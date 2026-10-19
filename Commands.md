@@ -86,6 +86,8 @@ dotnet run --project MagicConsole -- --ai-vs-ai         # watch two AIs
 dotnet run --project MagicConsole -- --greedy           # the AI is GreedyAi (instant), not the search (BeamSearchAi, ~1 s a decision)
 dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip the deck prompt
 dotnet run --project MagicConsole -- --match=greedy,random --games=72  # AI vs AI, measured (AiMatch)
+dotnet run -c Release --project MagicConsole -- --match=beam+shuffle,beam --until-clear  # the overnight run: stops once a 5pp
+#   difference (or none) is settled, judged after every 8 seeds (96 games); --games=N is the cap (default 600)
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it

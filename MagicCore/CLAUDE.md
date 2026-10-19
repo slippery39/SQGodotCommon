@@ -75,6 +75,7 @@ MagicCore/
 │                        HeldValues: a held card priced by its measured value — the search's setting (AI-1)
 ├── Ai/IAi.cs            what every AI is: Decide(state) for its player; RandomAi.cs is the floor
 ├── Ai/AiMatch.cs        THE strength harness: AI vs AI, every deck pairing, seats swapped (MagicConsole --match)
+├── Ai/EarlyStop.cs      when a match has said enough: 5pp better / worse / neither, judged on mirror pairs (--until-clear)
 ├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer
 ├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;

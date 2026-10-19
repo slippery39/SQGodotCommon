@@ -20,7 +20,9 @@ int? Arg(string name) =>
 		? n
 		: null;
 
-// --match=A,B [--games=N] [--sequential]: AI against AI over every deck pairing, both seats (AiMatch).
+// --match=A,B [--games=N] [--sequential] [--until-clear]: AI against AI over every deck pairing, both
+// seats (AiMatch). --until-clear stops once a 5pp difference, or its absence, is settled; --games is
+// then the cap (default 600). Games come in whole seeds (12 a seed), so a count rounds up to one.
 if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 {
 	var names = match["--match=".Length..].Split(',');
@@ -29,8 +31,13 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 		Console.WriteLine($"--match=A,B with two of: {AiMatch.Usage}");
 		return;
 	}
+	var sequential = flags.Contains("--sequential");
 	Console.WriteLine(
-		AiMatch.Run(names[0], names[1], Arg("games") ?? 24, flags.Contains("--sequential")).Report()
+		(
+			flags.Contains("--until-clear")
+				? AiMatch.RunUntilClear(names[0], names[1], Arg("games") ?? 600, sequential)
+				: AiMatch.Run(names[0], names[1], Arg("games") ?? 24, sequential)
+		).Report()
 	);
 	return;
 }

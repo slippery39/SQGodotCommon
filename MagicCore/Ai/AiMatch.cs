@@ -146,21 +146,80 @@ public static class AiMatch
 	/// </summary>
 	public static Result Run(string a, string b, int games, bool sequential = false)
 	{
+		var pairs = Pairings(a, b);
+		var clock = Stopwatch.StartNew();
+		var seeds = SeedsFor(games, pairs);
+		var results = PlaySeeds(a, b, pairs, 1, seeds, sequential);
+		return new Result(a, b, pairs.Count, seeds, results, clock.Elapsed, sequential);
+	}
+
+	/// <summary>
+	/// Seeds played in batches of <see cref="SeedsPerBatch"/> until <see cref="EarlyStop"/> gives a
+	/// verdict, or <paramref name="maxGames"/> are played (story AI-6.3). Judged only between whole
+	/// batches, so where it stops depends on the results alone — never on which game finished first —
+	/// and its games are the first ones a fixed <see cref="Run"/> of that size plays.
+	/// </summary>
+	public static Result RunUntilClear(
+		string a,
+		string b,
+		int maxGames = 600,
+		bool sequential = false
+	)
+	{
+		var pairs = Pairings(a, b);
+		var clock = Stopwatch.StartNew();
+		var maxSeeds = SeedsFor(maxGames, pairs);
+		var games = new List<Game>();
+		var reading = EarlyStop.Judge([]);
+		var seed = 1;
+		while (seed <= maxSeeds && reading.Verdict == EarlyStop.Verdict.Undecided)
+		{
+			var batch = Math.Min(SeedsPerBatch, maxSeeds - seed + 1);
+			games.AddRange(PlaySeeds(a, b, pairs, seed, batch, sequential));
+			seed += batch;
+			reading = EarlyStop.Judge(PairScores(games), reading);
+		}
+		return new Result(a, b, pairs.Count, seed - 1, games, clock.Elapsed, sequential)
+		{
+			Stop = reading,
+		};
+	}
+
+	/// <summary>
+	/// Seeds judged at once: 8 × 12 games (48 pairs, EarlyStop.MinPairs) — six waves on 16 cores. Every
+	/// batch waits for its slowest game; fewer, larger batches waste less of the cores on that.
+	/// </summary>
+	public const int SeedsPerBatch = 8;
+
+	static List<(string x, string y)> Pairings(string a, string b)
+	{
 		var decks = FraDecks.All.Keys.ToList();
 		var pairs = decks.SelectMany(x => decks.Where(y => y != x).Select(y => (x, y))).ToList();
 		if (pairs.Count == 0)
 			throw new InvalidOperationException("A match needs at least two FRA decks to pair.");
 		foreach (var name in new[] { a, b }.Where(n => !IsKnown(n)))
 			throw new ArgumentException($"Unknown AI '{name}' — known: {Usage}");
-		var seeds = Math.Max(1, (int)Math.Ceiling(games / (pairs.Count * 2.0)));
+		return pairs;
+	}
+
+	static int SeedsFor(int games, List<(string x, string y)> pairs) =>
+		Math.Max(1, (int)Math.Ceiling(games / (pairs.Count * 2.0)));
+
+	static Game[] PlaySeeds(
+		string a,
+		string b,
+		List<(string x, string y)> pairs,
+		int firstSeed,
+		int seeds,
+		bool sequential
+	)
+	{
 		var schedule = (
-			from seed in Enumerable.Range(1, seeds)
+			from seed in Enumerable.Range(firstSeed, seeds)
 			from pair in pairs
 			from aIsPlayer1 in new[] { true, false }
 			select (pair.x, pair.y, seed, aIsPlayer1)
 		).ToList();
-
-		var clock = Stopwatch.StartNew();
 		var results = new Game[schedule.Count];
 		// One game at a time, each search uses every core; games in parallel, each search one thread.
 		int? searchThreads = sequential ? null : 1;
@@ -185,8 +244,12 @@ public static class AiMatch
 				new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
 				PlayAt
 			);
-		return new Result(a, b, pairs.Count, seeds, results, clock.Elapsed, sequential);
+		return results;
 	}
+
+	/// <summary>A's score in each mirror pair — the independent trials (see <see cref="Result.StandardError"/>).</summary>
+	static List<double> PairScores(IEnumerable<Game> games) =>
+		[.. games.GroupBy(g => (g.Deck1, g.Deck2, g.Seed)).Select(p => p.Average(Result.ScoreOfA))];
 
 	static Game Play(
 		string a,
@@ -288,6 +351,9 @@ public static class AiMatch
 		bool Sequential
 	)
 	{
+		/// <summary>Where early stopping stood when the run ended (RunUntilClear only).</summary>
+		public EarlyStop.Reading? Stop { get; init; }
+
 		/// <summary>A's score: a win is 1, a draw or unfinished game half.</summary>
 		public double WinRateA => Games.Average(ScoreOfA);
 
@@ -309,16 +375,8 @@ public static class AiMatch
 		{
 			get
 			{
-				var pairScores = Games
-					.GroupBy(g => (g.Deck1, g.Deck2, g.Seed))
-					.Select(p => p.Average(ScoreOfA))
-					.ToList();
-				if (pairScores.Count < 2)
-					return double.NaN;
-				var mean = pairScores.Average();
-				var variance =
-					pairScores.Sum(x => (x - mean) * (x - mean)) / (pairScores.Count - 1);
-				return Math.Sqrt(variance / pairScores.Count);
+				var pairScores = PairScores(Games);
+				return Math.Sqrt(EarlyStop.Variance(pairScores) / pairScores.Count);
 			}
 		}
 
@@ -340,20 +398,29 @@ public static class AiMatch
 				);
 			var unfinished = Games.Count(g => !g.Finished);
 			return string.Join(
-				"\n",
-				$"{A} vs {B}: {Games.Count} games ({Pairings} deck pairings x {Seeds} seeds x both seats), {Elapsed.TotalSeconds:0.0} s",
-				$"  {a} {WinRateA * 100:0.0}% ± {StandardError * 100:0.0}pp (1 SE) — wins {a} {Games.Count(g => g.Winner == 1)}, {b} {Games.Count(g => g.Winner == 2)}, draws {Games.Count(g => g.Winner == 0)}",
-				$"  cost per decision (deterministic): {a} {PerDecision(Games.Sum(g => g.StepsA), decA)} engine steps, {PerDecision(Games.Sum(g => g.RolloutsA), decA)} rollouts; "
-					+ $"{b} {PerDecision(Games.Sum(g => g.StepsB), decB)} steps, {PerDecision(Games.Sum(g => g.RolloutsB), decB)} rollouts",
-				$"  time per decision{(Sequential ? "" : " (games in parallel: NOT evidence — use the cost line, or --sequential)")}: {a} {Ms(secA, decA)} (slowest {Games.Max(g => g.SlowestA) * 1000:0} ms), {b} {Ms(secB, decB)} (slowest {Games.Max(g => g.SlowestB) * 1000:0} ms)",
-				$"  per game: decisions {a} {(double)decA / Games.Count:0}, {b} {(double)decB / Games.Count:0}; turns {Games.Average(g => g.Turns):0.0}",
-				$"  per game: lands played {a} {Games.Average(g => g.LandsA):0.0}, {b} {Games.Average(g => g.LandsB):0.0}; "
-					+ $"spells cast {a} {Games.Average(g => g.SpellsA):0.0}, {b} {Games.Average(g => g.SpellsB):0.0}",
-				$"  {a}'s record by its deck (W-L-D): {string.Join(", ", byDeck)}",
-				unfinished > 0
-					? $"  UNFINISHED at {DecisionLimit} decisions: {unfinished} (counted as draws)"
-					: "  every game finished"
-			);
+					"\n",
+					$"{A} vs {B}: {Games.Count} games ({Pairings} deck pairings x {Seeds} seeds x both seats), {Elapsed.TotalSeconds:0.0} s",
+					$"  {a} {WinRateA * 100:0.0}% ± {StandardError * 100:0.0}pp (1 SE) — wins {a} {Games.Count(g => g.Winner == 1)}, {b} {Games.Count(g => g.Winner == 2)}, draws {Games.Count(g => g.Winner == 0)}",
+					$"  cost per decision (deterministic): {a} {PerDecision(Games.Sum(g => g.StepsA), decA)} engine steps, {PerDecision(Games.Sum(g => g.RolloutsA), decA)} rollouts; "
+						+ $"{b} {PerDecision(Games.Sum(g => g.StepsB), decB)} steps, {PerDecision(Games.Sum(g => g.RolloutsB), decB)} rollouts",
+					$"  time per decision{(Sequential ? "" : " (games in parallel: NOT evidence — use the cost line, or --sequential)")}: {a} {Ms(secA, decA)} (slowest {Games.Max(g => g.SlowestA) * 1000:0} ms), {b} {Ms(secB, decB)} (slowest {Games.Max(g => g.SlowestB) * 1000:0} ms)",
+					$"  per game: decisions {a} {(double)decA / Games.Count:0}, {b} {(double)decB / Games.Count:0}; turns {Games.Average(g => g.Turns):0.0}",
+					$"  per game: lands played {a} {Games.Average(g => g.LandsA):0.0}, {b} {Games.Average(g => g.LandsB):0.0}; "
+						+ $"spells cast {a} {Games.Average(g => g.SpellsA):0.0}, {b} {Games.Average(g => g.SpellsB):0.0}",
+					$"  {a}'s record by its deck (W-L-D): {string.Join(", ", byDeck)}",
+					unfinished > 0
+						? $"  UNFINISHED at {DecisionLimit} decisions: {unfinished} (counted as draws)"
+						: "  every game finished"
+				) + (Stop is null ? "" : "\n" + StopLine(Stop, a));
 		}
+
+		static string StopLine(EarlyStop.Reading stop, string a) =>
+			$"  early stop: {stop.Verdict switch
+			{
+				EarlyStop.Verdict.Better => $"{a} BETTER by {EarlyStop.Margin * 100:0}pp or more",
+				EarlyStop.Verdict.Worse => $"{a} WORSE by {EarlyStop.Margin * 100:0}pp or more",
+				EarlyStop.Verdict.NoDifference => $"NO difference of {EarlyStop.Margin * 100:0}pp either way",
+				_ => "UNDECIDED at the cap: any difference is too small to settle here; read the estimate",
+			}} (log-likelihood: better {stop.BetterLlr:0.00}, worse {stop.WorseLlr:0.00}; decided at ±{stop.Bound:0.00}, {EarlyStop.Error * 100:0}% error per direction)";
 	}
 }
