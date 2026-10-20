@@ -1093,6 +1093,7 @@ otherwise look like a real serialization regression.
 The real-rules engine (branch `mtg-real`, `MagicCore/`). Each is fine for now and marked `ponytail:`
 in the code with its upgrade path; revisit when a card or the AI needs it.
 
+- FRA packs meet Wizards' "four of the five colors" at common by redrawing the common sheet (`Limited/Boosters.cs`, LIM-1), not by FRA's real print runs, which are unpublished — collate by runs if opened-pack data ever reveals them
 - Damage split among blockers is automatic
 - an exhaust stamp is per card, not per ability
 - triggers are matched against the battlefield at the next priority, so a source, or an entering creature, that is gone by then — destroyed later in the same resolution — is missed (one the state-based check kills is still seen)

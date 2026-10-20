@@ -1,7 +1,7 @@
 ---
 id: LIM-1
-title: Sealed and draft for Reality Fracture
-status: backlog
+title: Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table
+status: in-progress
 area: LIM
 created: 2026-10-07
 ---
@@ -10,36 +10,76 @@ created: 2026-10-07
 
 Two of the use cases from the first interview (MC-1): **a sealed pool to builds** and **draft vs
 bots** — the reason for the whole engine is building better limited decks before an Arena direct.
-It also unlocks the last FRA card, **Extrapolate the Impossible**, whose "from outside the game"
-needs a sideboard.
+The FRA Arena Direct is **Bo1 sealed**, so sealed comes first; draft is LIM-2. It also unlocks the
+last FRA card, **Extrapolate the Impossible**, whose "from outside the game" needs a sideboard.
 
 ## Requirements
 
-- [ ] Extrapolate the Impossible plays, with the sideboard as "outside the game"
-
-To be shaped — see the open questions.
+- [ ] A sealed pool is 6 FRA packs, each an **Arena** play booster: the paper play booster with
+      the foil slot as a second non-foil wildcard (same rarity odds)
+- [ ] Packs follow FRA's real collation, from MTGJSON's play-booster data (232 pack variants, exact
+      weights): 6 commons, 1 uncommon, 1 common/uncommon, the echoed-pair block (a whole pair of
+      one rarity + one card from a DIFFERENT pair), 1 rare/mythic, the wildcard, 1 land
+- [ ] Special Guests replace a common in 1 pack in 55 — once all 10 are scripted (MC-3)
+- [ ] Commons follow every stated rule and nothing invented: at least 4 of the 5 colours among a
+      pack's commons (Wizards' Play Booster Q&A), and no card twice from one sheet (MTGJSON: none
+      of FRA's play sheets sets `allowDuplicates`; across sheets a repeat can happen — the two
+      wildcards, and the common/uncommon slot, can match a card the pack already holds)
+- [ ] The rates are checked by a test over many packs, against the published odds
+- [ ] A deck builder on MagicTable: the pool, 40 cards, basics free, Arena-style
+- [ ] A suggested deck — what the AI builds from the pool; the same builder makes the AI
+      opponent's deck from ITS OWN pool
+- [ ] Play the built deck against that AI opponent on the table, Bo1
+- [ ] Extrapolate the Impossible plays, with the sideboard (the pool's unplayed cards) as
+      "outside the game"
 
 ## Decisions
 
 - 2026-10-07, Shayne: Bo1 only for now; Bo3 and sideboarding maybe later.
 - 2026-10-09, Shayne: after the UI, his choice between this and a search AI (AI-2).
-
-Open questions:
-- Sealed first, draft first, or both?
-- Real FRA booster collation (play boosters, rarity slots) or something simpler?
-- What does "pool to builds" mean: suggested decks, a deck builder UI, sims ranking builds — or all three?
-- Draft bots: how good, and from what — 17lands data (DATA-1), card values, or simple picks?
-- Console first, or straight onto MagicTable?
+- 2026-10-20, Shayne: **sealed first**, draft afterwards (LIM-2).
+- 2026-10-20, Shayne: **Arena packs** — what an Arena Direct opens. Wizards: "in MTG Arena there
+  will be two non-foil wildcard slots" where paper has a foil one, mechanically identical
+  contents. Arena's land-slot and Special Guest handling are unpublished, so they mirror paper.
+- 2026-10-20, Shayne: **collation = the official rules only.** Paper packs use sequential
+  collation (a pack's commons are consecutive cards of fixed print runs — Lethe's Collation
+  Project reverse-engineered it through MKM), but FRA's runs are unpublished; synthesized runs
+  would invent the neighbours. Revisit if opened-pack data for FRA ever appears.
+- 2026-10-20, Shayne: deck building = **build your own + a suggested (AI) build**; AI opponents
+  build their own sealed decks with it. Several AI builds ranked by sims: out of scope here.
+- 2026-10-20, Shayne: **Special Guests: script all 10** — story MC-3, before pools contain them.
+- 2026-10-20, Shayne: **MagicTable first** (the builder is a UI); generator and AI builder are
+  plain C# under it, tested.
 
 ## Tasks
 
-- [ ] LIM-1.1 Interview the open questions, then split into stories
+- [x] LIM-1.1 Interview the open questions, then split into stories (2026-10-20: LIM-2, MC-3)
+- [x] LIM-1.2 Import FRA's play-booster config from MTGJSON (`tools/`) into an embedded
+      `MagicCore/Sets/FRA.boosters.json` — sheets by card NAME, treatments folded onto the FRA card
+      (uncommitted, 2026-10-20)
+- [x] LIM-1.3 The pack generator (seeded): Arena packs, colour and duplicate rules, rate test
+      (`Limited/Boosters.cs`, `BoosterTests`; uncommitted, 2026-10-20)
+- [ ] LIM-1.4 The sealed AI builder: pool → 40 (colours, curve, card values), its own tests
+- [ ] LIM-1.5 MagicTable: open a pool, build or take the suggested deck, play the AI's build
+- [ ] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game
 
 ## Next
 
-MtgSimulator already drafts (`MtgSimulator/Draft/`, rules in `.claude/rules/sim-draft.md`) and
-MtgGame has a draft screen (`SQGodotCommon/MtgGame/Draft/`) — grep them first and copy-adapt.
+**LIM-1.4, the AI builder.** The packs exist: `Boosters.Sealed(seed)` → 6 packs of `PackCard`
+(card name + the sheet it came from). Read `MagicCore/Limited/Boosters.cs` and `BoosterTests` first.
+For the builder, grep MtgSimulator's deck building (`MtgSimulator/Draft/DraftGameSetup.cs`, the
+evolver's builders) and copy-adapt; value cards by `CardValues` (`Sets/FRA.values.json`) — only
+implemented cards have values, and every FRA card but Extrapolate the Impossible is implemented.
+Traps: the collation data is by NAME (treatments folded); `GuestsPlayable` stays false until
+MC-3; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
+Not yet followed: the AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) still weights
+by old draft boosters (10 C / 3 U / 1 R, 1-in-8 mythic) — point it at these sheets once a sealed
+opponent's pool is what it guesses from.
 
 ## Log
 
 - 2026-10-16: created from the interview's use cases and the old handoff's "Later" list.
+- 2026-10-20: researched FRA collation (Wizards' Collecting article, MTG Scribe fact sheet,
+  MTGJSON, Lethe); interviewed; split — draft to LIM-2, Special Guests to MC-3. Status → ready.
+- 2026-10-20: LIM-1.2 + 1.3 built — 172 pack variants (232 in MTGJSON; borderless pairs folded),
+  totals and sheet sizes match the official counts (71 C, 43 U, 50+20 R/M, 270 in the wildcard).

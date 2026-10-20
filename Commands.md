@@ -17,6 +17,7 @@ dotnet test MagicCore.Tests
 
 ```
 python tools/import_scryfall_set.py fra    # -> MagicCore/Sets/FRA.json, embedded in MagicCore
+python tools/import_mtgjson_boosters.py fra    # -> MagicCore/Sets/FRA.boosters.json (pack collation, LIM-1)
 ```
 
 Stdlib only. Re-running rewrites the file sorted by collector number, so `git diff` shows exactly
