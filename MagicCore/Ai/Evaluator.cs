@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Turns;
 
 namespace MagicCore.Ai;
 
@@ -26,8 +27,110 @@ public static class Evaluator
 		if (s.IsOver())
 			return s.WinnerId() == player ? 10_000 : -10_000;
 		var opponent = s.OpponentOf(player);
-		return Side(s, player, held, own: true) - Side(s, opponent, held, own: false);
+		var sides = Side(s, player, held, own: true) - Side(s, opponent, held, own: false);
+		return threatOff.Value
+			? sides
+			: sides + Pressure(s, player, opponent) - Pressure(s, opponent, player);
 	}
+
+	/// <summary>
+	/// <paramref name="work"/> evaluated without the threat term — the search measured without it
+	/// (`beam+nothreat`, AI-5.2). Flows with the execution context into the search's parallel workers,
+	/// as MagicRules.CountingSteps does.
+	/// </summary>
+	public static T WithoutThreat<T>(Func<T> work)
+	{
+		var outer = threatOff.Value;
+		threatOff.Value = true;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			threatOff.Value = outer;
+		}
+	}
+
+	static readonly AsyncLocal<bool> threatOff = new();
+
+	/// <summary>
+	/// Threat (story AI-5.2): how soon <paramref name="attacker"/>'s board kills <paramref name="defender"/>
+	/// — <see cref="PressureWeight"/> × 20 ÷ the turns it needs: life over the power that gets past the
+	/// defender's blockers in the next attack. Symmetric: the term that makes the AI respect a clock on
+	/// itself makes it press one on them (MtgSimulator's race pressure, which never counted blockers).
+	/// Monotonic, uncapped: more lasting power, less life, fewer blockers — more pressure. An opposing
+	/// 2/2 at 4 life with no blocker weighs 5; against a blocker, nothing.
+	/// Power is what lasts (pumps until end of turn wear off before the next attack); a creature dying
+	/// to its damage neither attacks nor blocks; who can attack or block is Combat's rule.
+	/// ponytail: one blocker stops one attacker whatever their sizes; menace, trample and first strike
+	/// are ignored, and a keyword granted until end of turn still counts. Count them if a misjudged race
+	/// is ever shown.
+	/// </summary>
+	static double Pressure(GameState s, int attacker, int defender)
+	{
+		var life = s.GetPlayer(defender).Life;
+		if (life <= 0)
+			return 0;
+		var attackers = new List<(Card Card, int Power)>();
+		foreach (var c in s.CardsIn(attacker, ZoneType.Battlefield))
+			if (
+				c.Is(CardType.Creature)
+				&& Alive(s, c)
+				&& (!s.Has(c, "Defender") || s.Has(c, Combat.AttacksDespiteDefender))
+				&& s.Power(c) - Pumps(c).Power is > 0 and var power
+			)
+				attackers.Add((c, power));
+		if (attackers.Count == 0)
+			return 0;
+		// A tapped blocker blocks the next attack only if the defender untaps first: the attacker's own
+		// combat this turn is over, so its next attack comes after the defender's turn.
+		var game = s.GetGame();
+		var untapsFirst = game.ActivePlayerId == attacker && game.Step >= Step.EndCombat;
+		var blockers = new List<Card>();
+		foreach (var c in s.CardsIn(defender, ZoneType.Battlefield))
+			if (c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))
+				blockers.Add(c.IsTapped ? c with { IsTapped = false } : c);
+		// The defender blocks the biggest it can — fliers first, which only fliers and reach stop.
+		var through = 0;
+		foreach (
+			var (card, power) in attackers
+				.OrderByDescending(a => s.Has(a.Card, "Flying"))
+				.ThenByDescending(a => a.Power)
+		)
+		{
+			var blocker = blockers.FindIndex(b => Combat.CanBlock(s, b, card));
+			if (blocker < 0)
+				through += power;
+			else
+				blockers.RemoveAt(blocker);
+		}
+		return PressureWeight * 20.0 * through / life;
+	}
+
+	/// <summary>Not dying to what is marked on it now: the state-based check's own question.</summary>
+	static bool Alive(GameState s, Card c)
+	{
+		var toughness = s.Toughness(c);
+		return toughness > 0 && (toughness - c.Damage > 0 || s.IsIndestructible(c));
+	}
+
+	/// <summary>What its pumps until end of turn add — gone before the next turn ("until your next turn" lasts).</summary>
+	static (int Power, int Toughness) Pumps(Card c)
+	{
+		var (power, toughness) = (0, 0);
+		foreach (var component in c.Components)
+			if (component is UntilEndOfTurn { UntilTurnOf: 0 } pump)
+				(power, toughness) = (power + pump.Power, toughness + pump.Toughness);
+		return (power, toughness);
+	}
+
+	/// <summary>
+	/// Half: at a healthy life a forecast must not outweigh real damage — a free attack for 2 at 29 life
+	/// (+1.0) must beat the 1 power it leaves unblocked (−0.5 here, −1.0 at full weight: a tie, and a
+	/// tie takes the passive move). Near death it still dominates: a lethal swing-back at 3 life is −10.
+	/// </summary>
+	public const double PressureWeight = 0.5;
 
 	static double Side(GameState s, int player, HeldValues? held, bool own)
 	{

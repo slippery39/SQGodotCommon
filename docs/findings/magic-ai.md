@@ -666,3 +666,29 @@ order, so it now favours `beam+realorder` (86.1% against 81.3%).
 - **Combinations were not run** (Shayne: each model alone is enough to choose). A richer opponent with
   GreedyAi rollouts, or all-in with judged blocks, are costed in DesignNotes.md.
 
+## The threat term: a clock that counts blockers (2026-10-20, AI-5.2)
+
+`Evaluator.Pressure`, in the shared evaluator at half weight: for each side, 20 ÷ the turns its board
+needs to kill the other — life over the lasting power that gets past the defender's blockers in the
+next attack (fliers blocked only by fliers and reach, a tapped blocker counted only if it untaps
+first, the dying and defenders left out). Symmetric and uncapped. The card-value sandbox measures
+without it (Shayne): its creature ladder would otherwise give almost any card a flat bonus.
+
+**The blunder it fixes** (`GreedyAiTests.StaysHome_WhenAttackingLeavesItDeadToTheSwingBack`): GreedyAi
+at 3 life, its 3/3 facing their 3/3 — it went face, tapping its only blocker, and the swing back was
+lethal. The search did not (its rollouts play the swing back). With the term GreedyAi stays home.
+
+| `beam` (with it) vs `beam+nothreat` | Result |
+|---|---|
+| Quick check | 27 of 288 decisions changed (9.4%); 2 624.7 steps a position (2 436.7, +7.7%) |
+| `--until-clear` | **600 games (the cap), 312–288, 52.0% ± 1.4pp — UNDECIDED: worse ruled out (−11.96), better by 5pp not reached (−1.33)**; 1 324.3 steps a decision (1 276.7, +3.7%); 783 s |
+
+- **Kept** by the rule Shayne set: no measured loss, and a recorded blunder fixed. It leans ~+2pp.
+- **Half weight** keeps a forecast from outweighing real damage at a healthy life (a free attack for
+  2 at 29 life tied with the 1 power it leaves unblocked at full weight — a tie takes the passive
+  move); near death it dominates (a lethal swing-back at 3 life scores −10).
+- **Review caught four defects before the measurement** — pumps until end of turn counted as threat,
+  dying creatures as attackers and blockers, defender and unblockable ignored, and a cap at 40 that
+  broke the monotonic rule — and the sandbox measuring its own fixture. The first match was stopped.
+- The card-value table is unchanged (measured without the term); GreedyAi's 12 recorded games moved.
+

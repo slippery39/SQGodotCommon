@@ -50,6 +50,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// (AI-6.5), which stays available for simulations that want the stronger search.
 	/// </param>
 	/// <param name="Hand">What it may know of the opponent's hand — <see cref="Hidden.Hand"/> (story AI-3.4).</param>
+	/// <param name="Threat">The evaluator's threat term (story AI-5.2); false measures the search without it.</param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -68,7 +69,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		TimeSpan? TimeLimit = null,
 		Hidden.Library Library = Hidden.Library.ShuffleUnknown,
 		int? Threads = null,
-		Hidden.Hand Hand = Hidden.Hand.Real
+		Hidden.Hand Hand = Hidden.Hand.Real,
+		bool Threat = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -184,7 +186,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		rollouts = 0; // a plan replay or a pass doesn't search, and so doesn't reset it
 		firstMoves.Clear();
 		firstMoveOrder.Clear();
-		var decided = DecideHere(s);
+		var decided = options.Threat ? DecideHere(s) : Evaluator.WithoutThreat(() => DecideHere(s));
 		totalRollouts += rollouts;
 		return decided;
 	}

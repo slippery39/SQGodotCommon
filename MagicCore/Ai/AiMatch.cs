@@ -60,6 +60,8 @@ public static class AiMatch
 			// search sees its own future draws, 5pp or more stronger — is beam+realorder.
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
 			["realorder"] = o => o with { Library = Hidden.Library.RealOrder },
+			// The evaluator without its threat term (AI-5.2) — the search before it: beam+nothreat.
+			["nothreat"] = o => o with { Threat = false },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a

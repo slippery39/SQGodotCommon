@@ -45,6 +45,47 @@ public class GreedyAiTests
 		Assert.That(Evaluator.Evaluate(s, me), Is.GreaterThan(before));
 	}
 
+	// The threat term (AI-5.2) forecasts the next attack: a pump until end of turn is gone by then, so
+	// it adds no threat — at 4 life, their pumped 2/2 scores as their plain 2/2.
+	[Test]
+	public void Threat_APumpUntilEndOfTurn_AddsNoThreat()
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var (me, them) = (s.GetGame().StartingPlayerId, s.OpponentOf(s.GetGame().StartingPlayerId));
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 4 });
+		int bear;
+		(s, bear) = TestGames.Put(s, them, TestGames.Creature("Bear", "2/2"), ZoneType.Battlefield);
+		var plain = Evaluator.Evaluate(s, me);
+
+		s = s.UpdateObject(bear, s.GetCard(bear).WithComponent(new UntilEndOfTurn(3, 3)));
+
+		Assert.That(Evaluator.Evaluate(s, me), Is.EqualTo(plain).Within(1e-9));
+	}
+
+	// A creature with defender never attacks: no threat. At 4 life their 3/3 defender costs us less
+	// than their plain 3/3 — only its body, not the clock.
+	[Test]
+	public void Threat_ADefender_IsNoClock()
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var (me, them) = (s.GetGame().StartingPlayerId, s.OpponentOf(s.GetGame().StartingPlayerId));
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 4 });
+		var (wall, _) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Wall", "3/3", "Defender"),
+			ZoneType.Battlefield
+		);
+		var (bear, _) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Bear", "3/3"),
+			ZoneType.Battlefield
+		);
+
+		Assert.That(Evaluator.Evaluate(wall, me), Is.GreaterThan(Evaluator.Evaluate(bear, me) + 5));
+	}
+
 	// Lethal damage doesn't kill an indestructible creature, so the AI must not score it as dead.
 	[Test]
 	public void Evaluate_ADamagedIndestructibleCreature_StillCounts()
@@ -105,6 +146,24 @@ public class GreedyAiTests
 		var (_, what) = new GreedyAi(me).Decide(s);
 
 		Assert.That(what, Does.EndWith(s.GetPlayer(them).Name), what);
+	}
+
+	// The threat term (AI-5.2): at 3 life, its 3/3 facing their 3/3 — attacking taps its only blocker
+	// and the swing back is lethal. Without the term the evaluator saw 3 damage and nothing else, and
+	// GreedyAi went face (docs/findings/magic-ai.md).
+	[Test]
+	public void StaysHome_WhenAttackingLeavesItDeadToTheSwingBack()
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var (me, them) = (s.GetGame().StartingPlayerId, s.OpponentOf(s.GetGame().StartingPlayerId));
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Mine", "3/3"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, TestGames.Creature("Theirs", "3/3"), ZoneType.Battlefield);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 3 });
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+
+		var (_, what) = new GreedyAi(me).Decide(s);
+
+		Assert.That(what, Does.EndWith("Don't attack"), what);
 	}
 
 	// Lands were capped at 7 in the evaluation, so an 8th scored less in play than in hand and the

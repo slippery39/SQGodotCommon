@@ -1,7 +1,7 @@
 ---
 id: AI-5
 title: The evaluator sees threats and abilities
-status: backlog
+status: in-progress
 area: AI
 created: 2026-10-16
 ---
@@ -67,25 +67,43 @@ Not written down in MtgSimulator's docs; this paragraph is its first record.
 
 ## Requirements
 
-- [ ] **Threat:** a symmetric term for how soon each side's board can kill the other, counting the
+- [x] **Threat:** a symmetric term for how soon each side's board can kill the other, counting the
       defender's possible blockers — a 2/2 at 4 life against no blockers weighs heavily, against four
       blockers little. MtgSimulator's `RacePressure` (20 / turns-to-kill, `.claude/rules/sim-ai.md`)
       is the starting point; it never counted blockers. Monotonic (MagicCore/CLAUDE.md).
-- [ ] **Abilities:** seen through PLAY first — an opponent model that activates abilities (AI-3) and
+- [ ] ~~**Abilities:** seen through PLAY first~~ — deferred (Shayne, 2026-10-20): AI-3 measured richer
+      opponent models and GreedyAi rollouts at under 5pp; DesignNotes keeps them. Was: seen through PLAY first — an opponent model that activates abilities (AI-3) and
       a wider budget for our own plays a turn — before any per-ability value; card-agnostic either way
-- [ ] **Held spells as options:** a held card's value moves with what may still come, time left,
+- [ ] ~~**Held spells as options:**~~ — deferred (Shayne, 2026-10-20) to a later story, with AI-4's
+      plans. Was: a held card's value moves with what may still come, time left,
       the risk of holding, unused mana and flexibility — replacing or refining AI-1.8's static price;
       measured, including positions where holding for many turns is right and where cashing in is
 - [ ] **Keywords:** the ones that matter and score nothing today (vigilance, haste, reach, hexproof,
       indestructible, ward) — measured, not guessed
-- [ ] Every change measured with `AiMatch` (strength and `--sequential` time) and recorded in
-      `docs/findings/magic-ai.md`; a regenerated card-value table where the sandbox's numbers move
+- [ ] Every change measured — the suite, then `--until-clear` against `beam`, and its cost (AI-6's
+      count) — and recorded in `docs/findings/magic-ai.md`; a regenerated card-value table where the
+      sandbox's numbers move. **Kept if better, or if neutral (no difference, not worse) AND it fixes
+      a recorded blunder position, with a test of that position** (Shayne, 2026-10-20)
 
 ## Decisions
 
 - 2026-10-16, Shayne: create the story; it comes later — after AI-1 (held values) for now.
+- 2026-10-20, Shayne (AI-5.1): **this story does threat and keywords**, before Shayne plays against
+  the AI (TBL-2 next); held spells as options and abilities through play are deferred. **Threat lives
+  in the shared evaluator** (GreedyAi has no look-ahead — the evaluator is its judgment; the search's
+  leaves and the card-value sandbox see it too; the table regenerated). **The keep rule:** a change
+  is kept if it measures better, or if it measures no difference and fixes a recorded blunder
+  position (with a test) — as MtgSimulator kept its race term.
 
-Open questions:
+- 2026-10-20, Shayne (AI-5.2, after review): **the card-value sandbox measures WITHOUT the threat
+  term** — a card's worth, not a position's clock: the fixture's creature ladder gave almost any card
+  a flat +0.5 for the attacker it leaves unblocked. GreedyAi and the search keep it. (Revises the
+  AI-5.1 line that the sandbox sees it.)
+- 2026-10-20 (default, not asked): the threat term at **half weight** — at a healthy life a forecast
+  must not outweigh real damage (a free attack for 2 at 29 life tied with the 1 power it leaves
+  unblocked at full weight, and a tie takes the passive move); near death it still dominates.
+
+Settled by the above (2026-10-20) — the questions as they were:
 - Threat in the shared evaluator, or only at the search's leaves? MtgSimulator measured static terms
   as neutral once rollouts exist (four of four), and a hand term in the shared evaluator as a loss —
   where a term lives decides what it distorts.
@@ -98,12 +116,20 @@ Open questions:
 
 ## Tasks
 
-- [ ] AI-5.1 Settle the open questions with Shayne
+- [x] AI-5.1 Settle the open questions with Shayne — threat and keywords; threat in the shared
+      evaluator; the keep rule
+- [x] AI-5.2 Threat: a symmetric race term counting the defender's blockers; a blunder position it fixes —
+      kept: 312–288 at the 600 cap (worse ruled out, ~+2pp), +3.7% cost; GreedyAi's swing-back blunder fixed
+- [ ] AI-5.3 Keywords: vigilance, haste, reach, hexproof, indestructible, ward — each valued by the
+      card-value sandbox, not guessed
 
 ## Next
 
-Read `MagicCore/Ai/Evaluator.cs`, `.claude/rules/sim-ai.md` ("Race pressure", "Four evaluator changes
-measured, four neutral"), and AI-3 — its opponent models are half of the abilities requirement.
+**AI-5.2 threat.** Read `MagicCore/Ai/Evaluator.cs` and `.claude/rules/sim-ai.md` ("Race pressure",
+"Four evaluator changes measured, four neutral"). Find a recorded blunder first (GreedyAi and the
+search, at the table or in a crafted position) — the keep rule needs one. Then the term, tested on
+that position; the suite and `--until-clear` against `beam`; the card-value table regenerated
+(`dotnet run --project MagicConsole -- --card-values`) and its diff read.
 
 ## Log
 
@@ -113,3 +139,18 @@ measured, four neutral"), and AI-3 — its opponent models are half of the abili
 - 2026-10-16: Shayne confirmed the option's inputs and added two: our own plan (Bolt the 2-power
   creature now if we'll tap out for two turns; not if next turn's creature blocks it) and the kind of
   game (unused mana matters a lot in a tempo game, hardly at all in a slow one).
+- 2026-10-20: AI-5.1 settled with Shayne (Decisions) — threat and keywords now; the rest deferred.
+- 2026-10-20: AI-5.2 — the threat term (`Evaluator.Pressure`, half weight, no cap): 20 ÷ turns to kill
+  for each side, counting the power that gets past the defender's blockers in the next attack
+  (lasting power only, the dying left out, Combat's rules for who attacks and blocks, a tapped
+  blocker counted only if it untaps first). The recorded blunder: GreedyAi at 3 life went face with
+  its only blocker into a lethal swing-back — the search did not (its rollouts see it); test
+  `StaysHome_WhenAttackingLeavesItDeadToTheSwingBack` (fails without the term). Review: pumps until
+  end of turn and dying creatures counted, defender and unblockable ignored, a cap that broke the
+  monotonic rule, and the sandbox measuring the fixture — all fixed (Decisions); the first match was
+  stopped. `+nothreat` is the search without it (`Evaluator.WithoutThreat`, flowing like the step
+  count). The card table regenerates unchanged; GreedyAi's 12 recorded games regenerated (all moved).
+  Tests: no threat from a pump, none from a defender — revert-checked. 1 006 tests.
+  Measured (findings): UNDECIDED at the 600 cap, 312–288 (52.0% ± 1.4pp; worse ruled out), +3.7% —
+  kept by the rule (no loss, a recorded blunder fixed).
+

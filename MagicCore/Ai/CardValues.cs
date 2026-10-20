@@ -113,13 +113,19 @@ public static class CardValues
 
 	// ===== Measuring =====
 
-	public static IReadOnlyList<Entry> Measure(IReadOnlyList<CardDefinition> cards, int seed = 7)
-	{
-		var (fixture, me) = Fixture(seed);
-		var results = new Entry[cards.Count];
-		Parallel.For(0, cards.Count, i => results[i] = MeasureOne(cards[i], fixture, me));
-		return results;
-	}
+	/// <summary>
+	/// Each card's measured value. Without the evaluator's threat term (Shayne, AI-5.2): a card's worth,
+	/// not a position's clock — the fixture's creature ladder would otherwise give almost any card a flat
+	/// bonus for the attacker it leaves unblocked.
+	/// </summary>
+	public static IReadOnlyList<Entry> Measure(IReadOnlyList<CardDefinition> cards, int seed = 7) =>
+		Evaluator.WithoutThreat(() =>
+		{
+			var (fixture, me) = Fixture(seed);
+			var results = new Entry[cards.Count];
+			Parallel.For(0, cards.Count, i => results[i] = MeasureOne(cards[i], fixture, me));
+			return (IReadOnlyList<Entry>)results;
+		});
 
 	static Entry MeasureOne(CardDefinition card, GameState fixture, int me)
 	{

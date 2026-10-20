@@ -66,9 +66,9 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 
 | ID | Story | Status |
 |---|---|---|
+| [AI-5](AI-5-evaluator-threat-abilities.md) | The evaluator sees threats and abilities | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
-| [AI-5](AI-5-evaluator-threat-abilities.md) | The evaluator sees threats and abilities | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed and draft for Reality Fracture | backlog |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | backlog |

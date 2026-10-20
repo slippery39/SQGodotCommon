@@ -130,6 +130,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     greedyrollout  GreedyAi plays our side in the rollouts (not --match=greedy, the AI itself)
 #     allin          an attack judged all-in as well as each alone (not with greedyrollout)
 #     targets        a target choice by its owner's best (not with greedyrollout)
+#     nothreat       the evaluator without its threat term (AI-5.2) — the search before it
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 ```
 
