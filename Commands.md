@@ -131,6 +131,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     allin          an attack judged all-in as well as each alone (not with greedyrollout)
 #     targets        a target choice by its owner's best (not with greedyrollout)
 #     nothreat       the evaluator without its threat term (AI-5.2) — the search before it
+#     nokeywords     the evaluator without the six keywords AI-5.3 added (vigilance, haste, reach, …)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 ```
 

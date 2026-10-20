@@ -61,7 +61,9 @@ public static class AiMatch
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
 			["realorder"] = o => o with { Library = Hidden.Library.RealOrder },
 			// The evaluator without its threat term (AI-5.2) — the search before it: beam+nothreat.
-			["nothreat"] = o => o with { Threat = false },
+			["nothreat"] = o => o with { Without = o.Without | Evaluator.Terms.Threat },
+			// Without the six keywords AI-5.3 added to a creature's value: beam+nokeywords.
+			["nokeywords"] = o => o with { Without = o.Without | Evaluator.Terms.MoreKeywords },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a

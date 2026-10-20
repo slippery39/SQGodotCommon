@@ -1,7 +1,7 @@
 ---
 id: AI-5
 title: The evaluator sees threats and abilities
-status: in-progress
+status: done
 area: AI
 created: 2026-10-16
 ---
@@ -78,9 +78,9 @@ Not written down in MtgSimulator's docs; this paragraph is its first record.
       plans. Was: a held card's value moves with what may still come, time left,
       the risk of holding, unused mana and flexibility — replacing or refining AI-1.8's static price;
       measured, including positions where holding for many turns is right and where cashing in is
-- [ ] **Keywords:** the ones that matter and score nothing today (vigilance, haste, reach, hexproof,
+- [x] **Keywords:** the ones that matter and score nothing today (vigilance, haste, reach, hexproof,
       indestructible, ward) — measured, not guessed
-- [ ] Every change measured — the suite, then `--until-clear` against `beam`, and its cost (AI-6's
+- [x] Every change measured — the suite, then `--until-clear` against `beam`, and its cost (AI-6's
       count) — and recorded in `docs/findings/magic-ai.md`; a regenerated card-value table where the
       sandbox's numbers move. **Kept if better, or if neutral (no difference, not worse) AND it fixes
       a recorded blunder position, with a test of that position** (Shayne, 2026-10-20)
@@ -103,6 +103,11 @@ Not written down in MtgSimulator's docs; this paragraph is its first record.
   must not outweigh real damage (a free attack for 2 at 29 life tied with the 1 power it leaves
   unblocked at full weight, and a tie takes the passive move); near death it still dominates.
 
+- 2026-10-20, Shayne (AI-5.3): **the six keywords at the weight the other seven get (0.8), measured
+  by a match** and kept by the rule — the sandbox cannot value a keyword (it scores the board with the
+  evaluator, so it would echo the weight back). Default, not asked: the sandbox measures without
+  them, as without threat, so the card table and the A/B stay clean.
+
 Settled by the above (2026-10-20) — the questions as they were:
 - Threat in the shared evaluator, or only at the search's leaves? MtgSimulator measured static terms
   as neutral once rollouts exist (four of four), and a hand term in the shared evaluator as a loss —
@@ -120,16 +125,16 @@ Settled by the above (2026-10-20) — the questions as they were:
       evaluator; the keep rule
 - [x] AI-5.2 Threat: a symmetric race term counting the defender's blockers; a blunder position it fixes —
       kept: 312–288 at the 600 cap (worse ruled out, ~+2pp), +3.7% cost; GreedyAi's swing-back blunder fixed
-- [ ] AI-5.3 Keywords: vigilance, haste, reach, hexproof, indestructible, ward — each valued by the
-      card-value sandbox, not guessed
+- [x] AI-5.3 Keywords: vigilance, haste, reach, hexproof, indestructible, ward — measured by match (the
+      sandbox can't value a keyword): NO difference at 192 games, 95–97; GreedyAi's haste blunder fixed
 
 ## Next
 
-**AI-5.2 threat.** Read `MagicCore/Ai/Evaluator.cs` and `.claude/rules/sim-ai.md` ("Race pressure",
-"Four evaluator changes measured, four neutral"). Find a recorded blunder first (GreedyAi and the
-search, at the table or in a crafted position) — the keep rule needs one. Then the term, tested on
-that position; the suite and `--until-clear` against `beam`; the card-value table regenerated
-(`dotnet run --project MagicConsole -- --card-values`) and its diff read.
+**Done (2026-10-20).** Threat (a clock that counts blockers, half weight) and six more keywords are in
+the shared evaluator; the card-value sandbox measures without both. Both kept by Shayne's rule —
+threat leaned +2pp (worse ruled out at 600 games), keywords no difference — each fixing a recorded
+GreedyAi blunder. `+nothreat`, `+nokeywords` measure the search without them. Deferred: held spells
+as options (with AI-4's plans) and abilities through play (DesignNotes). Next: Shayne plays (TBL-2).
 
 ## Log
 
@@ -148,9 +153,21 @@ that position; the suite and `--until-clear` against `beam`; the card-value tabl
   `StaysHome_WhenAttackingLeavesItDeadToTheSwingBack` (fails without the term). Review: pumps until
   end of turn and dying creatures counted, defender and unblockable ignored, a cap that broke the
   monotonic rule, and the sandbox measuring the fixture — all fixed (Decisions); the first match was
-  stopped. `+nothreat` is the search without it (`Evaluator.WithoutThreat`, flowing like the step
-  count). The card table regenerates unchanged; GreedyAi's 12 recorded games regenerated (all moved).
-  Tests: no threat from a pump, none from a defender — revert-checked. 1 006 tests.
+  stopped. `+nothreat` is the search without it (`Evaluator.Without(Terms.Threat, …)` since
+  AI-5.3, flowing like the step count). The card table regenerates unchanged; GreedyAi's 12
+  recorded games regenerated (all moved). Tests: no threat from a pump, none from a defender —
+  revert-checked. 1 006 tests.
   Measured (findings): UNDECIDED at the 600 cap, 312–288 (52.0% ± 1.4pp; worse ruled out), +3.7% —
   kept by the rule (no loss, a recorded blunder fixed).
+- 2026-10-20: AI-5.3 — vigilance, haste, reach, hexproof, indestructible and ward join a creature's
+  valued keywords at 0.8 (`Evaluator.ValuedKeywords`); haste only while the creature is new; a
+  printed keyword counts even when a pump grants it again. The evaluator's switchable terms are one
+  `[Flags] Evaluator.Terms` (`Threat`, `MoreKeywords`) — `+nothreat`, `+nokeywords`; the sandbox
+  measures without both, so the card table stays unchanged. The recorded blunder: of two equal
+  2/2s and the mana for one, GreedyAi cast whichever came first — now the one with haste (test,
+  fails without the six). Review: haste valued forever, a pump hiding a printed keyword, the switch
+  read per creature — fixed; tests that the switch turns the six off and haste counts only while
+  new (revert-checked). GreedyAi's recorded games regenerated (5 moved). 1 009 tests.
+  Measured (findings): NO difference of 5pp at 192 games (95–97), +0.2% cost — kept by the rule.
+  The suite's committed answers moved to the current search (29 of 288). AI-5 done.
 

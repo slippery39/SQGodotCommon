@@ -27,32 +27,48 @@ public static class Evaluator
 		if (s.IsOver())
 			return s.WinnerId() == player ? 10_000 : -10_000;
 		var opponent = s.OpponentOf(player);
-		var sides = Side(s, player, held, own: true) - Side(s, opponent, held, own: false);
-		return threatOff.Value
+		var keywords = (off.Value & Terms.MoreKeywords) != 0 ? FirstKeywords : ValuedKeywords;
+		var sides =
+			Side(s, player, held, own: true, keywords)
+			- Side(s, opponent, held, own: false, keywords);
+		return (off.Value & Terms.Threat) != 0
 			? sides
 			: sides + Pressure(s, player, opponent) - Pressure(s, opponent, player);
 	}
 
+	/// <summary>The evaluator's terms that can be switched off — each added by a measured story, so each can be measured without.</summary>
+	[Flags]
+	public enum Terms
+	{
+		None = 0,
+
+		/// <summary>The clock that counts blockers (AI-5.2, `+nothreat`).</summary>
+		Threat = 1,
+
+		/// <summary>Vigilance, haste, reach, hexproof, indestructible and ward among a creature's valued keywords (AI-5.3, `+nokeywords`).</summary>
+		MoreKeywords = 2,
+	}
+
 	/// <summary>
-	/// <paramref name="work"/> evaluated without the threat term — the search measured without it
-	/// (`beam+nothreat`, AI-5.2). Flows with the execution context into the search's parallel workers,
+	/// <paramref name="work"/> evaluated without <paramref name="terms"/> — a search measured without them,
+	/// or the card-value sandbox. Flows with the execution context into the search's parallel workers,
 	/// as MagicRules.CountingSteps does.
 	/// </summary>
-	public static T WithoutThreat<T>(Func<T> work)
+	public static T Without<T>(Terms terms, Func<T> work)
 	{
-		var outer = threatOff.Value;
-		threatOff.Value = true;
+		var outer = off.Value;
+		off.Value = outer | terms;
 		try
 		{
 			return work();
 		}
 		finally
 		{
-			threatOff.Value = outer;
+			off.Value = outer;
 		}
 	}
 
-	static readonly AsyncLocal<bool> threatOff = new();
+	static readonly AsyncLocal<Terms> off = new();
 
 	/// <summary>
 	/// Threat (story AI-5.2): how soon <paramref name="attacker"/>'s board kills <paramref name="defender"/>
@@ -132,10 +148,12 @@ public static class Evaluator
 	/// </summary>
 	public const double PressureWeight = 0.5;
 
-	static double Side(GameState s, int player, HeldValues? held, bool own)
+	static double Side(GameState s, int player, HeldValues? held, bool own, string[] keywords)
 	{
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
-		var creatures = board.Where(c => c.Is(CardType.Creature)).Sum(c => CreatureValue(s, c));
+		var creatures = board
+			.Where(c => c.Is(CardType.Creature))
+			.Sum(c => CreatureValue(s, c, keywords));
 		// Every term is MONOTONIC — more of a good thing always scores more, tapering instead of
 		// capping. A cap makes "more" tie with "less", and a tie silently picks the passive move:
 		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
@@ -166,7 +184,30 @@ public static class Evaluator
 	static double Taper(int n, int knee, double perUnit, double beyond) =>
 		Math.Min(n, knee) * perUnit + Math.Max(0, n - knee) * beyond;
 
-	static double CreatureValue(GameState s, Card c)
+	/// <summary>The keywords a creature's value counts, 0.8 each — the first seven, then six more (AI-5.3, Shayne).</summary>
+	static readonly string[] FirstKeywords =
+	[
+		"Flying",
+		"Deathtouch",
+		"Lifelink",
+		"First strike",
+		"Double strike",
+		"Trample",
+		"Menace",
+	];
+
+	static readonly string[] ValuedKeywords =
+	[
+		.. FirstKeywords,
+		"Vigilance",
+		"Haste",
+		"Reach",
+		"Hexproof",
+		"Indestructible",
+		"Ward",
+	];
+
+	static double CreatureValue(GameState s, Card c, string[] valued)
 	{
 		// Alive is decided by the real toughness (a pump that saved it counts); its VALUE by what
 		// lasts past this turn — statics yes ("creatures you control have trample" stays), until-
@@ -176,18 +217,21 @@ public static class Evaluator
 		var pumps = c.GetComponents<UntilEndOfTurn>().Where(u => u.UntilTurnOf == 0).ToList(); // "until your next turn" lasts
 		var power = s.Power(c) - pumps.Sum(u => u.Power);
 		var toughness = Math.Max(1, s.Toughness(c) - pumps.Sum(u => u.Toughness) - c.Damage);
-		var keywords = new[]
-		{
-			"Flying",
-			"Deathtouch",
-			"Lifelink",
-			"First strike",
-			"Double strike",
-			"Trample",
-			"Menace",
-		}.Count(k => s.Has(c, k) && !pumps.Any(u => u.Keyword == k));
+		var keywords = valued.Count(k => Lasting(s, c, k, pumps));
 		return 2 + power * 1.5 + toughness + keywords * 0.8;
 	}
+
+	/// <summary>
+	/// A keyword it keeps: printed, or granted by more than a pump that ends this turn. Haste only while
+	/// the creature is new — after its first turn haste does nothing (AI-5.3).
+	/// ponytail: keywords read by name — a ward or hexproof given by a scripted component instead of the
+	/// keyword ("Hexproof from …", a ward trigger with another cost) scores nothing; add them if a card
+	/// with one is ever misjudged.
+	/// </summary>
+	static bool Lasting(GameState s, Card c, string keyword, List<UntilEndOfTurn> pumps) =>
+		s.Has(c, keyword)
+		&& (c.Keywords.Contains(keyword) || !pumps.Any(u => u.Keyword == keyword))
+		&& (keyword != "Haste" || Combat.IsSummoningSick(s, c));
 }
 
 /// <summary>

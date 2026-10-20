@@ -692,3 +692,24 @@ lethal. The search did not (its rollouts play the swing back). With the term Gre
   broke the monotonic rule — and the sandbox measuring its own fixture. The first match was stopped.
 - The card-value table is unchanged (measured without the term); GreedyAi's 12 recorded games moved.
 
+## Six more keywords valued (2026-10-20, AI-5.3)
+
+Vigilance, haste, reach, hexproof, indestructible and ward join a creature's valued keywords at the
+0.8 the other seven get (Shayne); haste only while the creature is new, and a printed keyword counts
+even when a pump grants it again. The card-value sandbox can't value a keyword — it scores the board
+with the evaluator, so it would echo the weight — so it measures without them, and the six were
+measured by a match instead.
+
+**The blunder it fixes** (`GreedyAiTests.Keywords_OfTwoEqualCreatures_CastsTheOneWithHaste`): of two
+equal 2/2s and the mana for one, GreedyAi cast whichever came first; now the one with haste.
+
+| `beam` vs `beam+nokeywords` | Result |
+|---|---|
+| Quick check | 29 decisions changed against 27 without them; 2 637.2 steps a position (2 625.4) |
+| `--until-clear` | **192 games, 95–97, 49.5% ± 1.7pp — NO difference of 5pp**; 1 374.5 steps a decision (1 371.7, +0.2%); 377 s |
+
+- **Kept** by the rule: no difference, and a recorded blunder fixed. As MtgSimulator found, static
+  terms add little once rollouts play the game out — but GreedyAi has no rollouts.
+- After AI-5 the suite's committed answers moved to the current search (29 of 288); its oracle still
+  reads the real library order and the evaluator before AI-5.
+

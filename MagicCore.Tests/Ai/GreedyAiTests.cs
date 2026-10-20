@@ -86,6 +86,57 @@ public class GreedyAiTests
 		Assert.That(Evaluator.Evaluate(wall, me), Is.GreaterThan(Evaluator.Evaluate(bear, me) + 5));
 	}
 
+	// Keywords (AI-5.3): of two otherwise equal 2/2s and the mana for one, the one with haste — once
+	// haste scored nothing, the two tied and GreedyAi cast whichever came first (the plain one, here).
+	[Test]
+	public void Keywords_OfTwoEqualCreatures_CastsTheOneWithHaste()
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var me = s.GetGame().StartingPlayerId;
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Plain", "2/2"), ZoneType.Hand);
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Hasty", "2/2", "Haste"), ZoneType.Hand);
+
+		var (_, what) = new GreedyAi(me).Decide(s);
+
+		Assert.That(what, Does.Contain("Hasty"), what);
+	}
+
+	// Haste counts only while the creature is new (AI-5.3); `MoreKeywords` switched off, it never does —
+	// the switch +nokeywords measures by.
+	[Test]
+	public void Keywords_HasteCountsOnlyWhileNew_AndTheSwitchTurnsItOff()
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var me = s.GetGame().StartingPlayerId;
+		var before = Evaluator.Evaluate(s, me);
+		int hasty;
+		(s, hasty) = TestGames.Put(
+			s,
+			me,
+			TestGames.Creature("Hasty", "2/2", "Haste"),
+			ZoneType.Battlefield
+		);
+		var veteran = s.UpdateObject(hasty, s.GetCard(hasty) with { ControlledSinceTurn = -5 });
+		var newcomer = s.UpdateObject(
+			hasty,
+			s.GetCard(hasty) with
+			{
+				ControlledSinceTurn = s.GetGame().TurnNumber,
+			}
+		);
+
+		Assert.That(
+			Evaluator.Evaluate(newcomer, me) - Evaluator.Evaluate(veteran, me),
+			Is.EqualTo(0.8).Within(1e-9)
+		);
+		Assert.That(
+			Evaluator.Without(Evaluator.Terms.MoreKeywords, () => Evaluator.Evaluate(newcomer, me)),
+			Is.EqualTo(Evaluator.Evaluate(veteran, me)).Within(1e-9)
+		);
+		Assert.That(Evaluator.Evaluate(newcomer, me), Is.GreaterThan(before));
+	}
+
 	// Lethal damage doesn't kill an indestructible creature, so the AI must not score it as dead.
 	[Test]
 	public void Evaluate_ADamagedIndestructibleCreature_StillCounts()

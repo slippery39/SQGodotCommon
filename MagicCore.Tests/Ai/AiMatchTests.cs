@@ -108,6 +108,7 @@ public class AiMatchTests
 	[TestCase("beam+greedyrollout+allin", false)]
 	[TestCase("beam+realorder+casts", true)]
 	[TestCase("beam+realorder+shuffle", false)]
+	[TestCase("beam+nothreat+nokeywords", true)]
 	public void TheModels_CombineOnlyWhereTheyMeanSomething(string name, bool known)
 	{
 		Assert.That(AiMatch.IsKnown(name), Is.EqualTo(known));
