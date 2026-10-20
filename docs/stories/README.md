@@ -10,7 +10,7 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-1. **AI-3** — swappable simulation models (opponent, our policy, hidden info, combat), measured — next AI-3.7
+1. **AI-3** — swappable simulation models (opponent, our policy, hidden info, combat), measured — next AI-3.8
 2. **AI-5** — the evaluator sees threats (life against the board, blockers) and abilities
 3. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
 4. **LIM-1** — sealed and draft (and the last FRA card)

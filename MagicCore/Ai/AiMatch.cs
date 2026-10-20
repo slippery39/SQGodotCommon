@@ -57,6 +57,8 @@ public static class AiMatch
 			// It also responds at instant speed in our turn (AI-3.6) — casts from hand too: beam+responds.
 			["responds"] = Opponent(Rollout.OpponentModel.Responds),
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
+			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
+			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The opponent's unseen hand drawn again from its unseen cards (AI-3.4) — matters only
 			// when the simulated opponent casts: beam+casts+unseen.
 			["unseen"] = o => o with { Hand = Hidden.Hand.ShuffleUnseen },
@@ -66,15 +68,12 @@ public static class AiMatch
 
 	static Func<BeamSearchAi.Settings, BeamSearchAi.Settings> Opponent(
 		Rollout.OpponentModel model
-	) =>
-		o =>
-			o with
-			{
-				RolloutSettings = (o.RolloutSettings ?? BeamSearchAi.DefaultRollout) with
-				{
-					Opponent = model,
-				},
-			};
+	) => WithRollout(r => r with { Opponent = model });
+
+	/// <summary>A model that changes the rollout — from the search's own default (held values in).</summary>
+	static Func<BeamSearchAi.Settings, BeamSearchAi.Settings> WithRollout(
+		Func<Rollout.Settings, Rollout.Settings> change
+	) => o => o with { RolloutSettings = change(o.RolloutSettings ?? BeamSearchAi.DefaultRollout) };
 
 	static BeamSearchAi.Settings? Combined(string name) =>
 		name.Split('+') is ["beam", .. var models]

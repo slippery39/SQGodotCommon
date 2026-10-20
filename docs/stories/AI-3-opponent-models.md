@@ -73,6 +73,9 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
   our combat** (after attackers, after blockers); a response **must beat passing**, both settled;
   **no limit** on how many. Default, not asked: responses are spells (instants, flash) — not
   activated abilities, which a free one could repeat without end.
+- 2026-10-19, Shayne (AI-3.7): **GreedyAi decides every decision of ours in a rollout** (plays at
+  any speed, choices), **with no per-turn play limit**, measured against **`beam`** (the policy is
+  its own axis). The casting opponent keeps the cheap policy (2026-10-17's default, below).
 - 2026-10-17 (default, not asked): the casting opponent uses OUR cheap policy, not one of its own —
   symmetric, so a measurement isolates the model. "Our policy" (AI-3.7) swaps our side only.
 
@@ -99,7 +102,8 @@ an enum of one (AI-2.4's review removed two).
 - [x] AI-3.6 Full responses: the opponent acts at instant speed inside our turn when it scores
       better; measured — `+responds`: NO difference of 5pp against `beam+casts` (288 games,
       145–143), +3.7% cost
-- [ ] AI-3.7 Our policy: `GreedyAi` as our rollout policy beside the cheap greedy; measured
+- [x] AI-3.7 Our policy: `GreedyAi` as our rollout policy beside the cheap greedy; measured —
+      `+greedyrollout`: UNDECIDED at 600 games, 317–283 (52.8% ± 1.4pp, worse ruled out), +61% cost
 - [ ] AI-3.8 Combat: attackers judged together (MtgSimulator's `FindLethalAttacks`, or all-in
       against each alone) and a trigger's target by its owner's answer; measured
 - [ ] AI-3.9 The matrix: every combination worth running, side by side in findings; pick the default
@@ -114,16 +118,16 @@ decision) is the time measure, not the clock.
 
 Done so far: casts from hand (AI-3.1, not shown stronger), who knows what (3.2), library shuffle
 (3.3: WORSE by 5pp, settled by AI-6.5), hand from unseen cards (3.4: no difference), hand guessed
-from its colours (3.5: no difference, 5% cheaper), full responses (3.6: no difference, +3.7%).
+from its colours (3.5: no difference, 5% cheaper), full responses (3.6: no difference, +3.7%),
+GreedyAi as our rollout policy (3.7: +2.8pp, undecided at 600 games, +61% cost).
 Defaults stay `BoardOnly`, `RealOrder` and the real hand until AI-3.9 chooses.
 
-**Next task: AI-3.7, our policy** — `GreedyAi` as OUR rollout policy beside the cheap greedy
-(`Rollout.OurPlay`, the land then the one best "no worse" play). Interview Shayne first: GreedyAi
-for every decision of ours in a rollout, or only for its plays (keeping the rollout's combat); with
-its per-turn play limit or not; and against which baseline it is measured (`beam`, the default, is
-the natural one — the opponent models are a separate axis). Expect it to be dear: GreedyAi looks one
-ply at every option. The seam is `Rollout.Score`'s own branch (`OurPlay`); AI-3's rule is one
-setting per axis, added with its second value.
+**Next task: AI-3.8, combat** — attackers judged together (MtgSimulator's `FindLethalAttacks`, or
+all-in against each alone) and a trigger's target by its owner's answer; measured. Interview Shayne
+first: which of the two (or both, as separate settings), and against which baseline. The rollout's
+combat is `Rollout.Answer` (each attacker and blocker judged alone, settled) and `Lookahead.QuickAnswer`
+(the first legal target). AI-7 measured combat judging at 41% of the search — a costlier combat
+policy shows in the cost count. Then AI-3.9: the matrix and the defaults.
 
 Notes still true:
 - The oracle shares beam's models and its board-only opponent, so it can't rank anything about the
@@ -219,4 +223,11 @@ Notes still true:
   beats passing, combat answered only when we attack — revert-checked three ways. `beam+casts`
   unchanged on the suite (35). 995 tests.
   Measured (findings): NO difference of 5pp, 288 games, 8½ min; +3.7% cost.
+- 2026-10-19: AI-3.7 — `Rollout.OurPolicy.Greedy` (`+greedyrollout`), interviewed first (Shayne:
+  every decision of ours, no play limit, against `beam`). `GreedyAi.Play` is its decision without the
+  description (none needed inside a rollout). Review: the model was first named `greedy` — the same
+  word as the AI (`--match=greedy`), so a dropped `beam+` would run the wrong thing silently; renamed
+  (the match ran under the old name, the same code). One `WithRollout` for every rollout model. Test:
+  two creatures in one turn where the cheap policy casts one (revert-checked). 996 tests. Measured
+  (findings): UNDECIDED at the 600-game cap, 317–283, +61% cost — run approved past 15 min (18 min).
 

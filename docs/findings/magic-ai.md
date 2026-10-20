@@ -597,3 +597,23 @@ White-Blue Jace 7 — mostly removal). Release, 16 logical processors:
 - A first cut opened the combat window with no attack declared — found in review, that match
   stopped. By deck, the responding side: Red-Green 60–36, White-Black 57–39, Jace 28–68.
 
+## GreedyAi as our rollout policy (2026-10-19, AI-3.7)
+
+`beam+greedyrollout` (run as `beam+greedy`, renamed after — the same code): `GreedyAi` decides every
+decision of ours in the rollouts — any play at any speed that strictly beats passing, as many a turn
+as do, every choice by its own answer — instead of the cheap policy (the land, then one play a turn
+that leaves us no worse, sorcery speed). The opponent keeps its model. Against `beam` (Shayne).
+Release, 16 logical processors:
+
+| Speed | Result | Cost per decision | Time |
+|---|---|---|---|
+| Quick check | changed 40 (13.9%); oracle agreement 77.1% (beam 86.1% — the oracle uses the cheap policy, so it favours beam); walks into a loss 1 | 3 822.5 steps a position (2 405.5, **+59%**) | ~20 s |
+| `--until-clear` | **600 games (the cap), 317–283, 52.8% ± 1.4pp — UNDECIDED: worse is ruled out (−13.66), better by 5pp is not reached (0.85)** | 2 041.1 steps, 6.7 rollouts (1 264.6, **+61%**) | 1 085 s |
+
+- **Probably a small gain, under 5pp:** +2.8pp at about 2 standard errors — the only AI-3 model so far
+  that leans better — for **61% more cost per decision**. Under AI-6's rule (5pp or more matters;
+  smaller is kept or dropped on reasoning) it is AI-3.9's call, with the table's time in the balance.
+- **Two changes in one:** GreedyAi plays more a turn AND only what strictly beats passing — the
+  cheap policy's "no worse" was chosen so setup plays (which score flat) are made. Not separated.
+- By deck, the greedy-rollout side: Red-Green 129–71, White-Black 141–59, Jace 47–153.
+

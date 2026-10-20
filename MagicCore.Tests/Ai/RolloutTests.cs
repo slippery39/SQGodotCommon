@@ -185,6 +185,24 @@ public class RolloutTests
 		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.EqualTo(spellsCast));
 	}
 
+	// Greedy (AI-3.7): GreedyAi plays our side — every play that beats passing, not one a turn. Two
+	// creatures and the mana for both, scored at the end of this turn: the cheap policy casts one.
+	[Test]
+	public void AGreedyPolicy_PlaysEveryPlayThatBeatsPassing_NotOneATurn()
+	{
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("A", "3/3"), ZoneType.Hand);
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("B", "3/3"), ZoneType.Hand);
+		var thisTurn = Rollout.Default with { LookaheadTurns = 0 };
+		double Scored(Rollout.Settings x) => Rollout.Score(s, me, Rollout.Horizon(s, x), x);
+
+		Assert.That(
+			Scored(thisTurn with { Ours = Rollout.OurPolicy.Greedy }),
+			Is.GreaterThan(Scored(thisTurn))
+		);
+	}
+
 	[Test]
 	public void BoardOnly_NeverCasts()
 	{

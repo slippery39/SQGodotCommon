@@ -32,14 +32,30 @@ public static class Rollout
 	/// measured from there.
 	/// </param>
 	/// <param name="Opponent">What the simulated opponent does — <see cref="OpponentModel"/>.</param>
+	/// <param name="Ours">How our own side plays in a rollout — <see cref="OurPolicy"/>.</param>
 	public sealed record Settings(
 		int LookaheadTurns = 2,
 		int ActionsPerTurn = 1,
 		double TerminalDiscount = 0.95,
 		int DecisionLimit = 2_000,
 		HeldValues? Held = null,
-		OpponentModel Opponent = OpponentModel.BoardOnly
+		OpponentModel Opponent = OpponentModel.BoardOnly,
+		OurPolicy Ours = OurPolicy.Cheap
 	);
+
+	/// <summary>Our own side's rollout policy (story AI-3.7) — the opponent's is its model, apart.</summary>
+	public enum OurPolicy
+	{
+		/// <summary>The land, then at most ActionsPerTurn plays a turn, each the best that leaves us no worse; sorcery speed only (<see cref="OurPlay"/>).</summary>
+		Cheap,
+
+		/// <summary>
+		/// <see cref="GreedyAi"/> decides every decision of ours — any play at any speed that beats
+		/// passing, as many as do, and every choice by its own answer (Shayne). One ply at every option:
+		/// dear.
+		/// </summary>
+		Greedy,
+	}
 
 	/// <summary>The simulated opponent, measured against each other (story AI-3).</summary>
 	public enum OpponentModel
@@ -71,6 +87,7 @@ public static class Rollout
 	public static double Score(GameState s, int me, int horizon, Settings settings)
 	{
 		var rootTurn = horizon - 1 - settings.LookaheadTurns;
+		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
 		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 		// ponytail: a rollout that hits DecisionLimit is scored where it stopped, mid-turn, beside
 		// rollouts scored at the horizon. Only a loop that never advances reaches it; flag or drop
@@ -86,6 +103,11 @@ public static class Rollout
 			if (who != me)
 			{
 				s = OpponentStep(s, who, settings);
+				continue;
+			}
+			if (greedy is not null)
+			{
+				s = greedy.Play(s);
 				continue;
 			}
 			if (s.GetPendingChoice() is { } choice)

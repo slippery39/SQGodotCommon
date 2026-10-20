@@ -24,6 +24,12 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 			? AiDecision.Answering(s, [.. Answer(s, choice)])
 			: AiDecision.Acting(s, ChooseAction(s));
 
+	/// <summary>The same decision, played and not described — inside a search's rollouts (story AI-3.7).</summary>
+	public GameState Play(GameState s) =>
+		s.GetPendingChoice() is { } choice
+			? s.Choose([.. Answer(s, choice)])
+			: s.Act(ChooseAction(s));
+
 	GameAction ChooseAction(GameState s)
 	{
 		var actions = s.DistinctMoves(s.LegalActions());

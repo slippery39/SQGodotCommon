@@ -71,6 +71,7 @@ public class AiMatchTests
 	[TestCase("beam-casts")]
 	[TestCase("beam+shuffle")]
 	[TestCase("beam+responds+guess")]
+	[TestCase("beam+greedyrollout")]
 	[TestCase("beam-held=0.25")]
 	public void EverySearch_TakesTheThreadCount(string name)
 	{
