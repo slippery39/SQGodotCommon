@@ -40,8 +40,33 @@ public static class Rollout
 		int DecisionLimit = 2_000,
 		HeldValues? Held = null,
 		OpponentModel Opponent = OpponentModel.BoardOnly,
-		OurPolicy Ours = OurPolicy.Cheap
+		OurPolicy Ours = OurPolicy.Cheap,
+		Attacks Attacks = Attacks.EachAlone,
+		Targets Targets = Targets.FirstLegal
 	);
+
+	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
+	public enum Attacks
+	{
+		/// <summary>Each creature alone, the ones after it staying home in the look-ahead.</summary>
+		EachAlone,
+
+		/// <summary>
+		/// Also "this creature and every one after it attack the player", taken if it beats the best
+		/// alone — two 3/3s into one blocker for lethal (Shayne).
+		/// </summary>
+		AllInToo,
+	}
+
+	/// <summary>How the rollout answers a target choice — a trigger's, as it goes on the stack (story AI-3.8).</summary>
+	public enum Targets
+	{
+		/// <summary>The first legal target (<see cref="Lookahead.QuickAnswer"/>).</summary>
+		FirstLegal,
+
+		/// <summary>Each legal target settled, the best for whoever chooses it — as GreedyAi answers one pick (Shayne).</summary>
+		OwnersBest,
+	}
 
 	/// <summary>Our own side's rollout policy (story AI-3.7) — the opponent's is its model, apart.</summary>
 	public enum OurPolicy
@@ -266,22 +291,60 @@ public static class Rollout
 
 	/// <summary>
 	/// Attacks and blocks are judged by what they lead to, for whoever declares them — so a player
-	/// facing lethal chump-blocks. Every other choice takes the cheap answer (first legal target …).
-	/// ponytail: each creature is judged ALONE (the rest declare nothing in the look-ahead), so an
-	/// attack that only works together — two 3/3s into one blocker for lethal — is never found.
-	/// MtgSimulator's FindLethalAttacks covers that before the search; port it if rollouts need it.
+	/// facing lethal chump-blocks. Each creature is judged alone (the rest declare nothing in the
+	/// look-ahead) unless <see cref="Attacks.AllInToo"/> weighs "all attack" too. A target choice takes
+	/// its owner's best under <see cref="Targets.OwnersBest"/>; every other choice the cheap answer.
 	/// </summary>
 	static IEnumerable<int> Answer(GameState s, ChoiceAction choice, int who, Settings settings) =>
 		choice switch
 		{
+			DeclareAttackerChoice attacker when settings.Attacks == Attacks.AllInToo =>
+				AllInOrAlone(s, attacker, who, settings),
 			DeclareAttackerChoice or DeclareBlockerChoice =>
 			[
-				choice
-					.Options.Select(o => o.Id)
-					.MaxBy(id =>
-						Evaluator.Evaluate(Lookahead.Settle(s.Choose([id])), who, settings.Held)
-					),
+				BestAlone(s, choice, who, settings).Id,
 			],
+			// Each legal target (or none, when optional) settled, the best for its owner — GreedyAi's
+			// answer to one pick, with the search's held values.
+			ChooseTargetChoice { MaxChoices: 1 } when settings.Targets == Targets.OwnersBest =>
+				new GreedyAi(who, settings.Held).Answer(s, choice),
 			_ => Lookahead.QuickAnswer(s, choice),
 		};
+
+	/// <summary>One attacker's or blocker's best option, judged alone: each settled for <paramref name="who"/>.</summary>
+	static (int Id, double Score) BestAlone(
+		GameState s,
+		ChoiceAction choice,
+		int who,
+		Settings settings
+	) =>
+		choice
+			.Options.Select(o =>
+				(o.Id, Evaluator.Evaluate(Lookahead.Settle(s.Choose([o.Id])), who, settings.Held))
+			)
+			.MaxBy(x => x.Item2);
+
+	/// <summary>
+	/// AllInToo: the best answer judged alone, unless "this one and every one after attack the player"
+	/// settles better — then attack the player (the next creature's judgment sees the same all-in line).
+	/// ponytail: the look-ahead's defender blocks only what it survives — it never chump-blocks — so an
+	/// all-in can look lethal where a defender would chump; the rollout's own blocks (Answer) do chump.
+	/// Settle the all-in line with those blocks if all-in proves too eager.
+	/// </summary>
+	static IEnumerable<int> AllInOrAlone(
+		GameState s,
+		DeclareAttackerChoice attacker,
+		int who,
+		Settings settings
+	)
+	{
+		var (alone, aloneScore) = BestAlone(s, attacker, who, settings);
+		var player = s.OpponentOf(attacker.PlayerId);
+		var allIn = Evaluator.Evaluate(
+			Lookahead.Settle(s.Choose([player]), allAttack: true),
+			who,
+			settings.Held
+		);
+		return [allIn > aloneScore ? player : alone];
+	}
 }

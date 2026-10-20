@@ -76,6 +76,10 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
 - 2026-10-19, Shayne (AI-3.7): **GreedyAi decides every decision of ours in a rollout** (plays at
   any speed, choices), **with no per-turn play limit**, measured against **`beam`** (the policy is
   its own axis). The casting opponent keeps the cheap policy (2026-10-17's default, below).
+- 2026-10-19, Shayne (AI-3.8): **attacks: all-in against each alone** — at an attack declaration
+  the rollout also settles "every creature attacks the player" and takes it if it beats the
+  alone-judged answer; **a trigger's target by its owner's answer** (each legal target settled, the
+  best for the owner) as a **separate setting**, each measured alone against **`beam`**.
 - 2026-10-17 (default, not asked): the casting opponent uses OUR cheap policy, not one of its own —
   symmetric, so a measurement isolates the model. "Our policy" (AI-3.7) swaps our side only.
 
@@ -104,8 +108,9 @@ an enum of one (AI-2.4's review removed two).
       145–143), +3.7% cost
 - [x] AI-3.7 Our policy: `GreedyAi` as our rollout policy beside the cheap greedy; measured —
       `+greedyrollout`: UNDECIDED at 600 games, 317–283 (52.8% ± 1.4pp, worse ruled out), +61% cost
-- [ ] AI-3.8 Combat: attackers judged together (MtgSimulator's `FindLethalAttacks`, or all-in
-      against each alone) and a trigger's target by its owner's answer; measured
+- [x] AI-3.8 Combat: attackers judged together (MtgSimulator's `FindLethalAttacks`, or all-in
+      against each alone) and a trigger's target by its owner's answer; measured — `+allin`: WORSE
+      by 5pp (96 games, 39–57; its look-ahead defender never chumps); `+targets`: NO difference (96–96)
 - [ ] AI-3.9 The matrix: every combination worth running, side by side in findings; pick the default
 
 ## Next
@@ -119,15 +124,18 @@ decision) is the time measure, not the clock.
 Done so far: casts from hand (AI-3.1, not shown stronger), who knows what (3.2), library shuffle
 (3.3: WORSE by 5pp, settled by AI-6.5), hand from unseen cards (3.4: no difference), hand guessed
 from its colours (3.5: no difference, 5% cheaper), full responses (3.6: no difference, +3.7%),
-GreedyAi as our rollout policy (3.7: +2.8pp, undecided at 600 games, +61% cost).
+GreedyAi as our rollout policy (3.7: +2.8pp, undecided at 600 games, +61% cost), combat (3.8:
+all-in WORSE by 5pp; targets no difference).
 Defaults stay `BoardOnly`, `RealOrder` and the real hand until AI-3.9 chooses.
 
-**Next task: AI-3.8, combat** — attackers judged together (MtgSimulator's `FindLethalAttacks`, or
-all-in against each alone) and a trigger's target by its owner's answer; measured. Interview Shayne
-first: which of the two (or both, as separate settings), and against which baseline. The rollout's
-combat is `Rollout.Answer` (each attacker and blocker judged alone, settled) and `Lookahead.QuickAnswer`
-(the first legal target). AI-7 measured combat judging at 41% of the search — a costlier combat
-policy shows in the cost count. Then AI-3.9: the matrix and the defaults.
+**Next task: AI-3.9, the matrix** — every combination worth running, side by side in findings; pick
+the defaults. Measured so far, each alone (findings): library shuffle WORSE by 5pp; hand unseen,
+hand guessed, full responses, targets — no difference; GreedyAi rollout policy +2.8pp undecided at
++61% cost; all-in WORSE by 5pp. Interview Shayne first: which defaults to settle by reasoning (the
+honest modes cost nothing measurable — `+guess` is even cheaper — while the real library order is
+worth 5pp but cheats), which combinations still need a match (e.g. `beam+greedyrollout` with the
+honest modes; whether all-in is worth a second try with judged blocks), and whether the table should
+default to the honest search. A default change runs the overnight match against the current one.
 
 Notes still true:
 - The oracle shares beam's models and its board-only opponent, so it can't rank anything about the
@@ -230,4 +238,15 @@ Notes still true:
   (the match ran under the old name, the same code). One `WithRollout` for every rollout model. Test:
   two creatures in one turn where the cheap policy casts one (revert-checked). 996 tests. Measured
   (findings): UNDECIDED at the 600-game cap, 317–283, +61% cost — run approved past 15 min (18 min).
+- 2026-10-19: AI-3.8 — `Rollout.Attacks.AllInToo` (`+allin`): at an attack declaration the rollout also
+  settles "this one and every one after attack the player" (`Lookahead.Settle(allAttack: true)`) and
+  takes it if it beats the best alone; `Rollout.Targets.OwnersBest` (`+targets`): a target choice by
+  GreedyAi's own one-pick answer. Interviewed first (Shayne). Review: allin/targets with
+  greedyrollout reach only the opponent — refused; one `BestAlone` for both attack judgments; the
+  look-ahead's defender never chump-blocks, so all-in can look lethal where a chump would save
+  (ponytail, not changed). Tests: two 3/3s into a 4/4 at 3 life found only all-in; a trigger aimed at
+  theirs where the first legal target isn't — revert-checked both. Suite: allin 8 changed, +14% cost;
+  targets 2, +1.4%; `beam` and `beam+casts` unchanged. 1 001 tests.
+  Measured (findings): `+allin` WORSE by 5pp at 96 games (39–57), +20% cost; `+targets` NO
+  difference at 192 games (96–96). Both matches approved together past 15 min (7 min in all).
 

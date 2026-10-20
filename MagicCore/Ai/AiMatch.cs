@@ -59,6 +59,10 @@ public static class AiMatch
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
+			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a
+			// target choice by its owner's best answer — beam+targets.
+			["allin"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AllInToo }),
+			["targets"] = WithRollout(r => r with { Targets = Rollout.Targets.OwnersBest }),
 			// The opponent's unseen hand drawn again from its unseen cards (AI-3.4) — matters only
 			// when the simulated opponent casts: beam+casts+unseen.
 			["unseen"] = o => o with { Hand = Hidden.Hand.ShuffleUnseen },
@@ -86,6 +90,11 @@ public static class AiMatch
 			|| models.Contains("responds")
 		)
 		&& !(models.Contains("casts") && models.Contains("responds")) // one opponent model
+		// GreedyAi makes all our rollout decisions: allin and targets would reach only the opponent's.
+		&& !(
+			models.Contains("greedyrollout")
+			&& (models.Contains("allin") || models.Contains("targets"))
+		)
 		&& !(models.Contains("unseen") && models.Contains("guess")) // one hand mode
 			? models.Aggregate(new BeamSearchAi.Settings(), (o, m) => Models[m](o))
 			: null;

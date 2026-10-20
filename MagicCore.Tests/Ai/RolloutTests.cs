@@ -203,6 +203,61 @@ public class RolloutTests
 		);
 	}
 
+	// AllInToo (AI-3.8): two 3/3s into their 4/4 at 3 life. Alone, each would be blocked and die, so
+	// neither attacks; together one gets through for exactly 3. Scored at the end of this turn.
+	[Test]
+	public void AllIn_FindsTheAttackThatOnlyWorksTogether()
+	{
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("A", "3/3"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("B", "3/3"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, TestGames.Creature("Wall", "4/4"), ZoneType.Battlefield);
+		s = WithLife(s, them, 3);
+		var thisTurn = Rollout.Default with { LookaheadTurns = 0 };
+		double Scored(Rollout.Settings x) => Rollout.Score(s, me, Rollout.Horizon(s, x), x);
+
+		Assert.That(Scored(thisTurn), Is.LessThan(5_000));
+		Assert.That(
+			Scored(thisTurn with { Attacks = Rollout.Attacks.AllInToo }),
+			Is.GreaterThan(5_000)
+		);
+	}
+
+	// OwnersBest (AI-3.8): our creature's "enters, 3 damage to target creature" — the first legal target
+	// is not theirs; judged by its owner, the trigger kills theirs.
+	[Test]
+	public void OwnersBest_AimsATrigger_AtWhatIsBestForItsOwner()
+	{
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Ours", "2/2"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, TestGames.Creature("Theirs", "2/2"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		var pinger = TestGames.Creature("Pinger", "1/1") with
+		{
+			Components =
+			[
+				new TriggeredAbilityComponent(
+					TriggerEvent.SelfEnters,
+					[new DealDamage(Ref.Target(), 3)]
+				)
+				{
+					Targets = [TargetSpec.Creature],
+				},
+			],
+		};
+		int card;
+		(s, card) = TestGames.Put(s, me, pinger, ZoneType.Hand);
+		s = s.Act(new Actions.CastSpellAction { PlayerId = me, CardId = card });
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.ChooseTargetChoice);
+		var first = Lookahead.QuickAnswer(s, s.GetPendingChoice()!).Single();
+		Assert.That(s.GetCard(first).Name, Is.Not.EqualTo("Theirs")); // what the cheap answer gets wrong
+		var thisTurn = Rollout.Default with { LookaheadTurns = 0 };
+		double Scored(Rollout.Settings x) => Rollout.Score(s, me, Rollout.Horizon(s, x), x);
+
+		Assert.That(
+			Scored(thisTurn with { Targets = Rollout.Targets.OwnersBest }),
+			Is.GreaterThan(Scored(thisTurn) + 2)
+		);
+	}
+
 	[Test]
 	public void BoardOnly_NeverCasts()
 	{

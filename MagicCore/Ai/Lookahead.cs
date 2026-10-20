@@ -13,13 +13,19 @@ public static class Lookahead
 	/// <summary>
 	/// Plays forward until the move's consequence is visible: answers choices cheaply, passes for
 	/// both players until the stack is empty, and — mid-combat — until the damage is dealt.
+	/// <paramref name="allAttack"/>: every attacker still to be declared attacks the player, where
+	/// otherwise nobody else attacks (the rollout's all-in judgment, story AI-3.8).
 	/// </summary>
-	public static GameState Settle(GameState s)
+	public static GameState Settle(GameState s, bool allAttack = false)
 	{
 		for (var i = 0; i < 200 && !s.IsOver(); i++)
 		{
 			if (s.GetPendingChoice() is { } choice)
-				s = s.Choose(QuickAnswer(s, choice));
+				s = s.Choose(
+					allAttack && choice is DeclareAttackerChoice attacker
+						? [s.OpponentOf(attacker.PlayerId)]
+						: QuickAnswer(s, choice)
+				);
 			else if (!s.StackIsEmpty() || InCombat(s))
 				s = s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
 			else

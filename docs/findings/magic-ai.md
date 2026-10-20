@@ -617,3 +617,25 @@ Release, 16 logical processors:
   cheap policy's "no worse" was chosen so setup plays (which score flat) are made. Not separated.
 - By deck, the greedy-rollout side: Red-Green 129–71, White-Black 141–59, Jace 47–153.
 
+## The rollout's combat: all-in attacks and owner-chosen targets (2026-10-19, AI-3.8)
+
+Two settings, each measured alone against `beam` (Shayne). `+allin`: at an attack declaration the
+rollout also settles "this creature and every one after it attack the player" and takes it if it
+beats the best judged alone. `+targets`: a target choice in the rollout takes its owner's best (each
+legal target settled) instead of the first legal one. Release, 16 logical processors:
+
+| Setting | Quick check | `--until-clear` | Cost per decision | Time |
+|---|---|---|---|---|
+| `+allin` | 8 changed (2.8%), oracle 83.3% | **96 games, 39–57, 40.6% ± 2.8pp — WORSE by 5pp or more** (worse 4.24) | 1 529.0 steps (beam 1 278.0, +20%) | 186 s |
+| `+targets` | 2 changed (0.7%), oracle 86.1% | **192 games, 96–96, 50.0% ± 1.8pp — NO difference of 5pp** | 1 299.0 steps (1 293.4, +0.4%) | 242 s |
+
+- **All-in attacking made the search clearly worse**, settled at the first possible check. The likely
+  cause was named in review before the run: the look-ahead's defender (`QuickAnswer`) blocks only
+  what it survives and never chump-blocks, so an all-in line scores as lethal where the rollout's own
+  defender (which judges blocks and does chump) survives — the search swings too eagerly and eats the
+  crack-back. By deck the all-in side went Red-Green 17–15, White-Black 19–13, **Jace 3–29**. Not
+  confirmed by a position; the upgrade (settle the all-in line with judged blocks) is in the code's
+  ponytail.
+- **Targets by their owner's answer change nothing worth 5pp** at no cost: on this field the first
+  legal target is rarely the wrong one (2 decisions in 288).
+

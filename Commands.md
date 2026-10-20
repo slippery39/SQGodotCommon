@@ -122,7 +122,9 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #   the search before held values; beam-held=0.25 is the search at that fraction; models combine as
 #   beam+casts+shuffle (casts: the simulated opponent casts from its real hand; responds: it casts
 #   and also answers our spells and combat at instant speed, AI-3.6 — one of the two; greedyrollout:
-#   GreedyAi plays our side in the rollouts, AI-3.7 (not --match=greedy, the AI itself); shuffle: what the
+#   GreedyAi plays our side in the rollouts, AI-3.7 (not --match=greedy, the AI itself); allin: an
+#   attack is judged all-in as well as each alone; targets: a target choice by its owner's best, AI-3.8
+#   (neither with greedyrollout); shuffle: what the
 #   search can't know of the libraries is shuffled at its root; unseen: the opponent's hand cards it
 #   hasn't seen are drawn again from its unseen cards, AI-3.4; guess: they are guessed from the colours
 #   it has shown, by rarity, AI-3.5 — only a casting opponent uses its hand: casts or responds;
