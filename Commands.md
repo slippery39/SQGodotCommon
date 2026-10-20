@@ -102,12 +102,13 @@ dotnet run -c Release --project MagicConsole -- --suite=beam
 #   "changed": decisions that differ from the committed answers (0 = a pure optimisation, AI-7)
 #   "cost per position": engine steps and rollouts — the deterministic cost, not the clock
 #   "agrees with the oracle" / "score given up": against a search looking four turns ahead, read once.
-#   It shares beam's models, so it ranks versions of ONE model; a model change goes to step 2
+#   It ranks versions of ONE model — and it reads the real library order (computed before the default
+#   went honest, AI-3.9), so it favours beam+realorder; a model change goes to step 2
 #   --accept: this AI's answers become the committed ones (after an intended behaviour change)
 #   a test says the suite is stale (the engine moved): --suite=generate (~4 min), then --suite=oracle (~1 min)
 
 # 2. The early-stop match (~10-30 min since AI-7; AI-3.4's: 9½ min), before anything becomes a default
-dotnet run -c Release --project MagicConsole -- --match=beam+shuffle,beam --until-clear
+dotnet run -c Release --project MagicConsole -- --match=beam+casts,beam --until-clear
 #   stops once A is 5pp better, 5pp worse, or neither is settled (5% error per direction), judged
 #   after every 8 seeds (96 games); --games=N is the cap (default 600). UNDECIDED at the cap: any
 #   difference is under 5pp — read the estimate
@@ -118,17 +119,18 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #   ~6x faster; use --sequential only for wall-clock time per decision; --match=x lists the AIs
 #   the "cost per decision" line (engine steps, rollouts) is deterministic: identical on every run
 #   and machine for an uncapped AI (every --match AI)
-#   beam is the search as it plays (held cards at 0.5 of their measured value — AI-1); beam-plain is
-#   the search before held values; beam-held=0.25 is the search at that fraction; models combine as
-#   beam+casts+shuffle (casts: the simulated opponent casts from its real hand; responds: it casts
-#   and also answers our spells and combat at instant speed, AI-3.6 — one of the two; greedyrollout:
-#   GreedyAi plays our side in the rollouts, AI-3.7 (not --match=greedy, the AI itself); allin: an
-#   attack is judged all-in as well as each alone; targets: a target choice by its owner's best, AI-3.8
-#   (neither with greedyrollout); shuffle: what the
-#   search can't know of the libraries is shuffled at its root; unseen: the opponent's hand cards it
-#   hasn't seen are drawn again from its unseen cards, AI-3.4; guess: they are guessed from the colours
-#   it has shown, by rarity, AI-3.5 — only a casting opponent uses its hand: casts or responds;
-#   beam-casts = beam+casts)
+#   beam is the search as it plays: held cards at 0.5 of their measured value (AI-1), the libraries
+#   honest — what it can't know is shuffled (AI-3.9). beam-plain: before held values; beam-held=0.25:
+#   at that fraction. Models combine as beam+<model>[+<model>…] (story AI-3; findings say what each did):
+#     realorder      the libraries as they really are — sees its own draws; 5pp+ stronger, cheats
+#     casts          the simulated opponent casts from its hand (board-only otherwise)
+#     responds       casts, and answers our spells and combat at instant speed (not with casts)
+#     unseen, guess  its hand's unseen cards redrawn from its unseen cards / guessed from its colours —
+#                    only with casts or responds; one of the two
+#     greedyrollout  GreedyAi plays our side in the rollouts (not --match=greedy, the AI itself)
+#     allin          an attack judged all-in as well as each alone (not with greedyrollout)
+#     targets        a target choice by its owner's best (not with greedyrollout)
+#     shuffle        the default library, kept as a name; beam-casts = beam+casts
 ```
 
 ## Play in console

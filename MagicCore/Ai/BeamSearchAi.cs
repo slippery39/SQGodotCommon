@@ -44,7 +44,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// ponytail: the root level always completes — 16 root moves measured at 1.1–2.2 s; skip root
 	/// rollouts past the limit (scoring them by the cheap evaluation) if that ever shows on the table.
 	/// </param>
-	/// <param name="Library">What the search may know of the libraries — <see cref="Hidden.Library"/> (story AI-3).</param>
+	/// <param name="Library">
+	/// What the search may know of the libraries — <see cref="Hidden.Library"/>. Honest by default
+	/// (Shayne, AI-3.9): only what a player could know, at a measured 5pp or more against the real order
+	/// (AI-6.5), which stays available for simulations that want the stronger search.
+	/// </param>
 	/// <param name="Hand">What it may know of the opponent's hand — <see cref="Hidden.Hand"/> (story AI-3.4).</param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
@@ -62,7 +66,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		double DivergenceThreshold = 5.0,
 		Rollout.Settings? RolloutSettings = null,
 		TimeSpan? TimeLimit = null,
-		Hidden.Library Library = Hidden.Library.RealOrder,
+		Hidden.Library Library = Hidden.Library.ShuffleUnknown,
 		int? Threads = null,
 		Hidden.Hand Hand = Hidden.Hand.Real
 	)

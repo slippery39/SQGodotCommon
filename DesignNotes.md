@@ -1149,6 +1149,21 @@ AI-7 cut the search's allocation in half with no decision changed (`docs/finding
   id fixed all game. Ids on `MagicPlayer` (or a per-game array) would make it a field read; ~0.1 µs a
   call, under every `CardsIn`.
 
+## MagicCore search: rollout models not taken (AI-3, 2026-10-19)
+
+Measured each alone (`docs/findings/magic-ai.md`, "AI-3's matrix"); off by default, each a `--match`
+name. Two worth another look, with their cost:
+
+- **GreedyAi as our rollout policy** (`+greedyrollout`) — +2.8pp at about 2 SE, undecided at 600
+  games, for +61% engine steps per decision. Under the 5pp rule a reasoning call: not worth the table's
+  time. Take it up if the search gets cheaper (AI-7's leftovers) or a 1 200-game run is wanted (~35 min).
+  It also mixes two changes (more plays a turn; strictly-better instead of "no worse").
+- **All-in attacks with judged blocks** (`+allin` was WORSE by 5pp) — the look-ahead's defender never
+  chump-blocks (`Lookahead.QuickAnswer`), so all-in looked lethal where a defender chumps. Settle the
+  all-in line with the rollout's own judged blocks (`Rollout.Answer`), then measure again; cost: a
+  block judgment per blocker inside every all-in settle.
+- Not run: combinations (a richer opponent with GreedyAi rollouts, honest hand with real library).
+
 ## MagicTable does not use Common's Card2D or drag-to-play (deferred)
 
 Shayne, 2026-10-09: the MagicTable front end (`SQGodotCommon/MagicTable/`) draws every card as

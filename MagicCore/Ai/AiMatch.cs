@@ -56,7 +56,10 @@ public static class AiMatch
 			["casts"] = Opponent(Rollout.OpponentModel.CastsFromHand),
 			// It also responds at instant speed in our turn (AI-3.6) — casts from hand too: beam+responds.
 			["responds"] = Opponent(Rollout.OpponentModel.Responds),
+			// The library: honest by default since AI-3.9 (shuffle, kept as a name); the real order — the
+			// search sees its own future draws, 5pp or more stronger — is beam+realorder.
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
+			["realorder"] = o => o with { Library = Hidden.Library.RealOrder },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a
@@ -90,6 +93,7 @@ public static class AiMatch
 			|| models.Contains("responds")
 		)
 		&& !(models.Contains("casts") && models.Contains("responds")) // one opponent model
+		&& !(models.Contains("shuffle") && models.Contains("realorder")) // one library mode
 		// GreedyAi makes all our rollout decisions: allin and targets would reach only the opponent's.
 		&& !(
 			models.Contains("greedyrollout")

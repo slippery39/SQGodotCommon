@@ -13,11 +13,11 @@ public static class Hidden
 {
 	public enum Library
 	{
-		/// <summary>The libraries as they really are — the AI sees its own future (AI-2's first cut).</summary>
+		/// <summary>The libraries as they really are — the AI sees its own future (AI-2's first cut; `+realorder`).</summary>
 		RealOrder,
 
 		/// <summary>
-		/// Every card whose place the searching player doesn't know is shuffled among the unknown
+		/// THE DEFAULT (AI-3.9). Every card whose place the searching player doesn't know is shuffled among the unknown
 		/// places; the known stay put — a surveil's keep, a mulligan's bottom, a card seen going on top.
 		/// </summary>
 		ShuffleUnknown,

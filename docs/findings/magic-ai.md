@@ -639,3 +639,30 @@ legal target settled) instead of the first legal one. Release, 16 logical proces
 - **Targets by their owner's answer change nothing worth 5pp** at no cost: on this field the first
   legal target is rarely the wrong one (2 decisions in 288).
 
+## AI-3's matrix, and the defaults chosen (2026-10-19, AI-3.9)
+
+Every simulation model, each measured alone by the early-stop match (5pp either way, 5% error per
+direction) against the search without it. Cost is engine steps per decision in that match.
+
+| Model (`beam+…`) | Against | Result | Cost |
+|---|---|---|---|
+| `shuffle` — libraries honest (AI-3.3) | real order | **WORSE by 5pp**, 288 games, 130–158 | +9% |
+| `casts` — opponent casts from hand (AI-3.1) | `beam` | not shown stronger (156 games, 84–72, before early stop) | +21% |
+| `unseen` — its hand redrawn from unseen cards (AI-3.4) | `casts` | no difference, 384 games, 189–195 | −2% |
+| `guess` — its hand guessed from its colours (AI-3.5) | `casts` | no difference, 384 games, 190–194 | −5% |
+| `responds` — answers at instant speed (AI-3.6) | `casts` | no difference, 288 games, 145–143 | +4% |
+| `greedyrollout` — GreedyAi plays our side (AI-3.7) | `beam` | **+2.8pp, undecided** at the 600 cap, 317–283 | +61% |
+| `allin` — attacks judged all-in too (AI-3.8) | `beam` | **WORSE by 5pp**, 96 games, 39–57 | +20% |
+| `targets` — targets by the owner's best (AI-3.8) | `beam` | no difference, 192 games, 96–96 | +0.4% |
+
+**Defaults (Shayne):** the library **honest** — `ShuffleUnknown` became the default; the real order
+is `beam+realorder` (5pp+ stronger, but it sees its own draws) — the board-only opponent, the cheap
+rollout policy, each attacker alone, the first legal target. The suite's committed answers moved to
+the honest search (24 of 288 changed — the same 24 `beam+shuffle` changed); its oracle reads the real
+order, so it now favours `beam+realorder` (86.1% against 81.3%).
+
+- **What sees more costs more and, here, rarely plays better.** Only knowledge of the real library
+  order — a cheat — was worth 5pp; the opponent's real hand, its casts and its responses were not.
+- **Combinations were not run** (Shayne: each model alone is enough to choose). A richer opponent with
+  GreedyAi rollouts, or all-in with judged blocks, are costed in DesignNotes.md.
+

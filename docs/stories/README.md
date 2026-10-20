@@ -10,13 +10,12 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-1. **AI-3** — swappable simulation models (opponent, our policy, hidden info, combat), measured — next AI-3.9, the matrix
-2. **AI-5** — the evaluator sees threats (life against the board, blockers) and abilities
-3. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-4. **LIM-1** — sealed and draft (and the last FRA card)
-5. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
-6. **DATA-1** — bring in 17lands data
-7. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
+1. **AI-5** — the evaluator sees threats (life against the board, blockers) and abilities
+2. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+3. **LIM-1** — sealed and draft (and the last FRA card)
+4. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
+5. **DATA-1** — bring in 17lands data
+6. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
 
 ## How it works
 
@@ -67,7 +66,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 
 | ID | Story | Status |
 |---|---|---|
-| [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-5](AI-5-evaluator-threat-abilities.md) | The evaluator sees threats and abilities | backlog |
@@ -76,6 +74,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
+| [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | done |
 | [AI-6](AI-6-fast-measurement.md) | Measure an AI change in minutes, or overnight | done |
 | [AI-7](AI-7-faster-search.md) | A faster search — profiled, then optimised without changing a decision | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |

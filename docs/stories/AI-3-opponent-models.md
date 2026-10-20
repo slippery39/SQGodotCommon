@@ -1,7 +1,7 @@
 ---
 id: AI-3
 title: Swappable simulation models in the search, measured for strength against time
-status: in-progress
+status: done
 area: AI
 created: 2026-10-16
 ---
@@ -15,29 +15,29 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
 
 ## Requirements
 
-- [ ] Three opponent models behind AI-2's seam (`Rollout.OpponentStep`), chosen by a setting:
+- [x] Three opponent models behind AI-2's seam (`Rollout.OpponentStep`), chosen by a setting:
   - `BoardOnly` — attacks and blocks with its board, never casts (ships in AI-2)
   - casts from hand — plays a land and threats in its own turn, by the same cheap policy as ours
     (`Rollout.OurPlay`), so the model is symmetric — MtgSimulator's lesson: a rollout that gives the
     opponent every attack and us one spell measures the asymmetry (`.claude/rules/sim-ai.md`)
   - full responses — also responds at instant speed (counters, tricks, removal) inside our turn
-- [ ] **Which hand the opponent casts from is its own setting**, swappable and measured (2026-10-17):
+- [x] **Which hand the opponent casts from is its own setting**, swappable and measured (2026-10-17):
   - real — the cards it really holds (cheap; cheats, like the real library order)
   - shuffled from its own unseen cards — its hand cards we don't know, sampled from the pool of its
     hand plus the unknown part of its library (a determinization, taken once per decision at the
     search root, from the state's seeded RNG); its own deck list is the guess
   - guessed from a deck model — sampled from what its deck COULD hold, never from its real cards
     (honest even in limited, where the opponent's pool is not known)
-- [ ] Each measured: head-to-head against the others and against `GreedyAi`, AND its cost (AI-6's
+- [x] Each measured: head-to-head against the others and against `GreedyAi`, AND its cost (AI-6's
       count: engine steps and rollouts per decision) — recorded side by side in `docs/findings/magic-ai.md`
-- [ ] Our own side's rollout policy is swappable through the same seam (cheap greedy vs `GreedyAi`)
-- [ ] Hidden information in the library has a second mode beside AI-2's "real order": **shuffle only
+- [x] Our own side's rollout policy is swappable through the same seam (cheap greedy vs `GreedyAi`)
+- [x] Hidden information in the library has a second mode beside AI-2's "real order": **shuffle only
       what isn't known**. Needs the engine to record which library positions a player knows — surveil
       keeps, "put on the top / bottom" (Loyal Tutor, Paradox Shaper, Identity Echo's bottom), mulligan
       bottoms — cleared when the library is shuffled; and which hand cards the other player knows
       (revealed, or returned from a public zone), for the hand modes above
-- [ ] Every combination worth running is measured the same way: strength AND cost per decision
-- [ ] The rollout's combat: each attacker is judged alone and a trigger's target is the first legal
+- [x] Every combination worth running is measured the same way: strength AND cost per decision
+- [x] The rollout's combat: each attacker is judged alone and a trigger's target is the first legal
       one (DesignNotes ceilings). On a full board this trades both sides away — it made the card-value
       sandbox measure combat instead of the card (findings, AI-1.6) and it shapes the search's
       scores too. Measure a better combat policy here, like the other models
@@ -80,6 +80,12 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
   the rollout also settles "every creature attacks the player" and takes it if it beats the
   alone-judged answer; **a trigger's target by its owner's answer** (each legal target settled, the
   best for the owner) as a **separate setting**, each measured alone against **`beam`**.
+- 2026-10-19, Shayne (AI-3.9, the defaults): **the library: honest by default** — `ShuffleUnknown`
+  (shuffle what the player can't know), though it costs 5pp or more (AI-6.5); **the real order stays
+  available** ("I can see a world where we might want real order as well") as `+realorder`. **The
+  opponent: board-only stays** (no richer model measured stronger; each costs more). **GreedyAi as
+  our rollout policy: off, noted** (+2.8pp undecided is not worth +61% cost). **No further matches;
+  AI-3 closes.** The library change needs no new match: it is AI-6.5's (honest vs real order, 288 games).
 - 2026-10-17 (default, not asked): the casting opponent uses OUR cheap policy, not one of its own —
   symmetric, so a measurement isolates the model. "Our policy" (AI-3.7) swaps our side only.
 
@@ -111,47 +117,20 @@ an enum of one (AI-2.4's review removed two).
 - [x] AI-3.8 Combat: attackers judged together (MtgSimulator's `FindLethalAttacks`, or all-in
       against each alone) and a trigger's target by its owner's answer; measured — `+allin`: WORSE
       by 5pp (96 games, 39–57; its look-ahead defender never chumps); `+targets`: NO difference (96–96)
-- [ ] AI-3.9 The matrix: every combination worth running, side by side in findings; pick the default
+- [x] AI-3.9 The matrix: every combination worth running, side by side in findings; pick the default —
+      each model alone (Shayne: no combinations needed); the library honest by default, the rest kept
 
 ## Next
 
-**Resumed 2026-10-19 after AI-6 and AI-7.** Measuring is now minutes: the quick check
-(`--suite=<ai>`, ~20 s) says what a change alters; the early-stop match (`--match=A,B --until-clear`)
-says whether it costs or gains 5pp — AI-3.4's took 9½ min (384 games), a fixed 156-game match 4½ min.
-Commands.md, "Measure an AI change — two speeds". The cost count (engine steps, rollouts per
-decision) is the time measure, not the clock.
+**Done (2026-10-19).** Every model is a `--match` name and measured (findings, "AI-3's matrix, and the
+defaults chosen"). The default search is now honest about the libraries (`ShuffleUnknown`); the real
+order is `beam+realorder`. Requirements met with two narrowings, by Shayne's decisions: models were
+measured each against its natural baseline (not each against GreedyAi too), and combinations were
+not run — each alone was enough to choose. Costed candidates left in DesignNotes.md ("MagicCore
+search: rollout models not taken"): GreedyAi rollouts (+2.8pp, +61% cost), all-in with judged blocks.
 
-Done so far: casts from hand (AI-3.1, not shown stronger), who knows what (3.2), library shuffle
-(3.3: WORSE by 5pp, settled by AI-6.5), hand from unseen cards (3.4: no difference), hand guessed
-from its colours (3.5: no difference, 5% cheaper), full responses (3.6: no difference, +3.7%),
-GreedyAi as our rollout policy (3.7: +2.8pp, undecided at 600 games, +61% cost), combat (3.8:
-all-in WORSE by 5pp; targets no difference).
-Defaults stay `BoardOnly`, `RealOrder` and the real hand until AI-3.9 chooses.
-
-**Next task: AI-3.9, the matrix** — every combination worth running, side by side in findings; pick
-the defaults. Measured so far, each alone (findings): library shuffle WORSE by 5pp; hand unseen,
-hand guessed, full responses, targets — no difference; GreedyAi rollout policy +2.8pp undecided at
-+61% cost; all-in WORSE by 5pp. Interview Shayne first: which defaults to settle by reasoning (the
-honest modes cost nothing measurable — `+guess` is even cheaper — while the real library order is
-worth 5pp but cheats), which combinations still need a match (e.g. `beam+greedyrollout` with the
-honest modes; whether all-in is worth a second try with judged blocks), and whether the table should
-default to the honest search. A default change runs the overnight match against the current one.
-
-Notes still true:
-- The oracle shares beam's models and its board-only opponent, so it can't rank anything about the
-  opponent's hand or casting — those go to the match.
-- A sample of hidden cards must come from a COPY of the state's RNG (`TakeRng` advances the seed),
-  or searching changes the real game's draws; `Hidden.Sample` seeds its own `Random` from the state.
-- The tree's own opponent decisions and the rollouts must see the SAME sampled state: sample once at
-  the root, before the tree, not inside `Rollout.Score`.
-- The evaluator prices the opponent's hand blind already (`HeldValues.Unknown`); a hand mode changes
-  what the opponent DOES with its hand, not how the hand is scored.
-- Deferred from AI-3.3's review: `Hidden.ShuffleUnknown` is a third copy of "out and back in" (with
-  `Shuffle` and Identity Echo — one `ReorderLibrary` helper would do; `ShuffleUnseenHand` is a
-  fourth, over two zones). Known-card gaps (AI-3.2): Theorist's Sanctum's behold reveals nothing;
-  Identity Echo's random bottom is not known; Pia's and Fblthp's `Reveal` have no test of their own.
-- `MoveKey` groups hand cards by name: a revealed and a hidden copy are one move. Moot for the
-  sampled opponent (rollouts never re-sample, and our own hand is never sampled).
+The suite's oracle reads the real order — re-read it (`--suite=oracle`, ~1 min) if the honest search
+should be ranked against an honest oracle; that is a question for whoever next uses the oracle.
 
 ## Log
 
@@ -249,4 +228,9 @@ Notes still true:
   targets 2, +1.4%; `beam` and `beam+casts` unchanged. 1 001 tests.
   Measured (findings): `+allin` WORSE by 5pp at 96 games (39–57), +20% cost; `+targets` NO
   difference at 192 games (96–96). Both matches approved together past 15 min (7 min in all).
+- 2026-10-19: AI-3.9 — interviewed (Shayne): the library honest by default, the real order kept as
+  `+realorder`; board-only, the cheap policy and the rest stay; no further matches. `BeamSearchAi
+  .Settings.Library` defaults to `ShuffleUnknown`; the suite's answers accepted for it (24 moved —
+  `beam` now reads as `beam+shuffle` did, `beam+realorder` as `beam` did); Commands.md's model list
+  rewritten; the name rules tested. 1 001 tests. AI-3 done.
 
