@@ -15,7 +15,10 @@ MagicTable/
 │                         stops, one AI move per StepAi (the search capped at ~1 s, or GreedyAi),
 │                         undo, log. Tested in SQGodotCommon.Tests
 ├── DeckSelectScene.cs    the entry: both seats' decks (built-in or a pasted Arena export), seed, AI vs
-│                         AI, search AI
+│                         AI, search AI; the way into Sealed
+├── SealedSession.cs      a sealed event (plain C#): your pool and the AI's (seed, seed + 1), the deck
+│                         from the pool, free basics, the suggested build, the table setup. Tested
+├── SealedScene.cs        Arena's deck builder: pool by colour (click in), deck list (click out), basics
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer
 │                         (pause / step / speed)
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)

@@ -17,6 +17,9 @@ public sealed record TableSetup(
 {
 	/// <summary>The last setup chosen — New game and Replay keep it.</summary>
 	public static TableSetup? Current { get; set; }
+
+	/// <summary>Where Escape from the table goes: the screen the game was set up on.</summary>
+	public string Back { get; init; } = "res://MagicTable/DeckSelectScene.tscn";
 }
 
 /// <summary>
@@ -71,6 +74,12 @@ public partial class DeckSelectScene : Control
 		_search.AddThemeFontSizeOverride("font_size", 24);
 		bottom.AddChild(_search);
 		bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+		var sealedButton = new Button { Text = "Sealed", FocusMode = FocusModeEnum.None };
+		MtgUiStyles.StylePrimary(sealedButton, 34);
+		sealedButton.CustomMinimumSize = new Vector2(240, 0);
+		sealedButton.Pressed += () =>
+			Project.GameManager.Instance.ChangeScene("res://MagicTable/SealedScene.tscn");
+		bottom.AddChild(sealedButton);
 		MtgUiStyles.StylePrimary(_start, 34);
 		_start.CustomMinimumSize = new Vector2(300, 0);
 		_start.Pressed += Start;

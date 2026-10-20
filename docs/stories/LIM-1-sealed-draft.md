@@ -66,16 +66,19 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - [x] LIM-1.3 The pack generator (seeded): Arena packs, colour and duplicate rules, rate test
       (`Limited/Boosters.cs`, `BoosterTests`; 1ca628d)
 - [x] LIM-1.4 The sealed AI builder: pool → 40, ranked by 17lands' GIH WR (`Limited/SealedBuilder.cs`,
-      `CardRatings.cs`, `tools/import_17lands.py`, `SealedBuilderTests`; uncommitted, 2026-10-20)
-- [ ] LIM-1.5 MagicTable: open a pool, build or take the suggested deck, play the AI's build
+      `CardRatings.cs`, `tools/import_17lands.py`, `SealedBuilderTests`; 45c3a57)
+- [ ] LIM-1.5 MagicTable: open a pool, build or take the suggested deck, play the AI's build —
+      built (`SealedSession`, `SealedScene`; Sealed on the deck select), captured, NOT yet played
+      by hand: Shayne's playtest ticks it
 - [ ] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game
 
 ## Next
 
-**LIM-1.5, the table.** Pools: `Boosters.Sealed(seed)` → 6 packs of `PackCard`. Decks:
-`SealedBuilder.Build(pool, CardRatings.Fra)` → colours, the 40, the sideboard — the human's suggested
-deck, and the AI opponent's from its OWN pool. Read `.claude/rules/magic-table.md` and
-`DeckSelectScene.cs` (the table's entry) first; the deck builder screen goes before it.
+**Playtest LIM-1.5** (`./Run-Godot.ps1`, MagicTable → Sealed): build by hand, take the suggested
+deck, Start, play. Every "looks off" becomes a task. Then **LIM-1.6**: Extrapolate the Impossible
+needs the sideboard in the game — `SealedSession.Sideboard` holds it; `TableSetup` doesn't carry
+it yet, nor does `MagicRules.NewGame`. The session lives in `SealedScene._session` (static), and
+Escape from a sealed game returns to it (`TableSetup.Back`).
 Traps: the collation data is by NAME (treatments folded); `GuestsPlayable` stays false until
 MC-3; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
 Re-run `python tools/import_17lands.py fra` as 17lands' public files update (weekly or so).
@@ -95,3 +98,6 @@ opponent's pool is what it guesses from.
   computed from the public game data: 295 cards, 11 under 200 games in both formats (4 of them
   Special Guests). Two built pools looked like real decks (23 spells, 17 lands, duals and hybrids
   right).
+- 2026-10-20: LIM-1.5 built. Your pool from the seed, the AI's from seed + 1; captured at 1280x720:
+  the pool by colour as card images, a suggested deck as 23 + 17 = 40 (11 Island, 5 Mountain, a
+  U/R dual). Clicks not verified by the capture — that is the playtest.

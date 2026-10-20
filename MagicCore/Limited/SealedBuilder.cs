@@ -34,7 +34,15 @@ public static class SealedBuilder
 		ManaColor.Green,
 	];
 
-	static readonly string[] Basics = ["Plains", "Island", "Swamp", "Mountain", "Forest"];
+	/// <summary>The basic lands, in WUBRG order — free in limited, never from the pool.</summary>
+	public static readonly IReadOnlyList<string> Basics =
+	[
+		"Plains",
+		"Island",
+		"Swamp",
+		"Mountain",
+		"Forest",
+	];
 
 	public static SealedDeck Build(
 		IReadOnlyList<string> pool,

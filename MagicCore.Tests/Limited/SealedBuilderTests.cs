@@ -7,7 +7,7 @@ namespace MagicCore.Tests.Limited;
 /// <summary>The AI's sealed build (story LIM-1): a legal 40 in two colours, chosen by the ratings it is given.</summary>
 public class SealedBuilderTests
 {
-	static readonly string[] BasicNames = ["Plains", "Island", "Swamp", "Mountain", "Forest"];
+	static readonly IReadOnlyList<string> BasicNames = SealedBuilder.Basics;
 
 	static List<string> Pool(int seed) =>
 		[.. Boosters.Sealed(seed).SelectMany(p => p).Select(c => c.Card)];

@@ -202,7 +202,9 @@ public partial class MagicTableScene : Control
 			else if (_plays is not null || _targeting is not null)
 				Do(() => { }); // Esc cancels a play first, like Arena
 			else
-				Project.GameManager.Instance.ChangeScene("res://MagicTable/DeckSelectScene.tscn");
+				Project.GameManager.Instance.ChangeScene(
+					TableSetup.Current?.Back ?? "res://MagicTable/DeckSelectScene.tscn"
+				);
 		}
 		else if (
 			key.Keycode == Key.Space
