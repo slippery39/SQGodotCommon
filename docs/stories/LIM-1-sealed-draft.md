@@ -50,28 +50,35 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - 2026-10-20, Shayne: **Special Guests: script all 10** — story MC-3, before pools contain them.
 - 2026-10-20, Shayne: **MagicTable first** (the builder is a UI); generator and AI builder are
   plain C# under it, tested.
+- 2026-10-20, Shayne: the builder ranks by **17lands' GIH WR** for FRA — the engine's measured
+  values put every planeswalker last and climb with cost. Sealed's rate, else Premier Draft's
+  (each needing 200 games in hand), computed from the PUBLIC game data, the only 17lands data
+  permitted outside the site (DATA-1). The ratings are any table, because custom and unreleased
+  sets need the engine's own — story DATA-2.
+- 2026-10-20, Shayne: **two colours, no splash** to start; a splash only if builds show the need.
 
 ## Tasks
 
 - [x] LIM-1.1 Interview the open questions, then split into stories (2026-10-20: LIM-2, MC-3)
 - [x] LIM-1.2 Import FRA's play-booster config from MTGJSON (`tools/`) into an embedded
       `MagicCore/Sets/FRA.boosters.json` — sheets by card NAME, treatments folded onto the FRA card
-      (uncommitted, 2026-10-20)
+      (1ca628d)
 - [x] LIM-1.3 The pack generator (seeded): Arena packs, colour and duplicate rules, rate test
-      (`Limited/Boosters.cs`, `BoosterTests`; uncommitted, 2026-10-20)
-- [ ] LIM-1.4 The sealed AI builder: pool → 40 (colours, curve, card values), its own tests
+      (`Limited/Boosters.cs`, `BoosterTests`; 1ca628d)
+- [x] LIM-1.4 The sealed AI builder: pool → 40, ranked by 17lands' GIH WR (`Limited/SealedBuilder.cs`,
+      `CardRatings.cs`, `tools/import_17lands.py`, `SealedBuilderTests`; uncommitted, 2026-10-20)
 - [ ] LIM-1.5 MagicTable: open a pool, build or take the suggested deck, play the AI's build
 - [ ] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game
 
 ## Next
 
-**LIM-1.4, the AI builder.** The packs exist: `Boosters.Sealed(seed)` → 6 packs of `PackCard`
-(card name + the sheet it came from). Read `MagicCore/Limited/Boosters.cs` and `BoosterTests` first.
-For the builder, grep MtgSimulator's deck building (`MtgSimulator/Draft/DraftGameSetup.cs`, the
-evolver's builders) and copy-adapt; value cards by `CardValues` (`Sets/FRA.values.json`) — only
-implemented cards have values, and every FRA card but Extrapolate the Impossible is implemented.
+**LIM-1.5, the table.** Pools: `Boosters.Sealed(seed)` → 6 packs of `PackCard`. Decks:
+`SealedBuilder.Build(pool, CardRatings.Fra)` → colours, the 40, the sideboard — the human's suggested
+deck, and the AI opponent's from its OWN pool. Read `.claude/rules/magic-table.md` and
+`DeckSelectScene.cs` (the table's entry) first; the deck builder screen goes before it.
 Traps: the collation data is by NAME (treatments folded); `GuestsPlayable` stays false until
 MC-3; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
+Re-run `python tools/import_17lands.py fra` as 17lands' public files update (weekly or so).
 Not yet followed: the AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) still weights
 by old draft boosters (10 C / 3 U / 1 R, 1-in-8 mythic) — point it at these sheets once a sealed
 opponent's pool is what it guesses from.
@@ -83,3 +90,8 @@ opponent's pool is what it guesses from.
   MTGJSON, Lethe); interviewed; split — draft to LIM-2, Special Guests to MC-3. Status → ready.
 - 2026-10-20: LIM-1.2 + 1.3 built — 172 pack variants (232 in MTGJSON; borderless pairs folded),
   totals and sheet sizes match the official counts (71 C, 43 U, 50+20 R/M, 270 in the wildcard).
+- 2026-10-20: LIM-1.4 — the first ratings came from 17lands' old `card_ratings/data` endpoint and
+  were wrong (a frozen snapshot: 139 cards unrated); Shayne caught it against the site. Now
+  computed from the public game data: 295 cards, 11 under 200 games in both formats (4 of them
+  Special Guests). Two built pools looked like real decks (23 spells, 17 lands, duals and hybrids
+  right).

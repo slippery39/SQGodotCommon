@@ -28,7 +28,8 @@ sealed pool in nine holds one. Shayne (2026-10-20): script all 10 before LIM-1's
 
 ## Next
 
-Read each card's full Oracle text first. Easy: Consider, Mind Twist, Root Maze, Austere Command,
+The guests must join the card data `FraCards.Get` reads: today the sealed builder
+(`Limited/SealedBuilder.cs`) would throw on a guest in a pool. Read each card's full Oracle text first. Easy: Consider, Mind Twist, Root Maze, Austere Command,
 Sublime Epiphany, Consign to Memory. Engine work likely: Splinter Twin (a granted ability making a
 token copy), Flesh Duplicate (clone), Eye of Ugin (Eldrazi cost reduction + a library search),
 Necrodominance (skip draw, end-step pay life, hand size). Grep MtgCore first for each.

@@ -18,8 +18,9 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 6. **TBL-4** — a clearer, calmer table: MTGA first, the best of MTGO kept
 7. **LIM-2** — draft against bots, on LIM-1's packs
 8. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
-9. **DATA-1** — bring in 17lands data
-10. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
+9. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+10. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+11. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
 
 ## How it works
 
@@ -77,6 +78,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
+| [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | backlog |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | backlog |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | backlog |
@@ -92,5 +94,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [MC-2](MC-2-filter-refactor.md) | One composable filter instead of six closed vocabularies | done |
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 
-Next free id per area: AI-9 · DATA-2 · DEV-3 · LIM-3 · MC-4 · TBL-6
+Next free id per area: AI-9 · DATA-3 · DEV-3 · LIM-3 · MC-4 · TBL-6
 <!-- stories:end -->

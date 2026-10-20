@@ -18,6 +18,7 @@ dotnet test MagicCore.Tests
 ```
 python tools/import_scryfall_set.py fra    # -> MagicCore/Sets/FRA.json, embedded in MagicCore
 python tools/import_mtgjson_boosters.py fra    # -> MagicCore/Sets/FRA.boosters.json (pack collation, LIM-1)
+python tools/import_17lands.py fra    # -> MagicCore/Sets/FRA.17lands.json (GIH WR from 17lands' public game data, ~30 s)
 ```
 
 Stdlib only. Re-running rewrites the file sorted by collector number, so `git diff` shows exactly

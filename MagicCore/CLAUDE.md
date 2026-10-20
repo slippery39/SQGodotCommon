@@ -86,9 +86,12 @@ MagicCore/
 │                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3)
 ├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end
 ├── Limited/Boosters.cs  FRA packs as Arena opens them (MTGJSON collation, 4-colour commons) + a seeded sealed pool (LIM-1)
+├── Limited/SealedBuilder.cs  pool → 40 in two colours, by any ratings table: the suggested deck AND the AI's own (LIM-1)
+├── Limited/CardRatings.cs  limited ratings: FRA's 17lands GIH WR (Sealed, else Premier); NOT CardValues, which miss planeswalkers
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects) + shared Stack; per-CONTROLLER battlefield
 ├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
 ├── Sets/FRA.positions.txt GENERATED position suite (PositionSuite; MagicConsole --suite=generate) — embedded, a test fails while stale
+├── Sets/FRA.17lands.json  computed by tools/import_17lands.py from 17lands' PUBLIC game data (never its API): GIH WR + games
 ├── Sets/FRA.boosters.json  imported by tools/import_mtgjson_boosters.py — play-booster sheets by card name, never hand-edit
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
 ```
