@@ -72,7 +72,7 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       by hand: Shayne's playtest ticks it
 - [x] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game (`ZoneType.Sideboard`,
       `MagicRules.WithSideboard`, `RevealTwoFromOutsideTheGame`; the table passes both pools'
-      sideboards; `FraOutsideTheGameTests`, 6/6 revert-checks; uncommitted, 2026-10-21)
+      sideboards; `FraOutsideTheGameTests`, 9/9 revert-checks; dccdafa)
 
 ## Next
 

@@ -55,7 +55,11 @@ public class FraOutsideTheGameTests : FraBoardTest
 		{
 			if (choice is ChooseAmongChoice { MinChoices: 2 } c)
 				offered.AddRange(c.Options.Select(o => o.DisplayText));
-			return choice is YesNoChoice ? [1] : choice.Options.Take(choice.MinChoices).Select(o => o.Id);
+			return choice switch // not `is YesNoChoice ? [1] : …` — CSharpier 0.29 misreads it (MagicCore/CLAUDE.md)
+			{
+				YesNoChoice => [1],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			};
 		});
 		Assert.That(offered, Is.EquivalentTo(new[] { "Bear", "Elf" }));
 	}
@@ -112,7 +116,12 @@ public class FraOutsideTheGameTests : FraBoardTest
 	public void AGameWithoutASideboard_HasNoZone_AndKeepsEveryIdItHad()
 	{
 		var plain = MagicRules.NewGame(TestGames.Deck(), TestGames.Deck(), seed: 3);
-		var with = MagicRules.NewGame(TestGames.Deck(), TestGames.Deck(), seed: 3, sideboard1: [Bear, Elf]);
+		var with = MagicRules.NewGame(
+			TestGames.Deck(),
+			TestGames.Deck(),
+			seed: 3,
+			sideboard1: [Bear, Elf]
+		);
 
 		Assert.That(plain.CardsIn(plain.Player1Id(), ZoneType.Sideboard), Is.Empty);
 		Assert.That(with.CardsIn(with.Player1Id(), ZoneType.Sideboard).Count(), Is.EqualTo(2));
