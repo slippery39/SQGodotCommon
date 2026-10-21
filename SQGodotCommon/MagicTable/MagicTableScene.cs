@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
@@ -184,6 +185,8 @@ public partial class MagicTableScene : Control
 			decks is null ? setup?.TheirSideboard : null
 		)
 		{
+			// The solution root, beside the Godot project — untracked, like sim_results/ (story TBL-5).
+			RecordTo = Path.GetFullPath(ProjectSettings.GlobalizePath("res://../game_records")),
 			Stops = stops,
 		};
 	}

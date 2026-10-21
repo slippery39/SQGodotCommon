@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
@@ -10,8 +13,10 @@ namespace MagicTable;
 
 /// <summary>
 /// The one bridge between the table and MagicCore — plain C#, no Godot types (like MtgGameManager
-/// for MtgCore). Holds the game, the seed, the human's stops, an undo history and the log. The
-/// table calls <see cref="StepAi"/> on a timer, so the AI's moves play out one at a time.
+/// for MtgCore). Holds the game, the seed, the human's stops, an undo history, the log and the
+/// <see cref="Record"/>. The table calls <see cref="StepAi"/> on a timer, so the AI's moves play out
+/// one at a time. Every move — yours, the AI's, a pass your stops or the rules made — goes through
+/// <see cref="Play"/>: recorded, then made FROM ITS TOKEN, so the record replays exactly this game.
 /// </summary>
 public sealed class MagicTableManager
 {
@@ -19,7 +24,7 @@ public sealed class MagicTableManager
 	private readonly IReadOnlyList<CardDefinition> _deck2;
 	private readonly Dictionary<int, IAi> _ais = new();
 	private readonly List<string> _log = new();
-	private readonly List<(GameState State, int LogCount)> _undo = new();
+	private readonly List<(GameState State, int LogCount, int MoveCount)> _undo = new();
 
 	public GameState State { get; private set; }
 	public int Seed { get; }
@@ -44,9 +49,17 @@ public sealed class MagicTableManager
 		{
 			_stops = value;
 			Settle();
+			Save();
 		}
 	}
 	public IReadOnlyList<string> Log => _log;
+
+	/// <summary>Every transition of this game (story TBL-5); undone moves leave it.</summary>
+	public GameRecord Record { get; private set; }
+
+	/// <summary>A folder to write <see cref="Record"/> into as the game goes; null writes nothing (tests).</summary>
+	public string? RecordTo { get; init; }
+	private string? _recordFile;
 	public bool CanUndo => _undo.Count > 0;
 
 	public MagicTableManager(
@@ -70,6 +83,21 @@ public sealed class MagicTableManager
 			sideboard2: _sideboard2
 		);
 		(HumanId, OpponentId) = (State.Player1Id(), State.Player2Id());
+		var ai = search ? nameof(BeamSearchAi) : nameof(GreedyAi);
+		Record = GameRecord.New(
+			seed,
+			deck1,
+			deck2,
+			aiVsAi ? ("AI 1", "AI 2") : ("You", "AI"),
+			_sideboard1,
+			_sideboard2
+		) with
+		{
+			About = ImmutableDictionary<string, string>
+				.Empty.Add("Player1", aiVsAi ? ai : "human")
+				.Add("Player2", ai)
+				.Add("Started", DateTime.Now.ToString("s")),
+		};
 		_ais[OpponentId] = NewAi(OpponentId);
 		if (aiVsAi)
 			_ais[HumanId] = NewAi(HumanId);
@@ -78,7 +106,11 @@ public sealed class MagicTableManager
 
 	/// <summary>The same game again: same decks, same seed, so the same shuffles.</summary>
 	public MagicTableManager Replay() =>
-		new(_deck1, _deck2, Seed, AiVsAi, Search, _sideboard1, _sideboard2) { Stops = Stops };
+		new(_deck1, _deck2, Seed, AiVsAi, Search, _sideboard1, _sideboard2)
+		{
+			RecordTo = RecordTo,
+			Stops = Stops,
+		};
 
 	private readonly IReadOnlyList<CardDefinition> _sideboard1;
 	private readonly IReadOnlyList<CardDefinition> _sideboard2;
@@ -98,17 +130,20 @@ public sealed class MagicTableManager
 	/// </summary>
 	public string? StepAi()
 	{
-		while (AiToAct)
+		string? shown = null;
+		while (AiToAct && shown is null)
 		{
 			var who = State.DecidingPlayerId();
 			var turn = State.GetGame().TurnNumber;
-			var (next, what) = _ais[who].Decide(State);
-			State = next;
+			var decision = _ais[who].Decide(State);
+			var what = decision.What;
+			Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);
 			Settle();
 			if (what != "Pass")
-				return Write(turn, who, what);
+				shown = Write(turn, who, what);
 		}
-		return null;
+		Save();
+		return shown;
 	}
 
 	/// <summary>Your move. Ignored unless it is yours to make (a click landing while the AI decides).</summary>
@@ -117,7 +152,7 @@ public sealed class MagicTableManager
 		if (HumanToAct)
 			Decided(
 				Describe.Action(State, action),
-				State.Act(action),
+				[MoveTokens.Token(State, action, null)],
 				// A manual tap keeps your priority: auto-passing now would empty the pool you just filled.
 				settle: action is not TapForManaAction
 			);
@@ -129,7 +164,10 @@ public sealed class MagicTableManager
 		if (!HumanToAct)
 			return;
 		var picked = ids.ToList();
-		Decided(Describe.Answer(State, State.GetPendingChoice()!, picked), State.Choose(picked));
+		Decided(
+			Describe.Answer(State, State.GetPendingChoice()!, picked),
+			[MoveTokens.Token(State, null, picked)]
+		);
 	}
 
 	/// <summary>Sandbox mode is open whenever someone holds priority and nothing is being asked.</summary>
@@ -146,7 +184,8 @@ public sealed class MagicTableManager
 		var where = zone == ZoneType.Library ? "on top of the library" : $"into {zone}";
 		Decided(
 			$"[sandbox] {card.Data.Name} {where} ({State.GetPlayer(playerId).Name})",
-			MagicCore.Sandbox.Put(State, playerId, card, zone)
+			[MoveTokens.Sandbox(playerId, card.Data.Name, zone)],
+			kind: "sandbox"
 		);
 	}
 
@@ -166,6 +205,7 @@ public sealed class MagicTableManager
 			return [];
 		var next = State;
 		var asked = new HashSet<int>();
+		var answers = new List<string>();
 		while (
 			next.DecidingPlayerId() == HumanId
 			&& next.GetPendingChoice() is { } choice
@@ -184,7 +224,8 @@ public sealed class MagicTableManager
 				&& o.Id != CombatOption.None
 				&& o.Id == chosen.GetValueOrDefault(creature)
 			);
-			next = next.Choose([pick?.Id ?? CombatOption.None]);
+			answers.Add(MoveTokens.Token(next, null, [pick?.Id ?? CombatOption.None]));
+			next = MoveTokens.Apply(next, answers[^1]);
 		}
 
 		string Pair(int creature, int target) =>
@@ -207,7 +248,7 @@ public sealed class MagicTableManager
 			took.Count == 0
 				? (attacking ? "No attacks" : "No blocks")
 				: $"{(attacking ? "Attack" : "Block")}: {string.Join(", ", took.Select(d => Pair(d.Key, d.Value)))}",
-			next
+			answers
 		);
 		return [];
 	}
@@ -229,9 +270,10 @@ public sealed class MagicTableManager
 				StepAi();
 				continue;
 			}
-			State = standIn.Decide(State).State;
+			Play(MoveTokens.Token(State, standIn.Decide(State)), "auto");
 			Settle();
 		}
+		Save();
 	}
 
 	/// <summary>Back to just before your last decision — the AI's replies since then go too.</summary>
@@ -239,25 +281,76 @@ public sealed class MagicTableManager
 	{
 		if (!CanUndo)
 			return;
-		var (state, logCount) = _undo[^1];
+		var (state, logCount, moveCount) = _undo[^1];
 		_undo.RemoveAt(_undo.Count - 1);
 		State = state;
 		_log.RemoveRange(logCount, _log.Count - logCount);
+		Record = Record.Truncate(moveCount);
 		// The search commits to a plan; one made past the undone decisions would replay out of order.
 		foreach (var id in _ais.Keys.ToList())
 			_ais[id] = NewAi(id);
+		Save();
 	}
 
-	/// <summary>Applied only once the engine accepted it, so a rejected move leaves no undo step.</summary>
-	private void Decided(string line, GameState next, bool settle = true)
+	/// <summary>
+	/// One decision of yours, as one or more moves (a combat declaration answers each creature, and
+	/// has already checked them all). A rejected move leaves no undo step.
+	/// </summary>
+	private void Decided(
+		string line,
+		IReadOnlyList<string> tokens,
+		bool settle = true,
+		string kind = "you"
+	)
 	{
-		_undo.Add((State, _log.Count));
+		var undo = (State, _log.Count, Record.Moves.Count);
 		var turn = State.GetGame().TurnNumber;
-		State = next;
+		foreach (var token in tokens)
+			Play(token, kind, MoveTokens.Describe(State, token));
+		_undo.Add(undo);
 		Write(turn, HumanId, line);
 		if (settle)
 			Settle();
+		Save();
 	}
+
+	/// <summary>
+	/// Makes the move from its token — what a replay will make — and records it. A move the engine
+	/// rejects throws before either changes.
+	/// </summary>
+	private void Play(string token, string kind, string said = "")
+	{
+		var next = MoveTokens.Apply(State, token);
+		Record = Record.Add(State, token, kind, said);
+		State = next;
+	}
+
+	/// <summary>
+	/// Writes the record over its file — once per public call (a decision, an AI step, an undo), not
+	/// per pass. A file that can't be written is said once in the log; the game goes on.
+	/// </summary>
+	private void Save()
+	{
+		if (RecordTo is null)
+			return;
+		try
+		{
+			Directory.CreateDirectory(RecordTo);
+			_recordFile ??= Path.Combine(
+				RecordTo,
+				$"{DateTime.Now:yyyy-MM-dd_HHmmss}_seed{Seed}.json"
+			);
+			File.WriteAllText(_recordFile, (IsOver ? Record.Ended(State) : Record).ToJson());
+		}
+		catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+		{
+			if (!_recordFailed)
+				_log.Add($"[record] not saved: {e.Message}");
+			_recordFailed = true;
+		}
+	}
+
+	private bool _recordFailed;
 
 	private string Write(int turn, int who, string what)
 	{
@@ -266,16 +359,23 @@ public sealed class MagicTableManager
 		return line;
 	}
 
-	/// <summary>Passes wherever passing is the only move (anyone), and for the human between stops.</summary>
+	/// <summary>
+	/// Passes wherever passing is the only move (anyone: <c>rule</c>), and for the human between stops
+	/// (<c>stop</c>) — AutoPass and Stops.PassUntilStop as one loop, so each pass is recorded.
+	/// </summary>
 	private void Settle()
 	{
-		GameState before;
-		do
+		while (!IsOver)
 		{
-			before = State;
-			State = State.AutoPass();
-			if (HumanToAct)
-				State = Stops.PassUntilStop(State, HumanId);
-		} while (!ReferenceEquals(before, State));
+			if (State.LegalActions() is [PassPriorityAction pass])
+				Play(MoveTokens.Token(State, pass, null), "rule");
+			else if (HumanToAct && !Stops.StopsAt(State, HumanId))
+				Play(
+					MoveTokens.Token(State, new PassPriorityAction { PlayerId = HumanId }, null),
+					"stop"
+				);
+			else
+				break;
+		}
 	}
 }

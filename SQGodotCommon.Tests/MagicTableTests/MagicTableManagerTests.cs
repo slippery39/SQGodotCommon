@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using MagicCore;
 using MagicCore.Actions;
+using MagicCore.Ai;
 using MagicCore.Sets.Fra;
 using MagicTable;
 using NUnit.Framework;
@@ -230,6 +232,93 @@ public class MagicTableManagerTests
 		Assert.That(m.Log[^1], Does.Contain("[sandbox] Last Gasp"));
 		m.Undo();
 		Assert.That(m.State, Is.SameAs(before));
+	}
+
+	/// <summary>
+	/// Every kind of move the table makes — the stand-in, a sandbox put, a manual tap, a whole combat
+	/// declaration, an undone decision, the AI, your stops, the rules — and the file it wrote replays
+	/// to exactly this position. An undone move left in the record, or a pass made but not recorded,
+	/// makes the replay stale.
+	/// </summary>
+	[Test]
+	public void TheRecordFile_ReplaysTheGameAsPlayed()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+		var m = new MagicTableManager(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], 5)
+		{
+			RecordTo = dir,
+		};
+		m.AutoplayTo(9); // seed 5: your turn 9, a creature able to attack (the lazy human below casts none)
+		RunAi(m);
+		m.Sandbox(m.HumanId, FraCards.Get("Last Gasp"), ZoneType.Hand);
+		var (tapped, undone) = (false, false);
+		for (var i = 0; i < 400 && !m.IsOver && m.State.GetGame().TurnNumber < 13; i++)
+		{
+			RunAi(m);
+			if (!m.HumanToAct)
+				continue;
+			var land = m
+				.State.CardsIn(m.HumanId, ZoneType.Battlefield)
+				.FirstOrDefault(c => m.State.TapOptions(m.HumanId, c.Id).Any());
+			if (!tapped && m.State.GetPendingChoice() is null && land is not null)
+			{
+				m.Act(m.State.TapOptions(m.HumanId, land.Id).First());
+				tapped = true;
+			}
+			else if (m.State.GetPendingChoice() is DeclareAttackerChoice)
+				m.DeclareCombat(
+					global::MagicCore
+						.Turns.Combat.AttackCandidates(m.State)
+						.ToDictionary(c => c.Id, _ => m.OpponentId)
+				);
+			else
+				PassOrFirst(m);
+			if (!undone && m.State.GetGame().TurnNumber >= 11)
+			{
+				RunAi(m);
+				m.Undo();
+				undone = true;
+			}
+		}
+		var record = GameRecord.FromJson(File.ReadAllText(Directory.GetFiles(dir).Single()));
+		Directory.Delete(dir, recursive: true);
+
+		var (_, last) = record.Replay();
+
+		Assert.That(MoveTokens.Offers(last), Is.EqualTo(MoveTokens.Offers(m.State)));
+		Assert.That(MoveTokens.Ending(last), Is.EqualTo(MoveTokens.Ending(m.State)));
+		Assert.That(tapped && undone, "precondition");
+		Assert.That(
+			m.Log.Any(l => l.Contains("You: Attack: ")),
+			"precondition: you attacked\n" + string.Join("\n", m.Log)
+		);
+		Assert.That(
+			record.Moves.Select(mv => mv.Kind).Distinct(),
+			Is.EquivalentTo(new[] { "auto", "ai", "rule", "stop", "sandbox", "you" })
+		);
+	}
+
+	[Test]
+	public void AnAiGame_IsRecordedToItsEnd()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+		var m = new MagicTableManager(
+			FraDecks.All["White-Black"],
+			FraDecks.All["Red-Green"],
+			5,
+			aiVsAi: true
+		)
+		{
+			RecordTo = dir,
+		};
+		for (var i = 0; i < 5000 && !m.IsOver; i++)
+			m.StepAi();
+		var record = GameRecord.FromJson(File.ReadAllText(Directory.GetFiles(dir).Single()));
+		Directory.Delete(dir, recursive: true);
+
+		Assert.That(m.IsOver, "precondition");
+		Assert.That(record.End, Is.EqualTo(MoveTokens.Ending(m.State)));
+		Assert.That(MoveTokens.Ending(record.Replay().Last), Is.EqualTo(record.End));
 	}
 
 	[Test]
