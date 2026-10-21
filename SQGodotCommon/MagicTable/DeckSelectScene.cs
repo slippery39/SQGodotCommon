@@ -18,6 +18,11 @@ public sealed record TableSetup(
 	/// <summary>The last setup chosen — New game and Replay keep it.</summary>
 	public static TableSetup? Current { get; set; }
 
+	/// <summary>Each seat's cards outside the game — sealed's unplayed pool (Extrapolate the Impossible).</summary>
+	public IReadOnlyList<CardDefinition> MySideboard { get; init; } = [];
+
+	public IReadOnlyList<CardDefinition> TheirSideboard { get; init; } = [];
+
 	/// <summary>Where Escape from the table goes: the screen the game was set up on.</summary>
 	public string Back { get; init; } = "res://MagicTable/DeckSelectScene.tscn";
 }

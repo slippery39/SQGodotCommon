@@ -3,7 +3,7 @@
 Status, not rules: what is scripted, what waits and why. The rules live in `MagicCore/CLAUDE.md`.
 Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memory; this file once ran one high.
 
-**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 86/86 · uncommon 109/109 · rare 63/64 · mythic 26/26 · **284/285**.
+**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-21): common 86/86 · uncommon 109/109 · rare 64/64 · mythic 26/26 · **285/285**.
 8a (rares from existing pieces): Aerid Konstrari, Craterclaw Colossus, Ingris Stingerquill, Overwrite the
 Multiverse, The Echoverse Fulcrum, Tarmogoyf, Dark Matter Manipulator, Simulacrum Shaper, Lyra Archangel
 of Dawn, Master of Barbs, Solarium Sentry, Liliana the Faultless. 8b: Stinging Vitriol, Loyal Tutor, Entrust
@@ -15,8 +15,8 @@ Hexhaven Invigorator, Seasoned Cryomancer, Identity Echo, Kindred Judgment, Karn
 Approach, Null Summoner, Omnipresence. 8e (copying permanents): Sphinx of False Conclusions, Face Yourself,
 Vindictive Triumph, Hall of Echoes. 8f (planeswalkers): Ajani Resolute, both Chandras, both Garruks, Jace
 Reality Sculptor, Tam the Possibility. 8g: Puppet Crafting, Emrakul the Exigent Doom, Uldaros Theorix (type
-change, casting from exile, casting mid-resolution). **Only Extrapolate the Impossible remains** — "from
-outside the game", held for sealed/draft's sideboard.
+change, casting from exile, casting mid-resolution). **Extrapolate the Impossible, the last** (2026-10-21,
+story LIM-1.6): "from outside the game" is the sideboard — sealed's unplayed pool. **Every FRA card plays.**
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,

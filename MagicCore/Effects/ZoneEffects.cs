@@ -1354,3 +1354,79 @@ public record ExileUntilSourceLeaves(Ref What) : Effect
 		return new(s);
 	}
 }
+
+/// <summary>
+/// Extrapolate the Impossible: "You may reveal exactly two cards you own with different names from
+/// outside the game. An opponent chooses one of them. You put that card into your hand." Outside the
+/// game is the sideboard (MagicRules.WithSideboard); with fewer than two names there, it is not asked.
+/// </summary>
+public record RevealTwoFromOutsideTheGame : Effect
+{
+	/// <summary>Set once "you may" was answered yes: now the two cards are chosen.</summary>
+	public bool Revealing { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var outside = s.CardsIn(Controller, ZoneType.Sideboard).ToList();
+		if (outside.Select(c => c.Name).Distinct().Count() < 2)
+			return new(s);
+		var context = InputContext
+			.Remove(ChoosePermanentChoice.Chosen)
+			.Remove(ChooseCardsFromHandChoice.Chosen);
+		GameAction[] steps = Revealing
+			?
+			[
+				new ChooseAmongChoice
+				{
+					PlayerId = Controller,
+					Ids = [.. outside.Select(c => c.Id)],
+					Zone = ZoneType.Sideboard,
+					DifferentNames = true,
+					MinChoices = 2,
+					MaxChoices = 2,
+					Prompt = "Reveal two cards with different names from outside the game",
+				},
+				new RevealChosenAction(),
+				new OpponentChoosesOneAction(Controller),
+			]
+			:
+			[
+				new YesNoChoice(Controller, "Reveal two cards from outside the game?"),
+				new IfChosenAction([this with { Revealing = true }]),
+			];
+		return new(
+			s.SpawnAction(new PipelineAction { PipelineContext = context, Steps = [.. steps] })
+		);
+	}
+}
+
+/// <summary>Extrapolate the Impossible: "An opponent chooses one of them. You put that card into your hand."</summary>
+public record OpponentChoosesOneAction(int PlayerId) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var revealed = ChooseCardsFromHandChoice.Read(InputContext);
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps =
+					[
+						new ChooseAmongChoice
+						{
+							PlayerId = PlayerId,
+							DeciderId = s.OpponentOf(PlayerId),
+							Ids = [.. revealed],
+							Zone = ZoneType.Sideboard,
+							MinChoices = 1,
+							MaxChoices = 1,
+							Prompt = "Choose the card they put into their hand",
+						},
+						new MoveChosenToAction(PlayerId, ZoneType.Hand),
+					],
+				}
+			)
+		);
+	}
+}

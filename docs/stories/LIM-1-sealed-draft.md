@@ -70,15 +70,17 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - [ ] LIM-1.5 MagicTable: open a pool, build or take the suggested deck, play the AI's build —
       built (`SealedSession`, `SealedScene`; Sealed on the deck select), captured, NOT yet played
       by hand: Shayne's playtest ticks it
-- [ ] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game
+- [x] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game (`ZoneType.Sideboard`,
+      `MagicRules.WithSideboard`, `RevealTwoFromOutsideTheGame`; the table passes both pools'
+      sideboards; `FraOutsideTheGameTests`, 6/6 revert-checks; uncommitted, 2026-10-21)
 
 ## Next
 
 **Playtest LIM-1.5** (`./Run-Godot.ps1`, MagicTable → Sealed): build by hand, take the suggested
-deck, Start, play. Every "looks off" becomes a task. Then **LIM-1.6**: Extrapolate the Impossible
-needs the sideboard in the game — `SealedSession.Sideboard` holds it; `TableSetup` doesn't carry
-it yet, nor does `MagicRules.NewGame`. The session lives in `SealedScene._session` (static), and
-Escape from a sealed game returns to it (`TableSetup.Back`).
+deck, Start, play — and cast Extrapolate the Impossible if the pool has it (your sideboard is the
+pool's unplayed cards; the AI chooses which you get). Every "looks off" becomes a task; once it plays
+right, LIM-1 is done. The session lives in `SealedScene._session` (static), and Escape from a sealed
+game returns to it (`TableSetup.Back`).
 Traps: the collation data is by NAME (treatments folded); `GuestsPlayable` stays false until
 MC-3; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
 Re-run `python tools/import_17lands.py fra` as 17lands' public files update (weekly or so).
@@ -98,6 +100,9 @@ opponent's pool is what it guesses from.
   computed from the public game data: 295 cards, 11 under 200 games in both formats (4 of them
   Special Guests). Two built pools looked like real decks (23 spells, 17 lands, duals and hybrids
   right).
+- 2026-10-21: LIM-1.6 — every FRA card plays (285/285). The sideboard zone exists only when given
+  one, so no existing game, golden replay or recorded position moved for it; the random-play
+  goldens moved only where Extrapolate joined a deck (30 every-card games, ~80 card replays).
 - 2026-10-20: LIM-1.5 built. Your pool from the seed, the AI's from seed + 1; captured at 1280x720:
   the pool by colour as card images, a suggested deck as 23 + 17 = 40 (11 Island, 5 Mountain, a
   U/R dual). Clicks not verified by the capture — that is the playtest.

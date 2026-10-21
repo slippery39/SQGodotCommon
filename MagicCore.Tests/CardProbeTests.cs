@@ -62,7 +62,14 @@ public class CardProbeTests
 		for (var seed = 1; seed <= games; seed++)
 		{
 			var rng = new Random(seed);
-			var s = MagicRules.NewGame(Deck(batch, seed), Deck(batch, seed + 10_000), seed);
+			// a sideboard too, so a card that reaches outside the game (Extrapolate) has something there
+			var s = MagicRules.NewGame(
+				Deck(batch, seed),
+				Deck(batch, seed + 10_000),
+				seed,
+				sideboard1: Deck(batch, seed + 20_000).Take(5),
+				sideboard2: Deck(batch, seed + 30_000).Take(5)
+			);
 			for (var i = 0; i < 20_000 && !s.IsOver(); i++)
 			{
 				if (s.GetPendingChoice() is { } choice)

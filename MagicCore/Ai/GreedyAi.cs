@@ -71,6 +71,14 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		if (choice is ChooseModesChoice { MaxChoices: > 1 } modes)
 			return Combinations(modes.Options.Select(o => o.Id).ToList(), modes.MaxChoices)
 				.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
+		if (choice is ChooseAmongChoice { MinChoices: > 1 } reveal)
+			// Extrapolate the Impossible's reveal: an opponent hands you the worse, so show the priciest.
+			// ponytail: mana value stands in for worth, as for "their hand" above — price by held values if it misplays.
+			return reveal
+				.Options.Select(o => s.GetCard(o.Id))
+				.OrderByDescending(c => c.ManaCost.ManaValue)
+				.Take(reveal.MinChoices)
+				.Select(c => c.Id);
 		if (choice is ChooseFromLibraryChoice { MaxChoices: > 1 })
 			return choice.Options.Take(choice.MaxChoices).Select(o => o.Id); // "up to N lands": more is better
 		if (choice.MaxChoices != 1)

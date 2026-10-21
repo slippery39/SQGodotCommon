@@ -1097,6 +1097,9 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the sealed builder splits basics by the spells' pips, not by WHEN they are needed (`Limited/SealedBuilder.cs`, LIM-1) — weight early pips more if builds come out colour-screwed
 - a card with under 200 games in hand in both 17lands formats is pulled toward the set's median (`Limited/CardRatings.cs`) — a rarely played card is usually weak, so the pull may flatter it; the engine's own rating (DATA-2) can replace it
 - the sealed screen's deck rows print a cost as its text ("{1}{W/U}", `MagicTable/SealedScene.cs`, LIM-1) — draw pips in a RichTextLabel with the mana icons if it reads poorly
+- Extrapolate the Impossible measures 0 in `CardValues` — the fixture has no sideboard, so it does nothing there; the search still judges a cast by its result. Give the fixture a sideboard if the AI holds it wrongly
+- the AI reveals its two highest mana values for Extrapolate the Impossible (`GreedyAi.Answer`; rollouts' `QuickAnswer` takes the first two) — mana value stands in for worth; price by held values if it misplays
+- the search knows the opponent's sideboard as it really is (`Hidden` samples hands and libraries only) — it matters only to Extrapolate's "an opponent chooses"; sample it if that pick ever looks clairvoyant
 - Damage split among blockers is automatic
 - an exhaust stamp is per card, not per ability
 - triggers are matched against the battlefield at the next priority, so a source, or an entering creature, that is gone by then — destroyed later in the same resolution — is missed (one the state-based check kills is still seen)

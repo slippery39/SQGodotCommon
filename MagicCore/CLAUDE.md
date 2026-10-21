@@ -17,7 +17,7 @@ the engine source). How to script: **`Cookbook.md`**. Every card's script beside
 
 ```
 MagicCore/
-├── MagicRules.cs        THE API: NewGame, DecidingPlayerId, LegalActions, Act, Choose, AutoPass,
+├── MagicRules.cs        THE API: NewGame (+ WithSideboard: cards outside the game), DecidingPlayerId, LegalActions, Act, Choose, AutoPass,
 │                        DistinctMoves (+ IsMoveFor, CardOf: which card a move is for;
 │                        OptionsAreObjects: every choice type, classified — a test enforces it;
 │                        TapOptions: manual tapping for a front end)
@@ -88,7 +88,7 @@ MagicCore/
 ├── Limited/Boosters.cs  FRA packs as Arena opens them (MTGJSON collation, 4-colour commons) + a seeded sealed pool (LIM-1)
 ├── Limited/SealedBuilder.cs  pool → 40 in two colours, by any ratings table: the suggested deck AND the AI's own (LIM-1)
 ├── Limited/CardRatings.cs  limited ratings: FRA's 17lands GIH WR (Sealed, else Premier); NOT CardValues, which miss planeswalkers
-├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects) + shared Stack; per-CONTROLLER battlefield
+├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects; Sideboard only when given one) + shared Stack; per-CONTROLLER battlefield
 ├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
 ├── Sets/FRA.positions.txt GENERATED position suite (PositionSuite; MagicConsole --suite=generate) — embedded, a test fails while stale
 ├── Sets/FRA.17lands.json  computed by tools/import_17lands.py from 17lands' PUBLIC game data (never its API): GIH WR + games

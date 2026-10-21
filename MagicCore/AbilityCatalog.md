@@ -98,6 +98,8 @@ and (in brackets) how many FRA cards use it, with a few. Find one: `grep -rn "re
   - `Tapped` (bool): Gallia, Tragic Host: "to the battlefield tapped".
   - `Finality` (bool): Grim Repriser, Proctor: "with a finality counter on it".
 - **`ReturnToHand(Ref What)`** — "Return target spell or creature to its owner's hand" - from the battlefield or the stack. [5: Fatehold Charm, The Theorist, Jace Beleren, Diviner of Victory // Unwind History…]
+- **`RevealTwoFromOutsideTheGame`** — Extrapolate the Impossible: "You may reveal exactly two cards you own with different names from outside the game. An opponent chooses one… [1: Extrapolate the Impossible]
+  - `Revealing` (bool): Set once "you may" was answered yes: now the two cards are chosen.
 - **`RevealUntilOntoBattlefield(CardType Types)`** — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types] card. Put that card onto the battlefield and the rest… [1: Identity Echo]
 - **`Sacrifice(Ref What)`** — "Sacrifice this …" — only what is still on the battlefield. [3: Frostbite Pyromental, Eye of Jace, Face Yourself]
 - **`SacrificeGreatestManaValue(Ref Who, CardType Types)`** — Break Under Pressure: each player named sacrifices one of their [Types] with the greatest mana value. ponytail: on a tie the first is… [1: Break Under Pressure]
@@ -247,6 +249,8 @@ and (in brackets) how many FRA cards use it, with a few. Find one: `grep -rn "re
 
 - **`ChooseAmongChoice`** — Something Worth Saving: "You may put a [Types] card from among them into your hand."
   - `Zone` (ZoneType): Where the cards are: a graveyard (mill), or exile (Uldaros' copies to cast).
+  - `DeciderId` (int): Extrapolate the Impossible: "An opponent chooses one of them." Who chooses; 0 is the cards' owner.
+  - `DifferentNames` (bool): Extrapolate the Impossible: "two cards … with different names" — one option per name.
 - **`ChooseCardsFromHandChoice`** — Pick N cards from your own hand — mulligan bottoms, discard to hand size.
   - `PlayerId` (int): Whose hand.
   - `DeciderId` (int): Who chooses, if not the hand's owner — Solve for Disappointment: "You choose … from it."
@@ -332,7 +336,7 @@ and (in brackets) how many FRA cards use it, with a few. Find one: `grep -rn "re
 
 - **Whose**: `Any`; `You`; `Opponent`
 
-- **ZoneType**: `Hand`; `Library`; `Graveyard`; `Battlefield`; `Exile`; `Stack`; `Command` (emblems, and "until your next turn" effects that outlive their source (CR 408))
+- **ZoneType**: `Hand`; `Library`; `Graveyard`; `Battlefield`; `Exile`; `Stack`; `Command` (emblems, and "until your next turn" effects that outlive their source (CR 408)); `Sideboard`
 
 ## Named shortcuts
 

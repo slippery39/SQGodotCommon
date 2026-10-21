@@ -3471,6 +3471,8 @@ public static class FraCards
 				},
 			],
 
+			// ===== LIM-1.6: from outside the game — the sideboard =====
+			["Extrapolate the Impossible"] = [Spell([], new RevealTwoFromOutsideTheGame())],
 			// ===== Mythics and a rare (8g): type change, casting from exile, casting mid-resolution =====
 			["Puppet Crafting"] =
 			[

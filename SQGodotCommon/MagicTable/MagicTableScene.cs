@@ -179,7 +179,9 @@ public partial class MagicTableScene : Control
 			decks is null ? setup?.Theirs ?? FraDecks.All["Red-Green"] : FraDecks.All[decks[1]],
 			seed,
 			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai") || setup?.AiVsAi == true,
-			!OS.GetCmdlineUserArgs().Contains("--greedy") && setup?.Search != false
+			!OS.GetCmdlineUserArgs().Contains("--greedy") && setup?.Search != false,
+			decks is null ? setup?.MySideboard : null,
+			decks is null ? setup?.TheirSideboard : null
 		)
 		{
 			Stops = stops,

@@ -21,12 +21,16 @@ public static class MagicRules
 	/// is unconfirmed, so a run can turn it off.
 	/// </param>
 	/// <param name="names">What prompts and logs call the two players ("Attack the AI"); the keys by default.</param>
+	/// <param name="sideboard1">Player 1's cards outside the game (sealed: the pool's unplayed cards).</param>
+	/// <param name="sideboard2">Player 2's.</param>
 	public static GameState NewGame(
 		IEnumerable<CardDefinition> deck1,
 		IEnumerable<CardDefinition> deck2,
 		int seed = 0,
 		bool handSmoothing = true,
-		(string Player1, string Player2)? names = null
+		(string Player1, string Player2)? names = null,
+		IEnumerable<CardDefinition>? sideboard1 = null,
+		IEnumerable<CardDefinition>? sideboard2 = null
 	)
 	{
 		var s = new GameState { RngSeed = seed };
@@ -47,7 +51,10 @@ public static class MagicRules
 			var name = names is var (n1, n2) ? (key == MagicKeys.Player1 ? n1 : n2) : key;
 			(s, var player) = s.AddObject(new MagicPlayer { Name = name }, game.Id);
 			s = s.RegisterWellKnownId(key, player.Id);
-			foreach (var type in Enum.GetValues<ZoneType>().Where(t => t != ZoneType.Stack))
+			foreach (
+				var type in Enum.GetValues<ZoneType>()
+					.Where(t => t != ZoneType.Stack && t != ZoneType.Sideboard)
+			)
 			{
 				(s, var zone) = s.AddObject(
 					new Zone { Name = $"{key} {type}", ZoneType = type },
@@ -60,12 +67,43 @@ public static class MagicRules
 				s = s.AddObject(CardFactory.Create(card, player.Id), libraryId).GameState;
 			(p1, p2) = p1 == 0 ? (player.Id, 0) : (p1, player.Id);
 		}
+		// After everything else: ids of the decks don't move, and the shuffles below don't change.
+		s = s.WithSideboard(p1, sideboard1 ?? []).WithSideboard(p2, sideboard2 ?? []);
 
 		(var rng, s) = s.TakeRng();
 		var starting = rng.Next(2) == 0 ? p1 : p2; // Bo1: a coin flip decides who plays first
 		s = s.WithGame(s.GetGame() with { StartingPlayerId = starting, ActivePlayerId = starting });
 
 		return DrawOpeningHand(DrawOpeningHand(s, p1, handSmoothing), p2, handSmoothing);
+	}
+
+	/// <summary>
+	/// Puts cards outside the game for this player — the ONE way a sideboard enters a game (NewGame
+	/// and tests). Its zone is made the first time, so a game never given one has none (Extrapolate
+	/// the Impossible: "from outside the game").
+	/// </summary>
+	public static GameState WithSideboard(
+		this GameState s,
+		int playerId,
+		IEnumerable<CardDefinition> cards
+	)
+	{
+		var key = MagicKeys.Zone(playerId, ZoneType.Sideboard);
+		var list = cards.ToList(); // read once: a one-shot sequence must not add nothing
+		if (list.Count == 0)
+			return s;
+		if (!s.WellKnownIds.ContainsKey(key))
+		{
+			var who = playerId == s.Player1Id() ? MagicKeys.Player1 : MagicKeys.Player2;
+			(s, var zone) = s.AddObject(
+				new Zone { Name = $"{who} {ZoneType.Sideboard}", ZoneType = ZoneType.Sideboard }, // as NewGame names zones
+				playerId
+			);
+			s = s.RegisterWellKnownId(key, zone.Id);
+		}
+		foreach (var card in list)
+			s = s.AddObject(CardFactory.Create(card, playerId), s.GetWellKnownId(key)).GameState;
+		return s;
 	}
 
 	/// <summary>

@@ -1,4 +1,5 @@
 using System.Linq;
+using MagicCore;
 using MagicCore.Limited;
 using MagicCore.Sets.Fra;
 using MagicTable;
@@ -47,19 +48,19 @@ public class SealedSessionTests
 		Assert.That(s.Sideboard.Count + s.FromPool.Count, Is.EqualTo(s.Pool.Count));
 	}
 
+	/// <summary>
+	/// Extrapolate the Impossible was the last (LIM-1.6): no FRA card is unscripted now, so no pool
+	/// holds one to keep out. The guard stays for sets to come (and MC-3's Special Guests).
+	/// </summary>
 	[Test]
-	public void AnUnscriptedCard_StaysInThePool()
-	{
-		// a pool that opened one, so Add is refused by the guard and not by "not in the sideboard"
-		var s = Enumerable
-			.Range(1, 500)
-			.Select(seed => new SealedSession(seed))
-			.First(p => p.Pool.Any(c => !SealedSession.Playable(c)));
-		var unscripted = s.Pool.First(c => !SealedSession.Playable(c));
-		Assert.That(s.Sideboard, Does.Contain(unscripted));
-		Assert.That(s.Add(unscripted), Is.False);
-		Assert.That(s.FromPool, Is.Empty);
-	}
+	public void EveryFraCard_IsPlayable() =>
+		Assert.That(
+			MagicCore
+				.Cards.CardDataSet.Load("FRA")
+				.Where(c => !SealedSession.Playable(c.Name))
+				.Select(c => c.Name),
+			Is.Empty
+		);
 
 	[Test]
 	public void BasicsAreFree_AndCountTowardForty()
@@ -87,6 +88,32 @@ public class SealedSessionTests
 			setup.Back,
 			Does.EndWith("SealedScene.tscn"),
 			"Escape from the table returns to the pool"
+		);
+		Assert.That(
+			setup.MySideboard.Select(c => c.Data.Name),
+			Is.EquivalentTo(s.Sideboard.Where(SealedSession.Playable))
+		);
+		Assert.That(
+			setup.TheirSideboard.Select(c => c.Data.Name),
+			Is.EquivalentTo(s.Opponent.Sideboard.Where(SealedSession.Playable))
+		);
+
+		var game = new MagicTableManager(
+			setup.Mine,
+			setup.Theirs,
+			setup.Seed!.Value,
+			sideboard1: setup.MySideboard,
+			sideboard2: setup.TheirSideboard
+		);
+		Assert.That(
+			game.State.CardsIn(game.HumanId, ZoneType.Sideboard).Select(c => c.Name),
+			Is.EquivalentTo(s.Sideboard),
+			"the table's game holds your sideboard outside the game"
+		);
+		Assert.That(
+			game.Replay().State.CardsIn(game.OpponentId, ZoneType.Sideboard).Count(),
+			Is.EqualTo(s.Opponent.Sideboard.Count),
+			"and a replay keeps both"
 		);
 	}
 

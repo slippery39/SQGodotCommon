@@ -240,6 +240,10 @@
     "Value": 16
   },
   {
+    "Name": "Extrapolate the Impossible",
+    "Value": 0
+  },
+  {
     "Name": "Eye of Jace",
     "Value": 2
   },

@@ -128,6 +128,12 @@ public record ChooseAmongChoice : ChoiceAction
 	/// <summary>Where the cards are: a graveyard (mill), or exile (Uldaros' copies to cast).</summary>
 	public ZoneType Zone { get; init; } = ZoneType.Graveyard;
 
+	/// <summary>Extrapolate the Impossible: "An opponent chooses one of them." Who chooses; 0 is the cards' owner.</summary>
+	public int DeciderId { get; init; }
+
+	/// <summary>Extrapolate the Impossible: "two cards … with different names" — one option per name.</summary>
+	public bool DifferentNames { get; init; }
+
 	public ChooseAmongChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -138,17 +144,20 @@ public record ChooseAmongChoice : ChoiceAction
 	public override ImmutableList<ChoiceOption> GetOptions(
 		GameState s,
 		ImmutableDictionary<string, object> context
-	) =>
-		Ids.Where(id => s.IsIn(id, PlayerId, Zone))
+	)
+	{
+		var cards = Ids.Where(id => s.IsIn(id, PlayerId, Zone))
 			.Select(s.GetCard)
-			.Where(c => Types == CardType.None || c.Is(Types)) // None: any card
+			.Where(c => Types == CardType.None || c.Is(Types)); // None: any card
+		return (DifferentNames ? cards.DistinctBy(c => c.Name) : cards)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();
+	}
 
 	public override int GetDecidingPlayerId(
 		GameState s,
 		ImmutableDictionary<string, object> context
-	) => PlayerId;
+	) => DeciderId == 0 ? PlayerId : DeciderId;
 }
 
 /// <summary>"Choose a color." Option id = ManaColor + 1: 0 means "none" across this engine, so no answer may be 0.</summary>

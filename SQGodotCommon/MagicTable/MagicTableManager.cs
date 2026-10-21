@@ -54,15 +54,20 @@ public sealed class MagicTableManager
 		IReadOnlyList<CardDefinition> deck2,
 		int seed,
 		bool aiVsAi = false,
-		bool search = false
+		bool search = false,
+		IReadOnlyList<CardDefinition>? sideboard1 = null,
+		IReadOnlyList<CardDefinition>? sideboard2 = null
 	)
 	{
 		(_deck1, _deck2, Seed, AiVsAi, Search) = (deck1, deck2, seed, aiVsAi, search);
+		(_sideboard1, _sideboard2) = (sideboard1 ?? [], sideboard2 ?? []);
 		State = MagicRules.NewGame(
 			deck1,
 			deck2,
 			seed,
-			names: aiVsAi ? ("AI 1", "AI 2") : ("You", "AI")
+			names: aiVsAi ? ("AI 1", "AI 2") : ("You", "AI"),
+			sideboard1: _sideboard1,
+			sideboard2: _sideboard2
 		);
 		(HumanId, OpponentId) = (State.Player1Id(), State.Player2Id());
 		_ais[OpponentId] = NewAi(OpponentId);
@@ -73,7 +78,10 @@ public sealed class MagicTableManager
 
 	/// <summary>The same game again: same decks, same seed, so the same shuffles.</summary>
 	public MagicTableManager Replay() =>
-		new(_deck1, _deck2, Seed, AiVsAi, Search) { Stops = Stops };
+		new(_deck1, _deck2, Seed, AiVsAi, Search, _sideboard1, _sideboard2) { Stops = Stops };
+
+	private readonly IReadOnlyList<CardDefinition> _sideboard1;
+	private readonly IReadOnlyList<CardDefinition> _sideboard2;
 
 	private IAi NewAi(int playerId) =>
 		Search

@@ -188,6 +188,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   is a condition and reveals nothing, a known gap). A random order (Identity Echo's bottom) is NOT
   known. A new card that looks at or reveals a hidden card must do the same, or the search's "shuffle
   what isn't known" reshuffles a card its player has seen.
+- **"From outside the game"** (Extrapolate the Impossible) is the `Sideboard` zone — Bo1 limited's
+  unplayed pool. It exists only in a game given one, through `MagicRules.WithSideboard` (NewGame's
+  `sideboard1/2`, and tests), made after both decks: a game without keeps every id it had —
+  the golden replays and the position suite's move tokens hold ids. `CardsIn` of a missing sideboard
+  is empty. A card leaving it was revealed, so `MoveCard` makes it known to everyone.
 - **Randomness** (a discard at random, a random order) takes `s.TakeRng()`, so a seeded game replays.
   A search for several cards may take two of a name unless `SearchLibrary.DifferentNames` (Fblthp).
   A spell that exiles itself as it resolves (Sphinx's Approach) is left there by `FinishSpellAction`.

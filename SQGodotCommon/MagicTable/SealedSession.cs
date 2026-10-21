@@ -111,6 +111,9 @@ public sealed class SealedSession
 		)
 		{
 			Back = "res://MagicTable/SealedScene.tscn",
+			// outside the game: each pool's unplayed cards — every one playable, Extrapolate's options
+			MySideboard = [.. Sideboard.Where(Playable).Select(FraCards.Get)],
+			TheirSideboard = [.. Opponent.Sideboard.Where(Playable).Select(FraCards.Get)],
 		};
 
 	private static int BasicIndex(string basic) =>

@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 86/86 · uncommon 109/109 · rare 63/64 · mythic 26/26 · **284/285**
+**Playable:** common 86/86 · uncommon 109/109 · rare 64/64 · mythic 26/26 · **285/285**
 
 ### Academic Ascent
 
@@ -4743,7 +4743,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may reveal exactly two cards you own with different names from outside the game. An opponent chooses one of them. You put that card into your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** FraOutsideTheGameTests
+
+**Engine pieces:** `RevealTwoFromOutsideTheGame` — Extrapolate the Impossible: "You may reveal exactly two cards you own with different…
+
+```csharp
+["Extrapolate the Impossible"] = [Spell([], new RevealTwoFromOutsideTheGame())],
+```
 
 ### Face Yourself
 

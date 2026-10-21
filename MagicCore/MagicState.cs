@@ -36,7 +36,13 @@ public static class MagicState
 	public static IEnumerable<Card> CardsIn(this GameState s, int playerId, ZoneType type)
 	{
 		// One iterator over the ids, not GetChildren(…).Cast — it sits under every rule and the search.
-		if (!s.ParentToChildren.TryGetValue(s.ZoneId(playerId, type), out var ids))
+		// A sideboard exists only in a game given one (MagicRules.WithSideboard): none, no cards. Any
+		// other zone always exists — a missing one is a bug, and still throws.
+		if (
+			type == ZoneType.Sideboard
+				&& !s.WellKnownIds.ContainsKey(MagicKeys.Zone(playerId, type))
+			|| !s.ParentToChildren.TryGetValue(s.ZoneId(playerId, type), out var ids)
+		)
 			yield break;
 		foreach (var id in ids)
 			yield return (Card)s.GetObject(id);
