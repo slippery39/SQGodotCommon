@@ -339,8 +339,11 @@ public static class MagicRules
 			_ => a, // the rest have no collection fields, so a record's own equality is the identity
 		};
 
-	/// <summary>Sacrificing one Forest is the same move as sacrificing another.</summary>
-	static string Fodder(GameState s, int id) => id == 0 ? "" : s.GetCard(id).Name;
+	/// <summary>
+	/// What a cost takes, by the same identity: a permanent by id — two of the same name can differ
+	/// (damage, counters, auras), and the player picks which (TBL-5.3) — a card elsewhere by name.
+	/// </summary>
+	static string Fodder(GameState s, int id) => id == 0 ? "" : Identity(s, id);
 
 	/// <summary>Which card a move is "from" for DistinctMoves: a permanent by id; elsewhere any copy in the same zone.</summary>
 	static string Identity(GameState s, int id) =>

@@ -393,6 +393,20 @@ oracle's answer avoids, are counted apart. Release, 16 cores:
   optimisation must keep beam's 86.1% exactly — but whether casting or shuffling is better is the
   overnight match's question.
 - 180 of the 288 positions are scored for "given up": the rest are decided within four turns.
+
+## The suite regenerated (2026-10-21, TBL-5.3)
+
+`MoveKey` now tells apart two same-named permanents a cost could take, so the old suite's move
+tokens no longer replayed; it was regenerated (1½ min) and the oracle re-read it (0.5 min). **The
+old suite had already drifted:** regenerated with the OLD `MoveKey`, 23 of 24 games differ from it
+(the engine and AI changed since `acdd6c5`; a replay checks the moves still apply, not that the AI
+would make them). The `MoveKey` change itself alters 3 of 24 games. On the new suite, Release:
+
+| `--suite=…` | Changed | Agrees with the 4-turn oracle | Given up | Wins missed | Losses walked into |
+|---|---|---|---|---|---|
+| beam | 0 of 288 | **79.2%** | 0.83 over 172 | 6 | 4 |
+
+- **79.2% is not a regression from 86.1%** — different positions. Compare versions on ONE suite.
 - **One decided game swamps the average:** before losses were counted apart, GreedyAi's single walk
   into a loss (−9 000 against an undecided best) read as 49.72 given up a position; it is 2.15.
 

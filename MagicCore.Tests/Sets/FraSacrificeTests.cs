@@ -298,6 +298,23 @@ public class FraSacrificeTests : FraBoardTest
 
 	// ===== Found by review =====
 
+	// MoveKey keyed what a cost takes by NAME, so sacrificing one Forest or the other was one move:
+	// the table, playing from move tokens (TBL-5.3), paid with the copy DistinctMoves kept, not the
+	// one clicked — and two same-named permanents can differ (damage, counters, auras).
+	[Test]
+	public void DistinctMoves_KeepsEachPermanentACostCanTake()
+	{
+		var marwyn = Field(FraCards.Get("Marwyn, the Clearcutter"), me);
+		int[] forests = [Field(TestGames.Card("Forest"), me), Field(TestGames.Card("Forest"), me)];
+
+		var taken = s.DistinctMoves(s.LegalActions())
+			.OfType<ActivateAbilityAction>()
+			.Where(a => a.CardId == marwyn)
+			.Select(a => a.SacrificeId);
+
+		Assert.That(taken, Is.SupersetOf(forests));
+	}
+
 	// CR 603.3b across state-based-check rounds: the non-active player's trigger (seen in round 1)
 	// must end up on TOP of the active player's (seen in round 2, after the check killed a creature).
 	[Test]
