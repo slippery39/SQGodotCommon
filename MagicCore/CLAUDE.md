@@ -77,6 +77,8 @@ MagicCore/
 ├── Ai/AiMatch.cs        THE strength harness: AI vs AI, every deck pairing, seats swapped (MagicConsole --match)
 ├── Ai/EarlyStop.cs      when a match has said enough: 5pp better / worse / neither, judged on mirror pairs (--until-clear)
 ├── Ai/PositionSuite.cs  THE quick check: recorded self-play positions, an AI decides again, what changed (--suite=A)
+├── Ai/MoveTokens.cs     a move as a token (a3 · c12,15 · t41:2 tap · s5:Hand:Name sandbox) + Offers/Ending fingerprints — the suite's and the records'
+├── Ai/GameRecord.cs     a played game, EVERY transition kept (you/ai/stop/rule/sandbox), replayed by token alone; stale says so (TBL-5)
 ├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer
 ├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;

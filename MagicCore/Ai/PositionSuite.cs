@@ -11,8 +11,8 @@ namespace MagicCore.Ai;
 /// every move made and replayed in milliseconds. An AI decides in each; the report says which
 /// decisions differ from the committed AI's stored answers, and what the decisions cost.
 ///
-/// A move is stored as its index among the position's distinct moves (<c>a3</c>), or the ids
-/// answering its choice (<c>c12,15</c>; <c>c</c> for none). The generator plays the RECORDED move,
+/// A move is a <see cref="MoveTokens"/> token — its index among the position's distinct moves, or the
+/// ids answering its choice; the format lives there, shared with the table's game records (TBL-5). The generator plays the RECORDED move,
 /// not the state the AI returned, so a recording replays exactly by construction. An engine change
 /// can make it replay something else: each position stores a fingerprint of what it offers and each
 /// game one of how it ended, and a replay that differs from either fails as stale — never silently.
@@ -92,72 +92,42 @@ public static class PositionSuite
 		);
 
 	public sealed class StaleException(string message)
-		: Exception($"{message} — the suite is stale; regenerate it: {GenerateCommand}");
+		: MoveTokens.StaleException(
+			$"{message} — the suite is stale; regenerate it: {GenerateCommand}"
+		);
 
-	// ===== Moves as tokens =====
+	// ===== Moves as tokens: MoveTokens, shared with the table's game records (TBL-5) =====
 
-	public static string Token(GameState s, AiDecision decision) =>
-		Token(s, decision.Action, decision.Answer);
+	public static string Token(GameState s, AiDecision decision) => MoveTokens.Token(s, decision);
 
-	static string Token(GameState s, GameAction? action, IReadOnlyList<int>? answer)
-	{
-		if (answer is not null)
-			return "c" + string.Join(",", answer);
-		var key = s.MoveKey(action!);
-		var index = s.DistinctMoves(s.LegalActions()).FindIndex(a => Equals(s.MoveKey(a), key));
-		return index >= 0
-			? $"a{index}"
-			: throw new InvalidOperationException($"{action}: not among the distinct moves");
-	}
-
-	/// <summary>A token against the state it applies to: the action, or the choice's ids — the one parser.</summary>
-	static (GameAction? Action, int[]? Ids) Resolve(GameState s, string token)
-	{
-		try
-		{
-			return token switch
-			{
-				"c" => (null, []),
-				['c', .. var ids] => (null, [.. ids.Split(',').Select(int.Parse)]),
-				['a', .. var index] => (s.DistinctMoves(s.LegalActions())[int.Parse(index)], null),
-				_ => throw new FormatException($"not a move token: '{token}'"),
-			};
-		}
-		catch (Exception e)
-			when (e is FormatException or OverflowException or ArgumentOutOfRangeException)
-		{
-			throw new StaleException($"move '{token}' no longer applies ({e.Message})");
-		}
-	}
+	static string Token(GameState s, GameAction? action, IReadOnlyList<int>? answer) =>
+		MoveTokens.Token(s, action, answer);
 
 	public static GameState Apply(GameState s, string token)
 	{
-		var (action, ids) = Resolve(s, token);
 		try
 		{
-			return action is not null ? s.Act(action) : s.Choose(ids!);
+			return MoveTokens.Apply(s, token);
 		}
-		catch (InvalidOperationException e)
+		catch (MoveTokens.StaleException e)
 		{
-			throw new StaleException($"move '{token}' no longer applies ({e.Message})");
+			throw new StaleException(e.Message);
 		}
 	}
 
-	static string Describe(GameState s, string token) =>
-		Resolve(s, token) switch
+	static string Describe(GameState s, string token)
+	{
+		try
 		{
-			({ } action, _) => MagicCore.Describe.Action(s, action),
-			(_, var ids) => MagicCore.Describe.Answer(s, s.GetPendingChoice()!, ids!),
-		};
+			return MoveTokens.Describe(s, token);
+		}
+		catch (MoveTokens.StaleException e)
+		{
+			throw new StaleException(e.Message);
+		}
+	}
 
-	/// <summary>Two answers are the same if they pick the same move, or the same ids in any order.</summary>
-	static bool Same(string a, string b) =>
-		a == b
-		|| (
-			a[0] == 'c'
-			&& b[0] == 'c'
-			&& a[1..].Split(',').Order().SequenceEqual(b[1..].Split(',').Order())
-		);
+	static bool Same(string a, string b) => MoveTokens.Same(a, b);
 
 	// ===== What a position offers =====
 
@@ -180,39 +150,9 @@ public static class PositionSuite
 		return enabled >= 2 && enabled > choice.MinChoices;
 	}
 
-	/// <summary>What a position offers, as a stable hash: its distinct moves, or its choice's options.</summary>
-	static string Offers(GameState s) =>
-		Fnv(
-			s.GetPendingChoice() is { } choice
-				? choice.Options.Select(o => $"{o.Id}:{o.DisplayText}:{o.IsEnabled}")
-				: s.DistinctMoves(s.LegalActions()).Select(a => s.MoveKey(a).ToString()!)
-		);
+	static string Offers(GameState s) => MoveTokens.Offers(s);
 
-	/// <summary>How a game ended, as a stable hash: the turn, and each player's life and zones.</summary>
-	static string Ending(GameState s) =>
-		Fnv(
-			new[] { s.Player1Id(), s.Player2Id() }.Select(p =>
-				$"{s.GetGame().TurnNumber}:{s.GetPlayer(p).Life}:{string.Join(",", PlayerZones.Select(z => s.CardsIn(p, z).Count()))}"
-			)
-		);
-
-	static readonly ZoneType[] PlayerZones =
-	[
-		ZoneType.Library,
-		ZoneType.Hand,
-		ZoneType.Battlefield,
-		ZoneType.Graveyard,
-		ZoneType.Exile,
-	];
-
-	/// <summary>FNV-1a — stable across processes, where string.GetHashCode is not.</summary>
-	static string Fnv(IEnumerable<string> parts)
-	{
-		var hash = 2166136261u;
-		foreach (var c in string.Join("|", parts))
-			hash = unchecked((hash ^ c) * 16777619u);
-		return hash.ToString("x8");
-	}
+	static string Ending(GameState s) => MoveTokens.Ending(s);
 
 	// ===== Replay =====
 

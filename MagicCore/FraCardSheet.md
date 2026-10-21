@@ -886,7 +886,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target creature gets -3/-3 until end of turn.
 
-**Status:** scripted · **tests naming it:** ArenaDeckTests, FraCardTests, FraCommonTests, FraGraveyardTests, FraModalTests, FraSacrificeTests, FraTriggerTests
+**Status:** scripted · **tests naming it:** ArenaDeckTests, FraCardTests, FraCommonTests, FraGraveyardTests, FraModalTests, FraSacrificeTests, FraTriggerTests, GameRecordTests
 
 **Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1121,7 +1121,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, each opponent discards a card.
 
-**Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests, GameRecordTests
 
 **Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
