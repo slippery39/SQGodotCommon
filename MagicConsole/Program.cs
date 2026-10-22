@@ -101,20 +101,31 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 
 // --record=FILE [--passes]: replay a game record (the table writes them to game_records/, TBL-5) and
 // print it, move by move. A record the engine no longer replays says which move, and exits 1.
+// --record=FILE --keep=NAME --at=N: keep it as an AI test case (TBL-5.5) — copied to
+// MagicCore.Tests/Records/NAME.json (run from the solution root), and a test to start from printed.
 if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 {
 	try
 	{
 		var record = GameRecord.FromJson(File.ReadAllText(recordArg["--record=".Length..]));
-		foreach (var line in record.Transcript(flags.Contains("--passes")))
-			Console.WriteLine(line);
+		if (args.FirstOrDefault(a => a.StartsWith("--keep="))?["--keep=".Length..] is { } keep)
+			Console.WriteLine(Keep(record, keep, Arg("at")));
+		else
+			foreach (var line in record.Transcript(flags.Contains("--passes")))
+				Console.WriteLine(line);
+	}
+	catch (KeepRefused e)
+	{
+		Console.WriteLine(e.Message);
+		Environment.ExitCode = 1;
 	}
 	catch (MoveTokens.StaleException e)
 	{
 		Console.WriteLine($"Stale: {e.Message}");
 		Environment.ExitCode = 1;
 	}
-	catch (Exception e) when (e is IOException or System.Text.Json.JsonException)
+	catch (Exception e)
+		when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
 	{
 		Console.WriteLine($"Can't read the record: {e.Message}");
 		Environment.ExitCode = 1;
@@ -305,3 +316,72 @@ static string? Read()
 		Environment.Exit(0);
 	return line;
 }
+
+// Copies the record into the tests and returns a test to start from: the position, what was played
+// there, and what the AI that made it plays now — the CONTROL every AiPositionTests case has.
+string Keep(GameRecord record, string name, int? at)
+{
+	if (!System.Text.RegularExpressions.Regex.IsMatch(name, "^[A-Za-z][A-Za-z0-9_]*$"))
+		throw new KeepRefused(
+			$"--keep=NAME: a letter, then letters, digits or _ (it names the test too), not '{name}'"
+		);
+	if (at is not { } n || n < 1 || n > record.Moves.Count)
+		throw new KeepRefused(
+			$"--keep needs --at=N, a move from 1 to {record.Moves.Count} (the transcript's #N)"
+		);
+	var move = record.Moves[n - 1];
+	if (move.Kind is not ("you" or "ai" or "auto"))
+		throw new KeepRefused(
+			$"move #{n} is a {move.Kind} move, not a decision — keep a you, ai or auto move"
+		);
+	var dir = Path.Combine("MagicCore.Tests", "Records");
+	if (!Directory.Exists("MagicCore.Tests"))
+		throw new KeepRefused("Run from the solution root — no MagicCore.Tests here.");
+	var path = Path.Combine(dir, $"{name}.json");
+	if (File.Exists(path))
+		throw new KeepRefused($"{path} exists — pick another name.");
+
+	var s = record.Before(n);
+	var played = MoveTokens.Describe(s, move.Token);
+	// The AI that made the play, as a test can run it: the stand-in (auto) and a greedy table are
+	// GreedyAi; the table's search is capped at 1 s, which no test repeats, so here it is the default
+	// search. A human's move is set beside the search's.
+	var byAi = move.Kind != "you";
+	var greedy =
+		move.Kind == "auto"
+		|| byAi && record.About.GetValueOrDefault($"Player{move.By}") == nameof(GreedyAi);
+	var (ai, aiCode) = greedy
+		? ((IAi)new GreedyAi(s.DecidingPlayerId()), "new GreedyAi(s.DecidingPlayerId())")
+		: (new BeamSearchAi(s.DecidingPlayerId()), "new BeamSearchAi(s.DecidingPlayerId())");
+	var now = MoveTokens.Token(s, ai.Decide(s));
+	var nowSays = MoveTokens.Describe(s, now);
+	var who = greedy ? "GreedyAi" : "the search";
+	var control =
+		!byAi
+			? $"What {who} plays here now ({nowSays}) — a human's move; assert the play it SHOULD make."
+		: MoveTokens.Same(now, move.Token)
+			? $"The control: {who} still makes the recorded play ({nowSays})."
+		: $"NOT A CONTROL: {who} now plays {nowSays}, not the recorded play — find a position that still provokes it.";
+	Directory.CreateDirectory(dir);
+	File.WriteAllText(path, record.ToJson());
+	return $$"""
+		{{path}}: kept. A test to start from, for MagicCore.Tests/Ai/AiPositionTests.cs:
+
+			// TODO who reported it, when, and what looked wrong. Kept table game "{{name}}", move #{{n}}
+			// (turn {{s.GetGame().TurnNumber}}): {{record.Players[
+			move.By - 1
+		]}} [{{move.Kind}}] {{played}}.
+			[Test]
+			public void {{name}}_TODO()
+			{
+				var s = KeptRecords.Before("{{name}}", {{n}});
+				var choice = MoveTokens.Token(s, {{aiCode}}.Decide(s));
+
+				// {{control}}
+				Assert.That(MoveTokens.Same(choice, "{{now}}"));
+			}
+		""";
+}
+
+/// <summary>A --keep the console won't do, and why.</summary>
+sealed class KeepRefused(string message) : Exception(message);

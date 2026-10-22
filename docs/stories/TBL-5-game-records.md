@@ -48,6 +48,9 @@ own choices differ from the AI's.
   does, so the table must too.
 - 2026-10-21, Shayne: a permanent a cost takes is told apart by id in `MoveKey` (MagicCore), so a
   token keeps WHICH one you clicked — fixed in the engine, not worked around in the table.
+- 2026-10-22, Shayne: kept records live in **`MagicCore.Tests/Records/`** (tracked, embedded in
+  the test assembly), and the one step is the console — `--record=FILE --keep=NAME --at=N` copies
+  the record in and prints a test to paste into `AiPositionTests`, its control included.
 
 ## Tasks
 
@@ -64,21 +67,31 @@ own choices differ from the AI's.
       (forced passes only with `--passes`), `MagicConsole --record=FILE`; stale → names the move,
       exit 1; an unreadable file says so. A headless table game (seed 5, autoplay to 6) replayed
       move by move; a corrupted copy named move 21. Tests: the transcript; a deck card that no longer
-      exists is stale, not a crash — both revert-checked (uncommitted, 2026-10-22)
-- [ ] TBL-5.5 A position from a record → an AI test case in one step (for AI-8)
+      exists is stale, not a crash — both revert-checked (fbd7c6f, 2026-10-22)
+- [x] TBL-5.5 A position from a record → an AI test case in one step (for AI-8): the transcript
+      numbers its moves (`#110`), `GameRecord.Before(at)`, `KeptRecords` (tests), `--keep=NAME
+      --at=N` (refuses an existing name, a name that isn't an identifier, a move that isn't a
+      decision, the wrong folder). The control is the AI that MADE the play — GreedyAi for the
+      stand-in or a greedy table, else the default search (the table's 1 s cap isn't repeatable) —
+      and says NOT A CONTROL when it no longer makes it (review). Checked end to end on a headless
+      table game: the printed test pasted verbatim compiled and passed, failed with a wrong control;
+      a corrupted kept record failed `EveryKeptRecord_StillReplays` by name. `Records/Sample.json`
+      (that game, move #110) stays, so the embedding is tested — revert-checked by breaking the glob
+      (uncommitted, 2026-10-22)
 - [ ] TBL-5.6 The comparison report: the search's and the oracle's choice at each human decision
 
 ## Next
 
-**TBL-5.5, a position from a record → an AI test case in one step.** The position before move N is
-`record.Replay().Before[N - 1]`, so the case needs only the record and N. To decide first (ask
-Shayne): where kept records live (a tracked folder in MagicCore.Tests, e.g. `Records/`, copied to
-the output like the suite's file), and what the "one step" is — likely the console:
-`--record=FILE --keep=NAME --at=N` copies the file in and prints a test skeleton for
-`AiPositionTests` (who decided, what the human chose, the AI's choice now). That file's own rule
-applies: each case has a CONTROL (the AI that made the play still makes it). A stale kept record
-fails its test — the same as the position suite. The transcript's move numbers are what `--at`
-needs; `Transcript` doesn't print them yet.
+**TBL-5.6, the comparison report** (requirement 4). For each `you` move of a record (`Kind ==
+"you"`; a combat declaration is several — one per creature): the position (`Before`), what the
+search plays there and what the oracle plays, and where YOUR pick ranks among the oracle's scores.
+The scoring exists: `PositionSuite.WithOracle` runs `new BeamSearchAi(p, PositionSuite.OracleSettings)`
+and reads `FirstMoveScores` (every first move searched — the default `beam` does not search them
+all, so rank only by the oracle; for the search, say same/different). Parallel over positions
+like `WithOracle`. A console flag beside `--keep` (`--record=FILE --compare`): one line per
+decision where either differs, then a summary (agreed with search %, with oracle %, score given
+up). Ask Shayne whether the search is the table's (`Settings.Interactive`, 1 s — what he played
+against) or the default — they can differ.
 
 ## Log
 
@@ -96,3 +109,4 @@ needs; `Transcript` doesn't print them yet.
   the table's recording is the commit after it.
 - 2026-10-22: TBL-5.4 — the console replays a record. A sandbox put now reads "Put X into Hand (AI)"
   — whose zone, since either seat can be the target (review); the table's own log line is unchanged.
+- 2026-10-22: TBL-5.5 — a recorded position becomes an AI test case in one console step.

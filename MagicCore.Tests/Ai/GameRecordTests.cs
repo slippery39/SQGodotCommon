@@ -108,6 +108,44 @@ public class GameRecordTests
 	}
 
 	[Test]
+	public void ATranscriptsMoveNumber_IsThePositionBeforeThatMove()
+	{
+		var (record, _) = PlayRecorded(seed: 4);
+		var line = record.Transcript().Single(l => l.Contains("[sandbox]"));
+		var at = int.Parse(line[1..line.IndexOf(' ')]);
+
+		Assert.That(record.Moves[at - 1].Kind, Is.EqualTo("sandbox"));
+		Assert.That(MoveTokens.Offers(record.Before(at)), Is.EqualTo(record.Moves[at - 1].Offers));
+		Assert.Throws<ArgumentOutOfRangeException>(() => record.Before(record.Moves.Count + 1));
+	}
+
+	/// <summary>
+	/// <c>Records/Sample.json</c>: a headless table game (GreedyAi, seed 5, the stand-in to turn 6),
+	/// kept with <c>--keep=Sample --at=110</c> — so the embedding is checked, and the test that printed
+	/// (its control: GreedyAi still casts Samut there) runs. Stale with the engine like any kept record.
+	/// </summary>
+	[Test]
+	public void TheSampleKeptRecord_IsEmbedded_AndItsPrintedControlHolds()
+	{
+		Assert.That(KeptRecords.Names, Does.Contain("Sample"), "the csproj embeds Records/*.json");
+		var s = KeptRecords.Before("Sample", 110);
+		var choice = MoveTokens.Token(s, new GreedyAi(s.DecidingPlayerId()).Decide(s));
+
+		Assert.That(MoveTokens.Same(choice, KeptRecords.Get("Sample").Moves[109].Token));
+	}
+
+	/// <summary>A kept record (an AI test case, TBL-5.5) the engine no longer replays fails HERE by name.</summary>
+	[Test]
+	public void EveryKeptRecord_StillReplays()
+	{
+		foreach (var name in KeptRecords.Names)
+			Assert.DoesNotThrow(
+				() => KeptRecords.Get(name).Replay(),
+				$"{name}: stale — keep it again from a new game, or drop it with its test"
+			);
+	}
+
+	[Test]
 	public void ARecord_SurvivesItsFile()
 	{
 		var (record, _) = PlayRecorded(seed: 5);

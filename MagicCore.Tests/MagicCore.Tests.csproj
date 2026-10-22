@@ -23,6 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Table games kept as AI test cases (KeptRecords, story TBL-5.5). -->
+    <EmbeddedResource Include="Records\*.json" LogicalName="Records.%(Filename).json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MagicCore\MagicCore.csproj" />
   </ItemGroup>
 

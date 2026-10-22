@@ -9,6 +9,8 @@ namespace MagicCore.Tests.Ai;
 /// test names who reported it and when. The real cards are used — the report is about them.
 /// Each position has a CONTROL: the AI that made the bad play still makes it there, so a position
 /// that stops provoking it (a setup change, a card change) fails loudly instead of passing for nothing.
+/// A play from a recorded table game needs no rebuilding: keep the record (<see cref="KeptRecords"/>)
+/// and start from the test the console prints.
 /// </summary>
 public class AiPositionTests
 {

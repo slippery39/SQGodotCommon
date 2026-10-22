@@ -46,6 +46,10 @@ Open questions:
 
 ## Next
 
+Every table game is now recorded (`game_records/`, TBL-5): a NEW report from a played game needs no
+rebuilding — `MagicConsole --record=FILE --keep=NAME --at=N` makes it a test case (`Commands.md`).
+AI-8.1 and 8.2 predate the records, so they are still rebuilt by hand.
+
 Rebuild AI-8.1 first: a position with the AI's 2/2, the opponent's planeswalker that draws on its
 plus, the opponent at a high life total — `Decide` for `GreedyAi` and `beam`. Then read `Evaluator`
 (the planeswalker term) and `Rollout.Answer` (attack options: the player and each walker). For AI-8.2

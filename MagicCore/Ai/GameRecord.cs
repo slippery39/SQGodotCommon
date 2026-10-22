@@ -134,9 +134,16 @@ public sealed record GameRecord
 		return (before, s);
 	}
 
+	/// <summary>The position before move <paramref name="at"/> (from 1, as the transcript numbers it).</summary>
+	public GameState Before(int at) =>
+		at >= 1 && at <= Moves.Count
+			? Replay().Before[at - 1]
+			: throw new ArgumentOutOfRangeException(nameof(at), $"moves are 1 to {Moves.Count}");
+
 	/// <summary>
-	/// The game as text (story TBL-5.4): <c>T3 You [you] Cast Last Gasp …</c>, one line a move, then
-	/// how it stands. Passes made FOR a player (<c>rule</c>, <c>stop</c>) only with
+	/// The game as text (story TBL-5.4): <c>#57 T3 You [you] Cast Last Gasp …</c>, one line a move,
+	/// then how it stands. A move's number counts from 1 — the console's <c>--at</c>, and
+	/// <see cref="Before"/>'s. Passes made FOR a player (<c>rule</c>, <c>stop</c>) only with
 	/// <paramref name="passes"/>. Replays first, so a stale record throws before a line is written.
 	/// </summary>
 	public IReadOnlyList<string> Transcript(bool passes = false)
@@ -148,7 +155,7 @@ public sealed record GameRecord
 			var (move, s) = (Moves[i], before[i]);
 			if (passes || move.Kind is not ("rule" or "stop"))
 				lines.Add(
-					$"T{s.GetGame().TurnNumber} {Players[move.By - 1]} [{move.Kind}] {MoveTokens.Describe(s, move.Token)}"
+					$"#{i + 1} T{s.GetGame().TurnNumber} {Players[move.By - 1]} [{move.Kind}] {MoveTokens.Describe(s, move.Token)}"
 				);
 		}
 		var turn = last.GetGame().TurnNumber;

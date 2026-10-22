@@ -88,6 +88,7 @@ dotnet run --project MagicConsole -- --ai-vs-ai         # watch two AIs
 dotnet run --project MagicConsole -- --greedy           # the AI is GreedyAi (instant), not the search (BeamSearchAi, ~1 s a decision)
 dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip the deck prompt
 dotnet run --project MagicConsole -- --record=game_records/<file>.json   # a table game, move by move (--passes: the forced ones too); stale → names the move, exit 1
+dotnet run --project MagicConsole -- --record=game_records/<file>.json --keep=NAME --at=N   # keep it as an AI test case: MagicCore.Tests/Records/NAME.json + a test to paste into AiPositionTests (#N from the transcript)
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
