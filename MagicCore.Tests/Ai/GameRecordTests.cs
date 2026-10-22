@@ -89,6 +89,25 @@ public class GameRecordTests
 	}
 
 	[Test]
+	public void ATranscript_SaysEveryMoveButAForcedPass_ThenHowItEnded()
+	{
+		var (record, last) = PlayRecorded(seed: 4);
+		Assert.That(last.IsOver(), "precondition");
+
+		var lines = record.Transcript();
+
+		Assert.That(lines, Has.Count.EqualTo(record.Moves.Count(m => m.Kind != "rule") + 1));
+		Assert.That(lines, Has.One.Contains("[sandbox] Put Last Gasp into Hand"));
+		Assert.That(
+			lines[^1],
+			Is.EqualTo(
+				$"{last.GetPlayer(last.WinnerId()).Name} won on turn {last.GetGame().TurnNumber}."
+			)
+		);
+		Assert.That(record.Transcript(passes: true), Has.Count.EqualTo(record.Moves.Count + 1));
+	}
+
+	[Test]
 	public void ARecord_SurvivesItsFile()
 	{
 		var (record, _) = PlayRecorded(seed: 5);
@@ -127,15 +146,28 @@ public class GameRecordTests
 	}
 
 	[Test]
-	public void ASandboxMove_SaysWhatItPut()
+	public void ADeckCardThatNoLongerExists_IsStale_NotACrash()
+	{
+		var record = PlayRecorded(seed: 9).Record;
+		Assert.Throws<MoveTokens.StaleException>(
+			() => (record with { Deck2 = record.Deck2.SetItem(0, "No Such Card") }).Replay()
+		);
+	}
+
+	// Into EITHER seat, whoever holds priority — so the description names whose zone.
+	[Test]
+	public void ASandboxMove_SaysWhatItPut_AndWhere()
 	{
 		var s = PlayRecorded(seed: 9).Record.Start();
 		var token = MoveTokens.Token(
 			s,
-			new SandboxPutAction(s.Player1Id(), FraCards.Get("Last Gasp"), ZoneType.Hand),
+			new SandboxPutAction(s.Player2Id(), FraCards.Get("Last Gasp"), ZoneType.Hand),
 			null
 		);
-		Assert.That(MoveTokens.Describe(s, token), Is.EqualTo("[sandbox] Last Gasp into Hand"));
+		Assert.That(
+			MoveTokens.Describe(s, token),
+			Is.EqualTo($"Put Last Gasp into Hand ({s.GetPlayer(s.Player2Id()).Name})")
+		);
 	}
 
 	[Test]

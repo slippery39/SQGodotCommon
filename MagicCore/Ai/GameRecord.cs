@@ -107,14 +107,22 @@ public sealed record GameRecord
 			throw new MoveTokens.StaleException(
 				$"a format-{Format} record; this engine reads format {CurrentFormat}"
 			);
-		var s = Start();
+		GameState s;
+		try
+		{
+			s = Start();
+		}
+		catch (KeyNotFoundException e) // FraCards.Get: a card renamed or gone since
+		{
+			throw new MoveTokens.StaleException($"a deck card no longer exists ({e.Message})");
+		}
 		var before = new List<GameState>(Moves.Count);
 		for (var i = 0; i < Moves.Count; i++)
 		{
 			var move = Moves[i];
 			if (MoveTokens.Offers(s) != move.Offers)
 				throw new MoveTokens.StaleException(
-					$"move {i + 1} ({move.Kind} {move.Said}): the position no longer offers what it did — the engine has moved"
+					$"move {i + 1} ({$"{move.Kind} {move.Said}".Trim()}): the position no longer offers what it did — the engine has moved"
 				);
 			before.Add(s);
 			s = MoveTokens.Apply(s, move.Token);
@@ -124,6 +132,33 @@ public sealed record GameRecord
 				"every move replays, but the game ends differently"
 			);
 		return (before, s);
+	}
+
+	/// <summary>
+	/// The game as text (story TBL-5.4): <c>T3 You [you] Cast Last Gasp …</c>, one line a move, then
+	/// how it stands. Passes made FOR a player (<c>rule</c>, <c>stop</c>) only with
+	/// <paramref name="passes"/>. Replays first, so a stale record throws before a line is written.
+	/// </summary>
+	public IReadOnlyList<string> Transcript(bool passes = false)
+	{
+		var (before, last) = Replay();
+		var lines = new List<string>();
+		for (var i = 0; i < Moves.Count; i++)
+		{
+			var (move, s) = (Moves[i], before[i]);
+			if (passes || move.Kind is not ("rule" or "stop"))
+				lines.Add(
+					$"T{s.GetGame().TurnNumber} {Players[move.By - 1]} [{move.Kind}] {MoveTokens.Describe(s, move.Token)}"
+				);
+		}
+		var turn = last.GetGame().TurnNumber;
+		lines.Add(
+			!last.IsOver() ? $"Not over: turn {turn}, {Moves.Count} moves."
+			: last.WinnerId() is var winner and not 0
+				? $"{last.GetPlayer(winner).Name} won on turn {turn}."
+			: $"A draw on turn {turn}."
+		);
+		return lines;
 	}
 
 	static readonly JsonSerializerOptions Json = new() { WriteIndented = true, NewLine = "\n" };

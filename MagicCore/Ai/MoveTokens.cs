@@ -96,7 +96,9 @@ public static class MoveTokens
 	public static string Describe(GameState s, string token) =>
 		Resolve(s, token) switch
 		{
-			(SandboxPutAction put, _) => $"[sandbox] {put.Card.Data.Name} into {put.Zone}",
+			// whose zone: the playtest tool puts into either seat, whoever holds priority
+			(SandboxPutAction put, _) =>
+				$"Put {put.Card.Data.Name} into {put.Zone} ({s.GetPlayer(put.PlayerId).Name})",
 			({ } action, _) => MagicCore.Describe.Action(s, action),
 			(_, var ids) => MagicCore.Describe.Answer(s, s.GetPendingChoice()!, ids!),
 		};

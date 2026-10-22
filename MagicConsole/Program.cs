@@ -12,6 +12,7 @@ using MagicCore.Sets.Fra;
 //   --greedy: the AI is GreedyAi (one ply, instant), not the search (BeamSearchAi, ~1 s a decision).
 //   dotnet run --project MagicConsole -- --match=greedy,random --games=72   AI vs AI, measured
 //   dotnet run --project MagicConsole -- --card-values   regenerate MagicCore/Sets/FRA.values.json
+//   dotnet run --project MagicConsole -- --record=game_records/<file>.json   replay a table game
 
 var flags = args.ToHashSet();
 int? Arg(string name) =>
@@ -94,6 +95,29 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 		Console.WriteLine(
 			$"{path}: {name}'s answers are now the committed ones. Rebuild to embed it."
 		);
+	}
+	return;
+}
+
+// --record=FILE [--passes]: replay a game record (the table writes them to game_records/, TBL-5) and
+// print it, move by move. A record the engine no longer replays says which move, and exits 1.
+if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
+{
+	try
+	{
+		var record = GameRecord.FromJson(File.ReadAllText(recordArg["--record=".Length..]));
+		foreach (var line in record.Transcript(flags.Contains("--passes")))
+			Console.WriteLine(line);
+	}
+	catch (MoveTokens.StaleException e)
+	{
+		Console.WriteLine($"Stale: {e.Message}");
+		Environment.ExitCode = 1;
+	}
+	catch (Exception e) when (e is IOException or System.Text.Json.JsonException)
+	{
+		Console.WriteLine($"Can't read the record: {e.Message}");
+		Environment.ExitCode = 1;
 	}
 	return;
 }

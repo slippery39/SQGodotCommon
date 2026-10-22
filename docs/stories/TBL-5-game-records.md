@@ -59,19 +59,26 @@ own choices differ from the AI's.
       `MagicTableManager.Record`/`RecordTo`, one `Play` for every move, `Settle` as one loop; two
       tests (a table game with every kind of move and an undo, replayed from its file; an AI game
       recorded to its end), 3/3 revert-checks; a headless run wrote its file to the solution root
-      (uncommitted, 2026-10-21)
-- [ ] TBL-5.4 Replay a record in the console; a stale record says so
+      (103d38f engine, ef94d68 table — 2026-10-21)
+- [x] TBL-5.4 Replay a record in the console; a stale record says so: `GameRecord.Transcript`
+      (forced passes only with `--passes`), `MagicConsole --record=FILE`; stale → names the move,
+      exit 1; an unreadable file says so. A headless table game (seed 5, autoplay to 6) replayed
+      move by move; a corrupted copy named move 21. Tests: the transcript; a deck card that no longer
+      exists is stale, not a crash — both revert-checked (uncommitted, 2026-10-22)
 - [ ] TBL-5.5 A position from a record → an AI test case in one step (for AI-8)
 - [ ] TBL-5.6 The comparison report: the search's and the oracle's choice at each human decision
 
 ## Next
 
-**TBL-5.4, replay a record in the console.** A `--record=<file>` flag in `MagicConsole/Program.cs`
-(beside `--suite=`, `--match=`): `GameRecord.FromJson`, then `Replay()`; print each move as
-`T<turn> <player> [<kind>] <MoveTokens.Describe(before, token)>`, skipping `rule`/`stop` passes
-unless asked, and the end. A `StaleException` prints its message (it names the move) and exits
-non-zero. A real record to try it on: play a few turns on the table — it writes
-`game_records/<date>_seed<N>.json`. Update `RunningSimulations.md` if it lists MagicConsole's flags.
+**TBL-5.5, a position from a record → an AI test case in one step.** The position before move N is
+`record.Replay().Before[N - 1]`, so the case needs only the record and N. To decide first (ask
+Shayne): where kept records live (a tracked folder in MagicCore.Tests, e.g. `Records/`, copied to
+the output like the suite's file), and what the "one step" is — likely the console:
+`--record=FILE --keep=NAME --at=N` copies the file in and prints a test skeleton for
+`AiPositionTests` (who decided, what the human chose, the AI's choice now). That file's own rule
+applies: each case has a CONTROL (the AI that made the play still makes it). A stale kept record
+fails its test — the same as the position suite. The transcript's move numbers are what `--at`
+needs; `Transcript` doesn't print them yet.
 
 ## Log
 
@@ -87,3 +94,5 @@ non-zero. A real record to try it on: play a few turns on the table — it write
   name); `FraSacrificeTests.DistinctMoves_KeepsEachPermanentACostCanTake`, revert-checked. The
   position suite was regenerated and re-read by the oracle (`docs/findings/magic-ai.md`) — 103d38f;
   the table's recording is the commit after it.
+- 2026-10-22: TBL-5.4 — the console replays a record. A sandbox put now reads "Put X into Hand (AI)"
+  — whose zone, since either seat can be the target (review); the table's own log line is unchanged.
