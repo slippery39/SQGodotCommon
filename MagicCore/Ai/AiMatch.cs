@@ -66,6 +66,8 @@ public static class AiMatch
 			["nokeywords"] = o => o with { Without = o.Without | Evaluator.Terms.MoreKeywords },
 			// The look-ahead's safe block counting damage once, before AI-8.3: beam+oldblocks.
 			["oldblocks"] = o => o with { Without = o.Without | Evaluator.Terms.BlockSurvival },
+			// The threat term without a trampler's excess over its blocker (AI-8.4): beam+notrample.
+			["notrample"] = o => o with { Without = o.Without | Evaluator.Terms.Trample },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a

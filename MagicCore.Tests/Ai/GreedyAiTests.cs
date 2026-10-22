@@ -86,6 +86,46 @@ public class GreedyAiTests
 		Assert.That(Evaluator.Evaluate(wall, me), Is.GreaterThan(Evaluator.Evaluate(bear, me) + 5));
 	}
 
+	// AI-8.4 (Shayne's sealed game, at AI-8.3's horizon): at 3 life, our 2/3 against their 7/5 — with
+	// trample the excess gets past our blocker, a lethal clock; "one blocker stops one attacker" scored
+	// it as none. Without trample the 2/3 does stop it, so trample counted changes nothing there — nor
+	// does trample granted until end of turn, gone before the next attack.
+	[TestCase("Trample", false, true)]
+	[TestCase("", false, false)]
+	[TestCase("", true, false)]
+	public void Threat_ATramplersExcess_GetsPastItsBlocker(
+		string keyword,
+		bool trampleThisTurn,
+		bool aClock
+	)
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var (me, them) = (s.GetGame().StartingPlayerId, s.OpponentOf(s.GetGame().StartingPlayerId));
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 3 });
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Blocker", "2/3"), ZoneType.Battlefield);
+		string[] keywords = keyword == "" ? [] : [keyword];
+		int crusher;
+		(s, crusher) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Crusher", "7/5", keywords),
+			ZoneType.Battlefield
+		);
+		if (trampleThisTurn) // TEST SETUP
+			s = s.UpdateObject(
+				crusher,
+				s.GetCard(crusher).WithComponent(new UntilEndOfTurn(Keyword: "Trample"))
+			);
+
+		var counted = Evaluator.Evaluate(s, me);
+		var ignored = Evaluator.Without(Evaluator.Terms.Trample, () => Evaluator.Evaluate(s, me));
+
+		if (aClock)
+			Assert.That(counted, Is.LessThan(ignored - 5), "a lethal clock, at 3 life");
+		else
+			Assert.That(counted, Is.EqualTo(ignored).Within(1e-9));
+	}
+
 	// Keywords (AI-5.3): of two otherwise equal 2/2s and the mana for one, the one with haste — once
 	// haste scored nothing, the two tied and GreedyAi cast whichever came first (the plain one, here).
 	[Test]

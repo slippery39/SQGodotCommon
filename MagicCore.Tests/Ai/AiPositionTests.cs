@@ -111,22 +111,30 @@ public class AiPositionTests
 		Assert.That(KillsTheRatWhileItIsNotAttacking(new BeamSearchAi(me)), Is.False);
 
 	// Shayne, 2026-10-22 (AI-8.3, his sealed game — kept record, move #332): at 22 life the AI would not
-	// trade its Divining Duelist (4/3) for an attacking 4/4 Beast. Partly a look-ahead bug, fixed (a
-	// double striker's damage counted once, so the simulated opponent threw its 7/5 into the Duelist:
-	// RolloutTests.ALookAheadBlocker_BlocksOnlyWhatItSurvives); partly the horizon — blocking dies on
-	// turn 18, inside the look-ahead, while not blocking is alive at 3 life on turn 19 and lost a turn
-	// later. Both lines lose. The CONTROL: the search still declines; scoring a lethal board at the
-	// horizon as a loss (AI-8's next step) must be re-read here.
+	// trade its Divining Duelist (4/3) for an attacking 4/4 Beast. Two causes. A look-ahead bug (AI-8.3:
+	// a double striker's damage counted once, so the simulated opponent threw its 7/5 into the Duelist —
+	// RolloutTests.ALookAheadBlocker_BlocksOnlyWhatItSurvives). And the threat term (AI-8.4): it let
+	// one 2/3 "stop" the opponent's 7/5 trampler, so dying to it later scored as no clock. The CONTROL:
+	// without trample counted, the search still declines.
 	[Test]
-	public void DuelistWontTrade_AtTwentyTwoLife_StillDeclines()
+	public void DuelistWontTrade_AtTwentyTwoLife_TradesOnceTrampleCounts()
 	{
 		var record = KeptRecords.Get("DuelistWontTrade");
 		var s = record.Before(332);
-		var choice = MoveTokens.Token(s, new BeamSearchAi(s.DecidingPlayerId()).Decide(s));
+		string Choice(Evaluator.Terms without) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(s.DecidingPlayerId(), new() { Without = without }).Decide(s)
+			);
+		// Blocking either Beast: every option of the Duelist's block but "don't".
+		var trades = s.GetPendingChoice()!
+			.Options.Where(o => o.Id != global::MagicCore.Actions.CombatOption.None)
+			.Select(o => $"c{o.Id}");
 
 		Assert.That(
-			MoveTokens.Same(choice, record.Moves[331].Token),
-			"the search declines the trade"
+			MoveTokens.Same(Choice(Evaluator.Terms.Trample), record.Moves[331].Token),
+			"the control: without trample, it declines"
 		);
+		Assert.That(trades, Does.Contain(Choice(Evaluator.Terms.None)), "it trades");
 	}
 }

@@ -2,14 +2,14 @@
 # for an intended behaviour change, with the diff reviewed. Format: game seed : steps, last
 # turn, each player's life [hand,library,graveyard,battlefield,exile], hash | hash per 100 steps.
 Red-Green vs White-Black 01 : steps=146 turn=28 end=0L[0,19,9,12,1] 21[1,18,9,13,0] final=6215f76a | c3453068
-Red-Green vs White-Black 02 : steps=121 turn=30 end=-2L[0,19,9,11,1] 23[0,18,9,13,0] final=f2be23b8 | 41ed71b0
-Red-Green vs White-Blue Jace 01 : steps=195 turn=29 end=7[0,18,8,15,0] -6L[0,14,13,19,0] final=04a33f12 | 7b8029c6
-Red-Green vs White-Blue Jace 02 : steps=156 turn=27 end=5[0,21,8,15,0] -3L[0,17,11,17,0] final=0afebe96 | 3d1dd83d
+Red-Green vs White-Black 02 : steps=121 turn=30 end=0L[0,19,9,11,1] 20[0,18,9,13,0] final=9eb6312a | fbaec611
+Red-Green vs White-Blue Jace 01 : steps=173 turn=28 end=-2L[0,19,9,13,0] 6[0,14,14,17,0] final=c0275c08 | 00c7c4f8
+Red-Green vs White-Blue Jace 02 : steps=195 turn=30 end=-5L[0,19,8,16,0] 10[0,15,12,19,0] final=fdb7023f | c2c36aa6
 White-Black vs Red-Green 01 : steps=72 turn=19 end=11[0,23,7,10,0] -1L[0,24,6,10,2] final=f2613f59
 White-Black vs Red-Green 02 : steps=125 turn=23 end=14[0,22,9,9,0] -1L[0,20,8,12,1] final=24146e73 | 19f57a10
 White-Black vs White-Blue Jace 01 : steps=113 turn=21 end=16[0,23,7,10,0] -1L[0,19,10,9,2] final=5f5c09ce | 5cadce60
 White-Black vs White-Blue Jace 02 : steps=97 turn=21 end=23[0,23,5,12,0] 0L[0,17,10,15,1] final=37587fb0
-White-Blue Jace vs Red-Green 01 : steps=151 turn=20 end=-1L[1,20,9,12,0] 8[0,23,6,12,0] final=18ae21ae | 275dabca
-White-Blue Jace vs Red-Green 02 : steps=149 turn=18 end=-2L[0,22,10,9,0] 9[1,22,6,13,0] final=c3e1a4c1 | e9531d8d
+White-Blue Jace vs Red-Green 01 : steps=150 turn=20 end=-1L[1,20,9,12,0] 5[0,23,6,12,0] final=da77632d | b32a601c
+White-Blue Jace vs Red-Green 02 : steps=156 turn=24 end=-5L[0,18,11,13,0] 8[0,20,8,14,0] final=a63eef99 | a23e90bd
 White-Blue Jace vs White-Black 01 : steps=169 turn=43 end=7[0,5,15,23,1] -4L[0,12,13,15,0] final=4f9a8c11 | 8dcb6b83
 White-Blue Jace vs White-Black 02 : steps=87 turn=22 end=0L[0,18,10,12,1] 16[0,20,7,13,0] final=29883fa9

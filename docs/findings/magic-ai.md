@@ -758,3 +758,32 @@ counted. The simulated opponent chumps with its 1/1, as Shayne did.
   "lost one turn past the horizon"; its race pressure was the only signal, and our port counts
   blockers with trample ignored, so at this horizon Yuriko "stops" the trampling Crusher (from the
   code, not measured).
+
+## The threat term counts a trampler's excess (2026-10-22, AI-8.4)
+
+`Evaluator.Pressure` matched each attacker to one blocker and let nothing past a blocked one — at
+AI-8.3's horizon Yuriko's 2/3 "stopped" Shayne's 7/5 trampler at 3 life, so a lethal board scored as
+no clock. Now a trampler meets the blocker that absorbs most and gets past what that blocker can't
+absorb by the next attack — its lasting toughness (pumps and marked damage gone, as power already
+is), or 1 against deathtouch; trample granted until end of turn doesn't count.
+
+| | Result |
+|---|---|
+| Quick check (first version) | 2 of 288 decisions changed (0.7%), both attack declarations |
+| `beam` vs `beam+notrample`, `--until-clear` (first version) | 288 games, 141–147, 49.0% ± 1.0pp — no difference of 5pp either way; 421 s |
+| **the same, final version** (review: lasting toughness, end-of-turn trample) | **288 games, 141–147, 49.0% ± 1.2pp — NO difference of 5pp either way** (log-likelihood: better −13.34, worse −5.49); 1 416.2 steps a decision (1 425.6); 402 s |
+| Suite after `--accept` and a fresh oracle | beam agrees 79.5%, `beam+notrample` 79.2% (1 of 288 differs) |
+
+- **Kept** by AI-5's rule: no difference, and the rebuilt position fixed — at Shayne's turn 14
+  (`DuelistWontTrade`, #332) the search and the oracle now TRADE the Duelist for a Beast:
+
+  | at #332 | don't block | block a Beast |
+  |---|---|---|
+  | search | −45.97 | **−38.51** (`+notrample`: −27.55 / −28.51, declines) |
+  | oracle | −65.21 | **−33.71** (`+notrample`: −17.91 / −23.71, declines) |
+
+- So the report needed the threat term, not a horizon change: AI-8.5 (a lethal board at the horizon
+  scored as a loss) has no recorded blunder behind it now.
+- Review moved 1 suite answer and 2 recorded games after the first match, so the match was run
+  again on the final version — same verdict. GreedyAi's recorded games moved (all with Red-Green,
+  the deck with tramplers); the card-value table is unchanged (measured without the threat term).

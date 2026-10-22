@@ -56,6 +56,9 @@ public static class Evaluator
 		/// damage in "blocks only what it survives" (<see cref="Lookahead.QuickAnswer"/>, AI-8.3, `+oldblocks`).
 		/// </summary>
 		BlockSurvival = 4,
+
+		/// <summary>A trampler's excess over its blocker in the threat term (AI-8.4, `+notrample`).</summary>
+		Trample = 8,
 	}
 
 	/// <summary>Whether <paramref name="term"/> is switched off here (<see cref="Without{T}"/>).</summary>
@@ -91,9 +94,14 @@ public static class Evaluator
 	/// 2/2 at 4 life with no blocker weighs 5; against a blocker, nothing.
 	/// Power is what lasts (pumps until end of turn wear off before the next attack); a creature dying
 	/// to its damage neither attacks nor blocks; who can attack or block is Combat's rule.
-	/// ponytail: one blocker stops one attacker whatever their sizes; menace, trample and first strike
-	/// are ignored, and a keyword granted until end of turn still counts. Count them if a misjudged race
-	/// is ever shown.
+	/// A trampler (AI-8.4) is met by the blocker that absorbs most, and gets past it what that blocker
+	/// can't absorb by the next attack — its lasting toughness, or 1 against deathtouch: Yuriko's 2/3
+	/// "stopped" a 7/5 trampler at 3 life, scoring a lethal board as no clock at all.
+	/// ponytail: otherwise one blocker stops one attacker whatever their sizes; menace and first strike
+	/// are ignored, and a keyword granted until end of turn still counts (trample excepted). Blockers go
+	/// to attackers in order, never two to one trampler, and a non-trampler may take the blocker a
+	/// trampler would have met — so a trampler beside a bigger attacker can be overstated. Count them
+	/// if a misjudged race is ever shown.
 	/// </summary>
 	static double Pressure(GameState s, int attacker, int defender)
 	{
@@ -127,13 +135,40 @@ public static class Evaluator
 				.ThenByDescending(a => a.Power)
 		)
 		{
-			var blocker = blockers.FindIndex(b => Combat.CanBlock(s, b, card));
-			if (blocker < 0)
+			if (!IsTrampler(card))
+			{
+				var blocker = blockers.FindIndex(b => Combat.CanBlock(s, b, card));
+				if (blocker < 0)
+					through += power;
+				else
+					blockers.RemoveAt(blocker);
+				continue;
+			}
+			// What a blocker absorbs by the NEXT attack, as power is: pumps and marked damage gone.
+			var deathtouch = s.Has(card, "Deathtouch");
+			int Absorbs(Card b) =>
+				deathtouch ? 1 : Math.Max(1, s.Toughness(b) - Pumps(b).Toughness);
+			var best = blockers.Where(b => Combat.CanBlock(s, b, card)).MaxBy(Absorbs);
+			if (best is null)
 				through += power;
 			else
-				blockers.RemoveAt(blocker);
+			{
+				through += Math.Max(0, power - Absorbs(best));
+				blockers.Remove(best);
+			}
 		}
 		return PressureWeight * 20.0 * through / life;
+
+		// Trample that lasts to the next attack (AI-8.4) — not one granted until end of turn.
+		bool IsTrampler(Card c) =>
+			!IsOff(Terms.Trample)
+			&& s.Has(c, "Trample")
+			&& Lasting(
+				s,
+				c,
+				"Trample",
+				[.. c.GetComponents<UntilEndOfTurn>().Where(u => u.UntilTurnOf == 0)]
+			);
 	}
 
 	/// <summary>Not dying to what is marked on it now: the state-based check's own question.</summary>

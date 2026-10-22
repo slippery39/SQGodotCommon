@@ -64,25 +64,26 @@ Open questions:
       misjudged race is ever shown") — at this horizon Yuriko "stops" the trampling Crusher, so the
       term reads 0 (from the code, not yet measured) — AI-8.4 and AI-8.5 below. Review: a first-striking
       blocker that kills a double striker first takes one hit, not two (moves no suite answer and no
-      recorded game) (uncommitted, 2026-10-22)
-- [ ] AI-8.4 **Trample in the threat term** (`Evaluator.Pressure`): "one blocker stops one attacker"
-      lets a 2/3 stop a trampling 7/5 — its ponytail says count trample once a misjudged race is
-      shown; AI-8.3's horizon is one. Measured like AI-5.2 (a `+notrample` switch, the suite, a match)
+      recorded game) (441fd6e, 2026-10-22)
+- [x] AI-8.4 **Trample in the threat term** (`Evaluator.Pressure`): a trampler meets the blocker that
+      absorbs most and gets past what it can't absorb by the next attack (lasting toughness, 1
+      against deathtouch; end-of-turn trample doesn't count); `+notrample` reproduces the old
+      answers. **Match on the final version (rerun after review moved 1 answer): 288 games, 141–147,
+      49.0% ± 1.2pp — no difference of 5pp either way; kept, the rebuilt position fixed:** at #332
+      the search and the oracle now TRADE the Duelist (findings). Suite answers accepted, the oracle
+      re-read (79.5% against 79.2%), GreedyAi's recorded games moved (all with Red-Green). The
+      position's test is `DuelistWontTrade_AtTwentyTwoLife_TradesOnceTrampleCounts` — control:
+      `+notrample` still declines (uncommitted, 2026-10-22)
 - [ ] AI-8.5 **A lethal board at the horizon is a loss one turn later**: if the opponent's next attack
       kills through our blockers where a rollout stops, score it as a loss at horizon + 1, decayed like
       any other — so "dead on turn 18" (−8145) and "dead on turn 20" (~−7700) are compared honestly,
-      not against −17.91. New ground (MtgSimulator never had it); re-read
-      `DuelistWontTrade_AtTwentyTwoLife_StillDeclines` with it
+      not against −17.91. New ground (MtgSimulator never had it). **No recorded blunder behind it
+      now** — AI-8.4 fixed the report it came from; wait for one (a kept record) before building it
 
 ## Next
 
-**AI-8.4, trample in the threat term** (suggested order, not yet agreed: 8.4, then 8.5, then 8.1/8.2).
-`Evaluator.Pressure` matches each attacker to one blocker and counts nothing through a blocked one;
-a trampler blocked by a smaller creature gets its excess through (power − the blocker's toughness
-left). Add it as a switchable term (`Evaluator.Terms`, as `+oldblocks` did), check it fires on the
-suite (the switch reproduces the committed answers), then `--match=beam,beam+notrample --until-clear`.
-The position to read it on: `DuelistWontTrade` move #332's horizon (Yuriko 2/3 against the Crusher
-7/5 trample at 3 life — pressure 0 today, by the code).
+**AI-8.1 next** (suggested — AI-8.5 waits for a recorded blunder that needs it; Shayne to confirm):
+the AI leaving a card-drawing planeswalker alone. It predates the records, so rebuild it by hand.
 
 Every table game is now recorded (`game_records/`, TBL-5): a NEW report from a played game needs no
 rebuilding — `MagicConsole --record=FILE --keep=NAME --at=N` makes it a test case (`Commands.md`).
@@ -98,3 +99,4 @@ For AI-8.2 the surveil choice is `ChooseFromLibraryTopChoice` (`MagicCore/Action
 - 2026-10-22: AI-8.3 from Shayne's sealed game (TBL-5's first real record) — the look-ahead's
   double-strike bug, found by tracing the oracle's rollouts; fix uncommitted, awaiting a measurement.
 - 2026-10-22: AI-8.3 measured — the safe-block fix is better by 5pp+; kept. Status → in-progress.
+- 2026-10-22: AI-8.4 — trample in the threat term; no difference, kept, and it is what fixes AI-8.3's report.

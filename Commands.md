@@ -137,6 +137,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     nothreat       the evaluator without its threat term (AI-5.2) — the search before it
 #     nokeywords     the evaluator without the six keywords AI-5.3 added (vigilance, haste, reach, …)
 #     oldblocks      the look-ahead's safe block counting damage once (before AI-8.3: no double strike, deathtouch)
+#     notrample      the threat term without a trampler's excess over its blocker (before AI-8.4)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 ```
 
