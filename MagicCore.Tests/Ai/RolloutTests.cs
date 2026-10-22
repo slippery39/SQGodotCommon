@@ -397,4 +397,51 @@ public class RolloutTests
 				+ $"p99 {At(0.99):0.0}, max {times[^1]:0.0} ms"
 		);
 	}
+
+	// AI-8.3 (Shayne's sealed game): the look-ahead's "blocks only what it survives" counted a double
+	// striker's damage once — Yuriko's 4/3 deals 4 twice — so a 7/5 blocked it in every look-ahead
+	// and died, and the search kept the 4/3 alive to win a trade the opponent would never make. The
+	// blocker here is a 7/5, with the keyword and the damage marked on it that each case names.
+	[TestCase("4/3", "", "", 0, false, ExpectedResult = true)]
+	[TestCase("4/3", "Double strike", "", 0, false, ExpectedResult = false)]
+	[TestCase("1/1", "Deathtouch", "", 0, false, ExpectedResult = false)]
+	[TestCase("3/3", "", "", 3, false, ExpectedResult = false)] // 3 more on 2 left
+	// first strike kills the 4/3 before its second hit: 4 taken, 5 toughness
+	[TestCase("4/3", "Double strike", "First strike", 0, false, ExpectedResult = true)]
+	[TestCase("4/3", "Double strike", "", 0, true, ExpectedResult = true)] // +oldblocks: the old check
+	public bool ALookAheadBlocker_BlocksOnlyWhatItSurvives(
+		string attackerPt,
+		string attackerKeyword,
+		string blockerKeyword,
+		int blockerDamage,
+		bool oldBlocks
+	)
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var them = s.OpponentOf(me);
+		string[] Keywords(string k) => k == "" ? [] : [k];
+		(s, var attacker) = TestGames.Put(
+			s,
+			me,
+			TestGames.Creature("Attacker", attackerPt, Keywords(attackerKeyword)),
+			ZoneType.Battlefield
+		);
+		(s, var blocker) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Blocker", "7/5", Keywords(blockerKeyword)),
+			ZoneType.Battlefield
+		);
+		s = s.UpdateObject(blocker, s.GetCard(blocker) with { Damage = blockerDamage }); // TEST SETUP
+		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
+		s = s.Choose([them]);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareBlockerChoice);
+
+		var answer = Evaluator.Without(
+			oldBlocks ? Evaluator.Terms.BlockSurvival : Evaluator.Terms.None,
+			() => Lookahead.QuickAnswer(s, s.GetPendingChoice()!).Single()
+		);
+		return answer == attacker;
+	}
 }

@@ -727,3 +727,34 @@ equal 2/2s and the mana for one, GreedyAi cast whichever came first; now the one
 - After AI-5 the suite's committed answers moved to the current search (29 of 288); its oracle still
   reads the real library order and the evaluator before AI-5.
 
+
+## The look-ahead's safe block counts double strike (2026-10-22, AI-8.3)
+
+From Shayne's sealed game (kept: `MagicCore.Tests/Records/DuelistWontTrade.json`, move #332): at 22
+life the AI would not trade Divining Duelist (4/3) for a 4/4 Beast — the oracle scored the block
+−8145.06 (exactly −10 000 × 0.95⁴: a loss on turn 18) against −75 for no block. Traced through the
+oracle's rollouts: in the no-block line the simulated opponent blocked the Duelist (double strike
+under Yuriko, attacking alone) with its Craftwork Crusher 7/5 and lost it. `Lookahead.QuickAnswer`
+lets a look-ahead blocker take only blocks it survives — and counted a double striker's damage once
+(4 < 5). Now `Lookahead.Survives`: damage twice for double strike, deathtouch fatal, marked damage
+counted. The simulated opponent chumps with its 1/1, as Shayne did.
+
+| | Result |
+|---|---|
+| Quick check | 4 of 288 decisions changed (1.4%); 2 830.5 steps a position |
+| `beam` vs `beam+oldblocks`, `--until-clear` | **288 games, 155–133, 53.8% ± 1.3pp — BETTER by 5pp or more** (log-likelihood: better 3.84, worse −18.38; decided at ±2.94); 1 398.4 steps a decision (1 425.6); 647 s |
+| Suite after `--accept` and a fresh oracle | beam agrees 78.8%, `beam+oldblocks` 78.1% |
+
+- **Kept** — better by AI-5's rule. The recorded GreedyAi games moved by one (`GoldenAiReplay.txt`);
+  the card-value table is unchanged.
+- After the match, review: a first-striking blocker that kills a double striker in the first-strike
+  step takes one hit, not two (the measured version counted two). It moves no suite answer and no
+  recorded game, so the match stands.
+- **The reported play is NOT changed by it:** the search still declines, now for the horizon —
+  blocking dies on turn 18, inside the look-ahead (−8145); not blocking is alive at 3 life on turn 19
+  (−17.91), lost a turn later. Both lines lose.
+- **Rechecked against MtgSimulator** (Shayne): its horizon fixes — the terminal discount, the
+  absolute horizon (both ported), the pre-search lethal check (our lethal, not this) — never scored
+  "lost one turn past the horizon"; its race pressure was the only signal, and our port counts
+  blockers with trample ignored, so at this horizon Yuriko "stops" the trampling Crusher (from the
+  code, not measured).

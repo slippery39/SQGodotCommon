@@ -77,7 +77,7 @@ own choices differ from the AI's.
       table game: the printed test pasted verbatim compiled and passed, failed with a wrong control;
       a corrupted kept record failed `EveryKeptRecord_StillReplays` by name. `Records/Sample.json`
       (that game, move #110) stays, so the embedding is tested — revert-checked by breaking the glob
-      (uncommitted, 2026-10-22)
+      (267d330, 2026-10-22)
 - [ ] TBL-5.6 The comparison report: the search's and the oracle's choice at each human decision
 
 ## Next

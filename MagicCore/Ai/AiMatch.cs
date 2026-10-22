@@ -64,6 +64,8 @@ public static class AiMatch
 			["nothreat"] = o => o with { Without = o.Without | Evaluator.Terms.Threat },
 			// Without the six keywords AI-5.3 added to a creature's value: beam+nokeywords.
 			["nokeywords"] = o => o with { Without = o.Without | Evaluator.Terms.MoreKeywords },
+			// The look-ahead's safe block counting damage once, before AI-8.3: beam+oldblocks.
+			["oldblocks"] = o => o with { Without = o.Without | Evaluator.Terms.BlockSurvival },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a

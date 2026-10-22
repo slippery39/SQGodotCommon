@@ -1,7 +1,7 @@
 ---
 id: AI-8
 title: Plays that looked wrong at the table, rebuilt and fixed
-status: ready
+status: in-progress
 area: AI
 created: 2026-10-20
 ---
@@ -43,19 +43,58 @@ Open questions:
       branches a one-card surveil; GreedyAi answers a multi-card one by taking the minimum), whether
       its colour could be paid, and what the honest library mode makes of a known top card against a
       shuffled unknown one
+- [x] AI-8.3 **It wouldn't trade Divining Duelist (4/3) for a Beast (4/4) at 22 life** — Shayne's
+      sealed game (2026-10-22, kept: `Records/DuelistWontTrade.json`, move #332; the default search,
+      the table's and the oracle all decline). Cause found (2026-10-22): the look-ahead's "blocks only
+      what it survives" (`Lookahead.QuickAnswer`) counted a DOUBLE STRIKER's damage once — under
+      Yuriko the Duelist deals 4 twice — so in every look-ahead the opponent's Crusher (7/5) blocked it
+      and died, which made keeping the Duelist look decisive (−75 against −8145, a loss on turn 18).
+      Fixed in `Lookahead.Survives` (double strike, deathtouch, damage marked): the simulated Shayne now
+      chumps with the 1/1, as he did. The AI STILL declines the trade — now for the horizon: the block
+      line dies on turn 18, inside the look-ahead (−8145); the no-block line is alive at 3 life on turn
+      19, lost a turn later, and scores −17.91. Both lines lose; which is better is a toss-up.
+      Suite: 4 of 288 answers change (1.4%). **Measured: `beam` vs `beam+oldblocks`, 288 games,
+      155–133, 53.8% ± 1.3pp — better by 5pp or more; kept** (findings). Suite answers accepted, the
+      oracle re-read, GreedyAi's recorded games moved by one; the position is
+      `AiPositionTests.DuelistWontTrade_AtTwentyTwoLife_StillDeclines` (its control: still declines).
+      Rechecked against MtgSimulator (Shayne, 2026-10-22): its horizon fixes were the terminal
+      discount and the absolute horizon (both ported), the pre-search lethal check (not ported — OUR
+      lethal, not this) and race pressure. None scored "lost one turn past the horizon"; race pressure
+      was its only signal, and our port counts blockers with trample ignored ("count them if a
+      misjudged race is ever shown") — at this horizon Yuriko "stops" the trampling Crusher, so the
+      term reads 0 (from the code, not yet measured) — AI-8.4 and AI-8.5 below. Review: a first-striking
+      blocker that kills a double striker first takes one hit, not two (moves no suite answer and no
+      recorded game) (uncommitted, 2026-10-22)
+- [ ] AI-8.4 **Trample in the threat term** (`Evaluator.Pressure`): "one blocker stops one attacker"
+      lets a 2/3 stop a trampling 7/5 — its ponytail says count trample once a misjudged race is
+      shown; AI-8.3's horizon is one. Measured like AI-5.2 (a `+notrample` switch, the suite, a match)
+- [ ] AI-8.5 **A lethal board at the horizon is a loss one turn later**: if the opponent's next attack
+      kills through our blockers where a rollout stops, score it as a loss at horizon + 1, decayed like
+      any other — so "dead on turn 18" (−8145) and "dead on turn 20" (~−7700) are compared honestly,
+      not against −17.91. New ground (MtgSimulator never had it); re-read
+      `DuelistWontTrade_AtTwentyTwoLife_StillDeclines` with it
 
 ## Next
 
+**AI-8.4, trample in the threat term** (suggested order, not yet agreed: 8.4, then 8.5, then 8.1/8.2).
+`Evaluator.Pressure` matches each attacker to one blocker and counts nothing through a blocked one;
+a trampler blocked by a smaller creature gets its excess through (power − the blocker's toughness
+left). Add it as a switchable term (`Evaluator.Terms`, as `+oldblocks` did), check it fires on the
+suite (the switch reproduces the committed answers), then `--match=beam,beam+notrample --until-clear`.
+The position to read it on: `DuelistWontTrade` move #332's horizon (Yuriko 2/3 against the Crusher
+7/5 trample at 3 life — pressure 0 today, by the code).
+
 Every table game is now recorded (`game_records/`, TBL-5): a NEW report from a played game needs no
 rebuilding — `MagicConsole --record=FILE --keep=NAME --at=N` makes it a test case (`Commands.md`).
-AI-8.1 and 8.2 predate the records, so they are still rebuilt by hand.
-
-Rebuild AI-8.1 first: a position with the AI's 2/2, the opponent's planeswalker that draws on its
-plus, the opponent at a high life total — `Decide` for `GreedyAi` and `beam`. Then read `Evaluator`
-(the planeswalker term) and `Rollout.Answer` (attack options: the player and each walker). For AI-8.2
-the surveil choice is `ChooseFromLibraryTopChoice` (`MagicCore/Actions/LibraryChoices.cs`).
+AI-8.1 and 8.2 predate the records, so they are still rebuilt by hand: AI-8.1 first — a position with
+the AI's 2/2, the opponent's planeswalker that draws on its plus, the opponent at a high life total —
+`Decide` for `GreedyAi` and `beam`; then `Evaluator` (the planeswalker term) and `Rollout.Answer`.
+For AI-8.2 the surveil choice is `ChooseFromLibraryTopChoice` (`MagicCore/Actions/LibraryChoices.cs`).
 
 ## Log
 
 - 2026-10-20: created from Shayne's first playtest session (TBL-2) — two reports, no seed saved
   (TBL-5 would make the next one replayable).
+- 2026-10-22: AI-8.3 from Shayne's sealed game (TBL-5's first real record) — the look-ahead's
+  double-strike bug, found by tracing the oracle's rollouts; fix uncommitted, awaiting a measurement.
+- 2026-10-22: AI-8.3 measured — the safe-block fix is better by 5pp+; kept. Status → in-progress.

@@ -45,11 +45,7 @@ public static class Lookahead
 		{
 			var blocker = s.GetCard(block.CreatureId);
 			var safe = choice.Options.Where(o =>
-				o.Id != CombatOption.None
-				&& (
-					Turns.Combat.Assigns(s, s.GetCard(o.Id)) < s.Toughness(blocker)
-					|| s.IsIndestructible(blocker)
-				)
+				o.Id != CombatOption.None && Survives(s, blocker, s.GetCard(o.Id))
 			);
 			return [safe.Select(o => o.Id).FirstOrDefault(CombatOption.None)];
 		}
@@ -58,5 +54,37 @@ public static class Lookahead
 		if (choice is PayToKeepChoice)
 			return choice.Options.Select(o => o.Id).Take(1); // looking ahead: keep the spell if it can be paid
 		return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
+	}
+
+	/// <summary>
+	/// Does <paramref name="blocker"/> live through blocking <paramref name="attacker"/>? Counted by the
+	/// hits that land: a double striker strikes twice — unless a first-striking blocker kills it in the
+	/// first-strike step, when no later hit comes (nor any hit from an attacker without first strike).
+	/// Deathtouch kills with any damage; damage already marked counts. Counting the damage once let a
+	/// 7/5 block a double-striking 4/3 in every look-ahead and die (story AI-8.3, Shayne's sealed game).
+	/// ponytail: one attacker's full damage on this one blocker — split among several blockers,
+	/// prevented, or stopped by protection is not seen; count them if a misjudged block is shown.
+	/// </summary>
+	static bool Survives(GameState s, Card blocker, Card attacker)
+	{
+		if (s.IsIndestructible(blocker))
+			return true;
+		var assigns = Turns.Combat.Assigns(s, attacker);
+		if (Evaluator.IsOff(Evaluator.Terms.BlockSurvival)) // the check before AI-8.3, to measure against
+			return assigns < s.Toughness(blocker);
+		bool First(Card c) => s.Has(c, "First strike") || s.Has(c, "Double strike");
+		var killedFirst =
+			First(blocker)
+			&& (
+				s.Has(blocker, "Deathtouch") && Turns.Combat.Assigns(s, blocker) > 0
+				|| Turns.Combat.Assigns(s, blocker) >= s.Toughness(attacker) - attacker.Damage
+			);
+		var hits =
+			killedFirst ? (First(attacker) ? 1 : 0)
+			: s.Has(attacker, "Double strike") ? 2
+			: 1;
+		var damage = assigns * hits;
+		return damage <= 0
+			|| !s.Has(attacker, "Deathtouch") && damage < s.Toughness(blocker) - blocker.Damage;
 	}
 }

@@ -27,16 +27,19 @@ public static class Evaluator
 		if (s.IsOver())
 			return s.WinnerId() == player ? 10_000 : -10_000;
 		var opponent = s.OpponentOf(player);
-		var keywords = (off.Value & Terms.MoreKeywords) != 0 ? FirstKeywords : ValuedKeywords;
+		var keywords = IsOff(Terms.MoreKeywords) ? FirstKeywords : ValuedKeywords;
 		var sides =
 			Side(s, player, held, own: true, keywords)
 			- Side(s, opponent, held, own: false, keywords);
-		return (off.Value & Terms.Threat) != 0
+		return IsOff(Terms.Threat)
 			? sides
 			: sides + Pressure(s, player, opponent) - Pressure(s, opponent, player);
 	}
 
-	/// <summary>The evaluator's terms that can be switched off — each added by a measured story, so each can be measured without.</summary>
+	/// <summary>
+	/// The evaluator's terms that can be switched off — each added by a measured story, so each can be
+	/// measured without — and the look-ahead's one beside them (<see cref="BlockSurvival"/>).
+	/// </summary>
 	[Flags]
 	public enum Terms
 	{
@@ -47,7 +50,16 @@ public static class Evaluator
 
 		/// <summary>Vigilance, haste, reach, hexproof, indestructible and ward among a creature's valued keywords (AI-5.3, `+nokeywords`).</summary>
 		MoreKeywords = 2,
+
+		/// <summary>
+		/// Not the evaluator's own, but the look-ahead's beside it: double strike, deathtouch and marked
+		/// damage in "blocks only what it survives" (<see cref="Lookahead.QuickAnswer"/>, AI-8.3, `+oldblocks`).
+		/// </summary>
+		BlockSurvival = 4,
 	}
+
+	/// <summary>Whether <paramref name="term"/> is switched off here (<see cref="Without{T}"/>).</summary>
+	public static bool IsOff(Terms term) => (off.Value & term) != 0;
 
 	/// <summary>
 	/// <paramref name="work"/> evaluated without <paramref name="terms"/> — a search measured without them,
