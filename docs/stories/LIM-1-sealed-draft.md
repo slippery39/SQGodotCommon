@@ -63,6 +63,11 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - 2026-10-23, Claude (LIM-1.7, open to change): Start on the Sealed screen opens a fresh opponent;
   the table's **New game keeps the same opponent** (a rematch). A pasted pool drops its basics
   (free) and starts with an empty deck — the deck you built in Arena is not carried over.
+- 2026-10-23, Shayne: **build LIM-1.8 anyway** — not yet sure he plays the Direct.
+- 2026-10-23, Claude (LIM-1.8, open to change): a candidate build is an **Arena export** (its
+  Sideboard section is the rest of the pool, outside the game); every build meets the SAME opponents
+  — pool i from seed i, the AI's build, in a game of seed i — one game each, the candidate as
+  player 1 and the coin flip deciding who starts, so builds are compared paired by opponent.
 - 2026-10-23, Shayne: the Special Guests are part of the full sealed experience — MC-3 moves up
   to the sprint's second item, and generated packs contain them once they play.
 
@@ -90,17 +95,21 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       opponent — a new random pool and its build — not one fixed by your seed; and
       `python tools/import_17lands.py fra` re-run for current ratings — built: `ArenaDeck.ReadPool`,
       `SealedSession(pool, leftOut)` + `OpponentFor(seed)`, Paste Arena pool on `SealedScene`
-- [ ] LIM-1.8 Compare candidate builds by sims — **only if Shayne plays the Direct**: each build
+- [x] LIM-1.8 Compare candidate builds by sims: each build
       against ~200 AI sealed decks from random pools, the search on both sides, in the console.
       Says which colours the AI pilots better, not which card; ~7pp is the smallest difference
-      200 games show
+      200 games show — built: `SealedBuildMatch`, `MagicConsole --builds=a.txt,b.txt`
+      (`SealedBuildMatchTests`); the opponent is `SealedBuilder.Opponent(seed)`, which the table's
+      `SealedSession.OpponentFor` now calls. Not yet run on a real pool's candidates
 - [ ] LIM-1.9 The AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) weights by old
       draft boosters (10 C / 3 U / 1 R) — point it at `FRA.boosters.json`'s sheets
 
 ## Next
 
-LIM-1.7 and MC-3 are done (pools can hold a Special Guest now). LIM-1.8 waits on
-Shayne deciding to play the Direct.
+LIM-1.7, MC-3 and LIM-1.8 are done (pools can hold a Special Guest now). **To compare builds:**
+export each candidate from Arena's deck builder into a file, then
+`dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt` (Commands.md) — ~15 min
+for two builds at 200 games on 16 cores; ask Shayne before a run that long.
 
 **Playtest LIM-1.5** (`./Run-Godot.ps1`, MagicTable → Sealed): build by hand, take the suggested
 deck, Start, play — and cast Extrapolate the Impossible if the pool has it (your sideboard is the
@@ -141,3 +150,5 @@ opponent's pool is what it guesses from.
 - 2026-10-23: LIM-1.7 — your real pool pasted from Arena; each game a fresh AI opponent. The
   17lands re-run found nothing new: its public files are still those of 2026-10-19, so the ratings
   are unchanged (not committed). The dialog captured; the paste itself is tested, not clicked.
+- 2026-10-23: LIM-1.8 — `--builds`. A smoke run (two FraDecks decks as builds, 8 opponents, beam
+  both sides) played 16 games in 42 s on 16 cores; no real comparison run yet.

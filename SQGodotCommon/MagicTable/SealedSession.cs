@@ -39,8 +39,7 @@ public sealed class SealedSession
 	public IReadOnlyList<string> LeftOut { get; }
 
 	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, and its own build of it.</summary>
-	public static SealedDeck OpponentFor(int seed) =>
-		SealedBuilder.Build(Open(seed), CardRatings.Fra);
+	public static SealedDeck OpponentFor(int seed) => SealedBuilder.Opponent(seed);
 
 	/// <summary>The pool cards in your deck (basics added on top are <see cref="Basics"/>).</summary>
 	public IReadOnlyList<string> FromPool => _deck;
@@ -133,6 +132,5 @@ public sealed class SealedSession
 			? i
 			: throw new System.ArgumentException($"{basic} is not a basic land", nameof(basic));
 
-	private static IReadOnlyList<string> Open(int seed) =>
-		[.. Boosters.Sealed(seed).SelectMany(p => p).Select(c => c.Card)];
+	private static IReadOnlyList<string> Open(int seed) => Boosters.SealedPool(seed);
 }

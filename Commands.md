@@ -141,6 +141,13 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     notrample      the threat term without a trampler's excess over its blocker (before AI-8.4)
 #     walkercount    a planeswalker as a flat body and 0.35 a counter, not by what its best ability makes (before AI-8.2)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
+
+# Compare candidate SEALED builds (LIM-1.8; ~15 min for two builds at 200, 16 cores)
+dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=200]
+#   each file an Arena export (deck builder -> Export); its Sideboard section is the rest of your pool,
+#   "outside the game". Every build plays the SAME 200 AI sealed opponents (pool i opened from seed i,
+#   the AI's own build, in a game of seed i), beam on both sides; the difference is paired by opponent.
+#   200 games show ~7pp; it says which build the AI pilots better, not which card is right
 ```
 
 ## Play in console

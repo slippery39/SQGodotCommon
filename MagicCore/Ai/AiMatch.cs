@@ -331,7 +331,6 @@ public static class AiMatch
 	static List<double> PairScores(IEnumerable<Game> games) =>
 		[.. games.GroupBy(g => (g.Deck1, g.Deck2, g.Seed)).Select(p => p.Average(Result.ScoreOfA))];
 
-	/// <summary>One game; null if <paramref name="stop"/> is cancelled before it ends.</summary>
 	static Game? Play(
 		string a,
 		string b,
@@ -341,9 +340,37 @@ public static class AiMatch
 		bool aIsPlayer1,
 		int? searchThreads,
 		CancellationToken stop
+	) =>
+		Play(
+			a,
+			b,
+			MagicRules.NewGame(FraDecks.All[deck1], FraDecks.All[deck2], seed),
+			deck1,
+			deck2,
+			seed,
+			aIsPlayer1,
+			searchThreads,
+			stop
+		);
+
+	/// <summary>
+	/// One game from <paramref name="newGame"/> (a new game of decks named <paramref name="deck1"/> and
+	/// <paramref name="deck2"/> — any decks, not only FRA's: sealed builds, LIM-1.8); null if
+	/// <paramref name="stop"/> is cancelled before it ends.
+	/// </summary>
+	public static Game? Play(
+		string a,
+		string b,
+		GameState newGame,
+		string deck1,
+		string deck2,
+		int seed,
+		bool aIsPlayer1,
+		int? searchThreads,
+		CancellationToken stop = default
 	)
 	{
-		var s = MagicRules.NewGame(FraDecks.All[deck1], FraDecks.All[deck2], seed);
+		var s = newGame;
 		var (aSeat, bSeat) = aIsPlayer1
 			? (s.Player1Id(), s.Player2Id())
 			: (s.Player2Id(), s.Player1Id());

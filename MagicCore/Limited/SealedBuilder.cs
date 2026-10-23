@@ -44,6 +44,10 @@ public static class SealedBuilder
 		"Forest",
 	];
 
+	/// <summary>An AI sealed opponent: a pool opened from <paramref name="seed"/>, and its own build of it.</summary>
+	public static SealedDeck Opponent(int seed) =>
+		Build(Boosters.SealedPool(seed), CardRatings.Fra);
+
 	public static SealedDeck Build(
 		IReadOnlyList<string> pool,
 		IReadOnlyDictionary<string, double> ratings

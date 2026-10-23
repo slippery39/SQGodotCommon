@@ -43,6 +43,34 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 	return;
 }
 
+// --builds=A.txt,B.txt[,…] [--games=N]: candidate sealed builds, each an Arena export (its Sideboard
+// section is the rest of your pool), against the same N AI sealed opponents — the search on both sides
+// (SealedBuildMatch, LIM-1.8). Default 200: the smallest difference that shows is then ~7pp.
+if (args.FirstOrDefault(a => a.StartsWith("--builds=")) is { } buildsArg)
+{
+	try
+	{
+		var builds = buildsArg["--builds=".Length..]
+			.Split(',')
+			.Select(path =>
+				MagicCore.Limited.SealedBuildMatch.FromExport(
+					Path.GetFileNameWithoutExtension(path),
+					File.ReadAllText(path)
+				)
+			)
+			.ToList();
+		Console.WriteLine(
+			MagicCore.Limited.SealedBuildMatch.Run(builds, Arg("games") ?? 200).Report()
+		);
+	}
+	catch (Exception e) when (e is IOException or ArgumentException)
+	{
+		Console.WriteLine(e.Message);
+		Environment.ExitCode = 1;
+	}
+	return;
+}
+
 // --suite=generate: record the search's self-play as the position suite (run from the solution root).
 // --suite=A [--accept]: what AI A decides at every position, against the committed answers (AI-6.4);
 // --accept makes A's answers the committed ones. --suite=oracle: a much deeper search reads every

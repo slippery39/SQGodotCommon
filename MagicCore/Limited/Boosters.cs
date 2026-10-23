@@ -54,6 +54,10 @@ public static class Boosters
 		return [.. Enumerable.Range(0, packs).Select(_ => Pack(rng))];
 	}
 
+	/// <summary><see cref="Sealed"/> as card names, pack by pack — what a builder reads.</summary>
+	public static IReadOnlyList<string> SealedPool(int seed) =>
+		[.. Sealed(seed).SelectMany(p => p).Select(c => c.Card)];
+
 	/// <summary>One pack: a weighted variant, then each of its sheets drawn — no card twice from a sheet.</summary>
 	public static IReadOnlyList<PackCard> Pack(Random rng)
 	{
