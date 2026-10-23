@@ -39,6 +39,9 @@ public record StackAbility : GameObject
 
 	/// <summary>X for its effects: the X paid for the permanent, for its own "enters" trigger only (CR 107.3m).</summary>
 	public int X { get; init; }
+
+	/// <summary>A triggered ability, not an activated one — Consign to Memory counters only these.</summary>
+	public bool Triggered { get; init; }
 }
 
 /// <summary>
@@ -66,6 +69,9 @@ public record CastSpellAction : GameAction
 
 	/// <summary>Omnipresence: cast without paying its mana cost — X is 0 (CR 107.3c).</summary>
 	public bool WithoutPayingManaCost { get; init; }
+
+	/// <summary>Consign to Memory: how many times its replicate cost is paid — that many copies.</summary>
+	public int Replicate { get; init; }
 
 	/// <summary>
 	/// Cast by an effect as it resolves (CastNow — Chandra, Uldaros): no priority, no timing, and the
@@ -100,7 +106,9 @@ public record CastSpellAction : GameAction
 			s,
 			PlayerId,
 			card,
-			X + CostList.OrPayOwed(CostsOf(s, card), Chosen),
+			X
+				+ Replicate * (card.GetComponent<ReplicateComponent>()?.Generic ?? 0)
+				+ CostList.OrPayOwed(CostsOf(s, card), Chosen),
 			free: WithoutPayingManaCost
 		);
 
@@ -130,6 +138,8 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Sorcery speed: your main phase with an empty stack");
 		if (X < 0 || (X > 0 && (!card.ManaCost.HasX || WithoutPayingManaCost)))
 			return ValidationResult.Invalid("Invalid X");
+		if (Replicate < 0 || (Replicate > 0 && !card.HasComponent<ReplicateComponent>()))
+			return ValidationResult.Invalid("It has no replicate cost");
 		if (
 			WithoutPayingManaCost
 			&& !DuringResolution
@@ -137,7 +147,7 @@ public record CastSpellAction : GameAction
 		)
 			return ValidationResult.Invalid("You may not cast that without paying its mana cost");
 		var text = card.GetComponent<SpellEffectsComponent>();
-		if (!Modal.IsLegal(text?.Modes ?? [], text?.Choose ?? 1, Modes))
+		if (!Modal.IsLegal(text?.Modes ?? [], text?.Choose ?? 1, Modes, text?.ChooseAtLeast))
 			return ValidationResult.Invalid("Illegal choice of modes");
 		if (
 			!TargetSpec.AreLegal(
@@ -201,7 +211,31 @@ public record CastSpellAction : GameAction
 		);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
-		return PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from);
+		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from);
+		if (Replicate == 0)
+			return s;
+		// Replicate (CR 702.56a): "when you cast this spell, copy it for each time you paid its
+		// replicate cost" — a triggered ability above it; CopySpell lets each copy choose new targets.
+		// ponytail: pushed here, not through Triggers.Collect — other "whenever you cast" triggers go
+		// above it with no ordering choice; route it through Collect if a card makes the order matter.
+		var spell = s.GetCard(CardId);
+		return StackResolution.Push(
+			s,
+			new StackAbility
+			{
+				Name = $"{spell.Name} replicate",
+				SourceId = CardId,
+				Source = spell,
+				ControllerId = PlayerId,
+				Effects =
+				[
+					.. Enumerable.Repeat<GameAction>(new CopySpell(Ref.EventCard), Replicate),
+				],
+				EventCardId = CardId,
+				EventSnapshot = spell,
+				Triggered = true,
+			}
+		);
 	}
 
 	/// <summary>
@@ -465,17 +499,29 @@ public static class StackResolution
 					auraHost == 0
 					|| !aura.Enchant.IsLegal(s, permanent.ControllerId, permanent.Id, auraHost);
 			}
-			s =
-				cast?.CastFrom == ZoneType.Graveyard || auraFizzles
-					? s.MoveCard(permanent.Id, s.ZoneId(permanent.OwnerId, ZoneType.Graveyard)) // flashback: exiled instead (MoveCard)
-					: s.EnterBattlefield(
-						permanent.Id,
-						permanent.ControllerId,
-						cast?.X ?? 0,
-						attachTo: auraHost,
-						cast: cast is not null
-					);
-			return Priority.Retain(s, s.GetGame().ActivePlayerId);
+			if (cast?.CastFrom == ZoneType.Graveyard || auraFizzles)
+				return Priority.Retain(
+					s.MoveCard(permanent.Id, s.ZoneId(permanent.OwnerId, ZoneType.Graveyard)), // flashback: exiled instead (MoveCard)
+					s.GetGame().ActivePlayerId
+				);
+			// Two steps, so a choice it makes as it enters (Flesh Duplicate's copy, Room of Refuge's
+			// colour) is answered before anyone gets priority — and before the state check sees a 0/0.
+			return s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new EnterFromStackAction(
+							permanent.Id,
+							permanent.ControllerId,
+							cast?.X ?? 0,
+							auraHost,
+							cast is not null
+						),
+						new ActivePlayerGetsPriorityAction(),
+					],
+				}
+			);
 		}
 
 		var (controller, sourceId, snapshot, effects, specs, chosen, x, eventCard, finish) =
@@ -548,6 +594,21 @@ public record FinishSpellAction : GameAction
 			s = s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 		return new ActionResult(Priority.Retain(s, s.GetGame().ActivePlayerId));
 	}
+}
+
+/// <summary>A resolving permanent spell enters the battlefield (CR 608.3) — then ActivePlayerGetsPriorityAction.</summary>
+public record EnterFromStackAction(int CardId, int ControllerId, int X, int AttachTo, bool Cast)
+	: GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.EnterBattlefield(CardId, ControllerId, X, attachTo: AttachTo, cast: Cast));
+}
+
+/// <summary>After a resolution, the active player gets priority (CR 117.3b).</summary>
+public record ActivePlayerGetsPriorityAction : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		new(Priority.Retain(s, s.GetGame().ActivePlayerId));
 }
 
 public record FinishAbilityAction : GameAction

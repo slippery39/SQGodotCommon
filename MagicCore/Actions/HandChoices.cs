@@ -295,6 +295,43 @@ public record ChooseKeywordChoice : ChoiceAction
 	) => PlayerId;
 }
 
+/// <summary>
+/// "Pay any amount of life" — a number from 0 to Max. Option id = the number + 1: 0 means "none"
+/// across this engine, so no answer may be 0.
+/// </summary>
+public record ChooseNumberChoice : ChoiceAction
+{
+	public const string Chosen = "number";
+
+	public int PlayerId { get; init; }
+	public int Max { get; init; }
+
+	public ChooseNumberChoice(int playerId, int max)
+	{
+		PlayerId = playerId;
+		Max = max;
+		MinChoices = 1;
+		MaxChoices = 1;
+		OutputKey = Chosen;
+		Prompt = "Choose a number";
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		[
+			.. Enumerable
+				.Range(0, Max + 1)
+				.Select(n => new ChoiceOption { Id = n + 1, DisplayText = $"{n}" }),
+		];
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
 /// <summary>How to cast a card in the middle of a resolution: its targets, modes, X — one legal cast each.</summary>
 public record ChooseCastChoice : ChoiceAction
 {

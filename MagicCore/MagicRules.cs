@@ -192,7 +192,7 @@ public static class MagicRules
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		var choices = Modal
-			.Choices(text?.Modes ?? [], text?.Choose ?? 1)
+			.Choices(text?.Modes ?? [], text?.Choose ?? 1, text?.ChooseAtLeast)
 			.SelectMany(modes =>
 				TargetSpec
 					.Combinations(s, StackResolution.TextOf(card, modes).Specs, player, card.Id)
@@ -208,26 +208,39 @@ public static class MagicRules
 		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
 		var free = Rules.Playable.MayCastWithoutPaying(s, card, player);
 		var payments = Enumerable.Range(0, maxX + 1).Select(x => (x, free: free && x == 0));
-		return payments.SelectMany(payment =>
-			sacrifices.SelectMany(sacrifice =>
-				discards.SelectMany(discard =>
-					beholds.SelectMany(beheld =>
-						choices.Select(c => new CastSpellAction
-						{
-							PlayerId = player,
-							CardId = card.Id,
-							X = payment.x,
-							WithoutPayingManaCost = payment.free,
-							Targets = c.targets,
-							Modes = c.modes,
-							SacrificeId = sacrifice,
-							DiscardId = discard,
-							BeholdId = beheld,
-						})
+		// Replicate: one cast per number of payments, bounded loosely like X — ValidateAdd's payment decides.
+		var maxReplicate = card.GetComponent<ReplicateComponent>() is { } replicate
+			? Math.Max(
+				0,
+				(AvailableMana(s, player, s.Has(card, "Convoke"), card) - card.ManaCost.ManaValue)
+					/ Math.Max(1, replicate.Generic)
+			)
+			: 0;
+		return Enumerable
+			.Range(0, maxReplicate + 1)
+			.SelectMany(replicates =>
+				payments.SelectMany(payment =>
+					sacrifices.SelectMany(sacrifice =>
+						discards.SelectMany(discard =>
+							beholds.SelectMany(beheld =>
+								choices.Select(c => new CastSpellAction
+								{
+									PlayerId = player,
+									CardId = card.Id,
+									X = payment.x,
+									WithoutPayingManaCost = payment.free,
+									Targets = c.targets,
+									Modes = c.modes,
+									SacrificeId = sacrifice,
+									DiscardId = discard,
+									BeholdId = beheld,
+									Replicate = replicates,
+								})
+							)
+						)
 					)
 				)
-			)
-		);
+			);
 	}
 
 	/// <summary>Abilities activated from the zone the card is in — one candidate per target and card-cost choice.</summary>
@@ -331,7 +344,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}",
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}",
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
 			ActivateLoyaltyAction loyalty =>
@@ -373,6 +386,7 @@ public static class MagicRules
 		typeof(ChooseFromLibraryTopChoice),
 		typeof(ChooseAmongChoice),
 		typeof(ChoosePermanentChoice),
+		typeof(ChooseCreatureToCopyChoice),
 		typeof(ChooseHostChoice),
 		typeof(DeclareAttackerChoice),
 		typeof(DeclareBlockerChoice),
@@ -384,6 +398,7 @@ public static class MagicRules
 		typeof(ChooseModesChoice),
 		typeof(ChooseColorChoice),
 		typeof(ChooseKeywordChoice),
+		typeof(ChooseNumberChoice),
 		typeof(YesNoChoice),
 		typeof(ChooseCastChoice),
 	];

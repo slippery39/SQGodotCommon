@@ -240,9 +240,15 @@ public static class Combat
 				|| c.Components.Any(x => x is UntilEndOfTurn { UntilTurnOf: 0 })
 				|| c.HasComponent<CopyUntilEndOfTurn>(),
 			c =>
-				(Card)(c.WithoutCopyEffect() with { Damage = 0, DamagedByDeathtouch = false }) with
+				(Card)(
+					c.WithoutCopyUntilEndOfTurn() with
+					{
+						Damage = 0,
+						DamagedByDeathtouch = false,
+					}
+				) with
 				{
-					Components = c.WithoutCopyEffect()
+					Components = c.WithoutCopyUntilEndOfTurn()
 						.Components.RemoveAll(x => x is UntilEndOfTurn { UntilTurnOf: 0 }),
 				}
 		);

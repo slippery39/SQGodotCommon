@@ -29,6 +29,7 @@ public static class Describe
 					: ""
 				)
 				+ (c.X > 0 ? $" (X={c.X})" : "")
+				+ (c.Replicate > 0 ? $" (replicate ×{c.Replicate})" : "")
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")

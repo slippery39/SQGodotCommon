@@ -140,6 +140,11 @@
     "Value": 0.3
   },
   {
+    "Name": "Consign to Memory",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
     "Name": "Countersculpt",
     "Value": 0,
     "NotMeasured": "can't be cast in the fixture"
@@ -292,6 +297,10 @@
   {
     "Name": "Ferocity of the Hunt",
     "Value": 4.3
+  },
+  {
+    "Name": "Flesh Duplicate",
+    "Value": 14.5
   },
   {
     "Name": "Flickering Hound",
@@ -634,6 +643,10 @@
     "Value": 2
   },
   {
+    "Name": "Necrodominance",
+    "Value": 2
+  },
+  {
     "Name": "No Admittance",
     "Value": 11.85
   },
@@ -901,6 +914,10 @@
   {
     "Name": "Stinging Vitriol",
     "Value": 2
+  },
+  {
+    "Name": "Sublime Epiphany",
+    "Value": 28.1
   },
   {
     "Name": "Sureshot Sower",

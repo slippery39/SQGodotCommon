@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 86/86 · uncommon 109/109 · rare 64/64 · mythic 32/36 · **291/295**
+**Playable:** common 86/86 · uncommon 109/109 · rare 64/64 · mythic 36/36 · **295/295**
 
 ### Academic Ascent
 
@@ -6378,7 +6378,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Replicate {1} (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the copies.)  
 > Counter target triggered ability or colorless spell.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReplicateComponent` — "Replicate {N} (When you cast this spell, copy it for each time you paid its replicate…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Consign to Memory"] =
+[
+	new ReplicateComponent(1),
+	Spell(
+		[
+			TargetSpec.Ability(Is.TriggeredAbility) with
+			{
+				Or = TargetSpec.Spell(Is.Colorless),
+			},
+		],
+		new Counter(Ref.Target())
+	),
+],
+```
 
 ### Craterclaw Colossus
 
@@ -6559,7 +6577,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may have this creature enter as a copy of any creature on the battlefield, except it has vanishing 3 if that creature doesn't have vanishing. (A permanent with vanishing 3 enters with three time counters on it. At the beginning of your upkeep, remove a time counter from it. When the last is removed, sacrifice it.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `MayEnterAsCopy` — Flesh Duplicate: "You may have this creature enter as a copy of any creature on the…
+
+```csharp
+["Flesh Duplicate"] = [new MayEnterAsCopy { VanishingIfNone = 3 }],
+```
 
 ### Garruk, Curse Breaker
 
@@ -6773,7 +6797,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Your maximum hand size is five.  
 > If a card or token would be put into your graveyard from anywhere, exile it instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `ExileInsteadOfYourGraveyard` — Necrodominance: "If a card or token would be put into your graveyard from anywhere,…; `MaximumHandSize` — Necrodominance: "Your maximum hand size is five." The lowest applies; read by the…; `PayAnyLifeThenDraw` — Necrodominance: "you may pay any amount of life. If you do, draw that many cards." — a…; `SkipYourDrawStep` — Necrodominance: "Skip your draw step." — it never begins: no draw, no trigger, no…
+
+```csharp
+["Necrodominance"] =
+[
+	new SkipYourDrawStep(),
+	When(TriggerEvent.YourEndStep, [], new PayAnyLifeThenDraw()),
+	new MaximumHandSize(5),
+	new ExileInsteadOfYourGraveyard(),
+],
+```
 
 ### Omnipresence
 
@@ -6961,7 +6997,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Create a token that's a copy of target creature you control.  
 > • Target player draws a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Sublime Epiphany"] =
+[
+	ModalSpell(
+		"Sublime Epiphany",
+		5,
+		M([TargetSpec.Spell()], new Counter(Ref.Target())),
+		M([TargetSpec.Ability()], new Counter(Ref.Target())),
+		M([Target(!Is.Land)], new ReturnToHand(Ref.Target())),
+		M([Target(Is.Creature & Is.Yours)], new CreateTokenCopy(Ref.Target())),
+		M([TargetSpec.Player()], new DrawCards(Ref.Target(), 1))
+	) with
+	{
+		ChooseAtLeast = 1,
+	},
+],
+```
 
 ### Tarmogoyf
 

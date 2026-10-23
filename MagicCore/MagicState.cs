@@ -174,6 +174,14 @@ public static class MagicState
 			)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
+		// Necrodominance: its controller's cards go to exile instead of their graveyard, from anywhere —
+		// so a creature never dies. Read while it is still on the battlefield, so it exiles itself too.
+		if (
+			zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
+			&& s.CardsIn(before.OwnerId, ZoneType.Battlefield)
+				.Any(s.HasAbility<ExileInsteadOfYourGraveyard>)
+		)
+			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
 		var milled =
 			s.IsIn(cardId, before.OwnerId, ZoneType.Library)
@@ -275,6 +283,7 @@ public static class MagicState
 				ControlledSinceTurn = s.GetGame().TurnNumber,
 				EnteredOnTurn = s.GetGame().TurnNumber,
 				Loyalty = card.PrintedLoyalty,
+				TimeCounters = card.GetComponent<Vanishing>()?.N ?? 0, // vanishing: "enters with N time counters"
 				CastX = x,
 				WasCast = cast,
 				HasFinalityCounter = finality,
@@ -323,6 +332,17 @@ public static class MagicState
 					[
 						new Actions.ChooseColorChoice(controllerId),
 						new Actions.SetChosenColorAction(cardId),
+					],
+				}
+			);
+		if (card.GetComponent<MayEnterAsCopy>() is { } asCopy)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new Actions.ChooseCreatureToCopyChoice(controllerId, cardId),
+						new Actions.BecomeCopyOfChosenAction(cardId, asCopy.VanishingIfNone),
 					],
 				}
 			);

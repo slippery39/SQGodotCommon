@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using MagicCore.Cards;
 using MagicCore.Limited;
+using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Limited;
 
@@ -78,7 +79,7 @@ public class BoosterTests
 	}
 
 	[Test]
-	public void SpecialGuests_AreOnePackIn55_AndNoneWhileUnscripted()
+	public void SpecialGuests_AreOnePackIn55_AndPlay()
 	{
 		var variants = Data["boosters"]!.AsArray();
 		var guest = variants
@@ -89,8 +90,17 @@ public class BoosterTests
 			Is.EqualTo(1.0 / 55).Within(1e-9)
 		);
 
-		if (!Boosters.GuestsPlayable)
-			Assert.That(Packs(2000).SelectMany(p => p).All(c => Fra.ContainsKey(c.Card)));
+		const int n = 20000;
+		var packs = Packs(n);
+		var withGuest = packs.Count(p => p.Any(c => c.Sheet == "specialGuest"));
+		var expected = 1.0 / 55;
+		Assert.That(
+			(double)withGuest / n,
+			Is.EqualTo(expected).Within(4 * Math.Sqrt(expected * (1 - expected) / n))
+		);
+		var guests = packs.SelectMany(p => p).Where(c => c.Sheet == "specialGuest").ToList();
+		Assert.That(guests.Select(c => c.Card).Distinct(), Is.SubsetOf(Boosters.Guests));
+		Assert.That(guests.Where(c => !FraCards.IsImplemented(c.Card)), Is.Empty);
 	}
 
 	[Test]

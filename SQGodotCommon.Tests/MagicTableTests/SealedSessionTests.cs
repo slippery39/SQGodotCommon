@@ -100,15 +100,13 @@ public class SealedSessionTests
 
 	/// <summary>
 	/// Extrapolate the Impossible was the last (LIM-1.6): no FRA card is unscripted now, so no pool
-	/// holds one to keep out. The guard stays for sets to come. The Special Guests (MC-3) are left
-	/// out only while packs can't hold them.
+	/// holds one to keep out — nor one of the Special Guests (MC-3). The guard stays for sets to come.
 	/// </summary>
 	[Test]
 	public void EveryFraCard_IsPlayable() =>
 		Assert.That(
 			MagicCore
 				.Cards.CardDataSet.Load("FRA")
-				.Where(c => Boosters.GuestsPlayable || !Boosters.Guests.Contains(c.Name))
 				.Where(c => !SealedSession.Playable(c.Name))
 				.Select(c => c.Name),
 			Is.Empty

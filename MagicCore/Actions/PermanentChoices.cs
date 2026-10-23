@@ -1,8 +1,81 @@
 using System.Collections.Immutable;
 using ImmutableGameObjects;
+using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Filters;
 
 namespace MagicCore.Actions;
+
+/// <summary>
+/// Flesh Duplicate: "a copy of any creature on the battlefield" — anyone's, not itself. ponytail:
+/// "you may" is offered as must whenever there is a creature — a 0/0 that copies nothing just dies,
+/// and the AI's look-ahead answers a choice with its minimum (Lookahead.QuickAnswer).
+/// </summary>
+public record ChooseCreatureToCopyChoice : ChoiceAction
+{
+	public int PlayerId { get; init; }
+	public int SourceId { get; init; }
+
+	public ChooseCreatureToCopyChoice(int playerId, int sourceId)
+	{
+		PlayerId = playerId;
+		SourceId = sourceId;
+		MinChoices = 1;
+		MaxChoices = 1;
+		OutputKey = ChoosePermanentChoice.Chosen;
+		Prompt = "Enter as a copy of a creature?";
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		[
+			.. new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Where(c => c.Id != SourceId && c.Is(CardType.Creature))
+				.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name }),
+		];
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
+/// <summary>
+/// After the choice: it becomes a copy of the chosen creature — with vanishing, if that had none.
+/// ponytail: copied just AFTER entering, so the model's own "enters with counters / tapped" don't
+/// apply (its "when this enters" triggers do); copy before EnterBattlefield's entry stamp if a card needs it.
+/// </summary>
+public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (
+			!s.IsOnBattlefield(CardId)
+			|| ChoosePermanentChoice.Read(InputContext).FirstOrDefault() is not (> 0 and var id)
+			|| !s.IsOnBattlefield(id)
+		)
+			return new(s);
+		var card = s.GetCard(CardId);
+		var model = s.GetCard(id);
+		var copy = (Card)card.WithCopiableValuesOf(model).WithComponent(new EnteredAsCopy(card));
+		if (VanishingIfNone > 0 && !s.HasAbility<Vanishing>(model))
+			foreach (var component in Vanishing.Of(VanishingIfNone))
+				copy = (Card)copy.WithComponent(component);
+		// It entered just before it became the copy: vanishing's "enters with N time counters" here.
+		return new(
+			s.UpdateObject(
+				CardId,
+				copy with
+				{
+					TimeCounters = copy.GetComponent<Vanishing>()?.N ?? 0,
+				}
+			)
+		);
+	}
+}
 
 /// <summary>
 /// Pick up to one of your permanents matching a filter — "you may sacrifice a creature". Not

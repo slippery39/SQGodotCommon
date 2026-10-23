@@ -70,6 +70,12 @@ public static class Is
 
 	public static Filter Color(ManaColor color) => new OfColor(color);
 
+	/// <summary>Consign to Memory: "target triggered ability" — with TargetSpec.Ability.</summary>
+	public static readonly Filter TriggeredAbility = new AbilityKind(Triggered: true);
+
+	/// <summary>"Target activated ability" — loyalty abilities are activated too.</summary>
+	public static readonly Filter ActivatedAbility = new AbilityKind(Triggered: false);
+
 	/// <summary>Eye of Ugin: "colorless" — a card with no colour at all.</summary>
 	public static readonly Filter Colorless = new Colorless();
 

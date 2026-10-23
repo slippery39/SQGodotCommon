@@ -138,6 +138,9 @@ public record Card : GameObject
 	/// <summary>Gardenize's charge counters — a resource; nothing but the card that holds them reads them.</summary>
 	public int ChargeCounters { get; init; }
 
+	/// <summary>Vanishing's time counters (Flesh Duplicate) — one removed each upkeep; the last sacrifices it.</summary>
+	public int TimeCounters { get; init; }
+
 	/// <summary>The TurnNumber a loyalty ability of this permanent was last activated — once per turn (CR 606.3).</summary>
 	public int LoyaltyActivatedOnTurn { get; init; }
 	public int Damage { get; init; }
@@ -206,6 +209,7 @@ public record Card : GameObject
 			CastX = 0,
 			WasCast = false,
 			ChargeCounters = 0,
+			TimeCounters = 0,
 			LoyaltyActivatedOnTurn = 0,
 			EnteredOnTurn = 0,
 			AttackedOnTurn = 0,
@@ -240,6 +244,7 @@ public record Card : GameObject
 				or Effects.ExiledBy
 				or Effects.ChosenColorMana
 				or CopyUntilEndOfTurn
+				or EnteredAsCopy
 				or Effects.DelayedTrigger
 				or Animated
 				or Effects.TapsForTwoColorlessWhileExiled;
@@ -316,7 +321,14 @@ public record Card : GameObject
 			: this;
 
 	/// <summary>Hall of Echoes back to itself — at cleanup, or as it leaves (CR 400.7).</summary>
+	/// <summary>Leaving the battlefield: every copy effect undone — until end of turn first, then entered-as.</summary>
 	public Card WithoutCopyEffect() =>
+		WithoutCopyUntilEndOfTurn() is var card && card.GetComponent<EnteredAsCopy>() is { } entered
+			? (Card)card.WithCopiableValuesOf(entered.Original).WithoutComponents<EnteredAsCopy>()
+			: card;
+
+	/// <summary>Cleanup: only Hall of Echoes' "until end of turn" copy ends — a Flesh Duplicate stays one.</summary>
+	public Card WithoutCopyUntilEndOfTurn() =>
 		GetComponent<CopyUntilEndOfTurn>() is { } copy
 			? (Card)WithCopiableValuesOf(copy.Original).WithoutComponents<CopyUntilEndOfTurn>()
 			: this;
@@ -372,6 +384,12 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 /// cleanup or on leaving the battlefield (Card.WithoutCopyEffect).
 /// </summary>
 public record CopyUntilEndOfTurn(Card Original) : GameComponent;
+
+/// <summary>
+/// Flesh Duplicate: it entered as a copy — what it was, restored as it leaves the battlefield
+/// (Card.WithoutCopyEffect), never in cleanup.
+/// </summary>
+public record EnteredAsCopy(Card Original) : GameComponent;
 
 /// <summary>Animated by this Aura (this object of it); the rest is what it was, to put back.</summary>
 public record Animated(

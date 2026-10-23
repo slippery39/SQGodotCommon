@@ -191,8 +191,7 @@ public static class Hidden
 	/// <summary>
 	/// Every implemented FRA nonland card, weighted as a booster deals it: 10 commons, 3 uncommons and
 	/// a rare or (one time in eight) a mythic, each slot shared among that rarity's nonland cards.
-	/// Not the Special Guests (MC-3): one pack in 55 holds one, none while packs can't — so they are
-	/// never guessed. ponytail: the old draft-booster slots; LIM-1.9 weights by FRA.boosters.json's sheets.
+	/// Not the Special Guests (MC-3): one pack in 55 holds one — too rare to guess at. ponytail: the old draft-booster slots; LIM-1.9 weights by FRA.boosters.json's sheets.
 	/// </summary>
 	static readonly (string Name, ManaColor[] Colors, double Weight)[] Spells = BoosterWeighted();
 

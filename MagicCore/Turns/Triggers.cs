@@ -636,6 +636,7 @@ public record PutTriggerOnStackAction : GameAction
 					EventSnapshot = EventSnapshot,
 					EventObject = EventObject,
 					X = X,
+					Triggered = true,
 				}
 			)
 		);

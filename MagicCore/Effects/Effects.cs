@@ -368,6 +368,77 @@ public record GrantChosenKeywordAction(Ref What, ImmutableArray<string> Keywords
 	}
 }
 
+/// <summary>
+/// Vanishing: "remove a time counter from it. When the last is removed, sacrifice it." ponytail: one
+/// ability, where the rules have two — the same game unless a player acts between them.
+/// </summary>
+public record RemoveTimeCounter(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var card in Permanents(What, s).ToList())
+		{
+			if (card.TimeCounters <= 0)
+				continue;
+			s = s.UpdateObject(card.Id, card with { TimeCounters = card.TimeCounters - 1 });
+			if (card.TimeCounters == 1)
+				s = s.Sacrifice(card.Id);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Necrodominance: "you may pay any amount of life. If you do, draw that many cards." — a number
+/// from 0 (not paying) to your life total.
+/// </summary>
+public record PayAnyLifeThenDraw : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						// ponytail: never your whole life or more cards than your library — either loses
+						// the game, and each number is a look-ahead the AI settles.
+						new ChooseNumberChoice(
+							Controller,
+							Math.Max(
+								0,
+								Math.Min(
+									s.GetPlayer(Controller).Life - 1,
+									s.CardsIn(Controller, ZoneType.Library).Count()
+								)
+							)
+						)
+						{
+							Prompt = "Pay how much life? You draw that many cards.",
+						},
+						new PayChosenLifeThenDraw(),
+					],
+				}
+			)
+		);
+}
+
+/// <summary>After the choice: that much life paid, that many cards drawn.</summary>
+public record PayChosenLifeThenDraw : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var n = InputContext.GetValueOrDefault(ChooseNumberChoice.Chosen) is int id ? id - 1 : 0;
+		if (n <= 0)
+			return new(s);
+		s = new LoseLife(Ref.You, n) { InputContext = InputContext }
+			.Execute(s)
+			.GameState;
+		return new DrawCards(Ref.You, n) { InputContext = InputContext }.Execute(s);
+	}
+}
+
 /// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>
 public record AdditionalLandDrop : Effect
 {

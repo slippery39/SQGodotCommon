@@ -197,6 +197,14 @@ public class FilterMigrationTests
 		);
 		yield return Row("Spell", TargetSpec.Spell(), (Zone.Stack, null));
 		yield return Row(
+			"TriggeredAbilityOrColorlessSpell", // Consign to Memory; no ability is on this board's stack
+			TargetSpec.Ability(Is.TriggeredAbility) with
+			{
+				Or = TargetSpec.Spell(Is.Colorless),
+			},
+			(Zone.Stack, Is.Colorless)
+		);
+		yield return Row(
 			"WhoseYou",
 			TargetSpec.Permanent(Is.Creature & Is.Yours),
 			(bf, Is.Creature & Is.Yours)

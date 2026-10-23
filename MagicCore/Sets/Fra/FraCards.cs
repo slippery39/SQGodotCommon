@@ -3517,6 +3517,43 @@ public static class FraCards
 					If = new SourceWasCast(),
 				},
 			],
+			// ===== MC-3: Special Guests (SPG #159–168), batch 2 =====
+			["Consign to Memory"] =
+			[
+				new ReplicateComponent(1),
+				Spell(
+					[
+						TargetSpec.Ability(Is.TriggeredAbility) with
+						{
+							Or = TargetSpec.Spell(Is.Colorless),
+						},
+					],
+					new Counter(Ref.Target())
+				),
+			],
+			["Sublime Epiphany"] =
+			[
+				ModalSpell(
+					"Sublime Epiphany",
+					5,
+					M([TargetSpec.Spell()], new Counter(Ref.Target())),
+					M([TargetSpec.Ability()], new Counter(Ref.Target())),
+					M([Target(!Is.Land)], new ReturnToHand(Ref.Target())),
+					M([Target(Is.Creature & Is.Yours)], new CreateTokenCopy(Ref.Target())),
+					M([TargetSpec.Player()], new DrawCards(Ref.Target(), 1))
+				) with
+				{
+					ChooseAtLeast = 1,
+				},
+			],
+			["Flesh Duplicate"] = [new MayEnterAsCopy { VanishingIfNone = 3 }],
+			["Necrodominance"] =
+			[
+				new SkipYourDrawStep(),
+				When(TriggerEvent.YourEndStep, [], new PayAnyLifeThenDraw()),
+				new MaximumHandSize(5),
+				new ExileInsteadOfYourGraveyard(),
+			],
 			// ===== MC-3: Special Guests (SPG #159–168), batch 1 =====
 			["Consider"] = [Spell([], new Surveil(1), new DrawCards(Ref.You, 1))],
 			["Austere Command"] =

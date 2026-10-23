@@ -138,6 +138,17 @@ public sealed record OfColor(ManaColor Color) : Filter
 		o is Card card && card.Colors.Contains(Color);
 }
 
+/// <summary>Consign to Memory: "target triggered ability" — an ability on the stack, triggered or activated.</summary>
+public sealed record AbilityKind(bool Triggered) : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Actions.StackAbility a && a.Triggered == Triggered;
+}
+
 /// <summary>Eye of Ugin: "colorless Eldrazi spells", "a colorless creature card" — a card with no colour; never a player.</summary>
 public sealed record Colorless : Filter
 {

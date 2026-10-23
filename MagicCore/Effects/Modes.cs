@@ -43,16 +43,32 @@ public static class Modal
 		return (specs.ToImmutable(), steps.ToImmutable());
 	}
 
-	/// <summary>A legal choice of modes: exactly <paramref name="choose"/> distinct, in range — or none for a non-modal text.</summary>
-	public static bool IsLegal(ImmutableList<Mode> modes, int choose, ImmutableArray<int> chosen) =>
+	/// <summary>
+	/// A legal choice of modes: <paramref name="choose"/> distinct, in range (from
+	/// <paramref name="atLeast"/> for "choose one or more") — or none for a non-modal text.
+	/// </summary>
+	public static bool IsLegal(
+		ImmutableList<Mode> modes,
+		int choose,
+		ImmutableArray<int> chosen,
+		int? atLeast = null
+	) =>
 		modes.IsEmpty
 			? chosen.IsDefaultOrEmpty
-			: chosen.Length == choose
-				&& chosen.Distinct().Count() == choose
+			: chosen.Length >= (atLeast ?? choose)
+				&& chosen.Length <= choose
+				&& chosen.Distinct().Count() == chosen.Length
 				&& chosen.All(i => i >= 0 && i < modes.Count);
 
-	/// <summary>Every way to choose <paramref name="choose"/> of the modes (just the empty choice when not modal).</summary>
-	public static IEnumerable<ImmutableArray<int>> Choices(ImmutableList<Mode> modes, int choose)
+	/// <summary>
+	/// Every way to choose <paramref name="choose"/> of the modes — or any number from
+	/// <paramref name="atLeast"/> up (just the empty choice when not modal).
+	/// </summary>
+	public static IEnumerable<ImmutableArray<int>> Choices(
+		ImmutableList<Mode> modes,
+		int choose,
+		int? atLeast = null
+	)
 	{
 		if (modes.IsEmpty)
 			return
@@ -68,7 +84,8 @@ public static class Modal
 				: Enumerable
 					.Range(from, modes.Count - from)
 					.SelectMany(i => Pick(i + 1, left - 1).Select(rest => rest.Insert(0, i)));
-		return Pick(0, choose);
+		var least = atLeast ?? choose; // more than choose is a mis-scripted card: no way to cast it, not a crash
+		return Enumerable.Range(least, Math.Max(0, choose - least + 1)).SelectMany(n => Pick(0, n));
 	}
 }
 

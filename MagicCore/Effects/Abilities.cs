@@ -12,7 +12,17 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 	/// <summary>"Choose one/two —": the bullets. Empty for a non-modal spell.</summary>
 	public ImmutableList<Mode> Modes { get; init; } = [];
 	public int Choose { get; init; } = 1;
+
+	/// <summary>Sublime Epiphany: "Choose one or more —" is ChooseAtLeast 1, Choose every mode. Unset: exactly Choose.</summary>
+	public int? ChooseAtLeast { get; init; }
 }
+
+/// <summary>
+/// "Replicate {N} (When you cast this spell, copy it for each time you paid its replicate cost. You
+/// may choose new targets for the copies.)" — CastSpellAction.Replicate. ponytail: a generic cost
+/// only (Consign to Memory's {1}); a coloured one would add symbols, not generic.
+/// </summary>
+public record ReplicateComponent(int Generic) : GameComponent;
 
 /// <summary>What happened, for triggers — one value per event record. Grows only with a new kind of event.</summary>
 public enum EventKind
@@ -621,6 +631,46 @@ public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
 /// read by MagicState.EnterBattlefield while this is on the battlefield.
 /// </summary>
 public record PermanentsEnterTapped(Filters.Filter Which) : GameComponent;
+
+/// <summary>
+/// Flesh Duplicate: "You may have this creature enter as a copy of any creature on the battlefield,
+/// except it has vanishing N if that creature doesn't have vanishing." Applied by
+/// MagicState.EnterBattlefield: the choice as it enters, then BecomeCopyOfChosenAction.
+/// </summary>
+public record MayEnterAsCopy : GameComponent
+{
+	/// <summary>"Except it has vanishing N if that creature doesn't have vanishing" — 0: no exception.</summary>
+	public int VanishingIfNone { get; init; }
+}
+
+/// <summary>
+/// "Vanishing N (A permanent with vanishing N enters with N time counters on it. At the beginning of
+/// your upkeep, remove a time counter from it. When the last is removed, sacrifice it.)" The marker;
+/// <see cref="Of"/> is the whole keyword, its upkeep trigger included.
+/// </summary>
+public record Vanishing(int N) : GameComponent
+{
+	public static GameComponent[] Of(int n) =>
+		[
+			new Vanishing(n),
+			new TriggeredAbilityComponent(
+				TriggerEvent.YourUpkeep,
+				[new RemoveTimeCounter(Ref.Source)]
+			),
+		];
+}
+
+/// <summary>Necrodominance: "Skip your draw step." — it never begins: no draw, no trigger, no priority. Read by TurnStructure.</summary>
+public record SkipYourDrawStep : GameComponent;
+
+/// <summary>Necrodominance: "Your maximum hand size is five." The lowest applies; read by the cleanup step (TurnStructure.MaxHandSizeOf).</summary>
+public record MaximumHandSize(int N) : GameComponent;
+
+/// <summary>
+/// Necrodominance: "If a card or token would be put into your graveyard from anywhere, exile it
+/// instead." — your graveyard is the one you own; read by MagicState.MoveCard, so nothing dies.
+/// </summary>
+public record ExileInsteadOfYourGraveyard : GameComponent;
 
 /// <summary>
 /// Splinter Twin: "Enchanted creature has '[ability]'" — an activated ability the host gets while

@@ -237,3 +237,18 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   (`CreateTokenCopy.ExileAtNextEndStep`) is added AFTER it enters — entering strips one given before.
 - **"[Permanents] enter tapped"** from another permanent (Root Maze) is `PermanentsEnterTapped(filter)`
   on it, read by `EnterBattlefield` beside the card's own `EntersTappedComponent` — everyone's, not just yours.
+- **A permanent spell resolves in two steps** (`EnterFromStackAction`, then `ActivePlayerGetsPriorityAction`),
+  so a choice it makes as it enters is answered before anyone gets priority — and before the state
+  check sees Flesh Duplicate as a 0/0. **"Enter as a copy"** (`MayEnterAsCopy`) is that choice, then
+  `BecomeCopyOfChosenAction`: its copiable values, with `EnteredAsCopy(original)` restored as it leaves
+  (`Card.WithoutCopyEffect`), never in cleanup. **Vanishing** is `Vanishing.Of(n)`: the marker, an upkeep
+  trigger (`RemoveTimeCounter`) and `Card.TimeCounters`.
+- **Targeting an ability on the stack** is `TargetSpec.Ability(filter)` (`From.Ability`; a `StackAbility`,
+  not a card); `Is.TriggeredAbility` / `Is.ActivatedAbility` read `StackAbility.Triggered`, set where a
+  trigger goes on the stack. Countering one removes it (`StackResolution.Counter`).
+- **Replicate** is `CastSpellAction.Replicate` (enumerated like X, in `MoveKey`): the cost grows by that many
+  `ReplicateComponent` costs, and a triggered ability above the spell copies it that many times.
+  **"Choose one or more"** is `SpellEffectsComponent.ChooseAtLeast` — `Modal.Choices`/`IsLegal` take every size.
+- **Necrodominance's rules each live in their one place:** a skipped draw step never begins (`EnterStep`),
+  hand size is `TurnStructure.MaxHandSizeOf`, and "exile instead of your graveyard" is decided in `MoveCard`
+  with the other exile-instead cases — so nothing of yours dies.

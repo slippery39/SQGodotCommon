@@ -13,6 +13,14 @@ public static class TurnStructure
 {
 	public const int MaxHandSize = 7;
 
+	/// <summary>Seven, or less while a permanent you control says so (Necrodominance: five).</summary>
+	public static int MaxHandSizeOf(GameState s, int player) =>
+		s.CardsIn(player, ZoneType.Battlefield)
+			.SelectMany(s.AbilitiesOf<Effects.MaximumHandSize>)
+			.Select(m => m.N)
+			.Append(MaxHandSize)
+			.Min();
+
 	/// <summary>
 	/// CR 117.5: every time a player would receive priority, state-based actions are checked and
 	/// triggered abilities go on the stack. Triggers are collected BEFORE the check, so a creature
@@ -120,6 +128,12 @@ public static class TurnStructure
 		var game = s.GetGame() with { Step = step, PriorityPlayerId = 0, PassesInSuccession = 0 };
 		s = s.WithGame(game);
 		var active = game.ActivePlayerId;
+		// Necrodominance: a skipped step doesn't happen (CR 614.1b, 614.10) — no draw, no trigger.
+		if (
+			step == Step.Draw
+			&& s.CardsIn(active, ZoneType.Battlefield).Any(s.HasAbility<Effects.SkipYourDrawStep>)
+		)
+			return EndStep(s);
 		// "At the beginning of …" (CR 503.1a, 504.2, 505.4, 507.1, 513.1a) — the main phase is the first one
 		// only: Gardenize's "your first main phase".
 		if (step is Step.Upkeep or Step.Draw or Step.PreCombatMain or Step.BeginCombat or Step.End)
@@ -190,7 +204,7 @@ public static class TurnStructure
 
 			case Step.Cleanup:
 				s = Combat.CleanupPermanents(s);
-				var excess = s.CardsIn(active, ZoneType.Hand).Count() - MaxHandSize;
+				var excess = s.CardsIn(active, ZoneType.Hand).Count() - MaxHandSizeOf(s, active);
 				if (excess <= 0)
 					return FinishCleanup(s); // no priority in cleanup unless something triggers (CR 514.3)
 				return s.SpawnAction(

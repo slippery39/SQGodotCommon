@@ -13,6 +13,7 @@ public enum From
 	Stack, // spells: an ability on the stack is not a card
 	YourGraveyard,
 	AnyGraveyard, // Afterthought Sentry: "target card from a graveyard"
+	Ability, // Sublime Epiphany: "target activated or triggered ability" — on the stack, not a card
 }
 
 public enum Whose
@@ -67,6 +68,9 @@ public record TargetSpec(From From, Filter? Filter = null)
 	/// <summary>"Target spell" — never the spell itself (CR 115.5).</summary>
 	public static TargetSpec Spell(Filter? filter = null) => new(From.Stack, filter);
 
+	/// <summary>"Target activated or triggered ability" — Is.TriggeredAbility narrows it.</summary>
+	public static TargetSpec Ability(Filter? filter = null) => new(From.Ability, filter);
+
 	public static TargetSpec InYourGraveyard(Filter? filter = null) =>
 		new(From.YourGraveyard, filter);
 
@@ -107,6 +111,7 @@ public record TargetSpec(From From, Filter? Filter = null)
 			From.Battlefield => o is Card && s.IsOnBattlefield(o.Id),
 			// Off the battlefield a spell or ability never targets its own card (CR 115.5).
 			From.Stack => o is Card && OnStack(s, o.Id) && o.Id != sourceId,
+			From.Ability => o is Actions.StackAbility && OnStack(s, o.Id),
 			From.YourGraveyard => o is Card
 				&& s.IsIn(o.Id, controllerId, ZoneType.Graveyard)
 				&& o.Id != sourceId,
@@ -140,7 +145,7 @@ public record TargetSpec(From From, Filter? Filter = null)
 			ids = ids.Concat(
 				players.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield)).Select(c => c.Id)
 			);
-		if (Covers(From.Stack))
+		if (Covers(From.Stack) || Covers(From.Ability)) // one pass: "triggered ability or colorless spell" covers both
 			ids = ids.Concat(s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)));
 		if (Covers(From.AnyGraveyard))
 			ids = ids.Concat(

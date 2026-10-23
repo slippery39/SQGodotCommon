@@ -77,7 +77,7 @@ public static class Targeting
 		)
 			return null;
 		return Modal
-			.Choices(spell.Modes, spell.Choose)
+			.Choices(spell.Modes, spell.Choose, spell.ChooseAtLeast)
 			.SelectMany(combo =>
 			{
 				var text = Describe.Modes(spell.Modes, combo);

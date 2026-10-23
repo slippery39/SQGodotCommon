@@ -39,12 +39,9 @@ public static class Boosters
 		);
 
 	/// <summary>
-	/// False until the 10 Special Guests are scripted (story MC-3): until then the pack that would
-	/// hold one takes a sixth common instead. Shayne, 2026-10-20: no unscripted guest in a pool.
+	/// The Special Guests a pack can hold (their sheet) — one pack in 55 has one in place of a common.
+	/// In the set's card data since MC-3.1, all scripted since MC-3.4.
 	/// </summary>
-	public const bool GuestsPlayable = false;
-
-	/// <summary>The Special Guests a pack can hold (their sheet), in the set's card data since MC-3.1.</summary>
 	public static IReadOnlyCollection<string> Guests => Fra.Value.Sheets["specialGuest"].Cards.Keys;
 
 	/// <summary>The four-of-five-colours rule, applied to the <c>common</c> sheet's cards.</summary>
@@ -64,8 +61,7 @@ public static class Boosters
 		var contents = new Dictionary<string, int>(
 			Pick(config.Boosters, v => v.Weight, rng).Contents
 		);
-		if (!GuestsPlayable && contents.Remove("specialGuest", out var guests))
-			contents["common"] += guests;
+
 		var pack = new List<PackCard>();
 		foreach (var (sheet, count) in contents)
 			pack.AddRange(

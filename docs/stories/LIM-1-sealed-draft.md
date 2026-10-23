@@ -20,7 +20,7 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - [ ] Packs follow FRA's real collation, from MTGJSON's play-booster data (232 pack variants, exact
       weights): 6 commons, 1 uncommon, 1 common/uncommon, the echoed-pair block (a whole pair of
       one rarity + one card from a DIFFERENT pair), 1 rare/mythic, the wildcard, 1 land
-- [ ] Special Guests replace a common in 1 pack in 55 — once all 10 are scripted (MC-3)
+- [x] Special Guests replace a common in 1 pack in 55 — once all 10 are scripted (MC-3, done 2026-10-23)
 - [ ] Commons follow every stated rule and nothing invented: at least 4 of the 5 colours among a
       pack's commons (Wizards' Play Booster Q&A), and no card twice from one sheet (MTGJSON: none
       of FRA's play sheets sets `allowDuplicates`; across sheets a repeat can happen — the two
@@ -99,7 +99,7 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 
 ## Next
 
-LIM-1.7 is done; the sprint's next item is **MC-3** (the Special Guests). LIM-1.8 waits on
+LIM-1.7 and MC-3 are done (pools can hold a Special Guest now). LIM-1.8 waits on
 Shayne deciding to play the Direct.
 
 **Playtest LIM-1.5** (`./Run-Godot.ps1`, MagicTable → Sealed): build by hand, take the suggested
@@ -110,8 +110,8 @@ game returns to it (`TableSetup.Back`). Also try **Paste Arena pool** with a rea
 (Arena's deck builder → Export): what isn't FRA is named above the pool; each Start is a new
 opponent, its pool opened from the game's seed (shown on the table) — the session's seed is your
 pool's only.
-Traps: the collation data is by NAME (treatments folded); `GuestsPlayable` stays false until
-MC-3; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
+Traps: the collation data is by NAME (treatments folded); the guests are in `FRA.json` and
+`Boosters.Guests`; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
 Re-run `python tools/import_17lands.py fra` as 17lands' public files update (weekly or so).
 Not yet followed: the AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) still weights
 by old draft boosters (10 C / 3 U / 1 R, 1-in-8 mythic) — point it at these sheets once a sealed

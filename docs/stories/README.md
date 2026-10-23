@@ -29,17 +29,16 @@ every task a sprint file names exists.
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
 1. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-2. **MC-3** — the 10 Special Guests play (a real pool can hold one)
-3. **TBL-5** — game records: resume one mid-game; compare its choices with the AI's
-4. **TBL-4** — a clearer, calmer table: quick wins now, the MTGA-first redesign next sprint
-5. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-6. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-7. **LIM-2** — draft against bots: FRA first, a cube later
-8. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-9. **AI-9** — resources priced by what they provide
-10. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-11. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-12. **AI-4** — strategic plans above single actions
+2. **TBL-5** — game records: resume one mid-game; compare its choices with the AI's
+3. **TBL-4** — a clearer, calmer table: quick wins now, the MTGA-first redesign next sprint
+4. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+5. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+6. **LIM-2** — draft against bots: FRA first, a cube later
+7. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+8. **AI-9** — resources priced by what they provide
+9. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+10. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+11. **AI-4** — strategic plans above single actions
 
 ## How it works
 
@@ -92,7 +91,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | ID | Story | Status |
 |---|---|---|
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
-| [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | in-progress |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | ready |
@@ -114,6 +112,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [MC-1](MC-1-fra-cards.md) | A real-rules engine that plays every Reality Fracture card | done |
 | [MC-2](MC-2-filter-refactor.md) | One composable filter instead of six closed vocabularies | done |
+| [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | done |
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 
 Next free id per area: AI-10 · DATA-3 · DEV-4 · LIM-3 · MC-4 · TBL-6

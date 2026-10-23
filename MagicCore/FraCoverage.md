@@ -3,7 +3,7 @@
 Status, not rules: what is scripted, what waits and why. The rules live in `MagicCore/CLAUDE.md`.
 Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memory; this file once ran one high.
 
-**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-23): common 86/86 · uncommon 109/109 · rare 64/64 · mythic 32/36 · **291/295** — the 10 Special Guests (SPG #159–168, story MC-3) joined FRA.json as mythics; batch 1 scripted Consider, Austere Command, Mind Twist, Eye of Ugin, Root Maze, Splinter Twin. Waiting (MC-3 batch 2): Consign to Memory, Sublime Epiphany (countering an ability, replicate, "one or more"), Flesh Duplicate (enter as a copy, vanishing), Necrodominance (skip draw, pay any life, hand size, graveyard → exile).
+**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-23): common 86/86 · uncommon 109/109 · rare 64/64 · mythic 36/36 · **295/295** — with the 10 Special Guests (SPG #159–168, story MC-3), mythics in FRA.json, in 1 pack in 55. Batch 1: Consider, Austere Command, Mind Twist, Eye of Ugin, Root Maze, Splinter Twin. Batch 2: Consign to Memory (targeting an ability on the stack, replicate), Sublime Epiphany ("choose one or more"), Flesh Duplicate (enter as a copy, vanishing), Necrodominance (skip draw, pay any life, hand size, graveyard → exile).
 8a (rares from existing pieces): Aerid Konstrari, Craterclaw Colossus, Ingris Stingerquill, Overwrite the
 Multiverse, The Echoverse Fulcrum, Tarmogoyf, Dark Matter Manipulator, Simulacrum Shaper, Lyra Archangel
 of Dawn, Master of Barbs, Solarium Sentry, Liliana the Faultless. 8b: Stinging Vitriol, Loyal Tutor, Entrust
