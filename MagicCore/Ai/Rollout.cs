@@ -33,6 +33,11 @@ public static class Rollout
 	/// </param>
 	/// <param name="Opponent">What the simulated opponent does — <see cref="OpponentModel"/>.</param>
 	/// <param name="Ours">How our own side plays in a rollout — <see cref="OurPolicy"/>.</param>
+	/// <param name="TheirWalkers">
+	/// The simulated opponent uses its best planeswalker ability every turn it can, whatever its model
+	/// (<see cref="TheirLoyalty"/>, story AI-8.1). False: only a casting opponent does, and only when
+	/// it leaves it no worse — which by the evaluator a Jace drawing its card never did.
+	/// </param>
 	public sealed record Settings(
 		int LookaheadTurns = 2,
 		int ActionsPerTurn = 1,
@@ -42,7 +47,8 @@ public static class Rollout
 		OpponentModel Opponent = OpponentModel.BoardOnly,
 		OurPolicy Ours = OurPolicy.Cheap,
 		Attacks Attacks = Attacks.EachAlone,
-		Targets Targets = Targets.FirstLegal
+		Targets Targets = Targets.FirstLegal,
+		bool TheirWalkers = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -85,10 +91,10 @@ public static class Rollout
 	/// <summary>The simulated opponent, measured against each other (story AI-3).</summary>
 	public enum OpponentModel
 	{
-		/// <summary>Attacks and blocks with its board; never casts, never plays a land.</summary>
+		/// <summary>Attacks and blocks with its board, and — while <see cref="Settings.TheirWalkers"/> is on — uses its planeswalkers; never casts, never plays a land.</summary>
 		BoardOnly,
 
-		/// <summary>Also plays a land, up to ActionsPerTurn spells and its loyalty abilities in its own turn, by OUR policy — from its real hand.</summary>
+		/// <summary>Also plays a land and up to ActionsPerTurn spells in its own turn, by OUR policy — from its real hand; its walkers act by their effect while <see cref="Settings.TheirWalkers"/> is on, by OUR policy otherwise.</summary>
 		CastsFromHand,
 
 		/// <summary>
@@ -162,17 +168,57 @@ public static class Rollout
 	/// <summary>
 	/// One decision of the simulated opponent — the ONE place the opponent model is decided: attacks
 	/// and blocks judged, every other choice the cheap answer, (CastsFromHand, Responds) its own
-	/// sorcery-speed plays, and (Responds) its instant-speed answers in our turn; every other priority
-	/// passed. The search answers the opponent through here too, so its tree and its rollouts agree.
+	/// sorcery-speed plays, its planeswalkers' best abilities (TheirWalkers), and (Responds) its
+	/// instant-speed answers in our turn; every other priority passed. The search answers the opponent through here too, so its tree and its rollouts agree.
 	/// </summary>
 	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
 		s.GetPendingChoice() is { } choice ? s.Choose(Answer(s, choice, who, settings))
 		: settings.Opponent != OpponentModel.BoardOnly && TheirPlay(s, who, settings) is { } play
 			? s.Act(play)
+		: settings.TheirWalkers && TheirLoyalty(s, who, settings) is { } loyalty ? s.Act(loyalty)
 		: settings.Opponent == OpponentModel.Responds
 		&& TheirResponse(s, who, settings) is { } response
 			? s.Act(response)
 		: Pass(s, who);
+
+	/// <summary>
+	/// The opponent's planeswalkers act (AI-8.1, Shayne: "assume the opponent will use its best
+	/// planeswalker ability"): in its own turn at sorcery speed — after a casting model's own plays —
+	/// the loyalty ability whose EFFECT is best, never weighed against not activating. Judged by what it
+	/// does, not what it costs the walker: the walker's own worth is added back, since by the evaluator
+	/// alone cashing a Jace at 3 for its card lost to a surveil (verified: it surveiled). So a Jace at 3
+	/// draws next turn and at 1 or 2 surveils — what it WOULD do is what makes it worth attacking. A
+	/// walker is on the board, so even the board-only opponent uses it; once a turn by the rules.
+	/// ponytail: a minus that kills its own walker (a Jace at 1 surveiling) is taken like any other —
+	/// a real player might keep the token for the next Empower; weigh that if a walker misjudged so shows.
+	/// </summary>
+	/// <summary>A planeswalker of <paramref name="who"/>'s that hasn't used its loyalty this turn.</summary>
+	static bool HasUnusedWalker(GameState s, int who) =>
+		s.CardsIn(who, ZoneType.Battlefield)
+			.Any(c =>
+				c.Is(CardType.Planeswalker) && c.LoyaltyActivatedOnTurn != s.GetGame().TurnNumber
+			);
+
+	static GameAction? TheirLoyalty(GameState s, int who, Settings settings)
+	{
+		if (!Priority.AtSorcerySpeed(s, who) || !HasUnusedWalker(s, who))
+			return null;
+		return s.DistinctMoves(s.LegalActions())
+			.OfType<ActivateLoyaltyAction>()
+			.MaxBy(a => WhatItDoes(s, a, who, settings));
+	}
+
+	static double WhatItDoes(GameState s, ActivateLoyaltyAction a, int who, Settings settings)
+	{
+		var after = Lookahead.Settle(s.Act(a));
+		var walkerAfter =
+			after.HasObject(a.CardId) && after.IsOnBattlefield(a.CardId)
+				? Evaluator.Walker(after.GetCard(a.CardId))
+				: 0;
+		return Evaluator.Evaluate(after, who, settings.Held)
+			+ Evaluator.Walker(s.GetCard(a.CardId))
+			- walkerAfter;
+	}
 
 	/// <summary>
 	/// Responds: in our turn, while our spell or ability is on top of the stack or our attackers or
@@ -217,16 +263,15 @@ public static class Rollout
 	static GameAction? TheirPlay(GameState s, int who, Settings settings)
 	{
 		var tally = s.GetPlayer(who).ThisTurn;
-		var turn = s.GetGame().TurnNumber;
 		// No land in hand: no land drop to look for (a land played from another zone is missed).
 		var landDone =
 			tally.LandsPlayed >= 1 + tally.ExtraLandDrops
 			|| !s.CardsIn(who, ZoneType.Hand).Any(c => c.Is(CardType.Land));
+		// With TheirWalkers on, a walker is TheirLoyalty's alone — judged by its effect, after the plays.
 		var playable =
-			tally.SpellsCast < settings.ActionsPerTurn ? SpellOrLoyalty
-			: s.CardsIn(who, ZoneType.Battlefield)
-				.Any(c => c.Is(CardType.Planeswalker) && c.LoyaltyActivatedOnTurn != turn)
-				? Loyalty
+			tally.SpellsCast < settings.ActionsPerTurn
+				? (settings.TheirWalkers ? Spell : SpellOrLoyalty)
+			: !settings.TheirWalkers && HasUnusedWalker(s, who) ? Loyalty
 			: null;
 		return landDone && playable is null
 			? null
@@ -234,6 +279,7 @@ public static class Rollout
 	}
 
 	static readonly Func<GameAction, bool> AnyPlay = a => a is not PassPriorityAction;
+	static readonly Func<GameAction, bool> Spell = a => a is CastSpellAction;
 	static readonly Func<GameAction, bool> SpellOrLoyalty = a =>
 		a is CastSpellAction or ActivateLoyaltyAction;
 	static readonly Func<GameAction, bool> Loyalty = a => a is ActivateLoyaltyAction;

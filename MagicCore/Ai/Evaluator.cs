@@ -206,9 +206,7 @@ public static class Evaluator
 		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
 		// opponent above it; lands capped at 7 made an 8th land worth less in play than in hand.
 		var lands = Taper(board.Count(c => c.Is(CardType.Land)), 7, 1.5, 0.4);
-		// Loyalty is spent, not banked: valued under half a card per counter, so trading three
-		// counters for a card scores as a gain. At 0.8 the AI never once used its Jace.
-		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(c => 2 + c.Loyalty * 0.35);
+		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(Walker);
 		var others =
 			board.Count(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
 			* 2.0;
@@ -226,6 +224,13 @@ public static class Evaluator
 			);
 		return creatures + walkers + lands + others + hand + lifeValue;
 	}
+
+	/// <summary>
+	/// A planeswalker's own worth: a body and its loyalty. Loyalty is spent, not banked — valued under
+	/// half a card per counter, so trading three counters for a card scores as a gain. At 0.8 the AI
+	/// never once used its Jace.
+	/// </summary>
+	public static double Walker(Card c) => 2 + c.Loyalty * 0.35;
 
 	/// <summary>Full value per unit up to <paramref name="knee"/>, a smaller value per unit beyond.</summary>
 	static double Taper(int n, int knee, double perUnit, double beyond) =>

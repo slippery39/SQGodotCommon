@@ -31,12 +31,34 @@ Open questions:
 
 ## Tasks
 
-- [ ] AI-8.1 **It didn't attack a planeswalker that draws a card each turn.** Shayne's Jace token at 3
+- [x] AI-8.1 **It didn't attack a planeswalker that draws a card each turn.** Shayne's Jace token at 3
       loyalty, the AI's 2/2 able to attack it, Shayne at a high life total: the AI attacked the player
       (or held), and Jace drew another card. Not always wrong — "but at a high life total, very likely
       a mistake" (Shayne). Lead: the evaluator prices a planeswalker at 2 + 0.35 × loyalty — nothing
       for what its abilities produce every turn — so 2 loyalty off a walker scores ~0.7 against ~2 for
       2 life off the player; the threat term (AI-5.2) counts only the player's life
+      **Rebuilt and traced (2026-10-22):** a 2/2 against a Jace token at 3 (which can −3 to draw), no
+      blockers — GreedyAi, the search and the oracle all attack the player, at 20 life and at 8. The
+      settled scores: face +2.11, Jace +0.70 (2 loyalty × 0.35). The rollouts never show Jace drawing:
+      the default simulated opponent (BoardOnly) never uses loyalty — and even the casting one won't,
+      because by the evaluator a −3 that draws and kills the token LOSES its owner value (the walker's
+      2 + 1.05 against one card). So the cause is the evaluator's walker term, not the rollout: a
+      walker is worth nothing for what its abilities will still produce, and the AI-8 open question
+      ("evaluator or rollout?") is answered — evaluator. A second lever: life is valued at 1.0 a point
+      up to 20, so 2 damage at 20 life outweighs a card (1.2 flat)
+      **Fix chosen (Shayne, 2026-10-22):** not the evaluator — valuing a walker's unspent abilities
+      would also stop the AI using its OWN Jace (the 0.8 trap again; no numbers satisfy both). Instead
+      the rollout: "assume the opponent will use its best planeswalker ability" — the simulated
+      opponent, whatever its model, uses the loyalty ability with the best EFFECT every turn it can
+      (`Rollout.TheirLoyalty`; the walker's own worth added back, else a Jace at 3 surveiled rather
+      than drew — caught by checking which ability fired). Our own walkers are unchanged: an
+      asymmetry Shayne chose. Positions: `AiPositionTests.AJaceThatWouldDraw_IsAttacked_…` — a 2/2
+      attacks a Jace at 3 (control: `+idlewalkers` goes face), not one at 1, nor a 5/5 one at 2.
+      Suite: 14 of 288 changed (4.9%) — removal aimed at Jace, attacks on Jace. A first match, on a
+      version whose Jace surveiled, was stopped unread. **Match: 288 games, 145–143, 50.3% ± 1.6pp —
+      no difference of 5pp either way; kept, the positions fixed** (+2.2% steps). Suite accepted,
+      oracle re-read (80.6% against 77.8%). Shayne's wider point — resources valued by count, not by
+      what they provide — is in DesignNotes (uncommitted, 2026-10-22)
 - [ ] AI-8.2 **It surveiled Way of the Wildspeaker into its graveyard** while it had the lands to cast
       it. Leads, unconfirmed: the card's measured value is 6.45 (held at half: ~3.2, well above a flat
       card), so the held-value pricing says keep it — look at who answered the surveil (the search
@@ -73,7 +95,7 @@ Open questions:
       the search and the oracle now TRADE the Duelist (findings). Suite answers accepted, the oracle
       re-read (79.5% against 79.2%), GreedyAi's recorded games moved (all with Red-Green). The
       position's test is `DuelistWontTrade_AtTwentyTwoLife_TradesOnceTrampleCounts` — control:
-      `+notrample` still declines (uncommitted, 2026-10-22)
+      `+notrample` still declines (0f35401, 2026-10-22)
 - [ ] AI-8.5 **A lethal board at the horizon is a loss one turn later**: if the opponent's next attack
       kills through our blockers where a rollout stops, score it as a loss at horizon + 1, decayed like
       any other — so "dead on turn 18" (−8145) and "dead on turn 20" (~−7700) are compared honestly,
@@ -82,8 +104,9 @@ Open questions:
 
 ## Next
 
-**AI-8.1 next** (suggested — AI-8.5 waits for a recorded blunder that needs it; Shayne to confirm):
-the AI leaving a card-drawing planeswalker alone. It predates the records, so rebuild it by hand.
+**AI-8.2 next** (suggested): it surveiled Way of the Wildspeaker into its graveyard with the lands to
+cast it. Predates the records, so rebuild it by hand — then ask what the card would PROVIDE there
+(Shayne's principle, DesignNotes "values resources by count"), not only its held value.
 
 Every table game is now recorded (`game_records/`, TBL-5): a NEW report from a played game needs no
 rebuilding — `MagicConsole --record=FILE --keep=NAME --at=N` makes it a test case (`Commands.md`).
@@ -100,3 +123,4 @@ For AI-8.2 the surveil choice is `ChooseFromLibraryTopChoice` (`MagicCore/Action
   double-strike bug, found by tracing the oracle's rollouts; fix uncommitted, awaiting a measurement.
 - 2026-10-22: AI-8.3 measured — the safe-block fix is better by 5pp+; kept. Status → in-progress.
 - 2026-10-22: AI-8.4 — trample in the threat term; no difference, kept, and it is what fixes AI-8.3's report.
+- 2026-10-22: AI-8.1 — the simulated opponent uses its planeswalkers; no difference, kept, the Jace positions fixed.

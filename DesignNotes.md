@@ -1133,6 +1133,7 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the search reads the libraries in their REAL order by default (`Hidden.Library.RealOrder`), so it draws the cards really on top — the AI sees its own future; `ShuffleUnknown` is honest and measured 3–6pp weaker (findings, AI-3.3); the default is chosen at AI-3.9
 - the rollout judges each attacker ALONE (the others declare nothing in its look-ahead), so an attack that only works together — two 3/3s into one blocker for lethal — is never found; port MtgSimulator's FindLethalAttacks if rollouts need it
 - the look-ahead's safe block (`Lookahead.Survives`, AI-8.3) counts one attacker's full damage on one blocker — damage split among several blockers, prevention and protection are not seen; count them if a misjudged block is shown
+- the simulated opponent's walker (`Rollout.TheirLoyalty`, AI-8.1) takes a minus that kills itself like any other (a Jace at 1 surveils and is gone) — a real player might keep the token for the next Empower; weigh that if a walker misjudged so shows
 - a rollout that hits its DecisionLimit is scored where it stopped, mid-turn, beside rollouts scored at the horizon — only a loop that never advances gets there; flag or drop such a candidate if one is ever seen
 - the search's table time cap (`BeamSearchAi.Settings.TimeLimit`, 1 s) gates only the lines below the root: a 16-move root always completes — 1.1–2.2 s measured; with the cap 10 of 1 913 decisions ran over 1.2 s, the slowest 1.65 s (docs/findings/magic-ai.md); skip root rollouts past the limit, scored by the cheap evaluation, if that shows on the table
 - the search runs on the table's main thread, so the window does not redraw while it thinks (the slowest `StepAi` measured 1.1 s); move `Decide` to a worker and apply on the main thread if a playtest calls it a freeze. Undo rebuilds the AIs (the search commits to a plan that an undo would put out of step)
@@ -1213,3 +1214,29 @@ is worth more than the rat, or that the spell is better held for an attacker. Op
   target's value against the spell's. Measure every change over 25+ games per pairing and record it
   in `docs/findings/magic-ai.md` — twice a change there measured as noise.
 - Capture positions like this one to test against: MagicTable's seed + undo make them repeatable.
+
+## MagicCore's evaluator values resources by count, not by what they provide (Shayne, 2026-10-22)
+
+Shayne: "we are judging resources (life, cards in hand, creatures in play etc) but not properly
+judging what the resources actually provide" — three lands put into a hand that already has ten in
+play are worth almost nothing, yet score as three cards; loyalty "only matters as to what it can
+actually provide if you spend it, otherwise it is an empty resource" — losing a 3-loyalty Jace to
+draw a card, or a 1-loyalty one to surveil, is not a loss.
+
+**Instances already met** (story AI-8): the threat term let any blocker "stop" any attacker (AI-8.4:
+trample now gets past); the walker term is 2 + 0.35 a counter, nothing for what it buys (AI-8.1 —
+fixed for the OPPONENT by simulating its walkers' use in the rollout; our own walkers are still
+counted, and a Jace spent to nothing still scores as a loss); the opponent's unseen hand is 2.71 a
+card whatever is in it; every land in our hand is a flat 0.3, however many are in play.
+
+**The precedent**: MtgSimulator priced a land in hand by what it unlocks — "a land is worth 0 on its
+own; its value is entirely the difference it makes to everything else" (`.claude/rules/sim-ai.md`,
+card values in ResolveChoice): a lot with four-drops stuck at three lands, ~nothing at six lands or
+in flood. MagicCore never ported it.
+
+**Two ways to price a resource by its use**: simulate the use (the walker fix — the rollout spends
+it, the evaluator sees the result), or a cheap context check in the evaluator (MtgSimulator's land:
+the castable spells it adds). Each is a measured change — a switch, the suite, a match.
+
+**Revisit**: as a story when the next recorded blunder is one of these; the likely first ones — our
+own walkers valued by use (the other half of AI-8.1), and lands in hand by what they unlock.

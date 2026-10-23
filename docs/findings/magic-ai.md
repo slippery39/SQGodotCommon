@@ -787,3 +787,36 @@ is), or 1 against deathtouch; trample granted until end of turn doesn't count.
 - Review moved 1 suite answer and 2 recorded games after the first match, so the match was run
   again on the final version — same verdict. GreedyAi's recorded games moved (all with Red-Green,
   the deck with tramplers); the card-value table is unchanged (measured without the threat term).
+
+## The simulated opponent uses its planeswalkers (2026-10-22, AI-8.1)
+
+From Shayne's first playtest (TBL-2, rebuilt by hand): the AI's 2/2 went face while his Jace token
+at 3 loyalty — able to −3 and draw — sat unattacked. GreedyAi, the search and the oracle all did it,
+at 20 life and at 8: face scored +2.11, the Jace +0.70 (2 × 0.35). The look-ahead never saw the
+draw: the board-only opponent never used a walker, and a casting one wouldn't, because by the
+evaluator cashing the Jace (2 + 1.05) for a card (2.71 to the search) left it worse off.
+
+Not fixed in the evaluator: pricing a walker's unspent abilities would also stop the AI using its
+own Jace — no weights satisfy both (the 0.8-per-counter trap, again). Instead `Rollout.TheirLoyalty`
+(Shayne: "assume the opponent will use its best planeswalker ability"): every turn it can, whatever
+its model, the simulated opponent uses the loyalty ability with the best EFFECT — the walker's own
+worth added back. **Checked which ability fired**: judged by the evaluator alone, a Jace at 3
+surveiled, and the AI attacked it only to make it surveil itself to death; with the worth added
+back it draws at 3 and 6, surveils at 1 and 2. A first match on the surveiling version was stopped.
+
+| | Result |
+|---|---|
+| Quick check | 14 of 288 decisions changed (4.9%) — removal aimed at Jace, attacks on Jace |
+| `beam` vs `beam+idlewalkers`, `--until-clear` | **288 games, 145–143, 50.3% ± 1.6pp — NO difference of 5pp either way** (log-likelihood: better −4.22, worse −5.59); 1 394.1 steps a decision (1 364.5, +2.2%); 385 s |
+| Suite after `--accept` and a fresh oracle | beam agrees 80.6%, `beam+idlewalkers` 77.8%; wins missed 7 against 10 — an oracle with the same opponent model, so it leans this way by construction |
+
+- **Kept** by AI-5's rule: no difference, and the rebuilt positions fixed —
+  `AiPositionTests.AJaceThatWouldDraw_IsAttacked_OneThatWouldOnlySurveil_IsNot`: a 2/2 attacks a
+  Jace at 3 (control: `+idlewalkers` goes face), not one at 1, nor a 5/5 one at 2 (Shayne's cases).
+- An asymmetry, chosen: their walkers act by effect, ours by the rollout's "leaves us no worse"
+  and the evaluator's count — the other half, in DesignNotes ("values resources by count").
+- GreedyAi's recorded games and the card-value table are unchanged (neither uses the rollout).
+- After the match, review: under a casting model (`+casts`, `+responds`, not the default) its usual
+  play judged the walker first by the evaluator alone, pre-empting the effect choice — now a walker
+  is `TheirLoyalty`'s alone while it is on. The board-only default is untouched (the suite reads the
+  same both ways), so the match stands.

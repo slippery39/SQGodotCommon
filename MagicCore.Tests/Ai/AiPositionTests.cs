@@ -137,4 +137,43 @@ public class AiPositionTests
 		);
 		Assert.That(trades, Does.Contain(Choice(Evaluator.Terms.None)), "it trades");
 	}
+
+	// Shayne, 2026-10-20 (AI-8.1, TBL-2 — no seed saved, rebuilt by hand): the AI's 2/2 went face while
+	// his Jace token at 3 loyalty, able to −3 and draw, sat unattacked. Its look-ahead never saw the
+	// draw: the simulated opponent never used a planeswalker — the board-only one by its model, a
+	// casting one because by the evaluator cashing the Jace for a card left it worse off. Now the
+	// simulated opponent uses its best planeswalker ability every turn it can (Rollout.TheirLoyalty),
+	// so a walker is judged by what it would do: worth attacking at 3 (a card denied), not at 1 or 2
+	// where it can only surveil (Shayne: "attacking a Jace for 5 when it could only surveil next turn
+	// anyways, probably not worth it"). The CONTROL: with its walkers idle (before AI-8.1), it goes face.
+	// The two "not worth it" cases guard against over-attacking: they went face before AI-8.1 too.
+	[TestCase("2/2", 3, true)]
+	[TestCase("2/2", 1, false)]
+	[TestCase("5/5", 2, false)]
+	public void AJaceThatWouldDraw_IsAttacked_OneThatWouldOnlySurveil_IsNot(
+		string attacker,
+		int loyalty,
+		bool attacksJace
+	)
+	{
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Bear", attacker), ZoneType.Battlefield);
+		int jace;
+		(s, jace) = TestGames.Put(s, them, EmpowerJace.JaceToken, ZoneType.Battlefield);
+		s = s.UpdateObject(jace, s.GetCard(jace) with { Loyalty = loyalty, IsToken = true }); // TEST SETUP
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+		int Target(bool theirWalkersAct)
+		{
+			var settings = new BeamSearchAi.Settings(
+				RolloutSettings: BeamSearchAi.DefaultRollout with
+				{
+					TheirWalkers = theirWalkersAct,
+				}
+			);
+			return new BeamSearchAi(me, settings).Decide(s).Answer!.Single();
+		}
+
+		Assert.That(Target(true), Is.EqualTo(attacksJace ? jace : them));
+		if (attacksJace)
+			Assert.That(Target(false), Is.EqualTo(them), "the control: walkers idle, it goes face");
+	}
 }

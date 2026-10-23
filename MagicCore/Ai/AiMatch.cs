@@ -74,6 +74,9 @@ public static class AiMatch
 			// target choice by its owner's best answer — beam+targets.
 			["allin"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AllInToo }),
 			["targets"] = WithRollout(r => r with { Targets = Rollout.Targets.OwnersBest }),
+			// The simulated opponent's planeswalkers idle unless a casting model judges them worth it —
+			// before AI-8.1: beam+idlewalkers.
+			["idlewalkers"] = WithRollout(r => r with { TheirWalkers = false }),
 			// The opponent's unseen hand drawn again from its unseen cards (AI-3.4) — matters only
 			// when the simulated opponent casts: beam+casts+unseen.
 			["unseen"] = o => o with { Hand = Hidden.Hand.ShuffleUnseen },

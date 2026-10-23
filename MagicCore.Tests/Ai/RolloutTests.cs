@@ -258,14 +258,23 @@ public class RolloutTests
 		);
 	}
 
-	[Test]
-	public void BoardOnly_NeverCasts()
+	// Its planeswalkers are on its board, so they act (AI-8.1) — what a walker would do is what makes it
+	// worth attacking; with TheirWalkers off (before AI-8.1) the board-only opponent never touched one.
+	[TestCase(true)]
+	[TestCase(false)]
+	public void BoardOnly_NeverCasts_ButItsWalkersAct(bool theirWalkers)
 	{
-		var walker = TheirsWith(out var after, Rollout.Default);
+		var walker = TheirsWith(
+			out var after,
+			Rollout.Default with
+			{
+				TheirWalkers = theirWalkers,
+			}
+		);
 
 		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.Zero);
 		Assert.That(after.GetPlayer(them).ThisTurn.LandsPlayed, Is.Zero);
-		Assert.That(after.GetCard(walker).LoyaltyActivatedOnTurn, Is.Zero);
+		Assert.That(after.GetCard(walker).LoyaltyActivatedOnTurn != 0, Is.EqualTo(theirWalkers));
 	}
 
 	/// <summary>
