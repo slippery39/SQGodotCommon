@@ -68,6 +68,8 @@ public static class AiMatch
 			["oldblocks"] = o => o with { Without = o.Without | Evaluator.Terms.BlockSurvival },
 			// The threat term without a trampler's excess over its blocker (AI-8.4): beam+notrample.
 			["notrample"] = o => o with { Without = o.Without | Evaluator.Terms.Trample },
+			// A planeswalker as a flat body and 0.35 a counter (before AI-8.2): beam+walkercount.
+			["walkercount"] = o => o with { Without = o.Without | Evaluator.Terms.WalkerUse },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a

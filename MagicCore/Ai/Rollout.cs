@@ -213,10 +213,10 @@ public static class Rollout
 		var after = Lookahead.Settle(s.Act(a));
 		var walkerAfter =
 			after.HasObject(a.CardId) && after.IsOnBattlefield(a.CardId)
-				? Evaluator.Walker(after.GetCard(a.CardId))
+				? Evaluator.Walker(after, after.GetCard(a.CardId), settings.Held)
 				: 0;
 		return Evaluator.Evaluate(after, who, settings.Held)
-			+ Evaluator.Walker(s.GetCard(a.CardId))
+			+ Evaluator.Walker(s, s.GetCard(a.CardId), settings.Held)
 			- walkerAfter;
 	}
 

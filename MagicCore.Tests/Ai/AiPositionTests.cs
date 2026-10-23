@@ -176,4 +176,38 @@ public class AiPositionTests
 		if (attacksJace)
 			Assert.That(Target(false), Is.EqualTo(them), "the control: walkers idle, it goes face");
 	}
+
+	// Shayne, 2026-10-20 (AI-8.2, TBL-2 — no seed saved, rebuilt by hand): it surveiled Way of the
+	// Wildspeaker away with the lands to cast it — "a 4/4 that draws a card": Jace +7, then −4 for a 4/4
+	// Beast, then −3 to draw. Priced as loyalty alone (0.35 a counter), casting Way lost to a 2-mana
+	// pump, so the look-ahead (one play a turn) never cast it, a Way on top was worth a random card,
+	// and with cheap spells in hand it was binned by a hair. A walker is now priced by what its best
+	// ability makes (Evaluator.Walker). The bin itself was too narrow to keep as a test (the new card
+	// values alone flip it); the play that caused it is not. The CONTROL: priced by count, the pump.
+	[Test]
+	public void WayOfTheWildspeaker_IsCastOverAPump()
+	{
+		for (var i = 0; i < 5; i++)
+			(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		foreach (
+			var card in new[] { "Way of the Wildspeaker", "Tam's Resistance", "No Admittance" }
+		)
+			(s, _) = TestGames.Put(s, me, FraCards.Get(card), ZoneType.Hand);
+		(s, _) = TestGames.Put(s, me, FraCards.Get("Arcane Amphisbaena"), ZoneType.Battlefield);
+		int jace;
+		(s, jace) = TestGames.Put(s, me, EmpowerJace.JaceToken, ZoneType.Battlefield);
+		s = s.UpdateObject(jace, s.GetCard(jace) with { Loyalty = 1, IsToken = true }); // TEST SETUP
+		string Casts(Evaluator.Terms without) =>
+			Evaluator.Without(
+				without,
+				() => new GreedyAi(me, BeamSearchAi.DefaultRollout.Held).Decide(s).What
+			);
+
+		Assert.That(
+			Casts(Evaluator.Terms.WalkerUse),
+			Does.StartWith("Cast Tam's Resistance"),
+			"the control: priced by count, the pump"
+		);
+		Assert.That(Casts(Evaluator.Terms.None), Is.EqualTo("Cast Way of the Wildspeaker"));
+	}
 }

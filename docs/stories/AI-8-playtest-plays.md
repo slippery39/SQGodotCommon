@@ -1,7 +1,7 @@
 ---
 id: AI-8
 title: Plays that looked wrong at the table, rebuilt and fixed
-status: in-progress
+status: done
 area: AI
 created: 2026-10-20
 ---
@@ -15,15 +15,19 @@ the cause found, then fixed or explained.
 
 ## Requirements
 
-- [ ] Each report rebuilt as a position where the AI makes the play, before anything changes
-- [ ] The cause found and named (evaluator, rollout model, choice answer, engine) before the fix
-- [ ] Each fix measured as AI-6 measures (the suite, then `--until-clear` against `beam`) and kept by
+- [x] Each report rebuilt as a position where the AI makes the play, before anything changes
+- [x] The cause found and named (evaluator, rollout model, choice answer, engine) before the fix
+- [x] Each fix measured as AI-6 measures (the suite, then `--until-clear` against `beam`) and kept by
       AI-5's rule: better, or no difference AND the rebuilt position fixed, with its test
-- [ ] Findings recorded in `docs/findings/magic-ai.md`
+- [x] Findings recorded in `docs/findings/magic-ai.md`
 
 ## Decisions
 
 - 2026-10-20, Shayne: noted now, fixed in a later session.
+
+- 2026-10-23, Shayne: AI-8.5 (a lethal board at the horizon scored as a loss) **deferred** to
+  `DesignNotes.md` ("MagicCore search: a lethal board at the horizon") — AI-8.4 fixed the report it
+  came from; it waits for a recorded blunder that needs it.
 
 Open questions:
 - Planeswalkers: is the fix in the evaluator (what a walker will produce each turn) or in the rollout
@@ -58,13 +62,34 @@ Open questions:
       version whose Jace surveiled, was stopped unread. **Match: 288 games, 145–143, 50.3% ± 1.6pp —
       no difference of 5pp either way; kept, the positions fixed** (+2.2% steps). Suite accepted,
       oracle re-read (80.6% against 77.8%). Shayne's wider point — resources valued by count, not by
-      what they provide — is in DesignNotes (uncommitted, 2026-10-22)
-- [ ] AI-8.2 **It surveiled Way of the Wildspeaker into its graveyard** while it had the lands to cast
+      what they provide — is in DesignNotes (8af6bca, 2026-10-22)
+- [x] AI-8.2 **It surveiled Way of the Wildspeaker into its graveyard** while it had the lands to cast
       it. Leads, unconfirmed: the card's measured value is 6.45 (held at half: ~3.2, well above a flat
       card), so the held-value pricing says keep it — look at who answered the surveil (the search
       branches a one-card surveil; GreedyAi answers a multi-card one by taking the minimum), whether
       its colour could be paid, and what the honest library mode makes of a known top card against a
       shuffled unknown one
+      **Rebuilt and traced (2026-10-23):** five Forests, its Jace at 2 uses −1, Way on top (unknown
+      until surveiled). Alone, every AI keeps it (search 11.59 against 8.64) — and with Jace at 1, one
+      Forest, or an opponent pressing. **With a hand of four spells it bins it** (keep 49.18, bin
+      50.08). Cause: the rollout's own policy casts ONE spell a turn (`Rollout.Settings.ActionsPerTurn`
+      = 1, MtgSimulator's starting point, never measured alone here), so a fifth spell is never cast
+      inside the look-ahead — a known Way is worth only its held price, about a random card's. Not
+      the plan replay (a sampled library moves ids, so a planned pick can't replay), not the colour,
+      not the held value. With 2 plays a turn: keep 62.80 against 50.08; 3, the same; GreedyAi
+      rollouts the same. **The real driver, measured (Shayne: "it's a 4/4 that draws a card"):** the
+      four spells were stand-ins (no record of the game); casting Way scores only +1.23 — its +7
+      loyalty at 0.35 a counter, less the card leaving hand — against Tam's Resistance +1.45, so the
+      one-play look-ahead never casts it; the 4/4 it enables (Jace −4) scores +13.40 but only as the
+      NEXT play. Loyalty valued by count, not by what it buys — Shayne's principle exactly. Two plays a
+      turn hides it here; valuing a walker's loyalty by what its abilities make is the real fix.
+      **Built (Shayne: "start the real fix now"):** `Evaluator.Walker` = max(2, ½ × what its best
+      affordable ability makes — a creature token, a card drawn) + 0.35 a counter; `+walkercount` the
+      old price. The first version was not monotonic (caught in review; its match stopped) — the
+      floor of 2 fixes it, pinned by a test. **Match: 192 games, 98–94, 51.0% ± 1.8pp — no
+      difference of 5pp either way; kept, the play fixed:** `WayOfTheWildspeaker_IsCastOverAPump`
+      (control: the pump). Card values moved for 4 cards (Way of the Wildspeaker 6.45 → 10.85);
+      suite accepted, oracle re-read (81.6% against 80.2%) (uncommitted, 2026-10-23)
 - [x] AI-8.3 **It wouldn't trade Divining Duelist (4/3) for a Beast (4/4) at 22 life** — Shayne's
       sealed game (2026-10-22, kept: `Records/DuelistWontTrade.json`, move #332; the default search,
       the table's and the oracle all decline). Cause found (2026-10-22): the look-ahead's "blocks only
@@ -84,7 +109,7 @@ Open questions:
       lethal, not this) and race pressure. None scored "lost one turn past the horizon"; race pressure
       was its only signal, and our port counts blockers with trample ignored ("count them if a
       misjudged race is ever shown") — at this horizon Yuriko "stops" the trampling Crusher, so the
-      term reads 0 (from the code, not yet measured) — AI-8.4 and AI-8.5 below. Review: a first-striking
+      term reads 0 (from the code, not yet measured) — AI-8.4 below; AI-8.5, deferred (Decisions). Review: a first-striking
       blocker that kills a double striker first takes one hit, not two (moves no suite answer and no
       recorded game) (441fd6e, 2026-10-22)
 - [x] AI-8.4 **Trample in the threat term** (`Evaluator.Pressure`): a trampler meets the blocker that
@@ -96,24 +121,13 @@ Open questions:
       re-read (79.5% against 79.2%), GreedyAi's recorded games moved (all with Red-Green). The
       position's test is `DuelistWontTrade_AtTwentyTwoLife_TradesOnceTrampleCounts` — control:
       `+notrample` still declines (0f35401, 2026-10-22)
-- [ ] AI-8.5 **A lethal board at the horizon is a loss one turn later**: if the opponent's next attack
-      kills through our blockers where a rollout stops, score it as a loss at horizon + 1, decayed like
-      any other — so "dead on turn 18" (−8145) and "dead on turn 20" (~−7700) are compared honestly,
-      not against −17.91. New ground (MtgSimulator never had it). **No recorded blunder behind it
-      now** — AI-8.4 fixed the report it came from; wait for one (a kept record) before building it
-
 ## Next
 
-**AI-8.2 next** (suggested): it surveiled Way of the Wildspeaker into its graveyard with the lands to
-cast it. Predates the records, so rebuild it by hand — then ask what the card would PROVIDE there
-(Shayne's principle, DesignNotes "values resources by count"), not only its held value.
-
-Every table game is now recorded (`game_records/`, TBL-5): a NEW report from a played game needs no
-rebuilding — `MagicConsole --record=FILE --keep=NAME --at=N` makes it a test case (`Commands.md`).
-AI-8.1 and 8.2 predate the records, so they are still rebuilt by hand: AI-8.1 first — a position with
-the AI's 2/2, the opponent's planeswalker that draws on its plus, the opponent at a high life total —
-`Decide` for `GreedyAi` and `beam`; then `Evaluator` (the planeswalker term) and `Rollout.Answer`.
-For AI-8.2 the surveil choice is `ChooseFromLibraryTopChoice` (`MagicCore/Actions/LibraryChoices.cs`).
+**Done.** Every report is rebuilt, its cause named, and fixed and measured. Deferred: AI-8.5 (a
+lethal board at the horizon) and the rest of Shayne's principle — resources valued by what they
+provide (DesignNotes: "values resources by count"): unpriced walker effects, a Jace cashed for one
+card, lands in hand by what they unlock. A new report from a recorded game starts with
+`MagicConsole --record=FILE --keep=NAME --at=N` (Commands.md).
 
 ## Log
 
@@ -124,3 +138,5 @@ For AI-8.2 the surveil choice is `ChooseFromLibraryTopChoice` (`MagicCore/Action
 - 2026-10-22: AI-8.3 measured — the safe-block fix is better by 5pp+; kept. Status → in-progress.
 - 2026-10-22: AI-8.4 — trample in the threat term; no difference, kept, and it is what fixes AI-8.3's report.
 - 2026-10-22: AI-8.1 — the simulated opponent uses its planeswalkers; no difference, kept, the Jace positions fixed.
+- 2026-10-23: AI-8.5 deferred to DesignNotes; AI-8.2 started.
+- 2026-10-23: AI-8.2 — a planeswalker priced by what its best ability makes; no difference, kept. AI-8 done.

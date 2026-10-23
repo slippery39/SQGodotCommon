@@ -84,7 +84,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Deathtouch  
 > When this creature enters, empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests
 
 ```csharp
 ["Arcane Amphisbaena"] = [When(TriggerEvent.SelfEnters, [], new EmpowerJace(2))],
@@ -613,7 +613,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames
 
 ### Formidable Commons
 
@@ -1031,7 +1031,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > No Admittance deals 3 damage to any target.  
 > Empower Jace 1. (Put a loyalty counter on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -1444,7 +1444,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Put a +1/+1 counter on up to one target creature. It gains vigilance until end of turn.  
 > Empower Jace 4. (Put four loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests
 
 **Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -4266,7 +4266,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Way of the Wildspeaker enters, empower Jace 7. (Put seven loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")  
 > Planeswalkers you control have "[−4]: Create a 4/4 green Beast creature token with trample."
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests
 
 **Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
 

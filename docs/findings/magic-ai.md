@@ -820,3 +820,33 @@ back it draws at 3 and 6, surveils at 1 and 2. A first match on the surveiling v
   play judged the walker first by the evaluator alone, pre-empting the effect choice — now a walker
   is `TheirLoyalty`'s alone while it is on. The board-only default is untouched (the suite reads the
   same both ways), so the match stands.
+
+## A planeswalker priced by what its best ability makes (2026-10-23, AI-8.2)
+
+From Shayne's first playtest (TBL-2, rebuilt by hand; the hand a stand-in): the AI surveiled Way of
+the Wildspeaker away with the lands to cast it — "a 4/4 that draws a card" (Jace +7, −4 for a 4/4
+Beast, −3 to draw). Traced: priced as loyalty alone, casting Way scored +1.23 and lost to a 2-mana
+pump (+1.45), so the one-play look-ahead never cast it and a Way on top was worth a random card;
+with cheap spells in hand it was binned by 0.9. The Beast it enables scores +13.40 — as the NEXT play.
+
+`Evaluator.Walker`: **max(2, ½ × what its best affordable ability makes) + 0.35 a counter** — a
+creature token's body, a card drawn at a held card's price; anything else unpriced (the old body).
+**The first version was not monotonic** (½ × a draw replaced the body of 2 once −3 was affordable, so
+empowering Jace 2 → 3 scored as a loss) — caught in review, its match stopped; the floor fixes it,
+pinned by `GreedyAiTests.AWalkersValue_NeverFalls_AsItsLoyaltyRises`. The card-value table moved for
+4 cards: Way of the Wildspeaker 6.45 → 10.85, Garruk, Curse Breaker 3.75 → 8.15, Way of the Healer
+5.75 → 7.25, The Theorist 3.05 → 3.3.
+
+| | Result |
+|---|---|
+| Quick check | 6 of 288 decisions changed (2.1%) |
+| `beam` vs `beam+walkercount`, `--until-clear` | **192 games, 98–94, 51.0% ± 1.8pp — NO difference of 5pp either way** (log-likelihood: better −2.22, worse −5.40); 1 387.9 steps a decision (1 423.8); 395 s |
+| Suite after `--accept` and a fresh oracle | beam agrees 81.6%, `beam+walkercount` 80.2%; score given up 0.76 against 0.87 |
+
+- **Kept** by AI-5's rule: no difference, and the play fixed — `AiPositionTests.WayOfTheWildspeaker_IsCastOverAPump`
+  (+3.43 against the pump's +1.50; control `+walkercount`: the pump). The surveil itself was too
+  narrow to keep as a test — the new card values alone flip it.
+- Both sides of the match use the new card-value table: it measures the walker price; the table
+  moves with it. GreedyAi's recorded games moved by two.
+- **Not done, by design**: a Jace whose best is one draw keeps its old value (½ a card < the body),
+  so the AI still won't count cashing a 3-loyalty Jace for a card as a gain — monotonic first.

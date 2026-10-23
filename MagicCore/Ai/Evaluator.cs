@@ -1,5 +1,7 @@
 using ImmutableGameObjects;
+using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Turns;
 
 namespace MagicCore.Ai;
@@ -27,7 +29,7 @@ public static class Evaluator
 		if (s.IsOver())
 			return s.WinnerId() == player ? 10_000 : -10_000;
 		var opponent = s.OpponentOf(player);
-		var keywords = IsOff(Terms.MoreKeywords) ? FirstKeywords : ValuedKeywords;
+		var keywords = Keywords;
 		var sides =
 			Side(s, player, held, own: true, keywords)
 			- Side(s, opponent, held, own: false, keywords);
@@ -59,7 +61,13 @@ public static class Evaluator
 
 		/// <summary>A trampler's excess over its blocker in the threat term (AI-8.4, `+notrample`).</summary>
 		Trample = 8,
+
+		/// <summary>A planeswalker priced by what its best ability makes, not a flat body (AI-8.2, `+walkercount`).</summary>
+		WalkerUse = 16,
 	}
+
+	/// <summary>The keywords a creature's value counts here (<see cref="Terms.MoreKeywords"/>).</summary>
+	static string[] Keywords => IsOff(Terms.MoreKeywords) ? FirstKeywords : ValuedKeywords;
 
 	/// <summary>Whether <paramref name="term"/> is switched off here (<see cref="Without{T}"/>).</summary>
 	public static bool IsOff(Terms term) => (off.Value & term) != 0;
@@ -206,7 +214,7 @@ public static class Evaluator
 		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
 		// opponent above it; lands capped at 7 made an 8th land worth less in play than in hand.
 		var lands = Taper(board.Count(c => c.Is(CardType.Land)), 7, 1.5, 0.4);
-		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(Walker);
+		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(c => Walker(s, c, held));
 		var others =
 			board.Count(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
 			* 2.0;
@@ -226,11 +234,70 @@ public static class Evaluator
 	}
 
 	/// <summary>
-	/// A planeswalker's own worth: a body and its loyalty. Loyalty is spent, not banked — valued under
-	/// half a card per counter, so trading three counters for a card scores as a gain. At 0.8 the AI
+	/// A planeswalker's worth (AI-8.2, Shayne: loyalty "only matters as to what it can actually provide
+	/// if you spend it"): HALF of what its best affordable loyalty ability makes — next turn's, and it
+	/// can be attacked first — plus 0.35 a counter. Counted as loyalty alone, casting Way of the
+	/// Wildspeaker (Jace +7, and "−4: a 4/4 Beast") scored +1.23 and lost to a 2-mana pump; the Beast it
+	/// enables scores +13.40. An ability whose effect isn't priced here (<see cref="Makes"/>) leaves the
+	/// old flat body of 2. Loyalty is spent, not banked — under half a card a counter: at 0.8 the AI
 	/// never once used its Jace.
 	/// </summary>
-	public static double Walker(Card c) => 2 + c.Loyalty * 0.35;
+	public static double Walker(GameState s, Card c, HeldValues? held)
+	{
+		var loyalty = c.Loyalty * 0.35;
+		if (IsOff(Terms.WalkerUse))
+			return 2 + loyalty;
+		var best = 0.0;
+		foreach (var a in Loyalty.AbilitiesOf(s, c))
+			// "Activate only if" isn't checked here: a gated ability stays unpriced (the flat body).
+			if (
+				a.OnlyIf is null
+				&& (a.MinusX ? c.Loyalty > 0 : a.Cost >= 0 || -a.Cost <= c.Loyalty)
+			)
+				best = Math.Max(best, Makes(a, held));
+		// Never below the old body: more loyalty only ever adds affordable abilities, so the value
+		// only rises with it (monotonic, as every term is). Half a card's draw stays under the body.
+		return Math.Max(2, WalkerPotential * best) + loyalty;
+	}
+
+	/// <summary>What a walker's best ability is worth while unspent: half — it is next turn's.</summary>
+	public const double WalkerPotential = 0.5;
+
+	/// <summary>
+	/// What a loyalty ability makes, read from its effects (never its text): a creature token's value,
+	/// a card drawn at a held card's price. Anything else is 0 — not priced, so the walker keeps its
+	/// flat body. ponytail: damage, mana, life, pumps and exile are unpriced, as is a token or draw
+	/// wrapped in "you may" or "if", a token's counters, and a count that depends on the board (taken as
+	/// 1); price one when a misjudged walker shows it.
+	/// </summary>
+	static double Makes(LoyaltyAbilityComponent a, HeldValues? held) =>
+		a.Effects.Sum(e =>
+			e switch
+			{
+				CreateTokens t
+					when t.ControlledBy is null && t.Token.TypeLine.Contains("Creature") => Amount(
+					t.Count
+				) * TokenValue(t.Token),
+				DrawCards d when d.Who == Ref.You => Amount(d.Amount)
+					* (held?.Unknown ?? FlatHandCard),
+				_ => 0,
+			}
+		);
+
+	/// <summary>A count's number where it is fixed; 1 where it depends on the game.</summary>
+	static int Amount(Count n) => n.Kind == CountOf.Fixed ? n.Fixed * n.Sign : 1;
+
+	/// <summary>A creature token as <see cref="CreatureValue"/> prices a fresh creature: printed stats and keywords.</summary>
+	static double TokenValue(CardData token) =>
+		Body(
+			int.TryParse(token.Power, out var p) ? p : 0,
+			int.TryParse(token.Toughness, out var t) ? t : 0,
+			token.Keywords.Count(Keywords.Contains)
+		);
+
+	/// <summary>A creature's value from its lasting stats and valued keywords — the ONE formula.</summary>
+	static double Body(int power, int toughness, int keywords) =>
+		2 + power * 1.5 + toughness + keywords * 0.8;
 
 	/// <summary>Full value per unit up to <paramref name="knee"/>, a smaller value per unit beyond.</summary>
 	static double Taper(int n, int knee, double perUnit, double beyond) =>
@@ -270,7 +337,7 @@ public static class Evaluator
 		var power = s.Power(c) - pumps.Sum(u => u.Power);
 		var toughness = Math.Max(1, s.Toughness(c) - pumps.Sum(u => u.Toughness) - c.Damage);
 		var keywords = valued.Count(k => Lasting(s, c, k, pumps));
-		return 2 + power * 1.5 + toughness + keywords * 0.8;
+		return Body(power, toughness, keywords);
 	}
 
 	/// <summary>

@@ -139,6 +139,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     nokeywords     the evaluator without the six keywords AI-5.3 added (vigilance, haste, reach, …)
 #     oldblocks      the look-ahead's safe block counting damage once (before AI-8.3: no double strike, deathtouch)
 #     notrample      the threat term without a trampler's excess over its blocker (before AI-8.4)
+#     walkercount    a planeswalker as a flat body and 0.35 a counter, not by what its best ability makes (before AI-8.2)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 ```
 

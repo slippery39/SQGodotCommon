@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Ai;
@@ -124,6 +125,64 @@ public class GreedyAiTests
 			Assert.That(counted, Is.LessThan(ignored - 5), "a lethal clock, at 3 life");
 		else
 			Assert.That(counted, Is.EqualTo(ignored).Within(1e-9));
+	}
+
+	// AI-8.2: a planeswalker is priced by what its best affordable ability makes — and its first version
+	// was NOT monotonic: at 3 loyalty a Jace's draw (half a card) replaced the 2-point body it had at
+	// 2, so empowering it from 2 to 3 scored as a loss. More loyalty must never score less — with a
+	// "−4: a 4/4 Beast" (Way of the Wildspeaker's grant), or without.
+	[TestCase(false)]
+	[TestCase(true)]
+	public void AWalkersValue_NeverFalls_AsItsLoyaltyRises(bool beast)
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var me = s.GetGame().StartingPlayerId;
+		LoyaltyAbilityComponent[] abilities =
+		[
+			new(-1, [new Surveil(1)]),
+			new(-3, [new DrawCards(Ref.You, 1)]),
+			.. beast
+				?
+				[
+					new LoyaltyAbilityComponent(
+						-4,
+						[new CreateTokens(TestGames.Creature("Beast", "4/4", "Trample").Data, 1)]
+					),
+				]
+				: Array.Empty<LoyaltyAbilityComponent>(),
+		];
+		int walker;
+		(s, walker) = TestGames.Put(
+			s,
+			me,
+			TestGames.Planeswalker("Walker", 8, abilities),
+			ZoneType.Battlefield
+		);
+		var values = Enumerable
+			.Range(0, 9)
+			.Select(loyalty =>
+				Evaluator.Walker(
+					s,
+					s.GetCard(walker) with
+					{
+						Loyalty = loyalty,
+					},
+					BeamSearchAi.DefaultRollout.Held
+				)
+			)
+			.ToList();
+
+		Assert.That(
+			values,
+			Is.Ordered.Ascending,
+			string.Join(", ", values.Select(v => v.ToString("0.00")))
+		);
+		if (beast)
+			Assert.That(
+				values[4],
+				Is.GreaterThan(values[3] + 2),
+				"the Beast, once affordable, is priced"
+			);
 	}
 
 	// Keywords (AI-5.3): of two otherwise equal 2/2s and the mana for one, the one with haste — once

@@ -14,13 +14,12 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 2. **TBL-5** — game records: export a played game, replay it, compare its choices with the AI's
 3. **MC-3** — the 10 Special Guests play (LIM-1's pools contain them)
 4. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-5. **AI-8** — plays that looked wrong at the table (a planeswalker left alone; a castable card surveiled away)
-6. **TBL-4** — a clearer, calmer table: MTGA first, the best of MTGO kept
-7. **LIM-2** — draft against bots, on LIM-1's packs
-8. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
-9. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-10. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-11. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
+5. **TBL-4** — a clearer, calmer table: MTGA first, the best of MTGO kept
+6. **LIM-2** — draft against bots, on LIM-1's packs
+7. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
+8. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+9. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+10. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
 
 ## How it works
 
@@ -71,7 +70,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 
 | ID | Story | Status |
 |---|---|---|
-| [AI-8](AI-8-playtest-plays.md) | Plays that looked wrong at the table, rebuilt and fixed | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | in-progress |
 | [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | ready |
@@ -88,6 +86,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-5](AI-5-evaluator-threat-abilities.md) | The evaluator sees threats and abilities | done |
 | [AI-6](AI-6-fast-measurement.md) | Measure an AI change in minutes, or overnight | done |
 | [AI-7](AI-7-faster-search.md) | A faster search — profiled, then optimised without changing a decision | done |
+| [AI-8](AI-8-playtest-plays.md) | Plays that looked wrong at the table, rebuilt and fixed | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [MC-1](MC-1-fra-cards.md) | A real-rules engine that plays every Reality Fracture card | done |
