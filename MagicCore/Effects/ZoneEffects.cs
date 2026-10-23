@@ -95,7 +95,7 @@ public record Flicker(Ref What) : Effect
 }
 
 /// <summary>Curse-Marred Demon: "discard a card at random" — MtgCore's DiscardRandomCardAction, through the one discard.</summary>
-public record DiscardAtRandom(Ref Who, int N) : Effect
+public record DiscardAtRandom(Ref Who, Count N) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
@@ -104,7 +104,7 @@ public record DiscardAtRandom(Ref Who, int N) : Effect
 			var hand = s.CardsIn(player, ZoneType.Hand).Select(c => c.Id).ToArray();
 			(var rng, s) = s.TakeRng();
 			rng.Shuffle(hand);
-			s = s.Discard(player, [.. hand.Take(N)]);
+			s = s.Discard(player, [.. hand.Take(N.Value(s, InputContext))]);
 		}
 		return new(s);
 	}
@@ -332,6 +332,9 @@ public record CreateTokenCopy(Ref What) : Effect
 	/// <summary>"… and '[ability]'" — abilities the copies also have.</summary>
 	public ImmutableArray<GameComponent> Adding { get; init; } = [];
 
+	/// <summary>Splinter Twin: "Exile that token at the beginning of the next end step." — set once it has entered.</summary>
+	public bool ExileAtNextEndStep { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var originals = Permanents(What, s).ToList();
@@ -363,6 +366,14 @@ public record CreateTokenCopy(Ref What) : Effect
 			};
 			(s, copy) = s.AddObject(copy);
 			s = s.EnterBattlefield(copy.Id, Controller);
+			// after entering: a zone change strips a delayed trigger, entering included
+			if (ExileAtNextEndStep)
+				s = Update(
+					s,
+					(Card)
+						s.GetCard(copy.Id)
+							.WithComponent(ReturnFromExileUnderYourControl.ExileItAtTheEndStep)
+				);
 		}
 		return new(s);
 	}
@@ -380,7 +391,8 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 	/// <summary>"Exile it at the beginning of the next end step" — a delayed trigger on it.</summary>
 	public bool ExileAtNextEndStep { get; init; }
 
-	static readonly DelayedTrigger ExileItAtTheEndStep =
+	/// <summary>"Exile it at the beginning of the next end step" — CreateTokenCopy's too.</summary>
+	internal static readonly DelayedTrigger ExileItAtTheEndStep =
 		new(new TriggeredAbilityComponent(TriggerEvent.EachEndStep, [new Exile(Ref.Source)]));
 
 	public override ActionResult Execute(GameState s)
@@ -845,6 +857,12 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>Fblthp: "with different names". Unset, two Forests may both be taken.</summary>
 	public bool DifferentNames { get; init; }
 
+	/// <summary>Eye of Ugin: "a colorless creature card" — what Type, Supertype and Subtype don't say.</summary>
+	public Filters.Filter? Filter { get; init; }
+
+	/// <summary>The Filter in words, for the prompt — Eye of Ugin: "colorless".</summary>
+	public string? FilterText { get; init; }
+
 	/// <summary>"Reveal it" — landcycling, Fblthp, Pia, Loyal Tutor: the found card is known to everyone where it goes.</summary>
 	public bool Reveal { get; init; }
 
@@ -862,10 +880,11 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							Type = Type,
 							Supertype = Supertype,
 							Subtype = Subtype,
+							Filter = Filter,
 							DifferentNames = DifferentNames,
 							MaxChoices = Math.Max(0, UpTo.Value(s, InputContext)),
 							Prompt =
-								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{(Subtype is null ? "" : Subtype + " ")}{(Type == CardType.None ? "" : Type.ToString().ToLowerInvariant() + " ")}card{(UpTo == 1 ? "" : "s")}{(DifferentNames ? " with different names" : "")}",
+								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{(FilterText is null ? "" : FilterText + " ")}{(Subtype is null ? "" : Subtype + " ")}{(Type == CardType.None ? "" : Type.ToString().ToLowerInvariant() + " ")}card{(UpTo == 1 ? "" : "s")}{(DifferentNames ? " with different names" : "")}",
 						},
 						// Loyal Tutor: "then shuffle and put that card on top" — the shuffle comes first.
 						.. To == ZoneType.Library

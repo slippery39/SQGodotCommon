@@ -617,6 +617,18 @@ public record TapsForTwoColorlessWhileExiled(int CardId, int Incarnation) : Game
 public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
 
 /// <summary>
+/// Root Maze: "Artifacts and lands enter tapped." — every player's permanents the filter matches,
+/// read by MagicState.EnterBattlefield while this is on the battlefield.
+/// </summary>
+public record PermanentsEnterTapped(Filters.Filter Which) : GameComponent;
+
+/// <summary>
+/// Splinter Twin: "Enchanted creature has '[ability]'" — an activated ability the host gets while
+/// this Aura is on it. Its "this creature" is the host. Read by Characteristics.ActivatedAbilitiesOf.
+/// </summary>
+public record GrantsActivatedAbility(ActivatedAbilityComponent Ability) : GameComponent;
+
+/// <summary>
 /// Omnipresence: "You may cast spells with mana value less than or equal to the number of creatures
 /// you control from your hand without paying their mana costs." (CastSpellAction.WithoutPayingManaCost)
 /// </summary>

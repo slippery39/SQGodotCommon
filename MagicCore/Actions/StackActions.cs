@@ -297,8 +297,7 @@ public record ActivateAbilityAction : GameAction
 		[.. ability.Costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))];
 
 	ActivatedAbilityComponent? Ability(GameState s) =>
-		s.AbilitiesOf<ActivatedAbilityComponent>(s.GetCard(CardId))
-			.ElementAtOrDefault(AbilityIndex);
+		s.ActivatedAbilitiesOf(s.GetCard(CardId)).ElementAtOrDefault(AbilityIndex);
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{

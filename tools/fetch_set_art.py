@@ -17,6 +17,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from import_scryfall_set import query
+
 ROOT = Path(__file__).resolve().parent.parent / "SQGodotCommon" / "MagicTable" / "Assets"
 HEADERS = {"User-Agent": "SQGodotCardGame/1.0 (personal project)", "Accept": "*/*"}
 
@@ -37,9 +39,9 @@ def get(url):
             time.sleep(2 ** attempt)
 
 
-def search(query):
+def search(q):
     url = "https://api.scryfall.com/cards/search?" + urllib.parse.urlencode(
-        {"q": query, "unique": "cards", "order": "set"})
+        {"q": q, "unique": "cards", "order": "set"})
     cards = []
     while url:
         try:
@@ -69,7 +71,7 @@ def main():
     code = sys.argv[1].lower()
     (ROOT / "Art").mkdir(parents=True, exist_ok=True)
     (ROOT / "Cards").mkdir(parents=True, exist_ok=True)
-    cards = search(f"set:{code} not:extra") + search(f"set:t{code}")
+    cards = search(query(code)) + search(f"set:t{code}")
     fetched = skipped = 0
     for card in cards:
         for name, uris in images(card):

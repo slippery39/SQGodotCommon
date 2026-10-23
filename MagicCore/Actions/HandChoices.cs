@@ -60,6 +60,9 @@ public record ChooseFromLibraryChoice : ChoiceAction
 	/// <summary>Fblthp: "with different names".</summary>
 	public bool DifferentNames { get; init; }
 
+	/// <summary>Eye of Ugin: "a colorless creature card". None means any.</summary>
+	public Filters.Filter? Filter { get; init; }
+
 	public ChooseFromLibraryChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -78,6 +81,7 @@ public record ChooseFromLibraryChoice : ChoiceAction
 				(Type == CardType.None || c.Is(Type)) // None: "a card"
 				&& (Supertype == Supertype.None || c.Is(Supertype))
 				&& (Subtype is null || c.Subtypes.Contains(Subtype))
+				&& (Filter?.Matches(s, c, new(PlayerId)) ?? true)
 			);
 		// Taking one, two Forests are one choice: the library is shuffled after. Taking up to
 		// several, Hexhaven Invigorator may take both — unless the names must differ (Fblthp).

@@ -70,6 +70,9 @@ public static class Is
 
 	public static Filter Color(ManaColor color) => new OfColor(color);
 
+	/// <summary>Eye of Ugin: "colorless" — a card with no colour at all.</summary>
+	public static readonly Filter Colorless = new Colorless();
+
 	/// <summary>"With flying" — granted keywords count.</summary>
 	public static Filter With(string keyword) => new HasKeyword(keyword);
 

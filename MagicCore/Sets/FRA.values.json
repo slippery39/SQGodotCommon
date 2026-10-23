@@ -48,6 +48,10 @@
     "Value": 0.3
   },
   {
+    "Name": "Austere Command",
+    "Value": 0
+  },
+  {
     "Name": "Avatar of Burgeoning Echoes",
     "Value": 8
   },
@@ -130,6 +134,10 @@
   {
     "Name": "Compel Brutality",
     "Value": 14.5
+  },
+  {
+    "Name": "Consider",
+    "Value": 0.3
   },
   {
     "Name": "Countersculpt",
@@ -246,6 +254,11 @@
   {
     "Name": "Eye of Jace",
     "Value": 2
+  },
+  {
+    "Name": "Eye of Ugin",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
   },
   {
     "Name": "Face Yourself",
@@ -600,6 +613,10 @@
     "Value": 22.3
   },
   {
+    "Name": "Mind Twist",
+    "Value": 0
+  },
+  {
     "Name": "Mindseeker Oculus",
     "Value": 9.4
   },
@@ -772,6 +789,10 @@
     "NotMeasured": "a land — mana, which the evaluator already prices"
   },
   {
+    "Name": "Root Maze",
+    "Value": 2
+  },
+  {
     "Name": "Ruric Thar, Biomagus",
     "Value": 14.8
   },
@@ -855,6 +876,10 @@
   {
     "Name": "Sphinx's Approach",
     "Value": 0.6
+  },
+  {
+    "Name": "Splinter Twin",
+    "Value": 2
   },
   {
     "Name": "Stingcaster Mage",

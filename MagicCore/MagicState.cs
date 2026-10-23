@@ -232,6 +232,24 @@ public static class MagicState
 	public static GameState Sacrifice(this GameState s, int cardId) =>
 		s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
 
+	/// <summary>
+	/// Root Maze: another permanent on the battlefield says this one enters tapped — judged under its
+	/// new controller. Never itself: its rule applies once it is there (CR 614.12).
+	/// </summary>
+	static bool EntersTappedByAPermanent(GameState s, Card entering)
+	{
+		foreach (var p in new[] { s.Player1Id(), s.Player2Id() })
+		foreach (var permanent in s.CardsIn(p, ZoneType.Battlefield))
+		foreach (
+			var rule in permanent.Id == entering.Id
+				? []
+				: s.AbilitiesOf<PermanentsEnterTapped>(permanent)
+		)
+			if (rule.Which.Matches(s, entering, new(permanent.ControllerId, permanent.Id)))
+				return true;
+		return false;
+	}
+
 	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
 	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
 	public static GameState EnterBattlefield(
@@ -262,6 +280,7 @@ public static class MagicState
 				HasFinalityCounter = finality,
 				IsTapped =
 					tapped
+					|| EntersTappedByAPermanent(s, card with { ControllerId = controllerId })
 					|| (
 						card.GetComponent<EntersTappedComponent>() is { } entersTapped
 						&& entersTapped.Unless?.Holds(

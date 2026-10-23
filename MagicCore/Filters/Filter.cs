@@ -138,6 +138,17 @@ public sealed record OfColor(ManaColor Color) : Filter
 		o is Card card && card.Colors.Contains(Color);
 }
 
+/// <summary>Eye of Ugin: "colorless Eldrazi spells", "a colorless creature card" — a card with no colour; never a player.</summary>
+public sealed record Colorless : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card { Colors.Length: 0 };
+}
+
 /// <summary>Konstrari Charm: "creature with flying" — through s.Has, so a granted keyword counts.</summary>
 public sealed record HasKeyword(string Keyword) : Filter
 {

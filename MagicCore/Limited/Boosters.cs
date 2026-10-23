@@ -44,6 +44,9 @@ public static class Boosters
 	/// </summary>
 	public const bool GuestsPlayable = false;
 
+	/// <summary>The Special Guests a pack can hold (their sheet), in the set's card data since MC-3.1.</summary>
+	public static IReadOnlyCollection<string> Guests => Fra.Value.Sheets["specialGuest"].Cards.Keys;
+
 	/// <summary>The four-of-five-colours rule, applied to the <c>common</c> sheet's cards.</summary>
 	public const int MinCommonColors = 4;
 

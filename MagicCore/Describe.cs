@@ -52,7 +52,7 @@ public static class Describe
 	{
 		if (!s.HasObject(a.CardId) || s.GetObject(a.CardId) is not Card card)
 			return "";
-		var abilities = s.AbilitiesOf<ActivatedAbilityComponent>(card).ToList();
+		var abilities = s.ActivatedAbilitiesOf(card).ToList();
 		if (abilities.Count < 2 || abilities.ElementAtOrDefault(a.AbilityIndex) is not { } ability)
 			return "";
 		var cost = new[]

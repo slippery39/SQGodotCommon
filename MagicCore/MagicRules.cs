@@ -234,7 +234,7 @@ public static class MagicRules
 	static IEnumerable<GameAction> ActivateCandidates(GameState s, int player, Card card)
 	{
 		var zone = ((Zone)s.GetObject(s.GetParent(card.Id)!.Value)).ZoneType;
-		return s.AbilitiesOf<ActivatedAbilityComponent>(card)
+		return s.ActivatedAbilitiesOf(card)
 			.Select((ability, index) => (ability, index))
 			.Where(a => a.ability.From == zone)
 			.SelectMany(a =>

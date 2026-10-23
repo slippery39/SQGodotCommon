@@ -252,7 +252,7 @@ public partial class SealedScene : Control
 		_leftOut.Text =
 			S.LeftOut.Count == 0
 				? ""
-				: "Left out (not in the engine yet, or unreadable): "
+				: "Left out (not Reality Fracture cards, or unreadable): "
 					+ string.Join(
 						", ",
 						S.LeftOut.GroupBy(c => c)

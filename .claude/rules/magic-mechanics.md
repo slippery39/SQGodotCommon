@@ -229,3 +229,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"When you cast this spell"** (`TriggerEvent.SelfCast`, Emrakul) is read from the spell on the stack.
 - **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).
+- **An activated ability an Aura grants** ("enchanted creature has '{T}: …'", Splinter Twin) is
+  `GrantsActivatedAbility` on the Aura. `s.ActivatedAbilitiesOf(card)` is THE list activation indexes
+  into — own, then granted — read by the candidates, the action and `Describe`; never
+  `AbilitiesOf<ActivatedAbilityComponent>` for activation, or a granted ability is offered and refused.
+  It is not copiable: a token copy of the host has none. A delayed trigger on a new token
+  (`CreateTokenCopy.ExileAtNextEndStep`) is added AFTER it enters — entering strips one given before.
+- **"[Permanents] enter tapped"** from another permanent (Root Maze) is `PermanentsEnterTapped(filter)`
+  on it, read by `EnterBattlefield` beside the card's own `EntersTappedComponent` — everyone's, not just yours.

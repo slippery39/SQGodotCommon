@@ -36,10 +36,10 @@ public class SealedSessionTests
 
 	/// <summary>
 	/// LIM-1.7: a seeded pool, exported as Arena does (part built, the rest in the sideboard) with a
-	/// Special Guest the engine lacks — read back whole, the guest left out, and it builds and plays.
+	/// card from another set — read back whole, that card left out, and it builds and plays.
 	/// </summary>
 	[Test]
-	public void YourArenaPool_Pasted_BuildsAndPlays_AGuestLeftOut()
+	public void YourArenaPool_Pasted_BuildsAndPlays_ACardNotInFraLeftOut()
 	{
 		var opened = new SealedSession(12).Pool;
 		static string Lines(System.Collections.Generic.IEnumerable<string> cards) =>
@@ -51,7 +51,7 @@ public class SealedSessionTests
 
 			Sideboard
 			{Lines(opened.Skip(20))}
-			1 Mind Twist (SPG) 164
+			1 Lightning Bolt (STA) 42
 			""";
 
 		var read = ArenaDeck.ReadPool(export);
@@ -59,7 +59,7 @@ public class SealedSessionTests
 			read.Pool,
 			Is.EquivalentTo(opened.Where(c => !SealedSession.BasicNames.Contains(c)))
 		);
-		Assert.That(read.LeftOut, Is.EqualTo(new[] { "Mind Twist" }));
+		Assert.That(read.LeftOut, Is.EqualTo(new[] { "Lightning Bolt" }));
 
 		var s = new SealedSession(read.Pool, read.LeftOut);
 		Assert.That(s.Seed, Is.Null);
@@ -100,13 +100,15 @@ public class SealedSessionTests
 
 	/// <summary>
 	/// Extrapolate the Impossible was the last (LIM-1.6): no FRA card is unscripted now, so no pool
-	/// holds one to keep out. The guard stays for sets to come (and MC-3's Special Guests).
+	/// holds one to keep out. The guard stays for sets to come. The Special Guests (MC-3) are left
+	/// out only while packs can't hold them.
 	/// </summary>
 	[Test]
 	public void EveryFraCard_IsPlayable() =>
 		Assert.That(
 			MagicCore
 				.Cards.CardDataSet.Load("FRA")
+				.Where(c => Boosters.GuestsPlayable || !Boosters.Guests.Contains(c.Name))
 				.Where(c => !SealedSession.Playable(c.Name))
 				.Select(c => c.Name),
 			Is.Empty

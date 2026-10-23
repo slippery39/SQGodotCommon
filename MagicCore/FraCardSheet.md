@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 86/86 · uncommon 109/109 · rare 64/64 · mythic 26/26 · **285/285**
+**Playable:** common 86/86 · uncommon 109/109 · rare 64/64 · mythic 32/36 · **291/295**
 
 ### Academic Ascent
 
@@ -6192,6 +6192,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Austere Command
+
+{4}{W}{W} · Sorcery · mythic
+
+> Choose two —  
+> • Destroy all artifacts.  
+> • Destroy all enchantments.  
+> • Destroy all creatures with mana value 3 or less.  
+> • Destroy all creatures with mana value 4 or greater.
+
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Austere Command"] =
+[
+	ModalSpell(
+		"Austere Command",
+		2,
+		M([], new Destroy(Ref.Permanents(Is.Artifact))),
+		M([], new Destroy(Ref.Permanents(Is.Enchantment))),
+		M([], new Destroy(Ref.Permanents(Is.Creature & Is.ManaValueAtMost(3)))),
+		M([], new Destroy(Ref.Permanents(Is.Creature & Is.ManaValueAtLeast(4))))
+	),
+],
+```
+
 ### Avatar of Burgeoning Echoes
 
 {G}{U} · Creature — Avatar · mythic · 2/3
@@ -6327,6 +6355,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 ],
 ```
+
+### Consider
+
+{U} · Instant · mythic
+
+> Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)  
+> Draw a card.
+
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Consider"] = [Spell([], new Surveil(1), new DrawCards(Ref.You, 1))],
+```
+
+### Consign to Memory
+
+{U} · Instant · mythic
+
+> Replicate {1} (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the copies.)  
+> Counter target triggered ability or colorless spell.
+
+**Status:** NOT IMPLEMENTED
 
 ### Craterclaw Colossus
 
@@ -6468,6 +6520,46 @@ How to write a script: `MagicCore/Cookbook.md`.
 	},
 ],
 ```
+
+### Eye of Ugin
+
+ · Legendary Land · mythic
+
+> Colorless Eldrazi spells you cast cost {2} less to cast.  
+> {7}, {T}: Search your library for a colorless creature card, reveal it, put it into your hand, then shuffle.
+
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Eye of Ugin"] =
+[
+	new CostChange(-2, Is.Colorless & Is.Subtype("Eldrazi")),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{7}"),
+		[
+			new SearchLibrary(CardType.Creature, ZoneType.Hand)
+			{
+				Filter = Is.Colorless,
+				FilterText = "colorless",
+				Reveal = true,
+			},
+		]
+	)
+	{
+		Costs = [new TapSelfCost()],
+	},
+],
+```
+
+### Flesh Duplicate
+
+{U}{U} · Creature — Shapeshifter Rebel · mythic · 0/0
+
+> You may have this creature enter as a copy of any creature on the battlefield, except it has vanishing 3 if that creature doesn't have vanishing. (A permanent with vanishing 3 enters with three time counters on it. At the beginning of your upkeep, remove a time counter from it. When the last is removed, sacrifice it.)
+
+**Status:** NOT IMPLEMENTED
 
 ### Garruk, Curse Breaker
 
@@ -6655,6 +6747,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Mind Twist
+
+{X}{B} · Sorcery · mythic
+
+> Target player discards X cards at random.
+
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DiscardAtRandom` — Curse-Marred Demon: "discard a card at random" — MtgCore's DiscardRandomCardAction,…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Mind Twist"] =
+[
+	Spell([TargetSpec.Player()], new DiscardAtRandom(Ref.Target(), Count.X)),
+],
+```
+
+### Necrodominance
+
+{B}{B}{B} · Legendary Enchantment · mythic
+
+> Skip your draw step.  
+> At the beginning of your end step, you may pay any amount of life. If you do, draw that many cards.  
+> Your maximum hand size is five.  
+> If a card or token would be put into your graveyard from anywhere, exile it instead.
+
+**Status:** NOT IMPLEMENTED
+
 ### Omnipresence
 
 {5}{G}{G}{G} · Enchantment · mythic
@@ -6713,6 +6833,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Root Maze
+
+{G} · Enchantment · mythic
+
+> Artifacts and lands enter tapped.
+
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `PermanentsEnterTapped` — Root Maze: "Artifacts and lands enter tapped." — every player's permanents the filter…
+
+```csharp
+["Root Maze"] = [new PermanentsEnterTapped(Is.Artifact | Is.Land)],
+```
+
 ### Seasoned Cryomancer
 
 {1}{U}{U} · Creature — Human Wizard · mythic · 2/2
@@ -6761,6 +6895,39 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Splinter Twin
+
+{2}{R}{R} · Enchantment — Aura · mythic
+
+> Enchant creature  
+> Enchanted creature has "{T}: Create a token that's a copy of this creature, except it has haste. Exile that token at the beginning of the next end step."
+
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `GrantsActivatedAbility` — Splinter Twin: "Enchanted creature has '[ability]'" — an activated ability the host gets…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Splinter Twin"] =
+[
+	new AuraComponent(Creature),
+	new GrantsActivatedAbility(
+		new ActivatedAbilityComponent(
+			ManaCost.None,
+			[
+				new CreateTokenCopy(Ref.Source)
+				{
+					AddingKeywords = ["Haste"],
+					ExileAtNextEndStep = true,
+				},
+			]
+		)
+		{
+			Costs = [new TapSelfCost()],
+		}
+	),
+],
+```
+
 ### Stingcaster Mage
 
 {1}{R} · Creature — Human Wizard · mythic · 2/1
@@ -6782,6 +6949,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 ],
 ```
+
+### Sublime Epiphany
+
+{4}{U}{U} · Instant · mythic
+
+> Choose one or more —  
+> • Counter target spell.  
+> • Counter target activated or triggered ability.  
+> • Return target nonland permanent to its owner's hand.  
+> • Create a token that's a copy of target creature you control.  
+> • Target player draws a card.
+
+**Status:** NOT IMPLEMENTED
 
 ### Tarmogoyf
 

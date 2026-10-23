@@ -47,6 +47,26 @@ public static class Characteristics
 		where T : GameComponent => s.AbilitiesOf<T>(card).Any();
 
 	/// <summary>
+	/// THE list of a card's activated abilities — activation indexes into it: its own, then those an
+	/// Aura on it grants (Splinter Twin). Empty once it has lost all abilities, granted ones too.
+	/// </summary>
+	public static IEnumerable<ActivatedAbilityComponent> ActivatedAbilitiesOf(
+		this GameState s,
+		Card card
+	)
+	{
+		var board = BoardOf(s);
+		if (board.Granted is null)
+			return s.AbilitiesOf<ActivatedAbilityComponent>(card); // nearly always: no Aura grants one
+		if (Lost(board, card))
+			return [];
+		var own = card.GetComponents<ActivatedAbilityComponent>();
+		return board.Granted.TryGetValue((card.Id, card.Incarnation), out var more)
+			? own.Concat(more)
+			: own;
+	}
+
+	/// <summary>
 	/// "Loses all abilities" — until end of turn (Flourishing Grapple) or while an Aura says so
 	/// (Infinite Coursework). ponytail: no timestamps (CR 613.7) — it loses every ability, even one
 	/// granted later, and a P/T it sets for itself (layer 7a) with them. Order them if a card cares.
@@ -79,7 +99,11 @@ public static class Characteristics
 	sealed record Board(
 		(Card Source, StaticEffectComponent Effect)[] Statics,
 		HashSet<(int, int)> Stripped
-	);
+	)
+	{
+		/// <summary>Activated abilities Auras grant, by host (id, incarnation); null when none do.</summary>
+		public Dictionary<(int, int), List<ActivatedAbilityComponent>>? Granted { get; init; }
+	}
 
 	static readonly HashSet<(int, int)> NoneStripped = [];
 
@@ -104,6 +128,7 @@ public static class Characteristics
 		// One pass over the battlefield: it runs for every new state the AI simulates.
 		List<(Card, StaticEffectComponent)> statics = [];
 		HashSet<(int, int)>? stripped = null;
+		List<(Card Aura, GrantsActivatedAbility Grant)>? grants = null;
 		foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
 		foreach (
 			var c in state
@@ -115,9 +140,17 @@ public static class Characteristics
 				statics.Add((c, effect));
 			else if (component is EnchantedLosesAllAbilities)
 				(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
+			else if (component is GrantsActivatedAbility grant && c.AttachedToId != 0)
+				(grants ??= []).Add((c, grant));
 		var lost = new Board([], stripped ?? NoneStripped);
+		// An Aura that lost its abilities grants none either.
+		var live = grants?.Where(g => !Lost(lost, g.Aura)).ToList();
 		return lost with
 		{
+			Granted = live is null or []
+				? null
+				: live.GroupBy(g => (g.Aura.AttachedToId, g.Aura.AttachedToIncarnation))
+					.ToDictionary(g => g.Key, g => g.Select(x => x.Grant.Ability).ToList()),
 			// A permanent that lost its abilities has no statics either.
 			Statics = [.. statics.Where(x => !Lost(lost, x.Item1))],
 		};

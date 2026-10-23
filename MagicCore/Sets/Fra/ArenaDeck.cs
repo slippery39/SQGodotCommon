@@ -80,7 +80,7 @@ public static partial class ArenaDeck
 	}
 
 	/// <param name="Pool">FRA card names, one per copy — basics dropped, since limited's are free.</param>
-	/// <param name="LeftOut">What isn't an FRA card (a Special Guest until MC-3), one per copy, or an unreadable line.</param>
+	/// <param name="LeftOut">What isn't an FRA card (nor one of its Special Guests), one per copy, or an unreadable line.</param>
 	public sealed record PoolResult(IReadOnlyList<string> Pool, IReadOnlyList<string> LeftOut);
 
 	/// <summary>

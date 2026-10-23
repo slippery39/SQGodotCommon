@@ -82,7 +82,7 @@ public class ArenaDeckTests
 
 			Sideboard
 			1 Prophesied End (FRA) 12
-			1 Mind Twist (SPG) 164
+			1 Lightning Bolt (STA) 42
 			7 Island
 			1 Blossom-Blessed Angel /// Seed Suture (FRA) 30
 			"""
@@ -100,7 +100,7 @@ public class ArenaDeckTests
 				}
 			)
 		);
-		Assert.That(result.LeftOut, Is.EqualTo(new[] { "Mind Twist" }));
+		Assert.That(result.LeftOut, Is.EqualTo(new[] { "Lightning Bolt" }));
 	}
 
 	[Test]

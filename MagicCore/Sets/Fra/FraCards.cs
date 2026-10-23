@@ -3517,6 +3517,61 @@ public static class FraCards
 					If = new SourceWasCast(),
 				},
 			],
+			// ===== MC-3: Special Guests (SPG #159–168), batch 1 =====
+			["Consider"] = [Spell([], new Surveil(1), new DrawCards(Ref.You, 1))],
+			["Austere Command"] =
+			[
+				ModalSpell(
+					"Austere Command",
+					2,
+					M([], new Destroy(Ref.Permanents(Is.Artifact))),
+					M([], new Destroy(Ref.Permanents(Is.Enchantment))),
+					M([], new Destroy(Ref.Permanents(Is.Creature & Is.ManaValueAtMost(3)))),
+					M([], new Destroy(Ref.Permanents(Is.Creature & Is.ManaValueAtLeast(4))))
+				),
+			],
+			["Mind Twist"] =
+			[
+				Spell([TargetSpec.Player()], new DiscardAtRandom(Ref.Target(), Count.X)),
+			],
+			["Eye of Ugin"] =
+			[
+				new CostChange(-2, Is.Colorless & Is.Subtype("Eldrazi")),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{7}"),
+					[
+						new SearchLibrary(CardType.Creature, ZoneType.Hand)
+						{
+							Filter = Is.Colorless,
+							FilterText = "colorless",
+							Reveal = true,
+						},
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Root Maze"] = [new PermanentsEnterTapped(Is.Artifact | Is.Land)],
+			["Splinter Twin"] =
+			[
+				new AuraComponent(Creature),
+				new GrantsActivatedAbility(
+					new ActivatedAbilityComponent(
+						ManaCost.None,
+						[
+							new CreateTokenCopy(Ref.Source)
+							{
+								AddingKeywords = ["Haste"],
+								ExileAtNextEndStep = true,
+							},
+						]
+					)
+					{
+						Costs = [new TapSelfCost()],
+					}
+				),
+			],
 		};
 
 	public static CardDefinition Get(string name) =>
