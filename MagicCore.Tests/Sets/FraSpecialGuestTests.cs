@@ -140,7 +140,10 @@ public class FraSpecialGuestTests : FraBoardTest
 	{
 		var herald = Hand(Herald, me);
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = herald });
-		s = TestGames.PassUntil(s, x => x.GetChildren(x.GetWellKnownId(MagicKeys.Stack)).OfType<StackAbility>().Any());
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetChildren(x.GetWellKnownId(MagicKeys.Stack)).OfType<StackAbility>().Any()
+		);
 		return Stack.OfType<StackAbility>().Single().Id;
 	}
 
@@ -153,7 +156,11 @@ public class FraSpecialGuestTests : FraBoardTest
 	void ToMyNextMain() =>
 		s = TestGames.PassUntil(
 			s,
-			x => x.GetGame().ActivePlayerId == me && x.GetGame().Step == Step.PreCombatMain && x.StackIsEmpty() && x.GetGame().TurnNumber > 1
+			x =>
+				x.GetGame().ActivePlayerId == me
+				&& x.GetGame().Step == Step.PreCombatMain
+				&& x.StackIsEmpty()
+				&& x.GetGame().TurnNumber > 1
 		);
 
 	// ===== Necrodominance =====
@@ -216,11 +223,12 @@ public class FraSpecialGuestTests : FraBoardTest
 		var duplicate = Hand("Flesh Duplicate", me);
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = duplicate });
 		Resolve(choice =>
-		{
-			return choice is ChooseCreatureToCopyChoice
-				? [ogre]
-				: choice.Options.Take(choice.MinChoices).Select(o => o.Id);
-		});
+			choice switch
+			{
+				ChooseCreatureToCopyChoice => [ogre],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			}
+		);
 		var copy = s.GetCard(duplicate);
 		Assert.That(
 			(Alive(duplicate), copy.Name, s.Power(copy), copy.TimeCounters),
@@ -256,12 +264,18 @@ public class FraSpecialGuestTests : FraBoardTest
 		var second = Hand("Flesh Duplicate", me);
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = second });
 		Resolve(choice =>
-			choice is ChooseCreatureToCopyChoice
-				? [first]
-				: choice.Options.Take(choice.MinChoices).Select(o => o.Id)
+			choice switch
+			{
+				ChooseCreatureToCopyChoice => [first],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			}
 		);
 		Assert.That(s.GetCard(second).TimeCounters, Is.EqualTo(s.GetCard(first).TimeCounters));
-		Assert.That(s.GetCard(second).TimeCounters, Is.GreaterThan(0), "it has vanishing, so it leaves");
+		Assert.That(
+			s.GetCard(second).TimeCounters,
+			Is.GreaterThan(0),
+			"it has vanishing, so it leaves"
+		);
 	}
 
 	// ===== Consign to Memory =====
