@@ -89,7 +89,7 @@ Open questions:
       floor of 2 fixes it, pinned by a test. **Match: 192 games, 98–94, 51.0% ± 1.8pp — no
       difference of 5pp either way; kept, the play fixed:** `WayOfTheWildspeaker_IsCastOverAPump`
       (control: the pump). Card values moved for 4 cards (Way of the Wildspeaker 6.45 → 10.85);
-      suite accepted, oracle re-read (81.6% against 80.2%) (uncommitted, 2026-10-23)
+      suite accepted, oracle re-read (81.6% against 80.2%) (8732290, 2026-10-23)
 - [x] AI-8.3 **It wouldn't trade Divining Duelist (4/3) for a Beast (4/4) at 22 life** — Shayne's
       sealed game (2026-10-22, kept: `Records/DuelistWontTrade.json`, move #332; the default search,
       the table's and the oracle all decline). Cause found (2026-10-22): the look-ahead's "blocks only

@@ -30,7 +30,7 @@ The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only 
 
 | Kind | Location | Loads |
 |---|---|---|
-| **The work: what is being built, its requirements, decisions, tasks and next step** — one story each, referred to by ID (`AI-1`, task `AI-1.2`) | `docs/stories/` — "Next up" and every story in its `README.md` | at the start of every task; the story before working on it |
+| **The work: what is being built, its requirements, decisions, tasks and next step** — one story each, referred to by ID (`AI-1`, task `AI-1.2`) | `docs/stories/` — "Next up", the current sprint (`docs/sprints/`) and every story in its `README.md` | at the start of every task; the story before working on it |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
 | Procedures | skills (`/pre-commit` before any commit; `/add-card` (MtgCore), `/card-batch` (MagicCore), `/ai-inspect`, `/regen-card-values`; art and look: `/match-mockup`, `/generate-art`, `/add-icon`) | when invoked or relevant |
@@ -174,7 +174,7 @@ added or removed.
 | A command and its traps | `Commands.md` |
 | A repeatable procedure | a skill under `.claude/skills/` |
 | "Fine now, revisit later", with costed options | `DesignNotes.md` |
-| What a piece of work needs, decided, did and does next | its story in `docs/stories/` — never a handoff file |
+| What a piece of work needs, decided, did and does next | its story in `docs/stories/` — never a handoff file; a week's plan and its review: `docs/sprints/` |
 
 **Budget: 200 lines per `CLAUDE.md`.** A `PostToolUse` hook (`.claude/check-docs.py`) warns when one
 goes over. Over budget means content is in the wrong file, not that the budget is wrong — move it

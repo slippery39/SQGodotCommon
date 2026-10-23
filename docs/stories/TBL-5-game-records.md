@@ -51,6 +51,11 @@ own choices differ from the AI's.
 - 2026-10-22, Shayne: kept records live in **`MagicCore.Tests/Records/`** (tracked, embedded in
   the test assembly), and the one step is the console — `--record=FILE --keep=NAME --at=N` copies
   the record in and prints a test to paste into `AiPositionTests`, its control included.
+- 2026-10-23, Shayne: the comparison (TBL-5.6) ranks your pick by the **oracle** (it scores every
+  option) and says whether the **uncapped default search** would have played it (repeatable) — not
+  the table's 1 s search, whose answer depends on the machine's load.
+- 2026-10-23, Shayne: **resume a recorded game** (TBL-5.7) — play, see something odd, the fix
+  lands, continue the same game from before the odd play to check it, without losing the game.
 
 ## Tasks
 
@@ -78,9 +83,22 @@ own choices differ from the AI's.
       a corrupted kept record failed `EveryKeptRecord_StillReplays` by name. `Records/Sample.json`
       (that game, move #110) stays, so the embedding is tested — revert-checked by breaking the glob
       (267d330, 2026-10-22)
-- [ ] TBL-5.6 The comparison report: the search's and the oracle's choice at each human decision
+- [ ] TBL-5.6 The comparison report: the oracle's ranking of your pick and the default search's
+      choice at each of your decisions (sprint item 8, if budget is left)
+- [ ] TBL-5.7 Resume a record on the table from a chosen move (sprint item 4): a new
+      `MagicTableManager` from the record's seed, decks and sideboards, its moves replayed through
+      `Play` so the new record starts as a copy (written as a NEW file; the old one is kept). The
+      cheapest form: replay the whole record with the undo history filled, so the existing Undo
+      steps back to before the odd play. A fix to the AI replays exactly (moves are tokens, not
+      re-decided — the fixed AI decides from there); a fix to the ENGINE can make an earlier
+      position stale (`MoveTokens.StaleException`) — offer a lenient replay that keeps applying
+      moves while they are legal and says where the first one differs. Entry: the deck select
 
 ## Next
+
+**TBL-5.7 first** (sprint item 4, `docs/stories/README.md`), then TBL-5.6. For TBL-5.7 read
+`MagicTableManager.cs` (the constructor, `Play`, `Undo`, `Replay`) and `MagicCore/Ai/GameRecord.cs`
+(`Replay`, `Before`, the stale check).
 
 **TBL-5.6, the comparison report** (requirement 4). For each `you` move of a record (`Kind ==
 "you"`; a combat declaration is several — one per creature): the position (`Before`), what the
@@ -90,8 +108,7 @@ and reads `FirstMoveScores` (every first move searched — the default `beam` do
 all, so rank only by the oracle; for the search, say same/different). Parallel over positions
 like `WithOracle`. A console flag beside `--keep` (`--record=FILE --compare`): one line per
 decision where either differs, then a summary (agreed with search %, with oracle %, score given
-up). Ask Shayne whether the search is the table's (`Settings.Interactive`, 1 s — what he played
-against) or the default — they can differ.
+up). The search is the uncapped default, not the table's (decided 2026-10-23).
 
 ## Log
 
@@ -110,3 +127,4 @@ against) or the default — they can differ.
 - 2026-10-22: TBL-5.4 — the console replays a record. A sandbox put now reads "Put X into Hand (AI)"
   — whose zone, since either seat can be the target (review); the table's own log line is unchanged.
 - 2026-10-22: TBL-5.5 — a recorded position becomes an AI test case in one console step.
+- 2026-10-23: sprint planning — TBL-5.7 (resume a record) added; TBL-5.6's searches decided.

@@ -25,9 +25,12 @@ To be shaped — see the open questions.
 - 2026-10-20, Shayne (LIM-1): the sealed builder's card ratings come from 17lands for FRA — this
   story's first slice (`Sets/FRA.17lands.json`: GIH WR and games, Sealed and Premier Draft).
 
+- 2026-10-23, Shayne: **draft stats and analytics are not built here** — he uses an existing
+  tracker (17lands' client, Untapped.gg or Arena Tutor all track Arena drafts and games).
+
 Open questions:
-- What else for: draft-bot picks (LIM-2), deck analytics, checking our sims against real win rates
-  (DATA-2 does that for card ratings)?
+- What else for: draft-bot picks (LIM-2), checking our sims against real win rates (DATA-2 does
+  that for card ratings)?
 
 ## Tasks
 
@@ -42,3 +45,4 @@ Nothing to read yet — start with the interview.
 - 2026-10-16: created from the first interview.
 - 2026-10-20: first slice landed with LIM-1.4 — GIH WR per card from FRA's public game data
   (298k Premier Draft games, 61k Sealed; files of 2026-10-19).
+- 2026-10-23: draft analytics ruled out — an existing tracker does it (Shayne).

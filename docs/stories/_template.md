@@ -24,7 +24,7 @@ Open questions:
 
 ## Tasks
 
-- [ ] AREA-N.1 A step small enough to review — tick it with its commit hash.
+- [ ] AREA-N.1 A step small enough to review — tick it when done (the commit subject carries the ID).
 
 ## Next
 

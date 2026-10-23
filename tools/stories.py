@@ -1,7 +1,7 @@
 """Builds the story index and checks every story — the "All stories" table is generated, never hand-edited.
 
     python tools/stories.py              # rewrite the table in docs/stories/README.md, report problems
-    python tools/stories.py --check      # exit 1 if the table is stale or a story is broken (for /pre-commit)
+    python tools/stories.py --check      # exit 1 if the table is stale, a story or the current sprint is broken (for /pre-commit)
     python tools/stories.py --selftest   # prove the checks catch what they claim to
 
 A story is one file in docs/stories/ with a header (id, title, status, area, created) — see the
@@ -10,6 +10,8 @@ README there for the whole system. What is checked, because each one drifts sile
 - no two stories share an id (two sessions each taking "the next number")
 - a task id inside a story (`- [ ] AI-1.2 …`) is that story's own, and appears once
 - every story the README's "Next up" names exists and is still open
+- once docs/sprints/ exists, the README links the current sprint, the link resolves, and every task
+  that sprint names exists in a story (closed sprints are frozen, so only the current one is read)
 """
 
 import contextlib
@@ -27,6 +29,8 @@ NOT_STORIES = ("README.md", "_template.md")
 BEGIN, END = "<!-- stories:begin -->", "<!-- stories:end -->"
 ID = re.compile(r"^([A-Z]+)-(\d+)$")
 TASK = re.compile(r"^\s*[-*] \[[ xX]\] ([A-Z]+-\d+\.\d+)\b", re.M)
+SPRINT = re.compile(r"Current sprint:\**\s*\[[^\]]*\]\(([^)\s]+)\)")
+TASK_REF = re.compile(r"\b[A-Z]+-\d+\.\d+\b")
 
 
 def read(path):
@@ -90,6 +94,22 @@ def problems(stories, readme):
     return out
 
 
+def sprint_problems(stories, readme, folder):
+    """The README links the current sprint, the link resolves, and every task it names is some story's.
+    Only tokens in a known area count as task ids, so "SDXL-1.0" in prose is not one."""
+    m = SPRINT.search(readme)
+    if not m:
+        return ["README.md has no 'Current sprint: [..](..)' link"] if (folder.parent / "sprints").is_dir() else []
+    link = m[1].split("#", 1)[0]
+    current = folder / link
+    if not current.is_file():
+        return [f"README.md's current sprint {link} does not exist"]
+    areas = {ID.match(h["id"])[1] for _, h, _ in stories if ID.match(h.get("id", ""))}
+    tasks = {t for _, _, text in stories for t in TASK.findall(text)}
+    named = {t for t in TASK_REF.findall(read(current)) if t.split("-")[0] in areas}
+    return [f"{link}: task {t} is in no story" for t in sorted(named - tasks)]
+
+
 def table(stories):
     listed = [(p, h) for p, h, _ in stories if ID.match(h.get("id", "")) and h.get("status") in STATUSES]
     key = lambda s: (STATUSES.index(s[1]["status"]), ID.match(s[1]["id"])[1], int(ID.match(s[1]["id"])[2]))
@@ -119,7 +139,7 @@ def main(argv, folder=STORIES):
         return 0
     readme, stories = read(readme_path), load(folder)
     fresh = with_table(readme, table(stories))
-    found = problems(stories, readme)
+    found = problems(stories, readme) + sprint_problems(stories, readme, folder)
     if "--check" in argv:
         if fresh != readme:
             found.append("README.md's table is stale: run python tools/stories.py")
@@ -133,7 +153,8 @@ def main(argv, folder=STORIES):
 
 def selftest():
     with tempfile.TemporaryDirectory() as d:
-        f = Path(d)
+        f = Path(d) / "stories"  # beside sprints/, as on disk
+        f.mkdir()
 
         def story(name, task=None, **h):
             h = {"title": "t", "status": "ready", "created": "2026-10-16", **h}
@@ -150,7 +171,8 @@ def selftest():
         (f / "DEV-2.md").write_text(read(f / "DEV-2.md").replace("- [ ]", "  * [X]"), encoding="utf-8")
         story("DEV-3.md", id="DEV-3", area="DEV", status="in progress")  # a typo'd status still holds its number
         (f / "MC-9.md").write_text("﻿" + read(f / "MC-2-x.md").replace("MC-3", "MC-9"), encoding="utf-8")  # a BOM
-        readme = f"## Next up\n\n1. **AI-9** — gone\n2. **DEV-1** — closed\n\n## All stories\n\n{BEGIN}\n{END}\n"
+        readme = (f"**Current sprint: [now](../sprints/now.md)**\n\n"
+                  f"## Next up\n\n1. **AI-9** — gone\n2. **DEV-1** — closed\n\n## All stories\n\n{BEGIN}\n{END}\n")
         (f / "README.md").write_text(readme, encoding="utf-8")
 
         def run(argv):
@@ -162,7 +184,8 @@ def selftest():
         code, found = run(["--check"])
         for expected in ("AI-1 is used by both", "MC-2-x.md: the file name", "TBL-1.md: area AI",
                          "task AI-1.1 does not belong to LIM-1", "AI-9, which has no story", "DEV-1, which is done",
-                         "DEV-2.md: task LIM-1.1", "DEV-3.md: status 'in progress'", "README.md's table is stale"):
+                         "DEV-2.md: task LIM-1.1", "DEV-3.md: status 'in progress'", "README.md's table is stale",
+                         "current sprint ../sprints/now.md does not exist"):
             assert expected in found, f"missed {expected!r} in:\n{found}"
         assert "MC-9" not in found, f"a BOM broke the header:\n{found}"
         assert code == 1 and read(f / "README.md") == readme, "--check never writes"
@@ -172,6 +195,18 @@ def selftest():
         assert "| [AI-1](AI-1-a.md) | t | ready |" in written and "| Fix #12 \\| pipe |" in written
         assert "Next free id per area: AI-2 · DEV-4" in written
         assert written.index("AI-1-a.md") < written.index("DEV-1.md"), "open stories list before done ones"
+        sprints = Path(d) / "sprints"
+        sprints.mkdir()
+        (sprints / "now.md").write_text("| 1 | a | AI-1.1 | S |\n| 2 | b | AI-1.7 | M |\nart: SDXL-1.0\n", encoding="utf-8")
+        (sprints / "old.md").write_text("Done: DEV-2.9 — closed, so never read.\n", encoding="utf-8")
+        found = run(["--check"])[1]
+        assert "../sprints/now.md: task AI-1.7 is in no story" in found, f"missed a missing task in:\n{found}"
+        for wrong in ("task AI-1.1 is in no story", "SDXL", "DEV-2.9", "does not exist"):
+            assert wrong not in found, f"flagged {wrong!r}:\n{found}"
+        (f / "README.md").write_text(read(f / "README.md").replace("../sprints/now.md)", "../sprints/now.md#plan)"), encoding="utf-8")
+        assert "does not exist" not in run(["--check"])[1], "a #fragment broke the link"
+        (f / "README.md").write_text(read(f / "README.md").replace("Current sprint:", "Sprint:"), encoding="utf-8")
+        assert "has no 'Current sprint" in run(["--check"])[1], "a lost sprint link went unnoticed"
         empty = Path(d) / "unmigrated"
         empty.mkdir()
         assert main(["--check"], empty) == 0, "a branch with no stories passes"

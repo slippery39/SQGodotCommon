@@ -43,7 +43,7 @@ is stale while curl's is fine; the certifi bundle works. Re-runs skip files alre
 
 ```
 python tools/stories.py              # rebuild the "All stories" table in docs/stories/README.md, report problems
-python tools/stories.py --check      # exit 1 if the table is stale or a story is broken (/pre-commit)
+python tools/stories.py --check      # exit 1 if the table is stale, a story is broken, or the current sprint (docs/sprints/) is missing or names a task no story has (/pre-commit)
 python tools/stories.py --selftest   # prove the checks catch what they claim to
 ```
 

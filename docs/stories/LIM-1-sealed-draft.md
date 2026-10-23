@@ -56,6 +56,12 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
   permitted outside the site (DATA-1). The ratings are any table, because custom and unreleased
   sets need the engine's own — story DATA-2.
 - 2026-10-20, Shayne: **two colours, no splash** to start; a splash only if builds show the need.
+- 2026-10-23, Shayne (sprint planning): the point is **Arena Direct practice with your real
+  pool** — paste it in, take or adjust the suggested build, and play it against a range of AI
+  sealed decks. Built now whether or not he plays the Direct of 10-24; every later FRA sealed event
+  uses it. Comparing builds by sims (LIM-1.8) only if he decides to play.
+- 2026-10-23, Shayne: the Special Guests are part of the full sealed experience — MC-3 moves up
+  to the sprint's second item, and generated packs contain them once they play.
 
 ## Tasks
 
@@ -73,8 +79,26 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - [x] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game (`ZoneType.Sideboard`,
       `MagicRules.WithSideboard`, `RevealTwoFromOutsideTheGame`; the table passes both pools'
       sideboards; `FraOutsideTheGameTests`, 9/9 revert-checks; dccdafa)
+- [ ] LIM-1.7 **Your real pool** (sprint item 1): on the Sealed screen, paste the pool exported from
+      Arena (deck AND sideboard sections — `ArenaDeck.Parse` stops at the sideboard today, so it
+      needs a pool reading that keeps both) as an alternative to a seeded pool; a card the engine
+      doesn't have (a Special Guest before MC-3) is shown and left out, never a throw
+      (`SealedBuilder.Build` calls `FraCards.Get` on every pool card); each game faces a FRESH AI
+      opponent — a new random pool and its build — not one fixed by your seed; and
+      `python tools/import_17lands.py fra` re-run for current ratings
+- [ ] LIM-1.8 Compare candidate builds by sims — **only if Shayne plays the Direct**: each build
+      against ~200 AI sealed decks from random pools, the search on both sides, in the console.
+      Says which colours the AI pilots better, not which card; ~7pp is the smallest difference
+      200 games show
+- [ ] LIM-1.9 The AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) weights by old
+      draft boosters (10 C / 3 U / 1 R) — point it at `FRA.boosters.json`'s sheets
 
 ## Next
+
+**LIM-1.7 first** — the sprint's item 1 (`docs/stories/README.md`). Read `SealedSession.cs`
+(pools are card-name lists; `Playable` already keeps unscripted cards out of the deck),
+`SealedScene.cs`, `MagicCore/Sets/Fra/ArenaDeck.cs` and `SealedBuilder.cs`. A pool pasted from
+Arena may hold a Special Guest: their names are not in `FraCards` until MC-3.
 
 **Playtest LIM-1.5** (`./Run-Godot.ps1`, MagicTable → Sealed): build by hand, take the suggested
 deck, Start, play — and cast Extrapolate the Impossible if the pool has it (your sideboard is the
@@ -106,3 +130,6 @@ opponent's pool is what it guesses from.
 - 2026-10-20: LIM-1.5 built. Your pool from the seed, the AI's from seed + 1; captured at 1280x720:
   the pool by colour as card images, a suggested deck as 23 + 17 = 40 (11 Island, 5 Mountain, a
   U/R dual). Clicks not verified by the capture — that is the playtest.
+- 2026-10-23: sprint planning — LIM-1.7 (your real pool), 1.8 (build sims, if Shayne plays), 1.9
+  added. Shayne played a sealed game on 2026-10-22 (AI-8.3's report); whether that was the LIM-1.5
+  playtest he doesn't recall — ask before ticking it.

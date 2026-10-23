@@ -6,20 +6,39 @@ A story replaces the handoff file — when a session ends, the story already say
 
 Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
+## Sprints
+
+**Current sprint: [2026-10-23](../sprints/2026-10-23.md)** — the full FRA sealed experience for
+Arena Direct practice, then a better feel at the table. Start there: it says which task is next.
+
+Sprints run **Thursday to Thursday**, when Shayne's Claude usage resets, so a sprint is one week's
+usage budget. **One file per sprint** in `docs/sprints/`, named by its start date (the Thursday
+reset; sprint 2 began on a Friday only because sprints were adopted mid-week):
+- **Plan:** the goal, then the items in order, each a story task with a size (S/M/L), and which
+  items slip first.
+- **Review**, written at the close: what got done, what slipped and why, sizes against what each
+  item took, anything heavy on usage. After that the file is never edited again.
+
+A sprint file only POINTS at story tasks. Requirements, decisions and where the work stands stay in
+the stories, so nothing in a sprint file can go stale. At the boundary: write the review, start the
+next file, and move the link above. `python tools/stories.py` checks that the link resolves and that
+every task a sprint file names exists.
+
 ## Next up
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
 1. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-2. **TBL-5** — game records: export a played game, replay it, compare its choices with the AI's
-3. **MC-3** — the 10 Special Guests play (LIM-1's pools contain them)
-4. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-5. **TBL-4** — a clearer, calmer table: MTGA first, the best of MTGO kept
-6. **LIM-2** — draft against bots, on LIM-1's packs
-7. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
-8. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+2. **MC-3** — the 10 Special Guests play (a real pool can hold one)
+3. **TBL-5** — game records: resume one mid-game; compare its choices with the AI's
+4. **TBL-4** — a clearer, calmer table: quick wins now, the MTGA-first redesign next sprint
+5. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+6. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+7. **LIM-2** — draft against bots: FRA first, a cube later
+8. **AI-9** — resources priced by what they provide
 9. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-10. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
+10. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+11. **AI-4** — strategic plans above single actions
 
 ## How it works
 
@@ -48,7 +67,8 @@ agreed, can start) → `in-progress` → `done`, or `dropped` (say why in the Lo
 **Keep the story current, in the same step as the work** — the root `CLAUDE.md` makes this a rule:
 - a requirement added, changed or dropped → edit Requirements, and log the change with its date
 - a decision taken → Decisions, dated, with who decided; it is not re-asked
-- a task done → tick it with its commit hash; a "looks off" report → a new task
+- a task done → tick it (no hash: a commit can't hold its own; its subject starts with the task
+  ID, so `git log --grep "AI-8.2"` finds it); a "looks off" report → a new task
 - a result measured → a line in Log pointing at `docs/findings/`
 - the session ends → Next says what a fresh session needs (files to read, traps, the next task)
 
@@ -74,11 +94,12 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | in-progress |
 | [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | ready |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
+| [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
+| [AI-9](AI-9-resources-by-use.md) | Resources priced by what they provide, not by how many there are | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | backlog |
-| [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | backlog |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
@@ -93,5 +114,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [MC-2](MC-2-filter-refactor.md) | One composable filter instead of six closed vocabularies | done |
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 
-Next free id per area: AI-9 · DATA-3 · DEV-3 · LIM-3 · MC-4 · TBL-6
+Next free id per area: AI-10 · DATA-3 · DEV-3 · LIM-3 · MC-4 · TBL-6
 <!-- stories:end -->
