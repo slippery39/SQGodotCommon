@@ -100,13 +100,19 @@ public sealed record GameRecord
 
 	public GameRecord Ended(GameState s) => this with { End = MoveTokens.Ending(s) };
 
-	/// <summary>Plays it back: the position before each move, and the last one.</summary>
-	public (IReadOnlyList<GameState> Before, GameState Last) Replay()
+	/// <summary>A record of another format is stale — said, never misread.</summary>
+	public void CheckFormat()
 	{
 		if (Format != CurrentFormat)
 			throw new MoveTokens.StaleException(
 				$"a format-{Format} record; this engine reads format {CurrentFormat}"
 			);
+	}
+
+	/// <summary>Plays it back: the position before each move, and the last one.</summary>
+	public (IReadOnlyList<GameState> Before, GameState Last) Replay()
+	{
+		CheckFormat();
 		GameState s;
 		try
 		{

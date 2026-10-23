@@ -298,6 +298,99 @@ public class MagicTableManagerTests
 		);
 	}
 
+	/// <summary>
+	/// Seed 5 from your turn 9 to 12: the stand-in, then a second creature put in (the lazy human casts
+	/// none), then the lazy human, attacking with everything it can.
+	/// </summary>
+	static MagicTableManager PlayedToTurn12()
+	{
+		var m = New();
+		m.AutoplayTo(9);
+		RunAi(m);
+		m.Sandbox(
+			m.HumanId,
+			FraDecks.All["White-Black"].First(c => c.Data.TypeLine.Contains("Creature")),
+			ZoneType.Battlefield
+		);
+		for (var i = 0; i < 400 && !m.IsOver && m.State.GetGame().TurnNumber < 12; i++)
+		{
+			RunAi(m);
+			if (!m.HumanToAct)
+				continue;
+			if (m.State.GetPendingChoice() is DeclareAttackerChoice)
+				m.DeclareCombat(
+					global::MagicCore
+						.Turns.Combat.AttackCandidates(m.State)
+						.ToDictionary(c => c.Id, _ => m.OpponentId)
+				);
+			else
+				PassOrFirst(m);
+		}
+		return m;
+	}
+
+	static string Position(MagicTableManager m) =>
+		MoveTokens.Offers(m.State) + MoveTokens.Ending(m.State);
+
+	/// <summary>
+	/// TBL-5.7: a resumed record is the same game with the same undo steps — each Undo lands where the
+	/// original's did, a combat declaration one step, the stand-in's moves none — so you can step back
+	/// to before any decision of yours.
+	/// </summary>
+	[Test]
+	public void Resume_IsTheSameGame_WithTheSameUndoSteps()
+	{
+		var m = PlayedToTurn12();
+
+		var r = MagicTableManager.Resume(m.Record, search: false);
+
+		Assert.That(
+			r.Record.Moves.Select(x => x.Token),
+			Is.EqualTo(m.Record.Moves.Select(x => x.Token))
+		);
+		Assert.That(Position(r), Is.EqualTo(Position(m)));
+		Assert.That(r.Log[^1], Does.StartWith("[resumed] all"));
+		Assert.That(
+			m.Log.Any(l => l.Contains("You: Attack: ") && l.Split('→').Length > 2),
+			"precondition: a declaration of two creatures, to group\n" + string.Join("\n", m.Log)
+		);
+		var steps = 0;
+		for (; m.CanUndo; steps++)
+		{
+			m.Undo();
+			r.Undo();
+			Assert.That(Position(r), Is.EqualTo(Position(m)), $"undo {steps + 1}");
+		}
+		Assert.That(r.CanUndo, Is.False, "no more undo steps than the original");
+		Assert.That(steps, Is.GreaterThan(3), "precondition");
+	}
+
+	/// <summary>When the engine has moved, the replay goes on while moves apply, and says where it differs and stops.</summary>
+	[Test]
+	public void Resume_AStaleRecord_SaysWhereItDiffersAndStops()
+	{
+		var record = PlayedToTurn12().Record;
+		var n = record.Moves.Count;
+
+		var moved = record with
+		{
+			Moves = record.Moves.SetItem(9, record.Moves[9] with { Offers = "changed" }),
+		};
+		var broken = record with
+		{
+			Moves = record.Moves.SetItem(9, record.Moves[9] with { Token = "a99999" }),
+		};
+
+		Assert.That(
+			MagicTableManager.Resume(moved, search: false).Log[^1],
+			Does.Contain($"move 10; {n} of {n} moves replayed")
+		);
+		Assert.That(
+			MagicTableManager.Resume(broken, search: false).Log[^1],
+			Does.Contain($"move 10; 9 of {n} moves replayed")
+		);
+	}
+
 	[Test]
 	public void AnAiGame_IsRecordedToItsEnd()
 	{

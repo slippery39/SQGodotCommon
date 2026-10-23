@@ -101,7 +101,86 @@ public sealed class MagicTableManager
 		_ais[OpponentId] = NewAi(OpponentId);
 		if (aiVsAi)
 			_ais[HumanId] = NewAi(HumanId);
+		_start = State;
 		Settle();
+	}
+
+	private readonly GameState _start;
+
+	/// <summary>
+	/// A recorded game, resumed (story TBL-5.7): every move of <paramref name="record"/> made again
+	/// through <see cref="Play"/>, with an undo step before each decision of yours — so Undo steps
+	/// back to before the play you want to see again, and a fixed AI decides from there. Moves are
+	/// tokens, never re-decided. Written as a NEW record; the old file is never touched. If the engine
+	/// has moved, the replay goes on while the moves still apply — the log says where the first
+	/// position differs and where it stopped.
+	/// </summary>
+	public static MagicTableManager Resume(GameRecord record, bool search, string? recordTo = null)
+	{
+		record.CheckFormat();
+		var m = new MagicTableManager(
+			[.. record.Deck1.Select(MagicCore.Sets.Fra.FraCards.Get)],
+			[.. record.Deck2.Select(MagicCore.Sets.Fra.FraCards.Get)],
+			record.Seed,
+			aiVsAi: record.About.GetValueOrDefault("Player1") != "human",
+			search,
+			[.. record.Sideboard1.Select(MagicCore.Sets.Fra.FraCards.Get)],
+			[.. record.Sideboard2.Select(MagicCore.Sets.Fra.FraCards.Get)]
+		)
+		{
+			RecordTo = recordTo,
+		};
+		// The constructor settled by today's stops; the record says what was played instead.
+		m.State = m._start;
+		m.Record = m.Record.Truncate(0) with
+		{
+			About = m.Record.About.Add(
+				"ResumedFrom",
+				record.About.GetValueOrDefault("Started", "a record")
+			),
+		};
+		int? differs = null;
+		var played = 0;
+		var declaring = false;
+		foreach (var move in record.Moves)
+		{
+			if (differs is null && MoveTokens.Offers(m.State) != move.Offers)
+				differs = played + 1;
+			// A combat declaration is a move per creature but one decision of yours: one undo step.
+			var declaration = move.Kind == "you" && IsDeclaration(m.State.GetPendingChoice());
+			var step = move.Kind is "you" or "sandbox" && !(declaration && declaring);
+			if (step)
+				m._undo.Add((m.State, m._log.Count, m.Record.Moves.Count));
+			declaring = declaration;
+			// As the table logged it: your decisions and sandbox puts are yours, whoever held priority.
+			var (turn, who) = (
+				m.State.GetGame().TurnNumber,
+				move.Kind is "you" or "sandbox" ? m.HumanId : m.State.DecidingPlayerId()
+			);
+			try
+			{
+				m.Play(move.Token, move.Kind, move.Said);
+			}
+			catch (MoveTokens.StaleException)
+			{
+				if (step)
+					m._undo.RemoveAt(m._undo.Count - 1);
+				break;
+			}
+			if (move.Said != "")
+				m.Write(turn, who, move.Kind == "sandbox" ? $"[sandbox] {move.Said}" : move.Said);
+			played++;
+		}
+		// A whole record ends settled by the stops it was played with; only a broken replay needs today's.
+		if (played < record.Moves.Count)
+			m.Settle();
+		m._log.Add(
+			played == record.Moves.Count && differs is null
+				? $"[resumed] all {played} moves — Undo steps back through your decisions"
+				: $"[resumed] the engine has moved: the first position to differ is move {differs ?? played + 1}; {played} of {record.Moves.Count} moves replayed"
+		);
+		m.Save();
+		return m;
 	}
 
 	/// <summary>The same game again: same decks, same seed, so the same shuffles.</summary>

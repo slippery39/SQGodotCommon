@@ -85,20 +85,24 @@ own choices differ from the AI's.
       (267d330, 2026-10-22)
 - [ ] TBL-5.6 The comparison report: the oracle's ranking of your pick and the default search's
       choice at each of your decisions (sprint item 8, if budget is left)
-- [ ] TBL-5.7 Resume a record on the table from a chosen move (sprint item 4): a new
+- [x] TBL-5.7 Resume a record on the table from a chosen move (sprint item 4): a new
       `MagicTableManager` from the record's seed, decks and sideboards, its moves replayed through
       `Play` so the new record starts as a copy (written as a NEW file; the old one is kept). The
       cheapest form: replay the whole record with the undo history filled, so the existing Undo
       steps back to before the odd play. A fix to the AI replays exactly (moves are tokens, not
       re-decided — the fixed AI decides from there); a fix to the ENGINE can make an earlier
       position stale (`MoveTokens.StaleException`) — offer a lenient replay that keeps applying
-      moves while they are legal and says where the first one differs. Entry: the deck select
+      moves while they are legal and says where the first one differs. Entry: the deck select —
+      built: `MagicTableManager.Resume`, "Resume a game" on the deck select (a file dialog on
+      `game_records/`), `--resume=FILE`; `Resume_IsTheSameGame_WithTheSameUndoSteps` (revert-checked:
+      a declaration as one step per creature fails it), `Resume_AStaleRecord_SaysWhereItDiffersAndStops`
 
 ## Next
 
-**TBL-5.7 first** (sprint item 4, `docs/stories/README.md`), then TBL-5.6. For TBL-5.7 read
-`MagicTableManager.cs` (the constructor, `Play`, `Undo`, `Replay`) and `MagicCore/Ai/GameRecord.cs`
-(`Replay`, `Before`, the stale check).
+TBL-5.7 is done: the deck select's **Resume a game** opens a record, the table replays it, and
+Undo steps back through your decisions (a combat declaration is one step, the stand-in's moves
+none). The resumed game's log shows each move as the record said it — a declaration as one line per
+creature, not the table's one line. **TBL-5.6 next** (sprint item 8, if budget is left).
 
 **TBL-5.6, the comparison report** (requirement 4). For each `you` move of a record (`Kind ==
 "you"`; a combat declaration is several — one per creature): the position (`Before`), what the
@@ -128,3 +132,5 @@ up). The search is the uncapped default, not the table's (decided 2026-10-23).
   — whose zone, since either seat can be the target (review); the table's own log line is unchanged.
 - 2026-10-22: TBL-5.5 — a recorded position becomes an AI test case in one console step.
 - 2026-10-23: sprint planning — TBL-5.7 (resume a record) added; TBL-5.6's searches decided.
+- 2026-10-23: TBL-5.7 — resume a record. Shayne's sealed game of 2026-10-22 (seed 451259, 454
+  moves) resumed on the table: every move replayed, the same win, Undo enabled.

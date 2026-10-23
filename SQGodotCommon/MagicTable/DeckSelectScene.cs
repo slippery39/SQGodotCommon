@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Sets.Fra;
 using MtgGame;
@@ -22,6 +24,9 @@ public sealed record TableSetup(
 	public IReadOnlyList<CardDefinition> MySideboard { get; init; } = [];
 
 	public IReadOnlyList<CardDefinition> TheirSideboard { get; init; } = [];
+
+	/// <summary>A recorded game to resume (TBL-5.7): the table makes its moves again, once.</summary>
+	public GameRecord? Resume { get; init; }
 
 	/// <summary>Where Escape from the table goes: the screen the game was set up on.</summary>
 	public string Back { get; init; } = "res://MagicTable/DeckSelectScene.tscn";
@@ -79,6 +84,10 @@ public partial class DeckSelectScene : Control
 		_search.AddThemeFontSizeOverride("font_size", 24);
 		bottom.AddChild(_search);
 		bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+		var resumeButton = new Button { Text = "Resume a game", FocusMode = FocusModeEnum.None };
+		MtgUiStyles.StylePrimary(resumeButton, 34);
+		resumeButton.Pressed += ChooseRecord;
+		bottom.AddChild(resumeButton);
 		var sealedButton = new Button { Text = "Sealed", FocusMode = FocusModeEnum.None };
 		MtgUiStyles.StylePrimary(sealedButton, 34);
 		sealedButton.CustomMinimumSize = new Vector2(240, 0);
@@ -111,6 +120,74 @@ public partial class DeckSelectScene : Control
 			_search.ButtonPressed
 		);
 		Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");
+	}
+
+	/// <summary>Pick a file from game_records/ — every table game is recorded there (TBL-5).</summary>
+	private void ChooseRecord()
+	{
+		var dialog = new FileDialog
+		{
+			FileMode = FileDialog.FileModeEnum.OpenFile,
+			Access = FileDialog.AccessEnum.Filesystem,
+			CurrentDir = MagicTableScene.RecordsDir,
+			Filters = ["*.json ; Game records"],
+			Title = "Resume a recorded game — then Undo back to the play you want to see again",
+		};
+		dialog.FileSelected += Resume;
+		dialog.VisibilityChanged += () =>
+		{
+			if (!dialog.Visible)
+				dialog.QueueFree();
+		};
+		AddChild(dialog);
+		dialog.PopupCentered(new Vector2I(1100, 700));
+	}
+
+	private void Resume(string path)
+	{
+		try
+		{
+			var record = GameRecord.FromJson(File.ReadAllText(path));
+			record.CheckFormat();
+			TableSetup.Current = new TableSetup(
+				[.. record.Deck1.Select(FraCards.Get)],
+				[.. record.Deck2.Select(FraCards.Get)],
+				record.Seed,
+				record.About.GetValueOrDefault("Player1") != "human",
+				_search.ButtonPressed
+			)
+			{
+				MySideboard = [.. record.Sideboard1.Select(FraCards.Get)],
+				TheirSideboard = [.. record.Sideboard2.Select(FraCards.Get)],
+				Resume = record,
+			};
+			Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");
+		}
+		catch (System.Exception e)
+			when (e
+					is IOException
+						or System.UnauthorizedAccessException
+						or System.Text.Json.JsonException
+						or KeyNotFoundException
+						or MoveTokens.StaleException
+			)
+		{
+			var problem = new AcceptDialog
+			{
+				Title = "Can't resume",
+				DialogText =
+					e is KeyNotFoundException
+						? $"A card in it no longer exists ({e.Message})"
+						: e.Message,
+			};
+			problem.VisibilityChanged += () =>
+			{
+				if (!problem.Visible)
+					problem.QueueFree();
+			};
+			AddChild(problem);
+			problem.PopupCentered();
+		}
 	}
 
 	private static Label Text(string text, int size = 24)

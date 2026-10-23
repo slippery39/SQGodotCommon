@@ -5,6 +5,7 @@ using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
 using MagicCore.Actions;
+using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Rules;
 using MagicCore.Sets.Fra;
@@ -127,12 +128,20 @@ public partial class MagicTableScene : Control
 			Do(() => _m.Sandbox(seat == 0 ? _m.HumanId : _m.OpponentId, FraCards.Get(name), zone));
 		_sandbox.Previewed += Preview;
 
-		_m = NewGame(
-			int.TryParse(Arg("seed"), out var seed)
-				? seed
-				: TableSetup.Current?.Seed ?? Random.Shared.Next(1, int.MaxValue),
-			Stops.Arena
-		);
+		// A record to resume (TBL-5.7): --resume=FILE, or picked on the deck select — once; New game is new.
+		var resume = Arg("resume") is { } file
+			? GameRecord.FromJson(File.ReadAllText(file))
+			: TableSetup.Current?.Resume;
+		if (TableSetup.Current?.Resume is not null)
+			TableSetup.Current = TableSetup.Current with { Resume = null };
+		_m = resume is not null
+			? MagicTableManager.Resume(resume, UseSearch, RecordsDir)
+			: NewGame(
+				int.TryParse(Arg("seed"), out var seed)
+					? seed
+					: TableSetup.Current?.Seed ?? Random.Shared.Next(1, int.MaxValue),
+				Stops.Arena
+			);
 		if (int.TryParse(Arg("autoplay"), out var turn))
 			_m.AutoplayTo(turn);
 		// --put=Name:Zone (repeatable): the sandbox from the command line, into your seat. Without
@@ -180,16 +189,22 @@ public partial class MagicTableScene : Control
 			decks is null ? setup?.Theirs ?? FraDecks.All["Red-Green"] : FraDecks.All[decks[1]],
 			seed,
 			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai") || setup?.AiVsAi == true,
-			!OS.GetCmdlineUserArgs().Contains("--greedy") && setup?.Search != false,
+			UseSearch,
 			decks is null ? setup?.MySideboard : null,
 			decks is null ? setup?.TheirSideboard : null
 		)
 		{
-			// The solution root, beside the Godot project — untracked, like sim_results/ (story TBL-5).
-			RecordTo = Path.GetFullPath(ProjectSettings.GlobalizePath("res://../game_records")),
+			RecordTo = RecordsDir,
 			Stops = stops,
 		};
 	}
+
+	private static bool UseSearch =>
+		!OS.GetCmdlineUserArgs().Contains("--greedy") && TableSetup.Current?.Search != false;
+
+	/// <summary>The solution root, beside the Godot project — untracked, like sim_results/ (story TBL-5).</summary>
+	public static string RecordsDir =>
+		Path.GetFullPath(ProjectSettings.GlobalizePath("res://../game_records"));
 
 	public override void _UnhandledInput(InputEvent @event)
 	{

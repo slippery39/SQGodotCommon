@@ -14,9 +14,10 @@ MagicTable/
 ├── MagicTableManager.cs  THE bridge to MagicCore (plain C#, no Godot types): game, seed, replay,
 │                         stops, one AI move per StepAi (the search capped at ~1 s, or GreedyAi),
 │                         undo, log, the game record (every move via Play, from its token, written
-│                         to game_records/ — story TBL-5). Tested in SQGodotCommon.Tests
+│                         to game_records/ — story TBL-5); Resume: a record's moves made again, an
+│                         undo step at each of yours, written as a new file (TBL-5.7). Tested in SQGodotCommon.Tests
 ├── DeckSelectScene.cs    the entry: both seats' decks (built-in or a pasted Arena export), seed, AI vs
-│                         AI, search AI; the way into Sealed
+│                         AI, search AI; the way into Sealed; Resume a game (a record from game_records/)
 ├── SealedSession.cs      a sealed event (plain C#): your pool (a seed, or pasted from Arena), the deck
 │                         from the pool, free basics, the suggested build, the table setup — a FRESH
 │                         AI opponent per game, from the game's seed (OpponentFor). Tested
