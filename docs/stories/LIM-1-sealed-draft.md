@@ -60,6 +60,9 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
   pool** — paste it in, take or adjust the suggested build, and play it against a range of AI
   sealed decks. Built now whether or not he plays the Direct of 10-24; every later FRA sealed event
   uses it. Comparing builds by sims (LIM-1.8) only if he decides to play.
+- 2026-10-23, Claude (LIM-1.7, open to change): Start on the Sealed screen opens a fresh opponent;
+  the table's **New game keeps the same opponent** (a rematch). A pasted pool drops its basics
+  (free) and starts with an empty deck — the deck you built in Arena is not carried over.
 - 2026-10-23, Shayne: the Special Guests are part of the full sealed experience — MC-3 moves up
   to the sprint's second item, and generated packs contain them once they play.
 
@@ -79,13 +82,14 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - [x] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game (`ZoneType.Sideboard`,
       `MagicRules.WithSideboard`, `RevealTwoFromOutsideTheGame`; the table passes both pools'
       sideboards; `FraOutsideTheGameTests`, 9/9 revert-checks; dccdafa)
-- [ ] LIM-1.7 **Your real pool** (sprint item 1): on the Sealed screen, paste the pool exported from
+- [x] LIM-1.7 **Your real pool** (sprint item 1): on the Sealed screen, paste the pool exported from
       Arena (deck AND sideboard sections — `ArenaDeck.Parse` stops at the sideboard today, so it
       needs a pool reading that keeps both) as an alternative to a seeded pool; a card the engine
       doesn't have (a Special Guest before MC-3) is shown and left out, never a throw
       (`SealedBuilder.Build` calls `FraCards.Get` on every pool card); each game faces a FRESH AI
       opponent — a new random pool and its build — not one fixed by your seed; and
-      `python tools/import_17lands.py fra` re-run for current ratings
+      `python tools/import_17lands.py fra` re-run for current ratings — built: `ArenaDeck.ReadPool`,
+      `SealedSession(pool, leftOut)` + `OpponentFor(seed)`, Paste Arena pool on `SealedScene`
 - [ ] LIM-1.8 Compare candidate builds by sims — **only if Shayne plays the Direct**: each build
       against ~200 AI sealed decks from random pools, the search on both sides, in the console.
       Says which colours the AI pilots better, not which card; ~7pp is the smallest difference
@@ -95,16 +99,17 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 
 ## Next
 
-**LIM-1.7 first** — the sprint's item 1 (`docs/stories/README.md`). Read `SealedSession.cs`
-(pools are card-name lists; `Playable` already keeps unscripted cards out of the deck),
-`SealedScene.cs`, `MagicCore/Sets/Fra/ArenaDeck.cs` and `SealedBuilder.cs`. A pool pasted from
-Arena may hold a Special Guest: their names are not in `FraCards` until MC-3.
+LIM-1.7 is done; the sprint's next item is **MC-3** (the Special Guests). LIM-1.8 waits on
+Shayne deciding to play the Direct.
 
 **Playtest LIM-1.5** (`./Run-Godot.ps1`, MagicTable → Sealed): build by hand, take the suggested
 deck, Start, play — and cast Extrapolate the Impossible if the pool has it (your sideboard is the
 pool's unplayed cards; the AI chooses which you get). Every "looks off" becomes a task; once it plays
 right, LIM-1 is done. The session lives in `SealedScene._session` (static), and Escape from a sealed
-game returns to it (`TableSetup.Back`).
+game returns to it (`TableSetup.Back`). Also try **Paste Arena pool** with a real export
+(Arena's deck builder → Export): what isn't FRA is named above the pool; each Start is a new
+opponent, its pool opened from the game's seed (shown on the table) — the session's seed is your
+pool's only.
 Traps: the collation data is by NAME (treatments folded); `GuestsPlayable` stays false until
 MC-3; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
 Re-run `python tools/import_17lands.py fra` as 17lands' public files update (weekly or so).
@@ -133,3 +138,6 @@ opponent's pool is what it guesses from.
 - 2026-10-23: sprint planning — LIM-1.7 (your real pool), 1.8 (build sims, if Shayne plays), 1.9
   added. Shayne played a sealed game on 2026-10-22 (AI-8.3's report); whether that was the LIM-1.5
   playtest he doesn't recall — ask before ticking it.
+- 2026-10-23: LIM-1.7 — your real pool pasted from Arena; each game a fresh AI opponent. The
+  17lands re-run found nothing new: its public files are still those of 2026-10-19, so the ratings
+  are unchanged (not committed). The dialog captured; the paste itself is tested, not clicked.

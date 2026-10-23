@@ -69,7 +69,8 @@ MagicCore/
 ├── Sets/Fra/FraCards.cs hand-written FRA abilities by name; IsImplemented
 ├── Sets/Fra/EmpowerJace.cs  the keyword action and the Jace token
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
-├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named
+├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named; ReadPool: a sealed
+│                        pool (every section), what isn't FRA left out by name
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
 ├── Ai/Evaluator.cs      THE position score every AI compares moves by (a change shows in GoldenAiReplay.txt);
 │                        HeldValues: a held card priced by its measured value — the search's setting (AI-1)

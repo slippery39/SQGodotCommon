@@ -11,14 +11,64 @@ namespace SQGodotCommon.Tests;
 public class SealedSessionTests
 {
 	[Test]
-	public void ASeed_OpensYourPoolAndTheAis_AndReplaysBoth()
+	public void ASeed_ReplaysYourPool_AndAGameSeed_ItsOpponent()
 	{
-		var a = new SealedSession(11);
-		var b = new SealedSession(11);
-		Assert.That(a.Pool, Is.EqualTo(b.Pool));
-		Assert.That(a.OpponentPool, Is.EqualTo(b.OpponentPool));
-		Assert.That(a.OpponentPool, Is.Not.EqualTo(a.Pool));
-		Assert.That(a.Opponent.Main, Has.Count.EqualTo(SealedBuilder.DeckSize));
+		Assert.That(new SealedSession(11).Pool, Is.EqualTo(new SealedSession(11).Pool));
+		Assert.That(
+			SealedSession.OpponentFor(3).Main,
+			Is.EqualTo(SealedSession.OpponentFor(3).Main)
+		);
+		Assert.That(SealedSession.OpponentFor(3).Main, Has.Count.EqualTo(SealedBuilder.DeckSize));
+	}
+
+	[Test]
+	public void EachGame_FacesAFreshOpponent()
+	{
+		var s = new SealedSession(11);
+		s.Suggest();
+		Assert.That(
+			s.ToSetup(search: false, gameSeed: 1).Theirs.Select(c => c.Data.Name),
+			Is.Not.EquivalentTo(
+				s.ToSetup(search: false, gameSeed: 2).Theirs.Select(c => c.Data.Name)
+			)
+		);
+	}
+
+	/// <summary>
+	/// LIM-1.7: a seeded pool, exported as Arena does (part built, the rest in the sideboard) with a
+	/// Special Guest the engine lacks — read back whole, the guest left out, and it builds and plays.
+	/// </summary>
+	[Test]
+	public void YourArenaPool_Pasted_BuildsAndPlays_AGuestLeftOut()
+	{
+		var opened = new SealedSession(12).Pool;
+		static string Lines(System.Collections.Generic.IEnumerable<string> cards) =>
+			string.Join('\n', cards.GroupBy(c => c).Select(g => $"{g.Count()} {g.Key} (FRA) 1"));
+		var export = $"""
+			Deck
+			{Lines(opened.Take(20))}
+			9 Plains (FRA) 270
+
+			Sideboard
+			{Lines(opened.Skip(20))}
+			1 Mind Twist (SPG) 164
+			""";
+
+		var read = ArenaDeck.ReadPool(export);
+		Assert.That(
+			read.Pool,
+			Is.EquivalentTo(opened.Where(c => !SealedSession.BasicNames.Contains(c)))
+		);
+		Assert.That(read.LeftOut, Is.EqualTo(new[] { "Mind Twist" }));
+
+		var s = new SealedSession(read.Pool, read.LeftOut);
+		Assert.That(s.Seed, Is.Null);
+		s.Suggest();
+		Assert.That(s.Ready);
+		Assert.That(
+			s.ToSetup(search: false, gameSeed: 5).Mine,
+			Has.Count.EqualTo(SealedBuilder.DeckSize)
+		);
 	}
 
 	[Test]
@@ -75,14 +125,15 @@ public class SealedSessionTests
 	}
 
 	[Test]
-	public void TheSetup_PlaysYourDeck_AgainstTheAisOwnBuild_OnTheEventsSeed()
+	public void TheSetup_PlaysYourDeck_AgainstTheAisOwnBuild_OnTheGamesSeed()
 	{
 		var s = new SealedSession(9);
 		s.Suggest();
-		var setup = s.ToSetup(search: true);
+		var setup = s.ToSetup(search: true, gameSeed: 21);
+		var opponent = SealedSession.OpponentFor(21);
 		Assert.That(setup.Mine.Select(c => c.Data.Name), Is.EquivalentTo(s.Deck));
-		Assert.That(setup.Theirs.Select(c => c.Data.Name), Is.EquivalentTo(s.Opponent.Main));
-		Assert.That(setup.Seed, Is.EqualTo(9));
+		Assert.That(setup.Theirs.Select(c => c.Data.Name), Is.EquivalentTo(opponent.Main));
+		Assert.That(setup.Seed, Is.EqualTo(21));
 		Assert.That(setup.AiVsAi, Is.False);
 		Assert.That(
 			setup.Back,
@@ -95,7 +146,7 @@ public class SealedSessionTests
 		);
 		Assert.That(
 			setup.TheirSideboard.Select(c => c.Data.Name),
-			Is.EquivalentTo(s.Opponent.Sideboard.Where(SealedSession.Playable))
+			Is.EquivalentTo(opponent.Sideboard.Where(SealedSession.Playable))
 		);
 
 		var game = new MagicTableManager(
@@ -112,7 +163,7 @@ public class SealedSessionTests
 		);
 		Assert.That(
 			game.Replay().State.CardsIn(game.OpponentId, ZoneType.Sideboard).Count(),
-			Is.EqualTo(s.Opponent.Sideboard.Count),
+			Is.EqualTo(opponent.Sideboard.Count),
 			"and a replay keeps both"
 		);
 	}

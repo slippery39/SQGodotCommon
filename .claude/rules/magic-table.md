@@ -17,9 +17,11 @@ MagicTable/
 │                         to game_records/ — story TBL-5). Tested in SQGodotCommon.Tests
 ├── DeckSelectScene.cs    the entry: both seats' decks (built-in or a pasted Arena export), seed, AI vs
 │                         AI, search AI; the way into Sealed
-├── SealedSession.cs      a sealed event (plain C#): your pool and the AI's (seed, seed + 1), the deck
-│                         from the pool, free basics, the suggested build, the table setup. Tested
-├── SealedScene.cs        Arena's deck builder: pool by colour (click in), deck list (click out), basics
+├── SealedSession.cs      a sealed event (plain C#): your pool (a seed, or pasted from Arena), the deck
+│                         from the pool, free basics, the suggested build, the table setup — a FRESH
+│                         AI opponent per game, from the game's seed (OpponentFor). Tested
+├── SealedScene.cs        Arena's deck builder: pool by colour (click in), deck list (click out), basics;
+│                         Paste Arena pool (a dialog), what was left out named above the pool
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer
 │                         (pause / step / speed)
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)

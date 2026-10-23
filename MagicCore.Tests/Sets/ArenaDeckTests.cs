@@ -72,6 +72,38 @@ public class ArenaDeckTests
 	}
 
 	[Test]
+	public void APool_ReadsDeckAndSideboard_DropsBasics_AndLeavesOutWhatIsNotFra()
+	{
+		var result = ArenaDeck.ReadPool(
+			"""
+			Deck
+			2 Last Gasp (FRA) 96
+			8 Swamp (FRA) 283
+
+			Sideboard
+			1 Prophesied End (FRA) 12
+			1 Mind Twist (SPG) 164
+			7 Island
+			1 Blossom-Blessed Angel /// Seed Suture (FRA) 30
+			"""
+		);
+
+		Assert.That(
+			result.Pool,
+			Is.EquivalentTo(
+				new[]
+				{
+					"Last Gasp",
+					"Last Gasp",
+					"Prophesied End",
+					"Blossom-Blessed Angel // Seed Suture",
+				}
+			)
+		);
+		Assert.That(result.LeftOut, Is.EqualTo(new[] { "Mind Twist" }));
+	}
+
+	[Test]
 	public void NothingPasted_SaysWhatToPaste()
 	{
 		Assert.That(ArenaDeck.Parse("  \n").Problems, Has.Count.EqualTo(1));

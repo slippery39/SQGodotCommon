@@ -10,7 +10,8 @@ namespace MagicTable;
 /// Sealed deck building, the Arena way (story LIM-1): the pool's cards in the middle, filtered by
 /// colour — click one into the deck; the deck as a list on the right — click a row back out; free
 /// basics; the suggested deck (the AI's build of your pool). Start plays it on the table against the
-/// AI's own build of ITS pool. Every rule is <see cref="SealedSession"/>'s; this only draws it.
+/// AI's own build of ITS pool, a fresh one each Start. Your pool is opened from a seed, or pasted from
+/// Arena. Every rule is <see cref="SealedSession"/>'s; this only draws it.
 /// </summary>
 public partial class SealedScene : Control
 {
@@ -38,6 +39,22 @@ public partial class SealedScene : Control
 	private readonly Dictionary<string, Label> _basicCounts = new();
 	private readonly Label _deckTitle = MtgUiStyles.Title("", 28);
 	private readonly Label _title = MtgUiStyles.Title("", 34);
+	private readonly Label _leftOut = Text("", 20);
+	private readonly TextEdit _paste =
+		new()
+		{
+			PlaceholderText = """
+				In Arena's deck builder: Export, then paste here.
+
+				Deck
+				1 Card Name (FRA) 123
+				…
+
+				Sideboard
+				…
+				""",
+			CustomMinimumSize = new Vector2(720, 440),
+		};
 	private readonly TextureRect _preview =
 		new()
 		{
@@ -90,8 +107,7 @@ public partial class SealedScene : Control
 		seedRow.AddChild(Text("Seed"));
 		_seed.AddThemeFontSizeOverride("font_size", 22);
 		seedRow.AddChild(_seed);
-		left.AddChild(seedRow);
-		left.AddChild(
+		seedRow.AddChild(
 			Choice(
 				"New pool",
 				() =>
@@ -105,7 +121,34 @@ public partial class SealedScene : Control
 				}
 			)
 		);
+		left.AddChild(seedRow);
+
+		var dialog = new AcceptDialog
+		{
+			Title = "Your Arena pool — the deck AND sideboard",
+			OkButtonText = "Use this pool",
+		};
+		_paste.AddThemeFontSizeOverride("font_size", 18);
+		dialog.AddChild(_paste);
+		dialog.AddCancelButton("Cancel");
+		dialog.Confirmed += UsePastedPool;
+		AddChild(dialog);
+		left.AddChild(Choice("Paste Arena pool", () => dialog.PopupCentered()));
 		return left;
+	}
+
+	/// <summary>Your real pool (LIM-1.7). Nothing readable keeps the pool you had, and says why.</summary>
+	private void UsePastedPool()
+	{
+		var read = ArenaDeck.ReadPool(_paste.Text);
+		if (read.Pool.Count == 0)
+		{
+			_leftOut.Text = "No FRA cards found in the paste — the pool is unchanged.";
+			_leftOut.Visible = true;
+			return;
+		}
+		_session = new SealedSession(read.Pool, read.LeftOut);
+		Redraw();
 	}
 
 	private Control PoolColumn()
@@ -128,6 +171,9 @@ public partial class SealedScene : Control
 			filters.AddChild(button);
 		}
 		center.AddChild(filters);
+		_leftOut.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		_leftOut.CustomMinimumSize = new Vector2(1, 0);
+		center.AddChild(_leftOut);
 		var scroll = new ScrollContainer
 		{
 			SizeFlagsVertical = SizeFlags.ExpandFill,
@@ -180,7 +226,11 @@ public partial class SealedScene : Control
 		MtgUiStyles.StylePrimary(_start, 34);
 		_start.Pressed += () =>
 		{
-			TableSetup.Current = S.ToSetup(_search.ButtonPressed);
+			// never your pool's own seed: that would open your pool for the AI too
+			var gameSeed = System.Random.Shared.Next(1, 1_000_000);
+			if (gameSeed == S.Seed)
+				gameSeed++;
+			TableSetup.Current = S.ToSetup(_search.ButtonPressed, gameSeed);
 			Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");
 		};
 		right.AddChild(_start);
@@ -198,7 +248,17 @@ public partial class SealedScene : Control
 
 	private void Redraw()
 	{
-		_title.Text = $"Sealed · seed {S.Seed}";
+		_title.Text = S.Seed is { } seed ? $"Sealed · seed {seed}" : "Sealed · your pool";
+		_leftOut.Text =
+			S.LeftOut.Count == 0
+				? ""
+				: "Left out (not in the engine yet, or unreadable): "
+					+ string.Join(
+						", ",
+						S.LeftOut.GroupBy(c => c)
+							.Select(g => g.Count() > 1 ? $"{g.Count()}× {g.Key}" : g.Key)
+					);
+		_leftOut.Visible = _leftOut.Text.Length > 0;
 		foreach (var button in _filterButtons)
 			MtgUiStyles.StyleChoice(button, selected: button.Text == _filter);
 

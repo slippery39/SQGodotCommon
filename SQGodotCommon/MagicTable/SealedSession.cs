@@ -6,10 +6,10 @@ using MagicCore.Sets.Fra;
 namespace MagicTable;
 
 /// <summary>
-/// A sealed event's deck building, plain C# (no Godot types), story LIM-1: your six packs and the
-/// AI's, the deck you are building from your pool, free basics, the suggested build — and the
-/// table setup that plays your deck against the AI's own build from ITS pool. The seed makes both
-/// pools: yours from <c>seed</c>, the AI's from <c>seed + 1</c>, so one number replays the event.
+/// A sealed event's deck building, plain C# (no Godot types), story LIM-1: your pool — six packs
+/// opened from a seed, or your real one pasted from Arena — the deck you are building from it, free
+/// basics, the suggested build — and the table setup that plays your deck against an AI's own build
+/// of ITS pool. Each game's opponent is fresh, opened from that game's seed (LIM-1.7).
 /// </summary>
 public sealed class SealedSession
 {
@@ -18,23 +18,29 @@ public sealed class SealedSession
 	private readonly List<string> _deck = new();
 	private readonly int[] _basics = new int[5];
 
+	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool.</summary>
 	public SealedSession(int seed)
+		: this(Open(seed)) => Seed = seed;
+
+	/// <summary>A pool you opened elsewhere (<see cref="ArenaDeck.ReadPool"/>); what it held that the engine hasn't is <paramref name="leftOut"/>.</summary>
+	public SealedSession(IReadOnlyList<string> pool, IReadOnlyList<string>? leftOut = null)
 	{
-		Seed = seed;
-		Pool = Open(seed);
-		OpponentPool = Open(seed + 1);
-		Opponent = SealedBuilder.Build(OpponentPool, CardRatings.Fra);
+		Pool = pool;
+		LeftOut = leftOut ?? [];
 	}
 
-	public int Seed { get; }
+	/// <summary>The seed your pool was opened from; null for a pasted pool.</summary>
+	public int? Seed { get; }
 
-	/// <summary>Your pool, pack by pack.</summary>
+	/// <summary>Your pool: pack by pack when opened from a seed, in the export's order when pasted.</summary>
 	public IReadOnlyList<string> Pool { get; }
 
-	public IReadOnlyList<string> OpponentPool { get; }
+	/// <summary>Cards of a pasted pool the engine doesn't have — shown, never played.</summary>
+	public IReadOnlyList<string> LeftOut { get; }
 
-	/// <summary>The AI's build from its own pool — what you play against.</summary>
-	public SealedDeck Opponent { get; }
+	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, and its own build of it.</summary>
+	public static SealedDeck OpponentFor(int seed) =>
+		SealedBuilder.Build(Open(seed), CardRatings.Fra);
 
 	/// <summary>The pool cards in your deck (basics added on top are <see cref="Basics"/>).</summary>
 	public IReadOnlyList<string> FromPool => _deck;
@@ -100,12 +106,17 @@ public sealed class SealedSession
 		return built;
 	}
 
-	/// <summary>Your deck against the AI's build, on this event's seed.</summary>
-	public TableSetup ToSetup(bool search) =>
-		new(
+	/// <summary>
+	/// Your deck against a fresh AI opponent (<see cref="OpponentFor"/>), both from <paramref name="gameSeed"/>
+	/// — which also seeds the game, so the table's seed replays the opponent too.
+	/// </summary>
+	public TableSetup ToSetup(bool search, int gameSeed)
+	{
+		var opponent = OpponentFor(gameSeed);
+		return new(
 			[.. Deck.Select(FraCards.Get)],
-			[.. Opponent.Main.Select(FraCards.Get)],
-			Seed,
+			[.. opponent.Main.Select(FraCards.Get)],
+			gameSeed,
 			AiVsAi: false,
 			search
 		)
@@ -113,8 +124,9 @@ public sealed class SealedSession
 			Back = "res://MagicTable/SealedScene.tscn",
 			// outside the game: each pool's unplayed cards — every one playable, Extrapolate's options
 			MySideboard = [.. Sideboard.Where(Playable).Select(FraCards.Get)],
-			TheirSideboard = [.. Opponent.Sideboard.Where(Playable).Select(FraCards.Get)],
+			TheirSideboard = [.. opponent.Sideboard.Where(Playable).Select(FraCards.Get)],
 		};
+	}
 
 	private static int BasicIndex(string basic) =>
 		BasicNames.ToList().IndexOf(basic) is var i && i >= 0
