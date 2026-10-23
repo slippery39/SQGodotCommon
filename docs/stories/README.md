@@ -35,10 +35,11 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 5. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
 6. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
 7. **LIM-2** — draft against bots: FRA first, a cube later
-8. **AI-9** — resources priced by what they provide
-9. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-10. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-11. **AI-4** — strategic plans above single actions
+8. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+9. **AI-9** — resources priced by what they provide
+10. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+11. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+12. **AI-4** — strategic plans above single actions
 
 ## How it works
 
@@ -99,6 +100,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-9](AI-9-resources-by-use.md) | Resources priced by what they provide, not by how many there are | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
+| [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | backlog |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
@@ -114,5 +116,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [MC-2](MC-2-filter-refactor.md) | One composable filter instead of six closed vocabularies | done |
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 
-Next free id per area: AI-10 · DATA-3 · DEV-3 · LIM-3 · MC-4 · TBL-6
+Next free id per area: AI-10 · DATA-3 · DEV-4 · LIM-3 · MC-4 · TBL-6
 <!-- stories:end -->
