@@ -41,12 +41,19 @@ Open questions (Shayne):
   - **Discount by step, not turn** — a win sooner within the turn scores higher. Not yet tried.
 - Should the simulated opponent stop being so passive (`CastsFromHand` / `Responds`, AI-3)? That is
   why the search felt safe; AI-3 measured those models — read `docs/findings/magic-ai.md` first.
+  **Decided here once for every story it touches** (2026-10-24): the same board-only opponent likely
+  makes Unsummon look like a kill spell — a bounced creature is never recast in the look-ahead
+  (AI-4's bounce cases, AI-10.3). AI-3 measured casting opponents no STRONGER overall at 5pp, but
+  never these behaviours.
 
 ## Tasks
 
 - [ ] AI-10.1 Keep the two positions as AI test cases, each failing today (the control: the search
       plays "Don't attack")
 - [ ] AI-10.2 The tie-break Shayne picks; the kept cases pass; `--suite=beam`, then the early-stop match
+- [ ] AI-10.3 Evidence for the opponent-model question: in a position of the same record where the
+      oracle casts Unsummon and Shayne held it (#547), its scores with `BoardOnly` against a casting
+      opponent — does the bounced creature ever come back in its rollouts? Minutes, not a run
 
 ## Next
 
@@ -57,3 +64,4 @@ two lines in `Evaluate` — the record replays, so `GameRecord.Before(545)` is t
 ## Log
 
 - 2026-10-23: created from Shayne's game; the cause measured (above); one tie-break tried and reverted.
+- 2026-10-24: the opponent-model question now also covers AI-4's bounce timing (AI-10.3 added).
