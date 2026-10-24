@@ -42,8 +42,15 @@ Open questions:
 
 ## Next
 
-Wait for AI-2 and AI-3 — what the search gets wrong without a strategy is the input to this design.
+AI-2 and AI-3 are done, so AI-4.1 can start. Its inputs: the plays that looked wrong at the table
+(AI-8 — what it fixed, and what it deferred to `DesignNotes.md`), and AI-8.2's finding that the
+rollout casts **one spell a turn** (`Rollout.Settings.ActionsPerTurn` = 1, never measured alone) —
+so a hand of several spells is worth only their held price inside the look-ahead. AI-5 deferred
+held spells as options to this story; the open question on plans and held spells is where they
+meet. TBL-5.6's comparison report, run on Shayne's games, is a further input: where his choices
+and the search's differ.
 
 ## Log
 
 - 2026-10-16: created from Shayne's plan idea during the AI-2 interview.
+- 2026-10-23: Next pointed at its inputs (sprint housekeeping) — AI-2 and AI-3 done.

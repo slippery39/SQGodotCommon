@@ -15,15 +15,15 @@ own choices differ from the AI's.
 
 ## Requirements
 
-- [ ] A played game exports to a file: the seed, both decks, every decision of both players, enough
+- [x] A played game exports to a file: the seed, both decks, every decision of both players, enough
       to rebuild every state — saved without having to remember (every game, or one key)
-- [ ] A record replays exactly in the console and in tests, and says so when the engine has moved
+- [x] A record replays exactly in the console and in tests, and says so when the engine has moved
       (as the position suite's file does)
-- [ ] A position from a record becomes an AI test case in a step (AI-8 needs exactly this)
+- [x] A position from a record becomes an AI test case in a step (AI-8 needs exactly this)
 - [ ] At each of the human's decisions, what the AI would have chosen — and how its scores rank the
       human's pick — reported for the whole game, by BOTH the search (as the table plays it) and
       the oracle (PositionSuite's deeper search)
-- [ ] Undo and the sandbox never break a replay: undone moves leave the record, sandbox
+- [x] Undo and the sandbox never break a replay: undone moves leave the record, sandbox
       placements are recorded as moves
 
 ## Decisions
@@ -134,3 +134,5 @@ up). The search is the uncapped default, not the table's (decided 2026-10-23).
 - 2026-10-23: sprint planning — TBL-5.7 (resume a record) added; TBL-5.6's searches decided.
 - 2026-10-23: TBL-5.7 — resume a record. Shayne's sealed game of 2026-10-22 (seed 451259, 454
   moves) resumed on the table: every move replayed, the same win, Undo enabled.
+- 2026-10-23: requirements 1, 2, 3, 5 ticked (sprint housekeeping) — met by TBL-5.3, 5.4, 5.5, 5.3;
+  the comparison (4) is TBL-5.6.

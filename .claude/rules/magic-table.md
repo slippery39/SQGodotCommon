@@ -89,6 +89,9 @@ MagicTable/
   Lists use the plain plate in the body font; only main actions use the big oxblood style.
 - **Glows:** gold playable, blue clickable now, green picked, white what it is about, red/blue in
   combat — one style for every object (`CardViews.Outline`).
+- **Everything stays in view** (Shayne, 2026-10-23): a screen that doesn't fit is reorganised or
+  scrolls — never clipped off the edge. Capture every screen a change touches (TBL-2.5: a new button
+  pushed Start off the deck select).
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.
 - **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
   only way to read a card), so a hold must never also play it. A new click target on a card goes

@@ -15,22 +15,22 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 
 ## Requirements
 
-- [ ] A sealed pool is 6 FRA packs, each an **Arena** play booster: the paper play booster with
+- [x] A sealed pool is 6 FRA packs, each an **Arena** play booster: the paper play booster with
       the foil slot as a second non-foil wildcard (same rarity odds)
-- [ ] Packs follow FRA's real collation, from MTGJSON's play-booster data (232 pack variants, exact
+- [x] Packs follow FRA's real collation, from MTGJSON's play-booster data (232 pack variants, exact
       weights): 6 commons, 1 uncommon, 1 common/uncommon, the echoed-pair block (a whole pair of
       one rarity + one card from a DIFFERENT pair), 1 rare/mythic, the wildcard, 1 land
 - [x] Special Guests replace a common in 1 pack in 55 — once all 10 are scripted (MC-3, done 2026-10-23)
-- [ ] Commons follow every stated rule and nothing invented: at least 4 of the 5 colours among a
+- [x] Commons follow every stated rule and nothing invented: at least 4 of the 5 colours among a
       pack's commons (Wizards' Play Booster Q&A), and no card twice from one sheet (MTGJSON: none
       of FRA's play sheets sets `allowDuplicates`; across sheets a repeat can happen — the two
       wildcards, and the common/uncommon slot, can match a card the pack already holds)
-- [ ] The rates are checked by a test over many packs, against the published odds
-- [ ] A deck builder on MagicTable: the pool, 40 cards, basics free, Arena-style
-- [ ] A suggested deck — what the AI builds from the pool; the same builder makes the AI
+- [x] The rates are checked by a test over many packs, against the published odds
+- [x] A deck builder on MagicTable: the pool, 40 cards, basics free, Arena-style
+- [x] A suggested deck — what the AI builds from the pool; the same builder makes the AI
       opponent's deck from ITS OWN pool
-- [ ] Play the built deck against that AI opponent on the table, Bo1
-- [ ] Extrapolate the Impossible plays, with the sideboard (the pool's unplayed cards) as
+- [x] Play the built deck against that AI opponent on the table, Bo1
+- [x] Extrapolate the Impossible plays, with the sideboard (the pool's unplayed cards) as
       "outside the game"
 
 ## Decisions
@@ -111,7 +111,7 @@ export each candidate from Arena's deck builder into a file, then
 `dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt` (Commands.md) — ~15 min
 for two builds at 200 games on 16 cores; ask Shayne before a run that long.
 
-**Left:** LIM-1.9 (below), and the unticked requirements' boxes (housekeeping, sprint item 7).
+**Left:** LIM-1.9 (below) — every requirement is met.
 The playtest (LIM-1.5) is done; what looked off is in TBL-2. The session lives in
 `SealedScene._session` (static), and Escape from a sealed game returns to it (`TableSetup.Back`);
 each Start is a new opponent, its pool opened from the game's seed (shown on the table).
@@ -151,3 +151,6 @@ opponent's pool is what it guesses from.
 - 2026-10-23: LIM-1.5 ticked — Shayne playtested the sealed screen and played a game. What looked
   off is table-side: TBL-2.5 (deck select off the screen, fixed), 2.6 (a prepared copy's art,
   fixed), 2.7 (the prepared copy in the hand, his call).
+- 2026-10-23: requirements ticked (sprint housekeeping) — all nine met: packs, collation, guests,
+  commons and rate test by LIM-1.3 and MC-3, builder, suggested deck and play by LIM-1.4–1.5,
+  Extrapolate by LIM-1.6. LIM-1.9 keeps the story open.

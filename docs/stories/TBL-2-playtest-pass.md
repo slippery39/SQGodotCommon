@@ -37,7 +37,8 @@ is a bug report, never about the look.
 - [x] TBL-2.2 Shayne's first playtest session — reports become tasks below — 2026-10-20 against the
       search (W-B vs R-G): two AI plays → AI-8; the turn was unclear → TBL-4; no seed saved → TBL-5
 - [ ] TBL-2.3 If the AI ever again spends Prophesied End (or any removal) on a non-attacking 1-drop:
-      capture that game's seed as a real position beside AI-1's hand-built one (moved from AI-1.4)
+      keep that game's record (`MagicConsole --record=FILE --keep=NAME --at=N`, TBL-5.5) as a real
+      position beside AI-1's hand-built one (moved from AI-1.4)
 - [x] TBL-2.4 An unticked checkbox draws no box ("AI plays both seats", "Full control"; "Search AI"
       once unticked); a ticked one is ~10 px beside 24 px text. Cause: Godot's DEFAULT CheckBox
       icons — `mtg_theme.tres` styles no CheckBox — a faint dark outline on the dark backdrop, not
@@ -62,12 +63,13 @@ is a bug report, never about the look.
 ## Next
 
 **Reports so far live in their own stories:** AI plays in AI-8, the table's clarity in TBL-4, game
-records (so the next report can be replayed) in TBL-5. Until TBL-5: note the seed before a game that
-might be reported (`--seed`), and the turn and cards involved.
+records in TBL-5. Every game is recorded to `game_records/`: for a report, note the turn and cards
+involved; keep the position as an AI test case (`--record=FILE --keep=NAME --at=N`) or resume the
+game on the table (Resume a game, TBL-5.7) to check a fix.
 
 Run the table with `Run-Godot.ps1` (`Commands.md`: flags `--seed --decks --autoplay --ai-vs-ai
 --greedy --put`). **The AI is the search since AI-2.8** (~1 s a move; the window stalls while it
-thinks — DesignNotes); `--greedy` plays GreedyAi instead, and makes `--autoplay` fast. For each report: reproduce it with the seed + undo, read `.claude/rules/magic-table.md`
+thinks — DesignNotes); `--greedy` plays GreedyAi instead, and makes `--autoplay` fast. For each report: reproduce it from its record, read `.claude/rules/magic-table.md`
 for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause before the fix.
 
 ## Log
@@ -88,6 +90,10 @@ for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause 
   (3) he passed through his own turn thinking it was the opponent's, and the table "feels a little
   too busy" — TBL-4 (Arena-like first, the best of MTGO kept); (4) he wants exportable game records
   for analysis and AI test cases — TBL-5. Noted, not fixed (Shayne).
+- 2026-10-22: Shayne's sealed session — three files in `game_records/`: a seed-5 game (124 moves,
+  unfinished), the sealed game (seed 451259, 454 moves, played to the end) and a sealed start with no
+  moves. AI-8.3's report (the Duelist that wouldn't trade) came from the sealed game, kept as
+  `Records/DuelistWontTrade.json`; TBL-5.7 resumed it.
 - 2026-10-23: Shayne's sealed game — the deck select off the screen (TBL-2.5), a prepared copy's
   wrong art (TBL-2.6), the prepared copy in the hand confusing (TBL-2.7). Status → in-progress.
 - 2026-10-23: Shayne decided TBL-2.7 — the prepared copy on its creature, for now; built and
