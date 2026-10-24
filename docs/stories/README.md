@@ -92,11 +92,12 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 |---|---|---|
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
+| [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | in-progress |
-| [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-9](AI-9-resources-by-use.md) | Resources priced by what they provide, not by how many there are | backlog |
+| [AI-10](AI-10-winning-ties.md) | A winning AI still presses — ties among won lines no longer pick the passive move | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
@@ -115,5 +116,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | done |
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 
-Next free id per area: AI-10 · DATA-3 · DEV-4 · LIM-3 · MC-4 · TBL-6
+Next free id per area: AI-11 · DATA-3 · DEV-4 · LIM-3 · MC-4 · TBL-6
 <!-- stories:end -->

@@ -27,7 +27,9 @@ MagicTable/
 │                         Tools menu (undo, sandbox, full control, pause / step / speed); the turn
 │                         banner; each side's board half (gold on its turn); permanents scaled to the room
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)
-├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), hand cards, thumbs;
+├── MagicHandView.cs      your hand: Common's Hand2D + Card2D fan (KIN's, TBL-3), Scryfall image as the
+│                         whole face, glow as a plate behind it; click AND drag → ObjectClicked
+├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), card faces (zone viewer), thumbs;
 │                         Hook: hover, click, hold-to-zoom for every card
 ├── PhaseBar.cs           the active player's steps (Stops shows both); each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
@@ -67,8 +69,22 @@ MagicTable/
   "Sacrifice or pay" is chosen as a WAY first (`Targeting.Ways`), never listed per combination.
 - **A modal spell asks for its mode, always** (`Targeting.Modes`): every mode listed, one that can't
   be chosen greyed with why — Surgical Precision used to cast its only legal mode by itself.
-- **The hand overlaps to fit** (`FitHand`) — 8 cards hid the last behind a scrollbar. The row is
-  `ShowNever`, not `Disabled`: Disabled sized it to the whole hand and pushed the right column off.
+- **The hand is a Card2D fan, and a fan card is clicked AND dragged** (`MagicHandView`). A Card2D
+  drag starts on the PRESS, which clears the hover its click needs — so dragging is enabled only
+  once the pointer moved 12 px from the PRESSED card (`Hand2D.DragEnabled`, read when the drag asks:
+  it sees each motion before the scene's `Track`), and a still press and release is a click, on
+  release; a 0.4 s hold zooms, as every card. Movement is measured from the EVENTS too: `--tap`'s
+  synthetic input moves no real mouse, and a "drag" check that read the mouse was a click.
+  A drop on the table goes to `ObjectClicked`; a refused one slides back and says why. A card being
+  dragged is never freed by a redraw (Common's static drag state would stay set: no drag again).
+  Hand2D's `_Input` (a debug "D draws a card") is switched off.
+- **Card hover is physics picking**: the scene root and the hand's space ignore the mouse, and the
+  overlays sit at `ZIndex` 300, above the fan's cards (Hand2D gives each one a ZIndex).
+- **The fan is placed on the space's `ItemRectChanged`, not `Resized`** — the container MOVES the
+  space after the first draw, and the fan stayed at the top of the screen, unseen.
+- **A Scryfall face hides every Card2D layer but the frame** (`Decorate`, idempotent), with
+  `FrameColor` white and `Holographic` off — the shared shader tinted the cards green. The glow is a
+  plate behind the image: the shader's outline traces transparency, and a JPG has none.
 - **Action-column buttons wrap** (`AddButton`): a long label once grew a button off the screen.
   Lists use the plain plate in the body font; only main actions use the big oxblood style.
 - **Glows:** gold playable, blue clickable now, green picked, white what it is about, red/blue in

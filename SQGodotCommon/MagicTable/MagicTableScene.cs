@@ -51,11 +51,16 @@ public partial class MagicTableScene : Control
 	private readonly HFlowContainer _oppField = Row();
 	private readonly HFlowContainer _myField = Row();
 	private readonly HFlowContainer _myLands = Row();
-	private readonly HBoxContainer _hand =
+
+	// Your hand: Common's fan (TBL-3), a Node2D placed over this space — the column reserves the room,
+	// it can't contain a Node2D. Ignores the mouse: card hover is physics picking, which any Control
+	// that stops the mouse above it blocks (godot-frontend.md).
+	private MagicHandView _hand = null!;
+	private readonly Control _handSpace =
 		new()
 		{
-			Alignment = BoxContainer.AlignmentMode.Center,
-			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			CustomMinimumSize = new Vector2(0, CardViews.HandSize.Y + 12),
+			MouseFilter = MouseFilterEnum.Ignore,
 		};
 	private readonly PhaseBar _phases = new();
 	private readonly VBoxContainer _stack = new();
@@ -138,6 +143,17 @@ public partial class MagicTableScene : Control
 	{
 		MtgUiStyles.AddBackdrop(this);
 		BuildLayout();
+		MouseFilter = MouseFilterEnum.Ignore; // the full-screen root would swallow the cards' picking
+		_hand = new MagicHandView(
+			this,
+			DropOnTable,
+			ObjectClicked,
+			Preview,
+			t => ShowBanner(t, 36),
+			() => _choice.Visible || _viewer.Visible || _sandbox.Visible
+		);
+		// ItemRectChanged, not Resized: the container MOVES the space into place after the first draw.
+		_handSpace.ItemRectChanged += PlaceHand;
 		_phases.StopsChanged += stops => Do(() => _m.Stops = stops);
 		_phases.RowsChanged += Refresh;
 
@@ -247,6 +263,7 @@ public partial class MagicTableScene : Control
 	// Any release ends a zoom: a redraw during the hold frees the held card, and its own release never comes.
 	public override void _Input(InputEvent @event)
 	{
+		_hand.Track(@event);
 		if (@event is InputEventMouseButton { Pressed: false })
 			_zoom.Visible = false;
 	}
@@ -405,7 +422,6 @@ public partial class MagicTableScene : Control
 		Fill(_myField, s, _m.HumanId, lands: false, attached, c => GlowOf(c.Id, c), scale);
 		Fill(_myLands, s, _m.HumanId, lands: true, attached, c => GlowOf(c.Id, c), scale);
 
-		CardViews.Clear(_hand);
 		var hand = s.CardsIn(_m.HumanId, ZoneType.Hand).ToList();
 		// Anything castable from elsewhere (flashback, impulse exile) joins the hand row — but a
 		// prepared copy is cast from its creature (TBL-2.7: in the hand it confused Shayne).
@@ -415,21 +431,22 @@ public partial class MagicTableScene : Control
 			.Distinct()
 			.Select(s.GetCard)
 			.Where(c => OnItsCreature(s, c.Id) == c.Id);
-		foreach (var c in hand.Concat(elsewhere))
-			_hand.AddChild(
-				CardViews.HandCard(
-					s,
-					c,
-					GlowOf(c.Id, c),
-					Preview,
-					() => ObjectClicked(c.Id),
-					from: s.GetParent(c.Id) is int parent
-					&& s.GetObject(parent) is Zone { ZoneType: not ZoneType.Hand } zone
-						? zone.ZoneType.ToString().ToLowerInvariant()
-						: null
-				)
-			);
-		FitHand();
+		_hand.Sync(
+			[
+				.. hand.Concat(elsewhere)
+					.Select(c =>
+						(
+							c.Id,
+							MagicArt.ImageName(s, c),
+							GlowOf(c.Id, c),
+							s.GetParent(c.Id) is int parent
+							&& s.GetObject(parent) is Zone { ZoneType: not ZoneType.Hand } zone
+								? zone.ZoneType.ToString().ToLowerInvariant()
+								: null
+						)
+					),
+			]
+		);
 
 		ShowStack(s, id => GlowOf(id, null));
 		ShowButtons(s, moves);
@@ -551,17 +568,27 @@ public partial class MagicTableScene : Control
 		Refresh();
 	}
 
-	/// <summary>
-	/// A hand too wide for the row overlaps, as on Arena, instead of hiding its last cards behind a
-	/// scrollbar (8 cards did). The hover preview shows the whole card.
-	/// </summary>
-	private void FitHand()
+	private void PlaceHand()
 	{
-		var count = _hand.GetChildCount();
-		var width = ((Control)_hand.GetParent()).Size.X;
-		var room =
-			count < 2 || width <= 0 ? 4 : (width - count * CardViews.HandSize.X) / (count - 1);
-		_hand.AddThemeConstantOverride("separation", Mathf.Min(4, Mathf.FloorToInt(room))); // floor: a truncated overlap still clipped the last card
+		_hand.Place(_handSpace.GetGlobalRect());
+	}
+
+	/// <summary>
+	/// A card dragged out of the hand onto the table: the same router as a click (TBL-3). Says why
+	/// when there is nothing it could do — a drop that silently slides back tells the player nothing.
+	/// </summary>
+	private string? DropOnTable(int id)
+	{
+		var s = _m.State;
+		if (
+			!Clickable().Contains(id)
+			&& (_targeting is not null || !Moves().Any(a => s.IsMoveFor(a, id)))
+		)
+			return _m.HumanToAct
+				? $"{s.GetCard(id).Name} can't be played now"
+				: "Not your move — the AI is deciding";
+		ObjectClicked(id);
+		return null;
 	}
 
 	// ponytail: a creature that has its own plays lists a modal copy's casts one per mode combination,
@@ -789,10 +816,10 @@ public partial class MagicTableScene : Control
 
 	private Tween? _bannerTween;
 
-	private void ShowBanner(string text)
+	private void ShowBanner(string text, int size = 64)
 	{
 		CardViews.Clear(_banner);
-		_banner.AddChild(MtgUiStyles.Title(text, 64));
+		_banner.AddChild(MtgUiStyles.Title(text, size));
 		_bannerTween?.Kill(); // a fade-out still running would hide the new turn's banner
 		var tween = _bannerTween = CreateTween();
 		tween.TweenProperty(_banner, "modulate", Colors.White, 0.2);
@@ -911,17 +938,7 @@ public partial class MagicTableScene : Control
 		center.AddChild(Half(_oppBoard, _oppLands, _oppField));
 		center.AddChild(_phases);
 		center.AddChild(Half(_myBoard, _myField, _myLands));
-		var handRow = new ScrollContainer
-		{
-			CustomMinimumSize = new Vector2(0, CardViews.HandSize.Y + 12),
-			VerticalScrollMode = ScrollContainer.ScrollMode.Disabled,
-			// ShowNever, not Disabled: Disabled makes the row as wide as the whole hand and pushes
-			// the right column off the screen. The cards overlap to fit (FitHand), so it never scrolls.
-			HorizontalScrollMode = ScrollContainer.ScrollMode.ShowNever,
-		};
-		handRow.AddChild(_hand);
-		handRow.Resized += FitHand;
-		center.AddChild(handRow);
+		center.AddChild(_handSpace);
 		columns.AddChild(center);
 
 		var right = Column(RightWidth);
@@ -942,7 +959,12 @@ public partial class MagicTableScene : Control
 		// Later children draw on top: a pending choice above an open zone viewer.
 		foreach (var panel in new Control[] { _banner, _viewer, _sandbox, _choice, _zoom })
 		{
-			var overlay = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+			// Above the hand: Hand2D gives each card a ZIndex, which beats tree order (godot-frontend.md).
+			var overlay = new CenterContainer
+			{
+				MouseFilter = MouseFilterEnum.Ignore,
+				ZIndex = 300,
+			};
 			overlay.SetAnchorsPreset(LayoutPreset.FullRect);
 			overlay.AddChild(panel);
 			AddChild(overlay);

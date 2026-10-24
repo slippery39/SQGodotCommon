@@ -1174,7 +1174,10 @@ name. Two worth another look, with their cost:
   block judgment per blocker inside every all-in settle.
 - Not run: combinations (a richer opponent with GreedyAi rollouts, honest hand with real library).
 
-## MagicTable does not use Common's Card2D or drag-to-play (deferred)
+## MagicTable does not use Common's Card2D or drag-to-play (hand done: TBL-3.2; battlefield deferred)
+
+**Taken up, 2026-10-23 (TBL-3.2):** the hand is Common's fan (`MagicHandView`, from KIN) with click
+and drag; the battlefield keeps its crops. The rest below is the original note.
 
 Shayne, 2026-10-09: the MagicTable front end (`SQGodotCommon/MagicTable/`) draws every card as
 plain Controls built in `CardViews` — a `TextureRect` of the Scryfall image in the hand, a Panel
