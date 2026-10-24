@@ -1262,3 +1262,27 @@ a lethal check at every rollout's end (cheap — `Pressure` already assigns bloc
 **Revisit when** a recorded blunder needs it — AI-8.4 fixed the report it came from (with trample
 counted the threat term reads the danger, and the search trades). Take it up as a story with a kept
 record as its position.
+
+## MagicCore AI: machine learning, later (Shayne asked, 2026-10-24)
+
+Shayne asked whether machine learning or neural networks could help the AI. Yes — after AI-13's
+lessons and a test bed (AI-11's settled positions, AI-4.2's built ones) exist; without one, a trained
+model is a different set of numbers nobody can judge. Where it fits best is scoring positions:
+today `Evaluator` is hand-tuned weights; a model can learn from how games turned out what a position
+is worth — "value is what a card makes happen" (AI-12) without being told why.
+
+**The options, costed** (cheapest first):
+1. **Learn the evaluator's existing weights from outcomes** — thousands of AI-vs-AI games
+   (`AiMatch`), every position labelled with who won, the weights fitted. Cheap; the search is
+   unchanged; measured like any evaluator change.
+2. **A small neural network as the position scorer** — board, hands, life in; trained in Python
+   (PyTorch), run from C# (ONNX Runtime or ML.NET). Needs a description of each card for the
+   network: fine for one set (FRA, 285 cards), retrained per set — MtgSimulator's trained draft
+   picker learned card NAMES and never carried to a new set (`.claude/rules/sim-draft.md`).
+3. **AlphaZero-style self-play**, the network also choosing which moves to search — a large project,
+   and far more games than one PC plays with the search in the loop (~40 s a game with the search
+   on both sides, LIM-1.8's smoke run).
+
+Shayne's own games are the EXAM, not the training data: one game gives ~10 settled positions, a model
+needs thousands of games. **Revisit when** AI-11 and AI-4.2 have positions, and AI-13 has tried its
+first rules — then option 1, as a story.

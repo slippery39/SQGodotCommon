@@ -41,6 +41,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 11. **AI-4** — strategic plans above single actions
 12. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
 13. **AI-12** — a card's threat over time, on an empty board and a busy one
+14. **AI-13** — Shayne's lessons as general rules for the search, each measured
 
 ## How it works
 
@@ -102,6 +103,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-10](AI-10-winning-ties.md) | A winning AI still presses — ties among won lines no longer pick the passive move | backlog |
 | [AI-11](AI-11-learn-from-shaynes-games.md) | Learn from Shayne's games — settle where he and the oracle differ, keep what he got right | backlog |
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
+| [AI-13](AI-13-shaynes-lessons.md) | Shayne's lessons as general rules for the search — card-agnostic, switchable, measured | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
@@ -120,5 +122,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | done |
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 
-Next free id per area: AI-13 · DATA-3 · DEV-4 · LIM-3 · MC-4 · TBL-6
+Next free id per area: AI-14 · DATA-3 · DEV-4 · LIM-3 · MC-4 · TBL-6
 <!-- stories:end -->

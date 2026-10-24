@@ -51,7 +51,8 @@ Open questions:
 - Shayne's bounce and removal cases (Decisions, 2026-10-24) are the held-spell question's first
   concrete examples. Part of why the search casts Unsummon at once may be the look-ahead, not the
   price: its opponent never recasts what's bounced (AI-10.3). Fix what the search SEES first, then
-  price the hold — card-agnostic either way, no rule per card.
+  price the hold — card-agnostic either way, no rule per card. AI-13 tries the RULES route on the
+  same cases (Shayne's lessons as general rules); both are measured on AI-4.2's positions.
 
 ## Tasks
 
@@ -75,4 +76,4 @@ and the search's differ.
 - 2026-10-16: created from Shayne's plan idea during the AI-2 interview.
 - 2026-10-23: Next pointed at its inputs (sprint housekeeping) — AI-2 and AI-3 done.
 - 2026-10-24: Shayne's bounce and removal cases added (from AI-11, where they were first written);
-  AI-4.2 added. AI-11's settled positions are how a fix here is measured.
+  AI-4.2 added. AI-11's settled positions are how a fix here is measured. AI-13 created beside it.

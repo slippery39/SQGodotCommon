@@ -38,16 +38,30 @@ being punished much.
 - [ ] The AI's removal and bounce decisions read it: a target's threat is its curve in a board like
       this one (AI-4's held-spell price consumes it)
 - [ ] Checked on cards whose answer isn't in doubt: Ragavan-like early threats rank high early, a
-      vanilla 2/1 against two 4/4s ranks low
+      vanilla 2/1 against two 4/4s ranks low, and **a 1/1 deathtouch facing their 5/5 is worth what
+      it does, not its board score**: the damage it stops for several turns (life it effectively
+      gains), or the removal spell it forces them to spend before they can attack
 
 ## Decisions
 
 - 2026-10-24, Shayne: capture it as a story; the idea and the examples above are his.
+- 2026-10-24, Shayne: **value is what a card makes happen, not the board it leaves** — a 1/1
+  deathtouch scores little on a board, but if it keeps a 5/5 home for several turns it has gained
+  you that much life, and it may force a removal spell. Grading only the resulting board misses it.
+- 2026-10-24, Shayne: **win rates are for deckbuilding; gameplay takes the state into account.** A
+  card's win rate measures it in the abstract — fine for building a deck (DATA-2, the sealed
+  builder) — but in a game your best card may not be the one to play now. So the AI never decides a
+  play by a context-free number: a card's threat is read in a board like this one. (Claude had
+  proposed checking the in-game measure against card win rates; withdrawn.)
 
 Open questions:
 - How many turns X, and does it depend on the turn of the game or the format?
 - What counts as value: damage only, or cards, life, mana and board too — and on the evaluator's
-  scale?
+  scale? Damage stopped is worth more under pressure (AI-9.2: life by what it buys) — so perhaps in
+  turns bought on their clock rather than points of life.
+- The counterfactual is only as good as the simulated opponent: deterrence shows only if its attacks
+  see the deathtouch blocker (the look-ahead's blocks do — `Lookahead.Survives`, AI-8.3), and "forces
+  a removal spell" only if it casts removal at all — the board-only opponent never does (AI-10).
 - The empty board: does the other side do anything (block, cast)? The busy board: a fixed fill, or
   sample states — from where (the position suite's 288 positions, game records)? Matched to the
   current game how?
@@ -68,8 +82,9 @@ Open questions:
     Built for MtgCore (no blocking) — not tried on MagicCore's real combat.
 - Format speed: whose number is the price of an unspent mana — this story's, AI-4's, or AI-5's
   "kind of game"?
-- Beside `CardValues`, or replacing it? Could it be DATA-2's rating (a value over time would stop
-  planeswalkers reading last)?
+- Beside `CardValues`, or replacing it? DATA-2's deckbuilding rating is a separate question — a
+  value over time might help it (planeswalkers read last today), but gameplay never reads a
+  context-free rating (Decisions, 2026-10-24).
 
 ## The trap — a busy board measured combat, not the card (2026-10-16, AI-1.6)
 
@@ -129,3 +144,5 @@ dropped), AI-5's story ("A held spell is an option"), AI-4, DATA-2, and `.claude
 - 2026-10-24: created from Shayne's idea, while restructuring AI-11.
 - 2026-10-24: the trap written out in full (Shayne asked) — AI-1.6's table, why it happened, what
   a busy board must do differently; MtgSimulator's OutputProbe added as a precedent.
+- 2026-10-24: Shayne's deathtouch example — value is what a card makes happen; a requirement's check.
+- 2026-10-24: Shayne: win rates for deckbuilding, the state for gameplay (Decisions).
