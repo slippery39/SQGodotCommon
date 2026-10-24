@@ -1,7 +1,7 @@
 ---
 id: TBL-4
 title: A clearer, calmer table — MTGA first, the best of MTGO kept
-status: backlog
+status: in-progress
 area: TBL
 created: 2026-10-20
 ---
@@ -38,7 +38,7 @@ Open questions:
 
 ## Tasks
 
-- [ ] TBL-4.2 Quick wins (sprint item 5), from a capture of turn 7 (seed 5, 2026-10-23):
+- [x] TBL-4.2 Quick wins (sprint item 5), from a capture of turn 7 (seed 5, 2026-10-23):
       whose turn it is — a banner as the turn changes, the active side's plate and board edge lit,
       the pass button naming what comes next ("To combat", "End turn") as Arena's does; the phase
       bar one row (the active player's), stops in a toggle; a dark overlay calming the leather
@@ -55,8 +55,8 @@ Open questions:
 
 ## Next
 
-**TBL-4.2 is built and waits for Shayne's yes** on the captures (one frame each was sent). What
-he may push back on: the pass label is by step alone ("To combat" in main 1 even with no
+**TBL-4.2 is done** — Shayne: "fine for now" (2026-10-23).
+Open edges, should they bite: the pass label is by step alone ("To combat" in main 1 even with no
 attackers — `PassLabel`'s ponytail); permanents grow only ~1.1× at 1280x720, since height is the
 limit; a click now fires on release; the Tools popup's unticked boxes are faint (Godot's default
 icons on a dark popup — godot-frontend.md). Then TBL-4.1 (the redesign) next sprint.

@@ -77,5 +77,9 @@ MagicTable/
 - **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
   only way to read a card), so a hold must never also play it. A new click target on a card goes
   through `Hook`, not its own `GuiInput` press handler.
+- **A prepared copy is cast from its creature, never shown in the hand row** (Shayne, TBL-2.7):
+  `_preparedCopies` maps each creature to its copy FROM THE LEGAL MOVES (any exile — a stolen
+  creature's copy is its owner's), the creature glows and takes the click. Its image is the creature's
+  (`MagicArt.ImageName`) — by its face's name it showed another card.
 - **The permanents' scale comes from the SCREEN, never from the board's own size** — the board
   grows with its cards, and reading it back grew them until the hand left the screen (TBL-4.2).

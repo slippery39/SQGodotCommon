@@ -312,6 +312,17 @@ public partial class MagicTableScene : Control
 		var s = _m.State;
 		var game = s.GetGame();
 		var moves = Moves();
+		// A prepared creature → its castable copy, from the legal moves themselves (TBL-2.7): wherever
+		// the copy is, whoever owns it, if the engine lets you cast it, its creature takes the click.
+		_preparedCopies = moves
+			.Select(MagicRules.CardOf)
+			.Where(id => id != 0)
+			.Distinct()
+			.Select(s.GetCard)
+			.Select(c => (Copy: c.Id, Creature: Prepare.CreatureOf(s, c)))
+			.Where(x => x.Creature is not null)
+			.DistinctBy(x => x.Creature!.Id)
+			.ToDictionary(x => x.Creature!.Id, x => x.Copy);
 
 		var choice = _m.HumanToAct ? s.GetPendingChoice() : null;
 		var sameQuestion = ReferenceEquals(s, _shownState);
@@ -333,9 +344,11 @@ public partial class MagicTableScene : Control
 		_shownState = s;
 
 		var clickable = Clickable();
-		var about =
+		var about = OnItsCreature(
+			s,
 			_boardChoice?.AboutId
-			?? (_targeting is (var candidates, _) ? MagicRules.CardOf(candidates[0]) : 0);
+				?? (_targeting is (var candidates, _) ? MagicRules.CardOf(candidates[0]) : 0)
+		);
 		Glow GlowOf(int id, Card? c) =>
 			_combat is { } combat ? combat.GlowOf(id, c, clickable)
 			: _picked.Contains(id) ? Glow.Selected
@@ -343,7 +356,9 @@ public partial class MagicTableScene : Control
 			: id == about ? Glow.About
 			: c?.AttackingId > 0 ? Glow.Attacking
 			: c?.BlockingId > 0 ? Glow.Blocking
-			: c is not null && _targeting is null && moves.Any(a => s.IsMoveFor(a, id))
+			: c is not null
+			&& _targeting is null
+			&& (moves.Any(a => s.IsMoveFor(a, id)) || _preparedCopies.ContainsKey(id))
 				? Glow.Playable
 			: Glow.None;
 
@@ -392,12 +407,14 @@ public partial class MagicTableScene : Control
 
 		CardViews.Clear(_hand);
 		var hand = s.CardsIn(_m.HumanId, ZoneType.Hand).ToList();
-		// Anything castable from elsewhere (flashback, impulse exile, prepared copies) joins the hand row.
+		// Anything castable from elsewhere (flashback, impulse exile) joins the hand row — but a
+		// prepared copy is cast from its creature (TBL-2.7: in the hand it confused Shayne).
 		var elsewhere = moves
 			.Select(MagicRules.CardOf)
 			.Where(id => id != 0 && !s.IsOnBattlefield(id) && hand.All(c => c.Id != id))
 			.Distinct()
-			.Select(s.GetCard);
+			.Select(s.GetCard)
+			.Where(c => OnItsCreature(s, c.Id) == c.Id);
 		foreach (var c in hand.Concat(elsewhere))
 			_hand.AddChild(
 				CardViews.HandCard(
@@ -406,10 +423,9 @@ public partial class MagicTableScene : Control
 					GlowOf(c.Id, c),
 					Preview,
 					() => ObjectClicked(c.Id),
-					from: c.IsCopy ? "prepared copy"
-						: s.GetParent(c.Id) is int parent
-						&& s.GetObject(parent) is Zone { ZoneType: not ZoneType.Hand } zone
-							? zone.ZoneType.ToString().ToLowerInvariant()
+					from: s.GetParent(c.Id) is int parent
+					&& s.GetObject(parent) is Zone { ZoneType: not ZoneType.Hand } zone
+						? zone.ZoneType.ToString().ToLowerInvariant()
 						: null
 				)
 			);
@@ -484,7 +500,18 @@ public partial class MagicTableScene : Control
 		}
 		else if (s.HasObject(id) && s.GetObject(id) is Card)
 		{
-			var mine = Moves().Where(a => s.IsMoveFor(a, id)).ToList();
+			var all = Moves();
+			var mine = all.Where(a => s.IsMoveFor(a, id)).ToList();
+			// A prepared creature casts its spell's copy (TBL-2.7). With nothing else to do, the click
+			// IS a click on the copy — so a modal copy still asks for its mode below.
+			if (_preparedCopies.TryGetValue(id, out var copy))
+			{
+				var spell = all.Where(a => s.IsMoveFor(a, copy)).ToList();
+				if (mine.Count == 0 && !s.TapOptions(_m.HumanId, id).Any())
+					(id, mine) = (copy, spell);
+				else
+					mine.AddRange(spell);
+			}
 			// A modal spell asks for its mode first — every mode shown, the impossible ones greyed.
 			if (Targeting.Modes(s, id, mine) is { } modes)
 			{
@@ -536,6 +563,18 @@ public partial class MagicTableScene : Control
 			count < 2 || width <= 0 ? 4 : (width - count * CardViews.HandSize.X) / (count - 1);
 		_hand.AddThemeConstantOverride("separation", Mathf.Min(4, Mathf.FloorToInt(room))); // floor: a truncated overlap still clipped the last card
 	}
+
+	// ponytail: a creature that has its own plays lists a modal copy's casts one per mode combination,
+	// not through the mode picker — pick the copy first if a modal prepare spell meets such a creature.
+	private Dictionary<int, int> _preparedCopies = new();
+
+	/// <summary>A prepared copy is shown by its creature; anything else by itself.</summary>
+	private static int OnItsCreature(GameState s, int id) =>
+		s.HasObject(id)
+		&& s.GetObject(id) is Card { IsCopy: true } copy
+		&& Prepare.CreatureOf(s, copy) is { } creature
+			? creature.Id
+			: id;
 
 	/// <summary>A play's button: in full when there is nothing left to click, its picks left out otherwise.</summary>
 	private static string PlayLabel(GameState s, List<GameAction> play) =>

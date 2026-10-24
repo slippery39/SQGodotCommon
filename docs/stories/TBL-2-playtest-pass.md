@@ -53,9 +53,11 @@ is a bug report, never about the look.
       by NAME, and a copy is named after its spell face, which three creatures share each ("Seed
       Suture", five such faces) — the known ceiling in `MagicArt`. Now through the copy's link to its
       creature (`MagicArt.ImageName`): hand row, stack, zone viewer, choices; `MagicArtTests`
-- [ ] TBL-2.7 A prepared copy sits in the hand row ("from prepared copy") and confused Shayne at
-      first, though Arena does much the same (2026-10-23). Ask: keep it, or show it on its creature
-      (a "prepared" badge you click to cast), as the redesign (TBL-4.1) may decide anyway
+- [x] TBL-2.7 A prepared copy sat in the hand row ("from prepared copy") and confused Shayne at
+      first, though Arena does much the same (2026-10-23). Shayne: **on the creature**, for now. The
+      copy no longer joins the hand row; its creature glows playable and a click on it casts the
+      copy (alone, the click IS on the copy, so a modal one still asks its mode). Captured: the hand
+      without it, the creature's click straight into Seed Suture's targets
 
 ## Next
 
@@ -88,3 +90,5 @@ for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause 
   for analysis and AI test cases — TBL-5. Noted, not fixed (Shayne).
 - 2026-10-23: Shayne's sealed game — the deck select off the screen (TBL-2.5), a prepared copy's
   wrong art (TBL-2.6), the prepared copy in the hand confusing (TBL-2.7). Status → in-progress.
+- 2026-10-23: Shayne decided TBL-2.7 — the prepared copy on its creature, for now; built and
+  captured the same day.
