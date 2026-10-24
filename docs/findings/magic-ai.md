@@ -873,3 +873,10 @@ His 112 `you` moves held 100 real decisions (two options or more):
 - **"Walks into a loss" is the oracle's reading, not the outcome** — he won. And the oracle (like the
   search, by default) reads the AI's REAL hand (`Hidden.Hand.Real`), so it judges him knowing what he
   couldn't. An honest-hand oracle for a human's game is not built (TBL-5's Next).
+- **The real hand barely moves the summary** (2026-10-24, measured by switching both searches to
+  `Hidden.Hand.ShuffleUnseen` for one run, then back): agreed with the oracle 37% (67% with ties)
+  against 38% (63%), the search with the oracle 82% against 85%, given up 3.12 against 3.95 — and the
+  same 3 missed wins and 6 losses walked into, so those are not the oracle peeking at the AI's hand.
+  **Single lines are not stable**: about half the listed decisions changed their reading — a
+  different sample of hidden cards is a different look-ahead — so a report is read in aggregate, and
+  one line is a lead to settle (AI-11), not a verdict.

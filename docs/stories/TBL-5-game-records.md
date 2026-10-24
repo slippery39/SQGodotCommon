@@ -1,7 +1,7 @@
 ---
 id: TBL-5
 title: Game records — export a played game, replay it, compare its choices with the AI's
-status: in-progress
+status: done
 area: TBL
 created: 2026-10-20
 ---
@@ -54,6 +54,9 @@ own choices differ from the AI's.
 - 2026-10-23, Shayne: the comparison (TBL-5.6) ranks your pick by the **oracle** (it scores every
   option) and says whether the **uncapped default search** would have played it (repeatable) — not
   the table's 1 s search, whose answer depends on the machine's load.
+- 2026-10-24, Shayne: **the comparison's oracle keeps reading the AI's REAL hand** — as AI-11's
+  settle does (the opponent's plays came from the hand it held); an honest hand moved the summary
+  1–4pp and none of the missed wins or losses (findings). TBL-5 done.
 - 2026-10-23, Shayne: **resume a recorded game** (TBL-5.7) — play, see something odd, the fix
   lands, continue the same game from before the odd play to check it, without losing the game.
 
@@ -104,16 +107,10 @@ own choices differ from the AI's.
 
 ## Next
 
-**Every requirement is met** (TBL-5.1–5.7). `--record=FILE --compare` sets your choices beside the
-AI's — ~20 s a game on 16 cores, so it needs no asking.
-
-Open, for Shayne to decide (not tasks yet):
-- **The oracle reads the opponent's REAL hand** (`Hidden.Hand.Real`, the search's default), so it
-  judges a human knowing what they couldn't — "walks into a loss" may rest on a card you never saw.
-  An honest reading is one setting (`Hand = Hidden.Hand.ShuffleUnseen` or `GuessedFromColors`, on
-  both searches in `RecordComparison.Compare`); it changes what the search would do, so it is a
-  decision, not a fix.
-- Story done? Status stays `in-progress` until Shayne has read a report on one of his games.
+**Done (2026-10-24).** Every game is recorded, replays in the console, resumes on the table, becomes
+an AI test case in one step, and `--record=FILE --compare` sets your choices beside the AI's (~20 s a
+game). Read a report in aggregate: a single line varies with the hidden sample — it is a lead, and
+settling it is AI-11's job. The oracle reads the AI's real hand, by Shayne's decision.
 
 ## Log
 
@@ -140,3 +137,6 @@ Open, for Shayne to decide (not tasks yet):
   counting ties; the search with the oracle 85% — `docs/findings/magic-ai.md`.
 - 2026-10-23: requirements 1, 2, 3, 5 ticked (sprint housekeeping) — met by TBL-5.3, 5.4, 5.5, 5.3;
   the comparison (4) is TBL-5.6.
+- 2026-10-24: the real-hand question measured — an honest hand moves the summary 1–4pp and none of
+  the missed wins or losses; single lines vary with the hidden sample (`docs/findings/magic-ai.md`).
+- 2026-10-24: Shayne keeps the real hand; status → done.
