@@ -5,9 +5,10 @@ using MtgGame;
 namespace MagicTable;
 
 /// <summary>
-/// Arena's phase ladder: one row of steps per player, the current step lit in the active player's
-/// row. Each step is also a stop toggle — clicking it flips whether you get priority there; a
-/// stop shows as a gold underline.
+/// Arena's phase ladder: the active player's steps, the current one lit (TBL-4.2: one row, not
+/// two — the other player's waits behind "Stops"). Each step is also a stop toggle — clicking it
+/// flips whether you get priority there; a stop shows as a gold underline. "Stops" shows both
+/// players' rows, to set the stops of the turn that isn't on.
 /// </summary>
 public partial class PhaseBar : VBoxContainer
 {
@@ -28,22 +29,30 @@ public partial class PhaseBar : VBoxContainer
 	/// <summary>Raised with the new stops when a toggle is clicked.</summary>
 	public event Action<Stops>? StopsChanged;
 
+	/// <summary>Raised when "Stops" adds or removes a row — the table redraws, since the board is sized around this bar.</summary>
+	public event Action? RowsChanged;
+
 	public PhaseBar()
 	{
 		AddThemeConstantOverride("separation", 1);
 	}
 
+	private bool _bothRows;
+
 	public void Show(MagicTableManager m)
 	{
 		CardViews.Clear(this);
 		var game = m.State.GetGame();
+		var activeIsMine = game.ActivePlayerId == m.HumanId;
 		foreach (var mine in new[] { false, true })
 		{
+			var active = activeIsMine == mine;
+			if (!active && !_bothRows)
+				continue;
 			var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
 			row.AddThemeConstantOverride("separation", 2);
 			AddChild(row);
 			row.AddChild(Label(m.State.GetPlayer(mine ? m.HumanId : m.OpponentId).Name, 60));
-			var active = (game.ActivePlayerId == m.HumanId) == mine;
 			foreach (var (step, label) in Steps)
 			{
 				var current =
@@ -54,7 +63,29 @@ public partial class PhaseBar : VBoxContainer
 					);
 				row.AddChild(Toggle(m.Stops, mine, step, label, current));
 			}
+			if (active)
+				row.AddChild(StopsButton(m));
 		}
+	}
+
+	private Button StopsButton(MagicTableManager m)
+	{
+		var button = new Button
+		{
+			Text = "Stops",
+			ToggleMode = true,
+			ButtonPressed = _bothRows,
+			FocusMode = FocusModeEnum.None,
+			TooltipText = "Show both players' steps, to set where you stop in either turn",
+		};
+		button.AddThemeFontSizeOverride("font_size", 18);
+		MtgUiStyles.StyleChoice(button, selected: _bothRows);
+		button.Toggled += on =>
+		{
+			_bothRows = on;
+			RowsChanged?.Invoke();
+		};
+		return button;
 	}
 
 	private Button Toggle(Stops stops, bool mine, Step step, string label, bool current)
@@ -64,7 +95,7 @@ public partial class PhaseBar : VBoxContainer
 		var button = new Button
 		{
 			Text = label,
-			CustomMinimumSize = new Vector2(96, 33),
+			CustomMinimumSize = new Vector2(86, 33),
 			TooltipText =
 				$"{(on ? "Stop" : "No stop")} in {(mine ? "your" : "the AI's")} {label} — click to toggle",
 			FocusMode = FocusModeEnum.None,

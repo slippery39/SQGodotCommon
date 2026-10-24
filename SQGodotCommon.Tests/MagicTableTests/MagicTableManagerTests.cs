@@ -191,9 +191,9 @@ public class MagicTableManagerTests
 			"every picked creature attacks the AI"
 		);
 		Assert.That(
-			m.Log.Count(l => l.Contains("Attack: ")),
+			m.Log.Count(l => l.Contains("You: Attack: ")),
 			Is.EqualTo(1),
-			"one line for the declaration"
+			"one line for your declaration (the AI's attacks read alike since TBL-4.2)"
 		);
 	}
 
@@ -389,6 +389,22 @@ public class MagicTableManagerTests
 			MagicTableManager.Resume(broken, search: false).Log[^1],
 			Does.Contain($"move 10; 9 of {n} moves replayed")
 		);
+	}
+
+	/// <summary>
+	/// TBL-4.2: an AI's attack reads like yours — "Attack: X → You" — never its prompt ("Attack with X
+	/// 2/2? Attack You"), and a creature it keeps home shows nothing.
+	/// </summary>
+	[Test]
+	public void TheAisCombat_IsLoggedAsADeclaration_NotItsPrompt()
+	{
+		var m = New(aiVsAi: true);
+		for (var i = 0; i < 5000 && !m.IsOver; i++)
+			m.StepAi();
+
+		Assert.That(m.Log.Any(l => l.Contains(": Attack: ")), "precondition: an attack");
+		Assert.That(m.Log.Where(l => l.Contains('?')), Is.Empty);
+		Assert.That(m.Log.Where(l => l.Contains("Don't")), Is.Empty);
 	}
 
 	[Test]

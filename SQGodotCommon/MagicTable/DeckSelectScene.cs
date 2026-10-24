@@ -83,22 +83,25 @@ public partial class DeckSelectScene : Control
 		bottom.AddChild(_aiVsAi);
 		_search.AddThemeFontSizeOverride("font_size", 24);
 		bottom.AddChild(_search);
-		bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+		column.AddChild(bottom);
+		// The buttons get their own row: beside the options, the row outgrew the screen (2026-10-23).
+		var actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
+		actions.AddThemeConstantOverride("separation", 24);
 		var resumeButton = new Button { Text = "Resume a game", FocusMode = FocusModeEnum.None };
 		MtgUiStyles.StylePrimary(resumeButton, 34);
 		resumeButton.Pressed += ChooseRecord;
-		bottom.AddChild(resumeButton);
+		actions.AddChild(resumeButton);
 		var sealedButton = new Button { Text = "Sealed", FocusMode = FocusModeEnum.None };
 		MtgUiStyles.StylePrimary(sealedButton, 34);
 		sealedButton.CustomMinimumSize = new Vector2(240, 0);
 		sealedButton.Pressed += () =>
 			Project.GameManager.Instance.ChangeScene("res://MagicTable/SealedScene.tscn");
-		bottom.AddChild(sealedButton);
+		actions.AddChild(sealedButton);
 		MtgUiStyles.StylePrimary(_start, 34);
 		_start.CustomMinimumSize = new Vector2(300, 0);
 		_start.Pressed += Start;
-		bottom.AddChild(_start);
-		column.AddChild(bottom);
+		actions.AddChild(_start);
+		column.AddChild(actions);
 		Validate();
 	}
 

@@ -81,9 +81,9 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       (`Limited/Boosters.cs`, `BoosterTests`; 1ca628d)
 - [x] LIM-1.4 The sealed AI builder: pool → 40, ranked by 17lands' GIH WR (`Limited/SealedBuilder.cs`,
       `CardRatings.cs`, `tools/import_17lands.py`, `SealedBuilderTests`; 45c3a57)
-- [ ] LIM-1.5 MagicTable: open a pool, build or take the suggested deck, play the AI's build —
-      built (`SealedSession`, `SealedScene`; Sealed on the deck select), captured, NOT yet played
-      by hand: Shayne's playtest ticks it
+- [x] LIM-1.5 MagicTable: open a pool, build or take the suggested deck, play the AI's build —
+      built (`SealedSession`, `SealedScene`; Sealed on the deck select), captured, and played by
+      hand: Shayne's playtest, 2026-10-23 (what looked off went to TBL-2.5–2.7)
 - [x] LIM-1.6 Extrapolate the Impossible, the sideboard as outside the game (`ZoneType.Sideboard`,
       `MagicRules.WithSideboard`, `RevealTwoFromOutsideTheGame`; the table passes both pools'
       sideboards; `FraOutsideTheGameTests`, 9/9 revert-checks; dccdafa)
@@ -111,14 +111,10 @@ export each candidate from Arena's deck builder into a file, then
 `dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt` (Commands.md) — ~15 min
 for two builds at 200 games on 16 cores; ask Shayne before a run that long.
 
-**Playtest LIM-1.5** (`./Run-Godot.ps1`, MagicTable → Sealed): build by hand, take the suggested
-deck, Start, play — and cast Extrapolate the Impossible if the pool has it (your sideboard is the
-pool's unplayed cards; the AI chooses which you get). Every "looks off" becomes a task; once it plays
-right, LIM-1 is done. The session lives in `SealedScene._session` (static), and Escape from a sealed
-game returns to it (`TableSetup.Back`). Also try **Paste Arena pool** with a real export
-(Arena's deck builder → Export): what isn't FRA is named above the pool; each Start is a new
-opponent, its pool opened from the game's seed (shown on the table) — the session's seed is your
-pool's only.
+**Left:** LIM-1.9 (below), and the unticked requirements' boxes (housekeeping, sprint item 7).
+The playtest (LIM-1.5) is done; what looked off is in TBL-2. The session lives in
+`SealedScene._session` (static), and Escape from a sealed game returns to it (`TableSetup.Back`);
+each Start is a new opponent, its pool opened from the game's seed (shown on the table).
 Traps: the collation data is by NAME (treatments folded); the guests are in `FRA.json` and
 `Boosters.Guests`; the colour rule redraws the common sheet (~30% of raw draws break it — measured 2026-10-20).
 Re-run `python tools/import_17lands.py fra` as 17lands' public files update (weekly or so).
@@ -152,3 +148,6 @@ opponent's pool is what it guesses from.
   are unchanged (not committed). The dialog captured; the paste itself is tested, not clicked.
 - 2026-10-23: LIM-1.8 — `--builds`. A smoke run (two FraDecks decks as builds, 8 opponents, beam
   both sides) played 16 games in 42 s on 16 cores; no real comparison run yet.
+- 2026-10-23: LIM-1.5 ticked — Shayne playtested the sealed screen and played a game. What looked
+  off is table-side: TBL-2.5 (deck select off the screen, fixed), 2.6 (a prepared copy's art,
+  fixed), 2.7 (the prepared copy in the hand, his call).

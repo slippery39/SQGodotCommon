@@ -91,8 +91,8 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | ID | Story | Status |
 |---|---|---|
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
+| [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | in-progress |
-| [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-9](AI-9-resources-by-use.md) | Resources priced by what they provide, not by how many there are | backlog |

@@ -215,7 +215,7 @@ public sealed class MagicTableManager
 			var who = State.DecidingPlayerId();
 			var turn = State.GetGame().TurnNumber;
 			var decision = _ais[who].Decide(State);
-			var what = decision.What;
+			var what = Declared(State, decision) ?? decision.What;
 			Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);
 			Settle();
 			if (what != "Pass")
@@ -307,8 +307,6 @@ public sealed class MagicTableManager
 			next = MoveTokens.Apply(next, answers[^1]);
 		}
 
-		string Pair(int creature, int target) =>
-			$"{State.GetCard(creature).Name} → {State.GetObject(target).Name}";
 		var took = chosen
 			.Where(d =>
 				asked.Contains(d.Key)
@@ -319,14 +317,14 @@ public sealed class MagicTableManager
 			.ToList();
 		var refused = chosen
 			.Except(took)
-			.Select(d => $"{Pair(d.Key, d.Value)} isn't allowed")
+			.Select(d => $"{Pair(State, d.Key, d.Value)} isn't allowed")
 			.ToList();
 		if (refused.Count > 0)
 			return refused;
 		Decided(
 			took.Count == 0
 				? (attacking ? "No attacks" : "No blocks")
-				: $"{(attacking ? "Attack" : "Block")}: {string.Join(", ", took.Select(d => Pair(d.Key, d.Value)))}",
+				: $"{(attacking ? "Attack" : "Block")}: {string.Join(", ", took.Select(d => Pair(State, d.Key, d.Value)))}",
 			answers
 		);
 		return [];
@@ -334,6 +332,24 @@ public sealed class MagicTableManager
 
 	private static bool IsDeclaration(ChoiceAction? choice) =>
 		choice is DeclareAttackerChoice or DeclareBlockerChoice;
+
+	private static string Pair(GameState s, int creature, int target) =>
+		$"{s.GetCard(creature).Name} → {s.GetObject(target).Name}";
+
+	/// <summary>
+	/// An AI's combat declaration as yours reads ("Attack: Samut → You"); "don't" as a pass, which
+	/// shows nothing. Null for anything else. Describe.Answer would log the prompt itself
+	/// ("Attack with Samut 2/2? Attack You") — and the golden replays hash that text, so it stays.
+	/// </summary>
+	private static string? Declared(GameState s, AiDecision decision) =>
+		(s.GetPendingChoice(), decision.Answer) switch
+		{
+			(DeclareAttackerChoice or DeclareBlockerChoice, [var pick])
+				when pick == CombatOption.None => "Pass",
+			(DeclareAttackerChoice a, [var target]) => $"Attack: {Pair(s, a.CreatureId, target)}",
+			(DeclareBlockerChoice b, [var attacker]) => $"Block: {Pair(s, b.CreatureId, attacker)}",
+			_ => null,
+		};
 
 	/// <summary>
 	/// Debug (<c>-GameArgs --autoplay=N</c>): a stand-in AI plays your seat too until turn N, so the

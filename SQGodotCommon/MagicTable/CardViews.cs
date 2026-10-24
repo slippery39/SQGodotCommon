@@ -33,17 +33,20 @@ public static class CardViews
 	public static readonly Vector2 PermanentSize = new(126, 168);
 	public static readonly Vector2 HandSize = new(144, 200);
 
+	/// <param name="scale">Bigger when the board has room (TBL-4.2); the text keeps its size.</param>
 	public static Control Permanent(
 		GameState s,
 		Card c,
 		int count,
 		Glow glow,
 		Action<string?> preview,
-		Action onClick
+		Action onClick,
+		float scale = 1
 	)
 	{
-		var (w, h) = (PermanentSize.X, PermanentSize.Y);
-		var card = Frame(glow, PermanentSize);
+		var size = PermanentSize * scale;
+		var (w, h) = (size.X, size.Y);
+		var card = Frame(glow, size);
 		card.AddChild(Art(MagicArt.Crop(c.Name), new Vector2(w - 6, h * 0.55f), new Vector2(3, 3)));
 		card.AddChild(Text(c.Name, 16, new Vector2(4, h * 0.55f + 3), w - 8, wrap: true));
 
@@ -58,7 +61,7 @@ public static class CardViews
 		// A tapped card lies sideways in a slot as wide as it is tall (rotated about its corner).
 		var slot = new Control
 		{
-			CustomMinimumSize = c.IsTapped ? new Vector2(h, w) : PermanentSize,
+			CustomMinimumSize = c.IsTapped ? new Vector2(h, w) : size,
 			TooltipText = Describe.Card(s, c),
 		};
 		if (c.IsTapped)
@@ -73,6 +76,7 @@ public static class CardViews
 
 	/// <param name="from">Where a card castable from outside the hand is ("graveyard", "exile"); null in hand.</param>
 	public static Control HandCard(
+		GameState s,
 		Card c,
 		Glow glow,
 		Action<string?> preview,
@@ -80,15 +84,16 @@ public static class CardViews
 		string? from = null
 	)
 	{
+		var image = MagicArt.ImageName(s, c);
 		var card = Frame(glow, HandSize);
-		card.AddChild(Art(MagicArt.Full(c.Name), HandSize - new Vector2(6, 6), new Vector2(3, 3)));
+		card.AddChild(Art(MagicArt.Full(image), HandSize - new Vector2(6, 6), new Vector2(3, 3)));
 		if (from is not null)
 			card.AddChild(
 				Badge($"from {from}", new Vector2(4, HandSize.Y - 36), false, 18, HandSize.X - 8)
 			);
 		var slot = new Control { CustomMinimumSize = HandSize };
 		slot.AddChild(card);
-		Hook(slot, c.Name, preview, onClick);
+		Hook(slot, image, preview, onClick);
 		return slot;
 	}
 
@@ -121,18 +126,65 @@ public static class CardViews
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
 
-	/// <summary>Hover shows the full card; a left click acts. Children ignore the mouse so the slot gets it.</summary>
+	/// <summary>Shows a card big while it is held (TBL-4.2), null to hide it — set by the table.</summary>
+	public static Action<string?>? Zoom { get; set; }
+
+	/// <summary>A hold this long zooms instead of clicking.</summary>
+	private const double HoldSeconds = 0.4;
+
+	/// <summary>A release this far from its press is a swipe, not a pick (design pixels).</summary>
+	private const float SwipeDistance = 12;
+
+	/// <summary>
+	/// A card's hover, click and zoom. Hover shows the full card; children ignore the mouse so the slot
+	/// gets it. Hold it (a mouse button or a finger — a touch has no hover) and it shows big until let
+	/// go; a right button zooms at once — on a screen that shows a zoom. The click is on RELEASE, so a
+	/// hold never also plays the card, and a release that moved is a swipe (godot-frontend.md).
+	/// </summary>
 	public static void Hook(Control slot, string cardName, Action<string?> preview, Action? onClick)
 	{
 		slot.MouseFilter = Control.MouseFilterEnum.Stop;
 		slot.MouseEntered += () => preview(cardName);
 		slot.MouseExited += () => preview(null);
-		if (onClick is not null)
-			slot.GuiInput += e =>
+		var (press, zoomed, from) = (0, false, Vector2.Zero);
+		slot.GuiInput += e =>
+		{
+			if (
+				e
+				is not InputEventMouseButton
+				{
+					ButtonIndex: MouseButton.Left or MouseButton.Right
+				} b
+			)
+				return;
+			if (b.Pressed)
 			{
-				if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
-					onClick();
-			};
+				var mine = ++press;
+				from = b.GlobalPosition;
+				zoomed = b.ButtonIndex == MouseButton.Right && Zoom is not null;
+				if (zoomed)
+					Zoom?.Invoke(cardName);
+				else
+					slot.GetTree().CreateTimer(HoldSeconds).Timeout += () =>
+					{
+						if (mine == press && GodotObject.IsInstanceValid(slot) && Zoom is not null)
+						{
+							zoomed = true;
+							Zoom?.Invoke(cardName);
+						}
+					};
+				return;
+			}
+			press++; // a timer still running belongs to a press that is over
+			if (zoomed)
+				Zoom?.Invoke(null);
+			else if (
+				b.ButtonIndex == MouseButton.Left
+				&& b.GlobalPosition.DistanceTo(from) < SwipeDistance
+			)
+				onClick?.Invoke();
+			zoomed = false;
+		};
 	}
 
 	/// <summary>Everything a crop shows — two lands that look alike may stack.</summary>
@@ -204,6 +256,36 @@ public static class CardViews
 		);
 		style.SetContentMarginAll(6);
 		return style;
+	}
+
+	/// <summary>The active player's plate (TBL-4.2): bright gold, wider than a glow, with a halo — never a card's playable gold.</summary>
+	public static StyleBoxFlat ActiveEdge()
+	{
+		var style = Outline(Glow.None);
+		Lit(style);
+		return style;
+	}
+
+	/// <summary>
+	/// One player's half of the battlefield (TBL-4.2): a dark wash that calms the leather behind the
+	/// cards, edged in gold while it is that player's turn.
+	/// </summary>
+	public static StyleBoxFlat Board(bool active)
+	{
+		var style = new StyleBoxFlat { BgColor = new Color(0.04f, 0.02f, 0.01f, 0.55f) };
+		style.SetCornerRadiusAll(8);
+		style.SetContentMarginAll(4);
+		if (active)
+			Lit(style);
+		return style;
+	}
+
+	private static void Lit(StyleBoxFlat style)
+	{
+		style.BorderColor = new Color("f4e29b");
+		style.SetBorderWidthAll(4);
+		style.ShadowColor = new Color(0.96f, 0.89f, 0.61f, 0.35f);
+		style.ShadowSize = 10;
 	}
 
 	private static Panel Frame(Glow glow, Vector2 size)

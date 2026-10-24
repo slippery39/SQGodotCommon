@@ -23,11 +23,13 @@ MagicTable/
 │                         AI opponent per game, from the game's seed (OpponentFor). Tested
 ├── SealedScene.cs        Arena's deck builder: pool by colour (click in), deck list (click out), basics;
 │                         Paste Arena pool (a dialog), what was left out named above the pool
-├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer
-│                         (pause / step / speed)
+├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer;
+│                         Tools menu (undo, sandbox, full control, pause / step / speed); the turn
+│                         banner; each side's board half (gold on its turn); permanents scaled to the room
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)
-├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), hand cards, thumbs
-├── PhaseBar.cs           both players' steps; each step is a stop toggle
+├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), hand cards, thumbs;
+│                         Hook: hover, click, hold-to-zoom for every card
+├── PhaseBar.cs           the active player's steps (Stops shows both); each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
 ├── Targeting.cs          click a spell, then its picks — targets, then what a cost takes (plain C#)
 ├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
@@ -72,3 +74,8 @@ MagicTable/
 - **Glows:** gold playable, blue clickable now, green picked, white what it is about, red/blue in
   combat — one style for every object (`CardViews.Outline`).
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.
+- **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
+  only way to read a card), so a hold must never also play it. A new click target on a card goes
+  through `Hook`, not its own `GuiInput` press handler.
+- **The permanents' scale comes from the SCREEN, never from the board's own size** — the board
+  grows with its cards, and reading it back grew them until the hand left the screen (TBL-4.2).

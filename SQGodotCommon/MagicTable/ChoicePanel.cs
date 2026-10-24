@@ -76,10 +76,11 @@ public partial class ChoicePanel : PanelContainer
 			MtgUiStyles.StyleChoice(button, selected: false);
 			if (card is not null)
 			{
-				button.Icon = MagicArt.Crop(card.Name);
+				var image = MagicArt.ImageName(s, card);
+				button.Icon = MagicArt.Crop(image);
 				button.ExpandIcon = true;
 				button.CustomMinimumSize = new Vector2(270, 90);
-				button.MouseEntered += () => preview(card.Name);
+				button.MouseEntered += () => preview(image);
 				button.MouseExited += () => preview(null);
 			}
 			var id = option.Id;

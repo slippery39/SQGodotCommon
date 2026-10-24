@@ -1,7 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using ImmutableGameObjects;
+using MagicCore;
 using MagicCore.Cards;
+using MagicCore.Effects;
 
 namespace MagicTable;
 
@@ -11,10 +14,19 @@ namespace MagicTable;
 /// </summary>
 public static class MagicArt
 {
-	// A prepared copy on the stack is named after its spell face; the file is the whole card's.
-	// ponytail: faces are shared ("Seed Suture" by three cards, "Omit Variables" by three), so a
-	// prepared copy shows the FIRST card's image — 4 of 6 such copies show another creature. Resolve
-	// through the copy's PreparedCopyOf link when the board shows the stack.
+	/// <summary>
+	/// The name whose image shows <paramref name="c"/>. A prepared copy is named after its spell face,
+	/// and faces are shared ("Seed Suture" by three cards) — so it shows the creature that prepared
+	/// it, through its link. By the face name, 4 of 6 such copies showed another creature (Shayne's
+	/// sealed game, 2026-10-23).
+	/// </summary>
+	public static string ImageName(GameState s, Card c) =>
+		c.GetComponent<PreparedCopyOf>() is { } link && s.HasObject(link.CreatureId)
+			? s.GetCard(link.CreatureId).Name
+			: c.Name;
+
+	// A copy with no link (a copy of a prepared copy: CopySpell drops it) is still named after its
+	// face, and the file is a whole card's — the first card with that face, the best a name can do.
 	private static readonly Dictionary<string, string> FaceToCard = CardDataSet
 		.Load("FRA")
 		.Where(c => c.CardFaces is not null)

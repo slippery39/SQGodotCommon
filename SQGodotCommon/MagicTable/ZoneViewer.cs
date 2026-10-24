@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ImmutableGameObjects;
 using MagicCore.Cards;
 using MtgGame;
 
@@ -20,6 +21,7 @@ public partial class ZoneViewer : PanelContainer
 	}
 
 	public void Show(
+		GameState s,
 		string title,
 		IEnumerable<Card> cards,
 		Func<Card, Glow> glow,
@@ -58,7 +60,7 @@ public partial class ZoneViewer : PanelContainer
 		foreach (var c in cards)
 		{
 			var id = c.Id;
-			flow.AddChild(CardViews.HandCard(c, glow(c), preview, () => onClick(id)));
+			flow.AddChild(CardViews.HandCard(s, c, glow(c), preview, () => onClick(id)));
 		}
 		if (flow.GetChildCount() == 0)
 			flow.AddChild(MtgUiStyles.Title("(empty)", 24));

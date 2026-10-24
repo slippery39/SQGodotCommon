@@ -27,6 +27,12 @@ public partial class MagicTableScene : Control
 	/// <summary>Sizes here are in the 1920x1080 design space (project.godot), shown at 2/3 in the 1280x720 window.</summary>
 	private const int TextSize = 22;
 
+	// The layout's numbers, read by BuildLayout AND BoardScale — the scale must know the room.
+	private const int Margin = 12;
+	private const int Gap = 8;
+	private const int LeftWidth = 375;
+	private const int RightWidth = 430;
+
 	private MagicTableManager _m = null!;
 	private readonly PlayerPlate _oppPlate = new();
 	private readonly PlayerPlate _myPlate = new();
@@ -54,9 +60,47 @@ public partial class MagicTableScene : Control
 	private readonly PhaseBar _phases = new();
 	private readonly VBoxContainer _stack = new();
 	private readonly VBoxContainer _buttons = new();
-	private readonly CheckBox _fullControl =
-		new() { Text = "Full control", FocusMode = FocusModeEnum.None };
-	private readonly Button _undo = new() { Text = "Undo", FocusMode = FocusModeEnum.None };
+
+	// The developer controls, folded away (TBL-4.2): undo, sandbox, full control, the AI's pace.
+	private readonly MenuButton _tools =
+		new()
+		{
+			Text = "Tools",
+			Flat = false,
+			FocusMode = FocusModeEnum.None,
+		};
+
+	private enum Tool
+	{
+		Undo,
+		Sandbox,
+		FullControl,
+		Pause,
+		Step,
+		Speed = 10, // + the index into Speeds
+	}
+
+	private bool _paused;
+
+	// Each side's half of the battlefield: a dark wash, edged in gold on its player's turn (TBL-4.2).
+	private readonly PanelContainer _oppBoard = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
+	private readonly PanelContainer _myBoard = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
+
+	// "Your turn" / "AI's turn", shown as each turn begins, then fading.
+	private readonly PanelContainer _banner =
+		new() { MouseFilter = MouseFilterEnum.Ignore, Modulate = Colors.Transparent };
+	private int _bannerTurn;
+
+	// A held card, big (TBL-4.2): Arena's zoom, and a phone's only way to read a card.
+	private readonly TextureRect _zoom =
+		new()
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			CustomMinimumSize = new Vector2(630, 880),
+			MouseFilter = MouseFilterEnum.Ignore,
+			Visible = false,
+		};
 	private readonly RichTextLabel _log =
 		new()
 		{
@@ -67,15 +111,6 @@ public partial class MagicTableScene : Control
 	private readonly ChoicePanel _choice = new() { CustomMinimumSize = new Vector2(930, 0) };
 	private readonly SandboxPanel _sandbox = new();
 	private readonly Timer _timer = new() { WaitTime = 0.5, Autostart = true };
-	private readonly Button _pause =
-		new()
-		{
-			Text = "Pause AI",
-			ToggleMode = true,
-			FocusMode = FocusModeEnum.None,
-		};
-	private readonly Button _step = new() { Text = "Step", FocusMode = FocusModeEnum.None };
-	private readonly OptionButton _speed = new() { FocusMode = FocusModeEnum.None };
 	private static readonly (string Label, double Seconds)[] Speeds =
 	[
 		("Fast", 0.1),
@@ -104,26 +139,29 @@ public partial class MagicTableScene : Control
 		MtgUiStyles.AddBackdrop(this);
 		BuildLayout();
 		_phases.StopsChanged += stops => Do(() => _m.Stops = stops);
-		_fullControl.Toggled += on => Do(() => _m.Stops = _m.Stops with { FullControl = on });
-		_undo.Pressed += () => Do(_m.Undo);
+		_phases.RowsChanged += Refresh;
 
 		// The AI moves on the timer; Pause stops it, Step makes one move, the speed sets the beat.
 		_timer.Timeout += () =>
 		{
-			if (!_pause.ButtonPressed && _m.AiToAct)
+			if (!_paused && _m.AiToAct)
 				Do(() => _m.StepAi());
 		};
 		AddChild(_timer);
-		_pause.Toggled += _ => Refresh();
-		_step.Pressed += () =>
+		BuildTools();
+		Action<string?> zoom = name =>
 		{
-			if (_m.AiToAct)
-				Do(() => _m.StepAi());
+			_zoom.Visible = name is not null;
+			if (name is not null)
+				_zoom.Texture = MagicArt.Full(name);
 		};
-		foreach (var (label, _) in Speeds)
-			_speed.AddItem(label);
-		_speed.Select(2);
-		_speed.ItemSelected += i => _timer.WaitTime = Speeds[i].Seconds;
+		CardViews.Zoom = zoom;
+		// Only if still ours: a scene changing to another table adds the new one before this one goes.
+		TreeExiting += () =>
+		{
+			if (CardViews.Zoom == zoom)
+				CardViews.Zoom = null;
+		};
 		_sandbox.Put += (seat, name, zone) =>
 			Do(() => _m.Sandbox(seat == 0 ? _m.HumanId : _m.OpponentId, FraCards.Get(name), zone));
 		_sandbox.Previewed += Preview;
@@ -205,6 +243,13 @@ public partial class MagicTableScene : Control
 	/// <summary>The solution root, beside the Godot project — untracked, like sim_results/ (story TBL-5).</summary>
 	public static string RecordsDir =>
 		Path.GetFullPath(ProjectSettings.GlobalizePath("res://../game_records"));
+
+	// Any release ends a zoom: a redraw during the hold frees the held card, and its own release never comes.
+	public override void _Input(InputEvent @event)
+	{
+		if (@event is InputEventMouseButton { Pressed: false })
+			_zoom.Visible = false;
+	}
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
@@ -302,6 +347,18 @@ public partial class MagicTableScene : Control
 				? Glow.Playable
 			: Glow.None;
 
+		var active = game.ActivePlayerId;
+		_oppBoard.AddThemeStyleboxOverride("panel", CardViews.Board(active == _m.OpponentId));
+		_myBoard.AddThemeStyleboxOverride("panel", CardViews.Board(active == _m.HumanId));
+		if (game.TurnNumber != _bannerTurn && game.TurnNumber > 0)
+		{
+			_bannerTurn = game.TurnNumber;
+			ShowBanner(
+				active == _m.HumanId && !_m.AiVsAi
+					? "Your turn"
+					: $"{s.GetPlayer(active).Name}'s turn"
+			);
+		}
 		_header.Text =
 			$"Seed {_m.Seed} · Turn {game.TurnNumber} · {(game.ActivePlayerId == _m.HumanId && !_m.AiVsAi ? "your" : $"{s.GetPlayer(game.ActivePlayerId).Name}'s")} turn";
 		foreach (
@@ -316,7 +373,8 @@ public partial class MagicTableScene : Control
 				{
 					_viewing = (player, zone);
 					Refresh();
-				}
+				},
+				active: player == active
 			);
 
 		// Auras and Equipment sit under their host — on its side of the table, whoever controls them.
@@ -325,11 +383,12 @@ public partial class MagicTableScene : Control
 			.Select(a => (Card: a, Host: Attachments.HostOf(s, a)))
 			.Where(x => x.Host is not null)
 			.ToLookup(x => x.Host!.Id, x => x.Card);
-		Fill(_oppLands, s, _m.OpponentId, lands: true, attached, c => GlowOf(c.Id, c));
-		Fill(_oppField, s, _m.OpponentId, lands: false, attached, c => GlowOf(c.Id, c));
-		Fill(_myField, s, _m.HumanId, lands: false, attached, c => GlowOf(c.Id, c));
-		Fill(_myLands, s, _m.HumanId, lands: true, attached, c => GlowOf(c.Id, c));
-		_phases.Show(_m);
+		_phases.Show(_m); // first: the scale reads its height
+		var scale = BoardScale(s);
+		Fill(_oppLands, s, _m.OpponentId, lands: true, attached, c => GlowOf(c.Id, c), scale);
+		Fill(_oppField, s, _m.OpponentId, lands: false, attached, c => GlowOf(c.Id, c), scale);
+		Fill(_myField, s, _m.HumanId, lands: false, attached, c => GlowOf(c.Id, c), scale);
+		Fill(_myLands, s, _m.HumanId, lands: true, attached, c => GlowOf(c.Id, c), scale);
 
 		CardViews.Clear(_hand);
 		var hand = s.CardsIn(_m.HumanId, ZoneType.Hand).ToList();
@@ -342,6 +401,7 @@ public partial class MagicTableScene : Control
 		foreach (var c in hand.Concat(elsewhere))
 			_hand.AddChild(
 				CardViews.HandCard(
+					s,
 					c,
 					GlowOf(c.Id, c),
 					Preview,
@@ -357,14 +417,18 @@ public partial class MagicTableScene : Control
 
 		ShowStack(s, id => GlowOf(id, null));
 		ShowButtons(s, moves);
-		_fullControl.SetPressedNoSignal(_m.Stops.FullControl);
-		_undo.Disabled = !_m.CanUndo;
-		_step.Disabled = !_m.AiToAct;
+		var tools = _tools.GetPopup();
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.FullControl), _m.Stops.FullControl);
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.Pause), _paused);
+		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Undo), !_m.CanUndo);
+		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Step), !_m.AiToAct);
+		_tools.Text = _paused ? "Tools · AI paused" : "Tools";
 		_sandbox.Allow(_m.CanSandbox);
 		_log.Text = string.Join("\n", _m.Log.TakeLast(200));
 
 		if (_viewing is (var viewPlayer, var viewZone))
 			_viewer.Show(
+				s,
 				$"{s.GetPlayer(viewPlayer).Name} — {viewZone}",
 				s.CardsIn(viewPlayer, viewZone),
 				c => GlowOf(c.Id, c),
@@ -485,10 +549,12 @@ public partial class MagicTableScene : Control
 		int player,
 		bool lands,
 		ILookup<int, Card> attached,
-		Func<Card, Glow> glow
+		Func<Card, Glow> glow,
+		float scale
 	)
 	{
 		CardViews.Clear(row);
+		row.CustomMinimumSize = new Vector2(0, CardViews.PermanentSize.Y * scale);
 		var onSomething = attached.SelectMany(g => g).Select(a => a.Id).ToHashSet();
 		var cards = s.CardsIn(player, ZoneType.Battlefield)
 			.Where(c => c.Is(CardType.Land) == lands && !onSomething.Contains(c.Id));
@@ -506,7 +572,8 @@ public partial class MagicTableScene : Control
 				group.Count(),
 				glow(c),
 				Preview,
-				() => ObjectClicked(c.Id)
+				() => ObjectClicked(c.Id),
+				scale
 			);
 			if (!attached.Contains(c.Id))
 			{
@@ -543,7 +610,7 @@ public partial class MagicTableScene : Control
 		{
 			var (name, text) = obj switch
 			{
-				Card spell => (spell.Name, spell.Name),
+				Card spell => (MagicArt.ImageName(s, spell), spell.Name),
 				StackAbility ability => (ability.Source.Name, $"{ability.Source.Name} — ability"),
 				_ => (obj.Name, obj.Name),
 			};
@@ -658,13 +725,85 @@ public partial class MagicTableScene : Control
 			: "AI is thinking…";
 		foreach (var move in moves.Where(a => MagicRules.CardOf(a) == 0))
 			AddButton(
-				move is PassPriorityAction
-					? s.StackIsEmpty()
-						? "Pass  (Space)"
-						: "Resolve  (Space)"
-					: Describe.Action(s, move),
+				move is PassPriorityAction ? $"{PassLabel(s)}  (Space)" : Describe.Action(s, move),
 				() => _m.Act(move)
 			);
+	}
+
+	/// <summary>
+	/// What passing leads to, as Arena's button says it (TBL-4.2) — so a pass is never made thinking
+	/// it is the other player's turn. ponytail: by the step alone, not by your stops; with stops that
+	/// skip combat, "To combat" passes further than it says — read Stops if that misleads.
+	/// </summary>
+	private string PassLabel(GameState s)
+	{
+		var game = s.GetGame();
+		return !s.StackIsEmpty() ? "Resolve"
+			: game.ActivePlayerId != _m.HumanId ? "Pass"
+			: game.Step switch
+			{
+				Step.PreCombatMain => "To combat",
+				Step.PostCombatMain or Step.End => "End turn",
+				_ => "Next",
+			};
+	}
+
+	private Tween? _bannerTween;
+
+	private void ShowBanner(string text)
+	{
+		CardViews.Clear(_banner);
+		_banner.AddChild(MtgUiStyles.Title(text, 64));
+		_bannerTween?.Kill(); // a fade-out still running would hide the new turn's banner
+		var tween = _bannerTween = CreateTween();
+		tween.TweenProperty(_banner, "modulate", Colors.White, 0.2);
+		tween.TweenInterval(0.9);
+		tween.TweenProperty(_banner, "modulate", Colors.Transparent, 0.6);
+	}
+
+	private void BuildTools()
+	{
+		var menu = _tools.GetPopup();
+		menu.AddThemeFontSizeOverride("font_size", TextSize);
+		menu.AddItem("Undo  (Ctrl+Z)", (int)Tool.Undo);
+		menu.AddItem("Sandbox", (int)Tool.Sandbox);
+		menu.AddSeparator();
+		menu.AddCheckItem("Full control", (int)Tool.FullControl);
+		menu.AddCheckItem("Pause AI", (int)Tool.Pause);
+		menu.AddItem("Step the AI", (int)Tool.Step);
+		menu.AddSeparator("AI speed");
+		for (var i = 0; i < Speeds.Length; i++)
+			menu.AddRadioCheckItem(Speeds[i].Label, (int)Tool.Speed + i);
+		menu.SetItemChecked(menu.GetItemIndex((int)Tool.Speed + 2), true);
+		menu.IdPressed += id =>
+		{
+			switch ((Tool)id)
+			{
+				case Tool.Undo:
+					Do(_m.Undo);
+					break;
+				case Tool.Sandbox:
+					_sandbox.Visible = !_sandbox.Visible;
+					break;
+				case Tool.FullControl:
+					Do(() => _m.Stops = _m.Stops with { FullControl = !_m.Stops.FullControl });
+					break;
+				case Tool.Pause:
+					_paused = !_paused;
+					Refresh();
+					break;
+				case Tool.Step:
+					if (_m.AiToAct)
+						Do(() => _m.StepAi());
+					break;
+				default:
+					var speed = (int)id - (int)Tool.Speed;
+					_timer.WaitTime = Speeds[speed].Seconds;
+					for (var i = 0; i < Speeds.Length; i++)
+						menu.SetItemChecked(menu.GetItemIndex((int)Tool.Speed + i), i == speed);
+					break;
+			}
+		};
 	}
 
 	/// <summary>A button in the action column. Through Do (clears any play in progress) unless it continues one.</summary>
@@ -711,14 +850,14 @@ public partial class MagicTableScene : Control
 		var margin = new MarginContainer();
 		margin.SetAnchorsPreset(LayoutPreset.FullRect);
 		foreach (var side in new[] { "left", "right", "top", "bottom" })
-			margin.AddThemeConstantOverride($"margin_{side}", 12);
+			margin.AddThemeConstantOverride($"margin_{side}", Margin);
 		AddChild(margin);
 		var columns = new HBoxContainer();
-		columns.AddThemeConstantOverride("separation", 8);
+		columns.AddThemeConstantOverride("separation", Gap);
 		margin.AddChild(columns);
 
 		// A player plate is a target too: "deal 3 damage to any target", "Attack the AI".
-		var left = Column(375);
+		var left = Column(LeftWidth);
 		_oppPlate.Clicked += () => ObjectClicked(_m.OpponentId);
 		_myPlate.Clicked += () => ObjectClicked(_m.HumanId);
 		left.AddChild(_oppPlate);
@@ -730,8 +869,9 @@ public partial class MagicTableScene : Control
 		center.AddThemeConstantOverride("separation", 4);
 		// The two battlefields take the slack, so lands sit at the edges and the hand at the bottom.
 		_oppField.SizeFlagsVertical = _myField.SizeFlagsVertical = SizeFlags.ExpandFill;
-		foreach (var part in new Control[] { _oppLands, _oppField, _phases, _myField, _myLands })
-			center.AddChild(part);
+		center.AddChild(Half(_oppBoard, _oppLands, _oppField));
+		center.AddChild(_phases);
+		center.AddChild(Half(_myBoard, _myField, _myLands));
 		var handRow = new ScrollContainer
 		{
 			CustomMinimumSize = new Vector2(0, CardViews.HandSize.Y + 12),
@@ -745,42 +885,65 @@ public partial class MagicTableScene : Control
 		center.AddChild(handRow);
 		columns.AddChild(center);
 
-		var right = Column(430);
+		var right = Column(RightWidth);
 		right.AddChild(Plate(_header));
 		right.AddChild(Plate(_stack));
 		right.AddChild(Plate(_status));
 		right.AddChild(_buttons);
-		var toggles = new HBoxContainer();
-		_fullControl.AddThemeFontSizeOverride("font_size", TextSize);
-		_undo.AddThemeFontSizeOverride("font_size", TextSize);
 		_log.AddThemeFontSizeOverride("normal_font_size", TextSize - 2);
-		toggles.AddChild(_fullControl);
-		toggles.AddChild(_undo);
-		var sandbox = new Button { Text = "Sandbox", FocusMode = FocusModeEnum.None };
-		sandbox.Pressed += () => _sandbox.Visible = !_sandbox.Visible;
-		toggles.AddChild(sandbox);
-		right.AddChild(toggles);
-		// Watching the AI: pause it, step it, set its pace.
-		var ai = new HBoxContainer();
-		foreach (var control in new Control[] { _pause, _step, _speed, sandbox })
-			control.AddThemeFontSizeOverride("font_size", TextSize);
-		ai.AddChild(_pause);
-		ai.AddChild(_step);
-		ai.AddChild(_speed);
-		right.AddChild(ai);
+		_tools.AddThemeFontSizeOverride("font_size", TextSize);
+		MtgUiStyles.StyleChoice(_tools, selected: false);
+		right.AddChild(_tools);
 		var logPlate = Plate(_log);
 		logPlate.SizeFlagsVertical = SizeFlags.ExpandFill;
 		right.AddChild(logPlate);
 		columns.AddChild(right);
 
+		_banner.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		// Later children draw on top: a pending choice above an open zone viewer.
-		foreach (var panel in new Control[] { _viewer, _sandbox, _choice })
+		foreach (var panel in new Control[] { _banner, _viewer, _sandbox, _choice, _zoom })
 		{
 			var overlay = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
 			overlay.SetAnchorsPreset(LayoutPreset.FullRect);
 			overlay.AddChild(panel);
 			AddChild(overlay);
 		}
+	}
+
+	/// <summary>
+	/// The permanents' size (TBL-4.2: a few cards sat small in an empty centre): as big as a half of
+	/// the board holds two rows, at most 1.5×, and never so wide that the fullest row would wrap —
+	/// counted as if every card were tapped (sideways), every land its own. The room comes from the
+	/// SCREEN, never from the board's own size, which grows with its cards (that fed back: the cards
+	/// grew until the hand left the screen). ponytail: attachments under a card are not counted; a
+	/// host with several could overflow its half.
+	/// </summary>
+	private float BoardScale(GameState s)
+	{
+		var screen = GetViewportRect().Size - new Vector2(2 * Margin, 2 * Margin);
+		var w = screen.X - LeftWidth - RightWidth - 2 * Gap - 8; // less the half's own margins
+		var h =
+			(screen.Y - _phases.GetCombinedMinimumSize().Y - (CardViews.HandSize.Y + 12) - 12) / 2
+			- 12; // per half: two rows, less the margins and the gap between them
+		var fullest = new[] { _m.HumanId, _m.OpponentId }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield).GroupBy(c => c.Is(CardType.Land)))
+			.Select(g => g.Count())
+			.DefaultIfEmpty(1)
+			.Max();
+		var size = CardViews.PermanentSize;
+		var byHeight = h / 2 / size.Y;
+		var byWidth = w / (fullest * (size.Y + 6));
+		return Mathf.Clamp(Mathf.Min(byHeight, byWidth), 1, 1.5f);
+	}
+
+	private static PanelContainer Half(PanelContainer board, params Control[] rows)
+	{
+		var column = new VBoxContainer();
+		column.AddThemeConstantOverride("separation", 4);
+		foreach (var row in rows)
+			column.AddChild(row);
+		board.AddChild(column);
+		return board;
 	}
 
 	private static VBoxContainer Column(int width)

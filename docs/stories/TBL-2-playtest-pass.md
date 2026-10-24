@@ -1,7 +1,7 @@
 ---
 id: TBL-2
 title: Playtest MagicTable until the games look right
-status: ready
+status: in-progress
 area: TBL
 created: 2026-10-09
 ---
@@ -45,6 +45,17 @@ is a bug report, never about the look.
       decision, so ask first (`MtgVisualDesign.md`): themed box icons sized to the text, or toggles
       as `MtgUiStyles.StyleChoice` plates (parchment = on), as the deck list already shows a pick.
       Done: themed box icons in the project theme
+- [x] TBL-2.5 The deck select ran off the screen (Start cut off; Shayne, 2026-10-23): TBL-5.7's
+      Resume button made the one bottom row wider than 1920. The options and the buttons are two
+      rows now; captured, and the sealed screen checked too. Rule (Shayne): everything stays in view
+      — reorganise or scroll, never clip
+- [x] TBL-2.6 A prepared copy sometimes showed another card's art (Shayne, 2026-10-23). Cause: art
+      by NAME, and a copy is named after its spell face, which three creatures share each ("Seed
+      Suture", five such faces) — the known ceiling in `MagicArt`. Now through the copy's link to its
+      creature (`MagicArt.ImageName`): hand row, stack, zone viewer, choices; `MagicArtTests`
+- [ ] TBL-2.7 A prepared copy sits in the hand row ("from prepared copy") and confused Shayne at
+      first, though Arena does much the same (2026-10-23). Ask: keep it, or show it on its creature
+      (a "prepared" badge you click to cast), as the redesign (TBL-4.1) may decide anyway
 
 ## Next
 
@@ -75,4 +86,5 @@ for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause 
   (3) he passed through his own turn thinking it was the opponent's, and the table "feels a little
   too busy" — TBL-4 (Arena-like first, the best of MTGO kept); (4) he wants exportable game records
   for analysis and AI test cases — TBL-5. Noted, not fixed (Shayne).
-
+- 2026-10-23: Shayne's sealed game — the deck select off the screen (TBL-2.5), a prepared copy's
+  wrong art (TBL-2.6), the prepared copy in the hand confusing (TBL-2.7). Status → in-progress.

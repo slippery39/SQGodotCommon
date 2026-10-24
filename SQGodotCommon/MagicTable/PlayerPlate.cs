@@ -32,11 +32,16 @@ public partial class PlayerPlate : PanelContainer
 		int player,
 		Glow glow,
 		Action<string?> preview,
-		Action<ZoneType> openZone
+		Action<ZoneType> openZone,
+		bool active = false
 	)
 	{
 		CardViews.Clear(this);
-		AddThemeStyleboxOverride("panel", CardViews.Outline(glow));
+		// Whose turn it is, at a glance (TBL-4.2): the active player's plate is edged in gold.
+		AddThemeStyleboxOverride(
+			"panel",
+			glow == Glow.None && active ? CardViews.ActiveEdge() : CardViews.Outline(glow)
+		);
 		var p = s.GetPlayer(player);
 		int Count(ZoneType z) => s.CardsIn(player, z).Count();
 
