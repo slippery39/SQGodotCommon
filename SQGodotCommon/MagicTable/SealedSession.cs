@@ -17,6 +17,7 @@ public sealed class SealedSession
 
 	private readonly List<string> _deck = new();
 	private readonly int[] _basics = new int[5];
+	private IReadOnlyList<SealedDeck>? _suggestions;
 
 	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool.</summary>
 	public SealedSession(int seed)
@@ -38,7 +39,7 @@ public sealed class SealedSession
 	/// <summary>Cards of a pasted pool the engine doesn't have — shown, never played.</summary>
 	public IReadOnlyList<string> LeftOut { get; }
 
-	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, and its own build of it.</summary>
+	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, and one of its suggested builds at random (LIM-3).</summary>
 	public static SealedDeck OpponentFor(int seed) => SealedBuilder.Opponent(seed);
 
 	/// <summary>The pool cards in your deck (basics added on top are <see cref="Basics"/>).</summary>
@@ -87,13 +88,25 @@ public sealed class SealedSession
 	{
 		_deck.Clear();
 		System.Array.Clear(_basics);
+		Suggested = null;
 	}
 
-	/// <summary>Replaces the deck with the AI's build of your pool — the same builder the opponent used.</summary>
-	public SealedDeck Suggest()
+	/// <summary>
+	/// The builds suggested from your pool (LIM-3) — two colours first, then a splash and a greedy
+	/// splash when the pool allows; suggestions, never "the optimal deck".
+	/// </summary>
+	public IReadOnlyList<SealedDeck> Suggestions =>
+		_suggestions ??= SealedBuilder.Suggestions(Pool, CardRatings.Fra);
+
+	/// <summary>The label of the suggestion the deck started from — kept through your edits; null once cleared.</summary>
+	public string? Suggested { get; private set; }
+
+	/// <summary>Replaces the deck with one of <see cref="Suggestions"/> — the builder the opponents use too.</summary>
+	public SealedDeck Suggest(int which = 0)
 	{
-		var built = SealedBuilder.Build(Pool, CardRatings.Fra);
+		var built = Suggestions[which];
 		Clear();
+		Suggested = built.Label;
 		foreach (var card in built.Main)
 		{
 			var basic = BasicNames.ToList().IndexOf(card);

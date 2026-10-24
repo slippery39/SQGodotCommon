@@ -81,6 +81,28 @@ public class SealedSessionTests
 		Assert.That(s.Sideboard, Is.EquivalentTo(built.Sideboard));
 	}
 
+	/// <summary>LIM-3: every suggestion of a pool that offers a splash, taken in turn, is the builder's deck with its label.</summary>
+	[Test]
+	public void EachSuggestion_TakenInTurn_IsThatBuild_AndClearForgetsIt()
+	{
+		var s = Enumerable
+			.Range(1, 30)
+			.Select(seed => new SealedSession(seed))
+			.First(x => x.Suggestions.Count >= 2);
+		for (var i = 0; i < s.Suggestions.Count; i++)
+		{
+			var built = s.Suggest(i);
+			Assert.That(built, Is.SameAs(s.Suggestions[i]));
+			Assert.That(s.Deck, Is.EquivalentTo(built.Main), built.Label);
+			Assert.That(s.Sideboard, Is.EquivalentTo(built.Sideboard), built.Label);
+			Assert.That(s.Suggested, Is.EqualTo(built.Label));
+			Assert.That(s.Ready);
+		}
+		s.Clear();
+		Assert.That(s.Suggested, Is.Null);
+		Assert.That(s.Count, Is.Zero);
+	}
+
 	[Test]
 	public void ACardMovesBetweenPoolAndDeck_NeverMoreCopiesThanOpened()
 	{

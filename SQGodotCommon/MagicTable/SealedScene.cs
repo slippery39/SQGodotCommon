@@ -9,9 +9,10 @@ namespace MagicTable;
 /// <summary>
 /// Sealed deck building, the Arena way (story LIM-1): the pool's cards in the middle, filtered by
 /// colour — click one into the deck; the deck as a list on the right — click a row back out; free
-/// basics; the suggested deck (the AI's build of your pool). Start plays it on the table against the
-/// AI's own build of ITS pool, a fresh one each Start. Your pool is opened from a seed, or pasted from
-/// Arena. Every rule is <see cref="SealedSession"/>'s; this only draws it.
+/// basics; the suggested decks (the AI's builds of your pool: two colours, a splash, a greedy splash —
+/// LIM-3). Start plays it on the table against the AI's own build of ITS pool, a fresh one each Start.
+/// Your pool is opened from a seed, or pasted from Arena. Every rule is <see cref="SealedSession"/>'s;
+/// this only draws it. Debug arg (<c>-GameArgs</c>): <c>--seed=N</c> opens that pool first.
 /// </summary>
 public partial class SealedScene : Control
 {
@@ -40,6 +41,8 @@ public partial class SealedScene : Control
 	private readonly Label _deckTitle = MtgUiStyles.Title("", 28);
 	private readonly Label _title = MtgUiStyles.Title("", 34);
 	private readonly Label _leftOut = Text("", 20);
+	private readonly HFlowContainer _suggestRow = new();
+	private readonly Label _suggested = Text("", 18);
 	private readonly TextEdit _paste =
 		new()
 		{
@@ -72,7 +75,15 @@ public partial class SealedScene : Control
 
 	public override void _Ready()
 	{
-		_session ??= new SealedSession(System.Random.Shared.Next(1, 1_000_000));
+		_session ??= new SealedSession(
+			OS.GetCmdlineUserArgs()
+				.FirstOrDefault(a => a.StartsWith("--seed="))
+				?["--seed=".Length..]
+				is { } arg
+			&& int.TryParse(arg, out var seed)
+				? seed
+				: System.Random.Shared.Next(1, 1_000_000)
+		);
 		MtgUiStyles.AddBackdrop(this);
 		var margin = new MarginContainer();
 		margin.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -216,11 +227,13 @@ public partial class SealedScene : Control
 			right.AddChild(row);
 		}
 
-		var buttons = new HBoxContainer();
-		buttons.AddThemeConstantOverride("separation", 8);
-		buttons.AddChild(Choice("Suggested deck", () => Act(() => S.Suggest())));
-		buttons.AddChild(Choice("Clear", () => Act(S.Clear)));
-		right.AddChild(buttons);
+		// a row that wraps: a pool may offer up to three suggestions, and nothing runs off the screen
+		_suggestRow.AddThemeConstantOverride("h_separation", 8);
+		_suggestRow.AddThemeConstantOverride("v_separation", 8);
+		right.AddChild(_suggestRow);
+		_suggested.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		_suggested.CustomMinimumSize = new Vector2(1, 0);
+		right.AddChild(_suggested);
 		_search.AddThemeFontSizeOverride("font_size", 22);
 		right.AddChild(_search);
 		MtgUiStyles.StylePrimary(_start, 34);
@@ -278,6 +291,18 @@ public partial class SealedScene : Control
 
 		foreach (var (basic, label) in _basicCounts)
 			label.Text = S.Basics(basic).ToString();
+		CardViews.Clear(_suggestRow);
+		for (var i = 0; i < S.Suggestions.Count; i++)
+		{
+			var which = i;
+			var button = Choice(S.Suggestions[i].Kind, () => Act(() => S.Suggest(which)));
+			button.TooltipText = S.Suggestions[i].Label;
+			_suggestRow.AddChild(button);
+		}
+		_suggestRow.AddChild(Choice("Clear", () => Act(S.Clear)));
+		_suggested.Text = S.Suggested is { } from ? $"Started from: {from}" : "";
+		_suggested.Visible = _suggested.Text.Length > 0;
+
 		var lands = S.Deck.Count(c => Data(c).TypeLine.Contains("Land"));
 		_deckTitle.Text = $"Deck  {S.Count - lands} + {lands} lands = {S.Count}";
 		_start.Disabled = !S.Ready;

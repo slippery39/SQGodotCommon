@@ -101,7 +101,8 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       Says which colours the AI pilots better, not which card; ~7pp is the smallest difference
       200 games show — built: `SealedBuildMatch`, `MagicConsole --builds=a.txt,b.txt`
       (`SealedBuildMatchTests`); the opponent is `SealedBuilder.Opponent(seed)`, which the table's
-      `SealedSession.OpponentFor` now calls. Not yet run on a real pool's candidates
+      `SealedSession.OpponentFor` now calls — since LIM-3.2 one of its pool's suggestions at random
+      (two colours, a splash, a greedy splash). Not yet run on a real pool's candidates
 - [ ] LIM-1.9 The AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) weights by old
       draft boosters (10 C / 3 U / 1 R) — point it at `FRA.boosters.json`'s sheets
 

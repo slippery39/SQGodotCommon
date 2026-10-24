@@ -5,18 +5,28 @@ using MagicCore.Sets.Fra;
 namespace MagicCore.Limited;
 
 /// <summary>A built sealed deck: its colours, the 40, and the rest of the pool (the sideboard — "outside the game").</summary>
+/// <param name="Colors">Its pair, then a splash colour if it has one.</param>
+/// <param name="Kind">How greedy it is: <see cref="SealedBuilder.TwoColours"/>, <see cref="SealedBuilder.Splashing"/> or <see cref="SealedBuilder.Greedy"/> (LIM-3).</param>
+/// <param name="Detail">What it splashes, for a reader ("Splash Black: Lich's Relic"); null for two colours.</param>
 public sealed record SealedDeck(
 	IReadOnlyList<ManaColor> Colors,
 	IReadOnlyList<string> Main,
-	IReadOnlyList<string> Sideboard
-);
+	IReadOnlyList<string> Sideboard,
+	string Kind = SealedBuilder.TwoColours,
+	string? Detail = null
+)
+{
+	public string Label => Detail ?? Kind;
+}
 
 /// <summary>
-/// The AI's sealed build (story LIM-1) — the suggested deck for a human, and the AI opponent's own deck
-/// from its own pool. Two colours, no splash yet (Shayne, 2026-10-20): the pair whose best
-/// <see cref="Spells"/> castable cards rate highest, by any <see cref="CardRatings"/> table. Lands: every
+/// The AI's sealed builds (stories LIM-1, LIM-3) — the suggested decks for a human, and the AI
+/// opponent's own from its own pool. <see cref="Build"/> is the streamlined two colours: the pair whose
+/// best <see cref="Spells"/> castable cards rate highest, by any <see cref="CardRatings"/> table; every
 /// dual in the pool that makes exactly the pair's colours, then basics split by the spells' pips.
-/// Like MtgSimulator's draft builder, the manabase serves the cards the deck plays, and nothing else.
+/// <see cref="Suggestions"/> adds a splash and a greedy splash when the mana allows; an opponent plays
+/// one of them at random. Like MtgSimulator's draft builder, the manabase serves the cards the deck
+/// plays, and nothing else.
 /// </summary>
 public static class SealedBuilder
 {
@@ -44,9 +54,352 @@ public static class SealedBuilder
 		"Forest",
 	];
 
-	/// <summary>An AI sealed opponent: a pool opened from <paramref name="seed"/>, and its own build of it.</summary>
-	public static SealedDeck Opponent(int seed) =>
-		Build(Boosters.SealedPool(seed), CardRatings.Fra);
+	public const string TwoColours = "Two colours",
+		Splashing = "Splash",
+		Greedy = "Greedy";
+
+	/// <summary>
+	/// An AI sealed opponent: a pool opened from <paramref name="seed"/>, and one of its
+	/// <see cref="Suggestions"/> at random — streamlined or greedy, as a person might (Shayne, LIM-3).
+	/// </summary>
+	public static SealedDeck Opponent(int seed)
+	{
+		var builds = Suggestions(Boosters.SealedPool(seed), CardRatings.Fra);
+		return builds[new Random(seed).Next(builds.Count)];
+	}
+
+	/// <summary>
+	/// The builds worth suggesting from a pool (story LIM-3) — never "the optimal deck": the
+	/// streamlined two-colour <see cref="Build"/>; a SPLASH of its pair's single best off-colour card;
+	/// and a GREEDY build — any two main colours and one or two more, each a real colour or a splash —
+	/// when it rates higher than the splash. Shayne's rules (2026-10-24): every colour meets its
+	/// sources — <see cref="MainSources"/> for the mains, <see cref="RealSources"/> for a real third or
+	/// fourth colour (any card), <see cref="SplashSources"/> for a splash (one more per extra card;
+	/// only the set's top 10% by rating, one pip) — counting every fixer as 1 (<see cref="Fixes"/>).
+	/// ponytail: the mana is the rule of thumb — LIM-3.3's measured bar (simulated draws, surveil
+	/// included) replaces it.
+	/// </summary>
+	public static IReadOnlyList<SealedDeck> Suggestions(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, double> ratings
+	)
+	{
+		var streamlined = Build(pool, ratings);
+		var bar = TopDecile(ratings);
+		var builds = new List<SealedDeck> { streamlined };
+		var data = pool.Distinct().ToDictionary(n => n, n => FraCards.Get(n).Data);
+
+		var splash = Wubrg
+			.Except(streamlined.Colors)
+			.Select(c =>
+				Multicolour(
+					pool,
+					data,
+					ratings,
+					[.. streamlined.Colors],
+					[(c, Splash: true)],
+					bar,
+					1
+				)
+			)
+			.OfType<Built>()
+			.MaxBy(b => b.Score);
+		if (splash is not null)
+			builds.Add(splash.Deck);
+
+		var greedy = (
+			from mains in Pairs
+			from extras in Extras(mains)
+			select Multicolour(pool, data, ratings, mains, extras, bar, int.MaxValue)
+		)
+			.OfType<Built>()
+			.ToList();
+		var streamlinedScore = streamlined
+			.Main.Where(n => !IsLand(FraCards.Get(n).Data))
+			.Sum(n => ratings[n]); // its spells, as every build scores
+		var three = greedy.Where(b => b.Deck.Colors.Count == 3).MaxBy(b => b.Score);
+		var safer = three ?? splash ?? new Built(streamlined, streamlinedScore);
+		// three colours preferred; four only for a top-10% card the safer build can't play (Shayne)
+		var four = greedy
+			.Where(b =>
+				b.Deck.Colors.Count == 4
+				&& b.Deck.Main.Any(n =>
+					!IsLand(FraCards.Get(n).Data)
+					&& ratings.GetValueOrDefault(n) >= bar
+					&& !safer.Deck.Main.Contains(n)
+				)
+			)
+			.MaxBy(b => b.Score);
+		var pick =
+			four is not null && four.Score > (three?.Score ?? double.MinValue) ? four : three;
+		if (pick is not null && pick.Score > (splash?.Score ?? streamlinedScore))
+			builds.Add(pick.Deck);
+		return builds;
+	}
+
+	/// <summary>A rating in the table's top tenth — what a splash is for.</summary>
+	public static double TopDecile(IReadOnlyDictionary<string, double> ratings)
+	{
+		var sorted = ratings.Values.OrderByDescending(r => r).ToList();
+		return sorted[(int)(0.1 * (sorted.Count - 1))];
+	}
+
+	/// <summary>Sources a colour needs: a main colour, a real third or fourth, a splash for one card (one more per extra card).</summary>
+	public const int MainSources = 7,
+		RealSources = 6,
+		SplashSources = 3;
+
+	sealed record Built(SealedDeck Deck, double Score);
+
+	static readonly ManaColor[][] Pairs =
+	[
+		.. from i in Enumerable.Range(0, 5)
+		from j in Enumerable.Range(i + 1, 4 - i)
+		select new[] { Wubrg[i], Wubrg[j] },
+	];
+
+	/// <summary>One or two more colours beside <paramref name="mains"/>, each real or a splash.</summary>
+	static IEnumerable<(ManaColor Color, bool Splash)[]> Extras(ManaColor[] mains)
+	{
+		var others = Wubrg.Except(mains).ToArray();
+		foreach (var a in others)
+		foreach (var splashA in new[] { true, false })
+		{
+			yield return [(a, splashA)];
+			foreach (var b in others.Where(b => b > a))
+			foreach (var splashB in new[] { true, false })
+				yield return [(a, splashA), (b, splashB)];
+		}
+	}
+
+	/// <summary>
+	/// The best 23 the colours allow — a splash colour's cards only top-decile and one pip, at most
+	/// <paramref name="perSplash"/> of them — then lands that bring every colour to its sources:
+	/// fixing lands while they cover a colour still short, then basics. Null when the mana can't, or an
+	/// extra colour plays nothing.
+	/// </summary>
+	static Built? Multicolour(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, CardData> data,
+		IReadOnlyDictionary<string, double> ratings,
+		ManaColor[] mains,
+		(ManaColor Color, bool Splash)[] extras,
+		double bar,
+		int perSplash
+	)
+	{
+		var colors = mains.Concat(extras.Select(e => e.Color)).ToArray();
+		var splashes = extras.Where(e => e.Splash).Select(e => e.Color).ToArray();
+		var needs = new Dictionary<string, ManaColor[]>();
+		// the extra colours a card can't be cast without — a hybrid of two extras needs both
+		ManaColor[] Needs(string n)
+		{
+			if (needs.TryGetValue(n, out var known))
+				return known;
+			var cost = FrontCost(data[n]);
+			var each = extras.Select(e => e.Color).ToArray();
+			var hard = each.Where(x => !Castable(cost, colors.Where(c => c != x).ToArray()))
+				.ToArray();
+			return needs[n] =
+				Castable(cost, mains) ? []
+				: hard.Length > 0 ? hard
+				: [.. each.Where(x => ColorsOf(cost).Contains(x))];
+		}
+		bool Eligible(string n) =>
+			Castable(FrontCost(data[n]), colors)
+			&& Needs(n)
+				.Where(splashes.Contains)
+				.All(x =>
+					ratings[n] >= bar
+					&& Pips(FrontCost(data[n]), x, colors.Where(c => c != x).ToArray()) <= 1
+				);
+
+		var chosen = new List<string>();
+		var perColor = splashes.ToDictionary(c => c, _ => 0);
+		foreach (
+			var n in pool.Where(n => !IsLand(data[n]) && FraCards.IsImplemented(n) && Eligible(n))
+				.OrderByDescending(n => ratings[n])
+				.ThenBy(n => n, StringComparer.Ordinal)
+		)
+		{
+			if (chosen.Count == Spells)
+				break;
+			var splashed = Needs(n).Where(splashes.Contains).ToList();
+			if (splashed.Any(x => perColor[x] >= perSplash))
+				continue;
+			chosen.Add(n);
+			foreach (var x in splashed)
+				perColor[x]++;
+		}
+		if (extras.Any(e => !chosen.Any(n => Needs(n).Contains(e.Color))))
+			return null; // a colour nothing needs isn't a splash, it's a weaker manabase
+		int CardsOf(ManaColor c) => chosen.Count(n => ColorsOf(FrontCost(data[n])).Contains(c));
+		if (extras.Any(e => mains.Any(m => CardsOf(m) < CardsOf(e.Color))))
+			return null; // the colours with the most cards are the mains — the swap is tried too
+
+		// what each colour still needs once the spells that make it are counted; fetchers come last
+		var needed = colors.ToDictionary(
+			c => c,
+			c =>
+				(
+					mains.Contains(c) ? MainSources
+					: splashes.Contains(c) ? SplashSources + perColor[c] - 1
+					: RealSources
+				) - chosen.Count(n => Fixes(n).Contains(c))
+		);
+		var fetchers = chosen.Count(FetchesABasic);
+		var lands = DeckSize - chosen.Count;
+		var fixing = new List<string>();
+		var available = pool.Where(n => IsLand(data[n]) && !Basics.Contains(n)).ToList();
+		while (fixing.Count < lands)
+		{
+			var land = available
+				.OrderByDescending(n => Fixes(n).Count(c => needed.GetValueOrDefault(c) > 0))
+				.ThenByDescending(n => Fixes(n).Count(colors.Contains))
+				.ThenBy(n => n, StringComparer.Ordinal)
+				.FirstOrDefault();
+			if (land is null || !Fixes(land).Any(c => needed.GetValueOrDefault(c) > 0))
+				break;
+			fixing.Add(land);
+			available.Remove(land);
+			foreach (var c in Fixes(land).Where(needed.ContainsKey))
+				needed[c]--;
+		}
+		// a fetcher finds a basic: with one basic of a colour in the deck, every fetcher is a source of
+		// it; with none, no fetcher is (Shayne: two landcyclers and a Swamp are 3 black sources, two and
+		// no Swamp are 0)
+		var least = colors.ToDictionary(
+			c => c,
+			c =>
+				needed[c] <= 0 ? 0
+				: fetchers > 0 ? Math.Max(1, needed[c] - fetchers)
+				: needed[c]
+		);
+		var free = lands - fixing.Count - least.Values.Sum();
+		if (free < 0)
+			return null; // the mana can't carry these colours
+		var basics = colors
+			.SelectMany(c => Enumerable.Repeat(Basics[(int)c], least[c]))
+			.Concat(BasicsFor(chosen.Select(n => data[n]), colors, free));
+
+		var main = chosen.Concat(fixing).Concat(basics).ToList();
+		var sideboard = pool.ToList();
+		foreach (var card in main.Where(n => !Basics.Contains(n)))
+			sideboard.Remove(card);
+		var splashCards = chosen.Where(n => Needs(n).Any(splashes.Contains)).ToList();
+		var kind = perSplash == 1 ? Splashing : Greedy;
+		var detail =
+			kind == Splashing
+				? $"{Splashing} {splashes[0]}: {string.Join(", ", splashCards)}"
+				: $"{Greedy} {string.Join("/", mains)}"
+					+ string.Concat(
+						extras.Select(e =>
+							e.Splash
+								? $" + {e.Color} splash ({string.Join(", ", chosen.Where(n => Needs(n).Contains(e.Color)))})"
+								: $" + {e.Color}"
+						)
+					);
+		return new Built(
+			new SealedDeck(colors, main, sideboard, kind, detail),
+			chosen.Sum(n => ratings[n])
+		);
+	}
+
+	/// <summary>The pips only <paramref name="color"/> pays beside the others — a hybrid with a half among them isn't one.</summary>
+	static int Pips(ManaCost cost, ManaColor color, IReadOnlyCollection<ManaColor> others) =>
+		cost.Symbols.Count(s =>
+			s.Kind switch
+			{
+				SymbolKind.Colored or SymbolKind.TwoBrid => s.Color == color,
+				SymbolKind.Hybrid => (s.Color == color || s.Color2 == color)
+					&& !others.Contains(s.Color)
+					&& !others.Contains(s.Color2),
+				_ => false,
+			}
+		);
+
+	static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ManaColor[]> fixes =
+		new();
+
+	/// <summary>
+	/// The colours a card MAKES, from its SCRIPT — every fixer counts 1 (Shayne, LIM-3): a basic its
+	/// colour; a mana ability (a land, a mana creature, a rock — not one restricted to some spells); a
+	/// token it makes for you with one (Heartwood) or a basic land type (Forest Tentacle); every colour
+	/// for a land that chooses its colour or mana of any one colour (Treasure). A card that FETCHES a
+	/// basic is <see cref="FetchesABasic"/>: it makes nothing itself.
+	/// </summary>
+	public static IReadOnlyList<ManaColor> Fixes(string card) =>
+		fixes.GetOrAdd(
+			card,
+			n =>
+			{
+				if (Basics.Contains(n))
+					return [Wubrg.First(c => Basics[(int)c] == n)];
+				var parts = Parts(FraCards.Get(n).Components, 0).ToList();
+				var land = IsLand(FraCards.Get(n).Data);
+				if (
+					parts.Any(p =>
+						p is ManaOfOneColorComponent || land && p is ChoosesColorAsItEnters
+					)
+				)
+					return Wubrg;
+				return
+				[
+					.. parts
+						.OfType<ManaAbilityComponent>()
+						.Where(m => m.Restriction == ManaRestriction.None)
+						.Select(m => m.Color)
+						.Concat(
+							parts
+								.OfType<CreateTokens>()
+								.SelectMany(t =>
+									Wubrg.Where(c => t.Token.TypeLine.Contains(Basics[(int)c]))
+								)
+						)
+						.Where(Wubrg.Contains)
+						.Distinct(),
+				];
+			}
+		);
+
+	/// <summary>
+	/// Landcycling, Simulacrum Shaper, Fblthp: it searches for a BASIC land — a source of every colour
+	/// the deck has at least one basic of, and of none other (Shayne). Enroot's "a land card" isn't one.
+	/// </summary>
+	public static bool FetchesABasic(string card) =>
+		Parts(FraCards.Get(card).Components, 0)
+			.Any(p => p is SearchLibrary { Type: CardType.Land, Supertype: Supertype.Basic });
+
+	/// <summary>The colours a cost's symbols name — a hybrid both halves; a generic symbol none.</summary>
+	static IEnumerable<ManaColor> ColorsOf(ManaCost cost) =>
+		cost.Symbols.SelectMany(x =>
+			x.Kind switch
+			{
+				SymbolKind.Colored or SymbolKind.TwoBrid => [x.Color],
+				SymbolKind.Hybrid => new[] { x.Color, x.Color2 },
+				_ => [], // a generic symbol's colours are unset (White by default)
+			}
+		);
+
+	/// <summary>Everything a script holds, nested — skipping tokens made for another player (Vraska's Treasure is theirs).</summary>
+	static IEnumerable<object> Parts(object? o, int depth) =>
+		o switch
+		{
+			null or string or CardData => [],
+			CreateTokens { ControlledBy: not null } => [],
+			System.Collections.IEnumerable list when depth < 12 => list.Cast<object>()
+				.SelectMany(x => Parts(x, depth + 1)),
+			_ when depth < 12 && o.GetType().Namespace?.StartsWith("MagicCore") == true =>
+				o.GetType()
+					.GetProperties(
+						System.Reflection.BindingFlags.Public
+							| System.Reflection.BindingFlags.Instance
+					)
+					.Where(p => p.GetIndexParameters().Length == 0 && p.Name != "EqualityContract")
+					.SelectMany(p => Parts(p.GetValue(o), depth + 1))
+					.Prepend(o),
+			_ => [],
+		};
 
 	public static SealedDeck Build(
 		IReadOnlyList<string> pool,
@@ -57,11 +410,7 @@ public static class SealedBuilder
 		// An unscripted card would play silently vanilla (MagicCore/CLAUDE.md), so it is never played.
 		var spells = pool.Where(n => !IsLand(data[n]) && FraCards.IsImplemented(n)).ToList();
 
-		var pairs =
-			from i in Enumerable.Range(0, 5)
-			from j in Enumerable.Range(i + 1, 4 - i)
-			select new[] { Wubrg[i], Wubrg[j] };
-		var (colors, chosen) = pairs
+		var (colors, chosen) = Pairs
 			.Select(pair =>
 				(
 					Pair: pair,

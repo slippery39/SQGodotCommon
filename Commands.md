@@ -147,7 +147,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=200]
 #   each file an Arena export (deck builder -> Export); its Sideboard section is the rest of your pool,
 #   "outside the game". Every build plays the SAME 200 AI sealed opponents (pool i opened from seed i,
-#   the AI's own build, in a game of seed i), beam on both sides; the difference is paired by opponent.
+#   one of the AI's suggested builds, in a game of seed i), beam on both sides; the difference is paired by opponent.
 #   200 games show ~7pp; it says which build the AI pilots better, not which card is right
 ```
 
@@ -201,7 +201,7 @@ Traps, each paid for once on the KIN branch:
   `window/size/window_*_override` (it does: 1280x720). Check a capture's real pixel size.
 - **A capture cannot hover or click**, and a still frame proves nothing about motion — nothing moves
   until state changes. KIN added debug flags (`--hover-card=N`, `--mouse=x,y`, real clicks through
-  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1 (`--tap=X,Y@F~N` holds it N frames — a long press; `--tap=X,Y@F~N>X2,Y2` drags to X2,Y2), and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N`, `--ai-vs-ai`, `--resume=FILE` (a game record replayed onto the table, Undo then steps back — pass each game arg as its own string: `-GameArgs '--resume=…','--greedy'`), `--greedy` (GreedyAi instead of the search; the deck select's checkbox — makes `--autoplay` fast) and `--put=Name:Zone` (repeatable; the sandbox into your seat — `"--put=Hunter's Axe:Battlefield"`). Its entry screen is `MagicTable/DeckSelectScene.tscn`; the flags override what it chose. Add more when a screen needs them, and send REAL input
+  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1 (`--tap=X,Y@F~N` holds it N frames — a long press; `--tap=X,Y@F~N>X2,Y2` drags to X2,Y2), and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N`, `--ai-vs-ai`, `--resume=FILE` (a game record replayed onto the table, Undo then steps back — pass each game arg as its own string: `-GameArgs '--resume=…','--greedy'`), `--greedy` (GreedyAi instead of the search; the deck select's checkbox — makes `--autoplay` fast) and `--put=Name:Zone` (repeatable; the sandbox into your seat — `"--put=Hunter's Axe:Battlefield"`). Its entry screen is `MagicTable/DeckSelectScene.tscn`; the flags override what it chose. The Sealed screen (`MagicTable/SealedScene.tscn`) takes `--seed=N` for its pool. Add more when a screen needs them, and send REAL input
   events through the viewport rather than calling the handler, or the capture "verifies" something
   no player can do.
 
