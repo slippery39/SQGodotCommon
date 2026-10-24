@@ -31,6 +31,9 @@ never dealt mattered.
 
 ## Decisions
 
+- 2026-10-24, Shayne: **the tie-break is "progress this turn"** — a won line also counts the
+  opponent's life lost before the rollout's first turn ends, so damage dealt NOW scores higher.
+
 Open questions (Shayne):
 - Which tie-break? Measured on the record, one position each (2026-10-23):
   - **Overkill** — a win scores 10,000 + how far below 0 the loser's life went. Gallia then attacks
