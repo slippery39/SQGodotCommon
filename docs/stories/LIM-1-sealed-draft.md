@@ -56,6 +56,7 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
   permitted outside the site (DATA-1). The ratings are any table, because custom and unreleased
   sets need the engine's own — story DATA-2.
 - 2026-10-20, Shayne: **two colours, no splash** to start; a splash only if builds show the need.
+  Revisited 2026-10-24: splash and greedy suggestions are LIM-3.
 - 2026-10-23, Shayne (sprint planning): the point is **Arena Direct practice with your real
   pool** — paste it in, take or adjust the suggested build, and play it against a range of AI
   sealed decks. Built now whether or not he plays the Direct of 10-24; every later FRA sealed event

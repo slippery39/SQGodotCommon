@@ -29,18 +29,19 @@ every task a sprint file names exists.
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
 1. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-2. **TBL-4** — a clearer, calmer table: quick wins now, the MTGA-first redesign next sprint
-3. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-4. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-5. **LIM-2** — draft against bots: FRA first, a cube later
-6. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-7. **AI-9** — resources priced by what they provide
-8. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-9. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-10. **AI-4** — strategic plans above single actions
-11. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-12. **AI-12** — a card's threat over time, on an empty board and a busy one
-13. **AI-13** — Shayne's lessons as general rules for the search, each measured
+2. **LIM-3** — sealed suggestions beyond two colours: streamlined, splash or greedy, when the mana works
+3. **TBL-4** — a clearer, calmer table: quick wins now, the MTGA-first redesign next sprint
+4. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+5. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+6. **LIM-2** — draft against bots: FRA first, a cube later
+7. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+8. **AI-9** — resources priced by what they provide
+9. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+10. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+11. **AI-4** — strategic plans above single actions
+12. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+13. **AI-12** — a card's threat over time, on an empty board and a busy one
+14. **AI-13** — Shayne's lessons as general rules for the search, each measured
 
 ## How it works
 
@@ -106,6 +107,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | backlog |
+| [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | done |
@@ -121,5 +123,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 
-Next free id per area: AI-14 · DATA-3 · DEV-4 · LIM-3 · MC-4 · TBL-6
+Next free id per area: AI-14 · DATA-3 · DEV-4 · LIM-4 · MC-4 · TBL-6
 <!-- stories:end -->
