@@ -131,6 +131,8 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 // print it, move by move. A record the engine no longer replays says which move, and exits 1.
 // --record=FILE --keep=NAME --at=N: keep it as an AI test case (TBL-5.5) — copied to
 // MagicCore.Tests/Records/NAME.json (run from the solution root), and a test to start from printed.
+// --record=FILE --compare: your choices beside the AI's (TBL-5.6) — at each of your decisions, the
+// default search's pick and where the oracle ranks yours; one line where either differs, then a summary.
 if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 {
 	try
@@ -138,6 +140,8 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 		var record = GameRecord.FromJson(File.ReadAllText(recordArg["--record=".Length..]));
 		if (args.FirstOrDefault(a => a.StartsWith("--keep="))?["--keep=".Length..] is { } keep)
 			Console.WriteLine(Keep(record, keep, Arg("at")));
+		else if (flags.Contains("--compare"))
+			Console.WriteLine(RecordComparison.Compare(record).Text());
 		else
 			foreach (var line in record.Transcript(flags.Contains("--passes")))
 				Console.WriteLine(line);

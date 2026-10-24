@@ -850,3 +850,26 @@ pinned by `GreedyAiTests.AWalkersValue_NeverFalls_AsItsLoyaltyRises`. The card-v
   moves with it. GreedyAi's recorded games moved by two.
 - **Not done, by design**: a Jace whose best is one draw keeps its old value (½ a card < the body),
   so the AI still won't count cashing a 3-loyalty Jace for a card as a gain — monotonic first.
+
+## Shayne's sealed game beside the AI (2026-10-23, TBL-5.6)
+
+`MagicConsole --record=game_records/2026-10-23_230227_seed934349.json --compare` — Release, 16 cores,
+16 s (repeatable: a second run printed the same lines). Seed 934349, 835 moves, Shayne won on turn 33.
+His 112 `you` moves held 100 real decisions (two options or more):
+
+| | |
+|---|---|
+| agreed with the default search | 38.0% |
+| agreed with the oracle | 38.0% — **63.0%** counting the 25 picks it scores the same (to 2 decimals) |
+| the search with the oracle | 85.0% (the position suite: 86.1%) |
+| score given up to the oracle | 3.95 a decision, over 68 |
+| missed a win the oracle found | 3 (#615 Seed Suture's target, #703, #821) |
+| walked into a loss it avoids | 6 (turns 24–26: passes holding Unsummon, and #590's no-block) |
+
+- **Ties are a third of the "disagreements"**: Pass against Play Island before combat, attacks in a
+  game already won. The report labels them "a tie"; the agreement is given both ways.
+- **Most real differences are instant-speed windows:** the oracle casts Unsummon or Prophesied End at
+  the first chance; Shayne held them.
+- **"Walks into a loss" is the oracle's reading, not the outcome** — he won. And the oracle (like the
+  search, by default) reads the AI's REAL hand (`Hidden.Hand.Real`), so it judges him knowing what he
+  couldn't. An honest-hand oracle for a human's game is not built (TBL-5's Next).

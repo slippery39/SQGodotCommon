@@ -20,9 +20,9 @@ own choices differ from the AI's.
 - [x] A record replays exactly in the console and in tests, and says so when the engine has moved
       (as the position suite's file does)
 - [x] A position from a record becomes an AI test case in a step (AI-8 needs exactly this)
-- [ ] At each of the human's decisions, what the AI would have chosen — and how its scores rank the
-      human's pick — reported for the whole game, by BOTH the search (as the table plays it) and
-      the oracle (PositionSuite's deeper search)
+- [x] At each of the human's decisions, what the AI would have chosen — and how its scores rank the
+      human's pick — reported for the whole game, by BOTH the search (the uncapped default, not the
+      table's 1 s cap — 2026-10-23) and the oracle (PositionSuite's deeper search)
 - [x] Undo and the sandbox never break a replay: undone moves leave the record, sandbox
       placements are recorded as moves
 
@@ -83,8 +83,13 @@ own choices differ from the AI's.
       a corrupted kept record failed `EveryKeptRecord_StillReplays` by name. `Records/Sample.json`
       (that game, move #110) stays, so the embedding is tested — revert-checked by breaking the glob
       (267d330, 2026-10-22)
-- [ ] TBL-5.6 The comparison report: the oracle's ranking of your pick and the default search's
-      choice at each of your decisions (sprint item 8, if budget is left)
+- [x] TBL-5.6 The comparison report: the oracle's ranking of your pick and the default search's
+      choice at each of your decisions (sprint item 8) — built: `RecordComparison` (MagicCore/Ai),
+      `MagicConsole --record=FILE --compare`; the oracle's reading of one position is
+      `PositionSuite.Read`, the summary its `Judge`. A pick the oracle scores the same as its own is
+      "a tie", counted both ways. `RecordComparisonTests`: a seat that plays as the oracle agrees at
+      every decision and ranks first — revert-checked (the position after the move; a rank counting
+      ties against you). Run on Shayne's sealed game of 2026-10-23 (findings)
 - [x] TBL-5.7 Resume a record on the table from a chosen move (sprint item 4): a new
       `MagicTableManager` from the record's seed, decks and sideboards, its moves replayed through
       `Play` so the new record starts as a copy (written as a NEW file; the old one is kept). The
@@ -99,20 +104,16 @@ own choices differ from the AI's.
 
 ## Next
 
-TBL-5.7 is done: the deck select's **Resume a game** opens a record, the table replays it, and
-Undo steps back through your decisions (a combat declaration is one step, the stand-in's moves
-none). The resumed game's log shows each move as the record said it — a declaration as one line per
-creature, not the table's one line. **TBL-5.6 next** (sprint item 8, if budget is left).
+**Every requirement is met** (TBL-5.1–5.7). `--record=FILE --compare` sets your choices beside the
+AI's — ~20 s a game on 16 cores, so it needs no asking.
 
-**TBL-5.6, the comparison report** (requirement 4). For each `you` move of a record (`Kind ==
-"you"`; a combat declaration is several — one per creature): the position (`Before`), what the
-search plays there and what the oracle plays, and where YOUR pick ranks among the oracle's scores.
-The scoring exists: `PositionSuite.WithOracle` runs `new BeamSearchAi(p, PositionSuite.OracleSettings)`
-and reads `FirstMoveScores` (every first move searched — the default `beam` does not search them
-all, so rank only by the oracle; for the search, say same/different). Parallel over positions
-like `WithOracle`. A console flag beside `--keep` (`--record=FILE --compare`): one line per
-decision where either differs, then a summary (agreed with search %, with oracle %, score given
-up). The search is the uncapped default, not the table's (decided 2026-10-23).
+Open, for Shayne to decide (not tasks yet):
+- **The oracle reads the opponent's REAL hand** (`Hidden.Hand.Real`, the search's default), so it
+  judges a human knowing what they couldn't — "walks into a loss" may rest on a card you never saw.
+  An honest reading is one setting (`Hand = Hidden.Hand.ShuffleUnseen` or `GuessedFromColors`, on
+  both searches in `RecordComparison.Compare`); it changes what the search would do, so it is a
+  decision, not a fix.
+- Story done? Status stays `in-progress` until Shayne has read a report on one of his games.
 
 ## Log
 
@@ -134,5 +135,8 @@ up). The search is the uncapped default, not the table's (decided 2026-10-23).
 - 2026-10-23: sprint planning — TBL-5.7 (resume a record) added; TBL-5.6's searches decided.
 - 2026-10-23: TBL-5.7 — resume a record. Shayne's sealed game of 2026-10-22 (seed 451259, 454
   moves) resumed on the table: every move replayed, the same win, Undo enabled.
+- 2026-10-23: TBL-5.6 — the comparison report; requirement 4 reworded to the decided search (the
+  uncapped default) and ticked. Shayne's sealed game (seed 934349): agreed with the oracle 38%, 63%
+  counting ties; the search with the oracle 85% — `docs/findings/magic-ai.md`.
 - 2026-10-23: requirements 1, 2, 3, 5 ticked (sprint housekeeping) — met by TBL-5.3, 5.4, 5.5, 5.3;
   the comparison (4) is TBL-5.6.

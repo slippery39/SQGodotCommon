@@ -140,7 +140,7 @@ public static class PositionSuite
 	/// A decision an AI could get wrong: two moves or more, or a choice with more than one answer — not
 	/// one where every enabled option must be taken (those would inflate any agreement).
 	/// </summary>
-	static bool IsReal(GameState s)
+	internal static bool IsReal(GameState s)
 	{
 		if (s.GetGame().Step == Step.PreGame)
 			return false;
@@ -303,18 +303,24 @@ public static class PositionSuite
 			0,
 			states.Count,
 			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-			i =>
-			{
-				var s = states[i].State;
-				var oracle = new BeamSearchAi(s.DecidingPlayerId(), settings ?? OracleSettings);
-				var best = Token(s, oracle.Decide(s));
-				var scores = oracle
-					.FirstMoveScores.GroupBy(f => Token(s, f.Action, f.Answer))
-					.ToDictionary(g => g.Key, g => Math.Round(g.Max(f => f.Score), 2));
-				readings[i] = new OracleReading(i, best, scores);
-			}
+			i => readings[i] = Read(states[i].State, i, settings)
 		);
 		return suite with { Oracle = readings };
+	}
+
+	/// <summary>The oracle's reading of one position (<see cref="OracleSettings"/> unless given) — also the game records' comparison (TBL-5.6).</summary>
+	public static OracleReading Read(
+		GameState s,
+		int position,
+		BeamSearchAi.Settings? settings = null
+	)
+	{
+		var oracle = new BeamSearchAi(s.DecidingPlayerId(), settings ?? OracleSettings);
+		var best = Token(s, oracle.Decide(s));
+		var scores = oracle
+			.FirstMoveScores.GroupBy(f => Token(s, f.Action, f.Answer))
+			.ToDictionary(g => g.Key, g => Math.Round(g.Max(f => f.Score), 2));
+		return new OracleReading(position, best, scores);
 	}
 
 	/// <summary>What <paramref name="ai"/> decides at every position, against the stored answers.</summary>
