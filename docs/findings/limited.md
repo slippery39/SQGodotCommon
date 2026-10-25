@@ -39,3 +39,29 @@ per extra card; 7 per main colour; 17 lands):
 - **Two real bombs pull the pair onto their colour:** the builder picks the pair by its best 23, so a
   pool given two top-10% cards of one colour chose that colour in every pool tried (seeds 1–20) —
   they became the deck, not a splash.
+
+## How often each suggestion's spells are castable on time (2026-10-25, LIM-3.3)
+
+`Castability.OnTime` (simulated draws, 1 000 games a deck, on the play and the draw; a main-colour
+card on curve, a splash card by turn 6 — Shayne) over the suggestions of 60 seeded FRA pools:
+
+| Suggestion | Pools | Castable on time: mean (range) |
+|---|---|---|
+| Two colours | 60 | **82.2%** (74.2–88.7) |
+| Splash | 22 | **67.2%** (54.2–75.6) |
+| Greedy, three colours | 25 | **60.6%** (48.5–72.4) |
+| Greedy, four colours | 31 | **50.8%** (29.5–60.9) |
+
+- **The rule of thumb passes builds that are half on time.** Every suggestion meets its source
+  counts, yet a four-colour greedy build casts its spells on time about half as often as it would
+  in two colours. Shayne's decision stands: shown, not gated — the screen puts each beside the
+  two-colour build's number.
+- **A splash costs ~15 points, mostly in the MAIN colours:** the splash's basics come out of the
+  pair's (7 each instead of 8–9), so their cards are late more often — the splash card itself is
+  judged by turn 6.
+- **What it measures:** having the mana, as Karsten's tables do — no spell but fixers, mana
+  sources and surveil is cast, so the curve itself never spends mana. A land that enters tapped is a
+  source from the next turn (the first version counted it the turn it entered; the tapped-land test
+  caught it). After the /pre-commit review: {2/X} paid by its colour or two generic, a Treasure
+  spent once (not a lasting source), a surveil only as the card is cast or enters — the means moved
+  by 0.2 points at most.

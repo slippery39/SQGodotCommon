@@ -96,10 +96,22 @@ public class SealedSessionTests
 			Assert.That(s.Deck, Is.EquivalentTo(built.Main), built.Label);
 			Assert.That(s.Sideboard, Is.EquivalentTo(built.Sideboard), built.Label);
 			Assert.That(s.Suggested, Is.EqualTo(built.Label));
+			Assert.That(s.SuggestedIndex, Is.EqualTo(i));
+			Assert.That(
+				s.OnTime(i),
+				Is.EqualTo(Castability.OnTime(built)),
+				"the simulated draws, once"
+			);
+			// beside the two-colour build's — except on the two-colour build itself
+			Assert.That(
+				s.OnTimeText(i),
+				i == 0 ? Does.Not.Contain("two colours") : Does.Contain("two colours")
+			);
 			Assert.That(s.Ready);
 		}
 		s.Clear();
 		Assert.That(s.Suggested, Is.Null);
+		Assert.That(s.SuggestedIndex, Is.Null);
 		Assert.That(s.Count, Is.Zero);
 	}
 

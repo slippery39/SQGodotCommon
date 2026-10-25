@@ -92,6 +92,7 @@ MagicCore/
 ├── Limited/Boosters.cs  FRA packs as Arena opens them (MTGJSON collation, 4-colour commons) + a seeded sealed pool (LIM-1)
 ├── Limited/SealedBuilder.cs  pool → 40 in two colours, by any ratings table: the suggested deck AND the AI's own (LIM-1);
 │                        Suggestions: + a splash and a greedy (up to 4 colours) build, every fixer counted (Fixes); an opponent plays one at random (LIM-3)
+├── Limited/Castability.cs  how often a deck's spells are castable on time, by simulated draws — shown beside each suggestion (LIM-3.3)
 ├── Limited/SealedBuildMatch.cs  candidate sealed builds (Arena exports) vs the same N AI sealed opponents, paired (MagicConsole --builds, LIM-1.8)
 ├── Limited/CardRatings.cs  limited ratings: FRA's 17lands GIH WR (Sealed, else Premier); NOT CardValues, which miss planeswalkers
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects; Sideboard only when given one) + shared Stack; per-CONTROLLER battlefield

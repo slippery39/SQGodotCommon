@@ -8,15 +8,20 @@ namespace MagicCore.Limited;
 /// <param name="Colors">Its pair, then a splash colour if it has one.</param>
 /// <param name="Kind">How greedy it is: <see cref="SealedBuilder.TwoColours"/>, <see cref="SealedBuilder.Splashing"/> or <see cref="SealedBuilder.Greedy"/> (LIM-3).</param>
 /// <param name="Detail">What it splashes, for a reader ("Splash Black: Lich's Relic"); null for two colours.</param>
+/// <param name="Splash">The colours it only splashes (not its mains or a real extra colour).</param>
 public sealed record SealedDeck(
 	IReadOnlyList<ManaColor> Colors,
 	IReadOnlyList<string> Main,
 	IReadOnlyList<string> Sideboard,
 	string Kind = SealedBuilder.TwoColours,
-	string? Detail = null
+	string? Detail = null,
+	IReadOnlyList<ManaColor>? Splash = null
 )
 {
 	public string Label => Detail ?? Kind;
+
+	/// <summary>The colours it only splashes — their cards are on time by turn 6 (Castability).</summary>
+	public IReadOnlyList<ManaColor> Splashes => Splash ?? [];
 }
 
 /// <summary>
@@ -300,7 +305,7 @@ public static class SealedBuilder
 						)
 					);
 		return new Built(
-			new SealedDeck(colors, main, sideboard, kind, detail),
+			new SealedDeck(colors, main, sideboard, kind, detail, splashes),
 			chosen.Sum(n => ratings[n])
 		);
 	}
@@ -369,6 +374,36 @@ public static class SealedBuilder
 	public static bool FetchesABasic(string card) =>
 		Parts(FraCards.Get(card).Components, 0)
 			.Any(p => p is SearchLibrary { Type: CardType.Land, Supertype: Supertype.Basic });
+
+	/// <summary>
+	/// Its only mana is spent as it's used — a Treasure ("sacrifice this: add one mana of any color").
+	/// Loot, the Nexus makes mana of one colour without being sacrificed: a lasting source.
+	/// </summary>
+	public static bool ManaIsSpentOnce(string card)
+	{
+		var parts = Parts(FraCards.Get(card).Components, 0).ToList();
+		return parts.OfType<ManaOfOneColorComponent>().Any(m => m.SacrificeSelf)
+			&& !parts.OfType<ManaOfOneColorComponent>().Any(m => !m.SacrificeSelf)
+			&& !parts.OfType<ManaAbilityComponent>().Any();
+	}
+
+	/// <summary>
+	/// The most cards one of its surveils looks at, as it is cast or enters — not an activated or a
+	/// loyalty ability's, which come later and cost more (Castability, LIM-3.3; from the script).
+	/// </summary>
+	public static int Surveils(string card) =>
+		Parts(
+				FraCards
+					.Get(card)
+					.Components.Where(c =>
+						c is not (ActivatedAbilityComponent or LoyaltyAbilityComponent)
+					),
+				0
+			)
+			.OfType<Surveil>()
+			.Select(x => x.N)
+			.DefaultIfEmpty(0)
+			.Max();
 
 	/// <summary>The colours a cost's symbols name — a hybrid both halves; a generic symbol none.</summary>
 	static IEnumerable<ManaColor> ColorsOf(ManaCost cost) =>

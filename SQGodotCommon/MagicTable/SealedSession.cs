@@ -18,6 +18,7 @@ public sealed class SealedSession
 	private readonly List<string> _deck = new();
 	private readonly int[] _basics = new int[5];
 	private IReadOnlyList<SealedDeck>? _suggestions;
+	private double[]? _onTime;
 
 	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool.</summary>
 	public SealedSession(int seed)
@@ -88,7 +89,7 @@ public sealed class SealedSession
 	{
 		_deck.Clear();
 		System.Array.Clear(_basics);
-		Suggested = null;
+		SuggestedIndex = null;
 	}
 
 	/// <summary>
@@ -99,14 +100,29 @@ public sealed class SealedSession
 		_suggestions ??= SealedBuilder.Suggestions(Pool, CardRatings.Fra);
 
 	/// <summary>The label of the suggestion the deck started from — kept through your edits; null once cleared.</summary>
-	public string? Suggested { get; private set; }
+	public string? Suggested => SuggestedIndex is { } i ? Suggestions[i].Label : null;
+
+	/// <summary>Which of <see cref="Suggestions"/> the deck started from; null once cleared.</summary>
+	public int? SuggestedIndex { get; private set; }
+
+	/// <summary>
+	/// How often suggestion <paramref name="which"/>'s spells are castable on time, by simulated draws
+	/// (LIM-3.3 — shown, never used to choose). Measured once for all of them, ~0.1 s each.
+	/// </summary>
+	public double OnTime(int which) =>
+		(_onTime ??= [.. Suggestions.Select(d => Castability.OnTime(d))])[which];
+
+	/// <summary>"castable on time 79% (two colours 85%)" — the two-colour build is the one to beat.</summary>
+	public string OnTimeText(int which) =>
+		$"castable on time {OnTime(which):P0}"
+		+ (which == 0 ? "" : $" (two colours {OnTime(0):P0})");
 
 	/// <summary>Replaces the deck with one of <see cref="Suggestions"/> — the builder the opponents use too.</summary>
 	public SealedDeck Suggest(int which = 0)
 	{
 		var built = Suggestions[which];
 		Clear();
-		Suggested = built.Label;
+		SuggestedIndex = which;
 		foreach (var card in built.Main)
 		{
 			var basic = BasicNames.ToList().IndexOf(card);

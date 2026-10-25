@@ -296,11 +296,13 @@ public partial class SealedScene : Control
 		{
 			var which = i;
 			var button = Choice(S.Suggestions[i].Kind, () => Act(() => S.Suggest(which)));
-			button.TooltipText = S.Suggestions[i].Label;
+			button.TooltipText = S.Suggestions[i].Label + "\n" + S.OnTimeText(i);
 			_suggestRow.AddChild(button);
 		}
 		_suggestRow.AddChild(Choice("Clear", () => Act(S.Clear)));
-		_suggested.Text = S.Suggested is { } from ? $"Started from: {from}" : "";
+		_suggested.Text = S.SuggestedIndex is { } from
+			? $"Started from: {S.Suggestions[from].Label} — as suggested, {S.OnTimeText(from)}"
+			: "";
 		_suggested.Visible = _suggested.Text.Length > 0;
 
 		var lands = S.Deck.Count(c => Data(c).TypeLine.Contains("Land"));

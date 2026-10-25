@@ -20,7 +20,7 @@ MagicTable/
 │                         AI, search AI; the way into Sealed; Resume a game (a record from game_records/)
 ├── SealedSession.cs      a sealed event (plain C#): your pool (a seed, or pasted from Arena), the deck
 │                         from the pool, free basics, the suggested builds (two colours, splash,
-│                         greedy — LIM-3; Suggest(i)), the table setup — a FRESH
+│                         greedy — LIM-3; Suggest(i), OnTime(i): castable on time), the table setup — a FRESH
 │                         AI opponent per game, from the game's seed (OpponentFor). Tested
 ├── SealedScene.cs        Arena's deck builder: pool by colour (click in), deck list (click out), basics;
 │                         Paste Arena pool (a dialog), what was left out named above the pool; a
