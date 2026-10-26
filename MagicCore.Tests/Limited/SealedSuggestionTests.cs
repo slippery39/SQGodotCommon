@@ -434,6 +434,13 @@ public class SealedSuggestionTests
 			Is.EquivalentTo(pool.Where(n => !SealedBuilder.Basics.Contains(n))),
 			why
 		);
+		// a land that makes only one of the deck's colours is a tapped basic, never fixing
+		foreach (var land in deck.Main.Where(n => IsLand(n) && !SealedBuilder.Basics.Contains(n)))
+			Assert.That(
+				SealedBuilder.Fixes(land).Count(deck.Colors.Contains),
+				Is.GreaterThanOrEqualTo(2),
+				$"{why}: {land} makes only one of its colours"
+			);
 		if (deck.Colors.Count == 2)
 			return 0; // the streamlined build is LIM-1's: basics by pips, no source bar
 		foreach (var main in deck.Colors.Take(2))

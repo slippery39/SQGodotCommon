@@ -125,19 +125,38 @@ as the optimal deck.
       the card's — revert-checked (a landcycler making any colour, splash cards on curve, {2/X} by
       colour only; the tapped-land test caught a real bug first). Captured on seed 3: "castable on time
       59% (two colours 84%)"
+- [ ] LIM-3.6 Suggest the runner-up PAIR when it is close (Shayne's qualifier pool, 2026-10-25):
+      Blue/Black rated 59.7% a card, White/Black 58.4% but with 16 spells at 1–3 mana against 13 —
+      the builder only ever builds on the single best pair, so Orzhov + Blue + Green was never
+      offered. Within ~1 point, offer the second pair too, its castability and curve shown
+- [ ] LIM-3.7 Price the TEMPO fixing costs (Shayne, the same qualifier): a landcycler made black
+      available but spent turn 2, so the 2/1 menace never came down to block — ~6 life and an
+      unopposed three-drop. `Castability` cycles with the turn's leftover mana AFTER measuring it, as
+      if the 2-drop were cast too, so it flatters cycler-fixed builds. Measure the early turns a
+      deck spends fixing instead of playing, and show it beside castability
 - [ ] LIM-3.4 Compare a pool's suggestions by sims without exporting each from Arena — LIM-1.8's
       `--builds` reads Arena exports; a pool (or a seed) in, its suggestions out
 
 ## Next
 
-LIM-3.2, 3.3 and 3.5 are built: the Sealed screen offers **Two colours / Splash / Greedy**, each
-with how often its spells are castable on time beside the two-colour build's. **Measured
-(`docs/findings/limited.md`): two colours 82%, splash 67%, greedy 61% in three colours and 51% in
-four** — the rule of thumb passes builds that are on time half as often. Shayne decided: shown, not
-gated. If those numbers make the greedy suggestions unhelpful, the levers are: gate greedy on a
-floor (e.g. within N points of two colours), or raise the source bars. Next: LIM-3.4 (compare the
-suggestions by AI-vs-AI sims). Read `SealedBuilder.Suggestions`/`Multicolour` and `Castability`
-first. LIM-1.8's opponents include greedy decks.
+Built: LIM-3.2 (suggestions), 3.3 (castability, shown not gated), 3.5 (greedy up to four colours,
+every fixer counted, fixing lands that make two of the deck's colours). The Sealed screen offers
+**Two colours / Splash / Greedy** with "castable on time X% (two colours Y%)". Measured
+(`docs/findings/limited.md`): two colours 82%, splash 67%, greedy 61% / 51% (three / four colours).
+
+**Next, in order:**
+1. **LIM-3.7 — price fixing's tempo** (small). In `Castability.Play`, a landcycler cycles AFTER the
+   turn is measured, with that turn's mana — as if the 2-drop were cast too. Cycle before measuring
+   (the mana spent leaves the turn's usable sources) and count the early turns spent fixing; show it
+   beside castability. Shayne's qualifier loss is the case: cycled for black on turn 2, no blocker.
+2. **LIM-3.6 — offer the runner-up pair when close** (~1 point of rating a card): his pool's Orzhov
+   (58.4%, 16 cheap spells) lost to Blue/Black (59.7%, 13) and was never suggested.
+3. LIM-3.4 — compare a pool's suggestions by AI-vs-AI sims without exporting each.
+
+Traps: `Fixes` is what a card MAKES; `FetchesABasic` finds a basic (a source of a colour only with a
+basic of it in the deck — Shayne: two landcyclers + a Swamp = 3, + no Swamp = 0). Every rule has a
+test that fails without it (revert-checked); `SealedSuggestionTests.CheckRules` is the rule book.
+Shayne's qualifier pool is in this session's scratchpad only — ask him for the export if needed.
 
 ## Log
 
@@ -148,3 +167,10 @@ first. LIM-1.8's opponents include greedy decks.
   can't play); LIM-3.5 built: greedy on 56 of 60 pools, 31 of them four colours (findings).
 - 2026-10-25: LIM-3.3 — castability measured and shown: two colours 82%, splash 67%, greedy 61% /
   51% (three / four colours) over 60 pools (findings).
+- 2026-10-25: Shayne's qualifier pool — the splash suggestion played duals that make only ONE of its
+  colours (a White/Black dual in Blue/Black + Green): tapped basics. Fixing lands now make two of the
+  deck's colours or choose their colour; that build's castability 61% → 78% (two colours 86%).
+- 2026-10-25: Shayne played the FRA qualifier with Esper and went 1-2; on reflection Orzhov splashing
+  Blue (Way of the Mind Sculptor) and Green (Kwia Vigorbloom) would have had the better early curve.
+  One loss turned on landcycling for black on turn 2 instead of casting a blocker. LIM-3.6 (offer
+  the close runner-up pair) and LIM-3.7 (price fixing's tempo) added.

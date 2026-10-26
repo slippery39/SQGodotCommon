@@ -255,7 +255,12 @@ public static class SealedBuilder
 		var fetchers = chosen.Count(FetchesABasic);
 		var lands = DeckSize - chosen.Count;
 		var fixing = new List<string>();
-		var available = pool.Where(n => IsLand(data[n]) && !Basics.Contains(n)).ToList();
+		// a land that makes only one of the deck's colours is a basic that enters tapped: never fixing
+		// (Shayne, his qualifier pool: a White/Black dual in a Blue/Black + Green deck)
+		var available = pool.Where(n =>
+				IsLand(data[n]) && !Basics.Contains(n) && Fixes(n).Count(colors.Contains) >= 2
+			)
+			.ToList();
 		while (fixing.Count < lands)
 		{
 			var land = available
