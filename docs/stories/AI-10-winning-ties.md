@@ -60,9 +60,15 @@ Open questions (Shayne):
 
 ## Next
 
-Ask Shayne which tie-break (above). Read `MagicCore/Ai/Evaluator.cs` (`Evaluate`: the flat
-±10,000), `Rollout.cs` (`TerminalDiscount`), and `docs/findings/magic-ai.md`. The experiment is
-two lines in `Evaluate` — the record replays, so `GameRecord.Before(545)` is the position.
+**Tie-break decided** (Shayne, 2026-10-24): **progress this turn** — a won line also counts the
+opponent's life lost before the rollout's first turn ends. Start with AI-10.1 (keep #545 and #587 of
+`game_records/2026-10-23_230227_seed934349.json` as test cases: `MagicConsole --record=… --keep=NAME
+--at=N`; each control should show the search playing "Don't attack" today), then AI-10.2 (the
+tie-break in `Evaluator.Evaluate` / `Rollout.Score`, the kept cases passing, `--suite=beam`, then
+`--match=…,beam --until-clear` — about an hour: ask Shayne before starting it). AI-10.3 (does a
+bounced creature come back in the look-ahead?) is minutes and can go first. Read
+`MagicCore/Ai/Evaluator.cs` (the flat ±10,000), `Rollout.cs` (`Score`, `TerminalDiscount`), and
+`docs/findings/magic-ai.md`.
 
 ## Log
 
