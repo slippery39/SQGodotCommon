@@ -151,6 +151,11 @@ dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=20
 #   "outside the game". Every build plays the SAME 200 AI sealed opponents (pool i opened from seed i,
 #   one of the AI's suggested builds, in a game of seed i), beam on both sides; the difference is paired by opponent.
 #   200 games show ~7pp; it says which build the AI pilots better, not which card is right
+dotnet run -c Release --project MagicConsole -- --compare=pool.txt [--builds=mine.txt] [--games=200]   # or --compare=seed:N
+#   every build the Sealed screen offers for that pool (LIM-3.4): its suggestions and the 4 closest pairs' builds,
+#   up to 11 (~80 min at 200, 16 cores; it prints its estimate first). With more than 3 builds (here or
+#   with --builds) each is compared with the FIRST — the best pair's two colours — not every pair.
+#   The Sealed screen's "Copy sim command" copies this for its pool (a pasted pool is saved to sealed_pools/, untracked)
 ```
 
 ## Play in console

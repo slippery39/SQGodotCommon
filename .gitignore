@@ -10,6 +10,7 @@ simulator.speedscope.json
 flagged_games/
 sim_results/
 game_records/
+sealed_pools/
 
 # graphify generated knowledge graph (regenerate with /graphify)
 # Everything here is derivable for free EXCEPT cache/semantic, which holds the

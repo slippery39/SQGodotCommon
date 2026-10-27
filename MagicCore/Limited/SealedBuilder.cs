@@ -121,11 +121,35 @@ public static class SealedBuilder
 		return [builds[0], .. builds.Skip(1).TakeLast(1)];
 	}
 
+	/// <summary>Two builds of the same 40, whatever order their cards are listed in.</summary>
+	public static bool SameDeck(SealedDeck a, SealedDeck b) =>
+		a.Main.Order(StringComparer.Ordinal).SequenceEqual(b.Main.Order(StringComparer.Ordinal));
+
+	/// <summary>
+	/// Everything the Sealed screen offers for a pool (LIM-3.4, Shayne): the <see cref="Suggestions"/>,
+	/// then every close pair's builds (<see cref="ForPair"/>) — each 40 once.
+	/// </summary>
+	public static IReadOnlyList<SealedDeck> AllBuilds(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, double> ratings
+	)
+	{
+		var all = Suggestions(pool, ratings).ToList();
+		foreach (var close in ClosePairs(pool, ratings))
+			all.AddRange(
+				ForPair(pool, ratings, close.Pair).Where(d => !all.Any(x => SameDeck(x, d)))
+			);
+		return all;
+	}
+
 	/// <summary>A pair as the builder rates it: its best <see cref="Spells"/> castable spells' mean rating, and how many of them cost 1–3.</summary>
 	public sealed record PairRating(IReadOnlyList<ManaColor> Pair, double Rating, int Cheap);
 
 	/// <summary>Within this much of the best pair's rating a pair is offered too — 1.5 points (Shayne, LIM-3.6).</summary>
 	public const double ClosePairPoints = 0.015;
+
+	/// <summary>At most this many close pairs, the closest — within 1.5 points most pools have 7–9 of the 9 (Shayne, LIM-3.4).</summary>
+	public const int MaxClosePairs = 4;
 
 	/// <summary>Every pair, best first — the first is the one <see cref="Build"/> picks.</summary>
 	public static IReadOnlyList<PairRating> RatePairs(
@@ -147,14 +171,20 @@ public static class SealedBuilder
 		];
 	}
 
-	/// <summary>The pairs besides the best within <see cref="ClosePairPoints"/> of it — Shayne picks among them.</summary>
+	/// <summary>The pairs besides the best within <see cref="ClosePairPoints"/> of it, the <see cref="MaxClosePairs"/> closest — Shayne picks among them.</summary>
 	public static IReadOnlyList<PairRating> ClosePairs(
 		IReadOnlyList<string> pool,
 		IReadOnlyDictionary<string, double> ratings
 	)
 	{
 		var rated = RatePairs(pool, ratings);
-		return [.. rated.Skip(1).Where(p => p.Rating >= rated[0].Rating - ClosePairPoints - 1e-9)];
+		return
+		[
+			.. rated
+				.Skip(1)
+				.Where(p => p.Rating >= rated[0].Rating - ClosePairPoints - 1e-9)
+				.Take(MaxClosePairs),
+		];
 	}
 
 	/// <summary>Its spells that cost 1–3 — the early curve (Shayne's qualifier: 16 against 13).</summary>

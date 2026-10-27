@@ -1,7 +1,7 @@
 ---
 id: LIM-3
 title: Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions
-status: in-progress
+status: done
 area: LIM
 created: 2026-10-24
 ---
@@ -25,7 +25,7 @@ as the optimal deck.
       the two-colour build's, not used to reject it (Shayne, 2026-10-25)
 - [x] Shown as suggestions on the Sealed screen, never as "best" or "optimal"; Shayne takes one or
       adjusts it
-- [ ] The suggestions can be compared by LIM-1.8's sims (`--builds`) — with its caveat: it says how
+- [x] The suggestions can be compared by LIM-1.8's sims (`--builds`) — with its caveat: it says how
       well the AI pilots each, not which is right
 
 ## Decisions
@@ -108,6 +108,13 @@ as the optimal deck.
   58.36%, 16 spells at 1–3 mana against Blue/Black's 13), so "the runner-up pair" would never have
   offered it. Instead: **a compact list of every pair within 1.5 points, each with its rating and
   spells at 1–3 mana; clicking one adds its two-colour and greedy builds** — he judges.
+- 2026-10-27, Shayne (LIM-3.4, interview): **compare everything the screen offers** — the best
+  pair's suggestions and every close pair's two colours and greedy (up to 13 builds, ~1.5–2 h at
+  200); **from the console** (`--compare=FILE` or `seed:N`), **and the Sealed screen gives the
+  command** for its pool (a pasted pool saved to a file for it); **200 opponents**, as `--builds`.
+- 2026-10-27, Shayne (LIM-3.4, on seeing seeded pools list 4–9 of the 9 other pairs within 1.5
+  points, his only 5 — up to 20 builds, ~2.5 h): **at most the 4 closest pairs** (still within 1.5),
+  listed and compared — at most 11 builds, ~80 min. His Orzhov is the third, so it stays.
 
 ## Tasks
 
@@ -167,27 +174,32 @@ as the optimal deck.
       (measure before the cycle; cycle eagerly). Captured on seed 3's Greedy: 55% (two colours 83%),
       cycles early in 26% of games. Review fixes: it fetches the colour the due card lacks (not the
       first missing one), and a landcycler's own colour never sets off a cycle (25% after)
-- [ ] LIM-3.4 Compare a pool's suggestions by sims without exporting each from Arena — LIM-1.8's
-      `--builds` reads Arena exports; a pool (or a seed) in, its suggestions out
-
+- [x] LIM-3.4 Compare a pool's suggestions by sims without exporting each (Shayne's rules —
+      Decisions, 2026-10-27): `SealedBuilder.AllBuilds` (the suggestions, then the close pairs' builds,
+      each deck once — `SameDeck`), `SealedBuildMatch.FromSuggestion` (named by its button) and
+      `EstimatedMinutes`; `MagicConsole --compare=POOL.txt|seed:N` (with any `--builds` exports beside
+      them; prints its estimate first; more than 3 builds are each compared with the best). The Sealed
+      screen's **Copy sim command** copies it for the pool (a pasted pool saved to `sealed_pools/`),
+      with how many builds and minutes. `ClosePairs` capped at `MaxClosePairs` (4). Tests: AllBuilds on
+      his pool and seed 3 (a duplicate dropped — revert-checked), FromSuggestion, the session's
+      command; the cap revert-checked on his pool (5 close). Found on the screen: nine close pairs
+      pushed Start off it (a LIM-3.6 bug — only his pool, 5 pairs, had been captured) — the list now
+      scrolls. Smoke-run on his pool (2 opponents, 11 builds); captured on seed 2 (4 pairs, 10 builds,
+      ~74 min). Review fixes: with more than 3 builds each is compared with the FIRST (the best pair's
+      two colours), never the one that won most (a lucky draw would set every gap); repeated names
+      numbered (`FromSuggestions`); a pasted pool saved before the session changes
 ## Next
 
-Built: LIM-3.2 (suggestions), 3.3 (castability, shown not gated), 3.5 (greedy up to four colours,
-every fixer counted, fixing lands that make two of the deck's colours), 3.7 (fixing's tempo), 3.6
-(the close pairs). The Sealed screen offers the best pair's **Blue/Black / + splash / greedy**, lists
-every pair within 1.5 points (rating a card · spells at 1–3) to add its builds, and each says
-"castable on time X% (Blue/Black Y%) · N spells at 1–3 mana · cycles in turns 1–4 in Z% of games".
+**Done** (2026-10-27): every requirement met. The Sealed screen offers the best pair's builds, the 4
+closest pairs (rating a card · spells at 1–3) to add theirs, castability, the early curve and
+fixing's tempo beside each, and a console command that compares them all by AI-vs-AI sims.
 
-**Next:** LIM-3.4 — compare a pool's suggestions by AI-vs-AI sims without exporting each. Then the
-last requirement (LIM-1.8's `--builds` on the suggestions) is met.
-
-Traps: `Fixes` is what a card MAKES; `FetchesABasic` finds a basic (a source of a colour only with a
-basic of it in the deck — Shayne: two landcyclers + a Swamp = 3, + no Swamp = 0). In `Castability`,
-only a LANDCYCLE is tempo (it's discarded); a land-searcher, mana source or surveil spell is a card
-cast on the curve, measured after the turn as before. Every rule has a test that fails without it
-(revert-checked); `SealedSuggestionTests.CheckRules` is the rule book. Shayne's qualifier pool is
-`MagicCore.Tests/Limited/Pools/Qualifier20261025.txt`. The Sealed screen's right column is full: a
-new row there squeezes the deck list — capture with a deck taken.
+Not run yet: a real `--compare` on Shayne's pool (~80 min — ask him first). Traps for whoever comes
+back: `Fixes` is what a card MAKES, `FetchesABasic` finds a basic (a source of a colour only with a
+basic of it in the deck); in `Castability` only a LANDCYCLE is tempo; `SealedSuggestionTests.CheckRules`
+is the rule book; his qualifier pool is `MagicCore.Tests/Limited/Pools/Qualifier20261025.txt`. The
+Sealed screen's right column is full, and the left column's pair list scrolls: capture with a deck
+taken AND with a pool of many close pairs (seed 2).
 
 ## Log
 
@@ -210,3 +222,5 @@ new row there squeezes the deck list — capture with a deck taken.
   turns 1–4 in 7% (two colours) to 21% (four colours) of games (findings).
 - 2026-10-27: LIM-3.6 — interviewed (twice: on his pool, Orzhov was the FOURTH pair, so "the
   runner-up" became the list of close pairs); built, his pool kept as the test.
+- 2026-10-27: LIM-3.4 interviewed and built; the close pairs capped at 4 (Shayne, after seeded pools
+  listed up to 9). Story done.

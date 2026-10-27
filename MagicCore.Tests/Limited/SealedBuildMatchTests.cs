@@ -52,4 +52,37 @@ public class SealedBuildMatchTests
 		);
 		Assert.That(result.Difference(0, 1).Mean, Is.Zero);
 	}
+
+	// LIM-3.4: a builder's build as a candidate — named by its button, its pool's other playable cards
+	// outside the game, never a basic (they're free).
+	[Test]
+	public void FromSuggestion_IsTheBuild_NamedByItsButton()
+	{
+		var deck = SealedBuilder.Suggestions(Boosters.SealedPool(3), CardRatings.Fra)[0];
+		var build = SealedBuildMatch.FromSuggestion(deck);
+
+		Assert.That(build.Name, Is.EqualTo(deck.Button));
+		Assert.That(build.Main.Select(c => c.Data.Name), Is.EqualTo(deck.Main));
+		Assert.That(
+			build.Sideboard.Select(c => c.Data.Name),
+			Is.EquivalentTo(
+				deck.Sideboard.Where(n =>
+					FraCards.IsImplemented(n) && !SealedBuilder.Basics.Contains(n)
+				)
+			)
+		);
+	}
+
+	// The best's greedy and a close pair's greedy can share a button name; the report needs one each.
+	[Test]
+	public void FromSuggestions_NumbersARepeatedName()
+	{
+		var deck = SealedBuilder.Suggestions(Boosters.SealedPool(3), CardRatings.Fra)[0];
+		var names = SealedBuildMatch.FromSuggestions([deck, deck, deck]).Select(b => b.Name);
+
+		Assert.That(
+			names,
+			Is.EqualTo(new[] { deck.Button, $"{deck.Button} #2", $"{deck.Button} #3" })
+		);
+	}
 }

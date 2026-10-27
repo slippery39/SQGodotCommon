@@ -105,13 +105,13 @@ public sealed class SealedSession
 	public IReadOnlyList<SealedDeck> Suggestions =>
 		_suggestions ??= [
 			.. Best,
-			.. _pairBuilds.Where(p => !Best.Any(b => b.Main.Order().SequenceEqual(p.Main.Order()))),
+			.. _pairBuilds.Where(p => !Best.Any(b => SealedBuilder.SameDeck(b, p))),
 		];
 
 	private IReadOnlyList<SealedDeck> Best =>
 		_best ??= SealedBuilder.Suggestions(Pool, CardRatings.Fra);
 
-	/// <summary>The other pairs within 1.5 points of the best (LIM-3.6, Shayne) — for you to judge.</summary>
+	/// <summary>The other pairs within 1.5 points of the best, the 4 closest (LIM-3.6, 3.4, Shayne) — for you to judge.</summary>
 	public IReadOnlyList<SealedBuilder.PairRating> ClosePairs =>
 		_closePairs ??= SealedBuilder.ClosePairs(Pool, CardRatings.Fra);
 
@@ -134,6 +134,24 @@ public sealed class SealedSession
 			);
 		_pairBuilds = builds;
 		_suggestions = null;
+	}
+
+	/// <summary>
+	/// The console command that compares every build offered for this pool by AI-vs-AI sims (LIM-3.4,
+	/// Shayne), and what it will play: its seed, or <paramref name="poolFile"/> for a pasted pool.
+	/// </summary>
+	public (string Command, string Note) SimCommand(string? poolFile)
+	{
+		var pool =
+			Seed is { } seed ? $"seed:{seed}"
+			: poolFile is not null ? $"\"{poolFile}\""
+			: throw new System.InvalidOperationException("a pasted pool needs its file");
+		var builds = SealedBuilder.AllBuilds(Pool, CardRatings.Fra).Count;
+		const int opponents = SealedBuildMatch.DefaultOpponents;
+		return (
+			$"dotnet run -c Release --project MagicConsole -- --compare={pool}",
+			$"{builds} builds x {opponents} AI opponents, ~{SealedBuildMatch.EstimatedMinutes(builds, opponents):0} min on this machine."
+		);
 	}
 
 	/// <summary>"White/Black 58.4% · 16 at 1–3" — a close pair's rating a card and its early curve.</summary>

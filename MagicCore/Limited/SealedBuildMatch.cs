@@ -41,6 +41,47 @@ public static class SealedBuildMatch
 		);
 	}
 
+	/// <summary>Opponents a comparison plays unless told otherwise: ~7pp is then the smallest difference that shows.</summary>
+	public const int DefaultOpponents = 200;
+
+	/// <summary>One of the builder's builds as a candidate (LIM-3.4): named by its button, the rest of its pool outside the game.</summary>
+	public static Build FromSuggestion(SealedDeck deck) =>
+		new(deck.Button, [.. deck.Main.Select(FraCards.Get)], Outside(deck.Sideboard));
+
+	/// <summary>Builds as candidates, a repeated name numbered — the best's greedy and a close pair's can share one.</summary>
+	public static IReadOnlyList<Build> FromSuggestions(IEnumerable<SealedDeck> decks)
+	{
+		var seen = new Dictionary<string, int>();
+		return
+		[
+			.. decks
+				.Select(FromSuggestion)
+				.Select(b =>
+					(seen[b.Name] = seen.GetValueOrDefault(b.Name) + 1) == 1
+						? b
+						: b with
+						{
+							Name = $"{b.Name} #{seen[b.Name]}",
+						}
+				),
+		];
+	}
+
+	/// <summary>A pool's unplayed cards outside the game, as <see cref="ArenaDeck.ReadPool"/> reads them: playable, and no basics — they're free.</summary>
+	static IReadOnlyList<CardDefinition> Outside(IEnumerable<string> cards) =>
+		[
+			.. cards
+				.Where(n => FraCards.IsImplemented(n) && !SealedBuilder.Basics.Contains(n))
+				.Select(FraCards.Get),
+		];
+
+	/// <summary>Games a minute a core, measured by LIM-1.8 (two builds at 200 in ~15 min on 16 cores) — for an estimate, not a promise.</summary>
+	public const double GamesPerMinutePerCore = 1.7;
+
+	/// <summary>Roughly how long <see cref="Run"/> takes on this machine.</summary>
+	public static double EstimatedMinutes(int builds, int opponents) =>
+		builds * opponents / (GamesPerMinutePerCore * Environment.ProcessorCount);
+
 	/// <summary>Each build against opponents 1..<paramref name="opponents"/>, games in parallel, each search on one thread.</summary>
 	public static Result Run(IReadOnlyList<Build> builds, int opponents, string ai = "beam")
 	{
@@ -68,12 +109,7 @@ public static class SealedBuildMatch
 					rival.Main.Select(FraCards.Get),
 					seed,
 					sideboard1: build.Sideboard,
-					// as the candidate's (ArenaDeck.ReadPool): playable, and no basics — they're free
-					sideboard2: rival
-						.Sideboard.Where(n =>
-							FraCards.IsImplemented(n) && !SealedBuilder.Basics.Contains(n)
-						)
-						.Select(FraCards.Get)
+					sideboard2: Outside(rival.Sideboard)
 				);
 				games[i] = AiMatch.Play(ai, ai, start, build.Name, $"pool {seed}", seed, true, 1)!;
 			}
@@ -126,9 +162,19 @@ public static class SealedBuildMatch
 						+ (unfinished > 0 ? $", {unfinished} UNFINISHED (draws)" : "")
 				);
 			}
+			// many builds (a pool's whole offer, LIM-3.4): each against the FIRST — the best pair's two
+			// colours, the screen's one to beat — not every pair, and never against whichever won most,
+			// which would measure every gap from a lucky draw
+			var each = Builds.Count > 3;
+			if (each)
+				lines.Add(
+					$"  each against {Builds[0].Name} ({Builds.Count - 1} comparisons: at 2 SE, about one in 20 shows a gap by chance)"
+				);
 			for (var x = 0; x < Builds.Count; x++)
 			for (var y = x + 1; y < Builds.Count; y++)
 			{
+				if (each && x != 0)
+					continue;
 				var (mean, se) = Difference(x, y);
 				lines.Add(
 					$"  {Builds[x].Name} − {Builds[y].Name}: {mean * 100:+0.0;-0.0;0.0}pp ± {se * 100:0.0}pp (paired by opponent; within 2 SE, no difference is shown)"

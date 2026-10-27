@@ -46,22 +46,48 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 // --builds=A.txt,B.txt[,…] [--games=N]: candidate sealed builds, each an Arena export (its Sideboard
 // section is the rest of your pool), against the same N AI sealed opponents — the search on both sides
 // (SealedBuildMatch, LIM-1.8). Default 200: the smallest difference that shows is then ~7pp.
-if (args.FirstOrDefault(a => a.StartsWith("--builds=")) is { } buildsArg)
+// --compare=POOL.txt | seed:N: every build the Sealed screen offers for that pool — its suggestions
+// and every close pair's (LIM-3.4) — with any --builds exports beside them (yours, say).
+var compareArg = args.FirstOrDefault(a => a.StartsWith("--compare="))?["--compare=".Length..];
+var buildsArg = args.FirstOrDefault(a => a.StartsWith("--builds="))?["--builds=".Length..];
+if (compareArg is not null || buildsArg is not null)
 {
 	try
 	{
-		var builds = buildsArg["--builds=".Length..]
-			.Split(',')
-			.Select(path =>
-				MagicCore.Limited.SealedBuildMatch.FromExport(
-					Path.GetFileNameWithoutExtension(path),
-					File.ReadAllText(path)
+		var pool = compareArg switch
+		{
+			null => null,
+			_ when compareArg.StartsWith("seed:") => int.TryParse(compareArg[5..], out var poolSeed)
+				? MagicCore.Limited.Boosters.SealedPool(poolSeed)
+				: throw new ArgumentException($"--compare={compareArg}: the seed isn't a number"),
+			_ => MagicCore.Sets.Fra.ArenaDeck.ReadPool(File.ReadAllText(compareArg)).Pool,
+		};
+		if (pool is { Count: 0 })
+			throw new ArgumentException($"{compareArg}: no FRA cards in it");
+		var builds = (
+			pool is null
+				? []
+				: MagicCore.Limited.SealedBuildMatch.FromSuggestions(
+					MagicCore.Limited.SealedBuilder.AllBuilds(
+						pool,
+						MagicCore.Limited.CardRatings.Fra
+					)
+				)
+		)
+			.Concat(
+				(buildsArg?.Split(',') ?? []).Select(path =>
+					MagicCore.Limited.SealedBuildMatch.FromExport(
+						Path.GetFileNameWithoutExtension(path),
+						File.ReadAllText(path)
+					)
 				)
 			)
 			.ToList();
+		var games = Arg("games") ?? MagicCore.Limited.SealedBuildMatch.DefaultOpponents;
 		Console.WriteLine(
-			MagicCore.Limited.SealedBuildMatch.Run(builds, Arg("games") ?? 200).Report()
+			$"{builds.Count} builds ({string.Join(", ", builds.Select(b => b.Name))}) x {games} opponents: ~{MagicCore.Limited.SealedBuildMatch.EstimatedMinutes(builds.Count, games):0} min"
 		);
+		Console.WriteLine(MagicCore.Limited.SealedBuildMatch.Run(builds, games).Report());
 	}
 	catch (Exception e) when (e is IOException or ArgumentException)
 	{

@@ -250,4 +250,27 @@ public class SealedSessionTests
 		Assert.That(s.SuggestedIndex, Is.Null, "its build is gone — the deck stays");
 		Assert.That(s.Count, Is.EqualTo(SealedBuilder.DeckSize));
 	}
+
+	// LIM-3.4 (Shayne): the Sealed screen gives the console command that compares everything it offers.
+	[Test]
+	public void TheSimCommand_NamesThePool_AndHowManyBuildsItPlays()
+	{
+		var seeded = new SealedSession(3);
+		var (command, note) = seeded.SimCommand(null);
+		Assert.That(command, Does.EndWith("--compare=seed:3"));
+		Assert.That(
+			note,
+			Does.StartWith($"{SealedBuilder.AllBuilds(seeded.Pool, CardRatings.Fra).Count} builds")
+		);
+
+		var pasted = new SealedSession(seeded.Pool);
+		Assert.That(
+			pasted.SimCommand("pools/mine.txt").Command,
+			Does.EndWith("--compare=\"pools/mine.txt\"")
+		);
+		Assert.Throws<System.InvalidOperationException>(
+			() => pasted.SimCommand(null),
+			"a pasted pool needs its file"
+		);
+	}
 }

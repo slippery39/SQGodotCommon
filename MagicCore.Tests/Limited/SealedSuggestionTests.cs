@@ -539,6 +539,7 @@ public class SealedSuggestionTests
 			close.All(p => p.Rating >= best.Rating - SealedBuilder.ClosePairPoints - 1e-9),
 			"only close pairs"
 		);
+		Assert.That(close, Has.Count.AtMost(SealedBuilder.MaxClosePairs), "the closest few");
 
 		var builds = SealedBuilder.ForPair(pool, CardRatings.Fra, orzhov.Pair);
 		Assert.That(
@@ -553,5 +554,39 @@ public class SealedSuggestionTests
 				new[] { ManaColor.White, ManaColor.Black, ManaColor.Blue, ManaColor.Green }
 			)
 		);
+	}
+
+	// LIM-3.4 (Shayne): the comparison plays everything the Sealed screen offers — the suggestions, then
+	// every close pair's builds — each 40 once. On his pool.
+	[Test]
+	public void AllBuilds_AreTheSuggestions_ThenEveryClosePairs_EachDeckOnce()
+	{
+		var pool = Qualifier();
+		var all = SealedBuilder.AllBuilds(pool, CardRatings.Fra);
+		var suggestions = SealedBuilder.Suggestions(pool, CardRatings.Fra);
+
+		Assert.That(
+			all.Take(suggestions.Count)
+				.Zip(suggestions)
+				.All(x => SealedBuilder.SameDeck(x.First, x.Second))
+		);
+		foreach (var close in SealedBuilder.ClosePairs(pool, CardRatings.Fra))
+		foreach (var d in SealedBuilder.ForPair(pool, CardRatings.Fra, close.Pair))
+			Assert.That(all.Count(x => SealedBuilder.SameDeck(x, d)), Is.EqualTo(1), d.Button);
+		Assert.That(all.Select(d => d.Button), Is.Unique, "a name each, for the report");
+
+		// a pool where a close pair's build IS one of the suggestions (seed 3: the best's greedy): once
+		var seeded = Pool(3);
+		var offered = SealedBuilder
+			.Suggestions(seeded, CardRatings.Fra)
+			.Concat(
+				SealedBuilder
+					.ClosePairs(seeded, CardRatings.Fra)
+					.SelectMany(c => SealedBuilder.ForPair(seeded, CardRatings.Fra, c.Pair))
+			)
+			.ToList();
+		var once = SealedBuilder.AllBuilds(seeded, CardRatings.Fra);
+		Assert.That(once, Has.Count.LessThan(offered.Count), "a duplicate to drop");
+		Assert.That(offered.All(d => once.Count(x => SealedBuilder.SameDeck(x, d)) == 1));
 	}
 }

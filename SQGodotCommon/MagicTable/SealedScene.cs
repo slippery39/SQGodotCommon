@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using MagicCore.Cards;
 using MagicCore.Sets.Fra;
@@ -32,6 +33,11 @@ public partial class SealedScene : Control
 
 	/// <summary>The event in progress — kept when the table returns here, replaced by New pool.</summary>
 	private static SealedSession? _session;
+
+	/// <summary>Where a pasted pool was saved for the console's <c>--compare</c> (LIM-3.4); null for a seed's pool.</summary>
+	private static string? _poolFile;
+
+	private readonly Label _simNote = Text("", 16);
 
 	private string _filter = "All";
 	private readonly List<Button> _filterButtons = new();
@@ -88,7 +94,10 @@ public partial class SealedScene : Control
 				? ArenaDeck.ReadPool(System.IO.File.ReadAllText(file))
 				: null;
 			if (read is { Pool.Count: > 0 })
+			{
 				_session = new SealedSession(read.Pool, read.LeftOut);
+				_poolFile = Path.GetFullPath(file);
+			}
 			else
 				GD.PushError(
 					$"--pool={file}: no such file, or no FRA cards in it — a seed's pool instead"
@@ -165,12 +174,27 @@ public partial class SealedScene : Control
 		AddChild(dialog);
 		left.AddChild(Choice("Paste Arena pool", () => dialog.PopupCentered()));
 
+		// every build offered here, compared by AI-vs-AI sims in the console (LIM-3.4) — hours, so not here
+		left.AddChild(Choice("Copy sim command", CopySimCommand));
+		_simNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		_simNote.CustomMinimumSize = new Vector2(1, 0);
+		_simNote.Visible = false;
+		left.AddChild(_simNote);
+
 		// every other pair within 1.5 points of the best, for Shayne to judge (LIM-3.6); a click adds
-		// its builds to the suggestions. Here, not under them: the deck list needs that column's height
+		// its builds to the suggestions. Here, not under them: the deck list needs that column's height.
+		// It scrolls: a taller column pushes Start off the screen (nine pairs did, before the cap of 4)
 		left.AddChild(_pairTitle);
 		_pairRow.AddThemeConstantOverride("h_separation", 6);
 		_pairRow.AddThemeConstantOverride("v_separation", 6);
-		left.AddChild(_pairRow);
+		_pairRow.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		var pairs = new ScrollContainer
+		{
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+		};
+		pairs.AddChild(_pairRow);
+		left.AddChild(pairs);
 		return left;
 	}
 
@@ -184,8 +208,40 @@ public partial class SealedScene : Control
 			_leftOut.Visible = true;
 			return;
 		}
+		// saved for the console's --compare, beside game_records/ (untracked) — before the session
+		// changes, so the file named is always this pool's
+		string? file = null;
+		try
+		{
+			var dir = Path.GetFullPath(ProjectSettings.GlobalizePath("res://../sealed_pools"));
+			Directory.CreateDirectory(dir);
+			file = Path.Combine(dir, $"{System.DateTime.Now:yyyy-MM-dd_HHmmss}.txt");
+			File.WriteAllText(file, _paste.Text);
+		}
+		catch (IOException e)
+		{
+			GD.PushError($"sealed_pools/: {e.Message}");
+			file = null;
+		}
 		_session = new SealedSession(read.Pool, read.LeftOut);
+		_poolFile = file;
+		_simNote.Visible = false;
 		Redraw();
+	}
+
+	/// <summary>The console command that compares every build offered for this pool, onto the clipboard.</summary>
+	private void CopySimCommand()
+	{
+		if (S.Seed is null && _poolFile is null)
+			_simNote.Text =
+				"This pasted pool couldn't be saved to sealed_pools/ — no command to copy.";
+		else
+		{
+			var (command, note) = S.SimCommand(_poolFile);
+			DisplayServer.ClipboardSet(command);
+			_simNote.Text = $"Copied — run it from the solution root. {note}";
+		}
+		_simNote.Visible = true;
 	}
 
 	private Control PoolColumn()
