@@ -98,16 +98,7 @@ public class CastabilityTests
 	public void ALandcycler_FindsAColour_OnlyIfTheDeckHasABasicOfIt()
 	{
 		// Shayne: two landcyclers and a Swamp are 3 black sources; two and no Swamp are 0
-		var cyclers = Fra.Where(c =>
-				SealedBuilder.FetchesABasic(c.Name)
-				&& FraCards
-					.Get(c.Name)
-					.Components.OfType<ActivatedAbilityComponent>()
-					.Any(a => a.From == ZoneType.Hand)
-			)
-			.Select(c => c.Name)
-			.Take(2)
-			.ToList();
+		var cyclers = Landcyclers().Take(2).ToList();
 		Assert.That(cyclers, Has.Count.EqualTo(2), "two landcyclers");
 		var black = Spells(B, 1);
 		var rest = Spells(W, 20 - cyclers.Count + 2);
@@ -129,6 +120,69 @@ public class CastabilityTests
 
 		Assert.That(OnTime(0, withCyclers: true), Is.Zero, "no Swamp: nothing makes black");
 		Assert.That(OnTime(1, withCyclers: true), Is.GreaterThan(OnTime(1, withCyclers: false)));
+	}
+
+	static List<string> Landcyclers() =>
+		[
+			.. Fra.Where(c =>
+					SealedBuilder.FetchesABasic(c.Name)
+					&& FraCards
+						.Get(c.Name)
+						.Components.OfType<ActivatedAbilityComponent>()
+						.Any(a =>
+							a.From == ZoneType.Hand && a.Effects.OfType<SearchLibrary>().Any()
+						)
+				)
+				.Select(c => c.Name)
+				.Distinct()
+				.Order(StringComparer.Ordinal),
+		];
+
+	// White 2-drops and black 3-drops with one Swamp; the landcyclers, or white cards in their place.
+	static SealedDeck Fixing(bool withCyclers, bool splashBlack)
+	{
+		var cyclers = Landcyclers().Take(4).ToList();
+		Assert.That(cyclers, Has.Count.EqualTo(4), "four landcyclers");
+		var white = Spells(W, 60).Where(n => Cost(n).ManaValue == 2).ToList();
+		var black = Spells(B, 60).Where(n => Cost(n).ManaValue == 3).Take(4).ToList();
+		return Deck(
+			[
+				.. black,
+				.. withCyclers ? cyclers : white.Skip(15).Take(4),
+				.. white.Take(15),
+				.. Enumerable.Repeat(Basic(B), 1),
+				.. Enumerable.Repeat(Basic(W), 16),
+			],
+			[W, B],
+			splash: splashBlack ? [B] : null
+		);
+	}
+
+	static ManaCost Cost(string name) => SealedBuilder.FrontCost(FraCards.Get(name).Data);
+
+	[Test]
+	public void ALandcycle_SpendsTheTurnsMana_BeforeItIsMeasured()
+	{
+		// Shayne's qualifier: he cycled for black on turn 2, so the 2/1 never came down to block
+		static Castability.Result Measure(bool withCyclers) =>
+			Castability.Measure(
+				Fixing(withCyclers, splashBlack: false),
+				only: [.. Spells(W, 60).Where(n => Cost(n).ManaValue == 2)]
+			);
+
+		Assert.That(Measure(true).OnTime, Is.LessThan(Measure(false).OnTime), "the 2-drops");
+		Assert.That(Measure(true).CyclesEarly, Is.GreaterThan(0.2));
+		Assert.That(Measure(false).CyclesEarly, Is.Zero);
+	}
+
+	[Test]
+	public void ALandcycle_ForAColour_WaitsUntilACardNeedsIt()
+	{
+		// patient (Shayne): a black card due on turn 3 is fixed for on turn 2; a splash, due on 6, on 5
+		double CyclesEarly(bool splash) =>
+			Castability.Measure(Fixing(withCyclers: true, splashBlack: splash)).CyclesEarly;
+
+		Assert.That(CyclesEarly(splash: true), Is.LessThan(CyclesEarly(splash: false) / 2));
 	}
 
 	[Test]

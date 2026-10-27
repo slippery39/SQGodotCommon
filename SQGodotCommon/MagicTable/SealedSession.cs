@@ -18,7 +18,7 @@ public sealed class SealedSession
 	private readonly List<string> _deck = new();
 	private readonly int[] _basics = new int[5];
 	private IReadOnlyList<SealedDeck>? _suggestions;
-	private double[]? _onTime;
+	private Castability.Result[]? _measured;
 
 	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool.</summary>
 	public SealedSession(int seed)
@@ -106,16 +106,28 @@ public sealed class SealedSession
 	public int? SuggestedIndex { get; private set; }
 
 	/// <summary>
-	/// How often suggestion <paramref name="which"/>'s spells are castable on time, by simulated draws
-	/// (LIM-3.3 — shown, never used to choose). Measured once for all of them, ~0.1 s each.
+	/// How often suggestion <paramref name="which"/>'s spells are castable on time, and how often it
+	/// landcycles early, by simulated draws (LIM-3.3, LIM-3.7 — shown, never used to choose). Measured
+	/// once for all of them, ~0.1 s each.
 	/// </summary>
-	public double OnTime(int which) =>
-		(_onTime ??= [.. Suggestions.Select(d => Castability.OnTime(d))])[which];
+	public Castability.Result Measured(int which) =>
+		(_measured ??= [.. Suggestions.Select(d => Castability.Measure(d))])[which];
 
-	/// <summary>"castable on time 79% (two colours 85%)" — the two-colour build is the one to beat.</summary>
+	/// <summary>Below this the text leaves the cycles out — it would read "0% of games".</summary>
+	public const double CyclesShownFrom = 0.005;
+
+	/// <summary>
+	/// "castable on time 79% (two colours 85%) · cycles in turns 1–4 in 23% of games" — the two-colour
+	/// build is the one to beat; the cycles only when any.
+	/// </summary>
 	public string OnTimeText(int which) =>
-		$"castable on time {OnTime(which):P0}"
-		+ (which == 0 ? "" : $" (two colours {OnTime(0):P0})");
+		$"castable on time {Measured(which).OnTime:P0}"
+		+ (which == 0 ? "" : $" (two colours {Measured(0).OnTime:P0})")
+		+ (
+			Measured(which).CyclesEarly is var c && c >= CyclesShownFrom
+				? $" · cycles in turns 1–{Castability.EarlyTurns} in {c:P0} of games"
+				: ""
+		);
 
 	/// <summary>Replaces the deck with one of <see cref="Suggestions"/> — the builder the opponents use too.</summary>
 	public SealedDeck Suggest(int which = 0)

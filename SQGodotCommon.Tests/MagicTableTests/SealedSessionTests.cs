@@ -98,14 +98,21 @@ public class SealedSessionTests
 			Assert.That(s.Suggested, Is.EqualTo(built.Label));
 			Assert.That(s.SuggestedIndex, Is.EqualTo(i));
 			Assert.That(
-				s.OnTime(i),
-				Is.EqualTo(Castability.OnTime(built)),
+				s.Measured(i),
+				Is.EqualTo(Castability.Measure(built)),
 				"the simulated draws, once"
 			);
 			// beside the two-colour build's — except on the two-colour build itself
 			Assert.That(
 				s.OnTimeText(i),
 				i == 0 ? Does.Not.Contain("two colours") : Does.Contain("two colours")
+			);
+			// fixing's tempo, from the same games (LIM-3.7) — shown only when it ever happens
+			Assert.That(
+				s.OnTimeText(i),
+				s.Measured(i).CyclesEarly >= SealedSession.CyclesShownFrom
+					? Does.Contain($"in {s.Measured(i).CyclesEarly:P0} of games")
+					: Does.Not.Contain("cycles")
 			);
 			Assert.That(s.Ready);
 		}

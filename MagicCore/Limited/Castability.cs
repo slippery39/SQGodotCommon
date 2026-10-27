@@ -12,8 +12,10 @@ namespace MagicCore.Limited;
 /// engine: shuffle; London mulligan (keep 2–5 lands, as GreedyAi); on the play or the draw, half each;
 /// a land a turn, the one that adds the colour least covered; lands that enter tapped (a dual "unless
 /// two or more other lands" untapped from the third); a land that chooses its colour picks the one
-/// least covered; a landcycler or land-searcher fetches the basic least covered once it can pay for
-/// it; mana creatures, rocks and Heartwood makers cast once payable, a source from the next turn; a
+/// least covered; a landcycler cycles patiently (LIM-3.7, Shayne) — out of lands, or for a colour a card
+/// in hand needs by next turn — with mana spent BEFORE the turn is measured, its tempo counted as
+/// <see cref="Result.CyclesEarly"/>; a land-searcher, cast when out of lands, fetches the basic least
+/// covered; mana creatures, rocks and Heartwood makers cast once payable, a source from the next turn; a
 /// surveil spell, cast once payable, bins what isn't needed (lands once six are in play and hand).
 /// ponytail: no spell but those is ever cast, so mana is never spent on the curve itself — this
 /// measures having the mana, as Karsten's tables do, not using it.
@@ -31,26 +33,56 @@ public static class Castability
 		int games = 1000,
 		int seed = 1,
 		IReadOnlyCollection<string>? only = null
+	) => Measure(deck, games, seed, only).OnTime;
+
+	/// <summary>The last turn a landcycle counts as fixing's tempo — "cycles in turns 1–4" (Shayne, LIM-3.7).</summary>
+	public const int EarlyTurns = 4;
+
+	/// <param name="OnTime">The share of the spells castable on time.</param>
+	/// <param name="CyclesEarly">The share of games with a landcycle in turns 1–<see cref="EarlyTurns"/> — mana not spent on a play.</param>
+	public sealed record Result(double OnTime, double CyclesEarly);
+
+	/// <summary><see cref="OnTime"/> and how often the deck spends an early turn's mana landcycling, from the same games.</summary>
+	public static Result Measure(
+		SealedDeck deck,
+		int games = 1000,
+		int seed = 1,
+		IReadOnlyCollection<string>? only = null
 	)
 	{
 		var cards = deck.Main.Select(Card.Of).ToArray();
+		var due = cards
+			.Where(c => !c.Land)
+			.DistinctBy(c => c.Name)
+			.ToDictionary(
+				c => c.Name,
+				c => c.Needs(deck) ? Math.Max(c.Value, SplashTurn) : Math.Max(1, c.Value)
+			);
 		var spells = cards.Where(c => !c.Land && (only is null || only.Contains(c.Name))).ToArray();
-		if (spells.Length == 0)
-			return 1;
-		var due = spells
-			.Select(c => c.Needs(deck) ? Math.Max(c.Value, SplashTurn) : Math.Max(1, c.Value))
-			.ToArray();
-		var last = due.Max();
+		var last = Math.Max(EarlyTurns, spells.Select(c => due[c.Name]).DefaultIfEmpty(0).Max());
 		var rng = new Random(seed);
 		long onTime = 0;
+		var cyclesEarly = 0;
 		for (var g = 0; g < games; g++)
 		{
-			var mana = Play(cards, deck.Colors, last, onThePlay: g % 2 == 0, rng);
-			for (var i = 0; i < spells.Length; i++)
-				if (Pays(mana[due[i]], spells[i].Cost))
+			var (mana, firstCycle) = Play(
+				cards,
+				deck.Colors,
+				due,
+				last,
+				onThePlay: g % 2 == 0,
+				rng
+			);
+			if (firstCycle <= EarlyTurns)
+				cyclesEarly++;
+			foreach (var spell in spells)
+				if (Pays(mana[due[spell.Name]], spell.Cost))
 					onTime++;
 		}
-		return (double)onTime / (games * spells.Length);
+		return new(
+			spells.Length == 0 ? 1 : (double)onTime / (games * spells.Length),
+			(double)cyclesEarly / games
+		);
 	}
 
 	/// <summary>One card as the simulation reads it — from its script and, for when a land enters untapped, its printed text.</summary>
@@ -118,10 +150,14 @@ public static class Castability
 			);
 	}
 
-	/// <summary>One game: the mana sources usable on each turn 0..<paramref name="last"/>, each a set of colours.</summary>
-	static List<ManaColor[]>[] Play(
+	/// <summary>
+	/// One game: the mana sources usable on each turn 0..<paramref name="last"/>, each a set of colours,
+	/// and the first turn it landcycled (int.MaxValue if never).
+	/// </summary>
+	static (List<ManaColor[]>[] Usable, int FirstCycle) Play(
 		Card[] deck,
 		IReadOnlyList<ManaColor> colors,
+		IReadOnlyDictionary<string, int> due,
 		int last,
 		bool onThePlay,
 		Random rng
@@ -134,10 +170,31 @@ public static class Castability
 		var lands = 0;
 		var usable = new List<ManaColor[]>[last + 1];
 		usable[0] = [];
+		var firstCycle = int.MaxValue;
 		for (var turn = 1; turn <= last; turn++)
 		{
 			if (turn > 1 || !onThePlay)
 				Draw(library, hand);
+			// this turn's mana: a landcycle spends it BEFORE the measure — tempo not spent on a play
+			// (Shayne, LIM-3.7: cycling for black on turn 2 instead of casting a blocker)
+			var mana = inPlay.ToList();
+			bool Cycle(IEnumerable<ManaColor> want)
+			{
+				var cycler = hand.FirstOrDefault(c =>
+					c.Fetches && c.CycleCost is not null && Pays(mana, c.CycleCost)
+				);
+				if (cycler is null || Fetch(library, inPlay, want) is not { } basic)
+					return false;
+				Spend(mana, cycler.CycleCost!);
+				hand.Remove(cycler);
+				hand.Add(basic);
+				firstCycle = Math.Min(firstCycle, turn);
+				return true;
+			}
+			// patiently (Shayne): out of lands, before the land drop, so the basic is played this turn
+			if (!hand.Any(c => c.Land))
+				Cycle(colors);
+
 			// the land a turn: the one that adds a colour least covered; untapped first. A land that
 			// enters tapped is a source from the next turn, as is everything cast below
 			var land = hand.Where(c => c.Land)
@@ -152,30 +209,57 @@ public static class Castability
 				if (Tapped(land, lands))
 					tappedLand = source;
 				else
+				{
 					inPlay.Add(source);
+					mana.Add(source);
+				}
 				lands++;
 			}
-			usable[turn] = [.. inPlay];
 			if (tappedLand is not null)
 				inPlay.Add(tappedLand);
 
-			// after the measure: what the deck casts for its mana — a fetcher when it has no land to
-			// play next, a mana source, a surveil spell — each once it can pay
-			var mana = usable[turn].ToList();
+			// patiently (Shayne): for a colour nothing in play or in hand makes, once a card in hand
+			// that needs it is due next turn — the latest cycle that still casts it on time
+			var have = inPlay
+				.SelectMany(s => s)
+				.Concat(hand.Where(c => c.Land).SelectMany(c => c.ChoosesColor ? colors : c.Makes))
+				.ToHashSet();
+			// the colours those cards lack — not a landcycler's own, which it fixes by being cycled
+			var lacking = hand.Where(c =>
+					!c.Land
+					&& c.CycleCost is null
+					&& due[c.Name] <= turn + 1
+					&& !SealedBuilder.Castable(c.Cost, have)
+				)
+				.SelectMany(c =>
+					colors.Where(x =>
+						!have.Contains(x)
+						&& c.Cost.Symbols.Any(s =>
+							s.Kind is SymbolKind.Colored or SymbolKind.Hybrid
+							&& (s.Color == x || s.Kind == SymbolKind.Hybrid && s.Color2 == x)
+						)
+					)
+				)
+				.Distinct()
+				.ToList();
+			if (lacking.Count > 0)
+				Cycle(lacking);
+			usable[turn] = [.. mana];
+
+			// after the measure: what the deck casts for its mana — a land-searcher when it has no
+			// land to play next, a mana source, a surveil spell — each once it can pay
 			foreach (var card in hand.Where(c => !c.Land).ToList())
 			{
-				var fetch = card.Fetches && !hand.Any(c => c.Land);
+				var fetch = card.Fetches && card.CycleCost is null && !hand.Any(c => c.Land);
 				if (!fetch && card.Makes.Count == 0 && card.Surveil == 0)
 					continue;
-				var cycles = fetch && card.CycleCost is not null; // discarded, not cast
-				var cost = cycles ? card.CycleCost! : card.Cost;
-				if (!Pays(mana, cost))
+				if (!Pays(mana, card.Cost))
 					continue;
-				Spend(mana, cost);
+				Spend(mana, card.Cost);
 				hand.Remove(card);
 				if (fetch && Fetch(library, inPlay, colors) is { } basic)
 					hand.Add(basic);
-				if (card.Makes.Count > 0 && !cycles)
+				if (card.Makes.Count > 0)
 					inPlay.Add([.. card.Makes]);
 				// surveil N: of the top N, what isn't wanted goes to the graveyard — lands until six
 				// are in play and hand, spells after
@@ -185,7 +269,7 @@ public static class Castability
 				library.InsertRange(0, top.Where(c => c.Land == wantLands));
 			}
 		}
-		return usable;
+		return (usable, firstCycle);
 	}
 
 	static void Shuffle(List<Card> cards, Random rng)
@@ -251,12 +335,8 @@ public static class Castability
 		IReadOnlyList<ManaColor> colors
 	) => land.ChoosesColor ? [LeastCovered(inPlay, colors)] : [.. land.Makes];
 
-	/// <summary>A basic of the colour least covered, from the library — none if the deck has none of it left.</summary>
-	static Card? Fetch(
-		List<Card> library,
-		List<ManaColor[]> inPlay,
-		IReadOnlyList<ManaColor> colors
-	)
+	/// <summary>A basic of the wanted colour least covered, from the library — none if the deck has none of it left.</summary>
+	static Card? Fetch(List<Card> library, List<ManaColor[]> inPlay, IEnumerable<ManaColor> colors)
 	{
 		var basic = colors
 			.OrderBy(c => inPlay.Count(s => s.Contains(c)))

@@ -91,6 +91,13 @@ as the optimal deck.
   beside the two-colour build's (the buttons' tooltips, the "Started from" line); **on time = main
   colours on curve, a splash card by turn 6**.
 
+- 2026-10-27, Shayne (LIM-3.7, interview): **a landcycle's mana leaves the turn it is measured on**,
+  and the simulated player cycles **patiently** — when it has no land in hand (before the land drop,
+  so the basic is played that turn), or for a colour a card in hand needs that nothing in play or in
+  hand makes, once that card is due next turn — the latest cycle that still casts it on time. Shown
+  beside castability as **the share of games with a landcycle in turns 1–4** ("cycles in turns 1–4
+  in 23% of games").
+
 ## Tasks
 
 - [x] LIM-3.1 Interview the open questions (2026-10-24, two rounds — Decisions)
@@ -129,34 +136,39 @@ as the optimal deck.
       Blue/Black rated 59.7% a card, White/Black 58.4% but with 16 spells at 1–3 mana against 13 —
       the builder only ever builds on the single best pair, so Orzhov + Blue + Green was never
       offered. Within ~1 point, offer the second pair too, its castability and curve shown
-- [ ] LIM-3.7 Price the TEMPO fixing costs (Shayne, the same qualifier): a landcycler made black
+- [x] LIM-3.7 Price the TEMPO fixing costs (Shayne, the same qualifier): a landcycler made black
       available but spent turn 2, so the 2/1 menace never came down to block — ~6 life and an
-      unopposed three-drop. `Castability` cycles with the turn's leftover mana AFTER measuring it, as
-      if the 2-drop were cast too, so it flatters cycler-fixed builds. Measure the early turns a
-      deck spends fixing instead of playing, and show it beside castability
+      unopposed three-drop. `Castability` used to cycle with the turn's leftover mana AFTER measuring
+      it, as if the 2-drop were cast too. Now `Castability.Measure` cycles patiently (out of lands,
+      before the land drop; for a colour a card needs by next turn) BEFORE the measure, and counts
+      `CyclesEarly`, the games with a landcycle in turns 1–4; `SealedSession.Measured`, and the
+      Sealed screen adds "· cycles in turns 1–4 in N% of games". `CastabilityTests`: the cycle spends
+      the 2-drops' turn (his case), and a splash colour waits until it's needed. Both revert-checked
+      (measure before the cycle; cycle eagerly). Captured on seed 3's Greedy: 55% (two colours 83%),
+      cycles early in 26% of games. Review fixes: it fetches the colour the due card lacks (not the
+      first missing one), and a landcycler's own colour never sets off a cycle (25% after)
 - [ ] LIM-3.4 Compare a pool's suggestions by sims without exporting each from Arena — LIM-1.8's
       `--builds` reads Arena exports; a pool (or a seed) in, its suggestions out
 
 ## Next
 
 Built: LIM-3.2 (suggestions), 3.3 (castability, shown not gated), 3.5 (greedy up to four colours,
-every fixer counted, fixing lands that make two of the deck's colours). The Sealed screen offers
-**Two colours / Splash / Greedy** with "castable on time X% (two colours Y%)". Measured
-(`docs/findings/limited.md`): two colours 82%, splash 67%, greedy 61% / 51% (three / four colours).
+every fixer counted, fixing lands that make two of the deck's colours), 3.7 (fixing's tempo). The
+Sealed screen offers **Two colours / Splash / Greedy** with "castable on time X% (two colours Y%) ·
+cycles in turns 1–4 in Z% of games". Measured (`docs/findings/limited.md`, 10-27): two colours 81%,
+splash 72%, greedy 65% / 52% (three / four colours). A four-colour build cycles early in 21% of games.
 
 **Next, in order:**
-1. **LIM-3.7 — price fixing's tempo** (small). In `Castability.Play`, a landcycler cycles AFTER the
-   turn is measured, with that turn's mana — as if the 2-drop were cast too. Cycle before measuring
-   (the mana spent leaves the turn's usable sources) and count the early turns spent fixing; show it
-   beside castability. Shayne's qualifier loss is the case: cycled for black on turn 2, no blocker.
-2. **LIM-3.6 — offer the runner-up pair when close** (~1 point of rating a card): his pool's Orzhov
+1. **LIM-3.6 — offer the runner-up pair when close** (~1 point of rating a card): his pool's Orzhov
    (58.4%, 16 cheap spells) lost to Blue/Black (59.7%, 13) and was never suggested.
-3. LIM-3.4 — compare a pool's suggestions by AI-vs-AI sims without exporting each.
+2. LIM-3.4 — compare a pool's suggestions by AI-vs-AI sims without exporting each.
 
 Traps: `Fixes` is what a card MAKES; `FetchesABasic` finds a basic (a source of a colour only with a
-basic of it in the deck — Shayne: two landcyclers + a Swamp = 3, + no Swamp = 0). Every rule has a
-test that fails without it (revert-checked); `SealedSuggestionTests.CheckRules` is the rule book.
-Shayne's qualifier pool is in this session's scratchpad only — ask him for the export if needed.
+basic of it in the deck — Shayne: two landcyclers + a Swamp = 3, + no Swamp = 0). In `Castability`,
+only a LANDCYCLE is tempo (it's discarded); a land-searcher, mana source or surveil spell is a card
+cast on the curve, measured after the turn as before. Every rule has a test that fails without it
+(revert-checked); `SealedSuggestionTests.CheckRules` is the rule book. Shayne's qualifier pool is in
+an earlier session's scratchpad only, so ask him for the export if it's needed.
 
 ## Log
 
@@ -174,3 +186,6 @@ Shayne's qualifier pool is in this session's scratchpad only — ask him for the
   Blue (Way of the Mind Sculptor) and Green (Kwia Vigorbloom) would have had the better early curve.
   One loss turned on landcycling for black on turn 2 instead of casting a blocker. LIM-3.6 (offer
   the close runner-up pair) and LIM-3.7 (price fixing's tempo) added.
+- 2026-10-27: LIM-3.7 — a landcycle's mana leaves the measured turn, and it cycles patiently
+  (Shayne). On time: two colours 82.2 → 80.6%, four-colour greedy 55.7 → 52.2%; a landcycle in
+  turns 1–4 in 7% (two colours) to 21% (four colours) of games (findings).

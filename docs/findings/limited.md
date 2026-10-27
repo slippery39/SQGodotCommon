@@ -65,3 +65,23 @@ card on curve, a splash card by turn 6 — Shayne) over the suggestions of 60 se
   caught it). After the /pre-commit review: {2/X} paid by its colour or two generic, a Treasure
   spent once (not a lasting source), a surveil only as the card is cast or enters — the means moved
   by 0.2 points at most.
+
+## Fixing's tempo: a landcycle spends the turn it's measured on (2026-10-27, LIM-3.7)
+
+The same 60 seeded pools and 1 000 games a deck. Before: a landcycler cycled only when out of lands,
+AFTER the turn was measured, so its {2} was also counted as casting the 2-drop. After (Shayne): it
+cycles patiently, out of lands or for a colour a card needs by next turn (that card's colour, never
+the landcycler's own), and its mana leaves the measured turn. "Before" is the code as it stood on 10-27, which is higher than the 10-25 table above
+because fixing lands now make two of the deck's colours.
+
+| Suggestion | Pools | Decks with a landcycler | On time, before → after | Games with a landcycle in turns 1–4: mean (max) |
+|---|---|---|---|---|
+| Two colours | 60 | 40 | 82.2% → **80.6%** | 7.0% (18%) |
+| Splash | 22 | 11 | 73.2% → **72.0%** | 5.6% (20%) |
+| Greedy, three colours | 25 | 21 | 67.0% → **64.5%** | 13.7% (28%) |
+| Greedy, four colours | 31 | 28 | 55.7% → **52.2%** | 20.9% (46%) |
+
+- **Fixing's tempo grows with greed:** a four-colour build cycles early in a fifth of its games (one
+  pool in nearly half), and pays 3.5 points of castability for it. A two-colour build cycles early mostly
+  to make a land drop.
+- Seed 3's greedy build (the capture): castable on time 59% → 55%, cycles early in 25% of games.
