@@ -12,7 +12,7 @@ namespace MagicTable;
 /// basics; the suggested decks (the AI's builds of your pool: two colours, a splash, a greedy splash —
 /// LIM-3). Start plays it on the table against the AI's own build of ITS pool, a fresh one each Start.
 /// Your pool is opened from a seed, or pasted from Arena. Every rule is <see cref="SealedSession"/>'s;
-/// this only draws it. Debug arg (<c>-GameArgs</c>): <c>--seed=N</c> opens that pool first.
+/// this only draws it. Debug args (<c>-GameArgs</c>): <c>--seed=N</c> opens that pool first; <c>--pool=FILE</c> an Arena pool export.
 /// </summary>
 public partial class SealedScene : Control
 {
@@ -42,6 +42,8 @@ public partial class SealedScene : Control
 	private readonly Label _title = MtgUiStyles.Title("", 34);
 	private readonly Label _leftOut = Text("", 20);
 	private readonly HFlowContainer _suggestRow = new();
+	private readonly Label _pairTitle = Text("Close pairs — rating a card · spells at 1–3:", 16);
+	private readonly HFlowContainer _pairRow = new();
 	private readonly Label _suggested = Text("", 18);
 	private readonly TextEdit _paste =
 		new()
@@ -75,6 +77,23 @@ public partial class SealedScene : Control
 
 	public override void _Ready()
 	{
+		// --pool=FILE: an Arena pool export, as if pasted (LIM-3.6's captures)
+		if (
+			_session is null
+			&& OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--pool=")) is { } poolArg
+		)
+		{
+			var file = poolArg["--pool=".Length..].Trim('"');
+			var read = System.IO.File.Exists(file)
+				? ArenaDeck.ReadPool(System.IO.File.ReadAllText(file))
+				: null;
+			if (read is { Pool.Count: > 0 })
+				_session = new SealedSession(read.Pool, read.LeftOut);
+			else
+				GD.PushError(
+					$"--pool={file}: no such file, or no FRA cards in it — a seed's pool instead"
+				);
+		}
 		_session ??= new SealedSession(
 			OS.GetCmdlineUserArgs()
 				.FirstOrDefault(a => a.StartsWith("--seed="))
@@ -145,6 +164,13 @@ public partial class SealedScene : Control
 		dialog.Confirmed += UsePastedPool;
 		AddChild(dialog);
 		left.AddChild(Choice("Paste Arena pool", () => dialog.PopupCentered()));
+
+		// every other pair within 1.5 points of the best, for Shayne to judge (LIM-3.6); a click adds
+		// its builds to the suggestions. Here, not under them: the deck list needs that column's height
+		left.AddChild(_pairTitle);
+		_pairRow.AddThemeConstantOverride("h_separation", 6);
+		_pairRow.AddThemeConstantOverride("v_separation", 6);
+		left.AddChild(_pairRow);
 		return left;
 	}
 
@@ -295,11 +321,25 @@ public partial class SealedScene : Control
 		for (var i = 0; i < S.Suggestions.Count; i++)
 		{
 			var which = i;
-			var button = Choice(S.Suggestions[i].Kind, () => Act(() => S.Suggest(which)));
+			var button = Choice(S.Suggestions[i].Button, () => Act(() => S.Suggest(which)));
 			button.TooltipText = S.Suggestions[i].Label + "\n" + S.OnTimeText(i);
 			_suggestRow.AddChild(button);
 		}
 		_suggestRow.AddChild(Choice("Clear", () => Act(S.Clear)));
+		CardViews.Clear(_pairRow);
+		for (var i = 0; i < S.ClosePairs.Count; i++)
+		{
+			var which = i;
+			var button = Choice(
+				SealedSession.PairText(S.ClosePairs[i]),
+				() => Act(() => S.ShowPair(which))
+			);
+			button.CustomMinimumSize = new Vector2(0, 32);
+			button.AddThemeFontSizeOverride("font_size", 16);
+			MtgUiStyles.StyleChoice(button, selected: S.ShownPair == i);
+			_pairRow.AddChild(button);
+		}
+		_pairTitle.Visible = S.ClosePairs.Count > 0;
 		_suggested.Text = S.SuggestedIndex is { } from
 			? $"Started from: {S.Suggestions[from].Label} — as suggested, {S.OnTimeText(from)}"
 			: "";

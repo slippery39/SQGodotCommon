@@ -17,8 +17,13 @@ public sealed class SealedSession
 
 	private readonly List<string> _deck = new();
 	private readonly int[] _basics = new int[5];
+	private IReadOnlyList<SealedDeck>? _best;
 	private IReadOnlyList<SealedDeck>? _suggestions;
-	private Castability.Result[]? _measured;
+	private IReadOnlyList<SealedDeck> _pairBuilds = [];
+	private readonly Dictionary<int, IReadOnlyList<SealedDeck>> _pairCache = new(); // built once a pair: measured once
+	private IReadOnlyList<SealedBuilder.PairRating>? _closePairs;
+	private readonly Dictionary<SealedDeck, Castability.Result> _measured =
+		new(ReferenceEqualityComparer.Instance);
 
 	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool.</summary>
 	public SealedSession(int seed)
@@ -94,10 +99,46 @@ public sealed class SealedSession
 
 	/// <summary>
 	/// The builds suggested from your pool (LIM-3) — two colours first, then a splash and a greedy
-	/// splash when the pool allows; suggestions, never "the optimal deck".
+	/// splash when the pool allows, then the builds of the close pair you showed (<see cref="ShowPair"/>);
+	/// suggestions, never "the optimal deck".
 	/// </summary>
 	public IReadOnlyList<SealedDeck> Suggestions =>
-		_suggestions ??= SealedBuilder.Suggestions(Pool, CardRatings.Fra);
+		_suggestions ??= [
+			.. Best,
+			.. _pairBuilds.Where(p => !Best.Any(b => b.Main.Order().SequenceEqual(p.Main.Order()))),
+		];
+
+	private IReadOnlyList<SealedDeck> Best =>
+		_best ??= SealedBuilder.Suggestions(Pool, CardRatings.Fra);
+
+	/// <summary>The other pairs within 1.5 points of the best (LIM-3.6, Shayne) — for you to judge.</summary>
+	public IReadOnlyList<SealedBuilder.PairRating> ClosePairs =>
+		_closePairs ??= SealedBuilder.ClosePairs(Pool, CardRatings.Fra);
+
+	/// <summary>Which of <see cref="ClosePairs"/> has its builds among the suggestions; null for none.</summary>
+	public int? ShownPair { get; private set; }
+
+	/// <summary>Adds close pair <paramref name="which"/>'s builds to the suggestions, in place of the last one's.</summary>
+	public void ShowPair(int which)
+	{
+		if (which == ShownPair)
+			return;
+		if (SuggestedIndex >= Best.Count)
+			SuggestedIndex = null; // its build is going; the deck stays as it is
+		ShownPair = which;
+		if (!_pairCache.TryGetValue(which, out var builds))
+			_pairCache[which] = builds = SealedBuilder.ForPair(
+				Pool,
+				CardRatings.Fra,
+				ClosePairs[which].Pair
+			);
+		_pairBuilds = builds;
+		_suggestions = null;
+	}
+
+	/// <summary>"White/Black 58.4% · 16 at 1–3" — a close pair's rating a card and its early curve.</summary>
+	public static string PairText(SealedBuilder.PairRating p) =>
+		$"{p.Pair[0]}/{p.Pair[1]} {p.Rating:P1} · {p.Cheap} at 1–3";
 
 	/// <summary>The label of the suggestion the deck started from — kept through your edits; null once cleared.</summary>
 	public string? Suggested => SuggestedIndex is { } i ? Suggestions[i].Label : null;
@@ -110,19 +151,25 @@ public sealed class SealedSession
 	/// landcycles early, by simulated draws (LIM-3.3, LIM-3.7 — shown, never used to choose). Measured
 	/// once for all of them, ~0.1 s each.
 	/// </summary>
-	public Castability.Result Measured(int which) =>
-		(_measured ??= [.. Suggestions.Select(d => Castability.Measure(d))])[which];
+	public Castability.Result Measured(int which)
+	{
+		var deck = Suggestions[which];
+		if (!_measured.TryGetValue(deck, out var result))
+			_measured[deck] = result = Castability.Measure(deck);
+		return result;
+	}
 
 	/// <summary>Below this the text leaves the cycles out — it would read "0% of games".</summary>
 	public const double CyclesShownFrom = 0.005;
 
 	/// <summary>
-	/// "castable on time 79% (two colours 85%) · cycles in turns 1–4 in 23% of games" — the two-colour
-	/// build is the one to beat; the cycles only when any.
+	/// "castable on time 79% (Blue/Black 85%) · 16 spells at 1–3 mana · cycles in turns 1–4 in 23% of
+	/// games" — the best pair's two colours is the one to beat; the cycles only when any.
 	/// </summary>
 	public string OnTimeText(int which) =>
 		$"castable on time {Measured(which).OnTime:P0}"
-		+ (which == 0 ? "" : $" (two colours {Measured(0).OnTime:P0})")
+		+ (which == 0 ? "" : $" ({Suggestions[0].Button} {Measured(0).OnTime:P0})")
+		+ $" · {SealedBuilder.CheapSpells(Suggestions[which].Main)} spells at 1–3 mana"
 		+ (
 			Measured(which).CyclesEarly is var c && c >= CyclesShownFrom
 				? $" · cycles in turns 1–{Castability.EarlyTurns} in {c:P0} of games"

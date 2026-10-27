@@ -97,6 +97,17 @@ as the optimal deck.
   hand makes, once that card is due next turn — the latest cycle that still casts it on time. Shown
   beside castability as **the share of games with a landcycle in turns 1–4** ("cycles in turns 1–4
   in 23% of games").
+- 2026-10-27, Shayne (LIM-3.6, interview): **offer the runner-up pair when its rating is within 1.5
+  points** of the best pair's (mean 17lands rating of each pair's best 23 spells; his qualifier pool,
+  Blue/Black 59.7 against White/Black 58.4, is 1.3 apart and must qualify — the test); the runner-up
+  gets **its two-colour build and its best splash or greedy build** when the mana allows; **every
+  suggestion shows its spells at 1–3 mana** beside castability ("16 spells at 1–3 mana"); **every
+  button names its colours** ("Blue/Black", "White/Black greedy").
+- 2026-10-27, Shayne (LIM-3.6, revised on his pool): six pairs are within 1.5 points there and
+  Orzhov is FOURTH (Blue/Black 59.67%; Blue/Green, White/Blue 58.74%; Blue/Red 58.28%… White/Black
+  58.36%, 16 spells at 1–3 mana against Blue/Black's 13), so "the runner-up pair" would never have
+  offered it. Instead: **a compact list of every pair within 1.5 points, each with its rating and
+  spells at 1–3 mana; clicking one adds its two-colour and greedy builds** — he judges.
 
 ## Tasks
 
@@ -132,10 +143,19 @@ as the optimal deck.
       the card's — revert-checked (a landcycler making any colour, splash cards on curve, {2/X} by
       colour only; the tapped-land test caught a real bug first). Captured on seed 3: "castable on time
       59% (two colours 84%)"
-- [ ] LIM-3.6 Suggest the runner-up PAIR when it is close (Shayne's qualifier pool, 2026-10-25):
-      Blue/Black rated 59.7% a card, White/Black 58.4% but with 16 spells at 1–3 mana against 13 —
-      the builder only ever builds on the single best pair, so Orzhov + Blue + Green was never
-      offered. Within ~1 point, offer the second pair too, its castability and curve shown
+- [x] LIM-3.6 Offer the close PAIRS (Shayne's qualifier pool, 2026-10-25): Blue/Black rated 59.7% a
+      card, White/Black 58.4% with 16 spells at 1–3 mana against 13, and the builder only built the
+      best pair, so Orzhov + Blue + Green was never offered. Built (2026-10-27, Shayne's rules —
+      Decisions): `SealedBuilder.RatePairs`/`ClosePairs` (within `ClosePairPoints`, 1.5), `ForPair`
+      (its two colours and its best splash or greedy), `CheapSpells`, `SealedDeck.Button` (named by
+      colours); `SealedSession.ClosePairs`/`ShowPair`, and every suggestion's text adds "N spells at
+      1–3 mana" beside "(Blue/Black 83%)". The Sealed screen lists the close pairs in its LEFT column
+      (under the suggestions they squeezed the deck list to one row); `--pool=FILE` opens an export.
+      His pool is the test (`Pools/Qualifier20261025.txt`, embedded): Orzhov is listed (58.4%, 16) and
+      its greedy is White/Black + Blue splash + Green — what he said he should have played;
+      revert-checked at 1.0 point. `ShowingAClosePair_…` revert-checked (appended instead of replaced;
+      a stale suggestion index). Captured on his pool: White/Black greedy castable on time 56%
+      (Blue/Black 83%), 14 spells at 1–3 mana, cycles in turns 1–4 in 18% of games
 - [x] LIM-3.7 Price the TEMPO fixing costs (Shayne, the same qualifier): a landcycler made black
       available but spent turn 2, so the 2/1 menace never came down to block — ~6 life and an
       unopposed three-drop. `Castability` used to cycle with the turn's leftover mana AFTER measuring
@@ -153,22 +173,21 @@ as the optimal deck.
 ## Next
 
 Built: LIM-3.2 (suggestions), 3.3 (castability, shown not gated), 3.5 (greedy up to four colours,
-every fixer counted, fixing lands that make two of the deck's colours), 3.7 (fixing's tempo). The
-Sealed screen offers **Two colours / Splash / Greedy** with "castable on time X% (two colours Y%) ·
-cycles in turns 1–4 in Z% of games". Measured (`docs/findings/limited.md`, 10-27): two colours 81%,
-splash 72%, greedy 65% / 52% (three / four colours). A four-colour build cycles early in 21% of games.
+every fixer counted, fixing lands that make two of the deck's colours), 3.7 (fixing's tempo), 3.6
+(the close pairs). The Sealed screen offers the best pair's **Blue/Black / + splash / greedy**, lists
+every pair within 1.5 points (rating a card · spells at 1–3) to add its builds, and each says
+"castable on time X% (Blue/Black Y%) · N spells at 1–3 mana · cycles in turns 1–4 in Z% of games".
 
-**Next, in order:**
-1. **LIM-3.6 — offer the runner-up pair when close** (~1 point of rating a card): his pool's Orzhov
-   (58.4%, 16 cheap spells) lost to Blue/Black (59.7%, 13) and was never suggested.
-2. LIM-3.4 — compare a pool's suggestions by AI-vs-AI sims without exporting each.
+**Next:** LIM-3.4 — compare a pool's suggestions by AI-vs-AI sims without exporting each. Then the
+last requirement (LIM-1.8's `--builds` on the suggestions) is met.
 
 Traps: `Fixes` is what a card MAKES; `FetchesABasic` finds a basic (a source of a colour only with a
 basic of it in the deck — Shayne: two landcyclers + a Swamp = 3, + no Swamp = 0). In `Castability`,
 only a LANDCYCLE is tempo (it's discarded); a land-searcher, mana source or surveil spell is a card
 cast on the curve, measured after the turn as before. Every rule has a test that fails without it
-(revert-checked); `SealedSuggestionTests.CheckRules` is the rule book. Shayne's qualifier pool is in
-an earlier session's scratchpad only, so ask him for the export if it's needed.
+(revert-checked); `SealedSuggestionTests.CheckRules` is the rule book. Shayne's qualifier pool is
+`MagicCore.Tests/Limited/Pools/Qualifier20261025.txt`. The Sealed screen's right column is full: a
+new row there squeezes the deck list — capture with a deck taken.
 
 ## Log
 
@@ -189,3 +208,5 @@ an earlier session's scratchpad only, so ask him for the export if it's needed.
 - 2026-10-27: LIM-3.7 — a landcycle's mana leaves the measured turn, and it cycles patiently
   (Shayne). On time: two colours 82.2 → 80.6%, four-colour greedy 55.7 → 52.2%; a landcycle in
   turns 1–4 in 7% (two colours) to 21% (four colours) of games (findings).
+- 2026-10-27: LIM-3.6 — interviewed (twice: on his pool, Orzhov was the FOURTH pair, so "the
+  runner-up" became the list of close pairs); built, his pool kept as the test.

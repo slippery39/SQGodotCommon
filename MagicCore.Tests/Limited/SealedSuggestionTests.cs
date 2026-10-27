@@ -504,4 +504,54 @@ public class SealedSuggestionTests
 		}
 		return beyond;
 	}
+
+	static IReadOnlyList<string> Qualifier()
+	{
+		using var stream = typeof(SealedSuggestionTests).Assembly.GetManifestResourceStream(
+			"Pools.Qualifier20261025.txt"
+		)!;
+		return ArenaDeck.ReadPool(new StreamReader(stream).ReadToEnd()).Pool;
+	}
+
+	// Shayne's FRA qualifier pool (2026-10-25): he built Blue/Black (59.7% a card, 13 spells at 1–3
+	// mana) and on reflection Orzhov — White/Black, 58.4%, 16 at 1–3, splashing Blue and Green — had the
+	// better early curve. Orzhov is only the FOURTH pair there, so every pair within 1.5 points is offered
+	// for him to judge, with its rating and its early curve (LIM-3.6).
+	[Test]
+	public void HisQualifierPool_OffersOrzhov_AmongTheClosePairs_WithItsEarlyCurve()
+	{
+		var pool = Qualifier();
+		var best = SealedBuilder.RatePairs(pool, CardRatings.Fra)[0];
+		var close = SealedBuilder.ClosePairs(pool, CardRatings.Fra);
+		var orzhov = close.Single(p =>
+			p.Pair.Order().SequenceEqual(new[] { ManaColor.White, ManaColor.Black })
+		);
+
+		Assert.That(best.Pair, Is.EqualTo(SealedBuilder.Build(pool, CardRatings.Fra).Colors));
+		Assert.That(
+			best.Pair,
+			Is.EquivalentTo(new[] { ManaColor.Blue, ManaColor.Black }),
+			"he built Blue/Black"
+		);
+		Assert.That(orzhov.Rating, Is.LessThan(best.Rating), "rated lower");
+		Assert.That(orzhov.Cheap, Is.GreaterThan(best.Cheap), "the better early curve");
+		Assert.That(
+			close.All(p => p.Rating >= best.Rating - SealedBuilder.ClosePairPoints - 1e-9),
+			"only close pairs"
+		);
+
+		var builds = SealedBuilder.ForPair(pool, CardRatings.Fra, orzhov.Pair);
+		Assert.That(
+			builds.Select(b => b.Button),
+			Is.EqualTo(new[] { "White/Black", "White/Black greedy" })
+		);
+		Assert.That(builds[0].Colors, Is.EquivalentTo(orzhov.Pair));
+		// what he said he should have played: Orzhov, splashing Blue, and Green
+		Assert.That(
+			builds[1].Colors,
+			Is.EquivalentTo(
+				new[] { ManaColor.White, ManaColor.Black, ManaColor.Blue, ManaColor.Green }
+			)
+		);
+	}
 }

@@ -20,6 +20,16 @@ public sealed record SealedDeck(
 {
 	public string Label => Detail ?? Kind;
 
+	/// <summary>Its button: its pair, and how far past it — "Blue/Black", "Blue/Black + splash", "White/Black greedy" (Shayne, LIM-3.6).</summary>
+	public string Button =>
+		$"{Colors[0]}/{Colors[1]}"
+		+ Kind switch
+		{
+			SealedBuilder.Splashing => " + splash",
+			SealedBuilder.Greedy => " greedy",
+			_ => "",
+		};
+
 	/// <summary>The colours it only splashes — their cards are on time by turn 6 (Castability).</summary>
 	public IReadOnlyList<ManaColor> Splashes => Splash ?? [];
 }
@@ -87,9 +97,79 @@ public static class SealedBuilder
 	public static IReadOnlyList<SealedDeck> Suggestions(
 		IReadOnlyList<string> pool,
 		IReadOnlyDictionary<string, double> ratings
+	) => Builds(pool, ratings, Build(pool, ratings), Pairs);
+
+	/// <summary>
+	/// A close pair's own builds (LIM-3.6, Shayne): its two colours, and its best splash or greedy
+	/// build on that pair when the mana allows.
+	/// </summary>
+	public static IReadOnlyList<SealedDeck> ForPair(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, double> ratings,
+		IReadOnlyList<ManaColor> pair
 	)
 	{
-		var streamlined = Build(pool, ratings);
+		var builds = Builds(
+			pool,
+			ratings,
+			Build(pool, ratings, pair),
+			[
+				[.. pair],
+			]
+		);
+		// Builds adds the greedy only when it beats the splash: the last past two colours is the best
+		return [builds[0], .. builds.Skip(1).TakeLast(1)];
+	}
+
+	/// <summary>A pair as the builder rates it: its best <see cref="Spells"/> castable spells' mean rating, and how many of them cost 1–3.</summary>
+	public sealed record PairRating(IReadOnlyList<ManaColor> Pair, double Rating, int Cheap);
+
+	/// <summary>Within this much of the best pair's rating a pair is offered too — 1.5 points (Shayne, LIM-3.6).</summary>
+	public const double ClosePairPoints = 0.015;
+
+	/// <summary>Every pair, best first — the first is the one <see cref="Build"/> picks.</summary>
+	public static IReadOnlyList<PairRating> RatePairs(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, double> ratings
+	)
+	{
+		var data = pool.Distinct().ToDictionary(n => n, n => FraCards.Get(n).Data);
+		return
+		[
+			.. Pairs
+				.Select(pair => (pair, Cards: BestSpells(pool, data, ratings, pair)))
+				.Select(x => new PairRating(
+					x.pair,
+					x.Cards.Sum(n => ratings[n]) / Spells,
+					CheapSpells(x.Cards)
+				))
+				.OrderByDescending(p => p.Rating), // stable: the first pair wins a tie, as in Build
+		];
+	}
+
+	/// <summary>The pairs besides the best within <see cref="ClosePairPoints"/> of it — Shayne picks among them.</summary>
+	public static IReadOnlyList<PairRating> ClosePairs(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, double> ratings
+	)
+	{
+		var rated = RatePairs(pool, ratings);
+		return [.. rated.Skip(1).Where(p => p.Rating >= rated[0].Rating - ClosePairPoints - 1e-9)];
+	}
+
+	/// <summary>Its spells that cost 1–3 — the early curve (Shayne's qualifier: 16 against 13).</summary>
+	public static int CheapSpells(IEnumerable<string> cards) =>
+		cards.Count(n =>
+			FraCards.Get(n).Data is var d && !IsLand(d) && FrontCost(d).ManaValue is >= 1 and <= 3
+		);
+
+	static IReadOnlyList<SealedDeck> Builds(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, double> ratings,
+		SealedDeck streamlined,
+		IEnumerable<ManaColor[]> mainsFrom
+	)
+	{
 		var bar = TopDecile(ratings);
 		var builds = new List<SealedDeck> { streamlined };
 		var data = pool.Distinct().ToDictionary(n => n, n => FraCards.Get(n).Data);
@@ -113,7 +193,7 @@ public static class SealedBuilder
 			builds.Add(splash.Deck);
 
 		var greedy = (
-			from mains in Pairs
+			from mains in mainsFrom
 			from extras in Extras(mains)
 			select Multicolour(pool, data, ratings, mains, extras, bar, int.MaxValue)
 		)
@@ -300,12 +380,12 @@ public static class SealedBuilder
 		var kind = perSplash == 1 ? Splashing : Greedy;
 		var detail =
 			kind == Splashing
-				? $"{Splashing} {splashes[0]}: {string.Join(", ", splashCards)}"
+				? $"{Splashing} {splashes[0]}: {string.Join(", ", splashCards.Distinct())}"
 				: $"{Greedy} {string.Join("/", mains)}"
 					+ string.Concat(
 						extras.Select(e =>
 							e.Splash
-								? $" + {e.Color} splash ({string.Join(", ", chosen.Where(n => Needs(n).Contains(e.Color)))})"
+								? $" + {e.Color} splash ({string.Join(", ", chosen.Where(n => Needs(n).Contains(e.Color)).Distinct())})"
 								: $" + {e.Color}"
 						)
 					);
@@ -441,28 +521,22 @@ public static class SealedBuilder
 			_ => [],
 		};
 
+	/// <param name="pair">The pair to build on; null: the best (LIM-3.6 builds a close one).</param>
 	public static SealedDeck Build(
 		IReadOnlyList<string> pool,
-		IReadOnlyDictionary<string, double> ratings
+		IReadOnlyDictionary<string, double> ratings,
+		IReadOnlyList<ManaColor>? pair = null
 	)
 	{
 		var data = pool.Distinct().ToDictionary(n => n, n => FraCards.Get(n).Data);
-		// An unscripted card would play silently vanilla (MagicCore/CLAUDE.md), so it is never played.
-		var spells = pool.Where(n => !IsLand(data[n]) && FraCards.IsImplemented(n)).ToList();
-
-		var (colors, chosen) = Pairs
-			.Select(pair =>
-				(
-					Pair: pair,
-					Cards: spells
-						.Where(n => Castable(FrontCost(data[n]), pair))
-						.OrderByDescending(n => ratings[n])
-						.ThenBy(n => n, StringComparer.Ordinal)
-						.Take(Spells)
-						.ToList()
-				)
-			)
-			.MaxBy(p => p.Cards.Sum(n => ratings[n])); // the first pair wins a tie: deterministic
+		var (colors, chosen) = (
+			pair is null
+				? Pairs
+				:
+				[
+					[.. pair],
+				]
+		).Select(p => (Pair: p, Cards: BestSpells(pool, data, ratings, p))).MaxBy(p => p.Cards.Sum(n => ratings[n])); // the first pair wins a tie: deterministic
 
 		var duals = pool.Where(n =>
 				IsLand(data[n]) && DualColors(n) is { Length: 2 } c && c.All(colors.Contains)
@@ -485,6 +559,24 @@ public static class SealedBuilder
 			sideboard.Remove(card);
 		return new SealedDeck(colors, main, sideboard);
 	}
+
+	/// <summary>A pair's best <see cref="Spells"/> castable spells. An unscripted card would play silently vanilla (MagicCore/CLAUDE.md), so it is never played.</summary>
+	static List<string> BestSpells(
+		IReadOnlyList<string> pool,
+		IReadOnlyDictionary<string, CardData> data,
+		IReadOnlyDictionary<string, double> ratings,
+		ManaColor[] pair
+	) =>
+		[
+			.. pool.Where(n =>
+					!IsLand(data[n])
+					&& FraCards.IsImplemented(n)
+					&& Castable(FrontCost(data[n]), pair)
+				)
+				.OrderByDescending(n => ratings[n])
+				.ThenBy(n => n, StringComparer.Ordinal)
+				.Take(Spells),
+		];
 
 	/// <summary>
 	/// Can these colours' lands pay every pip: a coloured pip needs its colour, a hybrid either half,

@@ -25,6 +25,8 @@
   <ItemGroup>
     <!-- Table games kept as AI test cases (KeptRecords, story TBL-5.5). -->
     <EmbeddedResource Include="Records\*.json" LogicalName="Records.%(Filename).json" />
+    <!-- Shayne's real sealed pools, as Arena exported them (LIM-3.6). -->
+    <EmbeddedResource Include="Limited\Pools\*.txt" LogicalName="Pools.%(Filename).txt" />
   </ItemGroup>
 
   <ItemGroup>

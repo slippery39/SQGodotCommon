@@ -102,10 +102,16 @@ public class SealedSessionTests
 				Is.EqualTo(Castability.Measure(built)),
 				"the simulated draws, once"
 			);
-			// beside the two-colour build's — except on the two-colour build itself
+			// beside the best pair's two colours, named by its colours — except on that build itself;
+			// and its early curve (LIM-3.6)
+			var against = $"({s.Suggestions[0].Button} ";
 			Assert.That(
 				s.OnTimeText(i),
-				i == 0 ? Does.Not.Contain("two colours") : Does.Contain("two colours")
+				i == 0 ? Does.Not.Contain(against) : Does.Contain(against)
+			);
+			Assert.That(
+				s.OnTimeText(i),
+				Does.Contain($"· {SealedBuilder.CheapSpells(built.Main)} spells at 1–3 mana")
 			);
 			// fixing's tempo, from the same games (LIM-3.7) — shown only when it ever happens
 			Assert.That(
@@ -212,4 +218,36 @@ public class SealedSessionTests
 	[Test]
 	public void ANameThatIsNoBasic_IsRefused() =>
 		Assert.Throws<System.ArgumentException>(() => new SealedSession(3).SetBasics("Wastes", 1));
+
+	// LIM-3.6 (Shayne): every pair within 1.5 points of the best is listed; showing one adds its own
+	// builds (its two colours, and its best splash or greedy), in place of the last pair shown.
+	[Test]
+	public void ShowingAClosePair_AddsItsBuilds_InPlaceOfTheLastPairs()
+	{
+		var s = Enumerable
+			.Range(1, 30)
+			.Select(seed => new SealedSession(seed))
+			.First(x => x.ClosePairs.Count >= 2);
+		var best = s.Suggestions.Count;
+
+		s.ShowPair(0);
+		var first = s.Suggestions.Skip(best).ToList();
+		Assert.That(first, Is.Not.Empty);
+		Assert.That(
+			first[0].Colors,
+			Is.EquivalentTo(s.ClosePairs[0].Pair),
+			"its two colours first"
+		);
+		Assert.That(s.ShownPair, Is.EqualTo(0));
+
+		s.Suggest(best); // a deck from the first pair's build
+		s.ShowPair(1);
+		Assert.That(
+			s.Suggestions.Skip(best).Select(b => b.Colors.Take(2).Order()),
+			Has.All.EqualTo(s.ClosePairs[1].Pair.Order()),
+			"in place of the last pair's"
+		);
+		Assert.That(s.SuggestedIndex, Is.Null, "its build is gone — the deck stays");
+		Assert.That(s.Count, Is.EqualTo(SealedBuilder.DeckSize));
+	}
 }
