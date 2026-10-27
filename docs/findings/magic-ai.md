@@ -900,3 +900,22 @@ search's own turn, a point a life (`Rollout.Settings.Progress`).
   oracle is built from the default rollout), agreement is **83.3%**, against 81.6% for
   beam+noprogress. The score given up is 0.76 a position all four ways.
 - Made the default; `beam+noprogress` is the search before it.
+
+## A known card in the opponent's hand priced as itself (2026-10-27, AI-9.5)
+
+Every card in the opponent's hand was priced blind (`HeldValues.Unknown`, 2.70). Now one the searcher
+knows (`Card.KnownTo`, e.g. a creature it bounced) is priced at its held value (`Evaluator.Terms.KnownHand`;
+off is `beam+blindhand`).
+
+- **It fires but is small:** at #547 of Shayne's 10-23 game the bounced Fateshaper Aspirant is
+  priced 6.50 instead of 2.70, which moves Unsummon on it −24.1 → −27.9 against Pass −38.5. It doesn't
+  flip that position, and neither does an honest casting opponent (`casts+unseen`: the search bounces
+  Gallia, −40.0 against −48.4). Shayne's hold there was patience (AI-4.2, AI-13 lesson 4).
+- **The match:** `--match=beam,beam+blindhand --until-clear`: beam 49.0% ± 1.0pp over 96 games
+  (47–49); no 5pp difference either way.
+- **The suite:** 2 of 288 decisions change. At White-Blue Jace vs Red-Green seed 4, move 53, Fatehold
+  Charm's bounce takes a Cadet token over Heartstring Puller (a bounced token is gone), which is the
+  recorded fix Shayne agreed (`AiPositionTests.ABounce_TakesTheToken_…`). Against the oracle re-read
+  with the term, beam agrees 82.6% (score given up 0.87, 4 losses walked into), and beam+blindhand
+  83.0% (0.78, 3): slightly worse on these positions, not seen in the match. Kept on the token fix
+  (AI-5's keep rule, Shayne).

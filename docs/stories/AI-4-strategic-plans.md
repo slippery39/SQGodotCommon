@@ -34,6 +34,20 @@ To be shaped — see the open questions.
     counters (they're removed); a relevant token (it can't go to a hand, so it's gone); a creature
     attacking your planeswalker, when the planeswalker matters
   - desperation — a creature that would kill you, even if you die next turn anyway (a "fog")
+- 2026-10-27, Shayne — **the first agreed holding position: #547 of his 10-23 game** (kept record
+  `GalliaWontAttack`; he is at 5 life against 16, in the AI's attack: Tinybones 3/2 attacking,
+  Fateshaper Aspirant 3/4 tapped by his stun, Gallia 2/1 menace home; Proctor 3/1 and Unsummon for
+  him). **The right answer is Pass** (then block Tinybones with Proctor). In his words:
+  "casting it on tinybones makes no sense because I can trade with it. Casting it on the fateshaper
+  aspirant means that when they recast it they would just be able to get back a creature (maybe the
+  tinybones) from their graveyard, and as well, I stunned it the previous turn anyways so it doesn't
+  make sense, I can at the very latest wait a turn if I really need to. Casting it on galia makes no
+  sense only because they did not attack with it, if they had attacked with it, I still might not
+  have used it at that time. I'm at 5 life, I can still take a hit. And maybe they make a bad attack
+  that allows me to unsummon something and trade with another one of thier creatures when they don't
+  expect it. … there is literally no reason to play it right now."
+  The search casts Unsummon there with every model tried (board-only: on Fateshaper; an honest
+  casting opponent: on Gallia — AI-9.5's task has the scores).
 - 2026-10-24, Shayne: **hard removal** is always a 1-for-1, so those cases don't apply; it needs a
   threat level that also weighs tempo (mana used efficiently so you aren't run over early) and
   aggression, balanced against holding it for a better target. The threat over time is AI-12.
@@ -59,7 +73,9 @@ Open questions:
 - [ ] AI-4.1 Once AI-2 plays: watch where it goes wrong for lack of a strategy, then interview
 - [ ] AI-4.2 Positions for Shayne's bounce and removal cases (Decisions, 2026-10-24), built by hand as
       AI-1 built the Rank Rat (`AiPositionTests`): one where holding is right, one per value case
-      where casting is — Shayne agrees each answer before it is a target (AI-9's rule)
+      where casting is — Shayne agrees each answer before it is a target (AI-9's rule). **Holding:
+      #547 of `GalliaWontAttack`, agreed (2026-10-27: Pass)** — a real game, not built by hand; a
+      test once a change makes the search pass there
 
 ## Next
 
@@ -77,3 +93,4 @@ and the search's differ.
 - 2026-10-23: Next pointed at its inputs (sprint housekeeping) — AI-2 and AI-3 done.
 - 2026-10-24: Shayne's bounce and removal cases added (from AI-11, where they were first written);
   AI-4.2 added. AI-11's settled positions are how a fix here is measured. AI-13 created beside it.
+- 2026-10-27: #547 agreed as AI-4.2's holding position (Shayne: Pass — his reasons in Decisions).

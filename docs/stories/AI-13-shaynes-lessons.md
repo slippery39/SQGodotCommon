@@ -55,6 +55,7 @@ Open questions:
 |---|---|---|---|
 | 1 | Bounce and removal: wait until they give real value, or use them in desperation (AI-4, Decisions 2026-10-24: his value and desperation cases) | **Patience with instants:** don't cast an instant now if casting it later does as much or more — unless the alternative is losing (desperation) | proposed |
 | 2 | Unsummon's value cases: a token, an Aura or counters, a creature in a double block, your bomb under removal, an attacker at a planeswalker that matters, a big creature for tempo (AI-4) | **What a bounce costs them:** a bounce is worth what is lost when the creature leaves play — a token is gone, Auras and counters are gone, the mana is paid again, a combat is won — computed for any card | proposed |
+| 4 | At #547 (AI-4.2's holding position, 2026-10-27): don't bounce what you can trade with in combat; a recast gives them its "enters" again (Fateshaper returning a creature from their graveyard); a creature already stunned or tapped needs no answer now — "at the very latest wait a turn"; at 5 life "I can still take a hit"; hold for their bad attack, when Unsummon plus a trade wins two for one "when they don't expect it" | Part of lesson 1, sharpened: **an instant cast now must beat holding it** — beat what combat already does (a trade), not hand them an "enters" again, and not answer what can't hurt you this turn | proposed |
 | 3 | Hard removal: a 1-for-1 — weigh the threat against tempo and against holding for a better target (AI-4) | needs a target's threat over time (AI-12) | waiting on AI-12 |
 
 New lessons go here as Shayne thinks of them — in his words first, the rule after.
@@ -76,3 +77,4 @@ measuring steps (`RunningSimulations.md` doesn't cover MagicCore — `Commands.m
 
 - 2026-10-24: created — Shayne's idea; machine learning for the AI noted as a later option in
   `DesignNotes.md` ("MagicCore AI: machine learning, later").
+- 2026-10-27: lesson 4 from Shayne's reasons at #547 (AI-4.2's first agreed holding position).

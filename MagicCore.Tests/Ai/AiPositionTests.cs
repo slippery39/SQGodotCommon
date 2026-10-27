@@ -170,6 +170,48 @@ public class AiPositionTests
 		Assert.That(attacks, Does.Contain(Choice(true)), "she attacks");
 	}
 
+	// Shayne, 2026-10-27 (AI-9.5): "an unknown card in hand vs a known card in hand should not have the
+	// same value". Every card in the opponent's hand was priced as an unknown card, so a bounced
+	// creature (known to everyone) was "a card" and a bounced TOKEN — gone, it can't go to a hand —
+	// scored about the same. Now a known card is priced as itself (Evaluator.Terms.KnownHand). The
+	// case Shayne agreed (the position suite, White-Blue Jace vs Red-Green seed 4, move 53): the bounce
+	// takes the token. The CONTROL: priced blind, it takes the card.
+	[Test]
+	public void ABounce_TakesTheToken_OnceAKnownCardInTheirHandIsPricedAsItself()
+	{
+		var suite = PositionSuite.Tracked()!;
+		var (_, s) = PositionSuite
+			.States(suite)
+			.Single(x =>
+				suite.Games[x.Position.GameIndex]
+					is { Deck1: "White-Blue Jace", Deck2: "Red-Green", Seed: 4 }
+				&& x.Position.Move == 53
+			);
+		var me = s.DecidingPlayerId();
+		global::MagicCore.Cards.Card Target(Evaluator.Terms without)
+		{
+			var cast = new BeamSearchAi(me, new() { Without = without }).Decide(s).Action;
+			Assert.That(
+				cast,
+				Is.InstanceOf<global::MagicCore.Actions.CastSpellAction>(),
+				"the bounce is cast — if not, the suite moved: find the token bounce again"
+			);
+			return s.GetCard(((global::MagicCore.Actions.CastSpellAction)cast!).Targets.Last());
+		}
+		Assume.That(
+			s.CardsIn(s.OpponentOf(me), ZoneType.Battlefield).Count(c => c.IsToken),
+			Is.Positive,
+			"the suite was regenerated: find the token bounce again"
+		);
+
+		Assert.That(
+			Target(Evaluator.Terms.KnownHand).IsToken,
+			Is.False,
+			"the control: priced blind, a card"
+		);
+		Assert.That(Target(Evaluator.Terms.None).IsToken, "the token");
+	}
+
 	// Shayne, 2026-10-20 (AI-8.1, TBL-2 — no seed saved, rebuilt by hand): the AI's 2/2 went face while
 	// his Jace token at 3 loyalty, able to −3 and draw, sat unattacked. Its look-ahead never saw the
 	// draw: the simulated opponent never used a planeswalker — the board-only one by its model, a

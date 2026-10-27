@@ -73,15 +73,23 @@ Open questions (Shayne):
       opponent — does the bounced creature ever come back in its rollouts? Minutes, not a run.
       **Answered (2026-10-27):** board-only, the search casts Unsummon on Fateshaper Aspirant (−24.1
       against passing's −38.5); with `CastsFromHand` it PASSES, as Shayne did (−60.3; the best
-      Unsummon −66.9). The board-only opponent makes a bounce a kill spell
+      Unsummon −66.9). **Corrected the same day (AI-9.5's probe):** that casting opponent cast from
+      its REAL hand (`Hidden.Hand.Real`, the default) — cards Shayne couldn't know. Honest
+      (`casts+unseen`), the search still casts Unsummon, on Gallia (−40.0 against passing's −48.4).
+      So a casting look-ahead alone does not explain his hold — and Shayne's reasons (2026-10-27) are
+      patience, not the look-ahead: #547 is AI-4.2's holding position, AI-13's lesson 4
+- [ ] AI-10.4 The look-ahead opponent casts, honestly (Shayne, 2026-10-27: "possibly"): `beam+casts+unseen`
+      (seen cards kept, unseen redrawn) at #547 and on AI-4.2's bounce cases, then `--match=beam+casts+unseen,beam
+      --until-clear`. AFTER AI-9.5 (a known card in their hand priced as itself), which may settle
+      #547 alone — then this asks only whether the recast tempo still matters
 
 ## Next
 
-Every task is done; the tie-break is the default. **Open, and Shayne's to decide:** the
-opponent-model question (Decisions). AI-10.3's evidence is that a board-only simulated opponent makes
-Unsummon a kill spell (it never recasts the creature). A casting opponent passes, as Shayne did, but
-AI-3 measured casting opponents as no stronger overall at 5pp. Close the story once he decides; the
-decision also covers AI-4's bounce cases and AI-13's lesson 2.
+AI-10.1–10.3 done; progress this turn is the default. **Left: AI-10.4** — the opponent-model
+question, now split (Shayne, 2026-10-27): first AI-9.5 prices a KNOWN card in their hand as itself
+(a bounced creature is not "a card"), then AI-10.4 tries an honest casting look-ahead opponent
+(`beam+casts+unseen`). Close the story after AI-10.4; its answer covers AI-4's bounce cases and
+AI-13's lesson 2.
 
 ## Log
 
@@ -91,3 +99,5 @@ decision also covers AI-4's bounce cases and AI-13's lesson 2.
   (board-only bounces, casting passes).
 - 2026-10-27: AI-10.2's match, 51.4% ± 1.2pp over 288 games (no 5pp difference); progress this
   turn is the default (`docs/findings/magic-ai.md`).
+- 2026-10-27: Shayne — the opponent-model question becomes two tasks: AI-9.5 (a known card in their
+  hand priced as itself) first, then AI-10.4 (an honest casting opponent).

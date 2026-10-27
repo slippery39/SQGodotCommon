@@ -64,6 +64,12 @@ public static class Evaluator
 
 		/// <summary>A planeswalker priced by what its best ability makes, not a flat body (AI-8.2, `+walkercount`).</summary>
 		WalkerUse = 16,
+
+		/// <summary>
+		/// A card in the opponent's hand that we KNOW (<see cref="Card.KnownTo"/> — a creature we bounced,
+		/// a card they revealed) priced as itself, not as an unknown card (AI-9.5, Shayne, `+blindhand`).
+		/// </summary>
+		KnownHand = 32,
 	}
 
 	/// <summary>The keywords a creature's value counts here (<see cref="Terms.MoreKeywords"/>).</summary>
@@ -222,10 +228,17 @@ public static class Evaluator
 		var lifeValue = life <= 0 ? -50 : Taper(life, 20, 1.0, 0.5) + (life < 6 ? life - 6 : 0); // low life hurts more
 		// A land in hand is worth less than a spell, so playing even a surplus land scores a gain.
 		// Floating mana scores nothing: it empties at the end of the step, which Settle never reaches.
-		// With held values the opponent's hand is BLIND — one price per card, land or not (HeldValues).
+		// With held values the opponent's hand is BLIND — one price per card, land or not (HeldValues) —
+		// except a card we know: a bounced creature is not "a card" (KnownHand, Shayne).
+		// ponytail: under Hidden.Hand.Real (the default) a reveal played INSIDE the look-ahead prices
+		// their real hidden cards — a peek; Hidden.Hand.ShuffleUnseen is honest. Price a card known only
+		// at the search's root if a reveal spell is ever misjudged.
 		var hand = s.CardsIn(player, ZoneType.Hand)
 			.Sum(c =>
-				held is not null && !own ? held.Unknown
+				held is not null
+				&& !own
+				&& !(c.KnownTo.HasFlag(Knowers.Opponent) && !IsOff(Terms.KnownHand))
+					? held.Unknown
 				: c.Is(CardType.Land) ? LandInHand
 				: held is null ? FlatHandCard
 				: held.Of(c.Name)
@@ -357,10 +370,11 @@ public static class Evaluator
 /// What a card in hand is worth when HELD: a fraction of its measured value (<see cref="CardValues"/>),
 /// never less than the flat price — at 0 the search, whose ties go to acting, would throw zero-valued
 /// tricks away. Story AI-1: the first, STATIC price of the option a held spell is (AI-5 prices it by
-/// what may still come, time, mana, plan). Our own cards are priced by name. The opponent's are
-/// hidden, so EVERY one of them — land or not — gets one blind price: a limited deck's share of lands
-/// at the land price, the rest at the average held value of a measured card. No peeking, and "they
-/// draw a card" costs on the same scale as our own cards are worth.
+/// what may still come, time, mana, plan). Our own cards are priced by name, and so is an opponent's
+/// card we KNOW (a creature we bounced — <see cref="Evaluator.Terms.KnownHand"/>, AI-9.5). The rest of
+/// theirs are hidden, so each — land or not — gets one blind price: a limited deck's share of lands
+/// at the land price, the rest at the average held value of a measured card. "They draw a card" costs
+/// on the same scale as our own cards are worth.
 /// Constant per card: it never moves with mana, which is how MtgSimulator's hand term made land drops
 /// score negative (.claude/rules/sim-ai.md). A class, not a record: a `with` copy would keep a stale
 /// blind price.
