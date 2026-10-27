@@ -33,6 +33,12 @@ public static class Rollout
 	/// </param>
 	/// <param name="Opponent">What the simulated opponent does — <see cref="OpponentModel"/>.</param>
 	/// <param name="Ours">How our own side plays in a rollout — <see cref="OurPolicy"/>.</param>
+	/// <param name="Progress">
+	/// "Progress this turn" (story AI-10, Shayne): a won line also counts the opponent's life lost by the
+	/// end of the search's own turn, so of two wins on the same turn the one that presses NOW scores
+	/// higher — both used to score 10,000 × 0.95², and the tie picked "Don't attack". No worse over
+	/// 288 games (51.4% ± 1.2pp, AI-10.2); off is beam+noprogress.
+	/// </param>
 	/// <param name="TheirWalkers">
 	/// The simulated opponent uses its best planeswalker ability every turn it can, whatever its model
 	/// (<see cref="TheirLoyalty"/>, story AI-8.1). False: only a casting opponent does, and only when
@@ -48,7 +54,8 @@ public static class Rollout
 		OurPolicy Ours = OurPolicy.Cheap,
 		Attacks Attacks = Attacks.EachAlone,
 		Targets Targets = Targets.FirstLegal,
-		bool TheirWalkers = true
+		bool TheirWalkers = true,
+		bool Progress = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -120,6 +127,8 @@ public static class Rollout
 		var rootTurn = horizon - 1 - settings.LookaheadTurns;
 		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
 		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
+		var them = s.OpponentOf(me);
+		int? theirLifeAfterThisTurn = null; // the root turn's end: the same moment for every candidate
 		// ponytail: a rollout that hits DecisionLimit is scored where it stopped, mid-turn, beside
 		// rollouts scored at the horizon. Only a loop that never advances reaches it; flag or drop
 		// such a candidate if one is ever seen.
@@ -129,6 +138,8 @@ public static class Rollout
 				break;
 			if (s.GetGame().TurnNumber != turn)
 				(turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
+			if (theirLifeAfterThisTurn is null && turn > rootTurn)
+				theirLifeAfterThisTurn = s.GetPlayer(them).Life;
 
 			var who = s.DecidingPlayerId();
 			if (who != me)
@@ -160,8 +171,12 @@ public static class Rollout
 		}
 
 		var score = Evaluator.Evaluate(s, me, settings.Held);
-		return s.IsOver()
-			? score * Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn)
+		if (!s.IsOver())
+			return score;
+		score *= Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn);
+		// a point a life: far under one turn's discount (~450), so a sooner win still wins, but no tie
+		return settings.Progress && s.WinnerId() == me
+			? score - (theirLifeAfterThisTurn ?? s.GetPlayer(them).Life)
 			: score;
 	}
 

@@ -880,3 +880,23 @@ His 112 `you` moves held 100 real decisions (two options or more):
   **Single lines are not stable**: about half the listed decisions changed their reading — a
   different sample of hidden cards is a different look-ahead — so a report is read in aggregate, and
   one line is a lead to settle (AI-11), not a verdict.
+
+## A winning AI presses: progress this turn breaks ties among won lines (2026-10-27, AI-10.2)
+
+A won line scored a flat 10,000 × 0.95^turns, so two wins on the same turn tied and the tie picked
+the first option, often "Don't attack" (Shayne's game: Gallia stayed home at #545 and #587 while he
+was at 5). Shayne's tie-break: a won line also counts the opponent's life lost by the end of the
+search's own turn, a point a life (`Rollout.Settings.Progress`).
+
+- **The match:** `--match=beam+progress,beam --until-clear` (the switch's name while it was off;
+  now `--match=beam,beam+noprogress`) stopped after 288 games (6 pairings ×
+  24 seeds × both seats, 495 s on 16 cores). beam+progress **51.4% ± 1.2pp** (148–140, no draws);
+  no 5pp difference either way. Cost per decision unchanged (1384 against 1380 engine steps, 7.3
+  rollouts each). By deck: Red-Green 60-36, White-Black 65-31, White-Blue Jace 23-73.
+- **The suite:** 5 of 288 decisions change, each at the same oracle score (score given up 0.76
+  either way): won positions now press, with an attack, an ability, or Ajani's Anguish for X=4 over a
+  land drop. Against the oracle as stored, agreement fell 81.6% → 79.9%: that oracle scored
+  without the tie-break and took the first of its own ties. Re-read with it (`--suite=oracle`, the
+  oracle is built from the default rollout), agreement is **83.3%**, against 81.6% for
+  beam+noprogress. The score given up is 0.76 a position all four ways.
+- Made the default; `beam+noprogress` is the search before it.

@@ -141,6 +141,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     oldblocks      the look-ahead's safe block counting damage once (before AI-8.3: no double strike, deathtouch)
 #     notrample      the threat term without a trampler's excess over its blocker (before AI-8.4)
 #     walkercount    a planeswalker as a flat body and 0.35 a counter, not by what its best ability makes (before AI-8.2)
+#     noprogress     won lines tie again: no credit for the opponent's life lost this turn (before AI-10)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 
 # Compare candidate SEALED builds (LIM-1.8; ~15 min for two builds at 200, 16 cores)

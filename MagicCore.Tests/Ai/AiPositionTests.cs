@@ -138,6 +138,38 @@ public class AiPositionTests
 		Assert.That(trades, Does.Contain(Choice(Evaluator.Terms.None)), "it trades");
 	}
 
+	// Shayne, 2026-10-23 (AI-10, his sealed game — kept record, moves #545 turn 22 and #587 turn 24): the
+	// AI never attacked with Gallia, Tragic Host (2/1 menace) though one creature at most could block
+	// her and he was at 5 life. Attacking and staying home both scored 10,000 × 0.95²: the board-only
+	// look-ahead's full attack next turn wins either way, and the tie picked "Don't attack". Now a won
+	// line counts the opponent's life lost this turn (Rollout.Settings.Progress, Shayne's tie-break).
+	// The CONTROL: without it, the search stays home, as it did in the game.
+	[TestCase(545)]
+	[TestCase(587)]
+	public void Gallia_AttacksWhenTheGameIsWon_ProgressThisTurn(int move)
+	{
+		var record = KeptRecords.Get("GalliaWontAttack");
+		var s = record.Before(move);
+		string Choice(bool progress) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					new(RolloutSettings: BeamSearchAi.DefaultRollout with { Progress = progress })
+				).Decide(s)
+			);
+
+		Assert.That(
+			MoveTokens.Same(Choice(false), record.Moves[move - 1].Token),
+			"the control: it stays home"
+		);
+		// Gallia's declaration is the pending choice: every option but "don't" attacks with her.
+		var attacks = s.GetPendingChoice()!
+			.Options.Where(o => o.Id != global::MagicCore.Actions.CombatOption.None)
+			.Select(o => $"c{o.Id}");
+		Assert.That(attacks, Does.Contain(Choice(true)), "she attacks");
+	}
+
 	// Shayne, 2026-10-20 (AI-8.1, TBL-2 — no seed saved, rebuilt by hand): the AI's 2/2 went face while
 	// his Jace token at 3 loyalty, able to −3 and draw, sat unattacked. Its look-ahead never saw the
 	// draw: the simulated opponent never used a planeswalker — the board-only one by its model, a

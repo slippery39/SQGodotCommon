@@ -1,7 +1,7 @@
 ---
 id: AI-10
 title: A winning AI still presses — ties among won lines no longer pick the passive move
-status: backlog
+status: in-progress
 area: AI
 created: 2026-10-23
 ---
@@ -23,16 +23,22 @@ never dealt mattered.
 
 ## Requirements
 
-- [ ] At #545 and #587 of that record the search attacks with Gallia — kept as AI test cases
+- [x] At #545 and #587 of that record the search attacks with Gallia — kept as AI test cases
       (`--record=… --keep=NAME --at=N`), each with its control
-- [ ] Among lines that all win, the one that presses now scores higher — a monotonic term, no tie
-- [ ] Measured the AI-6 way: `--suite=beam` (what changed) and `--match=…,beam --until-clear`
+- [x] Among lines that all win, the one that presses now scores higher — a monotonic term, no tie
+- [x] Measured the AI-6 way: `--suite=beam` (what changed) and `--match=…,beam --until-clear`
       before it becomes the default
 
 ## Decisions
 
 - 2026-10-24, Shayne: **the tie-break is "progress this turn"** — a won line also counts the
   opponent's life lost before the rollout's first turn ends, so damage dealt NOW scores higher.
+- 2026-10-27, Claude (AI-10.2, open to change): "the rollout's first turn" is read as **the search's
+  own turn** (the root turn), so the moment is the same for every candidate — the rollout's own rule
+  for its horizon. Their life is noted as that turn ends; a won line scores
+  `10,000 × 0.95^turns − their life then` — a point a life, far under one turn's discount (~450), so
+  a sooner win still beats a later one. Lost lines are unchanged. A switch,
+  `Rollout.Settings.Progress`; the default since its match (`beam+noprogress` is the search before).
 
 Open questions (Shayne):
 - Which tie-break? Measured on the record, one position each (2026-10-23):
@@ -51,26 +57,37 @@ Open questions (Shayne):
 
 ## Tasks
 
-- [ ] AI-10.1 Keep the two positions as AI test cases, each failing today (the control: the search
+- [x] AI-10.1 Keep the two positions as AI test cases, each failing today (the control: the search
       plays "Don't attack")
-- [ ] AI-10.2 The tie-break Shayne picks; the kept cases pass; `--suite=beam`, then the early-stop match
-- [ ] AI-10.3 Evidence for the opponent-model question: in a position of the same record where the
+- [x] AI-10.2 The tie-break Shayne picks; the kept cases pass; `--suite=beam`, then the early-stop match.
+      Built: `Rollout.Settings.Progress` (measured as `beam+progress`, now `beam+noprogress` is off); `AiPositionTests.Gallia_AttacksWhenTheGameIsWon_ProgressThisTurn`
+      (one kept record, `GalliaWontAttack`, at both moves; the control, without it, stays home). Suite: 5 decisions change, every one
+      at the same oracle score (score given up 0.76 either way) — ties among won lines now press (an
+      attack, Ajani's Anguish X=4 over a land, an ability). Oracle agreement 81.6 → 79.9% against the
+      old oracle, whose own ties pick the first; re-read with the tie-break (`--suite=oracle`),
+      83.3% against 81.6% without. The match: 51.4% ± 1.2pp over 288 games, no 5pp difference either way
+      (findings) — made the default, the suite accepted (which also took in seed 3 move 67's drift,
+      there at HEAD before this story)
+- [x] AI-10.3 Evidence for the opponent-model question: in a position of the same record where the
       oracle casts Unsummon and Shayne held it (#547), its scores with `BoardOnly` against a casting
-      opponent — does the bounced creature ever come back in its rollouts? Minutes, not a run
+      opponent — does the bounced creature ever come back in its rollouts? Minutes, not a run.
+      **Answered (2026-10-27):** board-only, the search casts Unsummon on Fateshaper Aspirant (−24.1
+      against passing's −38.5); with `CastsFromHand` it PASSES, as Shayne did (−60.3; the best
+      Unsummon −66.9). The board-only opponent makes a bounce a kill spell
 
 ## Next
 
-**Tie-break decided** (Shayne, 2026-10-24): **progress this turn** — a won line also counts the
-opponent's life lost before the rollout's first turn ends. Start with AI-10.1 (keep #545 and #587 of
-`game_records/2026-10-23_230227_seed934349.json` as test cases: `MagicConsole --record=… --keep=NAME
---at=N`; each control should show the search playing "Don't attack" today), then AI-10.2 (the
-tie-break in `Evaluator.Evaluate` / `Rollout.Score`, the kept cases passing, `--suite=beam`, then
-`--match=…,beam --until-clear` — about an hour: ask Shayne before starting it). AI-10.3 (does a
-bounced creature come back in the look-ahead?) is minutes and can go first. Read
-`MagicCore/Ai/Evaluator.cs` (the flat ±10,000), `Rollout.cs` (`Score`, `TerminalDiscount`), and
-`docs/findings/magic-ai.md`.
+Every task is done; the tie-break is the default. **Open, and Shayne's to decide:** the
+opponent-model question (Decisions). AI-10.3's evidence is that a board-only simulated opponent makes
+Unsummon a kill spell (it never recasts the creature). A casting opponent passes, as Shayne did, but
+AI-3 measured casting opponents as no stronger overall at 5pp. Close the story once he decides; the
+decision also covers AI-4's bounce cases and AI-13's lesson 2.
 
 ## Log
 
 - 2026-10-23: created from Shayne's game; the cause measured (above); one tie-break tried and reverted.
 - 2026-10-24: the opponent-model question now also covers AI-4's bounce timing (AI-10.3 added).
+- 2026-10-27: AI-10.1 kept (#545, #587); AI-10.2 built behind a switch, suite read; AI-10.3 answered
+  (board-only bounces, casting passes).
+- 2026-10-27: AI-10.2's match, 51.4% ± 1.2pp over 288 games (no 5pp difference); progress this
+  turn is the default (`docs/findings/magic-ai.md`).
