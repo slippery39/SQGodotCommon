@@ -219,9 +219,11 @@ public class HiddenTests
 	[Test]
 	public void TheSearch_PlaysARealGame_FromItsSampledHands()
 	{
+		// its WHOLE hand: the default plays only the cards we know, which a sample never replaces
 		var casts = BeamSearchAi.DefaultRollout with
 		{
 			Opponent = Rollout.OpponentModel.CastsFromHand,
+			KnownOnly = false,
 		};
 		Assert.That(
 			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.ShuffleUnseen)),
@@ -232,9 +234,11 @@ public class HiddenTests
 	[Test]
 	public void TheSearch_PlaysARealGame_FromItsGuessedHands()
 	{
+		// its WHOLE hand: the default plays only the cards we know, which a sample never replaces
 		var casts = BeamSearchAi.DefaultRollout with
 		{
 			Opponent = Rollout.OpponentModel.CastsFromHand,
+			KnownOnly = false,
 		};
 		Assert.That(
 			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.GuessedFromColors)),

@@ -53,9 +53,12 @@ public static class AiMatch
 	static readonly Dictionary<string, Func<BeamSearchAi.Settings, BeamSearchAi.Settings>> Models =
 		new()
 		{
+			// casts and responds play the WHOLE hand; the default plays only what we know (AI-10.4)
 			["casts"] = Opponent(Rollout.OpponentModel.CastsFromHand),
 			// It also responds at instant speed in our turn (AI-3.6) — casts from hand too: beam+responds.
 			["responds"] = Opponent(Rollout.OpponentModel.Responds),
+			// The board-only opponent, never casting even what we know — before AI-10.4: beam+boardonly.
+			["boardonly"] = Opponent(Rollout.OpponentModel.BoardOnly),
 			// The library: honest by default since AI-3.9 (shuffle, kept as a name); the real order — the
 			// search sees its own future draws, 5pp or more stronger — is beam+realorder.
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
@@ -79,7 +82,7 @@ public static class AiMatch
 			["allin"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AllInToo }),
 			["targets"] = WithRollout(r => r with { Targets = Rollout.Targets.OwnersBest }),
 			// The simulated opponent's planeswalkers idle unless a casting model judges them worth it —
-			// before AI-8.1: beam+idlewalkers.
+			// before AI-8.1: beam+boardonly+idlewalkers (the default opponent casts, so its walkers act by our policy).
 			["idlewalkers"] = WithRollout(r => r with { TheirWalkers = false }),
 			// Won lines tie again, without the opponent's life lost this turn (before AI-10): beam+noprogress.
 			["noprogress"] = WithRollout(r => r with { Progress = false }),
@@ -92,7 +95,7 @@ public static class AiMatch
 
 	static Func<BeamSearchAi.Settings, BeamSearchAi.Settings> Opponent(
 		Rollout.OpponentModel model
-	) => WithRollout(r => r with { Opponent = model });
+	) => WithRollout(r => r with { Opponent = model, KnownOnly = false });
 
 	/// <summary>A model that changes the rollout — from the search's own default (held values in).</summary>
 	static Func<BeamSearchAi.Settings, BeamSearchAi.Settings> WithRollout(
@@ -103,13 +106,13 @@ public static class AiMatch
 		name.Split('+') is ["beam", .. var models]
 		&& models.Length > 0
 		&& models.All(Models.ContainsKey)
-		// The board-only opponent never reads its hand: without casts or responds, unseen or guess measure nothing.
+		// Only an opponent that plays its whole hand reads it: without casts or responds, unseen or guess measure nothing.
 		&& (
 			!(models.Contains("unseen") || models.Contains("guess"))
 			|| models.Contains("casts")
 			|| models.Contains("responds")
 		)
-		&& !(models.Contains("casts") && models.Contains("responds")) // one opponent model
+		&& models.Count(m => m is "casts" or "responds" or "boardonly") <= 1 // one opponent model
 		&& !(models.Contains("shuffle") && models.Contains("realorder")) // one library mode
 		// GreedyAi makes all our rollout decisions: allin and targets would reach only the opponent's.
 		&& !(

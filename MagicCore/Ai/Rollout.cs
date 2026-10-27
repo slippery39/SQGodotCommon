@@ -39,6 +39,14 @@ public static class Rollout
 	/// higher — both used to score 10,000 × 0.95², and the tie picked "Don't attack". No worse over
 	/// 288 games (51.4% ± 1.2pp, AI-10.2); off is beam+noprogress.
 	/// </param>
+	/// <param name="KnownOnly">
+	/// A casting or responding opponent plays only the cards in its hand WE know (<see cref="Card.KnownTo"/>:
+	/// one we bounced, saw, or watched return from a graveyard) — board-only otherwise (Shayne, AI-10.4:
+	/// "the opponent shouldn't just run into it"). Its unknown hand, lands included, stays unplayed.
+	/// The default since AI-10.4, with <see cref="OpponentModel.Responds"/>: board-only plus what we
+	/// know — no stronger over 96 games (49.0% ± 1.0pp), +1% cost, and it stops an Aura run into a known
+	/// removal spell. Off (the whole hand) is beam+casts or beam+responds; board-only, beam+boardonly.
+	/// </param>
 	/// <param name="TheirWalkers">
 	/// The simulated opponent uses its best planeswalker ability every turn it can, whatever its model
 	/// (<see cref="TheirLoyalty"/>, story AI-8.1). False: only a casting opponent does, and only when
@@ -50,12 +58,13 @@ public static class Rollout
 		double TerminalDiscount = 0.95,
 		int DecisionLimit = 2_000,
 		HeldValues? Held = null,
-		OpponentModel Opponent = OpponentModel.BoardOnly,
+		OpponentModel Opponent = OpponentModel.Responds,
 		OurPolicy Ours = OurPolicy.Cheap,
 		Attacks Attacks = Attacks.EachAlone,
 		Targets Targets = Targets.FirstLegal,
 		bool TheirWalkers = true,
-		bool Progress = true
+		bool Progress = true,
+		bool KnownOnly = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -101,7 +110,7 @@ public static class Rollout
 		/// <summary>Attacks and blocks with its board, and — while <see cref="Settings.TheirWalkers"/> is on — uses its planeswalkers; never casts, never plays a land.</summary>
 		BoardOnly,
 
-		/// <summary>Also plays a land and up to ActionsPerTurn spells in its own turn, by OUR policy — from its real hand; its walkers act by their effect while <see cref="Settings.TheirWalkers"/> is on, by OUR policy otherwise.</summary>
+		/// <summary>Also plays a land and up to ActionsPerTurn spells in its own turn, by OUR policy — from its hand (only the cards we know under <see cref="Settings.KnownOnly"/>, the default); its walkers act by their effect while <see cref="Settings.TheirWalkers"/> is on, by OUR policy otherwise.</summary>
 		CastsFromHand,
 
 		/// <summary>
@@ -258,7 +267,9 @@ public static class Rollout
 			);
 		if (!window)
 			return null;
-		var spells = s.DistinctMoves(s.LegalActions()).OfType<CastSpellAction>().ToList();
+		var spells = s.DistinctMoves([.. s.LegalActions().Where(Allowed(s, who, settings))])
+			.OfType<CastSpellAction>()
+			.ToList();
 		if (spells.Count == 0)
 			return null;
 		var passing = Evaluator.Evaluate(Lookahead.Settle(Pass(s, who)), who, settings.Held);
@@ -290,8 +301,26 @@ public static class Rollout
 			: null;
 		return landDone && playable is null
 			? null
-			: OurPlay(s, who, playable, ref landDone, settings);
+			: OurPlay(s, who, playable, ref landDone, settings, Allowed(s, who, settings));
 	}
+
+	/// <summary>
+	/// What the opponent may play under <see cref="Settings.KnownOnly"/>: a card we know, or one from
+	/// anywhere but its hand. Applied BEFORE DistinctMoves, which keeps one move per name — after it, an
+	/// unknown copy could stand in for a known one and be dropped.
+	/// ponytail: no unknown land either, so its mana doesn't grow in the look-ahead (as board-only);
+	/// allow one land a turn if a known card it can't yet afford is ever misjudged.
+	/// </summary>
+	static Func<GameAction, bool> Allowed(GameState s, int who, Settings settings) =>
+		!settings.KnownOnly
+			? _ => true
+			: a =>
+				MagicRules.CardOf(a) is var id
+				&& (
+					id == 0
+					|| !s.IsIn(id, who, ZoneType.Hand)
+					|| s.GetCard(id).KnownTo.HasFlag(Knowers.Opponent)
+				);
 
 	static readonly Func<GameAction, bool> AnyPlay = a => a is not PassPriorityAction;
 	static readonly Func<GameAction, bool> Spell = a => a is CastSpellAction;
@@ -317,12 +346,15 @@ public static class Rollout
 		int me,
 		Func<GameAction, bool>? playable,
 		ref bool landDone,
-		Settings settings
+		Settings settings,
+		Func<GameAction, bool>? allowed = null
 	)
 	{
 		if (!Priority.AtSorcerySpeed(s, me))
 			return null;
-		var moves = s.DistinctMoves(s.LegalActions());
+		var moves = s.DistinctMoves(
+			allowed is null ? s.LegalActions() : [.. s.LegalActions().Where(allowed)]
+		);
 		if (moves.OfType<PlayLandAction>().FirstOrDefault() is { } land)
 			return land;
 		landDone = true; // none now: none this turn worth asking for again

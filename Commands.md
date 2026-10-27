@@ -128,20 +128,21 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #   honest — what it can't know is shuffled (AI-3.9). beam-plain: before held values; beam-held=0.25:
 #   at that fraction. Models combine as beam+<model>[+<model>…] (story AI-3; findings say what each did):
 #     realorder      the libraries as they really are — sees its own draws; 5pp+ stronger, cheats
-#     casts          the simulated opponent casts from its hand (board-only otherwise)
+#     casts          the simulated opponent casts from its WHOLE hand (the default plays only the cards we know: AI-10.4)
 #     responds       casts, and answers our spells and combat at instant speed (not with casts)
 #     unseen, guess  its hand's unseen cards redrawn from its unseen cards / guessed from its colours —
 #                    only with casts or responds; one of the two
 #     greedyrollout  GreedyAi plays our side in the rollouts (not --match=greedy, the AI itself)
 #     allin          an attack judged all-in as well as each alone (not with greedyrollout)
 #     targets        a target choice by its owner's best (not with greedyrollout)
-#     idlewalkers    the simulated opponent's planeswalkers idle unless a casting model judges them worth it (before AI-8.1)
+#     idlewalkers    the simulated opponent's planeswalkers idle unless a casting model judges them worth it (before AI-8.1: +boardonly too)
 #     nothreat       the evaluator without its threat term (AI-5.2) — the search before it
 #     nokeywords     the evaluator without the six keywords AI-5.3 added (vigilance, haste, reach, …)
 #     oldblocks      the look-ahead's safe block counting damage once (before AI-8.3: no double strike, deathtouch)
 #     notrample      the threat term without a trampler's excess over its blocker (before AI-8.4)
 #     walkercount    a planeswalker as a flat body and 0.35 a counter, not by what its best ability makes (before AI-8.2)
 #     noprogress     won lines tie again: no credit for the opponent's life lost this turn (before AI-10)
+#     boardonly      the simulated opponent never casts, even a card we know it holds (before AI-10.4)
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 

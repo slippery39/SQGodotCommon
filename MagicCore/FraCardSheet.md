@@ -589,7 +589,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Enchanted creature gets +1/+0 and has deathtouch.  
 > When enchanted creature dies, return that card to the battlefield tapped under its owner's control.
 
-**Status:** scripted · **tests naming it:** FraAttachmentTests, SandboxTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraAttachmentTests, SandboxTests
 
 **Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
@@ -886,7 +886,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target creature gets -3/-3 until end of turn.
 
-**Status:** scripted · **tests naming it:** ArenaDeckTests, FraCardTests, FraCommonTests, FraGraveyardTests, FraModalTests, FraSacrificeTests, FraTriggerTests, GameRecordTests
+**Status:** scripted · **tests naming it:** AiPositionTests, ArenaDeckTests, FraCardTests, FraCommonTests, FraGraveyardTests, FraModalTests, FraSacrificeTests, FraTriggerTests, GameRecordTests
 
 **Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1435,7 +1435,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests
 
 ### Tam's Resistance
 

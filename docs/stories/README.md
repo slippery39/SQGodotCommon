@@ -112,7 +112,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-6](AI-6-fast-measurement.md) | Measure an AI change in minutes, or overnight | done |
 | [AI-7](AI-7-faster-search.md) | A faster search — profiled, then optimised without changing a decision | done |
 | [AI-8](AI-8-playtest-plays.md) | Plays that looked wrong at the table, rebuilt and fixed | done |
-| [AI-10](AI-10-winning-ties.md) | A winning AI still presses — ties among won lines no longer pick the passive move | in-progress |
+| [AI-10](AI-10-winning-ties.md) | A winning AI still presses — ties among won lines no longer pick the passive move | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |

@@ -188,9 +188,21 @@ public class AiPositionTests
 				&& x.Position.Move == 53
 			);
 		var me = s.DecidingPlayerId();
+		// under the board-only look-ahead the term was measured in: the default (AI-10.4) recasts the
+		// bounced card, which by itself makes the token the better bounce
+		var boardOnly = BeamSearchAi.DefaultRollout with
+		{
+			Opponent = Rollout.OpponentModel.BoardOnly,
+			KnownOnly = false,
+		};
 		global::MagicCore.Cards.Card Target(Evaluator.Terms without)
 		{
-			var cast = new BeamSearchAi(me, new() { Without = without }).Decide(s).Action;
+			var cast = new BeamSearchAi(
+				me,
+				new() { Without = without, RolloutSettings = boardOnly }
+			)
+				.Decide(s)
+				.Action;
 			Assert.That(
 				cast,
 				Is.InstanceOf<global::MagicCore.Actions.CastSpellAction>(),
@@ -210,6 +222,68 @@ public class AiPositionTests
 			"the control: priced blind, a card"
 		);
 		Assert.That(Target(Evaluator.Terms.None).IsToken, "the token");
+	}
+
+	// Shayne, 2026-10-27 (AI-10.4, built by hand, the answer agreed): "if we know our opponent has a card
+	// in hand via a look at hand effect or unsummon or graveyard return type thing, then the opponent
+	// shouldn't just run into it." Our 2/2 and Ferocity of the Hunt (an Aura); their Last Gasp, KNOWN, with
+	// two Swamps up. Enchanting the 2/2 runs into it — two cards for their one. The simulated opponent
+	// now plays the cards we know (Rollout.Settings.KnownOnly), so the search holds. The CONTROL: the
+	// board-only look-ahead casts it. And a card we DON'T know changes nothing: the same decision as
+	// board-only. (Casting it at the first chance at all is lesson 5 of AI-13, Shayne — not pinned here.)
+	[TestCase(true)]
+	[TestCase(false)]
+	public void AnAura_IsntCastIntoAKnownRemovalSpell(bool known)
+	{
+		for (var i = 0; i < 2; i++)
+		{
+			(s, _) = TestGames.Put(s, me, TestGames.Card("Swamp"), ZoneType.Battlefield);
+			(s, _) = TestGames.Put(s, them, TestGames.Card("Swamp"), ZoneType.Battlefield);
+		}
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Bear", "2/2"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, TestGames.Creature("Wall", "1/4"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, FraCards.Get("Ferocity of the Hunt"), ZoneType.Hand);
+		int gasp;
+		(s, gasp) = TestGames.Put(s, them, FraCards.Get("Last Gasp"), ZoneType.Hand);
+		if (known)
+			s = s.UpdateObject(
+				gasp,
+				s.GetCard(gasp) with
+				{
+					KnownTo = global::MagicCore.Cards.Knowers.Everyone,
+				}
+			); // TEST SETUP
+		bool CastsTheAura(bool knownOnly) =>
+			new BeamSearchAi(
+				me,
+				new(
+					RolloutSettings: knownOnly
+						? BeamSearchAi.DefaultRollout with
+						{
+							Opponent = Rollout.OpponentModel.Responds,
+							KnownOnly = true,
+						}
+						: BeamSearchAi.DefaultRollout with
+						{
+							Opponent = Rollout.OpponentModel.BoardOnly,
+							KnownOnly = false,
+						}
+				)
+			)
+				.Decide(s)
+				.Action is global::MagicCore.Actions.CastSpellAction;
+
+		if (known)
+		{
+			Assert.That(CastsTheAura(knownOnly: false), "the control: board-only, it runs into it");
+			Assert.That(CastsTheAura(knownOnly: true), Is.False, "it holds");
+		}
+		else
+			Assert.That(
+				CastsTheAura(knownOnly: true),
+				Is.EqualTo(CastsTheAura(knownOnly: false)),
+				"an unseen card is not used"
+			);
 	}
 
 	// Shayne, 2026-10-20 (AI-8.1, TBL-2 — no seed saved, rebuilt by hand): the AI's 2/2 went face while

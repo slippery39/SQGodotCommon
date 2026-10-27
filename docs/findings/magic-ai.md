@@ -919,3 +919,42 @@ off is `beam+blindhand`).
   with the term, beam agrees 82.6% (score given up 0.87, 4 losses walked into), and beam+blindhand
   83.0% (0.78, 3): slightly worse on these positions, not seen in the match. Kept on the token fix
   (AI-5's keep rule, Shayne).
+
+## An honest casting opponent in the look-ahead, on today's defaults (2026-10-27, AI-10.4)
+
+`beam+casts+unseen` (the simulated opponent casts from its hand; the cards the search hasn't seen are
+redrawn from its unseen cards) against `beam` (board-only), on the defaults since AI-3: honest
+libraries, AI-10's progress tie-break, AI-9.5's known hand.
+
+| Speed | Result | Cost |
+|---|---|---|
+| Quick check | changed 70 of 288 (24.3%); oracle agreement 69.4% (82.6%), but the oracle searches with the board-only opponent, so it can't rank this | 3 552 steps a position (2 963, +20%) |
+| `--until-clear` | **384 games, 193–191, 50.3% ± 1.8pp: NO difference of 5pp either way** | 1 599 steps, 7.4 rollouts a decision (1 351, 7.2: +18%); 889 s |
+
+- **Still no stronger**, as AI-3.1 found before the honest libraries: a casting look-ahead changes
+  a quarter of the decisions and wins as often.
+- **It doesn't settle #547** of Shayne's 10-23 game: it bounces Gallia (−40.0 against Pass −48.4).
+  His hold there was patience (AI-4.2's holding position, AI-13 lesson 4).
+- By deck: Red-Green 79–49, White-Black 85–43, Jace 29–99 — the field's usual shape.
+
+## Board-only, except the cards we know: the default opponent (2026-10-27, AI-10.4)
+
+Shayne's model: the simulated opponent stays board-only, except that it plays the cards in its hand
+WE know (`Card.KnownTo`: a bounced creature, a card it revealed, one it returned from a graveyard),
+at sorcery speed in its turn and in answer to our spells and combat (`Responds` with
+`Rollout.Settings.KnownOnly`). Off is `beam+boardonly`; the whole hand is `beam+casts` / `beam+responds`.
+
+| Speed | Result | Cost |
+|---|---|---|
+| Quick check | **0 of 288 decisions change**: a known card in hand is rare in self-play, as Shayne expected | 2 992 steps a position (2 963, +1%) |
+| `--until-clear` | 96 games, 47–49, 49.0% ± 1.0pp: no difference of 5pp either way | 1 455 steps a decision (1 438, +1%); 234 s |
+
+- **Kept on what it changes, not on the win rate (Shayne: "while win rate is a nice baseline, we
+  also want to make sure the plays … make somewhat decent sense").** In a position built by hand
+  and agreed with him (our 2/2 and Ferocity of the Hunt; their KNOWN Last Gasp with two Swamps up),
+  the board-only search enchants the 2/2 into the removal spell, and this one holds
+  (`AiPositionTests.AnAura_IsntCastIntoAKnownRemovalSpell`). With Last Gasp unseen it decides exactly
+  as board-only.
+- It also makes the token the better bounce at seed 4 move 53 by itself: the bounced creature,
+  known, is recast in the look-ahead (AI-9.5's test now runs under `boardonly` to isolate its term).
+- The default since. The oracle, built from the default rollout, was re-read (agreement 83.0%).

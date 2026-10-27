@@ -1,7 +1,7 @@
 ---
 id: AI-10
 title: A winning AI still presses — ties among won lines no longer pick the passive move
-status: in-progress
+status: done
 area: AI
 created: 2026-10-23
 ---
@@ -39,6 +39,14 @@ never dealt mattered.
   `10,000 × 0.95^turns − their life then` — a point a life, far under one turn's discount (~450), so
   a sooner win still beats a later one. Lost lines are unchanged. A switch,
   `Rollout.Settings.Progress`; the default since its match (`beam+noprogress` is the search before).
+
+- 2026-10-27, Shayne (on AI-10.4's no-difference match): try **board-only, except for cards we
+  know about** — "if we know our opponent has a card in hand via a look at hand effect or unsummon
+  or graveyard return type thing, then the opponent shouldn't just run into it." And: **"while win
+  rate is a nice baseline, we also want to make sure the plays the opponents are making make
+  somewhat decent sense, so even if this doesn't change win rate by a lot, it is still
+  worthwhile."** — a change that measures no different is kept when it makes the plays sensible,
+  shown by a position (this widens AI-5's keep rule: "fixes a recorded blunder").
 
 Open questions (Shayne):
 - Which tie-break? Measured on the record, one position each (2026-10-23):
@@ -78,18 +86,32 @@ Open questions (Shayne):
       (`casts+unseen`), the search still casts Unsummon, on Gallia (−40.0 against passing's −48.4).
       So a casting look-ahead alone does not explain his hold — and Shayne's reasons (2026-10-27) are
       patience, not the look-ahead: #547 is AI-4.2's holding position, AI-13's lesson 4
-- [ ] AI-10.4 The look-ahead opponent casts, honestly (Shayne, 2026-10-27: "possibly"): `beam+casts+unseen`
+- [x] AI-10.4 The look-ahead opponent casts, honestly (Shayne, 2026-10-27: "possibly"): `beam+casts+unseen`
       (seen cards kept, unseen redrawn) at #547 and on AI-4.2's bounce cases, then `--match=beam+casts+unseen,beam
       --until-clear`. AFTER AI-9.5 (a known card in their hand priced as itself), which may settle
-      #547 alone — then this asks only whether the recast tempo still matters
+      #547 alone — then this asks only whether the recast tempo still matters.
+      **Run (2026-10-27), on today's defaults (honest libraries, progress, AI-9.5's known hand):** at
+      #547 it still bounces Gallia (−40.0 against Pass −48.4) — Shayne's hold there is patience
+      (AI-4.2, AI-13 lesson 4), not this. Suite: 70 of 288 decisions change (24.3%), cost 3 552 steps
+      a position against 2 963 (+20%); oracle agreement 69.4% — the oracle searches with the
+      board-only opponent, so it can't rank this one (AI-3.4's finding). The match: **50.3% ± 1.8pp,
+      384 games (193–191), no 5pp difference either way, +18% cost** (findings). Not adopted.
+      **Then Shayne's model (Decisions): board-only, except the cards we know** —
+      `Rollout.Settings.KnownOnly` with `Responds`, now the DEFAULT (`beam+boardonly` is the old one;
+      `casts`/`responds` the whole hand): 0 of 288 suite decisions change, 49.0% ± 1.0pp over 96 games,
+      +1% cost; kept on the hand-built position he agreed (`AnAura_IsntCastIntoAKnownRemovalSpell`:
+      Ferocity of the Hunt not cast into a known Last Gasp; with it unseen, the same as board-only —
+      revert-checked). His note there became AI-13's lesson 5. Review fixes: the filter runs BEFORE
+      DistinctMoves (one move per name — a known card behind an unknown one of its name was dropped;
+      `TheDefaultOpponent_CastsOnlyTheCardWeKnow`, revert-checked — the suite unchanged); HiddenTests'
+      casting opponents play the whole hand. Left (ponytail): no unknown land either, so a known card
+      it can't yet afford stays uncast in the look-ahead, as board-only
 
 ## Next
 
-AI-10.1–10.3 done; progress this turn is the default. **Left: AI-10.4** — the opponent-model
-question, now split (Shayne, 2026-10-27): first AI-9.5 prices a KNOWN card in their hand as itself
-(a bounced creature is not "a card"), then AI-10.4 tries an honest casting look-ahead opponent
-(`beam+casts+unseen`). Close the story after AI-10.4; its answer covers AI-4's bounce cases and
-AI-13's lesson 2.
+**Done** (2026-10-27). A winning AI presses (progress this turn); the simulated opponent is
+board-only plus the cards we know. The bounce and removal questions that remain are patience —
+AI-13's lessons 1, 4 and 5, and AI-4's held spells.
 
 ## Log
 
@@ -101,3 +123,5 @@ AI-13's lesson 2.
   turn is the default (`docs/findings/magic-ai.md`).
 - 2026-10-27: Shayne — the opponent-model question becomes two tasks: AI-9.5 (a known card in their
   hand priced as itself) first, then AI-10.4 (an honest casting opponent).
+- 2026-10-27: AI-10.4 — the honest casting opponent no different (+18% cost); Shayne's "board-only
+  except the cards we know" made the default (no different, +1%, a position he agreed). Story done.

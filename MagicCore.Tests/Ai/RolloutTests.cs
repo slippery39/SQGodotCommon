@@ -47,9 +47,11 @@ public class RolloutTests
 		Assert.That(Score(s), Is.LessThan(-5_000));
 	}
 
+	// the whole hand, as beam+casts — the default plays only the cards we know (AI-10.4)
 	static readonly Rollout.Settings Casts = Rollout.Default with
 	{
 		Opponent = Rollout.OpponentModel.CastsFromHand,
+		KnownOnly = false,
 	};
 
 	// CastsFromHand: the opponent's creature in hand arrives inside the rollout — compared with the
@@ -92,6 +94,7 @@ public class RolloutTests
 	static readonly Rollout.Settings Responds = Rollout.Default with
 	{
 		Opponent = Rollout.OpponentModel.Responds,
+		KnownOnly = false,
 	};
 
 	static readonly CardDefinition Kill =
@@ -260,13 +263,23 @@ public class RolloutTests
 
 	// Its planeswalkers are on its board, so they act (AI-8.1) — what a walker would do is what makes it
 	// worth attacking; with TheirWalkers off (before AI-8.1) the board-only opponent never touched one.
-	[TestCase(true)]
-	[TestCase(false)]
-	public void BoardOnly_NeverCasts_ButItsWalkersAct(bool theirWalkers)
+	// The default (AI-10.4) casts nothing from a hand we don't know either: it plays only the cards we know.
+	[TestCase(true, true)]
+	[TestCase(false, true)]
+	[TestCase(true, false)]
+	[TestCase(false, false)]
+	public void BoardOnly_NeverCasts_ButItsWalkersAct(bool theirWalkers, bool boardOnly)
 	{
 		var walker = TheirsWith(
 			out var after,
-			Rollout.Default with
+			(
+				boardOnly
+					? Rollout.Default with
+					{
+						Opponent = Rollout.OpponentModel.BoardOnly,
+					}
+					: Rollout.Default
+			) with
 			{
 				TheirWalkers = theirWalkers,
 			}
@@ -274,7 +287,27 @@ public class RolloutTests
 
 		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.Zero);
 		Assert.That(after.GetPlayer(them).ThisTurn.LandsPlayed, Is.Zero);
-		Assert.That(after.GetCard(walker).LoyaltyActivatedOnTurn != 0, Is.EqualTo(theirWalkers));
+		// (a casting model, the default among them, uses a walker by our policy when TheirWalkers is off)
+		if (boardOnly)
+			Assert.That(
+				after.GetCard(walker).LoyaltyActivatedOnTurn != 0,
+				Is.EqualTo(theirWalkers)
+			);
+	}
+
+	int KnownTheirs;
+
+	// AI-10.4 (Shayne): "board only, except for cards we know about" — of its two 4/4s in hand, the
+	// default opponent casts the one we know in its own turn, and never the other. They share a name: the
+	// filter comes before DistinctMoves, which keeps one move per name and would keep the unknown one.
+	[Test]
+	public void TheDefaultOpponent_CastsOnlyTheCardWeKnow()
+	{
+		TheirsWith(out var after, Rollout.Default, knowTheSecond: true);
+
+		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.EqualTo(1));
+		Assert.That(after.IsOnBattlefield(KnownTheirs), "the one we know");
+		Assert.That(after.GetPlayer(them).ThisTurn.LandsPlayed, Is.Zero, "its land isn't known");
 	}
 
 	/// <summary>
@@ -282,12 +315,23 @@ public class RolloutTests
 	/// <paramref name="settings"/>' model — <paramref name="after"/> is its turn's last state, before
 	/// the tally resets. Returns the planeswalker's id.
 	/// </summary>
-	int TheirsWith(out GameState after, Rollout.Settings settings)
+	/// <param name="knowTheSecond">The second 4/4 is one we know (AI-10.4) — the first, the same name, isn't.</param>
+	int TheirsWith(out GameState after, Rollout.Settings settings, bool knowTheSecond = false)
 	{
 		for (var i = 0; i < 2; i++)
 		{
 			(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Battlefield);
-			(s, _) = TestGames.Put(s, them, TestGames.Creature("Theirs", "4/4"), ZoneType.Hand);
+			(s, var theirs) = TestGames.Put(
+				s,
+				them,
+				TestGames.Creature("Theirs", "4/4"),
+				ZoneType.Hand
+			);
+			if (knowTheSecond && i == 1)
+			{
+				s = s.UpdateObject(theirs, s.GetCard(theirs) with { KnownTo = Knowers.Everyone }); // TEST SETUP
+				KnownTheirs = theirs;
+			}
 		}
 		(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Hand);
 		(s, var walker) = TestGames.Put(s, them, Walker, ZoneType.Hand);
