@@ -1037,3 +1037,25 @@ above, instead of a point a life to 20 and half above (`Evaluator.Terms.LifeByUs
 - **It moves every evaluation, GreedyAi's too:** 16 tests failed with it (GreedyAi's golden games, the
   card-value table, attacking above 20 life, the table's recorded games) — keeping it meant
   regenerating all of those for no measured gain. Dropped before the commit; the formula is above.
+
+## The look-ahead's defender gang-blocks (2026-10-28, AI-15.2)
+
+From Shayne's replay (AI-14, flag 4): the search scored a menace attack into a full board as a WIN —
+the look-ahead's blockers were judged one at a time, each blocking only what it survives, so no second
+blocker ever joined and a menace attacker was unblockable. Now a blocker joins a block already
+declared when, with it, the blockers kill the attacker, or menace needs a second
+(`Lookahead.Joins`, `Evaluator.Terms.GangBlocks`; `+nogang` is the old look-ahead).
+
+- **Position** (rebuilt by hand — the game no longer replayed): our 3/3 menace, their two 2/2s, them
+  at 3. The attack scored 10000 (a win), not attacking 9022; now 8.69 against 10.80, and it holds —
+  Shayne's answer. The control (`+nogang`) attacks.
+- **Suite:** 6 of 288 decisions change; cost 3 097 steps a position (3 040, +1.9%). Against the oracle
+  as stored (read with the old look-ahead) 81.3% against 82.6%; re-read with the new one, 82.6%
+  (score given up 1.09).
+- **Match:** `--match=beam,beam+nogang --until-clear`: 576 games, **51.2% ± 1.2pp (295–281), no 5pp
+  difference**, "worse" rejected (log-likelihood −13.1); cost 1 488 steps a decision (1 456, +2.1%);
+  1 422 s on 16 cores.
+- Kept (AI-5's rule: no difference, the agreed position fixed). GreedyAi's golden games moved (4 of
+  12) — gang blocks alone, checked by forcing the join off.
+- After the review, a menace join needs the two to kill the attacker or the joiner to survive it (no
+  chump): 0 of 288 suite decisions and the golden games unchanged, so the match above stands.

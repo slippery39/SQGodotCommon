@@ -1088,6 +1088,14 @@ recorded in the root `CLAUDE.md`:
 otherwise look like a real serialization regression.
 
 
+## `HotPathAllocationTests.ReadingACreature_AllocatesNothing` fails in Release only (found 2026-10-28)
+
+Reading a creature (`Power`, `Toughness`, `IsIndestructible`, `Has`, `HasOwn`) allocates 24 bytes in
+Release, 0 in Debug — at `a3e1f86` too, so not AI-15's. The suites run in Debug (`Commands.md`), so
+it passes there. Likely the JIT (tiered compilation or PGO) rather than the code; worth a look only
+if the search's allocation (AI-7) is measured again. Options: run it in Debug only, or warm up longer
+before measuring.
+
 ## MagicCore known ceilings
 
 The real-rules engine (branch `mtg-real`, `MagicCore/`). Each is fine for now and marked `ponytail:`
@@ -1112,6 +1120,8 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the search's guessed opponent hand (`Hidden.Hand.GuessedFromColors`, AI-3.5) takes the deck to be 40 cards with 17 lands, and its cards FRA's — read both from the game if another format or set plays
 - `GreedyAi` (no longer the default AI — the search is, AI-2) is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers (`docs/findings/magic-ai.md`)
 - menace drops a lone blocker instead of refusing the declaration
+- the look-ahead's gang block (`Lookahead.Joins`, AI-15) sums the blockers' damage — first strike, the attacker's split and its deathtouch are not seen, and it is a second "is it lethal" beside `Survives` — fold the two into one if a misjudged gang block is shown
+- the look-ahead's safe block can pick a menace attacker as a lone block, which is then dropped (`Lookahead.QuickAnswer`; older than AI-15) — the blocker blocks nothing where it could have blocked another attacker it survives; skip a menace attacker nobody has blocked yet, then measure (it moves decisions)
 - the auto-tapper ignores what the rest of the hand needs
 - Empower Jace with two Jace tokens loads the first
 - surveil keeps the kept cards' order.

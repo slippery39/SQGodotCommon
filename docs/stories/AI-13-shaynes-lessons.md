@@ -143,7 +143,8 @@ positions are held by pricing a bounced creature as itself (AI-9.5's `KnownHand`
 of `MagicConsole --decisions`) — the first position the option value itself should fix; then AI-13.5
 (creatures whose enters needs a target — Yoshimaru, turn 4). Lesson 5 (Ferocity) needs AI-9.4's risk of
 the unseen hand; lesson 3 waits on AI-12. The constants (`MaxOptionTurns` 4, `RecastPerMana` 0.5) were
-chosen, not measured. After any evaluator change, rerun `--cast-gains`.
+chosen, not measured. After any evaluator change, rerun `--cast-gains` — **due now**: AI-15 changed the look-ahead's blocks
+(2026-10-28) after the table was measured.
 
 ## Log
 

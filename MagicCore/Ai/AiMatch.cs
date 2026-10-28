@@ -69,6 +69,8 @@ public static class AiMatch
 			["nokeywords"] = o => o with { Without = o.Without | Evaluator.Terms.MoreKeywords },
 			// The look-ahead's safe block counting damage once, before AI-8.3: beam+oldblocks.
 			["oldblocks"] = o => o with { Without = o.Without | Evaluator.Terms.BlockSurvival },
+			// The look-ahead's defender never gang-blocks, before AI-15: beam+nogang.
+			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// The threat term without a trampler's excess over its blocker (AI-8.4): beam+notrample.
 			["notrample"] = o => o with { Without = o.Without | Evaluator.Terms.Trample },
 			// A planeswalker as a flat body and 0.35 a counter (before AI-8.2): beam+walkercount.

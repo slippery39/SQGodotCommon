@@ -65,11 +65,15 @@ scoring change — MagicTable has none, and MagicCore's evaluator couldn't expla
       from the game (who died, left or entered, life); the score against the next best only where the
       AI had a real choice; no "planned" labels (a replayed plan once hid a removal spell — flag 3);
       players named by their decks; close calls first. 2 games: 508 lines, from 3 205
+- [x] AI-14.6 Each game saved as a record beside the report (`decisions-<time>-gameN.json`), so a flag
+      can be kept as a test (`--record=FILE --keep=NAME --at=N`; `--record=FILE` numbers the moves) —
+      added 2026-10-28 when flag 4's game no longer replayed (AI-15.1)
 - [ ] AI-14.4 The F6 inspector on MagicTable (next sprint)
 
 ## Next
 
-Committed with AI-13.4 (the option value; AI-9.2's taper dropped). Run `dotnet run -c Release --project MagicConsole --
+**Keep a flagged position first** (AI-14.6): the engine moves on, and flag 4's game had gone within the
+hour. Committed with AI-13.4 (the option value; AI-9.2's taper dropped). Run `dotnet run -c Release --project MagicConsole --
 --decisions` from the solution root and open the file it names (VS Code's preview). Shayne's second
 flag (turn 15, "why block with the Cadet") was a double block with both Cadets that killed Edgar — the
 per-creature report hid it; the replay shows the block as one line. One reading already: casting a

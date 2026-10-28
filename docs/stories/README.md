@@ -28,22 +28,21 @@ every task a sprint file names exists.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-1. **AI-15** — the look-ahead's defender gang-blocks
-2. **LIM-2** — draft against bots: FRA first, a cube later
-3. **MC-4** — MTGA's powered cube: surveyed, then built in batches
-4. **AI-13** — Shayne's lessons as general rules for the search, each measured
-5. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-6. **AI-9** — resources priced by what they provide
-7. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
-8. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-9. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-10. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-11. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-12. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-13. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-14. **AI-4** — strategic plans above single actions
-15. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-16. **AI-12** — a card's threat over time, on an empty board and a busy one
+1. **LIM-2** — draft against bots: FRA first, a cube later
+2. **MC-4** — MTGA's powered cube: surveyed, then built in batches
+3. **AI-13** — Shayne's lessons as general rules for the search, each measured
+4. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
+5. **AI-9** — resources priced by what they provide
+6. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
+7. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
+8. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+9. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+10. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+11. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+12. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+13. **AI-4** — strategic plans above single actions
+14. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+15. **AI-12** — a card's threat over time, on an empty board and a busy one
 
 ## How it works
 
@@ -98,7 +97,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-9](AI-9-resources-by-use.md) | Resources priced by what they provide, not by how many there are | in-progress |
 | [AI-13](AI-13-shaynes-lessons.md) | Shayne's lessons as general rules for the search — card-agnostic, switchable, measured | in-progress |
 | [AI-14](AI-14-see-the-ai-play.md) | See what the AI decides and why — a decision report now, an in-game inspector next | in-progress |
-| [AI-15](AI-15-lookahead-gang-blocks.md) | The look-ahead's defender gang-blocks — a menace attacker isn't unblockable | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
@@ -119,6 +117,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-7](AI-7-faster-search.md) | A faster search — profiled, then optimised without changing a decision | done |
 | [AI-8](AI-8-playtest-plays.md) | Plays that looked wrong at the table, rebuilt and fixed | done |
 | [AI-10](AI-10-winning-ties.md) | A winning AI still presses — ties among won lines no longer pick the passive move | done |
+| [AI-15](AI-15-lookahead-gang-blocks.md) | The look-ahead's defender gang-blocks — a menace attacker isn't unblockable | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |

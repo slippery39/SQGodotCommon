@@ -197,8 +197,16 @@ if (flags.Contains("--decisions"))
 {
 	Directory.CreateDirectory("ai_reports");
 	var path = Path.Combine("ai_reports", $"decisions-{DateTime.Now:yyyy-MM-dd_HHmmss}.md");
-	File.WriteAllText(path, MagicCore.Ai.DecisionReport.Run(Arg("games") ?? 2, Arg("seed") ?? 1));
+	var (report, records) = MagicCore.Ai.DecisionReport.Run(Arg("games") ?? 2, Arg("seed") ?? 1);
+	File.WriteAllText(path, report);
 	Console.WriteLine(path);
+	// each game as a record: --record=FILE numbers its moves, --keep makes a flagged one a test
+	for (var g = 0; g < records.Count; g++)
+	{
+		var recordPath = Path.ChangeExtension(path, null) + $"-game{g + 1}.json";
+		File.WriteAllText(recordPath, records[g].ToJson());
+		Console.WriteLine(recordPath);
+	}
 	return;
 }
 

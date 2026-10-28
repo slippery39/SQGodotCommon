@@ -18,11 +18,17 @@ public static class DecisionReport
 	/// <summary>Within this of the best, a second option makes a decision a close call — listed first.</summary>
 	const double CloseCall = 1.0;
 
-	public static string Run(int games = 2, int firstSeed = 1)
+	/// <returns>The report, and each game as a record — so a flagged position can be kept as a test
+	/// (`--record=FILE --keep=NAME --at=N`).</returns>
+	public static (string Report, IReadOnlyList<GameRecord> Records) Run(
+		int games = 2,
+		int firstSeed = 1
+	)
 	{
 		var decks = FraDecks.All.Keys.ToList();
 		var md = new StringBuilder();
 		var close = new List<string>();
+		var records = new List<GameRecord>();
 		for (var g = 0; g < games; g++)
 		{
 			var (a, b) = (decks[g % decks.Count], decks[(g + 1) % decks.Count]);
@@ -37,6 +43,7 @@ public static class DecisionReport
 			var ais = names.Keys.ToDictionary(p => p, p => new BeamSearchAi(p));
 			md.Append($"\n## Game {g + 1}: {a} vs {b}, seed {seed}\n");
 			var replay = new Replay(md, names, s);
+			var record = GameRecord.New(seed, FraDecks.All[a], FraDecks.All[b], (a, b));
 			for (var step = 0; step < 4_000 && !s.IsOver(); step++)
 			{
 				var who = s.DecidingPlayerId();
@@ -47,14 +54,17 @@ public static class DecisionReport
 					close.Add(
 						$"- Game {g + 1}, turn {s.GetGame().TurnNumber}, {names[who]}: {closeCall}"
 					);
+				record = record.Add(s, MoveTokens.Token(s, decision), "ai");
 				s = decision.State;
 			}
 			replay.End(s);
+			records.Add(s.IsOver() ? record.Ended(s) : record);
 			md.Append(
 				$"\n**Result:** {(s.IsOver() ? (s.WinnerId() is { } w and > 0 ? $"{names[w]} won" : "a draw") : "unfinished")} on turn {s.GetGame().TurnNumber}.\n"
 			);
 		}
-		return "# AI games, move by move\n\n"
+		var report =
+			"# AI games, move by move\n\n"
 			+ "The default search on both sides. Each move is one line, what it did under it (→). Where the "
 			+ "AI had a real choice, its score is shown against the next best — higher is better for the side "
 			+ "moving; a tie means waiting would do the same thing later in the turn.\n\n"
@@ -62,6 +72,7 @@ public static class DecisionReport
 			+ (close.Count > 0 ? string.Join("\n", close) : "None.")
 			+ "\n"
 			+ md;
+		return (report, records);
 	}
 
 	/// <summary>Writes one game as it goes: a turn's heading, each move, a combat declaration gathered into one line, and the changes under each.</summary>

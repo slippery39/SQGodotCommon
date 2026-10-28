@@ -91,7 +91,8 @@ public static class Evaluator
 
 	/// <summary>
 	/// The evaluator's terms that can be switched off — each added by a measured story, so each can be
-	/// measured without — and the look-ahead's one beside them (<see cref="BlockSurvival"/>).
+	/// measured without — and the look-ahead's beside them (<see cref="BlockSurvival"/>,
+	/// <see cref="GangBlocks"/>).
 	/// </summary>
 	[Flags]
 	public enum Terms
@@ -130,6 +131,13 @@ public static class Evaluator
 		/// needs a gain at least that, and the bar falls as the game shortens (`+nooption`).
 		/// </summary>
 		HoldOption = 64,
+
+		/// <summary>
+		/// The look-ahead's, beside the evaluator: a blocker joins a block already declared when together
+		/// they kill the attacker, or menace needs a second (<see cref="Lookahead.QuickAnswer"/>, AI-15,
+		/// `+nogang`) — without it a menace attacker was unblockable in every look-ahead.
+		/// </summary>
+		GangBlocks = 128,
 	}
 
 	/// <summary>

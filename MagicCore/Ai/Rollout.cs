@@ -384,8 +384,8 @@ public static class Rollout
 
 	/// <summary>
 	/// Attacks and blocks are judged by what they lead to, for whoever declares them — so a player
-	/// facing lethal chump-blocks. Each creature is judged alone (the rest declare nothing in the
-	/// look-ahead) unless <see cref="Attacks.AllInToo"/> weighs "all attack" too. A target choice takes
+	/// facing lethal chump-blocks. Each creature is judged alone (in the look-ahead the rest don't attack,
+	/// and block only what they survive or join a block already made — Lookahead.Joins, AI-15) unless <see cref="Attacks.AllInToo"/> weighs "all attack" too. A target choice takes
 	/// its owner's best under <see cref="Targets.OwnersBest"/>; every other choice the cheap answer.
 	/// </summary>
 	static IEnumerable<int> Answer(GameState s, ChoiceAction choice, int who, Settings settings) =>

@@ -520,4 +520,40 @@ public class AiPositionTests
 		);
 		Assert.That(Casts(Evaluator.Terms.None), Is.EqualTo("Cast Way of the Wildspeaker"));
 	}
+
+	// Shayne, 2026-10-28 (AI-15, from flag 4 of AI-14's replay — the game itself no longer replayed, so
+	// rebuilt): our 3/3 menace, their two untapped 2/2s, them at 3 life. The look-ahead's defender never
+	// gang-blocked, so the attack scored as a WIN; their real search double-blocks and the 3/3 dies for a
+	// 2/2. His answer: don't attack. The CONTROL: without gang blocks in the look-ahead, it attacks.
+	[TestCase(false, ExpectedResult = false)]
+	[TestCase(true, ExpectedResult = true)]
+	public bool AMenaceAttack_IntoTwoBlockersThatKillIt_IsntMade(bool noGang)
+	{
+		(s, var brute) = TestGames.Put(
+			s,
+			me,
+			TestGames.Creature("Brute", "3/3", "Menace"),
+			ZoneType.Battlefield
+		);
+		for (var i = 0; i < 2; i++)
+			(s, _) = TestGames.Put(
+				s,
+				them,
+				TestGames.Creature("Cadet", "2/2"),
+				ZoneType.Battlefield
+			);
+		s = s.WithPlayer(s.GetPlayer(them) with { Life = 3 }); // TEST SETUP
+		var ai = new BeamSearchAi(
+			me,
+			new() { Without = noGang ? Evaluator.Terms.GangBlocks : Evaluator.Terms.None }
+		);
+		// our turn up to the end of combat: did the Brute attack?
+		var attacked = false;
+		for (var i = 0; i < 200 && s.GetGame().Step <= Step.EndCombat && !s.IsOver(); i++)
+		{
+			s = s.DecidingPlayerId() == me ? ai.Decide(s).State : TestGames.PassOrChoose(s);
+			attacked |= s.GetCard(brute).AttackingId != 0;
+		}
+		return attacked;
+	}
 }

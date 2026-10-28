@@ -497,4 +497,57 @@ public class RolloutTests
 		);
 		return answer == attacker;
 	}
+
+	// AI-15 (Shayne's replay, flag 4): the look-ahead's blockers were judged one at a time, each blocking
+	// only what it survives, so no second blocker ever joined a block — and a menace attacker blocked
+	// by one is unblocked. The second 2/2 now joins the first on an attacker the two kill together, or
+	// on a menace attacker; never on one the first already kills, nor on one the two can't.
+	[TestCase("3/3", "Menace", false, ExpectedResult = true)]
+	[TestCase("3/3", "", false, ExpectedResult = true)] // 2 + 2 kill it
+	[TestCase("2/1", "", false, ExpectedResult = false)] // the first already kills it (and a 2/2 blocking it alone dies)
+	[TestCase("5/5", "", false, ExpectedResult = false)] // 2 + 2 don't
+	[TestCase("5/5", "Menace", false, ExpectedResult = false)] // menace, but a chump: 2 + 2 don't kill it
+	[TestCase("3/3", "Menace", true, ExpectedResult = false)] // +nogang: never joins
+	public bool ALookAheadBlocker_JoinsABlock_TheTwoMake(
+		string attackerPt,
+		string attackerKeyword,
+		bool noGang
+	)
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var them = s.OpponentOf(me);
+		(s, var attacker) = TestGames.Put(
+			s,
+			me,
+			TestGames.Creature(
+				"Attacker",
+				attackerPt,
+				attackerKeyword == "" ? [] : [attackerKeyword]
+			),
+			ZoneType.Battlefield
+		);
+		for (var i = 0; i < 2; i++)
+			(s, _) = TestGames.Put(
+				s,
+				them,
+				TestGames.Creature("Blocker", "2/2"),
+				ZoneType.Battlefield
+			);
+		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
+		s = s.Choose([them]);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareBlockerChoice);
+		s = s.Choose([attacker]); // the first blocker blocks it
+		Assert.That(
+			s.GetPendingChoice(),
+			Is.InstanceOf<Actions.DeclareBlockerChoice>(),
+			"the second blocker's choice"
+		);
+
+		var answer = Evaluator.Without(
+			noGang ? Evaluator.Terms.GangBlocks : Evaluator.Terms.None,
+			() => Lookahead.QuickAnswer(s, s.GetPendingChoice()!).Single()
+		);
+		return answer == attacker;
+	}
 }
