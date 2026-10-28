@@ -1660,7 +1660,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Return target creature to its owner's hand.
 
-**Status:** scripted · **tests naming it:** FraCommonTests, FraKnowledgeTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCommonTests, FraKnowledgeTests
 
 **Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.
 

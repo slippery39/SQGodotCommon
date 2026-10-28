@@ -73,6 +73,8 @@ public static class AiMatch
 			["notrample"] = o => o with { Without = o.Without | Evaluator.Terms.Trample },
 			// A planeswalker as a flat body and 0.35 a counter (before AI-8.2): beam+walkercount.
 			["walkercount"] = o => o with { Without = o.Without | Evaluator.Terms.WalkerUse },
+			// Instant-speed cards held at their plain price, no patience (before AI-13.2): beam+nopatience.
+			["nopatience"] = o => o with { Without = o.Without | Evaluator.Terms.Patience },
 			// Every card in the opponent's hand priced blind, known or not (before AI-9.5): beam+blindhand.
 			["blindhand"] = o => o with { Without = o.Without | Evaluator.Terms.KnownHand },
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.

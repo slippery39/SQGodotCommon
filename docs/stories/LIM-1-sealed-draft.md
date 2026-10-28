@@ -65,6 +65,8 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
   the table's **New game keeps the same opponent** (a rematch). A pasted pool drops its basics
   (free) and starts with an empty deck — the deck you built in Arena is not carried over.
 - 2026-10-23, Shayne: **build LIM-1.8 anyway** — not yet sure he plays the Direct.
+- 2026-10-28, Shayne: **not playing the Arena Directs for now**, "maybe another time" — so no
+  LIM-1.8 run on his exports this sprint (LIM-3.4's `--compare` ran on his qualifier pool instead).
 - 2026-10-23, Claude (LIM-1.8, open to change): a candidate build is an **Arena export** (its
   Sideboard section is the rest of the pool, outside the game); every build meets the SAME opponents
   — pool i from seed i, the AI's build, in a game of seed i — one game each, the candidate as

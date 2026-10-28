@@ -183,9 +183,7 @@ public record CastSpellAction : GameAction
 
 	bool CanCastNow(GameState s, Card card)
 	{
-		return card.Is(CardType.Instant)
-			|| s.Has(card, "Flash")
-			|| Priority.AtSorcerySpeed(s, PlayerId);
+		return Priority.AtInstantSpeed(s, card) || Priority.AtSorcerySpeed(s, PlayerId);
 	}
 
 	public override ActionResult Execute(GameState s) => new(Priority.Retain(Cast(s), PlayerId));

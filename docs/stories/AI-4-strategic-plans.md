@@ -74,8 +74,8 @@ Open questions:
 - [ ] AI-4.2 Positions for Shayne's bounce and removal cases (Decisions, 2026-10-24), built by hand as
       AI-1 built the Rank Rat (`AiPositionTests`): one where holding is right, one per value case
       where casting is — Shayne agrees each answer before it is a target (AI-9's rule). **Holding:
-      #547 of `GalliaWontAttack`, agreed (2026-10-27: Pass)** — a real game, not built by hand; a
-      test once a change makes the search pass there
+      #547 of `GalliaWontAttack`, agreed (2026-10-27: Pass)** — a real game, not built by hand;
+      the search passes there since AI-10.4 (`AiPositionTests.Unsummon_IsHeld_AtMove547`, 2026-10-28)
 
 ## Next
 

@@ -958,3 +958,30 @@ at sorcery speed in its turn and in answer to our spells and combat (`Responds` 
 - It also makes the token the better bounce at seed 4 move 53 by itself: the bounced creature,
   known, is recast in the look-ahead (AI-9.5's test now runs under `boardonly` to isolate its term).
 - The default since. The oracle, built from the default rollout, was re-read (agreement 83.0%).
+
+## Patience with instant-speed cards: AI-13's first rule (2026-10-28, AI-13.2)
+
+Shayne's lessons 1, 4 and 5 as one card-agnostic rule: casting an instant or a flash card at
+sorcery timing (our main phase, the stack empty) costs `Evaluator.PatienceCost` (1.0), so casting it
+now must beat holding it by that much (`Evaluator.Terms.Patience`; off is `beam+nopatience`). The
+search's tree charges it on every such cast in a line, and our rollout policy waits the same way
+(`Rollout.Impatience`); a line that ends the game pays nothing.
+
+- **A hold value on the card in hand did nothing (tried first).** The search's best line after
+  "Pass" cast the flash card later the same turn, so holding and casting ended the same and still
+  tied. The cost has to sit on the cast, on every such cast in a line (a committed plan replays what
+  its line did), and in the rollout too: charged in the tree only, it rewarded pushing the cast past
+  the tree's edge — a delay, not patience (the /pre-commit review).
+- **The position (agreed, Shayne):** our 2/2 and Ferocity of the Hunt against their unseen Last Gasp
+  scored a TIE, Pass 5.40 = cast 5.40, and the tie cast it. Now it holds, in the tree and the rollout
+  alike (`AFlashAura_IsHeld_NotCastAtTheFirstChance`; without patience, the control casts).
+- **#547 of his 10-23 game** (Unsummon held at 5 life) holds since AI-10.4's known-card opponent —
+  in their turn, so patience doesn't touch it; kept as a guard (`Unsummon_IsHeld_AtMove547`).
+- **Quick check:** 4 of 288 decisions differ from no patience — two Extended Absences on a Jace held,
+  Divining Duelist (a 3-mana flash creature) held early, and one Jace activation that becomes a cast
+  as the look-ahead's values move. Against the oracle re-read with the rule: 83.0% agreement, score
+  given up 0.80 (without: 82.6%, 1.05).
+- **Match:** `--match=beam,beam+nopatience --until-clear` ran to its 600-game cap: **53.0% ± 1.0pp,
+  318–282** — undecided at 5pp, but "worse" firmly rejected (log-likelihood −26.7) and "better" near
+  its bar (2.43 of 2.94). Cost the same (1 342 steps a decision), spells cast a game the same (9.7):
+  it waits rather than hoards. (The tree-only first version: 51.0% ± 1.0pp over 96 games.)

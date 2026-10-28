@@ -32,6 +32,10 @@ static class Priority
 			&& s.StackIsEmpty();
 	}
 
+	/// <summary>A spell castable whenever its controller has priority: an instant, or one with flash (CR 702.8). The ONE read of it.</summary>
+	public static bool AtInstantSpeed(GameState s, Card card) =>
+		card.Is(CardType.Instant) || s.Has(card, "Flash");
+
 	/// <summary>CR 117.3c: a player who acts gets priority back, and the pass count restarts.</summary>
 	public static GameState Retain(GameState s, int playerId) =>
 		TurnStructure.GivePriority(

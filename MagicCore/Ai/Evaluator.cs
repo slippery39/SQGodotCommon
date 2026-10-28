@@ -70,7 +70,23 @@ public static class Evaluator
 		/// a card they revealed) priced as itself, not as an unknown card (AI-9.5, Shayne, `+blindhand`).
 		/// </summary>
 		KnownHand = 32,
+
+		/// <summary>
+		/// Not the evaluator's own, but the search's beside it: patience with instant-speed cards (AI-13's
+		/// first rule, Shayne) — casting an instant or a flash card at sorcery timing (our main phase,
+		/// the stack empty) costs <see cref="PatienceCost"/> in the line that does it, so casting it now
+		/// must beat holding it by that much (`+nopatience`).
+		/// </summary>
+		Patience = 64,
 	}
+
+	/// <summary>
+	/// What casting an instant-speed card at sorcery timing costs a line (<see cref="Terms.Patience"/>) —
+	/// about a card held at the flat price, so a real swing still casts it.
+	/// ponytail: one cost for every such card; price the option by what the card does at a later window
+	/// (AI-4's held spells) if one cost misjudges a kind of card.
+	/// </summary>
+	public const double PatienceCost = 1.0;
 
 	/// <summary>The keywords a creature's value counts here (<see cref="Terms.MoreKeywords"/>).</summary>
 	static string[] Keywords => IsOff(Terms.MoreKeywords) ? FirstKeywords : ValuedKeywords;

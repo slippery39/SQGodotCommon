@@ -224,16 +224,8 @@ public class AiPositionTests
 		Assert.That(Target(Evaluator.Terms.None).IsToken, "the token");
 	}
 
-	// Shayne, 2026-10-27 (AI-10.4, built by hand, the answer agreed): "if we know our opponent has a card
-	// in hand via a look at hand effect or unsummon or graveyard return type thing, then the opponent
-	// shouldn't just run into it." Our 2/2 and Ferocity of the Hunt (an Aura); their Last Gasp, KNOWN, with
-	// two Swamps up. Enchanting the 2/2 runs into it — two cards for their one. The simulated opponent
-	// now plays the cards we know (Rollout.Settings.KnownOnly), so the search holds. The CONTROL: the
-	// board-only look-ahead casts it. And a card we DON'T know changes nothing: the same decision as
-	// board-only. (Casting it at the first chance at all is lesson 5 of AI-13, Shayne — not pinned here.)
-	[TestCase(true)]
-	[TestCase(false)]
-	public void AnAura_IsntCastIntoAKnownRemovalSpell(bool known)
+	/// <summary>Our 2/2 and Ferocity of the Hunt (an Aura, with flash); their 1/4 and Last Gasp, two Swamps each side.</summary>
+	void FerocityAgainstLastGasp(bool known)
 	{
 		for (var i = 0; i < 2; i++)
 		{
@@ -253,8 +245,71 @@ public class AiPositionTests
 					KnownTo = global::MagicCore.Cards.Knowers.Everyone,
 				}
 			); // TEST SETUP
-		bool CastsTheAura(bool knownOnly) =>
-			new BeamSearchAi(
+	}
+
+	// Shayne, 2026-10-27 (AI-13, lesson 5, on the position below with Last Gasp unseen): "ferocity of the
+	// hunt is best held until the opponent plays their removal spell first, or if you can trade it with a
+	// creature. So the AI shouldn't have been playing this out at first possibility anyways." Casting it
+	// and holding it scored the same, and the tie cast it. Now a card that can be cast later at instant
+	// speed is worth more held (Evaluator.Terms.Patience, AI-13's first rule). The CONTROL: without
+	// patience, it casts it at the first chance.
+	[Test]
+	public void AFlashAura_IsHeld_NotCastAtTheFirstChance()
+	{
+		FerocityAgainstLastGasp(known: false);
+		bool CastsIt(Evaluator.Terms without) =>
+			new BeamSearchAi(me, new() { Without = without }).Decide(s).Action
+			is global::MagicCore.Actions.CastSpellAction;
+
+		Assert.That(CastsIt(Evaluator.Terms.Patience), "the control: no patience, it casts it");
+		Assert.That(CastsIt(Evaluator.Terms.None), Is.False, "it holds");
+	}
+
+	// AI-4.2's holding position, agreed with Shayne (2026-10-27): #547 of his game, Unsummon held at 5 life
+	// ("there is literally no reason to play it right now"). The search holds it since the simulated
+	// opponent recasts a creature we know it holds (AI-10.4) — a guard, so a later rule can't undo it.
+	// (AI-13's patience can't be what holds: #547 is in their turn, never sorcery timing.) The CONTROL:
+	// the board-only look-ahead casts Unsummon.
+	[Test]
+	public void Unsummon_IsHeld_AtMove547()
+	{
+		var record = KeptRecords.Get("GalliaWontAttack");
+		var s547 = record.Before(547);
+		AiDecision Choice(Rollout.Settings rollout) =>
+			new BeamSearchAi(s547.DecidingPlayerId(), new(RolloutSettings: rollout)).Decide(s547);
+		var boardOnly = BeamSearchAi.DefaultRollout with
+		{
+			Opponent = Rollout.OpponentModel.BoardOnly,
+			KnownOnly = false,
+		};
+
+		Assert.That(
+			Choice(boardOnly).Action is global::MagicCore.Actions.CastSpellAction c
+				&& s547.GetCard(c.CardId).Name == "Unsummon",
+			"the control: board-only, it casts Unsummon"
+		);
+		Assert.That(
+			MoveTokens.Same(
+				MoveTokens.Token(s547, Choice(BeamSearchAi.DefaultRollout)),
+				record.Moves[546].Token
+			),
+			"it holds, as Shayne did"
+		);
+	}
+
+	// Shayne, 2026-10-27 (AI-10.4, built by hand, the answer agreed): "if we know our opponent has a card
+	// in hand via a look at hand effect or unsummon or graveyard return type thing, then the opponent
+	// shouldn't just run into it." Our 2/2 and Ferocity of the Hunt (an Aura); their Last Gasp, KNOWN, with
+	// two Swamps up. Enchanting the 2/2 runs into it — two cards for their one. The simulated opponent
+	// now plays the cards we know (Rollout.Settings.KnownOnly), so the search holds. The CONTROL: the
+	// board-only look-ahead casts it. And a card we DON'T know changes nothing: the same decision as
+	// board-only. (Casting it at the first chance at all is AI-13's lesson 5: AFlashAura_IsHeld_NotCastAtTheFirstChance.)
+	[TestCase(true)]
+	[TestCase(false)]
+	public void AnAura_IsntCastIntoAKnownRemovalSpell(bool known)
+	{
+		FerocityAgainstLastGasp(known);
+		bool CastsTheAura(bool knownOnly) => new BeamSearchAi(
 				me,
 				new(
 					RolloutSettings: knownOnly
@@ -269,9 +324,11 @@ public class AiPositionTests
 							KnownOnly = false,
 						}
 				)
-			)
-				.Decide(s)
-				.Action is global::MagicCore.Actions.CastSpellAction;
+				{
+					// the opponent model alone: AI-13's patience would hold the Aura either way
+					Without = Evaluator.Terms.Patience,
+				}
+			).Decide(s).Action is global::MagicCore.Actions.CastSpellAction;
 
 		if (known)
 		{

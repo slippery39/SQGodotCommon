@@ -1140,6 +1140,9 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the search's table time cap (`BeamSearchAi.Settings.TimeLimit`, 1 s) gates only the lines below the root: a 16-move root always completes — 1.1–2.2 s measured; with the cap 10 of 1 913 decisions ran over 1.2 s, the slowest 1.65 s (docs/findings/magic-ai.md); skip root rollouts past the limit, scored by the cheap evaluation, if that shows on the table
 - the search runs on the table's main thread, so the window does not redraw while it thinks (the slowest `StepAi` measured 1.1 s); move `Decide` to a worker and apply on the main thread if a playtest calls it a freeze. Undo rebuilds the AIs (the search commits to a plan that an undo would put out of step)
 - the search AI (`Ai/BeamSearchAi.cs`) never responds to its OWN object on top of the stack — in its tree or for real — so a line that protects its spell with a second one is never found; branch that window if a deck needs it
+- a revealed card in the opponent's hand is priced as itself only by what the search knows (`Ai/Evaluator.cs` Side, AI-9.5) — under `Hidden.Hand.Real` (the default) a reveal played INSIDE the look-ahead prices their real hidden cards, a peek; price only cards known at the search's root if a reveal spell is ever misjudged
+- the default simulated opponent plays only the cards we know (`Ai/Rollout.cs` Allowed, AI-10.4) — no unknown land either, so its mana doesn't grow in the look-ahead and a known card it can't yet afford stays uncast; allow one land a turn if that misjudges a bounce
+- patience is one flat cost (`Evaluator.PatienceCost` = 1.0, AI-13.2) on every instant or flash card cast at sorcery timing, by the search's tree and our rollout policy alike — chosen, not measured; scale it by what the card does at a later window (AI-4's held spells) if a hold looks wrong
 
 ## MagicCore search: speedups not taken (AI-7, 2026-10-19)
 
