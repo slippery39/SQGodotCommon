@@ -85,3 +85,36 @@ because fixing lands now make two of the deck's colours.
   pool in nearly half), and pays 3.5 points of castability for it. A two-colour build cycles early mostly
   to make a land drop.
 - Seed 3's greedy build (the capture): castable on time 59% → 55%, cycles early in 25% of games.
+
+## Shayne's qualifier pool, every build compared by AI-vs-AI sims (2026-10-27, LIM-3.4)
+
+`MagicConsole --compare=MagicCore.Tests/Limited/Pools/Qualifier20261025.txt`: the 11 builds the Sealed
+screen offers (the best pair's three, and the 4 closest pairs' two colours and greedy), each against
+the SAME 200 AI sealed opponents (pool i from seed i, one of its suggestions), the search on both
+sides; 104 min on 16 cores.
+
+| Build | Win rate (± 1 SE) | Against Blue/Black, paired by opponent |
+|---|---|---|
+| **White/Black** | **55.0% ± 3.5** | **+20.5pp ± 4.3** |
+| Blue/Black greedy | 49.0% ± 3.5 | +14.5pp ± 4.4 |
+| White/Black greedy | 47.0% ± 3.5 | +12.5pp ± 4.3 |
+| White/Blue greedy | 43.0% ± 3.5 | +8.5pp ± 4.2 |
+| Blue/Green greedy | 42.5% ± 3.5 | +8.0pp ± 4.3 |
+| Blue/Black + splash | 40.5% ± 3.5 | +6.0pp ± 4.2 |
+| White/Blue | 35.5% ± 3.4 | +1.0pp ± 4.4 |
+| **Blue/Black** (the builder's first, what he played) | 34.5% ± 3.4 | — |
+| Blue/Green | 33.0% ± 3.3 | −1.5pp ± 4.3 |
+| Blue/Red | 29.5% ± 3.2 | −5.0pp ± 4.1 |
+| Blue/Red greedy | 29.0% ± 3.2 | −5.5pp ± 4.1 |
+
+- **Orzhov, as he concluded after the qualifier:** White/Black two colours beats the pair the
+  builder rates highest by 20.5 points — 4.8 standard errors, beyond chance even over 10
+  comparisons. Its 16 spells at 1–3 mana (Blue/Black's 13) are the likeliest reason. The rating a card
+  (59.7% against 58.4%) points the wrong way.
+- **Greedy helps the blue pairs** (Blue/Black +14.5, White/Blue +7.5, Blue/Green +9.5 over their two
+  colours), not White/Black (−8, unpaired).
+- **What it measures:** which build THIS AI pilots better against AI-built sealed decks, not which
+  is right for a person. The AI plays both seats, so a deck that needs patience it lacks (AI-13) is
+  underrated.
+- The report's lines all ended "within 2 SE, no difference is shown", even the 20.5-point gap; each
+  now says which it is. The estimate (~81 min) was low: 1.3 games a minute a core here, not 1.7.

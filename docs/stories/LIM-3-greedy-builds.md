@@ -194,7 +194,8 @@ as the optimal deck.
 closest pairs (rating a card · spells at 1–3) to add theirs, castability, the early curve and
 fixing's tempo beside each, and a console command that compares them all by AI-vs-AI sims.
 
-Not run yet: a real `--compare` on Shayne's pool (~80 min — ask him first). Traps for whoever comes
+Run (2026-10-27): `--compare` on Shayne's qualifier pool — White/Black 55.0%, Blue/Black (what he
+played, the builder's first) 34.5%: +20.5pp ± 4.3 paired (findings). Traps for whoever comes
 back: `Fixes` is what a card MAKES, `FetchesABasic` finds a basic (a source of a colour only with a
 basic of it in the deck); in `Castability` only a LANDCYCLE is tempo; `SealedSuggestionTests.CheckRules`
 is the rule book; his qualifier pool is `MagicCore.Tests/Limited/Pools/Qualifier20261025.txt`. The
@@ -224,3 +225,5 @@ taken AND with a pool of many close pairs (seed 2).
   runner-up" became the list of close pairs); built, his pool kept as the test.
 - 2026-10-27: LIM-3.4 interviewed and built; the close pairs capped at 4 (Shayne, after seeded pools
   listed up to 9). Story done.
+- 2026-10-27: `--compare` on his qualifier pool, 11 builds x 200: White/Black two colours 55.0% beats
+  Blue/Black 34.5% by 20.5pp ± 4.3 — the Orzhov he wished he'd played (`docs/findings/limited.md`).

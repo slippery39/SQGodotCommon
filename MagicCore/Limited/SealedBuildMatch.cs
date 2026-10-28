@@ -75,8 +75,8 @@ public static class SealedBuildMatch
 				.Select(FraCards.Get),
 		];
 
-	/// <summary>Games a minute a core, measured by LIM-1.8 (two builds at 200 in ~15 min on 16 cores) — for an estimate, not a promise.</summary>
-	public const double GamesPerMinutePerCore = 1.7;
+	/// <summary>Games a minute a core, measured (LIM-3.4: 11 builds at 200 in 104 min on 16 cores; LIM-1.8's two builds ran 1.7) — for an estimate, not a promise.</summary>
+	public const double GamesPerMinutePerCore = 1.3;
 
 	/// <summary>Roughly how long <see cref="Run"/> takes on this machine.</summary>
 	public static double EstimatedMinutes(int builds, int opponents) =>
@@ -177,7 +177,12 @@ public static class SealedBuildMatch
 					continue;
 				var (mean, se) = Difference(x, y);
 				lines.Add(
-					$"  {Builds[x].Name} − {Builds[y].Name}: {mean * 100:+0.0;-0.0;0.0}pp ± {se * 100:0.0}pp (paired by opponent; within 2 SE, no difference is shown)"
+					$"  {Builds[x].Name} − {Builds[y].Name}: {mean * 100:+0.0;-0.0;0.0}pp ± {se * 100:0.0}pp (paired by opponent) — "
+						+ (
+							Math.Abs(mean) > 2 * se
+								? "a difference, beyond 2 SE"
+								: "within 2 SE: no difference shown"
+						)
 				);
 			}
 			return string.Join("\n", lines);

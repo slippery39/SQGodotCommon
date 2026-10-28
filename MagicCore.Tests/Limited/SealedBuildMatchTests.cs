@@ -51,6 +51,7 @@ public class SealedBuildMatchTests
 			Is.EqualTo(result.Games[0].Select(g => (g.Winner, g.Turns)))
 		);
 		Assert.That(result.Difference(0, 1).Mean, Is.Zero);
+		Assert.That(result.Report(), Does.Contain("within 2 SE: no difference shown"));
 	}
 
 	// LIM-3.4: a builder's build as a candidate — named by its button, its pool's other playable cards
