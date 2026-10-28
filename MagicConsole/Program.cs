@@ -191,6 +191,30 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 	return;
 }
 
+// --decisions [--games=N] [--seed=N]: AI-vs-AI games with every real decision written out — the
+// options ranked and what each changes, term by term (DecisionReport) — to ai_reports/.
+if (flags.Contains("--decisions"))
+{
+	Directory.CreateDirectory("ai_reports");
+	var path = Path.Combine("ai_reports", $"decisions-{DateTime.Now:yyyy-MM-dd_HHmmss}.md");
+	File.WriteAllText(path, MagicCore.Ai.DecisionReport.Run(Arg("games") ?? 2, Arg("seed") ?? 1));
+	Console.WriteLine(path);
+	return;
+}
+
+// --cast-gains [--games=N]: each instant-speed card's offers in self-play, the tracked table AI-13's
+// option value reads (run from the solution root).
+if (flags.Contains("--cast-gains"))
+{
+	var clock = System.Diagnostics.Stopwatch.StartNew();
+	var table = MagicCore.Ai.CastGains.Measure(Arg("games") ?? 200);
+	File.WriteAllText(MagicCore.Ai.CastGains.TablePath, MagicCore.Ai.CastGains.ToJson(table));
+	Console.WriteLine(
+		$"{MagicCore.Ai.CastGains.TablePath}: {table.Count} cards, {clock.Elapsed.TotalSeconds:0} s"
+	);
+	return;
+}
+
 // --card-values: measure every FRA card and write the tracked table (run from the solution root).
 if (flags.Contains("--card-values"))
 {

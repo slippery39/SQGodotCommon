@@ -247,22 +247,127 @@ public class AiPositionTests
 			); // TEST SETUP
 	}
 
-	// Shayne, 2026-10-27 (AI-13, lesson 5, on the position below with Last Gasp unseen): "ferocity of the
-	// hunt is best held until the opponent plays their removal spell first, or if you can trade it with a
-	// creature. So the AI shouldn't have been playing this out at first possibility anyways." Casting it
-	// and holding it scored the same, and the tie cast it. Now a card that can be cast later at instant
-	// speed is worth more held (Evaluator.Terms.Patience, AI-13's first rule). The CONTROL: without
-	// patience, it casts it at the first chance.
-	[Test]
-	public void AFlashAura_IsHeld_NotCastAtTheFirstChance()
+	/// <summary>
+	/// They attack us (20 life) with one creature — <paramref name="kind"/> — and we have Unsummon and two
+	/// Islands, no creatures (AI-13.3/13.4, positions Shayne agreed 2026-10-28). Returns the attacker.
+	/// </summary>
+	int TheyAttackWith(string kind)
 	{
-		FerocityAgainstLastGasp(known: false);
-		bool CastsIt(Evaluator.Terms without) =>
-			new BeamSearchAi(me, new() { Without = without }).Decide(s).Action
-			is global::MagicCore.Actions.CastSpellAction;
+		for (var i = 0; i < 2; i++)
+			(s, _) = TestGames.Put(s, me, TestGames.Card("Island"), ZoneType.Battlefield);
+		for (var i = 0; i < 6; i++)
+			(s, _) = TestGames.Put(s, them, TestGames.Card("Plains"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, FraCards.Get("Unsummon"), ZoneType.Hand);
+		int attacker;
+		switch (kind)
+		{
+			case "token":
+				(s, attacker) = TestGames.Put(
+					s,
+					them,
+					TestGames.Creature("Spirit", "3/3"),
+					ZoneType.Battlefield
+				);
+				s = s.UpdateObject(attacker, s.GetCard(attacker) with { IsToken = true }); // TEST SETUP
+				break;
+			case "aura":
+				(s, attacker) = TestGames.Put(
+					s,
+					them,
+					TestGames.Creature("Beast", "2/2"),
+					ZoneType.Battlefield
+				);
+				int aura;
+				(s, aura) = TestGames.Put(
+					s,
+					them,
+					FraCards.Get("Ferocity of the Hunt"),
+					ZoneType.Battlefield
+				);
+				s = s.UpdateObject(aura, s.GetCard(aura) with { AttachedToId = attacker }); // TEST SETUP
+				break;
+			case "counters":
+				(s, attacker) = TestGames.Put(
+					s,
+					them,
+					TestGames.Creature("Beast", "2/2"),
+					ZoneType.Battlefield
+				);
+				s = s.UpdateObject(attacker, s.GetCard(attacker) with { PlusOneCounters = 3 }); // TEST SETUP
+				break;
+			case "plain":
+				(s, attacker) = TestGames.Put(
+					s,
+					them,
+					TestGames.Creature("Spirit", "3/3"),
+					ZoneType.Battlefield
+				);
+				break;
+			case "vanilla":
+				(s, attacker) = TestGames.Put(
+					s,
+					them,
+					TestGames.CreatureCosting("{4}{W}", "Rhino", "3/4"),
+					ZoneType.Battlefield
+				);
+				break;
+			default: // "enters"
+				(s, attacker) = TestGames.Put(
+					s,
+					them,
+					FraCards.Get("Fateshaper Aspirant"),
+					ZoneType.Battlefield
+				);
+				(s, _) = TestGames.Put(
+					s,
+					them,
+					FraCards.Get("Gallia, Tragic Host"),
+					ZoneType.Graveyard
+				);
+				break;
+		}
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetPendingChoice() is Actions.DeclareAttackerChoice c && c.PlayerId == them
+		);
+		while (s.GetPendingChoice() is Actions.DeclareAttackerChoice c)
+			s = s.Choose([c.CreatureId == attacker ? me : Actions.CombatOption.None]);
+		s = TestGames.PassUntil(s, x => !x.IsWaitingForChoice && x.DecidingPlayerId() == me);
+		return attacker;
+	}
 
-		Assert.That(CastsIt(Evaluator.Terms.Patience), "the control: no patience, it casts it");
-		Assert.That(CastsIt(Evaluator.Terms.None), Is.False, "it holds");
+	bool BouncesIt(int attacker, Evaluator.Terms without = Evaluator.Terms.None) =>
+		new BeamSearchAi(me, new() { Without = without }).Decide(s).Action
+			is Actions.CastSpellAction c
+		&& c.Targets.Contains(attacker);
+
+	// Shayne, 2026-10-28 (AI-13.3, lesson 2 — "wait until those cards provide actual good value"): a bounce
+	// earns its card on a token (gone), an Aura'd creature (the Aura falls off) or a countered one (they
+	// fall off) — and never gives back a creature whose "enters" a recast repeats (Fateshaper Aspirant,
+	// Gallia in their graveyard; lesson 4). Guards: the option value (AI-13.4) must not hold these.
+	[TestCase("token", true)]
+	[TestCase("aura", true)]
+	[TestCase("counters", true)]
+	[TestCase("enters", false)]
+	public void Unsummon_EarnsItsCard_OnAValueTarget(string kind, bool bounces) =>
+		Assert.That(BouncesIt(TheyAttackWith(kind)), Is.EqualTo(bounces));
+
+	// Shayne, 2026-10-28 (AI-13.4): at 20 life, a plain 3/3 or a vanilla 5-mana 3/4 attacking isn't worth
+	// Unsummon — "I'm at 5 life, I can still take a hit" (#547). A held instant is now priced as an option
+	// (Evaluator.Terms.HoldOption: the expected best of its offers over the turns left), and a creature we
+	// bounced is priced as itself less its recast — so a bounce gains tempo, not the creature. The CONTROL:
+	// without it, the search bounces both.
+	[TestCase("plain")]
+	[TestCase("vanilla")]
+	public void Unsummon_IsHeld_AgainstAPlainAttacker(string kind)
+	{
+		var attacker = TheyAttackWith(kind);
+
+		Assert.That(
+			BouncesIt(attacker, Evaluator.Terms.KnownHand),
+			"the control: a bounced creature priced as half a card, it bounces"
+		);
+		Assert.That(BouncesIt(attacker), Is.False, "it holds");
 	}
 
 	// AI-4.2's holding position, agreed with Shayne (2026-10-27): #547 of his game, Unsummon held at 5 life
@@ -325,8 +430,8 @@ public class AiPositionTests
 						}
 				)
 				{
-					// the opponent model alone: AI-13's patience would hold the Aura either way
-					Without = Evaluator.Terms.Patience,
+					// the opponent model alone: AI-13's option value would hold the Aura either way
+					Without = Evaluator.Terms.HoldOption,
 				}
 			).Decide(s).Action is global::MagicCore.Actions.CastSpellAction;
 

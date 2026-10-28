@@ -555,7 +555,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Return target legendary card from your graveyard to your hand.  
 > • Put a +1/+1 counter on target creature. It gains vigilance and indestructible until end of turn. (Damage and effects that say "destroy" don't destroy it.)
 
-**Status:** scripted · **tests naming it:** FraGraveyardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraGraveyardTests
 
 **Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -835,7 +835,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
 
 ### Keeper of the Quiet Hour
 
@@ -1660,7 +1660,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Return target creature to its owner's hand.
 
-**Status:** scripted · **tests naming it:** AiPositionTests, FraCommonTests, FraKnowledgeTests
+**Status:** scripted · **tests naming it:** AiPositionTests, CastGainsTests, FraCommonTests, FraKnowledgeTests
 
 **Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.
 
@@ -2395,7 +2395,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace (This creature can't be blocked except by two or more creatures.)  
 > {4}{B}, Exile another creature card from your graveyard: Return this card from your graveyard to the battlefield tapped with a +1/+1 counter on her.
 
-**Status:** scripted · **tests naming it:** FraGraveyardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraGraveyardTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ExileFromGraveyardCost` — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…
 

@@ -25,6 +25,11 @@ a walker priced by its best ability). This story is the rest.
 - 2026-10-23, Shayne: a position built **by hand** may serve as the bad play AI-5's keep rule asks
   for (as the Rank Rat did) — but Shayne agrees the AI's current play there is wrong BEFORE the
   change, so a position can't be built to flatter it.
+- 2026-10-28, Shayne (AI-9.2, from AI-13.3 — tried and dropped the same day, see AI-9.2): **life tapers from 10** — a point each up to 10, half a
+  point from 10 to 20, a quarter above; the threat term (the clock) carries the danger. The positions:
+  at 20 life with Unsummon, **hold** against a plain 3/3 and a vanilla 5-mana 3/4 attacking ("I'm at 5
+  life, I can still take a hit"); still **bounce** a token, an Aura'd creature, a countered one; **hold**
+  against Fateshaper Aspirant. Today it bounces the plain ones — for the damage at a point a life.
 - 2026-10-27, Shayne (from AI-10.3): **a known card in the opponent's hand must not be worth the same
   as an unknown one** — a flaw in this evaluator AND MtgCore's (`MtgSimulator/WeightedStateEvaluator`
   counts each side's non-land hand cards at a flat 1.4, known or not). Try it first: AI-9.5.
@@ -39,13 +44,24 @@ Open questions:
 - [ ] AI-9.1 Lands in hand by what they unlock — every land in our hand is a flat 0.3 today.
       MtgSimulator's precedent: "a land is worth 0 on its own; its value is entirely the difference
       it makes to everything else" (`.claude/rules/sim-ai.md`)
-- [ ] AI-9.2 Life by what it buys — 1.0 a point up to 20, so 2 damage at 20 life outweighs a card
+- [ ] AI-9.2 Life by what it buys — **tried 2026-10-28 and dropped:** Shayne's taper from 10 (a point a
+      life to 10, half to 20, a quarter above) measured no difference over 576 games (+2.8% cost),
+      fixed none of his positions (the option value did, AI-13.4), and failed 16 tests by moving every
+      evaluation (GreedyAi's golden games, the card-value table) — `docs/findings/magic-ai.md` keeps the
+      formula. Still open: a life price that MEASURES better. Original task: — 1.0 a point up to 20, so 2 damage at 20 life outweighs a card
       (AI-8.1's second lever); the threat term already has the clock
 - [ ] AI-9.3 Walker effects still unpriced (damage, mana, life, pumps, exile), and a 3-loyalty Jace
       cashed for a card still scores as a loss (AI-8.2 kept the price monotonic first); our own
       walkers' use
 - [ ] AI-9.4 The opponent's unseen hand at a flat 2.71 a card — by what it could cast with the mana
-      and colours shown
+      and colours shown; and the RISK it carries (AI-13.4, 2026-10-28): Shayne holds Ferocity of the
+      Hunt against an unseen Last Gasp "until the opponent plays their removal spell first", and the
+      option value can't see a later answer to the enchanted creature. Its position:
+      `AiPositionTests.FerocityAgainstLastGasp(known: false)` — today the AI casts it
+- [ ] AI-9.6 A creature's activated abilities priced by what they make, as AI-8.2 priced a walker's
+      (AI-14's first reading, Shayne: Yoshimaru, Scrappy Stray, with a {6} +1/+1 ability, traded into a
+      spent Rank Rat — "the AI did not properly value our 1/1 compared to theirs"); card-agnostic.
+      Position: game 1 seed 1 of `MagicConsole --decisions`, turn 6
 - [x] AI-9.5 A KNOWN card in the opponent's hand priced as what it is (Shayne, 2026-10-27): today
       `Evaluator.Side` prices every card in their hand blind (`HeldValues.Unknown`), so a creature
       just bounced is "a card", and Unsummon reads as a kill spell (AI-10.3, #547). `Card.KnownTo`

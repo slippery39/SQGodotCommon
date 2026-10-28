@@ -11,6 +11,7 @@ flagged_games/
 sim_results/
 game_records/
 sealed_pools/
+ai_reports/
 
 # graphify generated knowledge graph (regenerate with /graphify)
 # Everything here is derivable for free EXCEPT cache/semantic, which holds the

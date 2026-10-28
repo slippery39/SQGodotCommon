@@ -31,11 +31,62 @@ public static class Evaluator
 		var opponent = s.OpponentOf(player);
 		var keywords = Keywords;
 		var sides =
-			Side(s, player, held, own: true, keywords)
-			- Side(s, opponent, held, own: false, keywords);
+			Side(s, player, held, own: true, keywords).Total
+			- Side(s, opponent, held, own: false, keywords).Total;
 		return IsOff(Terms.Threat)
 			? sides
 			: sides + Pressure(s, player, opponent) - Pressure(s, opponent, player);
+	}
+
+	/// <summary>One side's terms — <see cref="Evaluate"/> sums them, <see cref="Explain"/> lists them.</summary>
+	public readonly record struct SideTerms(
+		double Creatures,
+		double Walkers,
+		double Lands,
+		double Others,
+		double Hand,
+		double Life
+	)
+	{
+		public double Total => Creatures + Walkers + Lands + Others + Hand + Life;
+	}
+
+	/// <summary>
+	/// <see cref="Evaluate"/> term by term — ours, theirs (negated) and both clocks — summing to it, for a
+	/// reader (the decision report, an inspector). The same <see cref="Side"/> and <see cref="Pressure"/>:
+	/// never a second copy of the sum.
+	/// </summary>
+	public static IReadOnlyList<(string Term, double Value)> Explain(
+		GameState s,
+		int player,
+		HeldValues? held = null
+	)
+	{
+		if (s.IsOver())
+			return [("game over", Evaluate(s, player, held))];
+		var opponent = s.OpponentOf(player);
+		var (ours, theirs) = (
+			Side(s, player, held, own: true, Keywords),
+			Side(s, opponent, held, own: false, Keywords)
+		);
+		var threat = !IsOff(Terms.Threat);
+		return
+		[
+			("our creatures", ours.Creatures),
+			("our walkers", ours.Walkers),
+			("our lands", ours.Lands),
+			("our other permanents", ours.Others),
+			("our hand", ours.Hand),
+			("our life", ours.Life),
+			("their creatures", -theirs.Creatures),
+			("their walkers", -theirs.Walkers),
+			("their lands", -theirs.Lands),
+			("their other permanents", -theirs.Others),
+			("their hand", -theirs.Hand),
+			("their life", -theirs.Life),
+			("our clock on them", threat ? Pressure(s, player, opponent) : 0),
+			("their clock on us", threat ? -Pressure(s, opponent, player) : 0),
+		];
 	}
 
 	/// <summary>
@@ -67,26 +118,40 @@ public static class Evaluator
 
 		/// <summary>
 		/// A card in the opponent's hand that we KNOW (<see cref="Card.KnownTo"/> — a creature we bounced,
-		/// a card they revealed) priced as itself, not as an unknown card (AI-9.5, Shayne, `+blindhand`).
+		/// a card they revealed) priced as itself, not as an unknown card (AI-9.5, Shayne, `+blindhand`) — a
+		/// creature at what it is on the board less the mana to cast it again (AI-13.4).
 		/// </summary>
 		KnownHand = 32,
 
 		/// <summary>
-		/// Not the evaluator's own, but the search's beside it: patience with instant-speed cards (AI-13's
-		/// first rule, Shayne) — casting an instant or a flash card at sorcery timing (our main phase,
-		/// the stack empty) costs <see cref="PatienceCost"/> in the line that does it, so casting it now
-		/// must beat holding it by that much (`+nopatience`).
+		/// A held instant or flash card of ours priced as an OPTION (AI-13, Shayne: "the expected value of
+		/// playing the spell now vs holding for a better situation"): the expected best of the offers it
+		/// meets over the turns left (<see cref="CastGains"/>, <see cref="OptionTurns"/>) — so casting it
+		/// needs a gain at least that, and the bar falls as the game shortens (`+nooption`).
 		/// </summary>
-		Patience = 64,
+		HoldOption = 64,
 	}
 
 	/// <summary>
-	/// What casting an instant-speed card at sorcery timing costs a line (<see cref="Terms.Patience"/>) —
-	/// about a card held at the flat price, so a real swing still casts it.
-	/// ponytail: one cost for every such card; price the option by what the card does at a later window
-	/// (AI-4's held spells) if one cost misjudges a kind of card.
+	/// What casting a known creature again costs them, a point of mana at this (AI-13.4) — chosen, not
+	/// measured: a land in play is worth 1.5, but this mana is spent once.
 	/// </summary>
-	public const double PatienceCost = 1.0;
+	public const double RecastPerMana = 0.5;
+
+	/// <summary>The most turns of offers an option counts — beyond, the game's length is a guess (AI-13).</summary>
+	public const int MaxOptionTurns = 4;
+
+	/// <summary>
+	/// The turns of offers a held card of <paramref name="player"/>'s has left: the sooner of the two
+	/// clocks (<see cref="TurnsToKill"/>), 1 to <see cref="MaxOptionTurns"/>.
+	/// ponytail: the clocks of the board as it stands; a game's real length moves with every play.
+	/// </summary>
+	public static int OptionTurns(GameState s, int player)
+	{
+		var opponent = s.OpponentOf(player);
+		var left = Math.Min(TurnsToKill(s, opponent, player), TurnsToKill(s, player, opponent));
+		return Math.Clamp(left, 1, MaxOptionTurns);
+	}
 
 	/// <summary>The keywords a creature's value counts here (<see cref="Terms.MoreKeywords"/>).</summary>
 	static string[] Keywords => IsOff(Terms.MoreKeywords) ? FirstKeywords : ValuedKeywords;
@@ -138,6 +203,25 @@ public static class Evaluator
 		var life = s.GetPlayer(defender).Life;
 		if (life <= 0)
 			return 0;
+		return PressureWeight * 20.0 * Through(s, attacker, defender) / life;
+	}
+
+	/// <summary>
+	/// Turns <paramref name="attacker"/>'s board needs to kill <paramref name="defender"/> at the damage
+	/// that gets past its blockers now — the threat term's clock (int.MaxValue: no clock).
+	/// </summary>
+	public static int TurnsToKill(GameState s, int attacker, int defender)
+	{
+		var life = s.GetPlayer(defender).Life;
+		var through = Through(s, attacker, defender);
+		return life <= 0 ? 0
+			: through <= 0 ? int.MaxValue
+			: (life + through - 1) / through;
+	}
+
+	/// <summary>The power that gets past <paramref name="defender"/>'s blockers in <paramref name="attacker"/>'s next attack.</summary>
+	static int Through(GameState s, int attacker, int defender)
+	{
 		var attackers = new List<(Card Card, int Power)>();
 		foreach (var c in s.CardsIn(attacker, ZoneType.Battlefield))
 			if (
@@ -187,7 +271,7 @@ public static class Evaluator
 				blockers.Remove(best);
 			}
 		}
-		return PressureWeight * 20.0 * through / life;
+		return through;
 
 		// Trample that lasts to the next attack (AI-8.4) — not one granted until end of turn.
 		bool IsTrampler(Card c) =>
@@ -225,7 +309,7 @@ public static class Evaluator
 	/// </summary>
 	public const double PressureWeight = 0.5;
 
-	static double Side(GameState s, int player, HeldValues? held, bool own, string[] keywords)
+	static SideTerms Side(GameState s, int player, HeldValues? held, bool own, string[] keywords)
 	{
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
 		var creatures = board
@@ -257,9 +341,21 @@ public static class Evaluator
 					? held.Unknown
 				: c.Is(CardType.Land) ? LandInHand
 				: held is null ? FlatHandCard
+				: own
+				&& !IsOff(Terms.HoldOption)
+				&& Priority.AtInstantSpeed(s, c)
+				&& CastGains.Fra.TryGetValue(c.Name, out var offers)
+					? CastGains.ExpectedBest(offers, OptionTurns(s, player))
+				// a creature of theirs we KNOW they hold (one we bounced): what it is on the board, less
+				// the mana to cast it again — a bounce gains the tempo, not the creature (AI-13.4, Shayne)
+				: !own && c.Is(CardType.Creature) && !IsOff(Terms.KnownHand)
+					? Math.Max(
+						held.Of(c.Name),
+						CreatureValue(s, c, keywords) - RecastPerMana * c.ManaCost.ManaValue
+					)
 				: held.Of(c.Name)
 			);
-		return creatures + walkers + lands + others + hand + lifeValue;
+		return new(creatures, walkers, lands, others, hand, lifeValue);
 	}
 
 	/// <summary>

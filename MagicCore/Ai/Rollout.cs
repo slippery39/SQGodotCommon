@@ -136,7 +136,6 @@ public static class Rollout
 		var rootTurn = horizon - 1 - settings.LookaheadTurns;
 		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
 		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
-		var impatience = 0.0; // our early instant-speed casts (Impatience) — none counted on a game's end
 		var them = s.OpponentOf(me);
 		int? theirLifeAfterThisTurn = null; // the root turn's end: the same moment for every candidate
 		// ponytail: a rollout that hits DecisionLimit is scored where it stopped, mid-turn, beside
@@ -169,11 +168,10 @@ public static class Rollout
 			}
 			var spent = plays >= settings.ActionsPerTurn;
 			var play = !(landDone && spent)
-				? OurPlay(s, me, spent ? null : AnyPlay, ref landDone, settings, patient: true)
+				? OurPlay(s, me, spent ? null : AnyPlay, ref landDone, settings)
 				: null;
 			if (play is not null)
 			{
-				impatience += Impatience(s, me, play);
 				s = s.Act(play);
 				plays += play is PlayLandAction ? 0 : 1;
 				continue;
@@ -183,7 +181,7 @@ public static class Rollout
 
 		var score = Evaluator.Evaluate(s, me, settings.Held);
 		if (!s.IsOver())
-			return score - impatience;
+			return score;
 		score *= Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn);
 		// a point a life: far under one turn's discount (~450), so a sooner win still wins, but no tie
 		return settings.Progress && s.WinnerId() == me
@@ -324,19 +322,6 @@ public static class Rollout
 					|| s.GetCard(id).KnownTo.HasFlag(Knowers.Opponent)
 				);
 
-	/// <summary>
-	/// Patience (AI-13, Shayne): what casting this costs <paramref name="me"/> — <see cref="Evaluator.PatienceCost"/>
-	/// for an instant or flash card cast at sorcery timing, when it could wait for a later window. The
-	/// search's tree and our rollout policy both charge it, so a cast pushed past the tree's edge isn't free.
-	/// </summary>
-	public static double Impatience(GameState s, int me, GameAction a) =>
-		!Evaluator.IsOff(Evaluator.Terms.Patience)
-		&& a is CastSpellAction c
-		&& Priority.AtSorcerySpeed(s, me)
-		&& Priority.AtInstantSpeed(s, s.GetCard(c.CardId))
-			? Evaluator.PatienceCost
-			: 0;
-
 	static readonly Func<GameAction, bool> AnyPlay = a => a is not PassPriorityAction;
 	static readonly Func<GameAction, bool> Spell = a => a is CastSpellAction;
 	static readonly Func<GameAction, bool> SpellOrLoyalty = a =>
@@ -362,8 +347,7 @@ public static class Rollout
 		Func<GameAction, bool>? playable,
 		ref bool landDone,
 		Settings settings,
-		Func<GameAction, bool>? allowed = null,
-		bool patient = false
+		Func<GameAction, bool>? allowed = null
 	)
 	{
 		if (!Priority.AtSorcerySpeed(s, me))
@@ -380,34 +364,21 @@ public static class Rollout
 		if (candidates.Count == 0)
 			return null;
 		var before = Evaluator.Evaluate(s, me, settings.Held);
-		// our own policy waits as the tree does: an early instant-speed cast must beat holding by its cost
-		var (move, score) = BestSettled(
-			s,
-			me,
-			candidates,
-			settings,
-			patient ? a => Impatience(s, me, a) : null
-		);
+		var (move, score) = BestSettled(s, me, candidates, settings);
 		return score >= before ? move : null;
 	}
 
 	/// <summary>The move whose settled result scores best for <paramref name="who"/> — our policy's and a responding opponent's one way to judge a play.</summary>
-	/// <param name="cost">What a move costs beside its result — our policy's patience (AI-13).</param>
 	static (GameAction Move, double Score) BestSettled<T>(
 		GameState s,
 		int who,
 		IEnumerable<T> candidates,
-		Settings settings,
-		Func<GameAction, double>? cost = null
+		Settings settings
 	)
 		where T : GameAction =>
 		candidates
 			.Select(a =>
-				(
-					(GameAction)a,
-					Evaluator.Evaluate(Lookahead.Settle(s.Act(a)), who, settings.Held)
-						- (cost?.Invoke(a) ?? 0)
-				)
+				((GameAction)a, Evaluator.Evaluate(Lookahead.Settle(s.Act(a)), who, settings.Held))
 			)
 			.MaxBy(x => x.Item2);
 

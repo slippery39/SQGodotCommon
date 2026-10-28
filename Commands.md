@@ -93,6 +93,8 @@ dotnet run -c Release --project MagicConsole -- --record=game_records/<file>.jso
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
+dotnet run -c Release --project MagicConsole -- --cast-gains [--games=400]   # regenerate MagicCore/Sets/FRA.castgains.json (~70 s)
+#   each instant-speed card's offers in self-play (AI-13.4's option value); after a change to the evaluator, rerun it
 ```
 
 Enter passes; `q` quits. The decks are `FraDecks` - only cards `FraCards.IsImplemented` allows.
@@ -143,7 +145,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     walkercount    a planeswalker as a flat body and 0.35 a counter, not by what its best ability makes (before AI-8.2)
 #     noprogress     won lines tie again: no credit for the opponent's life lost this turn (before AI-10)
 #     boardonly      the simulated opponent never casts, even a card we know it holds (before AI-10.4)
-#     nopatience     an instant or flash card cast at sorcery timing costs nothing (before AI-13.2)
+#     nooption       a held instant or flash card at its plain held price, not as an option (before AI-13.4)
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 

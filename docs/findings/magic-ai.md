@@ -985,3 +985,55 @@ search's tree charges it on every such cast in a line, and our rollout policy wa
   318–282** — undecided at 5pp, but "worse" firmly rejected (log-likelihood −26.7) and "better" near
   its bar (2.43 of 2.94). Cost the same (1 342 steps a decision), spells cast a game the same (9.7):
   it waits rather than hoards. (The tree-only first version: 51.0% ± 1.0pp over 96 games.)
+
+## A held instant priced as an option, replacing the patience cost (2026-10-28, AI-13.4)
+
+Shayne: patience "should be about calculating the expected value of playing the spell now vs holding
+for a better situation" — the AI-13.2 cost was a timer (the look-ahead spent a held Unsummon in its
+next main phase either way). Optimal stopping instead: `CastGains` measures, in 400 self-play games of
+the AI's sealed decks (GreedyAi, 70 s), each instant or flash card's OFFER a turn — the best its
+casting could gain, settled, or 0; casts that end the game excluded; twenty mid-slice quantiles. A
+held one of ours is worth the expected best of the next k offers, k = the sooner of the two clocks,
+1 to 4 (`Evaluator.Terms.HoldOption`; off is `beam+nooption`). Every card's median offer is 0: most
+turns offer nothing worth casting for.
+
+- **The bounce's value was the real error.** With the option alone, a plain 3/3 still tied: the
+  evaluator rated bouncing it a top-10% use of Unsummon, because a creature on their board counted far
+  more than the same known card in their hand (half its card value, AI-9.5). Now a known creature in
+  their hand is its board value less 0.5 a mana to recast (`RecastPerMana`): a bounce gains tempo.
+- **The cap on k, tried on Shayne's positions:** 6 held the Aura'd creature (the bounce 0.8 short);
+  4 and 3 got every bounce position right. 4 kept.
+- **Positions (agreed, Shayne):** bounce a token, an Aura'd creature, a countered one; hold against a
+  plain 3/3 and a vanilla 5-mana 3/4 at 20 life (without the option, the control bounces both); hold
+  against Fateshaper Aspirant (a recast repeats its enters); #547 holds. **Ferocity of the Hunt is no
+  longer held** (the patience cost held it by taxing every early cast): its risk — their unseen removal
+  on the enchanted creature, later — isn't in an offer measured at the cast. It moves to AI-9.4.
+- **Quick check:** 20 of 288 decisions change from the option value alone.
+- **Match:** `--match=beam,beam+nooption --until-clear` (both with AI-9.2's life taper, since dropped —
+  the positions were re-checked without it, all right): 600 games,
+  **51.7% ± 1.4pp, 310–290** — undecided at 5pp, "worse" rejected (log-likelihood −11.4); cost +1.6%
+  (1 395 against 1 373 steps a decision); spells cast a game the same (10.2).
+- **After the /pre-commit review** (the taper dropped; the offers measured with the option value OFF —
+  with it on, each run measured the last run's table; each game's last turn kept; the known-creature
+  price moved under AI-9.5's `KnownHand`): oracle agreement 82.6% (score given up 1.08) against 78.8%
+  without the option value (1.69); 22 of 288 decisions differ without it.
+- **Correction: the positions are held by the bounce's VALUE, not the option.** With the option value
+  forced off, all twelve position tests still pass — a creature we bounced priced as itself less its
+  recast is what holds Unsummon against a plain attacker (the control: `KnownHand` off, it bounces). The
+  option value is kept as Shayne's design for "not ASAP, not forever" — no worse in its match, 22 suite
+  decisions moved — but no agreed position depends on it yet: Ferocity of the Hunt (AI-9.4) and Ajani's
+  Anguish (AI-13.6) are the cases to prove it on.
+
+## Life tapered from 10: tried and dropped (2026-10-28, AI-9.2)
+
+Shayne's pricing (from AI-13.3's positions): a point a life up to 10, half a point to 20, a quarter
+above, instead of a point a life to 20 and half above (`Evaluator.Terms.LifeByUse`, the code:
+`Taper(Math.Min(life, 20), 10, 1.0, 0.5) + Math.Max(0, life - 20) * 0.25`).
+
+- **It fixed none of his positions:** the plain attackers were bounced for another reason (the bounce's
+  value, AI-13.4); with the option value in, every position passes with it off.
+- **Match:** `--match=beam,beam+flatlife --until-clear` (both with the option value): 576 games,
+  49.3% ± 1.5pp (284–292), no 5pp difference; cost +2.8%.
+- **It moves every evaluation, GreedyAi's too:** 16 tests failed with it (GreedyAi's golden games, the
+  card-value table, attacking above 20 life, the table's recorded games) — keeping it meant
+  regenerating all of those for no measured gain. Dropped before the commit; the formula is above.

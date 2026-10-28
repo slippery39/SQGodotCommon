@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using ImmutableGameObjects;
 using MagicCore.Actions;
-using MagicCore.Cards;
 
 namespace MagicCore.Ai;
 
@@ -136,16 +135,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	sealed record Pick(ImmutableList<int> Ids, object Key) : Decision(Key);
 
-	/// <summary>A line: the state after its last decision, the decisions, its rollout score less its
-	/// <paramref name="Impatience"/>, and our evaluation just before each decision — what the plan
-	/// expects to see when it replays them.</summary>
-	/// <param name="Impatience">What its instant-speed casts at sorcery timing cost it (<see cref="Evaluator.Terms.Patience"/>).</param>
+	/// <summary>A line: the state after its last decision, the decisions, its rollout score, and our
+	/// evaluation just before each decision — what the plan expects to see when it replays them.</summary>
 	sealed record Node(
 		GameState State,
 		ImmutableList<Decision> Path,
 		ImmutableList<double> Expected,
-		double Score,
-		double Impatience = 0
+		double Score
 	);
 
 	ImmutableList<Decision> plan = [];
@@ -274,17 +270,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			var state = Apply(at, children[i]);
 			var score = Rollout.Score(state, PlayerId, horizon, RolloutSettings);
 			Interlocked.Increment(ref rollouts);
-			// on every such cast in the line, not only its first: a replayed plan casts what its line did;
-			// none on a line whose rollout decided the game — there is no later window to wait for (the
-			// rollout drops its own then too)
-			var impatience = parent.Impatience + Impatience(at, children[i]);
-			nodes[i] = new Node(
-				state,
-				parent.Path.Add(children[i]),
-				expected,
-				Math.Abs(score) >= WinThreshold ? score : score - impatience,
-				impatience
-			);
+			nodes[i] = new Node(state, parent.Path.Add(children[i]), expected, score);
 		}
 		// One thread is a plain loop: Parallel.For would still hand its work to a pool thread and wait.
 		if (options.Threads == 1)
@@ -423,13 +409,6 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	}
 
 	static bool IsPass(Decision d) => d is Move { Action: PassPriorityAction };
-
-	/// <summary>
-	/// Casting an instant or a flash card at sorcery timing — our main phase, the stack empty — when it
-	/// could wait for a later window: <see cref="Evaluator.PatienceCost"/> (AI-13, Shayne). Card-agnostic.
-	/// </summary>
-	double Impatience(GameState at, Decision d) =>
-		d is Move { Action: var a } ? Rollout.Impatience(at, PlayerId, a) : 0;
 
 	Decision Commit(Node line, int rootTurn)
 	{
