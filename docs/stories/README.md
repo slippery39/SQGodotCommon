@@ -8,8 +8,8 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 ## Sprints
 
-**Current sprint: [2026-10-23](../sprints/2026-10-23.md)** — the full FRA sealed experience for
-Arena Direct practice, then a better feel at the table. Start there: it says which task is next.
+**Current sprint: [2026-10-29](../sprints/2026-10-29.md)** — the AI plays its cards right, FRA
+drafted against bots, the powered cube started. Start there: it says which task is next.
 
 Sprints run **Thursday to Thursday**, when Shayne's Claude usage resets, so a sprint is one week's
 usage budget. **One file per sprint** in `docs/sprints/`, named by its start date (the Thursday
@@ -28,19 +28,22 @@ every task a sprint file names exists.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-1. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-2. **TBL-4** — a clearer, calmer table: quick wins now, the MTGA-first redesign next sprint
-3. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-4. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-5. **LIM-2** — draft against bots: FRA first, a cube later
-6. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-7. **AI-9** — resources priced by what they provide
-8. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-9. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-10. **AI-4** — strategic plans above single actions
-11. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-12. **AI-12** — a card's threat over time, on an empty board and a busy one
-13. **AI-13** — Shayne's lessons as general rules for the search, each measured
+1. **AI-15** — the look-ahead's defender gang-blocks
+2. **LIM-2** — draft against bots: FRA first, a cube later
+3. **MC-4** — MTGA's powered cube: surveyed, then built in batches
+4. **AI-13** — Shayne's lessons as general rules for the search, each measured
+5. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
+6. **AI-9** — resources priced by what they provide
+7. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
+8. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
+9. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+10. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+11. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+12. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+13. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+14. **AI-4** — strategic plans above single actions
+15. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+16. **AI-12** — a card's threat over time, on an empty board and a busy one
 
 ## How it works
 
@@ -95,18 +98,19 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-9](AI-9-resources-by-use.md) | Resources priced by what they provide, not by how many there are | in-progress |
 | [AI-13](AI-13-shaynes-lessons.md) | Shayne's lessons as general rules for the search — card-agnostic, switchable, measured | in-progress |
 | [AI-14](AI-14-see-the-ai-play.md) | See what the AI decides and why — a decision report now, an in-game inspector next | in-progress |
+| [AI-15](AI-15-lookahead-gang-blocks.md) | The look-ahead's defender gang-blocks — a menace attacker isn't unblockable | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
+| [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-11](AI-11-learn-from-shaynes-games.md) | Learn from Shayne's games — settle where he and the oracle differ, keep what he got right | backlog |
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
-| [AI-15](AI-15-lookahead-gang-blocks.md) | The look-ahead's defender gang-blocks — a menace attacker isn't unblockable | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
-| [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | backlog |
+| [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | done |
@@ -124,5 +128,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 
-Next free id per area: AI-16 · DATA-3 · DEV-4 · LIM-4 · MC-4 · TBL-6
+Next free id per area: AI-16 · DATA-3 · DEV-4 · LIM-4 · MC-5 · TBL-6
 <!-- stories:end -->
