@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Text;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 
@@ -51,6 +52,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// </param>
 	/// <param name="Hand">What it may know of the opponent's hand — <see cref="Hidden.Hand"/> (story AI-3.4).</param>
 	/// <param name="Without">Evaluator terms switched off (AI-5) — to measure the search without each.</param>
+	/// <param name="WinNowOnly">
+	/// Only a win inside the search's own turn stops it early (AI-17.3); a later win keeps it searching to
+	/// its depth, and the end takes the best line found — the fastest win. Before, any win stopped it: at
+	/// Shayne's turn 21 both root lines ("Tether Technician attacks", "doesn't") won by turn 23, so it
+	/// stopped after two rollouts and the tie stayed home — one level deeper, both attacking won that turn.
+	/// Off is beam+anywin.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -70,7 +78,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		Hidden.Library Library = Hidden.Library.ShuffleUnknown,
 		int? Threads = null,
 		Hidden.Hand Hand = Hidden.Hand.Real,
-		Evaluator.Terms Without = Evaluator.Terms.None
+		Evaluator.Terms Without = Evaluator.Terms.None,
+		bool WinNowOnly = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -153,6 +162,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	// The last search's reading of each first move, in the order the root offered them (AI-6.4b).
 	readonly Dictionary<Decision, double> firstMoves = new(ReferenceEqualityComparer.Instance);
+
+	// …and the line that reading came from, in the world the search sampled (Explain, AI-17).
+	readonly Dictionary<Decision, Node> bestLines = new(ReferenceEqualityComparer.Instance);
+	GameState? sampled;
 	readonly List<Decision> firstMoveOrder = [];
 
 	/// <summary>
@@ -176,6 +189,70 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			),
 		];
 
+	/// <summary>
+	/// What the last search imagined (AI-17): for each first move, best first, the line its reading came
+	/// from — our decisions in the tree, the simulated opponent's answers between them, then the rollout
+	/// to its horizon — written as the replay writes a game (<see cref="DecisionReport"/>), in the world
+	/// the search sampled, with its evaluator terms. Empty but for a note when it didn't search.
+	/// </summary>
+	public string Explain() =>
+		sampled is null
+			? "\n(no search: one option, a plan replayed, or a forced pass)\n"
+			: Evaluator.Without(options.Without, () => ExplainLines(sampled));
+
+	string ExplainLines(GameState s)
+	{
+		var md = new StringBuilder();
+		var names = new[] { PlayerId, s.OpponentOf(PlayerId) }.ToDictionary(
+			p => p,
+			p => s.GetPlayer(p).Name
+		);
+		var (rootTurn, horizon) = (s.GetGame().TurnNumber, Rollout.Horizon(s, RolloutSettings));
+		foreach (var first in firstMoveOrder.OrderByDescending(f => firstMoves[f]))
+		{
+			var line = bestLines[first];
+			md.Append($"\n## {Describe(s, first)}: {firstMoves[first]:0.00}\n");
+			var replay = new DecisionReport.Replay(md, names, s);
+			var at = s;
+			var end = at;
+			void Told(GameState before, int who, AiDecision d)
+			{
+				replay.Move(before, who, d, [], out _);
+				end = d.State;
+			}
+			for (var i = 0; i < line.Path.Count; i++)
+			{
+				if (i > 0)
+					at = Rollout.Traced(Told, () => Advance(at, rootTurn).State);
+				var mine = line.Path[i] switch
+				{
+					Move m => AiDecision.Acting(at, m.Action),
+					Pick p => AiDecision.Answering(at, p.Ids),
+					_ => throw new InvalidOperationException(line.Path[i].GetType().Name),
+				};
+				replay.Move(at, PlayerId, mine, [], out _);
+				end = at = mine.State;
+			}
+			md.Append("- *(the rollout from here)*\n");
+			var score = Rollout.Traced(
+				Told,
+				() => Rollout.Score(at, PlayerId, horizon, RolloutSettings)
+			);
+			replay.End(end);
+			var result = end.IsOver() ? (end.WinnerId() == PlayerId ? " — won" : " — lost") : "";
+			md.Append($"\n**Rollout {score:0.00}**{result}\n");
+		}
+		return md.ToString();
+	}
+
+	static string Describe(GameState s, Decision d) =>
+		d switch
+		{
+			Move m => MagicCore.Describe.Action(s, m.Action),
+			Pick p => MagicCore.Describe.Answer(s, s.GetPendingChoice()!, p.Ids),
+			_ => d.ToString()!,
+		};
+
 	/// <summary>Rollouts every decision so far has played — beside MagicRules.CountingSteps, the search's cost (story AI-6).</summary>
 	public long Rollouts => totalRollouts;
 
@@ -186,6 +263,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		rollouts = 0; // a plan replay or a pass doesn't search, and so doesn't reset it
 		firstMoves.Clear();
 		firstMoveOrder.Clear();
+		bestLines.Clear();
+		sampled = null;
 		var decided = Evaluator.Without(options.Without, () => DecideHere(s));
 		totalRollouts += rollouts;
 		return decided;
@@ -209,7 +288,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
-		s = Hidden.Sample(s, PlayerId, options.Library, options.Hand);
+		s = sampled = Hidden.Sample(s, PlayerId, options.Library, options.Hand);
 		(plan, planExpected, rollouts) = ([], [], 0);
 		var clock = Stopwatch.StartNew();
 		var rootTurn = s.GetGame().TurnNumber;
@@ -291,9 +370,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			var first = node.Path[0];
 			if (atRoot)
 				firstMoveOrder.Add(first);
-			firstMoves[first] = firstMoves.TryGetValue(first, out var best)
-				? Math.Max(best, node.Score)
-				: node.Score;
+			if (!firstMoves.TryGetValue(first, out var best) || node.Score > best)
+				(firstMoves[first], bestLines[first]) = (node.Score, node);
 		}
 		return [.. nodes];
 	}
@@ -394,9 +472,21 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				.Select(x => x.n),
 		];
 
-	/// <summary>The FASTEST win found, if any: a sooner win's rollout decays less, so it scores higher.</summary>
-	static Node? Winner(List<Node> nodes) =>
-		nodes.Where(n => n.Score >= WinThreshold).MaxBy(n => n.Score);
+	/// <summary>
+	/// The FASTEST win found that ends the search early, if any: a sooner win's rollout decays less, so it
+	/// scores higher. Under <see cref="Settings.WinNowOnly"/> only one inside this turn — every later win
+	/// scores at most a turn's discount plus its tie-break (<see cref="Rollout.TurnEndCap"/>).
+	/// </summary>
+	Node? Winner(List<Node> nodes) =>
+		nodes
+			.Where(n =>
+				options.WinNowOnly
+					? n.Score
+						> Evaluator.WinScore * RolloutSettings.TerminalDiscount
+							+ Rollout.TurnEndCap(RolloutSettings)
+					: n.Score >= WinThreshold
+			)
+			.MaxBy(n => n.Score);
 
 	/// <summary>The best line; one starting with a pass must beat the best line that acts by <see cref="Settings.PassBias"/>.</summary>
 	Node Best(List<Node> nodes)

@@ -81,6 +81,14 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   deal (accounting for noise)"; +5pp changes can't go on forever. Agreed: **blunder counters** (Claude's
   proposal) — over many AI games, each decision checked for a named mistake, counted whatever the result.
 
+- 2026-10-29, Shayne (AI-17.3 (b), the attack as one decision): **each creature attacks its own best
+  target** — "maybe there is a planeswalker on 4 loyalty. Your 4 power creature might want to attack that
+  one, and your 2 and 3 power creature might want to attack their face" (the test); **attacks first,
+  blocks later — "but remember the attacking player takes potential blocks into consideration when
+  choosing who to attack with"** (each candidate attack is judged against the defender's blocks); **the
+  cost is acceptable** — "I am looking for an AI that plays the game reasonably and if it solves certain
+  plays it is making then that is good".
+
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
   chooser's best — each option settled and evaluated, as `GreedyAi.Answer` already answers a target
@@ -118,7 +126,37 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       every card it offers
 - [ ] AI-17.3 Fix 2, lethal: (a) the cheap defender chumps facing lethal, (b) the attack as one decision,
       (c) the early stop on a win this turn only — the position test and control, the suite, a match
-      (each part measured alone where it can be)
+      (each part measured alone where it can be) — **in progress (2026-10-29):** (c) built —
+      `BeamSearchAi.Settings.WinNowOnly` (`beam+anywin`): 50.0% over 96 games, +5.2% cost a decision. (a)
+      built — `Evaluator.Terms.ChumpBlocks` (`beam+nochump`), `Lookahead.Chumps`: first as "the blocker
+      asked first chumps": 48.6% ± 1.0 over 288 games (no 5pp difference, but leaning −1.4); then, Shayne:
+      **"you always want to chump with your least valuable creatures first"** — the chumps planned for every
+      blocker still to be asked, the biggest attacker taken by the least valuable that can block it
+      (`Evaluator.ValueOf`); its test `FacingLethal_TheLeastValuableCreatureChumps` (and its control).
+      Either fix alone makes the turn-21 attack (`ALethalAttack_IsMade_NotPostponedForALaterWin`, three
+      cases); the AI-16 control now switches chumps off too. **Open:** with the least-valuable chump the
+      agreed #547 hold flips — Unsummon on Fateshaper Aspirant −51.8 against Pass −53.5 (without chumps
+      Pass −42.0); the root rollouts are identical either way and both plans don't block, so the cause is
+      deeper in the tree. Shayne then: a 4/4 and a 1/1 against a 5/5 "should actually be blocked by
+      both" — a 6/6, the 1/1 alone: built (the least valuable that TOGETHER kill it all block), the test's
+      four cases pass. **Found with `--explain` (built for it — Shayne: "I would have to see what happens
+      on a deeper search"):** in the bounce line the look-ahead's opponent recasts Fateshaper Aspirant and
+      its trigger puts the +1/+1 counter and indestructible on SHAYNE'S Proctor — the first legal target
+      (`Rollout.Targets.FirstLegal`, AI-16's side note) — then attacks Gallia alone into two blockers.
+      With `Targets.OwnersBest` #547 holds again (the bounce −69.2, Pass −53.5). The chump rule only
+      changed which imagined futures the search reached; one held the misplay. **Targets by their owner's best
+      made the default** (Shayne, 2026-10-29 — `Rollout.Targets.OwnersBest`; `beam+firsttarget` is the
+      old): #547 holds; `OwnersBest_AimsATrigger…` now compares against first-legal explicitly.
+      GreedyAi's golden games regenerated (5 of 12 moved — the chump rule alone, checked by forcing it
+      off: all 12 pass then). MagicCore.Tests 1 153 pass. Suite with (a), (c) and the targets: 30 of 288
+      decisions change, 3 531 steps a position (+14% on AI-17.2's 3 103 — (c)'s deeper search in won
+      positions). Matches: chumps on/off **50.0% ± 1.5 over 96 (48–48)** — the lean gone; targets
+      owner's-best/first-legal **49.3% ± 1.2 over 288 (142–146)**, no difference. Suite accepted; the
+      oracle re-read: **87.2%, score given up 0.59** (85.4%, 1.06). The review: facing lethal the chump
+      plan goes first, a menace attacker with one blocker is unblocked, `Explain` uses the search's own
+      sample and terms, `Evaluator.WinScore` named, `+targets` gone (`+firsttarget`) — 1 suite decision
+      and 1 golden game moved; the oracle 87.2%, 0.81. Committed with `--explain`. **Left: (b),
+      the attack as one decision** — the design shown to Shayne (2026-10-29), its three questions open
 - [ ] AI-17.4 The review, code: read the decision path — `BeamSearchAi` (Search, Narrow, Prune, Winner,
       Best, plans and their replay), `Rollout` (Score, OurPlay, OpponentStep, Answer, BestAlone),
       `Lookahead` (Settle, QuickAnswer, Joins), `Evaluator`, `Hidden`, `GreedyAi` — about 2 000 lines;
@@ -145,8 +183,11 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 
 ## Next
 
-**AI-17.3** (lethal: the cheap defender chumps facing lethal, the attack as one decision, the early stop
-on a win this turn) — its position `Records/TechnicianSkipsLethal.json` #494 (kept, no test yet). Read this story's Diagnosis; the two kept records; then
+**AI-17.3 (b), the attack as one decision** — the design is in the conversation of 2026-10-29: candidate
+whole attacks (none, all, each alone, all but one), each creature at its own best target, applied as one
+step in the tree and chosen whole in the rollout (`Rollout.Attacks.AsOne` beside `EachAlone`). Shayne's
+three questions (mixed targets, blocks too, the cost) are open — ask first. `MagicConsole --record=FILE
+--explain=N` shows what the search imagined: use it on every position (it found #547's cause). Read this story's Diagnosis; the two kept records; then
 `BeamSearchAi.Search` / `Winner`, `Rollout.Answer`, `Lookahead.QuickAnswer`, and MtgSimulator's
 `MultiTurnBeamSearchAiStrategy.FindLethalAttacks`.
 
@@ -155,3 +196,5 @@ on a win this turn) — its position `Records/TechnicianSkipsLethal.json` #494 (
 - 2026-10-29: created from Shayne's two table games (LIM-2.3's playtest); both diagnosed on kept records.
 - 2026-10-29: the plan agreed — the attack as one decision (Shayne); to the top of sprint 3.
 - 2026-10-29: AI-17.2 — "you may" taken in the look-ahead; 51.0% over 192 games, kept.
+- 2026-10-29: AI-17.3 (a), (c) and targets by their owner — kept; the oracle 87.2%, score given up halved;
+  `--explain` built to find #547's cause.

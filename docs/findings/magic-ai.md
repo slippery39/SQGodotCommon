@@ -1120,3 +1120,32 @@ keeps the cheap answer (it pays); an optional target takes its chooser's best.
 - **Match:** `--match=beam,beam+nomays --until-clear`: 192 games, **51.0% ± 1.3pp (98–94), no 5pp
   difference**, "worse" rejected (log-likelihood −10.8); 1 509 steps a decision (1 505, +0.2%); 524 s.
 - Kept (AI-5's rule: no difference, the recorded blunder fixed).
+
+## Lethal: the early stop on a win this turn, a defender that chumps, targets by their owner (2026-10-29, AI-17.3)
+
+From Shayne's draft game (seed 636312, turn 21): at 3 life with one blocker he wasn't attacked by both
+creatures. Any win stopped the search (`Winner` at 2 500), and both root lines won by turn 23; the look-
+ahead's cheap defender never chumped, so a lone attacker looked lethal. Three changes, each its switch:
+
+- **(c) `BeamSearchAi.Settings.WinNowOnly`** (`+anywin`): only a win inside the search's own turn stops it
+  early. Match 96 games, **50.0% (48–48)**, no 5pp difference; cost +5.2% a decision (1 610 against 1 530).
+- **(a) `Evaluator.Terms.ChumpBlocks`** (`+nochump`, `Lookahead.Chumps`): facing lethal, the chumps are
+  planned for every blocker still to be asked — the biggest attacker taken by the least valuable that can
+  block it, or by the fewest least-valuable ones that kill it together (Shayne: a 4/4 and a 1/1 double-block
+  a 5/5; against a 6/6 the 1/1 chumps alone). First version (the blocker asked first chumps): 288 games,
+  48.6% ± 1.0 — no 5pp difference but leaning −1.4. Shayne's rule: 96 games, **50.0% ± 1.5 (48–48)**, cost
+  unchanged. GreedyAi's golden games moved (5 of 12; the chump rule alone, checked).
+- **Targets by their owner's best, the default** (`Rollout.Targets.OwnersBest`; `+firsttarget` the old):
+  `--explain` showed #547's bounce looking right because the simulated opponent's Fateshaper Aspirant put
+  its +1/+1 counter and indestructible on OUR creature (the first legal target). 288 games, **49.3% ± 1.2
+  (142–146)**, no difference (−0.7, half a standard error); +0.4% cost (AI-3.8 measured the same).
+- **Positions:** the turn-21 attack is made with either (a) or (c) alone; #547 holds; the least-valuable
+  chump's four cases pass.
+- **Suite:** 30 of 288 decisions change; 3 531 steps a position (3 103 after AI-17.2, +14% — (c)'s deeper
+  search where it already wins). Re-read with the new look-ahead, the oracle **agrees 87.2%** (85.4%) and
+  the **score given up halves, 0.59 a position** (1.06); misses a win it found 4 (5).
+- **The review** (before the commit): facing lethal the chump plan comes before a block the blocker
+  survives (a planned chumper took a safe block elsewhere, leaving the lethal attacker unblocked), and a
+  menace attacker with one blocker counts as unblocked. 1 of 288 suite decisions moved (a Cadet no longer
+  chumps Massacre Girl), one golden game; re-read, the oracle **87.2%, score given up 0.81** (still under
+  1.06). The matches above stand.

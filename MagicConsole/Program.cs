@@ -168,6 +168,15 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 			Console.WriteLine(Keep(record, keep, Arg("at")));
 		else if (flags.Contains("--compare"))
 			Console.WriteLine(RecordComparison.Compare(record).Text());
+		else if (Arg("explain") is { } explainAt)
+		{
+			// what the default search imagined before move N (AI-17): each first move's best line
+			var at = record.Before(explainAt);
+			var ai = new BeamSearchAi(at.DecidingPlayerId());
+			var decided = ai.Decide(at);
+			Console.WriteLine($"# Before #{explainAt}: the search plays {decided.What}");
+			Console.WriteLine(ai.Explain());
+		}
 		else
 			foreach (var line in record.Transcript(flags.Contains("--passes")))
 				Console.WriteLine(line);

@@ -71,6 +71,8 @@ public static class AiMatch
 			["oldblocks"] = o => o with { Without = o.Without | Evaluator.Terms.BlockSurvival },
 			// The look-ahead's defender never gang-blocks, before AI-15: beam+nogang.
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
+			// The look-ahead's defender never chump-blocks, facing lethal or not, before AI-17.3: beam+nochump.
+			["nochump"] = o => o with { Without = o.Without | Evaluator.Terms.ChumpBlocks },
 			// The threat term without a trampler's excess over its blocker (AI-8.4): beam+notrample.
 			["notrample"] = o => o with { Without = o.Without | Evaluator.Terms.Trample },
 			// A planeswalker as a flat body and 0.35 a counter (before AI-8.2): beam+walkercount.
@@ -82,9 +84,10 @@ public static class AiMatch
 			// GreedyAi plays our side in the rollouts (AI-3.7) — not "greedy", the AI: beam+greedyrollout.
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a
-			// target choice by its owner's best answer — beam+targets.
+			// target choice by its owner's best answer — the default since AI-17.3 (beam+firsttarget is the old).
 			["allin"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AllInToo }),
-			["targets"] = WithRollout(r => r with { Targets = Rollout.Targets.OwnersBest }),
+			// The first legal target, as before AI-17.3: beam+firsttarget.
+			["firsttarget"] = WithRollout(r => r with { Targets = Rollout.Targets.FirstLegal }),
 			// The simulated opponent's planeswalkers idle unless a casting model judges them worth it —
 			// before AI-8.1: beam+boardonly+idlewalkers (the default opponent casts, so its walkers act by our policy).
 			["idlewalkers"] = WithRollout(r => r with { TheirWalkers = false }),
@@ -106,6 +109,8 @@ public static class AiMatch
 			),
 			// Lost lines on one turn tie again, the board as our turn ends not counted (before AI-16.4): beam+nolostlines.
 			["nolostlines"] = WithRollout(r => r with { LostLines = false }),
+			// Any win found stops the search, however slow, as before AI-17.3: beam+anywin.
+			["anywin"] = o => o with { WinNowOnly = false },
 			// "You may" declined in the look-ahead, as before AI-17.2: beam+nomays.
 			["nomays"] = WithRollout(r => r with { Mays = false }),
 			// The opponent's unseen hand drawn again from its unseen cards (AI-3.4) — matters only
@@ -136,10 +141,10 @@ public static class AiMatch
 		)
 		&& models.Count(m => m is "casts" or "responds" or "boardonly") <= 1 // one opponent model
 		&& !(models.Contains("shuffle") && models.Contains("realorder")) // one library mode
-		// GreedyAi makes all our rollout decisions: allin and targets would reach only the opponent's.
+		// GreedyAi makes all our rollout decisions: allin and firsttarget would reach only the opponent's.
 		&& !(
 			models.Contains("greedyrollout")
-			&& (models.Contains("allin") || models.Contains("targets"))
+			&& (models.Contains("allin") || models.Contains("firsttarget"))
 		)
 		&& !(models.Contains("unseen") && models.Contains("guess")) // one hand mode
 			? models.Aggregate(new BeamSearchAi.Settings(), (o, m) => Models[m](o))

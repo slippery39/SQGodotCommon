@@ -76,7 +76,7 @@ public static class DecisionReport
 	}
 
 	/// <summary>Writes one game as it goes: a turn's heading, each move, a combat declaration gathered into one line, and the changes under each.</summary>
-	sealed class Replay(StringBuilder md, Dictionary<int, string> names, GameState start)
+	internal sealed class Replay(StringBuilder md, Dictionary<int, string> names, GameState start)
 	{
 		GameState since = start; // the state the last line's changes are measured from
 		int turn;

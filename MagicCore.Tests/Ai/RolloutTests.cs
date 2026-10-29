@@ -257,7 +257,7 @@ public class RolloutTests
 
 		Assert.That(
 			Scored(thisTurn with { Targets = Rollout.Targets.OwnersBest }),
-			Is.GreaterThan(Scored(thisTurn) + 2)
+			Is.GreaterThan(Scored(thisTurn with { Targets = Rollout.Targets.FirstLegal }) + 2)
 		);
 	}
 
@@ -549,5 +549,59 @@ public class RolloutTests
 			() => Lookahead.QuickAnswer(s, s.GetPendingChoice()!).Single()
 		);
 		return answer == attacker;
+	}
+
+	// Shayne, 2026-10-29 (AI-17.3): "you always want to chump with your least valuable creatures first" —
+	// and a 4/4 and a 1/1 against a 5/5 "should actually be blocked by both", since together they kill it;
+	// against a 6/6 they don't, so the 1/1 chumps alone. At 3 life, whichever the engine asks first. When
+	// only the 4/4 can block (a flier; it has reach), the 4/4 chumps. The CONTROL: the look-ahead's
+	// defender before AI-17.3 never chumps.
+	[TestCase("5/5", "", false, ExpectedResult = "Big,Small")]
+	[TestCase("6/6", "", false, ExpectedResult = "Small")]
+	[TestCase("6/6", "Flying", false, ExpectedResult = "Big")]
+	[TestCase("6/6", "", true, ExpectedResult = "")]
+	public string FacingLethal_TheLeastValuableCreatureChumps(
+		string attackerPt,
+		string attackerKeyword,
+		bool noChump
+	)
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var them = s.OpponentOf(me);
+		(s, var attacker) = TestGames.Put(
+			s,
+			me,
+			TestGames.Creature(
+				"Attacker",
+				attackerPt,
+				attackerKeyword == "" ? [] : [attackerKeyword]
+			),
+			ZoneType.Battlefield
+		);
+		(s, _) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Big", "4/4", "Reach"),
+			ZoneType.Battlefield
+		);
+		(s, _) = TestGames.Put(s, them, TestGames.Creature("Small", "1/1"), ZoneType.Battlefield);
+		s = s.WithPlayer(s.GetPlayer(them) with { Life = 3 }); // TEST SETUP
+		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
+		s = s.Choose([them]);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareBlockerChoice);
+
+		var chumpers = new List<string>();
+		while (s.GetPendingChoice() is Actions.DeclareBlockerChoice block)
+		{
+			var answer = Evaluator.Without(
+				noChump ? Evaluator.Terms.ChumpBlocks : Evaluator.Terms.None,
+				() => Lookahead.QuickAnswer(s, block).Single()
+			);
+			if (answer == attacker)
+				chumpers.Add(s.GetCard(block.CreatureId).Name);
+			s = s.Choose([answer]);
+		}
+		return string.Join(",", chumpers.Order());
 	}
 }

@@ -40,7 +40,8 @@ public static class Lookahead
 
 	/// <summary>
 	/// Inside a simulation: nobody else attacks, blockers only take blocks they survive — or join one
-	/// already declared (<see cref="Joins"/>) — and targets are the first legal.
+	/// already declared (<see cref="Joins"/>), or chump the biggest attacker when what is left unblocked
+	/// would kill them (<see cref="Chumps"/>) — and targets are the first legal.
 	/// </summary>
 	public static IEnumerable<int> QuickAnswer(GameState s, ChoiceAction choice)
 	{
@@ -53,12 +54,16 @@ public static class Lookahead
 				)
 				.Select(o => o.Id)
 				.FirstOrDefault(CombatOption.None);
-			return
-			[
-				safe != CombatOption.None || Evaluator.IsOff(Evaluator.Terms.GangBlocks)
-					? safe
-					: Joins(s, blocker, choice),
-			];
+			// facing lethal, the chump plan comes first: a block it survives on a smaller attacker would
+			// leave the planned chump unmade (the review, AI-17.3)
+			if (
+				!Evaluator.IsOff(Evaluator.Terms.ChumpBlocks)
+				&& Chumps(s, blocker, choice) is var chump and not CombatOption.None
+			)
+				return [chump];
+			if (safe == CombatOption.None && !Evaluator.IsOff(Evaluator.Terms.GangBlocks))
+				safe = Joins(s, blocker, choice);
+			return [safe];
 		}
 		if (choice is DeclareAttackerChoice)
 			return [CombatOption.None];
@@ -70,8 +75,8 @@ public static class Lookahead
 	/// <summary>
 	/// The attacker this blocker gang-blocks (story AI-15), or none: one already blocked this declaration
 	/// that the blockers kill only with it — or a menace attacker blocked by one, whose block is dropped
-	/// without a second, when the two kill it or this one survives it (never a chump: the look-ahead
-	/// doesn't chump-block). The rollout's defender tries "block X" with each blocker (Rollout.BestAlone),
+	/// without a second, when the two kill it or this one survives it (a chump is <see cref="Chumps"/>'s,
+	/// facing lethal only). The rollout's defender tries "block X" with each blocker (Rollout.BestAlone),
 	/// so a first blocker starts the gang block and the rest join here; alone, the look-ahead never
 	/// starts one (it blocks only what it survives).
 	/// ponytail: damage summed — first strike, the attacker's split and deathtouch on the attacker's side
@@ -111,6 +116,81 @@ public static class Lookahead
 				return option.Id;
 		}
 		return CombatOption.None;
+	}
+
+	/// <summary>
+	/// The attacker this blocker chumps (story AI-17.3), or none — when the damage the attackers not yet
+	/// blocked would deal its controller is lethal. Shayne: "you always want to chump with your least
+	/// valuable creatures first" — so the chumps are planned for every blocker still to be asked: the
+	/// biggest unblocked attacker first, each taken by the least valuable creature that can block it
+	/// (<see cref="Evaluator.ValueOf"/>), until what is left no longer kills. And when the least valuable
+	/// free blockers TOGETHER kill that attacker, they all block it (Shayne: a 4/4 and a 1/1 against a 5/5
+	/// "should actually be blocked by both"; against a 6/6, the 1/1 alone). This blocker blocks only if it
+	/// is one of them; the engine asks one at a time, and each asks again with the blocks made so far.
+	/// ponytail: trample's excess, first strike and lifelink aren't counted; a creature's value is the
+	/// evaluator's (stats and keywords, not its abilities — AI-9.6); a menace attacker is never chumped
+	/// (one blocker alone is dropped; Joins pairs them).
+	/// </summary>
+	static int Chumps(GameState s, Card blocker, ChoiceAction choice)
+	{
+		if (s.ActionStack.Peek() is not PipelineAction declaring)
+			return CombatOption.None;
+		var declared = Declarations
+			.Read(declaring.PipelineContext, DeclareBlockerChoice.KeyPrefix)
+			.ToList();
+		var player = blocker.ControllerId;
+		int Damage(Card a) =>
+			Math.Max(0, Turns.Combat.Assigns(s, a)) * (s.Has(a, "Double strike") ? 2 : 1);
+		bool Blocked(Card a) =>
+			declared.Count(d => d.ChosenId == a.Id) is var n
+			&& (s.Has(a, "Menace") ? n >= 2 : n >= 1);
+		var unblocked = Turns
+			.Combat.Attackers(s)
+			.Where(a => a.AttackingId == player && !Blocked(a))
+			.OrderByDescending(Damage)
+			.ThenBy(a => a.Id)
+			.ToList();
+		var life = s.GetPlayer(player).Life;
+		var left = unblocked.Sum(Damage);
+		if (left < life)
+			return CombatOption.None;
+		var free = s.CardsIn(player, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Creature) && declared.All(d => d.CreatureId != c.Id))
+			.OrderBy(c => Evaluator.ValueOf(s, c))
+			.ThenBy(c => c.Id)
+			.ToList();
+		// one blocker alone on a menace attacker is dropped: no chump there (Joins pairs them)
+		foreach (var attacker in unblocked.Where(a => !s.Has(a, "Menace")))
+		{
+			if (left < life)
+				break;
+			var able = free.Where(b => Turns.Combat.CanBlock(s, b, attacker)).ToList();
+			if (able.Count == 0)
+				continue;
+			// the fewest of the least valuable that kill it, if any do; else the least valuable alone
+			var gang = able.Take(1).ToList();
+			var need = s.Toughness(attacker) - attacker.Damage;
+			for (
+				var i = 1;
+				i < able.Count && !s.IsIndestructible(attacker) && Dealt(gang) < need;
+				i++
+			)
+				gang.Add(able[i]);
+			if (s.IsIndestructible(attacker) || Dealt(gang) < need)
+				gang = able.Take(1).ToList();
+			if (gang.Any(b => b.Id == blocker.Id))
+				return choice.Options.Any(o => o.Id == attacker.Id)
+					? attacker.Id
+					: CombatOption.None;
+			free.RemoveAll(gang.Contains);
+			left -= Damage(attacker);
+		}
+		return CombatOption.None;
+
+		int Dealt(IEnumerable<Card> blockers) =>
+			blockers.Any(b => s.Has(b, "Deathtouch") && Turns.Combat.Assigns(s, b) > 0)
+				? int.MaxValue
+				: blockers.Sum(b => Math.Max(0, Turns.Combat.Assigns(s, b)));
 	}
 
 	/// <summary>

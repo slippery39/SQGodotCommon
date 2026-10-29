@@ -1154,6 +1154,8 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the default simulated opponent plays only the cards we know (`Ai/Rollout.cs` Allowed, AI-10.4) — no unknown land either, so its mana doesn't grow in the look-ahead and a known card it can't yet afford stays uncast; allow one land a turn if that misjudges a bounce
 - a held instant or flash card is priced as an option (`Evaluator.Terms.HoldOption`, AI-13.4): its offers come from GreedyAi self-play (`CastGains`, not the search's own play), are measured at the moment of casting (a risk that comes later — their unseen removal on an enchanted creature — is invisible: Ferocity of the Hunt, AI-9.4), and k is the board's clocks capped at 4 (`MaxOptionTurns`); a known creature in their hand is its board value less 0.5 a mana (`RecastPerMana`) — both constants chosen against Shayne's positions, not measured; learn the continuation value from play (Longstaff–Schwartz, a value function) if a hold looks wrong
 - a won or lost line's tie-break is the board as our turn ends (`Rollout.ProgressBy.TurnEnd`, `Settings.LostLines`, AI-16) — a line lost INSIDE the searched turn (blocks when every block dies this combat) has no turn end and still ties with the others lost then; read the board just before the loss if the AI ever throws something away facing lethal this turn — Shayne's rule says the turn's end, so ask before extending it
+- the look-ahead's defender chumps facing lethal (`Lookahead.Chumps`, AI-17.3): the least valuable creature that can block the biggest attacker, or the fewest least-valuable that kill it together — trample's excess, first strike and lifelink not counted, a creature valued by stats and keywords only (AI-9.6), a menace attacker never chumped; count them if a misjudged chump is shown
+- `Rollout.Traced` (`--explain`, AI-17) doesn't tell our GreedyAi policy's plays or the forced passes; their effects still show in the replay's changes
 
 ## MagicCore search: speedups not taken (AI-7, 2026-10-19)
 
@@ -1183,7 +1185,7 @@ name. Two worth another look, with their cost:
   games, for +61% engine steps per decision. Under the 5pp rule a reasoning call: not worth the table's
   time. Take it up if the search gets cheaper (AI-7's leftovers) or a 1 200-game run is wanted (~35 min).
   It also mixes two changes (more plays a turn; strictly-better instead of "no worse").
-- **All-in attacks with judged blocks** (`+allin` was WORSE by 5pp) — the look-ahead's defender never
+- **All-in attacks with judged blocks** (`+allin` was WORSE by 5pp, AI-3.8 — before AI-17.3 the look-ahead's defender never
   chump-blocks (`Lookahead.QuickAnswer`), so all-in looked lethal where a defender chumps. Settle the
   all-in line with the rollout's own judged blocks (`Rollout.Answer`), then measure again; cost: a
   block judgment per blocker inside every all-in settle.

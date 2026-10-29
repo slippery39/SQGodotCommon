@@ -1,4 +1,5 @@
 using ImmutableGameObjects;
+using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Sets.Fra;
 
@@ -189,12 +190,21 @@ public class AiPositionTests
 		var record = KeptRecords.Get("NoAdmittanceAtOwnFace");
 		var s = record.Before(321);
 		var selfBurn = record.Moves[320].Token;
-		string Choice(Rollout.ProgressBy progress) =>
+		string Choice(
+			Rollout.ProgressBy progress,
+			Evaluator.Terms without = Evaluator.Terms.None
+		) =>
 			MoveTokens.Token(
 				s,
 				new BeamSearchAi(
 					s.DecidingPlayerId(),
-					new(RolloutSettings: BeamSearchAi.DefaultRollout with { Progress = progress })
+					new(
+						RolloutSettings: BeamSearchAi.DefaultRollout with
+						{
+							Progress = progress,
+						},
+						Without: without
+					)
 				).Decide(s)
 			);
 
@@ -204,10 +214,93 @@ public class AiPositionTests
 			"the recorded move is the self-burn"
 		);
 		Assert.That(
-			MoveTokens.Same(Choice(Rollout.ProgressBy.TheirLife), selfBurn),
+			// the look-ahead's defender chump-blocking (AI-17.3) avoids it too, so the search as it was
+			MoveTokens.Same(
+				Choice(Rollout.ProgressBy.TheirLife, Evaluator.Terms.ChumpBlocks),
+				selfBurn
+			),
 			"the control: by their life alone, our own face"
 		);
 		Assert.That(MoveTokens.Same(Choice(Rollout.ProgressBy.TurnEnd), selfBurn), Is.False);
+	}
+
+	// Shayne, 2026-10-29 (AI-17.3, his draft game, seed 636312, turn 21): at 3 life with one blocker, the
+	// AI attacked with Chandra's Emberling alone and kept Tether Technician home — both attacking was
+	// lethal. Both root lines won by turn 23, and any win stopped the search: two rollouts, a tie, "don't
+	// attack". Two fixes, either enough here: only a win this turn stops the search early
+	// (BeamSearchAi.Settings.WinNowOnly), so it reaches the Emberling's declaration; and the look-ahead's
+	// defender chumps when facing lethal (Evaluator.Terms.ChumpBlocks), so the Technician alone no longer
+	// looks lethal. The CONTROL: neither — the Technician stays home, as recorded.
+	[TestCase(true, true)]
+	[TestCase(true, false)]
+	[TestCase(false, true)]
+	public void ALethalAttack_IsMade_NotPostponedForALaterWin(bool winNowOnly, bool chumps)
+	{
+		var record = KeptRecords.Get("TechnicianSkipsLethal");
+		var s = record.Before(494);
+		var me = s.DecidingPlayerId();
+		string Declare(GameState at, bool fixes) =>
+			MoveTokens.Token(
+				at,
+				new BeamSearchAi(
+					me,
+					fixes
+						? new(
+							WinNowOnly: winNowOnly,
+							Without: chumps ? Evaluator.Terms.None : Evaluator.Terms.ChumpBlocks
+						)
+						: new(WinNowOnly: false, Without: Evaluator.Terms.ChumpBlocks)
+				).Decide(at)
+			);
+
+		Assert.That(
+			MoveTokens.Same(Declare(s, fixes: false), record.Moves[493].Token),
+			"the control: it stays home"
+		);
+		var technician = Declare(s, fixes: true);
+		Assert.That(MoveTokens.Describe(s, technician), Does.EndWith("Attack You"));
+		var next = MoveTokens.Apply(s, technician);
+		var emberling = Declare(next, fixes: true);
+		Assert.That(
+			MoveTokens.Describe(next, emberling),
+			Does.EndWith("Attack You"),
+			"the Emberling attacks too"
+		);
+		var end = Lookahead.Settle(MoveTokens.Apply(next, emberling));
+		Assert.That(end.WinnerId(), Is.EqualTo(me), "and it is lethal");
+	}
+
+	// The same game (AI-17.3): the look-ahead's cheap defender never chump-blocked, so a lone attacker at a
+	// player on 3 life looked lethal and a second added nothing. Both attacking, Shayne's Skilled
+	// Battlecarver now chumps the bigger one, Tether Technician (Evaluator.Terms.ChumpBlocks). The CONTROL:
+	// without it, no block.
+	[Test]
+	public void TheLookAheadsDefender_Chumps_WhenFacingLethal()
+	{
+		var record = KeptRecords.Get("TechnicianSkipsLethal");
+		var s = record.Before(494);
+		static GameState AttackWith(GameState at) =>
+			at.Choose([at.GetPendingChoice()!.Options.First(o => o.Id != CombatOption.None).Id]);
+		var block = AttackWith(AttackWith(s)).AutoPass();
+		while (block.GetPendingChoice() is not DeclareBlockerChoice)
+			block = block
+				.Act(new PassPriorityAction { PlayerId = block.DecidingPlayerId() })
+				.AutoPass();
+		var choice = block.GetPendingChoice()!;
+		var technician = global::MagicCore
+			.Turns.Combat.Attackers(block)
+			.Single(a => a.Name == "Tether Technician")
+			.Id;
+
+		Assert.That(
+			Evaluator.Without(
+				Evaluator.Terms.ChumpBlocks,
+				() => Lookahead.QuickAnswer(block, choice)
+			),
+			Is.EqualTo(new[] { CombatOption.None }),
+			"the control: no chump"
+		);
+		Assert.That(Lookahead.QuickAnswer(block, choice), Is.EqualTo(new[] { technician }));
 	}
 
 	// Shayne, 2026-10-29 (AI-17.2, his draft game, seed 535739, turn 11): the AI made a Jace with Way of

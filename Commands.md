@@ -91,6 +91,7 @@ dotnet run --project MagicConsole -- --record=game_records/<file>.json   # a tab
 dotnet run --project MagicConsole -- --record=game_records/<file>.json --keep=NAME --at=N   # keep it as an AI test case: MagicCore.Tests/Records/NAME.json + a test to paste into AiPositionTests (#N from the transcript)
 dotnet run -c Release --project MagicConsole -- --record=game_records/<file>.json --compare   # your choices beside the AI's (TBL-5.6): at each decision, the default search's pick and where the oracle ranks yours; ~20 s a game on 16 cores
 dotnet run -c Release --project MagicConsole -- --decisions [--games=N] [--seed=N]   # AI games as a replay to read (AI-14): ai_reports/decisions-<time>.md, and each game as a record beside it (-gameN.json) — --record=… numbers its moves, --keep=… --at=N makes a flagged one a test
+dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N   # what the search imagined before move N (AI-17): each first move, best first, with the line its score came from - our decisions, the simulated opponent, the rollout to its horizon
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
@@ -137,7 +138,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #                    only with casts or responds; one of the two
 #     greedyrollout  GreedyAi plays our side in the rollouts (not --match=greedy, the AI itself)
 #     allin          an attack judged all-in as well as each alone (not with greedyrollout)
-#     targets        a target choice by its owner's best (not with greedyrollout)
+#     firsttarget    a target choice in the look-ahead takes the first legal one (before AI-17.3)
 #     idlewalkers    the simulated opponent's planeswalkers idle unless a casting model judges them worth it (before AI-8.1: +boardonly too)
 #     nothreat       the evaluator without its threat term (AI-5.2) — the search before it
 #     nokeywords     the evaluator without the six keywords AI-5.3 added (vigilance, haste, reach, …)

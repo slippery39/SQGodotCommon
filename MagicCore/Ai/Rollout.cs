@@ -82,7 +82,7 @@ public static class Rollout
 		OpponentModel Opponent = OpponentModel.Responds,
 		OurPolicy Ours = OurPolicy.Cheap,
 		Attacks Attacks = Attacks.EachAlone,
-		Targets Targets = Targets.FirstLegal,
+		Targets Targets = Targets.OwnersBest,
 		bool TheirWalkers = true,
 		ProgressBy Progress = ProgressBy.TurnEnd,
 		bool KnownOnly = true,
@@ -109,7 +109,13 @@ public static class Rollout
 		/// <summary>The first legal target (<see cref="Lookahead.QuickAnswer"/>).</summary>
 		FirstLegal,
 
-		/// <summary>Each legal target settled, the best for whoever chooses it — as GreedyAi answers one pick (Shayne).</summary>
+		/// <summary>
+		/// Each legal target settled, the best for whoever chooses it — as GreedyAi answers one pick
+		/// (Shayne). The default since AI-17.3: under FirstLegal the simulated opponent's Fateshaper
+		/// Aspirant put its +1/+1 counter and indestructible on OUR creature, and that misplay made a
+		/// bounce look right at #547 (Shayne held there). AI-3.8 had measured it no different (192 games,
+		/// 2 decisions in 288). The first legal one is beam+firsttarget.
+		/// </summary>
 		OwnersBest,
 	}
 
@@ -142,7 +148,7 @@ public static class Rollout
 	/// </summary>
 	public static double TurnEndCap(Settings settings) =>
 		0.45
-		* 10_000
+		* Evaluator.WinScore
 		* Math.Pow(settings.TerminalDiscount, settings.LookaheadTurns - 1)
 		* (1 - settings.TerminalDiscount);
 
@@ -219,7 +225,7 @@ public static class Rollout
 			}
 			if (s.GetPendingChoice() is { } choice)
 			{
-				s = s.Choose(Answer(s, choice, who, settings));
+				s = Do(s, who, Answer(s, choice, who, settings));
 				continue;
 			}
 			var spent = plays >= settings.ActionsPerTurn;
@@ -228,7 +234,7 @@ public static class Rollout
 				: null;
 			if (play is not null)
 			{
-				s = s.Act(play);
+				s = Do(s, who, play);
 				plays += play is PlayLandAction ? 0 : 1;
 				continue;
 			}
@@ -270,14 +276,57 @@ public static class Rollout
 	/// instant-speed answers in our turn; every other priority passed. The search answers the opponent through here too, so its tree and its rollouts agree.
 	/// </summary>
 	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
-		s.GetPendingChoice() is { } choice ? s.Choose(Answer(s, choice, who, settings))
+		s.GetPendingChoice() is { } choice ? Do(s, who, Answer(s, choice, who, settings))
 		: settings.Opponent != OpponentModel.BoardOnly && TheirPlay(s, who, settings) is { } play
-			? s.Act(play)
-		: settings.TheirWalkers && TheirLoyalty(s, who, settings) is { } loyalty ? s.Act(loyalty)
+			? Do(s, who, play)
+		: settings.TheirWalkers && TheirLoyalty(s, who, settings) is { } loyalty
+			? Do(s, who, loyalty)
 		: settings.Opponent == OpponentModel.Responds
 		&& TheirResponse(s, who, settings) is { } response
-			? s.Act(response)
+			? Do(s, who, response)
 		: Pass(s, who);
+
+	[ThreadStatic]
+	static Action<GameState, int, AiDecision>? trace;
+
+	/// <summary>
+	/// <paramref name="work"/> with every move the rollout and the simulated opponent make told to
+	/// <paramref name="onMove"/> (the state before, who, the move) — what a look-ahead imagined, for
+	/// <see cref="BeamSearchAi.Explain"/> (AI-17). Per thread: Explain replays on one, and a search's
+	/// parallel workers never see it — off, a move costs a field read. ponytail: our GreedyAi policy's
+	/// plays and the forced passes (AutoPass) aren't told; their effects still show.
+	/// </summary>
+	public static T Traced<T>(Action<GameState, int, AiDecision> onMove, Func<T> work)
+	{
+		var outer = trace;
+		trace = onMove;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			trace = outer;
+		}
+	}
+
+	static GameState Do(GameState s, int who, GameAction action)
+	{
+		if (trace is not { } told)
+			return s.Act(action);
+		var d = AiDecision.Acting(s, action);
+		told(s, who, d);
+		return d.State;
+	}
+
+	static GameState Do(GameState s, int who, IEnumerable<int> answer)
+	{
+		if (trace is not { } told)
+			return s.Choose(answer);
+		var d = AiDecision.Answering(s, [.. answer]);
+		told(s, who, d);
+		return d.State;
+	}
 
 	/// <summary>
 	/// The opponent's planeswalkers act (AI-8.1, Shayne: "assume the opponent will use its best
@@ -403,7 +452,9 @@ public static class Rollout
 	static readonly Func<GameAction, bool> Loyalty = a => a is ActivateLoyaltyAction;
 
 	static GameState Pass(GameState s, int who) =>
-		s.Act(
+		Do(
+			s,
+			who,
 			s.GetGame().Step == Step.PreGame
 				? new KeepHandAction { PlayerId = who }
 				: new PassPriorityAction { PlayerId = who }
@@ -498,9 +549,9 @@ public static class Rollout
 	/// <summary>
 	/// AllInToo: the best answer judged alone, unless "this one and every one after attack the player"
 	/// settles better — then attack the player (the next creature's judgment sees the same all-in line).
-	/// ponytail: the look-ahead's defender blocks only what it survives — it never chump-blocks — so an
-	/// all-in can look lethal where a defender would chump; the rollout's own blocks (Answer) do chump.
-	/// Settle the all-in line with those blocks if all-in proves too eager.
+	/// Measured WORSE (AI-3.8) while the look-ahead's defender never chump-blocked, so an all-in looked
+	/// lethal where a defender would chump; since AI-17.3 it chumps facing lethal (Lookahead.Chumps) —
+	/// re-measure before reading that result as a ceiling.
 	/// </summary>
 	static IEnumerable<int> AllInOrAlone(
 		GameState s,

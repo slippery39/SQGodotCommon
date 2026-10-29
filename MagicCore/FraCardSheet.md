@@ -1467,7 +1467,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Reach  
 > When this creature enters, you may discard a card. When you do, this creature deals 2 damage to any target.
 
-**Status:** scripted · **tests naming it:** FraCommonTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCommonTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
 

@@ -104,7 +104,7 @@ public class AiMatchTests
 	[TestCase("beam+guess", false)]
 	[TestCase("beam+casts+responds", false)]
 	[TestCase("beam+casts+unseen+guess", false)]
-	[TestCase("beam+allin+targets", true)]
+	[TestCase("beam+allin+firsttarget", true)]
 	[TestCase("beam+greedyrollout+allin", false)]
 	[TestCase("beam+realorder+casts", true)]
 	[TestCase("beam+realorder+shuffle", false)]

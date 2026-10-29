@@ -27,7 +27,7 @@ public static class Evaluator
 	public static double Evaluate(GameState s, int player, HeldValues? held = null)
 	{
 		if (s.IsOver())
-			return s.WinnerId() == player ? 10_000 : -10_000;
+			return s.WinnerId() == player ? WinScore : -WinScore;
 		var opponent = s.OpponentOf(player);
 		var keywords = Keywords;
 		var sides =
@@ -138,6 +138,14 @@ public static class Evaluator
 		/// `+nogang`) — without it a menace attacker was unblockable in every look-ahead.
 		/// </summary>
 		GangBlocks = 128,
+
+		/// <summary>
+		/// The look-ahead's defender chump-blocks when facing lethal (story AI-17.3, `+nochump`) — without
+		/// it a lone attacker at a player low on life looked lethal however many blockers they had, so a
+		/// second attacker added nothing (Shayne's turn 21: the Technician alone "killed", the rollout's
+		/// own defender chumped it, the lethal attack of both was never made).
+		/// </summary>
+		ChumpBlocks = 256,
 	}
 
 	/// <summary>
@@ -458,6 +466,12 @@ public static class Evaluator
 		"Indestructible",
 		"Ward",
 	];
+
+	/// <summary>An ended game's score: won, or lost (negative) — every "is it a win" threshold is read from it.</summary>
+	public const double WinScore = 10_000;
+
+	/// <summary>A creature's value as the evaluator counts it on the board — which one to chump with (Lookahead).</summary>
+	public static double ValueOf(GameState s, Card c) => CreatureValue(s, c, Keywords);
 
 	static double CreatureValue(GameState s, Card c, string[] valued)
 	{
