@@ -142,7 +142,8 @@ public class AiPositionTests
 	// AI never attacked with Gallia, Tragic Host (2/1 menace) though one creature at most could block
 	// her and he was at 5 life. Attacking and staying home both scored 10,000 × 0.95²: the board-only
 	// look-ahead's full attack next turn wins either way, and the tie picked "Don't attack". Now a won
-	// line counts the opponent's life lost this turn (Rollout.Settings.Progress, Shayne's tie-break).
+	// line counts the opponent's life lost this turn (Rollout.Settings.Progress, Shayne's tie-break —
+	// since AI-16 inside the turn's whole evaluation, ProgressBy.TurnEnd; she attacks under both).
 	// The CONTROL: without it, the search stays home, as it did in the game.
 	[TestCase(545)]
 	[TestCase(587)]
@@ -150,7 +151,7 @@ public class AiPositionTests
 	{
 		var record = KeptRecords.Get("GalliaWontAttack");
 		var s = record.Before(move);
-		string Choice(bool progress) =>
+		string Choice(Rollout.ProgressBy progress) =>
 			MoveTokens.Token(
 				s,
 				new BeamSearchAi(
@@ -160,14 +161,53 @@ public class AiPositionTests
 			);
 
 		Assert.That(
-			MoveTokens.Same(Choice(false), record.Moves[move - 1].Token),
+			MoveTokens.Same(Choice(Rollout.ProgressBy.None), record.Moves[move - 1].Token),
 			"the control: it stays home"
 		);
 		// Gallia's declaration is the pending choice: every option but "don't" attacks with her.
 		var attacks = s.GetPendingChoice()!
 			.Options.Where(o => o.Id != global::MagicCore.Actions.CombatOption.None)
 			.Select(o => $"c{o.Id}");
-		Assert.That(attacks, Does.Contain(Choice(true)), "she attacks");
+		Assert.That(attacks, Does.Contain(Choice(Rollout.ProgressBy.TurnEnd)), "she attacks");
+		Assert.That(
+			attacks,
+			Does.Contain(Choice(Rollout.ProgressBy.TheirLife)),
+			"AI-10's own rule"
+		);
+	}
+
+	// Claude, 2026-10-29 (AI-14's replay, game 2 seed 1, flag 6; Shayne: "a huge bug"): Red-Green, White-Blue
+	// at 9 and dead next turn on every line, cast No Admittance at ITS OWN FACE (20 → 17). Every line that
+	// burns a face or a Jace wins on turn 15, and a won line counted only their life as the turn ended:
+	// burned at their face they blocked everything and stayed at 6, burned at ours they took 6 (9 → 3) —
+	// so the self-burn "pressed harder", and our 3 life counted for nothing. Now a won line counts the
+	// turn's whole evaluation (Rollout.ProgressBy.TurnEnd, AI-16). The CONTROL: by their life alone, the
+	// recorded self-burn.
+	[Test]
+	public void AWonLine_DoesntBurnOurOwnFace()
+	{
+		var record = KeptRecords.Get("NoAdmittanceAtOwnFace");
+		var s = record.Before(321);
+		var selfBurn = record.Moves[320].Token;
+		string Choice(Rollout.ProgressBy progress) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					new(RolloutSettings: BeamSearchAi.DefaultRollout with { Progress = progress })
+				).Decide(s)
+			);
+
+		Assert.That(
+			MoveTokens.Describe(s, selfBurn),
+			Does.EndWith("→ " + s.GetPlayer(s.DecidingPlayerId()).Name),
+			"the recorded move is the self-burn"
+		);
+		Assert.That(
+			MoveTokens.Same(Choice(Rollout.ProgressBy.TheirLife), selfBurn),
+			"the control: by their life alone, our own face"
+		);
+		Assert.That(MoveTokens.Same(Choice(Rollout.ProgressBy.TurnEnd), selfBurn), Is.False);
 	}
 
 	// Shayne, 2026-10-27 (AI-9.5): "an unknown card in hand vs a known card in hand should not have the

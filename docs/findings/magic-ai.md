@@ -1059,3 +1059,24 @@ declared when, with it, the blockers kill the attacker, or menace needs a second
   12) — gang blocks alone, checked by forcing the join off.
 - After the review, a menace join needs the two to kill the attacker or the joiner to survive it (no
   chump): 0 of 288 suite decisions and the golden games unchanged, so the match above stands.
+
+## A won line counts the turn's whole evaluation — no more burning our own face (2026-10-29, AI-16)
+
+From AI-14's replay after AI-15 (game 2 seed 1, turn 13, flag 6): Red-Green cast No Admittance at its
+own face (20 → 17), White-Blue Jace at 9. Every line burning a face or a Jace won on turn 15 (it did),
+scored by AI-10's tie-break `10,000 × 0.95² − their life as our turn ends`: at their face they blocked
+everything and stayed at 6 (9019); at ours they took 6 in the attack, 9 → 3 (9022). Our own life never
+entered a won line. Counting it too ties (both net 3), and a tie takes the first move — the self-burn.
+Now a won line adds our evaluation as the turn ends, squashed under ~214 (`Rollout.ProgressBy.TurnEnd`;
+`+lifeprogress` is AI-10's rule, `+noprogress` no tie-break).
+
+- **Position** (kept, `Records/NoAdmittanceAtOwnFace.json` #321): their face 9083, our own face 9052;
+  the control (`+lifeprogress`) burns our face. AI-10's Gallia positions attack under both.
+- **Suite:** 6 of 288 decisions change (two edicts cast, Yoshimaru's fight activated, Jace −3 over
+  Memory Trap, two passes); cost unchanged, 3 097 steps a position. Against the oracle as stored
+  80.6% against 82.6%; re-read with the new rule, 82.6% (score given up 1.09).
+- **Match:** `--match=beam,beam+lifeprogress --until-clear`: 192 games, **51.6% ± 0.9pp (99–93), no 5pp
+  difference**, "worse" rejected (log-likelihood −19.5); cost 1 492 steps a decision (1 514, −1.5%);
+  678 s on 16 cores.
+- Kept (AI-5's rule: no difference, the recorded blunder fixed). Measured with a ±200 clamp; the review
+  replaced it with `cap × tanh(e / cap)`, which keeps every order below the cap — the suite unchanged.

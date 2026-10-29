@@ -37,7 +37,8 @@ public static class Rollout
 	/// "Progress this turn" (story AI-10, Shayne): a won line also counts the opponent's life lost by the
 	/// end of the search's own turn, so of two wins on the same turn the one that presses NOW scores
 	/// higher — both used to score 10,000 × 0.95², and the tie picked "Don't attack". No worse over
-	/// 288 games (51.4% ± 1.2pp, AI-10.2); off is beam+noprogress.
+	/// 288 games (51.4% ± 1.2pp, AI-10.2); off is beam+noprogress. Since AI-16 it is the whole
+	/// evaluation at that moment (<see cref="ProgressBy.TurnEnd"/>), not their life alone — see there.
 	/// </param>
 	/// <param name="KnownOnly">
 	/// A casting or responding opponent plays only the cards in its hand WE know (<see cref="Card.KnownTo"/>:
@@ -63,7 +64,7 @@ public static class Rollout
 		Attacks Attacks = Attacks.EachAlone,
 		Targets Targets = Targets.FirstLegal,
 		bool TheirWalkers = true,
-		bool Progress = true,
+		ProgressBy Progress = ProgressBy.TurnEnd,
 		bool KnownOnly = true
 	);
 
@@ -89,6 +90,39 @@ public static class Rollout
 		/// <summary>Each legal target settled, the best for whoever chooses it — as GreedyAi answers one pick (Shayne).</summary>
 		OwnersBest,
 	}
+
+	/// <summary>What a won line counts besides how soon it wins — <see cref="Settings.Progress"/>.</summary>
+	public enum ProgressBy
+	{
+		/// <summary>Nothing: won lines on the same turn tie (before AI-10) — beam+noprogress.</summary>
+		None,
+
+		/// <summary>The opponent's life as the search's own turn ends, a point a life (AI-10) — beam+lifeprogress.</summary>
+		TheirLife,
+
+		/// <summary>
+		/// Our evaluation as the search's own turn ends (AI-16): everything this turn did, both sides —
+		/// so a won line that wastes our life or a card scores under one that doesn't. Their life alone
+		/// burned our own face: hit there, they took 6 in the attack (9 → 3); hit at their face, they
+		/// blocked everything and stayed at 6 — the self-burn "pressed harder", and our 3 life counted
+		/// for nothing in a won line. Squashed under <see cref="TurnEndCap"/>, so a sooner win still beats
+		/// a later one, and never clamped, so no two lines tie at the cap. A win inside the search's own
+		/// turn has no turn end: it counts their life (how far under 0), as TheirLife. No worse than
+		/// TheirLife over 192 games (51.6% ± 0.9pp, AI-16.3).
+		/// </summary>
+		TurnEnd,
+	}
+
+	/// <summary>
+	/// The most a won line's progress may add or take away: under half the smallest gap between two
+	/// turns' discounted wins within the horizon (the last turn's), so it never reorders turns —
+	/// 214 at the defaults (0.95, two turns), 193 at the position suite's four.
+	/// </summary>
+	public static double TurnEndCap(Settings settings) =>
+		0.45
+		* 10_000
+		* Math.Pow(settings.TerminalDiscount, settings.LookaheadTurns - 1)
+		* (1 - settings.TerminalDiscount);
 
 	/// <summary>Our own side's rollout policy (story AI-3.7) — the opponent's is its model, apart.</summary>
 	public enum OurPolicy
@@ -137,7 +171,7 @@ public static class Rollout
 		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
 		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 		var them = s.OpponentOf(me);
-		int? theirLifeAfterThisTurn = null; // the root turn's end: the same moment for every candidate
+		GameState? turnEnd = null; // the root turn's end: the same moment for every candidate
 		// ponytail: a rollout that hits DecisionLimit is scored where it stopped, mid-turn, beside
 		// rollouts scored at the horizon. Only a loop that never advances reaches it; flag or drop
 		// such a candidate if one is ever seen.
@@ -147,8 +181,8 @@ public static class Rollout
 				break;
 			if (s.GetGame().TurnNumber != turn)
 				(turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
-			if (theirLifeAfterThisTurn is null && turn > rootTurn)
-				theirLifeAfterThisTurn = s.GetPlayer(them).Life;
+			if (turnEnd is null && turn > rootTurn)
+				turnEnd = s;
 
 			var who = s.DecidingPlayerId();
 			if (who != me)
@@ -183,11 +217,20 @@ public static class Rollout
 		if (!s.IsOver())
 			return score;
 		score *= Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn);
-		// a point a life: far under one turn's discount (~450), so a sooner win still wins, but no tie
-		return settings.Progress && s.WinnerId() == me
-			? score - (theirLifeAfterThisTurn ?? s.GetPlayer(them).Life)
-			: score;
+		// under half a turn's discount (TurnEndCap), so a sooner win still wins, but no tie
+		return s.WinnerId() == me ? score + Progress(turnEnd ?? s, me, them, settings) : score;
 	}
+
+	/// <summary>A won line's tie-break, read as the search's own turn ends (or the game, if it ends first).</summary>
+	static double Progress(GameState s, int me, int them, Settings settings) =>
+		settings.Progress switch
+		{
+			ProgressBy.TheirLife => -s.GetPlayer(them).Life,
+			ProgressBy.TurnEnd when !s.IsOver() => TurnEndCap(settings)
+				* Math.Tanh(Evaluator.Evaluate(s, me, settings.Held) / TurnEndCap(settings)),
+			ProgressBy.TurnEnd => -s.GetPlayer(them).Life, // won within the turn: how far under 0 they went
+			_ => 0,
+		};
 
 	/// <summary>
 	/// One decision of the simulated opponent — the ONE place the opponent model is decided: attacks

@@ -58,6 +58,13 @@ scoring change — MagicTable has none, and MagicCore's evaluator couldn't expla
          spells … If you draw lands the anguish gets better anyways, and there is always a chance the
          opponent plays some creature you need to kill" (Shayne) — sorcery-speed cards aren't priced as
          options yet → AI-13.6
+      **Re-read after AI-15 (2026-10-29, Claude, seed 1, `decisions-2026-10-28_211335`):** flag 1 still
+      plays (turn 4, Yoshimaru cast 3.8 over Pass) — kept, `Records/YoshimaruWithNoFight.json` (#70);
+      flag 2 is gone (turn 6 no attack; turn 7 Yoshimaru and Koth double-block Edgar); flag 5 is gone
+      (turn 16 No Admittance kills Rampart Hunter), so AI-13.6 needs a new position.
+      6. (Claude) Game 2 turn 13, Red-Green casts No Admittance at ITS OWN FACE (20 → 17), tied (0.0)
+         with its own Jace token, White-Blue Jace at 9 — kept, `Records/NoAdmittanceAtOwnFace.json`
+         (#321). Diagnosed and fixed → AI-16 (a won line counted only their life)
 - [x] AI-14.5 The report as a REPLAY (Shayne: "it's a lot and is time consuming to read"; then "think
       of the log more like a replay, where I am just watching a game … the main thing is that I can
       follow what actually happened"): a section a turn; every move one line — a whole attack, a whole
