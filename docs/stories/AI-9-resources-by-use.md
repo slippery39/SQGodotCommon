@@ -62,6 +62,8 @@ Open questions:
       (AI-14's first reading, Shayne: Yoshimaru, Scrappy Stray, with a {6} +1/+1 ability, traded into a
       spent Rank Rat — "the AI did not properly value our 1/1 compared to theirs"); card-agnostic.
       Position: game 1 seed 1 of `MagicConsole --decisions`, turn 6
+      — **gone since AI-15** (2026-10-29: turn 6 no longer attacks), so out of sprint 3 until a new
+      position shows it
 - [x] AI-9.5 A KNOWN card in the opponent's hand priced as what it is (Shayne, 2026-10-27): today
       `Evaluator.Side` prices every card in their hand blind (`HeldValues.Unknown`), so a creature
       just bounced is "a card", and Unsummon reads as a kill spell (AI-10.3, #547). `Card.KnownTo`

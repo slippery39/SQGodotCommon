@@ -26,6 +26,9 @@ as his three priorities.
 - 2026-10-28, Shayne: **MTGA's powered cube** (not MTGO's Vintage Cube). Sprint 3 covers the survey
   and the first large batch, not the whole cube.
 
+- 2026-10-29, Shayne: **the survey's first pass is a script** (each card's Oracle text to what it
+  needs), checked by hand after — not every card read in context.
+
 Open questions:
 - The list itself: Shayne exports it or gives a link (CubeCobra, or Wizards' announcement). Arena
   changes its cube between runs, so which run?

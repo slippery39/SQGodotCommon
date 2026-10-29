@@ -118,3 +118,18 @@ sides; 104 min on 16 cores.
   underrated.
 - The report's lines all ended "within 2 SE, no difference is shown", even the 20.5-point gap; each
   now says which it is. The estimate (~81 min) was low: 1.3 games a minute a core here, not 1.7.
+
+## FRA Quick Draft: eight bots, rating plus the colour lean (2026-10-29, LIM-2.2)
+
+`MagicConsole --draft --seed=N`, seeds 1–10 (80 seats, every seat a bot). A bot takes the highest 17lands
+GIH WR, ±2 points inside or outside its two colours (by value invested; a second colour left open
+until one is worth taking), ramped over 10 picks.
+
+- **Basic lands:** 17lands rates a Forest 56.5 (games in hand means nothing for a basic), and the bots
+  took them as early as pack 2 pick 6. Now a basic comes last: all 114 basics in the 10 drafts went as a
+  pack's 14th pick.
+- **Colours are skewed toward Blue and Black:** seats in Blue 58 of 80, Black 43, White 24, Green 21,
+  Red 14 (even would be 32 each). FRA's own ratings say so — its single-colour cards average Blue 58.4%,
+  Black 56.6%, White 56.1%, Red 55.4%, Green 54.1% (Sealed GIH WR) — so a rating bot overdrafts them.
+- **The decks still build:** a seat's coloured picks are 64% inside its two colours (lowest 34%), and it
+  holds 23.9 coloured playables in its best pair on average; 2 seats of 80 under 17.

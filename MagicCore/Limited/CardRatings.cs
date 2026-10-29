@@ -69,11 +69,7 @@ public static class CardRatings
 			: Enough(f.Premier) ? f.Premier.GihWr + gap
 			: null;
 
-		var rated = cards.Values.Select(Rated).OfType<double>().Order().ToList();
-		var median =
-			rated.Count == 0 ? 0.5 // a set nobody has played yet: every card even
-			: rated.Count % 2 == 1 ? rated[rated.Count / 2]
-			: (rated[rated.Count / 2 - 1] + rated[rated.Count / 2]) / 2;
+		var median = Median(cards.Values.Select(Rated).OfType<double>());
 
 		double Pooled(Formats f)
 		{
@@ -85,5 +81,14 @@ public static class CardRatings
 		}
 
 		return cards.ToDictionary(c => c.Key, c => Rated(c.Value) ?? Pooled(c.Value));
+	}
+
+	/// <summary>A table's median rating — 0.5 for an empty one (a set nobody has played yet: every card even).</summary>
+	public static double Median(IEnumerable<double> ratings)
+	{
+		var sorted = ratings.Order().ToList();
+		return sorted.Count == 0 ? 0.5
+			: sorted.Count % 2 == 1 ? sorted[sorted.Count / 2]
+			: (sorted[sorted.Count / 2 - 1] + sorted[sorted.Count / 2]) / 2;
 	}
 }

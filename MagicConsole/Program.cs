@@ -210,6 +210,35 @@ if (flags.Contains("--decisions"))
 	return;
 }
 
+// --draft [--seed=N]: an FRA Quick Draft with every seat a bot (LIM-2.2) — each seat's colours and its
+// picks in order, to judge the bots before the table's draft screen.
+if (flags.Contains("--draft"))
+{
+	var ratings = MagicCore.Limited.CardRatings.Fra;
+	var draftSeed = Arg("seed") ?? 1;
+	var drafted = MagicCore.Limited.Draft.RunBots(MagicCore.Limited.Draft.Fra(draftSeed), ratings);
+	Console.WriteLine($"FRA Quick Draft, seed {draftSeed}: 8 bots, rating plus the colour lean");
+	Console.WriteLine();
+	for (var i = 0; i < drafted.Seats.Count; i++)
+	{
+		var picks = drafted.Seats[i].Picks;
+		var lane = MagicCore.Limited.Draft.Lane(picks, ratings);
+		var colors = picks.Select(MagicCore.Limited.Draft.ColorsOf).ToList();
+		var inside = colors.Count(c => c.Count > 0 && c.All(lane.Contains));
+		var colourless = colors.Count(c => c.Count == 0);
+		Console.WriteLine(
+			$"Seat {i + 1}: {string.Join("/", lane)} — {inside} in its colours, {picks.Count - inside - colourless} outside, {colourless} colourless"
+		);
+		var packSize = picks.Count / MagicCore.Limited.Draft.PackCount;
+		for (var p = 0; p < picks.Count; p++)
+			Console.WriteLine(
+				$"  {p / packSize + 1}.{p % packSize + 1, -3} {picks[p]} ({string.Join("", colors[p].Select(c => "WUBRGC"[(int)c]))}, {(ratings.TryGetValue(picks[p], out var r) ? $"{100 * r:0.0}" : "unrated")})"
+			);
+		Console.WriteLine();
+	}
+	return;
+}
+
 // --cast-gains [--games=N]: each instant-speed card's offers in self-play, the tracked table AI-13's
 // option value reads (run from the solution root).
 if (flags.Contains("--cast-gains"))

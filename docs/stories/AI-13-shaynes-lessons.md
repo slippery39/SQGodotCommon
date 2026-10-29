@@ -70,6 +70,10 @@ thousands of games is exactly what a two-turn search won't rediscover.
   clocks) — so casting needs a gain ≥ C, and C falls as the game shortens. It replaces the patience
   cost; instants and flash first, sorcery-speed removal later.
 
+- 2026-10-29, Shayne (sprint 3 planning): AI-13.6's position (flag 5) is gone since AI-15 — **hand-build
+  one now** (Ajani's Anguish for 3 at the face at 20 life, nothing worth killing), Shayne agreeing "hold"
+  before the change; swap in a real one if a replay shows it.
+
 Open questions:
 - How a rule steers: a score adjustment the search adds, a move left out of the search (pruning),
   or an ordering hint (searched first)? Pruning is the cheapest and the most dangerous — a pruned

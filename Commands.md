@@ -152,6 +152,9 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 
+# An FRA Quick Draft with 8 bots (LIM-2.2): each seat's two colours and its picks in order, with rating
+dotnet run -c Release --project MagicConsole -- --draft [--seed=N]
+
 # Compare candidate SEALED builds (LIM-1.8; ~15 min for two builds at 200, 16 cores)
 dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=200]
 #   each file an Arena export (deck builder -> Export); its Sideboard section is the rest of your pool,

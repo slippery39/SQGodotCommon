@@ -47,6 +47,9 @@ tie takes the first move — the self-burn.
   mistake that might allow you back into the game" — then the best board score, read **as our turn
   ends** (the moment a won line uses). Committed after AI-16.3, built as AI-16.4.
 
+- 2026-10-29, Shayne: a line lost INSIDE the searched turn (blocks when every block dies) is **not**
+  extended to "the board just before the loss" for now — wait until it shows in a game.
+
 ## Tasks
 
 - [x] AI-16.1 Diagnosed on the kept position (`Records/NoAdmittanceAtOwnFace.json`, #321) — above
