@@ -210,6 +210,39 @@ public class AiPositionTests
 		Assert.That(MoveTokens.Same(Choice(Rollout.ProgressBy.TurnEnd), selfBurn), Is.False);
 	}
 
+	// Shayne, 2026-10-29 (AI-16.4): "If the AI can only find losing lines, the AI should still try to
+	// maximize their board score" — a later loss first ("it gives your opponent the chance to make a
+	// mistake"), then the best board as the searched turn ends. Every lost line on one turn used to tie.
+	// Kept from an AI game played WITH the rule (seed 11's game 8, #548, turn 21: Red-Green, lost on
+	// every line, passed). The CONTROL: lost lines tied (Rollout.Settings.LostLines off), it casts
+	// Ajani's Anguish for X = 0 — a card for nothing.
+	[Test]
+	public void ALostLine_KeepsTheBoard_NotACardThrownAway()
+	{
+		var record = KeptRecords.Get("LostLineAnguishForNothing");
+		var s = record.Before(548);
+		string Choice(bool lostLines) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					new(RolloutSettings: BeamSearchAi.DefaultRollout with { LostLines = lostLines })
+				).Decide(s)
+			);
+
+		Assert.That(
+			MoveTokens.Describe(s, Choice(false)),
+			Does.StartWith("Cast Ajani's Anguish"),
+			"the control: lost lines tied, the card thrown away"
+		);
+		Assert.That(
+			MoveTokens.Describe(s, record.Moves[547].Token),
+			Is.EqualTo("Pass"),
+			"the record"
+		);
+		Assert.That(MoveTokens.Same(Choice(true), record.Moves[547].Token), "it keeps the card");
+	}
+
 	// Shayne, 2026-10-27 (AI-9.5): "an unknown card in hand vs a known card in hand should not have the
 	// same value". Every card in the opponent's hand was priced as an unknown card, so a bounced
 	// creature (known to everyone) was "a card" and a bounced TOKEN — gone, it can't go to a hand —

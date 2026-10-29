@@ -97,7 +97,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-9](AI-9-resources-by-use.md) | Resources priced by what they provide, not by how many there are | in-progress |
 | [AI-13](AI-13-shaynes-lessons.md) | Shayne's lessons as general rules for the search — card-agnostic, switchable, measured | in-progress |
 | [AI-14](AI-14-see-the-ai-play.md) | See what the AI decides and why — a decision report now, an in-game inspector next | in-progress |
-| [AI-16](AI-16-won-line-self-burn.md) | A won line still counts what it spends — the AI no longer burns its own face | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
@@ -119,6 +118,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-8](AI-8-playtest-plays.md) | Plays that looked wrong at the table, rebuilt and fixed | done |
 | [AI-10](AI-10-winning-ties.md) | A winning AI still presses — ties among won lines no longer pick the passive move | done |
 | [AI-15](AI-15-lookahead-gang-blocks.md) | The look-ahead's defender gang-blocks — a menace attacker isn't unblockable | done |
+| [AI-16](AI-16-won-line-self-burn.md) | A won line still counts what it spends — the AI no longer burns its own face | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |

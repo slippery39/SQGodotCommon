@@ -1,7 +1,7 @@
 ---
 id: AI-16
 title: A won line still counts what it spends — the AI no longer burns its own face
-status: in-progress
+status: done
 area: AI
 created: 2026-10-29
 ---
@@ -26,7 +26,7 @@ tie takes the first move — the self-burn.
 - [x] The position as a test (`AiPositionTests.AWonLine_DoesntBurnOurOwnFace`), its control the old
       tie-break; AI-10's Gallia positions still attack
 - [x] Measured the AI-6 way: suite, then `--until-clear` against `beam+lifeprogress`
-- [ ] When every line loses (Shayne, 2026-10-29): a later loss still beats a sooner one, and among
+- [x] When every line loses (Shayne, 2026-10-29): a later loss still beats a sooner one, and among
       losses on the same turn the best board as our turn ends wins
 
 ## Decisions
@@ -60,20 +60,29 @@ tie takes the first move — the self-burn.
       0.9pp over 192 games (99–93), no difference, worse rejected**, −1.5% cost, 678 s. Kept. Suite
       accepted, the oracle re-read: 82.6% (`docs/findings/magic-ai.md`). The review's squash in place of
       the clamp keeps every lower line's order, so the match stands: the suite 0 changed after it
-- [ ] AI-16.4 Lost lines get the same tie-break (Shayne's Decision): `−10,000 × discount + the turn-end
-      board, squashed under TurnEndCap` — a later loss still first. A position where every line loses
-      and the AI wastes a card or life (find one in the suite: every first move under −2 500), its
-      control; the suite; a match (ask first)
+- [x] AI-16.4 Lost lines get the same tie-break (Shayne's Decision) — **built** (2026-10-29):
+      `Rollout.Settings.LostLines` (`beam+nolostlines` is off): a line lost after our turn adds the
+      turn-end board, squashed under `TurnEndCap`, so a later loss still comes first; a loss inside our
+      own turn has no turn-end board and is unchanged. Fires: at the default look-ahead only 2 of 288
+      suite positions lose on every line (the oracle's four-turn look sees 13), and neither changes
+      (#119 now ranks Pass over spending Academic Ascent, −9505 against −9557: it passed already) — the
+      suite 0 changed. In 8 AI games (`--decisions --games=8 --seed=11`) lost positions are common and
+      the rule moves many: it keeps Academic Ascent or Ajani's Anguish rather than cast them for
+      nothing, draws with Jace, kills a Cadet. Position: `ALostLine_KeepsTheBoard_NotACardThrownAway`
+      (`Records/LostLineAnguishForNothing.json` #548: Ajani's Anguish for X = 0 while lost; its
+      control casts it). Match (Shayne approved): `--match=beam,beam+nolostlines --until-clear` — **50.0% over
+      96 games (48–48), no difference**, +0.2% cost. Kept (sensible plays, AI-10.4's rule)
 
 ## Next
 
-**AI-16.4** (lost lines, Shayne's Decision above): `Rollout.Score`'s terminal branch, `Progress`. Side note found on the way, not this bug: the
+Done. Side note found on the way, not this bug: the
 look-ahead answers a TRIGGER's target with the first legal one (`Targets.FirstLegal`, measured no
 different in AI-3.8), so a simulated Ajani's Anguish may hit our own face; only the real decision
-searches every target. Lost lines still tie among themselves — AI-16.4.
+searches every target. A line lost inside our own turn still ties (DesignNotes, MagicCore known ceilings).
 `Records/YoshimaruWithNoFight.json` (#70) is kept for AI-13.5, not tested here.
 
 ## Log
 
 - 2026-10-29: created from AI-14.3's flag 6; diagnosed and fixed behind a switch the same day.
-- 2026-10-29: measured (51.6% over 192 games, no difference, worse rejected) and kept. Done.
+- 2026-10-29: measured (51.6% over 192 games, no difference, worse rejected) and kept.
+- 2026-10-29: AI-16.4 — lost lines keep the best board (Shayne); 50.0% over 96 games, kept. Done.

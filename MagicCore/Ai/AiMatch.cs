@@ -89,9 +89,23 @@ public static class AiMatch
 			// before AI-8.1: beam+boardonly+idlewalkers (the default opponent casts, so its walkers act by our policy).
 			["idlewalkers"] = WithRollout(r => r with { TheirWalkers = false }),
 			// Won lines tie again, without the opponent's life lost this turn (before AI-10): beam+noprogress.
-			["noprogress"] = WithRollout(r => r with { Progress = Rollout.ProgressBy.None }),
+			["noprogress"] = WithRollout(r =>
+				r with
+				{
+					Progress = Rollout.ProgressBy.None,
+					LostLines = false,
+				}
+			),
 			// A won line's progress is their life alone, not the turn's whole evaluation (before AI-16): beam+lifeprogress.
-			["lifeprogress"] = WithRollout(r => r with { Progress = Rollout.ProgressBy.TheirLife }),
+			["lifeprogress"] = WithRollout(r =>
+				r with
+				{
+					Progress = Rollout.ProgressBy.TheirLife,
+					LostLines = false,
+				}
+			),
+			// Lost lines on one turn tie again, the board as our turn ends not counted (before AI-16.4): beam+nolostlines.
+			["nolostlines"] = WithRollout(r => r with { LostLines = false }),
 			// The opponent's unseen hand drawn again from its unseen cards (AI-3.4) — matters only
 			// when the simulated opponent casts: beam+casts+unseen.
 			["unseen"] = o => o with { Hand = Hidden.Hand.ShuffleUnseen },

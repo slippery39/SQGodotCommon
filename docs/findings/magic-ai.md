@@ -1080,3 +1080,24 @@ Now a won line adds our evaluation as the turn ends, squashed under ~214 (`Rollo
   678 s on 16 cores.
 - Kept (AI-5's rule: no difference, the recorded blunder fixed). Measured with a ±200 clamp; the review
   replaced it with `cap × tanh(e / cap)`, which keeps every order below the cap — the suite unchanged.
+
+## A lost line keeps the best board (2026-10-29, AI-16.4)
+
+Shayne: "If the AI can only find losing lines, the AI should still try to maximize their board score" —
+a later loss first ("it gives your opponent the chance to make a mistake"), then the best board as our
+turn ends. Every lost line on one turn used to score −10,000 × the discount exactly, and the tie took the
+first move. Now a line lost after our turn adds the turn-end board, squashed under `TurnEndCap` as a won
+line's is (`Rollout.Settings.LostLines`; `+nolostlines` is off).
+
+- **Suite:** 0 of 288 decisions change. At the default look-ahead only 2 positions lose on every line
+  (the oracle, four turns deep, sees 13); at #119 Pass now outranks spending Academic Ascent (−9505
+  against −9557), as it already passed.
+- **8 AI games** (`--decisions --games=8 --seed=11`, scanned with the switch off and on): lost positions
+  are common in play, and the rule moves many — Academic Ascent and a 0-damage Ajani's Anguish held
+  instead of cast for nothing, Jace's −3 to draw, Wrath of the Bloodmane on a Cadet.
+- **Position** (kept, `Records/LostLineAnguishForNothing.json` #548): lost on every line, the control
+  casts Ajani's Anguish for X = 0; now it keeps it.
+- **Match:** `--match=beam,beam+nolostlines --until-clear`: 96 games, **50.0% ± 0.0pp (48–48), no 5pp
+  difference** either way, settled at the first check; cost 1 545 steps a decision (1 543, +0.2%);
+  275 s on 16 cores. Expected — a better board in a lost position rarely turns the result.
+- Kept (Shayne's rule, AI-10.4's: sensible plays count when the match shows no difference).

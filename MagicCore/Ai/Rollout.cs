@@ -40,6 +40,15 @@ public static class Rollout
 	/// 288 games (51.4% ± 1.2pp, AI-10.2); off is beam+noprogress. Since AI-16 it is the whole
 	/// evaluation at that moment (<see cref="ProgressBy.TurnEnd"/>), not their life alone — see there.
 	/// </param>
+	/// <param name="LostLines">
+	/// A lost line counts the board as the searched turn ends too (AI-16.4, Shayne: "if the AI can only find
+	/// losing lines, the AI should still try to maximize their board score") — a later loss still first
+	/// ("it gives your opponent the chance to make a mistake"), then the better board, squashed under
+	/// <see cref="TurnEndCap"/> as a won line's is. Every lost line on one turn used to tie, and the tie
+	/// went to the first move that acts (<see cref="BeamSearchAi"/>'s pass bias). A line lost INSIDE the
+	/// searched turn has no turn end and still ties. Off is beam+nolostlines (with lifeprogress and
+	/// noprogress, which reproduce the search before AI-16).
+	/// </param>
 	/// <param name="KnownOnly">
 	/// A casting or responding opponent plays only the cards in its hand WE know (<see cref="Card.KnownTo"/>:
 	/// one we bounced, saw, or watched return from a graveyard) — board-only otherwise (Shayne, AI-10.4:
@@ -65,7 +74,8 @@ public static class Rollout
 		Targets Targets = Targets.FirstLegal,
 		bool TheirWalkers = true,
 		ProgressBy Progress = ProgressBy.TurnEnd,
-		bool KnownOnly = true
+		bool KnownOnly = true,
+		bool LostLines = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -217,8 +227,12 @@ public static class Rollout
 		if (!s.IsOver())
 			return score;
 		score *= Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn);
-		// under half a turn's discount (TurnEndCap), so a sooner win still wins, but no tie
-		return s.WinnerId() == me ? score + Progress(turnEnd ?? s, me, them, settings) : score;
+		// under half a turn's discount (TurnEndCap), so a sooner win (or a later loss) still comes first, but no tie
+		if (s.WinnerId() == me)
+			return score + Progress(turnEnd ?? s, me, them, settings);
+		return settings.LostLines && turnEnd is not null
+			? score + TurnEndBoard(turnEnd, me, settings) // lost after our turn: the board we kept
+			: score;
 	}
 
 	/// <summary>A won line's tie-break, read as the search's own turn ends (or the game, if it ends first).</summary>
@@ -226,11 +240,15 @@ public static class Rollout
 		settings.Progress switch
 		{
 			ProgressBy.TheirLife => -s.GetPlayer(them).Life,
-			ProgressBy.TurnEnd when !s.IsOver() => TurnEndCap(settings)
-				* Math.Tanh(Evaluator.Evaluate(s, me, settings.Held) / TurnEndCap(settings)),
+			ProgressBy.TurnEnd when !s.IsOver() => TurnEndBoard(s, me, settings),
 			ProgressBy.TurnEnd => -s.GetPlayer(them).Life, // won within the turn: how far under 0 they went
 			_ => 0,
 		};
+
+	/// <summary>Our evaluation as the search's own turn ends, squashed under <see cref="TurnEndCap"/> — never clamped, so no two lines tie at it.</summary>
+	static double TurnEndBoard(GameState s, int me, Settings settings) =>
+		TurnEndCap(settings)
+		* Math.Tanh(Evaluator.Evaluate(s, me, settings.Held) / TurnEndCap(settings));
 
 	/// <summary>
 	/// One decision of the simulated opponent — the ONE place the opponent model is decided: attacks
