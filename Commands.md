@@ -147,6 +147,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     noprogress     won lines tie again: no credit for the opponent's life lost this turn (before AI-10)
 #     lifeprogress   a won line credits only the opponent's life lost this turn, not the turn's whole evaluation (before AI-16)
 #     nolostlines    lost lines on one turn tie again: the board as our turn ends not counted (before AI-16.4)
+#     nomays         a "you may" declined in the look-ahead, not answered with its chooser's best (before AI-17.2)
 #     boardonly      the simulated opponent never casts, even a card we know it holds (before AI-10.4)
 #     nooption       a held instant or flash card at its plain held price, not as an option (before AI-13.4)
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)

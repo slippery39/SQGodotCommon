@@ -40,6 +40,17 @@ public static class Rollout
 	/// 288 games (51.4% ± 1.2pp, AI-10.2); off is beam+noprogress. Since AI-16 it is the whole
 	/// evaluation at that moment (<see cref="ProgressBy.TurnEnd"/>), not their life alone — see there.
 	/// </param>
+	/// <param name="Mays">
+	/// A "you may" (a choice of none or one: "you may sacrifice a creature", a yes/no, "you may discard",
+	/// a library search) is answered with its chooser's best — none and each option settled, as
+	/// <see cref="GreedyAi.Answer"/> does — not with nothing (AI-17.2). Declined, Way of the Deathbringer's
+	/// "−2: you may sacrifice a creature … a 4/4" was "−2 loyalty for nothing", the worst of its options,
+	/// and the search's plan drew a card instead. An optional target ("up to one") is one too, whatever
+	/// <see cref="Targets"/> says; a pay-to-keep is not (the cheap answer pays). ponytail: only the
+	/// rollout's answers — <see cref="Lookahead.Settle"/>, which judges each play the policies weigh,
+	/// still declines (AI-17's review); and a library search settles every card it offers. Off is
+	/// beam+nomays.
+	/// </param>
 	/// <param name="LostLines">
 	/// A lost line counts the board as the searched turn ends too (AI-16.4, Shayne: "if the AI can only find
 	/// losing lines, the AI should still try to maximize their board score") — a later loss still first
@@ -75,7 +86,8 @@ public static class Rollout
 		bool TheirWalkers = true,
 		ProgressBy Progress = ProgressBy.TurnEnd,
 		bool KnownOnly = true,
-		bool LostLines = true
+		bool LostLines = true,
+		bool Mays = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -252,7 +264,8 @@ public static class Rollout
 
 	/// <summary>
 	/// One decision of the simulated opponent — the ONE place the opponent model is decided: attacks
-	/// and blocks judged, every other choice the cheap answer, (CastsFromHand, Responds) its own
+	/// and blocks judged, a "you may" its best (<see cref="Settings.Mays"/>), every other choice the cheap
+	/// answer, (CastsFromHand, Responds) its own
 	/// sorcery-speed plays, its planeswalkers' best abilities (TheirWalkers), and (Responds) its
 	/// instant-speed answers in our turn; every other priority passed. The search answers the opponent through here too, so its tree and its rollouts agree.
 	/// </summary>
@@ -447,7 +460,9 @@ public static class Rollout
 	/// Attacks and blocks are judged by what they lead to, for whoever declares them — so a player
 	/// facing lethal chump-blocks. Each creature is judged alone (in the look-ahead the rest don't attack,
 	/// and block only what they survive or join a block already made — Lookahead.Joins, AI-15) unless <see cref="Attacks.AllInToo"/> weighs "all attack" too. A target choice takes
-	/// its owner's best under <see cref="Targets.OwnersBest"/>; every other choice the cheap answer.
+	/// its owner's best under <see cref="Targets.OwnersBest"/>; a choice of none or one — a "you may", an
+	/// optional target — its chooser's best under <see cref="Settings.Mays"/>, a pay-to-keep excepted (the
+	/// cheap answer pays); every other choice the cheap answer.
 	/// </summary>
 	static IEnumerable<int> Answer(GameState s, ChoiceAction choice, int who, Settings settings) =>
 		choice switch
@@ -461,6 +476,8 @@ public static class Rollout
 			// Each legal target (or none, when optional) settled, the best for its owner — GreedyAi's
 			// answer to one pick, with the search's held values.
 			ChooseTargetChoice { MaxChoices: 1 } when settings.Targets == Targets.OwnersBest =>
+				new GreedyAi(who, settings.Held).Answer(s, choice),
+			{ MinChoices: 0, MaxChoices: 1 } and not PayToKeepChoice when settings.Mays =>
 				new GreedyAi(who, settings.Held).Answer(s, choice),
 			_ => Lookahead.QuickAnswer(s, choice),
 		};

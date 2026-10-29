@@ -106,6 +106,8 @@ public static class AiMatch
 			),
 			// Lost lines on one turn tie again, the board as our turn ends not counted (before AI-16.4): beam+nolostlines.
 			["nolostlines"] = WithRollout(r => r with { LostLines = false }),
+			// "You may" declined in the look-ahead, as before AI-17.2: beam+nomays.
+			["nomays"] = WithRollout(r => r with { Mays = false }),
 			// The opponent's unseen hand drawn again from its unseen cards (AI-3.4) — matters only
 			// when the simulated opponent casts: beam+casts+unseen.
 			["unseen"] = o => o with { Hand = Hidden.Hand.ShuffleUnseen },

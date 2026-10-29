@@ -210,6 +210,51 @@ public class AiPositionTests
 		Assert.That(MoveTokens.Same(Choice(Rollout.ProgressBy.TurnEnd), selfBurn), Is.False);
 	}
 
+	// Shayne, 2026-10-29 (AI-17.2, his draft game, seed 535739, turn 11): the AI made a Jace with Way of
+	// the Deathbringer and drew a card (−3) where "−2: you may sacrifice a creature. If you do, create a
+	// 4/4" with Blessed Ghoul out "would (theoretically have stopped all my creatures)". The look-ahead
+	// answered every "you may" with nothing, so the −2 was "−2 loyalty for nothing" — and the plan made as
+	// Way of the Deathbringer was cast (#257) drew, replayed at #262 without a search. Now a "you may" is
+	// answered with its chooser's best (Rollout.Settings.Mays). Played as the table plays — one AI from
+	// #257, its plan and all. The CONTROL: "you may" declined, it draws.
+	[Test]
+	public void AYouMay_IsTakenInTheLookAhead_TheDeathbringersBeast()
+	{
+		var record = KeptRecords.Get("DeathbringerDrawsNotABeast");
+		var (before, _) = record.Replay();
+		var me = before[256].DecidingPlayerId();
+		Assert.That(before[261].DecidingPlayerId(), Is.EqualTo(me), "#262 is the AI's");
+		string AtMove262(bool mays)
+		{
+			var ai = new BeamSearchAi(
+				me,
+				new(RolloutSettings: BeamSearchAi.DefaultRollout with { Mays = mays })
+			);
+			var played = "";
+			for (var n = 257; n <= 262; n++)
+			{
+				var s = before[n - 1];
+				if (s.DecidingPlayerId() != me)
+					continue;
+				played = MoveTokens.Token(s, ai.Decide(s));
+				if (n == 257) // its plan follows the record only if it casts what was cast
+					Assert.That(MoveTokens.Same(played, record.Moves[256].Token), $"mays {mays}: #257");
+			}
+			return played;
+		}
+
+		var drew = record.Moves[261].Token;
+		Assert.That(
+			MoveTokens.Same(AtMove262(false), drew),
+			"the control: blind to the 4/4, it draws"
+		);
+		Assert.That(
+			MoveTokens.Describe(before[261], AtMove262(true)),
+			Does.EndWith("[−2]"),
+			"the 4/4"
+		);
+	}
+
 	// Shayne, 2026-10-29 (AI-16.4): "If the AI can only find losing lines, the AI should still try to
 	// maximize their board score" — a later loss first ("it gives your opponent the chance to make a
 	// mistake"), then the best board as the searched turn ends. Every lost line on one turn used to tie.

@@ -1101,3 +1101,22 @@ line's is (`Rollout.Settings.LostLines`; `+nolostlines` is off).
   difference** either way, settled at the first check; cost 1 545 steps a decision (1 543, +0.2%);
   275 s on 16 cores. Expected — a better board in a lost position rarely turns the result.
 - Kept (Shayne's rule, AI-10.4's: sensible plays count when the match shows no difference).
+
+## "You may" answered by its chooser in the look-ahead (2026-10-29, AI-17.2)
+
+From Shayne's draft game (seed 535739, turn 11): Way of the Deathbringer's Jace drew a card (−3) where
+"−2: you may sacrifice a creature. If you do, create a 4/4" with Blessed Ghoul out was the best play. The
+look-ahead answered every choice of none-or-one with nothing (`Lookahead.QuickAnswer`: `MinChoices`) —
+the sacrifice declined, the −2 scored −48.5 against −20.1 taken — and the plan made as Way of the
+Deathbringer was cast drew, replayed without a search. Now `Rollout.Answer` gives such a choice
+`GreedyAi.Answer` (none and each option settled, the chooser's best) — `Rollout.Settings.Mays`,
+`+nomays` off. `QuickAnswer`, inside every `Settle`, still declines (AI-17's review); a pay-to-keep
+keeps the cheap answer (it pays); an optional target takes its chooser's best.
+
+- **Position** (kept, `Records/DeathbringerDrawsNotABeast.json`, one AI from #257 as the table plays):
+  Jace −2, the Beast; the control draws.
+- **Suite:** 7 of 288 decisions change; 3 103 steps a position (3 097, +0.2%). Against the oracle as
+  stored 81.9% against 82.6%; re-read with the new look-ahead, **85.4%** (score given up 1.06, was 1.09).
+- **Match:** `--match=beam,beam+nomays --until-clear`: 192 games, **51.0% ± 1.3pp (98–94), no 5pp
+  difference**, "worse" rejected (log-likelihood −10.8); 1 509 steps a decision (1 505, +0.2%); 524 s.
+- Kept (AI-5's rule: no difference, the recorded blunder fixed).
