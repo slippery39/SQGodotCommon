@@ -17,7 +17,13 @@ MagicTable/
 │                         to game_records/ — story TBL-5); Resume: a record's moves made again, an
 │                         undo step at each of yours, written as a new file (TBL-5.7). Tested in SQGodotCommon.Tests
 ├── DeckSelectScene.cs    the entry: both seats' decks (built-in or a pasted Arena export), seed, AI vs
-│                         AI, search AI; the way into Sealed; Resume a game (a record from game_records/)
+│                         AI, search AI; the way into Sealed and Draft; Resume a game (a record from game_records/);
+│                         TableSetup.Finished: a run's game reports its result once, then only the way back
+├── DraftSession.cs       an FRA Quick Draft (plain C#, LIM-2.3): you in seat 0 and 7 bots (MagicCore's Draft),
+│                         your picks as a SealedSession (Builder), the run — 7 wins or 3 losses — against
+│                         each bot's own build in turn (BotDeck, NextBot, Record). Tested
+├── DraftScene.cs         the pack as full cards (click takes one), your picks by colour in curve order and
+│                         the curve; done → SealedScene.OpenDraft; --seed=N, --autopick (to the deck building)
 ├── SealedSession.cs      a sealed event (plain C#): your pool (a seed, or pasted from Arena), the deck
 │                         from the pool, free basics, the suggested builds (two colours, splash,
 │                         greedy — LIM-3; Suggest(i), Measured(i): castable on time, early landcycles; ClosePairs/ShowPair(i): a
@@ -28,7 +34,8 @@ MagicTable/
 │                         Paste Arena pool (a dialog), what was left out named above the pool; a
 │                         button per suggestion in a wrapping row, named by its colours; the close
 │                         pairs in the left column (scrolling), Copy sim command above them; --seed=N
-│                         opens that pool, --pool=FILE an export
+│                         opens that pool, --pool=FILE an export; a DRAFT's pool too (OpenDraft: the run
+│                         in the title, Start plays the next bot, New draft)
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer;
 │                         Tools menu (undo, sandbox, full control, pause / step / speed); the turn
 │                         banner; each side's board half (gold on its turn); permanents scaled to the room

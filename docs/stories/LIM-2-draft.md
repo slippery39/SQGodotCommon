@@ -17,7 +17,7 @@ The second limited use case from the first interview (MC-1): draft vs bots. Spli
 - [x] Arena's **Quick Draft**: Shayne and 7 bots; the bots pick the highest-rated card, leaning into
       the colours they have already picked
 - [ ] The drafted pool goes to LIM-1's deck builder and is played on the table, as sealed is
-- [ ] **After the draft, a deck-building screen — the Sealed screen reused** (Shayne, 2026-10-29), its
+- [x] **After the draft, a deck-building screen — the Sealed screen reused** (Shayne, 2026-10-29), its
       pool the 42 picks
 - [x] A console `--draft --seed=N` prints all 8 pools and each bot's colours, so the bots can be judged
       before the screen exists
@@ -63,6 +63,9 @@ Open questions:
   Red 15, because FRA's Blue cards rate highest (58.4% against Green's 54.1%). Leave it (it is what
   rating plus a lean does, and Blue is cut — a real signal), or spread the bots (rate each card against
   its colour's average)? Shayne's call. (Blue 58 of 80 after the review's open second colour.)
+- **A run's game left unfinished** (LIM-2.3's review): Escape from the table before the game ends counts
+  nothing, so a losing game can be walked away from — Arena counts a concede as a loss. And a draw is
+  counted as a loss today; Undo and the sandbox still work in a run's game. Count a left game as a loss?
 
 ## Tasks
 
@@ -83,14 +86,25 @@ Open questions:
       basics now always the last pick; colours skewed to Blue and Black (open question)
 - [ ] LIM-2.3 On the table: a draft screen (the pack, your picks by colour and curve, the pick
       number), then the deck-building screen — the Sealed screen reused for the drafted pool — and a
-      run against the 7 bots' decks until 7 wins or 3 losses
+      run against the 7 bots' decks until 7 wins or 3 losses — **built (2026-10-29), awaiting Shayne's
+      playtest**: `DraftSession` (plain C#: the picks, `Builder` — your picks as a `SealedSession`, made
+      once so the deck survives each game — the run: `NextBot` each bot in turn, `BotDeck` the sealed
+      builder's two-colour build of its picks, `Record`), `DraftScene` (the pack as full cards, the picks
+      by colour in curve order, the curve), `SealedScene.OpenDraft` (the run in its title, Start plays
+      the next bot, New draft; sealed's seed, paste and sim command hidden), Draft on the deck select;
+      `TableSetup.Finished` — the table reports a run's game once and offers only Back to deck building.
+      `DraftSessionTests` (4). Captured with real input (`--autopick`, `--tap`): five picks grouped and
+      the curve; the builder's suggestion → Start → a game autoplayed to its end → Back → "0–1 · next:
+      seat 3", the deck kept. The review: the pack dims an unscripted card as the builder does, the
+      picks group by `SealedScene.Order`, the debug args read on the first visit only. Open: a run's game
+      left unfinished (Decisions)
 
 ## Next
 
-**LIM-2.3** (the table): a draft screen, then the Sealed screen's deck builder for the 42 picks, then a
-run against the 7 bots' decks (each built by `SealedBuilder` from its pool) until 7 wins or 3 losses.
-Drive it with `Draft.Next(state, CardRatings.Fra, seat0: pick)`; the seats' pools are `Seats[i].Picks`.
-First ask Shayne the colour-skew question (Decisions). Before: needs LIM-1's pack generator and AI builder. MtgSimulator already drafts (`MtgSimulator/Draft/`,
+**LIM-2.3 is built; Shayne's playtest ticks it** — Deck select → Draft: 42 picks, the deck builder, a
+game of the run (it also exercises TBL-3's hand fan, whose tick waits on the same playtest). Then the
+colour-skew question and a run's game left unfinished (both in Decisions).
+Run it: `./Run-Godot.ps1 MagicTable/DeckSelectScene.tscn` (Commands.md). MtgSimulator already drafts (`MtgSimulator/Draft/`,
 rules in `.claude/rules/sim-draft.md`) and MtgGame has a draft screen (`SQGodotCommon/MtgGame/
 Draft/`) — grep them first and copy-adapt.
 
@@ -103,3 +117,4 @@ Draft/`) — grep them first and copy-adapt.
   the after-draft deck builder (the Sealed screen) added as a requirement (Shayne).
 - 2026-10-29: LIM-2.2 built — the draft, bots and `--draft`; basics made the last pick; the colour skew
   measured (`docs/findings/limited.md`). Status → in-progress.
+- 2026-10-29: LIM-2.3 built — the draft screen, the Sealed screen for the pool, the run; captured.

@@ -37,6 +37,25 @@ public partial class SealedScene : Control
 	/// <summary>Where a pasted pool was saved for the console's <c>--compare</c> (LIM-3.4); null for a seed's pool.</summary>
 	private static string? _poolFile;
 
+	/// <summary>A draft's deck building (LIM-2.3): its picks are the pool, and Start plays its run's next bot.</summary>
+	private static DraftSession? _draft;
+
+	/// <summary>The drafted pool, built here — the same screen as sealed (Shayne, 2026-10-29).</summary>
+	public static void OpenDraft(DraftSession draft)
+	{
+		_draft = draft;
+		_session = draft.Builder;
+		_poolFile = null;
+	}
+
+	/// <summary>Sealed again, from the deck select: a draft's pool is never a sealed pool.</summary>
+	public static void OpenSealed()
+	{
+		if (_draft is null)
+			return;
+		(_draft, _session, _poolFile) = (null, null, null);
+	}
+
 	private readonly Label _simNote = Text("", 16);
 
 	private string _filter = "All";
@@ -161,6 +180,17 @@ public partial class SealedScene : Control
 			)
 		);
 		left.AddChild(seedRow);
+		seedRow.Visible = _draft is null; // a draft's pool is its picks
+		var newDraft = Choice(
+			"New draft",
+			() =>
+			{
+				DraftScene.Reset();
+				Project.GameManager.Instance.ChangeScene("res://MagicTable/DraftScene.tscn");
+			}
+		);
+		newDraft.Visible = _draft is not null;
+		left.AddChild(newDraft);
 
 		var dialog = new AcceptDialog
 		{
@@ -172,10 +202,14 @@ public partial class SealedScene : Control
 		dialog.AddCancelButton("Cancel");
 		dialog.Confirmed += UsePastedPool;
 		AddChild(dialog);
-		left.AddChild(Choice("Paste Arena pool", () => dialog.PopupCentered()));
+		var paste = Choice("Paste Arena pool", () => dialog.PopupCentered());
+		paste.Visible = _draft is null;
+		left.AddChild(paste);
 
 		// every build offered here, compared by AI-vs-AI sims in the console (LIM-3.4) — hours, so not here
-		left.AddChild(Choice("Copy sim command", CopySimCommand));
+		var sim = Choice("Copy sim command", CopySimCommand);
+		sim.Visible = _draft is null; // --compare reads a seed or a file; a draft's pool is neither
+		left.AddChild(sim);
 		_simNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_simNote.CustomMinimumSize = new Vector2(1, 0);
 		_simNote.Visible = false;
@@ -325,7 +359,9 @@ public partial class SealedScene : Control
 			var gameSeed = System.Random.Shared.Next(1, 1_000_000);
 			if (gameSeed == S.Seed)
 				gameSeed++;
-			TableSetup.Current = S.ToSetup(_search.ButtonPressed, gameSeed);
+			TableSetup.Current =
+				_draft?.ToSetup(_search.ButtonPressed, gameSeed)
+				?? S.ToSetup(_search.ButtonPressed, gameSeed);
 			Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");
 		};
 		right.AddChild(_start);
@@ -343,7 +379,10 @@ public partial class SealedScene : Control
 
 	private void Redraw()
 	{
-		_title.Text = S.Seed is { } seed ? $"Sealed · seed {seed}" : "Sealed · your pool";
+		_title.Text =
+			_draft is not null ? $"Draft · seed {_draft.Seed}\n{_draft.RunText}" // two lines: one widened the column
+			: S.Seed is { } seed ? $"Sealed · seed {seed}"
+			: "Sealed · your pool";
 		_leftOut.Text =
 			S.LeftOut.Count == 0
 				? ""
@@ -403,7 +442,7 @@ public partial class SealedScene : Control
 
 		var lands = S.Deck.Count(c => Data(c).TypeLine.Contains("Land"));
 		_deckTitle.Text = $"Deck  {S.Count - lands} + {lands} lands = {S.Count}";
-		_start.Disabled = !S.Ready;
+		_start.Disabled = !S.Ready || _draft is { RunOver: true };
 	}
 
 	/// <summary>A card of the pool: the full card; hover previews it, a click puts it in the deck.</summary>
@@ -470,7 +509,7 @@ public partial class SealedScene : Control
 	}
 
 	/// <summary>Arena's pool order: white, blue, black, red, green, multicolour, colourless, lands — then cost.</summary>
-	private static (int, double) Order(string card)
+	internal static (int, double) Order(string card)
 	{
 		var data = Data(card);
 		var colors = data.Colors ?? [];
@@ -482,9 +521,9 @@ public partial class SealedScene : Control
 		return (group, data.Cmc);
 	}
 
-	private static CardData Data(string card) => FraCards.Get(card).Data;
+	internal static CardData Data(string card) => FraCards.Get(card).Data;
 
-	private static Button Choice(string text, System.Action pressed)
+	internal static Button Choice(string text, System.Action pressed)
 	{
 		var button = new Button
 		{
@@ -498,7 +537,7 @@ public partial class SealedScene : Control
 		return button;
 	}
 
-	private static Label Text(string text, int size = 22)
+	internal static Label Text(string text, int size = 22)
 	{
 		var label = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.Off };
 		label.AddThemeFontSizeOverride("font_size", size);

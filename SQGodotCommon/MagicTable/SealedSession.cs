@@ -213,11 +213,12 @@ public sealed class SealedSession
 
 	/// <summary>
 	/// Your deck against a fresh AI opponent (<see cref="OpponentFor"/>), both from <paramref name="gameSeed"/>
-	/// — which also seeds the game, so the table's seed replays the opponent too.
+	/// — which also seeds the game, so the table's seed replays the opponent too — or against
+	/// <paramref name="opponent"/> (a draft's bot, LIM-2.3).
 	/// </summary>
-	public TableSetup ToSetup(bool search, int gameSeed)
+	public TableSetup ToSetup(bool search, int gameSeed, SealedDeck? opponent = null)
 	{
-		var opponent = OpponentFor(gameSeed);
+		opponent ??= OpponentFor(gameSeed);
 		return new(
 			[.. Deck.Select(FraCards.Get)],
 			[.. opponent.Main.Select(FraCards.Get)],

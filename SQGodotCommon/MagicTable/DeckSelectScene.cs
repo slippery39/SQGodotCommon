@@ -30,6 +30,12 @@ public sealed record TableSetup(
 
 	/// <summary>Where Escape from the table goes: the screen the game was set up on.</summary>
 	public string Back { get; init; } = "res://MagicTable/DeckSelectScene.tscn";
+
+	/// <summary>
+	/// A game of a run (a draft's, LIM-2.3): told once, as the game ends, whether you won — and the
+	/// table then offers only the way back, so a game can't be replayed into the run.
+	/// </summary>
+	public System.Action<bool>? Finished { get; init; }
 }
 
 /// <summary>
@@ -95,8 +101,17 @@ public partial class DeckSelectScene : Control
 		MtgUiStyles.StylePrimary(sealedButton, 34);
 		sealedButton.CustomMinimumSize = new Vector2(240, 0);
 		sealedButton.Pressed += () =>
+		{
+			SealedScene.OpenSealed();
 			Project.GameManager.Instance.ChangeScene("res://MagicTable/SealedScene.tscn");
+		};
 		actions.AddChild(sealedButton);
+		var draftButton = new Button { Text = "Draft", FocusMode = FocusModeEnum.None };
+		MtgUiStyles.StylePrimary(draftButton, 34);
+		draftButton.CustomMinimumSize = new Vector2(240, 0);
+		draftButton.Pressed += () =>
+			Project.GameManager.Instance.ChangeScene("res://MagicTable/DraftScene.tscn");
+		actions.AddChild(draftButton);
 		MtgUiStyles.StylePrimary(_start, 34);
 		_start.CustomMinimumSize = new Vector2(300, 0);
 		_start.Pressed += Start;

@@ -34,6 +34,9 @@ public partial class MagicTableScene : Control
 	private const int RightWidth = 430;
 
 	private MagicTableManager _m = null!;
+
+	/// <summary>The game whose result a run was told (<see cref="TableSetup.Finished"/>) — told once.</summary>
+	private MagicTableManager? _reportedGame;
 	private readonly PlayerPlate _oppPlate = new();
 	private readonly PlayerPlate _myPlate = new();
 	private readonly ZoneViewer _viewer = new();
@@ -707,6 +710,18 @@ public partial class MagicTableScene : Control
 				winner == 0 ? "Draw."
 				: winner == _m.HumanId ? "You win!"
 				: "The AI wins.";
+			if (TableSetup.Current?.Finished is { } finished)
+			{
+				// a run's game (a draft's): reported once, and no replay into the run
+				if (_reportedGame != _m)
+					finished(winner == _m.HumanId);
+				_reportedGame = _m;
+				AddButton(
+					"Back to deck building",
+					() => Project.GameManager.Instance.ChangeScene(TableSetup.Current.Back)
+				);
+				return;
+			}
 			AddButton("Replay this seed", () => _m = _m.Replay());
 			AddButton(
 				"New game",
