@@ -101,6 +101,14 @@ public static class Rollout
 		/// alone — two 3/3s into one blocker for lethal (Shayne).
 		/// </summary>
 		AllInToo,
+
+		/// <summary>
+		/// The attack chosen as ONE decision at the declaration's first question (AI-17.3, Shayne): a few
+		/// candidate attacks, each creature at its own best target, each settled against the defender's
+		/// blocks — <see cref="WholeAttacks"/>, as the search's tree chooses (BeamSearchAi.Settings.
+		/// WholeAttacks). Not the default: +27.6% a position in the look-ahead (AI-17.3) — beam+asonelookahead.
+		/// </summary>
+		AsOne,
 	}
 
 	/// <summary>How the rollout answers a target choice — a trigger's, as it goes on the stack (story AI-3.8).</summary>
@@ -225,7 +233,7 @@ public static class Rollout
 			}
 			if (s.GetPendingChoice() is { } choice)
 			{
-				s = Do(s, who, Answer(s, choice, who, settings));
+				s = Choose(s, choice, who, settings);
 				continue;
 			}
 			var spent = plays >= settings.ActionsPerTurn;
@@ -276,7 +284,7 @@ public static class Rollout
 	/// instant-speed answers in our turn; every other priority passed. The search answers the opponent through here too, so its tree and its rollouts agree.
 	/// </summary>
 	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
-		s.GetPendingChoice() is { } choice ? Do(s, who, Answer(s, choice, who, settings))
+		s.GetPendingChoice() is { } choice ? Choose(s, choice, who, settings)
 		: settings.Opponent != OpponentModel.BoardOnly && TheirPlay(s, who, settings) is { } play
 			? Do(s, who, play)
 		: settings.TheirWalkers && TheirLoyalty(s, who, settings) is { } loyalty
@@ -309,6 +317,19 @@ public static class Rollout
 			trace = outer;
 		}
 	}
+
+	/// <summary>A choice answered — a declaration's first attacker by a whole attack (<see cref="Attacks.AsOne"/>), the rest by <see cref="Answer"/>.</summary>
+	static GameState Choose(GameState s, ChoiceAction choice, int who, Settings settings) =>
+		choice is DeclareAttackerChoice ask
+		&& settings.Attacks == Attacks.AsOne
+		&& WholeAttacks.IsFirst(s, ask)
+			? WholeAttacks.Declare(
+				s,
+				who,
+				WholeAttacks.Best(s, who, settings.Held),
+				(at, ids) => Do(at, who, ids)
+			)
+			: Do(s, who, Answer(s, choice, who, settings));
 
 	static GameState Do(GameState s, int who, GameAction action)
 	{

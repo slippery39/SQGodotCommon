@@ -50,7 +50,10 @@ Open questions:
       evaluation (GreedyAi's golden games, the card-value table) — `docs/findings/magic-ai.md` keeps the
       formula. Still open: a life price that MEASURES better. Original task: — 1.0 a point up to 20, so 2 damage at 20 life outweighs a card
       (AI-8.1's second lever); the threat term already has the clock
-- [ ] AI-9.3 Walker effects still unpriced (damage, mana, life, pumps, exile), and a 3-loyalty Jace
+- [ ] AI-9.3 **A known defect since AI-17.3 (Shayne, 2026-10-29):** Chandra, Torch of Defiance is 3.40 at 4
+      loyalty and 2.70 at 2 — body and loyalty only — so a whole attack chips her with a 2/2 and sends
+      the 4/4 face; the ignored `RolloutTests.AWholeAttack_SendsTheFourPowerAtTheWalker_TheRestAtTheFace`
+      is this task's test. Walker effects still unpriced (damage, mana, life, pumps, exile), and a 3-loyalty Jace
       cashed for a card still scores as a loss (AI-8.2 kept the price monotonic first); our own
       walkers' use
 - [ ] AI-9.4 The opponent's unseen hand at a flat 2.71 a card — by what it could cast with the mana

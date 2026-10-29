@@ -88,6 +88,11 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   choosing who to attack with"** (each candidate attack is judged against the defender's blocks); **the
   cost is acceptable** — "I am looking for an AI that plays the game reasonably and if it solves certain
   plays it is making then that is good".
+- 2026-10-29, Shayne (on the walker test — a "+1: draw a card" walker, the opponent at 20 with no
+  creatures, the AI sending all at the face): "it depends on the walker and board … a jace token maybe,
+  maybe not depending on the life total of the opponent. But an actual planeswalker with more than just
+  draw a card? Very likely" — so the test is a real walker (Chandra, Torch of Defiance at 4 loyalty), and
+  the Jace token's case is left open.
 
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
@@ -124,7 +129,7 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       `OurPlay`, their `TheirLoyalty`, `BestAlone`) — still declines a "you may", so the simulated
       opponent's own Deathbringer −2 still reads as "−2 for nothing"; and a library search now settles
       every card it offers
-- [ ] AI-17.3 Fix 2, lethal: (a) the cheap defender chumps facing lethal, (b) the attack as one decision,
+- [x] AI-17.3 Fix 2, lethal: (a) the cheap defender chumps facing lethal, (b) the attack as one decision,
       (c) the early stop on a win this turn only — the position test and control, the suite, a match
       (each part measured alone where it can be) — **in progress (2026-10-29):** (c) built —
       `BeamSearchAi.Settings.WinNowOnly` (`beam+anywin`): 50.0% over 96 games, +5.2% cost a decision. (a)
@@ -155,8 +160,27 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       oracle re-read: **87.2%, score given up 0.59** (85.4%, 1.06). The review: facing lethal the chump
       plan goes first, a menace attacker with one blocker is unblocked, `Explain` uses the search's own
       sample and terms, `Evaluator.WinScore` named, `+targets` gone (`+firsttarget`) — 1 suite decision
-      and 1 golden game moved; the oracle 87.2%, 0.81. Committed with `--explain`. **Left: (b),
-      the attack as one decision** — the design shown to Shayne (2026-10-29), its three questions open
+      and 1 golden game moved; the oracle 87.2%, 0.81. Committed with `--explain`. **(b) the attack as one decision —
+      built (2026-10-29):** `Ai/WholeAttacks.cs` — candidates (everyone, no one, each alone, all but one, one
+      creature at another target), each creature at its own best target given the bigger ones
+      (`Targets`), the declaration answered whole (`Declare`); in the search's TREE only
+      (`BeamSearchAi.Settings.WholeAttacks`, `beam+eachalone` off) — in the look-ahead too
+      (`Rollout.Attacks.AsOne`, `+asonelookahead`) cost +27.6% a position against +6.5%, so Shayne: "search
+      only for now, but if we ever find a test case that needs it to be in the look ahead then we will have
+      to reconsider". Tests: the turn-21 attack by whole attacks alone; the all-in pair (AsOne finds it,
+      each-alone doesn't); Shayne's walker case as Chandra, Torch of Defiance at 4 — a KNOWN DEFECT,
+      ignored: the attack offers "the 4/4 at Chandra", but the evaluator prices her abilities at nothing
+      (AI-9.3), so the 2/2 chips her. Suite: 4 of 288 change, 3 768 steps (+6.5%), the oracle 87.5%.
+      The review (before the match — its first run stopped): "don't attack" counted as an answer
+      (`WholeAttacks.IsFirst` read only the attacks, so a first creature left home made the next question
+      look like the first, and the AI dropped its plan and searched again — revert-checked by
+      `AWholeAttack_AnswersEveryLaterQuestion_FromItsPlan`); a whole attack is offered at any question no
+      plan decides for (a fresh AI mid-declaration — the suite, `--compare` — plays as the table does),
+      and a plan answers only its own creatures in its own turn; "no attack" is never narrowed out (as
+      Pass); the class renamed `WholeAttacks` (it shared `Rollout.Attacks`' name). The Gallia control
+      switches whole attacks off (they attack there too). Suite: 5 of 288 change, 3 769 steps (+6.6%).
+      Match: **49.5% ± 1.7 over 192 games (95–97), no difference**, +1.1% a decision — kept. Suite
+      accepted; the oracle re-read 87.2%, score given up 0.84 (0.81 before (b)).
 - [ ] AI-17.4 The review, code: read the decision path — `BeamSearchAi` (Search, Narrow, Prune, Winner,
       Best, plans and their replay), `Rollout` (Score, OurPlay, OpponentStep, Answer, BestAlone),
       `Lookahead` (Settle, QuickAnswer, Joins), `Evaluator`, `Hidden`, `GreedyAi` — about 2 000 lines;
@@ -183,10 +207,8 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 
 ## Next
 
-**AI-17.3 (b), the attack as one decision** — the design is in the conversation of 2026-10-29: candidate
-whole attacks (none, all, each alone, all but one), each creature at its own best target, applied as one
-step in the tree and chosen whole in the rollout (`Rollout.Attacks.AsOne` beside `EachAlone`). Shayne's
-three questions (mixed targets, blocks too, the cost) are open — ask first. `MagicConsole --record=FILE
+**AI-17.4–17.5, the review** (the code read, then the basics suite with Shayne's answers), then AI-17.7's
+blunder counters; AI-9.3 (walker abilities) holds the ignored Chandra test. `MagicConsole --record=FILE
 --explain=N` shows what the search imagined: use it on every position (it found #547's cause). Read this story's Diagnosis; the two kept records; then
 `BeamSearchAi.Search` / `Winner`, `Rollout.Answer`, `Lookahead.QuickAnswer`, and MtgSimulator's
 `MultiTurnBeamSearchAiStrategy.FindLethalAttacks`.
@@ -198,3 +220,5 @@ three questions (mixed targets, blocks too, the cost) are open — ask first. `M
 - 2026-10-29: AI-17.2 — "you may" taken in the look-ahead; 51.0% over 192 games, kept.
 - 2026-10-29: AI-17.3 (a), (c) and targets by their owner — kept; the oracle 87.2%, score given up halved;
   `--explain` built to find #547's cause.
+- 2026-10-29: AI-17.3 (b) — the attack as one decision, the search's tree only (Shayne); 49.5% over 192
+  games, +1.1% a decision; Chandra's walker case a known defect (AI-9.3). AI-17.3 done.

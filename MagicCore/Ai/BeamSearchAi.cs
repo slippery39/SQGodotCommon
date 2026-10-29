@@ -59,6 +59,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// stopped after two rollouts and the tie stayed home — one level deeper, both attacking won that turn.
 	/// Off is beam+anywin.
 	/// </param>
+	/// <param name="WholeAttacks">
+	/// The search chooses an attack as ONE decision at the declaration's first question — the candidates
+	/// of <see cref="WholeAttacks"/>, each rolled out — not a creature at a time (AI-17.3, Shayne). The tree
+	/// only: the look-ahead still judges each attacker alone (Rollout.Attacks.EachAlone; AsOne there cost
+	/// +27.6% a position against +6.5% here — Shayne: "search only for now, but if we ever find a test case
+	/// that needs it to be in the look ahead then we will have to reconsider"). Off is beam+eachalone.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -79,7 +86,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		int? Threads = null,
 		Hidden.Hand Hand = Hidden.Hand.Real,
 		Evaluator.Terms Without = Evaluator.Terms.None,
-		bool WinNowOnly = true
+		bool WinNowOnly = true,
+		bool WholeAttacks = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -144,6 +152,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	sealed record Pick(ImmutableList<int> Ids, object Key) : Decision(Key);
 
+	/// <summary>A whole attack, chosen at the declaration's first question (<see cref="WholeAttacks"/>, AI-17.3).</summary>
+	sealed record Declare(WholeAttacks.Plan Plan, int FirstAnswer, object Key) : Decision(Key);
+
+	// The whole attack being declared, and its turn: the rest of the declaration's questions it decides
+	// for are answered from it.
+	(WholeAttacks.Plan Plan, int Turn)? declaring;
+
 	/// <summary>A line: the state after its last decision, the decisions, its rollout score, and our
 	/// evaluation just before each decision — what the plan expects to see when it replays them.</summary>
 	sealed record Node(
@@ -184,6 +199,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				{
 					Move m => (m.Action, (IReadOnlyList<int>?)null, firstMoves[d]),
 					Pick p => ((GameAction?)null, p.Ids, firstMoves[d]),
+					// a whole attack reads as its first answer: candidates may share it (readers group by token)
+					Declare a => (
+						(GameAction?)null,
+						(IReadOnlyList<int>)[a.FirstAnswer],
+						firstMoves[d]
+					),
 					_ => throw new InvalidOperationException(d.GetType().Name),
 				}
 			),
@@ -224,6 +245,21 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			{
 				if (i > 0)
 					at = Rollout.Traced(Told, () => Advance(at, rootTurn).State);
+				if (line.Path[i] is Declare whole)
+				{
+					end = at = WholeAttacks.Declare(
+						at,
+						PlayerId,
+						whole.Plan,
+						(x, ids) =>
+						{
+							var d = AiDecision.Answering(x, ids);
+							replay.Move(x, PlayerId, d, [], out _);
+							return d.State;
+						}
+					);
+					continue;
+				}
 				var mine = line.Path[i] switch
 				{
 					Move m => AiDecision.Acting(at, m.Action),
@@ -250,6 +286,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		{
 			Move m => MagicCore.Describe.Action(s, m.Action),
 			Pick p => MagicCore.Describe.Answer(s, s.GetPendingChoice()!, p.Ids),
+			Declare a => WholeAttacks.Describe(s, a.Plan),
 			_ => d.ToString()!,
 		};
 
@@ -276,7 +313,23 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			return greedy.Decide(s); // mulligans: GreedyAi's rule
 		if (!s.IsWaitingForChoice && Stops.TopOfStackControllerId(s) == PlayerId) // as the tree does: let our own object resolve
 			return AiDecision.Acting(s, new PassPriorityAction { PlayerId = PlayerId });
+		if (
+			declaring is var (attack, turn)
+			&& turn == s.GetGame().TurnNumber
+			&& s.GetPendingChoice() is DeclareAttackerChoice ask
+			&& ask.PlayerId == PlayerId
+			&& !WholeAttacks.IsFirst(s, ask)
+			&& attack.Creatures.Contains(ask.CreatureId)
+		)
+			return AiDecision.Answering(s, [WholeAttacks.Answer(s, PlayerId, attack, ask)]);
+		declaring = null;
 		var decision = FromPlan(s) ?? Search(s);
+		if (decision is Declare d)
+		{
+			declaring = (d.Plan, s.GetGame().TurnNumber);
+			var first = (DeclareAttackerChoice)s.GetPendingChoice()!;
+			return AiDecision.Answering(s, [WholeAttacks.Answer(s, PlayerId, d.Plan, first)]);
+		}
 		return decision switch
 		{
 			Move m => AiDecision.Acting(s, m.Action),
@@ -406,6 +459,18 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		if (s.GetPendingChoice() is not { } choice)
 			return [.. s.DistinctMoves(s.LegalActions()).Select(a => new Move(a, s.MoveKey(a)))];
 		var key = ChoiceKey(choice);
+		// from any question no whole attack decides for (a fresh AI mid-declaration — the suite, --compare —
+		// plays as the table does): the questions from here on
+		if (choice is DeclareAttackerChoice attacker && options.WholeAttacks)
+			return
+			[
+				.. WholeAttacks
+					.Candidates(s, PlayerId, RolloutSettings.Held)
+					.Select(plan =>
+						(Decision)
+							new Declare(plan, WholeAttacks.Answer(s, PlayerId, plan, attacker), key)
+					),
+			];
 		if (choice.MaxChoices != 1)
 			return [new Pick([.. greedy.Answer(s, choice)], key)];
 		var picks = choice.Options.Select(o => (Decision)new Pick([o.Id], key)).ToList();
@@ -423,11 +488,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			_ => 0,
 		}}|{choice.Prompt}|{string.Join(",", choice.Options.Select(o => o.Id))}";
 
-	static GameState Apply(GameState s, Decision d) =>
+	GameState Apply(GameState s, Decision d) =>
 		d switch
 		{
 			Move m => s.Act(m.Action),
 			Pick p => s.Choose(p.Ids),
+			Declare a => WholeAttacks.Declare(s, PlayerId, a.Plan),
 			_ => throw new InvalidOperationException(d.GetType().Name),
 		};
 
@@ -445,7 +511,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				(c, i) =>
 					(
 						i,
-						Score: IsPass(c)
+						Score: IsPass(c) || c is Declare { Plan.Targets.Count: 0 } // "no attack", as passing
 							? double.MaxValue
 							: Evaluator.Evaluate(
 								Lookahead.Settle(Apply(s, c)),
@@ -540,7 +606,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	static Decision? Refind(GameState s, Decision planned)
 	{
 		if (s.GetPendingChoice() is { } choice)
-			return planned is Pick p && Equals(ChoiceKey(choice), p.Key) ? p : null;
+			return planned is Pick or Declare && Equals(ChoiceKey(choice), planned.Key)
+				? planned
+				: null;
 		return
 			planned is Move
 			&& s.DistinctMoves(s.LegalActions())

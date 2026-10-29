@@ -81,7 +81,7 @@ MagicCore/
 ├── Ai/MoveTokens.cs     a move as a token (a3 · c12,15 · t41:2 tap · s5:Hand:Name sandbox) + Offers/Ending fingerprints — the suite's and the records'
 ├── Ai/GameRecord.cs     a played game, EVERY transition kept (you/ai/stop/rule/sandbox), replayed by token alone; stale says so; Transcript, Before(#N) (TBL-5) — kept as AI test cases in MagicCore.Tests/Records (KeptRecords)
 ├── Ai/RecordComparison.cs  a record's choices beside the AI's: the default search's pick and the oracle's rank of yours at each `you` decision (--compare, TBL-5.6)
-├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer
+├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer (chumps facing lethal: Chumps); WholeAttacks.cs: an attack as ONE decision — candidates, targets, the declaration answered whole (AI-17.3)
 ├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;
 │                        held cards priced by their measured value by default (AI-1); Settings.Interactive

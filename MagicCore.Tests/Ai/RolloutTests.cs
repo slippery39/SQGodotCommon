@@ -207,7 +207,8 @@ public class RolloutTests
 	}
 
 	// AllInToo (AI-3.8): two 3/3s into their 4/4 at 3 life. Alone, each would be blocked and die, so
-	// neither attacks; together one gets through for exactly 3. Scored at the end of this turn.
+	// neither attacks; together one gets through for exactly 3. Scored at the end of this turn. The
+	// CONTROL: each attacker judged alone (the look-ahead's default).
 	[Test]
 	public void AllIn_FindsTheAttackThatOnlyWorksTogether()
 	{
@@ -221,6 +222,11 @@ public class RolloutTests
 		Assert.That(Scored(thisTurn), Is.LessThan(5_000));
 		Assert.That(
 			Scored(thisTurn with { Attacks = Rollout.Attacks.AllInToo }),
+			Is.GreaterThan(5_000)
+		);
+		// the attack as one decision (AI-17.3 — the search's, an option here) finds it too
+		Assert.That(
+			Scored(thisTurn with { Attacks = Rollout.Attacks.AsOne }),
 			Is.GreaterThan(5_000)
 		);
 	}
@@ -603,5 +609,87 @@ public class RolloutTests
 			s = s.Choose([answer]);
 		}
 		return string.Join(",", chumpers.Order());
+	}
+
+	// Shayne, 2026-10-29 (AI-17.3 (b), the attack as one decision): "maybe there is a planeswalker on 4
+	// loyalty. Your 4 power creature might want to attack that one, and your 2 and 3 power creature might
+	// want to attack their face" — for a real planeswalker ("an actual planeswalker with more than just draw
+	// a card? Very likely"; a Jace token depends on the board): Chandra, Torch of Defiance at 4 loyalty. The
+	// search answers the declaration's questions one at a time, as in a game, from the whole attack it
+	// chose at the first.
+	// KNOWN DEFECT (Shayne, 2026-10-29: "as long as its noted as a known defect"): the whole attack offers
+	// "the 4/4 at Chandra, the rest at the face", but the evaluator prices Chandra by her body and loyalty
+	// alone (3.40 at 4, 2.70 at 2 — her abilities unpriced, AI-9.3), so the search chips her with the 2/2
+	// and sends the 4/4 face. Un-ignore once AI-9.3 prices a walker's abilities.
+	[Test]
+	[Ignore(
+		"Known defect: walker abilities unpriced (AI-9.3) — the 2/2 chips Chandra, the 4/4 goes face"
+	)]
+	public void AWholeAttack_SendsTheFourPowerAtTheWalker_TheRestAtTheFace()
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var them = s.OpponentOf(me);
+		foreach (var (name, pt) in new[] { ("Four", "4/4"), ("Three", "3/3"), ("Two", "2/2") })
+			(s, _) = TestGames.Put(s, me, TestGames.Creature(name, pt), ZoneType.Battlefield);
+		(s, var walker) = TestGames.Put(
+			s,
+			them,
+			FraCards.Get("Chandra, Torch of Defiance"),
+			ZoneType.Battlefield
+		);
+		s = s.UpdateObject(walker, s.GetCard(walker) with { Loyalty = 4 }); // TEST SETUP: Put sets no loyalty
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+
+		var ai = new BeamSearchAi(me);
+		var targets = new Dictionary<string, int>();
+		while (s.GetPendingChoice() is Actions.DeclareAttackerChoice ask && ask.PlayerId == me)
+		{
+			var decided = ai.Decide(s);
+			targets[s.GetCard(ask.CreatureId).Name] = decided.Answer!.Single();
+			s = decided.State;
+		}
+		Assert.That(
+			targets,
+			Is.EquivalentTo(
+				new Dictionary<string, int>
+				{
+					["Four"] = walker,
+					["Three"] = them,
+					["Two"] = them,
+				}
+			)
+		);
+	}
+
+	// AI-17.3's review: an answer of "don't attack" is still an answer — the first question's None used to
+	// leave the next looking like the first, so the AI dropped the whole attack it chose and searched
+	// again at every question. Now each question after the first is answered from the plan, unsearched.
+	[Test]
+	public void AWholeAttack_AnswersEveryLaterQuestion_FromItsPlan()
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var them = s.OpponentOf(me);
+		foreach (var (name, pt) in new[] { ("A", "1/1"), ("B", "3/3"), ("C", "2/2") })
+			(s, _) = TestGames.Put(s, me, TestGames.Creature(name, pt), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, TestGames.Creature("Wall", "0/4"), ZoneType.Battlefield);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+		var first = (Actions.DeclareAttackerChoice)s.GetPendingChoice()!;
+		Assert.That(WholeAttacks.IsFirst(s, first));
+		Assert.That(
+			WholeAttacks.IsFirst(s.Choose([Actions.CombatOption.None]), first),
+			Is.False,
+			"after a \"don't attack\", not the first"
+		);
+
+		var ai = new BeamSearchAi(me);
+		s = ai.Decide(s).State;
+		Assert.That(ai.FirstMoveScores, Is.Not.Empty, "the first question: searched");
+		while (s.GetPendingChoice() is Actions.DeclareAttackerChoice ask && ask.PlayerId == me)
+		{
+			s = ai.Decide(s).State;
+			Assert.That(ai.FirstMoveScores, Is.Empty, "a later question: from the plan");
+		}
 	}
 }

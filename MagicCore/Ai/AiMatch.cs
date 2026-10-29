@@ -86,6 +86,10 @@ public static class AiMatch
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a
 			// target choice by its owner's best answer — the default since AI-17.3 (beam+firsttarget is the old).
 			["allin"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AllInToo }),
+			// The search's tree declares a creature at a time, before AI-17.3: beam+eachalone.
+			["eachalone"] = o => o with { WholeAttacks = false },
+			// The look-ahead chooses whole attacks too (AI-17.3, not taken for its cost): beam+asonelookahead.
+			["asonelookahead"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AsOne }),
 			// The first legal target, as before AI-17.3: beam+firsttarget.
 			["firsttarget"] = WithRollout(r => r with { Targets = Rollout.Targets.FirstLegal }),
 			// The simulated opponent's planeswalkers idle unless a casting model judges them worth it —

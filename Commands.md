@@ -138,6 +138,8 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #                    only with casts or responds; one of the two
 #     greedyrollout  GreedyAi plays our side in the rollouts (not --match=greedy, the AI itself)
 #     allin          an attack judged all-in as well as each alone (not with greedyrollout)
+#     eachalone      the search's tree declares a creature at a time, not a whole attack (before AI-17.3)
+#     asonelookahead the look-ahead chooses whole attacks too (AI-17.3; not taken, +27.6% cost)
 #     firsttarget    a target choice in the look-ahead takes the first legal one (before AI-17.3)
 #     idlewalkers    the simulated opponent's planeswalkers idle unless a casting model judges them worth it (before AI-8.1: +boardonly too)
 #     nothreat       the evaluator without its threat term (AI-5.2) — the search before it

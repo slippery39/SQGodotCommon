@@ -6330,7 +6330,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > −3: Chandra deals 4 damage to target creature.  
 > −7: You get an emblem with "Whenever you cast a spell, this emblem deals 5 damage to any target."
 
-**Status:** scripted · **tests naming it:** FraRareFinalTests, FraRarePlaneswalkerTests
+**Status:** scripted · **tests naming it:** FraRareFinalTests, FraRarePlaneswalkerTests, RolloutTests
 
 **Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ExileTopMayCast` — Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card.…; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 

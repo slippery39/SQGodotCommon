@@ -152,17 +152,27 @@ public class AiPositionTests
 	{
 		var record = KeptRecords.Get("GalliaWontAttack");
 		var s = record.Before(move);
-		string Choice(Rollout.ProgressBy progress) =>
+		string Choice(Rollout.ProgressBy progress, bool wholeAttacks = true) =>
 			MoveTokens.Token(
 				s,
 				new BeamSearchAi(
 					s.DecidingPlayerId(),
-					new(RolloutSettings: BeamSearchAi.DefaultRollout with { Progress = progress })
+					new(
+						RolloutSettings: BeamSearchAi.DefaultRollout with
+						{
+							Progress = progress,
+						},
+						WholeAttacks: wholeAttacks
+					)
 				).Decide(s)
 			);
 
 		Assert.That(
-			MoveTokens.Same(Choice(Rollout.ProgressBy.None), record.Moves[move - 1].Token),
+			// whole attacks (AI-17.3) attack here too — "everyone" leads a tie — so the search as it was
+			MoveTokens.Same(
+				Choice(Rollout.ProgressBy.None, wholeAttacks: false),
+				record.Moves[move - 1].Token
+			),
 			"the control: it stays home"
 		);
 		// Gallia's declaration is the pending choice: every option but "don't" attacks with her.
@@ -203,7 +213,9 @@ public class AiPositionTests
 						{
 							Progress = progress,
 						},
-						Without: without
+						Without: without,
+						// the control is the search as it was: whole attacks (AI-17.3) avoid it too
+						WholeAttacks: without == Evaluator.Terms.None
 					)
 				).Decide(s)
 			);
@@ -227,47 +239,58 @@ public class AiPositionTests
 	// Shayne, 2026-10-29 (AI-17.3, his draft game, seed 636312, turn 21): at 3 life with one blocker, the
 	// AI attacked with Chandra's Emberling alone and kept Tether Technician home — both attacking was
 	// lethal. Both root lines won by turn 23, and any win stopped the search: two rollouts, a tie, "don't
-	// attack". Two fixes, either enough here: only a win this turn stops the search early
-	// (BeamSearchAi.Settings.WinNowOnly), so it reaches the Emberling's declaration; and the look-ahead's
+	// attack". Three fixes, each enough here alone: only a win this turn stops the search early
+	// (BeamSearchAi.Settings.WinNowOnly), so it reaches the Emberling's declaration; the look-ahead's
 	// defender chumps when facing lethal (Evaluator.Terms.ChumpBlocks), so the Technician alone no longer
-	// looks lethal. The CONTROL: neither — the Technician stays home, as recorded.
-	[TestCase(true, true)]
-	[TestCase(true, false)]
-	[TestCase(false, true)]
-	public void ALethalAttack_IsMade_NotPostponedForALaterWin(bool winNowOnly, bool chumps)
+	// looks lethal; and the attack is chosen whole (BeamSearchAi.Settings.WholeAttacks), "everyone" among
+	// its candidates.
+	// The CONTROL: none — the Technician stays home, as recorded.
+	[TestCase(true, true, true)]
+	[TestCase(true, false, false)]
+	[TestCase(false, true, false)]
+	[TestCase(false, false, true)]
+	public void ALethalAttack_IsMade_NotPostponedForALaterWin(
+		bool winNowOnly,
+		bool chumps,
+		bool asOne
+	)
 	{
 		var record = KeptRecords.Get("TechnicianSkipsLethal");
 		var s = record.Before(494);
 		var me = s.DecidingPlayerId();
-		string Declare(GameState at, bool fixes) =>
-			MoveTokens.Token(
-				at,
-				new BeamSearchAi(
-					me,
-					fixes
-						? new(
-							WinNowOnly: winNowOnly,
-							Without: chumps ? Evaluator.Terms.None : Evaluator.Terms.ChumpBlocks
-						)
-						: new(WinNowOnly: false, Without: Evaluator.Terms.ChumpBlocks)
-				).Decide(at)
+		BeamSearchAi Ai(bool fixes) =>
+			new(
+				me,
+				fixes
+					? new(
+						WinNowOnly: winNowOnly,
+						Without: chumps ? Evaluator.Terms.None : Evaluator.Terms.ChumpBlocks,
+						WholeAttacks: asOne
+					)
+					: new(
+						WinNowOnly: false,
+						Without: Evaluator.Terms.ChumpBlocks,
+						WholeAttacks: false
+					)
 			);
 
 		Assert.That(
-			MoveTokens.Same(Declare(s, fixes: false), record.Moves[493].Token),
+			MoveTokens.Same(
+				MoveTokens.Token(s, Ai(fixes: false).Decide(s)),
+				record.Moves[493].Token
+			),
 			"the control: it stays home"
 		);
-		var technician = Declare(s, fixes: true);
-		Assert.That(MoveTokens.Describe(s, technician), Does.EndWith("Attack You"));
-		var next = MoveTokens.Apply(s, technician);
-		var emberling = Declare(next, fixes: true);
+		var ai = Ai(fixes: true); // one AI for the declaration, as the table plays: a whole attack is answered whole
+		var technician = ai.Decide(s);
+		Assert.That(technician.What, Does.EndWith("Attack You"));
+		var emberling = ai.Decide(technician.State);
+		Assert.That(emberling.What, Does.EndWith("Attack You"), "the Emberling attacks too");
 		Assert.That(
-			MoveTokens.Describe(next, emberling),
-			Does.EndWith("Attack You"),
-			"the Emberling attacks too"
+			Lookahead.Settle(emberling.State).WinnerId(),
+			Is.EqualTo(me),
+			"and it is lethal"
 		);
-		var end = Lookahead.Settle(MoveTokens.Apply(next, emberling));
-		Assert.That(end.WinnerId(), Is.EqualTo(me), "and it is lethal");
 	}
 
 	// The same game (AI-17.3): the look-ahead's cheap defender never chump-blocked, so a lone attacker at a

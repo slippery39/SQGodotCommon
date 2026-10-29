@@ -1149,3 +1149,22 @@ ahead's cheap defender never chumped, so a lone attacker looked lethal. Three ch
   menace attacker with one blocker counts as unblocked. 1 of 288 suite decisions moved (a Cadet no longer
   chumps Massacre Girl), one golden game; re-read, the oracle **87.2%, score given up 0.81** (still under
   1.06). The matches above stand.
+
+## The attack as one decision, in the search's tree (2026-10-29, AI-17.3 (b))
+
+Shayne: "we are launching an attack as one decision". `Ai/WholeAttacks.cs`: at an attack question no
+plan decides for, the search's tree offers whole attacks — everyone, no one, each alone, all but one
+(each creature at its own best target given the bigger ones), and everyone with one creature at another
+target — each rolled out; the chosen one answers the rest of the declaration
+(`BeamSearchAi.Settings.WholeAttacks`, `+eachalone` off).
+
+- **Tree only** (Shayne): in the look-ahead too (`Rollout.Attacks.AsOne`, `+asonelookahead`) cost +27.6%
+  a suite position (4 513 steps against 3 537); in the tree alone +6.6%.
+- **Positions:** the turn-21 attack by whole attacks alone; the all-in pair (two 3/3s into a 4/4 at 3 life)
+  found by `AsOne`, not by each alone; AI-10's Gallia attacks with whole attacks alone too. Shayne's walker
+  case (Chandra, Torch of Defiance at 4) is a **known defect**, ignored: the whole attack offers the 4/4 at
+  Chandra, but the evaluator prices her at 3.40 (body and loyalty, her abilities unpriced — AI-9.3).
+- **Suite:** 5 of 288 change; 3 769 steps a position (+6.6%). Re-read, the oracle **87.2%** (unchanged),
+  score given up 0.84 (0.81).
+- **Match:** `--match=beam,beam+eachalone --until-clear`: 192 games, **49.5% ± 1.7pp (95–97), no 5pp
+  difference**; 1 548 steps a decision (1 531, +1.1%); 768 s. Kept (Shayne's positions).
