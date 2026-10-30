@@ -64,7 +64,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters or dies, you gain 2 life.  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** scripted · **tests naming it:** FraGraveyardTests
+**Status:** scripted · **tests naming it:** BasicsTests, FraGraveyardTests
 
 **Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -613,7 +613,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames
 
 ### Formidable Commons
 
@@ -774,7 +774,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this Aura enters, tap enchanted creature. It becomes unprepared.  
 > Enchanted creature loses all abilities and doesn't untap during its controller's untap step.
 
-**Status:** scripted · **tests naming it:** FraEngineTests
+**Status:** scripted · **tests naming it:** BasicsTests, FraEngineTests
 
 **Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `BecomeUnprepared` — Infinite Coursework: "It becomes unprepared."; `EnchantedDoesntUntap` — Infinite Coursework: "… and doesn't untap during its controller's untap step" — the…; `EnchantedLosesAllAbilities` — Infinite Coursework: "Enchanted creature loses all abilities" —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
 
@@ -835,7 +835,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
 
 ### Keeper of the Quiet Hour
 
@@ -1052,7 +1052,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests
 
 ### Predictive Preparations
 
@@ -1435,7 +1435,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests
 
 ### Tam's Resistance
 
@@ -6330,7 +6330,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > −3: Chandra deals 4 damage to target creature.  
 > −7: You get an emblem with "Whenever you cast a spell, this emblem deals 5 damage to any target."
 
-**Status:** scripted · **tests naming it:** FraRareFinalTests, FraRarePlaneswalkerTests, RolloutTests
+**Status:** scripted · **tests naming it:** BasicsTests, FraRareFinalTests, FraRarePlaneswalkerTests, RolloutTests
 
 **Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ExileTopMayCast` — Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card.…; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 

@@ -137,9 +137,11 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     unseen, guess  its hand's unseen cards redrawn from its unseen cards / guessed from its colours —
 #                    only with casts or responds; one of the two
 #     greedyrollout  GreedyAi plays our side in the rollouts (not --match=greedy, the AI itself)
-#     allin          an attack judged all-in as well as each alone (not with greedyrollout)
+#     allin          an attack judged all-in as well as each alone, INSTEAD of whole attacks (not with greedyrollout)
 #     eachalone      the search's tree declares a creature at a time, not a whole attack (before AI-17.3)
-#     asonelookahead the look-ahead chooses whole attacks too (AI-17.3; not taken, +27.6% cost)
+#     eachalonelookahead  the look-ahead judges each attacker alone, not the attack whole (before AI-17.6)
+#     flatlowlife    life below 6 without the growing risk of being finished (before AI-17.6)
+#     onepick        a choice of several picks gets one cheap answer, not every combination (before AI-17.6)
 #     firsttarget    a target choice in the look-ahead takes the first legal one (before AI-17.3)
 #     idlewalkers    the simulated opponent's planeswalkers idle unless a casting model judges them worth it (before AI-8.1: +boardonly too)
 #     nothreat       the evaluator without its threat term (AI-5.2) — the search before it
@@ -151,6 +153,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     lifeprogress   a won line credits only the opponent's life lost this turn, not the turn's whole evaluation (before AI-16)
 #     nolostlines    lost lines on one turn tie again: the board as our turn ends not counted (before AI-16.4)
 #     nomays         a "you may" declined in the look-ahead, not answered with its chooser's best (before AI-17.2)
+#     flatend        a finished game scores a flat win or loss, its board unread (before AI-17.6)
 #     boardonly      the simulated opponent never casts, even a card we know it holds (before AI-10.4)
 #     nooption       a held instant or flash card at its plain held price, not as an option (before AI-13.4)
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)

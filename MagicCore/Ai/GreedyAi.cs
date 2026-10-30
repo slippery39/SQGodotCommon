@@ -90,7 +90,7 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		return options.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 	}
 
-	static IEnumerable<IEnumerable<int>> Combinations(List<int> ids, int k) =>
+	internal static IEnumerable<IEnumerable<int>> Combinations(List<int> ids, int k) =>
 		k == 0
 			?
 			[

@@ -26,8 +26,30 @@ public static class Evaluator
 	/// </summary>
 	public static double Evaluate(GameState s, int player, HeldValues? held = null)
 	{
-		if (s.IsOver())
-			return s.WinnerId() == player ? WinScore : -WinScore;
+		if (!s.IsOver())
+			return Position(s, player, held);
+		var end = s.WinnerId() == player ? WinScore : -WinScore;
+		return IsOff(Terms.EndBoard)
+			? end
+			: end + EndBoardCap * Math.Tanh(Position(s, player, held) / EndBoardScale);
+	}
+
+	/// <summary>
+	/// The most a finished game's board adds to or takes from its win or loss (<see cref="Terms.EndBoard"/>):
+	/// small beside a turn's discount (Rollout.TurnEndCap and BeamSearchAi.Winner allow for it), so it only
+	/// orders games that end alike.
+	/// </summary>
+	public const double EndBoardCap = 10;
+
+	/// <summary>
+	/// The position at which a finished game's tie-break is three-quarters spent. Wide: an ended game's
+	/// position is ±60 and more (the dead player's life alone is −50), so squashed by the cap itself the
+	/// boards differed by 1e-5 and past ~190 tied exactly again (the review, AI-17.6).
+	/// </summary>
+	public const double EndBoardScale = 100;
+
+	static double Position(GameState s, int player, HeldValues? held)
+	{
 		var opponent = s.OpponentOf(player);
 		var keywords = Keywords;
 		var sides =
@@ -146,6 +168,23 @@ public static class Evaluator
 		/// own defender chumped it, the lethal attack of both was never made).
 		/// </summary>
 		ChumpBlocks = 256,
+
+		/// <summary>
+		/// A finished game keeps its board as a tie-break under its win or loss (AI-17.6, Shayne: "we want to
+		/// make the best play possible even if our search shows that we are winning or losing no matter what
+		/// … players can always make mistakes"). Without it every finished game scored a flat ±WinScore, so
+		/// every choice ending one tied: the look-ahead's defender, dead to an unblockable flier, blocked
+		/// nothing, and our 2/2 attacked beside the flier for free (`+flatend`).
+		/// </summary>
+		EndBoard = 512,
+
+		/// <summary>
+		/// Below 6 life a lost point costs more the nearer 0 — (6 − life)² ÷ 2 on top: 0.5 at 5, 12.5 at 1
+		/// (AI-17.6, Shayne: "As your life total gets lower you take on more risk of your opponent having
+		/// something that can just kill you"). Without it 5 life → 1 cost 8 points, under a dead 2/2 and
+		/// their weaker clock, and the AI drew two cards into a swing to 1 (`+flatlowlife`).
+		/// </summary>
+		LowLifeRisk = 1024,
 	}
 
 	/// <summary>
@@ -341,7 +380,12 @@ public static class Evaluator
 			board.Count(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
 			* 2.0;
 		var life = s.GetPlayer(player).Life;
-		var lifeValue = life <= 0 ? -50 : Taper(life, 20, 1.0, 0.5) + (life < 6 ? life - 6 : 0); // low life hurts more
+		var lifeValue =
+			life <= 0
+				? -50
+				: Taper(life, 20, 1.0, 0.5)
+					+ (life < 6 ? life - 6 : 0) // low life hurts more
+					- (life < 6 && !IsOff(Terms.LowLifeRisk) ? (6 - life) * (6 - life) / 2.0 : 0);
 		// A land in hand is worth less than a spell, so playing even a surplus land scores a gain.
 		// Floating mana scores nothing: it empties at the end of the step, which Settle never reaches.
 		// With held values the opponent's hand is BLIND — one price per card, land or not (HeldValues) —

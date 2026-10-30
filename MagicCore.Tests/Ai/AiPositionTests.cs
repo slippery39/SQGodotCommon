@@ -212,6 +212,11 @@ public class AiPositionTests
 						RolloutSettings: BeamSearchAi.DefaultRollout with
 						{
 							Progress = progress,
+							// the control is the look-ahead as it was: whole attacks there (AI-17.6) avoid it too
+							Attacks =
+								without == Evaluator.Terms.None
+									? Rollout.Attacks.AsOne
+									: Rollout.Attacks.EachAlone,
 						},
 						Without: without,
 						// the control is the search as it was: whole attacks (AI-17.3) avoid it too
@@ -226,9 +231,15 @@ public class AiPositionTests
 			"the recorded move is the self-burn"
 		);
 		Assert.That(
-			// the look-ahead's defender chump-blocking (AI-17.3) avoids it too, so the search as it was
+			// the look-ahead's defender chump-blocking (AI-17.3) and a finished game's board (AI-17.6) avoid
+			// it too, so the search as it was
 			MoveTokens.Same(
-				Choice(Rollout.ProgressBy.TheirLife, Evaluator.Terms.ChumpBlocks),
+				Choice(
+					Rollout.ProgressBy.TheirLife,
+					Evaluator.Terms.ChumpBlocks
+						| Evaluator.Terms.EndBoard
+						| Evaluator.Terms.LowLifeRisk
+				),
 				selfBurn
 			),
 			"the control: by their life alone, our own face"
@@ -387,7 +398,14 @@ public class AiPositionTests
 				s,
 				new BeamSearchAi(
 					s.DecidingPlayerId(),
-					new(RolloutSettings: BeamSearchAi.DefaultRollout with { LostLines = lostLines })
+					new(
+						RolloutSettings: BeamSearchAi.DefaultRollout with
+						{
+							LostLines = lostLines,
+						},
+						// the control is the search as it was: a finished game's own board (AI-17.6) keeps it too
+						Without: lostLines ? Evaluator.Terms.None : Evaluator.Terms.EndBoard
+					)
 				).Decide(s)
 			);
 

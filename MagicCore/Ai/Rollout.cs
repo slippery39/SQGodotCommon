@@ -57,7 +57,8 @@ public static class Rollout
 	/// ("it gives your opponent the chance to make a mistake"), then the better board, squashed under
 	/// <see cref="TurnEndCap"/> as a won line's is. Every lost line on one turn used to tie, and the tie
 	/// went to the first move that acts (<see cref="BeamSearchAi"/>'s pass bias). A line lost INSIDE the
-	/// searched turn has no turn end and still ties. Off is beam+nolostlines (with lifeprogress and
+	/// searched turn has no turn end; since AI-17.6 its own board breaks the tie (Evaluator.Terms.EndBoard).
+	/// Off is beam+nolostlines (with lifeprogress and
 	/// noprogress, which reproduce the search before AI-16).
 	/// </param>
 	/// <param name="KnownOnly">
@@ -81,7 +82,7 @@ public static class Rollout
 		HeldValues? Held = null,
 		OpponentModel Opponent = OpponentModel.Responds,
 		OurPolicy Ours = OurPolicy.Cheap,
-		Attacks Attacks = Attacks.EachAlone,
+		Attacks Attacks = Attacks.AsOne,
 		Targets Targets = Targets.OwnersBest,
 		bool TheirWalkers = true,
 		ProgressBy Progress = ProgressBy.TurnEnd,
@@ -106,7 +107,11 @@ public static class Rollout
 		/// The attack chosen as ONE decision at the declaration's first question (AI-17.3, Shayne): a few
 		/// candidate attacks, each creature at its own best target, each settled against the defender's
 		/// blocks — <see cref="WholeAttacks"/>, as the search's tree chooses (BeamSearchAi.Settings.
-		/// WholeAttacks). Not the default: +27.6% a position in the look-ahead (AI-17.3) — beam+asonelookahead.
+		/// WholeAttacks). The default since AI-17.6 (Shayne, AI-17.3: "if we ever find a test case that needs
+		/// it to be in the look ahead then we will have to reconsider"): at 5 life with one 3/3 against three
+		/// 2/2s, each 2/2 alone dies to the 3/3, so a look-ahead judging them one by one never imagined the
+		/// swing to 1 life and the AI drew two cards instead of casting a blocker. +27.6% a position (AI-17.3)
+		/// — beam+eachalonelookahead is the old.
 		/// </summary>
 		AsOne,
 	}
@@ -152,7 +157,9 @@ public static class Rollout
 	/// <summary>
 	/// The most a won line's progress may add or take away: under half the smallest gap between two
 	/// turns' discounted wins within the horizon (the last turn's), so it never reorders turns —
-	/// 214 at the defaults (0.95, two turns), 193 at the position suite's four.
+	/// 214 at the defaults (0.95, two turns), 193 at the position suite's four. With a finished game's
+	/// own board tie-break (<see cref="Evaluator.EndBoardCap"/>, 10) two lines still move at most 2 × (cap +
+	/// 10) — 448 against a 475 gap at the defaults, 406 against 428 at four turns.
 	/// </summary>
 	public static double TurnEndCap(Settings settings) =>
 		0.45

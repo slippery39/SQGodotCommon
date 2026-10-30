@@ -359,7 +359,7 @@ public static class MagicRules
 	static string Fodder(GameState s, int id) => id == 0 ? "" : Identity(s, id);
 
 	/// <summary>Which card a move is "from" for DistinctMoves: a permanent by id; elsewhere any copy in the same zone.</summary>
-	static string Identity(GameState s, int id) =>
+	internal static string Identity(GameState s, int id) =>
 		s.IsOnBattlefield(id) ? $"{id}" : $"{s.GetCard(id).Name}@{s.GetParent(id)}";
 
 	/// <summary>

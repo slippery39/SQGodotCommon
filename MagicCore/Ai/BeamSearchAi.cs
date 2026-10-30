@@ -61,10 +61,16 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// </param>
 	/// <param name="WholeAttacks">
 	/// The search chooses an attack as ONE decision at the declaration's first question — the candidates
-	/// of <see cref="WholeAttacks"/>, each rolled out — not a creature at a time (AI-17.3, Shayne). The tree
-	/// only: the look-ahead still judges each attacker alone (Rollout.Attacks.EachAlone; AsOne there cost
-	/// +27.6% a position against +6.5% here — Shayne: "search only for now, but if we ever find a test case
-	/// that needs it to be in the look ahead then we will have to reconsider"). Off is beam+eachalone.
+	/// of <see cref="WholeAttacks"/>, each rolled out — not a creature at a time (AI-17.3, Shayne). The
+	/// look-ahead chooses its attacks whole too since AI-17.6 (Rollout.Attacks.AsOne). Off is beam+eachalone.
+	/// </param>
+	/// <param name="BranchPicks">
+	/// A choice of several picks — surveil's "any number of them", a discard of two, two modes — is branched
+	/// on every combination, each rolled out (at most <see cref="MaxPicks"/>; more falls back to GreedyAi's
+	/// one answer), as MtgSimulator's ResolveChoice did (AI-17.6). Before, it got that one answer, which for
+	/// surveil was the minimum: eight lands in play and two more on top, it binned nothing (Shayne: "surveil
+	/// excess lands that are not needed"). The tree only: the rollout's own answers stay cheap. Off is
+	/// beam+onepick.
 	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
@@ -87,7 +93,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		Hidden.Hand Hand = Hidden.Hand.Real,
 		Evaluator.Terms Without = Evaluator.Terms.None,
 		bool WinNowOnly = true,
-		bool WholeAttacks = true
+		bool WholeAttacks = true,
+		bool BranchPicks = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -453,7 +460,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		return (s, true);
 	}
 
-	/// <summary>Our options here: each move, or each single answer to a choice. A choice of several picks gets GreedyAi's one answer.</summary>
+	/// <summary>Our options here: each move, or each answer to a choice — a choice of several picks every combination (<see cref="Settings.BranchPicks"/>), or past <see cref="MaxPicks"/> GreedyAi's one answer.</summary>
 	List<Decision> Children(GameState s)
 	{
 		if (s.GetPendingChoice() is not { } choice)
@@ -472,11 +479,48 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					),
 			];
 		if (choice.MaxChoices != 1)
-			return [new Pick([.. greedy.Answer(s, choice)], key)];
+			return options.BranchPicks && Picks(s, choice) is { } every
+				? [.. every.Select(p => (Decision)new Pick(p, key))]
+				: [new Pick([.. greedy.Answer(s, choice)], key)];
 		var picks = choice.Options.Select(o => (Decision)new Pick([o.Id], key)).ToList();
 		if (choice.MinChoices == 0)
 			picks.Insert(0, new Pick([], key));
 		return picks;
+	}
+
+	/// <summary>The most combinations a choice of several picks is branched on (<see cref="Settings.BranchPicks"/>).</summary>
+	public const int MaxPicks = 32;
+
+	/// <summary>
+	/// Every legal answer to a choice of several picks — each size from its least (no more than there are
+	/// options, as the engine allows) to its most — one per set of interchangeable cards (two Forests on top:
+	/// "bin one" is one answer, by <see cref="MagicRules.Identity"/>); null past <see cref="MaxPicks"/> or
+	/// with none.
+	/// </summary>
+	static List<ImmutableList<int>>? Picks(GameState s, ChoiceAction choice)
+	{
+		var ids = choice.Options.Select(o => o.Id).ToList();
+		var picks = new List<ImmutableList<int>>();
+		var seen = new HashSet<string>();
+		var objects = MagicRules.OptionsAreObjects(choice); // modes and the like are numbers, not cards
+		string Same(int id) =>
+			objects && s.HasObject(id) && s.GetObject(id) is Cards.Card
+				? MagicRules.Identity(s, id)
+				: $"{id}";
+		for (
+			var k = Math.Min(choice.MinChoices, ids.Count);
+			k <= Math.Min(choice.MaxChoices, ids.Count);
+			k++
+		)
+			foreach (var pick in GreedyAi.Combinations(ids, k))
+			{
+				if (!seen.Add(string.Join("|", pick.Select(Same).Order())))
+					continue;
+				picks.Add([.. pick]);
+				if (picks.Count > MaxPicks)
+					return null;
+			}
+		return picks.Count == 0 ? null : picks;
 	}
 
 	/// <summary>Which choice this is, so a planned answer is only replayed into the same question.</summary>
@@ -550,6 +594,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					? n.Score
 						> Evaluator.WinScore * RolloutSettings.TerminalDiscount
 							+ Rollout.TurnEndCap(RolloutSettings)
+							+ Evaluator.EndBoardCap
 					: n.Score >= WinThreshold
 			)
 			.MaxBy(n => n.Score);

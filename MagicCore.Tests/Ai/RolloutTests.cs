@@ -208,7 +208,7 @@ public class RolloutTests
 
 	// AllInToo (AI-3.8): two 3/3s into their 4/4 at 3 life. Alone, each would be blocked and die, so
 	// neither attacks; together one gets through for exactly 3. Scored at the end of this turn. The
-	// CONTROL: each attacker judged alone (the look-ahead's default).
+	// CONTROL: each attacker judged alone (the look-ahead's default before AI-17.6).
 	[Test]
 	public void AllIn_FindsTheAttackThatOnlyWorksTogether()
 	{
@@ -219,12 +219,15 @@ public class RolloutTests
 		var thisTurn = Rollout.Default with { LookaheadTurns = 0 };
 		double Scored(Rollout.Settings x) => Rollout.Score(s, me, Rollout.Horizon(s, x), x);
 
-		Assert.That(Scored(thisTurn), Is.LessThan(5_000));
+		Assert.That(
+			Scored(thisTurn with { Attacks = Rollout.Attacks.EachAlone }),
+			Is.LessThan(5_000)
+		);
 		Assert.That(
 			Scored(thisTurn with { Attacks = Rollout.Attacks.AllInToo }),
 			Is.GreaterThan(5_000)
 		);
-		// the attack as one decision (AI-17.3 — the search's, an option here) finds it too
+		// the attack as one decision (AI-17.3; the look-ahead's default since AI-17.6) finds it too
 		Assert.That(
 			Scored(thisTurn with { Attacks = Rollout.Attacks.AsOne }),
 			Is.GreaterThan(5_000)

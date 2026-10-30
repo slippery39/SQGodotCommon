@@ -1168,3 +1168,126 @@ target — each rolled out; the chosen one answers the rest of the declaration
   score given up 0.84 (0.81).
 - **Match:** `--match=beam,beam+eachalone --until-clear`: 192 games, **49.5% ± 1.7pp (95–97), no 5pp
   difference**; 1 548 steps a decision (1 531, +1.1%); 768 s. Kept (Shayne's positions).
+
+## The review, code: every shortcut in the decision path (2026-10-29, AI-17.4)
+
+Read in full: `BeamSearchAi`, `Rollout`, `Lookahead`, `WholeAttacks`, `Evaluator`, `GreedyAi`, `Hidden`
+(~2 600 lines), every `ponytail:` in them, DesignNotes' "MagicCore known ceilings", AI-3's models not
+taken, and MtgSimulator's `MultiTurnBeamSearchAiStrategy`. Each shortcut judged by one question: **can it
+make the AI miss an obvious play?** Judged from the code; AI-17.5's positions are the test.
+
+**Likely to cause a miss** — each wants a basics position:
+
+1. **`Lookahead.Settle` declines every "you may" and aims every trigger at its first legal target**
+   (`QuickAnswer`: `Options.Take(MinChoices)`). AI-17.2/17.3 fixed the rollout's OWN answers, but Settle is
+   still the judge of which play is worth making in: `Narrow` (which children get a rollout — 16 at the
+   root, **only 5 below it**), our rollout policy (`OurPlay`: the one play a simulated turn makes), the
+   simulated opponent's plays, walkers and responses, `GreedyAi.Answer` one choice down, and
+   `WholeAttacks`' targets. A creature whose "enters" trigger targets reads as hitting whatever is listed
+   first (AI-17.3's Fateshaper Aspirant: our creature); a "you may" play reads as nothing. Below the root,
+   where 5 of maybe 10 children survive, such a play is cut before its rollout. Fix: Settle answers a
+   single target or a may by each option settled one level down (GreedyAi's way), then measure the cost.
+2. **A planeswalker's abilities are unpriced** (AI-9.3, known defect): damage, removal, pumps and mana
+   abilities leave the flat body of 2 — so a walker is chipped where it should be killed, and attacking it
+   is undervalued. Its own activations are judged by their result in the rollout, so its "best ability"
+   choice is likely right; its worth as a target is not.
+3. **The simulated opponent judges each attacker alone** (`Rollout.Attacks.EachAlone`; whole attacks are
+   in our tree only). An attack of theirs that kills only together — three 2/2s into our one 3/3 at 4 life
+   — is never imagined, so the AI can tap out or attack with its last blocker into a lethal swing back
+   ("walked into lethal", AI-17.7's second counter). Shayne (AI-17.3): reconsider whole attacks in the
+   look-ahead if a test case needs it — this is that case, if a position shows it.
+4. **Every priority window the AI holds an instant in costs one of the search's 3 levels.** `AutoPass`
+   skips only a lone pass, so with an instant and open mana, main 1 → beginning of combat → the
+   declaration is two levels; a land or a precombat spell first puts the whole attack past depth 3, where
+   the rollout's each-alone attack judges it. "Removal on the only blocker, then the lethal attack" is the
+   play at risk (at the declaration itself the search starts afresh and finds the attack; the miss is
+   choosing the precombat play). Fix if a position fails: let `Advance` pass our empty windows (no spell
+   on the stack, no combat) without spending a level.
+5. **A creature is valued by its stats and keywords only** (AI-9.6): an engine or a lord with a small body
+   is "small", so removal goes on the biggest body. A lord's statics show (the board shrinks when it
+   dies); a triggered or activated engine shows only through what it makes inside two turns.
+6. **A permanent that never untaps is still a creature at full value** — Infinite Coursework ("tap
+   enchanted creature … doesn't untap"; FRA common) leaves its target's body counted, and `Through` counts
+   it as an attacker in their clock (it reads no "doesn't untap"). So Coursework scores far under a kill
+   spell on the same creature, and the AI fears a clock that can't attack.
+
+**Possible** — a position only if one of the above shows it:
+
+7. **Narrow keeps no "potential" lines.** MtgSimulator kept a potential bucket beside the concrete
+   score in both its narrowing and its beam (setup plays — fast mana — that score badly at once); here
+   both rank by one score, and below the root only 5 children survive. Mostly item 1's cost.
+8. **Choices of several picks get one cheap answer, never branched** (`Children` → `GreedyAi.Answer`):
+   modes are settled; a discard of N takes the priciest spells unless flooded (`WorstCards`, by mana
+   value — a bomb can go); a search for up to N takes the first N; anything else takes the minimum —
+   so a surveil of 2 never puts a card in the graveyard. MtgSimulator rolled out every combination.
+9. **A committed plan replays while the evaluation stays within 5.0** of what it expected — the plan's
+   later moves were judged only by their rollouts at depth, never searched as a root (#262's −3 was
+   such a replay). Fixed for mays; the mechanism stays.
+10. **The table's 1 s cap leaves lines below the root unexpanded** — a miss seen at the table may not
+    reproduce in a match (no cap there). At the declaration the whole attack is the root, so lethal
+    on board is found under the cap.
+11. **The rollout's own play is one non-land spell a turn, sorcery speed, never a response**; the opponent
+    plays only cards we know. Two-spell turns and tricks after the root turn are invisible — symmetric
+    enough to rank lines, and measured (AI-3).
+
+**Unlikely to cause an obvious miss** (kept as they are): the threat term's blocker model (menace, first
+strike, sizes — the rollout plays the real combat); `Chumps`/`Joins`/`Survives` ignoring trample's excess,
+first strike on the attacker's side, lifelink and split damage; a line lost INSIDE the searched turn tying
+(AI-16); never responding to our own spell (no FRA line needs it yet); one hidden-card sample per decision;
+GreedyAi's mulligan (2–5 lands); a rollout stopped at its decision limit; `TheirLoyalty` taking a minus that
+kills its walker; the colour guess's 40/17 deck.
+
+**Compared with MtgSimulator:** its lethal pre-pass (`FindLethalAttacks`) is now the whole attack
+"everyone" at the declaration plus `WinNowOnly` (AI-17.3); its land-first override is a move like any
+other here (the pass bias and the land's +1.2 take it); its potential bucket (item 7) and its rolled-out
+combinations (item 8) were not ported.
+
+## A finished game keeps its board (2026-10-29, AI-17.6)
+
+Shayne's flier (basics position 3): a 3/3 flier and a 2/2 against two 4/4s at 3 life — "only the flyer
+attacks". Both attacks won this turn, and `Explain` showed why the 2/2's cost nothing: the look-ahead's
+defender, dead whatever it blocks, blocked nothing — every finished game scored a flat ±10 000, so every
+block tied and the tie took "no block". Shayne: "it should block anyways … players can always make
+mistakes". **`Evaluator.Terms.EndBoard`** (`+flatend`): a finished game is ±WinScore plus its position
+squashed under `EndBoardCap` (10), for every chooser; `Winner`'s threshold and `TurnEndCap`'s margin
+allow for it (two lines still never cross a turn: 448 against a 475 gap, 406 against 428 at four turns).
+
+- **Positions:** the flier stays home; off, the 2/2 attacks. AI-16's self-burn control switches it off
+  (it avoids the self-burn too). A first try — a won-this-turn tie-break by our own side — fixed nothing
+  alone and was removed.
+- **Golden games:** 6 of 12 moved; all pass with it forced off. Regenerated.
+- **Suite:** 3 of 288 change; 3 772 steps a position (+0.1%).
+- **Match:** `--match=beam,beam+flatend --until-clear`: 192 games, **49.5% ± 0.9pp (95–97), no 5pp
+  difference**; 1 537 steps a decision against 1 545; 872 s. Kept.
+
+## Life near 0, whole attacks in the look-ahead, every combination of a several-pick choice (2026-10-30, AI-17.6)
+
+From Shayne's basics positions (`MagicCore.Tests/Ai/BasicsTests.cs`), each behind its switch:
+
+- **Life risk below 6** (`Evaluator.Terms.LowLifeRisk`, `+flatlowlife`): (6 − life)² ÷ 2 more — 5 → 1 life
+  now costs ~20 points, was 8 (Shayne: "As your life total gets lower you take on more risk"). Match: 384
+  games, **49.2% ± 1.1pp (189–195), no 5pp difference**; 1 917 steps a decision against 1 900 (+0.9%).
+  Golden games: 1 moved (all pass with it forced off).
+- **Whole attacks in the look-ahead, the default** (`Rollout.Attacks.AsOne`, `+eachalonelookahead`):
+  position 7 (at 5 with a 3/3 against three 2/2s, the blocker over Draw Two) needs BOTH this and the life
+  risk — each alone shown not to flip it. Match: 288 games, **49.7% ± 1.6pp (143–145), no 5pp
+  difference**; **1 846 steps a decision against 1 504 (+22.7%)** — cost accepted by Shayne.
+- **Every combination of a several-pick choice in the tree** (`BeamSearchAi.Settings.BranchPicks`,
+  `+onepick`, up to 32): surveil 2 bins two lands when flooded. Match: 96 games, 50.0% (48–48), identical
+  games and cost — it never fired in the three decks; kept on its position.
+- **Suite** (all three): 21 of 288 change, 4 470 steps a position (+18.5% on 3 772); `+eachalonelookahead`
+  alone 8 change and 3 745 steps, `+flatlowlife` 15, `+onepick` 21 (never fires). Accepted; the oracle
+  re-read **86.5%, score given up 1.03** (87.2%, 0.84 before AI-17.6) — a little further from the oracle.
+- **Tried and reverted:** a share of each line read as our turn ends (Shayne's option A for the Pinger,
+  position 9): the Pinger is cast from 0.2, but AI-13.4's agreed Unsummon hold breaks at every share down
+  to 0.1 — a uniform "now" can't tell "waiting buys nothing" from "waiting has value".
+- **Positions that already pass:** a one-card tutor fetches the basic the hand needs (landcycling — the
+  control, one ply, ties the basics). **Known, ignored:** Chandra at 1 loyalty not attacked (AI-9.3: priced
+  2.35, her abilities unpriced).
+- **The review (before the commit):** the end-board tie-break was squashed by its own cap (10), and an
+  ended game's position is ±60 and more (the dead player's −50 alone), so boards differed by ~1e-5 and past
+  ~190 tied exactly again — now squashed over `EndBoardScale` (100). A several-pick choice asking more than
+  its options gave no answer at all (the engine allows fewer); interchangeable cards (two Forests) now give
+  one answer. 1 of 288 suite decisions moved (Break Under Pressure cast where it passed); accepted, the
+  oracle re-read 86.5%, 1.03. AI-16.4's lost-line control now switches the end board off too (it keeps the
+  card alone). The `+flatend` match above was run on the saturated version.

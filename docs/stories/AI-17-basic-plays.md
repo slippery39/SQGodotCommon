@@ -94,6 +94,58 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   draw a card? Very likely" — so the test is a real walker (Chandra, Torch of Defiance at 4 loyalty), and
   the Jace token's case is left open.
 
+- 2026-10-29, Shayne (on AI-17.4's review): **"all of those shortcuts are bad, and we should address
+  those. If it causes our AI to be more expensive speed wise, then its ok"** — every listed shortcut is
+  to be fixed (AI-17.6), cost accepted.
+- 2026-10-29, Shayne (the basics positions' answers): (1) 3/3, 3/3, 2/2 against one 2/2 at 5 — "easy
+  attack, almost 0 downside"; (2) a 4/4 menace and a 2/2 against one 3/3 at 4 — attack; (3) a 3/3 flier
+  and a 2/2 against two 4/4s at 3 — **only the flier attacks**: "the 2/2 would be blocked and no reason
+  to attack (in real life, your opponent might be able to remove the flyer and you wouldn't want your
+  2/2 to die)"; (4) a 6/6 trampler against a 2/2 at 4 — attack; (5) a 2/2 and a +2/+2 instant against no
+  blockers at 4 — attack and pump; (6) two 3/3s and a kill spell against one 2/2 at 6 — kill it and
+  attack; (7) at 5 with a 3/3 against three 2/2s, mana for a 2/2 or "draw two" — play the 2/2; (8) a 2/2
+  against an untapped 3/3 at 20 — stay home; (9) a 2/2 "enters, 2 damage to any target" over a vanilla
+  3/3, their only creature a 2/2 — yes; (10) a 5/5 or a 1/1 lord — **no answer: "a judgement call and
+  depends on other cards in your hand and deck"**, so not a position; (11) Infinite Coursework on their
+  only threat, a 5/5 — yes; (12) surveil when flooded — "surveil excess lands that are not needed", and
+  look at how MtgSimulator values lands for scry / surveil / discard when there are enough. (13) a library
+  search and (14) a planeswalker's best ability — to discuss first.
+
+- 2026-10-29, Shayne (the failures' rules): (3) two attacks that both win this turn — the one that
+  leaves us the better board, everyone on equal boards: "Yes I would say so for now". (9) kill now or
+  later — option A, a line's value counted partly at this turn's end: "generally in MTG if I am dealing
+  with a high value target, I do usually kill right it away, unless the risk reward of waiting is alot
+  higher … like playing around counters or protection spells, vs trying to surprise the opponent and
+  maybe get a little more potential value. If there isn't any more potential value to get though, then
+  i'll kill it right away. It kind of scales with the severity of the threat." (13) **"Tutors should
+  fetch the highest potential value card in theory. This is kind of the same problem as surveil and
+  scry, but just with more potential cards to choose from"** — MtgSimulator was solving it. (14) **"like
+  Chandra for example, even if it has 1 loyalty, you will want to attack it still, because it could draw
+  the opponent a card still (with its first +1) or give your opponent mana … Even with like a 4 or 5
+  power attacker, the risk of not being able to remove it later on is super high and can be game losing.
+  This is not the same risk as not attacking a jace planeswalker token … since the ceiling of jace is
+  just drawing a card."**
+
+- 2026-10-29, Shayne (the flier, after `Explain` showed the look-ahead's defender blocking nothing —
+  every block an equal −10 000 loss, the tie to "no block"): **"it should block anyways. Like yeah it is
+  technically dead, but again we want to make the best play possible even if our search shows that we
+  are winning or losing no matter what. This is because players can always make mistakes. So yes it
+  should block."** And: "I feel like the early exit due to the scoring is causing issues here" — a
+  finished game scored a flat ±10 000, blind to the board. So a finished game keeps a board tie-break
+  under its win or loss, for every chooser (extends AI-16.4's "a lost line keeps the best board" to a
+  loss inside the turn — DesignNotes' known ceiling, now asked).
+
+- 2026-10-29, Shayne: the `+flatend` match approved (one run). And position 7's cause, life near 0
+  priced too cheaply (5 → 1 for 8 points): **"As your life total gets lower you take on more risk of
+  your opponent having something that can just kill you, so we do need to account for it"** — agreed:
+  below 6 life a lost point costs more the nearer 0, e.g. (6 − life)² ÷ 2 on top (0.5 at 5, 12.5 at 1).
+
+- 2026-10-30, Shayne (the life risk is symmetric — their low life prices our burn at their face higher):
+  **"burn to their face is better at low life, but in general we would only do that if either the burn is
+  player only, its some sort of repeatable burn effect, or if we have enough damage in hand to completely
+  burn them out."** A rule to build as positions (a burn spell that can hit a creature, at their face
+  only when one of those holds). The end-board match re-run approved (one run); the commit approved.
+
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
   chooser's best — each option settled and evaluated, as `GreedyAi.Answer` already answers a target
@@ -181,17 +233,100 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       switches whole attacks off (they attack there too). Suite: 5 of 288 change, 3 769 steps (+6.6%).
       Match: **49.5% ± 1.7 over 192 games (95–97), no difference**, +1.1% a decision — kept. Suite
       accepted; the oracle re-read 87.2%, score given up 0.84 (0.81 before (b)).
-- [ ] AI-17.4 The review, code: read the decision path — `BeamSearchAi` (Search, Narrow, Prune, Winner,
+- [x] AI-17.4 The review, code: read the decision path — `BeamSearchAi` (Search, Narrow, Prune, Winner,
       Best, plans and their replay), `Rollout` (Score, OurPlay, OpponentStep, Answer, BestAlone),
       `Lookahead` (Settle, QuickAnswer, Joins), `Evaluator`, `Hidden`, `GreedyAi` — about 2 000 lines;
       every shortcut listed (the `ponytail:` comments, DesignNotes' "MagicCore known ceilings", AI-3's
       models not taken) and each judged: can it make the AI miss an obvious play? Compared against
-      MtgSimulator's AI for anything it does that this one doesn't
+      MtgSimulator's AI for anything it does that this one doesn't — **done (2026-10-29):** written up in
+      `docs/findings/magic-ai.md` ("The review, code"). Six likely to cause a miss: (1) `Settle` still
+      declines every may and aims every trigger at its first legal target — and it decides which children
+      get a rollout (5 below the root), our rollout's play, the opponent's plays; (2) walker abilities
+      unpriced (AI-9.3); (3) the simulated opponent's attackers each alone — walking into a swing that
+      kills only together; (4) every priority window with an instant in hand costs a search level, so a
+      precombat play pushes the whole attack past depth 3; (5) a creature valued by stats and keywords
+      only; (6) a creature that never untaps (Infinite Coursework) counted at full value and as an attacker.
+      Five possible (no potential bucket in Narrow; several-pick choices one cheap answer — surveil never
+      bins; plans replayed; the table's cap; one play a rollout turn). Not ported from MtgSimulator: its
+      potential bucket and rolled-out combinations. Nothing changed in code: AI-17.5's positions test them
 - [ ] AI-17.5 The review, behaviour: the basics suite — hand-built positions with Shayne's answers (lethal
       on board: with blockers, menace, flying, trample, a pump; a chump when facing lethal; a "may" for
       value; a search that finds its card; removal on the biggest threat; a planeswalker's best ability;
-      no attack into a losing trade; …), the AI run on each; every failure a task here
-- [ ] AI-17.6 What the review finds, fixed in order of how often it bites — each measured
+      no attack into a losing trade; …), the AI run on each; every failure a task here. From the review
+      (AI-17.4) too: an "enters, deal damage to any target" creature cast over a plain one; keeping a
+      blocker home against a swing that kills only together; removal on the only blocker, then lethal,
+      with an instant in hand; removal on an engine over a bigger body; Infinite Coursework against a kill
+      spell; a surveil that bins a land when flooded — **first eleven built (2026-10-29):**
+      `MagicCore.Tests/Ai/BasicsTests.cs`, Shayne's answers (1)–(9), (11), (12); (10) has no answer, (13)
+      and (14) wait on a discussion. **7 pass:** lethal through one blocker, with menace, with trample,
+      with a pump, after killing the only blocker (an instant in hand — review item 4 didn't bite here),
+      no attack into a losing trade, Coursework on their only threat (item 6 didn't bite: no other play).
+      **4 fail, ignored as AI-17.6 tasks** (each cause read with `Explain`, not guessed): (3), (7), (9), (12)
+- [ ] AI-17.6 What the review finds, fixed in order of how often it bites — each measured. Shayne: every
+      shortcut in AI-17.4's list is to be fixed, cost accepted. From the basics suite:
+  - [ ] (7) the blocker over Draw Two at 5 life — **re-diagnosed (2026-10-29):** Claude's position was
+        wrong: at 5 with one 3/3 against three 2/2s, the swing puts us at 1, it doesn't kill. With
+        `Rollout.Attacks.AsOne` the look-ahead imagines that swing, and Draw Two still wins (−13.30 against
+        −17.50): 5 life → 1 costs 8 points, under one dead 2/2 plus their weaker clock. **Life near 0 is
+        priced too cheaply** — the rule to agree with Shayne (AI-9.2's taper was dropped, 16 tests moved).
+        At 4 life (where it does kill only together) both models cast the blocker — `AsOne` sees Draw Two
+        as a loss (−9 529), each-alone wins by less (−17.50 against −19.30). **Built (2026-10-29/30), suite
+        and match to run:** at 5 life BOTH fixes are needed, each shown alone not to flip it: the life risk
+        (`Evaluator.Terms.LowLifeRisk`, `+flatlowlife`: below 6, (6 − life)² ÷ 2 more — Shayne's rule) with
+        the default look-ahead still never imagines the swing (each 2/2 alone dies to our 3/3); **whole
+        attacks in the look-ahead, the default now** (`Rollout.Attacks.AsOne`, `+eachalonelookahead` the
+        old; +27.6% a position in AI-17.3 — Shayne: "reconsider if a test case needs it", and cost
+        accepted) — so review item 3 IS a miss, together with the life price. Test with both controls.
+        AI-16's control switches both off; the all-in test's control names `EachAlone`. Golden games:
+        1 more moved by the life term (all 12 pass with it forced off); regenerated. Suite (with (12)'s
+        branching): 21 of 288 change, 4 470 steps a position (+18.5% on 3 772); each off alone —
+        `+eachalonelookahead` 8 change, 3 745 steps; `+flatlowlife` 15, 4 523; `+onepick` 21, 4 470 (it never
+        fires in the suite). MagicCore.Tests 1 169 pass. **Matches (2026-10-30), each no 5pp difference —
+        kept:** `+eachalonelookahead` 49.7% ± 1.6 over 288 (143–145), +22.7% a decision; `+flatlowlife`
+        49.2% ± 1.1 over 384 (189–195), +0.9%; `+onepick` 50.0% over 96, identical (never fires). Suite
+        accepted; the oracle re-read 86.5%, score given up 1.03 (87.2%, 0.84 before). The review: the
+        end-board tie-break saturated (squashed by its cap, 10, an ended game's position ±60+) — now over
+        `EndBoardScale` (100); several picks: fewer options than asked gave no answer, duplicates deduped.
+        1 suite decision moved, accepted; `+flatend`'s match ran on the saturated version
+  - [ ] (3) two attacks that both win this turn: the tie-break counts their life under 0, so everyone
+        attacking (10 002) beats the flier alone (10 000) — **built (2026-10-29), match to run:** `Explain`
+        showed the deeper cause: the look-ahead's defender, dead to the flier whatever it does, blocked
+        nothing (every block −10 000, the tie to "no block"), so the 2/2's attack cost nothing. Shayne: "it
+        should block anyways … players can always make mistakes", and "the early exit due to the scoring is
+        causing issues". So **a finished game keeps its board** (`Evaluator.Terms.EndBoard`, `+flatend`):
+        ±WinScore plus the position squashed under `EndBoardCap` (10), for every chooser; `Winner`'s
+        "a win this turn" threshold allows for it, and two lines still never cross a turn (448 against a
+        475 gap). It alone fixes the flier (a "won-this-turn by our board" tie-break was built first and
+        removed: not needed). Test with its control (off: the 2/2 attacks). AI-16's control switches it
+        off too. Golden games: 6 of 12 moved — all 12 pass with it forced off; regenerated. MagicCore.Tests
+        all pass. Suite: 3 of 288 change, 3 772 steps a position (+0.1%). **Match: 49.5% ± 0.9pp over 192
+        games (95–97), no difference, 1 537 steps a decision against 1 545 — kept** (done but for the commit)
+  - [ ] (9) the Pinger loses to a vanilla 3/3 (23.08 against 24.24): the look-ahead's opponent never
+        improves its board (it plays no unknown card), so their 2/2 killed on turn 3 ends the same as killed
+        now and the 3/3 first deals one more damage — NOT review item 1; the rule to agree with Shayne —
+        **option A tried and reverted (2026-10-30):** a share of each line read as our turn ends
+        (`Rollout.Settings.NowShare`): the Pinger is cast from a share of 0.2 (0.15 not), but AI-13.4's
+        agreed hold breaks at every share tried down to 0.1 (`Unsummon_IsHeld_AgainstAPlainAttacker`: the
+        bounce's tempo shows at once, their recast only by the horizon). A uniform "now" can't tell "waiting
+        buys nothing" (the Pinger) from "waiting has value" (Unsummon) — back to Shayne
+  - [ ] (12) surveil bins nothing: a choice of several picks gets one cheap answer, the minimum (review
+        item 8); branch it. Shayne also: price lands by what they unlock, as MtgSimulator's
+        `CardValueTable` did (DesignNotes, "values resources by count") — AI-9's half — **built (2026-10-30), match to
+        run:** `BeamSearchAi.Settings.BranchPicks` (`+onepick`): a choice of several picks is branched on every
+        combination, each rolled out (up to `MaxPicks`, 32), as MtgSimulator's ResolveChoice; the tree only.
+        The position bins both lands; its control (off) keeps them
+  - [x] (13) a tutor fetches the highest-value card (Shayne) — **already so for a one-card search
+        (2026-10-30):** `Landcycling_FetchesTheColourTheHandNeeds` (Claude's reading of his rule: two Plains
+        in play, a {1}{B} creature stuck in hand, Apex Witchstalker landcycled — the Swamp). The tree tries
+        each card, the rollout sees the creature cast. The CONTROL: one ply ties the three basics (4.50 each)
+        and takes the first by name. "Up to N" searches (Fblthp) take the first N — only basics in FRA
+  - [ ] (14) a walker attacked even at 1 loyalty (Shayne's Chandra rule) — **position built, fails, ignored
+        under AI-9.3 (2026-10-30):** `AWalkerAtOneLoyalty_IsAttacked_OverTheirFace`: Chandra priced 2.35
+        (body and loyalty, her abilities unpriced; in the look-ahead her +1 only deals us 2), so 5 at their
+        face (23.60) beats killing her (21.63)
+  - [ ] Burn at their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
+        damage in hand burns them out — otherwise a creature. Positions first (the symmetric life risk
+        prices their low life higher, so check it doesn't send burn at the face against his rule)
 - [ ] AI-17.7 Blunder counters (Shayne, 2026-10-29): over N AI games, each decision checked for a named
       mistake, counted whatever the game's result — **missed lethal** first (an attack that kills through
       the defender's best blocks, not made; AI-17.3 should drive it to 0), then walked into lethal,
@@ -207,11 +342,17 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 
 ## Next
 
-**AI-17.4–17.5, the review** (the code read, then the basics suite with Shayne's answers), then AI-17.7's
-blunder counters; AI-9.3 (walker abilities) holds the ignored Chandra test. `MagicConsole --record=FILE
---explain=N` shows what the search imagined: use it on every position (it found #547's cause). Read this story's Diagnosis; the two kept records; then
-`BeamSearchAi.Search` / `Winner`, `Rollout.Answer`, `Lookahead.QuickAnswer`, and MtgSimulator's
-`MultiTurnBeamSearchAiStrategy.FindLethalAttacks`.
+**AI-17.6, the rest of the fixes.** The basics suite (`MagicCore.Tests/Ai/BasicsTests.cs`, Shayne's answers)
+has two ignored: (9) the Pinger — option A reverted (it breaks AI-13.4's Unsummon hold), a new rule from
+Shayne needed; (14) Chandra at 1 — AI-9.3's walker pricing, the design to agree with Shayne. Then the
+review's list not yet fixed (`docs/findings/magic-ai.md`, "The review, code"): item 1 (`Lookahead.Settle`
+still declines mays and aims triggers first-legal — it judges `Narrow`, our rollout's play, the opponent's
+plays), 4 (instant windows cost search levels), 5 (creatures valued by stats only), 6 (Infinite Coursework
+counted whole), 7 (no potential bucket), 9 (plans replayed), 10 (the table's cap), 11 (one play a rollout
+turn) — each with a position that fails first, its control the fix off. Every new switch joins the anchor
+(AI-17.8). `MagicConsole --record=FILE --explain=N` and `BeamSearchAi.Explain()` show what the search
+imagined: read it before naming a cause (three of this session's four guesses were wrong). Then AI-17.7's
+blunder counters, each checker's rule agreed with Shayne first.
 
 ## Log
 
@@ -222,3 +363,10 @@ blunder counters; AI-9.3 (walker abilities) holds the ignored Chandra test. `Mag
   `--explain` built to find #547's cause.
 - 2026-10-29: AI-17.3 (b) — the attack as one decision, the search's tree only (Shayne); 49.5% over 192
   games, +1.1% a decision; Chandra's walker case a known defect (AI-9.3). AI-17.3 done.
+- 2026-10-29: AI-17.4 — the code read: six shortcuts likely to cause a miss, five possible
+  (`docs/findings/magic-ai.md`, "The review, code"); the basics suite's positions extended from it.
+- 2026-10-29: AI-17.5 — Shayne's answers; 11 positions built, 7 pass, 4 fail (ignored, AI-17.6 tasks).
+- 2026-10-30: AI-17.6 — a finished game keeps its board (`EndBoard`): 49.5% over 192 games, kept. Life
+  risk below 6, whole attacks in the look-ahead, every combination of a several-pick choice: each no
+  worse over 96–384 games, kept (+22.7% a decision, the look-ahead's whole attacks). Option A for the Pinger
+  tried and reverted (it breaks AI-13.4's hold); a tutor already fetches well; Chandra at 1 is AI-9.3's.

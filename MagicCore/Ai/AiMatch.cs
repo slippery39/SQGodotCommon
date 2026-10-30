@@ -71,6 +71,10 @@ public static class AiMatch
 			["oldblocks"] = o => o with { Without = o.Without | Evaluator.Terms.BlockSurvival },
 			// The look-ahead's defender never gang-blocks, before AI-15: beam+nogang.
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
+			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
+			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
+			// Life below 6 without the growing risk of being finished, as before AI-17.6: beam+flatlowlife.
+			["flatlowlife"] = o => o with { Without = o.Without | Evaluator.Terms.LowLifeRisk },
 			// The look-ahead's defender never chump-blocks, facing lethal or not, before AI-17.3: beam+nochump.
 			["nochump"] = o => o with { Without = o.Without | Evaluator.Terms.ChumpBlocks },
 			// The threat term without a trampler's excess over its blocker (AI-8.4): beam+notrample.
@@ -85,11 +89,19 @@ public static class AiMatch
 			["greedyrollout"] = WithRollout(r => r with { Ours = Rollout.OurPolicy.Greedy }),
 			// The rollout's combat (AI-3.8): an attack judged all-in as well as alone — beam+allin; a
 			// target choice by its owner's best answer — the default since AI-17.3 (beam+firsttarget is the old).
+			// Since AI-17.6 it REPLACES the look-ahead's whole attacks (the default), not adds to them.
 			["allin"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AllInToo }),
 			// The search's tree declares a creature at a time, before AI-17.3: beam+eachalone.
 			["eachalone"] = o => o with { WholeAttacks = false },
-			// The look-ahead chooses whole attacks too (AI-17.3, not taken for its cost): beam+asonelookahead.
-			["asonelookahead"] = WithRollout(r => r with { Attacks = Rollout.Attacks.AsOne }),
+			// A choice of several picks gets GreedyAi's one answer, not every combination, as before AI-17.6: beam+onepick.
+			["onepick"] = o => o with { BranchPicks = false },
+			// The look-ahead judges each attacker alone, as before AI-17.6: beam+eachalonelookahead.
+			["eachalonelookahead"] = WithRollout(r =>
+				r with
+				{
+					Attacks = Rollout.Attacks.EachAlone,
+				}
+			),
 			// The first legal target, as before AI-17.3: beam+firsttarget.
 			["firsttarget"] = WithRollout(r => r with { Targets = Rollout.Targets.FirstLegal }),
 			// The simulated opponent's planeswalkers idle unless a casting model judges them worth it —
