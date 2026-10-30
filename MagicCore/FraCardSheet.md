@@ -189,7 +189,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Lifelink  
 > {2}{W/B}: Return this card from your graveyard to your hand.
 
-**Status:** scripted · **tests naming it:** FraGraveyardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, BasicsTests, FraGraveyardTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…
 
@@ -3802,7 +3802,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Tinybones enters, each opponent discards a card.  
 > Whenever a player discards one or more cards, Tinybones deals 1 damage to each opponent.
 
-**Status:** scripted · **tests naming it:** FraEngineTests, FraUncommonDiscardTests
+**Status:** scripted · **tests naming it:** BasicsTests, FraEngineTests, FraUncommonDiscardTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Discard` — Each player named discards, choosing for themselves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

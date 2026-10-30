@@ -73,6 +73,14 @@ public static class AiMatch
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
+			// Every graveyard card worth nothing, even one that can return itself, as before AI-17.6: beam+deadgraveyard.
+			["deadgraveyard"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.GraveyardAccess,
+				},
+			// Settle answers a target first-legal and declines every "you may", as before AI-17.6: beam+quicksettle.
+			["quicksettle"] = o => o with { Without = o.Without | Evaluator.Terms.SettleChoices },
 			// Life below 6 without the growing risk of being finished, as before AI-17.6: beam+flatlowlife.
 			["flatlowlife"] = o => o with { Without = o.Without | Evaluator.Terms.LowLifeRisk },
 			// The look-ahead's defender never chump-blocks, facing lethal or not, before AI-17.3: beam+nochump.

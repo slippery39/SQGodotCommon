@@ -343,7 +343,8 @@ public class AiPositionTests
 	// answered every "you may" with nothing, so the −2 was "−2 loyalty for nothing" — and the plan made as
 	// Way of the Deathbringer was cast (#257) drew, replayed at #262 without a search. Now a "you may" is
 	// answered with its chooser's best (Rollout.Settings.Mays). Played as the table plays — one AI from
-	// #257, its plan and all. The CONTROL: "you may" declined, it draws.
+	// #257, its plan and all. The CONTROL: "you may" declined, it draws. Shayne's whole answer (2026-10-30)
+	// is the 4/4 from Blessed Ghoul — the test after this one.
 	[Test]
 	public void AYouMay_IsTakenInTheLookAhead_TheDeathbringersBeast()
 	{
@@ -353,9 +354,16 @@ public class AiPositionTests
 		Assert.That(before[261].DecidingPlayerId(), Is.EqualTo(me), "#262 is the AI's");
 		string AtMove262(bool mays)
 		{
+			// the control is the look-ahead as it was: Settle's own "you may" (AI-17.6) takes the −2 too
 			var ai = new BeamSearchAi(
 				me,
-				new(RolloutSettings: BeamSearchAi.DefaultRollout with { Mays = mays })
+				new(
+					RolloutSettings: BeamSearchAi.DefaultRollout with
+					{
+						Mays = mays,
+					},
+					Without: mays ? Evaluator.Terms.None : Evaluator.Terms.SettleChoices
+				)
 			);
 			var played = "";
 			for (var n = 257; n <= 262; n++)
@@ -375,10 +383,51 @@ public class AiPositionTests
 			MoveTokens.Same(AtMove262(false), drew),
 			"the control: blind to the 4/4, it draws"
 		);
+		// Since AI-17.6 it goes to combat at #262, attacks with Tinybones, then −2 — the 4/4 made this turn.
 		Assert.That(
-			MoveTokens.Describe(before[261], AtMove262(true)),
-			Does.EndWith("[−2]"),
+			DeathbringerTurn(record, before, me)
+				.CardsIn(me, ZoneType.Battlefield)
+				.Select(c => c.Name),
+			Does.Contain("Beast"),
 			"the 4/4"
+		);
+	}
+
+	/// <summary>The Deathbringer's turn played as the table plays it — one AI from #257 — then on from #262 against GreedyAi.</summary>
+	static GameState DeathbringerTurn(GameRecord record, IReadOnlyList<GameState> before, int me)
+	{
+		var ai = new BeamSearchAi(me);
+		var s = before[256];
+		for (var n = 257; n <= 262; n++)
+			if ((s = before[n - 1]).DecidingPlayerId() == me)
+				s = ai.Decide(s).State;
+		return TestGames.PlayAis(s, s.GetGame().TurnNumber, ai, new GreedyAi(s.OpponentOf(me)));
+	}
+
+	// Shayne, 2026-10-30: "the idea is that we can recur the blessed ghoul from the graveyard, so sacrificing
+	// the ghoul means we can just get the ghoul back next turn and potentially do it again" — and "having the
+	// 2/1 tinybones and a 4/4 beast is better than having a 1/1 that you can recur from the graveyard and a
+	// beast token". Right after the −2 the evaluator agrees (Ghoul −23.38, Tinybones −25.23, the graveyard's
+	// 1.15 in — Evaluator.Terms.GraveyardAccess); the imagined turns flip it: the imagined defender blocks one
+	// combat deep, so in the Ghoul's line Tinybones blocks a Cadet, the 3/1 trampling Puller lives, and the
+	// Beast must stay home (their swing back is exactly lethal at 6).
+	[
+		Test,
+		Ignore(
+			"AI-17.6: blocks judged one combat deep in the look-ahead — the fix to build (Shayne: think about their swing back)"
+		)
+	]
+	public void TheDeathbringersBeast_IsMadeFromBlessedGhoul_WhichComesBack()
+	{
+		var record = KeptRecords.Get("DeathbringerDrawsNotABeast");
+		var (before, _) = record.Replay();
+		var me = before[256].DecidingPlayerId();
+
+		Assert.That(
+			DeathbringerTurn(record, before, me)
+				.CardsIn(me, ZoneType.Graveyard)
+				.Select(c => c.Name),
+			Does.Contain("Blessed Ghoul")
 		);
 	}
 
@@ -632,8 +681,15 @@ public class AiPositionTests
 	{
 		var record = KeptRecords.Get("GalliaWontAttack");
 		var s547 = record.Before(547);
-		AiDecision Choice(Rollout.Settings rollout) =>
-			new BeamSearchAi(s547.DecidingPlayerId(), new(RolloutSettings: rollout)).Decide(s547);
+		AiDecision Choice(
+			Rollout.Settings rollout,
+			Evaluator.Terms without = Evaluator.Terms.None
+		) =>
+			new BeamSearchAi(
+				s547.DecidingPlayerId(),
+				new(RolloutSettings: rollout, Without: without)
+			).Decide(s547);
+		// the control is the look-ahead as it was: Settle's choices (AI-17.6) hold too
 		var boardOnly = BeamSearchAi.DefaultRollout with
 		{
 			Opponent = Rollout.OpponentModel.BoardOnly,
@@ -641,7 +697,8 @@ public class AiPositionTests
 		};
 
 		Assert.That(
-			Choice(boardOnly).Action is global::MagicCore.Actions.CastSpellAction c
+			Choice(boardOnly, Evaluator.Terms.SettleChoices).Action
+				is global::MagicCore.Actions.CastSpellAction c
 				&& s547.GetCard(c.CardId).Name == "Unsummon",
 			"the control: board-only, it casts Unsummon"
 		);

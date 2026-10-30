@@ -1,15 +1,15 @@
 # Seeded games' fingerprints — see MagicCore.Tests/GoldenReplay.cs. Regenerate only
 # for an intended behaviour change, with the diff reviewed. Format: game seed : steps, last
 # turn, each player's life [hand,library,graveyard,battlefield,exile], hash | hash per 100 steps.
-Red-Green vs White-Black 01 : steps=146 turn=28 end=0L[0,19,9,12,1] 21[1,18,9,13,0] final=6215f76a | c3453068
-Red-Green vs White-Black 02 : steps=121 turn=30 end=0L[0,19,9,11,1] 20[0,18,9,13,0] final=9eb6312a | fbaec611
-Red-Green vs White-Blue Jace 01 : steps=201 turn=28 end=-2L[0,19,9,12,0] 17[0,14,12,21,0] final=c1f74705 | c2b78801 b2dc3d86
-Red-Green vs White-Blue Jace 02 : steps=345 turn=41 end=1[0,13,13,14,0] -2L[0,9,18,16,0] final=2a8c3f5c | c2c36aa6 92a97d87 52048fc3
+Red-Green vs White-Black 01 : steps=121 turn=28 end=0L[0,19,9,12,1] 16[0,19,9,13,0] final=8b014177 | 0c0916bb
+Red-Green vs White-Black 02 : steps=121 turn=30 end=0L[0,19,9,11,1] 19[0,18,9,13,0] final=ff7f07d6 | b9e3fd13
+Red-Green vs White-Blue Jace 01 : steps=195 turn=28 end=-2L[0,19,9,12,0] 17[0,14,12,20,0] final=ce8873a4 | aa49a59f
+Red-Green vs White-Blue Jace 02 : steps=168 turn=32 end=0L[0,18,8,15,0] 22[0,14,14,16,0] final=71274bb2 | 5ab77bf1
 White-Black vs Red-Green 01 : steps=72 turn=19 end=12[0,23,7,10,0] -2L[0,24,6,10,2] final=01cd6ea9
 White-Black vs Red-Green 02 : steps=125 turn=23 end=14[0,22,9,9,0] 0L[0,20,8,12,1] final=2f6e6e9a | 19f57a10
-White-Black vs White-Blue Jace 01 : steps=113 turn=21 end=16[0,23,7,10,0] -1L[0,19,10,9,2] final=5f5c09ce | 5cadce60
+White-Black vs White-Blue Jace 01 : steps=105 turn=19 end=14[0,24,6,10,0] -1L[0,20,10,10,1] final=688b8f9d | 68bfe6e1
 White-Black vs White-Blue Jace 02 : steps=97 turn=21 end=26[0,23,5,12,0] -15L[0,17,10,14,1] final=8d77a108
-White-Blue Jace vs Red-Green 01 : steps=105 turn=18 end=0L[1,21,9,10,0] 18[0,24,5,12,0] final=f79c50c6 | 4054ff10
-White-Blue Jace vs Red-Green 02 : steps=132 turn=22 end=-1L[0,19,11,12,0] 17[0,21,7,13,0] final=e805049b | 9ee0433e
-White-Blue Jace vs White-Black 01 : steps=113 turn=26 end=0L[0,15,11,18,1] 9[0,19,10,12,0] final=e6128b0a | 035d873f
+White-Blue Jace vs Red-Green 01 : steps=118 turn=20 end=0L[1,20,9,11,0] 6[0,23,7,13,0] final=a96ca373 | a062ec51
+White-Blue Jace vs Red-Green 02 : steps=132 turn=22 end=-1L[0,19,11,12,0] 17[0,21,7,13,0] final=bc846ba7 | ad53f359
+White-Blue Jace vs White-Black 01 : steps=121 turn=28 end=0L[0,13,13,17,1] 9[0,19,10,11,0] final=411a8502 | 9e029d7b
 White-Blue Jace vs White-Black 02 : steps=89 turn=22 end=-12L[0,18,10,11,1] 20[0,20,7,13,0] final=aa57306f

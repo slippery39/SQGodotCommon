@@ -327,4 +327,87 @@ public class BasicsTests
 
 		Assert.That(s.IsOnBattlefield(chandra), Is.False, "Chandra is attacked and dies");
 	}
+
+	// Review item 1 (AI-17.4): below the root only 5 children get a rollout, ranked by the cheap look-ahead
+	// (Lookahead.Settle), which aimed every trigger at its first legal target — ours are listed first. The
+	// destroyer ("When this enters, destroy target creature", 3 mana) needs the land drop first, then
+	// competes with six 1-mana 1/1s; their only creature is a 5/5. The land's line scored as a pass — Settle
+	// had the destroyer kill itself, so our rollout never cast it, even on turn 3 — and fell out of the
+	// beam's 4. Two fixes, each needed: Settle answers a target by its chooser's best
+	// (Evaluator.Terms.SettleChoices); and the rollout makes more than one play a turn
+	// (Rollout.Settings.ActionsPerTurn — at 1 the land's line cast one 1-drop on turn 3 with four lands
+	// up). The CONTROLS: either one off, a 1-mana creature. ActionsPerTurn stays 1 by default: from 2 the
+	// agreed #547 hold casts Unsummon (AI-17.6, for Shayne) — so the default AI still misses this.
+	[TestCase(Evaluator.Terms.None, 20, ExpectedResult = true)]
+	[TestCase(Evaluator.Terms.SettleChoices, 20, ExpectedResult = false)]
+	[TestCase(Evaluator.Terms.None, 1, ExpectedResult = false)]
+	public bool AnEntersTrigger_BehindALandDrop_DestroysTheirThreat(
+		Evaluator.Terms without,
+		int plays
+	)
+	{
+		Lands(2);
+		Put(me, TestGames.Card("Forest"), ZoneType.Hand);
+		var destroyer = Put(
+			me,
+			new CardDefinition(
+				TestGames.CreatureCosting("{3}", "Destroyer", "2/2").Data,
+				[
+					new TriggeredAbilityComponent(
+						TriggerEvent.SelfEnters,
+						[new Destroy(Ref.Target())]
+					)
+					{
+						Targets = [TargetSpec.Creature],
+					},
+				]
+			),
+			ZoneType.Hand
+		);
+		for (var i = 0; i < 6; i++)
+			Put(me, TestGames.Creature($"Cheap {i}", "1/1"), ZoneType.Hand);
+		var threat = Put(them, TestGames.Creature("Threat", "5/5"));
+
+		Play(
+			settings: new()
+			{
+				Without = without,
+				RolloutSettings = BeamSearchAi.DefaultRollout with { ActionsPerTurn = plays },
+			}
+		);
+
+		return s.IsOnBattlefield(destroyer) && !s.IsOnBattlefield(threat); // cast, and their 5/5 destroyed
+	}
+
+	// Shayne, 2026-10-30: a card that can return itself from the graveyard is "basically like paying a cost
+	// to be able to have access to a card. So that should be priced in" (Evaluator.Terms.GraveyardAccess):
+	// Blessed Ghoul ("{2}{W/B}: Return this card from your graveyard to your hand") at its price in hand less
+	// the mana to bring it back; Tinybones, which can't come back, at nothing. The CONTROL: off, nothing.
+	[TestCase(Evaluator.Terms.None, "Blessed Ghoul", true)]
+	[TestCase(Evaluator.Terms.None, "Tinybones, Pocket Nuisance", false)]
+	[TestCase(Evaluator.Terms.GraveyardAccess, "Blessed Ghoul", false)]
+	public void ACardThatReturnsItself_KeepsAValueInTheGraveyard(
+		Evaluator.Terms without,
+		string name,
+		bool valued
+	)
+	{
+		var held = BeamSearchAi.DefaultRollout.Held!;
+		var card = Put(me, FraCards.Get(name), ZoneType.Graveyard);
+		var access = s.ActivatedAbilitiesOf(s.GetCard(card))
+			.Where(a => a.From == ZoneType.Graveyard)
+			.Select(a => a.Cost.ManaValue)
+			.DefaultIfEmpty(0)
+			.Min();
+
+		var value = Evaluator.Without(
+			without,
+			() => Evaluator.Explain(s, me, held).Single(x => x.Term == "our graveyard").Value
+		);
+
+		Assert.That(
+			value,
+			Is.EqualTo(valued ? held.Of(name) - Evaluator.RecastPerMana * access : 0).Within(1e-9)
+		);
+	}
 }

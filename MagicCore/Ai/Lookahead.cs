@@ -16,7 +16,10 @@ public static class Lookahead
 	/// <paramref name="allAttack"/>: every attacker still to be declared attacks the player, where
 	/// otherwise nobody else attacks (the rollout's all-in judgment, story AI-3.8).
 	/// </summary>
-	public static GameState Settle(GameState s, bool allAttack = false)
+	public static GameState Settle(GameState s, bool allAttack = false) =>
+		Settle(s, allAttack, true);
+
+	static GameState Settle(GameState s, bool allAttack, bool choose)
 	{
 		for (var i = 0; i < 200 && !s.IsOver(); i++)
 		{
@@ -24,7 +27,8 @@ public static class Lookahead
 				s = s.Choose(
 					allAttack && choice is DeclareAttackerChoice attacker
 						? [s.OpponentOf(attacker.PlayerId)]
-						: QuickAnswer(s, choice)
+					: choose && IsChosen(choice) ? Chosen(s, choice)
+					: QuickAnswer(s, choice)
 				);
 			else if (!s.StackIsEmpty() || InCombat(s))
 				s = s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
@@ -32,6 +36,37 @@ public static class Lookahead
 				break;
 		}
 		return s;
+	}
+
+	/// <summary>
+	/// A choice Settle answers by its chooser's best (<see cref="Evaluator.Terms.SettleChoices"/>, AI-17.6): one
+	/// target, or a single "you may" (none or one — a pay-to-keep pays, as the cheap answer does). Combat
+	/// declarations keep their own rules (QuickAnswer).
+	/// </summary>
+	static bool IsChosen(ChoiceAction choice) =>
+		!Evaluator.IsOff(Evaluator.Terms.SettleChoices)
+		&& choice is not (DeclareAttackerChoice or DeclareBlockerChoice or PayToKeepChoice)
+		&& choice.MaxChoices == 1
+		&& (choice is ChooseTargetChoice || choice.MinChoices == 0);
+
+	/// <summary>
+	/// Each answer (none too, if optional) settled ONE level down — the cheap answers below it, so nested
+	/// triggers can't multiply the cost — and the best for whoever chooses: GreedyAi's way, inside Settle.
+	/// Lich's Relic ("you may pay {2}. When you do, destroy …") measured 2 in the card-value sandbox, the
+	/// "you may" declined; now 16.5.
+	/// Before, a trigger's target was the first legal one (ours are listed first: "destroy target creature"
+	/// killed our own) and every "you may" was declined, and Settle ranks which children the search rolls
+	/// out (BeamSearchAi.Narrow), which play our rollout makes, and the simulated opponent's plays.
+	/// ponytail: hand cards at the flat price (Settle has no held values) — pass them in if a pick between
+	/// two cards in hand is ever misjudged.
+	/// </summary>
+	static IEnumerable<int> Chosen(GameState s, ChoiceAction choice)
+	{
+		var who = s.DecidingPlayerId();
+		var picks = choice.Options.Select(o => (IEnumerable<int>)[o.Id]).ToList();
+		if (choice.MinChoices == 0)
+			picks.Insert(0, []);
+		return picks.MaxBy(pick => Evaluator.Evaluate(Settle(s.Choose(pick), false, false), who))!;
 	}
 
 	public static bool InCombat(GameState s) =>

@@ -67,10 +67,11 @@ public static class Evaluator
 		double Lands,
 		double Others,
 		double Hand,
-		double Life
+		double Life,
+		double Graveyard
 	)
 	{
-		public double Total => Creatures + Walkers + Lands + Others + Hand + Life;
+		public double Total => Creatures + Walkers + Lands + Others + Hand + Life + Graveyard;
 	}
 
 	/// <summary>
@@ -100,12 +101,14 @@ public static class Evaluator
 			("our other permanents", ours.Others),
 			("our hand", ours.Hand),
 			("our life", ours.Life),
+			("our graveyard", ours.Graveyard),
 			("their creatures", -theirs.Creatures),
 			("their walkers", -theirs.Walkers),
 			("their lands", -theirs.Lands),
 			("their other permanents", -theirs.Others),
 			("their hand", -theirs.Hand),
 			("their life", -theirs.Life),
+			("their graveyard", -theirs.Graveyard),
 			("our clock on them", threat ? Pressure(s, player, opponent) : 0),
 			("their clock on us", threat ? -Pressure(s, opponent, player) : 0),
 		];
@@ -185,6 +188,23 @@ public static class Evaluator
 		/// their weaker clock, and the AI drew two cards into a swing to 1 (`+flatlowlife`).
 		/// </summary>
 		LowLifeRisk = 1024,
+
+		/// <summary>
+		/// The look-ahead's, beside the evaluator: <see cref="Lookahead.Settle"/> answers one target or a
+		/// single "you may" by its chooser's best, one level down (AI-17.6, review item 1) — before, the
+		/// first legal target and "no" (`+quicksettle`).
+		/// </summary>
+		SettleChoices = 2048,
+
+		/// <summary>
+		/// A card in a graveyard that can return itself (an activated ability usable there that returns its
+		/// source) priced as a card in hand less the mana to bring it back (<see cref="RecastPerMana"/>) —
+		/// AI-17.6, Shayne: "basically like paying a cost to be able to have access to a card. So that should
+		/// be priced in." Without it every graveyard card was worth nothing, so Way of the Deathbringer's −2
+		/// sacrificed Tinybones and kept Blessed Ghoul ("{2}{W/B}: Return this card from your graveyard to your
+		/// hand"), where the Ghoul comes back to do it again (`+deadgraveyard`).
+		/// </summary>
+		GraveyardAccess = 4096,
 	}
 
 	/// <summary>
@@ -415,8 +435,42 @@ public static class Evaluator
 					)
 				: held.Of(c.Name)
 			);
-		return new(creatures, walkers, lands, others, hand, lifeValue);
+		var graveyard = IsOff(Terms.GraveyardAccess)
+			? 0
+			: s.CardsIn(player, ZoneType.Graveyard)
+				.Sum(c =>
+					ReturnCost(s, c) is { } cost
+						? Math.Max(
+							0,
+							(
+								c.Is(CardType.Land) ? LandInHand
+								: held is null ? FlatHandCard
+								: held.Of(c.Name)
+							)
+								- RecastPerMana * cost.ManaValue
+						)
+						: 0
+				);
+		return new(creatures, walkers, lands, others, hand, lifeValue, graveyard);
 	}
+
+	/// <summary>
+	/// The mana cost of the cheapest ability that returns this graveyard card itself (Blessed Ghoul's
+	/// "{2}{W/B}: Return this card from your graveyard to your hand"), or null.
+	/// ponytail: the mana only — an extra cost (a finality counter, "activate only if") is not priced, and a
+	/// graveyard ability that exiles the card for an effect (Campus Crier) gives it no value; price them if
+	/// such a card is ever misjudged.
+	/// </summary>
+	static ManaCost? ReturnCost(GameState s, Card c) =>
+		s.ActivatedAbilitiesOf(c)
+			.Where(a =>
+				a.From == ZoneType.Graveyard
+				&& a.Effects.Any(e =>
+					e is ReturnFromGraveyard { What: var what } && what == Ref.Source
+				)
+			)
+			.Select(a => a.Cost)
+			.MinBy(cost => cost.ManaValue);
 
 	/// <summary>
 	/// A planeswalker's worth (AI-8.2, Shayne: loyalty "only matters as to what it can actually provide

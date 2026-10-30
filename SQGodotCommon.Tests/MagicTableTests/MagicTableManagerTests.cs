@@ -12,7 +12,14 @@ namespace SQGodotCommon.Tests;
 
 public class MagicTableManagerTests
 {
-	static MagicTableManager New(int seed = 5, bool aiVsAi = false, bool search = false) =>
+	/// <summary>
+	/// The seeded game most tests here autoplay to turn 9 — your turn, a creature able to attack, and a later
+	/// declaration of two. GreedyAi plays it, so a change in how GreedyAi plays can move it: pick another seed
+	/// that keeps those moments — 15 since AI-17.6 (5 before; GreedyAi's look-ahead began choosing its targets).
+	/// </summary>
+	const int Seed = 15;
+
+	static MagicTableManager New(int seed = Seed, bool aiVsAi = false, bool search = false) =>
 		new(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], seed, aiVsAi, search);
 
 	static void RunAi(MagicTableManager m)
@@ -144,7 +151,7 @@ public class MagicTableManagerTests
 	public void NoAttacks_DeclinesTheWholeDeclaration_AsOneUndoStep()
 	{
 		var m = New();
-		m.AutoplayTo(9); // seed 5: your turn 9, a creature able to attack
+		m.AutoplayTo(9); // the seed: your turn 9, a creature able to attack
 		for (var i = 0; i < 50 && m.State.GetPendingChoice() is not DeclareAttackerChoice; i++)
 		{
 			RunAi(m);
@@ -173,7 +180,7 @@ public class MagicTableManagerTests
 	public void DeclareCombat_AttacksWithThePickedCreatures_AsOneDecision()
 	{
 		var m = New();
-		m.AutoplayTo(9); // seed 5: your turn 9, a creature able to attack
+		m.AutoplayTo(9); // the seed: your turn 9, a creature able to attack
 		for (var i = 0; i < 50 && m.State.GetPendingChoice() is not DeclareAttackerChoice; i++)
 		{
 			RunAi(m);
@@ -201,7 +208,7 @@ public class MagicTableManagerTests
 	public void AManualTap_FloatsTheMana_AndKeepsYourPriority()
 	{
 		var m = New();
-		m.AutoplayTo(9); // seed 5: your main phase, untapped Swamps
+		m.AutoplayTo(9); // the seed: your main phase, untapped Swamps
 		RunAi(m);
 		Assert.That(m.HumanToAct && m.State.GetPendingChoice() is null, "precondition");
 		var step = m.State.GetGame().Step;
@@ -244,11 +251,11 @@ public class MagicTableManagerTests
 	public void TheRecordFile_ReplaysTheGameAsPlayed()
 	{
 		var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-		var m = new MagicTableManager(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], 5)
+		var m = new MagicTableManager(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], Seed)
 		{
 			RecordTo = dir,
 		};
-		m.AutoplayTo(9); // seed 5: your turn 9, a creature able to attack (the lazy human below casts none)
+		m.AutoplayTo(9); // the seed: your turn 9, a creature able to attack (the lazy human below casts none)
 		RunAi(m);
 		m.Sandbox(m.HumanId, FraCards.Get("Last Gasp"), ZoneType.Hand);
 		var (tapped, undone) = (false, false);

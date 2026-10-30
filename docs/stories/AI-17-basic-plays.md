@@ -151,6 +151,17 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   When you said "pinger" I thought you meant an activated ability on a creature you already own." Not a
   miss; the position is dropped and option A stays reverted. Lesson: name a test card by what it does.
 
+- 2026-10-30, Shayne (the Deathbringer at #262 — the AI, with Settle's fix, attacks with Tinybones and
+  then −2 sacrificing TINYBONES): **"the idea is that we can recur the blessed ghoul from the graveyard,
+  so sacrificing the ghoul means we can just get the ghoul back next turn and potentially do it again."**
+  His answer is the −2 sacrificing Blessed Ghoul; the AI sacrifices Tinybones with or without the fix —
+  AI-17.2's test checked only "the −2", so it never checked this.
+
+- 2026-10-30, Shayne (Claude's proposal: a card in our graveyard that can return itself priced like a
+  known card in hand, less the mana to bring it back): **"the graveyard rule is basically like paying a
+  cost to be able to have access to a card. So that should be priced in."** Item 11 (plays per rollout
+  turn) against #547: "back to item 11 a little later". The `+quicksettle` match approved (one run).
+
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
   chooser's best — each option settled and evaluated, as `GreedyAi.Answer` already answers a target
@@ -333,6 +344,38 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         under AI-9.3 (2026-10-30):** `AWalkerAtOneLoyalty_IsAttacked_OverTheirFace`: Chandra priced 2.35
         (body and loyalty, her abilities unpriced; in the look-ahead her +1 only deals us 2), so 5 at their
         face (23.60) beats killing her (21.63)
+  - [ ] Review item 1, `Lookahead.Settle` — **built, waiting on Shayne (2026-10-30):** position
+        `AnEntersTrigger_BehindALandDrop_DestroysTheirThreat` (a 3-mana "enters, destroy target creature"
+        behind a land drop, six 1-mana 1/1s, their 5/5): the land's line scored as a pass — Settle had the
+        destroyer kill ITSELF (ours are listed first), so our rollout never cast it — and fell out of the
+        beam. Fix: `Evaluator.Terms.SettleChoices` (`+quicksettle`): Settle answers one target or a single
+        "you may" by its chooser's best, one level down (two levels tried — not needed). The position also
+        needs review item 11 (more than one play a rollout turn, from 3) — and FROM 2 PLAYS the agreed
+        #547 hold casts Unsummon (its imagined next turn plays Hortimancer AND Proctor from the graveyard
+        in the bounce line), so `ActionsPerTurn` stays 1 and the default AI still misses the position.
+        SettleChoices alone: card values — Lich's Relic 2 → 16.5 ("you may pay {2}" was declined),
+        Yoshimaru 4.5 → 16.5 (its "up to one" fight never fought); regenerated. Golden games 8 moved (all
+        pass with it forced off), regenerated. Suite 9 of 288 change, 4 866 steps a position (+8.8%). The
+        Deathbringer test (#262) fails: at #262 the AI goes to combat instead — it attacks with Tinybones first, THEN −2
+        sacrificing it — the same 4/4 and 2 more damage (played on: Beast made, Shayne 15 → 13) — asked
+        Shayne before changing his test. **Match: 49.5% ± 1.7 over 192 (95–97), no difference, +4.4% a
+        decision — kept.** It moved MagicTable's seeded test game (GreedyAi plays it): four
+        `MagicTableManagerTests` lost their "a creature able to attack on turn 9" — the seed is now one
+        constant, 15 (seeds 1–14 each missed one). Shayne then: the right sacrifice is Blessed Ghoul (it returns) — the test now
+        asserts that, ignored: **graveyard access** (`Evaluator.Terms.GraveyardAccess`, `+deadgraveyard`,
+        Shayne's rule) is built and fires (`ACardThatReturnsItself_KeepsAValueInTheGraveyard`), but the
+        sacrifice is still Tinybones — fresh, −14.29 against −16.74, the gap from the imagined next turn's
+        combat (kept, the Ghoul trades with Heartstring Puller and the Beast attacks for 4); and at the table
+        the sacrifice came from #257's plan (review item 9). Suite unchanged by it. Back to Shayne
+  - [ ] Blocks judged with a turn's foresight in the look-ahead (Shayne, 2026-10-30: "usually when you
+        attack you are thinking of what will happen if they attack back … If so we should try to fix
+        this") — the imagined defender scores a block by the board right after combat, so killing their
+        3/1 trampler or their 2/2 looks alike, though the trampler alive pins our Beast at home next turn.
+        Position: `TheDeathbringersBeast_IsMadeFromBlessedGhoul_WhichComesBack` (ignored)
+  - [ ] From the review of review item 1's fix (before its commit): Settle's chooser's-best is one level —
+        a "you may pay … when you do, target" reads as paying for nothing inside Settle; a required single
+        pick (a sacrifice) still takes the first listed; Settle prices hand cards flat, so graveyard
+        access is 0 there; and a second "chooser's best" beside `GreedyAi.Answer` (DesignNotes)
   - [ ] DEFERRED (Shayne, 2026-10-30: "hold off on the burn rule now, but note it for later") — burn at
         their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
         damage in hand burns them out — otherwise a creature. Positions first (the symmetric life risk

@@ -29,7 +29,10 @@ public static class Rollout
 	/// <param name="ActionsPerTurn">
 	/// Our non-land plays per simulated turn (and a casting opponent's spells). MtgSimulator's default
 	/// of 1 is an asymmetry — the opponent attacks with everything — kept as the starting point and
-	/// measured from there.
+	/// measured from there. AI-17.6 (review item 11): with a land to play and six 1-drops beside a 3-mana
+	/// "enters, destroy target creature", the land's line cast ONE 1-drop on turn 3 with four lands up, so
+	/// killing their 5/5 now lost to three 1/1s now (BasicsTests) — fixed from 3 plays; but from 2 the
+	/// agreed #547 hold casts Unsummon (its imagined next turn plays more). Left at 1 until Shayne decides.
 	/// </param>
 	/// <param name="Opponent">What the simulated opponent does — <see cref="OpponentModel"/>.</param>
 	/// <param name="Ours">How our own side plays in a rollout — <see cref="OurPolicy"/>.</param>

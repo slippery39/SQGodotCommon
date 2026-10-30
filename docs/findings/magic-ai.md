@@ -1293,3 +1293,25 @@ From Shayne's basics positions (`MagicCore.Tests/Ai/BasicsTests.cs`), each behin
   oracle re-read 86.5%, 1.03. AI-16.4's lost-line control now switches the end board off too (it keeps the
   card alone). The `+flatend` match above was run on the saturated version; **re-run on the committed
   one (b817065): 96 games, 51.0% ± 1.0pp (49–47), no 5pp difference**; 1 759 steps a decision against 1 778.
+
+## The cheap look-ahead answers by its chooser's best; a returning graveyard card keeps its value (2026-10-30, AI-17.6)
+
+- **Review item 1, `Evaluator.Terms.SettleChoices`** (`+quicksettle`): `Lookahead.Settle` answers one
+  target or a single "you may" by its chooser's best, one level down (two levels tried: not needed). The
+  position (`BasicsTests`: a 3-mana "enters, destroy target creature" behind a land drop beside six 1/1s,
+  their 5/5): Settle had the destroyer kill ITSELF (ours are listed first), so our rollout never cast it
+  and the land's line left the beam. It also needs more than one play a rollout turn (item 11) — from 3 it
+  is cast; but from 2 the agreed #547 hold casts Unsummon (the bounce line's imagined next turn casts
+  Hortimancer AND returns Proctor), so `ActionsPerTurn` stays 1 (Shayne: item 11 later). Card values:
+  Lich's Relic 2 → 16.5, Yoshimaru 4.5 → 16.5 (their "may"/"up to one" now taken); regenerated. Golden
+  games 8 moved (all pass with it forced off). Suite: 9 of 288 change, 4 866 steps a position (+8.8%).
+  Match: **192 games, 49.5% ± 1.7pp (95–97), no 5pp difference**; 1 894 steps a decision against 1 814
+  (+4.4%). Kept.
+- **Graveyard access, `Evaluator.Terms.GraveyardAccess`** (`+deadgraveyard`, Shayne: "like paying a cost
+  to be able to have access to a card"): a card whose graveyard ability returns it is priced as in hand
+  less 0.5 a mana (Blessed Ghoul 2.65 − 1.5 = 1.15). Suite: no decision changes, no cost — it fires on no
+  recorded position. It does NOT fix the Deathbringer (Shayne: −2 sacrificing the Ghoul, which comes back):
+  fresh at the sacrifice, Tinybones −14.29 against the Ghoul −16.74 — kept, the Ghoul trades with
+  Heartstring Puller in the imagined next turn and the Beast then attacks for 4; sacrificed, Tinybones
+  blocks a Cadet and the Beast stays home. The graveyard's 1.15 counts in both lines. No match yet.
+
