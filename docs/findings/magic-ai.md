@@ -1280,7 +1280,8 @@ From Shayne's basics positions (`MagicCore.Tests/Ai/BasicsTests.cs`), each behin
   re-read **86.5%, score given up 1.03** (87.2%, 0.84 before AI-17.6) — a little further from the oracle.
 - **Tried and reverted:** a share of each line read as our turn ends (Shayne's option A for the Pinger,
   position 9): the Pinger is cast from 0.2, but AI-13.4's agreed Unsummon hold breaks at every share down
-  to 0.1 — a uniform "now" can't tell "waiting buys nothing" from "waiting has value".
+  to 0.1 — a uniform "now" can't tell "waiting buys nothing" from "waiting has value". Then Shayne, the position
+  spelled out: with a vanilla 2/2 against it, "playing the 3/3 is probably correct" — not a miss; dropped.
 - **Positions that already pass:** a one-card tutor fetches the basic the hand needs (landcycling — the
   control, one ply, ties the basics). **Known, ignored:** Chandra at 1 loyalty not attacked (AI-9.3: priced
   2.35, her abilities unpriced).
@@ -1290,4 +1291,5 @@ From Shayne's basics positions (`MagicCore.Tests/Ai/BasicsTests.cs`), each behin
   its options gave no answer at all (the engine allows fewer); interchangeable cards (two Forests) now give
   one answer. 1 of 288 suite decisions moved (Break Under Pressure cast where it passed); accepted, the
   oracle re-read 86.5%, 1.03. AI-16.4's lost-line control now switches the end board off too (it keeps the
-  card alone). The `+flatend` match above was run on the saturated version.
+  card alone). The `+flatend` match above was run on the saturated version; **re-run on the committed
+  one (b817065): 96 games, 51.0% ± 1.0pp (49–47), no 5pp difference**; 1 759 steps a decision against 1 778.

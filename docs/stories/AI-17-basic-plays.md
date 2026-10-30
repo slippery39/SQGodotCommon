@@ -146,6 +146,11 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   burn them out."** A rule to build as positions (a burn spell that can hit a creature, at their face
   only when one of those holds). The end-board match re-run approved (one run); the commit approved.
 
+- 2026-10-30, Shayne (position 9 re-explained — the Pinger's 2 damage is a one-time "enters" trigger):
+  "In that specific case, with a vanilla 2/2 as the opponents card playing the 3/3 is probably correct.
+  When you said "pinger" I thought you meant an activated ability on a creature you already own." Not a
+  miss; the position is dropped and option A stays reverted. Lesson: name a test card by what it does.
+
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
   chooser's best — each option settled and evaluated, as `GreedyAi.Answer` already answers a target
@@ -287,7 +292,8 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         accepted; the oracle re-read 86.5%, score given up 1.03 (87.2%, 0.84 before). The review: the
         end-board tie-break saturated (squashed by its cap, 10, an ended game's position ±60+) — now over
         `EndBoardScale` (100); several picks: fewer options than asked gave no answer, duplicates deduped.
-        1 suite decision moved, accepted; `+flatend`'s match ran on the saturated version
+        1 suite decision moved, accepted; `+flatend`'s match ran on the saturated version — re-run on
+        b817065: 51.0% ± 1.0pp over 96 (49–47), no difference, kept
   - [ ] (3) two attacks that both win this turn: the tie-break counts their life under 0, so everyone
         attacking (10 002) beats the flier alone (10 000) — **built (2026-10-29), match to run:** `Explain`
         showed the deeper cause: the look-ahead's defender, dead to the flier whatever it does, blocked
@@ -301,7 +307,10 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         off too. Golden games: 6 of 12 moved — all 12 pass with it forced off; regenerated. MagicCore.Tests
         all pass. Suite: 3 of 288 change, 3 772 steps a position (+0.1%). **Match: 49.5% ± 0.9pp over 192
         games (95–97), no difference, 1 537 steps a decision against 1 545 — kept** (done but for the commit)
-  - [ ] (9) the Pinger loses to a vanilla 3/3 (23.08 against 24.24): the look-ahead's opponent never
+  - [x] (9) NOT A MISS — Shayne (2026-10-30), once the position was spelled out (the Pinger's damage is a
+        one-time "enters" trigger, not an ability of a creature already in play): "with a vanilla 2/2 as the
+        opponents card playing the 3/3 is probably correct". Claude's "Pinger" read as an activated ability;
+        the position is dropped from BasicsTests. What follows is the history. The Pinger loses to a vanilla 3/3 (23.08 against 24.24): the look-ahead's opponent never
         improves its board (it plays no unknown card), so their 2/2 killed on turn 3 ends the same as killed
         now and the 3/3 first deals one more damage — NOT review item 1; the rule to agree with Shayne —
         **option A tried and reverted (2026-10-30):** a share of each line read as our turn ends
@@ -324,7 +333,8 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         under AI-9.3 (2026-10-30):** `AWalkerAtOneLoyalty_IsAttacked_OverTheirFace`: Chandra priced 2.35
         (body and loyalty, her abilities unpriced; in the look-ahead her +1 only deals us 2), so 5 at their
         face (23.60) beats killing her (21.63)
-  - [ ] Burn at their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
+  - [ ] DEFERRED (Shayne, 2026-10-30: "hold off on the burn rule now, but note it for later") — burn at
+        their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
         damage in hand burns them out — otherwise a creature. Positions first (the symmetric life risk
         prices their low life higher, so check it doesn't send burn at the face against his rule)
 - [ ] AI-17.7 Blunder counters (Shayne, 2026-10-29): over N AI games, each decision checked for a named
@@ -343,8 +353,7 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 ## Next
 
 **AI-17.6, the rest of the fixes.** The basics suite (`MagicCore.Tests/Ai/BasicsTests.cs`, Shayne's answers)
-has two ignored: (9) the Pinger — option A reverted (it breaks AI-13.4's Unsummon hold), a new rule from
-Shayne needed; (14) Chandra at 1 — AI-9.3's walker pricing, the design to agree with Shayne. Then the
+has one ignored: (14) Chandra at 1 — AI-9.3's walker pricing, the design to agree with Shayne. Then the
 review's list not yet fixed (`docs/findings/magic-ai.md`, "The review, code"): item 1 (`Lookahead.Settle`
 still declines mays and aims triggers first-legal — it judges `Narrow`, our rollout's play, the opponent's
 plays), 4 (instant windows cost search levels), 5 (creatures valued by stats only), 6 (Infinite Coursework

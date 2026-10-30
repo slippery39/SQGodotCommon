@@ -234,40 +234,6 @@ public class BasicsTests
 		Assert.That(attacked, Does.Not.Contain(bear));
 	}
 
-	// (9) "Yes" — the 2/2 whose entering deals 2 to any target, over a vanilla 3/3, their only creature a
-	// 2/2. The look-ahead's opponent never improves its board, so their 2/2 killed on turn 3 ends the same
-	// as killed now, and the 3/3 first deals one more damage (24.24 against 23.08).
-	[
-		Test,
-		Ignore(
-			"AI-17.6: the look-ahead's opponent never improves its board, so a kill later scores as a kill now; a share of each line read as our turn ends (Shayne's option A) fixes it from 0.2 but breaks AI-13's Unsummon hold even at 0.1 — the rule to agree with Shayne"
-		)
-	]
-	public void AnEntersTrigger_KillsTheirCreature_OverABiggerBody()
-	{
-		Lands(2);
-		var pinger = new CardDefinition(
-			TestGames.CreatureCosting("{2}", "Pinger", "2/2").Data,
-			[
-				new TriggeredAbilityComponent(
-					TriggerEvent.SelfEnters,
-					[new DealDamage(Ref.Target(), 2)]
-				)
-				{
-					Targets = [TargetSpec.AnyTarget()],
-				},
-			]
-		);
-		var ours = Put(me, pinger, ZoneType.Hand);
-		Put(me, TestGames.CreatureCosting("{2}", "Bigger", "3/3"), ZoneType.Hand);
-		var theirs = Put(them, TestGames.Creature("Theirs", "2/2"));
-
-		Play();
-
-		Assert.That(s.IsOnBattlefield(ours), Is.True, "the Pinger is cast");
-		Assert.That(s.IsOnBattlefield(theirs), Is.False, "and kills their 2/2");
-	}
-
 	// (11) "Yeah thats a good use for it." Infinite Coursework on their only threat (review item 6: a
 	// creature that never untaps is still counted whole).
 	[Test]
