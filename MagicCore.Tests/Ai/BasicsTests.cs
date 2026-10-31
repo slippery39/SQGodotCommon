@@ -410,4 +410,36 @@ public class BasicsTests
 			Is.EqualTo(valued ? held.Of(name) - Evaluator.RecastPerMana * access : 0).Within(1e-9)
 		);
 	}
+
+	// Review item 6 (AI-17.4), for Shayne's answer: their 5/5 under our Infinite Coursework ("tap enchanted
+	// creature … loses all abilities and doesn't untap during its controller's untap step") and their
+	// untapped 3/3; we hold a 1-mana "destroy target creature". Claude's expectation: the 3/3 — the 5/5 can
+	// neither attack nor block. Passes as built (2026-10-30): the evaluator still prices the locked 5/5 whole,
+	// but the look-ahead never sees it attack, so the kill goes on the 3/3 — item 6 doesn't bite here.
+	[Test]
+	public void Removal_GoesOnTheLiveThreat_NotOneCourseworkHolds()
+	{
+		Lands(4, "Island");
+		var coursework = Put(me, FraCards.Get("Infinite Coursework"), ZoneType.Hand);
+		var locked = Put(them, TestGames.Creature("Locked", "5/5"));
+		var live = Put(them, TestGames.Creature("Live", "3/3"));
+		s = s.Act(
+			s.LegalActions()
+				.OfType<CastSpellAction>()
+				.First(a => a.CardId == coursework && a.Targets.Contains(locked))
+		);
+		s = TestGames.PassUntil(s, x => x.StackIsEmpty() && x.DecidingPlayerId() == me);
+		Assume.That(
+			s.GetCard(coursework).AttachedToId == locked
+				&& s.GetCard(locked).IsTapped
+				&& s.GetGame().Step == Step.PreCombatMain,
+			"Coursework holds the 5/5, still our first main"
+		);
+		Put(me, Kill, ZoneType.Hand);
+
+		Play();
+
+		Assert.That(s.IsOnBattlefield(live), Is.False, "the live 3/3 is destroyed");
+		Assert.That(s.IsOnBattlefield(locked), Is.True);
+	}
 }

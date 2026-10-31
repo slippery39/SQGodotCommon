@@ -146,6 +146,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     deadgraveyard  every graveyard card worth nothing, even one that can return itself (before AI-17.6)
 #     nocounter      the look-ahead stops right after our own turn, their swing back unseen (before AI-17.6)
 #     shallowsettle  the cheap look-ahead's chooser's best one choice deep, targets and "you may" only (before AI-17.6)
+#     noplans        a fresh search at every decision, no plan committed and replayed (review item 9, AI-17.6)
 #     firsttarget    a target choice in the look-ahead takes the first legal one (before AI-17.3)
 #     idlewalkers    the simulated opponent's planeswalkers idle unless a casting model judges them worth it (before AI-8.1: +boardonly too)
 #     nothreat       the evaluator without its threat term (AI-5.2) — the search before it

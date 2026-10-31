@@ -407,13 +407,23 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         a "you may pay … when you do, target" reads as paying for nothing inside Settle; a required single
         pick (a sacrifice) still takes the first listed; Settle prices hand cards flat, so graveyard
         access is 0 there; and a second "chooser's best" beside `GreedyAi.Answer` (DesignNotes)
-  - [ ] Review item 9, plans replayed — **measured (2026-10-30), not yet changed:** three self-play games
+  - [ ] Review item 6, Infinite Coursework counted whole — **a position, passes (2026-10-30):**
+        `Removal_GoesOnTheLiveThreat_NotOneCourseworkHolds` (their 5/5 under our Coursework and their 3/3,
+        a 1-mana kill: it kills the 3/3 — the look-ahead never sees the locked 5/5 attack). Kept as a guard;
+        the evaluator's price of a locked creature is unchanged. Shayne (2026-10-30), asked: "infinite
+        courseworking a 3/3 on an empty board is a good play" — about Coursework itself; the guard's answer
+        (the kill on the 3/3) is still Claude's, to confirm
+  - [x] Review item 10, the table's 1 s cap — **doesn't bite on the basics (2026-10-30):** every
+        `BasicsTests` position played through the table's settings (`TimeLimit` 1 s) passes as it does
+        uncapped (`docs/findings/magic-ai.md`). Re-check when a table game shows a miss the suite doesn't
+  - [x] Review item 9, plans replayed — **kept (2026-10-30): plans off (`+noplans`) 49.3% ± 1.6 over 288
+        (142–146), no difference, at ×1.98 the cost a decision.** Measured first: three self-play games
         (beam both seats; seeds 1–3), at every decision answered from a committed plan a fresh search run
         on the same position: 23 of 83, 40 of 195, 20 of 58 replays with a real choice DIFFER (25–35%).
         Many are timing (the plan passes, plays the land or spell later); some are not — an attack made or
         held (Samut, Rampart Hunter at Jace), Jace −3 against −1, Divining Duelist's mode. A difference is
         not a worse play: the plan's line is coherent across the turn. The question is a match: a fresh
-        search at every decision (`CommitPlans` off, no switch yet), or plans kept only inside one priority
+        search at every decision (`CommitPlans` off, `+noplans`), or plans kept only inside one priority
         window. The suite cannot see this (it decides every position fresh)
   - [ ] DEFERRED (Shayne, 2026-10-30: "hold off on the burn rule now, but note it for later") — burn at
         their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
@@ -434,16 +444,14 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 
 ## Next
 
-**AI-17.6, the rest of the fixes.** The basics suite (`MagicCore.Tests/Ai/BasicsTests.cs`, Shayne's answers)
-has one ignored: (14) Chandra at 1 — AI-9.3's walker pricing, the design to agree with Shayne. Then the
-review's list not yet fixed (`docs/findings/magic-ai.md`, "The review, code"): item 1 (`Lookahead.Settle`
-still declines mays and aims triggers first-legal — it judges `Narrow`, our rollout's play, the opponent's
-plays), 4 (instant windows cost search levels), 5 (creatures valued by stats only), 6 (Infinite Coursework
-counted whole), 7 (no potential bucket), 9 (plans replayed), 10 (the table's cap), 11 (one play a rollout
-turn) — each with a position that fails first, its control the fix off. Every new switch joins the anchor
-(AI-17.8). `MagicConsole --record=FILE --explain=N` and `BeamSearchAi.Explain()` show what the search
-imagined: read it before naming a cause (three of this session's four guesses were wrong). Then AI-17.7's
-blunder counters, each checker's rule agreed with Shayne first.
+**AI-17.6, what is left.** Done this session: the quick check (review item 1, two levels, every pick), the
+counter-attack always seen, graveyard access; item 9 (plans) kept after a match, item 10 (the table's cap)
+and item 6 (Coursework) checked. Open: **item 11** (more plays a rollout turn) against the agreed #547 hold —
+Shayne: "a little later"; **AI-9.3** walker pricing (the Chandra position, ignored) — a design talk first;
+item 5 (creatures by stats — Shayne: a judgement call); the burn rule (deferred). Then AI-17.7's blunder
+counters, each checker's rule agreed with Shayne first. **But first in the sprint: MC-5 (Star Trek) in a fresh
+session.** `BeamSearchAi.Explain()` / `--explain` show what the search imagined: read it before naming a
+cause (this session's guesses were wrong more often than right).
 
 ## Log
 
@@ -464,3 +472,5 @@ blunder counters, each checker's rule agreed with Shayne first.
 - 2026-10-30: AI-17.6 — the cheap look-ahead answers by its chooser's best (49.5% over 192, kept); graveyard
   access priced (Shayne); the counter-attack always seen (Shayne's rule; 50.0% over 384, +16.6%, kept) — the
   Deathbringer now sacrifices the Ghoul, the oracle 88.5%.
+- 2026-10-30: AI-17.6 — plans kept (a fresh search at every decision 49.3% over 288, ×1.98 the cost); the
+  table's 1 s cap and Infinite Coursework checked on positions.

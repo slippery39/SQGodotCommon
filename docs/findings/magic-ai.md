@@ -1356,3 +1356,12 @@ answered from a committed plan: 23 of 83, 40 of 195, 20 of 58 differ (25–35%) 
 or spell later in the turn), some not (an attack made or held, Jace −3 against −1, a Duelist's mode). Not yet
 changed: whether a fresh search at every decision plays better is a match.
 
+**Plans off, the match (review item 9):** `--match=beam+noplans,beam --until-clear` (a fresh search at every
+decision): **288 games, 49.3% ± 1.6pp (142–146), no 5pp difference**, at **4 577 steps a decision against
+2 317 (×1.98)**; 1 246 s. The replays that differ from a fresh search are, on balance, equivalent choices —
+the committed plan stays (`+noplans` kept as a switch).
+
+**The table's 1 s cap (review item 10):** every `BasicsTests` position played with `TimeLimit` 1 s (the
+table's `Settings.Interactive`) passes as it does uncapped — 22 pass, Chandra's (AI-9.3) ignored; a
+time-capped run depends on the machine, so this is a check on a quiet one (2026-10-30), not a test.
+
