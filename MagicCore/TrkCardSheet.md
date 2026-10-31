@@ -79,7 +79,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.SelfAttacks,
 		[],
-		new MaySacrifice((Is.Creature | Is.Artifact) & !Is.Source, [new DrawCards(Ref.You, 1)])
+		new MaySacrifice(
+			(Is.Creature | Is.Artifact) & !Is.Source,
+			[new DrawCards(Ref.You, 1)]
+		)
 	),
 ],
 ```
@@ -661,10 +664,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
 
 ```csharp
-["He's Dead, Jim"] =
-[
-	Spell([Creature], new Destroy(Ref.Target()), new Surveil(1)),
-],
+["He's Dead, Jim"] = [Spell([Creature], new Destroy(Ref.Target()), new Surveil(1))],
 ```
 
 ### Horta
@@ -1647,7 +1647,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
 
 ```csharp
-["Assembly Specialist"] = [When(TriggerEvent.SelfEnters, [], new CreateTokens(Borg, 1))],
+["Assembly Specialist"] =
+[
+	When(TriggerEvent.SelfEnters, [], new CreateTokens(Borg, 1)),
+],
 ```
 
 ### Bat'leth
@@ -2355,7 +2358,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Munitions Enthusiast"] =
 [
-	When(TriggerEvent.SelfDies, [TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 1)),
+	When(
+		TriggerEvent.SelfDies,
+		[TargetSpec.AnyTarget()],
+		new DealDamage(Ref.Target(), 1)
+	),
 ],
 ```
 
@@ -3056,7 +3063,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Status:** scripted · **tests naming it:** TrkBatch1Tests
 
 ```csharp
-["V'Ger, the Intruder"] = [VGer(TriggerEvent.SelfEnters), VGer(TriggerEvent.SelfAttacks)],
+["V'Ger, the Intruder"] =
+[
+	VGer(TriggerEvent.SelfEnters),
+	VGer(TriggerEvent.SelfAttacks),
+],
 ```
 
 ### Vash, Freelance Archaeologist
