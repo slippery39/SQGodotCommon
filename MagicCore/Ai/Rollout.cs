@@ -25,7 +25,10 @@ namespace MagicCore.Ai;
 /// </summary>
 public static class Rollout
 {
-	/// <param name="LookaheadTurns">Turns played after the current one is finished.</param>
+	/// <param name="LookaheadTurns">
+	/// Turns played after the current one is finished — and one more when the last of them is ours
+	/// (<see cref="CounterAttack"/>): from our own turn, LookaheadTurns 0 plays their next turn too.
+	/// </param>
 	/// <param name="ActionsPerTurn">
 	/// Our non-land plays per simulated turn (and a casting opponent's spells). MtgSimulator's default
 	/// of 1 is an asymmetry — the opponent attacks with everything — kept as the starting point and
@@ -64,6 +67,15 @@ public static class Rollout
 	/// Off is beam+nolostlines (with lifeprogress and
 	/// noprogress, which reproduce the search before AI-16).
 	/// </param>
+	/// <param name="CounterAttack">
+	/// A rollout never stops right after our own turn: when the turn at the horizon is the opponent's — so
+	/// the last one played was ours — it plays that one too, its swing back included (AI-17.6, Shayne: "We
+	/// need to make sure we always account for a counter attack from an opponent whenever we are choosing
+	/// attackers ourselves"). Before, from our own turn the look-ahead stopped at the start of theirs: Way of
+	/// the Deathbringer's −2 kept Blessed Ghoul over Tinybones because the Ghoul's line then swung the Beast
+	/// at him (15 → 11) — and his unseen swing back took the AI from 6 to 1, the next one killing it.
+	/// ponytail: turns taken to alternate (an extra turn breaks it). Off is beam+nocounter.
+	/// </param>
 	/// <param name="KnownOnly">
 	/// A casting or responding opponent plays only the cards in its hand WE know (<see cref="Card.KnownTo"/>:
 	/// one we bounced, saw, or watched return from a graveyard) — board-only otherwise (Shayne, AI-10.4:
@@ -91,7 +103,8 @@ public static class Rollout
 		ProgressBy Progress = ProgressBy.TurnEnd,
 		bool KnownOnly = true,
 		bool LostLines = true,
-		bool Mays = true
+		bool Mays = true,
+		bool CounterAttack = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -159,15 +172,19 @@ public static class Rollout
 
 	/// <summary>
 	/// The most a won line's progress may add or take away: under half the smallest gap between two
-	/// turns' discounted wins within the horizon (the last turn's), so it never reorders turns —
-	/// 214 at the defaults (0.95, two turns), 193 at the position suite's four. With a finished game's
-	/// own board tie-break (<see cref="Evaluator.EndBoardCap"/>, 10) two lines still move at most 2 × (cap +
-	/// 10) — 448 against a 475 gap at the defaults, 406 against 428 at four turns.
+	/// turns' discounted wins within the horizon (the last turn's — one turn later with the counter-attack,
+	/// <see cref="Settings.CounterAttack"/>), so it never reorders turns — 203 at the defaults (0.95, two
+	/// turns and the counter-attack), 183 at the position suite's four. With a finished game's own board
+	/// tie-break (<see cref="Evaluator.EndBoardCap"/>, 10) two lines still move at most 2 × (cap + 10) —
+	/// 426 against a 451 gap at the defaults, 386 against 407 at four turns.
 	/// </summary>
 	public static double TurnEndCap(Settings settings) =>
 		0.45
 		* Evaluator.WinScore
-		* Math.Pow(settings.TerminalDiscount, settings.LookaheadTurns - 1)
+		* Math.Pow(
+			settings.TerminalDiscount,
+			settings.LookaheadTurns - (settings.CounterAttack ? 0 : 1)
+		)
 		* (1 - settings.TerminalDiscount);
 
 	/// <summary>Our own side's rollout policy (story AI-3.7) — the opponent's is its model, apart.</summary>
@@ -221,10 +238,20 @@ public static class Rollout
 		// ponytail: a rollout that hits DecisionLimit is scored where it stopped, mid-turn, beside
 		// rollouts scored at the horizon. Only a loop that never advances reaches it; flag or drop
 		// such a candidate if one is ever seen.
+		var stopAt = horizon;
 		for (var i = 0; i < settings.DecisionLimit && !s.IsOver(); i++)
 		{
-			if (s.GetGame().TurnNumber >= horizon)
-				break;
+			if (s.GetGame().TurnNumber >= stopAt)
+			{
+				// the horizon's turn is theirs, so the last played was ours: play their answer to it too
+				if (
+					stopAt != horizon
+					|| !settings.CounterAttack
+					|| s.GetGame().ActivePlayerId == me
+				)
+					break;
+				stopAt++;
+			}
 			if (s.GetGame().TurnNumber != turn)
 				(turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 			if (turnEnd is null && turn > rootTurn)

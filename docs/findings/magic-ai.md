@@ -1315,3 +1315,27 @@ From Shayne's basics positions (`MagicCore.Tests/Ai/BasicsTests.cs`), each behin
   Heartstring Puller in the imagined next turn and the Beast then attacks for 4; sacrificed, Tinybones
   blocks a Cadet and the Beast stays home. The graveyard's 1.15 counts in both lines. No match yet.
 
+## The counter-attack always seen: a look-ahead never stops right after our own turn (2026-10-30, AI-17.6)
+
+Shayne: "We need to make sure we always account for a counter attack from an opponent whenever we are
+choosing attackers ourselves." The Deathbringer (#262, Way of the Deathbringer's −2) sacrificed Tinybones
+and kept Blessed Ghoul — though right after the −2 the evaluator preferred the Ghoul's sacrifice (−23.38
+against −25.23): in the Ghoul-kept line the AI at 6 swung its Beast at him on 15 (→ 11), and the look-ahead,
+searching from the AI's own turn, stopped at the start of his — before his swing back (6 → 1; the next
+kills). MtgSimulator never fixed this (DesignNotes: "a lethal board at the horizon").
+
+- **`Rollout.Settings.CounterAttack`** (`+nocounter`): when the turn at the horizon is the opponent's, so the
+  last played was ours, the rollout plays it too. `TurnEndCap` counts the extra turn (203 at the defaults).
+- **Tried first, reverted:** a race-aware clock (a side's clock counts nothing if its all-out attack dies
+  to the swing back): it didn't flip the position — in the Ghoul-sacrificed line both imagined blocks left
+  the Beast pinned — and the oracle read worse (83.3%, 1.44). One more look-ahead turn alone made the Ghoul
+  sacrifice, with or without it.
+- **Positions:** `TheDeathbringersBeast_IsMadeFromBlessedGhoul_WhichComesBack` (off: Tinybones). The chump
+  test now asserts the chump buys a turn; AI-9.5's token bounce holds under the default.
+- **Suite:** 18 of 288 change (9 of them the quick-check fix's, not accepted in fcba060); 5 790 steps a
+  position (+19% on 4 866). Accepted; the oracle re-read **88.5%, score given up 1.00, walks into a loss
+  1** (86.5%, 1.12 and 3 before) — the first change in AI-17 to move the oracle up.
+- **Match:** `--match=beam,beam+nocounter --until-clear`: **384 games, 50.0% ± 1.4pp (192–192), no 5pp
+  difference**; 2 306 steps a decision against 1 977 (+16.6%); 1 448 s (on the build before the review's
+  `TurnEndCap` correction, which moved no suite decision). Kept.
+

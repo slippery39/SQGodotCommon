@@ -368,15 +368,24 @@ public class RolloutTests
 		new LoyaltyAbilityComponent(1, [new GainLife(Ref.You, 1)])
 	);
 
-	// Blocks are judged by what they lead to: facing lethal, a chump block keeps us alive.
+	// Blocks are judged by what they lead to: facing lethal, a chump block keeps us alive — a turn longer
+	// (since AI-17.6 the look-ahead plays their next swing back too, where nothing is left to chump).
 	[Test]
 	public void FacingLethal_WeChumpBlock()
 	{
-		(s, _) = TestGames.Put(s, me, TestGames.Creature("Chump", "1/1"), ZoneType.Battlefield);
 		(s, _) = TestGames.Put(s, them, TestGames.Creature("Theirs", "4/4"), ZoneType.Battlefield);
 		s = WithLife(s, me, 3);
+		var withoutAChump = Score(s);
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Chump", "1/1"), ZoneType.Battlefield);
 
-		Assert.That(Score(s), Is.GreaterThan(-5_000));
+		// two turns later: a loss decays 0.95 a turn, so later by more than one turn's gap
+		Assert.That(
+			Score(s),
+			Is.GreaterThan(
+				withoutAChump + Evaluator.WinScore * (1 - Rollout.Default.TerminalDiscount)
+			),
+			"a later loss: the chump bought a turn"
+		);
 	}
 
 	// The discount counts from the SEARCH's root, which the horizon fixes — so two candidates that lose

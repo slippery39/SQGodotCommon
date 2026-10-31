@@ -73,6 +73,8 @@ public static class AiMatch
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
+			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.
+			["nocounter"] = WithRollout(r => r with { CounterAttack = false }),
 			// Every graveyard card worth nothing, even one that can return itself, as before AI-17.6: beam+deadgraveyard.
 			["deadgraveyard"] = o =>
 				o with

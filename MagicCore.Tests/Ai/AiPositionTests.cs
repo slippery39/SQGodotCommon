@@ -394,9 +394,14 @@ public class AiPositionTests
 	}
 
 	/// <summary>The Deathbringer's turn played as the table plays it — one AI from #257 — then on from #262 against GreedyAi.</summary>
-	static GameState DeathbringerTurn(GameRecord record, IReadOnlyList<GameState> before, int me)
+	static GameState DeathbringerTurn(
+		GameRecord record,
+		IReadOnlyList<GameState> before,
+		int me,
+		BeamSearchAi.Settings? settings = null
+	)
 	{
-		var ai = new BeamSearchAi(me);
+		var ai = new BeamSearchAi(me, settings);
 		var s = before[256];
 		for (var n = 257; n <= 262; n++)
 			if ((s = before[n - 1]).DecidingPlayerId() == me)
@@ -407,28 +412,35 @@ public class AiPositionTests
 	// Shayne, 2026-10-30: "the idea is that we can recur the blessed ghoul from the graveyard, so sacrificing
 	// the ghoul means we can just get the ghoul back next turn and potentially do it again" — and "having the
 	// 2/1 tinybones and a 4/4 beast is better than having a 1/1 that you can recur from the graveyard and a
-	// beast token". Right after the −2 the evaluator agrees (Ghoul −23.38, Tinybones −25.23, the graveyard's
-	// 1.15 in — Evaluator.Terms.GraveyardAccess); the imagined turns flip it: the imagined defender blocks one
-	// combat deep, so in the Ghoul's line Tinybones blocks a Cadet, the 3/1 trampling Puller lives, and the
-	// Beast must stay home (their swing back is exactly lethal at 6).
-	[
-		Test,
-		Ignore(
-			"AI-17.6: blocks judged one combat deep in the look-ahead — the fix to build (Shayne: think about their swing back)"
-		)
-	]
-	public void TheDeathbringersBeast_IsMadeFromBlessedGhoul_WhichComesBack()
+	// beast token". Right after the −2 the evaluator agreed (Ghoul −23.38, Tinybones −25.23); the imagined
+	// turns flipped it: keeping the Ghoul, the AI at 6 swung its Beast at him on 15 — and the look-ahead
+	// stopped at the start of his turn, before his swing back took it to 1 (the next one killing it). His
+	// rule: "always account for a counter attack from an opponent whenever we are choosing attackers
+	// ourselves" (Rollout.Settings.CounterAttack). The CONTROL: the look-ahead stopping after our turn.
+	[TestCase(true, ExpectedResult = true)]
+	[TestCase(false, ExpectedResult = false)]
+	public bool TheDeathbringersBeast_IsMadeFromBlessedGhoul_WhichComesBack(bool counterAttack)
 	{
 		var record = KeptRecords.Get("DeathbringerDrawsNotABeast");
 		var (before, _) = record.Replay();
 		var me = before[256].DecidingPlayerId();
 
-		Assert.That(
-			DeathbringerTurn(record, before, me)
-				.CardsIn(me, ZoneType.Graveyard)
-				.Select(c => c.Name),
-			Does.Contain("Blessed Ghoul")
-		);
+		return DeathbringerTurn(
+				record,
+				before,
+				me,
+				new()
+				{
+					RolloutSettings = BeamSearchAi.DefaultRollout with
+					{
+						CounterAttack = counterAttack,
+					},
+				}
+			)
+				is var after
+			&& after.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name == "Beast")
+			&& after.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name.StartsWith("Tinybones"))
+			&& after.CardsIn(me, ZoneType.Graveyard).Any(c => c.Name == "Blessed Ghoul");
 	}
 
 	// Shayne, 2026-10-29 (AI-16.4): "If the AI can only find losing lines, the AI should still try to
@@ -490,11 +502,13 @@ public class AiPositionTests
 			);
 		var me = s.DecidingPlayerId();
 		// under the board-only look-ahead the term was measured in: the default (AI-10.4) recasts the
-		// bounced card, which by itself makes the token the better bounce
+		// bounced card, which by itself makes the token the better bounce — and stopping after our turn,
+		// as it did then (the default since AI-17.6 plays their swing back, and still bounces the token)
 		var boardOnly = BeamSearchAi.DefaultRollout with
 		{
 			Opponent = Rollout.OpponentModel.BoardOnly,
 			KnownOnly = false,
+			CounterAttack = false,
 		};
 		global::MagicCore.Cards.Card Target(Evaluator.Terms without)
 		{
@@ -523,6 +537,12 @@ public class AiPositionTests
 			"the control: priced blind, a card"
 		);
 		Assert.That(Target(Evaluator.Terms.None).IsToken, "the token");
+		var today =
+			new BeamSearchAi(me).Decide(s).Action as global::MagicCore.Actions.CastSpellAction;
+		Assert.That(
+			today is not null && s.GetCard(today.Targets.Last()).IsToken,
+			"and the default search, their swing back seen, bounces the token too"
+		);
 	}
 
 	/// <summary>Our 2/2 and Ferocity of the Hunt (an Aura, with flash); their 1/4 and Last Gasp, two Swamps each side.</summary>

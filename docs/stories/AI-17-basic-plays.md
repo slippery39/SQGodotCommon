@@ -162,6 +162,13 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   cost to be able to have access to a card. So that should be priced in."** Item 11 (plays per rollout
   turn) against #547: "back to item 11 a little later". The `+quicksettle` match approved (one run).
 
+- 2026-10-30, Shayne (the Deathbringer's imagined race: the AI at 6 swings its Beast at him on 15, his swing
+  back takes it to 1, the next one kills — its look-ahead ends at the start of his turn, one step short):
+  "Did we not solve the horizon problem in MtgCore? … why it seems we are repeating the same issues" (no:
+  MtgSimulator never fixed it — DesignNotes, "a lethal board at the horizon", deferred AI-8.5) and the
+  rule: **"We need to make sure we always account for a counter attack from an opponent whenever we are
+  choosing attackers ourselves."**
+
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
   chooser's best — each option settled and evaluated, as `GreedyAi.Answer` already answers a target
@@ -367,6 +374,21 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         sacrifice is still Tinybones — fresh, −14.29 against −16.74, the gap from the imagined next turn's
         combat (kept, the Ghoul trades with Heartstring Puller and the Beast attacks for 4); and at the table
         the sacrifice came from #257's plan (review item 9). Suite unchanged by it. Back to Shayne
+  - [x] The counter-attack always seen (Shayne's rule, 2026-10-30) — **done: 50.0% ± 1.4 over 384 (192–192),
+        +16.6% a decision, kept; suite accepted, the oracle 88.5%, 1.00 given up.** the cause of
+        the Deathbringer's Tinybones sacrifice was the HORIZON, not the blocks: from our own turn the
+        look-ahead stopped at the start of his, so the AI at 6 swinging its Beast at him on 15 never met his
+        swing back (6 → 1, the next one killing). With one more turn it sacrifices the Ghoul (probed: 3
+        lookahead turns, with or without a race-aware clock). `Rollout.Settings.CounterAttack`
+        (`+nocounter`): when the turn at the horizon is the opponent's, the rollout plays it too. A race-aware
+        clock (a side's clock 0 if its all-out attack dies to the swing back) was built first and reverted:
+        it didn't flip the position (both imagined lines pinned the Beast) and pulled the oracle the wrong
+        way. Position: `TheDeathbringersBeast_IsMadeFromBlessedGhoul_WhichComesBack` (control: off, Tinybones).
+        Two tests moved: the chump test now asserts the chump buys a turn (their next swing kills); the
+        AI-9.5 token-bounce test's old look-ahead stops after our turn too (the default still bounces the
+        token). Suite: 18 of 288 change (9 without), 5 790 steps a position (+19%); the oracle (read before)
+        agrees 88.5% (86.1%), score given up 1.02 (1.12), walks into a loss 1 (3). fcba060 had not
+        re-accepted the suite: accepted with this one. The review: `TurnEndCap` counts the extra turn
   - [ ] Blocks judged with a turn's foresight in the look-ahead (Shayne, 2026-10-30: "usually when you
         attack you are thinking of what will happen if they attack back … If so we should try to fix
         this") — the imagined defender scores a block by the board right after combat, so killing their
@@ -422,3 +444,6 @@ blunder counters, each checker's rule agreed with Shayne first.
   risk below 6, whole attacks in the look-ahead, every combination of a several-pick choice: each no
   worse over 96–384 games, kept (+22.7% a decision, the look-ahead's whole attacks). Option A for the Pinger
   tried and reverted (it breaks AI-13.4's hold); a tutor already fetches well; Chandra at 1 is AI-9.3's.
+- 2026-10-30: AI-17.6 — the cheap look-ahead answers by its chooser's best (49.5% over 192, kept); graveyard
+  access priced (Shayne); the counter-attack always seen (Shayne's rule; 50.0% over 384, +16.6%, kept) — the
+  Deathbringer now sacrifices the Ghoul, the oracle 88.5%.
