@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Limited;
 
@@ -108,7 +108,7 @@ public static class Castability
 				name,
 				n =>
 				{
-					var def = FraCards.Get(n);
+					var def = CardRegistry.Get(n);
 					var land = def.Data.TypeLine.Contains("Land");
 					var tapped = def.Components.OfType<EntersTappedComponent>().FirstOrDefault();
 					var text = def.Data.OracleText ?? "";

@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Rules;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -25,7 +25,7 @@ public class FraStaticTests : FraBoardTest
 		var theirs = Fresh("2/2", them);
 		Assert.That(Combat.CanAttack(s, s.GetCard(mine)), Is.False, "sick, no Samut yet");
 
-		var samut = Field(FraCards.Get("Samut, Hazoret's Champion"), me);
+		var samut = Field(CardRegistry.Get("Samut, Hazoret's Champion"), me);
 		Assert.That(Combat.CanAttack(s, s.GetCard(mine)));
 		Assert.That(s.Has(s.GetCard(theirs), "Haste"), Is.False, "only yours");
 
@@ -84,7 +84,7 @@ public class FraStaticTests : FraBoardTest
 	[Test]
 	public void SkilledBattlecarver_FirstStrikeOnlyDuringYourTurn_AndPumps()
 	{
-		var carver = Field(FraCards.Get("Skilled Battlecarver"), me);
+		var carver = Field(CardRegistry.Get("Skilled Battlecarver"), me);
 		Assert.That(s.Has(s.GetCard(carver), "First strike"));
 
 		var power = s.Power(s.GetCard(carver));
@@ -149,7 +149,7 @@ public class FraStaticTests : FraBoardTest
 	[Test]
 	public void TetsukoFugitive_SmallCreaturesOfYoursCantBeBlocked()
 	{
-		var tetsuko = Field(FraCards.Get("Tetsuko Umezawa, Fugitive"), me); // 1/3: power 1
+		var tetsuko = Field(CardRegistry.Get("Tetsuko Umezawa, Fugitive"), me); // 1/3: power 1
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var wall = Field(TestGames.Creature("Wall", "0/5"), me); // toughness 5, power 0
 		var blocker = Field(TestGames.Creature("Blocker", "5/5"), them);
@@ -167,7 +167,7 @@ public class FraStaticTests : FraBoardTest
 	[Test]
 	public void EardrumRattler_MakesAnotherSmallCreatureUnblockableThisTurn()
 	{
-		var rattler = Field(FraCards.Get("Eardrum Rattler"), me);
+		var rattler = Field(CardRegistry.Get("Eardrum Rattler"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var big = Field(TestGames.Creature("Big", "3/3"), me);
 		var targets = s.LegalActions()
@@ -197,8 +197,8 @@ public class FraStaticTests : FraBoardTest
 	[Test]
 	public void TetsukoFugitive_ReadsRealPower_NotPrinted()
 	{
-		Field(FraCards.Get("Tetsuko Umezawa, Fugitive"), me);
-		var winter = Field(FraCards.Get("Winter, Tormented Loner"), me); // printed 0/3
+		Field(CardRegistry.Get("Tetsuko Umezawa, Fugitive"), me);
+		var winter = Field(CardRegistry.Get("Winter, Tormented Loner"), me); // printed 0/3
 		for (var i = 0; i < 4; i++)
 			Hand(TestGames.Creature($"Dead{i}", "1/1"), me);
 		foreach (
@@ -228,8 +228,6 @@ public class FraStaticTests : FraBoardTest
 				null,
 				null,
 				[],
-				"common",
-				"0",
 				null
 			),
 			[
@@ -261,7 +259,7 @@ public class FraStaticTests : FraBoardTest
 	[Test]
 	public void TheAiValuesWhatStaticsGive()
 	{
-		var winter = Field(FraCards.Get("Winter, Tormented Loner"), me);
+		var winter = Field(CardRegistry.Get("Winter, Tormented Loner"), me);
 		var before = global::MagicCore.Ai.Evaluator.Evaluate(s, me);
 		var dead = Hand(TestGames.Creature("Dead", "1/1"), me);
 		s = s.MoveCard(dead, s.ZoneId(me, ZoneType.Graveyard)); // TEST SETUP: Winter is now 1/3

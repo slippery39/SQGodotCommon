@@ -8,6 +8,7 @@ using MagicCore;
 using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Sets;
 
 namespace MagicTable;
 
@@ -119,13 +120,13 @@ public sealed class MagicTableManager
 	{
 		record.CheckFormat();
 		var m = new MagicTableManager(
-			[.. record.Deck1.Select(MagicCore.Sets.Fra.FraCards.Get)],
-			[.. record.Deck2.Select(MagicCore.Sets.Fra.FraCards.Get)],
+			[.. record.Deck1.Select(MagicCore.Sets.CardRegistry.Get)],
+			[.. record.Deck2.Select(MagicCore.Sets.CardRegistry.Get)],
 			record.Seed,
 			aiVsAi: record.About.GetValueOrDefault("Player1") != "human",
 			search,
-			[.. record.Sideboard1.Select(MagicCore.Sets.Fra.FraCards.Get)],
-			[.. record.Sideboard2.Select(MagicCore.Sets.Fra.FraCards.Get)]
+			[.. record.Sideboard1.Select(MagicCore.Sets.CardRegistry.Get)],
+			[.. record.Sideboard2.Select(MagicCore.Sets.CardRegistry.Get)]
 		)
 		{
 			RecordTo = recordTo,

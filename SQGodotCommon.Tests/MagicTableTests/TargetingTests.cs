@@ -5,6 +5,7 @@ using MagicCore;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicTable;
 using NUnit.Framework;
@@ -113,7 +114,7 @@ public class TargetingTests
 		)
 		{
 			while (!m.CanSandbox && m.StepAi() is not null) { }
-			m.Sandbox(m.HumanId, FraCards.Get(name), zone);
+			m.Sandbox(m.HumanId, CardRegistry.Get(name), zone);
 		}
 		while (m.StepAi() is not null) { }
 		var s = m.State;
@@ -166,7 +167,7 @@ public class TargetingTests
 		)
 		{
 			while (!m.CanSandbox && m.StepAi() is not null) { }
-			m.Sandbox(m.HumanId, FraCards.Get(name), zone);
+			m.Sandbox(m.HumanId, CardRegistry.Get(name), zone);
 		}
 		while (m.StepAi() is not null) { }
 		var s = m.State;

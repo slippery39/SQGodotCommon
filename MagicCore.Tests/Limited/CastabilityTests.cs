@@ -1,7 +1,7 @@
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Limited;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Limited;
 
@@ -14,7 +14,13 @@ public class CastabilityTests
 {
 	static readonly IEnumerable<CardData> Fra = CardDataSet
 		.Load("FRA")
-		.Where(c => FraCards.IsImplemented(c.Name));
+		.Select(p => p.Card)
+		.Where(c => CardRegistry.IsImplemented(c.Name));
+
+	static readonly HashSet<string> Commons =
+	[
+		.. CardDataSet.Load("FRA").Where(p => p.Rarity == "common").Select(p => p.Card.Name),
+	];
 
 	static string Basic(ManaColor c) => SealedBuilder.Basics[(int)c];
 
@@ -79,8 +85,8 @@ public class CastabilityTests
 	{
 		// a common dual: "enters tapped unless you control a planeswalker" — tapped in these games
 		var dual = Fra.First(c =>
-			c.Rarity == "common"
-			&& FraCards.Get(c.Name).Components.OfType<EntersTappedComponent>().Any()
+			Commons.Contains(c.Name)
+			&& CardRegistry.Get(c.Name).Components.OfType<EntersTappedComponent>().Any()
 			&& SealedBuilder.Fixes(c.Name) is [var a, var b]
 			&& new[] { a, b }.Order().SequenceEqual(new[] { W, U }.Order())
 		).Name;
@@ -126,7 +132,7 @@ public class CastabilityTests
 		[
 			.. Fra.Where(c =>
 					SealedBuilder.FetchesABasic(c.Name)
-					&& FraCards
+					&& CardRegistry
 						.Get(c.Name)
 						.Components.OfType<ActivatedAbilityComponent>()
 						.Any(a =>
@@ -158,7 +164,7 @@ public class CastabilityTests
 		);
 	}
 
-	static ManaCost Cost(string name) => SealedBuilder.FrontCost(FraCards.Get(name).Data);
+	static ManaCost Cost(string name) => SealedBuilder.FrontCost(CardRegistry.Get(name).Data);
 
 	[Test]
 	public void ALandcycle_SpendsTheTurnsMana_BeforeItIsMeasured()
@@ -189,7 +195,7 @@ public class CastabilityTests
 	public void ASplashCard_IsOnTimeByTurnSix_NotOnCurve()
 	{
 		var black = Spells(B, 50)
-			.Where(n => SealedBuilder.FrontCost(FraCards.Get(n).Data).ManaValue < 4)
+			.Where(n => SealedBuilder.FrontCost(CardRegistry.Get(n).Data).ManaValue < 4)
 			.Take(1)
 			.ToList();
 		Assert.That(
@@ -276,7 +282,9 @@ public class CastabilityTests
 	[Test]
 	public void TheSameDeck_MeasuresTheSame_AndOnlyItsSpellsCount()
 	{
-		var deck = SealedBuilder.Suggestions(Boosters.SealedPool(3), CardRatings.Fra)[0];
+		var deck = SealedBuilder.Suggestions(Boosters.SealedPool("FRA", 3), CardRatings.Of("FRA"))[
+			0
+		];
 		Assert.That(Castability.OnTime(deck), Is.EqualTo(Castability.OnTime(deck)));
 		Assert.That(Castability.OnTime(deck), Is.InRange(0.0, 1.0));
 	}

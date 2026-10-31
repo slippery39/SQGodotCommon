@@ -58,7 +58,7 @@ if (compareArg is not null || buildsArg is not null)
 		{
 			null => null,
 			_ when compareArg.StartsWith("seed:") => int.TryParse(compareArg[5..], out var poolSeed)
-				? MagicCore.Limited.Boosters.SealedPool(poolSeed)
+				? MagicCore.Limited.Boosters.SealedPool("FRA", poolSeed)
 				: throw new ArgumentException($"--compare={compareArg}: the seed isn't a number"),
 			_ => MagicCore.Sets.Fra.ArenaDeck.ReadPool(File.ReadAllText(compareArg)).Pool,
 		};
@@ -70,7 +70,7 @@ if (compareArg is not null || buildsArg is not null)
 				: MagicCore.Limited.SealedBuildMatch.FromSuggestions(
 					MagicCore.Limited.SealedBuilder.AllBuilds(
 						pool,
-						MagicCore.Limited.CardRatings.Fra
+						MagicCore.Limited.CardRatings.Of("FRA")
 					)
 				)
 		)
@@ -223,9 +223,12 @@ if (flags.Contains("--decisions"))
 // picks in order, to judge the bots before the table's draft screen.
 if (flags.Contains("--draft"))
 {
-	var ratings = MagicCore.Limited.CardRatings.Fra;
+	var ratings = MagicCore.Limited.CardRatings.Of("FRA");
 	var draftSeed = Arg("seed") ?? 1;
-	var drafted = MagicCore.Limited.Draft.RunBots(MagicCore.Limited.Draft.Fra(draftSeed), ratings);
+	var drafted = MagicCore.Limited.Draft.RunBots(
+		MagicCore.Limited.Draft.New("FRA", draftSeed),
+		ratings
+	);
 	Console.WriteLine($"FRA Quick Draft, seed {draftSeed}: 8 bots, rating plus the colour lean");
 	Console.WriteLine();
 	for (var i = 0; i < drafted.Seats.Count; i++)

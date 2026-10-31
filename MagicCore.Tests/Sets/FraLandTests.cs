@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Sets;
 
@@ -18,13 +18,14 @@ public class FraLandTests
 	static IEnumerable<CardData> PrintedDuals =>
 		CardDataSet
 			.Load("FRA")
+			.Select(p => p.Card)
 			.Where(c => c.TypeLine.Contains("Land") && DualText.IsMatch(c.OracleText ?? ""));
 
 	static IEnumerable<string> DualNames() => PrintedDuals.Select(c => c.Name);
 
 	[Test]
 	public void EveryPrintedDual_IsScripted() =>
-		Assert.That(DualNames().Where(n => !FraCards.Scripted.Contains(n)), Is.Empty);
+		Assert.That(DualNames().Where(n => !CardRegistry.Scripted.Contains(n)), Is.Empty);
 
 	GameState s = null!;
 	int me;
@@ -39,7 +40,7 @@ public class FraLandTests
 	int Play(string land)
 	{
 		int id;
-		(s, id) = TestGames.Put(s, me, FraCards.Get(land), ZoneType.Hand);
+		(s, id) = TestGames.Put(s, me, CardRegistry.Get(land), ZoneType.Hand);
 		s = s.Act(new PlayLandAction { PlayerId = me, CardId = id });
 		return id;
 	}
@@ -81,7 +82,7 @@ public class FraLandTests
 			.Select(ManaCost.ColorOf)
 			.ToList();
 		int land;
-		(s, land) = TestGames.Put(s, me, FraCards.Get(name), ZoneType.Battlefield);
+		(s, land) = TestGames.Put(s, me, CardRegistry.Get(name), ZoneType.Battlefield);
 
 		foreach (var colour in Enum.GetValues<ManaColor>())
 		{
@@ -117,7 +118,7 @@ public class FraLandTests
 		for (var i = 0; i < 2; i++)
 			(s, _) = TestGames.Put(s, me, TestGames.Card("Plains"), ZoneType.Battlefield);
 		int beach;
-		(s, beach) = TestGames.Put(s, them, FraCards.Get("Deserted Beach"), ZoneType.Hand); // theirs, two lands of mine
+		(s, beach) = TestGames.Put(s, them, CardRegistry.Get("Deserted Beach"), ZoneType.Hand); // theirs, two lands of mine
 
 		s = s.EnterBattlefield(beach, me);
 

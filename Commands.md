@@ -99,7 +99,7 @@ dotnet run -c Release --project MagicConsole -- --cast-gains [--games=400]   # r
 #   each instant-speed card's offers in self-play (AI-13.4's option value); after a change to the evaluator, rerun it
 ```
 
-Enter passes; `q` quits. The decks are `FraDecks` - only cards `FraCards.IsImplemented` allows.
+Enter passes; `q` quits. The decks are `FraDecks` - only cards `CardRegistry.IsImplemented` allows.
 
 ## Measure an AI change — two speeds (MagicCore, story AI-6)
 

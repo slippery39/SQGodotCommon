@@ -1,6 +1,7 @@
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Limited;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Limited;
@@ -11,9 +12,9 @@ namespace MagicCore.Tests.Limited;
 /// </summary>
 public class SealedSuggestionTests
 {
-	static List<string> Pool(int seed) => [.. Boosters.SealedPool(seed)];
+	static List<string> Pool(int seed) => [.. Boosters.SealedPool("FRA", seed)];
 
-	static CardData Data(string name) => FraCards.Get(name).Data;
+	static CardData Data(string name) => CardRegistry.Get(name).Data;
 
 	static bool IsLand(string name) => Data(name).TypeLine.Contains("Land");
 
@@ -37,7 +38,12 @@ public class SealedSuggestionTests
 	public void Fixes_MatchesWhatEachCardSays()
 	{
 		var seen = new Dictionary<string, int>();
-		foreach (var card in CardDataSet.Load("FRA").Where(c => FraCards.IsImplemented(c.Name)))
+		foreach (
+			var card in CardDataSet
+				.Load("FRA")
+				.Select(p => p.Card)
+				.Where(c => CardRegistry.IsImplemented(c.Name))
+		)
 		{
 			// a two-faced card (prepare: creature // spell) prints its text on its faces
 			var text =
@@ -106,16 +112,16 @@ public class SealedSuggestionTests
 	[Test]
 	public void EverySuggestion_IsLegal_AndEverySplashKeepsTheRules()
 	{
-		var bar = SealedBuilder.TopDecile(CardRatings.Fra);
+		var bar = SealedBuilder.TopDecile(CardRatings.Of("FRA"));
 		var (splashes, greedy) = (0, 0);
 		for (var seed = 1; seed <= 60; seed++)
 		{
 			var pool = Pool(seed);
-			var builds = SealedBuilder.Suggestions(pool, CardRatings.Fra);
+			var builds = SealedBuilder.Suggestions(pool, CardRatings.Of("FRA"));
 			var streamlined = builds[0];
 			Assert.That(
 				streamlined,
-				Is.EqualTo(SealedBuilder.Build(pool, CardRatings.Fra)).Using<SealedDeck>(Same)
+				Is.EqualTo(SealedBuilder.Build(pool, CardRatings.Of("FRA"))).Using<SealedDeck>(Same)
 			);
 			foreach (var deck in builds)
 			{
@@ -123,7 +129,7 @@ public class SealedSuggestionTests
 					deck,
 					pool,
 					streamlined,
-					CardRatings.Fra,
+					CardRatings.Of("FRA"),
 					bar,
 					$"seed {seed}, {deck.Label}"
 				);
@@ -141,13 +147,13 @@ public class SealedSuggestionTests
 	{
 		for (var seed = 1; seed <= 20; seed++)
 		{
-			var opponent = SealedBuilder.Opponent(seed);
+			var opponent = SealedBuilder.Opponent("FRA", seed);
 			Assert.That(
-				SealedBuilder.Suggestions(Pool(seed), CardRatings.Fra),
+				SealedBuilder.Suggestions(Pool(seed), CardRatings.Of("FRA")),
 				Has.Some.Matches<SealedDeck>(d => Same(d, opponent)),
 				$"seed {seed}"
 			);
-			Assert.That(Same(SealedBuilder.Opponent(seed), opponent), $"seed {seed}");
+			Assert.That(Same(SealedBuilder.Opponent("FRA", seed), opponent), $"seed {seed}");
 		}
 	}
 
@@ -170,7 +176,7 @@ public class SealedSuggestionTests
 		var found = (
 			from seed in Enumerable.Range(1, 30)
 			let basePool = Pool(seed)
-			let pair = SealedBuilder.Build(basePool, CardRatings.Fra).Colors
+			let pair = SealedBuilder.Build(basePool, CardRatings.Of("FRA")).Colors
 			from color in Colours.Where(c => !pair.Contains(c))
 			let bombs = Bombs(color, basePool)
 			where bombs.Count == 2
@@ -214,7 +220,7 @@ public class SealedSuggestionTests
 			let basePool = Pool(seed)
 				.Where(n => !IsLand(n) || SealedBuilder.Basics.Contains(n)) // no fixing
 				.ToList()
-			let pair = SealedBuilder.Build(basePool, CardRatings.Fra).Colors
+			let pair = SealedBuilder.Build(basePool, CardRatings.Of("FRA")).Colors
 			from color in Colours.Where(c => !pair.Contains(c))
 			let bombs = Bombs(color, basePool).Take(1).ToList()
 			where bombs.Count == 1
@@ -268,9 +274,10 @@ public class SealedSuggestionTests
 	{
 		var chooser = CardDataSet
 			.Load("FRA")
+			.Select(p => p.Card)
 			.First(c =>
 				c.TypeLine.Contains("Land")
-				&& FraCards.Get(c.Name).Components.OfType<ChoosesColorAsItEnters>().Any()
+				&& CardRegistry.Get(c.Name).Components.OfType<ChoosesColorAsItEnters>().Any()
 			)
 			.Name;
 		var basePool = Pool(1).Concat(Enumerable.Repeat(chooser, 6)).ToList();
@@ -378,9 +385,9 @@ public class SealedSuggestionTests
 		[
 			.. CardDataSet
 				.Load("FRA")
-				.Select(c => c.Name)
+				.Select(p => p.Card.Name)
 				.Where(n =>
-					FraCards.IsImplemented(n)
+					CardRegistry.IsImplemented(n)
 					&& !IsLand(n)
 					&& !pool.Contains(n)
 					&& SealedBuilder.FrontCost(Data(n)).Symbols is var pips
@@ -398,9 +405,10 @@ public class SealedSuggestionTests
 		[
 			.. CardDataSet
 				.Load("FRA")
+				.Where(p => p.Rarity == "common")
+				.Select(p => p.Card)
 				.Where(c =>
-					c.Rarity == "common"
-					&& FraCards.Get(c.Name).Components.OfType<ManaAbilityComponent>().Count() == 2
+					CardRegistry.Get(c.Name).Components.OfType<ManaAbilityComponent>().Count() == 2
 					&& Makes(c.Name, color)
 					&& pair.Any(m => Makes(c.Name, m))
 				)
@@ -521,13 +529,13 @@ public class SealedSuggestionTests
 	public void HisQualifierPool_OffersOrzhov_AmongTheClosePairs_WithItsEarlyCurve()
 	{
 		var pool = Qualifier();
-		var best = SealedBuilder.RatePairs(pool, CardRatings.Fra)[0];
-		var close = SealedBuilder.ClosePairs(pool, CardRatings.Fra);
+		var best = SealedBuilder.RatePairs(pool, CardRatings.Of("FRA"))[0];
+		var close = SealedBuilder.ClosePairs(pool, CardRatings.Of("FRA"));
 		var orzhov = close.Single(p =>
 			p.Pair.Order().SequenceEqual(new[] { ManaColor.White, ManaColor.Black })
 		);
 
-		Assert.That(best.Pair, Is.EqualTo(SealedBuilder.Build(pool, CardRatings.Fra).Colors));
+		Assert.That(best.Pair, Is.EqualTo(SealedBuilder.Build(pool, CardRatings.Of("FRA")).Colors));
 		Assert.That(
 			best.Pair,
 			Is.EquivalentTo(new[] { ManaColor.Blue, ManaColor.Black }),
@@ -541,7 +549,7 @@ public class SealedSuggestionTests
 		);
 		Assert.That(close, Has.Count.AtMost(SealedBuilder.MaxClosePairs), "the closest few");
 
-		var builds = SealedBuilder.ForPair(pool, CardRatings.Fra, orzhov.Pair);
+		var builds = SealedBuilder.ForPair(pool, CardRatings.Of("FRA"), orzhov.Pair);
 		Assert.That(
 			builds.Select(b => b.Button),
 			Is.EqualTo(new[] { "White/Black", "White/Black greedy" })
@@ -562,30 +570,30 @@ public class SealedSuggestionTests
 	public void AllBuilds_AreTheSuggestions_ThenEveryClosePairs_EachDeckOnce()
 	{
 		var pool = Qualifier();
-		var all = SealedBuilder.AllBuilds(pool, CardRatings.Fra);
-		var suggestions = SealedBuilder.Suggestions(pool, CardRatings.Fra);
+		var all = SealedBuilder.AllBuilds(pool, CardRatings.Of("FRA"));
+		var suggestions = SealedBuilder.Suggestions(pool, CardRatings.Of("FRA"));
 
 		Assert.That(
 			all.Take(suggestions.Count)
 				.Zip(suggestions)
 				.All(x => SealedBuilder.SameDeck(x.First, x.Second))
 		);
-		foreach (var close in SealedBuilder.ClosePairs(pool, CardRatings.Fra))
-		foreach (var d in SealedBuilder.ForPair(pool, CardRatings.Fra, close.Pair))
+		foreach (var close in SealedBuilder.ClosePairs(pool, CardRatings.Of("FRA")))
+		foreach (var d in SealedBuilder.ForPair(pool, CardRatings.Of("FRA"), close.Pair))
 			Assert.That(all.Count(x => SealedBuilder.SameDeck(x, d)), Is.EqualTo(1), d.Button);
 		Assert.That(all.Select(d => d.Button), Is.Unique, "a name each, for the report");
 
 		// a pool where a close pair's build IS one of the suggestions (seed 3: the best's greedy): once
 		var seeded = Pool(3);
 		var offered = SealedBuilder
-			.Suggestions(seeded, CardRatings.Fra)
+			.Suggestions(seeded, CardRatings.Of("FRA"))
 			.Concat(
 				SealedBuilder
-					.ClosePairs(seeded, CardRatings.Fra)
-					.SelectMany(c => SealedBuilder.ForPair(seeded, CardRatings.Fra, c.Pair))
+					.ClosePairs(seeded, CardRatings.Of("FRA"))
+					.SelectMany(c => SealedBuilder.ForPair(seeded, CardRatings.Of("FRA"), c.Pair))
 			)
 			.ToList();
-		var once = SealedBuilder.AllBuilds(seeded, CardRatings.Fra);
+		var once = SealedBuilder.AllBuilds(seeded, CardRatings.Of("FRA"));
 		Assert.That(once, Has.Count.LessThan(offered.Count), "a duplicate to drop");
 		Assert.That(offered.All(d => once.Count(x => SealedBuilder.SameDeck(x, d)) == 1));
 	}

@@ -3,6 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicCore.Targeting;
 using MagicCore.Turns;
@@ -62,7 +63,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void VerdantKraken_EveryUpkeep_MakesAForestTentacleThatTapsForGreen()
 	{
-		Field(FraCards.Get("Verdant Kraken"), me);
+		Field(CardRegistry.Get("Verdant Kraken"), me);
 
 		To(Step.Upkeep, them);
 		Resolve();
@@ -89,7 +90,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void FrostbitePyromental_DrawsTwoOnCombatDamage_AndIsSacrificedAtTheEndStep()
 	{
-		var pyromental = Field(FraCards.Get("Frostbite Pyromental"), me);
+		var pyromental = Field(CardRegistry.Get("Frostbite Pyromental"), me);
 		var (hand, life) = (HandCount(me), Life(them));
 
 		Attack();
@@ -105,7 +106,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EyeOfJace_SurveilsFirst_ThenAtSevenItSacrificesAndDrains()
 	{
-		var eye = Field(FraCards.Get("Eye of Jace"), me);
+		var eye = Field(CardRegistry.Get("Eye of Jace"), me);
 		for (var i = 0; i < 6; i++)
 			(s, _) = TestGames.Put(s, me, TestGames.Card("Plains"), ZoneType.Graveyard);
 		To(Step.Upkeep, me);
@@ -120,7 +121,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EyeOfJace_UnderSeven_JustSurveils()
 	{
-		var eye = Field(FraCards.Get("Eye of Jace"), me);
+		var eye = Field(CardRegistry.Get("Eye of Jace"), me);
 		for (var i = 0; i < 6; i++)
 			(s, _) = TestGames.Put(s, me, TestGames.Card("Plains"), ZoneType.Graveyard);
 		To(Step.Upkeep, me);
@@ -134,7 +135,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void TraxosAcademyGuardian_CostsTwoLessAfterANoncreatureSpell_AndHasProwess()
 	{
-		var traxos = Field(FraCards.Get("Traxos, Academy Guardian"), me);
+		var traxos = Field(CardRegistry.Get("Traxos, Academy Guardian"), me);
 		var inHand = Hand("Traxos, Academy Guardian", me);
 		Assert.That(Costs.Of(s, me, s.GetCard(inHand)).ManaValue, Is.EqualTo(4));
 
@@ -153,7 +154,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EdgarMoonlitSovereign_GrowsAtYourEndStep_IfYouCastNoSpell()
 	{
-		var edgar = Field(FraCards.Get("Edgar, Moonlit Sovereign"), me);
+		var edgar = Field(CardRegistry.Get("Edgar, Moonlit Sovereign"), me);
 		To(Step.End, me);
 		Resolve();
 		Assert.That(s.GetCard(edgar).PlusOneCounters, Is.EqualTo(2));
@@ -162,7 +163,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EdgarMoonlitSovereign_ASpellThisTurn_StopsTheTrigger()
 	{
-		var edgar = Field(FraCards.Get("Edgar, Moonlit Sovereign"), me);
+		var edgar = Field(CardRegistry.Get("Edgar, Moonlit Sovereign"), me);
 		Cast(Spark(), []);
 		To(Step.End, me);
 		Assert.That(s.StackIsEmpty(), "never triggered (CR 603.4)");
@@ -172,7 +173,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EdgarMoonlitSovereign_ASpellInResponse_CountersTheTriggerOnResolution()
 	{
-		var edgar = Field(FraCards.Get("Edgar, Moonlit Sovereign"), me);
+		var edgar = Field(CardRegistry.Get("Edgar, Moonlit Sovereign"), me);
 		To(Step.End, me);
 		Assert.That(s.StackIsEmpty(), Is.False, "triggered: no spell yet");
 
@@ -186,7 +187,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EdgarMoonlitSovereign_ActivatedGrowsOnlyCreaturesWithACounter()
 	{
-		var edgar = Field(FraCards.Get("Edgar, Moonlit Sovereign"), me);
+		var edgar = Field(CardRegistry.Get("Edgar, Moonlit Sovereign"), me);
 		var countered = Field(TestGames.Creature("Countered", "2/2"), me);
 		var plain = Field(TestGames.Creature("Plain", "2/2"), me);
 		s = s.UpdateObject(countered, s.GetCard(countered) with { PlusOneCounters = 1 }); // TEST SETUP
@@ -207,7 +208,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void TetsukoUmezawaPursuer_ASmallBlockerCostsItsController1()
 	{
-		var tetsuko = Field(FraCards.Get("Tetsuko Umezawa, Pursuer"), me);
+		var tetsuko = Field(CardRegistry.Get("Tetsuko Umezawa, Pursuer"), me);
 		Field(TestGames.Creature("Wall", "1/5"), them);
 		var life = Life(them);
 
@@ -222,7 +223,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void TetsukoUmezawaPursuer_TheBlockerLeavingFirst_StillCostsItsController1()
 	{
-		var tetsuko = Field(FraCards.Get("Tetsuko Umezawa, Pursuer"), me);
+		var tetsuko = Field(CardRegistry.Get("Tetsuko Umezawa, Pursuer"), me);
 		var token = Field(TestGames.Creature("Token", "1/1"), them);
 		s = s.UpdateObject(token, s.GetCard(token) with { IsToken = true }); // TEST SETUP
 		var life = Life(them);
@@ -240,7 +241,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void TetsukoUmezawaPursuer_ABigBlockerDoesNotTrigger_AndProwessPumps()
 	{
-		var tetsuko = Field(FraCards.Get("Tetsuko Umezawa, Pursuer"), me);
+		var tetsuko = Field(CardRegistry.Get("Tetsuko Umezawa, Pursuer"), me);
 		Field(TestGames.Creature("Bear", "2/2"), them);
 		Cast(Spark(), []);
 		Assert.That(s.Power(s.GetCard(tetsuko)), Is.EqualTo(3), "prowess");
@@ -439,7 +440,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void DesperateFuturescribe_PumpsAnotherCreature_OrCountersItIfYouSurveilled()
 	{
-		Field(FraCards.Get("Desperate Futurescribe"), me);
+		Field(CardRegistry.Get("Desperate Futurescribe"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 
 		To(Step.BeginCombat, me);
@@ -478,7 +479,12 @@ public class FraTriggerTests : FraBoardTest
 	public void DarklightPhoenix_ReturnsFromTheGraveyardAtCombat_AfterTwoDeaths()
 	{
 		int phoenix;
-		(s, phoenix) = TestGames.Put(s, me, FraCards.Get("Darklight Phoenix"), ZoneType.Graveyard);
+		(s, phoenix) = TestGames.Put(
+			s,
+			me,
+			CardRegistry.Get("Darklight Phoenix"),
+			ZoneType.Graveyard
+		);
 		var a = Field(TestGames.Creature("A", "1/1"), me);
 		var b = Field(TestGames.Creature("B", "1/1"), them);
 		s = s.Sacrifice(a); // TEST SETUP: one creature dies
@@ -499,7 +505,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void RuricTharBiomagus_DrawsWhenAnOpponentTargetsIt_NotWhenYouDo()
 	{
-		var ruric = Field(FraCards.Get("Ruric Thar, Biomagus"), me);
+		var ruric = Field(CardRegistry.Get("Ruric Thar, Biomagus"), me);
 		var gasp = Hand("Last Gasp", them);
 		var hand = HandCount(me);
 
@@ -524,7 +530,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void RuricTharBiomagus_TargetedTwiceByOneSpell_DrawsOnce()
 	{
-		var ruric = Field(FraCards.Get("Ruric Thar, Biomagus"), me);
+		var ruric = Field(CardRegistry.Get("Ruric Thar, Biomagus"), me);
 		var twin = Hand(
 			new CardDefinition(
 				TestGames.Inline("Twin Bolt", "{R}", "Instant").Data,
@@ -556,7 +562,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void RuricTharBiomagus_ProwessTwice()
 	{
-		var ruric = Field(FraCards.Get("Ruric Thar, Biomagus"), me);
+		var ruric = Field(CardRegistry.Get("Ruric Thar, Biomagus"), me);
 		Cast(Spark(), []);
 		Assert.That(s.Power(s.GetCard(ruric)), Is.EqualTo(4 + 2));
 	}
@@ -564,7 +570,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void LyraTolarianArchangel_AnAngelAtTheEndStep_IfYouDrewThree()
 	{
-		Field(FraCards.Get("Lyra, Tolarian Archangel"), me);
+		Field(CardRegistry.Get("Lyra, Tolarian Archangel"), me);
 		Cast(Instant(new DrawCards(Ref.You, 2)), []);
 		To(Step.End, me);
 		Resolve();
@@ -585,7 +591,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void LyraTolarianArchangel_ActivatedDrawsTwoOnCombatDamage_UntilEndOfTurn()
 	{
-		var lyra = Field(FraCards.Get("Lyra, Tolarian Archangel"), me);
+		var lyra = Field(CardRegistry.Get("Lyra, Tolarian Archangel"), me);
 		s = s.Act(new ActivateAbilityAction { PlayerId = me, CardId = lyra });
 		Resolve();
 		var hand = HandCount(me);
@@ -617,7 +623,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EnlightenedConfidant_GainedLife_SurveilsAndReturnsACheapCard()
 	{
-		Field(FraCards.Get("Enlightened Confidant"), me);
+		Field(CardRegistry.Get("Enlightened Confidant"), me);
 		Cast(Instant(new GainLife(Ref.You, 2)), []);
 		var cheap = OnTop(TestGames.CreatureCosting("{1}{G}", "Cheap", "2/2"));
 
@@ -636,7 +642,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EnlightenedConfidant_TooExpensive_StaysInTheGraveyard()
 	{
-		Field(FraCards.Get("Enlightened Confidant"), me);
+		Field(CardRegistry.Get("Enlightened Confidant"), me);
 		Cast(Instant(new GainLife(Ref.You, 2)), []);
 		var dear = OnTop(TestGames.CreatureCosting("{2}{G}", "Dear", "2/2"));
 
@@ -655,7 +661,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void EnlightenedConfidant_NoLifeGained_NoTrigger()
 	{
-		Field(FraCards.Get("Enlightened Confidant"), me);
+		Field(CardRegistry.Get("Enlightened Confidant"), me);
 		To(Step.End, me);
 		Assert.That(s.StackIsEmpty());
 	}
@@ -663,7 +669,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void SurveillancePhantasm_AttacksOnlyAfterYouSurveil()
 	{
-		var phantasm = Field(FraCards.Get("Surveillance Phantasm"), me);
+		var phantasm = Field(CardRegistry.Get("Surveillance Phantasm"), me);
 		Assert.That(Combat.CanAttack(s, s.GetCard(phantasm)), Is.False, "defender");
 
 		s = s.Act(new ActivateAbilityAction { PlayerId = me, CardId = phantasm });
@@ -701,7 +707,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void DenziloreFatehold_EverySurveilCountersEachCreatureYouControl()
 	{
-		var denzilore = Field(FraCards.Get("Denzilore Fatehold"), me);
+		var denzilore = Field(CardRegistry.Get("Denzilore Fatehold"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 
 		SurveilNow();
@@ -715,7 +721,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void SaheeliConsulOfOversight_AThopterOnlyOnceEachTurn()
 	{
-		Field(FraCards.Get("Saheeli, Consul of Oversight"), me);
+		Field(CardRegistry.Get("Saheeli, Consul of Oversight"), me);
 		SurveilNow();
 		SurveilNow();
 		var thopter = Named("Thopter", me).Single();
@@ -733,7 +739,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void SaheeliConsulOfOversight_DyingToTheStateCheck_StillMakesTheThopter()
 	{
-		Field(FraCards.Get("Saheeli, Consul of Oversight"), me);
+		Field(CardRegistry.Get("Saheeli, Consul of Oversight"), me);
 
 		// Lethal damage: she is still there when triggers are collected, gone (state-based) before
 		// they go on the stack.
@@ -745,7 +751,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void ProftConsultingDetective_PayingTwo_CountersAndDraws()
 	{
-		var proft = Field(FraCards.Get("Proft, Consulting Detective"), me);
+		var proft = Field(CardRegistry.Get("Proft, Consulting Detective"), me);
 		var surveil = Instant(new Surveil(1));
 		var hand = HandCount(me);
 
@@ -765,7 +771,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void ProftConsultingDetective_UnableToPay_IsNotAsked()
 	{
-		Field(FraCards.Get("Proft, Consulting Detective"), me);
+		Field(CardRegistry.Get("Proft, Consulting Detective"), me);
 		var surveil = Instant(new Surveil(1));
 		var island = s.CardsIn(me, ZoneType.Battlefield).First(c => c.Subtypes.Contains("Island"));
 		foreach (
@@ -789,7 +795,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void GalliaTheMerrymaker_CountersANewCreature_WhichThenHasHaste()
 	{
-		var gallia = Field(FraCards.Get("Gallia, the Merrymaker"), me);
+		var gallia = Field(CardRegistry.Get("Gallia, the Merrymaker"), me);
 		var old = Field(TestGames.Creature("Old", "2/2"), me);
 		var fresh = Hand(TestGames.Creature("Fresh", "2/2"), me);
 		s = s.EnterBattlefield(fresh, me); // TEST SETUP: entered this turn, summoning sick
@@ -817,7 +823,7 @@ public class FraTriggerTests : FraBoardTest
 	[Test]
 	public void MabelValleyHero_ACreatureEntering_CountersACreatureThatEnteredThisTurn()
 	{
-		Field(FraCards.Get("Mabel, Valley Hero"), me);
+		Field(CardRegistry.Get("Mabel, Valley Hero"), me);
 		var bear = Hand(TestGames.Creature("Bear", "2/2"), me);
 
 		Cast(bear, []);

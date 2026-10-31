@@ -93,9 +93,9 @@ public partial class PlayerPlate : PanelContainer
 		var command = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
 		foreach (var c in s.CardsIn(player, ZoneType.Command))
 		{
-			var thumb = CardViews.Thumb(c.Name, 70);
+			var thumb = CardViews.Thumb(MagicArt.Key(c), 70);
 			thumb.TooltipText = c.Name;
-			CardViews.Hook(thumb, c.Name, preview, null);
+			CardViews.Hook(thumb, MagicArt.Key(c), preview, null);
 			command.AddChild(thumb);
 		}
 		if (command.GetChildCount() > 0)

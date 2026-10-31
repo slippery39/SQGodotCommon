@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Ai;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Ai;
@@ -35,8 +36,8 @@ public class AiPositionTests
 		var state = s;
 		for (var i = 0; i < 2; i++)
 			(state, _) = TestGames.Put(state, me, TestGames.Card("Plains"), ZoneType.Battlefield);
-		(state, _) = TestGames.Put(state, me, FraCards.Get("Prophesied End"), ZoneType.Hand);
-		(state, _) = TestGames.Put(state, them, FraCards.Get("Rank Rat"), ZoneType.Battlefield);
+		(state, _) = TestGames.Put(state, me, CardRegistry.Get("Prophesied End"), ZoneType.Hand);
+		(state, _) = TestGames.Put(state, them, CardRegistry.Get("Rank Rat"), ZoneType.Battlefield);
 		return state;
 	}
 
@@ -555,9 +556,9 @@ public class AiPositionTests
 		}
 		(s, _) = TestGames.Put(s, me, TestGames.Creature("Bear", "2/2"), ZoneType.Battlefield);
 		(s, _) = TestGames.Put(s, them, TestGames.Creature("Wall", "1/4"), ZoneType.Battlefield);
-		(s, _) = TestGames.Put(s, me, FraCards.Get("Ferocity of the Hunt"), ZoneType.Hand);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Ferocity of the Hunt"), ZoneType.Hand);
 		int gasp;
-		(s, gasp) = TestGames.Put(s, them, FraCards.Get("Last Gasp"), ZoneType.Hand);
+		(s, gasp) = TestGames.Put(s, them, CardRegistry.Get("Last Gasp"), ZoneType.Hand);
 		if (known)
 			s = s.UpdateObject(
 				gasp,
@@ -578,7 +579,7 @@ public class AiPositionTests
 			(s, _) = TestGames.Put(s, me, TestGames.Card("Island"), ZoneType.Battlefield);
 		for (var i = 0; i < 6; i++)
 			(s, _) = TestGames.Put(s, them, TestGames.Card("Plains"), ZoneType.Battlefield);
-		(s, _) = TestGames.Put(s, me, FraCards.Get("Unsummon"), ZoneType.Hand);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Unsummon"), ZoneType.Hand);
 		int attacker;
 		switch (kind)
 		{
@@ -602,7 +603,7 @@ public class AiPositionTests
 				(s, aura) = TestGames.Put(
 					s,
 					them,
-					FraCards.Get("Ferocity of the Hunt"),
+					CardRegistry.Get("Ferocity of the Hunt"),
 					ZoneType.Battlefield
 				);
 				s = s.UpdateObject(aura, s.GetCard(aura) with { AttachedToId = attacker }); // TEST SETUP
@@ -636,13 +637,13 @@ public class AiPositionTests
 				(s, attacker) = TestGames.Put(
 					s,
 					them,
-					FraCards.Get("Fateshaper Aspirant"),
+					CardRegistry.Get("Fateshaper Aspirant"),
 					ZoneType.Battlefield
 				);
 				(s, _) = TestGames.Put(
 					s,
 					them,
-					FraCards.Get("Gallia, Tragic Host"),
+					CardRegistry.Get("Gallia, Tragic Host"),
 					ZoneType.Graveyard
 				);
 				break;
@@ -831,8 +832,8 @@ public class AiPositionTests
 		foreach (
 			var card in new[] { "Way of the Wildspeaker", "Tam's Resistance", "No Admittance" }
 		)
-			(s, _) = TestGames.Put(s, me, FraCards.Get(card), ZoneType.Hand);
-		(s, _) = TestGames.Put(s, me, FraCards.Get("Arcane Amphisbaena"), ZoneType.Battlefield);
+			(s, _) = TestGames.Put(s, me, CardRegistry.Get(card), ZoneType.Hand);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Arcane Amphisbaena"), ZoneType.Battlefield);
 		int jace;
 		(s, jace) = TestGames.Put(s, me, EmpowerJace.JaceToken, ZoneType.Battlefield);
 		s = s.UpdateObject(jace, s.GetCard(jace) with { Loyalty = 1, IsToken = true }); // TEST SETUP

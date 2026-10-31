@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Ai;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Ai;
@@ -24,7 +25,7 @@ public class GameRecordTests
 			FraDecks.All["White-Black"],
 			FraDecks.All["Red-Green"],
 			("You", "AI"),
-			sideboard1: [FraCards.Get("Last Gasp"), FraCards.Get("Rank Rat")]
+			sideboard1: [CardRegistry.Get("Last Gasp"), CardRegistry.Get("Rank Rat")]
 		);
 		var s = record.Start();
 		var ais = new Dictionary<int, IAi>
@@ -199,7 +200,7 @@ public class GameRecordTests
 		var s = PlayRecorded(seed: 9).Record.Start();
 		var token = MoveTokens.Token(
 			s,
-			new SandboxPutAction(s.Player2Id(), FraCards.Get("Last Gasp"), ZoneType.Hand),
+			new SandboxPutAction(s.Player2Id(), CardRegistry.Get("Last Gasp"), ZoneType.Hand),
 			null
 		);
 		Assert.That(

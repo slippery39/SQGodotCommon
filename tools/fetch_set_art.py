@@ -5,6 +5,9 @@
 Per card (and per token of the set's token set, t<code>), by name slug:
   SQGodotCommon/MagicTable/Assets/Art/<slug>.jpg    art crop  — battlefield card crops
   SQGodotCommon/MagicTable/Assets/Cards/<slug>.jpg  full card — hand and preview (exact Oracle text)
+A REPRINT — a card an EARLIER set in CardRegistry.Sets also prints — goes in Art/<code>/ and
+Cards/<code>/ instead: its printing's own art, which MagicArt looks for first (MC-5.5). The shared
+folder holds each card's first printing, whatever order the sets are fetched in.
 Files already on disk are skipped, so a re-run only fetches what is missing.
 """
 
@@ -20,6 +23,7 @@ from pathlib import Path
 from import_scryfall_set import query
 
 ROOT = Path(__file__).resolve().parent.parent / "SQGodotCommon" / "MagicTable" / "Assets"
+SETS = Path(__file__).resolve().parent.parent / "MagicCore" / "Sets"
 HEADERS = {"User-Agent": "SQGodotCardGame/1.0 (personal project)", "Accept": "*/*"}
 
 
@@ -67,16 +71,28 @@ def images(card):
     return [(f["name"], f["image_uris"]) for f in card.get("card_faces", []) if "image_uris" in f]
 
 
+def printed_earlier(code):
+    """Names a set before this one in CardRegistry.Sets prints too — this set's printing is a reprint."""
+    registry = (SETS / "CardRegistry.cs").read_text(encoding="utf-8")
+    order = [s.lower() for s in re.findall(r'"(\w+)"', re.search(r"Sets = \[(.*?)\]", registry).group(1))]
+    earlier = order[: order.index(code)] if code in order else order
+    names = set()
+    for s in earlier:
+        names |= {c["name"] for c in json.loads((SETS / f"{s.upper()}.json").read_text(encoding="utf-8"))}
+    return names
+
+
 def main():
     code = sys.argv[1].lower()
-    (ROOT / "Art").mkdir(parents=True, exist_ok=True)
-    (ROOT / "Cards").mkdir(parents=True, exist_ok=True)
+    reprints = printed_earlier(code)
     cards = search(query(code)) + search(f"set:t{code}")
     fetched = skipped = 0
     for card in cards:
         for name, uris in images(card):
             for folder, kind in (("Art", "art_crop"), ("Cards", "normal")):
-                path = ROOT / folder / f"{slug(name)}.jpg"
+                where = ROOT / folder / code if card["name"] in reprints else ROOT / folder
+                where.mkdir(parents=True, exist_ok=True)
+                path = where / f"{slug(name)}.jpg"
                 if path.exists():
                     skipped += 1
                     continue

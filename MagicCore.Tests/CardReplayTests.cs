@@ -1,5 +1,5 @@
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests;
 
@@ -22,11 +22,11 @@ public class CardReplayTests
 	[OneTimeTearDown]
 	public void SaveReplays() => Replays.WriteIfUpdating();
 
-	static IEnumerable<string> Cards => FraCards.Scripted.Order(StringComparer.Ordinal);
+	static IEnumerable<string> Cards => CardRegistry.Scripted.Order(StringComparer.Ordinal);
 
 	static readonly List<CardDefinition> Spells =
 	[
-		.. Cards.Select(FraCards.Get).Where(c => !c.Data.TypeLine.Contains("Land")),
+		.. Cards.Select(CardRegistry.Get).Where(c => !c.Data.TypeLine.Contains("Land")),
 	];
 
 	[TestCaseSource(nameof(Cards))]
@@ -61,7 +61,7 @@ public class CardReplayTests
 	/// </summary>
 	static List<CardDefinition> Deck(string card, int seed) =>
 		[
-			.. Enumerable.Repeat(FraCards.Get(card), 3),
+			.. Enumerable.Repeat(CardRegistry.Get(card), 3),
 			.. Spells.OrderBy(c => Mix(c.Data.Name, seed)).Take(10),
 			.. new[] { "Plains", "Island", "Swamp", "Mountain", "Forest" }.SelectMany(l =>
 				Enumerable.Repeat(TestGames.Card(l), 5)

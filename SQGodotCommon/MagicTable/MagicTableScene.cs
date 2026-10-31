@@ -8,6 +8,7 @@ using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Rules;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MtgGame;
 
@@ -182,7 +183,10 @@ public partial class MagicTableScene : Control
 				CardViews.Zoom = null;
 		};
 		_sandbox.Put += (seat, name, zone) =>
-			Do(() => _m.Sandbox(seat == 0 ? _m.HumanId : _m.OpponentId, FraCards.Get(name), zone));
+			Do(
+				() =>
+					_m.Sandbox(seat == 0 ? _m.HumanId : _m.OpponentId, CardRegistry.Get(name), zone)
+			);
 		_sandbox.Previewed += Preview;
 
 		// A record to resume (TBL-5.7): --resume=FILE, or picked on the deck select — once; New game is new.
@@ -218,7 +222,7 @@ public partial class MagicTableScene : Control
 			while (!_m.CanSandbox && _m.AiToAct)
 				_m.StepAi();
 			if (_m.CanSandbox)
-				_m.Sandbox(_m.HumanId, FraCards.Get(name), zone);
+				_m.Sandbox(_m.HumanId, CardRegistry.Get(name), zone);
 			else
 				GD.PushWarning(
 					$"{put} skipped: a choice of yours is pending — answer it, then use the Sandbox panel"

@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -104,7 +104,7 @@ public class FraRareFinalTests : FraBoardTest
 	[Test]
 	public void PuppetCrafting_ReturnsFromTheGraveyardToHand()
 	{
-		var crafting = Put(FraCards.Get("Puppet Crafting"), me, ZoneType.Graveyard);
+		var crafting = Put(CardRegistry.Get("Puppet Crafting"), me, ZoneType.Graveyard);
 		s = s.Act(Activations(crafting).Single());
 		Resolve();
 		Assert.That(s.IsIn(crafting, me, ZoneType.Hand));
@@ -130,7 +130,7 @@ public class FraRareFinalTests : FraBoardTest
 	[Test]
 	public void Emrakul_WardSacrificeThree_DecliningCounters_PayingCostsThree()
 	{
-		var emrakul = Field(FraCards.Get("Emrakul, the Exigent Doom"), me);
+		var emrakul = Field(CardRegistry.Get("Emrakul, the Exigent Doom"), me);
 		var kill = Hand(Kill, them);
 		s = s.Act(new PassPriorityAction { PlayerId = me });
 		s = s.Act(
@@ -301,7 +301,7 @@ public class FraRareFinalTests : FraBoardTest
 
 	int ChandraOnTop(CardDefinition card)
 	{
-		var chandra = Field(FraCards.Get("Chandra, Torch of Defiance"), me);
+		var chandra = Field(CardRegistry.Get("Chandra, Torch of Defiance"), me);
 		s = s.UpdateObject(chandra, s.GetCard(chandra) with { Loyalty = 4 }); // TEST SETUP
 		int id;
 		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);

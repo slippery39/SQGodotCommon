@@ -3,6 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicCore.Turns;
 
@@ -28,7 +29,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Bloombrute_DrawsOnTheFirstLifeGainEachTurnOnly()
 	{
-		Field(FraCards.Get("Bloombrute"), me);
+		Field(CardRegistry.Get("Bloombrute"), me);
 		var first = Hand(Heal, me);
 		var second = Hand(Heal, me);
 		var hand = HandCount(me);
@@ -40,7 +41,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Bloombrute_GivesTrampleAndLifelink()
 	{
-		var brute = Field(FraCards.Get("Bloombrute"), me);
+		var brute = Field(CardRegistry.Get("Bloombrute"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Activate(brute, bear);
 		var card = s.GetCard(bear);
@@ -50,7 +51,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Koth_APlainsGainsOneAndPutsACounter()
 	{
-		Field(FraCards.Get("Koth of the Homestead"), me);
+		Field(CardRegistry.Get("Koth of the Homestead"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var plains = Hand(TestGames.Card("Plains"), me);
 		var life = Life(me);
@@ -68,7 +69,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Koth_AnotherLandOnlyGainsOne()
 	{
-		Field(FraCards.Get("Koth of the Homestead"), me);
+		Field(CardRegistry.Get("Koth of the Homestead"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var forest = Hand(TestGames.Card("Forest"), me);
 		var life = Life(me);
@@ -88,7 +89,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void RescueGirl_ReturnsAnotherPermanentYouControl_OnlyDuringYourTurn()
 	{
-		var girl = Field(FraCards.Get("Rescue Girl, First Responder"), me);
+		var girl = Field(CardRegistry.Get("Rescue Girl, First Responder"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Assert.That(Activations(girl).SelectMany(a => a.Targets), Does.Not.Contain(girl));
 		Activate(girl, bear);
@@ -168,7 +169,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void HapatraDesertFrost_UntapsACreature()
 	{
-		var hapatra = Field(FraCards.Get("Hapatra, the Desert Frost"), me);
+		var hapatra = Field(CardRegistry.Get("Hapatra, the Desert Frost"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Tapped(bear);
 		Activate(hapatra, bear);
@@ -178,7 +179,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void GeistOfSaintThalia_YourNoncreatureSpellsCostOneLess()
 	{
-		Field(FraCards.Get("Geist of Saint Thalia"), me);
+		Field(CardRegistry.Get("Geist of Saint Thalia"), me);
 		var spell = Hand(TestGames.Inline("Spell", "{2}{U}", "Instant"), me);
 		var creature = Hand(TestGames.CreatureCosting("{2}{U}", "Guy", "2/2"), me);
 		var theirs = Hand(TestGames.Inline("Theirs", "{2}{U}", "Instant"), them);
@@ -190,7 +191,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void GeistOfSaintThalia_TheDiscountAppliesToX()
 	{
-		Field(FraCards.Get("Geist of Saint Thalia"), me);
+		Field(CardRegistry.Get("Geist of Saint Thalia"), me);
 		var blast = Hand(
 			TestGames.Inline("Blast", "{X}{R}", "Instant", null, new GainLife(Ref.You, 1)),
 			me
@@ -216,7 +217,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Arni_UntapsWhenANontokenCreatureEnters_NotAToken()
 	{
-		var arni = Field(FraCards.Get("Arni, Humble Scribe"), me);
+		var arni = Field(CardRegistry.Get("Arni, Humble Scribe"), me);
 		Tapped(arni);
 		var thopters = Hand(
 			TestGames.Inline(
@@ -238,7 +239,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Arni_LootsForTap()
 	{
-		var arni = Field(FraCards.Get("Arni, Humble Scribe"), me);
+		var arni = Field(CardRegistry.Get("Arni, Humble Scribe"), me);
 		var hand = HandCount(me);
 		var graveyard = s.CardsIn(me, ZoneType.Graveyard).Count();
 		Activate(arni);
@@ -251,7 +252,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Traxos_StaysTappedThroughYourUntapStep_ButACreatureSpellUntapsIt()
 	{
-		var traxos = Field(FraCards.Get("Traxos, Scourge Eternal"), me);
+		var traxos = Field(CardRegistry.Get("Traxos, Scourge Eternal"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Tapped(traxos);
 		Tapped(bear);
@@ -276,7 +277,7 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void Saheeli_ThoptersHaveHaste_AndANoncreatureSpellMakesOne()
 	{
-		Field(FraCards.Get("Saheeli, Jewel of Avishkar"), me);
+		Field(CardRegistry.Get("Saheeli, Jewel of Avishkar"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(Hand(Heal, me), []);
 		var thopter = Tokens(me, "Thopter").Single();
@@ -289,8 +290,8 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void HexhavenArena_PreparesForFour()
 	{
-		var arena = Field(FraCards.Get("Hexhaven Dueling Arena"), me);
-		var foreseer = Field(FraCards.Get("Semester Foreseer // Peer Review"), me);
+		var arena = Field(CardRegistry.Get("Hexhaven Dueling Arena"), me);
+		var foreseer = Field(CardRegistry.Get("Semester Foreseer // Peer Review"), me);
 		Activate(arena, foreseer);
 		Assert.That(s.GetCard(foreseer).IsPrepared);
 	}
@@ -298,8 +299,8 @@ public class FraUncommonCreatureTests : FraBoardTest
 	[Test]
 	public void HexhavenArena_ForTwo_OnlyACreatureThatAttackedThisTurn()
 	{
-		var arena = Field(FraCards.Get("Hexhaven Dueling Arena"), me);
-		var attacker = Field(FraCards.Get("Semester Foreseer // Peer Review"), me);
+		var arena = Field(CardRegistry.Get("Hexhaven Dueling Arena"), me);
+		var attacker = Field(CardRegistry.Get("Semester Foreseer // Peer Review"), me);
 		var stayedHome = Field(TestGames.Creature("Homebody", "2/2"), me);
 		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
 		while (s.GetPendingChoice() is DeclareAttackerChoice declare)

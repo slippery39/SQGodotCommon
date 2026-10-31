@@ -1,7 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests;
 
@@ -28,14 +28,14 @@ public class CardProbeTests
 	static List<CardDefinition> Deck(IReadOnlyList<string> batch, int seed)
 	{
 		var rng = new Random(seed);
-		var extras = FraCards
-			.Scripted.Select(FraCards.Get)
+		var extras = CardRegistry
+			.Scripted.Select(CardRegistry.Get)
 			.Where(c => !c.Data.TypeLine.Contains("Land"))
 			.OrderBy(_ => rng.Next())
 			.Take(10);
 		return
 		[
-			.. batch.SelectMany(n => Enumerable.Repeat(FraCards.Get(n), 3)),
+			.. batch.SelectMany(n => Enumerable.Repeat(CardRegistry.Get(n), 3)),
 			.. extras,
 			.. new[] { "Plains", "Island", "Swamp", "Mountain", "Forest" }.SelectMany(l =>
 				Enumerable.Repeat(TestGames.Card(l), 5)

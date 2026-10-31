@@ -1,6 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Ai;
 
@@ -75,7 +75,7 @@ public static class MoveTokens
 		var parts = put.Split(':', 3);
 		return new SandboxPutAction(
 			int.Parse(parts[0]),
-			FraCards.Get(parts[2]),
+			CardRegistry.Get(parts[2]),
 			Enum.Parse<ZoneType>(parts[1])
 		);
 	}

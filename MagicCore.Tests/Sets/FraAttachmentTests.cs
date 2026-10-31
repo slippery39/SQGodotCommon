@@ -3,7 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -27,7 +27,7 @@ public class FraAttachmentTests : FraBoardTest
 	[Test]
 	public void MedicsKitesail_EquippedGetsPlusOneAndFlying_AndGainsOneAttacking()
 	{
-		var kitesail = Field(FraCards.Get("Medic's Kitesail"), me);
+		var kitesail = Field(CardRegistry.Get("Medic's Kitesail"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Equip(kitesail, bear);
 		Assert.That(
@@ -48,7 +48,7 @@ public class FraAttachmentTests : FraBoardTest
 	[Test]
 	public void Equipment_ItsBonusIsLive_ItMovesWithTheEquipment()
 	{
-		var kitesail = Field(FraCards.Get("Medic's Kitesail"), me);
+		var kitesail = Field(CardRegistry.Get("Medic's Kitesail"), me);
 		var first = Field(TestGames.Creature("First", "2/2"), me);
 		var second = Field(TestGames.Creature("Second", "2/2"), me);
 		Equip(kitesail, first);
@@ -63,7 +63,7 @@ public class FraAttachmentTests : FraBoardTest
 	[Test]
 	public void Equipment_StaysWhenItsCreatureDies_Unattached()
 	{
-		var kitesail = Field(FraCards.Get("Medic's Kitesail"), me);
+		var kitesail = Field(CardRegistry.Get("Medic's Kitesail"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Equip(kitesail, bear);
 		s = s.Sacrifice(bear);
@@ -74,7 +74,7 @@ public class FraAttachmentTests : FraBoardTest
 	[Test]
 	public void Equip_OnlyYourCreatures_OnlyAsASorcery()
 	{
-		var kitesail = Field(FraCards.Get("Medic's Kitesail"), me);
+		var kitesail = Field(CardRegistry.Get("Medic's Kitesail"), me);
 		var theirs = Field(TestGames.Creature("Theirs", "2/2"), them);
 		Field(TestGames.Creature("Mine", "2/2"), me);
 		Assert.That(Activations(kitesail).Select(a => a.Targets[0]), Does.Not.Contain(theirs));
@@ -175,7 +175,7 @@ public class FraAttachmentTests : FraBoardTest
 	[Test]
 	public void HuntersAxe_TheAttackerGainsTheChosenKeyword()
 	{
-		var axe = Field(FraCards.Get("Hunter's Axe"), me);
+		var axe = Field(CardRegistry.Get("Hunter's Axe"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Equip(axe, bear);
 		Assert.That(s.Power(s.GetCard(bear)), Is.EqualTo(4));
@@ -262,7 +262,7 @@ public class FraAttachmentTests : FraBoardTest
 		(s, ferocity) = TestGames.Put(
 			s,
 			me,
-			FraCards.Get("Ferocity of the Hunt"),
+			CardRegistry.Get("Ferocity of the Hunt"),
 			ZoneType.Graveyard
 		);
 		var asked = false;
@@ -286,7 +286,7 @@ public class FraAttachmentTests : FraBoardTest
 	[Test]
 	public void AHostThatLeftAndCameBack_IsANewObject_NothingIsOnIt()
 	{
-		var kitesail = Field(FraCards.Get("Medic's Kitesail"), me);
+		var kitesail = Field(CardRegistry.Get("Medic's Kitesail"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Equip(kitesail, bear);
 

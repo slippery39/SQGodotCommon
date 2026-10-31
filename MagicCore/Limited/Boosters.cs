@@ -1,6 +1,7 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Limited;
 
@@ -26,13 +27,17 @@ public static class Boosters
 
 	static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 
-	static readonly Lazy<Config> Fra =
-		new(
-			() =>
+	static readonly ConcurrentDictionary<string, Config> Configs = new();
+
+	/// <summary>A set's collation, <c>Sets/&lt;SET&gt;.boosters.json</c> — loaded once.</summary>
+	static Config Of(string set) =>
+		Configs.GetOrAdd(
+			set,
+			s =>
 				JsonSerializer.Deserialize<Config>(
-					CardDataSet.ResourceText("FRA.boosters.json")
+					CardDataSet.ResourceText($"{s}.boosters.json")
 						?? throw new InvalidOperationException(
-							"No FRA.boosters.json. Run: python tools/import_mtgjson_boosters.py fra"
+							$"No {s}.boosters.json. Run: python tools/import_mtgjson_boosters.py {s.ToLowerInvariant()}"
 						),
 					Options
 				)!
@@ -42,26 +47,27 @@ public static class Boosters
 	/// The Special Guests a pack can hold (their sheet) — one pack in 55 has one in place of a common.
 	/// In the set's card data since MC-3.1, all scripted since MC-3.4.
 	/// </summary>
-	public static IReadOnlyCollection<string> Guests => Fra.Value.Sheets["specialGuest"].Cards.Keys;
+	public static IReadOnlyCollection<string> Guests(string set) =>
+		Of(set).Sheets.TryGetValue("specialGuest", out var sheet) ? sheet.Cards.Keys : [];
 
 	/// <summary>The four-of-five-colours rule, applied to the <c>common</c> sheet's cards.</summary>
 	public const int MinCommonColors = 4;
 
 	/// <summary>A sealed pool: <paramref name="packs"/> packs (Arena: six), the same pool for the same seed.</summary>
-	public static IReadOnlyList<IReadOnlyList<PackCard>> Sealed(int seed, int packs = 6)
+	public static IReadOnlyList<IReadOnlyList<PackCard>> Sealed(string set, int seed, int packs = 6)
 	{
 		var rng = new Random(seed);
-		return [.. Enumerable.Range(0, packs).Select(_ => Pack(rng))];
+		return [.. Enumerable.Range(0, packs).Select(_ => Pack(set, rng))];
 	}
 
 	/// <summary><see cref="Sealed"/> as card names, pack by pack — what a builder reads.</summary>
-	public static IReadOnlyList<string> SealedPool(int seed) =>
-		[.. Sealed(seed).SelectMany(p => p).Select(c => c.Card)];
+	public static IReadOnlyList<string> SealedPool(string set, int seed) =>
+		[.. Sealed(set, seed).SelectMany(p => p).Select(c => c.Card)];
 
 	/// <summary>One pack: a weighted variant, then each of its sheets drawn — no card twice from a sheet.</summary>
-	public static IReadOnlyList<PackCard> Pack(Random rng)
+	public static IReadOnlyList<PackCard> Pack(string set, Random rng)
 	{
-		var config = Fra.Value;
+		var config = Of(set);
 		var contents = new Dictionary<string, int>(
 			Pick(config.Boosters, v => v.Weight, rng).Contents
 		);
@@ -94,7 +100,7 @@ public static class Boosters
 			}
 			if (
 				!balance
-				|| drawn.SelectMany(c => FraCards.Get(c).Data.Colors ?? []).Distinct().Count()
+				|| drawn.SelectMany(c => CardRegistry.Get(c).Data.Colors ?? []).Distinct().Count()
 					>= MinCommonColors
 			)
 				return drawn;

@@ -64,10 +64,10 @@ MagicCore/
 ├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
 ├── Rules/Replacements.cs  THE numeric replacements ("that much plus one instead") — damage, +1/+1 counters
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
-├── Cards/CardData.cs    printed data (Scryfall) + CardDataSet.Load("FRA")
+├── Cards/CardData.cs    printed RULES data (Scryfall), one per name; CardPrinting: a set's rarity, number; Load(set)
 ├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities
-├── Sets/Fra/FraCards.cs hand-written FRA abilities by name; IsImplemented
-├── Sets/Fra/EmpowerJace.cs  the keyword action and the Jace token
+├── Sets/CardRegistry.cs EVERY set's cards by name: Get(name[, set]), IsImplemented, Printings(set); Tokens.cs: Treasure, Clue, Food
+├── Sets/Fra/, Sets/Trk/ <Set>Cards.cs: a set's abilities by name — a reprint scripted ONCE (MC-5.5); Fra/EmpowerJace.cs
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named; ReadPool: a sealed
 │                        pool (every section), what isn't FRA left out by name
@@ -167,11 +167,11 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   "don't". Damage assignment ORDER is gone from the rules (Foundations, Nov 2024); the split among
   blockers is automatic for now (`Combat.DealDamage`).
 - Mana abilities are not in `LegalActions` (pure AI branching); casting taps what it needs.
-- **A card plays only if `FraCards.IsImplemented`** — scripted, a basic land, or text that is only
+- **A card plays only if `CardRegistry.IsImplemented`** — scripted, a basic land, or text that is only
   engine keywords. Anything else plays silently vanilla. **Every scripted card has a test in
   a `Sets/Fra*Tests` file that its ability FIRES** (`FraCardTests`, or the batch's own file —
   `FraTriggerTests`, `FraStaticTests` …), through real casting and the real stack.
-- Card abilities are hand-written as data (`FraCards`); **name, cost, type, P/T and keywords come from
+- Card abilities are hand-written as data (a set's Cards file); **name, cost, type, P/T and keywords come from
   `CardData`**, never retyped. Test cards are inline (`TestGames.Creature/Inline`).
 - **A card test asserts the PRINTED text's numbers** (Last Gasp is -3/-3) — that is the root rule's
   exception, not a breach: printed cards get no balance passes, and reading the number back from the

@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Sets;
 
@@ -109,7 +109,7 @@ public class FraKnowledgeTests : FraBoardTest
 	[Test]
 	public void ParadoxShaper_TheGraveyardCardOnTheBottom_IsKnownToEveryone()
 	{
-		var shaper = Field(FraCards.Get("Paradox Shaper // Omit Variables"), me);
+		var shaper = Field(CardRegistry.Get("Paradox Shaper // Omit Variables"), me);
 		int card;
 		(s, card) = TestGames.Put(s, me, TestGames.Card("Plains"), ZoneType.Graveyard);
 		s = s.Act(
@@ -174,7 +174,7 @@ public class FraKnowledgeTests : FraBoardTest
 	[Test]
 	public void IdentityEcho_ItsRandomBottom_IsNotKnown()
 	{
-		var echo = Field(FraCards.Get("Identity Echo"), me);
+		var echo = Field(CardRegistry.Get("Identity Echo"), me);
 		var mine = Field(TestGames.Creature("Mine", "1/1"), me);
 		int bear,
 			island;

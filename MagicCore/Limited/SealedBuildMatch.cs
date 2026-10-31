@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Limited;
@@ -37,7 +38,7 @@ public static class SealedBuildMatch
 		return new Build(
 			name,
 			deck.Deck,
-			[.. rest.Where(FraCards.IsImplemented).Select(FraCards.Get)]
+			[.. rest.Where(CardRegistry.IsImplemented).Select(CardRegistry.Get)]
 		);
 	}
 
@@ -46,7 +47,7 @@ public static class SealedBuildMatch
 
 	/// <summary>One of the builder's builds as a candidate (LIM-3.4): named by its button, the rest of its pool outside the game.</summary>
 	public static Build FromSuggestion(SealedDeck deck) =>
-		new(deck.Button, [.. deck.Main.Select(FraCards.Get)], Outside(deck.Sideboard));
+		new(deck.Button, [.. deck.Main.Select(CardRegistry.Get)], Outside(deck.Sideboard));
 
 	/// <summary>Builds as candidates, a repeated name numbered — the best's greedy and a close pair's can share one.</summary>
 	public static IReadOnlyList<Build> FromSuggestions(IEnumerable<SealedDeck> decks)
@@ -71,8 +72,8 @@ public static class SealedBuildMatch
 	static IReadOnlyList<CardDefinition> Outside(IEnumerable<string> cards) =>
 		[
 			.. cards
-				.Where(n => FraCards.IsImplemented(n) && !SealedBuilder.Basics.Contains(n))
-				.Select(FraCards.Get),
+				.Where(n => CardRegistry.IsImplemented(n) && !SealedBuilder.Basics.Contains(n))
+				.Select(CardRegistry.Get),
 		];
 
 	/// <summary>Games a minute a core, measured (LIM-3.4: 11 builds at 200 in 104 min on 16 cores; LIM-1.8's two builds ran 1.7) — for an estimate, not a promise.</summary>
@@ -90,7 +91,10 @@ public static class SealedBuildMatch
 		if (opponents < 2)
 			throw new ArgumentException("At least 2 opponents — a standard error needs two games.");
 		var clock = Stopwatch.StartNew();
-		var rivals = Enumerable.Range(1, opponents).Select(SealedBuilder.Opponent).ToList();
+		var rivals = Enumerable
+			.Range(1, opponents)
+			.Select(i => SealedBuilder.Opponent("FRA", i))
+			.ToList();
 		var games = new AiMatch.Game[builds.Count * opponents];
 		// Capped at the cores, as AiMatch.PlayAll: uncapped, the pool grows past them and games fight over them.
 		Parallel.For(
@@ -106,7 +110,7 @@ public static class SealedBuildMatch
 				);
 				var start = MagicRules.NewGame(
 					build.Main,
-					rival.Main.Select(FraCards.Get),
+					rival.Main.Select(CardRegistry.Get),
 					seed,
 					sideboard1: build.Sideboard,
 					sideboard2: Outside(rival.Sideboard)

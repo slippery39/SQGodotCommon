@@ -1,7 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -236,7 +236,7 @@ public class FraModalTests : FraBoardTest
 	[Test]
 	public void ArchiveArbiter_DestroysANoncreatureNonland_OrGainsFour()
 	{
-		var way = Field(FraCards.Get("Way of the Pyromancer"), them);
+		var way = Field(CardRegistry.Get("Way of the Pyromancer"), them);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), them);
 		CastWithTrigger(Hand("Archive Arbiter", me), [0], way);
 		Assert.That(Alive(way), Is.False);

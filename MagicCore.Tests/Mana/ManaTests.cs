@@ -1,7 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Mana;
 
@@ -41,7 +41,9 @@ public class ManaCostTests
 	[Test]
 	public void EveryFraCard_BuildsAndItsManaValueMatchesScryfall()
 	{
-		foreach (var data in CardDataSet.Load("FRA").Where(d => d.CardFaces is null))
+		foreach (
+			var data in CardDataSet.Load("FRA").Select(p => p.Card).Where(d => d.CardFaces is null)
+		)
 		{
 			var card = CardFactory.Create(CardDefinition.Vanilla(data), ownerId: 1);
 			Assert.That(card.ManaCost.ManaValue, Is.EqualTo((int)data.Cmc), data.Name);
@@ -121,7 +123,7 @@ public class ManaPaymentTests
 		(s, propagator) = TestGames.Put(
 			s,
 			me,
-			FraCards.Get("Greenhouse Propagator"),
+			CardRegistry.Get("Greenhouse Propagator"),
 			ZoneType.Battlefield
 		);
 		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);

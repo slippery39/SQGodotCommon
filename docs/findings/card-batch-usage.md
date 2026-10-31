@@ -15,3 +15,4 @@ session per batch was simulated to save 37–40%.
 | Date | Batch | Session | Calls | Median context | Total |
 |---|---|---|---|---|---|
 | 2026-10-31 | MC-5.1: the TRK survey + plan, 0 cards | f711d95c | 61 | 184k | 2.0M |
+| 2026-10-31 | MC-5.5: card registry across sets, TRK tokens, Planet duals, 10 cards | 498c3cea | 142 | 225k | 4.7M |

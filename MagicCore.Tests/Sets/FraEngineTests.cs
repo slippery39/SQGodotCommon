@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -97,7 +97,7 @@ public class FraEngineTests : FraBoardTest
 	[Test]
 	public void InfiniteCoursework_ItsTriggersGo()
 	{
-		var tinybones = Field(FraCards.Get("Tinybones, Pocket Nuisance"), them);
+		var tinybones = Field(CardRegistry.Get("Tinybones, Pocket Nuisance"), them);
 		Coursework(tinybones);
 		Hand(TestGames.Inline("Fodder", "{1}", "Sorcery"), me);
 		var life = Life(me);
@@ -127,7 +127,7 @@ public class FraEngineTests : FraBoardTest
 	[Test]
 	public void InfiniteCoursework_ItBecomesUnprepared()
 	{
-		var foreseer = Field(FraCards.Get("Semester Foreseer // Peer Review"), them);
+		var foreseer = Field(CardRegistry.Get("Semester Foreseer // Peer Review"), them);
 		s = Rules.Prepare.Become(s, foreseer);
 		Assert.That(s.GetCard(foreseer).IsPrepared);
 		Coursework(foreseer);
@@ -222,7 +222,7 @@ public class FraEngineTests : FraBoardTest
 	[Test]
 	public void FlourishingGrapple_AStrippedPlaneswalkerLosesGrantedLoyaltyAbilities()
 	{
-		Field(FraCards.Get("Kiora of Salt and Sand"), them); // grants "[-8]: Create … Leviathan"
+		Field(CardRegistry.Get("Kiora of Salt and Sand"), them); // grants "[-8]: Create … Leviathan"
 		var walker = Field(Red(TestGames.Planeswalker("Walker", 9)), them);
 		s = s.UpdateObject(walker, s.GetCard(walker) with { Loyalty = 9 }); // TEST SETUP: Put skips entering
 		Assert.That(Loyalty.AbilitiesOf(s, s.GetCard(walker)), Is.Not.Empty);
@@ -284,7 +284,7 @@ public class FraEngineTests : FraBoardTest
 	[Test]
 	public void LootTheNexus_OneColourForEachDifferentPower()
 	{
-		Field(FraCards.Get("Loot, the Nexus"), me); // a 2/1
+		Field(CardRegistry.Get("Loot, the Nexus"), me); // a 2/1
 		Field(TestGames.Creature("Two", "2/2"), me);
 		Field(TestGames.Creature("Three", "3/3"), me);
 		TapAllLandsBut();
@@ -300,7 +300,7 @@ public class FraEngineTests : FraBoardTest
 	[Test]
 	public void LootTheNexus_WhatTheSpellDoesntUseFloats()
 	{
-		var loot = Field(FraCards.Get("Loot, the Nexus"), me);
+		var loot = Field(CardRegistry.Get("Loot, the Nexus"), me);
 		Field(TestGames.Creature("Three", "3/3"), me);
 		TapAllLandsBut();
 		var spell = Hand(Spell("{G}"), me);
@@ -314,7 +314,7 @@ public class FraEngineTests : FraBoardTest
 	[Test]
 	public void HeartwoodCrafter_ItsManaPaysAbilities_NotSpellsFromYourHand()
 	{
-		var crafter = Field(FraCards.Get("Heartwood Crafter // Soul Tether"), me);
+		var crafter = Field(CardRegistry.Get("Heartwood Crafter // Soul Tether"), me);
 		var engine = TestGames.Creature("Engine", "1/1");
 		var engineId = Field(
 			engine with
@@ -357,7 +357,7 @@ public class FraEngineTests : FraBoardTest
 	public void HeartwoodCrafter_ItsManaCantPayForASpellFromHand_ButItCanStillConvoke()
 	{
 		var winter = Hand("Winter, Team Player", me); // {4}{R}, convoke
-		Field(FraCards.Get("Heartwood Crafter // Soul Tether"), me);
+		Field(CardRegistry.Get("Heartwood Crafter // Soul Tether"), me);
 		Field(Red(TestGames.Creature("Red", "1/1")), me);
 		for (var i = 0; i < 3; i++)
 			Field(TestGames.Creature("Grey", "1/1"), me);
@@ -368,7 +368,7 @@ public class FraEngineTests : FraBoardTest
 	[Test]
 	public void PyreRhymer_MoltenTideMakesEachMountainTapForTwo()
 	{
-		var rhymer = Field(FraCards.Get("Pyre Rhymer // Molten Tide"), me);
+		var rhymer = Field(CardRegistry.Get("Pyre Rhymer // Molten Tide"), me);
 		s = Rules.Prepare.Become(s, rhymer);
 		var tide = s.CardsIn(me, ZoneType.Exile).Single(c => c.IsCopy).Id;
 		var red = Hand(Spell("{R}{R}"), me);
@@ -530,7 +530,7 @@ public class FraEngineTests : FraBoardTest
 	{
 		var a = Field(TestGames.Creature("A", "5/5"), them);
 		WayMinusThree();
-		var tomik = Field(FraCards.Get("Tomik, Izzet Sparkmage"), me); // prowess — after Way, itself a cast
+		var tomik = Field(CardRegistry.Get("Tomik, Izzet Sparkmage"), me); // prowess — after Way, itself a cast
 		Cast(Hand(Bolt(1), me), [], a);
 		Assert.That(s.Power(s.GetCard(tomik)), Is.EqualTo(1 + 1), "prowess saw one cast, not two");
 	}
@@ -658,7 +658,7 @@ public class FraEngineTests : FraBoardTest
 		var a = Field(TestGames.Creature("A", "2/2"), them);
 		var b = Field(TestGames.Creature("B", "2/2"), them);
 		WayMinusThree();
-		var proxy = Field(FraCards.Get("Theorist's Proxy"), me);
+		var proxy = Field(CardRegistry.Get("Theorist's Proxy"), me);
 		s = s.Act(Activations(proxy).Single()); // the next spell you cast this turn can't be countered
 		Resolve();
 		var bolt = Hand(Bolt(2), me);

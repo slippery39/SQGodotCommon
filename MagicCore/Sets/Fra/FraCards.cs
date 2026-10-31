@@ -5,21 +5,23 @@ using MagicCore.Effects;
 using MagicCore.Filters;
 using MagicCore.Targeting;
 using MagicCore.Turns;
+using static MagicCore.Sets.Tokens;
 
 namespace MagicCore.Sets.Fra;
 
 /// <summary>
 /// Reality Fracture's hand-written abilities, keyed by card name. Names, costs, types, P/T and
-/// keywords come from FRA.json; only what the rules text DOES is written here.
+/// keywords come from FRA.json; only what the rules text DOES is written here. Cards are looked up
+/// through <see cref="CardRegistry"/>, which holds every set's scripts — a reprint is scripted once.
 ///
-/// A card is playable when it is scripted here or its text is nothing but keywords the engine
-/// implements — see <see cref="IsImplemented"/>. Anything else would play silently vanilla.
+/// A card is playable when it is scripted or its text is nothing but keywords the engine
+/// implements — see <see cref="CardRegistry.IsImplemented"/>. Anything else would play silently vanilla.
 /// </summary>
 public static class FraCards
 {
 	static readonly Dictionary<string, CardData> Data = CardDataSet
 		.Load("FRA")
-		.ToDictionary(c => c.Name);
+		.ToDictionary(p => p.Card.Name, p => p.Card);
 
 	/// <summary>"A 2/2 colorless Wizard Soldier creature token named Cadet."</summary>
 	public static readonly CardData Cadet =
@@ -35,8 +37,6 @@ public static class FraCards
 			null,
 			[],
 			[],
-			"token",
-			"T",
 			null
 		);
 
@@ -54,8 +54,6 @@ public static class FraCards
 			null,
 			["G"],
 			["Trample"],
-			"token",
-			"T",
 			null
 		);
 
@@ -73,8 +71,6 @@ public static class FraCards
 			null,
 			["U"],
 			[],
-			"token",
-			"T",
 			null
 		);
 
@@ -92,8 +88,6 @@ public static class FraCards
 			null,
 			["G"],
 			[],
-			"token",
-			"T",
 			null
 		);
 
@@ -111,8 +105,6 @@ public static class FraCards
 			null,
 			["G"],
 			[],
-			"token",
-			"T",
 			null
 		);
 
@@ -130,8 +122,6 @@ public static class FraCards
 			null,
 			["U"],
 			["Flying"],
-			"token",
-			"T",
 			null
 		);
 
@@ -149,8 +139,6 @@ public static class FraCards
 			null,
 			[],
 			["Flying"],
-			"token",
-			"T",
 			null
 		);
 
@@ -168,8 +156,6 @@ public static class FraCards
 			null,
 			["R"],
 			["Flying"],
-			"token",
-			"T",
 			null
 		);
 
@@ -187,36 +173,8 @@ public static class FraCards
 			null,
 			["U"],
 			["Hexproof"],
-			"token",
-			"T",
 			null
 		);
-
-	static CardData Token(
-		string name,
-		string typeLine,
-		string? power = null,
-		string? toughness = null
-	) =>
-		new(
-			name,
-			"token",
-			null,
-			0,
-			typeLine,
-			null,
-			power,
-			toughness,
-			null,
-			[],
-			[],
-			"token",
-			"T",
-			null
-		);
-
-	/// <summary>"A Treasure token. (It's an artifact with '{T}, Sacrifice this token: Add one mana of any color.')"</summary>
-	public static readonly CardData Treasure = Token("Treasure", "Artifact — Treasure");
 
 	/// <summary>Vraska, Soul of Stone: "a 1/1 colorless Sculpture Treasure artifact creature token".</summary>
 	public static readonly CardData SculptureTreasure = Token(
@@ -228,10 +186,6 @@ public static class FraCards
 
 	/// <summary>Kwia Vigorbloom: "a colorless artifact token named Lotus".</summary>
 	public static readonly CardData Lotus = Token("Lotus", "Artifact");
-
-	/// <summary>"{T}, Sacrifice this token: Add [N] mana of any (one) color." — Treasure's and Lotus's.</summary>
-	static ManaOfOneColorComponent SacrificeForMana(int amount) =>
-		new(amount) { SacrificeSelf = true };
 
 	/// <summary>Ajani Resolute: "a 2/2 white Cat Soldier creature token named Ajani's Pridemate".</summary>
 	public static readonly CardData AjanisPridemate =
@@ -247,8 +201,6 @@ public static class FraCards
 			null,
 			["W"],
 			[],
-			"token",
-			"T",
 			null
 		);
 
@@ -269,8 +221,6 @@ public static class FraCards
 			null,
 			["R", "G"],
 			[],
-			"token",
-			"T",
 			null
 		);
 
@@ -294,23 +244,6 @@ public static class FraCards
 			new ManaAbilityComponent(a),
 			new ManaAbilityComponent(b),
 		];
-
-	/// <summary>Keywords the engine implements; a text line made only of these needs no script.</summary>
-	public static readonly ImmutableHashSet<string> EngineKeywords = ImmutableHashSet.Create(
-		StringComparer.OrdinalIgnoreCase,
-		"Flying",
-		"Reach",
-		"Trample",
-		"Deathtouch",
-		"Lifelink",
-		"First strike",
-		"Double strike",
-		"Vigilance",
-		"Haste",
-		"Menace",
-		"Defender",
-		"Flash"
-	);
 
 	/// <summary>"Target [filter]" — a permanent: Target(Is.Creature &amp; Is.Yours) is "target creature you control".</summary>
 	static TargetSpec Target(Filter? filter = null) => TargetSpec.Permanent(filter);
@@ -524,7 +457,7 @@ public static class FraCards
 		return [.. modes.Select((m, i) => m with { Text = bullets[i] })];
 	}
 
-	static readonly Dictionary<string, ImmutableArray<GameComponent>> Scripts =
+	internal static readonly Dictionary<string, ImmutableArray<GameComponent>> Scripts =
 		new()
 		{
 			// ===== White =====
@@ -3610,22 +3543,4 @@ public static class FraCards
 				),
 			],
 		};
-
-	public static CardDefinition Get(string name) =>
-		new(Data[name], Scripts.TryGetValue(name, out var components) ? components : []);
-
-	/// <summary>Scripted, or nothing in its text but keywords the engine already implements.</summary>
-	public static bool IsImplemented(string name) =>
-		Scripts.ContainsKey(name)
-		|| Data[name].TypeLine.StartsWith("Basic Land") // mana from the subtype, CR 305.6
-		|| (
-			Data[name].CardFaces is null
-			&& (Data[name].OracleText ?? "")
-				.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-				.All(line => line.Split(", ").All(EngineKeywords.Contains))
-		);
-
-	public static IEnumerable<string> Scripted => Scripts.Keys;
-
-	public static IEnumerable<string> AllNames => Data.Keys;
 }

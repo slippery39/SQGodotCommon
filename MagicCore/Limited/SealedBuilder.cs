@@ -1,6 +1,6 @@
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Limited;
 
@@ -77,9 +77,9 @@ public static class SealedBuilder
 	/// An AI sealed opponent: a pool opened from <paramref name="seed"/>, and one of its
 	/// <see cref="Suggestions"/> at random — streamlined or greedy, as a person might (Shayne, LIM-3).
 	/// </summary>
-	public static SealedDeck Opponent(int seed)
+	public static SealedDeck Opponent(string set, int seed)
 	{
-		var builds = Suggestions(Boosters.SealedPool(seed), CardRatings.Fra);
+		var builds = Suggestions(Boosters.SealedPool(set, seed), CardRatings.Of(set));
 		return builds[new Random(seed).Next(builds.Count)];
 	}
 
@@ -157,7 +157,7 @@ public static class SealedBuilder
 		IReadOnlyDictionary<string, double> ratings
 	)
 	{
-		var data = pool.Distinct().ToDictionary(n => n, n => FraCards.Get(n).Data);
+		var data = pool.Distinct().ToDictionary(n => n, n => CardRegistry.Get(n).Data);
 		return
 		[
 			.. Pairs
@@ -190,7 +190,9 @@ public static class SealedBuilder
 	/// <summary>Its spells that cost 1–3 — the early curve (Shayne's qualifier: 16 against 13).</summary>
 	public static int CheapSpells(IEnumerable<string> cards) =>
 		cards.Count(n =>
-			FraCards.Get(n).Data is var d && !IsLand(d) && FrontCost(d).ManaValue is >= 1 and <= 3
+			CardRegistry.Get(n).Data is var d
+			&& !IsLand(d)
+			&& FrontCost(d).ManaValue is >= 1 and <= 3
 		);
 
 	static IReadOnlyList<SealedDeck> Builds(
@@ -202,7 +204,7 @@ public static class SealedBuilder
 	{
 		var bar = TopDecile(ratings);
 		var builds = new List<SealedDeck> { streamlined };
-		var data = pool.Distinct().ToDictionary(n => n, n => FraCards.Get(n).Data);
+		var data = pool.Distinct().ToDictionary(n => n, n => CardRegistry.Get(n).Data);
 
 		var splash = Wubrg
 			.Except(streamlined.Colors)
@@ -230,7 +232,7 @@ public static class SealedBuilder
 			.OfType<Built>()
 			.ToList();
 		var streamlinedScore = streamlined
-			.Main.Where(n => !IsLand(FraCards.Get(n).Data))
+			.Main.Where(n => !IsLand(CardRegistry.Get(n).Data))
 			.Sum(n => ratings[n]); // its spells, as every build scores
 		var three = greedy.Where(b => b.Deck.Colors.Count == 3).MaxBy(b => b.Score);
 		var safer = three ?? splash ?? new Built(streamlined, streamlinedScore);
@@ -239,7 +241,7 @@ public static class SealedBuilder
 			.Where(b =>
 				b.Deck.Colors.Count == 4
 				&& b.Deck.Main.Any(n =>
-					!IsLand(FraCards.Get(n).Data)
+					!IsLand(CardRegistry.Get(n).Data)
 					&& ratings.GetValueOrDefault(n) >= bar
 					&& !safer.Deck.Main.Contains(n)
 				)
@@ -332,7 +334,9 @@ public static class SealedBuilder
 		var chosen = new List<string>();
 		var perColor = splashes.ToDictionary(c => c, _ => 0);
 		foreach (
-			var n in pool.Where(n => !IsLand(data[n]) && FraCards.IsImplemented(n) && Eligible(n))
+			var n in pool.Where(n =>
+					!IsLand(data[n]) && CardRegistry.IsImplemented(n) && Eligible(n)
+				)
 				.OrderByDescending(n => ratings[n])
 				.ThenBy(n => n, StringComparer.Ordinal)
 		)
@@ -455,8 +459,8 @@ public static class SealedBuilder
 			{
 				if (Basics.Contains(n))
 					return [Wubrg.First(c => Basics[(int)c] == n)];
-				var parts = Parts(FraCards.Get(n).Components, 0).ToList();
-				var land = IsLand(FraCards.Get(n).Data);
+				var parts = Parts(CardRegistry.Get(n).Components, 0).ToList();
+				var land = IsLand(CardRegistry.Get(n).Data);
 				if (
 					parts.Any(p =>
 						p is ManaOfOneColorComponent || land && p is ChoosesColorAsItEnters
@@ -487,7 +491,7 @@ public static class SealedBuilder
 	/// the deck has at least one basic of, and of none other (Shayne). Enroot's "a land card" isn't one.
 	/// </summary>
 	public static bool FetchesABasic(string card) =>
-		Parts(FraCards.Get(card).Components, 0)
+		Parts(CardRegistry.Get(card).Components, 0)
 			.Any(p => p is SearchLibrary { Type: CardType.Land, Supertype: Supertype.Basic });
 
 	/// <summary>
@@ -496,7 +500,7 @@ public static class SealedBuilder
 	/// </summary>
 	public static bool ManaIsSpentOnce(string card)
 	{
-		var parts = Parts(FraCards.Get(card).Components, 0).ToList();
+		var parts = Parts(CardRegistry.Get(card).Components, 0).ToList();
 		return parts.OfType<ManaOfOneColorComponent>().Any(m => m.SacrificeSelf)
 			&& !parts.OfType<ManaOfOneColorComponent>().Any(m => !m.SacrificeSelf)
 			&& !parts.OfType<ManaAbilityComponent>().Any();
@@ -508,7 +512,7 @@ public static class SealedBuilder
 	/// </summary>
 	public static int Surveils(string card) =>
 		Parts(
-				FraCards
+				CardRegistry
 					.Get(card)
 					.Components.Where(c =>
 						c is not (ActivatedAbilityComponent or LoyaltyAbilityComponent)
@@ -558,7 +562,7 @@ public static class SealedBuilder
 		IReadOnlyList<ManaColor>? pair = null
 	)
 	{
-		var data = pool.Distinct().ToDictionary(n => n, n => FraCards.Get(n).Data);
+		var data = pool.Distinct().ToDictionary(n => n, n => CardRegistry.Get(n).Data);
 		var (colors, chosen) = (
 			pair is null
 				? Pairs
@@ -600,7 +604,7 @@ public static class SealedBuilder
 		[
 			.. pool.Where(n =>
 					!IsLand(data[n])
-					&& FraCards.IsImplemented(n)
+					&& CardRegistry.IsImplemented(n)
 					&& Castable(FrontCost(data[n]), pair)
 				)
 				.OrderByDescending(n => ratings[n])
@@ -634,7 +638,7 @@ public static class SealedBuilder
 	/// </summary>
 	static ManaColor[] DualColors(string land) =>
 		[
-			.. FraCards
+			.. CardRegistry
 				.Get(land)
 				.Components.OfType<ManaAbilityComponent>()
 				.Select(m => m.Color)

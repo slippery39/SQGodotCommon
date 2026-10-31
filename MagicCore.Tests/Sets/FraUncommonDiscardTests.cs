@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -38,7 +38,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void Tinybones_TwoCardsInOneDiscardIsOneTrigger()
 	{
-		Field(FraCards.Get("Tinybones, Pocket Nuisance"), me);
+		Field(CardRegistry.Get("Tinybones, Pocket Nuisance"), me);
 		var purge = Hand(DiscardTwo, me);
 		Hand(Filler("A"), me);
 		Hand(Filler("B"), me);
@@ -50,7 +50,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void Tinybones_ADiscardPaidAsACostTriggersToo()
 	{
-		Field(FraCards.Get("Tinybones, Pocket Nuisance"), me);
+		Field(CardRegistry.Get("Tinybones, Pocket Nuisance"), me);
 		var proft = Hand("Proft, Sinister Mastermind", me);
 		var bear = Field(TestGames.Creature("Bear", "4/4"), them);
 		var life = Life(them);
@@ -62,7 +62,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void Tinybones_ADiscardToHandSizeResolvesInThatCleanup_BeforeTheTurnEnds()
 	{
-		Field(FraCards.Get("Tinybones, Pocket Nuisance"), me);
+		Field(CardRegistry.Get("Tinybones, Pocket Nuisance"), me);
 		while (HandCount(me) <= TurnStructure.MaxHandSize)
 			Hand(Filler("Extra"), me);
 		var (life, turn) = (Life(them), s.GetGame().TurnNumber);
@@ -78,7 +78,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void Tinybones_SurveilIntoTheGraveyardIsNoDiscard()
 	{
-		Field(FraCards.Get("Tinybones, Pocket Nuisance"), me);
+		Field(CardRegistry.Get("Tinybones, Pocket Nuisance"), me);
 		var peek = Hand(TestGames.Inline("Peek", "{U}", "Instant", null, new Surveil(1)), me);
 		var life = Life(them);
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = peek });
@@ -89,7 +89,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void Titanbones_TwoCountersOnLifeGain_AndThreeLifeWhenDiscarded()
 	{
-		var titan = Field(FraCards.Get("Titanbones, Towering Heart"), me);
+		var titan = Field(CardRegistry.Get("Titanbones, Towering Heart"), me);
 		var heal = Hand(
 			TestGames.Inline("Heal", "{W}", "Instant", null, new GainLife(Ref.You, 1)),
 			me
@@ -124,7 +124,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void JiangYanggu_AttackingAlone_LootsThenCountsTheDiscards()
 	{
-		Field(FraCards.Get("Jiang Yanggu, Alone"), me);
+		Field(CardRegistry.Get("Jiang Yanggu, Alone"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Hand(Filler("Fodder"), me);
 		var hand = HandCount(me);
@@ -140,7 +140,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void JiangYanggu_TwoAttackers_NoTrigger()
 	{
-		var jiang = Field(FraCards.Get("Jiang Yanggu, Alone"), me);
+		var jiang = Field(CardRegistry.Get("Jiang Yanggu, Alone"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		AttackWith(bear, jiang);
 		Resolve();
@@ -177,7 +177,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void DanithaSword_ASpellTargetingYourCreatureDraws_OncePerTurn()
 	{
-		Field(FraCards.Get("Danitha, Sword of Hope"), me);
+		Field(CardRegistry.Get("Danitha, Sword of Hope"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var pump = TargetSpec.Creature;
 		var first = Hand(Targeted("Pump", pump, new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)), me);
@@ -191,7 +191,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void DanithaSword_AnEquipmentSpellDraws()
 	{
-		Field(FraCards.Get("Danitha, Sword of Hope"), me);
+		Field(CardRegistry.Get("Danitha, Sword of Hope"), me);
 		var axe = Hand("Hunter's Axe", me);
 		var hand = HandCount(me);
 		Cast(axe, []);
@@ -201,7 +201,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void DanithaSpear_GrowsOnSpellsAtThemOrTheirCreatures_NotYours()
 	{
-		var danitha = Field(FraCards.Get("Danitha, Spear of Agony"), me);
+		var danitha = Field(CardRegistry.Get("Danitha, Spear of Agony"), me);
 		var mine = Field(TestGames.Creature("Mine", "2/2"), me);
 		var theirs = Field(TestGames.Creature("Theirs", "2/2"), them);
 		var any = TargetSpec.AnyTarget();
@@ -234,7 +234,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	[Test]
 	public void PlanForAllOutcomes_OnlyTheFirstNoncreatureSpellEmpowersJace()
 	{
-		Field(FraCards.Get("Plan for All Outcomes"), me);
+		Field(CardRegistry.Get("Plan for All Outcomes"), me);
 		Cast(Hand(TestGames.Inline("One", "{1}", "Instant"), me), []);
 		Assert.That(Jace(me)?.Loyalty, Is.EqualTo(1));
 		Cast(Hand(TestGames.Inline("Two", "{1}", "Instant"), me), []);

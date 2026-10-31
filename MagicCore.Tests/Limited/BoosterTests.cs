@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using MagicCore.Cards;
 using MagicCore.Limited;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Limited;
 
@@ -13,11 +13,12 @@ namespace MagicCore.Tests.Limited;
 public class BoosterTests
 {
 	static readonly JsonNode Data = JsonNode.Parse(CardDataSet.ResourceText("FRA.boosters.json")!)!;
-	static readonly Dictionary<string, CardData> Fra = CardDataSet
+	static readonly Dictionary<string, CardPrinting> Fra = CardDataSet
 		.Load("FRA")
-		.ToDictionary(c => c.Name);
+		.ToDictionary(p => p.Card.Name);
 
-	static List<IReadOnlyList<PackCard>> Packs(int n) => [.. Boosters.Sealed(seed: 7, packs: n)];
+	static List<IReadOnlyList<PackCard>> Packs(int n) =>
+		[.. Boosters.Sealed("FRA", seed: 7, packs: n)];
 
 	static IEnumerable<string> SheetCards(string sheet) =>
 		Data["sheets"]![sheet]!["cards"]!.AsObject().Select(c => c.Key);
@@ -56,7 +57,7 @@ public class BoosterTests
 			foreach (var sheet in pack.GroupBy(c => c.Sheet))
 				Assert.That(sheet.Select(c => c.Card), Is.Unique, sheet.Key);
 			var colors = pack.Where(c => c.Sheet == "common")
-				.SelectMany(c => Fra[c.Card].Colors ?? []);
+				.SelectMany(c => Fra[c.Card].Card.Colors ?? []);
 			Assert.That(
 				colors.Distinct().Count(),
 				Is.GreaterThanOrEqualTo(Boosters.MinCommonColors)
@@ -99,14 +100,14 @@ public class BoosterTests
 			Is.EqualTo(expected).Within(4 * Math.Sqrt(expected * (1 - expected) / n))
 		);
 		var guests = packs.SelectMany(p => p).Where(c => c.Sheet == "specialGuest").ToList();
-		Assert.That(guests.Select(c => c.Card).Distinct(), Is.SubsetOf(Boosters.Guests));
-		Assert.That(guests.Where(c => !FraCards.IsImplemented(c.Card)), Is.Empty);
+		Assert.That(guests.Select(c => c.Card).Distinct(), Is.SubsetOf(Boosters.Guests("FRA")));
+		Assert.That(guests.Where(c => !CardRegistry.IsImplemented(c.Card)), Is.Empty);
 	}
 
 	[Test]
 	public void TheSameSeed_OpensTheSamePool() =>
 		Assert.That(
-			Boosters.Sealed(42).SelectMany(p => p),
-			Is.EqualTo(Boosters.Sealed(42).SelectMany(p => p))
+			Boosters.Sealed("FRA", 42).SelectMany(p => p),
+			Is.EqualTo(Boosters.Sealed("FRA", 42).SelectMany(p => p))
 		);
 }

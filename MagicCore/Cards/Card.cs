@@ -48,6 +48,12 @@ public enum Knowers
 /// </summary>
 public record Card : GameObject
 {
+	/// <summary>
+	/// The set of the printing it shows ("TRK") — its art, as Arena lets a deck choose a printing.
+	/// Never rules: a reprint plays the same in every set (MC-5.5). Null for tokens and test cards.
+	/// </summary>
+	public string? Set { get; init; }
+
 	public int OwnerId { get; init; }
 	public int ControllerId { get; init; }
 	public CardType Types { get; init; }
@@ -260,6 +266,7 @@ public record Card : GameObject
 		this with
 		{
 			Name = source.Name,
+			Set = source.Set, // a copy shows the printing it copies
 			Types = source.Types,
 			Supertypes = source.Supertypes,
 			Subtypes = source.Subtypes,
@@ -404,9 +411,14 @@ public record Animated(
 /// <summary>
 /// What goes in a deck: the printed data plus the hand-written ability components. A card with no
 /// components plays as its printed types and cost only — a vanilla creature, an instant that does
-/// nothing. That is correct for a vanilla card and silently wrong for any other.
+/// nothing. That is correct for a vanilla card and silently wrong for any other. <see cref="Set"/> is
+/// the printing it shows (<see cref="Card.Set"/>).
 /// </summary>
-public sealed record CardDefinition(CardData Data, ImmutableArray<GameComponent> Components)
+public sealed record CardDefinition(
+	CardData Data,
+	ImmutableArray<GameComponent> Components,
+	string? Set = null
+)
 {
 	public static CardDefinition Vanilla(CardData data) => new(data, []);
 }
@@ -422,6 +434,7 @@ public static class CardFactory
 		return new Card
 		{
 			Name = data.Name,
+			Set = definition.Set,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
 			Types = types,

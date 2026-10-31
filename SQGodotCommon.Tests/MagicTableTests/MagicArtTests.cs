@@ -1,6 +1,7 @@
 using System.Linq;
 using MagicCore;
 using MagicCore.Rules;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicTable;
 using NUnit.Framework;
@@ -19,7 +20,7 @@ public class MagicArtTests
 		const string vanguard = "Vigorbloom Vanguard // Seed Suture";
 		var m = new MagicTableManager(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], 5);
 		m.AutoplayTo(1);
-		m.Sandbox(m.HumanId, FraCards.Get(vanguard), ZoneType.Battlefield);
+		m.Sandbox(m.HumanId, CardRegistry.Get(vanguard), ZoneType.Battlefield);
 		var creature = m
 			.State.CardsIn(m.HumanId, ZoneType.Battlefield)
 			.Single(c => c.Name == vanguard);
@@ -32,6 +33,10 @@ public class MagicArtTests
 			Is.EqualTo("Seed Suture"),
 			"precondition: named after the shared face"
 		);
-		Assert.That(MagicArt.ImageName(s, copy), Is.EqualTo(vanguard));
+		Assert.That(
+			MagicArt.ImageName(s, copy),
+			Is.EqualTo($"{vanguard}|FRA"),
+			"the creature, as its set prints it"
+		);
 	}
 }

@@ -1,5 +1,5 @@
 using MagicCore.Limited;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Limited;
 
@@ -22,7 +22,7 @@ public class SealedBuildMatchTests
 	[Test]
 	public void FromExport_TheDeckIsTheBuild_TheRestOfThePoolIsOutsideTheGame()
 	{
-		var deck = SealedBuilder.Opponent(5);
+		var deck = SealedBuilder.Opponent("FRA", 5);
 
 		var build = SealedBuildMatch.FromExport("mine", Export(deck));
 
@@ -31,7 +31,7 @@ public class SealedBuildMatchTests
 			build.Sideboard.Select(c => c.Data.Name),
 			Is.EquivalentTo(
 				deck.Sideboard.Where(n =>
-					FraCards.IsImplemented(n) && !SealedBuilder.Basics.Contains(n)
+					CardRegistry.IsImplemented(n) && !SealedBuilder.Basics.Contains(n)
 				)
 			),
 			"basics are free, so the pool's own never reach the sideboard"
@@ -41,7 +41,7 @@ public class SealedBuildMatchTests
 	[Test]
 	public void TheSameBuildTwice_PlaysTheSameGames_SoBuildsDifferOnlyByTheirCards()
 	{
-		var build = SealedBuildMatch.FromExport("a", Export(SealedBuilder.Opponent(5)));
+		var build = SealedBuildMatch.FromExport("a", Export(SealedBuilder.Opponent("FRA", 5)));
 
 		var result = SealedBuildMatch.Run([build, build with { Name = "b" }], 3, "greedy");
 
@@ -59,7 +59,9 @@ public class SealedBuildMatchTests
 	[Test]
 	public void FromSuggestion_IsTheBuild_NamedByItsButton()
 	{
-		var deck = SealedBuilder.Suggestions(Boosters.SealedPool(3), CardRatings.Fra)[0];
+		var deck = SealedBuilder.Suggestions(Boosters.SealedPool("FRA", 3), CardRatings.Of("FRA"))[
+			0
+		];
 		var build = SealedBuildMatch.FromSuggestion(deck);
 
 		Assert.That(build.Name, Is.EqualTo(deck.Button));
@@ -68,7 +70,7 @@ public class SealedBuildMatchTests
 			build.Sideboard.Select(c => c.Data.Name),
 			Is.EquivalentTo(
 				deck.Sideboard.Where(n =>
-					FraCards.IsImplemented(n) && !SealedBuilder.Basics.Contains(n)
+					CardRegistry.IsImplemented(n) && !SealedBuilder.Basics.Contains(n)
 				)
 			)
 		);
@@ -78,7 +80,9 @@ public class SealedBuildMatchTests
 	[Test]
 	public void FromSuggestions_NumbersARepeatedName()
 	{
-		var deck = SealedBuilder.Suggestions(Boosters.SealedPool(3), CardRatings.Fra)[0];
+		var deck = SealedBuilder.Suggestions(Boosters.SealedPool("FRA", 3), CardRatings.Of("FRA"))[
+			0
+		];
 		var names = SealedBuildMatch.FromSuggestions([deck, deck, deck]).Select(b => b.Name);
 
 		Assert.That(

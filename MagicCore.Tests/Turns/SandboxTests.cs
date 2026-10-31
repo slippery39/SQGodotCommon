@@ -69,7 +69,7 @@ public class SandboxTests
 		s = Sandbox.Put(s, me, Healer, ZoneType.Battlefield);
 		s = TestGames.PassUntil(s, x => x.StackIsEmpty());
 		var healer = Find(s, me, ZoneType.Battlefield);
-		var aura = global::MagicCore.Sets.Fra.FraCards.Get("Ferocity of the Hunt");
+		var aura = global::MagicCore.Sets.CardRegistry.Get("Ferocity of the Hunt");
 
 		s = Sandbox.Put(s, me, aura, ZoneType.Battlefield);
 		if (s.GetPendingChoice() is { } host)

@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -49,7 +49,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void Yuriko_AttackingAloneGivesDoubleStrike()
 	{
-		Field(FraCards.Get("Yuriko, Blade of the Mighty"), me);
+		Field(CardRegistry.Get("Yuriko, Blade of the Mighty"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var life = Life(them);
 		Attack(new() { [bear] = them });
@@ -60,7 +60,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void Yuriko_NoSpellsDuringCombat_ButBeforeIt()
 	{
-		Field(FraCards.Get("Yuriko, Blade of the Mighty"), me);
+		Field(CardRegistry.Get("Yuriko, Blade of the Mighty"), me);
 		var trick = Hand(Trick, me);
 		Assert.That(Casts(trick), Is.Not.Empty, "main phase");
 		s = TestGames.PassUntil(
@@ -73,7 +73,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void TomikOrzhov_OnlyOneCreatureMayAttackTheirPlaneswalker()
 	{
-		Field(FraCards.Get("Tomik, Orzhov Lawmage"), them);
+		Field(CardRegistry.Get("Tomik, Orzhov Lawmage"), them);
 		var walker = Walker(them, 5);
 		var a = Field(TestGames.Creature("A", "2/2"), me);
 		var b = Field(TestGames.Creature("B", "2/2"), me);
@@ -89,7 +89,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void TomikOrzhov_FlyingForACreatureWithACounter()
 	{
-		var tomik = Field(FraCards.Get("Tomik, Orzhov Lawmage"), me);
+		var tomik = Field(CardRegistry.Get("Tomik, Orzhov Lawmage"), me);
 		var plain = Field(TestGames.Creature("Plain", "2/2"), me);
 		var grown = Field(TestGames.Creature("Grown", "2/2"), me);
 		s = s.UpdateObject(grown, s.GetCard(grown) with { PlusOneCounters = 1 }); // TEST SETUP
@@ -105,7 +105,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void KioraSaltAndSand_AfterALoyaltyAbility_AttackingUntapsAndMakesUnblockable()
 	{
-		Field(FraCards.Get("Kiora of Salt and Sand"), me);
+		Field(CardRegistry.Get("Kiora of Salt and Sand"), me);
 		var walker = Walker(me, 3, new LoyaltyAbilityComponent(1, []));
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		s = s.Act(s.LegalActions().OfType<ActivateLoyaltyAction>().First(x => x.CardId == walker));
@@ -125,7 +125,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void KioraSaltAndSand_NoLoyaltyAbility_NoTrigger()
 	{
-		Field(FraCards.Get("Kiora of Salt and Sand"), me);
+		Field(CardRegistry.Get("Kiora of Salt and Sand"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Attack(new() { [bear] = them });
 		Resolve();
@@ -135,7 +135,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void KioraSaltAndSand_GivesYourPlaneswalkersALeviathan()
 	{
-		Field(FraCards.Get("Kiora of Salt and Sand"), me);
+		Field(CardRegistry.Get("Kiora of Salt and Sand"), me);
 		var walker = Walker(me, 8);
 		s = s.Act(s.LegalActions().OfType<ActivateLoyaltyAction>().Single(x => x.CardId == walker));
 		Resolve();
@@ -146,7 +146,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void Winter_NoncreatureSpellsPumpYourTeam()
 	{
-		Field(FraCards.Get("Winter, Team Player"), me);
+		Field(CardRegistry.Get("Winter, Team Player"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(Hand(Trick, me), []);
 		Assert.That(s.Power(s.GetCard(bear)), Is.EqualTo(2 + 1));
@@ -219,7 +219,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void FblthpLost_CombatDamageDrawsTwo_ThenHeShufflesIn()
 	{
-		var fblthp = Field(FraCards.Get("Fblthp, Impossibly Lost"), me);
+		var fblthp = Field(CardRegistry.Get("Fblthp, Impossibly Lost"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var hand = HandCount(me);
 		Attack(new() { [bear] = them });
@@ -231,7 +231,7 @@ public class FraUncommonCombatTests : FraBoardTest
 	[Test]
 	public void FblthpLost_AnEmptyLibraryWins()
 	{
-		Field(FraCards.Get("Fblthp, Impossibly Lost"), me);
+		Field(CardRegistry.Get("Fblthp, Impossibly Lost"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		foreach (var card in s.CardsIn(me, ZoneType.Library).ToList())
 			s = s.MoveObject(card.Id, s.ZoneId(me, ZoneType.Exile)); // TEST SETUP: an empty library

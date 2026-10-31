@@ -137,8 +137,6 @@ sealed class FilterBoard
 				loyalty,
 				colors,
 				keywords ?? [],
-				"common",
-				"0",
 				null
 			),
 			ImmutableArray<GameComponent>.Empty

@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Sets;
@@ -36,7 +37,7 @@ public abstract class FraBoardTest
 		return id;
 	}
 
-	protected int Hand(string fra, int player) => Hand(FraCards.Get(fra), player);
+	protected int Hand(string fra, int player) => Hand(CardRegistry.Get(fra), player);
 
 	protected int Hand(CardDefinition card, int player)
 	{

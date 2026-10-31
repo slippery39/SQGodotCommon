@@ -2,6 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Rules;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Sets;
@@ -38,7 +39,7 @@ public class FraCardTests
 		return id;
 	}
 
-	int Field(string fra, int player) => Field(FraCards.Get(fra), player);
+	int Field(string fra, int player) => Field(CardRegistry.Get(fra), player);
 
 	/// <summary>
 	/// Replaces <c>s</c> — call it on its own line. Inside <c>s.Act(new … { CardId = Hand(…) })</c>
@@ -51,7 +52,7 @@ public class FraCardTests
 		return id;
 	}
 
-	int Hand(string fra, int player) => Hand(FraCards.Get(fra), player);
+	int Hand(string fra, int player) => Hand(CardRegistry.Get(fra), player);
 
 	/// <summary>Casts as the player holding priority, then resolves the whole stack.</summary>
 	void Cast(int cardId, params int[] targets)
@@ -720,14 +721,14 @@ public class FraCardTests
 
 	[Test]
 	public void EveryScriptedName_IsARealFraCard() =>
-		Assert.That(FraCards.Scripted.Where(n => !FraCards.AllNames.Contains(n)), Is.Empty);
+		Assert.That(CardRegistry.Scripted.Where(n => !CardRegistry.AllNames.Contains(n)), Is.Empty);
 
 	[Test]
 	public void BothSampleDecks_AreFullyImplemented()
 	{
 		foreach (var deck in FraDecks.All.Values)
 			Assert.That(
-				deck.Where(c => !FraCards.IsImplemented(c.Data.Name)).Select(c => c.Data.Name),
+				deck.Where(c => !CardRegistry.IsImplemented(c.Data.Name)).Select(c => c.Data.Name),
 				Is.Empty
 			);
 	}

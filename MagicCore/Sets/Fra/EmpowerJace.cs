@@ -28,8 +28,6 @@ public record EmpowerJace(Count Amount) : Effect
 				"0",
 				["U"],
 				[],
-				"token",
-				"T",
 				null
 			),
 			[

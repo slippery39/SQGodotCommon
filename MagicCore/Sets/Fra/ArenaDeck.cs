@@ -26,8 +26,11 @@ public static partial class ArenaDeck
 		public bool Ok => Problems.Count == 0;
 	}
 
-	static readonly IReadOnlyDictionary<string, string> ByName = FraCards
-		.AllNames.SelectMany(name =>
+	// FRA's cards only: a sealed pool or deck is FRA's until MC-5.4 reads TRK pools.
+	static readonly IReadOnlyDictionary<string, string> ByName = CardRegistry
+		.Printings("FRA")
+		.Select(p => p.Card.Name)
+		.SelectMany(name =>
 			name.Contains(" // ")
 				? new[] { (Key: name, Name: name), (Key: name.Split(" // ")[0], Name: name) }
 				: [(Key: name, Name: name)]
@@ -67,10 +70,10 @@ public static partial class ArenaDeck
 			);
 			if (!ByName.TryGetValue(name, out var fra))
 				problems.Add($"{name}: not a Reality Fracture card");
-			else if (!FraCards.IsImplemented(fra))
+			else if (!CardRegistry.IsImplemented(fra))
 				problems.Add($"{fra}: not playable yet");
 			else
-				deck.AddRange(Enumerable.Repeat(FraCards.Get(fra), count));
+				deck.AddRange(Enumerable.Repeat(CardRegistry.Get(fra, "FRA"), count));
 		}
 		if (deck.Count == 0 && problems.Count == 0)
 			problems.Add(

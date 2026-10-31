@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Ai;
 
@@ -77,13 +77,13 @@ public static class CardValues
 	public static IReadOnlyList<Entry> MeasureFra() =>
 		Measure(
 			[
-				.. CardDataSet
-					.Load("FRA")
-					.Select(d => d.Name)
+				.. CardRegistry
+					.Printings("FRA")
+					.Select(p => p.Card.Name)
 					.Distinct()
-					.Where(FraCards.IsImplemented)
+					.Where(CardRegistry.IsImplemented)
 					.Order(StringComparer.Ordinal)
-					.Select(FraCards.Get),
+					.Select(CardRegistry.Get),
 			]
 		);
 
@@ -138,7 +138,7 @@ public static class CardValues
 			return new(name, 0, "a land — mana, which the evaluator already prices");
 		var withLands = fixture;
 		foreach (var land in LandsFor(CardFactory.Create(card, me).ManaCost))
-			(withLands, _) = Put(withLands, me, FraCards.Get(land), ZoneType.Battlefield);
+			(withLands, _) = Put(withLands, me, CardRegistry.Get(land), ZoneType.Battlefield);
 		var control = Evaluator.Evaluate(ThroughTheTurn(withLands, me), me);
 		var (s, id) = Put(withLands, me, card, ZoneType.Hand);
 		// Casts only: an activation from the hand (landcycling) is not the card's value once cast.
@@ -195,7 +195,7 @@ public static class CardValues
 	/// <summary>The fixed position: our first main, both ladders, empty hands, libraries of basics.</summary>
 	static (GameState State, int Me) Fixture(int seed)
 	{
-		var library = Basics.SelectMany(b => Enumerable.Repeat(FraCards.Get(b), 8)).ToList();
+		var library = Basics.SelectMany(b => Enumerable.Repeat(CardRegistry.Get(b), 8)).ToList();
 		var s = MagicRules.NewGame(library, library, seed);
 		var me = s.GetGame().StartingPlayerId;
 		bool Ready(GameState x) =>
@@ -237,8 +237,6 @@ public static class CardValues
 				null,
 				null,
 				[],
-				"common",
-				"0",
 				null
 			)
 		);

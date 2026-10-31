@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using ImmutableGameObjects;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Ai;
 
@@ -65,14 +65,16 @@ public sealed record GameRecord
 		};
 
 	/// <summary>The game as it began — what the first move applies to.</summary>
+	// ponytail: names, not printings — a replay shows each card's first printing (MC-5.5); record the
+	// set per card if a TRK game's replay must show TRK's basics.
 	public GameState Start() =>
 		MagicRules.NewGame(
-			Deck1.Select(FraCards.Get),
-			Deck2.Select(FraCards.Get),
+			Deck1.Select(CardRegistry.Get),
+			Deck2.Select(CardRegistry.Get),
 			Seed,
 			names: (Players[0], Players[1]),
-			sideboard1: Sideboard1.Select(FraCards.Get),
-			sideboard2: Sideboard2.Select(FraCards.Get)
+			sideboard1: Sideboard1.Select(CardRegistry.Get),
+			sideboard2: Sideboard2.Select(CardRegistry.Get)
 		);
 
 	/// <summary>One more move, made from <paramref name="before"/>.</summary>
@@ -118,7 +120,7 @@ public sealed record GameRecord
 		{
 			s = Start();
 		}
-		catch (KeyNotFoundException e) // FraCards.Get: a card renamed or gone since
+		catch (KeyNotFoundException e) // CardRegistry.Get: a card renamed or gone since
 		{
 			throw new MoveTokens.StaleException($"a deck card no longer exists ({e.Message})");
 		}

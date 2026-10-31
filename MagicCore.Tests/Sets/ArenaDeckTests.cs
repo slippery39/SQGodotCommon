@@ -1,3 +1,4 @@
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Sets;
@@ -41,10 +42,13 @@ public class ArenaDeckTests
 	[Test]
 	public void UnknownAndUnplayableCards_AreNamed_AndNoDeckIsReturned()
 	{
-		// Whichever card is not scripted yet — read, not restated, so scripting it breaks nothing.
-		var unplayable = FraCards.AllNames.FirstOrDefault(n => !FraCards.IsImplemented(n));
+		// Whichever FRA card is not scripted yet — read, not restated, so scripting it breaks nothing.
+		var unplayable = CardRegistry
+			.Printings("FRA")
+			.Select(p => p.Card.Name)
+			.FirstOrDefault(n => !CardRegistry.IsImplemented(n));
 		var result = ArenaDeck.Parse(
-			$"4 Lightning Bolt (STA) 42\n10 Swamp (FRA) 283{(unplayable is null ? "" : $"\n1 {unplayable}")}"
+			$"4 Lightning Bolt (STA) 42\n1 Andoria (TRK) 275\n10 Swamp (FRA) 283{(unplayable is null ? "" : $"\n1 {unplayable}")}"
 		);
 
 		Assert.That(result.Ok, Is.False);
@@ -53,6 +57,8 @@ public class ArenaDeckTests
 			result.Problems,
 			Has.Some.StartsWith("Lightning Bolt: not a Reality Fracture card")
 		);
+		// A TRK card plays, but a pasted pool or deck is still FRA's (MC-5.5): refused here, not a crash later.
+		Assert.That(result.Problems, Has.Some.StartsWith("Andoria: not a Reality Fracture card"));
 		if (unplayable is not null)
 			Assert.That(result.Problems, Has.Some.StartsWith($"{unplayable}: not playable yet"));
 	}

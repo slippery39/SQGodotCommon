@@ -81,5 +81,5 @@ public static class FraDecks
 		};
 
 	static IReadOnlyList<CardDefinition> Build(params (string Name, int Count)[] cards) =>
-		cards.SelectMany(c => Enumerable.Repeat(FraCards.Get(c.Name), c.Count)).ToList();
+		cards.SelectMany(c => Enumerable.Repeat(CardRegistry.Get(c.Name), c.Count)).ToList();
 }

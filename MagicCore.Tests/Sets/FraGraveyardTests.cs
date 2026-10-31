@@ -3,7 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -24,7 +24,7 @@ public class FraGraveyardTests : FraBoardTest
 	int InGraveyard(string fra)
 	{
 		int id;
-		(s, id) = TestGames.Put(s, me, FraCards.Get(fra), ZoneType.Graveyard);
+		(s, id) = TestGames.Put(s, me, CardRegistry.Get(fra), ZoneType.Graveyard);
 		return id;
 	}
 
@@ -97,7 +97,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void UndulatingWitness_PaysTwoForPlusOneMinusOne()
 	{
-		var witness = Field(FraCards.Get("Undulating Witness"), me);
+		var witness = Field(CardRegistry.Get("Undulating Witness"), me);
 		Activate(Activations(witness).Single());
 		Assert.That(
 			(s.Power(s.GetCard(witness)), s.Toughness(s.GetCard(witness))),
@@ -155,7 +155,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void CampusCrier_OnTheBattlefield_HasNoAbility()
 	{
-		var crier = Field(FraCards.Get("Campus Crier"), me);
+		var crier = Field(CardRegistry.Get("Campus Crier"), me);
 		Assert.That(Activations(crier), Is.Empty, "only from the graveyard");
 	}
 
@@ -284,7 +284,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void HallwayHeckler_TapAndDiscardACardToDraw()
 	{
-		var heckler = Field(FraCards.Get("Hallway Heckler // Vicious Verse"), me);
+		var heckler = Field(CardRegistry.Get("Hallway Heckler // Vicious Verse"), me);
 		var fodder = Hand(TestGames.Card("Forest"), me);
 		var hand = HandCount(me);
 
@@ -324,7 +324,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void LilianaTheRepentant_MillsTwoAsAnotherCreatureEnters()
 	{
-		Field(FraCards.Get("Liliana the Repentant"), me);
+		Field(CardRegistry.Get("Liliana the Repentant"), me);
 		var graveyard = s.CardsIn(me, ZoneType.Graveyard).Count();
 		Cast(Hand(TestGames.Creature("Bear", "2/2"), me), []);
 		Assert.That(s.CardsIn(me, ZoneType.Graveyard).Count(), Is.EqualTo(graveyard + 2));
@@ -333,7 +333,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void LilianaTheRepentant_ExhaustReturnsACreatureCard_OnlyOnce()
 	{
-		var liliana = Field(FraCards.Get("Liliana the Repentant"), me);
+		var liliana = Field(CardRegistry.Get("Liliana the Repentant"), me);
 		var first = InGraveyard(TestGames.Creature("First", "2/2"));
 		var second = InGraveyard(TestGames.Creature("Second", "2/2"));
 
@@ -374,7 +374,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void MarwynThePreserver_YourLandsHaveHexproof_AndALandCardComesBack()
 	{
-		var marwyn = Field(FraCards.Get("Marwyn, the Preserver"), me);
+		var marwyn = Field(CardRegistry.Get("Marwyn, the Preserver"), me);
 		var land = s.CardsIn(me, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
 		var theirLand = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
 		var shatter = Hand(DestroyTargetPermanent(), them);
@@ -399,7 +399,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void RuricTharMagecrusher_HexproofUntilItDealsCombatDamage()
 	{
-		var ruric = Field(FraCards.Get("Ruric Thar, Magecrusher"), me);
+		var ruric = Field(CardRegistry.Get("Ruric Thar, Magecrusher"), me);
 		var gasp = Hand("Last Gasp", them);
 		Assert.That(TheirTargets(gasp), Does.Not.Contain(ruric), "hexproof");
 		s = s.Act(new PassPriorityAction { PlayerId = them });
@@ -414,7 +414,7 @@ public class FraGraveyardTests : FraBoardTest
 	[Test]
 	public void RuricTharMagecrusher_DamageToSomethingAlreadyGone_KeepsHexproof()
 	{
-		var ruric = Field(FraCards.Get("Ruric Thar, Magecrusher"), me);
+		var ruric = Field(CardRegistry.Get("Ruric Thar, Magecrusher"), me);
 		var walker = Field(TestGames.Creature("Gone", "1/1"), them);
 		s = s.Sacrifice(walker); // TEST SETUP: its combat target left before damage
 

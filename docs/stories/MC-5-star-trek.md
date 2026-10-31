@@ -49,6 +49,12 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   borderless, ~1 pack in 25 in place of a common), TRK's Special Guests. Until they play, that slot opens
   a common.
 
+- 2026-10-31, Shayne (MC-5.5's questions): **each card in a deck carries its set** — "this matches how
+  MTGA and MTGO work, where you can actually choose which art to use in your deck. In draft and sealed
+  this would obviously just mean that it would be the art of whatever set you are drafting." **Rarity
+  and collector number split out of `CardData`** (a `CardPrinting` per set). The registry is named
+  **`CardRegistry`**.
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -61,16 +67,23 @@ Open questions:
 - [ ] MC-5.2 The new mechanics (Station, Strange new worlds, Face a dilemma, and whatever the survey finds)
 - [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
-- [ ] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
+- [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
       rules text differs), printing data per set (art, rarity, collector number); `FraCards.Get`'s ~50
-      call sites moved to it
+      call sites moved to it. Done 2026-10-31: `CardRegistry`, `CardPrinting`, `Card.Set`; boosters,
+      ratings and drafts by set code; art in `Art/<set>/` first; `TrkCards` with the TRK tokens and the
+      10 Planet duals; `TrkCardSheet.md`
 - [ ] MC-5.6 LAST, aimed at Nov 10: the 30 Stardates (SDS) — imported as TRK's guests
       (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG), scripted once each, into the collation
 
 ## Next
 
-**MC-5.1 is done (2026-10-31): the survey and the plan, agreed with Shayne.** Nothing is built.
+**MC-5.5 is done (2026-10-31): the engine is multi-set.** `CardRegistry.Get(name[, set])` is the one
+lookup (FraCards' and TrkCards' scripts merged; a name scripted twice, a script its set doesn't print,
+or a reprint whose text differs fails every test). A card carries its printing's set (`Card.Set`, art
+only). `Boosters`, `CardRatings`, `Draft` take a set code — TRK has neither boosters nor ratings yet,
+and asking says which import to run. The 10 Planet duals play; TRK's tokens are defined. 16/311.
+**Next: MC-5.3's first batch — the tier 0–1 commons, then uncommons (~118), in a NEW session.**
 **Every batch starts in a NEW session** (`/card-batch` step 0) and ends with its usage row
 (`tools/usage_report.py --log`, `docs/findings/card-batch-usage.md`) — this set tests that workflow.
 
@@ -92,9 +105,11 @@ The plan, one or more fresh sessions per row, every card by Nov 10:
 | Nov 7–9 | Rares and mythics: ~49 tier 1–2, then ~56 tier-3 one-offs in batches of ~14 |
 | Nov 9–10 | The TRK rating run (ask first: long), bots on it, a draft to check; the Stardates (MC-5.6) last |
 
-Traps: the engine is single-set — ~50 call sites use `FraCards.Get(name)`, `MagicArt` finds art by
-name slug only, and `tools/magic_set.py` finds a set's scripts by its folder name. MagicCore's
-`CLAUDE.md` is at its 200-line budget: move content down rather than add.
+Traps: scripts go in `Sets/Trk/TrkCards.cs`; a reprint FRA already scripts is never scripted again
+(only the basics overlap). A FraCards helper TRK needs (`When`, `Spell`, `Target`, `Equip` …) moves to
+a shared file then — never copied (Cookbook). TRK art isn't fetched yet: `python tools/fetch_set_art.py
+trk` (reprints land in `Art/trk/`), then a Godot import. `SealedSession.Set` is a const "FRA" until
+MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rather than add.
 
 ## Log
 
@@ -106,3 +121,5 @@ name slug only, and `tools/magic_set.py` finds a set's scripts by its folder nam
   rares if time; printings decoupled from functionality; bots on pre-simulated ratings, not colour lean
   alone.
 - 2026-10-31: usage per batch is now logged — `docs/findings/card-batch-usage.md` (the survey: 1.9M).
+- 2026-10-31: MC-5.5 — the card registry across sets, Shayne's three answers in Decisions; 21 new tests,
+  13/13 revert-checks caught; TRK 16/311 playable.

@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -27,7 +27,7 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 	/// <summary>A planeswalker on my side with its printed loyalty, or this many (TEST SETUP).</summary>
 	int Walker(string name, int? loyalty = null)
 	{
-		var id = Field(FraCards.Get(name), me);
+		var id = Field(CardRegistry.Get(name), me);
 		s = s.UpdateObject(
 			id,
 			s.GetCard(id) with
@@ -554,7 +554,7 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 	[Test]
 	public void Tam_PlaneswalkerSpellsCostOneLess()
 	{
-		Field(FraCards.Get("Tam, the Possibility"), me);
+		Field(CardRegistry.Get("Tam, the Possibility"), me);
 		TapAllLands(me);
 		var walker = Hand(TestGames.Planeswalker("Walker", 3), me); // {1}
 		var other = Hand(TestGames.Inline("Other", "{1}", "Sorcery"), me);
@@ -564,7 +564,7 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 	[Test]
 	public void Tam_ProliferatesOncePerPlaneswalkerType()
 	{
-		var tam = Field(FraCards.Get("Tam, the Possibility"), me);
+		var tam = Field(CardRegistry.Get("Tam, the Possibility"), me);
 		var ajani = Walker("Ajani Resolute", 3);
 		var jace = Walker("Jace, Reality Sculptor", 3);
 		var mine = Field(TestGames.Creature("Mine", "1/1"), me);

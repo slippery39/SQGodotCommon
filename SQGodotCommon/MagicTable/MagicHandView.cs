@@ -226,7 +226,7 @@ public sealed class MagicHandView
 		return new InternalCardUI2D.Details
 		{
 			Id = card.Id.ToString(),
-			CardName = card.Image,
+			CardName = MagicArt.NameOf(card.Image),
 			MainFrameTexture = image,
 			// The real card's own colours: no tint, no holographic shimmer over the printed text.
 			FrameColor = Colors.White,

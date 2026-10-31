@@ -3,7 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -23,7 +23,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void ShatterwingPegasus_PumpsYourTeam()
 	{
-		var pegasus = Field(FraCards.Get("Shatterwing Pegasus"), me);
+		var pegasus = Field(CardRegistry.Get("Shatterwing Pegasus"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		s = s.Act(Activations(pegasus).Single());
 		Resolve();
@@ -44,7 +44,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void InspiredTethermage_GrowsWhenYouPutLoyaltyCounters()
 	{
-		var tethermage = Field(FraCards.Get("Inspired Tethermage"), me);
+		var tethermage = Field(CardRegistry.Get("Inspired Tethermage"), me);
 		Cast(Hand(TestGames.Planeswalker("Walker", 3), me), []); // enters with loyalty: "put" (CR 122.6)
 		Assert.That(s.GetCard(tethermage).PlusOneCounters, Is.EqualTo(1));
 
@@ -99,7 +99,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void AfterthoughtSentry_FliesForTwo_AndAttackingExilesAGraveyardCard()
 	{
-		var sentry = Field(FraCards.Get("Afterthought Sentry"), me);
+		var sentry = Field(CardRegistry.Get("Afterthought Sentry"), me);
 		s = s.Act(Activations(sentry).Single());
 		Resolve();
 		Assert.That(s.Has(s.GetCard(sentry), "Flying"));
@@ -121,7 +121,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void MurmuringVolume_TapsForAnyColor_AndLootsForTwo()
 	{
-		var volume = Field(FraCards.Get("Murmuring Volume"), me);
+		var volume = Field(CardRegistry.Get("Murmuring Volume"), me);
 		Assert.That(ManaAbilities.ColorsOf(s, s.GetCard(volume)).Count(), Is.EqualTo(5));
 
 		var fodder = Hand(TestGames.Card("Forest"), me);
@@ -414,7 +414,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void Ward_CountersTheirSpell_UnlessTheyPay()
 	{
-		var hortimancer = Field(FraCards.Get("Unflinching Hortimancer"), me);
+		var hortimancer = Field(CardRegistry.Get("Unflinching Hortimancer"), me);
 		var gasp = TheirGaspAt(hortimancer);
 		Resolve(); // they decline to pay {1}
 		Assert.That(Alive(hortimancer) && s.IsIn(gasp, them, ZoneType.Graveyard));
@@ -423,7 +423,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void Ward_PaidFor_TheSpellResolves()
 	{
-		var gecko = Field(FraCards.Get("Wrecking Gecko"), me);
+		var gecko = Field(CardRegistry.Get("Wrecking Gecko"), me);
 		TheirGaspAt(gecko);
 		Resolve(choice =>
 			choice switch
@@ -438,7 +438,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void Ward_CountersAnAbilityToo()
 	{
-		var hortimancer = Field(FraCards.Get("Unflinching Hortimancer"), me);
+		var hortimancer = Field(CardRegistry.Get("Unflinching Hortimancer"), me);
 		var pinger = Field(
 			new CardDefinition(
 				TestGames.Creature("Pinger", "1/1").Data,
@@ -471,7 +471,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void Ward_IgnoresYourOwnSpells_AndHortimancerGrowsOnLifeGain()
 	{
-		var hortimancer = Field(FraCards.Get("Unflinching Hortimancer"), me);
+		var hortimancer = Field(CardRegistry.Get("Unflinching Hortimancer"), me);
 		var gift = Hand(
 			new CardDefinition(
 				TestGames.Inline("Gift", "{W}", "Instant").Data,
@@ -495,7 +495,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void WreckingGecko_PumpsFourAndTramples()
 	{
-		var gecko = Field(FraCards.Get("Wrecking Gecko"), me);
+		var gecko = Field(CardRegistry.Get("Wrecking Gecko"), me);
 		s = s.Act(Activations(gecko).Single());
 		Resolve();
 		Assert.That(
@@ -561,7 +561,7 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void TheAi_PaysWardInItsLookAhead_SoItRemovesAWardCreature()
 	{
-		var hortimancer = Field(FraCards.Get("Unflinching Hortimancer"), them);
+		var hortimancer = Field(CardRegistry.Get("Unflinching Hortimancer"), them);
 		foreach (var card in s.CardsIn(me, ZoneType.Hand).ToList())
 			s = s.MoveCard(card.Id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: only the Gasp to decide on
 		Hand("Last Gasp", me);

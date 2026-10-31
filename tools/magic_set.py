@@ -5,9 +5,9 @@
     python tools/magic_set.py coverage                               # playable by rarity
     python tools/magic_set.py ... --set FRA                          # another set's JSON (default FRA)
 
-"Playable" = scripted in the set's Cards file, keywords only (the engine plays those unscripted),
-or a basic land. THE rule — tools/magic_docs.py imports it; the keyword list is read from the Cards
-file's EngineKeywords, so a keyword the engine learns is learned here too.
+"Playable" = scripted in ANY set's Cards file (a reprint is scripted once, MC-5.5), keywords only
+(the engine plays those unscripted), or a basic land. THE rule — tools/magic_docs.py imports it; the
+keyword list is read from CardRegistry's EngineKeywords, so a keyword the engine learns is learned here too.
 """
 
 import json
@@ -25,9 +25,9 @@ def scripts_file(set_code):
     return ROOT / "MagicCore" / "Sets" / title / f"{title}Cards.cs"
 
 
-def engine_keywords(set_code="FRA"):
-    """The Cards file's EngineKeywords — the keywords the engine plays with no script."""
-    text = scripts_file(set_code).read_text(encoding="utf-8")
+def engine_keywords():
+    """CardRegistry's EngineKeywords — the keywords the engine plays with no script."""
+    text = (ROOT / "MagicCore" / "Sets" / "CardRegistry.cs").read_text(encoding="utf-8")
     m = re.search(r"EngineKeywords\s*=\s*ImmutableHashSet\.Create\((.*?)\);", text, re.S)
     return {k.lower() for k in re.findall(r'"([^"]+)"', m.group(1))} if m else set()
 
@@ -39,10 +39,15 @@ def script_keys(set_code="FRA"):
     return set(re.findall(r'^\t\t\t\["(.+?)"\] =', text[start:], re.M)) if start >= 0 else set()
 
 
+def all_script_keys():
+    """Every set's scripted names — a card plays in every set that prints it."""
+    return set().union(*(script_keys(f.parent.name.upper()) for f in (ROOT / "MagicCore" / "Sets").glob("*/*Cards.cs")))
+
+
 def load(set_code):
     d = json.loads((ROOT / "MagicCore" / "Sets" / f"{set_code}.json").read_text(encoding="utf-8"))
     cards = d if isinstance(d, list) else d.get("cards") or d.get("data")
-    return cards, script_keys(set_code) if scripts_file(set_code).exists() else set()
+    return cards, all_script_keys()
 
 
 def oracle(c):
@@ -83,7 +88,7 @@ def main():
     set_code = args[args.index("--set") + 1].upper() if "--set" in args else "FRA"
     args = [a for i, a in enumerate(args) if a != "--set" and (i == 0 or args[i - 1] != "--set")]
     cards, keys = load(set_code)
-    keywords = engine_keywords(set_code) if scripts_file(set_code).exists() else set()
+    keywords = engine_keywords()
     if not args:
         raise SystemExit(__doc__)
     if args[0] == "coverage":

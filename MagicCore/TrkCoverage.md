@@ -1,7 +1,9 @@
 # Star Trek (TRK) coverage — MagicCore
 
 Status, not rules: what is scripted, what waits and why (story MC-5). The rules live in
-`MagicCore/CLAUDE.md`. **Nothing is scripted yet** (2026-10-31). The tiers are the survey's (MC-5.1):
+`MagicCore/CLAUDE.md`. **Scripted: the 10 Planet duals (MC-5.5, 2026-10-31)** — 16/311 play, with the
+basics and Mugato (`python tools/magic_set.py coverage --set TRK`; every card's script beside its text:
+`MagicCore/TrkCardSheet.md`). The TOK tokens are DEFINED, waiting for their cards. The tiers are the survey's (MC-5.1):
 judged from each card's full text against `AbilityCatalog.md` — a batch re-checks its own cards'
 tiers before building. Tier 0 keywords only · 1 existing pieces · 2 a tested piece with a new option
 · 3 a new engine piece (`/card-batch`).
@@ -17,8 +19,8 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 
 | Tag | The new piece | Reuse |
 |---|---|---|
-| TOK | Token definitions: 1/1 red Officer, 1/1 Borg artifact, 2/1 haste Klingon Warrior, 2/2 black Romulan, 3/3 Illusion artifact, Clue, Food, New Planet (land, any colour) | `CreateTokens`, the Treasure/Heartwood helpers; Clue from MtgCore's `ClueToken`; `SacrificeSelfCost`; `AnyColorMana` |
-| PLANET-DUAL | The 10 common Planet duals (enters tapped, gain 1 life, two colours) | FRA's dual lands, `GainLife` |
+| TOK | DONE (MC-5.5): `TrkCards.Officer`, `Borg`, `KlingonWarrior`, `Romulan`, `ArtifactIllusion`, `CreateNewPlanet`; `Tokens.CreateClue`, `CreateFood`, `CreateTreasure` (tested: `TrkCardTests`). Not yet: Porthos, Murf, the Worm (CANT-BLOCK), City's Human — one-offs, with their card | `new CreateTokens(TrkCards.Officer, n)` |
+| PLANET-DUAL | DONE (MC-5.5): the 10 Planet duals, `TrkCards.PlanetDual` | — |
 | STATION | Spacecraft + "Station" + "N+ \| abilities"; a P/T box makes it a creature only at its last threshold | `TapUntappedCost` (summoning sickness doesn't matter), charge counters, `StaticEffectComponent.If`, Puppet Crafting's stamped type change |
 | SNW | Strange new worlds: a count of differently named lands you control | a new `CountOf`; `CostChange` already takes a `Count` |
 | BEAM | Beam me up: cast from your graveyard for [cost] + returning a creature you control, instead of the mana cost; exiled leaving the stack | `FlashbackComponent` + its `Costs` (Twinned Vision); Scotty grants it as Stingcaster Mage does |

@@ -252,3 +252,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Necrodominance's rules each live in their one place:** a skipped draw step never begins (`EnterStep`),
   hand size is `TurnStructure.MaxHandSizeOf`, and "exile instead of your graveyard" is decided in `MoveCard`
   with the other exile-instead cases — so nothing of yours dies.
+- **One card, a printing per set (MC-5.5).** `CardRegistry` is the one lookup across sets: a card's
+  rules data and script exist once; its printing (`CardPrinting`: rarity, collector number) is per set,
+  and a card in play carries its printing's set (`Card.Set`, kept through zone changes) — read for its
+  ART only, never by a rule. A sealed or draft session passes its set (`CardRegistry.Get(name, set)`);
+  boosters, ratings and drafts take a set code (`Boosters.Pack(set, rng)`, `CardRatings.Of(set)`,
+  `Draft.New(set, seed)`). Rarity is never read from `CardData` — it isn't there.

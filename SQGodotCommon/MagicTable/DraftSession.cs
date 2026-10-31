@@ -21,7 +21,7 @@ public sealed class DraftSession
 	public DraftSession(int seed)
 	{
 		Seed = seed;
-		State = Draft.Fra(seed);
+		State = Draft.New(SealedSession.Set, seed);
 		PackSize = State.Seats[0].Pack.Count;
 	}
 
@@ -49,7 +49,7 @@ public sealed class DraftSession
 	{
 		if (IsComplete || index < 0 || index >= Pack.Count)
 			return;
-		State = Draft.Next(State, CardRatings.Fra, seat0: index);
+		State = Draft.Next(State, CardRatings.Of(SealedSession.Set), seat0: index);
 	}
 
 	/// <summary>Your picks as a pool for the Sealed screen's deck builder — made once, so your deck survives each game.</summary>
@@ -75,9 +75,10 @@ public sealed class DraftSession
 	public SealedDeck BotDeck(int seat) =>
 		_botDecks.TryGetValue(seat, out var deck)
 			? deck
-			: _botDecks[seat] = SealedBuilder.Suggestions(State.Seats[seat].Picks, CardRatings.Fra)[
-				0
-			];
+			: _botDecks[seat] = SealedBuilder.Suggestions(
+				State.Seats[seat].Picks,
+				CardRatings.Of(SealedSession.Set)
+			)[0];
 
 	/// <summary>A game of the run is over; once the run is over nothing more counts.</summary>
 	public void Record(bool won)

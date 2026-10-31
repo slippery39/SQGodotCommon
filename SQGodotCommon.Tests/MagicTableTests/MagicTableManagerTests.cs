@@ -4,6 +4,7 @@ using System.Linq;
 using MagicCore;
 using MagicCore.Actions;
 using MagicCore.Ai;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicTable;
 using NUnit.Framework;
@@ -233,7 +234,7 @@ public class MagicTableManagerTests
 		var before = m.State;
 		var hand = m.State.CardsIn(m.HumanId, ZoneType.Hand).Count();
 
-		m.Sandbox(m.HumanId, FraCards.Get("Last Gasp"), ZoneType.Hand);
+		m.Sandbox(m.HumanId, CardRegistry.Get("Last Gasp"), ZoneType.Hand);
 
 		Assert.That(m.State.CardsIn(m.HumanId, ZoneType.Hand).Count(), Is.EqualTo(hand + 1));
 		Assert.That(m.Log[^1], Does.Contain("[sandbox] Last Gasp"));
@@ -257,7 +258,7 @@ public class MagicTableManagerTests
 		};
 		m.AutoplayTo(9); // the seed: your turn 9, a creature able to attack (the lazy human below casts none)
 		RunAi(m);
-		m.Sandbox(m.HumanId, FraCards.Get("Last Gasp"), ZoneType.Hand);
+		m.Sandbox(m.HumanId, CardRegistry.Get("Last Gasp"), ZoneType.Hand);
 		var (tapped, undone) = (false, false);
 		for (var i = 0; i < 400 && !m.IsOver && m.State.GetGame().TurnNumber < 13; i++)
 		{

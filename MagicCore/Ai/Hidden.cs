@@ -1,6 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Ai;
 
@@ -164,7 +164,7 @@ public static class Hidden
 				rng.NextDouble() < landChance || spells.Length == 0
 					? basics[rng.Next(basics.Length)]
 					: Weighted(spells, rng);
-			s = s.UpdateObject(card.Id, CardFactory.Create(FraCards.Get(guess), owner));
+			s = s.UpdateObject(card.Id, CardFactory.Create(CardRegistry.Get(guess), owner));
 		}
 		return s;
 	}
@@ -197,10 +197,10 @@ public static class Hidden
 
 	static (string, ManaColor[], double)[] BoosterWeighted()
 	{
-		var all = FraCards
-			.AllNames.Except(Limited.Boosters.Guests)
-			.Select(n => FraCards.Get(n).Data)
-			.ToList();
+		// ponytail: FRA's printings, whatever the game's set — guess by the set being played once a
+		// game knows it (MC-5.4, TRK sealed and draft).
+		var guests = Limited.Boosters.Guests("FRA").ToHashSet();
+		var all = CardRegistry.Printings("FRA").Where(p => !guests.Contains(p.Card.Name)).ToList();
 		var slots = new Dictionary<string, double>
 		{
 			["common"] = 10,
@@ -208,17 +208,17 @@ public static class Hidden
 			["rare"] = 7 / 8.0,
 			["mythic"] = 1 / 8.0,
 		};
-		var nonland = all.Where(d => !d.TypeLine.Contains("Land")).ToList(); // lands are guessed apart
+		var nonland = all.Where(p => !p.Card.TypeLine.Contains("Land")).ToList(); // lands are guessed apart
 		var inSet = nonland.GroupBy(d => d.Rarity).ToDictionary(g => g.Key, g => g.Count());
 		return
 		[
 			.. nonland
-				.Where(d => FraCards.IsImplemented(d.Name))
-				.OrderBy(d => d.Name, StringComparer.Ordinal)
+				.Where(d => CardRegistry.IsImplemented(d.Card.Name))
+				.OrderBy(d => d.Card.Name, StringComparer.Ordinal)
 				.Select(d =>
 					(
-						d.Name,
-						(d.Colors ?? []).Select(ManaCost.ColorOf).ToArray(),
+						d.Card.Name,
+						(d.Card.Colors ?? []).Select(ManaCost.ColorOf).ToArray(),
 						slots.GetValueOrDefault(d.Rarity) / inSet[d.Rarity]
 					)
 				),

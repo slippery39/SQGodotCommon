@@ -1,4 +1,5 @@
 using ImmutableGameObjects;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests;
@@ -37,8 +38,8 @@ public class RandomGameTests
 	public void RandomPlay_EveryScriptedCard([Range(1, 30)] int seed)
 	{
 		var rng = new Random(seed);
-		var spells = FraCards
-			.Scripted.Select(FraCards.Get)
+		var spells = CardRegistry
+			.Scripted.Select(CardRegistry.Get)
 			.Where(c => !c.Data.TypeLine.Contains("Land"))
 			.OrderBy(_ => rng.Next())
 			.ToList();

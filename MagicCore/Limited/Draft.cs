@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Limited;
 
@@ -46,8 +46,8 @@ public static class Draft
 	/// <summary>Picks over which the lean ramps from nothing to full — about when a drafter knows their colours.</summary>
 	public const int LaneRampPicks = 10;
 
-	/// <summary>FRA's draft: <see cref="SeatCount"/> seats × <see cref="PackCount"/> Arena packs, the same for the same seed.</summary>
-	public static DraftState Fra(int seed)
+	/// <summary>A set's draft: <see cref="SeatCount"/> seats × <see cref="PackCount"/> Arena packs, the same for the same seed.</summary>
+	public static DraftState New(string set, int seed)
 	{
 		var rng = new Random(seed);
 		var packs = new List<IReadOnlyList<IReadOnlyList<string>>>();
@@ -56,7 +56,7 @@ public static class Draft
 				[
 					.. Enumerable
 						.Range(0, PackCount)
-						.Select(_ => Boosters.Pack(rng).Select(c => c.Card).ToList()),
+						.Select(_ => Boosters.Pack(set, rng).Select(c => c.Card).ToList()),
 				]
 			);
 		return Create(packs);
@@ -244,5 +244,5 @@ public static class Draft
 
 	/// <summary>A card's colours (its whole card, as Scryfall gives them — a land has none).</summary>
 	public static IReadOnlyList<ManaColor> ColorsOf(string card) =>
-		[.. (FraCards.Get(card).Data.Colors ?? []).Select(ManaCost.ColorOf)];
+		[.. (CardRegistry.Get(card).Data.Colors ?? []).Select(ManaCost.ColorOf)];
 }

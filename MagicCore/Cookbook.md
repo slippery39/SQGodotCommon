@@ -2,13 +2,14 @@
 
 How a card becomes playable, by pattern, with real FRA scripts to copy. For **what pieces exist**, read
 `MagicCore/AbilityCatalog.md` (generated); for **every card's script next to its printed text**,
-`MagicCore/FraCardSheet.md` (generated). The rules each mechanic follows are in
+`MagicCore/<Set>CardSheet.md` (generated, one per set). The rules each mechanic follows are in
 `.claude/rules/magic-mechanics.md`.
 
 ## How a card is built
 
-A card's printed data — name, cost, types, P/T, loyalty, keywords — comes from `Sets/FRA.json`
-(Scryfall). Its **abilities** are hand-written in `Sets/Fra/FraCards.cs`, in the `Scripts` dictionary:
+A card's printed data — name, cost, types, P/T, loyalty, keywords — comes from its set's JSON
+(`Sets/FRA.json`, `Sets/TRK.json`: Scryfall). Its **abilities** are hand-written in that set's Cards
+file (`Sets/Fra/FraCards.cs`, `Sets/Trk/TrkCards.cs`), in the `Scripts` dictionary:
 
 ```csharp
 ["Card Name"] =
@@ -24,6 +25,12 @@ A card's printed data — name, cost, types, P/T, loyalty, keywords — comes fr
   "how many" is a `Count`, "if" is a `Condition`. No card has code of its own — if a card needs
   something no piece does, that is new ENGINE work (tier 3, below), never a special case in the script.
 - The card name must match Scryfall exactly (two-faced: `"Pyre Rhymer // Molten Tide"`).
+- **A reprint is scripted ONCE** (MC-5.5): a card another set already scripts plays in every set that
+  prints it — `CardRegistry` refuses a second script, a script its set doesn't print, and a reprint
+  whose rules text differs. Look a card up with `CardRegistry.Get("Name")` (`, "TRK"` for that printing).
+- **Tokens more than one set makes** (Treasure, Clue, Food) are in `Sets/Tokens.cs`
+  (`CreateClue(1)`); a set's own tokens stay in its Cards file. A FraCards helper a second set needs
+  moves to a shared file then, not before — never copy it.
 
 ## Patterns
 
@@ -181,7 +188,7 @@ both players) and use `TestCards` for inline helpers. Real casting, the real sta
 [Test]
 public void Gardenize_AChargeCounterPerDeath()
 {
-	var gardenize = Field(FraCards.Get("Gardenize"), me);
+	var gardenize = Field(CardRegistry.Get("Gardenize"), me);
 	var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 	Cast(Hand(TestCards.Kill(), me), [], bear);   // casts and resolves the whole stack
 	Assert.That(s.GetCard(gardenize).ChargeCounters, Is.EqualTo(1));

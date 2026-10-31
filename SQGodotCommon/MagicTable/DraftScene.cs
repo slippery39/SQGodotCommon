@@ -211,7 +211,7 @@ public partial class DraftScene : Control
 		{
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, // before Texture (godot-frontend.md)
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			Texture = MagicArt.Full(card),
+			Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set)),
 			CustomMinimumSize = new Vector2(TileWidth, TileWidth * 1.395f),
 			TooltipText = SealedSession.Playable(card)
 				? ""
@@ -253,7 +253,7 @@ public partial class DraftScene : Control
 	private void Preview(string? card)
 	{
 		if (card is not null)
-			_preview.Texture = MagicArt.Full(card);
+			_preview.Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set));
 	}
 
 	/// <summary>The next visit starts a fresh draft — the deck builder's New draft.</summary>

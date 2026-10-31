@@ -1,6 +1,6 @@
 using MagicCore.Cards;
 using MagicCore.Limited;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Limited;
 
@@ -10,9 +10,9 @@ public class SealedBuilderTests
 	static readonly IReadOnlyList<string> BasicNames = SealedBuilder.Basics;
 
 	static List<string> Pool(int seed) =>
-		[.. Boosters.Sealed(seed).SelectMany(p => p).Select(c => c.Card)];
+		[.. Boosters.Sealed("FRA", seed).SelectMany(p => p).Select(c => c.Card)];
 
-	static CardData Data(string name) => FraCards.Get(name).Data;
+	static CardData Data(string name) => CardRegistry.Get(name).Data;
 
 	static bool IsLand(string name) => Data(name).TypeLine.Contains("Land");
 
@@ -22,7 +22,7 @@ public class SealedBuilderTests
 		for (var seed = 1; seed <= 30; seed++)
 		{
 			var pool = Pool(seed);
-			var deck = SealedBuilder.Build(pool, CardRatings.Fra);
+			var deck = SealedBuilder.Build(pool, CardRatings.Of("FRA"));
 
 			Assert.That(deck.Main, Has.Count.EqualTo(SealedBuilder.DeckSize), $"seed {seed}");
 			Assert.That(deck.Colors, Has.Count.EqualTo(2));
@@ -51,9 +51,10 @@ public class SealedBuilderTests
 			CardDataSet
 				.Load("FRA")
 				.Single(c =>
-					c.Rarity == "common" && (c.OracleText ?? "").Contains($"Add {{{a}}} or {{{b}}}")
+					c.Rarity == "common"
+					&& (c.Card.OracleText ?? "").Contains($"Add {{{a}}} or {{{b}}}")
 				)
-				.Name;
+				.Card.Name;
 		var (onColour, offColour) = (CommonDual("U", "B"), CommonDual("R", "G"));
 		var pool = Pool(3).Append(onColour).Append(offColour).ToList();
 		var ratings = pool.Distinct()
@@ -70,7 +71,7 @@ public class SealedBuilderTests
 	[Test]
 	public void TheBasics_FollowThePips()
 	{
-		var deck = SealedBuilder.Build(Pool(5), CardRatings.Fra);
+		var deck = SealedBuilder.Build(Pool(5), CardRatings.Of("FRA"));
 		var (a, b) = (deck.Colors[0], deck.Colors[1]);
 		int Pips(ManaColor c) =>
 			deck
@@ -117,8 +118,8 @@ public class SealedBuilderTests
 		Assert.That(
 			CardDataSet
 				.Load("FRA")
-				.Where(c => !CardRatings.Fra.ContainsKey(c.Name))
-				.Select(c => c.Name),
+				.Where(c => !CardRatings.Of("FRA").ContainsKey(c.Card.Name))
+				.Select(c => c.Card.Name),
 			Is.Empty
 		);
 	}

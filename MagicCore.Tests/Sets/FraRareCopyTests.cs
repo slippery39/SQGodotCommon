@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -47,7 +47,7 @@ public class FraRareCopyTests : FraBoardTest
 	[Test]
 	public void SphinxOfFalseConclusions_Attacking_DrawsThenDiscards()
 	{
-		var sphinx = Field(FraCards.Get("Sphinx of False Conclusions"), me);
+		var sphinx = Field(CardRegistry.Get("Sphinx of False Conclusions"), me);
 		var hand = HandCount(me);
 		var graveyard = s.CardsIn(me, ZoneType.Graveyard).Count();
 		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
@@ -63,7 +63,7 @@ public class FraRareCopyTests : FraBoardTest
 	[Test]
 	public void SphinxOfFalseConclusions_Dying_LeavesATokenCopy_WhichLeavesNone()
 	{
-		var sphinx = Field(FraCards.Get("Sphinx of False Conclusions"), me);
+		var sphinx = Field(CardRegistry.Get("Sphinx of False Conclusions"), me);
 		s = s.UpdateObject(sphinx, s.GetCard(sphinx) with { PlusOneCounters = 2 }); // TEST SETUP
 		Cast(Hand(Kill, me), [], sphinx);
 		var copy = Named(me, "Sphinx of False Conclusions").Single();
@@ -128,7 +128,7 @@ public class FraRareCopyTests : FraBoardTest
 	[Test]
 	public void FaceYourself_UnderDraconicVisitor_ArtifactCopiesAreDragons()
 	{
-		Field(FraCards.Get("Draconic Visitor"), me);
+		Field(CardRegistry.Get("Draconic Visitor"), me);
 		var golem = TestGames.Creature("Golem", "3/3");
 		Field(
 			golem with
@@ -171,7 +171,7 @@ public class FraRareCopyTests : FraBoardTest
 	[Test]
 	public void HallOfEchoes_BecomesACopyUntilEndOfTurn_AndTheLegendRuleWaits()
 	{
-		var hall = Field(FraCards.Get("Hall of Echoes"), me);
+		var hall = Field(CardRegistry.Get("Hall of Echoes"), me);
 		var legend = Field(Legendary("Legend", "3/3", "Flying"), me);
 		s = s.Act(Activations(hall).Single(a => a.Targets[0] == legend));
 		Resolve();
@@ -202,7 +202,7 @@ public class FraRareCopyTests : FraBoardTest
 	[Test]
 	public void HallOfEchoes_DyingAsACopy_IsTheHallInTheGraveyard()
 	{
-		var hall = Field(FraCards.Get("Hall of Echoes"), me);
+		var hall = Field(CardRegistry.Get("Hall of Echoes"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		s = s.Act(Activations(hall).Single(a => a.Targets[0] == bear));
 		Resolve();

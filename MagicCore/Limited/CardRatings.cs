@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using MagicCore.Cards;
 
@@ -24,15 +25,23 @@ public static class CardRatings
 
 	sealed record Table(string Source, Dictionary<string, Formats> Cards);
 
-	static readonly Lazy<IReadOnlyDictionary<string, double>> fra =
-		new(
-			() =>
+	static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, double>> Tables =
+		new();
+
+	/// <summary>
+	/// A set's ratings for every card of the set and its packs — 17lands' GIH WR
+	/// (<c>Sets/&lt;SET&gt;.17lands.json</c>). A set with no 17lands data needs its own table (TRK: MC-5.4).
+	/// </summary>
+	public static IReadOnlyDictionary<string, double> Of(string set) =>
+		Tables.GetOrAdd(
+			set,
+			s =>
 				From17Lands(
 					JsonSerializer
 						.Deserialize<Table>(
-							CardDataSet.ResourceText("FRA.17lands.json")
+							CardDataSet.ResourceText($"{s}.17lands.json")
 								?? throw new InvalidOperationException(
-									"No FRA.17lands.json. Run: python tools/import_17lands.py fra"
+									$"No {s}.17lands.json. Run: python tools/import_17lands.py {s.ToLowerInvariant()}"
 								),
 							new JsonSerializerOptions
 							{
@@ -42,9 +51,6 @@ public static class CardRatings
 						.Cards
 				)
 		);
-
-	/// <summary>FRA's 17lands GIH WR for every card of the set and its packs.</summary>
-	public static IReadOnlyDictionary<string, double> Fra => fra.Value;
 
 	/// <summary>
 	/// Sealed's rate — the format being built for — when it rests on <see cref="MinGames"/>; else

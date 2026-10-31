@@ -5,7 +5,7 @@ namespace MagicCore.Tests;
 
 static class TestGames
 {
-	static readonly IReadOnlyList<CardData> Fra = CardDataSet.Load("FRA");
+	static readonly IReadOnlyList<CardData> Fra = [.. CardDataSet.Load("FRA").Select(p => p.Card)];
 
 	public static CardDefinition Card(string name) =>
 		CardDefinition.Vanilla(Fra.Single(c => c.Name == name));
@@ -40,8 +40,6 @@ static class TestGames
 				null,
 				null,
 				keywords ?? [],
-				"common",
-				"0",
 				null
 			),
 			effects.Length == 0 ? [] : [new Effects.SpellEffectsComponent([.. effects])]
@@ -70,8 +68,6 @@ static class TestGames
 				$"{loyalty}",
 				null,
 				[],
-				"common",
-				"0",
 				null
 			),
 			[.. abilities]
@@ -96,8 +92,6 @@ static class TestGames
 				null,
 				null,
 				keywords,
-				"common",
-				"0",
 				null
 			),
 			[]

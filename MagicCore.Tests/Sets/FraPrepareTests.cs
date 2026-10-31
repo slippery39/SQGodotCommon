@@ -3,7 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -12,8 +12,8 @@ namespace MagicCore.Tests.Sets;
 public class FraPrepareTests : FraBoardTest
 {
 	static IEnumerable<string> PrepareCards() =>
-		FraCards.Scripted.Where(n =>
-			FraCards.Get(n).Components.Any(c => c is PrepareSpellComponent)
+		CardRegistry.Scripted.Where(n =>
+			CardRegistry.Get(n).Components.Any(c => c is PrepareSpellComponent)
 		);
 
 	/// <summary>TEST SETUP: enters through EnterBattlefield, so "enters prepared" applies.</summary>

@@ -4,7 +4,7 @@ namespace MagicCore.Tests.Cards;
 
 public class CardDataSetTests
 {
-	static readonly IReadOnlyList<CardData> Fra = CardDataSet.Load("FRA");
+	static readonly IReadOnlyList<CardData> Fra = [.. CardDataSet.Load("FRA").Select(p => p.Card)];
 
 	[Test]
 	public void Fra_LoadsWithUniqueNamesAndTypeLines()

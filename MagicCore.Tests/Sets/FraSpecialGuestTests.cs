@@ -3,7 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Sets;
 
@@ -57,7 +57,7 @@ public class FraSpecialGuestTests : FraBoardTest
 	[Test]
 	public void EyeOfUgin_ColorlessEldraziCostLess_OthersDont()
 	{
-		Field(FraCards.Get("Eye of Ugin"), me);
+		Field(CardRegistry.Get("Eye of Ugin"), me);
 		var spawn = Hand(Eldrazi("Spawn"), me);
 		var greenSpawn = Hand(Eldrazi("Green Spawn", "G"), me);
 		var (colorless, green) = (s.GetCard(spawn), s.GetCard(greenSpawn));
@@ -71,7 +71,7 @@ public class FraSpecialGuestTests : FraBoardTest
 	[Test]
 	public void EyeOfUgin_SearchesForAColorlessCreatureOnly()
 	{
-		var eye = Field(FraCards.Get("Eye of Ugin"), me);
+		var eye = Field(CardRegistry.Get("Eye of Ugin"), me);
 		(s, _) = TestGames.Put(s, me, Eldrazi("Spawn"), ZoneType.Library);
 		(s, _) = TestGames.Put(s, me, Eldrazi("Green Spawn", "G"), ZoneType.Library);
 		s = s.Act(Activations(eye).Single());
@@ -92,7 +92,7 @@ public class FraSpecialGuestTests : FraBoardTest
 	[Test]
 	public void RootMaze_EveryonesArtifactsEnterTapped_CreaturesDont()
 	{
-		Field(FraCards.Get("Root Maze"), them);
+		Field(CardRegistry.Get("Root Maze"), them);
 		var trinket = Hand(TestGames.Inline("Trinket", "{1}", "Artifact"), me);
 		Cast(trinket, []);
 		var bear = Hand(TestGames.Creature("Bear", "2/2"), me);
@@ -168,7 +168,7 @@ public class FraSpecialGuestTests : FraBoardTest
 	[Test]
 	public void Necrodominance_SkipsYourDrawStep()
 	{
-		Field(FraCards.Get("Necrodominance"), me);
+		Field(CardRegistry.Get("Necrodominance"), me);
 		ToTheirTurn();
 		var hand = HandCount(me);
 		ToMyNextMain();
@@ -178,7 +178,7 @@ public class FraSpecialGuestTests : FraBoardTest
 	[Test]
 	public void Necrodominance_AtYourEndStep_PayLifeDrawThatMany()
 	{
-		Field(FraCards.Get("Necrodominance"), me);
+		Field(CardRegistry.Get("Necrodominance"), me);
 		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is ChooseNumberChoice);
 		var (life, hand) = (Life(me), HandCount(me));
 		Assert.That(
@@ -193,7 +193,7 @@ public class FraSpecialGuestTests : FraBoardTest
 	[Test]
 	public void Necrodominance_MaximumHandSizeFive()
 	{
-		Field(FraCards.Get("Necrodominance"), me);
+		Field(CardRegistry.Get("Necrodominance"), me);
 		for (var i = 0; i < 8; i++)
 			Hand(TestGames.Creature($"Card {i}", "1/1"), me);
 		ToTheirTurn();
@@ -203,7 +203,7 @@ public class FraSpecialGuestTests : FraBoardTest
 	[Test]
 	public void Necrodominance_YourCardsAreExiledInsteadOfGoingToYourGraveyard()
 	{
-		Field(FraCards.Get("Necrodominance"), me);
+		Field(CardRegistry.Get("Necrodominance"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var kill = Hand(TestCards.Kill(), me);
 		Cast(kill, [], bear);

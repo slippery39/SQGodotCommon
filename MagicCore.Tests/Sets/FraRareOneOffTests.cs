@@ -2,7 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -82,7 +82,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void GideonTheOathless_WardDiscard_DecliningCountersTheSpell()
 	{
-		var gideon = Field(FraCards.Get("Gideon the Oathless"), me);
+		var gideon = Field(CardRegistry.Get("Gideon the Oathless"), me);
 		var kill = Hand(Kill, them);
 		TheyCastAt(kill, gideon);
 		Resolve(choice =>
@@ -101,7 +101,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void GideonTheOathless_WardDiscard_DiscardingKeepsTheSpell()
 	{
-		var gideon = Field(FraCards.Get("Gideon the Oathless"), me);
+		var gideon = Field(CardRegistry.Get("Gideon the Oathless"), me);
 		var kill = Hand(Kill, them);
 		TheyCastAt(kill, gideon);
 		var hand = HandCount(them);
@@ -118,7 +118,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void GideonTheOathless_TheirCreatureEnters_OneDamageToThem()
 	{
-		Field(FraCards.Get("Gideon the Oathless"), me);
+		Field(CardRegistry.Get("Gideon the Oathless"), me);
 		var life = Life(them);
 		TheirSpellOnTheStack(TestGames.Creature("Flashy", "1/1", "Flash"));
 		Resolve();
@@ -130,7 +130,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void GideonTheOathless_TheyActivateALoyaltyAbility_OneDamageToThem()
 	{
-		Field(FraCards.Get("Gideon the Oathless"), me);
+		Field(CardRegistry.Get("Gideon the Oathless"), me);
 		var walker = Field(
 			TestGames.Planeswalker("Walker", 3, new LoyaltyAbilityComponent(1, [])),
 			them
@@ -151,7 +151,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void FlickeringHound_CastingACreature_FlickersAnotherOfMine()
 	{
-		Field(FraCards.Get("Flickering Hound"), me);
+		Field(CardRegistry.Get("Flickering Hound"), me);
 		var mine = Field(TestGames.Creature("Mine", "1/1"), me);
 		s = s.UpdateObject(mine, s.GetCard(mine) with { IsTapped = true, PlusOneCounters = 2 }); // TEST SETUP
 		var incarnation = s.GetCard(mine).Incarnation;
@@ -177,7 +177,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void Gardenize_AChargeCounterPerDeath_AndThatMuchGreenInMyFirstMainPhase()
 	{
-		var gardenize = Field(FraCards.Get("Gardenize"), me);
+		var gardenize = Field(CardRegistry.Get("Gardenize"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(Hand(Kill, me), [], bear);
 		Assert.That(s.GetCard(gardenize).ChargeCounters, Is.EqualTo(1));
@@ -200,7 +200,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void Gardenize_DestroyedInResponse_StillAddsItsGreen()
 	{
-		var gardenize = Field(FraCards.Get("Gardenize"), me);
+		var gardenize = Field(CardRegistry.Get("Gardenize"), me);
 		s = s.UpdateObject(gardenize, s.GetCard(gardenize) with { ChargeCounters = 3 }); // TEST SETUP
 		var turn = s.GetGame().TurnNumber;
 		s = TestGames.PassUntil(
@@ -289,7 +289,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void HexhavenInvigorator_DealtDamage_UpToThatManyLandsTapped()
 	{
-		var hexhaven = Field(FraCards.Get("Hexhaven Invigorator"), me);
+		var hexhaven = Field(CardRegistry.Get("Hexhaven Invigorator"), me);
 		for (var i = 0; i < 3; i++)
 			Put(TestGames.Card("Forest"), me, ZoneType.Library);
 		var lands = s.CardsIn(me, ZoneType.Battlefield).Select(c => c.Id).ToHashSet();
@@ -326,7 +326,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void HexhavenInvigorator_TheAiFetchesAllItMay()
 	{
-		var hexhaven = Field(FraCards.Get("Hexhaven Invigorator"), me);
+		var hexhaven = Field(CardRegistry.Get("Hexhaven Invigorator"), me);
 		for (var i = 0; i < 3; i++)
 			Put(TestGames.Card("Forest"), me, ZoneType.Library);
 		var lands = s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
@@ -400,7 +400,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void SeasonedCryomancer_ExiledFromTheGraveyard_DrawsTwo()
 	{
-		var cryomancer = Put(FraCards.Get("Seasoned Cryomancer"), me, ZoneType.Graveyard);
+		var cryomancer = Put(CardRegistry.Get("Seasoned Cryomancer"), me, ZoneType.Graveyard);
 		var hand = HandCount(me);
 		s = s.Act(Activations(cryomancer).Single());
 		Resolve();
@@ -415,7 +415,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void IdentityEcho_ExilesMine_AndPutsTheFirstCreatureRevealedOntoTheBattlefield()
 	{
-		var echo = Field(FraCards.Get("Identity Echo"), me);
+		var echo = Field(CardRegistry.Get("Identity Echo"), me);
 		var mine = Field(TestGames.Creature("Mine", "1/1"), me);
 		var bear = Put(TestGames.Creature("Bear", "2/2"), me, ZoneType.Library);
 		var island = Put(TestGames.Card("Island"), me, ZoneType.Library);
@@ -468,7 +468,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void KarnArgentDefender_CreaturesEnteringDontTrigger_OtherPermanentsDo()
 	{
-		Field(FraCards.Get("Karn, Argent Defender"), me);
+		Field(CardRegistry.Get("Karn, Argent Defender"), me);
 		var life = Life(me);
 		Cast(
 			Hand(
@@ -502,7 +502,7 @@ public class FraRareOneOffTests : FraBoardTest
 	public void SphinxsApproach_WithFourMore_ExilesThemForASphinx()
 	{
 		for (var i = 0; i < 4; i++)
-			Put(FraCards.Get("Sphinx's Approach"), me, ZoneType.Graveyard);
+			Put(CardRegistry.Get("Sphinx's Approach"), me, ZoneType.Graveyard);
 		var sphinx = Put(
 			Typed(TestGames.Creature("Sphinx", "4/4"), "Creature — Sphinx"),
 			me,
@@ -541,7 +541,7 @@ public class FraRareOneOffTests : FraBoardTest
 	public void SphinxsApproach_WithThreeMore_JustDraws()
 	{
 		for (var i = 0; i < 3; i++)
-			Put(FraCards.Get("Sphinx's Approach"), me, ZoneType.Graveyard);
+			Put(CardRegistry.Get("Sphinx's Approach"), me, ZoneType.Graveyard);
 		var approach = Hand("Sphinx's Approach", me);
 		var asked = false;
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = approach });
@@ -586,7 +586,7 @@ public class FraRareOneOffTests : FraBoardTest
 	public void NullSummoner_NotCast_NoExile()
 	{
 		var theirs = Hand(TestGames.Inline("Theirs", "{G}{G}", "Sorcery"), them);
-		var summoner = Put(FraCards.Get("Null Summoner"), me, ZoneType.Hand);
+		var summoner = Put(CardRegistry.Get("Null Summoner"), me, ZoneType.Hand);
 		s = s.EnterBattlefield(summoner, me); // TEST SETUP: put onto the battlefield, not cast
 		Cast(Hand(TestGames.Inline("Pass", "{1}", "Instant"), me), []); // a priority to collect triggers
 		Assert.That(
@@ -601,7 +601,7 @@ public class FraRareOneOffTests : FraBoardTest
 	[Test]
 	public void Omnipresence_FreeUpToTheNumberOfCreaturesIControl()
 	{
-		Field(FraCards.Get("Omnipresence"), me);
+		Field(CardRegistry.Get("Omnipresence"), me);
 		Field(TestGames.Creature("A", "1/1"), me);
 		Field(TestGames.Creature("B", "1/1"), me);
 		var two = Hand(TestGames.Inline("Two", "{1}{G}", "Sorcery"), me);

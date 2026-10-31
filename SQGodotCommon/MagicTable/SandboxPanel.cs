@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using MagicCore;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MtgGame;
 
 namespace MagicTable;
@@ -12,8 +12,8 @@ namespace MagicTable;
 /// </summary>
 public partial class SandboxPanel : PanelContainer
 {
-	private static readonly string[] Names = FraCards
-		.AllNames.Where(FraCards.IsImplemented)
+	private static readonly string[] Names = CardRegistry
+		.AllNames.Where(CardRegistry.IsImplemented)
 		.Order()
 		.ToArray();
 

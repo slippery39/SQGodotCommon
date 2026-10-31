@@ -154,8 +154,8 @@ public class SealedSessionTests
 		Assert.That(
 			MagicCore
 				.Cards.CardDataSet.Load("FRA")
-				.Where(c => !SealedSession.Playable(c.Name))
-				.Select(c => c.Name),
+				.Where(c => !SealedSession.Playable(c.Card.Name))
+				.Select(c => c.Card.Name),
 			Is.Empty
 		);
 
@@ -260,7 +260,9 @@ public class SealedSessionTests
 		Assert.That(command, Does.EndWith("--compare=seed:3"));
 		Assert.That(
 			note,
-			Does.StartWith($"{SealedBuilder.AllBuilds(seeded.Pool, CardRatings.Fra).Count} builds")
+			Does.StartWith(
+				$"{SealedBuilder.AllBuilds(seeded.Pool, CardRatings.Of("FRA")).Count} builds"
+			)
 		);
 
 		var pasted = new SealedSession(seeded.Pool);

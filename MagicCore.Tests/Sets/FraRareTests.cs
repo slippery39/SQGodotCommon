@@ -2,6 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicCore.Targeting;
 using MagicCore.Turns;
@@ -78,7 +79,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void IngrisStingerquill_EachAttackerPingsThem_AndACadetWithHaste()
 	{
-		var ingris = Field(FraCards.Get("Ingris Stingerquill"), me);
+		var ingris = Field(CardRegistry.Get("Ingris Stingerquill"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var life = Life(them);
 		AttackWith(bear);
@@ -128,7 +129,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void Tarmogoyf_CountsCardTypesInAllGraveyards()
 	{
-		var goyf = Field(FraCards.Get("Tarmogoyf"), me);
+		var goyf = Field(CardRegistry.Get("Tarmogoyf"), me);
 		Assert.That((s.Power(s.GetCard(goyf)), s.Toughness(s.GetCard(goyf))), Is.EqualTo((0, 1)));
 		(s, _) = TestGames.Put(s, me, TestGames.Creature("Dead", "1/1"), ZoneType.Graveyard);
 		(s, _) = TestGames.Put(
@@ -188,7 +189,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void LyraArchangelOfDawn_LifeGainGrowsYourAngels()
 	{
-		Field(FraCards.Get("Lyra, Archangel of Dawn"), me);
+		Field(CardRegistry.Get("Lyra, Archangel of Dawn"), me);
 		var angel = Field(Typed(TestGames.Creature("Angel", "2/2"), "Creature — Angel"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(
@@ -204,7 +205,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void MasterOfBarbs_NoncombatDamageToThemPumpsYourTeam()
 	{
-		Field(FraCards.Get("Master of Barbs"), me);
+		Field(CardRegistry.Get("Master of Barbs"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(
 			Hand(
@@ -225,7 +226,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void SolariumSentry_TheirCheapSpellsGainYouTwo()
 	{
-		Field(FraCards.Get("Solarium Sentry"), me);
+		Field(CardRegistry.Get("Solarium Sentry"), me);
 		var life = Life(me);
 		TheirSpellOnTheStack(TestGames.Inline("Cheap", "{1}{R}", "Instant"));
 		Resolve();
@@ -238,7 +239,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void LilianaTheFaultless_LifeAsYourCreaturesEnter_AndHexproofForADiscard()
 	{
-		var liliana = Field(FraCards.Get("Liliana the Faultless"), me);
+		var liliana = Field(CardRegistry.Get("Liliana the Faultless"), me);
 		var life = Life(me);
 		Cast(Hand(TestGames.Creature("Bear", "2/2"), me), []);
 		Assert.That(Life(me), Is.EqualTo(life + 1));
@@ -256,7 +257,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void IngrisStingerquill_TheAttackerKilledInResponseStillPings()
 	{
-		Field(FraCards.Get("Ingris Stingerquill"), me);
+		Field(CardRegistry.Get("Ingris Stingerquill"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
 		while (s.GetPendingChoice() is DeclareAttackerChoice declare)
@@ -344,8 +345,8 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void Codie_CopiesAPreparedSpell_AndPreparesYourCreatures()
 	{
-		var codie = Field(FraCards.Get("Codie, Ravenous Codex"), me);
-		var foreseer = Field(FraCards.Get("Semester Foreseer // Peer Review"), me);
+		var codie = Field(CardRegistry.Get("Codie, Ravenous Codex"), me);
+		var foreseer = Field(CardRegistry.Get("Semester Foreseer // Peer Review"), me);
 		s = s.Act(Activations(codie).Single());
 		Resolve();
 		Assert.That(
@@ -407,7 +408,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void Samut_NobodyCastsWhileYourInstantIsOnTheStack()
 	{
-		Field(FraCards.Get("Samut, Tyrant of Naktamun"), me);
+		Field(CardRegistry.Get("Samut, Tyrant of Naktamun"), me);
 		var mine = Hand(Instant("Mine", new GainLife(Ref.You, 1)), me);
 		var another = Hand(Instant("Another"), me);
 		var theirs = Hand(Instant("Theirs"), them);
@@ -452,7 +453,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void TheoristsProxy_TheNextSpellCantBeCountered()
 	{
-		var proxy = Field(FraCards.Get("Theorist's Proxy"), me);
+		var proxy = Field(CardRegistry.Get("Theorist's Proxy"), me);
 		s = s.Act(Activations(proxy).Single());
 		Resolve();
 		var gain = Hand(Instant("Gain", new GainLife(Ref.You, 3)), me);
@@ -511,7 +512,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void JacesMachinations_StillNotThroughSplitSecond()
 	{
-		Field(FraCards.Get("Samut, Tyrant of Naktamun"), me); // split second for your own instants too
+		Field(CardRegistry.Get("Samut, Tyrant of Naktamun"), me); // split second for your own instants too
 		Cast(Hand("Jace's Machinations", me), []);
 		var jace = Jace(me)!;
 		var instant = Hand(Instant("Hold", new GainLife(Ref.You, 1)), me);
@@ -526,7 +527,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void RoilingCanopy_TheEnteringForestRemovedInResponse_StillPumps()
 	{
-		Field(FraCards.Get("Roiling Canopy"), me);
+		Field(CardRegistry.Get("Roiling Canopy"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Field(TestGames.Card("Forest"), me); // five Forests on the battlefield
 		var sixth = Hand(TestGames.Card("Forest"), me);
@@ -565,7 +566,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void VraskaSoulOfStone_ASculptureTreasurePerNoncreatureSpell_WithVigilance()
 	{
-		Field(FraCards.Get("Vraska, Soul of Stone"), me);
+		Field(CardRegistry.Get("Vraska, Soul of Stone"), me);
 		Cast(Hand(Instant("Spell"), me), []);
 		var sculpture = Named(me, "Sculpture Treasure").Single();
 		Assert.That(
@@ -581,7 +582,7 @@ public class FraRareTests : FraBoardTest
 	{
 		var treasure = Field(
 			new CardDefinition(
-				FraCards.Treasure,
+				Tokens.Treasure,
 				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
 			),
 			me
@@ -599,7 +600,7 @@ public class FraRareTests : FraBoardTest
 	{
 		var treasure = Field(
 			new CardDefinition(
-				FraCards.Treasure,
+				Tokens.Treasure,
 				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
 			),
 			me
@@ -640,9 +641,9 @@ public class FraRareTests : FraBoardTest
 		Field(TestGames.Creature("Theirs", "2/2"), them);
 		var asked = false;
 		var vraska = Hand(
-			FraCards.Get("Vraska, the Cutting Glare") with
+			CardRegistry.Get("Vraska, the Cutting Glare") with
 			{
-				Data = FraCards.Get("Vraska, the Cutting Glare").Data with { ManaCost = "{B}" },
+				Data = CardRegistry.Get("Vraska, the Cutting Glare").Data with { ManaCost = "{B}" },
 			},
 			me
 		);
@@ -658,7 +659,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void KwiaVigorbloom_ALotusOnLifeGain_OncePerTurn_ForThreeOfOneColour()
 	{
-		Field(FraCards.Get("Kwia Vigorbloom"), me);
+		Field(CardRegistry.Get("Kwia Vigorbloom"), me);
 		Cast(Hand(Instant("Heal", new GainLife(Ref.You, 1)), me), []);
 		Cast(Hand(Instant("Heal", new GainLife(Ref.You, 1)), me), []);
 		Assert.That(Named(me, "Lotus").Count(), Is.EqualTo(1));
@@ -677,7 +678,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void DraconicVisitor_ArtifactTokensAreDragonsInstead()
 	{
-		Field(FraCards.Get("Draconic Visitor"), me);
+		Field(CardRegistry.Get("Draconic Visitor"), me);
 		Cast(Hand("Aerid Konstrari", me), []); // a Heartwood token as it enters
 		Assert.That(Named(me, "Heartwood"), Is.Empty);
 		var dragon = Named(me, "Dragon").Single();
@@ -741,7 +742,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void GideonsMemorial_TokensGetPlusOneAndVigilance()
 	{
-		Field(FraCards.Get("Gideon's Memorial"), me);
+		Field(CardRegistry.Get("Gideon's Memorial"), me);
 		Cast(
 			Hand(
 				TestGames.Inline(
@@ -764,7 +765,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void GideonsMemorial_ItsManaPaysOnlyForPlaneswalkerSpells()
 	{
-		Field(FraCards.Get("Gideon's Memorial"), me);
+		Field(CardRegistry.Get("Gideon's Memorial"), me);
 		TapAllLands(me);
 		var walker = Hand(TestGames.Planeswalker("Walker", 3), me); // costs {1}
 		var other = Hand(TestGames.Inline("Other", "{1}", "Sorcery"), me);
@@ -790,7 +791,7 @@ public class FraRareTests : FraBoardTest
 	}
 
 	CardDefinition TreasureToken =>
-		new(FraCards.Treasure, [new ManaOfOneColorComponent(1) { SacrificeSelf = true }]);
+		new(Tokens.Treasure, [new ManaOfOneColorComponent(1) { SacrificeSelf = true }]);
 
 	static CardDefinition HeartwoodToken =>
 		new(
@@ -837,7 +838,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void ATreasureCantPayBothTheSacrificeAndTheMana()
 	{
-		var beast = Field(FraCards.Get("Hungering Puppetbeast"), me); // {1}, Sacrifice another artifact
+		var beast = Field(CardRegistry.Get("Hungering Puppetbeast"), me); // {1}, Sacrifice another artifact
 		Field(TreasureToken, me);
 		TapAllLands(me);
 		Assert.That(Activations(beast), Is.Empty, "the only artifact is the only mana");

@@ -3,7 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Sets;
 
@@ -17,7 +17,7 @@ public class FraFlashbackTests : FraBoardTest
 		return id;
 	}
 
-	int InGraveyard(string fra) => InGraveyard(FraCards.Get(fra));
+	int InGraveyard(string fra) => InGraveyard(CardRegistry.Get(fra));
 
 	bool InExile(int card) => s.IsIn(card, me, ZoneType.Exile);
 

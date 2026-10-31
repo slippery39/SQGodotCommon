@@ -3,7 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Effects;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 
 namespace MagicCore.Tests.Ai;
@@ -240,7 +240,7 @@ public class BasicsTests
 	public void InfiniteCoursework_GoesOnTheirOnlyThreat()
 	{
 		Lands(3, "Island");
-		var coursework = Put(me, FraCards.Get("Infinite Coursework"), ZoneType.Hand);
+		var coursework = Put(me, CardRegistry.Get("Infinite Coursework"), ZoneType.Hand);
 		var threat = Put(them, TestGames.Creature("Threat", "5/5"));
 
 		Play();
@@ -291,7 +291,7 @@ public class BasicsTests
 		for (var i = 0; i < 5; i++)
 			Put(me, TestGames.CreatureCosting("{4}", $"Filler {i}", "4/4"), ZoneType.Library);
 		Put(me, TestGames.CreatureCosting("{1}{B}", "Rat", "3/3"), ZoneType.Hand);
-		var cycler = Put(me, FraCards.Get("Apex Witchstalker"), ZoneType.Hand);
+		var cycler = Put(me, CardRegistry.Get("Apex Witchstalker"), ZoneType.Hand);
 		s = s.Act(s.LegalActions().OfType<ActivateAbilityAction>().First(a => a.CardId == cycler));
 		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is not null);
 		var search = s.GetPendingChoice()!;
@@ -320,7 +320,7 @@ public class BasicsTests
 	public void AWalkerAtOneLoyalty_IsAttacked_OverTheirFace()
 	{
 		Put(me, TestGames.Creature("Big", "5/5"));
-		var chandra = Put(them, FraCards.Get("Chandra, Torch of Defiance"));
+		var chandra = Put(them, CardRegistry.Get("Chandra, Torch of Defiance"));
 		s = s.UpdateObject(chandra, s.GetCard(chandra) with { Loyalty = 1 }); // TEST SETUP
 
 		Play();
@@ -393,7 +393,7 @@ public class BasicsTests
 	)
 	{
 		var held = BeamSearchAi.DefaultRollout.Held!;
-		var card = Put(me, FraCards.Get(name), ZoneType.Graveyard);
+		var card = Put(me, CardRegistry.Get(name), ZoneType.Graveyard);
 		var access = s.ActivatedAbilitiesOf(s.GetCard(card))
 			.Where(a => a.From == ZoneType.Graveyard)
 			.Select(a => a.Cost.ManaValue)
@@ -420,7 +420,7 @@ public class BasicsTests
 	public void Removal_GoesOnTheLiveThreat_NotOneCourseworkHolds()
 	{
 		Lands(4, "Island");
-		var coursework = Put(me, FraCards.Get("Infinite Coursework"), ZoneType.Hand);
+		var coursework = Put(me, CardRegistry.Get("Infinite Coursework"), ZoneType.Hand);
 		var locked = Put(them, TestGames.Creature("Locked", "5/5"));
 		var live = Put(them, TestGames.Creature("Live", "3/3"));
 		s = s.Act(

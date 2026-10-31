@@ -36,8 +36,6 @@ public static class Prepare
 			null,
 			[.. "WUBRG".Where(c => face.ManaCost?.Contains(c) == true).Select(c => c.ToString())],
 			[],
-			"",
-			"",
 			null
 		);
 		var copy = CardFactory.Create(

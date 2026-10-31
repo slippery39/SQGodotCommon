@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MtgGame;
 
@@ -168,15 +169,15 @@ public partial class DeckSelectScene : Control
 			var record = GameRecord.FromJson(File.ReadAllText(path));
 			record.CheckFormat();
 			TableSetup.Current = new TableSetup(
-				[.. record.Deck1.Select(FraCards.Get)],
-				[.. record.Deck2.Select(FraCards.Get)],
+				[.. record.Deck1.Select(CardRegistry.Get)],
+				[.. record.Deck2.Select(CardRegistry.Get)],
 				record.Seed,
 				record.About.GetValueOrDefault("Player1") != "human",
 				_search.ButtonPressed
 			)
 			{
-				MySideboard = [.. record.Sideboard1.Select(FraCards.Get)],
-				TheirSideboard = [.. record.Sideboard2.Select(FraCards.Get)],
+				MySideboard = [.. record.Sideboard1.Select(CardRegistry.Get)],
+				TheirSideboard = [.. record.Sideboard2.Select(CardRegistry.Get)],
 				Resume = record,
 			};
 			Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");

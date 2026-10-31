@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicCore.Targeting;
 
@@ -26,8 +27,8 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void BuddingInsurgent_SacrificesItself_DrawingOnlyForALegendaryEnchantment()
 	{
-		var insurgent = Field(FraCards.Get("Budding Insurgent"), me);
-		var way = Field(FraCards.Get("Way of the Pyromancer"), them); // legendary
+		var insurgent = Field(CardRegistry.Get("Budding Insurgent"), me);
+		var way = Field(CardRegistry.Get("Way of the Pyromancer"), them); // legendary
 		var hand = HandCount(me);
 
 		Activate(insurgent, 0, way);
@@ -37,8 +38,8 @@ public class FraSacrificeTests : FraBoardTest
 			Is.EqualTo((false, false, hand + 1))
 		);
 
-		var second = Field(FraCards.Get("Budding Insurgent"), me);
-		var trap = Field(FraCards.Get("Memory Trap"), them); // not legendary
+		var second = Field(CardRegistry.Get("Budding Insurgent"), me);
+		var trap = Field(CardRegistry.Get("Memory Trap"), them); // not legendary
 		Activate(second, 0, trap);
 		Assert.That((Alive(trap), HandCount(me)), Is.EqualTo((false, hand + 1)), "no second draw");
 	}
@@ -46,8 +47,8 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void BuddingInsurgent_OnlyAsASorcery()
 	{
-		var insurgent = Field(FraCards.Get("Budding Insurgent"), me);
-		Field(FraCards.Get("Memory Trap"), them);
+		var insurgent = Field(CardRegistry.Get("Budding Insurgent"), me);
+		Field(CardRegistry.Get("Memory Trap"), them);
 		s = s.Act(new PassPriorityAction { PlayerId = me }); // their priority, my main phase
 		Assert.That(
 			s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == insurgent),
@@ -58,7 +59,7 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void LivingLibrary_ShufflesTheirCreatureIntoTheirLibrary()
 	{
-		var library = Field(FraCards.Get("Living Library"), me);
+		var library = Field(CardRegistry.Get("Living Library"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), them);
 
 		Activate(library, 0, bear);
@@ -70,7 +71,7 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void Marwyn_SacrificesOnlyAnArtifactOrLand_ToDraw()
 	{
-		var marwyn = Field(FraCards.Get("Marwyn, the Clearcutter"), me);
+		var marwyn = Field(CardRegistry.Get("Marwyn, the Clearcutter"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var offered = Activations(marwyn).Select(a => s.GetCard(a.SacrificeId)).ToList();
 		Assert.That(offered.All(c => c.Is(CardType.Land | CardType.Artifact)), "never the bear");
@@ -89,7 +90,7 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void Edgar_SacrificesAnother_GrowsWithMenace_AndGainsFromTheDeath()
 	{
-		var edgar = Field(FraCards.Get("Edgar, Ancient Bloodlord"), me);
+		var edgar = Field(CardRegistry.Get("Edgar, Ancient Bloodlord"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Assert.That(
 			Activations(edgar).Select(a => a.SacrificeId),
@@ -237,7 +238,7 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void MassacreGirl_AnotherDeathPings_AndThePingFeedsHer()
 	{
-		var girl = Field(FraCards.Get("Massacre Girl, Most Wanted"), me);
+		var girl = Field(CardRegistry.Get("Massacre Girl, Most Wanted"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		var (mine, theirs) = (Life(me), Life(them));
 
@@ -273,7 +274,7 @@ public class FraSacrificeTests : FraBoardTest
 		CastWithTrigger(trap, [], bear);
 		Assert.That(s.IsIn(bear, them, ZoneType.Exile));
 
-		var insurgent = Field(FraCards.Get("Budding Insurgent"), them);
+		var insurgent = Field(CardRegistry.Get("Budding Insurgent"), them);
 		s = s.MoveCard(trap, s.ZoneId(me, ZoneType.Graveyard)); // TEST SETUP: the trap is destroyed
 		Assert.That(Alive(bear), "back as soon as the trap left");
 		Assert.That(Alive(insurgent));
@@ -304,7 +305,7 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void DistinctMoves_KeepsEachPermanentACostCanTake()
 	{
-		var marwyn = Field(FraCards.Get("Marwyn, the Clearcutter"), me);
+		var marwyn = Field(CardRegistry.Get("Marwyn, the Clearcutter"), me);
 		int[] forests = [Field(TestGames.Card("Forest"), me), Field(TestGames.Card("Forest"), me)];
 
 		var taken = s.DistinctMoves(s.LegalActions())
@@ -320,9 +321,9 @@ public class FraSacrificeTests : FraBoardTest
 	[Test]
 	public void TriggersFromLaterCheckRounds_StillGoOnTheStackApnap()
 	{
-		var theirEdgar = Field(FraCards.Get("Edgar, Ancient Bloodlord"), them);
+		var theirEdgar = Field(CardRegistry.Get("Edgar, Ancient Bloodlord"), them);
 		var theirBear = Field(TestGames.Creature("TheirBear", "2/2"), them);
-		Field(FraCards.Get("Massacre Girl, Most Wanted"), me);
+		Field(CardRegistry.Get("Massacre Girl, Most Wanted"), me);
 		var myOne = Field(TestGames.Creature("MyOne", "1/1"), me);
 		var both = new CardDefinition(
 			new CardData(
@@ -337,8 +338,6 @@ public class FraSacrificeTests : FraBoardTest
 				null,
 				null,
 				[],
-				"common",
-				"0",
 				null
 			),
 			[
@@ -447,8 +446,6 @@ public class FraSacrificeTests : FraBoardTest
 					null,
 					null,
 					[],
-					"common",
-					"0",
 					null
 				),
 				[.. statics]

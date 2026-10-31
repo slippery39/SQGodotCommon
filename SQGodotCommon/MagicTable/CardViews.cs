@@ -47,7 +47,9 @@ public static class CardViews
 		var size = PermanentSize * scale;
 		var (w, h) = (size.X, size.Y);
 		var card = Frame(glow, size);
-		card.AddChild(Art(MagicArt.Crop(c.Name), new Vector2(w - 6, h * 0.55f), new Vector2(3, 3)));
+		card.AddChild(
+			Art(MagicArt.Crop(MagicArt.Key(c)), new Vector2(w - 6, h * 0.55f), new Vector2(3, 3))
+		);
 		card.AddChild(Text(c.Name, 16, new Vector2(4, h * 0.55f + 3), w - 8, wrap: true));
 
 		var stats = Stats(s, c);
@@ -70,7 +72,7 @@ public static class CardViews
 			card.Position = new Vector2(h, 0);
 		}
 		slot.AddChild(card);
-		Hook(slot, c.Name, preview, onClick);
+		Hook(slot, MagicArt.Key(c), preview, onClick);
 		return slot;
 	}
 
@@ -106,12 +108,12 @@ public static class CardViews
 		var strip = new PanelContainer { CustomMinimumSize = new Vector2(PermanentSize.X, 0) };
 		strip.AddThemeStyleboxOverride("panel", Outline(glow));
 		var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-		row.AddChild(Thumb(a.Name, 44));
+		row.AddChild(Thumb(MagicArt.Key(a), 44));
 		var name = Text(a.Name, 15, Vector2.Zero, PermanentSize.X - 56, wrap: false);
 		name.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // a clipped label in a row gets no width of its own
 		row.AddChild(name);
 		strip.AddChild(row);
-		Hook(strip, a.Name, preview, onClick);
+		Hook(strip, MagicArt.Key(a), preview, onClick);
 		return strip;
 	}
 

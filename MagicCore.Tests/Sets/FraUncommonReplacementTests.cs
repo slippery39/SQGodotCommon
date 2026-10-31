@@ -3,6 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicCore.Targeting;
 using MagicCore.Turns;
@@ -33,7 +34,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	[Test]
 	public void TomikIzzet_NoncombatDamageToThemIsOneMore()
 	{
-		Field(FraCards.Get("Tomik, Izzet Sparkmage"), me);
+		Field(CardRegistry.Get("Tomik, Izzet Sparkmage"), me);
 		var theirs = Field(TestGames.Creature("Theirs", "2/3"), them);
 		var life = Life(them);
 		Cast(Hand(Ping(Ref.EachOpponent, 1), me), []);
@@ -45,7 +46,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	[Test]
 	public void TomikIzzet_NotToYourOwn_NorInCombat()
 	{
-		Field(FraCards.Get("Tomik, Izzet Sparkmage"), me);
+		Field(CardRegistry.Get("Tomik, Izzet Sparkmage"), me);
 		var mine = Field(TestGames.Creature("Mine", "2/3"), me);
 		Cast(Hand(Ping(Ref.CreaturesYouControl, 2), me), []);
 		Assert.That(s.GetCard(mine).Damage, Is.EqualTo(2));
@@ -58,7 +59,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	[Test]
 	public void Yoshimaru_OneMoreCounterOnYourCreatures_NotTheirs()
 	{
-		Field(FraCards.Get("Yoshimaru, Beloved Companion"), me);
+		Field(CardRegistry.Get("Yoshimaru, Beloved Companion"), me);
 		var mine = Field(TestGames.Creature("Mine", "2/2"), me);
 		var theirs = Field(TestGames.Creature("Theirs", "2/2"), them);
 		var grow = new AddCounters(Ref.AllCreatures, 1);
@@ -72,7 +73,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	[Test]
 	public void Yoshimaru_EnteringWithCountersIsPuttingThem()
 	{
-		Field(FraCards.Get("Yoshimaru, Beloved Companion"), me);
+		Field(CardRegistry.Get("Yoshimaru, Beloved Companion"), me);
 		var make = new CreateTokens(FraCards.Cadet, 1) { Counters = 1 };
 		Cast(Hand(TestGames.Inline("Make", "{1}", "Sorcery", null, make), me), []);
 		var cadet = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Cadet");
@@ -86,7 +87,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 		(s, yoshi) = TestGames.Put(
 			s,
 			me,
-			FraCards.Get("Yoshimaru, Beloved Companion"),
+			CardRegistry.Get("Yoshimaru, Beloved Companion"),
 			ZoneType.Graveyard
 		);
 		var back = new ReturnFromGraveyard(Ref.CardsInYourGraveyard, ZoneType.Battlefield)
@@ -100,7 +101,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	[Test]
 	public void GraftSurgeon_ItsCountersIncludeMinusOnes()
 	{
-		var surgeon = Field(FraCards.Get("Graft Surgeon"), me);
+		var surgeon = Field(CardRegistry.Get("Graft Surgeon"), me);
 		s = s.UpdateObject(surgeon, s.GetCard(surgeon) with { MinusOneCounters = 1 }); // TEST SETUP
 		var bear = Field(TestGames.Creature("Bear", "3/3"), me);
 		var kill = new DealDamage(Ref.Target(), 5);
@@ -132,7 +133,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	[Test]
 	public void Yoshimaru_SixForACounterOnALegend()
 	{
-		var yoshi = Field(FraCards.Get("Yoshimaru, Beloved Companion"), me);
+		var yoshi = Field(CardRegistry.Get("Yoshimaru, Beloved Companion"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Assert.That(
 			Activations(yoshi).Select(a => a.Targets[0]),
@@ -221,7 +222,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	[Test]
 	public void Loot_NegativePowerDealsItsSize_AndSacrificingMakesItBigger()
 	{
-		var loot = Field(FraCards.Get("Loot, the Anomaly"), me);
+		var loot = Field(CardRegistry.Get("Loot, the Anomaly"), me);
 		var fodder = Field(TestGames.Creature("Fodder", "1/1"), me);
 		Assert.That(Activations(loot), Is.Empty, "threshold");
 		for (var i = 0; i < 7; i++)
@@ -243,7 +244,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 		var printed = s.GetCard(ghalta).ManaCost.ManaValue;
 		Assert.That(Costs.Of(s, me, s.GetCard(ghalta)).ManaValue, Is.EqualTo(printed - 6));
 
-		Field(FraCards.Get("Ghalta the Immovable"), me);
+		Field(CardRegistry.Get("Ghalta the Immovable"), me);
 		var life = Life(them);
 		AttackWith(wall);
 		Assert.That(Life(them), Is.EqualTo(life - 6));

@@ -3,6 +3,7 @@ using ImmutableGameObjects;
 using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MagicCore.Targeting;
 
@@ -647,7 +648,7 @@ public class RolloutTests
 		(s, var walker) = TestGames.Put(
 			s,
 			them,
-			FraCards.Get("Chandra, Torch of Defiance"),
+			CardRegistry.Get("Chandra, Torch of Defiance"),
 			ZoneType.Battlefield
 		);
 		s = s.UpdateObject(walker, s.GetCard(walker) with { Loyalty = 4 }); // TEST SETUP: Put sets no loyalty
@@ -729,7 +730,7 @@ public class RolloutTests
 	{
 		for (var i = 0; i < 3; i++)
 			(s, _) = TestGames.Put(s, me, TestGames.Card("Swamp"), ZoneType.Battlefield);
-		(s, var relic) = TestGames.Put(s, me, FraCards.Get("Lich's Relic"), ZoneType.Hand);
+		(s, var relic) = TestGames.Put(s, me, CardRegistry.Get("Lich's Relic"), ZoneType.Hand);
 		(s, var threat) = TestGames.Put(
 			s,
 			them,

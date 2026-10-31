@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using MagicCore.Limited;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicTable;
@@ -14,6 +15,12 @@ namespace MagicTable;
 public sealed class SealedSession
 {
 	public static IReadOnlyList<string> BasicNames => SealedBuilder.Basics;
+
+	/// <summary>
+	/// The set the pool is opened from: its boosters, its ratings, the printing its cards show.
+	/// ponytail: FRA only — MC-5.4 makes it a choice once TRK has boosters and ratings.
+	/// </summary>
+	public const string Set = "FRA";
 
 	private readonly List<string> _deck = new();
 	private readonly int[] _basics = new int[5];
@@ -46,7 +53,7 @@ public sealed class SealedSession
 	public IReadOnlyList<string> LeftOut { get; }
 
 	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, and one of its suggested builds at random (LIM-3).</summary>
-	public static SealedDeck OpponentFor(int seed) => SealedBuilder.Opponent(seed);
+	public static SealedDeck OpponentFor(int seed) => SealedBuilder.Opponent(Set, seed);
 
 	/// <summary>The pool cards in your deck (basics added on top are <see cref="Basics"/>).</summary>
 	public IReadOnlyList<string> FromPool => _deck;
@@ -74,7 +81,7 @@ public sealed class SealedSession
 	}
 
 	/// <summary>Unscripted cards would play silently vanilla (MagicCore/CLAUDE.md), so they stay in the pool.</summary>
-	public static bool Playable(string card) => FraCards.IsImplemented(card);
+	public static bool Playable(string card) => CardRegistry.IsImplemented(card);
 
 	/// <summary>One more copy into the deck, if the sideboard still holds one and it can be played.</summary>
 	public bool Add(string card)
@@ -109,11 +116,11 @@ public sealed class SealedSession
 		];
 
 	private IReadOnlyList<SealedDeck> Best =>
-		_best ??= SealedBuilder.Suggestions(Pool, CardRatings.Fra);
+		_best ??= SealedBuilder.Suggestions(Pool, CardRatings.Of(Set));
 
 	/// <summary>The other pairs within 1.5 points of the best, the 4 closest (LIM-3.6, 3.4, Shayne) — for you to judge.</summary>
 	public IReadOnlyList<SealedBuilder.PairRating> ClosePairs =>
-		_closePairs ??= SealedBuilder.ClosePairs(Pool, CardRatings.Fra);
+		_closePairs ??= SealedBuilder.ClosePairs(Pool, CardRatings.Of(Set));
 
 	/// <summary>Which of <see cref="ClosePairs"/> has its builds among the suggestions; null for none.</summary>
 	public int? ShownPair { get; private set; }
@@ -129,7 +136,7 @@ public sealed class SealedSession
 		if (!_pairCache.TryGetValue(which, out var builds))
 			_pairCache[which] = builds = SealedBuilder.ForPair(
 				Pool,
-				CardRatings.Fra,
+				CardRatings.Of(Set),
 				ClosePairs[which].Pair
 			);
 		_pairBuilds = builds;
@@ -146,7 +153,7 @@ public sealed class SealedSession
 			Seed is { } seed ? $"seed:{seed}"
 			: poolFile is not null ? $"\"{poolFile}\""
 			: throw new System.InvalidOperationException("a pasted pool needs its file");
-		var builds = SealedBuilder.AllBuilds(Pool, CardRatings.Fra).Count;
+		var builds = SealedBuilder.AllBuilds(Pool, CardRatings.Of(Set)).Count;
 		const int opponents = SealedBuildMatch.DefaultOpponents;
 		return (
 			$"dotnet run -c Release --project MagicConsole -- --compare={pool}",
@@ -220,8 +227,8 @@ public sealed class SealedSession
 	{
 		opponent ??= OpponentFor(gameSeed);
 		return new(
-			[.. Deck.Select(FraCards.Get)],
-			[.. opponent.Main.Select(FraCards.Get)],
+			[.. Deck.Select(n => CardRegistry.Get(n, Set))],
+			[.. opponent.Main.Select(n => CardRegistry.Get(n, Set))],
 			gameSeed,
 			AiVsAi: false,
 			search
@@ -229,8 +236,11 @@ public sealed class SealedSession
 		{
 			Back = "res://MagicTable/SealedScene.tscn",
 			// outside the game: each pool's unplayed cards — every one playable, Extrapolate's options
-			MySideboard = [.. Sideboard.Where(Playable).Select(FraCards.Get)],
-			TheirSideboard = [.. opponent.Sideboard.Where(Playable).Select(FraCards.Get)],
+			MySideboard = [.. Sideboard.Where(Playable).Select(n => CardRegistry.Get(n, Set))],
+			TheirSideboard =
+			[
+				.. opponent.Sideboard.Where(Playable).Select(n => CardRegistry.Get(n, Set)),
+			],
 		};
 	}
 
@@ -239,5 +249,5 @@ public sealed class SealedSession
 			? i
 			: throw new System.ArgumentException($"{basic} is not a basic land", nameof(basic));
 
-	private static IReadOnlyList<string> Open(int seed) => Boosters.SealedPool(seed);
+	private static IReadOnlyList<string> Open(int seed) => Boosters.SealedPool(Set, seed);
 }

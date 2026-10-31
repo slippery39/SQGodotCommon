@@ -666,7 +666,7 @@ public class FilterMigrationTests
 						.SelectMany(p => All(p.GetValue(o), depth + 1)),
 				_ => [],
 			};
-		return All(MagicCore.Sets.Fra.FraCards.Get(card).Components, 0)
+		return All(MagicCore.Sets.CardRegistry.Get(card).Components, 0)
 			.Select(a => a.On)
 			.Single(on => on.On == kind && on.Subject is not null);
 	}

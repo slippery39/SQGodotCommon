@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MagicCore.Cards;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MtgGame;
 
@@ -452,7 +453,7 @@ public partial class SealedScene : Control
 		{
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, // before Texture (godot-frontend.md)
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			Texture = MagicArt.Full(card),
+			Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set)),
 			CustomMinimumSize = new Vector2(TileWidth, TileWidth * 1.395f),
 			TooltipText = SealedSession.Playable(card)
 				? ""
@@ -490,7 +491,7 @@ public partial class SealedScene : Control
 	private void Preview(string? card)
 	{
 		if (card is not null)
-			_preview.Texture = MagicArt.Full(card);
+			_preview.Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set));
 	}
 
 	private bool Shows(string card)
@@ -521,7 +522,7 @@ public partial class SealedScene : Control
 		return (group, data.Cmc);
 	}
 
-	internal static CardData Data(string card) => FraCards.Get(card).Data;
+	internal static CardData Data(string card) => CardRegistry.Get(card).Data;
 
 	internal static Button Choice(string text, System.Action pressed)
 	{

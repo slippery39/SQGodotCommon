@@ -17,7 +17,10 @@ public class DraftTests
 			.. Enumerable
 				.Range(0, Draft.SeatCount)
 				.Select(_ =>
-					Enumerable.Range(0, Draft.PackCount).Select(_ => Boosters.Pack(rng)).ToList()
+					Enumerable
+						.Range(0, Draft.PackCount)
+						.Select(_ => Boosters.Pack("FRA", rng))
+						.ToList()
 				),
 		];
 	}
@@ -35,13 +38,13 @@ public class DraftTests
 	[Test]
 	public void AnFraDraft_IsEightSeats_ThreePacksEach_AndEverySeatEndsWithEveryPick()
 	{
-		var start = Draft.Fra(seed: 1);
+		var start = Draft.New("FRA", seed: 1);
 		Assert.That(start.Seats, Has.Count.EqualTo(Draft.SeatCount));
 		Assert.That(start.Seats.All(s => s.Unopened.Count == Draft.PackCount - 1));
 		var packSize = start.Seats[0].Pack.Count;
 		Assert.That(packSize, Is.EqualTo(14), "Wizards: 14 cards a play booster");
 
-		var end = Draft.RunBots(start, CardRatings.Fra);
+		var end = Draft.RunBots(start, CardRatings.Of("FRA"));
 		Assert.That(end.IsComplete);
 		Assert.That(end.Seats.All(s => s.Picks.Count == packSize * Draft.PackCount));
 		Assert.That(
@@ -56,8 +59,8 @@ public class DraftTests
 	[Test]
 	public void ADraft_IsTheSameForTheSameSeed()
 	{
-		var a = Draft.RunBots(Draft.Fra(seed: 4), CardRatings.Fra);
-		var b = Draft.RunBots(Draft.Fra(seed: 4), CardRatings.Fra);
+		var a = Draft.RunBots(Draft.New("FRA", seed: 4), CardRatings.Of("FRA"));
+		var b = Draft.RunBots(Draft.New("FRA", seed: 4), CardRatings.Of("FRA"));
 		Assert.That(
 			a.Seats.Select(s => string.Join("|", s.Picks)),
 			Is.EqualTo(b.Seats.Select(s => string.Join("|", s.Picks)))
@@ -67,18 +70,18 @@ public class DraftTests
 	[Test]
 	public void PacksPassLeft_ThenRight_ThenLeft()
 	{
-		var state = Draft.Fra(seed: 2);
+		var state = Draft.New("FRA", seed: 2);
 		for (var round = 0; round < Draft.PackCount; round++)
 		{
 			var before = state;
-			state = Draft.Next(state, CardRatings.Fra);
+			state = Draft.Next(state, CardRatings.Of("FRA"));
 			var from = round % 2 == 0 ? Draft.SeatCount - 1 : 1; // seat 0 receives seat 7's pack, then seat 1's
 			var expected = before
 				.Seats[from]
 				.Pack.RemoveAt(before.Seats[from].Pack.IndexOf(state.Seats[from].Picks[^1]));
 			Assert.That(state.Seats[0].Pack, Is.EquivalentTo(expected), $"round {round}");
 			while (state.Round == round && !state.IsComplete)
-				state = Draft.Next(state, CardRatings.Fra);
+				state = Draft.Next(state, CardRatings.Of("FRA"));
 		}
 	}
 
@@ -93,7 +96,11 @@ public class DraftTests
 		var partner = pack.Single(c => c.Sheet == taken.Sheet && c != taken).Card;
 		var third = pack.Single(c => c.Sheet.StartsWith("thirdNot")).Card;
 
-		state = Draft.Next(state, CardRatings.Fra, seat0: state.Seats[0].Pack.IndexOf(taken.Card));
+		state = Draft.Next(
+			state,
+			CardRatings.Of("FRA"),
+			seat0: state.Seats[0].Pack.IndexOf(taken.Card)
+		);
 
 		var seen = state.Seats[1].Pack; // seat 0's pack, passed left
 		Assert.That(seen, Does.Contain(partner).And.Contain(third));
@@ -105,7 +112,10 @@ public class DraftTests
 	}
 
 	// The lean, on inline ratings: a seat in Red and Green, a Blue card rated a point above a Red one.
-	static readonly CardData[] Fra = [.. CardDataSet.Load("FRA").OrderBy(c => c.Name)];
+	static readonly CardData[] Fra =
+	[
+		.. CardDataSet.Load("FRA").Select(p => p.Card).OrderBy(c => c.Name),
+	];
 
 	static string MonoColored(string letter) =>
 		Fra.First(c =>

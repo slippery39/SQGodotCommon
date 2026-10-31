@@ -3,7 +3,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Limited;
-using MagicCore.Sets.Fra;
+using MagicCore.Sets;
 
 namespace MagicCore.Ai;
 
@@ -88,10 +88,14 @@ public static class CastGains
 
 	static List<(string Card, double Offer)> Play(int seed, HeldValues held)
 	{
-		var decks = new[] { SealedBuilder.Opponent(seed), SealedBuilder.Opponent(1000 + seed) };
+		var decks = new[]
+		{
+			SealedBuilder.Opponent("FRA", seed),
+			SealedBuilder.Opponent("FRA", 1000 + seed),
+		};
 		var s = MagicRules.NewGame(
-			decks[0].Main.Select(FraCards.Get),
-			decks[1].Main.Select(FraCards.Get),
+			decks[0].Main.Select(CardRegistry.Get),
+			decks[1].Main.Select(CardRegistry.Get),
 			seed
 		);
 		var first = s.DecidingPlayerId();
