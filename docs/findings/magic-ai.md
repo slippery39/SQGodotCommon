@@ -1339,3 +1339,20 @@ kills). MtgSimulator never fixed this (DesignNotes: "a lethal board at the horiz
   difference**; 2 306 steps a decision against 1 977 (+16.6%); 1 448 s (on the build before the review's
   `TurnEndCap` correction, which moved no suite decision). Kept.
 
+## The cheap look-ahead two choices deep, for every single pick (2026-10-30, AI-17.6)
+
+The review of the quick-check fix: one level down, Lich's Relic's "you may pay {2}. When you do, destroy up
+to one target creature" read as paying for nothing (the inner target got the cheap answer, none), and a
+forced single pick — an edict's sacrifice — took the first listed (their best).
+**`Evaluator.Terms.SettleDeep`** (`+shallowsettle`): Settle's chooser's best two choices deep, for every
+single pick. Tests with controls: the Relic destroys their 5/5 through Settle; an edict takes their 1/1.
+Golden games 2 moved (all pass with it forced off); card values unchanged. Suite: 2 of 288 change, both
+better — no {6} +1/+1 counter from Yoshimaru on THEIR Screeching Soulbreaker; No Admittance on a Repurposed
+Enforcer over a Yoshimaru with nothing to fight — 5 881 steps a position (+1.6%). Match: **96 games, 50.0%
+(48–48), no game's result moved**; 2 246 steps a decision against 2 209 (+1.7%). Kept; the suite accepted.
+
+**Plans replayed, measured (review item 9):** three self-play games, a fresh search at every decision
+answered from a committed plan: 23 of 83, 40 of 195, 20 of 58 differ (25–35%) — many only timing (the land
+or spell later in the turn), some not (an attack made or held, Jace −3 against −1, a Duelist's mode). Not yet
+changed: whether a fresh search at every decision plays better is a match.
+

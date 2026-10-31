@@ -191,8 +191,8 @@ public static class Evaluator
 
 		/// <summary>
 		/// The look-ahead's, beside the evaluator: <see cref="Lookahead.Settle"/> answers one target or a
-		/// single "you may" by its chooser's best, one level down (AI-17.6, review item 1) — before, the
-		/// first legal target and "no" (`+quicksettle`).
+		/// single "you may" by its chooser's best (AI-17.6, review item 1) — before, the first legal target
+		/// and "no" (`+quicksettle`). Two levels deep and for every single pick under <see cref="SettleDeep"/>.
 		/// </summary>
 		SettleChoices = 2048,
 
@@ -205,6 +205,13 @@ public static class Evaluator
 		/// hand"), where the Ghoul comes back to do it again (`+deadgraveyard`).
 		/// </summary>
 		GraveyardAccess = 4096,
+
+		/// <summary>
+		/// The look-ahead's: <see cref="SettleChoices"/> two choices deep, and for every single pick — Lich's
+		/// Relic's "you may pay {2}. When you do, destroy target …" read as paying for nothing one level down,
+		/// and an edict's sacrifice took the first listed (AI-17.6, the review of item 1) — `+shallowsettle`.
+		/// </summary>
+		SettleDeep = 8192,
 	}
 
 	/// <summary>

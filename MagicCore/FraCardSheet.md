@@ -1435,7 +1435,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests, RolloutTests
 
 ### Tam's Resistance
 
@@ -5184,7 +5184,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Equipped creature gets +2/+1.  
 > Equip {2}
 
-**Status:** scripted · **tests naming it:** FraAttachmentTests
+**Status:** scripted · **tests naming it:** FraAttachmentTests, RolloutTests
 
 **Engine pieces:** `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
 

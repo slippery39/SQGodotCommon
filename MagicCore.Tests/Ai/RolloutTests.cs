@@ -704,4 +704,76 @@ public class RolloutTests
 			Assert.That(ai.FirstMoveScores, Is.Empty, "a later question: from the plan");
 		}
 	}
+
+	/// <summary>Cast a card from our hand and see it through the cheap look-ahead, the given terms off.</summary>
+	GameState CastAndSettle(int card, Evaluator.Terms without) =>
+		Evaluator.Without(
+			without,
+			() =>
+				Lookahead.Settle(
+					s.Act(
+						s.LegalActions()
+							.OfType<Actions.CastSpellAction>()
+							.First(a => a.CardId == card)
+					)
+				)
+		);
+
+	// The cheap look-ahead two choices deep (AI-17.6): Lich's Relic — "When this Equipment enters, you may pay
+	// {2}. When you do, for each opponent, destroy up to one target creature or planeswalker that player
+	// controls." One level down, the "when you do" target got the cheap answer (none), so paying read as
+	// paying for nothing and the look-ahead declined. The CONTROL: one level, their 5/5 lives.
+	[TestCase(Evaluator.Terms.None, ExpectedResult = false)]
+	[TestCase(Evaluator.Terms.SettleDeep, ExpectedResult = true)]
+	public bool TheCheapLookAhead_PaysForLichsRelic_AndDestroysTheirThreat(Evaluator.Terms without)
+	{
+		for (var i = 0; i < 3; i++)
+			(s, _) = TestGames.Put(s, me, TestGames.Card("Swamp"), ZoneType.Battlefield);
+		(s, var relic) = TestGames.Put(s, me, FraCards.Get("Lich's Relic"), ZoneType.Hand);
+		(s, var threat) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Threat", "5/5"),
+			ZoneType.Battlefield
+		);
+
+		return CastAndSettle(relic, without).IsOnBattlefield(threat); // alive: the Relic did nothing
+	}
+
+	// Every single pick by its chooser's best (AI-17.6): "Each opponent sacrifices a creature" — they keep
+	// their 5/5 and give up the 1/1. The first listed (the 5/5, put first) was the cheap answer, so every
+	// edict in the look-ahead read as killing their best. The CONTROL: the first listed.
+	[TestCase(Evaluator.Terms.None, ExpectedResult = true)]
+	[TestCase(Evaluator.Terms.SettleDeep, ExpectedResult = false)]
+	public bool TheCheapLookAhead_AnEdict_TakesTheirLeastValuable(Evaluator.Terms without)
+	{
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, var edict) = TestGames.Put(
+			s,
+			me,
+			new CardDefinition(
+				TestGames.Inline("Edict", "{1}", "Sorcery").Data,
+				[
+					new SpellEffectsComponent(
+						[
+							new EachSacrifices(
+								Ref.EachOpponent,
+								global::MagicCore.Filters.Is.Creature
+							),
+						]
+					),
+				]
+			),
+			ZoneType.Hand
+		);
+		(s, var big) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Big", "5/5"),
+			ZoneType.Battlefield
+		);
+		(s, _) = TestGames.Put(s, them, TestGames.Creature("Small", "1/1"), ZoneType.Battlefield);
+
+		return CastAndSettle(edict, without).IsOnBattlefield(big); // they keep the 5/5
+	}
 }

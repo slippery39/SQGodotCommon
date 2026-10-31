@@ -394,10 +394,27 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         this") — the imagined defender scores a block by the board right after combat, so killing their
         3/1 trampler or their 2/2 looks alike, though the trampler alive pins our Beast at home next turn.
         Position: `TheDeathbringersBeast_IsMadeFromBlessedGhoul_WhichComesBack` (ignored)
+  - [x] **Done (2026-10-30): 50.0% over 96 (48–48), +1.7% a decision, kept:** `Evaluator.Terms.SettleDeep` (`+shallowsettle`): Settle's
+        chooser's best two choices deep, and for every single pick. Tests (with controls):
+        `TheCheapLookAhead_PaysForLichsRelic_AndDestroysTheirThreat` (one level: their 5/5 lives) and
+        `TheCheapLookAhead_AnEdict_TakesTheirLeastValuable` (first listed: their 5/5 went). Golden games 2
+        moved (all pass with it forced off), regenerated; card values unchanged. Suite: 2 of 288 change,
+        5 881 steps a position (+1.6%) — both look better: no +1/+1 counter from Yoshimaru on THEIR Screeching
+        Soulbreaker (#181, now passes), No Admittance on a Repurposed Enforcer over a Yoshimaru with nothing
+        to fight (#18); the oracle (read with the old look-ahead) 87.8%, re-read with the new 88.5%, 1.00. The
+        review: a one-option pick takes it without a look-ahead; forced picks capped at 8 options. The task this answers:
   - [ ] From the review of review item 1's fix (before its commit): Settle's chooser's-best is one level —
         a "you may pay … when you do, target" reads as paying for nothing inside Settle; a required single
         pick (a sacrifice) still takes the first listed; Settle prices hand cards flat, so graveyard
         access is 0 there; and a second "chooser's best" beside `GreedyAi.Answer` (DesignNotes)
+  - [ ] Review item 9, plans replayed — **measured (2026-10-30), not yet changed:** three self-play games
+        (beam both seats; seeds 1–3), at every decision answered from a committed plan a fresh search run
+        on the same position: 23 of 83, 40 of 195, 20 of 58 replays with a real choice DIFFER (25–35%).
+        Many are timing (the plan passes, plays the land or spell later); some are not — an attack made or
+        held (Samut, Rampart Hunter at Jace), Jace −3 against −1, Divining Duelist's mode. A difference is
+        not a worse play: the plan's line is coherent across the turn. The question is a match: a fresh
+        search at every decision (`CommitPlans` off, no switch yet), or plans kept only inside one priority
+        window. The suite cannot see this (it decides every position fresh)
   - [ ] DEFERRED (Shayne, 2026-10-30: "hold off on the burn rule now, but note it for later") — burn at
         their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
         damage in hand burns them out — otherwise a creature. Positions first (the symmetric life risk

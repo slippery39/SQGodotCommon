@@ -75,6 +75,8 @@ public static class AiMatch
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.
 			["nocounter"] = WithRollout(r => r with { CounterAttack = false }),
+			// The cheap look-ahead's chooser's best one level deep, targets and "you may" only, as before: beam+shallowsettle.
+			["shallowsettle"] = o => o with { Without = o.Without | Evaluator.Terms.SettleDeep },
 			// Every graveyard card worth nothing, even one that can return itself, as before AI-17.6: beam+deadgraveyard.
 			["deadgraveyard"] = o =>
 				o with

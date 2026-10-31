@@ -17,9 +17,10 @@ public static class Lookahead
 	/// otherwise nobody else attacks (the rollout's all-in judgment, story AI-3.8).
 	/// </summary>
 	public static GameState Settle(GameState s, bool allAttack = false) =>
-		Settle(s, allAttack, true);
+		Settle(s, allAttack, Evaluator.IsOff(Evaluator.Terms.SettleDeep) ? 1 : 2);
 
-	static GameState Settle(GameState s, bool allAttack, bool choose)
+	/// <param name="choose">How many NESTED choices deep the chooser's best is still asked (a choice made while judging another's answer counts one deeper; choices one after another don't) — the cheap answers below.</param>
+	static GameState Settle(GameState s, bool allAttack, int choose)
 	{
 		for (var i = 0; i < 200 && !s.IsOver(); i++)
 		{
@@ -27,7 +28,7 @@ public static class Lookahead
 				s = s.Choose(
 					allAttack && choice is DeclareAttackerChoice attacker
 						? [s.OpponentOf(attacker.PlayerId)]
-					: choose && IsChosen(choice) ? Chosen(s, choice)
+					: choose > 0 && IsChosen(choice) ? Chosen(s, choice, choose - 1)
 					: QuickAnswer(s, choice)
 				);
 			else if (!s.StackIsEmpty() || InCombat(s))
@@ -40,18 +41,32 @@ public static class Lookahead
 
 	/// <summary>
 	/// A choice Settle answers by its chooser's best (<see cref="Evaluator.Terms.SettleChoices"/>, AI-17.6): one
-	/// target, or a single "you may" (none or one — a pay-to-keep pays, as the cheap answer does). Combat
-	/// declarations keep their own rules (QuickAnswer).
+	/// target, or a single "you may" (none or one — a pay-to-keep pays, as the cheap answer does) — and
+	/// under <see cref="Evaluator.Terms.SettleDeep"/> any single pick, a forced sacrifice included (an edict
+	/// took the first listed: their best). Combat declarations keep their own rules (QuickAnswer).
 	/// </summary>
 	static bool IsChosen(ChoiceAction choice) =>
 		!Evaluator.IsOff(Evaluator.Terms.SettleChoices)
 		&& choice is not (DeclareAttackerChoice or DeclareBlockerChoice or PayToKeepChoice)
 		&& choice.MaxChoices == 1
-		&& (choice is ChooseTargetChoice || choice.MinChoices == 0);
+		&& (
+			choice is ChooseTargetChoice
+			|| choice.MinChoices == 0
+			|| !Evaluator.IsOff(Evaluator.Terms.SettleDeep)
+				&& choice.Options.Count <= MaxForcedPicks
+		);
 
 	/// <summary>
-	/// Each answer (none too, if optional) settled ONE level down — the cheap answers below it, so nested
-	/// triggers can't multiply the cost — and the best for whoever chooses: GreedyAi's way, inside Settle.
+	/// The most options a forced single pick (not a target, not a "you may") is judged over — past it, the
+	/// cheap answer: "pay any amount of life" offers ~20, judged at both levels (the review, AI-17.6).
+	/// </summary>
+	const int MaxForcedPicks = 8;
+
+	/// <summary>
+	/// Each answer (none too, if optional) settled <paramref name="deeper"/> more choices down — two in all
+	/// under <see cref="Evaluator.Terms.SettleDeep"/>, so Lich's Relic's "you may pay {2}. When you do,
+	/// destroy …" is judged with its target chosen; the cheap answers below, so nested triggers can't multiply
+	/// the cost without bound — and the best for whoever chooses: GreedyAi's way, inside Settle.
 	/// Lich's Relic ("you may pay {2}. When you do, destroy …") measured 2 in the card-value sandbox, the
 	/// "you may" declined; now 16.5.
 	/// Before, a trigger's target was the first legal one (ours are listed first: "destroy target creature"
@@ -60,13 +75,15 @@ public static class Lookahead
 	/// ponytail: hand cards at the flat price (Settle has no held values) — pass them in if a pick between
 	/// two cards in hand is ever misjudged.
 	/// </summary>
-	static IEnumerable<int> Chosen(GameState s, ChoiceAction choice)
+	static IEnumerable<int> Chosen(GameState s, ChoiceAction choice, int deeper)
 	{
 		var who = s.DecidingPlayerId();
 		var picks = choice.Options.Select(o => (IEnumerable<int>)[o.Id]).ToList();
 		if (choice.MinChoices == 0)
 			picks.Insert(0, []);
-		return picks.MaxBy(pick => Evaluator.Evaluate(Settle(s.Choose(pick), false, false), who))!;
+		if (picks.Count == 1)
+			return picks[0]; // nothing to weigh
+		return picks.MaxBy(pick => Evaluator.Evaluate(Settle(s.Choose(pick), false, deeper), who))!;
 	}
 
 	public static bool InCombat(GameState s) =>
