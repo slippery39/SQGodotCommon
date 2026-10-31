@@ -42,6 +42,9 @@ public static class Is
 	public static readonly Filter EnteredThisTurn = new HasProperty(Property.EnteredThisTurn);
 	public static readonly Filter AttackedThisTurn = new HasProperty(Property.AttackedThisTurn);
 	public static readonly Filter Attacking = new HasProperty(Property.Attacking);
+
+	/// <summary>U.S.S. Excelsior: "target tapped creature".</summary>
+	public static readonly Filter Tapped = new HasProperty(Property.Tapped);
 	public static readonly Filter AttackingAPlayer = new HasProperty(Property.AttackingAPlayer);
 
 	/// <summary>"Attacks you or a planeswalker you control".</summary>

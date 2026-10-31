@@ -242,6 +242,7 @@ public enum Property
 	AttackingYou, // Jace, Reality Sculptor: "attacks you or a planeswalker you control"
 	Blocking,
 	DealtCombatDamage, // Ruric Thar: "as long as they haven't dealt combat damage yet"
+	Tapped, // U.S.S. Excelsior: "target tapped creature"
 }
 
 /// <summary>Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.</summary>
@@ -285,6 +286,7 @@ public sealed record HasProperty(Property Property) : Filter
 				),
 			Property.Blocking => card.BlockingId != 0,
 			Property.DealtCombatDamage => card.HasDealtCombatDamage,
+			Property.Tapped => card.IsTapped,
 			_ => false,
 		};
 }

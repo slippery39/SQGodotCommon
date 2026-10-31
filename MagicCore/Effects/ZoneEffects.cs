@@ -116,13 +116,21 @@ public record DiscardAtRandom(Ref Who, Count N) : Effect
 /// </summary>
 public record RevealUntilOntoBattlefield(CardType Types) : Effect
 {
+	/// <summary>U.S.S. Voyager: "until you reveal two land cards. Put those land cards …" — what it found, if the library ran out first.</summary>
+	public int HowMany { get; init; } = 1;
+
+	/// <summary>U.S.S. Voyager: "onto the battlefield tapped".</summary>
+	public bool Tapped { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var library = s.CardsIn(Controller, ZoneType.Library).ToList();
-		var hit = library.FindIndex(c => c.Is(Types));
-		var rest = (hit < 0 ? library : library.Take(hit)).Select(c => c.Id).ToArray();
-		if (hit >= 0)
-			s = s.EnterBattlefield(library[hit].Id, Controller);
+		var hits = library.Where(c => c.Is(Types)).Take(HowMany).Select(c => c.Id).ToList();
+		var revealed =
+			hits.Count < HowMany ? library.Count : library.FindIndex(c => c.Id == hits[^1]) + 1;
+		var rest = library.Take(revealed).Select(c => c.Id).Except(hits).ToArray();
+		foreach (var hit in hits)
+			s = s.EnterBattlefield(hit, Controller, tapped: Tapped);
 		(var rng, s) = s.TakeRng();
 		rng.Shuffle(rest);
 		var libraryId = s.ZoneId(Controller, ZoneType.Library);

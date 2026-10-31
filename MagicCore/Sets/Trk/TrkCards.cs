@@ -126,6 +126,29 @@ public static class TrkCards
 			)
 		);
 
+	/// <summary>
+	/// Station (MC-5.2): "Station (Tap another creature you control: Put charge counters equal to its
+	/// power on this Spacecraft. Station only as a sorcery. It's an artifact creature at N+.)" and the
+	/// keywords in the "N+" box beside its P/T — Oberth-Class Starship: Station(6, "Flying"). The
+	/// creature tapped is the ability's event card, its power read as it resolves.
+	/// </summary>
+	static GameComponent[] Station(int creatureAt, params string[] keywords) =>
+		[
+			new StationComponent(creatureAt),
+			new ActivatedAbilityComponent(
+				ManaCost.None,
+				[new AddChargeCounters(Ref.Source, Count.PowerOf(Ref.EventCard))]
+			)
+			{
+				Costs = [new TapUntappedCost(1, Is.Creature & !Is.Source)],
+				SorcerySpeed = true,
+			},
+			.. keywords.Select(k => new StaticEffectComponent(Is.Source, k)
+			{
+				If = new AtLeast(Count.ChargeCountersOn(Ref.Source), creatureAt),
+			}),
+		];
+
 	internal static readonly Dictionary<string, ImmutableArray<GameComponent>> Scripts =
 		new()
 		{
@@ -930,6 +953,154 @@ public static class TrkCards
 			[
 				VGer(TriggerEvent.SelfEnters),
 				VGer(TriggerEvent.SelfAttacks),
+			],
+			// ===== MC-5.3 batch 2: Station (MC-5.2) and the commons and uncommons waiting on it =====
+			["Oberth-Class Starship"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Supertype = Supertype.Basic,
+						Subtype = "Plains",
+						Reveal = true,
+					}
+				),
+				.. Station(6, "Flying"),
+			],
+			["Suurok-Class Science Vessel"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+				.. Station(5, "Flying"),
+			],
+			["Class-F Shuttlecraft"] =
+			[
+				.. AnyColorMana(ManaRestriction.None),
+				.. Station(6, "Flying", "Vigilance"),
+			],
+			["Emergency Holographic Crew"] =
+			[
+				ModalWhen(
+					"Emergency Holographic Crew",
+					TriggerEvent.SelfEnters,
+					1,
+					M(
+						[TargetSpec.InYourGraveyard(Is.Subtype("Spacecraft"))],
+						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					),
+					M([], new Surveil(2))
+				),
+			],
+			["Guidance Failure"] =
+			[
+				new CostChange(-1)
+				{
+					OnItself = true,
+					If = new Matches(Ref.Target(0), Is.Attacking),
+				},
+				Spell(
+					[Target(Is.Creature | Is.Subtype("Spacecraft"))],
+					new May(
+						"Put it on top of your library? (No: it goes on the bottom.)",
+						new Always(),
+						[new PutIntoLibrary(Ref.Target(), OnTop: true)]
+					)
+					{
+						Who = Ref.OwnerOfTarget(),
+						Otherwise = [new PutIntoLibrary(Ref.Target(), OnTop: false)],
+					}
+				),
+			],
+			["Stray from History"] =
+			[
+				ModalSpell(
+					"Stray from History",
+					1,
+					M(
+						[
+							TargetSpec.InYourGraveyard(Is.Creature | Is.Subtype("Spacecraft")),
+							TargetSpec.InYourGraveyard(Is.Creature | Is.Subtype("Spacecraft")) with
+							{
+								Optional = true,
+								NotThePrevious = true,
+							},
+						],
+						new ReturnFromGraveyard(Ref.Target(0), ZoneType.Hand),
+						new ReturnFromGraveyard(Ref.Target(1), ZoneType.Hand)
+					),
+					M(
+						[TargetSpec.Player(Is.Opponents)],
+						new YouChooseTheyDiscard(Ref.Target(), NonlandTypes) { ExileInstead = true }
+					)
+				),
+			],
+			["Warp Core"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Supertype = Supertype.Basic,
+						Reveal = true,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new AddChargeCounters(Ref.Target(), 2)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Artifact & Is.Subtype("Spacecraft"))],
+					SorcerySpeed = true,
+				},
+			],
+			["Enterprise NX-01"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Creature & Is.Opponents)],
+					new Tap(Ref.Target()),
+					new AddStunCounters(Ref.Target(), 1)
+				),
+				.. Station(6, "Flying", "Vigilance"),
+			],
+			["Sarcophagus, Ship of the Dead"] =
+			[
+				new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source) { Power = 1 },
+				When(
+					new Trigger(EventKind.Died) { Subject = Is.Creature },
+					[],
+					new AddChargeCounters(Ref.Source, 1)
+				) with
+				{
+					If = new Not(new Matches(Ref.Source, Is.Creature)),
+				},
+				.. Station(10, "Flying"),
+			],
+			["U.S.S. Cerritos, Following Up"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Officer, 2)),
+				.. Station(6, "Flying"),
+			],
+			["U.S.S. Excelsior, Cutting Edge"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Creature & Is.Opponents & Is.Tapped)],
+					new Destroy(Ref.Target())
+				),
+				.. Station(8, "Flying"),
+			],
+			["U.S.S. Voyager, Lone Wanderer"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new RevealUntilOntoBattlefield(CardType.Land) { HowMany = 2, Tapped = true }
+				),
+				.. Station(8, "Flying", "Vigilance"),
 			],
 		};
 }

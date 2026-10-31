@@ -219,11 +219,31 @@ public record Ref(RefKind Kind, int Index = 0)
 	)
 	{
 		var objects = Resolve(s, context).Select(s.GetObject).ToList();
-		return
+		if (
 			Kind == RefKind.Source
 			&& objects.Count == 0
 			&& context.GetValueOrDefault(ContextKeys.SourceSnapshot) is Card then
-			? [then]
+		)
+			return [then];
+		return objects;
+	}
+
+	/// <summary>
+	/// What a Count counts: <see cref="ObjectsAsTheyWere"/>, and "its power" once that creature changed
+	/// zones (CR 400.7: gone, or another object now) as it was — Station's tapped creature, as it was
+	/// tapped. Not Matches: "if it's in your graveyard" asks where it is NOW.
+	/// </summary>
+	internal IEnumerable<GameObject> CountedAsTheyWere(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	)
+	{
+		var objects = ObjectsAsTheyWere(s, context).ToList();
+		return
+			Kind == RefKind.EventCard
+			&& context.GetValueOrDefault(ContextKeys.EventSnapshot) is Card was
+			&& !(objects is [Card now] && now.Incarnation == was.Incarnation)
+			? [was]
 			: objects;
 	}
 
@@ -439,7 +459,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			};
 		}
 		var ids = Of!.Resolve(s, context);
-		IEnumerable<Card> Cards() => Of.ObjectsAsTheyWere(s, context).OfType<Card>();
+		IEnumerable<Card> Cards() => Of.CountedAsTheyWere(s, context).OfType<Card>();
 		var counted = Kind switch
 		{
 			CountOf.NumberOf => ids.Count(),

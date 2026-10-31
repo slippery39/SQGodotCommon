@@ -109,7 +109,8 @@ public record CastSpellAction : GameAction
 			X
 				+ Replicate * (card.GetComponent<ReplicateComponent>()?.Generic ?? 0)
 				+ CostList.OrPayOwed(CostsOf(s, card), Chosen),
-			free: WithoutPayingManaCost
+			free: WithoutPayingManaCost,
+			targets: Targets
 		);
 
 	public override ValidationResult ValidateAdd(GameState s)
@@ -317,6 +318,9 @@ public record ActivateAbilityAction : GameAction
 	/// <summary>The graveyard card exiled as the cost ("Exile another creature card from your graveyard:"); 0 if none.</summary>
 	public int ExileId { get; init; }
 
+	/// <summary>The creature tapped as the cost (Station: "Tap another creature you control"); 0 if none.</summary>
+	public int TapId { get; init; }
+
 	/// <summary>An ability's target words and steps for these modes (the whole text when not modal).</summary>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		ActivatedAbilityComponent ability,
@@ -330,6 +334,7 @@ public record ActivateAbilityAction : GameAction
 			CostSlot.Sacrifice => SacrificeId,
 			CostSlot.Discard => DiscardId,
 			CostSlot.Exile => ExileId,
+			CostSlot.Tap => TapId,
 			_ => throw new InvalidOperationException($"An ability's cost can't pick into {slot}"),
 		};
 
@@ -366,6 +371,8 @@ public record ActivateAbilityAction : GameAction
 		var costs = ability.Costs;
 		if (costs.Any(c => c is TapUntappedCost && !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Not enough untapped permanents to tap");
+		if (!CostList.Fits(costs, CostSlot.Tap, TapId, s, PlayerId, CardId))
+			return ValidationResult.Invalid("Not a permanent you can tap for this");
 		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
@@ -404,10 +411,14 @@ public record ActivateAbilityAction : GameAction
 			0,
 			alsoExclude: CostPermanents(s, ability)
 		)!;
+		// Station's "its power" is read as the ability resolves — from this snapshot once the creature
+		// left (last-known information). ponytail: as it was TAPPED, not as it left — a pump between
+		// the two is missed (Shayne: rare; full LKI if play shows otherwise, DesignNotes).
+		var tapped = TapId == 0 ? null : s.GetCard(TapId);
 		// The taps on the state the mana search excluded them from — the same permanents; then the
 		// mana, which never uses them.
 		foreach (var cost in ability.Costs.Where(c => c.Taps))
-			s = cost.Pay(s, PlayerId, CardId, 0);
+			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = ManaPayment.Pay(s, PlayerId, mana);
 		if (ability.Exhaust)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });
@@ -426,6 +437,8 @@ public record ActivateAbilityAction : GameAction
 				Effects = steps,
 				Specs = specs,
 				Targets = Targets,
+				EventCardId = TapId, // "its power": the creature tapped for it
+				EventSnapshot = tapped,
 			}
 		);
 		return new ActionResult(Priority.Retain(s, PlayerId));

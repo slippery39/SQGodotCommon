@@ -81,6 +81,30 @@ public class TargetingTests
 	}
 
 	[Test]
+	public void StationsCreatureToTap_IsClicked_AndSaysWhatItIs()
+	{
+		List<GameAction> moves =
+		[
+			new ActivateAbilityAction
+			{
+				PlayerId = 1,
+				CardId = 10,
+				TapId = 5,
+			},
+			new ActivateAbilityAction
+			{
+				PlayerId = 1,
+				CardId = 10,
+				TapId = 6,
+			},
+		];
+
+		Assert.That(Targeting.NextIndex(moves, 0), Is.EqualTo(0), "one play, then a click");
+		Assert.That(Targeting.What(moves[0], 0), Is.EqualTo("what to tap"));
+		Assert.That(Targeting.Options(moves, 0), Is.EquivalentTo(new[] { 5, 6 }));
+	}
+
+	[Test]
 	public void SacrificeOrPay_PickDifferentNumbers_AndAreListed()
 	{
 		List<GameAction> moves =

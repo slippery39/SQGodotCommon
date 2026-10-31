@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 63/96 · uncommon 41/110 · rare 0/80 · mythic 0/25 · **104/311**
+**Playable:** common 70/96 · uncommon 46/110 · rare 0/80 · mythic 0/25 · **116/311**
 
 ### A Good Day to Die
 
@@ -227,7 +227,15 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)  
 > 6+ | Flying, vigilance
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Class-F Shuttlecraft"] =
+[
+	.. AnyColorMana(ManaRestriction.None),
+	.. Station(6, "Flying", "Vigilance"),
+],
+```
 
 ### Cloistered Telepath
 
@@ -482,7 +490,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Return target Spacecraft card from your graveyard to your hand.  
 > • Surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Emergency Holographic Crew"] =
+[
+	ModalWhen(
+		"Emergency Holographic Crew",
+		TriggerEvent.SelfEnters,
+		1,
+		M(
+			[TargetSpec.InYourGraveyard(Is.Subtype("Spacecraft"))],
+			new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+		),
+		M([], new Surveil(2))
+	),
+],
+```
 
 ### Emergency Medical Hologram
 
@@ -580,7 +606,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests
 
 ### Free Borg Revolutionaries
 
@@ -651,7 +677,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This spell costs {1} less to cast if it targets an attacking creature.  
 > Target creature or Spacecraft's owner puts it on their choice of the top or bottom of their library.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PutIntoLibrary` — "Put [it] on the bottom (or top) of its owner's library" — Paradox Shaper's graveyard…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Guidance Failure"] =
+[
+	new CostChange(-1)
+	{
+		OnItself = true,
+		If = new Matches(Ref.Target(0), Is.Attacking),
+	},
+	Spell(
+		[Target(Is.Creature | Is.Subtype("Spacecraft"))],
+		new May(
+			"Put it on top of your library? (No: it goes on the bottom.)",
+			new Always(),
+			[new PutIntoLibrary(Ref.Target(), OnTop: true)]
+		)
+		{
+			Who = Ref.OwnerOfTarget(),
+			Otherwise = [new PutIntoLibrary(Ref.Target(), OnTop: false)],
+		}
+	),
+],
+```
 
 ### He's Dead, Jim
 
@@ -728,7 +779,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests, TrkBatch2Tests
 
 ### Make It So
 
@@ -837,7 +888,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)  
 > 6+ | Flying
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Oberth-Class Starship"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Supertype = Supertype.Basic,
+			Subtype = "Plains",
+			Reveal = true,
+		}
+	),
+	.. Station(6, "Flying"),
+],
+```
 
 ### Obsidian Order Operative
 
@@ -940,7 +1010,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests
 
 ### Planetary Bombardment
 
@@ -1291,7 +1361,35 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Rewrite the Past — Return one or two target creature and/or Spacecraft cards from your graveyard to your hand.  
 > • Repair the Timeline — Target opponent reveals their hand. You choose a nonland card from it. Exile that card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Stray from History"] =
+[
+	ModalSpell(
+		"Stray from History",
+		1,
+		M(
+			[
+				TargetSpec.InYourGraveyard(Is.Creature | Is.Subtype("Spacecraft")),
+				TargetSpec.InYourGraveyard(Is.Creature | Is.Subtype("Spacecraft")) with
+				{
+					Optional = true,
+					NotThePrevious = true,
+				},
+			],
+			new ReturnFromGraveyard(Ref.Target(0), ZoneType.Hand),
+			new ReturnFromGraveyard(Ref.Target(1), ZoneType.Hand)
+		),
+		M(
+			[TargetSpec.Player(Is.Opponents)],
+			new YouChooseTheyDiscard(Ref.Target(), NonlandTypes) { ExileInstead = true }
+		)
+	),
+],
+```
 
 ### Suurok-Class Science Vessel
 
@@ -1301,7 +1399,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 5+.)  
 > 5+ | Flying
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Suurok-Class Science Vessel"] =
+[
+	When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+	.. Station(5, "Flying"),
+],
+```
 
 ### Suus Mahna Practitioner
 
@@ -1525,7 +1633,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this artifact enters, you may search your library for a basic land card, reveal it, put it into your hand, then shuffle.  
 > {1}, {T}: Put two charge counters on target Spacecraft. Activate only as a sorcery.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AddChargeCounters` — Gardenize: "put a charge counter on this enchantment"; Station: "Put charge counters…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Warp Core"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Supertype = Supertype.Basic,
+			Reveal = true,
+		}
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[new AddChargeCounters(Ref.Target(), 2)]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [Target(Is.Artifact & Is.Subtype("Spacecraft"))],
+		SorcerySpeed = true,
+	},
+],
+```
 
 ### Xenobotanist
 
@@ -2034,7 +2168,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)  
 > 6+ | Flying, vigilance
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `AddStunCounters` — Cryotheory Adept: "put a stun counter on it".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+
+```csharp
+["Enterprise NX-01"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Opponents)],
+		new Tap(Ref.Target()),
+		new AddStunCounters(Ref.Target(), 1)
+	),
+	.. Station(6, "Flying", "Vigilance"),
+],
+```
 
 ### Erica Ortegas, Plucky Pilot
 
@@ -2571,7 +2720,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 10+.)  
 > 10+ | Flying
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `AddChargeCounters` — Gardenize: "put a charge counter on this enchantment"; Station: "Put charge counters…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Sarcophagus, Ship of the Dead"] =
+[
+	new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source) { Power = 1 },
+	When(
+		new Trigger(EventKind.Died) { Subject = Is.Creature },
+		[],
+		new AddChargeCounters(Ref.Source, 1)
+	) with
+	{
+		If = new Not(new Matches(Ref.Source, Is.Creature)),
+	},
+	.. Station(10, "Flying"),
+],
+```
 
 ### Saru, Unthreatened
 
@@ -3021,7 +3188,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)  
 > 6+ | Flying
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
+
+```csharp
+["U.S.S. Cerritos, Following Up"] =
+[
+	When(TriggerEvent.SelfEnters, [], new CreateTokens(Officer, 2)),
+	.. Station(6, "Flying"),
+],
+```
 
 ### U.S.S. Excelsior, Cutting Edge
 
@@ -3031,7 +3208,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)  
 > 8+ | Flying
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["U.S.S. Excelsior, Cutting Edge"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Opponents & Is.Tapped)],
+		new Destroy(Ref.Target())
+	),
+	.. Station(8, "Flying"),
+],
+```
 
 ### U.S.S. Voyager, Lone Wanderer
 
@@ -3041,7 +3232,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)  
 > 8+ | Flying, vigilance
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch2Tests
+
+**Engine pieces:** `RevealUntilOntoBattlefield` — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types]…
+
+```csharp
+["U.S.S. Voyager, Lone Wanderer"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new RevealUntilOntoBattlefield(CardType.Land) { HowMany = 2, Tapped = true }
+	),
+	.. Station(8, "Flying", "Vigilance"),
+],
+```
 
 ### Una Chin-Riley, Number One
 

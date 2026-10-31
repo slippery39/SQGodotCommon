@@ -53,12 +53,14 @@ public static class Costs
 	/// 601.2f) — Geist's {1} off an {X}{R} spell would be lost on the printed cost, which has no generic.
 	/// </param>
 	/// <param name="free">"Without paying its mana cost" (Omnipresence) — taxes and additional costs still apply.</param>
+	/// <param name="targets">The spell's chosen targets — Guidance Failure: "costs {1} less to cast if it targets an attacking creature".</param>
 	public static ManaCost Of(
 		GameState s,
 		int casterId,
 		Card card,
 		int addedGeneric = 0,
-		bool free = false
+		bool free = false,
+		System.Collections.Immutable.ImmutableArray<int> targets = default
 	)
 	{
 		var printed = free ? ManaCost.None : Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
@@ -80,7 +82,9 @@ public static class Costs
 				delta += change.Amount.Value(s, context);
 		}
 		// "This spell costs … less", judged as its caster's.
-		var asCast = Conditions.Of(card with { ControllerId = casterId });
+		var asCast = Conditions
+			.Of(card with { ControllerId = casterId })
+			.SetItem(ContextKeys.Targets, targets.IsDefault ? [] : targets);
 		foreach (var change in card.GetComponents<CostChange>())
 			if (change.OnItself && Applies(s, change, card, asCast))
 				delta += change.Amount.Value(s, asCast);

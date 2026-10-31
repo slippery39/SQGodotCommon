@@ -2,8 +2,11 @@
 
 Status, not rules: what is scripted, what waits and why (story MC-5). The rules live in
 `MagicCore/CLAUDE.md`. **Scripted: the 10 Planet duals (MC-5.5, 2026-10-31); MC-5.3 batch 1, every tier
-0–1 common and uncommon not waiting on STATION or ANY-COUNTER (88)** — 104/311 play, with the basics and
-Mugato. Batch 1 re-tiered from the full text: Tea, Earl Grey, Hot (a modal activated ability), Daniels (a
+0–1 common and uncommon not waiting on STATION or ANY-COUNTER (88); batch 2, Station (MC-5.2) and the 12
+STATION commons and uncommons waiting on nothing else** — 116/311 play, with the basics and Mugato. Batch 2
+re-tiered Stray from History to tier 2 (Null Summoner's exile, from a sorcery); Hemmer (TAPPED), Rutherford
+(LOOK-TAKE) and Zefram Cochrane (three tier-3 one-offs: look at the top any time, cast an artifact from
+the top, Spacecraft enter with two more counters — Shayne: with the one-offs) wait. Batch 1 re-tiered from the full text: Tea, Earl Grey, Hot (a modal activated ability), Daniels (a
 graveyard-to-bottom cost), Culber and Stamets (mana of any one color) and V'Ger (look at a hand) were
 tier 3; Red Alert!, Sickbay, Locutus, Spatial Anomaly, Munitions Enthusiast and Khaaaan! tier 2 (`python tools/magic_set.py coverage --set TRK`; every card's script beside its text:
 `MagicCore/TrkCardSheet.md`). The TOK tokens are DEFINED, waiting for their cards. The tiers are the survey's (MC-5.1):
@@ -24,7 +27,7 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 |---|---|---|
 | TOK | DONE (MC-5.5): `TrkCards.Officer`, `Borg`, `KlingonWarrior`, `Romulan`, `ArtifactIllusion`, `CreateNewPlanet`; `Tokens.CreateClue`, `CreateFood`, `CreateTreasure` (tested: `TrkCardTests`). Not yet: Porthos, Murf, the Worm (CANT-BLOCK), City's Human — one-offs, with their card | `new CreateTokens(TrkCards.Officer, n)` |
 | PLANET-DUAL | DONE (MC-5.5): the 10 Planet duals, `TrkCards.PlanetDual` | — |
-| STATION | Spacecraft + "Station" + "N+ \| abilities"; a P/T box makes it a creature only at its last threshold | `TapUntappedCost` (summoning sickness doesn't matter), charge counters, `StaticEffectComponent.If`, Puppet Crafting's stamped type change |
+| STATION | DONE (MC-5.2): `TrkCards.Station(n, keywords)` — `StationComponent` (a creature at n+, read live by `Card.Is`), the station ability (the creature tapped is a choice, `ActivateAbilityAction.TapId`), a static per "n+" keyword. Another threshold's ability: `If`/`OnlyIf` = `new AtLeast(Count.ChargeCountersOn(Ref.Source), n)` | — |
 | SNW | Strange new worlds: a count of differently named lands you control | a new `CountOf`; `CostChange` already takes a `Count` |
 | BEAM | Beam me up: cast from your graveyard for [cost] + returning a creature you control, instead of the mana cost; exiled leaving the stack | `FlashbackComponent` + its `Costs` (Twinned Vision); Scotty grants it as Stingcaster Mage does |
 | DILEMMA | Face a dilemma: an event when a player chooses one or more modes (one however many), + a count this turn | raised where modes are chosen: casting, and `ChooseModesChoice` |

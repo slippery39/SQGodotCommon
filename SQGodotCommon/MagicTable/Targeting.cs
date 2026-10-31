@@ -9,7 +9,7 @@ namespace MagicTable;
 
 /// <summary>
 /// Arena's "click the spell, then click its targets": a play's legal moves differ by what they
-/// pick — their targets, then the card a cost takes (what to sacrifice, discard, behold, exile) —
+/// pick — their targets, then the card a cost takes (what to sacrifice, discard, behold, exile, tap) —
 /// and are narrowed one pick at a time by clicking objects on the table. EVERY pick is clicked,
 /// even when only one is legal (Shayne, 2026-10-09: a spell casting itself was a surprise; Arena and
 /// MTGO ask). Plain C#; the moves come from LegalActions — nothing here decides what is legal.
@@ -41,6 +41,7 @@ public static class Targeting
 				.. Cost(a.SacrificeId, "sacrifice", "sacrificing"),
 				.. Cost(a.DiscardId, "discard", "discarding"),
 				.. Cost(a.ExileId, "exile", "exiling"),
+				.. Cost(a.TapId, "tap", "tapping"),
 			],
 			ActivateLoyaltyAction l => [.. Targets(l.Targets)],
 			_ => [],
@@ -169,6 +170,7 @@ public static class Targeting
 				SacrificeId = 0,
 				DiscardId = 0,
 				ExileId = 0,
+				TapId = 0,
 			},
 			ActivateLoyaltyAction l => l with { Targets = [] },
 			_ => move,

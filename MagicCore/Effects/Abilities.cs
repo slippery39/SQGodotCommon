@@ -627,6 +627,15 @@ public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
 /// </summary>
 public record EnchantedBecomesCreature(string Subtype, int Power, int Toughness) : GameComponent;
 
+/// <summary>
+/// Station (CR 702.184; Oberth-Class Starship: "It's an artifact creature at 6+."): a creature with its
+/// printed base P/T while it has CreatureAt or more charge counters. Read live by Card.Is from the
+/// card's OWN counters — never stamped, so it is right the moment a counter is put or removed — and a
+/// type change, so "loses all abilities" (layer 6) leaves it a creature. The station ability and the
+/// N+ abilities are ordinary components (TrkCards.Station).
+/// </summary>
+public record StationComponent(int CreatureAt) : GameComponent;
+
 /// <summary>Emrakul's land: "{T}: Add {C}{C}" until that card (this object of it) is cast from exile.</summary>
 public record TapsForTwoColorlessWhileExiled(int CardId, int Incarnation) : GameComponent;
 

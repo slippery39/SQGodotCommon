@@ -351,7 +351,15 @@ public record Card : GameObject
 		return false;
 	}
 
-	public bool Is(CardType type) => (Types & type) != 0;
+	/// <summary>Its types — and a Spacecraft at its last station threshold is a creature (StationComponent).</summary>
+	public bool Is(CardType type) =>
+		(Types & type) != 0
+		|| (
+			ChargeCounters > 0
+			&& (type & CardType.Creature) != 0
+			&& GetComponent<Effects.StationComponent>() is { } station
+			&& ChargeCounters >= station.CreatureAt
+		);
 
 	/// <summary>Its mana value — on the stack X counts (CR 202.3e); anywhere else X is 0.</summary>
 	public int ManaValueNow =>

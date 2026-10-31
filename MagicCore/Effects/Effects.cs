@@ -695,17 +695,23 @@ public record AddMana(ManaColor Color, Count Amount) : Effect
 	}
 }
 
-/// <summary>Gardenize: "put a charge counter on this enchantment".</summary>
-public record AddChargeCounters(Ref What, int N) : Effect
+/// <summary>
+/// Gardenize: "put a charge counter on this enchantment"; Station: "Put charge counters equal to its
+/// power" — counted as it resolves; a negative power counts 0 (Count.Value), so none are removed.
+/// </summary>
+public record AddChargeCounters(Ref What, Count N) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
+	public override ActionResult Execute(GameState s)
+	{
+		var n = N.Value(s, InputContext);
+		return new(
 			Permanents(What, s)
 				.Aggregate(
 					s,
-					(st, c) => Update(st, c with { ChargeCounters = c.ChargeCounters + N })
+					(st, c) => Update(st, c with { ChargeCounters = c.ChargeCounters + n })
 				)
 		);
+	}
 }
 
 /// <summary>"Tap [What]" — permanents only.</summary>

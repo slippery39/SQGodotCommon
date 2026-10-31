@@ -42,7 +42,8 @@ public static class Describe
 				+ Targets(s, a.Targets)
 				+ (a.SacrificeId != 0 ? $", sacrificing {Name(s, a.SacrificeId)}" : "")
 				+ (a.DiscardId != 0 ? $", discarding {Name(s, a.DiscardId)}" : "")
-				+ (a.ExileId != 0 ? $", exiling {Name(s, a.ExileId)}" : ""),
+				+ (a.ExileId != 0 ? $", exiling {Name(s, a.ExileId)}" : "")
+				+ (a.TapId != 0 ? $", tapping {Name(s, a.TapId)}" : ""),
 			ActivateLoyaltyAction l =>
 				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",

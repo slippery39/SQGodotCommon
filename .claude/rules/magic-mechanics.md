@@ -105,10 +105,12 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Cost changes all live in `Costs.Of`**: each is a `CostChange` — on a permanent, for the spells
   `By` names (Thalia's tax on opponents, Geist's reduction on yours), or `OnItself` ("this spell costs
   … less"); an activated ability's (Warrior's Blades) is `ActivatedAbilityComponent.CostChange`, read
-  by `Costs.OfAbility` with the targets known.
+  by `Costs.OfAbility` with the targets known — and a spell's own (Guidance Failure: "if it targets an
+  attacking creature") sees its targets too, `Costs.Of(…, targets)` from the cast.
 - **Costs beyond mana are one list of `AdditionalCost`** (Effects/AdditionalCosts.cs) — activated
   abilities, a spell's `AdditionalCostsComponent`, flashback, ward. A cost that picks a card names it
-  in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId` (`CostSlot`), one legal action per
+  in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`/`TapId` (`CostSlot`) — and the table's
+  `Targeting.PicksOf`/`WithoutPicks`, so it is clicked — one legal action per
   choice; `CostList` is the one place candidates, legality and "or pay" read them. Taps are paid
   first; ward pays by choosing (`PaidByChoosing`).
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this
@@ -225,6 +227,15 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   back by `Attachments.Check` once it doesn't, and by `Card.Fresh` as the host leaves. Every rule reads
   `card.Is(Creature)`, so a live layer-4 read would need every one of them; the stamp is right by the
   time anyone gets priority.
+- **Station** (Edge of Eternities' mechanic; TRK's Spacecraft, MC-5.2) is `TrkCards.Station(n, keywords)`. The
+  station ability's cost is `TapUntappedCost(1, …)` — tapping ONE is a choice (`ActivateAbilityAction.TapId`,
+  one legal action per creature; summoning sickness doesn't matter), and that creature is the ability's
+  event card, so "its power" is read as it resolves, from its snapshot once it left (a `Count` only —
+  `Ref.CountedAsTheyWere`; a `Matches` asks where it is now;
+  a known ceiling: the snapshot is as it was tapped). A negative power counts 0 (`Count.Value`). **"It's an
+  artifact creature at N+" is read LIVE by `Card.Is`** from the card's OWN charge counters
+  (`StationComponent`) — not stamped like Puppet Crafting, since nothing outside the card decides it — so it
+  is a creature exactly while it has N, and stays one when it loses all abilities (a type change, layer 4).
 - **Casting in the middle of a resolution** ("you may cast that card", Chandra, Torch of Defiance;
   Uldaros' free copies) is `CastNow`: a real `CastSpellAction` with `DuringResolution` — the engine's
   own cast candidates, checked by `ValidateAdd` (no priority or timing; modes, targets, X, additional

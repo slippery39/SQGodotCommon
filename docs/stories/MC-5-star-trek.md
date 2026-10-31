@@ -63,6 +63,14 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   dilemma counts it — so DILEMMA (MC-5.2) is raised where modes are chosen: the cast, a trigger's
   `ChooseModesChoice`, AND an activation (`ActivateAbilityAction.Modes`).
 
+- 2026-10-31, Shayne (MC-5.2 Station's questions): **Zefram Cochrane waits** for the tier-3 one-offs (look
+  at the top any time, cast an artifact from the top, Spacecraft enter with two more counters). **The AI
+  values station progress by a simple formula, to iterate on** — "you want to put counters on your
+  spacecraft, but you do need to account for opponent counter attacks if you tap your creatures." **The
+  tapped creature's last-known power is a snapshot taken as it is tapped**: "shortcutting LKI … not worth
+  a full engine overhaul for what is probably a very rare situation overall. If this situation comes up
+  more in playing then we can reconsider doing full LKI" (noted in `DesignNotes.md`).
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -73,10 +81,15 @@ Open questions:
       every card by what the engine needs, the new mechanics' rules read in full, a batch plan sized to
       reach sealed and draft by November 10
 - [ ] MC-5.2 The new mechanics (Station, Strange new worlds, Face a dilemma, and whatever the survey finds)
+      — Station done 2026-10-31 (batch 2): `TrkCards.Station`, a creature at its threshold read live by
+      `Card.Is`, the tapped creature a real choice (`ActivateAbilityAction.TapId`), the AI's station term
 - [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
       the 88 tier 0–1 C/U not waiting on STATION or ANY-COUNTER (re-tiered: 4 tier 3, 6 tier 2, list in
       `TrkCoverage.md`); new pieces: modal activated abilities, `PutSelfOnBottomCost`, `AddManaOfAnyOneColor`,
-      `LookAtHand`, `Count.Plus`; FraCards' shared helpers moved to `Sets/Scripting.cs`
+      `LookAtHand`, `Count.Plus`; FraCards' shared helpers moved to `Sets/Scripting.cs`. Batch 2 done
+      2026-10-31: the 12 STATION C/U waiting on nothing else (Stray from History re-tiered to 2); new
+      options: `Is.Tapped`, `RevealUntilOntoBattlefield.HowMany/Tapped`, a spell's cost change seeing its
+      targets. Waiting: Hemmer (TAPPED), Rutherford (LOOK-TAKE), Zefram Cochrane (tier-3 one-offs)
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -89,13 +102,14 @@ Open questions:
 
 ## Next
 
-**MC-5.3 batch 1 is done (2026-10-31): 104/311 play** — every tier 0–1 common and uncommon not waiting on
-STATION or ANY-COUNTER. Script helpers every set shares are in `Sets/Scripting.cs` (a FraCards helper TRK
-needs moves THERE). A modal activated ability is real (`ActivatedAbilityComponent.Modes`) — dilemma will
-count it. V'Ger's look shows in the table's log (`MagicTableManager.Play`); the hand display is TBL-6.
-**Next: the Nov 4–6 row — Station first (17 cards; `TrkCoverage.md`'s STATION row), then the small pieces
-(beam me up, strange new worlds, dilemma, Federation, power 8, becomes tapped, counters), Sagas, Kicker,
-in a NEW session.** Every batch starts in a NEW session (`/card-batch` step 0) and ends with its usage row
+**MC-5.3 batch 2 is done (2026-10-31): Station plays, 116/311** — batch 1's 88 plus the 12 STATION commons
+and uncommons waiting on nothing else. Station is `TrkCards.Station(n, keywords)` (Cookbook; the rule in
+`magic-mechanics.md`); the rare Spacecraft with a second threshold use `new AtLeast(Count.ChargeCountersOn(
+Ref.Source), n)` on that ability. The AI stations (checked with the search on a simple board) by a first
+formula Shayne wants iterated (`DesignNotes.md`), and the snapshot-at-tap LKI is a noted shortcut.
+**Next: the rest of the Nov 4–6 row — the small pieces (beam me up, strange new worlds, dilemma, Federation,
+power 8, becomes tapped — Hemmer, Sulu —, look-take — Rutherford —, counters), Sagas, Kicker, in a NEW
+session.** Every batch starts in a NEW session (`/card-batch` step 0) and ends with its usage row
 (`tools/usage_report.py --log`, `docs/findings/card-batch-usage.md`) — this set tests that workflow.
 
 Read: this story, `MagicCore/TrkCoverage.md` (every card's tier, what it waits on, what to reuse —
@@ -137,3 +151,7 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
 - 2026-10-31: MC-5.3 batch 1 — 88 cards (48 C, 40 U), TRK 104/311; 11 tests for the tier 2–3 cards,
   11/11 revert-checks caught (one only after a test was strengthened); probe: 150 games, no crash, every
   tier 2–3 card used. TBL-6 created (known hand cards on the table).
+- 2026-10-31: MC-5.2 Station + MC-5.3 batch 2 — Shayne's three answers in Decisions; 12 cards (7 C, 5 U),
+  TRK 116/311; 15 tests, 16/16 revert-checks caught (two only after a fix: a redundant clamp deleted, a
+  test made to ask WHO chooses); probe: 150 games, no crash, every card used; the search AI stations on
+  a simple board; bench +2.1% (noise); golden replays regenerated (only games dealing a new card moved).

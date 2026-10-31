@@ -403,9 +403,9 @@ public static class Evaluator
 		// opponent above it; lands capped at 7 made an 8th land worth less in play than in hand.
 		var lands = Taper(board.Count(c => c.Is(CardType.Land)), 7, 1.5, 0.4);
 		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(c => Walker(s, c, held));
-		var others =
-			board.Count(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
-			* 2.0;
+		var others = board
+			.Where(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
+			.Sum(c => Other(s, c, keywords));
 		var life = s.GetPlayer(player).Life;
 		var lifeValue =
 			life <= 0
@@ -577,6 +577,21 @@ public static class Evaluator
 
 	/// <summary>A creature's value as the evaluator counts it on the board — which one to chump with (Lookahead).</summary>
 	public static double ValueOf(GameState s, Card c) => CreatureValue(s, c, Keywords);
+
+	/// <summary>
+	/// A permanent that is no creature, land or planeswalker: 2 — and a Spacecraft below its station
+	/// threshold, that plus its share of the creature it becomes (charge counters ÷ threshold), so
+	/// stationing scores (MC-5.2). Shayne: a simple formula, to iterate on — the creature tapped for it
+	/// is priced only by the clock's untapped blockers. ponytail: the creature read off the card as it
+	/// is, so its threshold keywords (flying) aren't counted until it has them.
+	/// </summary>
+	static double Other(GameState s, Card c, string[] keywords) =>
+		c.GetComponent<StationComponent>() is { } station
+			? 2.0
+				+ (double)c.ChargeCounters
+					/ station.CreatureAt
+					* Math.Max(0, CreatureValue(s, c, keywords) - 2.0)
+			: 2.0;
 
 	static double CreatureValue(GameState s, Card c, string[] valued)
 	{

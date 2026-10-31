@@ -273,6 +273,7 @@ public static class MagicRules
 					card.Id
 				)
 				from exile in CostList.Options(a.ability.Costs, CostSlot.Exile, s, player, card.Id)
+				from tap in CostList.Options(a.ability.Costs, CostSlot.Tap, s, player, card.Id)
 				select (GameAction)
 					new ActivateAbilityAction
 					{
@@ -284,6 +285,7 @@ public static class MagicRules
 						SacrificeId = sacrifice,
 						DiscardId = discard,
 						ExileId = exile,
+						TapId = tap,
 					}
 			);
 	}
@@ -353,7 +355,7 @@ public static class MagicRules
 			CastSpellAction c =>
 				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}",
 			ActivateAbilityAction activate =>
-				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}", // modes only when chosen: older keys (records, the suite) stay byte-identical
+				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{(activate.TapId == 0 ? "" : $"|t{Fodder(s, activate.TapId)}")}", // modes and a tapped creature only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>
 				$"loyalty|{loyalty.CardId}|{loyalty.AbilityIndex}|{loyalty.X}|{string.Join(",", loyalty.Targets)}",
 			_ => a, // the rest have no collection fields, so a record's own equality is the identity
