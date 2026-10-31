@@ -16,3 +16,4 @@ session per batch was simulated to save 37–40%.
 |---|---|---|---|---|---|
 | 2026-10-31 | MC-5.1: the TRK survey + plan, 0 cards | f711d95c | 61 | 184k | 2.0M |
 | 2026-10-31 | MC-5.5: card registry across sets, TRK tokens, Planet duals, 10 cards | 498c3cea | 142 | 225k | 4.7M |
+| 2026-10-31 | MC-5.3: batch 1 — tier 0-1 TRK commons and uncommons, 88 cards | 0065e5f8 | 125 | 254k | 5.0M |

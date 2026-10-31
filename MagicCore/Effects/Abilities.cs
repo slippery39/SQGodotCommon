@@ -347,6 +347,13 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
 
+	/// <summary>
+	/// Tea, Earl Grey, Hot: "{2}, {T}, Sacrifice this artifact: Choose one — …" — chosen as it is
+	/// activated (CR 602.2b), like a spell's (ActivateAbilityAction.Modes).
+	/// </summary>
+	public ImmutableList<Mode> Modes { get; init; } = [];
+	public int Choose { get; init; } = 1;
+
 	/// <summary>"Activate only as a sorcery."</summary>
 	public bool SorcerySpeed { get; init; }
 

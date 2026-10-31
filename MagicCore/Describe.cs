@@ -38,6 +38,7 @@ public static class Describe
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{WhichAbility(s, a)}"
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")
+				+ (a.Modes.Length > 0 ? $" ({ModeText(s, a)})" : "")
 				+ Targets(s, a.Targets)
 				+ (a.SacrificeId != 0 ? $", sacrificing {Name(s, a.SacrificeId)}" : "")
 				+ (a.DiscardId != 0 ? $", discarding {Name(s, a.DiscardId)}" : "")
@@ -118,6 +119,13 @@ public static class Describe
 	static string ModeText(GameState s, CastSpellAction c) =>
 		s.GetCard(c.CardId).GetComponent<Effects.SpellEffectsComponent>() is { } text
 			? Modes(text.Modes, c.Modes)
+			: "";
+
+	static string ModeText(GameState s, ActivateAbilityAction a) =>
+		s.HasObject(a.CardId)
+		&& s.GetObject(a.CardId) is Card card
+		&& s.ActivatedAbilitiesOf(card).ElementAtOrDefault(a.AbilityIndex) is { } ability
+			? Modes(ability.Modes, a.Modes)
 			: "";
 
 	/// <summary>The chosen modes' printed lines, "Destroy … + You draw a card …" — for every front end.</summary>

@@ -1062,6 +1062,21 @@ public record ExileFromGraveyard(Ref What) : Effect
 }
 
 /// <summary>
+/// V'Ger, the Intruder: "Look at target opponent's hand" — every card in it becomes known to its owner's
+/// opponent (Card.KnownTo); the table logs what it now knows (TBL-6 will show it in the hand).
+/// </summary>
+public record LookAtHand(Ref Who) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
+		foreach (var card in s.CardsIn(player, ZoneType.Hand).ToList())
+			s = s.MakeKnown(card.Id, Knowers.Opponent);
+		return new(s);
+	}
+}
+
+/// <summary>
 /// Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card from it.
 /// That player discards that card." A real choice — MtgCore stands in "their most expensive card",
 /// but the card is costed on the choosing.

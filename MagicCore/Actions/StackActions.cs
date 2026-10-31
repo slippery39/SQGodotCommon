@@ -305,6 +305,9 @@ public record ActivateAbilityAction : GameAction
 	public int AbilityIndex { get; init; }
 	public ImmutableArray<int> Targets { get; init; } = [];
 
+	/// <summary>The modes chosen as it is activated (a modal ability's); empty otherwise.</summary>
+	public ImmutableArray<int> Modes { get; init; } = [];
+
 	/// <summary>The permanent sacrificed as the cost ("Sacrifice another creature:"); 0 if none.</summary>
 	public int SacrificeId { get; init; }
 
@@ -313,6 +316,12 @@ public record ActivateAbilityAction : GameAction
 
 	/// <summary>The graveyard card exiled as the cost ("Exile another creature card from your graveyard:"); 0 if none.</summary>
 	public int ExileId { get; init; }
+
+	/// <summary>An ability's target words and steps for these modes (the whole text when not modal).</summary>
+	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
+		ActivatedAbilityComponent ability,
+		ImmutableArray<int> modes
+	) => Modal.Compose(ability.Targets, ability.Effects, ability.Modes, modes);
 
 	int Chosen(CostSlot slot) =>
 		slot switch
@@ -367,7 +376,9 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Activate only as a sorcery");
 		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
-		if (!TargetSpec.AreLegal(s, ability.Targets, Targets, PlayerId, CardId))
+		if (!Modal.IsLegal(ability.Modes, ability.Choose, Modes))
+			return ValidationResult.Invalid("Not a legal choice of modes");
+		if (!TargetSpec.AreLegal(s, TextOf(ability, Modes).Specs, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
 		if (
 			ManaPayment.Find(
@@ -403,6 +414,7 @@ public record ActivateAbilityAction : GameAction
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
 		foreach (var cost in ability.Costs.Where(c => !c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
+		var (specs, steps) = TextOf(ability, Modes);
 		s = StackResolution.Push(
 			s,
 			new StackAbility
@@ -411,8 +423,8 @@ public record ActivateAbilityAction : GameAction
 				SourceId = CardId,
 				Source = source,
 				ControllerId = PlayerId,
-				Effects = ability.Effects,
-				Specs = ability.Targets,
+				Effects = steps,
+				Specs = specs,
 				Targets = Targets,
 			}
 		);

@@ -5,6 +5,7 @@ using MagicCore.Effects;
 using MagicCore.Filters;
 using MagicCore.Targeting;
 using MagicCore.Turns;
+using static MagicCore.Sets.Scripting;
 using static MagicCore.Sets.Tokens;
 
 namespace MagicCore.Sets.Fra;
@@ -19,10 +20,6 @@ namespace MagicCore.Sets.Fra;
 /// </summary>
 public static class FraCards
 {
-	static readonly Dictionary<string, CardData> Data = CardDataSet
-		.Load("FRA")
-		.ToDictionary(p => p.Card.Name, p => p.Card);
-
 	/// <summary>"A 2/2 colorless Wizard Soldier creature token named Cadet."</summary>
 	public static readonly CardData Cadet =
 		new(
@@ -245,34 +242,6 @@ public static class FraCards
 			new ManaAbilityComponent(b),
 		];
 
-	/// <summary>"Target [filter]" — a permanent: Target(Is.Creature &amp; Is.Yours) is "target creature you control".</summary>
-	static TargetSpec Target(Filter? filter = null) => TargetSpec.Permanent(filter);
-
-	static readonly TargetSpec Creature = TargetSpec.Creature;
-
-	/// <summary>"Permanent card" / "nonland permanent card". FRA has no battles.</summary>
-	const CardType NonlandPermanentTypes =
-		CardType.Creature | CardType.Artifact | CardType.Enchantment | CardType.Planeswalker;
-	const CardType PermanentTypes = NonlandPermanentTypes | CardType.Land;
-
-	/// <summary>"A nonland card": every card type but land.</summary>
-	const CardType NonlandTypes =
-		NonlandPermanentTypes
-		| CardType.Instant
-		| CardType.Sorcery
-		| CardType.Kindred
-		| CardType.Battle;
-	static readonly TargetSpec CreatureOrPlaneswalker = TargetSpec.CreatureOrPlaneswalker;
-
-	static SpellEffectsComponent Spell(TargetSpec[] targets, params GameAction[] effects) =>
-		new([.. effects]) { Targets = [.. targets] };
-
-	static TriggeredAbilityComponent When(
-		Trigger on,
-		TargetSpec[] targets,
-		params GameAction[] effects
-	) => new(on, [.. effects]) { Targets = [.. targets] };
-
 	/// <summary>
 	/// "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of
 	/// turn.)" A scripted trigger, not an engine keyword: Ruric Thar has it twice, and each instance
@@ -289,7 +258,7 @@ public static class FraCards
 		string card,
 		TargetSpec[] targets,
 		params GameAction[] effects
-	) => new(Data[card].CardFaces![1], Spell(targets, effects));
+	) => new(CardRegistry.DataOf(card).CardFaces![1], Spell(targets, effects));
 
 	/// <summary>"At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared."</summary>
 	static TriggeredAbilityComponent PreparesAtYourUpkeep =>
@@ -351,34 +320,8 @@ public static class FraCards
 		Ref.Permanents(Is.Artifact & Is.Yours)
 	);
 
-	/// <summary>"{T}: Add one mana of any color." — five abilities, one per colour, sharing a restriction.</summary>
-	static GameComponent[] AnyColorMana(ManaRestriction restriction) =>
-		[
-			.. ManaAbilities.AnyColor.Select(c => new ManaAbilityComponent(c)
-			{
-				Restriction = restriction,
-			}),
-		];
-
 	/// <summary>Soul Tether: "Create a Heartwood token."</summary>
 	static PrepareSpellComponent SoulTether(string card) => PrepareSpell(card, [], CreateHeartwood);
-
-	/// <summary>"Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"</summary>
-	static ActivatedAbilityComponent BasicLandcycling =>
-		new(
-			ManaCost.Parse("{2}"),
-			[
-				new SearchLibrary(CardType.Land, ZoneType.Hand)
-				{
-					Supertype = Supertype.Basic,
-					Reveal = true,
-				},
-			]
-		)
-		{
-			Costs = [new DiscardSelfCost()],
-			From = ZoneType.Hand,
-		};
 
 	/// <summary>"[Cost]: Return this card from your graveyard to the battlefield with a finality counter on it."</summary>
 	static ActivatedAbilityComponent ReturnsWithFinality(string cost, Condition onlyIf) =>
@@ -390,29 +333,6 @@ public static class FraCards
 			From = ZoneType.Graveyard,
 			OnlyIf = onlyIf,
 		};
-
-	/// <summary>
-	/// "Ward {N} (Whenever this creature becomes the target of a spell or ability an opponent controls,
-	/// counter it unless that player pays {N}.)" "It" is Ref.EventObject — the targeting spell or ability.
-	/// </summary>
-	static TriggeredAbilityComponent Ward(string cost) =>
-		When(
-			TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
-			[],
-			new CounterUnlessPays(Ref.EventObject, ManaCost.Parse(cost))
-		);
-
-	/// <summary>"Equip {N} ({N}: Attach to target creature you control. Equip only as a sorcery.)"</summary>
-	static ActivatedAbilityComponent Equip(string cost) =>
-		new(ManaCost.Parse(cost), [new AttachSourceTo(Ref.Target())])
-		{
-			SorcerySpeed = true,
-			Targets = [Target(Is.Creature & Is.Yours)],
-		};
-
-	/// <summary>"Equipped/enchanted creature gets +P/+T."</summary>
-	static StaticEffectComponent AttachedGets(int power, int toughness) =>
-		new(Is.AttachedToSource) { Power = power, Toughness = toughness };
 
 	/// <summary>
 	/// The Teyos: "When Teyo enters, target permanent you control gains [keyword] until end of turn.
@@ -427,35 +347,6 @@ public static class FraCards
 			new AddCounters(Ref.Target(), 1),
 			new AddLoyalty(Ref.Target(), 1)
 		);
-
-	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
-	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
-		new("", [.. targets], [.. effects]);
-
-	/// <summary>"Choose one/two —" spell. The modes must match the printed bullets one for one.</summary>
-	static SpellEffectsComponent ModalSpell(string name, int choose, params Mode[] modes) =>
-		new([]) { Modes = Printed(name, modes), Choose = choose };
-
-	static TriggeredAbilityComponent ModalWhen(
-		string name,
-		Trigger on,
-		int choose,
-		params Mode[] modes
-	) => new(on, []) { Modes = Printed(name, modes), Choose = choose };
-
-	/// <summary>Names each mode with its printed bullet — and refuses a script whose count differs.</summary>
-	static ImmutableList<Mode> Printed(string name, Mode[] modes)
-	{
-		var bullets = (Data[name].OracleText ?? "")
-			.Split('\n')
-			.Where(l => l.StartsWith('•'))
-			.ToList();
-		if (bullets.Count != modes.Length)
-			throw new InvalidOperationException(
-				$"{name}: {modes.Length} modes scripted, {bullets.Count} printed"
-			);
-		return [.. modes.Select((m, i) => m with { Text = bullets[i] })];
-	}
 
 	internal static readonly Dictionary<string, ImmutableArray<GameComponent>> Scripts =
 		new()

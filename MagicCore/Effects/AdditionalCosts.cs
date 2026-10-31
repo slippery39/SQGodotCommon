@@ -211,6 +211,18 @@ public sealed record ExileSelfCost : AdditionalCost
 	public override string Describe() => "Exile this card";
 }
 
+/// <summary>Daniels, Temporal Agent: "Put this card from your graveyard on the bottom of your library:".</summary>
+public sealed record PutSelfOnBottomCost : AdditionalCost
+{
+	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
+		[];
+
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		s.MoveCard(sourceId, s.ZoneId(playerId, ZoneType.Library)); // MoveCard appends: the bottom
+
+	public override string Describe() => "Put this card on the bottom of your library";
+}
+
 /// <summary>Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is !Is.Source.</summary>
 public sealed record ExileFromGraveyardCost(Filter Filter) : AdditionalCost
 {

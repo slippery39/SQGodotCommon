@@ -90,6 +90,9 @@ public static class CardRegistry
 	/// <summary>Every card of every set, once each.</summary>
 	public static IEnumerable<string> AllNames => Data.Keys;
 
+	/// <summary>A card's printed rules data, the same in every set — FraCards' and TrkCards' Printed read its modes.</summary>
+	public static CardData DataOf(string name) => Data[name];
+
 	/// <summary>One set's cards as it prints them — its rarities, its collector numbers.</summary>
 	public static IReadOnlyList<CardPrinting> Printings(string set) => printings[set];
 

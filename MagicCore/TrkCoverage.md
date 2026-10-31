@@ -1,8 +1,11 @@
 # Star Trek (TRK) coverage — MagicCore
 
 Status, not rules: what is scripted, what waits and why (story MC-5). The rules live in
-`MagicCore/CLAUDE.md`. **Scripted: the 10 Planet duals (MC-5.5, 2026-10-31)** — 16/311 play, with the
-basics and Mugato (`python tools/magic_set.py coverage --set TRK`; every card's script beside its text:
+`MagicCore/CLAUDE.md`. **Scripted: the 10 Planet duals (MC-5.5, 2026-10-31); MC-5.3 batch 1, every tier
+0–1 common and uncommon not waiting on STATION or ANY-COUNTER (88)** — 104/311 play, with the basics and
+Mugato. Batch 1 re-tiered from the full text: Tea, Earl Grey, Hot (a modal activated ability), Daniels (a
+graveyard-to-bottom cost), Culber and Stamets (mana of any one color) and V'Ger (look at a hand) were
+tier 3; Red Alert!, Sickbay, Locutus, Spatial Anomaly, Munitions Enthusiast and Khaaaan! tier 2 (`python tools/magic_set.py coverage --set TRK`; every card's script beside its text:
 `MagicCore/TrkCardSheet.md`). The TOK tokens are DEFINED, waiting for their cards. The tiers are the survey's (MC-5.1):
 judged from each card's full text against `AbilityCatalog.md` — a batch re-checks its own cards'
 tiers before building. Tier 0 keywords only · 1 existing pieces · 2 a tested piece with a new option

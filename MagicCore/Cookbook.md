@@ -29,8 +29,9 @@ file (`Sets/Fra/FraCards.cs`, `Sets/Trk/TrkCards.cs`), in the `Scripts` dictiona
   prints it — `CardRegistry` refuses a second script, a script its set doesn't print, and a reprint
   whose rules text differs. Look a card up with `CardRegistry.Get("Name")` (`, "TRK"` for that printing).
 - **Tokens more than one set makes** (Treasure, Clue, Food) are in `Sets/Tokens.cs`
-  (`CreateClue(1)`); a set's own tokens stay in its Cards file. A FraCards helper a second set needs
-  moves to a shared file then, not before — never copy it.
+  (`CreateClue(1)`); a set's own tokens stay in its Cards file. The helpers every set scripts with
+  (`When`, `Spell`, `Target`, `M`, `ModalSpell`, `Ward`, `Equip` …) are in `Sets/Scripting.cs`; a
+  FraCards helper a second set needs moves there then, not before — never copy it.
 
 ## Patterns
 

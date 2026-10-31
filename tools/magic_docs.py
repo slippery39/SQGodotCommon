@@ -25,6 +25,7 @@ TITLES = {"FRA": "Reality Fracture", "TRK": "Star Trek"}
 SETS = [(f.parent.name.upper(), TITLES.get(f.parent.name.upper(), f.parent.name.upper()))
         for f in sorted((CORE / "Sets").glob("*/*Cards.cs"))]
 TOKENS = CORE / "Sets" / "Tokens.cs"
+SCRIPTING = CORE / "Sets" / "Scripting.cs"
 
 
 def scripts_path(code):
@@ -324,6 +325,7 @@ def main():
         set_blocks, set_helpers = parse_scripts(scripts_path(code))
         blocks |= set_blocks
         helpers.append((f"{code.title()}Cards script helpers", scripts_path(code), set_helpers))
+    helpers.append(("Shared script helpers", SCRIPTING, parse_helpers(SCRIPTING.read_text(encoding="utf-8"))))
     helpers.append(("Shared tokens", TOKENS, parse_helpers(TOKENS.read_text(encoding="utf-8"))))
     users = used_by(types, blocks, [h for _, _, items in helpers for h in items])
     of_card = defaultdict(set)

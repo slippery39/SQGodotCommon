@@ -330,6 +330,39 @@ public record SetCopyTargetsAction(int CopyId) : GameAction
 	}
 }
 
+/// <summary>Culber and Stamets, Star-Crossed: "Add two mana of any one color." — the colour chosen as it resolves.</summary>
+public record AddManaOfAnyOneColor(Count Amount) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						new ChooseColorChoice(Controller),
+						new AddChosenColorManaAction(Amount),
+					],
+				}
+			)
+		);
+}
+
+/// <summary>Culber and Stamets, after the choice: "Add two mana of [the chosen] color."</summary>
+public record AddChosenColorManaAction(Count Amount) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		InputContext.GetValueOrDefault(ChooseColorChoice.Chosen) is int id
+			? (
+				new AddMana(ChooseColorChoice.ColorOf(id), Amount) with
+				{
+					InputContext = InputContext,
+				}
+			).Execute(s)
+			: new(s);
+}
+
 /// <summary>Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn."</summary>
 public record GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords) : Effect
 {

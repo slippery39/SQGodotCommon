@@ -243,7 +243,7 @@ public static class MagicRules
 			);
 	}
 
-	/// <summary>Abilities activated from the zone the card is in — one candidate per target and card-cost choice.</summary>
+	/// <summary>Abilities activated from the zone the card is in — one candidate per mode, target and card-cost choice.</summary>
 	static IEnumerable<GameAction> ActivateCandidates(GameState s, int player, Card card)
 	{
 		var zone = ((Zone)s.GetObject(s.GetParent(card.Id)!.Value)).ZoneType;
@@ -251,7 +251,13 @@ public static class MagicRules
 			.Select((ability, index) => (ability, index))
 			.Where(a => a.ability.From == zone)
 			.SelectMany(a =>
-				from targets in TargetSpec.Combinations(s, a.ability.Targets, player, card.Id)
+				from modes in Modal.Choices(a.ability.Modes, a.ability.Choose)
+				from targets in TargetSpec.Combinations(
+					s,
+					ActivateAbilityAction.TextOf(a.ability, modes).Specs,
+					player,
+					card.Id
+				)
 				from sacrifice in CostList.Options(
 					a.ability.Costs,
 					CostSlot.Sacrifice,
@@ -273,6 +279,7 @@ public static class MagicRules
 						PlayerId = player,
 						CardId = card.Id,
 						AbilityIndex = a.index,
+						Modes = modes,
 						Targets = targets,
 						SacrificeId = sacrifice,
 						DiscardId = discard,
@@ -346,7 +353,7 @@ public static class MagicRules
 			CastSpellAction c =>
 				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}",
 			ActivateAbilityAction activate =>
-				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
+				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}", // modes only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>
 				$"loyalty|{loyalty.CardId}|{loyalty.AbilityIndex}|{loyalty.X}|{string.Join(",", loyalty.Targets)}",
 			_ => a, // the rest have no collection fields, so a record's own equality is the identity

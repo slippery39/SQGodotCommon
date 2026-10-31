@@ -1162,6 +1162,7 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the AI's guess at hidden cards weighs FRA's printings whatever set is played (`Ai/Hidden.cs`, MC-5.5) — guess by the game's set once TRK sealed and draft exist (MC-5.4)
 - the sealed and draft sessions are FRA only (`SealedSession.Set`, a const, MC-5.5) — a choice once TRK has boosters and ratings (MC-5.4)
 - a game record keeps card names, not printings (`Ai/GameRecord.cs`, MC-5.5): a replay shows each card's first printing (FRA's basics in a TRK game) — record the set per card if that ever matters
+- a modal ACTIVATED ability's effects live in its `Modes`, which `Evaluator.ReturnCost` (and Castability's landcycling check) don't read — only its fixed `Effects` (MC-5.3; TRK's one, Tea, Earl Grey, Hot, has no graveyard return, so nothing is misjudged today). Read each mode's effects too when a modal graveyard or hand ability is scripted (Shayne, 2026-10-31: a known ceiling, fix when needed)
 
 ## MagicCore search: speedups not taken (AI-7, 2026-10-19)
 

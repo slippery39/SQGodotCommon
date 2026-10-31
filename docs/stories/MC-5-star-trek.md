@@ -55,6 +55,14 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   and collector number split out of `CardData`** (a `CardPrinting` per set). The registry is named
   **`CardRegistry`**.
 
+- 2026-10-31, Shayne (MC-5.3 batch 1's questions): **V'Ger's "look at target opponent's hand" goes to the
+  log for now**; the table showing known cards face up in the opponent's hand is its own story (TBL-6).
+  **A modal activated ability is a real "choose one"** (Tea, Earl Grey, Hot), never two abilities with one
+  cost: dilemma cards count mode choices.
+  Shayne, the same day: the table showing a modal activation's modes as separate plays is fine, as long as
+  dilemma counts it — so DILEMMA (MC-5.2) is raised where modes are chosen: the cast, a trigger's
+  `ChooseModesChoice`, AND an activation (`ActivateAbilityAction.Modes`).
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -65,7 +73,10 @@ Open questions:
       every card by what the engine needs, the new mechanics' rules read in full, a batch plan sized to
       reach sealed and draft by November 10
 - [ ] MC-5.2 The new mechanics (Station, Strange new worlds, Face a dilemma, and whatever the survey finds)
-- [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics
+- [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
+      the 88 tier 0–1 C/U not waiting on STATION or ANY-COUNTER (re-tiered: 4 tier 3, 6 tier 2, list in
+      `TrkCoverage.md`); new pieces: modal activated abilities, `PutSelfOnBottomCost`, `AddManaOfAnyOneColor`,
+      `LookAtHand`, `Count.Plus`; FraCards' shared helpers moved to `Sets/Scripting.cs`
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -78,13 +89,13 @@ Open questions:
 
 ## Next
 
-**MC-5.5 is done (2026-10-31): the engine is multi-set.** `CardRegistry.Get(name[, set])` is the one
-lookup (FraCards' and TrkCards' scripts merged; a name scripted twice, a script its set doesn't print,
-or a reprint whose text differs fails every test). A card carries its printing's set (`Card.Set`, art
-only). `Boosters`, `CardRatings`, `Draft` take a set code — TRK has neither boosters nor ratings yet,
-and asking says which import to run. The 10 Planet duals play; TRK's tokens are defined. 16/311.
-**Next: MC-5.3's first batch — the tier 0–1 commons, then uncommons (~118), in a NEW session.**
-**Every batch starts in a NEW session** (`/card-batch` step 0) and ends with its usage row
+**MC-5.3 batch 1 is done (2026-10-31): 104/311 play** — every tier 0–1 common and uncommon not waiting on
+STATION or ANY-COUNTER. Script helpers every set shares are in `Sets/Scripting.cs` (a FraCards helper TRK
+needs moves THERE). A modal activated ability is real (`ActivatedAbilityComponent.Modes`) — dilemma will
+count it. V'Ger's look shows in the table's log (`MagicTableManager.Play`); the hand display is TBL-6.
+**Next: the Nov 4–6 row — Station first (17 cards; `TrkCoverage.md`'s STATION row), then the small pieces
+(beam me up, strange new worlds, dilemma, Federation, power 8, becomes tapped, counters), Sagas, Kicker,
+in a NEW session.** Every batch starts in a NEW session (`/card-batch` step 0) and ends with its usage row
 (`tools/usage_report.py --log`, `docs/findings/card-batch-usage.md`) — this set tests that workflow.
 
 Read: this story, `MagicCore/TrkCoverage.md` (every card's tier, what it waits on, what to reuse —
@@ -123,3 +134,6 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
 - 2026-10-31: usage per batch is now logged — `docs/findings/card-batch-usage.md` (the survey: 1.9M).
 - 2026-10-31: MC-5.5 — the card registry across sets, Shayne's three answers in Decisions; 21 new tests,
   13/13 revert-checks caught; TRK 16/311 playable.
+- 2026-10-31: MC-5.3 batch 1 — 88 cards (48 C, 40 U), TRK 104/311; 11 tests for the tier 2–3 cards,
+  11/11 revert-checks caught (one only after a test was strengthened); probe: 150 games, no crash, every
+  tier 2–3 card used. TBL-6 created (known hand cards on the table).

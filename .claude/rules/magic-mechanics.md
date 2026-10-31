@@ -3,6 +3,7 @@ paths:
   - "MagicCore/*.cs"
   - "MagicCore/*/*.cs"
   - "MagicCore/Sets/Fra/*.cs"
+  - "MagicCore/Sets/Trk/*.cs"
   - "MagicCore.Tests/*.cs"
   - "MagicCore.Tests/*/*.cs"
 ---
@@ -19,8 +20,10 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Modes (CR 700.2):** a modal text is its `Modes` + `Choose`. `Modal.Compose` is the ONE place the
   chosen modes become target words and steps, in printed order; each mode's effects see only its own
   targets (`Target(0)` is that mode's first). A spell's modes are chosen when cast (`CastSpellAction.
-  Modes`), a trigger's as it goes on the stack. A mode with an unchoosable required target can't be
-  chosen. The scripted mode count must match the printed bullets — `FraCards` throws otherwise.
+  Modes`), a trigger's as it goes on the stack, an activated ability's as it is activated
+  (`ActivateAbilityAction.Modes`, one legal action per mode — Tea, Earl Grey, Hot; never two abilities
+  with one cost: TRK's dilemma counts mode choices). A mode with an unchoosable required target can't be
+  chosen. The scripted mode count must match the printed bullets — `Scripting.Printed` throws otherwise.
 - **"At the beginning of [step]"** triggers on a `StepBeganEvent`, raised by `EnterStep` for upkeep,
   draw, the first main phase, beginning of combat and end. **"This turn" lives in `MagicPlayer.ThisTurn`** (a `TurnTally`:
   lands, spells, cards drawn, life gained, surveils), REPLACED whole for BOTH players as each turn
@@ -185,7 +188,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   search takes it face down) — and `Shuffle` clears the library's. Anything else that LOOKS or REVEALS
   adds with `s.MakeKnown`: surveil's look, a search's `Reveal` (set it whenever the text says "reveal
   it"), "reveals their hand", behold from the hand (a cost — Theorist's Sanctum's behold as it enters
-  is a condition and reveals nothing, a known gap). A random order (Identity Echo's bottom) is NOT
+  is a condition and reveals nothing, a known gap), "look at target opponent's hand" (`LookAtHand`, V'Ger —
+  the table logs what you now know there; showing it in the hand is TBL-6). A random order (Identity Echo's bottom) is NOT
   known. A new card that looks at or reveals a hidden card must do the same, or the search's "shuffle
   what isn't known" reshuffles a card its player has seen.
 - **"From outside the game"** (Extrapolate the Impossible) is the `Sideboard` zone — Bo1 limited's

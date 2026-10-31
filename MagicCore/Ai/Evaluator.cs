@@ -530,8 +530,8 @@ public static class Evaluator
 			}
 		);
 
-	/// <summary>A count's number where it is fixed; 1 where it depends on the game.</summary>
-	static int Amount(Count n) => n.Kind == CountOf.Fixed ? n.Fixed * n.Sign : 1;
+	/// <summary>A count's number where it is fixed; 1 where it depends on the game — plus its Plus (Sickbay).</summary>
+	static int Amount(Count n) => (n.Kind == CountOf.Fixed ? n.Fixed * n.Sign : 1) + n.Plus;
 
 	/// <summary>A creature token as <see cref="CreatureValue"/> prices a fresh creature: printed stats and keywords.</summary>
 	static double TokenValue(CardData token) =>

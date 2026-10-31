@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 15/96 · uncommon 1/110 · rare 0/80 · mythic 0/25 · **16/311**
+**Playable:** common 63/96 · uncommon 41/110 · rare 0/80 · mythic 0/25 · **104/311**
 
 ### A Good Day to Die
 
@@ -43,7 +43,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Artifact creatures you control get +1/+0.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Assault Drone"] =
+[
+	new StaticEffectComponent(ArtifactCreaturesYouControl) { Power = 1 },
+],
+```
 
 ### Astute Terraformer
 
@@ -60,7 +69,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Whenever this creature attacks, you may sacrifice another creature or artifact. If you do, draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Automated Warfare System"] =
+[
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new MaySacrifice((Is.Creature | Is.Artifact) & !Is.Source, [new DrawCards(Ref.You, 1)])
+	),
+],
+```
 
 ### Bajor
 
@@ -83,7 +105,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace (This creature can't be blocked except by two or more creatures.)  
 > Whenever another creature dies, put a +1/+1 counter on this creature. This ability triggers only once each turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Battle-Scarred Survivalist"] =
+[
+	When(
+		new Trigger(EventKind.Died) { Subject = Is.Creature & !Is.Source },
+		[],
+		new AddCounters(Ref.Source, 1)
+	) with
+	{
+		OncePerTurn = true,
+	},
+],
+```
 
 ### Boarding Action
 
@@ -111,7 +149,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this Aura enters, enchanted creature gains first strike until end of turn.  
 > Enchanted creature gets +2/+0.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Captain's Tutelage"] =
+[
+	new AuraComponent(Creature),
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ModifyUntilEndOfTurn(Ref.EnchantedCreature, 0, 0, "First strike")
+	),
+	AttachedGets(2, 0),
+],
+```
 
 ### Cardassia Prime
 
@@ -134,7 +187,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ward {1} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)  
 > Whenever you cast a noncreature spell, put a +1/+1 counter on this creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Cetacean Ops"] =
+[
+	Ward("{1}"),
+	When(TriggerEvent.YouCastNoncreatureSpell, [], new AddCounters(Ref.Source, 1)),
+],
+```
 
 ### Cha'DIch Investigator
 
@@ -142,7 +205,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, create a 2/1 red Klingon Warrior creature token with haste.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
+
+```csharp
+["Cha'DIch Investigator"] =
+[
+	When(TriggerEvent.SelfEnters, [], new CreateTokens(KlingonWarrior, 1)),
+],
+```
 
 ### Class-F Shuttlecraft
 
@@ -161,7 +233,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > When this creature enters, draw a card, then discard a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Cloistered Telepath"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new DrawCards(Ref.You, 1),
+		new Discard(Ref.You, 1)
+	),
+],
+```
 
 ### Cold-Blooded Crew
 
@@ -181,7 +267,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Destroy target creature with power 4 or greater.  
 > • Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Command Decision"] =
+[
+	ModalSpell(
+		"Command Decision",
+		1,
+		M([Target(Is.Creature & Is.PowerAtLeast(4))], new Destroy(Ref.Target())),
+		M([], new DrawCards(Ref.You, 1))
+	),
+],
+```
 
 ### Common Goal
 
@@ -199,7 +299,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Interfere — Counter target spell unless its controller pays {3}.  
 > • Observe — Tap up to one target creature and put a stun counter on it. Draw a card. (If a permanent with a stun counter would become untapped, remove one from it instead.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddStunCounters` — Cryotheory Adept: "put a stun counter on it".; `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Consider the Prime Directive"] =
+[
+	ModalSpell(
+		"Consider the Prime Directive",
+		1,
+		M(
+			[TargetSpec.Spell()],
+			new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{3}"))
+		),
+		M(
+			[Creature with { Optional = true }],
+			new Tap(Ref.Target()),
+			new AddStunCounters(Ref.Target(), 1),
+			new DrawCards(Ref.You, 1)
+		)
+	),
+],
+```
 
 ### Cybernetic Specialist
 
@@ -208,7 +330,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)  
 > {1}, {T}: Put target card from your graveyard on the bottom of your library.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutIntoLibrary` — "Put [it] on the bottom (or top) of its owner's library" — Paradox Shaper's graveyard…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Cybernetic Specialist"] =
+[
+	When(TriggerEvent.SelfEnters, [], new Surveil(1)),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[new PutIntoLibrary(Ref.Target(), OnTop: false)]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [TargetSpec.InYourGraveyard()],
+	},
+],
+```
 
 ### DOT-7 Repair Squad
 
@@ -225,7 +364,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, you may sacrifice another nonland permanent. When you do, this creature deals 2 damage to any target.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+
+```csharp
+["Dahar Master"] =
+[
+	// "you may sacrifice another nonland permanent. When you do, … 2 damage to any target."
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new MaySacrifice(
+			!Is.Land & !Is.Source,
+			[new WhenYouDo([TargetSpec.AnyTarget()], [new DealDamage(Ref.Target(), 2)])]
+		)
+	),
+],
+```
 
 ### Dathon and Picard at El-Adrel
 
@@ -235,7 +391,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Temba, His Arms Wide — Target creature gets +3/+3 and gains trample until end of turn.  
 > • Shaka, When the Walls Fell — Each opponent sacrifices a nontoken artifact or enchantment of their choice.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Dathon and Picard at El-Adrel"] =
+[
+	ModalSpell(
+		"Dathon and Picard at El-Adrel",
+		1,
+		M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), 3, 3, "Trample")),
+		M(
+			[],
+			new EachSacrifices(
+				Ref.EachOpponent,
+				(Is.Artifact | Is.Enchantment) & !Is.Token
+			)
+		)
+	),
+],
+```
 
 ### Dominion Assault Force
 
@@ -246,7 +422,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Exile target card from a graveyard.  
 > • Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ExileFromGraveyard` — Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Dominion Assault Force"] =
+[
+	ModalWhen(
+		"Dominion Assault Force",
+		TriggerEvent.SelfEnters,
+		1,
+		M([TargetSpec.InAnyGraveyard()], new ExileFromGraveyard(Ref.Target())),
+		M([], new Surveil(1))
+	),
+],
+```
 
 ### Dominion Supervisor
 
@@ -296,7 +487,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, put a +1/+1 counter on target creature. You gain 1 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Emergency Medical Hologram"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Creature],
+		new AddCounters(Ref.Target(), 1),
+		new GainLife(Ref.You, 1)
+	),
+],
+```
 
 ### Federation Field Medic
 
@@ -318,7 +523,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Target creature gets +1/+1 until end of turn.  
 > • Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Federation Probe"] =
+[
+	ModalWhen(
+		"Federation Probe",
+		TriggerEvent.SelfEnters,
+		1,
+		M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)),
+		M([], new Surveil(1))
+	),
+],
+```
 
 ### Ferenginar
 
@@ -366,7 +586,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, creatures you control get +1/+1 until end of turn.  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Free Borg Revolutionaries"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 1)
+	),
+	BasicLandcycling,
+],
+```
 
 ### Fugitive Listener
 
@@ -374,7 +608,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, each opponent discards a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Fugitive Listener"] =
+[
+	When(TriggerEvent.SelfEnters, [], new Discard(Ref.EachOpponent, 1)),
+],
+```
 
 ### Genesis Effect
 
@@ -382,7 +625,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Genesis Effect deals 6 damage to target creature. Destroy target land you control. Create a tapped Planet land token named New Planet with "{T}: Add one mana of any color."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Effect` — ; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Genesis Effect"] =
+[
+	Spell(
+		[Creature, Target(Is.Land & Is.Yours)],
+		new DealDamage(Ref.Target(0), 6),
+		new Destroy(Ref.Target(1)),
+		CreateNewPlanet
+	),
+],
+```
 
 ### Guidance Failure
 
@@ -399,7 +656,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy target creature. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["He's Dead, Jim"] =
+[
+	Spell([Creature], new Destroy(Ref.Target()), new Surveil(1)),
+],
+```
 
 ### Horta
 
@@ -408,7 +674,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Horta"] = [BasicLandcycling],
+```
 
 ### Humpback Whales
 
@@ -417,7 +687,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Vigilance, ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Humpback Whales"] = [Ward("{2}"), BasicLandcycling],
+```
 
 ### I'm a Doctor, Not a . . .
 
@@ -433,7 +707,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, return target creature an opponent controls to its owner's hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.
+
+```csharp
+["Interstellar Effigy"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Opponents)],
+		new ReturnToHand(Ref.Target())
+	),
+],
+```
 
 ### Island
 
@@ -451,7 +738,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Untap target permanent you control. Target player draws two cards.  
 > • Create a 1/1 red Officer creature token and draw two cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Make It So"] =
+[
+	ModalSpell(
+		"Make It So",
+		1,
+		M(
+			[Target(Is.Yours), TargetSpec.Player()],
+			new Untap(Ref.Target(0)),
+			new DrawCards(Ref.Target(1), 2)
+		),
+		M([], new CreateTokens(Officer, 1), new DrawCards(Ref.You, 2))
+	),
+],
+```
 
 ### Malfunctioning Holodeck
 
@@ -460,7 +765,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ward {2} (Whenever this artifact becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)  
 > When this artifact enters, exile target nonland permanent an opponent controls until this artifact leaves the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ExileUntilSourceLeaves` — "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Malfunctioning Holodeck"] =
+[
+	Ward("{2}"),
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(!Is.Land & Is.Opponents)],
+		new ExileUntilSourceLeaves(Ref.Target())
+	),
+],
+```
 
 ### Marooned
 
@@ -488,7 +807,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Deathtouch  
 > {2}: This creature gains reach until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Moopsy"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{2}"),
+		[new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Reach")]
+	),
+],
+```
 
 ### Mountain
 
@@ -556,7 +887,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Use the Relic — Target creature gets +3/+2 until end of turn.  
 > • Destroy the Relic — Destroy target artifact.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Perils of the Past"] =
+[
+	ModalSpell(
+		"Perils of the Past",
+		1,
+		M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), 3, 2)),
+		M([Target(Is.Artifact)], new Destroy(Ref.Target()))
+	),
+],
+```
 
 ### Pet Sehlat
 
@@ -573,7 +918,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Reach  
 > {G}, Exile this card from your graveyard: Create a 1/1 red Officer creature token. Activate only as a sorcery.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `ExileSelfCost` — "Exile this card from your graveyard:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.
+
+```csharp
+["Photosynthetic Physician"] =
+[
+	new ActivatedAbilityComponent(ManaCost.Parse("{G}"), [new CreateTokens(Officer, 1)])
+	{
+		Costs = [new ExileSelfCost()],
+		From = ZoneType.Graveyard,
+		SorcerySpeed = true,
+	},
+],
+```
 
 ### Plains
 
@@ -589,7 +948,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Planetary Bombardment deals 2 damage to target creature. Planetary Bombardment deals 4 damage to that creature instead if a creature died this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Planetary Bombardment"] =
+[
+	// "2 damage … 4 damage to that creature instead if a creature died this turn"
+	Spell(
+		[Creature],
+		new If(
+			new AtLeast(Count.CreaturesDiedThisTurn, 1),
+			[new DealDamage(Ref.Target(), 4)]
+		)
+		{
+			Otherwise = [new DealDamage(Ref.Target(), 2)],
+		}
+	),
+],
+```
 
 ### Planetary Patrol
 
@@ -597,7 +975,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Landfall — Whenever a land you control enters, this creature gets +1/+1 until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Planetary Patrol"] =
+[
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[],
+		new ModifyUntilEndOfTurn(Ref.Source, 1, 1)
+	),
+],
+```
 
 ### Plasma Cascade
 
@@ -605,7 +996,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Plasma Cascade deals 3 damage to any target. You may discard a card. If you do, draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Plasma Cascade"] =
+[
+	Spell(
+		[TargetSpec.AnyTarget()],
+		new DealDamage(Ref.Target(), 3),
+		new MayDiscard([new DrawCards(Ref.You, 1)])
+	),
+],
+```
 
 ### Pure Energy
 
@@ -645,7 +1049,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Lifelink  
 > {2}{B}, Exile this card from your graveyard: You draw a card and lose 1 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileSelfCost` — "Exile this card from your graveyard:".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Relentless Drednok"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{2}{B}"),
+		[new DrawCards(Ref.You, 1), new LoseLife(Ref.You, 1)]
+	)
+	{
+		Costs = [new ExileSelfCost()],
+		From = ZoneType.Graveyard,
+	},
+],
+```
 
 ### Risa
 
@@ -670,7 +1090,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Rogue Artificial Intelligence"] =
+[
+	ModalWhen(
+		"Rogue Artificial Intelligence",
+		TriggerEvent.SelfEnters,
+		1,
+		M([], new GainLife(Ref.You, 3)),
+		M([], new Surveil(2))
+	),
+	BasicLandcycling,
+],
+```
 
 ### Romulus
 
@@ -693,7 +1129,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Landfall — Whenever a land you control enters, this creature gets +2/+2 until end of turn.  
 > {6}: Create a tapped Planet land token named New Planet with "{T}: Add one mana of any color." Activate only as a sorcery.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Saurian Explorer"] =
+[
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[],
+		new ModifyUntilEndOfTurn(Ref.Source, 2, 2)
+	),
+	new ActivatedAbilityComponent(ManaCost.Parse("{6}"), [CreateNewPlanet])
+	{
+		SorcerySpeed = true,
+	},
+],
+```
 
 ### Savvy Profiteer
 
@@ -702,7 +1155,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {R}.  
 > {3}, {T}: Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Savvy Profiteer"] =
+[
+	new ManaAbilityComponent(ManaColor.Red),
+	new ActivatedAbilityComponent(ManaCost.Parse("{3}"), [CreateTreasure(1)])
+	{
+		Costs = [new TapSelfCost()],
+	},
+],
+```
 
 ### Set Phasers to . . .
 
@@ -712,7 +1178,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Stun — Tap target creature and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)  
 > • Kill — This spell deals 3 damage to target attacking creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddStunCounters` — Cryotheory Adept: "put a stun counter on it".; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+
+```csharp
+["Set Phasers to . . ."] =
+[
+	ModalSpell(
+		"Set Phasers to . . .",
+		1,
+		M([Creature], new Tap(Ref.Target()), new AddStunCounters(Ref.Target(), 1)),
+		M([Target(Is.Creature & Is.Attacking)], new DealDamage(Ref.Target(), 3))
+	),
+],
+```
 
 ### Shields Up!
 
@@ -720,7 +1200,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target artifact or creature you control gains hexproof and indestructible until end of turn. If it's a creature, put a +1/+1 counter on it. (It can't be the target of spells or abilities your opponents control. Damage and effects that say "destroy" don't destroy it.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Shields Up!"] =
+[
+	// "If it's a creature, put a +1/+1 counter on it" — AddCounters skips a noncreature.
+	Spell(
+		[Target((Is.Artifact | Is.Creature) & Is.Yours)],
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Hexproof"),
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Indestructible"),
+		new AddCounters(Ref.Target(), 1)
+	),
+],
+```
 
 ### Shuttle Ace
 
@@ -738,7 +1233,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Reach  
 > When this creature enters, exile the top card of your library. Until the end of your next turn, you may play that card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ExileTopPlayable` — Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn,…
+
+```csharp
+["Silicate Surveyor"] = [When(TriggerEvent.SelfEnters, [], new ExileTopPlayable())],
+```
 
 ### Starfleet Security
 
@@ -747,7 +1248,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Haste  
 > When this creature dies during your turn, investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.
+
+```csharp
+["Starfleet Security"] =
+[
+	When(TriggerEvent.SelfDies, [], CreateClue(1)) with
+	{
+		If = new DuringYourTurn(),
+	},
+],
+```
 
 ### Starfleet Spanner Jockey
 
@@ -756,7 +1269,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Defender  
 > As long as you've cast a noncreature spell this turn, this creature can attack as though it didn't have defender.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Starfleet Spanner Jockey"] =
+[
+	new StaticEffectComponent(Is.Source, Combat.AttacksDespiteDefender)
+	{
+		If = new AtLeast(Count.NoncreatureSpellsYouCastThisTurn, 1),
+	},
+],
+```
 
 ### Stray from History
 
@@ -809,7 +1334,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: This creature deals 1 damage to each opponent.  
 > Whenever you cast a noncreature spell, untap this creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Tal Shiar Analyst"] =
+[
+	new ActivatedAbilityComponent(ManaCost.None, [new DealDamage(Ref.EachOpponent, 1)])
+	{
+		Costs = [new TapSelfCost()],
+	},
+	When(TriggerEvent.YouCastNoncreatureSpell, [], new Untap(Ref.Source)),
+],
+```
 
 ### Tal Shiar Operative
 
@@ -819,7 +1357,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Target creature you control gains deathtouch until end of turn.  
 > • Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Tal Shiar Operative"] =
+[
+	ModalWhen(
+		"Tal Shiar Operative",
+		TriggerEvent.SelfAttacks,
+		1,
+		M(
+			[Target(Is.Creature & Is.Yours)],
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Deathtouch")
+		),
+		M([], new Surveil(1))
+	),
+],
+```
 
 ### Tea, Earl Grey, Hot
 
@@ -830,7 +1386,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • This artifact deals 2 damage to target opponent.  
 > • You gain 3 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Tea, Earl Grey, Hot"] =
+[
+	When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+	// "{2}, {T}, Sacrifice this artifact: Choose one —" — a real modal activation (Shayne: dilemma counts it).
+	new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [])
+	{
+		Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+		Modes = Printed(
+			"Tea, Earl Grey, Hot",
+			[
+				M([TargetSpec.Player(Is.Opponents)], new DealDamage(Ref.Target(), 2)),
+				M([], new GainLife(Ref.You, 3)),
+			]
+		),
+	},
+],
+```
 
 ### Temporal Conqueror
 
@@ -846,7 +1423,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature dies, create a 1/1 colorless Borg artifact creature token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
+
+```csharp
+["Tenacious Drone"] = [When(TriggerEvent.SelfDies, [], new CreateTokens(Borg, 1))],
+```
 
 ### Tricorder
 
@@ -856,7 +1439,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever equipped creature attacks, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)  
 > Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Tricorder"] =
+[
+	AttachedGets(1, 1),
+	When(TriggerEvent.AttachedCreatureAttacks, [], new Surveil(1)),
+	Equip("{1}"),
+],
+```
 
 ### Unexplored Territory
 
@@ -865,7 +1459,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {1}, {T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Unexplored Territory"] =
+[
+	new ManaAbilityComponent(ManaColor.Colorless),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[
+			new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+			{
+				Supertype = Supertype.Basic,
+				Tapped = true,
+			},
+		]
+	)
+	{
+		Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+	},
+],
+```
 
 ### Vexing Drone
 
@@ -873,7 +1489,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, tap target creature an opponent controls.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+
+```csharp
+["Vexing Drone"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Opponents)],
+		new Tap(Ref.Target())
+	),
+],
+```
 
 ### Vulcan
 
@@ -904,7 +1533,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Add one mana of any color.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Xenobotanist"] = [.. AnyColorMana(ManaRestriction.None)],
+```
 
 ### Xindi Surveyors
 
@@ -912,7 +1545,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Landfall — Whenever a land you control enters, put a +1/+1 counter on this creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Xindi Surveyors"] =
+[
+	When(TriggerEvent.LandYouControlEnters, [], new AddCounters(Ref.Source, 1)),
+],
+```
 
 ### 70,000 Light-Years from Home
 
@@ -929,7 +1571,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This creature gets +1/+0 for each Officer token you control.  
 > Whenever you cast a noncreature spell, create a 1/1 red Officer creature token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Academy Instructor"] =
+[
+	new StaticEffectComponent(Is.Source)
+	{
+		Power = Count.NumberOf(
+			Ref.Permanents(Is.Token & Is.Yours & Is.Subtype("Officer"))
+		),
+	},
+	When(TriggerEvent.YouCastNoncreatureSpell, [], new CreateTokens(Officer, 1)),
+],
+```
 
 ### Adversary by Algorithm
 
@@ -966,7 +1623,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {3}{B}, {T}, Sacrifice this land: Each opponent loses 2 life and you gain 2 life. Create a tapped Planet land token named New Planet with "{T}: Add one mana of any color."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Artificial Anomaly"] = Anomaly(
+	"{3}{B}",
+	[],
+	new LoseLife(Ref.EachOpponent, 2),
+	new GainLife(Ref.You, 2)
+),
+```
 
 ### Assembly Specialist
 
@@ -974,7 +1642,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, create a 1/1 colorless Borg artifact creature token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
+
+```csharp
+["Assembly Specialist"] = [When(TriggerEvent.SelfEnters, [], new CreateTokens(Borg, 1))],
+```
 
 ### Bat'leth
 
@@ -984,7 +1658,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Equipped creature gets +2/+0.  
 > Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Bat'leth"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Opponents)],
+		new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)
+	),
+	AttachedGets(2, 0),
+	Equip("{2}"),
+],
+```
 
 ### Beckett Mariner, Impetuous Ensign
 
@@ -1047,7 +1736,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Collective Drone's power is equal to the number of artifact creatures you control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Collective Drone"] =
+[
+	// "*/2": power equal to the number of artifact creatures you control.
+	new StaticEffectComponent(Is.Source)
+	{
+		Power = Count.NumberOf(Ref.Permanents(ArtifactCreaturesYouControl)),
+	},
+],
+```
 
 ### Combadge
 
@@ -1065,7 +1767,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Artifact creatures you control have vigilance.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Command Subadjunct"] =
+[
+	new StaticEffectComponent(ArtifactCreaturesYouControl, "Vigilance"),
+],
+```
 
 ### Commander Raffi Musiker
 
@@ -1075,7 +1786,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Exile up to one target card from a graveyard. You gain 2 life.  
 > • Investigate. You lose 2 life. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ExileFromGraveyard` — Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Commander Raffi Musiker"] =
+[
+	ModalWhen(
+		"Commander Raffi Musiker",
+		TriggerEvent.SelfEnters,
+		1,
+		M(
+			[TargetSpec.InAnyGraveyard() with { Optional = true }],
+			new ExileFromGraveyard(Ref.Target()),
+			new GainLife(Ref.You, 2)
+		),
+		M([], CreateClue(1), new LoseLife(Ref.You, 2))
+	),
+],
+```
 
 ### Conquest Mission
 
@@ -1093,7 +1823,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Tap target creature an opponent controls. Put two stun counters on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)  
 > • Investigate twice. (To investigate, create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddStunCounters` — Cryotheory Adept: "put a stun counter on it".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+
+```csharp
+["Constable Odo"] =
+[
+	ModalWhen(
+		"Constable Odo",
+		TriggerEvent.SelfEnters,
+		1,
+		M(
+			[Target(Is.Creature & Is.Opponents)],
+			new Tap(Ref.Target()),
+			new AddStunCounters(Ref.Target(), 2)
+		),
+		M([], CreateClue(2))
+	),
+],
+```
 
 ### Culber and Stamets, Star-Crossed
 
@@ -1103,7 +1852,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Put a +1/+1 counter on target creature.  
 > • Add two mana of any one color.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `AddManaOfAnyOneColor` — Culber and Stamets, Star-Crossed: "Add two mana of any one color." — the colour chosen…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Culber and Stamets, Star-Crossed"] =
+[
+	ModalWhen(
+		"Culber and Stamets, Star-Crossed",
+		TriggerEvent.SelfEnters,
+		1,
+		M([Creature], new AddCounters(Ref.Target(), 1)),
+		M([], new AddManaOfAnyOneColor(2))
+	),
+],
+```
 
 ### D'Ghor Bloodletter
 
@@ -1113,7 +1877,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • All other creatures get -1/-1 until end of turn.  
 > • Each player sacrifices a creature of their choice.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["D'Ghor Bloodletter"] =
+[
+	ModalWhen(
+		"D'Ghor Bloodletter",
+		TriggerEvent.SelfEnters,
+		1,
+		M(
+			[],
+			new ModifyUntilEndOfTurn(Ref.Permanents(Is.Creature & !Is.Source), -1, -1)
+		),
+		M([], new EachSacrifices(Ref.EachPlayer, Is.Creature))
+	),
+],
+```
 
 ### D'Vana Tendi, Optimistic Ensign
 
@@ -1122,7 +1904,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Untap another target permanent.  
 > {3}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `TapSelfCost` — "{T}:" — tap this permanent.; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["D'Vana Tendi, Optimistic Ensign"] =
+[
+	new ActivatedAbilityComponent(ManaCost.None, [new Untap(Ref.Target())])
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [Target(!Is.Source)],
+	},
+	new ActivatedAbilityComponent(ManaCost.Parse("{3}"), [new Surveil(1)]),
+],
+```
 
 ### Dal R'El, Augment Orphan
 
@@ -1140,7 +1936,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Daniels enters, return target creature card from your graveyard to your hand.  
 > {2}, Put this card from your graveyard on the bottom of your library: You gain 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutSelfOnBottomCost` — Daniels, Temporal Agent: "Put this card from your graveyard on the bottom of your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Daniels, Temporal Agent"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InYourGraveyard(Is.Creature)],
+		new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+	),
+	new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new GainLife(Ref.You, 2)])
+	{
+		Costs = [new PutSelfOnBottomCost()],
+		From = ZoneType.Graveyard,
+	},
+],
+```
 
 ### Data, New Life
 
@@ -1156,7 +1970,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When David and Carol Marcus enter, create a tapped Planet land token named New Planet with "{T}: Add one mana of any color."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["David and Carol Marcus, Creators"] =
+[
+	When(TriggerEvent.SelfEnters, [], CreateNewPlanet),
+],
+```
 
 ### De-evolve
 
@@ -1245,7 +2066,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {5}{U}, {T}, Sacrifice this land: Draw two cards. Create a tapped Planet land token named New Planet with "{T}: Add one mana of any color."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Gaseous Anomaly"] = Anomaly("{5}{U}", [], new DrawCards(Ref.You, 2)),
+```
 
 ### Ghost of Illyria
 
@@ -1323,7 +2150,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Surgical Separation — Destroy target creature. Its controller creates two 1/1 red Officer creature tokens.  
 > • Remain Fused — You draw two cards and each player loses 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Impossible Choice"] =
+[
+	ModalSpell(
+		"Impossible Choice",
+		1,
+		// The tokens first: "its controller" is read while the creature is still there.
+		M(
+			[Creature],
+			new CreateTokens(Officer, 2) { ControlledBy = Ref.ControllerOfTarget(0) },
+			new Destroy(Ref.Target())
+		),
+		M([], new DrawCards(Ref.You, 2), new LoseLife(Ref.EachPlayer, 2))
+	),
+],
+```
 
 ### In the Pale Moonlight
 
@@ -1368,7 +2214,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Khaaaaaaaaaaaannn! deals twice X damage to target creature. If that creature would die this turn, exile it instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Khaaaaaaaaaaaannn!"] =
+[
+	Spell(
+		[Creature],
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true },
+		new DealDamage(Ref.Target(), Count.X with { Times = 2 })
+	),
+],
+```
 
 ### Khan, Despot by Design
 
@@ -1377,7 +2236,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > When Khan enters, he deals 1 damage to each opponent and each creature your opponents control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Khan, Despot by Design"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new DealDamage(Ref.EachOpponent, 1),
+		new DealDamage(Ref.Permanents(Is.Creature & Is.Opponents), 1)
+	),
+],
+```
 
 ### Kirk, Commanding Officer
 
@@ -1412,7 +2285,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Artifact creatures you control get +1/+1.  
 > {W}{B}, Discard this card: It deals 2 damage to target creature. You gain 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DiscardSelfCost` — Cycling: "Discard this card:".; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Locutus, the One Who Speaks"] =
+[
+	new StaticEffectComponent(ArtifactCreaturesYouControl) { Power = 1, Toughness = 1 },
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{W}{B}"),
+		[new DealDamage(Ref.Target(), 2), new GainLife(Ref.You, 2)]
+	)
+	{
+		Costs = [new DiscardSelfCost()],
+		From = ZoneType.Hand,
+		Targets = [Creature],
+	},
+],
+```
 
 ### Lore, Positronic Provocateur
 
@@ -1422,7 +2313,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Target creature gets +1/+0 until end of turn and can't be blocked this turn.  
 > • Surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Lore, Positronic Provocateur"] =
+[
+	ModalWhen(
+		"Lore, Positronic Provocateur",
+		TriggerEvent.SelfEnters,
+		1,
+		M(
+			[Creature],
+			new ModifyUntilEndOfTurn(Ref.Target(), 1, 0, Combat.CantBeBlocked)
+		),
+		M([], new Surveil(2))
+	),
+],
+```
 
 ### Mugato
 
@@ -1439,7 +2348,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > When this creature dies, it deals 1 damage to any target.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Munitions Enthusiast"] =
+[
+	When(TriggerEvent.SelfDies, [TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 1)),
+],
+```
 
 ### Neelix, Moral Support
 
@@ -1448,7 +2366,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Neelix enters, create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")  
 > Whenever you gain life, put a +1/+1 counter on Neelix.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Neelix, Moral Support"] =
+[
+	When(TriggerEvent.SelfEnters, [], CreateFood(1)),
+	When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+],
+```
 
 ### Organic Avulsion Unit
 
@@ -1456,7 +2384,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {2}: Artifact creatures you control gain menace until end of turn. (A creature with menace can't be blocked except by two or more creatures.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Organic Avulsion Unit"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{2}"),
+		[
+			new ModifyUntilEndOfTurn(
+				Ref.Permanents(ArtifactCreaturesYouControl),
+				0,
+				0,
+				"Menace"
+			),
+		]
+	),
+],
+```
 
 ### Phlox, Unorthodox Doctor
 
@@ -1473,7 +2420,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {1}, {T}: Another target creature gets +X/+X until end of turn, where X is Picard's power. Activate only as a sorcery.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Picard, Leading by Example"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[
+			new ModifyUntilEndOfTurn(
+				Ref.Target(),
+				Count.PowerOf(Ref.Source),
+				Count.PowerOf(Ref.Source)
+			),
+		]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [Target(Is.Creature & !Is.Source)],
+		SorcerySpeed = true,
+	},
+],
+```
 
 ### Ravenous Cosmozoan
 
@@ -1482,7 +2452,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This spell costs {1} less to cast for each noncreature, nonland card in your graveyard.  
 > Flying, haste
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Ravenous Cosmozoan"] =
+[
+	new CostChange(
+		Count
+			.NumberOf(Ref.All(ZoneType.Graveyard, !Is.Creature & !Is.Land, Ref.You))
+			.Negated
+	)
+	{
+		OnItself = true,
+	},
+],
+```
 
 ### Red Alert!
 
@@ -1491,7 +2477,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This spell costs {2} less to cast if a creature is attacking you.  
 > Creatures you control get +2/+0 until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Red Alert!"] =
+[
+	new CostChange(-2)
+	{
+		OnItself = true,
+		If = new AtLeast(
+			Count.NumberOf(Ref.Permanents(Is.Creature & Is.AttackingYou)),
+			1
+		),
+	},
+	Spell([], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 2, 0)),
+],
+```
 
 ### Resistance Is Futile
 
@@ -1501,7 +2504,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Destroy target nonartifact creature.  
 > • Return target artifact creature card with mana value 3 or less from your graveyard to the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Resistance Is Futile"] =
+[
+	ModalSpell(
+		"Resistance Is Futile",
+		1,
+		M([Target(Is.Creature & !Is.Artifact)], new Destroy(Ref.Target())),
+		M(
+			[
+				TargetSpec.InYourGraveyard(
+					Is.Artifact & Is.Creature & Is.ManaValueAtMost(3)
+				),
+			],
+			new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)
+		)
+	),
+],
+```
 
 ### Rules of Acquisition
 
@@ -1549,7 +2573,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > When Saru enters, another target creature you control gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Saru, Unthreatened"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Yours & !Is.Source)],
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Hexproof")
+	),
+],
+```
 
 ### Seven of Nine
 
@@ -1566,7 +2603,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever a creature you control enters, you gain 1 life.  
 > At the beginning of combat on your turn, put X +1/+1 counters on target creature you control, where X is one plus the amount of life you gained this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sickbay"] =
+[
+	When(TriggerEvent.CreatureYouControlEnters, [], new GainLife(Ref.You, 1)),
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn,
+		[Target(Is.Creature & Is.Yours)],
+		new AddCounters(Ref.Target(), Count.LifeYouGainedThisTurn with { Plus = 1 })
+	),
+],
+```
 
 ### Spatial Anomaly
 
@@ -1575,7 +2626,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {4}{R}, {T}, Sacrifice this land: It deals 2 damage to target creature. Create a tapped Planet land token named New Planet with "{T}: Add one mana of any color."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Spatial Anomaly"] = Anomaly("{4}{R}", [Creature], new DealDamage(Ref.Target(), 2)),
+```
 
 ### Species 8472
 
@@ -1611,7 +2668,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {4}{W}, {T}, Sacrifice this land: Create two 1/1 red Officer creature tokens. Create a tapped Planet land token named New Planet with "{T}: Add one mana of any color."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
+
+```csharp
+["Subspace Anomaly"] = Anomaly("{4}{W}", [], new CreateTokens(Officer, 2)),
+```
 
 ### Support Mission
 
@@ -1637,7 +2700,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > Landfall — Whenever a land you control enters, put two +1/+1 counters on target creature you control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Syndicate Liquidators"] =
+[
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[Target(Is.Creature & Is.Yours)],
+		new AddCounters(Ref.Target(), 2)
+	),
+],
+```
 
 ### Targ Wrangler
 
@@ -1646,7 +2722,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace (This creature can't be blocked except by two or more creatures.)  
 > At the beginning of your end step, if this creature attacked this turn, sacrifice a nonland permanent.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Targ Wrangler"] =
+[
+	When(TriggerEvent.YourEndStep, [], new EachSacrifices(Ref.You, !Is.Land)) with
+	{
+		If = new Matches(Ref.Source, Is.AttackedThisTurn),
+	},
+],
+```
 
 ### Tell Me What You See
 
@@ -1664,7 +2752,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {3}{G}, {T}, Sacrifice this land: Mill four cards. You may put a permanent card from among them into your hand. Create a tapped Planet land token named New Planet with "{T}: Add one mana of any color."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `MillAndMayTake` — Something Worth Saving: "Mill N. You may put a [Types] card from among them into your…
+
+```csharp
+["Temporal Anomaly"] = Anomaly("{3}{G}", [], new MillAndMayTake(4, PermanentTypes)),
+```
 
 ### Test of Conviction
 
@@ -1674,7 +2768,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Battle Stations — Put a +1/+1 counter on each creature you control.  
 > • Begin Negotiations — Target opponent draws a card. You draw two cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Test of Conviction"] =
+[
+	ModalSpell(
+		"Test of Conviction",
+		1,
+		M([], new AddCounters(Ref.CreaturesYouControl, 1)),
+		M(
+			[TargetSpec.Player(Is.Opponents)],
+			new DrawCards(Ref.Target(), 1),
+			new DrawCards(Ref.You, 2)
+		)
+	),
+],
+```
 
 ### Test of Courage
 
@@ -1684,7 +2796,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Alter the Past — Exile target card from a graveyard. You gain 2 life.  
 > • Obliterate the Transwarp Network — Destroy target artifact or enchantment with mana value 3 or less.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `ExileFromGraveyard` — Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Test of Courage"] =
+[
+	ModalSpell(
+		"Test of Courage",
+		1,
+		M(
+			[TargetSpec.InAnyGraveyard()],
+			new ExileFromGraveyard(Ref.Target()),
+			new GainLife(Ref.You, 2)
+		),
+		M(
+			[Target((Is.Artifact | Is.Enchantment) & Is.ManaValueAtMost(3))],
+			new Destroy(Ref.Target())
+		)
+	),
+],
+```
 
 ### Test of Identity
 
@@ -1694,7 +2827,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • I Am Klingon — Target Klingon gets +1/+1 and gains double strike until end of turn.  
 > • I Am Starfleet — Discard a card. If you do, draw two cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Test of Identity"] =
+[
+	ModalSpell(
+		"Test of Identity",
+		1,
+		M(
+			[Target(Is.Creature & Is.Subtype("Klingon"))],
+			new ModifyUntilEndOfTurn(Ref.Target(), 1, 1, "Double strike")
+		),
+		// "Discard a card. If you do, draw two cards." — you do whenever your hand isn't empty.
+		M(
+			[],
+			new If(
+				new AtLeast(Count.NumberOf(Ref.CardsInYourHand), 1),
+				[new Discard(Ref.You, 1), new DrawCards(Ref.You, 2)]
+			)
+		)
+	),
+],
+```
 
 ### Test of Loyalty
 
@@ -1704,7 +2861,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Plain, Simple Garak — Exile target card from a graveyard. Draw a card.  
 > • Of the Obsidian Order — Return target creature card from your graveyard to your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileFromGraveyard` — Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Test of Loyalty"] =
+[
+	ModalSpell(
+		"Test of Loyalty",
+		1,
+		M(
+			[TargetSpec.InAnyGraveyard()],
+			new ExileFromGraveyard(Ref.Target()),
+			new DrawCards(Ref.You, 1)
+		),
+		M(
+			[TargetSpec.InYourGraveyard(Is.Creature)],
+			new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+		)
+	),
+],
+```
 
 ### Test of Priorities
 
@@ -1730,7 +2908,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When The Duras Sisters die, create a 2/1 red Klingon Warrior creature token with haste.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
+
+```csharp
+["The Duras Sisters"] =
+[
+	When(TriggerEvent.SelfDies, [], new CreateTokens(KlingonWarrior, 1)),
+],
+```
 
 ### The Measure of a Man
 
@@ -1801,7 +2988,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Equipped creature gets +3/+0.  
 > Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddStunCounters` — Cryotheory Adept: "put a stun counter on it".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+
+```csharp
+["Type-2 Phaser"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Opponents)],
+		new Tap(Ref.Target()),
+		new AddStunCounters(Ref.Target(), 1)
+	),
+	AttachedGets(3, 0),
+	Equip("{3}"),
+],
+```
 
 ### U.S.S. Cerritos, Following Up
 
@@ -1850,7 +3053,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Look at target opponent's hand, then draw a card.  
 > • Creatures your opponents control get -1/-0 until your next turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch1Tests
+
+```csharp
+["V'Ger, the Intruder"] = [VGer(TriggerEvent.SelfEnters), VGer(TriggerEvent.SelfAttacks)],
+```
 
 ### Vash, Freelance Archaeologist
 

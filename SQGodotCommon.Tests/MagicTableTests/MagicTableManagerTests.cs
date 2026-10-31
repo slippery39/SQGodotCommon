@@ -464,4 +464,32 @@ public class MagicTableManagerTests
 		);
 		Assert.That(m.Replay().Search);
 	}
+
+	[Test]
+	public void ALookAtTheirHand_IsLogged_CardByCard()
+	{
+		var m = New();
+		RunAi(m);
+		while (!m.CanSandbox || !m.HumanToAct)
+		{
+			PassOrFirst(m);
+			RunAi(m);
+		}
+		// V'Ger, the Intruder enters: "choose one — • Look at target opponent's hand, then draw a card."
+		m.Sandbox(m.HumanId, CardRegistry.Get("V'Ger, the Intruder", "TRK"), ZoneType.Battlefield);
+		for (var i = 0; i < 50 && m.Log.All(l => !l.Contains("seen in")); i++)
+		{
+			RunAi(m);
+			if (m.State.GetPendingChoice() is ChooseModesChoice)
+				m.Choose([0]);
+			else if (m.State.GetPendingChoice() is ChooseTargetChoice)
+				m.Choose([m.OpponentId]);
+			else if (m.HumanToAct)
+				PassOrFirst(m);
+		}
+		var theirs = m.State.CardsIn(m.OpponentId, ZoneType.Hand).Select(c => c.Name);
+		var seen = m.Log.Single(l => l.Contains("seen in"));
+		Assert.That(theirs, Is.Not.Empty, "precondition: they hold cards");
+		Assert.That(theirs.All(seen.Contains), seen);
+	}
 }

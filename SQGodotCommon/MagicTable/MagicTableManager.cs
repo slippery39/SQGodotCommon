@@ -418,8 +418,45 @@ public sealed class MagicTableManager
 	{
 		var next = MoveTokens.Apply(State, token);
 		Record = Record.Add(State, token, kind, said);
+		var before = State;
+		var seen = KnownInOpponentsHand(before).Select(c => c.Id).ToHashSet();
 		State = next;
+		// V'Ger's "look at target opponent's hand", a revealed search: the log says what you now know is
+		// there — only cards that came from a hidden zone (a bounced creature was seen already).
+		// Noted after the line of the move that caused it (Write, Save). In the hand itself: TBL-6.
+		if (
+			KnownInOpponentsHand(State)
+				.Where(c =>
+					!seen.Contains(c.Id)
+					&& (
+						before.IsIn(c.Id, OpponentId, ZoneType.Hand)
+						|| before.IsIn(c.Id, OpponentId, ZoneType.Library)
+					)
+				)
+				.ToList()
+			is [_, ..] news
+		)
+			_notes.Add(
+				(
+					State.GetGame().TurnNumber,
+					$"seen in {State.GetPlayer(OpponentId).Name}'s hand: {string.Join(", ", news.Select(c => c.Name))}"
+				)
+			);
 	}
+
+	/// <summary>What a move revealed, logged after the move's own line.</summary>
+	private readonly List<(int Turn, string What)> _notes = new();
+
+	private void WriteNotes()
+	{
+		foreach (var (turn, what) in _notes)
+			Write(turn, HumanId, what, notes: false);
+		_notes.Clear();
+	}
+
+	/// <summary>The opponent's hand cards you know (Card.KnownTo — relative to their owner, the opponent).</summary>
+	private List<Card> KnownInOpponentsHand(GameState s) =>
+		[.. s.CardsIn(OpponentId, ZoneType.Hand).Where(c => (c.KnownTo & Knowers.Opponent) != 0)];
 
 	/// <summary>
 	/// Writes the record over its file — once per public call (a decision, an AI step, an undo), not
@@ -427,6 +464,7 @@ public sealed class MagicTableManager
 	/// </summary>
 	private void Save()
 	{
+		WriteNotes(); // a reveal on a move that writes no line (a pass resolving V'Ger's trigger)
 		if (RecordTo is null)
 			return;
 		try
@@ -448,10 +486,12 @@ public sealed class MagicTableManager
 
 	private bool _recordFailed;
 
-	private string Write(int turn, int who, string what)
+	private string Write(int turn, int who, string what, bool notes = true)
 	{
 		var line = $"T{turn} {State.GetPlayer(who).Name}: {what}";
 		_log.Add(line);
+		if (notes)
+			WriteNotes();
 		return line;
 	}
 

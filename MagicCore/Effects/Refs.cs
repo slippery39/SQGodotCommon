@@ -298,6 +298,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	/// <summary>Dark Matter Manipulator: "+2/+0 for every seven" — each Per counts this many.</summary>
 	public int Times { get; init; } = 1;
 
+	/// <summary>Sickbay: "where X is one plus the amount of life you gained this turn" — added after the rest.</summary>
+	public int Plus { get; init; }
+
 	public static implicit operator Count(int n) => new(n);
 
 	public static Count NumberOf(Ref r) => new(0, r, CountOf.NumberOf);
@@ -361,16 +364,16 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count CreaturesYouControl = NumberOf(Ref.CreaturesYouControl);
 	public static readonly Count LandsYouControl = NumberOf(Ref.LandsYouControl);
 
-	public Count Negated => this with { Sign = -Sign };
+	public Count Negated => this with { Sign = -Sign, Plus = -Plus };
 
 	/// <summary>"Is this a fixed nothing?" — a static with Power 0 and Toughness 0 changes no P/T.</summary>
 	public static bool operator ==(Count c, int n) =>
-		c.Kind == CountOf.Fixed && c.Sign * c.Fixed == n;
+		c.Kind == CountOf.Fixed && c.Sign * c.Fixed + c.Plus == n;
 
 	public static bool operator !=(Count c, int n) => !(c == n);
 
 	public int Value(GameState s, ImmutableDictionary<string, object> context) =>
-		Sign * Times * (Counted(s, context) / Per);
+		Sign * Times * (Counted(s, context) / Per) + Plus;
 
 	int Counted(GameState s, ImmutableDictionary<string, object> context)
 	{

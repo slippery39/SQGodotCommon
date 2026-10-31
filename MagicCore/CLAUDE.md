@@ -66,7 +66,7 @@ MagicCore/
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
 ├── Cards/CardData.cs    printed RULES data (Scryfall), one per name; CardPrinting: a set's rarity, number; Load(set)
 ├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities
-├── Sets/CardRegistry.cs EVERY set's cards by name: Get(name[, set]), IsImplemented, Printings(set); Tokens.cs: Treasure, Clue, Food
+├── Sets/CardRegistry.cs EVERY set's cards by name: Get(name[, set]), IsImplemented, Printings(set); Tokens.cs: Treasure, Clue, Food; Scripting.cs: the helpers every set scripts with (When, Spell, M …)
 ├── Sets/Fra/, Sets/Trk/ <Set>Cards.cs: a set's abilities by name — a reprint scripted ONCE (MC-5.5); Fra/EmpowerJace.cs
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named; ReadPool: a sealed
