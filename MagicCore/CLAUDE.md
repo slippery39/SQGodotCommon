@@ -52,7 +52,7 @@ MagicCore/
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions: every CostChange)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
-├── FraCoverage.md       what FRA is scripted, what waits and why — status, not rules
+├── FraCoverage.md / TrkCoverage.md   per set: what is scripted, what waits and why — status, not rules
 ├── AbilityCatalog.md    GENERATED: every effect, trigger, ref, count, condition, component — one line each
 ├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests
 ├── Cookbook.md          how to script a card, by pattern; the tiers of checking
@@ -100,7 +100,7 @@ MagicCore/
 ├── Sets/FRA.positions.txt GENERATED position suite (PositionSuite; MagicConsole --suite=generate) — embedded, a test fails while stale
 ├── Sets/FRA.17lands.json  computed by tools/import_17lands.py from 17lands' PUBLIC game data (never its API): GIH WR + games
 ├── Sets/FRA.boosters.json  imported by tools/import_mtgjson_boosters.py — play-booster sheets by card name, never hand-edit
-└── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
+└── Sets/FRA.json, TRK.json   imported by tools/import_scryfall_set.py — embedded resources, never hand-edit
 ```
 
 A front end's loop: `AutoPass` → `DecidingPlayerId` → if `GetPendingChoice()` answer with `Choose`,

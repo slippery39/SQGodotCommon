@@ -24,10 +24,12 @@ card is cast, so every FRA planeswalker reads last (2.7–3.75) and value climbs
 ## Decisions
 
 - 2026-10-20, Shayne: needed; FRA uses 17lands meanwhile (LIM-1).
+- 2026-10-31, Shayne: needed NOW for TRK's draft bots (MC-5): "pre-simulating win rates of cards against
+  bots" — a simulated win rate, not a `CardValues` fix; "not fully accurate to the true win rate … ok
+  for now".
 
 Open questions:
-- How: a simulated games-in-hand win rate from AI sealed games (17lands' own measure, made by
-  self-play), a fix to `CardValues`, or both?
+- The simulated win rate's exact measure (games in hand, as 17lands, or another) and the games it needs
 - How many games that takes, and how long (ask before any run over ~15 minutes)
 
 ## Tasks

@@ -72,4 +72,6 @@ modify MtgCore. Tell Shayne the tiers and the new pieces in one short list befor
 - `/pre-commit`. Point its code review at the ENGINE changes: tier 0–1 card scripts are checked by the
   card sheet, not line by line. Fix each finding with a test that fails without the fix.
 - Update the handoff's "next" section, ask Shayne, commit only on a yes, never push.
-- Optional now and then: `python tools/usage_report.py` — the batch's cost, to see the savings hold.
+- **Every batch, just before its commit:** `python tools/usage_report.py --log "<task>: <what>, <N> cards"`
+  — one row in `docs/findings/card-batch-usage.md`, committed with the batch; it is how we know the
+  fresh-session workflow holds its savings. Then start the NEXT batch in a NEW session.

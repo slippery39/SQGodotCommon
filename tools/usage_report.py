@@ -3,6 +3,8 @@
     python tools/usage_report.py              # the most recent session in this project
     python tools/usage_report.py SESSION_ID   # a given session (its .jsonl name)
     python tools/usage_report.py --all        # every session, one line each
+    python tools/usage_report.py --log "MC-5.5 registry, 0 cards"   # this session -> a row in
+                                              # docs/findings/card-batch-usage.md (one batch = one session)
 
 Costs are in INPUT-TOKEN EQUIVALENTS, weighting each token kind as the API prices it (input 1, output
 5, cache read 0.1, cache write 2): subscription usage tracks the same weights. Subagents (code reviews)
@@ -18,6 +20,7 @@ import re
 import statistics
 import sys
 from collections import Counter
+from datetime import date
 from pathlib import Path
 
 PROJECT = Path.home() / ".claude" / "projects" / "c--SQGodotHelperApps-SQGodotCommon"
@@ -100,6 +103,17 @@ def report(path):
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     files = sorted(PROJECT.glob("*.jsonl"), key=lambda p: p.stat().st_mtime)
+    if "--log" in sys.argv:
+        label = sys.argv[sys.argv.index("--log") + 1]
+        cs = calls(files[-1])
+        total = sum(cost(u) for u, _, _ in cs) + subagent_cost(files[-1].with_suffix(""))
+        ctx = statistics.median(u.get("cache_read_input_tokens", 0) + u.get("cache_creation_input_tokens", 0) for u, _, _ in cs)
+        log = Path(__file__).resolve().parent.parent / "docs" / "findings" / "card-batch-usage.md"
+        row = f"| {date.today()} | {label} | {files[-1].stem[:8]} | {len(cs)} | {ctx / 1e3:.0f}k | {total / 1e6:.1f}M |\n"
+        with open(log, "a", encoding="utf-8", newline="\n") as f:
+            f.write(row)
+        print(row, end="")
+        return
     if "--all" in sys.argv:
         for f in files:
             cs = calls(f)
