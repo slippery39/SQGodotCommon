@@ -412,7 +412,8 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         a 1-mana kill: it kills the 3/3 — the look-ahead never sees the locked 5/5 attack). Kept as a guard;
         the evaluator's price of a locked creature is unchanged. Shayne (2026-10-30), asked: "infinite
         courseworking a 3/3 on an empty board is a good play" — about Coursework itself; the guard's answer
-        (the kill on the 3/3) is still Claude's, to confirm
+        (the kill on the 3/3) is still Claude's. Then, asked again: "Killing the 3/3 could be relevant, its
+        situational so lets just leave it for now" — the guard stays as it is, its answer situational
   - [x] Review item 10, the table's 1 s cap — **doesn't bite on the basics (2026-10-30):** every
         `BasicsTests` position played through the table's settings (`TimeLimit` 1 s) passes as it does
         uncapped (`docs/findings/magic-ai.md`). Re-check when a table game shows a miss the suite doesn't

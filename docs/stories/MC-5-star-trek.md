@@ -47,7 +47,12 @@ Open questions:
 ## Next
 
 Start with MC-5.1 in a fresh session: read `/card-batch`, `MagicCore/CLAUDE.md` and FRA's story (MC-1) for
-how a set was built; import the set; survey. Grep MtgCore for every mechanic before building it.
+how a set was built; import the set (`python tools/import_scryfall_set.py trk` — Scryfall's code is `trk`;
+the Commander product is `trc`, not wanted); survey. Grep MtgCore for every mechanic before building it.
+Booster collation: `python tools/import_mtgjson_boosters.py trk` once MTGJSON has the set — check it does
+before planning around it; else a provisional collation, named as such. The deadline is Arena's release,
+November 10, 2026: plan the batches backwards from it, commons and uncommons first (what a prerelease
+opens most).
 
 ## Log
 
