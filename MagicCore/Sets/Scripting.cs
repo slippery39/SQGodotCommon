@@ -43,6 +43,18 @@ public static class Scripting
 		params GameAction[] effects
 	) => new(on, [.. effects]) { Targets = [.. targets] };
 
+	/// <summary>A Saga's chapter: "II — You gain 3 life." (Amok Time) — triggers as its lore counters reach N.</summary>
+	public static TriggeredAbilityComponent Chapter(
+		int n,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) =>
+		When(
+			new Trigger(EventKind.CountersPut) { Subject = Filters.Is.Source, Chapter = n },
+			targets,
+			effects
+		);
+
 	/// <summary>"{T}: Add one mana of any color." — five abilities, one per colour, sharing a restriction.</summary>
 	public static GameComponent[] AnyColorMana(ManaRestriction restriction) =>
 		[

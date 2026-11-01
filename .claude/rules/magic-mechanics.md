@@ -296,3 +296,31 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   ART only, never by a rule. A sealed or draft session passes its set (`CardRegistry.Get(name, set)`);
   boosters, ratings and drafts take a set code (`Boosters.Pack(set, rng)`, `CardRatings.Of(set)`,
   `Draft.New(set, seed)`). Rarity is never read from `CardData` — it isn't there.
+- **Counters of a named kind** (TRK: quest, lore, promotion — `CounterKinds`) live in ONE map, `Card.Counters`,
+  put on and removed through `MagicState.PutCounters` alone, which raises `CountersPutEvent` (how many it
+  had and has). The older kinds (+1/+1, -1/-1, charge, stun, time, loyalty, finality) keep their own fields.
+  "A permanent with a counter on it" is ANY kind — `Is.WithAnyCounter` (`Card.HasAnyCounter`) reads every
+  field and the map; a new counter field must join it. Proliferate doesn't see the map yet (no card needs it).
+- **Sagas** (CR 714) are `SagaComponent(chapters)` + `Scripting.Chapter(n, …)`: a trigger on
+  `CountersPutEvent` that fires as the lore count goes from below n to at least n (`Trigger.Chapter`). The
+  lore counter is added as it enters (`EnterBattlefield`) and as its controller's precombat main phase
+  begins — a TURN-BASED action in `EnterStep`, no stack (Shayne, 2026-11-01). The state-based check
+  sacrifices a Saga at its last chapter only once no chapter ability of it is waiting: collected and not
+  yet on the stack (`GivePriority` passes them to `StateBasedActions.Check`) or on the stack.
+- **Kicker** is `KickerComponent(mana) { Costs }` and `CastSpellAction.Kicked` (one cast unkicked, one
+  kicked; `|k` in `MoveKey` only when kicked): the mana joins the total in `Costs.Of(…, added:)`, the costs
+  join `CastSpellAction.CostsOf(…, kicked)` — a kicker sacrifice is the ordinary `SacrificeId`. The stack
+  keeps it (`OnStackComponent.Kicked`, copies too); "if kicked" is `WasKicked`; a target word that reads
+  differently kicked is `TargetSpec.IfKicked`, swapped in by `StackResolution.TextOf(…, kicked)`.
+- **"Can't block"** is `Combat.CantBlock`, a keyword-like grant read by `Combat.CanBlock` — a static
+  (Cleveland Booker's Worm) or until end of turn (La'An).
+- **"Activate only once each turn"** is `ActivatedAbilityComponent.OncePerTurn`, stamped on the card as it
+  is activated (`Card.ActivatedOncePerTurnOn`) — a new object may activate again.
+- **"Whenever [a creature with …] deals combat damage to a player"** — not "this" — is
+  `Trigger.CombatDamageBy`, a filter on the damage's SOURCE (Phlox); the event's subject is the player.
+- **"Sacrifice it at the beginning of the next end step"** on a new token is `CreateTokens`/`CreateTokenCopy`
+  `.SacrificeAtNextEndStep` — a `DelayedTrigger` added after it enters, like `ExileAtNextEndStep`.
+- **A linked "the exiled card"** (The Measure of a Man) is `Exile { Linked }` (stamps `ExiledBy` with this
+  object of the source) and `ReturnLinkedExile` — nothing once the source has left (CR 607.2a).
+- **"Whenever …, this turn"** from a resolving ability (The Naked Time's chapter II) is `WheneverThisTurn`:
+  the trigger on a command-zone object, removed with the turn's other "this turn" effects.

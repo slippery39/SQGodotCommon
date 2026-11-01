@@ -67,7 +67,15 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
 		if (choice is ChooseColorChoice)
-			return [ChooseColorChoice.IdOf(MostWantedColor(s))];
+			return
+			[
+				ChooseColorChoice.IdOf(
+					MostWantedColor(
+						s,
+						[.. choice.Options.Select(o => ChooseColorChoice.ColorOf(o.Id))]
+					)
+				),
+			];
 		if (choice is ChooseModesChoice { MaxChoices: > 1 } modes)
 			return Combinations(modes.Options.Select(o => o.Id).ToList(), modes.MaxChoices)
 				.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
@@ -102,9 +110,10 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 
 	/// <summary>
 	/// Room of Refuge: the color with the most mana symbols across this player's cards in hand,
-	/// library and on the battlefield. Every color scores the same to Evaluate, so it can't decide.
+	/// library and on the battlefield — among those offered (Dal R'El: {R} or {G}). Every color scores
+	/// the same to Evaluate, so it can't decide.
 	/// </summary>
-	ManaColor MostWantedColor(GameState s) =>
+	ManaColor MostWantedColor(GameState s, IReadOnlyList<ManaColor> offered) =>
 		new[] { ZoneType.Hand, ZoneType.Library, ZoneType.Battlefield }
 			.SelectMany(z => s.CardsIn(PlayerId, z))
 			.SelectMany(c => c.ManaCost.Symbols)
@@ -116,11 +125,11 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 					_ => [],
 				}
 			)
-			.Where(c => c != ManaColor.Colorless)
+			.Where(offered.Contains)
 			.GroupBy(c => c)
 			.OrderByDescending(g => g.Count())
 			.Select(g => g.Key)
-			.DefaultIfEmpty(ManaColor.White)
+			.DefaultIfEmpty(offered[0])
 			.First();
 
 	/// <summary>Keep 2–5 lands in seven; after two mulligans keep anything.</summary>

@@ -609,6 +609,7 @@ public class FilterMigrationTests
 		TriggerEvent.SelfDealsCombatDamageToPlayer, // Is.Source as the damage source + combat
 		TriggerEvent.SelfBecomesTapped, // Is.Source, on the one tap path (MagicState.Tap)
 		TriggerEvent.YouAttackWithTotalPower8, // YouAttack + While, judged as it triggers
+		new Trigger(EventKind.CountersPut) { Subject = Is.Source, Chapter = 1 }, // a Saga's chapter: the lore count crossing N (Scripting.Chapter)
 	];
 
 	/// <summary>Read from the card itself, not matched against an event on the battlefield (Triggers.Collect).</summary>

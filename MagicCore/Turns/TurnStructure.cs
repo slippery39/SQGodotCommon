@@ -38,7 +38,7 @@ public static class TurnStructure
 					"State-based actions kept raising events for 100 rounds"
 				);
 			triggered.AddRange(Triggers.Collect(s));
-			s = StateBasedActions.Check(s with { PendingGameEvents = [] });
+			s = StateBasedActions.Check(s with { PendingGameEvents = [] }, triggered);
 			if (s.PendingGameEvents.IsEmpty)
 				break;
 		}
@@ -138,6 +138,15 @@ public static class TurnStructure
 		// only: Gardenize's "your first main phase".
 		if (step is Step.Upkeep or Step.Draw or Step.PreCombatMain or Step.BeginCombat or Step.End)
 			s = s.Raise(new StepBeganEvent(step));
+		// CR 714.3b: a turn-based action, no stack — "as a player's precombat main phase begins, that
+		// player puts a lore counter on each Saga they control" (Shayne, 2026-11-01).
+		if (step == Step.PreCombatMain)
+			foreach (
+				var saga in s.CardsIn(active, ZoneType.Battlefield)
+					.Where(c => c.HasComponent<Effects.SagaComponent>())
+					.ToList()
+			)
+				s = s.PutCounters(saga.Id, Effects.CounterKinds.Lore, 1);
 
 		switch (step)
 		{
@@ -234,11 +243,12 @@ public static class TurnStructure
 public static class StateBasedActions
 {
 	/// <summary>CR 704.3: performed again and again until none applies — a pass that changes nothing returns the same state.</summary>
-	public static GameState Check(GameState s)
+	/// <param name="pending">Triggered abilities collected but not yet on the stack — a Saga waits for its chapter (CR 714.4).</param>
+	public static GameState Check(GameState s, IReadOnlyList<Triggers.Pending>? pending = null)
 	{
 		for (var round = 0; round < 100; round++)
 		{
-			var next = CheckOnce(s);
+			var next = CheckOnce(s, pending ?? []);
 			if (ReferenceEquals(next, s))
 				return s;
 			s = next;
@@ -246,7 +256,7 @@ public static class StateBasedActions
 		throw new InvalidOperationException("State-based actions still applied after 100 passes");
 	}
 
-	static GameState CheckOnce(GameState s)
+	static GameState CheckOnce(GameState s, IReadOnlyList<Triggers.Pending> pending)
 	{
 		if (s.IsOver())
 			return s; // the game ended — "you win the game" — so nothing more is checked (CR 104.2a)
@@ -305,6 +315,26 @@ public static class StateBasedActions
 					field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 			}
 
+			// CR 714.4: a Saga whose lore counters reached its last chapter is sacrificed — once no chapter
+			// ability of it has triggered and not yet left the stack. One that lost all abilities has no
+			// chapters, so it stays (CR 714.2d). ponytail: any triggered ability of it counts as a
+			// chapter; no TRK Saga has another.
+			List<Card>? finished = null;
+			foreach (var c in field)
+				if (
+					c.GetComponent<Effects.SagaComponent>() is { } saga
+					&& !s.HasLostAllAbilities(c)
+					&& c.CountersOf(Effects.CounterKinds.Lore) >= saga.Chapters
+					&& !ChapterToResolve(s, c, pending)
+				)
+					(finished ??= []).Add(c);
+			if (finished is not null)
+			{
+				foreach (var card in finished)
+					s = s.Sacrifice(card.Id);
+				field = s.CardsIn(id, ZoneType.Battlefield).ToList();
+			}
+
 			var beforeAttachments = s;
 			s = Rules.Attachments.Check(s, id); // CR 704.5m/n
 			if (!ReferenceEquals(s, beforeAttachments))
@@ -347,6 +377,15 @@ public static class StateBasedActions
 		ZoneType.Hand,
 		ZoneType.Library,
 	];
+
+	static bool ChapterToResolve(GameState s, Card saga, IReadOnlyList<Triggers.Pending> pending) =>
+		pending.Any(t => t.Source.Id == saga.Id && t.Ability.On.Chapter > 0)
+		|| s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
+			.Select(s.GetObject)
+			.OfType<Actions.StackAbility>()
+			.Any(a =>
+				a.Triggered && a.SourceId == saga.Id && a.Source.Incarnation == saga.Incarnation
+			);
 
 	/// <summary>Lethal: no toughness left, or damage enough to destroy it (or any from deathtouch) — 0 toughness kills even the indestructible.</summary>
 	static bool IsLethal(GameState s, Card c)

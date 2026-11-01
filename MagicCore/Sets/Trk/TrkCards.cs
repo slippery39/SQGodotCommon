@@ -59,6 +59,9 @@ public static class TrkCards
 		"3"
 	);
 
+	/// <summary>Cleveland Booker, Empath: "a 2/2 red and green Worm creature token with 'This token can't block.'"</summary>
+	public static readonly CardData Worm = Token("Worm", "Creature — Worm", "2", "2", ["R", "G"]);
+
 	/// <summary>"A tapped Planet land token named New Planet with '{T}: Add one mana of any color.'"</summary>
 	public static readonly CardData NewPlanet = Token("New Planet", "Land — Planet");
 
@@ -1421,5 +1424,391 @@ public static class TrkCards
 					new DealDamage(Ref.Target(), Federation)
 				),
 			],
+			// ===== MC-5.3 batch 4a: counters of any kind, quests, Sagas, kicker, can't block, once each turn =====
+			["Dominion Supervisor"] =
+			[
+				When(TriggerEvent.SelfEnters, [Creature], new AddCounters(Ref.Target(), 1)),
+				new StaticEffectComponent(Is.Creature & Is.Yours & Is.WithAnyCounter, "Trample"),
+			],
+			["The Doctor, EMH"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Creature],
+					new AddCounters(Ref.Target(), 1),
+					new AddCounters(Ref.Permanents(Is.Creature & Is.Yours & Is.WithAnyCounter), 1)
+				),
+			],
+			["Federation Field Medic"] =
+			[
+				ModalWhen(
+					"Federation Field Medic",
+					TriggerEvent.SelfEnters,
+					1,
+					M(
+						[Creature],
+						new AddCounters(Ref.Target(), 1),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Vigilance")
+					),
+					M(
+						[],
+						new If(
+							new AtLeast(
+								Count.NumberOf(Ref.Permanents(Is.Yours & Is.WithAnyCounter)),
+								1
+							),
+							[new DrawCards(Ref.You, 1)]
+						)
+					)
+				),
+			],
+			["Phlox, Unorthodox Doctor"] =
+			[
+				When(
+					new Trigger(EventKind.PlayerDealtDamage)
+					{
+						CombatDamageBy = Is.Creature & Is.Yours & Is.WithAnyCounter,
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Beckett Mariner, Impetuous Ensign"] =
+			[
+				When(
+					TriggerEvent.SelfBecomesTapped,
+					[],
+					new PutCounters(Ref.Source, CounterKinds.Promotion, 1),
+					new If(
+						new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Promotion), 3),
+						[
+							new RemoveCountersOfKind(Ref.Source, CounterKinds.Promotion),
+							new DealDamage(Ref.EachOpponent, 2),
+						]
+					)
+				),
+			],
+			["Anthropological Mission"] =
+			[
+				When(
+					TriggerEvent.YouCastNoncreatureSpell,
+					[],
+					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new DrawCards(Ref.You, 1),
+					new If(new Not(Quests(3)), [new Discard(Ref.You, 1)])
+				),
+			],
+			["Conquest Mission"] =
+			[
+				When(
+					new Trigger(EventKind.Entered) { Subject = Is.Artifact & !Is.Token & Is.Yours },
+					[],
+					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new If(Quests(6), [new CreateTokens(Borg, 2)])
+					{
+						Otherwise = [new CreateTokens(Borg, 1)],
+					}
+				),
+			],
+			["Support Mission"] =
+			[
+				When(
+					TriggerEvent.CreatureYouControlEnters,
+					[],
+					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new If(Quests(5), [new AddCounters(Ref.EventCard, 2)])
+					{
+						Otherwise = [new AddCounters(Ref.EventCard, 1)],
+					}
+				),
+			],
+			["Vengeance Mission"] =
+			[
+				When(
+					new Trigger(EventKind.Died) { Subject = Is.Creature },
+					[TargetSpec.Player(Is.Opponents)],
+					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new If(Quests(7), [new LoseLife(Ref.Target(), 2)])
+					{
+						Otherwise = [new LoseLife(Ref.Target(), 1)],
+					}
+				),
+			],
+			["Amok Time"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[
+						Target(Is.Creature & Is.Yours),
+						Target(Is.Creature & Is.Opponents) with
+						{
+							Optional = true,
+						},
+					],
+					new Fight(Ref.Target(0), Ref.Target(1))
+				),
+				Chapter(2, [], new GainLife(Ref.You, 3)),
+				Chapter(
+					3,
+					[TargetSpec.InYourGraveyard(Is.Creature)],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+				),
+			],
+			["In the Pale Moonlight"] =
+			[
+				new SagaComponent(3),
+				Chapter(1, [], new EachSacrifices(Ref.EachOpponent, Is.Creature & !Is.Token)),
+				Chapter(2, [], CreateClue(1)),
+				Chapter(
+					3,
+					[],
+					new MaySacrifice(Is.Artifact | Is.Creature, [new CreateTokens(Romulan, 2)])
+				),
+			],
+			["The Measure of a Man"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[Target(!Is.Token & (Is.Artifact | Is.Creature)) with { Optional = true }],
+					new Exile(Ref.Target()) { Linked = true }
+				),
+				Chapter(2, [], CreateClue(1)),
+				Chapter(3, [], new ReturnLinkedExile(), new GainLife(Ref.You, 2)),
+			],
+			["The Naked Time"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+					{
+						Supertype = Supertype.Basic,
+						Subtype = "Mountain",
+						Tapped = true,
+					}
+				),
+				Chapter(
+					2,
+					[],
+					new WheneverThisTurn(
+						When(
+							TriggerEvent.CreatureYouControlEnters,
+							[],
+							new AddCounters(Ref.EventCard, 1),
+							new ModifyUntilEndOfTurn(Ref.EventCard, 0, 0, "Haste")
+						)
+					)
+				),
+				Chapter(3, [], new EachSacrifices(Ref.You, Is.Land)),
+			],
+			["Those Old Scientists"] =
+			[
+				new SagaComponent(3),
+				Chapter(1, [], new DrawCards(Ref.You, 2), new Discard(Ref.You, 2)),
+				Chapter(
+					2,
+					[
+						TargetSpec.InYourGraveyard(Is.Artifact | Is.Instant | Is.Sorcery) with
+						{
+							Optional = true,
+						},
+					],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+				),
+				Chapter(
+					3,
+					[
+						TargetSpec.InAnyGraveyard() with
+						{
+							Optional = true,
+						},
+						TargetSpec.InAnyGraveyard() with
+						{
+							Optional = true,
+							NotThePrevious = true,
+						},
+					],
+					new ShuffleIntoLibrary(Ref.Target(0)) { FromGraveyards = true },
+					new ShuffleIntoLibrary(Ref.Target(1)) { FromGraveyards = true }
+				),
+			],
+			["Eject the Warp Core"] =
+			[
+				new KickerComponent(ManaCost.None)
+				{
+					Costs = [new SacrificeCost(Is.Artifact | Is.Creature)],
+				},
+				Spell(
+					[Creature],
+					new If(new WasKicked(), [new ModifyUntilEndOfTurn(Ref.Target(), -6, -6)])
+					{
+						Otherwise = [new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)],
+					}
+				),
+			],
+			["Highly Illogical"] =
+			[
+				new KickerComponent(ManaCost.Parse("{1}{U}")),
+				Spell(
+					[
+						TargetSpec.Spell(Is.ManaValueAtMost(2)) with
+						{
+							IfKicked = TargetSpec.Spell(),
+						},
+					],
+					new Counter(Ref.Target())
+				),
+			],
+			["La'An Noonien-Singh, Security"] =
+			[
+				When(
+					TriggerEvent.YouAttackWithTotalPower8,
+					[Creature],
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBlock)
+				),
+			],
+			["Cleveland Booker, Empath"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					new CreateTokens(Worm, 1)
+					{
+						Abilities = [new StaticEffectComponent(Is.Source, Combat.CantBlock)],
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{8}"),
+					[new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 2, 0)]
+				),
+			],
+			["Astute Terraformer"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{6}"),
+					[new ModifyUntilEndOfTurn(Ref.Source, 2, 2)]
+				)
+				{
+					CostChange = new(DifferentlyNamedLands.Negated),
+					OncePerTurn = true,
+				},
+			],
+			["DOT-7 Repair Squad"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}{W}"), [new Untap(Ref.Target())])
+				{
+					Targets = [Creature],
+					SorcerySpeed = true,
+					OncePerTurn = true,
+				},
+			],
+			["Reckless Impulse"] = [Spell([], new ExileTopPlayable { N = 2 })],
+			["Common Goal"] =
+			[
+				Spell(
+					[
+						Target(Is.Creature & Is.Yours),
+						Target(Is.Creature & Is.Yours) with
+						{
+							Optional = true,
+							NotThePrevious = true,
+						},
+						Target(Is.Creature & Is.Opponents),
+					],
+					new DamageFrom(Ref.Target(0), Ref.Target(2), Count.PowerOf(Ref.Target(0))),
+					new DamageFrom(Ref.Target(1), Ref.Target(2), Count.PowerOf(Ref.Target(1)))
+				),
+			],
+			["70,000 Light-Years from Home"] =
+			[
+				Spell(
+					[Target(Is.Creature | Is.Subtype("Spacecraft"))],
+					// The search first, while "its controller" is still on the battlefield to ask; the
+					// exile after it changes nothing the search could see.
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Supertype = Supertype.Basic,
+						Reveal = true,
+						Who = Ref.ControllerOfTarget(0),
+					},
+					new Exile(Ref.Target())
+				),
+			],
+			["L'Rell, Fierce Visionary"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new CreateTokens(KlingonWarrior, 1) { SacrificeAtNextEndStep = true }
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new Surveil(1)])
+				{
+					Costs = [new SacrificeCost((Is.Creature | Is.Artifact) & !Is.Source)],
+				},
+			],
+			["Gray and Adira, Forever Joined"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[Target(Is.Creature & Is.Yours)],
+					new CreateTokenCopy(Ref.Target())
+					{
+						AddingKeywords = ["Haste"],
+						NotLegendary = true,
+						SacrificeAtNextEndStep = true,
+					}
+				) with
+				{
+					If = new AtLeast(Count.NoncreatureSpellsYouCastThisTurn, 1),
+				},
+			],
+			["Dal R'El, Augment Orphan"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					new AddManaOfAnyOneColor(1) { Colors = [ManaColor.Red, ManaColor.Green] }
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{3}"), [new DrawCards(Ref.You, 1)])
+				{
+					Costs = [new SacrificeCost(Is.Land)],
+				},
+			],
+			["Temporal Conqueror"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Mill(Ref.You, 3),
+					new ReturnFromYourGraveyard(Is.Land) { Otherwise = [CreateTreasure(1)] }
+				),
+			],
+			["Andromedan Automatons"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.None, ZoneType.Hand)
+					{
+						Filter = Is.Named("Andromedan Automatons"),
+						FilterText = "Andromedan Automatons",
+						UpTo = Count.NumberOf(
+							Ref.All(
+								ZoneType.Library,
+								Is.Named("Andromedan Automatons"),
+								of: Ref.You
+							)
+						),
+						Reveal = true,
+					}
+				),
+			],
 		};
+
+	/// <summary>A quest's threshold: "if this enchantment has N or more quest counters on it".</summary>
+	static Condition Quests(int n) =>
+		new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Quest), n);
 }

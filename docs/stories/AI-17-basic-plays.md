@@ -442,6 +442,13 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       so those switches stay; freeze a build if that gets unwieldy); **~1 500 games (±0.45pp, ~1–1.5 h)
       near each sprint's end**, asked before it runs. Not GreedyAi: the search already beats it ~75%, past
       the 70% a top player reaches, and it moves with every evaluator and look-ahead fix
+- [ ] AI-17.9 Bug (found in MC-5.3 batch 4a's review, 2026-11-01; Shayne: note it, fix later): the clock's
+      next-attack estimate (`Evaluator.Through`) asks `Combat.CanBlock` and `s.Has` on the board as it is
+      NOW, so a grant that ends this turn is read as lasting into next turn — La'An's "target creature
+      can't block this turn", an attacker's flying or "can't be blocked" until end of turn. For the rest of
+      that turn the AI expects more damage through next turn than there will be. `Through` already strips
+      this turn's toughness pumps (`Pumps`); the fix strips every until-end-of-turn grant the same way (all
+      three at once), measured the AI-6 way — a position with La'An's trigger resolved, the suite, a match
 
 ## Next
 
@@ -475,3 +482,5 @@ cause (this session's guesses were wrong more often than right).
   Deathbringer now sacrifices the Ghoul, the oracle 88.5%.
 - 2026-10-30: AI-17.6 — plans kept (a fresh search at every decision 49.3% over 288, ×1.98 the cost); the
   table's 1 s cap and Infinite Coursework checked on positions.
+- 2026-11-01: AI-17.9 noted — `Evaluator.Through` reads this turn's grants as next turn's (MC-5.3 batch 4a's
+  review); to fix later (Shayne).

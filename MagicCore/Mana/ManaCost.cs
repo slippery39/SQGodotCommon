@@ -75,6 +75,14 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 		);
 	}
 
+	/// <summary>Highly Illogical's kicker: this cost and another, paid together — generic merged into one symbol.</summary>
+	public ManaCost Plus(ManaCost other) =>
+		new ManaCost(
+			Symbols.AddRange(other.Symbols.Where(sym => sym.Kind != SymbolKind.Generic))
+		).WithGeneric(
+			other.Symbols.Where(sym => sym.Kind == SymbolKind.Generic).Sum(sym => sym.Amount)
+		);
+
 	/// <summary>
 	/// "Mana of any type can be spent": each coloured, hybrid or {2/W} symbol becomes {1} — one mana of
 	/// any type pays it. X stays X.

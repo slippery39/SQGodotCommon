@@ -39,6 +39,7 @@ public static class Is
 	public static readonly Filter Prepared = new HasProperty(Property.Prepared);
 	public static readonly Filter PreparedCopy = new HasProperty(Property.PreparedCopy);
 	public static readonly Filter WithPlusOneCounter = new HasProperty(Property.PlusOneCounter);
+	public static readonly Filter WithAnyCounter = new HasProperty(Property.AnyCounter);
 	public static readonly Filter EnteredThisTurn = new HasProperty(Property.EnteredThisTurn);
 	public static readonly Filter AttackedThisTurn = new HasProperty(Property.AttackedThisTurn);
 	public static readonly Filter Attacking = new HasProperty(Property.Attacking);
@@ -70,6 +71,8 @@ public static class Is
 			: new OfSupertype(anyOf);
 
 	public static Filter Subtype(string subtype) => new OfSubtype(subtype);
+
+	public static Filter Named(string name) => new Named(name);
 
 	public static Filter Color(ManaColor color) => new OfColor(color);
 

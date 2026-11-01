@@ -174,6 +174,9 @@ public record ChooseColorChoice : ChoiceAction
 	public const string Chosen = "color";
 	public int PlayerId { get; init; }
 
+	/// <summary>Dal R'El: "{R} or {G}" — the colours offered; empty is all five.</summary>
+	public ImmutableArray<ManaColor> Colors { get; init; } = [];
+
 	/// <summary>The option id for a color, and back — the ONE place the +1 lives.</summary>
 	public static int IdOf(ManaColor color) => (int)color + 1;
 
@@ -193,7 +196,7 @@ public record ChooseColorChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		[
-			.. ManaAbilities.AnyColor.Select(c => new ChoiceOption
+			.. (Colors.IsEmpty ? ManaAbilities.AnyColor : Colors).Select(c => new ChoiceOption
 			{
 				Id = IdOf(c),
 				DisplayText = c.ToString(),

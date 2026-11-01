@@ -24,6 +24,33 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 /// </summary>
 public record ReplicateComponent(int Generic) : GameComponent;
 
+/// <summary>
+/// A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore counter.
+/// Sacrifice after III.)" The lore counters: MagicState.EnterBattlefield and the precombat main
+/// phase's turn-based action (TurnStructure); the sacrifice: the state-based check. Its chapters are
+/// triggered abilities (Scripting.Chapter).
+/// </summary>
+public record SagaComponent(int Chapters) : GameComponent;
+
+/// <summary>
+/// Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U} as you cast
+/// this spell.)" — CastSpellAction.Kicked; "if this spell was kicked" is the condition WasKicked, a
+/// target word that changes when kicked is TargetSpec.IfKicked.
+/// </summary>
+public record KickerComponent(ManaCost Mana) : GameComponent
+{
+	/// <summary>Eject the Warp Core: "Kicker—Sacrifice an artifact or creature." — paid only when kicked.</summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
+}
+
+/// <summary>The named counter kinds (Card.Counters) scripts and rules share.</summary>
+public static class CounterKinds
+{
+	public const string Lore = "lore";
+	public const string Quest = "quest";
+	public const string Promotion = "promotion";
+}
+
 /// <summary>What happened, for triggers — one value per event record. Grows only with a new kind of event.</summary>
 public enum EventKind
 {
@@ -45,6 +72,7 @@ public enum EventKind
 	LifeGained,
 	BecameTapped, // Hemmer: "whenever Hemmer becomes tapped"
 	FacedDilemma, // "whenever you face a dilemma" — modes chosen for a spell or ability
+	CountersPut, // a Saga's chapter: "as the number of lore counters becomes at least N" (Trigger.Chapter)
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 }
 
@@ -121,6 +149,40 @@ public record Trigger(EventKind On)
 	/// again as it resolves (release notes).
 	/// </summary>
 	public Condition? While { get; init; }
+
+	readonly int chapter;
+
+	/// <summary>
+	/// A Saga's chapter N (CR 714.2b): it triggers as the number of lore counters on this becomes at
+	/// least N — written with Scripting.Chapter.
+	/// </summary>
+	public int Chapter
+	{
+		get => chapter;
+		init =>
+			chapter =
+				value == 0 || On == EventKind.CountersPut
+					? value
+					: throw new ArgumentException($"A Chapter only fits CountersPut, not {On}");
+	}
+
+	readonly Filters.Filter? combatDamageBy;
+
+	/// <summary>
+	/// Phlox, Unorthodox Doctor: "Whenever a creature you control with a counter on it deals combat
+	/// damage to a player" — combat damage from a source this matches.
+	/// </summary>
+	public Filters.Filter? CombatDamageBy
+	{
+		get => combatDamageBy;
+		init =>
+			combatDamageBy =
+				value is null || On == EventKind.PlayerDealtDamage
+					? value
+					: throw new ArgumentException(
+						$"CombatDamageBy only fits PlayerDealtDamage, not {On}"
+					);
+	}
 
 	static bool Fits(EventKind on, EventTest test) =>
 		test switch
@@ -402,6 +464,12 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 
 	/// <summary>"Activate only if [condition]" — judged as it is activated.</summary>
 	public Condition? OnlyIf { get; init; }
+
+	/// <summary>
+	/// DOT-7 Repair Squad: "Activate only once each turn." — stamped on the card as it is activated
+	/// (Card.ActivatedOncePerTurnOn). ponytail: one stamp per card, as Exhaust's — no TRK card has two.
+	/// </summary>
+	public bool OncePerTurn { get; init; }
 
 	/// <summary>
 	/// "Exhaust — … (Activate each exhaust ability only once.)" — stamped on the card as it is

@@ -287,7 +287,7 @@ public record CopySpell(Ref What) : Effect
 			);
 			s = s.MoveObjectToFront(copy.Id, stack); // index 0 is the top
 			var onStack = copy.GetComponent<OnStackComponent>()!;
-			var specs = StackResolution.TextOf(copy, onStack.Modes).Specs;
+			var specs = StackResolution.TextOf(copy, onStack.Modes, onStack.Kicked).Specs;
 			if (specs.IsEmpty)
 				continue;
 			s = s.SpawnAction(
@@ -333,6 +333,9 @@ public record SetCopyTargetsAction(int CopyId) : GameAction
 /// <summary>Culber and Stamets, Star-Crossed: "Add two mana of any one color." — the colour chosen as it resolves.</summary>
 public record AddManaOfAnyOneColor(Count Amount) : Effect
 {
+	/// <summary>Dal R'El, Augment Orphan: "add {R} or {G}" — the colours to choose from; empty is any.</summary>
+	public ImmutableArray<ManaColor> Colors { get; init; } = [];
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -341,7 +344,7 @@ public record AddManaOfAnyOneColor(Count Amount) : Effect
 					PipelineContext = InputContext,
 					Steps =
 					[
-						new ChooseColorChoice(Controller),
+						new ChooseColorChoice(Controller) { Colors = Colors },
 						new AddChosenColorManaAction(Amount),
 					],
 				}
@@ -598,6 +601,26 @@ public record UntilYourNextTurnWhenever(TriggeredAbilityComponent Ability) : Eff
 /// </summary>
 public abstract record ThisTurnEffect : GameComponent;
 
+/// <summary>
+/// The Naked Time, chapter II: "Whenever a creature you control enters this turn, …" — the ability on an
+/// object in your command zone, gone with the turn's other "this turn" effects.
+/// </summary>
+public record WheneverThisTurn(TriggeredAbilityComponent Ability) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			GetEmblem.ToCommandZone(
+				s,
+				Controller,
+				$"{Source(s).Name} (this turn)",
+				[Ability, new TriggersThisTurn()]
+			)
+		);
+}
+
+/// <summary>Marks WheneverThisTurn's object as a "this turn" effect, so the turn's end removes it.</summary>
+public record TriggersThisTurn : ThisTurnEffect;
+
 /// <summary>Puts a <see cref="ThisTurnEffect"/> in your command zone for the rest of the turn.</summary>
 public record ThisTurn(ThisTurnEffect What) : Effect
 {
@@ -628,6 +651,8 @@ public record NoLegendRule : ThisTurnEffect;
 /// Tam: "Proliferate X times" (CR 701.27). ponytail: no prompt — it chooses your permanents' good
 /// counters (+1/+1, loyalty, charge) and opponents' bad ones (-1/-1, stun), never the other kind; as
 /// RemoveCounters does. No FRA player has counters. Make it a choice if a card ever wants otherwise.
+/// ponytail: the named counters (Card.Counters — quest, lore, promotion) aren't proliferated; offer
+/// them once a card proliferates beside them (DesignNotes).
 /// </summary>
 public record Proliferate(Count Times) : Effect
 {
@@ -712,6 +737,29 @@ public record AddChargeCounters(Ref What, Count N) : Effect
 				)
 		);
 	}
+}
+
+/// <summary>
+/// "Put a quest counter on this enchantment" (Anthropological Mission), "a promotion counter on her"
+/// (Beckett Mariner) — a named kind, on any permanent, through MagicState.PutCounters.
+/// </summary>
+public record PutCounters(Ref What, string Kind, Count N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var n = N.Value(s, InputContext);
+		return new(Permanents(What, s).Aggregate(s, (st, c) => st.PutCounters(c.Id, Kind, n)));
+	}
+}
+
+/// <summary>Beckett Mariner: "remove those counters" — every counter of the kind.</summary>
+public record RemoveCountersOfKind(Ref What, string Kind) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			Permanents(What, s)
+				.Aggregate(s, (st, c) => st.PutCounters(c.Id, Kind, -c.CountersOf(Kind)))
+		);
 }
 
 /// <summary>"Tap [What]" — permanents only.</summary>

@@ -127,6 +127,17 @@ public sealed record OfSubtype(string Subtype) : Filter
 		o is Card card && card.Subtypes.Contains(Subtype);
 }
 
+/// <summary>Andromedan Automatons: "any number of cards named Andromedan Automatons".</summary>
+public sealed record Named(string Name) : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card && card.Name == Name;
+}
+
 /// <summary>Terminal Criticism: "that's blue or red" — one colour each, joined with |.</summary>
 public sealed record OfColor(ManaColor Color) : Filter
 {
@@ -235,6 +246,7 @@ public enum Property
 	Prepared, // the creature is prepared (it has a copy of its spell in exile)
 	PreparedCopy, // Codie: the copy of a prepare spell, cast from exile
 	PlusOneCounter, // "with a +1/+1 counter on it"
+	AnyCounter, // Dominion Supervisor: "with counters on them" — any kind (Card.HasAnyCounter)
 	EnteredThisTurn,
 	AttackedThisTurn,
 	Attacking,
@@ -272,6 +284,7 @@ public sealed record HasProperty(Property Property) : Filter
 			Property.Prepared => card.IsPrepared,
 			Property.PreparedCopy => card.HasComponent<Effects.PreparedCopyOf>(),
 			Property.PlusOneCounter => card.PlusOneCounters > 0,
+			Property.AnyCounter => card.HasAnyCounter,
 			Property.EnteredThisTurn => card.EnteredOnTurn == s.GetGame().TurnNumber,
 			Property.AttackedThisTurn => card.AttackedOnTurn == s.GetGame().TurnNumber,
 			Property.Attacking => card.AttackingId != 0,

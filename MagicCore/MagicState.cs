@@ -316,6 +316,9 @@ public static class MagicState
 				),
 			entering: true
 		);
+		// CR 714.3a: "As a Saga enters the battlefield, its controller puts a lore counter on it" — chapter I.
+		if (card.HasComponent<SagaComponent>())
+			s = s.PutCounters(cardId, CounterKinds.Lore, 1);
 		// An Aura enters attached: to the target it was cast at, or to what its controller chooses (CR 303.4f).
 		if (card.HasComponent<AuraComponent>())
 			s =
@@ -421,6 +424,28 @@ public static class MagicState
 				PlusOneCounters = Math.Max(0, card.PlusOneCounters + n),
 			}
 		);
+	}
+
+	/// <summary>
+	/// The ONE way counters of a named kind (Card.Counters) are put on or removed — raising what a Saga's
+	/// chapter reads (CR 714.2b: "as the number of lore counters becomes at least the chapter number").
+	/// Negative removes, never below 0.
+	/// </summary>
+	public static GameState PutCounters(this GameState s, int cardId, string kind, int n)
+	{
+		var card = s.GetCard(cardId);
+		var had = card.CountersOf(kind);
+		var now = Math.Max(0, had + n);
+		if (now == had)
+			return s;
+		s = s.UpdateObject(
+			cardId,
+			card with
+			{
+				Counters = now == 0 ? card.Counters.Remove(kind) : card.Counters.SetItem(kind, now),
+			}
+		);
+		return now > had ? s.Raise(new CountersPutEvent(cardId, kind, had, now)) : s;
 	}
 
 	/// <summary>A player's "this turn" effects of one kind (<see cref="Effects.ThisTurn"/>), as the objects that hold them.</summary>

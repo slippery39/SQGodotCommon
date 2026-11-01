@@ -19,3 +19,4 @@ session per batch was simulated to save 37–40%.
 | 2026-10-31 | MC-5.3: batch 1 — tier 0-1 TRK commons and uncommons, 88 cards | 0065e5f8 | 125 | 254k | 5.0M |
 | 2026-10-31 | MC-5.2 + MC-5.3 batch 2: Station, 12 cards | a4330530 | 116 | 248k | 4.4M |
 | 2026-11-01 | MC-5.3: batch 3, the small TRK mechanics (beam me up, SNW, dilemma, power 8, becomes tapped, look-take, Federation), 31 cards | 14545f2e | 153 | 293k | 7.4M |
+| 2026-11-01 | MC-5.3: batch 4a — counters of any kind, Sagas, kicker, can't block, once each turn, 28 cards | dfef712d | 143 | 297k | 7.4M |

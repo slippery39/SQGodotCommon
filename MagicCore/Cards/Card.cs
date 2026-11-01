@@ -188,6 +188,29 @@ public record Card : GameObject
 	/// <summary>Its exhaust ability has been activated — never again for this object.</summary>
 	public bool ExhaustUsed { get; init; }
 
+	/// <summary>DOT-7 Repair Squad: "Activate only once each turn" — the TurnNumber it was last activated.</summary>
+	public int ActivatedOncePerTurnOn { get; init; }
+
+	/// <summary>
+	/// The counter kinds TRK added, by name — quest (Anthropological Mission), lore (Sagas), promotion
+	/// (Beckett Mariner). The older kinds keep their own fields; MagicState.PutCounters is the one way in.
+	/// </summary>
+	public ImmutableDictionary<string, int> Counters { get; init; } =
+		ImmutableDictionary<string, int>.Empty;
+
+	public int CountersOf(string kind) => Counters.GetValueOrDefault(kind);
+
+	/// <summary>Dominion Supervisor: "creatures you control with counters on them" — a counter of any kind.</summary>
+	public bool HasAnyCounter =>
+		PlusOneCounters > 0
+		|| MinusOneCounters > 0
+		|| ChargeCounters > 0
+		|| TimeCounters > 0
+		|| StunCounters > 0
+		|| Loyalty > 0
+		|| HasFinalityCounter
+		|| Counters.Values.Any(n => n > 0);
+
 	/// <summary>The player OR planeswalker it is attacking; 0 when not attacking. Never assume a player.</summary>
 	public int AttackingId { get; init; }
 
@@ -227,6 +250,8 @@ public record Card : GameObject
 			StunCounters = 0,
 			HasDealtCombatDamage = false,
 			ExhaustUsed = false,
+			ActivatedOncePerTurnOn = 0,
+			Counters = ImmutableDictionary<string, int>.Empty,
 			Damage = 0,
 			DamagedByDeathtouch = false,
 			ControlledSinceTurn = 0,

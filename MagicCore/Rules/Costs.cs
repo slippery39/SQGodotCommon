@@ -54,16 +54,20 @@ public static class Costs
 	/// </param>
 	/// <param name="free">"Without paying its mana cost" (Omnipresence) — taxes and additional costs still apply.</param>
 	/// <param name="targets">The spell's chosen targets — Guidance Failure: "costs {1} less to cast if it targets an attacking creature".</param>
+	/// <param name="added">An additional mana cost beyond generic — a kicker's {1}{U}; paid even when cast free.</param>
 	public static ManaCost Of(
 		GameState s,
 		int casterId,
 		Card card,
 		int addedGeneric = 0,
 		bool free = false,
-		System.Collections.Immutable.ImmutableArray<int> targets = default
+		System.Collections.Immutable.ImmutableArray<int> targets = default,
+		ManaCost? added = null
 	)
 	{
 		var printed = free ? ManaCost.None : Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
+		if (added is not null)
+			printed = printed.Plus(added);
 		// Null Summoner: "mana of any type can be spent to cast that spell".
 		if (!free && Playable.IsCastableThroughLink(s, card, casterId))
 			printed = printed.OfAnyType();

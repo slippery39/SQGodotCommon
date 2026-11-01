@@ -70,9 +70,16 @@ public static class Combat
 	/// <summary>"Can't be blocked" — granted by static abilities and until-end-of-turn effects alike.</summary>
 	public const string CantBeBlocked = "Can't be blocked";
 
+	/// <summary>
+	/// "Can't block" — Cleveland Booker's Worm token (a static), La'An's "target creature can't block
+	/// this turn" (until end of turn): a keyword-like grant, like CantBeBlocked.
+	/// </summary>
+	public const string CantBlock = "Can't block";
+
 	public static bool CanBlock(GameState s, Card blocker, Card attacker) =>
 		blocker.Is(CardType.Creature)
 		&& !blocker.IsTapped
+		&& !s.Has(blocker, CantBlock)
 		&& !s.Has(attacker, CantBeBlocked)
 		&& (!s.Has(attacker, "Flying") || s.Has(blocker, "Flying") || s.Has(blocker, "Reach"));
 

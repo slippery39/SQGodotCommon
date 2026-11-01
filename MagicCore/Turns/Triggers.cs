@@ -173,6 +173,15 @@ public record LoyaltyActivatedEvent(int PlayerId, int Cost) : MagicEvent
 	public override int By(GameState s) => PlayerId;
 }
 
+/// <summary>Counters of a named kind were put on a permanent (MagicState.PutCounters) — From and To are how many it had and has.</summary>
+public record CountersPutEvent(int CardId, string CounterKind, int From, int To) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.CountersPut;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
+
 /// <summary>A permanent went from untapped to tapped — raised by MagicState.Tap, every tap path (Hemmer).</summary>
 public record BecameTappedEvent(int CardId) : MagicEvent
 {
@@ -456,6 +465,24 @@ public static class Triggers
 		)
 			return false;
 		if (on.While is { } holding && !holding.Holds(s, Conditions.Of(source)))
+			return false;
+		if (
+			on.Chapter > 0
+			&& (
+				e is not CountersPutEvent { CounterKind: CounterKinds.Lore } lore
+				|| lore.From >= on.Chapter
+				|| lore.To < on.Chapter
+			)
+		)
+			return false;
+		if (
+			on.CombatDamageBy is { } by
+			&& (
+				e is not PlayerDealtDamageEvent { Combat: true } damage
+				|| !s.HasObject(damage.SourceId)
+				|| !by.Matches(s, s.GetObject(damage.SourceId), asking)
+			)
+		)
 			return false;
 		// A spell's target that is a player, or a permanent on the battlefield now.
 		bool Targets(SpellCastEvent cast, Filter f) =>

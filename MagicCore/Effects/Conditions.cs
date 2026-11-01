@@ -81,6 +81,14 @@ public record CastFrom(ZoneType Zone) : Condition
 		&& spell.GetComponent<Actions.OnStackComponent>()?.CastFrom == Zone;
 }
 
+/// <summary>Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.</summary>
+public record WasKicked : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetObject((int)context[ContextKeys.Source]) is Card spell
+		&& spell.GetComponent<Actions.OnStackComponent>()?.Kicked == true;
+}
+
 /// <summary>
 /// Null Summoner: "if you cast it" — it entered by resolving as a spell. Read from the source as it
 /// was when it triggered, so it leaving in response doesn't change the answer.

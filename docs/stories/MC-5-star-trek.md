@@ -76,6 +76,14 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   now, with a note** (Spock, Always Your Friend; `DesignNotes.md`). **Pure Energy's distribution is the
   exact rule**: split as it is cast, so a second target gone illegal loses its counter.
 
+- 2026-11-01, Shayne (MC-5.3 batch 4's questions): **batch 4 is three sessions** — 4a counters (any kind,
+  quests), Sagas, Kicker, can't block, once each turn and the tier-2 options (28); 4b the old tags'
+  one-offs (delayed return, leaves the graveyard, type change, second resolution, granted trigger,
+  control, Brad Boimler, block and target restrictions — 17); 4c the 14 remaining one-offs. **A Saga's
+  lore counter is added as your precombat main phase begins** (a turn-based action, CR 714.3b — no
+  trigger). **Warp Speed: every land you control enters untapped** — its own "enters tapped", Root
+  Maze's, a token created tapped and "onto the battlefield tapped" alike.
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -91,7 +99,10 @@ Open questions:
       Batch 3 (2026-10-31): beam me up (`BeamMeUpCost`), strange new worlds (`Count.DistinctNamesOf`), face
       a dilemma (`FacedDilemmaEvent`, three places), power 8 (`Trigger.While`, `Count.TotalPowerOf`), becomes
       tapped (`MagicState.Tap`, all six tap paths), look and take (`LookAndTake`), Federation
-      (`Count.CreatureTypesAmong`); "tap two" is now the player's choice (Worf — Tenured Tethermage too)
+      (`Count.CreatureTypesAmong`); "tap two" is now the player's choice (Worf — Tenured Tethermage too).
+      Batch 4a (2026-11-01): counters of any kind (`Card.Counters`, `MagicState.PutCounters`, `Is.WithAnyCounter`),
+      quests, Sagas (`SagaComponent`, `Scripting.Chapter`), kicker (`KickerComponent`), can't block
+      (`Combat.CantBlock`), once each turn (`ActivatedAbilityComponent.OncePerTurn`)
 - [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
       the 88 tier 0–1 C/U not waiting on STATION or ANY-COUNTER (re-tiered: 4 tier 3, 6 tier 2, list in
       `TrkCoverage.md`); new pieces: modal activated abilities, `PutSelfOnBottomCost`, `AddManaOfAnyOneColor`,
@@ -100,7 +111,11 @@ Open questions:
       options: `Is.Tapped`, `RevealUntilOntoBattlefield.HowMany/Tapped`, a spell's cost change seeing its
       targets. Batch 3 done 2026-10-31: the 31 C/U on batch 3's mechanics (Hemmer and Rutherford in);
       new options: `ExileTopPlayable.ThisTurn` (Kirk), `TargetChosen` (Pure Energy's split as cast),
-      `ChooseAmongChoice.Filter`. Waiting: Zefram Cochrane (tier-3 one-offs); batch 4's list in `TrkCoverage.md`
+      `ChooseAmongChoice.Filter`. Batch 4a done 2026-11-01: 28 C/U on the counter map, quests, Sagas, kicker,
+      can't block and once each turn, with the tier-2 options (`ExileTopPlayable.N`, `SacrificeAtNextEndStep`,
+      `CreateTokenCopy.NotLegendary`, `AddManaOfAnyOneColor.Colors`, `SearchLibrary.Who`, `Is.Named`,
+      `ReturnFromYourGraveyard`, `Trigger.CombatDamageBy`, `Exile.Linked` + `ReturnLinkedExile`,
+      `WheneverThisTurn`, `ShuffleIntoLibrary.FromGraveyards`). Waiting: 4b (17) and 4c (14), listed in `TrkCoverage.md`
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -113,14 +128,15 @@ Open questions:
 
 ## Next
 
-**MC-5.3 batch 3 is done (2026-10-31): the small mechanics play, 147/311** — beam me up, strange new
-worlds, face a dilemma, power 8, becomes tapped, look and take and Federation (each one's rule in
-`magic-mechanics.md`, its script helper in `TrkCards`: `BeamMeUp`, `DifferentlyNamedLands`, `Federation`), with
-the 31 commons and uncommons waiting on them. "Tap two" is the player's choice (`SecondTapId`). Batch 3's
-shortcuts are in `DesignNotes.md` (Spock's "any order" is random; bottom cards in a random order aren't known).
-**Next: batch 4 in a NEW session — the C/U left (`TrkCoverage.md`'s status names them): counters of any
-kind (ANY-COUNTER, QUEST), can't block, once each turn, Sagas, Kicker, and the four batch 3 re-tiered to 3
-(Species 8472, Ensign Pavel Chekov, Erica Ortegas, Warp Speed).** Every batch starts in a NEW session
+**MC-5.3 batch 4a is done (2026-11-01): 175/311 play** — counters of any kind and quests, Sagas, kicker,
+can't block and once each turn (each one's rule in `magic-mechanics.md`), with 28 commons and uncommons.
+Batch 4a's shortcuts are in `DesignNotes.md` (one once-a-turn stamp per card; any triggered ability of a
+Saga counts as a chapter; proliferate doesn't see the named counters). **Next: batch 4b in a NEW session —
+17 C/U on the old tags' one-offs (`TrkCoverage.md`'s status lists them): delayed return, leaves the
+graveyard, type change, second resolution, granted trigger, gain control, Brad Boimler's "plus one" of
+every kind (it must reach every counter path — `PutCounters`, `AddPlusOneCounters`, charge, loyalty, stun),
+Exploratory Mission, Storied Veteran, Cold-Blooded Crew and Species 8472. Then 4c, the 14 one-offs.**
+Every batch starts in a NEW session
 (`/card-batch` step 0) and ends with its usage row (`tools/usage_report.py --log`,
 `docs/findings/card-batch-usage.md`) — this set tests that workflow.
 
@@ -174,3 +190,11 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   "tap two" card (Tenured Tethermage's became a choice too). The review's fixes: either tap clicked first
   (one move by `MoveKey`), "tap two" not split again on a copied cost list, the beamed-up creature may tap
   for the mana first.
+- 2026-11-01: MC-5.3 batch 4a — Shayne's three answers in Decisions (the cut into 4a/4b/4c; lore at the
+  precombat main phase; Warp Speed untaps every land); 28 cards (9 C, 19 U), TRK 175/311; 24 tests, 36/36
+  revert-checks caught (one only after a vacuous test was fixed); probe: 150 games, no crash, every card
+  used; bench −1.0% on the unchanged games (+7.7% on all, from the 30 every-card games now dealing the new
+  cards); golden replays regenerated — 1,102 of 1,716 recorded card games moved, every one dealing a new card; no
+  FRA game or AI replay moved. The review's fixes: the greedy AI picks among the colours offered (Dal R'El
+  crashed it), a linked exile only for the same object of the source, a Saga that lost all abilities is not
+  sacrificed, no zero-count entries in the counter map.

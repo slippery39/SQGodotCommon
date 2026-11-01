@@ -183,10 +183,28 @@ public record Exile(Ref What) : Effect
 	/// <summary>Overwrite the Multiverse: "… where X is the number of creatures exiled this way" — run after, with X.</summary>
 	public ImmutableList<GameAction> ThenWithXExiled { get; init; } = [];
 
+	/// <summary>
+	/// The Measure of a Man: "I — Exile up to one target …" whose III returns "the exiled card" — linked
+	/// to this object of the source (ExiledBy, CR 607.2a); ReturnLinkedExile brings it back.
+	/// </summary>
+	public bool Linked { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var exiled = Permanents(What, s).ToList();
 		s = exiled.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Exile)));
+		// Linked to the object the ability came from — one that left and came back never finds it (CR 607.2a).
+		if (Linked && Ref.Source.Resolve(s, InputContext).Any() && s.IsOnBattlefield(Source(s).Id))
+			s = exiled.Aggregate(
+				s,
+				(st, c) =>
+					Update(
+						st,
+						(Card)
+							st.GetCard(c.Id)
+								.WithComponent(new ExiledBy(Source(st).Id, Source(st).Incarnation))
+					)
+			);
 		return ThenWithXExiled.IsEmpty
 			? new(s)
 			: new(
@@ -286,6 +304,9 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>Tenured Tethermage: "create two tapped Heartwood tokens".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>L'Rell, Fierce Visionary: "Sacrifice it at the beginning of the next end step." — set once it has entered.</summary>
+	public bool SacrificeAtNextEndStep { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var count = Count.Value(s, InputContext);
@@ -307,6 +328,12 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 				s = Update(
 					s,
 					(Card)s.GetCard(token.Id).WithComponent(new UntilEndOfTurn(Keyword: keyword))
+				);
+			if (SacrificeAtNextEndStep)
+				s = ReturnFromExileUnderYourControl.Delay(
+					s,
+					token.Id,
+					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
 				);
 		}
 		return new(s);
@@ -343,6 +370,12 @@ public record CreateTokenCopy(Ref What) : Effect
 	/// <summary>Splinter Twin: "Exile that token at the beginning of the next end step." — set once it has entered.</summary>
 	public bool ExileAtNextEndStep { get; init; }
 
+	/// <summary>Gray and Adira: "Sacrifice it at the beginning of the next end step."</summary>
+	public bool SacrificeAtNextEndStep { get; init; }
+
+	/// <summary>Gray and Adira: "except it isn't legendary".</summary>
+	public bool NotLegendary { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var originals = Permanents(What, s).ToList();
@@ -367,6 +400,9 @@ public record CreateTokenCopy(Ref What) : Effect
 				{
 					Keywords = [.. copy.Keywords, .. AddingKeywords],
 					Components = [.. copy.Components, .. Adding],
+					Supertypes = NotLegendary
+						? copy.Supertypes & ~Supertype.Legendary
+						: copy.Supertypes,
 				}
 			) with
 			{
@@ -376,11 +412,16 @@ public record CreateTokenCopy(Ref What) : Effect
 			s = s.EnterBattlefield(copy.Id, Controller);
 			// after entering: a zone change strips a delayed trigger, entering included
 			if (ExileAtNextEndStep)
-				s = Update(
+				s = ReturnFromExileUnderYourControl.Delay(
 					s,
-					(Card)
-						s.GetCard(copy.Id)
-							.WithComponent(ReturnFromExileUnderYourControl.ExileItAtTheEndStep)
+					copy.Id,
+					ReturnFromExileUnderYourControl.ExileItAtTheEndStep
+				);
+			if (SacrificeAtNextEndStep)
+				s = ReturnFromExileUnderYourControl.Delay(
+					s,
+					copy.Id,
+					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
 				);
 		}
 		return new(s);
@@ -403,6 +444,14 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 	internal static readonly DelayedTrigger ExileItAtTheEndStep =
 		new(new TriggeredAbilityComponent(TriggerEvent.EachEndStep, [new Exile(Ref.Source)]));
 
+	/// <summary>"Sacrifice it at the beginning of the next end step" — L'Rell's token, Gray and Adira's copy.</summary>
+	internal static readonly DelayedTrigger SacrificeItAtTheEndStep =
+		new(new TriggeredAbilityComponent(TriggerEvent.EachEndStep, [new Sacrifice(Ref.Source)]));
+
+	/// <summary>A delayed trigger on a permanent that has just entered — after it, as entering strips one given before.</summary>
+	internal static GameState Delay(GameState s, int id, DelayedTrigger trigger) =>
+		Update(s, (Card)s.GetCard(id).WithComponent(trigger));
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in All(What, s).ToList())
@@ -414,9 +463,67 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 				continue;
 			s = s.EnterBattlefield(id, Controller, tapped: Tapped);
 			if (ExileAtNextEndStep)
-				s = Update(s, (Card)s.GetCard(id).WithComponent(ExileItAtTheEndStep));
+				s = Delay(s, id, ExileItAtTheEndStep);
 		}
 		return new(s);
+	}
+}
+
+/// <summary>
+/// The Measure of a Man: "III — Return the exiled card to the battlefield under its owner's control." —
+/// every card this object of the source exiled (Exile.Linked); nothing once the source left (CR 607.2a).
+/// </summary>
+public record ReturnLinkedExile : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (!Ref.Source.Resolve(s, InputContext).Any() || !s.IsOnBattlefield(Source(s).Id))
+			return new(s);
+		var source = Source(s);
+		foreach (
+			var card in new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
+				.Where(c =>
+					c.GetComponent<ExiledBy>() is { } by
+					&& by.SourceId == source.Id
+					&& by.SourceIncarnation == source.Incarnation
+				)
+				.ToList()
+		)
+			s = s.EnterBattlefield(card.Id, card.OwnerId);
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Temporal Conqueror: "Then return a land card from your graveyard to your hand. If you can't, create a
+/// Treasure token." — chosen, not targeted; Otherwise runs only when there is none.
+/// </summary>
+public record ReturnFromYourGraveyard(Filters.Filter Filter) : Effect
+{
+	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var choice = new ChooseAmongChoice
+		{
+			PlayerId = Controller,
+			Ids = [.. s.CardsIn(Controller, ZoneType.Graveyard).Select(c => c.Id)],
+			Filter = Filter,
+			MinChoices = 1,
+			Prompt = "Put one into your hand",
+		};
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps = choice.GetOptions(s, InputContext).IsEmpty
+						? Otherwise
+						: [choice, new MoveChosenToAction(Controller, ZoneType.Hand)],
+				}
+			)
+		);
 	}
 }
 
@@ -874,45 +981,49 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>"Reveal it" — landcycling, Fblthp, Pia, Loyal Tutor: the found card is known to everyone where it goes.</summary>
 	public bool Reveal { get; init; }
 
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
-					Steps =
-					[
-						new ChooseFromLibraryChoice
-						{
-							PlayerId = Controller,
-							Type = Type,
-							Supertype = Supertype,
-							Subtype = Subtype,
-							Filter = Filter,
-							DifferentNames = DifferentNames,
-							MaxChoices = Math.Max(0, UpTo.Value(s, InputContext)),
-							Prompt =
-								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{(FilterText is null ? "" : FilterText + " ")}{(Subtype is null ? "" : Subtype + " ")}{(Type == CardType.None ? "" : Type.ToString().ToLowerInvariant() + " ")}card{(UpTo == 1 ? "" : "s")}{(DifferentNames ? " with different names" : "")}",
-						},
-						// Loyal Tutor: "then shuffle and put that card on top" — the shuffle comes first.
-						.. To == ZoneType.Library
-							? (GameAction[])
-								[
-									new ShuffleLibraryAction(Controller),
-									new MoveChosenToAction(Controller, ZoneType.Library)
-									{
-										OnTop = true,
-									},
-								]
-							:
+	/// <summary>70,000 Light-Years from Home: "Its controller may search their library" — who searches; unset is you.</summary>
+	public Ref? Who { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var searcher = Who is null ? Controller : All(Who, s).FirstOrDefault();
+		return searcher == 0 ? new(s) : new(Search(s, searcher));
+	}
+
+	GameState Search(GameState s, int searcher) =>
+		s.SpawnAction(
+			new PipelineAction
+			{
+				PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+				Steps =
+				[
+					new ChooseFromLibraryChoice
+					{
+						PlayerId = searcher,
+						Type = Type,
+						Supertype = Supertype,
+						Subtype = Subtype,
+						Filter = Filter,
+						DifferentNames = DifferentNames,
+						MaxChoices = Math.Max(0, UpTo.Value(s, InputContext)),
+						Prompt =
+							$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{(FilterText is null ? "" : FilterText + " ")}{(Subtype is null ? "" : Subtype + " ")}{(Type == CardType.None ? "" : Type.ToString().ToLowerInvariant() + " ")}card{(UpTo == 1 ? "" : "s")}{(DifferentNames ? " with different names" : "")}",
+					},
+					// Loyal Tutor: "then shuffle and put that card on top" — the shuffle comes first.
+					.. To == ZoneType.Library
+						? (GameAction[])
 							[
-								new MoveChosenToAction(Controller, To) { Tapped = Tapped },
-								new ShuffleLibraryAction(Controller),
-							],
-						.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],
-					],
-				}
-			)
+								new ShuffleLibraryAction(searcher),
+								new MoveChosenToAction(searcher, ZoneType.Library) { OnTop = true },
+							]
+						:
+						[
+							new MoveChosenToAction(searcher, To) { Tapped = Tapped },
+							new ShuffleLibraryAction(searcher),
+						],
+					.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],
+				],
+			}
 		);
 }
 
@@ -1038,14 +1149,15 @@ public record ExileTopPlayable : Effect
 	/// <summary>Kirk, Commanding Officer: "You may play that card this turn." — not until the end of your next.</summary>
 	public bool ThisTurn { get; init; }
 
+	/// <summary>Reckless Impulse: "Exile the top two cards of your library."</summary>
+	public int N { get; init; } = 1;
+
 	public override ActionResult Execute(GameState s)
 	{
-		var top = s.CardsIn(Controller, ZoneType.Library).FirstOrDefault();
-		if (top is null)
-			return new(s);
-		s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
-		return new(
-			Update(
+		foreach (var top in s.CardsIn(Controller, ZoneType.Library).Take(N).ToList())
+		{
+			s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
+			s = Update(
 				s,
 				(Card)
 					s.GetCard(top.Id)
@@ -1057,8 +1169,9 @@ public record ExileTopPlayable : Effect
 									: Playable.EndOfNextTurnOf(s, Controller)
 							)
 						)
-			)
-		);
+			);
+		}
+		return new(s);
 	}
 }
 
@@ -1363,9 +1476,17 @@ public record ReturnToHand(Ref What) : Effect
 /// <summary>"Its owner shuffles it into their library."</summary>
 public record ShuffleIntoLibrary(Ref What) : Effect
 {
+	/// <summary>Those Old Scientists: "Choose up to two target cards in graveyards. The owners of those cards shuffle them into their libraries."</summary>
+	public bool FromGraveyards { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		foreach (var card in Permanents(What, s).ToList())
+		var cards = FromGraveyards
+			? All(What, s)
+				.Where(id => s.GetObject(id) is Card c && s.IsIn(id, c.OwnerId, ZoneType.Graveyard))
+				.Select(s.GetCard)
+			: Permanents(What, s);
+		foreach (var card in cards.ToList())
 			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Library)).Shuffle(card.OwnerId);
 		return new(s);
 	}

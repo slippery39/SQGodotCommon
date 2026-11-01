@@ -54,6 +54,12 @@ public record TargetSpec(From From, Filter? Filter = null)
 	/// </summary>
 	public TargetSpec? Or { get; init; }
 
+	/// <summary>
+	/// Highly Illogical: "Counter target spell with mana value 2 or less. If this spell was kicked,
+	/// instead counter target spell." — the target word as it reads when kicked (StackResolution.TextOf).
+	/// </summary>
+	public TargetSpec? IfKicked { get; init; }
+
 	/// <summary>"Target creature" — on the battlefield.</summary>
 	public static readonly TargetSpec Creature = Permanent(Is.Creature);
 	public static readonly TargetSpec CreatureOrPlaneswalker = Permanent(

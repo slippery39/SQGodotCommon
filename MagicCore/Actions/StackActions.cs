@@ -18,6 +18,9 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 
 	/// <summary>Theorist's Proxy: this cast can't be countered — gone with the stack object, so a recast can be.</summary>
 	public bool CantBeCountered { get; init; }
+
+	/// <summary>Kicker: "if this spell was kicked" — a copy of it is kicked too (CR 707.10).</summary>
+	public bool Kicked { get; init; }
 }
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
@@ -76,6 +79,9 @@ public record CastSpellAction : GameAction
 	/// <summary>Consign to Memory: how many times its replicate cost is paid — that many copies.</summary>
 	public int Replicate { get; init; }
 
+	/// <summary>Kicker: its kicker cost is paid too (KickerComponent).</summary>
+	public bool Kicked { get; init; }
+
 	/// <summary>
 	/// Cast by an effect as it resolves (CastNow — Chandra, Uldaros): no priority, no timing, and the
 	/// effect is the permission to cast it from where it is (and, free, to skip its mana cost). Every
@@ -83,11 +89,16 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public bool DuringResolution { get; init; }
 
-	/// <summary>What casting it costs beyond mana: its additional costs, then its flashback's when cast that way.</summary>
-	public static ImmutableList<AdditionalCost> CostsOf(GameState s, Card card) =>
+	/// <summary>What casting it costs beyond mana: its additional costs, then its flashback's when cast that way, then its kicker's when kicked.</summary>
+	public static ImmutableList<AdditionalCost> CostsOf(
+		GameState s,
+		Card card,
+		bool kicked = false
+	) =>
 		[
 			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
 			.. Costs.Flashback(s, card)?.Costs ?? [],
+			.. kicked ? card.GetComponent<KickerComponent>()?.Costs ?? [] : [],
 		];
 
 	int Chosen(CostSlot slot) =>
@@ -112,9 +123,10 @@ public record CastSpellAction : GameAction
 			card,
 			X
 				+ Replicate * (card.GetComponent<ReplicateComponent>()?.Generic ?? 0)
-				+ CostList.OrPayOwed(CostsOf(s, card), Chosen),
+				+ CostList.OrPayOwed(CostsOf(s, card, Kicked), Chosen),
 			free: WithoutPayingManaCost,
-			targets: Targets
+			targets: Targets,
+			added: Kicked ? card.GetComponent<KickerComponent>()?.Mana : null
 		);
 
 	public override ValidationResult ValidateAdd(GameState s)
@@ -134,7 +146,9 @@ public record CastSpellAction : GameAction
 		var card = s.GetCard(CardId);
 		if (Turns.Combat.LockedDown(s))
 			return ValidationResult.Invalid("No spells now: combat lockdown or split second");
-		var costs = CostsOf(s, card);
+		if (Kicked && !card.HasComponent<KickerComponent>())
+			return ValidationResult.Invalid("It has no kicker");
+		var costs = CostsOf(s, card, Kicked);
 		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (card.Is(CardType.Land))
@@ -157,7 +171,7 @@ public record CastSpellAction : GameAction
 		if (
 			!TargetSpec.AreLegal(
 				s,
-				StackResolution.TextOf(card, Modes).Specs,
+				StackResolution.TextOf(card, Modes, Kicked).Specs,
 				Targets,
 				PlayerId,
 				CardId
@@ -199,7 +213,7 @@ public record CastSpellAction : GameAction
 	public GameState Cast(GameState s)
 	{
 		var card = s.GetCard(CardId);
-		var costs = CostsOf(s, card); // read before paying: flashback's are known only in the graveyard
+		var costs = CostsOf(s, card, Kicked); // read before paying: flashback's are known only in the graveyard
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		s = ManaPayment.Pay(
 			s,
@@ -216,7 +230,7 @@ public record CastSpellAction : GameAction
 		);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
-		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from);
+		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
 		if (Replicate == 0)
 			return s;
 		// Replicate (CR 702.56a): "when you cast this spell, copy it for each time you paid its
@@ -255,7 +269,8 @@ public record CastSpellAction : GameAction
 		int x,
 		ImmutableArray<int> targets,
 		ImmutableArray<int> modes,
-		ZoneType from
+		ZoneType from,
+		bool kicked = false
 	)
 	{
 		var card = s.GetCard(cardId);
@@ -272,6 +287,7 @@ public record CastSpellAction : GameAction
 					CastFrom = from,
 					// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
 					CantBeCountered = proxies.Count > 0,
+					Kicked = kicked,
 				}
 			)
 		);
@@ -380,6 +396,8 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Its condition isn't met");
 		if (ability.Exhaust && card.ExhaustUsed)
 			return ValidationResult.Invalid("Exhaust: activated once already");
+		if (ability.OncePerTurn && card.ActivatedOncePerTurnOn == s.GetGame().TurnNumber)
+			return ValidationResult.Invalid("Activated once this turn already");
 		var costs = ability.Costs;
 		if (costs.Any(c => c is TapUntappedCost && !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Not enough untapped permanents to tap");
@@ -439,6 +457,14 @@ public record ActivateAbilityAction : GameAction
 		s = ManaPayment.Pay(s, PlayerId, mana);
 		if (ability.Exhaust)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });
+		if (ability.OncePerTurn)
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId) with
+				{
+					ActivatedOncePerTurnOn = s.GetGame().TurnNumber,
+				}
+			);
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
 		foreach (var cost in ability.Costs.Where(c => !c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
@@ -467,14 +493,20 @@ public record ActivateAbilityAction : GameAction
 public static class StackResolution
 {
 	/// <summary>A spell's target words and steps for the chosen modes (the whole text when not modal).</summary>
+	/// <param name="kicked">Highly Illogical: a target word with an IfKicked reads as that instead.</param>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		Card card,
-		ImmutableArray<int> modes
-	) =>
-		card.GetComponent<SpellEffectsComponent>() is { } text
-			? Modal.Compose(text.Targets, text.Effects, text.Modes, modes)
-		: card.GetComponent<AuraComponent>() is { } aura ? ([aura.Enchant], [])
-		: ([], []);
+		ImmutableArray<int> modes,
+		bool kicked = false
+	)
+	{
+		var (specs, steps) =
+			card.GetComponent<SpellEffectsComponent>() is { } text
+				? Modal.Compose(text.Targets, text.Effects, text.Modes, modes)
+			: card.GetComponent<AuraComponent>() is { } aura ? ([aura.Enchant], [])
+			: ([], []);
+		return kicked ? ([.. specs.Select(t => t.IfKicked ?? t)], steps) : (specs, steps);
+	}
 
 	public static GameState Push(GameState s, StackAbility ability)
 	{
@@ -571,7 +603,7 @@ public static class StackResolution
 			{
 				Card spell
 					when spell.GetComponent<OnStackComponent>() is { } cast
-						&& TextOf(spell, cast.Modes) is var text => (
+						&& TextOf(spell, cast.Modes, cast.Kicked) is var text => (
 					spell.ControllerId,
 					spell.Id,
 					spell,

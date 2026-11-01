@@ -187,7 +187,13 @@ public static class MagicRules
 	/// One cast per affordable X. The bound is loose on purpose — ValidateAdd's payment search
 	/// decides; subtracting mana value would undercount, since one W pays a {2/W}.
 	/// </summary>
-	public static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
+	public static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card) =>
+		// Kicker: each cast once unkicked and once kicked — its targets and costs may differ.
+		card.HasComponent<KickerComponent>()
+			? CastCandidates(s, player, card, false).Concat(CastCandidates(s, player, card, true))
+			: CastCandidates(s, player, card, false);
+
+	static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card, bool kicked)
 	{
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
@@ -195,13 +201,18 @@ public static class MagicRules
 			.Choices(text?.Modes ?? [], text?.Choose ?? 1, text?.ChooseAtLeast)
 			.SelectMany(modes =>
 				TargetSpec
-					.Combinations(s, StackResolution.TextOf(card, modes).Specs, player, card.Id)
+					.Combinations(
+						s,
+						StackResolution.TextOf(card, modes, kicked).Specs,
+						player,
+						card.Id
+					)
 					.Select(targets => (modes, targets))
 			)
 			.ToList();
 		// One cast per way to pay each cost that picks a card: "sacrifice … or pay {N}" (0 is paying),
 		// a behold (any one is the same play), Twinned Vision's flashback discard.
-		var costs = CastSpellAction.CostsOf(s, card);
+		var costs = CastSpellAction.CostsOf(s, card, kicked);
 		var sacrifices = CostList.Options(costs, CostSlot.Sacrifice, s, player, card.Id);
 		var beholds = CostList.Options(costs, CostSlot.Behold, s, player, card.Id);
 		var discards = CostList.Options(costs, CostSlot.Discard, s, player, card.Id);
@@ -238,6 +249,7 @@ public static class MagicRules
 										BeholdId = beheld,
 										ReturnId = returned,
 										Replicate = replicates,
+										Kicked = kicked,
 									})
 								)
 							)
@@ -366,7 +378,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}", // a beamed-up creature only when chosen: older keys stay byte-identical
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}", // a beamed-up creature, kicked, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}", // modes and a tapped creature only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>

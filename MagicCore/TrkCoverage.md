@@ -4,12 +4,23 @@ Status, not rules: what is scripted, what waits and why (story MC-5). The rules 
 `MagicCore/CLAUDE.md`. **Scripted: the 10 Planet duals (MC-5.5, 2026-10-31); MC-5.3 batch 1, every tier
 0–1 common and uncommon not waiting on STATION or ANY-COUNTER (88); batch 2, Station (MC-5.2) and the 12
 STATION commons and uncommons waiting on nothing else; batch 3, the small mechanics (beam me up, strange new
-worlds, dilemma, power 8, becomes tapped, look and take, Federation) and their 31 commons and uncommons** —
-147/311 play, with the basics and Mugato. Batch 3 left for batch 4: Astute Terraformer (ONCE-A-TURN),
-La'An Noonien-Singh (CANT-BLOCK), Beckett Mariner and Brad Boimler (ANY-COUNTER), and four re-tiered to 3
-from their full text — Species 8472 (can't be blocked by artifact creatures; can't be targeted by opponents'
-artifact abilities), Ensign Pavel Chekov (exile their top X, play a land from among them), Erica Ortegas (a
-land from your hand, one returned at the next end step), Warp Speed ("Lands you control enter untapped"). Batch 2
+worlds, dilemma, power 8, becomes tapped, look and take, Federation) and their 31 commons and uncommons;
+batch 4a, counters of any kind (quests), Sagas, kicker, can't block, once each turn and 28 commons and
+uncommons** — 175/311 play, with the basics and Mugato. **Batch 4 is three sessions (Shayne, 2026-11-01).
+4b (17):** Ghost of Illyria, Test of Priorities, Erica Ortegas (DELAYED-RETURN); Blastoneuron, Hologram
+Stalker, Vash (LEAVES-GY); I'm a Doctor, Not a . . ., De-evolve (TYPE-SET); Captain Michael Burnham, Jake
+Sisko (RESOLVED-TWICE); Hive Mind Coprocessor (GRANT-TRIGGER); Rules of Acquisition (CONTROL); Brad Boimler
+(every kind of counter "plus one"); Exploratory Mission (exile until a nonland, playable this turn); Storied
+Veteran (cast from the graveyard with finality); Cold-Blooded Crew and Species 8472 (can't be blocked by
+power 2 or less / by artifact creatures; Species also untargetable by opponents' artifact abilities). **4c
+(14 one-offs):** Ensign Pavel Chekov, Warp Speed (every land you control enters untapped — Shayne), Pet
+Sehlat, Combadge, Data, Dr. McCoy, Vulcan Mind-Meld, Zero, Dominion Saboteur, Sylvia Tilly, First Contact, A
+Good Day to Die, Isolinear Processor, Zefram Cochrane. Batch 4 re-tiered from the full text: Dominion
+Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first
+spell this game), A Good Day to Die (a this-turn trigger on its target, controlled by the caster), Isolinear
+Processor (a mana restriction for artifacts), Dominion Saboteur (copies an artifact, not legendary, with
+counters), Sylvia Tilly (a graveyard card exiled while resolving), I'm a Doctor and De-evolve, Burnham and
+Jake Sisko, Ghost of Illyria and Test of Priorities. Batch 2
 re-tiered Stray from History to tier 2 (Null Summoner's exile, from a sorcery); Hemmer (TAPPED), Rutherford
 (LOOK-TAKE) and Zefram Cochrane (three tier-3 one-offs: look at the top any time, cast an artifact from
 the top, Spacecraft enter with two more counters — Shayne: with the one-offs) wait. Batch 1 re-tiered from the full text: Tea, Earl Grey, Hot (a modal activated ability), Daniels (a
@@ -37,21 +48,22 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | SNW | DONE (MC-5.2, batch 3): `TrkCards.DifferentlyNamedLands` (`Count.DistinctNamesOf`) — a cost change (`.Negated`), a power, a life gain | — |
 | BEAM | DONE (MC-5.2, batch 3): `TrkCards.BeamMeUp("{2}{W}")` — a flashback with `BeamMeUpCost` (`CastSpellAction.ReturnId`); Marooned's `EnchantedCantBeBeamedUp`. Not yet: Scotty granting it (as Stingcaster Mage grants flashback) | — |
 | DILEMMA | DONE (MC-5.2, batch 3): `TriggerEvent.YouFaceADilemma` — raised by a cast, an activation and a modal trigger. Not yet: a count this turn (no C/U needs it) | — |
-| SAGA | Lore counters, chapter triggers ("after your draw step" = first main phase), sacrifice after the last | `TriggerEvent.YourFirstMainPhase` |
+| SAGA | DONE (MC-5.3 batch 4a): `SagaComponent(n)` + `Chapter(n, …)` — the lore counter a turn-based action | — |
 | POWER8 | DONE (MC-5.2, batch 3): `TriggerEvent.YouAttackWithTotalPower8` (`Trigger.While`, judged as attackers are declared); `Count.TotalPowerOf` for a "then … if" | — |
 | TAPPED | DONE (MC-5.2, batch 3): `TriggerEvent.SelfBecomesTapped` — `MagicState.Tap`, every tap path | — |
 | FED | DONE (MC-5.2, batch 3): `TrkCards.Federation` (`Count.CreatureTypesAmong`, Spacecraft left out) | — |
-| QUEST, ANY-COUNTER | Quest, promotion, peace counters; "a counter of any kind" | proposed: ONE general counter map for the new kinds; the existing counter fields stay |
-| KICKER | An optional extra payment as it is cast, then "if kicked" | `ReplicateComponent`'s pattern; `SacrificeCost` (Eject the Warp Core) |
+| QUEST, ANY-COUNTER | DONE (batch 4a): `Card.Counters` (`PutCounters`, `RemoveCountersOfKind`, `Count.CountersOfKind`), `Is.WithAnyCounter`. Not yet: peace counters (Peace in Our Time), Brad Boimler's "plus one" of every kind (4b) | `CounterKinds` |
+| KICKER | DONE (batch 4a): `KickerComponent`, `WasKicked`, `TargetSpec.IfKicked`. Not yet: Mirror Universe Intrusion | — |
 | SHOCK | "As this land enters, you may pay 2 life. If you don't, it enters tapped." | `EntersTappedComponent(Unless)` |
 | ENTERS-UNTAPPED | "When this land enters untapped, choose one —" | `EntersTappedComponent` + a modal trigger |
-| CANT-BLOCK | "Can't block", as a keyword-like grant | `Combat.CantBeBlocked`'s pattern |
+| CANT-BLOCK | DONE (batch 4a): `Combat.CantBlock`. Not yet: Storied Veteran (cast from the graveyard), De-evolve (TYPE-SET), Troubling Tribbles | — |
 | LOOK-TAKE | DONE (MC-5.2, batch 3): `LookAndTake(n, filter) { Reveal, Must, RestToGraveyard }` | — |
 | DELAYED-RETURN | "Exile …, return it at the beginning of the next end step" | `Flicker`, `DelayedTrigger` |
 | LEAVES-GY | "Whenever one or more cards leave your graveyard" | — |
 | CONTROL | Gain control (until end of turn, or for good; exchange) | MtgCore's `GainControlAction` |
 | ASSIMILATE | Onto the battlefield under your control, +1/+1 counter, a Borg artifact creature | `ReturnFromGraveyard`, the type change |
-| ONCE-A-TURN, RESOLVED-TWICE, TYPE-SET, TRIGGER-TWICE, GRANT-TRIGGER | Small one-offs: activate only once each turn; "the second time this ability has resolved this turn"; "becomes a [type]"; a trigger triggering an additional time; artifact creatures "have '[triggered ability]'" | `Exhaust`'s stamp; `OncePerTurn`; `GrantsActivatedAbility` |
+| ONCE-A-TURN | DONE (batch 4a): `ActivatedAbilityComponent.OncePerTurn` | — |
+| RESOLVED-TWICE, TYPE-SET, TRIGGER-TWICE, GRANT-TRIGGER | Small one-offs: "the second time this ability has resolved this turn"; "becomes a [type]"; a trigger triggering an additional time; artifact creatures "have '[triggered ability]'" | `OncePerTurn`; `GrantsActivatedAbility` |
 
 Also needed, no tag: H.M.S. Bounty's extra turn (MtgCore's `TakeExtraTurnAction`), Borg Cube's
 affinity (a `CostChange` with a count). Genuinely new, found in neither engine: Station, dilemma,

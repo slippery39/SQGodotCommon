@@ -309,6 +309,7 @@ public enum CountOf
 	SubtypesAmong, // Tam: "planeswalker types among planeswalkers you control"
 	DistinctNamesOf, // Strange new worlds: "the number of differently named lands you control"
 	TotalPowerOf, // Power 8: "creatures you control have total power 8 or greater"
+	CountersOfKind, // Anthropological Mission: "three or more quest counters on [Ref]" — Count.CounterKind
 	CreatureTypesAmong, // Federation: "creature types among non-Borg creatures you control"
 }
 
@@ -326,6 +327,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	/// <summary>Sickbay: "where X is one plus the amount of life you gained this turn" — added after the rest.</summary>
 	public int Plus { get; init; }
+
+	/// <summary>CountersOfKind: which kind — "quest", "lore", "promotion".</summary>
+	public string? CounterKind { get; init; }
+
+	public static Count CountersOfKind(Ref r, string kind) =>
+		new(0, r, CountOf.CountersOfKind) { CounterKind = kind };
 
 	public static implicit operator Count(int n) => new(n);
 
@@ -493,6 +500,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Count(),
 			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
+			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),
 			CountOf.SubtypesAmong => Cards().SelectMany(c => c.Subtypes).Distinct().Count(),
 			CountOf.DistinctNamesOf => Cards().Select(c => c.Name).Distinct().Count(),
