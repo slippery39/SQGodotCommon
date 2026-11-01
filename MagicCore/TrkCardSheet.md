@@ -1018,11 +1018,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
-["Open Communications"] =
-[
-	Spell([], new DrawCards(Ref.You, 1)),
-	BeamMeUp("{2}{U}"),
-],
+["Open Communications"] = [Spell([], new DrawCards(Ref.You, 1)), BeamMeUp("{2}{U}")],
 ```
 
 ### Orion
@@ -2523,7 +2519,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Hologram Janeway"] =
 [
-	When(TriggerEvent.YouAttackWithTotalPower8, [Creature], new AddCounters(Ref.Target(), 1)),
+	When(
+		TriggerEvent.YouAttackWithTotalPower8,
+		[Creature],
+		new AddCounters(Ref.Target(), 1)
+	),
 ],
 ```
 
@@ -2627,10 +2627,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.SelfBecomesTapped,
 		[],
-		new If(
-			new Matches(Ref.Source, Is.PowerAtLeast(4)),
-			[new DrawCards(Ref.You, 1)]
-		)
+		new If(new Matches(Ref.Source, Is.PowerAtLeast(4)), [new DrawCards(Ref.You, 1)])
 		{
 			Otherwise = [new Surveil(1)],
 		}
@@ -2698,7 +2695,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Kirk, Commanding Officer"] =
 [
-	When(TriggerEvent.YouAttackWithTotalPower8, [], new ExileTopPlayable { ThisTurn = true }),
+	When(
+		TriggerEvent.YouAttackWithTotalPower8,
+		[],
+		new ExileTopPlayable { ThisTurn = true }
+	),
 	new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new Destroy(Ref.Target())])
 	{
 		Costs = [new SacrificeSelfCost()],
@@ -3001,7 +3002,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Rutherford, Upgraded Ensign"] =
 [
-	When(TriggerEvent.SelfEnters, [], new LookAndTake(6, Is.Artifact) { Reveal = true }),
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new LookAndTake(6, Is.Artifact) { Reveal = true }
+	),
 	When(
 		TriggerEvent.YouCastSpell with
 		{
@@ -3097,10 +3102,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
-["Seven of Nine"] =
-[
-	When(TriggerEvent.YouFaceADilemma, [], new DrawCards(Ref.You, 1)),
-],
+["Seven of Nine"] = [When(TriggerEvent.YouFaceADilemma, [], new DrawCards(Ref.You, 1))],
 ```
 
 ### Sickbay
@@ -3503,7 +3505,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Engine pieces:** `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
-["The Traveler"] = [new StaticEffectComponent(Is.Source) { Power = DifferentlyNamedLands }],
+["The Traveler"] =
+[
+	new StaticEffectComponent(Is.Source) { Power = DifferentlyNamedLands },
+],
 ```
 
 ### There's Coffee in that Nebula

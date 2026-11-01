@@ -26,9 +26,11 @@ public class TrkBatch3Tests : FraBoardTest
 
 	/// <summary>Answers every "you may" with yes; everything else as Resolve would.</summary>
 	static IEnumerable<int> Yes(ChoiceAction choice) =>
-		choice is YesNoChoice
-			? [choice.Options[0].Id]
-			: choice.Options.Take(choice.MinChoices).Select(o => o.Id);
+		choice switch
+		{
+			YesNoChoice => [choice.Options[0].Id],
+			_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+		};
 
 	int InGraveyard(CardDefinition card)
 	{
@@ -116,7 +118,14 @@ public class TrkBatch3Tests : FraBoardTest
 		var bear = Field(Bear, me);
 		var other = Field(TestGames.Creature("Other", "1/1"), me);
 		var marooned = Hand(Trk("Marooned"), me);
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = marooned, Targets = [bear] });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = marooned,
+				Targets = [bear],
+			}
+		);
 		Resolve(Yes);
 		Assert.That(s.GetCard(bear).IsTapped, Nu.True, "you may pay {3}: tap enchanted permanent");
 
@@ -150,7 +159,11 @@ public class TrkBatch3Tests : FraBoardTest
 	{
 		var adjudicator = Field(Trk("Melkotian Adjudicator"), me);
 		Cast(Hand(ChooseOneOrMore, me), [0, 1]);
-		Assert.That(s.GetCard(adjudicator).PlusOneCounters, Is.EqualTo(1), "two modes, one dilemma");
+		Assert.That(
+			s.GetCard(adjudicator).PlusOneCounters,
+			Is.EqualTo(1),
+			"two modes, one dilemma"
+		);
 		Cast(Hand(TestCards.Fodder, me), []);
 		Assert.That(s.GetCard(adjudicator).PlusOneCounters, Is.EqualTo(1), "no modes, no dilemma");
 	}
@@ -178,10 +191,11 @@ public class TrkBatch3Tests : FraBoardTest
 	{
 		var adjudicator = Field(Trk("Melkotian Adjudicator"), me);
 		var theirs = Field(Trk("Tea, Earl Grey, Hot"), them);
-		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == them && x.GetGame().Step == Step.PreCombatMain);
-		s = s.Act(
-			s.LegalActions().OfType<ActivateAbilityAction>().First(a => a.CardId == theirs)
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().ActivePlayerId == them && x.GetGame().Step == Step.PreCombatMain
 		);
+		s = s.Act(s.LegalActions().OfType<ActivateAbilityAction>().First(a => a.CardId == theirs));
 		Resolve();
 		Assert.That(s.GetCard(adjudicator).PlusOneCounters, Is.EqualTo(0), "whenever YOU face one");
 	}
@@ -211,7 +225,10 @@ public class TrkBatch3Tests : FraBoardTest
 		Assert.That(s.GetCard(officer).PlusOneCounters, Is.EqualTo(0), "2 + 5 = 7");
 
 		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == them);
-		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == me && x.GetGame().Step == Step.PreCombatMain);
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().ActivePlayerId == me && x.GetGame().Step == Step.PreCombatMain
+		);
 		Field(TestGames.Creature("One", "1/1"), me); // stays home: "creatures you control"
 		Declare(officer);
 		ToSecondMain();
@@ -229,7 +246,10 @@ public class TrkBatch3Tests : FraBoardTest
 			[
 				new ManaAbilityComponent(ManaColor.Green),
 				new ActivatedAbilityComponent(ManaCost.None, []) { Costs = [new TapSelfCost()] },
-				new TriggeredAbilityComponent(TriggerEvent.SelfBecomesTapped, [new GainLife(Ref.You, 1)]),
+				new TriggeredAbilityComponent(
+					TriggerEvent.SelfBecomesTapped,
+					[new GainLife(Ref.You, 1)]
+				),
 			],
 		};
 
@@ -258,9 +278,17 @@ public class TrkBatch3Tests : FraBoardTest
 	{
 		var watcher = Field(Watcher, me);
 		var life = Life(me);
-		Cast(Hand(TestCards.Targeted("Tap", TargetSpec.Creature, new Tap(Ref.Target())), me), [], watcher);
+		Cast(
+			Hand(TestCards.Targeted("Tap", TargetSpec.Creature, new Tap(Ref.Target())), me),
+			[],
+			watcher
+		);
 		Assert.That(Life(me), Is.EqualTo(life + 1));
-		Cast(Hand(TestCards.Targeted("Tap", TargetSpec.Creature, new Tap(Ref.Target())), me), [], watcher);
+		Cast(
+			Hand(TestCards.Targeted("Tap", TargetSpec.Creature, new Tap(Ref.Target())), me),
+			[],
+			watcher
+		);
 		Assert.That(Life(me), Is.EqualTo(life + 1), "already tapped: it doesn't become tapped");
 	}
 
@@ -269,7 +297,14 @@ public class TrkBatch3Tests : FraBoardTest
 	{
 		var watcher = Field(Watcher, me);
 		var life = Life(me);
-		s = s.Act(new TapForManaAction { PlayerId = me, CardId = watcher, Color = ManaColor.Green });
+		s = s.Act(
+			new TapForManaAction
+			{
+				PlayerId = me,
+				CardId = watcher,
+				Color = ManaColor.Green,
+			}
+		);
 		Resolve();
 		Assert.That(Life(me), Is.EqualTo(life + 1));
 	}
@@ -322,7 +357,11 @@ public class TrkBatch3Tests : FraBoardTest
 				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
 			}
 		);
-		Assert.That(s.IsIn(trinket, me, ZoneType.Hand), Nu.True, "an artifact card, into your hand");
+		Assert.That(
+			s.IsIn(trinket, me, ZoneType.Hand),
+			Nu.True,
+			"an artifact card, into your hand"
+		);
 		Assert.That(s.GetCard(trinket).KnownTo, Is.EqualTo(Knowers.Everyone), "revealed");
 		var library = s.CardsIn(me, ZoneType.Library).Select(c => c.Id).ToList();
 		Assert.That(library.TakeLast(5), Is.EquivalentTo(looked), "the rest on the bottom");
@@ -355,7 +394,11 @@ public class TrkBatch3Tests : FraBoardTest
 		var first = OnTop(TestCards.Trinket);
 		var hand = HandCount(me);
 		Cast(Hand(Trk("Pattern Buffer Preservation"), me), []);
-		Assert.That(HandCount(me), Is.EqualTo(hand + 1), "put one of them into your hand — not 'may'");
+		Assert.That(
+			HandCount(me),
+			Is.EqualTo(hand + 1),
+			"put one of them into your hand — not 'may'"
+		);
 		Assert.That(
 			new[] { first, second }.Count(id => s.IsIn(id, me, ZoneType.Graveyard)),
 			Is.EqualTo(1),
@@ -414,12 +457,30 @@ public class TrkBatch3Tests : FraBoardTest
 		var bear = Field(Bear, me);
 		var other = Field(Bear, me);
 		var energy = Hand(Trk("Pure Energy"), me);
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = energy, Targets = [bear, other] });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = energy,
+				Targets = [bear, other],
+			}
+		);
 		var kill = Hand(TestCards.Kill(), me);
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = kill, Targets = [other] });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = kill,
+				Targets = [other],
+			}
+		);
 		Resolve();
 		Assert.That(Alive(other), Nu.False);
-		Assert.That(s.GetCard(bear).PlusOneCounters, Is.EqualTo(1), "the split was announced as it was cast");
+		Assert.That(
+			s.GetCard(bear).PlusOneCounters,
+			Is.EqualTo(1),
+			"the split was announced as it was cast"
+		);
 	}
 
 	[Test]
@@ -433,7 +494,10 @@ public class TrkBatch3Tests : FraBoardTest
 		Assert.That(s.IsIn(top, me, ZoneType.Exile), Nu.True);
 		Assert.That(Casts(top), Is.Not.Empty, "you may play that card this turn");
 		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == them);
-		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == me && x.GetGame().Step == Step.PreCombatMain);
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().ActivePlayerId == me && x.GetGame().Step == Step.PreCombatMain
+		);
 		Assert.That(Casts(top), Is.Empty, "this turn — not your next");
 	}
 
@@ -444,9 +508,20 @@ public class TrkBatch3Tests : FraBoardTest
 		var bear = Field(Bear, me);
 		var trinket = Field(TestCards.Trinket, me);
 		var pairs = Activations(worf).Select(a => (a.TapId, a.SecondTapId)).ToList();
-		Assert.That(pairs, Has.Count.EqualTo(6), "Worf, the bear, the trinket: each pair, either first");
-		Assert.That(pairs.All(p => p.TapId != 0 && p.SecondTapId != 0 && p.TapId != p.SecondTapId), Nu.True);
-		Assert.That(s.DistinctMoves(Activations(worf)), Has.Count.EqualTo(3), "either order is one move");
+		Assert.That(
+			pairs,
+			Has.Count.EqualTo(6),
+			"Worf, the bear, the trinket: each pair, either first"
+		);
+		Assert.That(
+			pairs.All(p => p.TapId != 0 && p.SecondTapId != 0 && p.TapId != p.SecondTapId),
+			Nu.True
+		);
+		Assert.That(
+			s.DistinctMoves(Activations(worf)),
+			Has.Count.EqualTo(3),
+			"either order is one move"
+		);
 		s = s.Act(Activations(worf).Single(a => a.TapId == trinket && a.SecondTapId == bear)); // the trinket clicked first
 		Resolve();
 		Assert.That(s.GetCard(bear).IsTapped && s.GetCard(trinket).IsTapped, Nu.True);
@@ -457,7 +532,10 @@ public class TrkBatch3Tests : FraBoardTest
 	[Test]
 	public void TapTwo_ACopiedCostList_IsNotSplitAgain()
 	{
-		var worf = CardRegistry.Get("Worf, Honor-Bound Warrior").Components.OfType<ActivatedAbilityComponent>().Single();
+		var worf = CardRegistry
+			.Get("Worf, Honor-Bound Warrior")
+			.Components.OfType<ActivatedAbilityComponent>()
+			.Single();
 		var copy = new ActivatedAbilityComponent(worf.Cost, worf.Effects) { Costs = worf.Costs };
 		Assert.That(
 			copy.Costs.OfType<TapUntappedCost>().Select(c => c.Slot),
@@ -490,7 +568,14 @@ public class TrkBatch3Tests : FraBoardTest
 	{
 		var lorca = InGraveyard(Trk("Gabriel Lorca, Mirror Menace"));
 		var options = Hand(ChooseOneOrMore, me);
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = options, Modes = [0] });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = options,
+				Modes = [0],
+			}
+		);
 		Resolve(Yes);
 		Assert.That(s.IsIn(lorca, me, ZoneType.Hand), Nu.True);
 	}
@@ -506,7 +591,11 @@ public class TrkBatch3Tests : FraBoardTest
 			c switch
 			{
 				ChooseTargetChoice => [them],
-				YesNoChoice => (s.DecidingPlayerId() == them ? [] : throw new AssertionException("the opponent decides")),
+				YesNoChoice => (
+					s.DecidingPlayerId() == them
+						? []
+						: throw new AssertionException("the opponent decides")
+				),
 				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
 			}
 		);

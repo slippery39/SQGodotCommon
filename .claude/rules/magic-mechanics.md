@@ -273,7 +273,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   not becoming tapped. A new tap path must call it, or Hemmer silently misses it.
 - **"Tap two untapped …"** (Worf, Tenured Tethermage) is the player's choice of both: `TapUntappedCost(2, …)`
   is split as `ActivatedAbilityComponent.Costs` is built into two one-pick costs (`TapId`, `SecondTapId`),
-  each pair offered once (Shayne, 2026-10-31).
+  each pair in either click order (the table), one move by `MoveKey` (the AI) — Shayne, 2026-10-31.
 - **Beam me up** (TRK) is a `FlashbackComponent` whose cost beside the mana is `BeamMeUpCost` — return a
   creature you control (`CastSpellAction.ReturnId`, one cast per creature) — so it is cast and exiled as
   flashback is (`TrkCards.BeamMeUp`). Marooned's `EnchantedCantBeBeamedUp` takes its creature out of the
