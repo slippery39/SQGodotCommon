@@ -109,7 +109,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   attacking creature") sees its targets too, `Costs.Of(…, targets)` from the cast.
 - **Costs beyond mana are one list of `AdditionalCost`** (Effects/AdditionalCosts.cs) — activated
   abilities, a spell's `AdditionalCostsComponent`, flashback, ward. A cost that picks a card names it
-  in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`/`TapId` (`CostSlot`) — and the table's
+  in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`/`TapId`/`SecondTapId`/`ReturnId` (`CostSlot`) — and the table's
   `Targeting.PicksOf`/`WithoutPicks`, so it is clicked — one legal action per
   choice; `CostList` is the one place candidates, legality and "or pay" read them. Taps are paid
   first; ward pays by choosing (`PaidByChoosing`).
@@ -267,6 +267,29 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Necrodominance's rules each live in their one place:** a skipped draw step never begins (`EnterStep`),
   hand size is `TurnStructure.MaxHandSizeOf`, and "exile instead of your graveyard" is decided in `MoveCard`
   with the other exile-instead cases — so nothing of yours dies.
+- **Becoming tapped is `MagicState.Tap`** — the ONE way a permanent taps: attacking, a {T} cost, "tap N
+  untapped" (Station's too), the Tap effect, tapping for mana and mana payment. It raises
+  `BecameTappedEvent` only on untapped → tapped ("whenever Hemmer becomes tapped"); entering tapped is
+  not becoming tapped. A new tap path must call it, or Hemmer silently misses it.
+- **"Tap two untapped …"** (Worf, Tenured Tethermage) is the player's choice of both: `TapUntappedCost(2, …)`
+  is split as `ActivatedAbilityComponent.Costs` is built into two one-pick costs (`TapId`, `SecondTapId`),
+  each pair offered once (Shayne, 2026-10-31).
+- **Beam me up** (TRK) is a `FlashbackComponent` whose cost beside the mana is `BeamMeUpCost` — return a
+  creature you control (`CastSpellAction.ReturnId`, one cast per creature) — so it is cast and exiled as
+  flashback is (`TrkCards.BeamMeUp`). Marooned's `EnchantedCantBeBeamedUp` takes its creature out of the
+  candidates.
+- **Face a dilemma** (TRK) is `FacedDilemmaEvent`, ONE however many modes, raised where modes are chosen:
+  a cast (`PutOnStack`, a cast during a resolution too), an activation with `Modes`, and a modal trigger's
+  `ChooseModesChoice` (`QueueModalTriggerAction`) — whether or not it resolves. Copies choose nothing.
+- **"Whenever you attack WHILE …"** (power 8) is `Trigger.While` — part of the trigger condition, judged
+  only as the event happens (`Triggers.Matches`); never `TriggeredAbilityComponent.If`, which is judged
+  again on resolution (release notes: "it doesn't matter … when [ability] resolves").
+- **Look and take** ("look at the top N, you may reveal a [filter] card and put it into your hand, the rest
+  on the bottom in a random order") is `LookAndTake` — `Must`, `RestToGraveyard`, `Reveal` (known to
+  everyone). The rest go down as Identity Echo's: a random order, not known.
+- **A distribution decided as it is cast** (Pure Energy, CR 601.2d) reads `TargetChosen(i)` — the targets
+  as CHOSEN (`ContextKeys.ChosenTargets`); `Ref.Target` reads 0 for one gone illegal, which would hand
+  its share to the others.
 - **One card, a printing per set (MC-5.5).** `CardRegistry` is the one lookup across sets: a card's
   rules data and script exist once; its printing (`CardPrinting`: rarity, collector number) is per set,
   and a card in play carries its printing's set (`Card.Set`, kept through zone changes) — read for its

@@ -205,6 +205,7 @@ public static class MagicRules
 		var sacrifices = CostList.Options(costs, CostSlot.Sacrifice, s, player, card.Id);
 		var beholds = CostList.Options(costs, CostSlot.Behold, s, player, card.Id);
 		var discards = CostList.Options(costs, CostSlot.Discard, s, player, card.Id);
+		var returns = CostList.Options(costs, CostSlot.Return, s, player, card.Id);
 		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
 		var free = Rules.Playable.MayCastWithoutPaying(s, card, player);
 		var payments = Enumerable.Range(0, maxX + 1).Select(x => (x, free: free && x == 0));
@@ -223,19 +224,22 @@ public static class MagicRules
 					sacrifices.SelectMany(sacrifice =>
 						discards.SelectMany(discard =>
 							beholds.SelectMany(beheld =>
-								choices.Select(c => new CastSpellAction
-								{
-									PlayerId = player,
-									CardId = card.Id,
-									X = payment.x,
-									WithoutPayingManaCost = payment.free,
-									Targets = c.targets,
-									Modes = c.modes,
-									SacrificeId = sacrifice,
-									DiscardId = discard,
-									BeholdId = beheld,
-									Replicate = replicates,
-								})
+								returns.SelectMany(returned =>
+									choices.Select(c => new CastSpellAction
+									{
+										PlayerId = player,
+										CardId = card.Id,
+										X = payment.x,
+										WithoutPayingManaCost = payment.free,
+										Targets = c.targets,
+										Modes = c.modes,
+										SacrificeId = sacrifice,
+										DiscardId = discard,
+										BeholdId = beheld,
+										ReturnId = returned,
+										Replicate = replicates,
+									})
+								)
 							)
 						)
 					)
@@ -274,6 +278,14 @@ public static class MagicRules
 				)
 				from exile in CostList.Options(a.ability.Costs, CostSlot.Exile, s, player, card.Id)
 				from tap in CostList.Options(a.ability.Costs, CostSlot.Tap, s, player, card.Id)
+				from secondTap in CostList.Options(
+					a.ability.Costs,
+					CostSlot.SecondTap,
+					s,
+					player,
+					card.Id
+				)
+				where secondTap == 0 || secondTap != tap // both orders: the table clicks either first; MoveKey makes them one move
 				select (GameAction)
 					new ActivateAbilityAction
 					{
@@ -286,6 +298,7 @@ public static class MagicRules
 						DiscardId = discard,
 						ExileId = exile,
 						TapId = tap,
+						SecondTapId = secondTap,
 					}
 			);
 	}
@@ -353,9 +366,9 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}",
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}", // a beamed-up creature only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
-				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{(activate.TapId == 0 ? "" : $"|t{Fodder(s, activate.TapId)}")}", // modes and a tapped creature only when chosen: older keys (records, the suite) stay byte-identical
+				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}", // modes and a tapped creature only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>
 				$"loyalty|{loyalty.CardId}|{loyalty.AbilityIndex}|{loyalty.X}|{string.Join(",", loyalty.Targets)}",
 			_ => a, // the rest have no collection fields, so a record's own equality is the identity
@@ -366,6 +379,17 @@ public static class MagicRules
 	/// (damage, counters, auras), and the player picks which (TBL-5.3) — a card elsewhere by name.
 	/// </summary>
 	static string Fodder(GameState s, int id) => id == 0 ? "" : Identity(s, id);
+
+	/// <summary>The permanents a cost taps, in MoveKey: Station's one as before; Worf's two in either order is one move.</summary>
+	static string Taps(GameState s, ActivateAbilityAction a)
+	{
+		if (a.SecondTapId == 0)
+			return a.TapId == 0 ? "" : $"|t{Fodder(s, a.TapId)}";
+		var pair = new[] { Fodder(s, a.TapId), Fodder(s, a.SecondTapId) }.Order(
+			StringComparer.Ordinal
+		);
+		return $"|t{pair.First()}|u{pair.Last()}";
+	}
 
 	/// <summary>Which card a move is "from" for DistinctMoves: a permanent by id; elsewhere any copy in the same zone.</summary>
 	internal static string Identity(GameState s, int id) =>

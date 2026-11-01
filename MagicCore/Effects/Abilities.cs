@@ -43,6 +43,8 @@ public enum EventKind
 	BecameTarget,
 	LoyaltyActivated,
 	LifeGained,
+	BecameTapped, // Hemmer: "whenever Hemmer becomes tapped"
+	FacedDilemma, // "whenever you face a dilemma" — modes chosen for a spell or ability
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 }
 
@@ -113,6 +115,13 @@ public record Trigger(EventKind On)
 	/// <summary>"When this dies", "when you cast this": read from the card itself (Triggers.Collect), never matched on the battlefield.</summary>
 	public ReadFrom ReadFrom { get; init; }
 
+	/// <summary>
+	/// Power 8: "whenever you attack WHILE creatures you control have total power 8 or greater" — part
+	/// of the trigger condition, judged only as the event happens; unlike an intervening If, never
+	/// again as it resolves (release notes).
+	/// </summary>
+	public Condition? While { get; init; }
+
 	static bool Fits(EventKind on, EventTest test) =>
 		test switch
 		{
@@ -170,6 +179,19 @@ public static class TriggerEvent
 
 	/// <summary>Kiora of Salt and Sand: "whenever you attack" — once per declaration.</summary>
 	public static readonly Trigger YouAttack = new(EventKind.AttackersDeclared) { By = Whose.You };
+
+	/// <summary>Power 8: "Whenever you attack while creatures you control have total power 8 or greater" — judged as attackers are declared.</summary>
+	public static readonly Trigger YouAttackWithTotalPower8 = YouAttack with
+	{
+		While = new AtLeast(Count.TotalPowerOf(Ref.CreaturesYouControl), 8),
+	};
+
+	/// <summary>Hemmer, Shuttle Ace: "Whenever this creature becomes tapped" — MagicState.Tap, every tap path.</summary>
+	public static readonly Trigger SelfBecomesTapped =
+		new(EventKind.BecameTapped) { Subject = Filters.Is.Source };
+
+	/// <summary>Face a dilemma: "Whenever you face a dilemma" — as you choose one or more modes for a spell or ability.</summary>
+	public static readonly Trigger YouFaceADilemma = new(EventKind.FacedDilemma) { By = Whose.You };
 
 	/// <summary>Garruk, Curse Breaker's −4: "one or more creatures attack one of your opponents".</summary>
 	public static readonly Trigger CreaturesAttackYourOpponent =
@@ -332,16 +354,31 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	{
 		get => costs;
 		// "{T}, tap two untapped artifacts": the source is already spoken for (the old TapCost check).
+		// "Tap two" becomes two costs that each pick one — the action names both (TapId, SecondTapId);
+		// a list already split (a copy, a deserialized state) is not split again.
 		init =>
-			costs = value.Any(c => c is TapSelfCost)
-				?
-				[
-					.. value.Select(c =>
-						c is TapUntappedCost tap ? tap with { NotTheSource = true } : c
-					),
-				]
-				: value;
+			costs = [
+				.. value.SelectMany(c =>
+					c is TapUntappedCost tap
+						? Split(
+							tap with
+							{
+								NotTheSource = tap.NotTheSource || value.Any(v => v is TapSelfCost),
+							},
+							value.Any(v => v is TapUntappedCost { Second: true })
+						)
+						: [c]
+				),
+			];
 	}
+
+	static IEnumerable<AdditionalCost> Split(TapUntappedCost tap, bool alreadySplit) =>
+		(tap.Count, alreadySplit) switch
+		{
+			(1, _) or (2, true) => [tap],
+			(2, false) => [tap, tap with { Second = true }],
+			_ => throw new ArgumentException("Tap three or more: an action names two taps at most"),
+		};
 
 	readonly ImmutableList<AdditionalCost> costs = [];
 
@@ -606,6 +643,9 @@ public record EnchantedLosesAllAbilities : GameComponent;
 
 /// <summary>Infinite Coursework: "… and doesn't untap during its controller's untap step" — the Aura's, not the creature's.</summary>
 public record EnchantedDoesntUntap : GameComponent;
+
+/// <summary>Marooned: "Enchanted permanent … can't be beamed up." — read by BeamMeUpCost: never returned to pay one.</summary>
+public record EnchantedCantBeBeamedUp : GameComponent;
 
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
 public record CantBeCountered : GameComponent;

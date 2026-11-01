@@ -34,7 +34,8 @@ public static class Describe
 				+ Targets(s, c.Targets)
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")
 				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : "")
-				+ (c.BeholdId != 0 ? $", beholding {Name(s, c.BeholdId)}" : ""),
+				+ (c.BeholdId != 0 ? $", beholding {Name(s, c.BeholdId)}" : "")
+				+ (c.ReturnId != 0 ? $", returning {Name(s, c.ReturnId)}" : ""),
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{WhichAbility(s, a)}"
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")
@@ -43,7 +44,8 @@ public static class Describe
 				+ (a.SacrificeId != 0 ? $", sacrificing {Name(s, a.SacrificeId)}" : "")
 				+ (a.DiscardId != 0 ? $", discarding {Name(s, a.DiscardId)}" : "")
 				+ (a.ExileId != 0 ? $", exiling {Name(s, a.ExileId)}" : "")
-				+ (a.TapId != 0 ? $", tapping {Name(s, a.TapId)}" : ""),
+				+ (a.TapId != 0 ? $", tapping {Name(s, a.TapId)}" : "")
+				+ (a.SecondTapId != 0 ? $" and {Name(s, a.SecondTapId)}" : ""),
 			ActivateLoyaltyAction l =>
 				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",

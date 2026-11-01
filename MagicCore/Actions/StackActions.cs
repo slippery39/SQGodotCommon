@@ -67,6 +67,9 @@ public record CastSpellAction : GameAction
 	/// <summary>The card beheld for a "behold … or pay" cost; 0 when paying instead.</summary>
 	public int BeholdId { get; init; }
 
+	/// <summary>Beam me up: the creature returned to its owner's hand; 0 if none is owed.</summary>
+	public int ReturnId { get; init; }
+
 	/// <summary>Omnipresence: cast without paying its mana cost — X is 0 (CR 107.3c).</summary>
 	public bool WithoutPayingManaCost { get; init; }
 
@@ -94,6 +97,7 @@ public record CastSpellAction : GameAction
 			CostSlot.Sacrifice => SacrificeId,
 			CostSlot.Discard => DiscardId,
 			CostSlot.Behold => BeholdId,
+			CostSlot.Return => ReturnId,
 			_ => throw new InvalidOperationException($"A spell's cost can't pick into {slot}"),
 		};
 
@@ -164,6 +168,8 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (!CostList.Fits(costs, CostSlot.Behold, BeholdId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a card you can behold for this");
+		if (!CostList.Fits(costs, CostSlot.Return, ReturnId, s, PlayerId, CardId))
+			return ValidationResult.Invalid("Not a creature you can return for this");
 		if (costs.Any(c => !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Cannot pay the additional cost");
 		if (
@@ -294,6 +300,8 @@ public record CastSpellAction : GameAction
 				copies.Count
 			)
 		);
+		if (!modes.IsEmpty)
+			s = s.Raise(new Turns.FacedDilemmaEvent(playerId));
 		return Turns.Triggers.RaiseTargeted(s, targets, playerId, cardId);
 	}
 }
@@ -321,6 +329,9 @@ public record ActivateAbilityAction : GameAction
 	/// <summary>The creature tapped as the cost (Station: "Tap another creature you control"); 0 if none.</summary>
 	public int TapId { get; init; }
 
+	/// <summary>Worf: "Tap two untapped artifacts and/or creatures you control" — the second one; 0 if none.</summary>
+	public int SecondTapId { get; init; }
+
 	/// <summary>An ability's target words and steps for these modes (the whole text when not modal).</summary>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		ActivatedAbilityComponent ability,
@@ -335,6 +346,7 @@ public record ActivateAbilityAction : GameAction
 			CostSlot.Discard => DiscardId,
 			CostSlot.Exile => ExileId,
 			CostSlot.Tap => TapId,
+			CostSlot.SecondTap => SecondTapId,
 			_ => throw new InvalidOperationException($"An ability's cost can't pick into {slot}"),
 		};
 
@@ -373,6 +385,11 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Not enough untapped permanents to tap");
 		if (!CostList.Fits(costs, CostSlot.Tap, TapId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can tap for this");
+		if (
+			!CostList.Fits(costs, CostSlot.SecondTap, SecondTapId, s, PlayerId, CardId)
+			|| (SecondTapId != 0 && SecondTapId == TapId)
+		)
+			return ValidationResult.Invalid("Not a second permanent you can tap for this");
 		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
@@ -426,6 +443,8 @@ public record ActivateAbilityAction : GameAction
 		foreach (var cost in ability.Costs.Where(c => !c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		var (specs, steps) = TextOf(ability, Modes);
+		if (!Modes.IsEmpty)
+			s = s.Raise(new Turns.FacedDilemmaEvent(PlayerId));
 		s = StackResolution.Push(
 			s,
 			new StackAbility
@@ -591,6 +610,7 @@ public static class StackResolution
 			.Add(ContextKeys.X, x)
 			.Add(ContextKeys.Targets, legal)
 			.Add(ContextKeys.AllTargets, legal)
+			.Add(ContextKeys.ChosenTargets, chosen.ToImmutableArray())
 			.Add(ContextKeys.EventCard, eventCard);
 		if (top is StackAbility { EventSnapshot: { } snapshotOfEvent })
 			context = context.Add(ContextKeys.EventSnapshot, snapshotOfEvent);

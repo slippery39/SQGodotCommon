@@ -71,6 +71,11 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   a full engine overhaul for what is probably a very rare situation overall. If this situation comes up
   more in playing then we can reconsider doing full LKI" (noted in `DesignNotes.md`).
 
+- 2026-10-31, Shayne (MC-5.3 batch 3's questions): **Worf's "tap two untapped artifacts and/or creatures"
+  is a choice** — the player picks both. **"The rest on the bottom in any order" is a random order for
+  now, with a note** (Spock, Always Your Friend; `DesignNotes.md`). **Pure Energy's distribution is the
+  exact rule**: split as it is cast, so a second target gone illegal loses its counter.
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -82,14 +87,20 @@ Open questions:
       reach sealed and draft by November 10
 - [ ] MC-5.2 The new mechanics (Station, Strange new worlds, Face a dilemma, and whatever the survey finds)
       — Station done 2026-10-31 (batch 2): `TrkCards.Station`, a creature at its threshold read live by
-      `Card.Is`, the tapped creature a real choice (`ActivateAbilityAction.TapId`), the AI's station term
+      `Card.Is`, the tapped creature a real choice (`ActivateAbilityAction.TapId`), the AI's station term.
+      Batch 3 (2026-10-31): beam me up (`BeamMeUpCost`), strange new worlds (`Count.DistinctNamesOf`), face
+      a dilemma (`FacedDilemmaEvent`, three places), power 8 (`Trigger.While`, `Count.TotalPowerOf`), becomes
+      tapped (`MagicState.Tap`, all six tap paths), look and take (`LookAndTake`), Federation
+      (`Count.CreatureTypesAmong`); "tap two" is now the player's choice (Worf — Tenured Tethermage too)
 - [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
       the 88 tier 0–1 C/U not waiting on STATION or ANY-COUNTER (re-tiered: 4 tier 3, 6 tier 2, list in
       `TrkCoverage.md`); new pieces: modal activated abilities, `PutSelfOnBottomCost`, `AddManaOfAnyOneColor`,
       `LookAtHand`, `Count.Plus`; FraCards' shared helpers moved to `Sets/Scripting.cs`. Batch 2 done
       2026-10-31: the 12 STATION C/U waiting on nothing else (Stray from History re-tiered to 2); new
       options: `Is.Tapped`, `RevealUntilOntoBattlefield.HowMany/Tapped`, a spell's cost change seeing its
-      targets. Waiting: Hemmer (TAPPED), Rutherford (LOOK-TAKE), Zefram Cochrane (tier-3 one-offs)
+      targets. Batch 3 done 2026-10-31: the 31 C/U on batch 3's mechanics (Hemmer and Rutherford in);
+      new options: `ExileTopPlayable.ThisTurn` (Kirk), `TargetChosen` (Pure Energy's split as cast),
+      `ChooseAmongChoice.Filter`. Waiting: Zefram Cochrane (tier-3 one-offs); batch 4's list in `TrkCoverage.md`
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -102,15 +113,16 @@ Open questions:
 
 ## Next
 
-**MC-5.3 batch 2 is done (2026-10-31): Station plays, 116/311** — batch 1's 88 plus the 12 STATION commons
-and uncommons waiting on nothing else. Station is `TrkCards.Station(n, keywords)` (Cookbook; the rule in
-`magic-mechanics.md`); the rare Spacecraft with a second threshold use `new AtLeast(Count.ChargeCountersOn(
-Ref.Source), n)` on that ability. The AI stations (checked with the search on a simple board) by a first
-formula Shayne wants iterated (`DesignNotes.md`), and the snapshot-at-tap LKI is a noted shortcut.
-**Next: the rest of the Nov 4–6 row — the small pieces (beam me up, strange new worlds, dilemma, Federation,
-power 8, becomes tapped — Hemmer, Sulu —, look-take — Rutherford —, counters), Sagas, Kicker, in a NEW
-session.** Every batch starts in a NEW session (`/card-batch` step 0) and ends with its usage row
-(`tools/usage_report.py --log`, `docs/findings/card-batch-usage.md`) — this set tests that workflow.
+**MC-5.3 batch 3 is done (2026-10-31): the small mechanics play, 147/311** — beam me up, strange new
+worlds, face a dilemma, power 8, becomes tapped, look and take and Federation (each one's rule in
+`magic-mechanics.md`, its script helper in `TrkCards`: `BeamMeUp`, `DifferentlyNamedLands`, `Federation`), with
+the 31 commons and uncommons waiting on them. "Tap two" is the player's choice (`SecondTapId`). Batch 3's
+shortcuts are in `DesignNotes.md` (Spock's "any order" is random; bottom cards in a random order aren't known).
+**Next: batch 4 in a NEW session — the C/U left (`TrkCoverage.md`'s status names them): counters of any
+kind (ANY-COUNTER, QUEST), can't block, once each turn, Sagas, Kicker, and the four batch 3 re-tiered to 3
+(Species 8472, Ensign Pavel Chekov, Erica Ortegas, Warp Speed).** Every batch starts in a NEW session
+(`/card-batch` step 0) and ends with its usage row (`tools/usage_report.py --log`,
+`docs/findings/card-batch-usage.md`) — this set tests that workflow.
 
 Read: this story, `MagicCore/TrkCoverage.md` (every card's tier, what it waits on, what to reuse —
 the survey), `/card-batch`, `MagicCore/AbilityCatalog.md`, `MagicCore/Cookbook.md`. Card text:
@@ -155,3 +167,10 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   TRK 116/311; 15 tests, 16/16 revert-checks caught (two only after a fix: a redundant clamp deleted, a
   test made to ask WHO chooses); probe: 150 games, no crash, every card used; the search AI stations on
   a simple board; bench +2.1% (noise); golden replays regenerated (only games dealing a new card moved).
+- 2026-10-31: MC-5.2 small mechanics + MC-5.3 batch 3 — Shayne's three answers in Decisions (and the
+  bottom-of-library knowledge left as the rule has it, noted); 31 cards (12 C, 19 U), TRK 147/311; 29 tests,
+  37/37 revert-checks caught (one only after the revert itself was fixed to compile); probe: 150 games, no
+  crash, every card used; bench +0.0%; golden replays regenerated — every moved game deals a new card or a
+  "tap two" card (Tenured Tethermage's became a choice too). The review's fixes: either tap clicked first
+  (one move by `MoveKey`), "tap two" not split again on a copied cost list, the beamed-up creature may tap
+  for the mana first.

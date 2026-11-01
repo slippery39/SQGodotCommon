@@ -3,7 +3,13 @@
 Status, not rules: what is scripted, what waits and why (story MC-5). The rules live in
 `MagicCore/CLAUDE.md`. **Scripted: the 10 Planet duals (MC-5.5, 2026-10-31); MC-5.3 batch 1, every tier
 0–1 common and uncommon not waiting on STATION or ANY-COUNTER (88); batch 2, Station (MC-5.2) and the 12
-STATION commons and uncommons waiting on nothing else** — 116/311 play, with the basics and Mugato. Batch 2
+STATION commons and uncommons waiting on nothing else; batch 3, the small mechanics (beam me up, strange new
+worlds, dilemma, power 8, becomes tapped, look and take, Federation) and their 31 commons and uncommons** —
+147/311 play, with the basics and Mugato. Batch 3 left for batch 4: Astute Terraformer (ONCE-A-TURN),
+La'An Noonien-Singh (CANT-BLOCK), Beckett Mariner and Brad Boimler (ANY-COUNTER), and four re-tiered to 3
+from their full text — Species 8472 (can't be blocked by artifact creatures; can't be targeted by opponents'
+artifact abilities), Ensign Pavel Chekov (exile their top X, play a land from among them), Erica Ortegas (a
+land from your hand, one returned at the next end step), Warp Speed ("Lands you control enter untapped"). Batch 2
 re-tiered Stray from History to tier 2 (Null Summoner's exile, from a sorcery); Hemmer (TAPPED), Rutherford
 (LOOK-TAKE) and Zefram Cochrane (three tier-3 one-offs: look at the top any time, cast an artifact from
 the top, Spacecraft enter with two more counters — Shayne: with the one-offs) wait. Batch 1 re-tiered from the full text: Tea, Earl Grey, Hot (a modal activated ability), Daniels (a
@@ -28,19 +34,19 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | TOK | DONE (MC-5.5): `TrkCards.Officer`, `Borg`, `KlingonWarrior`, `Romulan`, `ArtifactIllusion`, `CreateNewPlanet`; `Tokens.CreateClue`, `CreateFood`, `CreateTreasure` (tested: `TrkCardTests`). Not yet: Porthos, Murf, the Worm (CANT-BLOCK), City's Human — one-offs, with their card | `new CreateTokens(TrkCards.Officer, n)` |
 | PLANET-DUAL | DONE (MC-5.5): the 10 Planet duals, `TrkCards.PlanetDual` | — |
 | STATION | DONE (MC-5.2): `TrkCards.Station(n, keywords)` — `StationComponent` (a creature at n+, read live by `Card.Is`), the station ability (the creature tapped is a choice, `ActivateAbilityAction.TapId`), a static per "n+" keyword. Another threshold's ability: `If`/`OnlyIf` = `new AtLeast(Count.ChargeCountersOn(Ref.Source), n)` | — |
-| SNW | Strange new worlds: a count of differently named lands you control | a new `CountOf`; `CostChange` already takes a `Count` |
-| BEAM | Beam me up: cast from your graveyard for [cost] + returning a creature you control, instead of the mana cost; exiled leaving the stack | `FlashbackComponent` + its `Costs` (Twinned Vision); Scotty grants it as Stingcaster Mage does |
-| DILEMMA | Face a dilemma: an event when a player chooses one or more modes (one however many), + a count this turn | raised where modes are chosen: casting, and `ChooseModesChoice` |
+| SNW | DONE (MC-5.2, batch 3): `TrkCards.DifferentlyNamedLands` (`Count.DistinctNamesOf`) — a cost change (`.Negated`), a power, a life gain | — |
+| BEAM | DONE (MC-5.2, batch 3): `TrkCards.BeamMeUp("{2}{W}")` — a flashback with `BeamMeUpCost` (`CastSpellAction.ReturnId`); Marooned's `EnchantedCantBeBeamedUp`. Not yet: Scotty granting it (as Stingcaster Mage grants flashback) | — |
+| DILEMMA | DONE (MC-5.2, batch 3): `TriggerEvent.YouFaceADilemma` — raised by a cast, an activation and a modal trigger. Not yet: a count this turn (no C/U needs it) | — |
 | SAGA | Lore counters, chapter triggers ("after your draw step" = first main phase), sacrifice after the last | `TriggerEvent.YourFirstMainPhase` |
-| POWER8 | "Whenever you attack while creatures you control have total power 8 or greater" | `TriggerEvent.YouAttack` + a total-power `CountOf` |
-| TAPPED | "Whenever this becomes tapped" — an event on the one tap path | — |
-| FED | Federation: creature types among non-Borg creatures you control | `Count.SubtypesAmong` (Tam) with a filter |
+| POWER8 | DONE (MC-5.2, batch 3): `TriggerEvent.YouAttackWithTotalPower8` (`Trigger.While`, judged as attackers are declared); `Count.TotalPowerOf` for a "then … if" | — |
+| TAPPED | DONE (MC-5.2, batch 3): `TriggerEvent.SelfBecomesTapped` — `MagicState.Tap`, every tap path | — |
+| FED | DONE (MC-5.2, batch 3): `TrkCards.Federation` (`Count.CreatureTypesAmong`, Spacecraft left out) | — |
 | QUEST, ANY-COUNTER | Quest, promotion, peace counters; "a counter of any kind" | proposed: ONE general counter map for the new kinds; the existing counter fields stay |
 | KICKER | An optional extra payment as it is cast, then "if kicked" | `ReplicateComponent`'s pattern; `SacrificeCost` (Eject the Warp Core) |
 | SHOCK | "As this land enters, you may pay 2 life. If you don't, it enters tapped." | `EntersTappedComponent(Unless)` |
 | ENTERS-UNTAPPED | "When this land enters untapped, choose one —" | `EntersTappedComponent` + a modal trigger |
 | CANT-BLOCK | "Can't block", as a keyword-like grant | `Combat.CantBeBlocked`'s pattern |
-| LOOK-TAKE | "Look at the top N, you may reveal a [filter] card and put it into your hand, the rest on the bottom in a random order" | `MillAndMayTake`, `ChooseAmongChoice` |
+| LOOK-TAKE | DONE (MC-5.2, batch 3): `LookAndTake(n, filter) { Reveal, Must, RestToGraveyard }` | — |
 | DELAYED-RETURN | "Exile …, return it at the beginning of the next end step" | `Flicker`, `DelayedTrigger` |
 | LEAVES-GY | "Whenever one or more cards leave your graveyard" | — |
 | CONTROL | Gain control (until end of turn, or for good; exchange) | MtgCore's `GainControlAction` |
@@ -254,7 +260,7 @@ Reno reads "+1/1 counter" — script +1/+1. The Stardates (SDS, 30) come last (M
 | U.S.S. Voyager, Lone Wanderer | U | 2 | STATION |
 | Una Chin-Riley, Number One | U | 2 | POWER8 |
 | Vengeance Mission | U | 2 | QUEST |
-| Warp Speed | U | 2 | SNW TOK |
+| Warp Speed | U | 3 | SNW TOK, lands enter untapped (batch 3) |
 | Worf, Honor-Bound Warrior | U | 2 | POWER8 |
 | Branching Timeline | R | 2 | SNW |
 | Captain Jonathan Archer | R | 2 | FED TOK |
@@ -302,14 +308,14 @@ Reno reads "+1/1 counter" — script +1/+1. The Stardates (SDS, 30) come last (M
 | Combadge | U | 3 |  |
 | Data, New Life | U | 3 |  |
 | Dr. McCoy, Surly Surgeon | U | 3 |  |
-| Ensign Pavel Chekov | U | 3 | SNW |
-| Erica Ortegas, Plucky Pilot | U | 3 | TAPPED |
+| Ensign Pavel Chekov | U | 3 | SNW, exile their top X + play a land (batch 3) |
+| Erica Ortegas, Plucky Pilot | U | 3 | TAPPED, a land from hand + DELAYED-RETURN (batch 3) |
 | Exploratory Mission | U | 3 | QUEST |
 | Highly Illogical | U | 3 | KICKER |
 | Hive Mind Coprocessor | U | 3 | GRANT-TRIGGER |
 | Hologram Stalker | U | 3 | LEAVES-GY TOK |
 | Rules of Acquisition | U | 3 | CONTROL |
-| Species 8472 | U | 3 | SNW |
+| Species 8472 | U | 3 | SNW, blocked-by and targeted-by restrictions (batch 3) |
 | Storied Veteran | U | 3 | CANT-BLOCK |
 | Vash, Freelance Archaeologist | U | 3 | LEAVES-GY |
 | Vulcan Mind-Meld | U | 3 |  |

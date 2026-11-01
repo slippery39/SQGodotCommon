@@ -138,6 +138,9 @@ public record ChooseAmongChoice : ChoiceAction
 	/// <summary>Extrapolate the Impossible: "two cards … with different names" — one option per name.</summary>
 	public bool DifferentNames { get; init; }
 
+	/// <summary>There's Coffee in that Nebula: "a Plains card or nonland permanent card with mana value 3 or less" — what Types can't say.</summary>
+	public Filters.Filter? Filter { get; init; }
+
 	public ChooseAmongChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -152,7 +155,8 @@ public record ChooseAmongChoice : ChoiceAction
 	{
 		var cards = Ids.Where(id => s.IsIn(id, PlayerId, Zone))
 			.Select(s.GetCard)
-			.Where(c => Types == CardType.None || c.Is(Types)); // None: any card
+			.Where(c => Types == CardType.None || c.Is(Types)) // None: any card
+			.Where(c => Filter?.Matches(s, c, new(PlayerId, 0)) ?? true);
 		return (DifferentNames ? cards.DistinctBy(c => c.Name) : cards)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();

@@ -117,15 +117,16 @@ public record FinishAttackersAction : GameAction
 		{
 			var card = s.GetCard(id);
 			s = s.UpdateObject(
-					id,
-					card with
-					{
-						AttackingId = target,
-						AttackedOnTurn = s.GetGame().TurnNumber,
-						IsTapped = card.IsTapped || !s.Has(card, "Vigilance"),
-					}
-				)
-				.Raise(new AttackedEvent(id));
+				id,
+				card with
+				{
+					AttackingId = target,
+					AttackedOnTurn = s.GetGame().TurnNumber,
+				}
+			);
+			if (!s.Has(card, "Vigilance"))
+				s = s.Tap(id);
+			s = s.Raise(new AttackedEvent(id));
 		}
 		// "Whenever you attack": once for the whole declaration, however many attack.
 		if (declared.Count > 0)

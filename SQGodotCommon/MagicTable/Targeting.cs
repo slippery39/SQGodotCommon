@@ -34,6 +34,7 @@ public static class Targeting
 				.. Cost(c.SacrificeId, "sacrifice", "sacrificing"),
 				.. Cost(c.DiscardId, "discard", "discarding"),
 				.. Cost(c.BeholdId, "behold", "beholding"),
+				.. Cost(c.ReturnId, "return", "returning"),
 			],
 			ActivateAbilityAction a =>
 			[
@@ -42,6 +43,7 @@ public static class Targeting
 				.. Cost(a.DiscardId, "discard", "discarding"),
 				.. Cost(a.ExileId, "exile", "exiling"),
 				.. Cost(a.TapId, "tap", "tapping"),
+				.. Cost(a.SecondTapId, "tap", "tapping"),
 			],
 			ActivateLoyaltyAction l => [.. Targets(l.Targets)],
 			_ => [],
@@ -163,6 +165,7 @@ public static class Targeting
 				SacrificeId = 0,
 				DiscardId = 0,
 				BeholdId = 0,
+				ReturnId = 0,
 			},
 			ActivateAbilityAction a => a with
 			{
@@ -171,6 +174,7 @@ public static class Targeting
 				DiscardId = 0,
 				ExileId = 0,
 				TapId = 0,
+				SecondTapId = 0,
 			},
 			ActivateLoyaltyAction l => l with { Targets = [] },
 			_ => move,

@@ -20,6 +20,8 @@ public enum CostSlot
 	Exile,
 	Behold,
 	Tap, // Station: "Tap another creature you control" — which one is the player's choice
+	SecondTap, // Worf: "Tap two untapped artifacts and/or creatures" — the second one
+	Return, // Beam me up: "return a creature you control to its owner's hand"
 }
 
 /// <summary>A cost beyond mana — what may be chosen to pay it, whether it can be paid, and paying it.</summary>
@@ -71,66 +73,77 @@ public sealed record TapSelfCost : AdditionalCost
 		[sourceId];
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		s.UpdateObject(sourceId, s.GetCard(sourceId) with { IsTapped = true });
+		s.Tap(sourceId);
 
 	public override string Describe() => "T";
 }
 
 /// <summary>
 /// Tenured Tethermage: "Tap two untapped artifacts you control:" — tapping for a cost isn't {T}, so
-/// summoning sickness doesn't matter (CR 302.6). ONE to tap is the player's choice, one legal action
-/// each (CostSlot.Tap) — Station: "Tap another creature you control", whose power is the point.
-/// ponytail: two or more are picked for the player, those that make no mana first; make that a choice
-/// too if the pick ever matters more than that.
+/// summoning sickness doesn't matter (CR 302.6). Each one tapped is the player's choice, one legal
+/// action each (CostSlot.Tap) — Station: "Tap another creature you control", whose power is the point.
+/// "Tap two" is split into two of these as ActivatedAbilityComponent.Costs is built, the second
+/// picking into SecondTap (Worf, Honor-Bound Warrior — Shayne: the player picks both). Only an
+/// activated ability splits it: no spell or ward costs "tap two" yet.
 /// </summary>
 public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 {
 	/// <summary>With "{T}" in the same cost the source is already spoken for — set by ActivatedAbilityComponent.Costs.</summary>
 	public bool NotTheSource { get; init; }
 
-	IEnumerable<Card> Untapped(GameState s, int playerId, int sourceId) =>
+	/// <summary>The second of "tap two" — set by ActivatedAbilityComponent.Costs; it picks into SecondTap.</summary>
+	public bool Second { get; init; }
+
+	public override CostSlot Slot => Second ? CostSlot.SecondTap : CostSlot.Tap;
+
+	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		s.CardsIn(playerId, ZoneType.Battlefield)
 			.Where(c =>
 				Filter.Matches(s, c, new(playerId, sourceId))
 				&& !c.IsTapped
 				&& !(NotTheSource && c.Id == sourceId)
-			);
+			)
+			.Select(c => c.Id);
 
-	public IReadOnlyList<Card> Pick(GameState s, int playerId, int sourceId) =>
-		[
-			.. Untapped(s, playerId, sourceId)
-				// What makes no mana first, then what makes least (a Lotus last).
-				.OrderBy(c =>
-					ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c).Units.Length : 0
-				)
-				.Take(Count),
-		];
-
-	public override CostSlot Slot => Count == 1 ? CostSlot.Tap : CostSlot.None;
-
-	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
-		Count == 1 ? Untapped(s, playerId, sourceId).Select(c => c.Id) : [];
-
+	/// <summary>"Tap two": two untapped to choose from, for each half.</summary>
 	public override bool CanPay(GameState s, int playerId, int sourceId) =>
-		Count == 1
-			? Untapped(s, playerId, sourceId).Any()
-			: Pick(s, playerId, sourceId).Count >= Count;
+		Candidates(s, playerId, sourceId).Count() >= Count;
 
 	public override bool Taps => true;
 
-	/// <summary>The one chosen, or the ones picked for the player.</summary>
-	IEnumerable<int> Tapped(GameState s, int playerId, int sourceId, int chosen) =>
-		Count == 1 ? (chosen == 0 ? [] : [chosen]) : Pick(s, playerId, sourceId).Select(c => c.Id);
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		chosen == 0 ? s : s.Tap(chosen);
 
+	public override string Describe() => "Tap an untapped permanent";
+}
+
+/// <summary>
+/// Beam me up: "You may cast this card from your graveyard for [cost] if you also return a creature
+/// you control to its owner's hand. Then exile this spell." — the cost beside the mana on its
+/// FlashbackComponent (TrkCards.BeamMeUp). Marooned: a creature whose Aura says it "can't be beamed
+/// up" is never offered.
+/// </summary>
+public sealed record BeamMeUpCost : AdditionalCost
+{
+	public override CostSlot Slot => CostSlot.Return;
+
+	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
+		Is
+			.Creature.Among(s, playerId, ZoneType.Battlefield, sourceId)
+			.Where(id =>
+				!MagicCore
+					.Rules.Attachments.On(s, s.GetCard(id))
+					.Any(a => a.HasComponent<EnchantedCantBeBeamedUp>())
+			);
+
+	/// <summary>Nothing: a creature may tap for the spell's mana before it is returned (CR 601.2g–h).</summary>
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
-		Tapped(s, playerId, sourceId, chosen);
+		[];
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		Tapped(s, playerId, sourceId, chosen)
-			.ToList()
-			.Aggregate(s, (st, id) => st.UpdateObject(id, st.GetCard(id) with { IsTapped = true }));
+		chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(s.GetCard(chosen).OwnerId, ZoneType.Hand));
 
-	public override string Describe() => $"Tap {Count} untapped permanents";
+	public override string Describe() => "Return a creature you control to its owner's hand";
 }
 
 /// <summary>"Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).</summary>

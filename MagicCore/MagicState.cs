@@ -350,6 +350,20 @@ public static class MagicState
 	}
 
 	/// <summary>
+	/// The ONE way a permanent becomes tapped — attacking, a {T} or "tap N untapped" cost (Station's
+	/// too), a Tap effect, tapping for mana — raising Hemmer's "whenever Hemmer becomes tapped" only
+	/// when it was untapped. Entering tapped is not becoming tapped (EnterBattlefield sets it).
+	/// </summary>
+	public static GameState Tap(this GameState s, int cardId)
+	{
+		var card = s.GetCard(cardId);
+		return card.IsTapped
+			? s
+			: s.UpdateObject(cardId, card with { IsTapped = true })
+				.Raise(new BecameTappedEvent(cardId));
+	}
+
+	/// <summary>
 	/// The ONE way a permanent untaps — the untap step and "untap" effects alike. A stun counter is
 	/// removed instead (CR 122.1d).
 	/// </summary>

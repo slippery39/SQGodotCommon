@@ -127,7 +127,22 @@ public static class TrkCards
 		);
 
 	/// <summary>
-	/// Station (MC-5.2): "Station (Tap another creature you control: Put charge counters equal to its
+	/// Beam me up [cost] (MC-5.2): "You may cast this card from your graveyard for [cost] if you also
+	/// return a creature you control to its owner's hand. Then exile this spell." — a flashback whose
+	/// cost beside the mana is <see cref="BeamMeUpCost"/>.
+	/// </summary>
+	static FlashbackComponent BeamMeUp(string cost) =>
+		new(ManaCost.Parse(cost)) { Costs = [new BeamMeUpCost()] };
+
+	/// <summary>Strange new worlds (MC-5.2): "the number of differently named lands you control".</summary>
+	static Count DifferentlyNamedLands => Count.DistinctNamesOf(Ref.LandsYouControl);
+
+	/// <summary>Federation (MC-5.2): "the number of creature types among non-Borg creatures you control" — Borg not considered at all.</summary>
+	static Count Federation =>
+		Count.CreatureTypesAmong(Ref.Permanents(Is.Creature & Is.Yours & !Is.Subtype("Borg")));
+
+	/// <summary>
+	/// Station (MC-5.2):"Station (Tap another creature you control: Put charge counters equal to its
 	/// power on this Spacecraft. Station only as a sorcery. It's an artifact creature at N+.)" and the
 	/// keywords in the "N+" box beside its P/T — Oberth-Class Starship: Station(6, "Flying"). The
 	/// creature tapped is the ability's event card, its power read as it resolves.
@@ -1101,6 +1116,310 @@ public static class TrkCards
 					new RevealUntilOntoBattlefield(CardType.Land) { HowMany = 2, Tapped = true }
 				),
 				.. Station(8, "Flying", "Vigilance"),
+			],
+			// ===== MC-5.3 batch 3: beam me up, strange new worlds, dilemma, power 8, becomes tapped, look and take, Federation (MC-5.2) =====
+			["Boarding Action"] =
+			[
+				Spell([], new CreateTokens(KlingonWarrior, 1)),
+				BeamMeUp("{2}{R}"),
+			],
+			["Final Frontier"] =
+			[
+				Spell(
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+					{
+						Filter = Is.Supertype(Supertype.Basic) | Is.Subtype("Planet"),
+						FilterText = "basic land or Planet",
+						Tapped = true,
+					}
+				),
+				BeamMeUp("{1}{G}"),
+			],
+			["Open Communications"] = [Spell([], new DrawCards(Ref.You, 1)), BeamMeUp("{2}{U}")],
+			["Pattern Buffer Preservation"] =
+			[
+				Spell([], new LookAndTake(2) { Must = true, RestToGraveyard = true }),
+				BeamMeUp("{1}{B}"),
+			],
+			["Pure Energy"] =
+			[
+				Spell(
+					[Creature, Creature with { Optional = true, NotThePrevious = true }],
+					new AddCounters(Ref.Target(0), 1),
+					new AddCounters(Ref.Target(1), 1),
+					// One target chosen: both counters on it. Two: one each, decided as it was cast.
+					new If(new Not(new TargetChosen(1)), [new AddCounters(Ref.Target(0), 1)])
+				),
+				BeamMeUp("{2}{W}"),
+			],
+			["Adversary by Algorithm"] =
+			[
+				Spell([], new CreateTokens(ArtifactIllusion, 1)),
+				BeamMeUp("{3}{G}"),
+			],
+			["Energize"] =
+			[
+				Spell([Target(Is.Creature & Is.Opponents)], new ReturnToHand(Ref.Target())),
+				BeamMeUp("{3}{U}"),
+			],
+			["Transporter Malfunction"] =
+			[
+				Spell([TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 3)),
+				BeamMeUp("{3}{R}{R}{R}"),
+			],
+			["There's Coffee in that Nebula"] =
+			[
+				Spell(
+					[],
+					new LookAndTake(
+						5,
+						Is.Subtype("Plains")
+							| (
+								Is.Type(
+									CardType.Artifact
+										| CardType.Creature
+										| CardType.Enchantment
+										| CardType.Planeswalker
+								)
+								& !Is.Land
+								& Is.ManaValueAtMost(3)
+							)
+					)
+					{
+						Reveal = true,
+					}
+				),
+				BeamMeUp("{2}{W}"),
+			],
+			["Marooned"] =
+			[
+				new AuraComponent(Target(Is.Artifact | Is.Creature)),
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new May(
+						"Pay {3} to tap the enchanted permanent?",
+						new CanPay(ManaCost.Parse("{3}")),
+						[new PayMana(ManaCost.Parse("{3}"), [new Tap(Ref.EnchantedCreature)])]
+					)
+				),
+				new EnchantedDoesntUntap(),
+				new EnchantedCantBeBeamedUp(),
+			],
+			["Suus Mahna Practitioner"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{4}{U}"), [new Tap(Ref.Target())])
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Creature],
+					CostChange = new(DifferentlyNamedLands.Negated),
+				},
+			],
+			["Cloak and Phaser"] =
+			[
+				new CostChange(DifferentlyNamedLands.Negated) { OnItself = true },
+				Spell(
+					[],
+					new CreateTokens(Romulan, 2),
+					new DrawCards(Ref.You, 2),
+					new Discard(Ref.You, 1)
+				),
+			],
+			["The Traveler"] =
+			[
+				new StaticEffectComponent(Is.Source) { Power = DifferentlyNamedLands },
+			],
+			["Melkotian Adjudicator"] =
+			[
+				When(TriggerEvent.YouFaceADilemma, [], new AddCounters(Ref.Source, 1)),
+			],
+			["Obsidian Order Operative"] =
+			[
+				When(
+					TriggerEvent.YouFaceADilemma,
+					[],
+					new LoseLife(Ref.EachOpponent, 1),
+					new GainLife(Ref.You, 1)
+				),
+			],
+			["Seven of Nine"] = [When(TriggerEvent.YouFaceADilemma, [], new DrawCards(Ref.You, 1))],
+			["Gabriel Lorca, Mirror Menace"] =
+			[
+				When(
+					TriggerEvent.YouFaceADilemma,
+					[],
+					new May(
+						"Pay {B} to return Gabriel Lorca from your graveyard to your hand?",
+						new CanPay(ManaCost.Parse("{B}")),
+						[
+							new PayMana(
+								ManaCost.Parse("{B}"),
+								[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]
+							),
+						]
+					)
+				) with
+				{
+					FromGraveyard = true,
+				},
+			],
+			["Tell Me What You See"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new May(
+						"Let your opponent draw a card? If not, you lose 4 life and they surveil 1.",
+						new Always(),
+						[new DrawCards(Ref.You, 1)]
+					)
+					{
+						Who = Ref.Target(0),
+						Otherwise = [new LoseLife(Ref.Target(0), 4), new Surveil(1)],
+					}
+				),
+				When(
+					TriggerEvent.YouFaceADilemma,
+					[],
+					new May(
+						"Return Tell Me What You See to your hand?",
+						new Always(),
+						[new ReturnToHand(Ref.Source)]
+					)
+				),
+			],
+			["Jett Reno, Problem Solver"] =
+			[
+				When(
+					TriggerEvent.SelfBecomesTapped,
+					[],
+					new If(new Matches(Ref.Source, Is.PowerAtLeast(4)), [new DrawCards(Ref.You, 1)])
+					{
+						Otherwise = [new Surveil(1)],
+					}
+				),
+				// Scryfall prints "+1/1 counter": a +1/+1 counter (TrkCoverage.md).
+				When(TriggerEvent.YouFaceADilemma, [], new AddCounters(Ref.Source, 1)),
+			],
+			["Hologram Janeway"] =
+			[
+				When(
+					TriggerEvent.YouAttackWithTotalPower8,
+					[Creature],
+					new AddCounters(Ref.Target(), 1)
+				),
+			],
+			["Tactical Officer"] =
+			[
+				When(
+					TriggerEvent.YouAttackWithTotalPower8,
+					[],
+					new AddCounters(Ref.Source, 1),
+					new Untap(Ref.Source)
+				),
+			],
+			["Cantankerous Captain"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[Target(Is.Creature & Is.Yours)],
+					new ModifyUntilEndOfTurn(Ref.Target(), 1, 0),
+					// Judged as it resolves — "Then … if", not the attack trigger's "while".
+					new If(
+						new AtLeast(Count.TotalPowerOf(Ref.CreaturesYouControl), 8),
+						[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Menace")]
+					)
+				),
+			],
+			["Una Chin-Riley, Number One"] =
+			[
+				When(
+					TriggerEvent.YouAttackWithTotalPower8,
+					[Target(Is.Creature & Is.Attacking)],
+					new ModifyUntilEndOfTurn(Ref.Target(), 2, 0, "First strike")
+				),
+			],
+			["Kirk, Commanding Officer"] =
+			[
+				When(
+					TriggerEvent.YouAttackWithTotalPower8,
+					[],
+					new ExileTopPlayable { ThisTurn = true }
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new Destroy(Ref.Target())])
+				{
+					Costs = [new SacrificeSelfCost()],
+					Targets = [Target(Is.Artifact | Is.Enchantment)],
+				},
+			],
+			["Worf, Honor-Bound Warrior"] =
+			[
+				// "Double Worf's power": +X/+0 where X is his power as it resolves.
+				When(
+					TriggerEvent.YouAttackWithTotalPower8,
+					[],
+					new ModifyUntilEndOfTurn(Ref.Source, Count.PowerOf(Ref.Source), 0)
+				),
+				new ActivatedAbilityComponent(ManaCost.None, [new AddCounters(Ref.Source, 1)])
+				{
+					Costs = [new TapUntappedCost(2, Is.Artifact | Is.Creature)],
+					SorcerySpeed = true,
+				},
+			],
+			["Shuttle Ace"] =
+			[
+				new StaticEffectComponent(Is.Source, "Flying") { If = new DuringYourTurn() },
+				When(TriggerEvent.SelfBecomesTapped, [], new GainLife(Ref.You, 2)),
+			],
+			["Hemmer, Fixing What Is Broken"] =
+			[
+				new StaticEffectComponent(Is.Subtype("Spacecraft") & Is.Yours, "Hexproof")
+				{
+					If = new DuringYourTurn(),
+				},
+				When(
+					TriggerEvent.SelfBecomesTapped,
+					[],
+					new DrawCards(Ref.You, 1),
+					new Discard(Ref.You, 1)
+				),
+			],
+			["Rutherford, Upgraded Ensign"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new LookAndTake(6, Is.Artifact) { Reveal = true }
+				),
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.Subtype("Spacecraft"),
+					},
+					[Creature],
+					new AddCounters(Ref.Target(), 1)
+				),
+			],
+			["Spock, Always Your Friend"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new LookAndTake(4, !Is.Creature & !Is.Land) { Reveal = true }
+				),
+			],
+			["Hoshi Sato, Exolinguist"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new LookAndTake(Federation) { Must = true }),
+			],
+			["Saavik, Stoic Student"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Creature & Is.Opponents & Is.InCombat)],
+					new DealDamage(Ref.Target(), Federation)
+				),
 			],
 		};
 }

@@ -1035,6 +1035,9 @@ public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 /// <summary>Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn, you may play that card."</summary>
 public record ExileTopPlayable : Effect
 {
+	/// <summary>Kirk, Commanding Officer: "You may play that card this turn." — not until the end of your next.</summary>
+	public bool ThisTurn { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var top = s.CardsIn(Controller, ZoneType.Library).FirstOrDefault();
@@ -1049,7 +1052,9 @@ public record ExileTopPlayable : Effect
 						.WithComponent(
 							new PlayableFromExile(
 								Controller,
-								Playable.EndOfNextTurnOf(s, Controller)
+								ThisTurn
+									? s.GetGame().TurnNumber
+									: Playable.EndOfNextTurnOf(s, Controller)
 							)
 						)
 			)
@@ -1178,6 +1183,92 @@ public record MillAndMayTake(int N, CardType Types) : Effect
 				}
 			)
 		);
+	}
+}
+
+/// <summary>
+/// Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal an artifact
+/// card from among them and put it into your hand. Put the rest on the bottom of your library in a
+/// random order." Hoshi Sato's "put one of them into your hand" is Must; Pattern Buffer Preservation's
+/// "… and the other into your graveyard" is RestToGraveyard. A revealed card is known to everyone; the
+/// rest go down as Identity Echo's do — a random order is not known (magic-mechanics.md).
+/// ponytail: Spock's "in any order" is a random order too (Shayne, 2026-10-31; DesignNotes).
+/// </summary>
+public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
+{
+	/// <summary>"You may reveal [it] and put it into your hand" — known to everyone there.</summary>
+	public bool Reveal { get; init; }
+
+	/// <summary>Hoshi Sato: "Put one of them into your hand" — not "you may".</summary>
+	public bool Must { get; init; }
+
+	/// <summary>Pattern Buffer Preservation: "the other into your graveyard", not the bottom.</summary>
+	public bool RestToGraveyard { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var top = s.CardsIn(Controller, ZoneType.Library)
+			.Take(N.Value(s, InputContext))
+			.Select(c => c.Id)
+			.ToImmutableList();
+		var choice = new ChooseAmongChoice
+		{
+			PlayerId = Controller,
+			Ids = top,
+			Zone = ZoneType.Library,
+			Filter = Filter,
+			Prompt = Must ? "Put one into your hand" : "You may put one into your hand",
+			MinChoices = Must ? 1 : 0,
+		};
+		var put = new PutLookedAtAction(Controller, top, Reveal, RestToGraveyard);
+		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = context,
+					// Nothing to take: no prompt with no options, but the rest still go.
+					Steps = choice.GetOptions(s, context).IsEmpty ? [put] : [choice, put],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>After LookAndTake's choice: the chosen card into the hand, the rest to the bottom in a random order (or the graveyard).</summary>
+public record PutLookedAtAction(
+	int PlayerId,
+	ImmutableList<int> Looked,
+	bool Reveal,
+	bool RestToGraveyard
+) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var taken = ChooseCardsFromHandChoice.Read(InputContext).ToHashSet();
+		foreach (var id in taken)
+		{
+			s = s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Hand));
+			if (Reveal)
+				s = s.MakeKnown(id, Knowers.Everyone);
+		}
+		var rest = Looked
+			.Where(id => !taken.Contains(id) && s.IsIn(id, PlayerId, ZoneType.Library))
+			.ToArray();
+		if (RestToGraveyard)
+			return new(
+				rest.Aggregate(
+					s,
+					(st, id) => st.MoveCard(id, st.ZoneId(PlayerId, ZoneType.Graveyard))
+				)
+			);
+		(var rng, s) = s.TakeRng();
+		rng.Shuffle(rest);
+		var libraryId = s.ZoneId(PlayerId, ZoneType.Library);
+		// Out and back in, as RevealUntilOntoBattlefield does: MoveObject appends, and the end is the bottom.
+		foreach (var id in rest)
+			s = s.MoveObject(id, 0).MoveObject(id, libraryId);
+		return new(s);
 	}
 }
 

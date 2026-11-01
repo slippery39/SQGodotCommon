@@ -173,6 +173,27 @@ public record LoyaltyActivatedEvent(int PlayerId, int Cost) : MagicEvent
 	public override int By(GameState s) => PlayerId;
 }
 
+/// <summary>A permanent went from untapped to tapped — raised by MagicState.Tap, every tap path (Hemmer).</summary>
+public record BecameTappedEvent(int CardId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.BecameTapped;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
+
+/// <summary>
+/// Face a dilemma: "You face a dilemma as you choose one or more modes for a spell or ability" — one
+/// event however many, whether or not it resolves. Raised where modes are chosen: a cast
+/// (CastSpellAction.PutOnStack), an activation, a trigger's ChooseModesChoice.
+/// </summary>
+public record FacedDilemmaEvent(int PlayerId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.FacedDilemma;
+
+	public override int By(GameState s) => PlayerId;
+}
+
 /// <summary>Raised by Rules.Life.Gain — one per life-gain event, however much (CR 119.9).</summary>
 public record LifeGainedEvent(int PlayerId) : MagicEvent
 {
@@ -434,6 +455,8 @@ public static class Triggers
 			&& !happened.Subjects(s).Any(o => subject.Matches(s, o, asking))
 		)
 			return false;
+		if (on.While is { } holding && !holding.Holds(s, Conditions.Of(source)))
+			return false;
 		// A spell's target that is a player, or a permanent on the battlefield now.
 		bool Targets(SpellCastEvent cast, Filter f) =>
 			SpellTargets(s, cast)
@@ -657,6 +680,7 @@ public record QueueModalTriggerAction : GameAction
 			Trigger.Ability.Modes,
 			chosen
 		);
+		s = s.Raise(new FacedDilemmaEvent(Trigger.Source.ControllerId));
 		return new(Triggers.QueueTargets(s, Trigger, specs, steps));
 	}
 }

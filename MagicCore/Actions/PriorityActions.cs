@@ -136,7 +136,7 @@ public record TapForManaAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
-		s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
+		s = s.Tap(CardId);
 		var player = s.GetPlayer(PlayerId);
 		var pool = player.ManaPool;
 		foreach (var unit in yield.Units.Select((u, i) => (Colors: u, First: i == 0)))

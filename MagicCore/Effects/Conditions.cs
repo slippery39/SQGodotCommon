@@ -104,6 +104,20 @@ public record CanPay(ManaCost Cost) : Condition
 		ManaPayment.Find(s, (int)context[ContextKeys.Controller], Cost, 0) is not null;
 }
 
+/// <summary>
+/// Pure Energy: "Distribute two +1/+1 counters among one or two target creatures" — whether target
+/// word Index was chosen as it was cast, legal now or not: the split is announced then (CR 601.2d),
+/// so a second target gone illegal loses its counter instead of handing it to the first. Index counts
+/// every target word of the spell, all modes together — for a non-modal spell, as Pure Energy is.
+/// </summary>
+public record TargetChosen(int Index) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		context.GetValueOrDefault(ContextKeys.ChosenTargets) is ImmutableArray<int> chosen
+		&& Index < chosen.Length
+		&& chosen[Index] != 0;
+}
+
 /// <summary>Eye of Jace: "if there are seven or more cards in your graveyard".</summary>
 public record AtLeast(Count Count, int N) : Condition
 {

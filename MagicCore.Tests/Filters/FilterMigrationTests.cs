@@ -590,6 +590,7 @@ public class FilterMigrationTests
 		TriggerEvent.APlayerDiscards,
 		TriggerEvent.YouAttack,
 		TriggerEvent.OpponentDealtNoncombatDamage,
+		TriggerEvent.YouFaceADilemma,
 	];
 
 	/// <summary>
@@ -606,6 +607,8 @@ public class FilterMigrationTests
 		TriggerEvent.OpponentsDealtCombatDamageDuringYourTurn, // whose turn, which players
 		TriggerEvent.CreaturesAttackYourOpponent, // any attacker at a player
 		TriggerEvent.SelfDealsCombatDamageToPlayer, // Is.Source as the damage source + combat
+		TriggerEvent.SelfBecomesTapped, // Is.Source, on the one tap path (MagicState.Tap)
+		TriggerEvent.YouAttackWithTotalPower8, // YouAttack + While, judged as it triggers
 	];
 
 	/// <summary>Read from the card itself, not matched against an event on the battlefield (Triggers.Collect).</summary>
@@ -740,16 +743,19 @@ public class FilterMigrationTests
 		{
 			Costs = [new TapSelfCost(), new TapUntappedCost(2, Is.Artifact)],
 		};
-		Assert.That(ability.Costs.OfType<TapUntappedCost>().Single().NotTheSource, Nu.True);
+		// "Tap two" is split into two costs that each pick one (Worf: the player chooses both).
+		Assert.That(
+			ability.Costs.OfType<TapUntappedCost>().Select(c => (c.NotTheSource, c.Slot)),
+			Nu.EqualTo(new[] { (true, CostSlot.Tap), (true, CostSlot.SecondTap) })
+		);
 		Assert.That(
 			new ActivatedAbilityComponent(ManaCost.None, [])
 			{
 				Costs = [new TapUntappedCost(2, Is.Artifact)],
 			}
 				.Costs.OfType<TapUntappedCost>()
-				.Single()
-				.NotTheSource,
-			Nu.False
+				.Select(c => c.NotTheSource),
+			Has.All.False
 		);
 	}
 

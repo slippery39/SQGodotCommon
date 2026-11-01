@@ -718,7 +718,7 @@ public record AddChargeCounters(Ref What, Count N) : Effect
 public record Tap(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
-		new(Permanents(What, s).Aggregate(s, (st, c) => Update(st, c with { IsTapped = true })));
+		new(Permanents(What, s).Aggregate(s, (st, c) => st.Tap(c.Id)));
 }
 
 /// <summary>

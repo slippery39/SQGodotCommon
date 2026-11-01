@@ -277,7 +277,7 @@ public static class ManaPayment
 			if (p.Sacrificed)
 				sacrificed.Add(p.LandId); // Treasure: "{T}, Sacrifice this"
 			if (p.LandId != 0)
-				s = s.UpdateObject(p.LandId, s.GetCard(p.LandId) with { IsTapped = true });
+				s = s.Tap(p.LandId);
 			if (p.Restriction != ManaRestriction.None)
 			{
 				var pool = s.GetPlayer(playerId).ManaPool;

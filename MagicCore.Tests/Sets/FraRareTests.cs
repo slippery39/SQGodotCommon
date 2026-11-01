@@ -731,7 +731,7 @@ public class FraRareTests : FraBoardTest
 		Assert.That(Activations(mage), Is.Empty, "both are tapped");
 		foreach (var h in heartwoods)
 			s = s.UpdateObject(h.Id, h with { IsTapped = false }); // TEST SETUP: next turn's untap
-		s = s.Act(Activations(mage).Single());
+		s = s.Act(s.DistinctMoves(Activations(mage)).Single()); // the two Heartwoods, either clicked first
 		Resolve();
 		Assert.That(
 			(s.GetCard(mage).PlusOneCounters, Named(me, "Heartwood").All(h => h.IsTapped)),
@@ -870,7 +870,7 @@ public class FraRareTests : FraBoardTest
 		Assert.That(Activations(engineId), Is.Empty, "two to tap and one for {1}: three needed");
 
 		Field(HeartwoodToken, me);
-		s = s.Act(Activations(engineId).Single());
+		s = s.Act(Activations(engineId).First()); // each pair of the three is its own choice
 		Resolve();
 		Assert.That(
 			(s.GetCard(engineId).PlusOneCounters, Named(me, "Heartwood").Count(h => h.IsTapped)),

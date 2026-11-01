@@ -23,6 +23,9 @@ public static class ContextKeys
 	/// <summary>Every chosen target, all modes together; Targets is narrowed to one mode's slice.</summary>
 	public const string AllTargets = "AllTargets";
 
+	/// <summary>The targets as they were chosen, legal now or not — Pure Energy's split was announced then (TargetChosen).</summary>
+	public const string ChosenTargets = "ChosenTargets";
+
 	/// <summary>The spell card or the permanent whose ability this is.</summary>
 	public const string Source = "Source";
 
@@ -304,6 +307,9 @@ public enum CountOf
 	NonlandCardsChosen, // Seasoned Cryomancer: "nonland cards [discarded] this way" — the last hand choice
 	TotalLoyaltyOf, // Jace, Reality Sculptor: "loyalty counters among Jaces you control"
 	SubtypesAmong, // Tam: "planeswalker types among planeswalkers you control"
+	DistinctNamesOf, // Strange new worlds: "the number of differently named lands you control"
+	TotalPowerOf, // Power 8: "creatures you control have total power 8 or greater"
+	CreatureTypesAmong, // Federation: "creature types among non-Borg creatures you control"
 }
 
 /// <summary>
@@ -348,6 +354,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count TotalLoyaltyOf(Ref r) => new(0, r, CountOf.TotalLoyaltyOf);
 
 	public static Count SubtypesAmong(Ref r) => new(0, r, CountOf.SubtypesAmong);
+
+	public static Count DistinctNamesOf(Ref r) => new(0, r, CountOf.DistinctNamesOf);
+
+	public static Count TotalPowerOf(Ref r) => new(0, r, CountOf.TotalPowerOf);
+
+	public static Count CreatureTypesAmong(Ref r) => new(0, r, CountOf.CreatureTypesAmong);
 
 	public static Count CardsFromLibraryToGraveyardThisTurn(Ref player) =>
 		new(0, player, CountOf.CardsFromLibraryToGraveyardThisTurn);
@@ -483,6 +495,15 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
 			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),
 			CountOf.SubtypesAmong => Cards().SelectMany(c => c.Subtypes).Distinct().Count(),
+			CountOf.DistinctNamesOf => Cards().Select(c => c.Name).Distinct().Count(),
+			CountOf.TotalPowerOf => Cards().Sum(c => s.Power(c)),
+			// ponytail: a stationed Spacecraft is the one creature in TRK with a subtype that isn't a
+			// creature type; a table of the artifact/enchantment/land types if a set brings more.
+			CountOf.CreatureTypesAmong => Cards()
+				.SelectMany(c => c.Subtypes)
+				.Where(t => t != "Spacecraft")
+				.Distinct()
+				.Count(),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
 		};
 		// CR 107.1b: a number that would be negative is 0 — a -4 power must not make "lose X life"
