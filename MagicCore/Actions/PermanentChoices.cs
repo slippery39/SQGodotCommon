@@ -70,7 +70,11 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 				CardId,
 				copy with
 				{
-					TimeCounters = copy.GetComponent<Vanishing>()?.N ?? 0,
+					TimeCounters = Rules.Replacements.Counters(
+						s,
+						copy.ControllerId,
+						copy.GetComponent<Vanishing>()?.N ?? 0
+					),
 				}
 			)
 		);

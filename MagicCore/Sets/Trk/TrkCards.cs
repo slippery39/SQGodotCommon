@@ -1806,6 +1806,190 @@ public static class TrkCards
 					}
 				),
 			],
+			// ===== MC-5.3 batch 4b: delayed return, leaves the graveyard, type change, second resolution, granted trigger, control, counters plus one, block and target restrictions =====
+			["Ghost of Illyria"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(!Is.Land & Is.Yours & !Is.Source) with { Optional = true }],
+					new Flicker(Ref.Target()) { AtNextEndStep = true }
+				),
+			],
+			["Test of Priorities"] =
+			[
+				ModalSpell(
+					"Test of Priorities",
+					1,
+					M([], new Surveil(2), new DrawCards(Ref.You, 1)),
+					M(
+						[Target(Is.Creature & Is.Yours)],
+						new Flicker(Ref.Target()) { AtNextEndStep = true }
+					)
+				),
+			],
+			["Cold-Blooded Crew"] =
+			[
+				When(TriggerEvent.SelfEnters, [Creature], new AddCounters(Ref.Target(), 2)),
+				new CantBeBlockedBy(Is.PowerAtMost(2)),
+				BasicLandcycling,
+			],
+			["Species 8472"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new GainLife(Ref.You, DifferentlyNamedLands)),
+				new CantBeBlockedBy(Is.Artifact & Is.Creature),
+				new CantBeTargetedByAbilitiesFrom(Is.Artifact & Is.Opponents),
+			],
+			["Blastoneuron"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))],
+					new ExileFromGraveyard(Ref.Target()),
+					new CreateTokenCopy(Ref.Target())
+					{
+						OfAnExiledCard = true,
+						AddingKeywords = ["Haste"],
+						SacrificeAtNextEndStep = true,
+					}
+				),
+				When(
+					TriggerEvent.OneOrMoreCardsLeaveYourGraveyard,
+					[],
+					new LoseLife(Ref.EachOpponent, 1),
+					new GainLife(Ref.You, 1)
+				),
+			],
+			["Hologram Stalker"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InYourGraveyard(Is.Type(PermanentTypes))],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+				),
+				When(
+					TriggerEvent.CardLeavesYourGraveyard,
+					[],
+					new CreateTokens(ArtifactIllusion, 1)
+				) with
+				{
+					OncePerTurn = true,
+				},
+			],
+			["Vash, Freelance Archaeologist"] =
+			[
+				When(TriggerEvent.YourUpkeep, [], new Surveil(1)),
+				When(TriggerEvent.CardLeavesYourGraveyard, [], new DrawCards(Ref.You, 1)) with
+				{
+					OncePerTurn = true,
+				},
+			],
+			["I'm a Doctor, Not a . . ."] =
+			[
+				Spell(
+					[Target(Is.Creature & Is.Yours)],
+					new AddCounters(Ref.Target(), 1),
+					new Untap(Ref.Target()),
+					new ModifyUntilEndOfTurn(Ref.Target(), 1, 1) { BecomesCreatureType = "Doctor" }
+				),
+			],
+			["De-evolve"] =
+			[
+				new AuraComponent(Creature),
+				AttachedGets(-4, 0),
+				new StaticEffectComponent(Is.AttachedToSource, Combat.CantBlock),
+				new EnchantedIsCreatureType("Salamander"),
+				When(TriggerEvent.EachUpkeep, [], new Exile(Ref.EnchantedCreature)) with
+				{
+					If = Threshold,
+				},
+			],
+			["Captain Michael Burnham"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					new DealDamage(Ref.EachOpponent, 1),
+					new IfNthResolutionThisTurn(2, [new AddCounters(Ref.Source, 1)])
+				),
+			],
+			["Jake Sisko, War Correspondent"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					new GainLife(Ref.You, 1),
+					new IfNthResolutionThisTurn(2, [CreateClue(1)])
+				),
+			],
+			["Hive Mind Coprocessor"] =
+			[
+				new GrantsTriggeredAbility(
+					ArtifactCreaturesYouControl,
+					When(
+						TriggerEvent.SelfDealsCombatDamageToPlayer,
+						[],
+						new May(
+							"Pay 1 life to draw a card?",
+							new Always(), // paying life is losing it (CR 119.4); at 0 the game is already over
+							[new LoseLife(Ref.You, 1), new DrawCards(Ref.You, 1)]
+						)
+					)
+				),
+			],
+			["Rules of Acquisition"] =
+			[
+				ModalSpell(
+					"Rules of Acquisition",
+					1,
+					M(
+						[Target(!Is.Land & Is.Opponents)],
+						new DrawCards(Ref.ControllerOfTarget(0), 3), // "that opponent" — asked before it changes
+						new GainControl(Ref.Target(), Ref.You)
+					),
+					M(
+						[TargetSpec.Player(Is.Opponents), Target(!Is.Land & Is.Yours)],
+						new GainControl(Ref.Target(1), Ref.Target(0)),
+						new If(
+							new Matches(Ref.Target(1), Is.Opponents),
+							[new DrawCards(Ref.You, 3)]
+						) // "if they do"
+					)
+				),
+			],
+			["Brad Boimler, Eager Ensign"] =
+			[
+				When(
+					TriggerEvent.SelfBecomesTapped,
+					[],
+					new ThisTurn(new CountersPlusOneThisTurn())
+				),
+			],
+			["Exploratory Mission"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new ExileTopPlayable { UntilNonland = true, ThisTurn = true },
+					new If(Quests(5), [new AddMana(ManaColor.Red, 2)])
+				),
+			],
+			["Storied Veteran"] =
+			[
+				new StaticEffectComponent(Is.Source, Combat.CantBlock),
+				new MayCastFromYourGraveyard(),
+			],
+			["Erica Ortegas, Plucky Pilot"] =
+			[
+				When(
+					TriggerEvent.SelfBecomesTapped,
+					[],
+					new MayPutFromHandOntoBattlefield(
+						CardType.Land,
+						[new AtNextEndStep([new ReturnYourPermanentToHand(Is.Land)])]
+					)
+				),
+			],
 		};
 
 	/// <summary>A quest's threshold: "if this enchantment has N or more quest counters on it".</summary>

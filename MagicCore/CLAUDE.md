@@ -119,7 +119,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Child index 0 is the TOP** of the library and of the stack; `MoveObject` appends (= bottom).
 - **Every zone change goes through `MagicState.MoveCard`** (or `EnterBattlefield`), which calls
   `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
-  stack choices die there. Only `Shuffle`, `RevealUntilOntoBattlefield` and the AI's `Hidden.Sample`
+  stack choices die there. Only `Shuffle`, `RevealUntilOntoBattlefield`, `GainControl` (between battlefields: no zone change) and the AI's `Hidden.Sample`
   use `MoveObject`, to reorder within one zone (`MoveCard` would reset `KnownTo`) — and
   `Hidden.Sample`'s hand modes, in a hypothetical position where a real zone change's events must
   not fire: swapping opponent cards between hand and library (AI-3.4), or replacing one in place

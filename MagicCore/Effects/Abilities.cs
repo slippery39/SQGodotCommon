@@ -73,6 +73,7 @@ public enum EventKind
 	BecameTapped, // Hemmer: "whenever Hemmer becomes tapped"
 	FacedDilemma, // "whenever you face a dilemma" — modes chosen for a spell or ability
 	CountersPut, // a Saga's chapter: "as the number of lore counters becomes at least N" (Trigger.Chapter)
+	LeftGraveyard, // Vash: "whenever a card leaves your graveyard" — MagicState.MoveCard, every path
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 }
 
@@ -149,6 +150,13 @@ public record Trigger(EventKind On)
 	/// again as it resolves (release notes).
 	/// </summary>
 	public Condition? While { get; init; }
+
+	/// <summary>
+	/// Blastoneuron: "Whenever one or more cards leave your graveyard" — at most one trigger per batch:
+	/// the events staged since a player last had priority (Shayne, 2026-11-01). ponytail: one resolution
+	/// moving cards in two separate steps triggers once, where the rules trigger twice.
+	/// </summary>
+	public bool OneOrMore { get; init; }
 
 	readonly int chapter;
 
@@ -251,6 +259,16 @@ public static class TriggerEvent
 	/// <summary>Hemmer, Shuttle Ace: "Whenever this creature becomes tapped" — MagicState.Tap, every tap path.</summary>
 	public static readonly Trigger SelfBecomesTapped =
 		new(EventKind.BecameTapped) { Subject = Filters.Is.Source };
+
+	/// <summary>Vash, Hologram Stalker: "Whenever a card leaves your graveyard" — to any zone; a token isn't a card.</summary>
+	public static readonly Trigger CardLeavesYourGraveyard =
+		new(EventKind.LeftGraveyard) { By = Whose.You };
+
+	/// <summary>Blastoneuron: "Whenever one or more cards leave your graveyard" — once per batch (Trigger.OneOrMore).</summary>
+	public static readonly Trigger OneOrMoreCardsLeaveYourGraveyard = CardLeavesYourGraveyard with
+	{
+		OneOrMore = true,
+	};
 
 	/// <summary>Face a dilemma: "Whenever you face a dilemma" — as you choose one or more modes for a spell or ability.</summary>
 	public static readonly Trigger YouFaceADilemma = new(EventKind.FacedDilemma) { By = Whose.You };
@@ -697,6 +715,20 @@ public record AssignsDamageAsThoughPowerPositive : GameComponent;
 /// <summary>Ghalta: "Each creature you control with toughness greater than its power assigns combat damage equal to its toughness."</summary>
 public record YourCreaturesAssignDamageByToughness : GameComponent;
 
+/// <summary>
+/// Cold-Blooded Crew: "This creature can't be blocked by creatures with power 2 or less."; Species 8472:
+/// "… by artifact creatures." — the filter asked of each would-be blocker (Combat.CanBlock).
+/// </summary>
+public record CantBeBlockedBy(Filters.Filter Blockers) : GameComponent;
+
+/// <summary>
+/// Species 8472: "This creature can't be the target of abilities from artifact sources your opponents
+/// control." — abilities only, never spells; the filter asked of the ability's source on the battlefield
+/// (TargetSpec). ponytail: a source sacrificed to pay the cost is gone by resolution, so the target is
+/// legal again then — keep the source as it was (StackAbility.Source) if a card ever cares.
+/// </summary>
+public record CantBeTargetedByAbilitiesFrom(Filters.Filter Sources) : GameComponent;
+
 /// <summary>Yuriko: "During combat, players can't cast spells or activate abilities that aren't mana abilities."</summary>
 public record NoSpellsOrAbilitiesDuringCombat : GameComponent;
 
@@ -708,6 +740,16 @@ public record OneAttackerPerPlaneswalkerYouControl : GameComponent;
 
 /// <summary>Infinite Coursework: "Enchanted creature loses all abilities" — Characteristics.HasLostAllAbilities.</summary>
 public record EnchantedLosesAllAbilities : GameComponent;
+
+/// <summary>De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)" — Characteristics.Subtypes.</summary>
+public record EnchantedIsCreatureType(string Subtype) : GameComponent;
+
+/// <summary>
+/// Storied Veteran: "You may cast this card from your graveyard. If you do, it enters with a finality
+/// counter on it." — read by Playable.CanCastFromHere; unlike flashback it isn't exiled leaving the stack
+/// (MagicState.MoveCard), so it resolves onto the battlefield (StackResolution).
+/// </summary>
+public record MayCastFromYourGraveyard : GameComponent;
 
 /// <summary>Infinite Coursework: "… and doesn't untap during its controller's untap step" — the Aura's, not the creature's.</summary>
 public record EnchantedDoesntUntap : GameComponent;
@@ -722,9 +764,15 @@ public record CantBeCountered : GameComponent;
 /// A delayed triggered ability (CR 603.7) kept on the permanent it acts on — Vindictive Triumph's
 /// "exile it at the beginning of the next end step". Not the permanent's ability: losing all
 /// abilities keeps it, a copy doesn't take it, and it is gone with a zone change (Card.IsStatus).
-/// ponytail: one-shot only because its effect moves the permanent; mark it fired if one ever doesn't.
+/// It triggers only once (CR 603.7c): Triggers.PutOnStack takes it off its host as it triggers, so one
+/// countered never comes back. Also on a card it exiled (Ghost of Illyria) and on an object in the
+/// command zone (AtNextEndStep).
 /// </summary>
-public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent;
+public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent
+{
+	/// <summary>Who controls it (CR 603.7d: whoever created it) — Ghost of Illyria's controller, not the exiled card's owner. 0: its host's.</summary>
+	public int ControllerId { get; init; }
+}
 
 /// <summary>Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard.</summary>
 public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
@@ -801,6 +849,15 @@ public record ExileInsteadOfYourGraveyard : GameComponent;
 /// this Aura is on it. Its "this creature" is the host. Read by Characteristics.ActivatedAbilitiesOf.
 /// </summary>
 public record GrantsActivatedAbility(ActivatedAbilityComponent Ability) : GameComponent;
+
+/// <summary>
+/// Hive Mind Coprocessor: "Artifact creatures you control have 'Whenever this creature deals combat
+/// damage to a player, you may pay 1 life. If you do, draw a card.'" — a static: Triggers.Collect gives
+/// the ability to each permanent the scope matches, and "this creature" is that permanent. Not on the
+/// card, so a copy doesn't have it; a permanent that lost all abilities doesn't either.
+/// </summary>
+public record GrantsTriggeredAbility(Filters.Filter Affects, TriggeredAbilityComponent Ability)
+	: GameComponent;
 
 /// <summary>
 /// Omnipresence: "You may cast spells with mana value less than or equal to the number of creatures

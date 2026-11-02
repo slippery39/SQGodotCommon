@@ -41,10 +41,13 @@ public record DrawCards(Ref Who, Count Amount) : Effect
 }
 
 /// <summary>"[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".</summary>
-public record GainLife(Ref Who, int Amount) : Effect
+public record GainLife(Ref Who, Count Amount) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(All(Who, s).Aggregate(s, (st, p) => Life.Gain(st, p, Amount)));
+	public override ActionResult Execute(GameState s)
+	{
+		var n = Amount.Value(s, InputContext); // Species 8472: "life equal to the number of …", counted as it resolves
+		return new(All(Who, s).Aggregate(s, (st, p) => Life.Gain(st, p, n)));
+	}
 }
 
 /// <summary>Life loss that is not damage — lifelink and damage triggers do not see it.</summary>
@@ -117,6 +120,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Garruk, Veiled Butcher: "until your next turn" instead of end of turn.</summary>
 	public bool UntilYourNextTurn { get; init; }
 
+	/// <summary>I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)".</summary>
+	public string? BecomesCreatureType { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var effect = new UntilEndOfTurn(
@@ -130,6 +136,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			ExileIfItWouldDie = ExileIfItWouldDie,
 			LosesAllAbilities = LosesAllAbilities,
 			UntilTurnOf = UntilYourNextTurn ? Controller : 0,
+			BecomesCreatureType = BecomesCreatureType,
 		};
 		return new(
 			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
@@ -164,7 +171,16 @@ public record AddMinusOneCounters(Ref What, Count Amount) : Effect
 					.Where(c => c.Is(CardType.Creature))
 					.Aggregate(
 						s,
-						(st, c) => Update(st, c with { MinusOneCounters = c.MinusOneCounters + n })
+						(st, c) =>
+							Update(
+								st,
+								c with
+								{
+									MinusOneCounters =
+										c.MinusOneCounters
+										+ Replacements.Counters(st, c.ControllerId, n),
+								}
+							)
 					)
 			);
 	}
@@ -545,7 +561,18 @@ public record AddStunCounters(Ref What, Count N) : Effect
 		var n = N.Value(s, InputContext);
 		return new(
 			Permanents(What, s)
-				.Aggregate(s, (st, c) => Update(st, c with { StunCounters = c.StunCounters + n }))
+				.Aggregate(
+					s,
+					(st, c) =>
+						Update(
+							st,
+							c with
+							{
+								StunCounters =
+									c.StunCounters + Replacements.Counters(st, c.ControllerId, n),
+							}
+						)
+				)
 		);
 	}
 }
@@ -618,6 +645,28 @@ public record WheneverThisTurn(TriggeredAbilityComponent Ability) : Effect
 		);
 }
 
+/// <summary>
+/// Erica Ortegas: "return a land you control to its owner's hand at the beginning of the next end step"
+/// — a delayed trigger (CR 603.7) on an object in your command zone, removed as it triggers
+/// (Triggers.PutOnStack); set up during the end step, it waits for the next turn's.
+/// </summary>
+public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			GetEmblem.ToCommandZone(
+				s,
+				Controller,
+				$"{Source(s).Name} (next end step)",
+				[
+					new DelayedTrigger(
+						new TriggeredAbilityComponent(TriggerEvent.EachEndStep, Effects)
+					),
+				]
+			)
+		);
+}
+
 /// <summary>Marks WheneverThisTurn's object as a "this turn" effect, so the turn's end removes it.</summary>
 public record TriggersThisTurn : ThisTurnEffect;
 
@@ -630,6 +679,9 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 
 /// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>
 public record ExtraRedFromMountains : ThisTurnEffect;
+
+/// <summary>Brad Boimler's "until end of turn … that many plus one of each of those kinds of counters" — Rules.Replacements.Counters.</summary>
+public record CountersPlusOneThisTurn : ThisTurnEffect;
 
 /// <summary>
 /// Way of the Cryomancer's granted "[−3]: When you next cast an instant or sorcery spell this turn,
@@ -671,7 +723,7 @@ public record Proliferate(Count Times) : Effect
 							s,
 							s.GetCard(c.Id) with
 							{
-								ChargeCounters = c.ChargeCounters + 1,
+								ChargeCounters = c.ChargeCounters + Replacements.Counters(s, p, 1),
 							}
 						);
 					if (c.Loyalty > 0)
@@ -683,8 +735,11 @@ public record Proliferate(Count Times) : Effect
 						c with
 						{
 							MinusOneCounters =
-								c.MinusOneCounters + (c.MinusOneCounters > 0 ? 1 : 0),
-							StunCounters = c.StunCounters + (c.StunCounters > 0 ? 1 : 0),
+								c.MinusOneCounters
+								+ (c.MinusOneCounters > 0 ? Replacements.Counters(s, p, 1) : 0),
+							StunCounters =
+								c.StunCounters
+								+ (c.StunCounters > 0 ? Replacements.Counters(s, p, 1) : 0),
 						}
 					);
 			}
@@ -733,7 +788,15 @@ public record AddChargeCounters(Ref What, Count N) : Effect
 			Permanents(What, s)
 				.Aggregate(
 					s,
-					(st, c) => Update(st, c with { ChargeCounters = c.ChargeCounters + n })
+					(st, c) =>
+						Update(
+							st,
+							c with
+							{
+								ChargeCounters =
+									c.ChargeCounters + Replacements.Counters(st, c.ControllerId, n),
+							}
+						)
 				)
 		);
 	}
@@ -955,6 +1018,30 @@ public record WinTheGame : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		new(s.WithPlayer(s.GetPlayer(s.OpponentOf(Controller)) with { HasLost = true }));
+}
+
+/// <summary>
+/// Captain Michael Burnham: "If this is the second time this ability has resolved this turn, put a
+/// +1/+1 counter on Captain Burnham." — counted on the source as it resolves, Then run on exactly the
+/// Nth. ponytail: one count per card, not per ability (no TRK card has two such abilities), and a
+/// source that left the battlefield counts nothing.
+/// </summary>
+public record IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (All(Ref.Source, s).Where(s.IsOnBattlefield).FirstOrDefault() is not (> 0 and var id))
+			return new(s);
+		var card = s.GetCard(id);
+		var turn = s.GetGame().TurnNumber;
+		var times = card.ResolvedOnTurn == turn ? card.ResolvedTimes + 1 : 1;
+		s = Update(s, card with { ResolvedOnTurn = turn, ResolvedTimes = times });
+		return times == N
+			? new(
+				s.SpawnAction(new PipelineAction { Steps = Then, PipelineContext = InputContext })
+			)
+			: new(s);
+	}
 }
 
 /// <summary>"If [condition], [effects]" — the effects run in order with this ability's context.</summary>

@@ -167,6 +167,12 @@ public record Card : GameObject
 	/// <summary>TurnNumber its "triggers only once each turn" ability last triggered.</summary>
 	public int OncePerTurnTriggeredOn { get; init; }
 
+	/// <summary>Captain Michael Burnham: how many times its ability resolved on turn ResolvedOnTurn (IfNthResolutionThisTurn).</summary>
+	public int ResolvedTimes { get; init; }
+
+	/// <summary>The turn ResolvedTimes counts.</summary>
+	public int ResolvedOnTurn { get; init; }
+
 	/// <summary>Prepare: its prepare spell's copy waits in exile (Rules/Prepare.cs).</summary>
 	public bool IsPrepared { get; init; }
 
@@ -243,6 +249,8 @@ public record Card : GameObject
 			EnteredOnTurn = 0,
 			AttackedOnTurn = 0,
 			OncePerTurnTriggeredOn = 0,
+			ResolvedTimes = 0,
+			ResolvedOnTurn = 0,
 			IsPrepared = false,
 			AttachedToId = 0,
 			AttachedToIncarnation = 0,
@@ -417,6 +425,9 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 
 	/// <summary>Flourishing Grapple: "loses all abilities until end of turn" — Characteristics.HasLostAllAbilities.</summary>
 	public bool LosesAllAbilities { get; init; }
+
+	/// <summary>I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)" — Characteristics.Subtypes.</summary>
+	public string? BecomesCreatureType { get; init; }
 }
 
 /// <summary>

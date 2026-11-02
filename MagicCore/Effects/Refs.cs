@@ -502,14 +502,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),
-			CountOf.SubtypesAmong => Cards().SelectMany(c => c.Subtypes).Distinct().Count(),
+			CountOf.SubtypesAmong => Cards().SelectMany(c => s.Subtypes(c)).Distinct().Count(),
 			CountOf.DistinctNamesOf => Cards().Select(c => c.Name).Distinct().Count(),
 			CountOf.TotalPowerOf => Cards().Sum(c => s.Power(c)),
-			// ponytail: a stationed Spacecraft is the one creature in TRK with a subtype that isn't a
-			// creature type; a table of the artifact/enchantment/land types if a set brings more.
-			CountOf.CreatureTypesAmong => Cards()
-				.SelectMany(c => c.Subtypes)
-				.Where(t => t != "Spacecraft")
+			CountOf.CreatureTypesAmong => Cards() // a stationed Spacecraft's "Spacecraft" isn't one
+				.SelectMany(c => s.Subtypes(c))
+				.Where(Characteristics.IsCreatureType)
 				.Distinct()
 				.Count(),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),

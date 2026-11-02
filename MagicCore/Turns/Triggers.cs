@@ -146,6 +146,17 @@ public record DiscardedEvent(int PlayerId, ImmutableList<int> CardIds) : MagicEv
 	public override int By(GameState s) => PlayerId;
 }
 
+/// <summary>A card left its owner's graveyard, to any zone — raised by MagicState.MoveCard, every path (Vash).</summary>
+public record LeftGraveyardEvent(int PlayerId, int CardId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.LeftGraveyard;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
+
+	public override int By(GameState s) => PlayerId;
+}
+
 /// <summary>A player put loyalty counters on a planeswalker — by a cost, an effect, or its entering with them (CR 122.6).</summary>
 public record LoyaltyCountersPutEvent(int PutterId) : MagicEvent
 {
@@ -268,28 +279,60 @@ public static class Triggers
 			return [];
 		var active = s.GetGame().ActivePlayerId;
 		// Permanents, and emblems and effects in the command zone (CR 113.6b).
-		var permanents = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
-			s.CardsIn(p, ZoneType.Battlefield).Concat(s.CardsIn(p, ZoneType.Command))
-		);
+		var permanents = new[] { active, s.OpponentOf(active) }
+			.SelectMany(p =>
+				s.CardsIn(p, ZoneType.Battlefield).Concat(s.CardsIn(p, ZoneType.Command))
+			)
+			.ToList(); // walked several times below
 		// A card in a graveyard is controlled by its owner (CR 108.4a).
 		var inGraveyards = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
 			s.CardsIn(p, ZoneType.Graveyard)
 				.Where(c => AbilitiesOf(s, c).Any(a => a.FromGraveyard))
 				.Select(c => c with { ControllerId = c.OwnerId })
 		);
+		// An exiled card's delayed trigger only — never its own abilities (Ghost of Illyria's "return
+		// that card at the beginning of the next end step").
+		var delayedInExile = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
+			s.CardsIn(p, ZoneType.Exile)
+				.Where(c => c.HasComponent<DelayedTrigger>())
+				.SelectMany(c =>
+					c.GetComponents<DelayedTrigger>()
+						.Select(d =>
+							(
+								source: d.ControllerId == 0
+									? c
+									: c with
+									{
+										ControllerId = d.ControllerId,
+									},
+								a: d.Ability
+							)
+						)
+				)
+		);
+		// Hive Mind Coprocessor: "Artifact creatures you control have '[trigger]'" — found once here.
+		var grants = permanents
+			.Where(p => p.HasComponent<GrantsTriggeredAbility>() && s.IsOnBattlefield(p.Id))
+			.SelectMany(p => s.AbilitiesOf<GrantsTriggeredAbility>(p).Select(g => (granter: p, g)))
+			.ToList();
 		var events = WithoutSilencedEntries(s, permanents);
 		var fromTheBattlefield = permanents
 			.SelectMany(source =>
-				AbilitiesOf(s, source).Where(a => !a.FromGraveyard).Select(a => (source, a))
+				AbilitiesOf(s, source)
+					.Where(a => !a.FromGraveyard)
+					.Concat(Granted(s, grants, source))
+					.Select(a => (source, a))
 			)
 			.Concat(
 				inGraveyards.SelectMany(source =>
 					AbilitiesOf(s, source).Where(a => a.FromGraveyard).Select(a => (source, a))
 				)
 			)
+			.Concat(delayedInExile)
 			.SelectMany(found =>
 				events
 					.Where(e => Matches(s, found.source, found.a.On, e))
+					.Take(found.a.On.OneOrMore ? 1 : int.MaxValue) // "one or more": one per batch
 					.Select(e => new Pending(
 						found.source,
 						found.a,
@@ -441,6 +484,20 @@ public static class Triggers
 					)
 		).Concat(card.GetComponents<DelayedTrigger>().Select(d => d.Ability)); // not its own: kept
 
+	/// <summary>The triggered abilities a static grants this permanent — none once it lost them all.</summary>
+	static IEnumerable<TriggeredAbilityComponent> Granted(
+		GameState s,
+		List<(Card granter, GrantsTriggeredAbility g)> grants,
+		Card permanent
+	) =>
+		grants.Count == 0 || !s.IsOnBattlefield(permanent.Id) || s.HasLostAllAbilities(permanent)
+			? []
+			: grants
+				.Where(x =>
+					x.g.Affects.Matches(s, permanent, new(x.granter.ControllerId, x.granter.Id))
+				)
+				.Select(x => x.g.Ability);
+
 	/// <summary>A look-back trigger's Subject, asked of the card it reads from.</summary>
 	static bool Concerns(GameState s, Trigger on, GameObject subject, Card source) =>
 		on.Subject?.Matches(s, subject, new FilterContext(source.ControllerId, source.Id)) ?? true;
@@ -552,6 +609,7 @@ public static class Triggers
 		var firedOnce = new HashSet<(int Id, int Incarnation)>();
 		foreach (var t in triggers)
 		{
+			s = WithoutFiredDelayedTrigger(s, t);
 			if (t.Ability.OncePerTurn)
 			{
 				// "Only once each turn": the first goes on the stack and stamps the card; the rest
@@ -594,6 +652,30 @@ public static class Triggers
 			);
 		}
 		return s.SpawnAction(new GivePriorityAction { PlayerId = priorityPlayerId });
+	}
+
+	/// <summary>
+	/// A delayed trigger triggers only once (CR 603.7c): taken off its host as it goes on the stack, so
+	/// one countered doesn't fire again at the next end step; an AtNextEndStep object left empty goes too.
+	/// </summary>
+	static GameState WithoutFiredDelayedTrigger(GameState s, Pending t)
+	{
+		if (
+			!s.HasObject(t.Source.Id)
+			|| s.GetObject(t.Source.Id) is not Card host
+			|| host.Incarnation != t.Source.Incarnation
+			|| host.GetComponents<DelayedTrigger>().FirstOrDefault(d => d.Ability == t.Ability)
+				is not { } fired
+		)
+			return s;
+		var rest = host.GetComponents<DelayedTrigger>().Where(d => d != fired).ToList();
+		var without = rest.Aggregate(
+			host.WithoutComponents<DelayedTrigger>(),
+			(c, d) => c.WithComponent(d)
+		);
+		return without.Components.Length == 0 && s.IsIn(host.Id, host.OwnerId, ZoneType.Command)
+			? s.RemoveObject(host.Id)
+			: s.UpdateObject(host.Id, without);
 	}
 
 	/// <summary>Modes whose required targets all have a legal choice (CR 700.2a).</summary>

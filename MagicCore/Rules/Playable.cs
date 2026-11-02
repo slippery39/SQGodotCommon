@@ -31,7 +31,10 @@ public static class Playable
 			s.IsIn(card.Id, playerId, ZoneType.Hand)
 			|| (
 				s.IsIn(card.Id, playerId, ZoneType.Graveyard)
-				&& Costs.Flashback(s, card) is not null
+				&& (
+					Costs.Flashback(s, card) is not null
+					|| s.HasAbility<MayCastFromYourGraveyard>(card)
+				)
 			)
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)

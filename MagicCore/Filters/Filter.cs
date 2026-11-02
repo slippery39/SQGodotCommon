@@ -124,7 +124,7 @@ public sealed record OfSubtype(string Subtype) : Filter
 	public override bool ReadsKeywords() => false;
 
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
-		o is Card card && card.Subtypes.Contains(Subtype);
+		o is Card card && s.Subtypes(card).Contains(Subtype);
 }
 
 /// <summary>Andromedan Automatons: "any number of cards named Andromedan Automatons".</summary>

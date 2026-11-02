@@ -210,6 +210,10 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   in `CopyUntilEndOfTurn`, restored in cleanup AND as it leaves (`Card.Fresh`), so a dead Hall is a Hall.
 - **A delayed trigger on a permanent** ("exile it at the beginning of the next end step") is a
   `DelayedTrigger` component: kept when it loses all abilities, not copied, gone with a zone change.
+  On a card it EXILED (`Flicker.AtNextEndStep`, Ghost of Illyria: "return that card at the beginning of the
+  next end step") `Triggers.Collect` reads that one component there, never the exiled card's own abilities.
+  With no card to hold it ("return a land you control", Erica Ortegas) it is `AtNextEndStep`: an object in
+  your command zone, removed once it has resolved. Set up during the end step, either waits for the next turn's.
 - **Emblems** (CR 114) are cards in their owner's COMMAND zone (`GetEmblem`): `Triggers.Collect` and
   the statics board read that zone beside the battlefield, so an emblem's trigger has a source
   ("this emblem deals 5 damage") and its anthem applies. Nothing removes them.
@@ -324,3 +328,30 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   object of the source) and `ReturnLinkedExile` — nothing once the source has left (CR 607.2a).
 - **"Whenever …, this turn"** from a resolving ability (The Naked Time's chapter II) is `WheneverThisTurn`:
   the trigger on a command-zone object, removed with the turn's other "this turn" effects.
+- **"Whenever a card leaves your graveyard"** is `LeftGraveyardEvent`, raised by `MagicState.MoveCard` for every
+  path out — cast, exiled, returned, shuffled, paid as a cost; a token isn't a card. **"One or more"** is
+  `Trigger.OneOrMore`: one trigger per priority pass, everything that left since a player last had priority
+  (Shayne, 2026-11-01).
+- **A permanent's subtypes are `s.Subtypes(card)`** (Characteristics) — never `Card.Subtypes` in a rule.
+  "Becomes a Doctor (it loses all other creature types)" until end of turn (`ModifyUntilEndOfTurn.BecomesCreatureType`)
+  or under an Aura (`EnchantedIsCreatureType`, De-evolve) is that one type plus the subtypes that aren't
+  creature types (`Characteristics.IsCreatureType`). `Is.Subtype`, Federation's count, behold and Kindred
+  Judgment read it.
+- **"Can't be blocked by [creatures with …]"** is `CantBeBlockedBy(filter)` on the attacker, the filter asked
+  of each blocker (`Combat.CanBlock`). **"Can't be the target of abilities from [sources]"** is
+  `CantBeTargetedByAbilitiesFrom(filter)`, asked in `TargetSpec` beside hexproof — abilities only: the source
+  is a permanent, not a spell on the stack.
+- **"If this is the second time this ability has resolved this turn"** is `IfNthResolutionThisTurn(n, …)`:
+  counted on the source as it resolves (`Card.ResolvedTimes`, by turn), the rest run on exactly the Nth.
+- **"[Permanents] you control have '[triggered ability]'"** is `GrantsTriggeredAbility(scope, ability)`:
+  `Triggers.Collect` gives it to each permanent the scope matches, and "this creature" is that one.
+- **Gaining control is `MagicState.GainControl`** — the same object (counters, damage, attachments,
+  until-end-of-turn effects stay), moved to its new controller's battlefield zone, summoning sick for them,
+  out of combat; no zone change, no event.
+- **"That many plus one of each kind of counter"** (Brad Boimler, `CountersPlusOneThisTurn`) is
+  `Rules.Replacements.Counters`, called at EVERY place counters are put on a permanent: `PutCounters`,
+  `AddPlusOneCounters`, -1/-1, charge, stun, `Loyalty.Change`, entering with loyalty or time counters,
+  proliferate. A new counter path must call it, or Brad silently misses it.
+- **"You may cast this card from your graveyard"** (Storied Veteran) is `MayCastFromYourGraveyard`, read by
+  `Playable.CanCastFromHere` — not flashback: it isn't exiled leaving the stack, it resolves onto the
+  battlefield (with a finality counter, `EnterFromStackAction.Finality`).

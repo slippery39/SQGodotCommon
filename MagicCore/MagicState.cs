@@ -154,6 +154,7 @@ public static class MagicState
 		// Flashback (CR 702.34a): leaving the stack — resolved, countered, fizzled, bounced — it is exiled instead.
 		if (
 			before.GetComponent<Actions.OnStackComponent>() is { CastFrom: ZoneType.Graveyard }
+			&& !before.HasComponent<MayCastFromYourGraveyard>() // Storied Veteran: no flashback
 			&& zoneId != s.GetWellKnownId(MagicKeys.Stack)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
@@ -183,6 +184,10 @@ public static class MagicState
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
+		var leavesGraveyard = // Vash: "a card leaves your graveyard" — a token isn't a card
+			!before.IsToken
+			&& s.IsIn(cardId, before.OwnerId, ZoneType.Graveyard)
+			&& s.GetParent(cardId) != zoneId;
 		var milled =
 			s.IsIn(cardId, before.OwnerId, ZoneType.Library)
 			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard);
@@ -195,6 +200,8 @@ public static class MagicState
 				before.OwnerId,
 				t => t with { CardsFromLibraryToGraveyard = t.CardsFromLibraryToGraveyard + 1 }
 			);
+		if (leavesGraveyard)
+			s = s.Raise(new LeftGraveyardEvent(before.OwnerId, cardId));
 		if (!leavesBattlefield)
 			return s;
 
@@ -282,8 +289,13 @@ public static class MagicState
 				ControllerId = controllerId,
 				ControlledSinceTurn = s.GetGame().TurnNumber,
 				EnteredOnTurn = s.GetGame().TurnNumber,
-				Loyalty = card.PrintedLoyalty,
-				TimeCounters = card.GetComponent<Vanishing>()?.N ?? 0, // vanishing: "enters with N time counters"
+				// Entering with counters is putting them on (Brad Boimler applies, CR 122.6).
+				Loyalty = Rules.Replacements.Counters(s, controllerId, card.PrintedLoyalty),
+				TimeCounters = Rules.Replacements.Counters(
+					s,
+					controllerId,
+					card.GetComponent<Vanishing>()?.N ?? 0 // vanishing: "enters with N time counters"
+				),
 				CastX = x,
 				WasCast = cast,
 				HasFinalityCounter = finality,
@@ -417,6 +429,7 @@ public static class MagicState
 				n,
 				exceptId: entering ? cardId : 0
 			);
+		n = Rules.Replacements.Counters(s, card.ControllerId, n);
 		return s.UpdateObject(
 			cardId,
 			card with
@@ -435,7 +448,7 @@ public static class MagicState
 	{
 		var card = s.GetCard(cardId);
 		var had = card.CountersOf(kind);
-		var now = Math.Max(0, had + n);
+		var now = Math.Max(0, had + Rules.Replacements.Counters(s, card.ControllerId, n));
 		if (now == had)
 			return s;
 		s = s.UpdateObject(
@@ -446,6 +459,33 @@ public static class MagicState
 			}
 		);
 		return now > had ? s.Raise(new CountersPutEvent(cardId, kind, had, now)) : s;
+	}
+
+	/// <summary>
+	/// THE control change (CR 108.4, Rules of Acquisition) — the same object, so its counters, damage,
+	/// attachments and "until end of turn" effects stay; it isn't a zone change (no event, no Fresh). The
+	/// battlefield is per controller, so it moves to its new controller's (MoveObject, as MtgCore's
+	/// GainControlAction does), summoning sick for them (CR 302.6) and out of combat (CR 506.4).
+	/// </summary>
+	public static GameState GainControl(this GameState s, int cardId, int playerId)
+	{
+		if (
+			!s.IsOnBattlefield(cardId)
+			|| s.GetCard(cardId) is not { } card
+			|| card.ControllerId == playerId
+		)
+			return s;
+		return s.MoveObject(cardId, s.ZoneId(playerId, ZoneType.Battlefield))
+			.UpdateObject(
+				cardId,
+				card with
+				{
+					ControllerId = playerId,
+					ControlledSinceTurn = s.GetGame().TurnNumber,
+					AttackingId = 0,
+					BlockingId = 0,
+				}
+			);
 	}
 
 	/// <summary>A player's "this turn" effects of one kind (<see cref="Effects.ThisTurn"/>), as the objects that hold them.</summary>

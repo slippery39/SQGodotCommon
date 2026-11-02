@@ -591,6 +591,7 @@ public class FilterMigrationTests
 		TriggerEvent.YouAttack,
 		TriggerEvent.OpponentDealtNoncombatDamage,
 		TriggerEvent.YouFaceADilemma,
+		TriggerEvent.CardLeavesYourGraveyard,
 	];
 
 	/// <summary>
@@ -610,6 +611,7 @@ public class FilterMigrationTests
 		TriggerEvent.SelfBecomesTapped, // Is.Source, on the one tap path (MagicState.Tap)
 		TriggerEvent.YouAttackWithTotalPower8, // YouAttack + While, judged as it triggers
 		new Trigger(EventKind.CountersPut) { Subject = Is.Source, Chapter = 1 }, // a Saga's chapter: the lore count crossing N (Scripting.Chapter)
+		TriggerEvent.OneOrMoreCardsLeaveYourGraveyard, // one per batch (Trigger.OneOrMore)
 	];
 
 	/// <summary>Read from the card itself, not matched against an event on the battlefield (Triggers.Collect).</summary>

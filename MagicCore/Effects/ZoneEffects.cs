@@ -38,7 +38,7 @@ public record DestroyCreaturesNotOfChosenType : Effect
 		[
 			.. Ref
 				.AllCreatures.Resolve(s, InputContext)
-				.SelectMany(id => s.GetCard(id).Subtypes)
+				.SelectMany(id => s.Subtypes(s.GetCard(id)))
 				.Distinct()
 				.Order(),
 			NoneOfThem,
@@ -71,7 +71,10 @@ public record DestroyCreaturesNotOfTypeAction(ImmutableArray<string> Types) : Ef
 			? Types[id - 1]
 			: DestroyCreaturesNotOfChosenType.NoneOfThem;
 		return new(
-			Destroy.All(s, Permanents(Ref.AllCreatures, s).Where(c => !c.Subtypes.Contains(chosen)))
+			Destroy.All(
+				s,
+				Permanents(Ref.AllCreatures, s).Where(c => !s.Subtypes(c).Contains(chosen))
+			)
 		);
 	}
 }
@@ -82,15 +85,54 @@ public record DestroyCreaturesNotOfTypeAction(ImmutableArray<string> Types) : Ef
 /// </summary>
 public record Flicker(Ref What) : Effect
 {
+	/// <summary>
+	/// Ghost of Illyria: "Return that card to the battlefield under its owner's control at the
+	/// beginning of the next end step." — a delayed trigger on the exiled card (Triggers.Collect reads
+	/// it there); exiled during the end step, it waits for the next turn's.
+	/// </summary>
+	public bool AtNextEndStep { get; init; }
+
+	static readonly TriggeredAbilityComponent ReturnItAtTheEndStep =
+		new(
+			TriggerEvent.EachEndStep,
+			[new ReturnFromExileUnderYourControl(Ref.Source) { UnderItsOwnersControl = true }]
+		);
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var card in Permanents(What, s).ToList())
 		{
 			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Exile));
 			if (!card.IsToken && s.IsIn(card.Id, card.OwnerId, ZoneType.Exile))
-				s = s.EnterBattlefield(card.Id, card.OwnerId);
+				s = AtNextEndStep
+					? ReturnFromExileUnderYourControl.Delay(
+						s,
+						card.Id,
+						new DelayedTrigger(ReturnItAtTheEndStep) { ControllerId = Controller } // CR 603.7d: yours
+					)
+					: s.EnterBattlefield(card.Id, card.OwnerId);
 		}
 		return new(s);
+	}
+}
+
+/// <summary>
+/// Rules of Acquisition: "Gain control of target nonland permanent an opponent controls" (To: you);
+/// "Target opponent gains control of target nonland permanent you control" (To: that player) — for
+/// good, through MagicState.GainControl. ponytail: no "until end of turn" control until a card needs it.
+/// </summary>
+public record GainControl(Ref What, Ref To) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (
+			All(To, s).FirstOrDefault(id => s.GetObject(id) is MagicPlayer)
+			is not (> 0 and var player)
+		)
+			return new(s);
+		return new(
+			Permanents(What, s).ToList().Aggregate(s, (st, c) => st.GainControl(c.Id, player))
+		);
 	}
 }
 
@@ -376,9 +418,17 @@ public record CreateTokenCopy(Ref What) : Effect
 	/// <summary>Gray and Adira: "except it isn't legendary".</summary>
 	public bool NotLegendary { get; init; }
 
+	/// <summary>Blastoneuron: "exile target creature card … from your graveyard. Create a token that's a copy of it." — a card in exile, not a permanent.</summary>
+	public bool OfAnExiledCard { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		var originals = Permanents(What, s).ToList();
+		var originals = OfAnExiledCard
+			? All(What, s)
+				.Where(id => s.GetObject(id) is Card c && s.IsIn(id, c.OwnerId, ZoneType.Exile))
+				.Select(s.GetCard)
+				.ToList()
+			: Permanents(What, s).ToList();
 		if (
 			originals.Count == 0
 			&& What.Kind == RefKind.Source
@@ -440,6 +490,9 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 	/// <summary>"Exile it at the beginning of the next end step" — a delayed trigger on it.</summary>
 	public bool ExileAtNextEndStep { get; init; }
 
+	/// <summary>Ghost of Illyria: "Return that card to the battlefield under its owner's control".</summary>
+	public bool UnderItsOwnersControl { get; init; }
+
 	/// <summary>"Exile it at the beginning of the next end step" — CreateTokenCopy's too.</summary>
 	internal static readonly DelayedTrigger ExileItAtTheEndStep =
 		new(new TriggeredAbilityComponent(TriggerEvent.EachEndStep, [new Exile(Ref.Source)]));
@@ -461,7 +514,11 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 				|| !s.IsIn(id, card.OwnerId, ZoneType.Exile)
 			)
 				continue;
-			s = s.EnterBattlefield(id, Controller, tapped: Tapped);
+			s = s.EnterBattlefield(
+				id,
+				UnderItsOwnersControl ? card.OwnerId : Controller,
+				tapped: Tapped
+			);
 			if (ExileAtNextEndStep)
 				s = Delay(s, id, ExileItAtTheEndStep);
 		}
@@ -1152,11 +1209,21 @@ public record ExileTopPlayable : Effect
 	/// <summary>Reckless Impulse: "Exile the top two cards of your library."</summary>
 	public int N { get; init; } = 1;
 
+	/// <summary>
+	/// Exploratory Mission: "exile cards from the top of your library until you exile a nonland card.
+	/// You may play that card" — the lands stay exiled, unplayable.
+	/// </summary>
+	public bool UntilNonland { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		foreach (var top in s.CardsIn(Controller, ZoneType.Library).Take(N).ToList())
+		var library = s.CardsIn(Controller, ZoneType.Library).ToList();
+		var count = UntilNonland ? library.TakeWhile(c => c.Is(CardType.Land)).Count() + 1 : N;
+		foreach (var top in library.Take(count))
 		{
 			s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
+			if (UntilNonland && top.Is(CardType.Land))
+				continue;
 			s = Update(
 				s,
 				(Card)
@@ -1509,6 +1576,89 @@ public record SacrificeGreatestManaValue(Ref Who, CardType Types) : Effect
 			if (victim is not null)
 				s = s.Sacrifice(victim.Id);
 		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Erica Ortegas: "you may put a land card from your hand onto the battlefield. If you do, [Then]" —
+/// chosen from your hand, entering through EnterBattlefield.
+/// </summary>
+public record MayPutFromHandOntoBattlefield(CardType Types, ImmutableList<GameAction> Then) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps =
+					[
+						new ChooseCardsFromHandChoice
+						{
+							PlayerId = Controller,
+							Types = Types,
+							MinChoices = 0,
+							MaxChoices = 1,
+							Prompt =
+								$"Put a {Types.ToString().ToLowerInvariant()} card from your hand onto the battlefield?",
+						},
+						new MoveChosenToAction(Controller, ZoneType.Battlefield),
+						new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
+					],
+				}
+			)
+		);
+}
+
+/// <summary>
+/// Erica Ortegas: "return a land you control to its owner's hand" — chosen as it resolves, not
+/// targeted; nothing when you control none.
+/// </summary>
+public record ReturnYourPermanentToHand(Filters.Filter Filter) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		!Filters
+			.FilterChoices.Among(
+				Filter,
+				s,
+				Controller,
+				ZoneType.Battlefield,
+				GetInput<int>(ContextKeys.Source)
+			)
+			.Any()
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+						Steps =
+						[
+							new ChoosePermanentChoice(
+								Controller,
+								GetInput<int>(ContextKeys.Source),
+								Filter,
+								required: true
+							)
+							{
+								Prompt = "Return to its owner's hand",
+							},
+							new ReturnChosenToHandAction(),
+						],
+					}
+				)
+			);
+}
+
+/// <summary>After the choice: the chosen permanent to its owner's hand.</summary>
+public record ReturnChosenToHandAction : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in ChoosePermanentChoice.Read(InputContext))
+			if (s.IsOnBattlefield(id))
+				s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Hand));
 		return new(s);
 	}
 }

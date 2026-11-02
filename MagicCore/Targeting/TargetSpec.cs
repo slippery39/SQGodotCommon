@@ -134,8 +134,23 @@ public record TargetSpec(From From, Filter? Filter = null)
 				&& o is Card card
 				&& card.ControllerId != controllerId
 				&& s.Has(card, "Hexproof")
+			)
+			&& !(
+				targeting
+				&& From == From.Battlefield
+				&& o is Card target
+				&& FromARestrictedSource(s, target, sourceId)
 			);
 	}
+
+	/// <summary>Species 8472: an ability (its source a permanent, not a spell on the stack) from a source its filter names.</summary>
+	static bool FromARestrictedSource(GameState s, Card target, int sourceId) =>
+		target.HasComponent<Effects.CantBeTargetedByAbilitiesFrom>()
+		&& s.IsOnBattlefield(sourceId)
+		&& s.AbilitiesOf<Effects.CantBeTargetedByAbilitiesFrom>(target)
+			.Any(r =>
+				r.Sources.Matches(s, s.GetCard(sourceId), new(target.ControllerId, target.Id))
+			);
 
 	bool Covers(From zone) => From == zone || (Or?.Covers(zone) ?? false);
 

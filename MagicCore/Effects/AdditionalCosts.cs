@@ -282,7 +282,7 @@ public sealed record BeholdCost(string Subtype) : AdditionalCost
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		s.CardsIn(playerId, ZoneType.Battlefield)
 			.Concat(s.CardsIn(playerId, ZoneType.Hand).Where(c => c.Id != sourceId))
-			.Where(c => c.Subtypes.Contains(Subtype))
+			.Where(c => s.Subtypes(c).Contains(Subtype))
 			.Select(c => c.Id);
 
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>

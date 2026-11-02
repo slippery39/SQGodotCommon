@@ -67,6 +67,78 @@ public static class Characteristics
 	}
 
 	/// <summary>
+	/// THE subtypes of a permanent (CR 205.1b) — every rule asks here, never Card.Subtypes, or Federation
+	/// counts a Doctor's old types. I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other
+	/// creature types.)" until end of turn; De-evolve: "is a Salamander" while the Aura is on it — that one
+	/// creature type, then the subtypes that aren't creature types. ponytail: no timestamps — an
+	/// until-end-of-turn type wins over an Aura's whichever came first.
+	/// </summary>
+	public static ImmutableArray<string> Subtypes(this GameState s, Card card)
+	{
+		string? set = null;
+		foreach (var component in card.Components) // a loop, not LINQ: every subtype filter asks
+			if (component is UntilEndOfTurn { BecomesCreatureType: { } type })
+				set = type;
+		if (set is null && BoardOf(s).TypeSet is { } typed && s.IsOnBattlefield(card.Id))
+			typed.TryGetValue((card.Id, card.Incarnation), out set);
+		return set is null || !card.Is(CardType.Creature)
+			? card.Subtypes
+			: [set, .. card.Subtypes.Where(t => t != set && !IsCreatureType(t))];
+	}
+
+	/// <summary>
+	/// Whether a subtype is a creature type: anything but the land, artifact and enchantment types (CR
+	/// 205.3g–h, j). ponytail: the ones printed on cards like these sets'; add one when a set brings it.
+	/// </summary>
+	public static bool IsCreatureType(string subtype) => !NotCreatureTypes.Contains(subtype);
+
+	static readonly HashSet<string> NotCreatureTypes =
+	[
+		"Plains",
+		"Island",
+		"Swamp",
+		"Mountain",
+		"Forest",
+		"Desert",
+		"Gate",
+		"Planet",
+		"Cave",
+		"Town",
+		"Sphere",
+		"Locus",
+		"Lair",
+		"Mine",
+		"Power-Plant",
+		"Tower",
+		"Urza's",
+		"Equipment",
+		"Vehicle",
+		"Spacecraft",
+		"Clue",
+		"Food",
+		"Treasure",
+		"Blood",
+		"Gold",
+		"Powerstone",
+		"Fortification",
+		"Incubator",
+		"Map",
+		"Junk",
+		"Aura",
+		"Saga",
+		"Class",
+		"Room",
+		"Case",
+		"Shrine",
+		"Curse",
+		"Cartouche",
+		"Rune",
+		"Background",
+		"Role",
+		"Shard",
+	];
+
+	/// <summary>
 	/// "Loses all abilities" — until end of turn (Flourishing Grapple) or while an Aura says so
 	/// (Infinite Coursework). ponytail: no timestamps (CR 613.7) — it loses every ability, even one
 	/// granted later, and a P/T it sets for itself (layer 7a) with them. Order them if a card cares.
@@ -103,6 +175,9 @@ public static class Characteristics
 	{
 		/// <summary>Activated abilities Auras grant, by host (id, incarnation); null when none do.</summary>
 		public Dictionary<(int, int), List<ActivatedAbilityComponent>>? Granted { get; init; }
+
+		/// <summary>De-evolve's creature type, by host (id, incarnation); null when no Aura sets one.</summary>
+		public Dictionary<(int, int), string>? TypeSet { get; init; }
 	}
 
 	static readonly HashSet<(int, int)> NoneStripped = [];
@@ -129,6 +204,7 @@ public static class Characteristics
 		List<(Card, StaticEffectComponent)> statics = [];
 		HashSet<(int, int)>? stripped = null;
 		List<(Card Aura, GrantsActivatedAbility Grant)>? grants = null;
+		Dictionary<(int, int), string>? typeSet = null;
 		foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
 		foreach (
 			var c in state
@@ -142,11 +218,23 @@ public static class Characteristics
 				(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
 			else if (component is GrantsActivatedAbility grant && c.AttachedToId != 0)
 				(grants ??= []).Add((c, grant));
+			else if (component is EnchantedIsCreatureType type && c.AttachedToId != 0)
+				(typeSet ??= [])[(c.AttachedToId, c.AttachedToIncarnation)] = type.Subtype;
 		var lost = new Board([], stripped ?? NoneStripped);
+		// An Aura that lost its abilities sets no type either.
+		if (typeSet is not null)
+			foreach (
+				var c in state
+					.CardsIn(state.Player1Id(), ZoneType.Battlefield)
+					.Concat(state.CardsIn(state.Player2Id(), ZoneType.Battlefield))
+			)
+				if (c.HasComponent<EnchantedIsCreatureType>() && Lost(lost, c))
+					typeSet.Remove((c.AttachedToId, c.AttachedToIncarnation));
 		// An Aura that lost its abilities grants none either.
 		var live = grants?.Where(g => !Lost(lost, g.Aura)).ToList();
 		return lost with
 		{
+			TypeSet = typeSet,
 			Granted = live is null or []
 				? null
 				: live.GroupBy(g => (g.Aura.AttachedToId, g.Aura.AttachedToIncarnation))

@@ -81,7 +81,9 @@ public static class Combat
 		&& !blocker.IsTapped
 		&& !s.Has(blocker, CantBlock)
 		&& !s.Has(attacker, CantBeBlocked)
-		&& (!s.Has(attacker, "Flying") || s.Has(blocker, "Flying") || s.Has(blocker, "Reach"));
+		&& (!s.Has(attacker, "Flying") || s.Has(blocker, "Flying") || s.Has(blocker, "Reach"))
+		&& !s.AbilitiesOf<Effects.CantBeBlockedBy>(attacker)
+			.Any(r => r.Blockers.Matches(s, blocker, new(attacker.ControllerId, attacker.Id)));
 
 	/// <summary>The active player's creatures that may be declared as attackers — one choice each.</summary>
 	public static List<Card> AttackCandidates(GameState s) =>

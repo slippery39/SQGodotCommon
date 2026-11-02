@@ -32,4 +32,16 @@ public static class Replacements
 					.SelectMany(s.AbilitiesOf<AmountReplacement>)
 					.Where(r => r.Event == evt)
 					.Sum(r => r.Bonus);
+
+	/// <summary>
+	/// Brad Boimler: "until end of turn, if one or more counters would be put on a permanent you
+	/// control, that many plus one of each of those kinds of counters are put on that permanent
+	/// instead." — ONE call at every place counters are put on a permanent (PutCounters, +1/+1, -1/-1,
+	/// charge, stun, loyalty, time — entering with them and proliferate too): +1 per such effect its
+	/// controller has this turn. The finality counter is a yes/no here, so one more changes nothing.
+	/// </summary>
+	public static int Counters(GameState s, int controllerId, int amount) =>
+		amount <= 0
+			? amount
+			: amount + s.ThisTurnEffects<CountersPlusOneThisTurn>(controllerId).Count();
 }

@@ -19,6 +19,9 @@ public static class Scripting
 
 	public static readonly TargetSpec Creature = TargetSpec.Creature;
 
+	/// <summary>Threshold — "as long as there are seven or more cards in your graveyard".</summary>
+	public static readonly AtLeast Threshold = new(Count.NumberOf(Ref.CardsInYourGraveyard), 7);
+
 	/// <summary>"Permanent card" / "nonland permanent card". No set here has battles yet.</summary>
 	public const CardType NonlandPermanentTypes =
 		CardType.Creature | CardType.Artifact | CardType.Enchantment | CardType.Planeswalker;

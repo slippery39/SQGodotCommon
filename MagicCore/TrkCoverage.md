@@ -6,13 +6,10 @@ Status, not rules: what is scripted, what waits and why (story MC-5). The rules 
 STATION commons and uncommons waiting on nothing else; batch 3, the small mechanics (beam me up, strange new
 worlds, dilemma, power 8, becomes tapped, look and take, Federation) and their 31 commons and uncommons;
 batch 4a, counters of any kind (quests), Sagas, kicker, can't block, once each turn and 28 commons and
-uncommons** — 175/311 play, with the basics and Mugato. **Batch 4 is three sessions (Shayne, 2026-11-01).
-4b (17):** Ghost of Illyria, Test of Priorities, Erica Ortegas (DELAYED-RETURN); Blastoneuron, Hologram
-Stalker, Vash (LEAVES-GY); I'm a Doctor, Not a . . ., De-evolve (TYPE-SET); Captain Michael Burnham, Jake
-Sisko (RESOLVED-TWICE); Hive Mind Coprocessor (GRANT-TRIGGER); Rules of Acquisition (CONTROL); Brad Boimler
-(every kind of counter "plus one"); Exploratory Mission (exile until a nonland, playable this turn); Storied
-Veteran (cast from the graveyard with finality); Cold-Blooded Crew and Species 8472 (can't be blocked by
-power 2 or less / by artifact creatures; Species also untargetable by opponents' artifact abilities). **4c
+uncommons; batch 4b, the old tags' one-offs (delayed return, leaves the graveyard, type change, a second
+resolution, a granted trigger, gain control, every counter "plus one", exile until a nonland, cast from your
+graveyard, block and target restrictions) and their 17 commons and uncommons** — 192/311 play, with the
+basics and Mugato. **Batch 4 is three sessions (Shayne, 2026-11-01); 4a and 4b are done. 4c
 (14 one-offs):** Ensign Pavel Chekov, Warp Speed (every land you control enters untapped — Shayne), Pet
 Sehlat, Combadge, Data, Dr. McCoy, Vulcan Mind-Meld, Zero, Dominion Saboteur, Sylvia Tilly, First Contact, A
 Good Day to Die, Isolinear Processor, Zefram Cochrane. Batch 4 re-tiered from the full text: Dominion
@@ -58,12 +55,13 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | ENTERS-UNTAPPED | "When this land enters untapped, choose one —" | `EntersTappedComponent` + a modal trigger |
 | CANT-BLOCK | DONE (batch 4a): `Combat.CantBlock`. Not yet: Storied Veteran (cast from the graveyard), De-evolve (TYPE-SET), Troubling Tribbles | — |
 | LOOK-TAKE | DONE (MC-5.2, batch 3): `LookAndTake(n, filter) { Reveal, Must, RestToGraveyard }` | — |
-| DELAYED-RETURN | "Exile …, return it at the beginning of the next end step" | `Flicker`, `DelayedTrigger` |
-| LEAVES-GY | "Whenever one or more cards leave your graveyard" | — |
-| CONTROL | Gain control (until end of turn, or for good; exchange) | MtgCore's `GainControlAction` |
+| DELAYED-RETURN | DONE (batch 4b): `Flicker.AtNextEndStep` (the delayed trigger on the exiled card); `AtNextEndStep` (one in your command zone, Erica) | — |
+| LEAVES-GY | DONE (batch 4b): `TriggerEvent.CardLeavesYourGraveyard` (`LeftGraveyardEvent`, MoveCard); `OneOrMoreCardsLeaveYourGraveyard` — once per priority pass (Shayne). Not yet: Sela | — |
+| CONTROL | DONE for good (batch 4b): `GainControl`, `MagicState.GainControl`. Not yet: until end of turn, exchange (The Wrath of Khan, Worf) | — |
 | ASSIMILATE | Onto the battlefield under your control, +1/+1 counter, a Borg artifact creature | `ReturnFromGraveyard`, the type change |
 | ONCE-A-TURN | DONE (batch 4a): `ActivatedAbilityComponent.OncePerTurn` | — |
-| RESOLVED-TWICE, TYPE-SET, TRIGGER-TWICE, GRANT-TRIGGER | Small one-offs: "the second time this ability has resolved this turn"; "becomes a [type]"; a trigger triggering an additional time; artifact creatures "have '[triggered ability]'" | `OncePerTurn`; `GrantsActivatedAbility` |
+| RESOLVED-TWICE, TYPE-SET, GRANT-TRIGGER | DONE (batch 4b): `IfNthResolutionThisTurn`; `s.Subtypes` (`ModifyUntilEndOfTurn.BecomesCreatureType`, `EnchantedIsCreatureType`); `GrantsTriggeredAbility`. Not yet: Antagonist Incorporator | — |
+| TRIGGER-TWICE | A trigger triggering an additional time (Lwaxana Troi, Dr. Beverly Crusher) | — |
 
 Also needed, no tag: H.M.S. Bounty's extra turn (MtgCore's `TakeExtraTurnAction`), Borg Cube's
 affinity (a `CostChange` with a count). Genuinely new, found in neither engine: Station, dilemma,

@@ -267,9 +267,6 @@ public static class FraCards
 			If = new Not(new Matches(Ref.Source, Is.Prepared)),
 		};
 
-	/// <summary>Threshold — "as long as there are seven or more cards in your graveyard".</summary>
-	static readonly AtLeast Threshold = new(Count.NumberOf(Ref.CardsInYourGraveyard), 7);
-
 	/// <summary>Dual lands: "enters tapped unless you control a planeswalker" — judged as this land enters.</summary>
 	static readonly Condition YouControlAPlaneswalker = new AtLeast(
 		Count.NumberOf(Ref.PlaneswalkersYouControl),

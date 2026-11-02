@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 91/96 · uncommon 84/110 · rare 0/80 · mythic 0/25 · **175/311**
+**Playable:** common 93/96 · uncommon 99/110 · rare 0/80 · mythic 0/25 · **192/311**
 
 ### A Good Day to Die
 
@@ -337,7 +337,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This creature can't be blocked by creatures with power 2 or less.  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `CantBeBlockedBy` — Cold-Blooded Crew: "This creature can't be blocked by creatures with power 2 or less.";…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Cold-Blooded Crew"] =
+[
+	When(TriggerEvent.SelfEnters, [Creature], new AddCounters(Ref.Target(), 2)),
+	new CantBeBlockedBy(Is.PowerAtMost(2)),
+	BasicLandcycling,
+],
+```
 
 ### Command Decision
 
@@ -929,7 +940,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Put a +1/+1 counter on target creature you control. Untap it. Until end of turn, it gets +1/+1 and becomes a Doctor. (It loses all other creature types.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["I'm a Doctor, Not a . . ."] =
+[
+	Spell(
+		[Target(Is.Creature & Is.Yours)],
+		new AddCounters(Ref.Target(), 1),
+		new Untap(Ref.Target()),
+		new ModifyUntilEndOfTurn(Ref.Target(), 1, 1) { BecomesCreatureType = "Doctor" }
+	),
+],
+```
 
 ### Interstellar Effigy
 
@@ -2232,7 +2257,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, exile target creature card with mana value 3 or less from your graveyard. Create a token that's a copy of it. That token gains haste. Sacrifice it at the beginning of the next end step.  
 > Whenever one or more cards leave your graveyard, each opponent loses 1 life and you gain 1 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `ExileFromGraveyard` — Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Blastoneuron"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))],
+		new ExileFromGraveyard(Ref.Target()),
+		new CreateTokenCopy(Ref.Target())
+		{
+			OfAnExiledCard = true,
+			AddingKeywords = ["Haste"],
+			SacrificeAtNextEndStep = true,
+		}
+	),
+	When(
+		TriggerEvent.OneOrMoreCardsLeaveYourGraveyard,
+		[],
+		new LoseLife(Ref.EachOpponent, 1),
+		new GainLife(Ref.You, 1)
+	),
+],
+```
 
 ### Brad Boimler, Eager Ensign
 
@@ -2241,7 +2291,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Lifelink  
 > Whenever Brad Boimler becomes tapped, until end of turn, if one or more counters would be put on a permanent you control, that many plus one of each of those kinds of counters are put on that permanent instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `CountersPlusOneThisTurn` — Brad Boimler's "until end of turn … that many plus one of each of those kinds of…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Brad Boimler, Eager Ensign"] =
+[
+	When(
+		TriggerEvent.SelfBecomesTapped,
+		[],
+		new ThisTurn(new CountersPlusOneThisTurn())
+	),
+],
+```
 
 ### Captain Michael Burnham
 
@@ -2250,7 +2313,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > Landfall — Whenever a land you control enters, Captain Burnham deals 1 damage to each opponent. If this is the second time this ability has resolved this turn, put a +1/+1 counter on Captain Burnham.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `IfNthResolutionThisTurn` — Captain Michael Burnham: "If this is the second time this ability has resolved this…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Captain Michael Burnham"] =
+[
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[],
+		new DealDamage(Ref.EachOpponent, 1),
+		new IfNthResolutionThisTurn(2, [new AddCounters(Ref.Source, 1)])
+	),
+],
+```
 
 ### Cleveland Booker, Empath
 
@@ -2596,7 +2673,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Enchanted creature gets -4/-0, can't block, and is a Salamander. (It loses all other creature types.)  
 > Threshold — At the beginning of each upkeep, if there are seven or more cards in your graveyard, exile enchanted creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `EnchantedIsCreatureType` — De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)"…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["De-evolve"] =
+[
+	new AuraComponent(Creature),
+	AttachedGets(-4, 0),
+	new StaticEffectComponent(Is.AttachedToSource, Combat.CantBlock),
+	new EnchantedIsCreatureType("Salamander"),
+	When(TriggerEvent.EachUpkeep, [], new Exile(Ref.EnchantedCreature)) with
+	{
+		If = Threshold,
+	},
+],
+```
 
 ### Dominion Saboteur
 
@@ -2674,7 +2767,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Haste  
 > Whenever Erica Ortegas becomes tapped, you may put a land card from your hand onto the battlefield. If you do, return a land you control to its owner's hand at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `MayPutFromHandOntoBattlefield` — Erica Ortegas: "you may put a land card from your hand onto the battlefield. If you do,…; `ReturnYourPermanentToHand` — Erica Ortegas: "return a land you control to its owner's hand" — chosen as it resolves,…
+
+```csharp
+["Erica Ortegas, Plucky Pilot"] =
+[
+	When(
+		TriggerEvent.SelfBecomesTapped,
+		[],
+		new MayPutFromHandOntoBattlefield(
+			CardType.Land,
+			[new AtNextEndStep([new ReturnYourPermanentToHand(Is.Land)])]
+		)
+	),
+],
+```
 
 ### Exploratory Mission
 
@@ -2682,7 +2791,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Landfall — Whenever a land you control enters, put a quest counter on this enchantment. Then exile cards from the top of your library until you exile a nonland card. You may play that card this turn. If this enchantment has five or more quest counters on it, add {R}{R}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `ExileTopPlayable` — Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn,…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `PutCounters` — "Put a quest counter on this enchantment" (Anthropological Mission), "a promotion…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Exploratory Mission"] =
+[
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[],
+		new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+		new ExileTopPlayable { UntilNonland = true, ThisTurn = true },
+		new If(Quests(5), [new AddMana(ManaColor.Red, 2)])
+	),
+],
+```
 
 ### Gabriel Lorca, Mirror Menace
 
@@ -2740,7 +2864,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > When this creature enters, exile up to one other target nonland permanent you control. Return that card to the battlefield under its owner's control at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `Flicker` — Flickering Hound: "exile [it], then return that card to the battlefield under its…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Ghost of Illyria"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(!Is.Land & Is.Yours & !Is.Source) with { Optional = true }],
+		new Flicker(Ref.Target()) { AtNextEndStep = true }
+	),
+],
+```
 
 ### Gray and Adira, Forever Joined
 
@@ -2831,7 +2968,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Artifact creatures you control have "Whenever this creature deals combat damage to a player, you may pay 1 life. If you do, draw a card."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GrantsTriggeredAbility` — Hive Mind Coprocessor: "Artifact creatures you control have 'Whenever this creature…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Hive Mind Coprocessor"] =
+[
+	new GrantsTriggeredAbility(
+		ArtifactCreaturesYouControl,
+		When(
+			TriggerEvent.SelfDealsCombatDamageToPlayer,
+			[],
+			new May(
+				"Pay 1 life to draw a card?",
+				new Always(), // paying life is losing it (CR 119.4); at 0 the game is already over
+				[new LoseLife(Ref.You, 1), new DrawCards(Ref.You, 1)]
+			)
+		)
+	),
+],
+```
 
 ### Hologram Janeway
 
@@ -2861,7 +3018,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, return target permanent card from your graveyard to your hand.  
 > Whenever a card leaves your graveyard, create a 3/3 colorless Illusion artifact creature token. This ability triggers only once each turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Hologram Stalker"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InYourGraveyard(Is.Type(PermanentTypes))],
+		new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+	),
+	When(
+		TriggerEvent.CardLeavesYourGraveyard,
+		[],
+		new CreateTokens(ArtifactIllusion, 1)
+	) with
+	{
+		OncePerTurn = true,
+	},
+],
+```
 
 ### Hoshi Sato, Exolinguist
 
@@ -2951,7 +3129,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Landfall — Whenever a land you control enters, you gain 1 life. If this is the second time this ability has resolved this turn, investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `IfNthResolutionThisTurn` — Captain Michael Burnham: "If this is the second time this ability has resolved this…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Jake Sisko, War Correspondent"] =
+[
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[],
+		new GainLife(Ref.You, 1),
+		new IfNthResolutionThisTurn(2, [CreateClue(1)])
+	),
+],
+```
 
 ### Jett Reno, Problem Solver
 
@@ -3375,7 +3567,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Follow the 3rd Rule — Gain control of target nonland permanent an opponent controls. That opponent draws three cards.  
 > • Follow the 98th Rule — Target opponent gains control of target nonland permanent you control. If they do, you draw three cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Rules of Acquisition"] =
+[
+	ModalSpell(
+		"Rules of Acquisition",
+		1,
+		M(
+			[Target(!Is.Land & Is.Opponents)],
+			new DrawCards(Ref.ControllerOfTarget(0), 3), // "that opponent" — asked before it changes
+			new GainControl(Ref.Target(), Ref.You)
+		),
+		M(
+			[TargetSpec.Player(Is.Opponents), Target(!Is.Land & Is.Yours)],
+			new GainControl(Ref.Target(1), Ref.Target(0)),
+			new If(
+				new Matches(Ref.Target(1), Is.Opponents),
+				[new DrawCards(Ref.You, 3)]
+			) // "if they do"
+		)
+	),
+],
+```
 
 ### Rutherford, Upgraded Ensign
 
@@ -3540,7 +3757,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This creature can't be blocked by artifact creatures.  
 > This creature can't be the target of abilities from artifact sources your opponents control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `CantBeBlockedBy` — Cold-Blooded Crew: "This creature can't be blocked by creatures with power 2 or less.";…; `CantBeTargetedByAbilitiesFrom` — Species 8472: "This creature can't be the target of abilities from artifact sources your…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Species 8472"] =
+[
+	When(TriggerEvent.SelfEnters, [], new GainLife(Ref.You, DifferentlyNamedLands)),
+	new CantBeBlockedBy(Is.Artifact & Is.Creature),
+	new CantBeTargetedByAbilitiesFrom(Is.Artifact & Is.Opponents),
+],
+```
 
 ### Spock, Always Your Friend
 
@@ -3570,7 +3798,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This creature can't block.  
 > You may cast this card from your graveyard. If you do, it enters with a finality counter on it.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `MayCastFromYourGraveyard` — Storied Veteran: "You may cast this card from your graveyard. If you do, it enters with…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Storied Veteran"] =
+[
+	new StaticEffectComponent(Is.Source, Combat.CantBlock),
+	new MayCastFromYourGraveyard(),
+],
+```
 
 ### Subspace Anomaly
 
@@ -3850,7 +4088,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Power to Engines — Surveil 2, then draw a card.  
 > • Power to Life Support — Exile target creature you control. Return that card to the battlefield under its owner's control at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Flicker` — Flickering Hound: "exile [it], then return that card to the battlefield under its…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Test of Priorities"] =
+[
+	ModalSpell(
+		"Test of Priorities",
+		1,
+		M([], new Surveil(2), new DrawCards(Ref.You, 1)),
+		M(
+			[Target(Is.Creature & Is.Yours)],
+			new Flicker(Ref.Target()) { AtNextEndStep = true }
+		)
+	),
+],
+```
 
 ### The Doctor, EMH
 
@@ -4225,7 +4480,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > At the beginning of your upkeep, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)  
 > Whenever a card leaves your graveyard, draw a card. This ability triggers only once each turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4bTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+
+```csharp
+["Vash, Freelance Archaeologist"] =
+[
+	When(TriggerEvent.YourUpkeep, [], new Surveil(1)),
+	When(TriggerEvent.CardLeavesYourGraveyard, [], new DrawCards(Ref.You, 1)) with
+	{
+		OncePerTurn = true,
+	},
+],
+```
 
 ### Vengeance Mission
 

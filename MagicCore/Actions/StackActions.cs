@@ -573,7 +573,9 @@ public static class StackResolution
 					auraHost == 0
 					|| !aura.Enchant.IsLegal(s, permanent.ControllerId, permanent.Id, auraHost);
 			}
-			if (cast?.CastFrom == ZoneType.Graveyard || auraFizzles)
+			var fromGraveyard = cast?.CastFrom == ZoneType.Graveyard;
+			var mayCastThere = permanent.HasComponent<MayCastFromYourGraveyard>(); // Storied Veteran
+			if ((fromGraveyard && !mayCastThere) || auraFizzles)
 				return Priority.Retain(
 					s.MoveCard(permanent.Id, s.ZoneId(permanent.OwnerId, ZoneType.Graveyard)), // flashback: exiled instead (MoveCard)
 					s.GetGame().ActivePlayerId
@@ -591,7 +593,10 @@ public static class StackResolution
 							cast?.X ?? 0,
 							auraHost,
 							cast is not null
-						),
+						)
+						{
+							Finality = fromGraveyard && mayCastThere, // "it enters with a finality counter on it"
+						},
 						new ActivePlayerGetsPriorityAction(),
 					],
 				}
@@ -675,8 +680,20 @@ public record FinishSpellAction : GameAction
 public record EnterFromStackAction(int CardId, int ControllerId, int X, int AttachTo, bool Cast)
 	: GameAction
 {
+	/// <summary>Storied Veteran: "If you do, it enters with a finality counter on it."</summary>
+	public bool Finality { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
-		new(s.EnterBattlefield(CardId, ControllerId, X, attachTo: AttachTo, cast: Cast));
+		new(
+			s.EnterBattlefield(
+				CardId,
+				ControllerId,
+				X,
+				finality: Finality,
+				attachTo: AttachTo,
+				cast: Cast
+			)
+		);
 }
 
 /// <summary>After a resolution, the active player gets priority (CR 117.3b).</summary>

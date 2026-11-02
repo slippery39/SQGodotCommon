@@ -84,6 +84,12 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   trigger). **Warp Speed: every land you control enters untapped** — its own "enters tapped", Root
   Maze's, a token created tapped and "onto the battlefield tapped" alike.
 
+- 2026-11-01, Shayne (MC-5.3 batch 4b's question): **"one or more cards leave your graveyard" triggers once
+  per priority pass** — everything that left since a player last had priority is one batch. Exact for
+  cards leaving together; it undercounts only where the rules see two events before anyone has priority
+  (one resolution moving cards out in two separate steps; a card cast from the graveyard while its cost
+  exiles others from there, CR 601.2a vs 601.2h) — noted in `DesignNotes.md`.
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -102,7 +108,12 @@ Open questions:
       (`Count.CreatureTypesAmong`); "tap two" is now the player's choice (Worf — Tenured Tethermage too).
       Batch 4a (2026-11-01): counters of any kind (`Card.Counters`, `MagicState.PutCounters`, `Is.WithAnyCounter`),
       quests, Sagas (`SagaComponent`, `Scripting.Chapter`), kicker (`KickerComponent`), can't block
-      (`Combat.CantBlock`), once each turn (`ActivatedAbilityComponent.OncePerTurn`)
+      (`Combat.CantBlock`), once each turn (`ActivatedAbilityComponent.OncePerTurn`). Batch 4b (2026-11-01):
+      delayed return (`Flicker.AtNextEndStep`, `AtNextEndStep`), leaves the graveyard (`LeftGraveyardEvent`,
+      `Trigger.OneOrMore`), type change (`s.Subtypes`), the second resolution (`IfNthResolutionThisTurn`),
+      granted triggers (`GrantsTriggeredAbility`), gain control (`MagicState.GainControl`), every counter
+      "plus one" (`Replacements.Counters`), cast from your graveyard (`MayCastFromYourGraveyard`),
+      `CantBeBlockedBy`, `CantBeTargetedByAbilitiesFrom`
 - [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
       the 88 tier 0–1 C/U not waiting on STATION or ANY-COUNTER (re-tiered: 4 tier 3, 6 tier 2, list in
       `TrkCoverage.md`); new pieces: modal activated abilities, `PutSelfOnBottomCost`, `AddManaOfAnyOneColor`,
@@ -115,7 +126,9 @@ Open questions:
       can't block and once each turn, with the tier-2 options (`ExileTopPlayable.N`, `SacrificeAtNextEndStep`,
       `CreateTokenCopy.NotLegendary`, `AddManaOfAnyOneColor.Colors`, `SearchLibrary.Who`, `Is.Named`,
       `ReturnFromYourGraveyard`, `Trigger.CombatDamageBy`, `Exile.Linked` + `ReturnLinkedExile`,
-      `WheneverThisTurn`, `ShuffleIntoLibrary.FromGraveyards`). Waiting: 4b (17) and 4c (14), listed in `TrkCoverage.md`
+      `WheneverThisTurn`, `ShuffleIntoLibrary.FromGraveyards`). Batch 4b done 2026-11-01: the old tags' 17
+      one-offs, with the options `ExileTopPlayable.UntilNonland`, `CreateTokenCopy.OfAnExiledCard`, `GainLife`
+      counting a `Count`; `Threshold` moved to `Scripting.cs`. Waiting: 4c (14), listed in `TrkCoverage.md`
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -128,14 +141,15 @@ Open questions:
 
 ## Next
 
-**MC-5.3 batch 4a is done (2026-11-01): 175/311 play** — counters of any kind and quests, Sagas, kicker,
-can't block and once each turn (each one's rule in `magic-mechanics.md`), with 28 commons and uncommons.
-Batch 4a's shortcuts are in `DesignNotes.md` (one once-a-turn stamp per card; any triggered ability of a
-Saga counts as a chapter; proliferate doesn't see the named counters). **Next: batch 4b in a NEW session —
-17 C/U on the old tags' one-offs (`TrkCoverage.md`'s status lists them): delayed return, leaves the
-graveyard, type change, second resolution, granted trigger, gain control, Brad Boimler's "plus one" of
-every kind (it must reach every counter path — `PutCounters`, `AddPlusOneCounters`, charge, loyalty, stun),
-Exploratory Mission, Storied Veteran, Cold-Blooded Crew and Species 8472. Then 4c, the 14 one-offs.**
+**MC-5.3 batch 4b is done (2026-11-01): 192/311 play** — delayed return, leaves the graveyard, type
+change, the second resolution, granted triggers, gain control, every counter "plus one", cast from your
+graveyard, can't be blocked by / targeted by abilities from (each one's rule in `magic-mechanics.md`), with
+17 commons and uncommons. Batch 4b's shortcuts are in `DesignNotes.md` (one trigger per priority pass for
+"one or more"; Species and a sacrificed source; one resolution count per card; type change without
+timestamps; control for good only). **Next: batch 4c in a NEW session — the 14 C/U one-offs
+(`TrkCoverage.md`'s status lists them): Ensign Pavel Chekov, Warp Speed, Pet Sehlat, Combadge, Data, Dr.
+McCoy, Vulcan Mind-Meld, Zero, Dominion Saboteur, Sylvia Tilly, First Contact, A Good Day to Die,
+Isolinear Processor, Zefram Cochrane. Then MC-5.4, boosters.**
 Every batch starts in a NEW session
 (`/card-batch` step 0) and ends with its usage row (`tools/usage_report.py --log`,
 `docs/findings/card-batch-usage.md`) — this set tests that workflow.
@@ -198,3 +212,12 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   FRA game or AI replay moved. The review's fixes: the greedy AI picks among the colours offered (Dal R'El
   crashed it), a linked exile only for the same object of the source, a Saga that lost all abilities is not
   sacrificed, no zero-count entries in the counter map.
+- 2026-11-01: MC-5.3 batch 4b — Shayne's answer in Decisions ("one or more" once per priority pass; no
+  FRA/TRK card has a shape it undercounts); 17 cards (2 C, 15 U), TRK 192/311; 29 tests, 51/51 revert-checks
+  caught (two only after a fix: a vacuous De-evolve check, a revert that didn't compile); probe: 150 games,
+  no crash, every card used; bench −1.5% (noise); golden replays regenerated — 887 of 1,896 card games
+  moved, every one dealing a new card, and the 30 every-card random games; no other game or AI replay moved.
+  The review's fixes: a delayed trigger triggers only once (CR 603.7c — a countered one no longer fires at
+  every later end step), Ghost's return is controlled by Ghost's controller (CR 603.7d), a De-evolve that
+  lost its abilities sets no type, two `///` summaries back on their own records, Erica reuses
+  `MoveChosenToAction`.
