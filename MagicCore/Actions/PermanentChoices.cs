@@ -66,17 +66,8 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 				copy = (Card)copy.WithComponent(component);
 		// It entered just before it became the copy: vanishing's "enters with N time counters" here.
 		return new(
-			s.UpdateObject(
-				CardId,
-				copy with
-				{
-					TimeCounters = Rules.Replacements.Counters(
-						s,
-						copy.ControllerId,
-						copy.GetComponent<Vanishing>()?.N ?? 0
-					),
-				}
-			)
+			s.UpdateObject(CardId, copy with { TimeCounters = 0 })
+				.PutCounters(CardId, CounterKinds.Time, copy.GetComponent<Vanishing>()?.N ?? 0)
 		);
 	}
 }

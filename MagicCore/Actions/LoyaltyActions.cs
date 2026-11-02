@@ -33,8 +33,7 @@ public static class Loyalty
 	public static GameState Change(GameState s, int walkerId, int delta, int putterId = 0)
 	{
 		var walker = s.GetCard(walkerId);
-		delta = Rules.Replacements.Counters(s, walker.ControllerId, delta); // Brad Boimler: only an increase
-		s = s.UpdateObject(walkerId, walker with { Loyalty = Math.Max(0, walker.Loyalty + delta) });
+		s = s.PutCounters(walkerId, CounterKinds.Loyalty, delta); // Brad Boimler applies there
 		return delta > 0
 			? s.Raise(new LoyaltyCountersPutEvent(putterId != 0 ? putterId : walker.ControllerId))
 			: s;

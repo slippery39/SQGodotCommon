@@ -169,19 +169,7 @@ public record AddMinusOneCounters(Ref What, Count Amount) : Effect
 			: new(
 				Permanents(What, s)
 					.Where(c => c.Is(CardType.Creature))
-					.Aggregate(
-						s,
-						(st, c) =>
-							Update(
-								st,
-								c with
-								{
-									MinusOneCounters =
-										c.MinusOneCounters
-										+ Replacements.Counters(st, c.ControllerId, n),
-								}
-							)
-					)
+					.Aggregate(s, (st, c) => st.PutCounters(c.Id, CounterKinds.MinusOne, n))
 			);
 	}
 }
@@ -560,19 +548,7 @@ public record AddStunCounters(Ref What, Count N) : Effect
 	{
 		var n = N.Value(s, InputContext);
 		return new(
-			Permanents(What, s)
-				.Aggregate(
-					s,
-					(st, c) =>
-						Update(
-							st,
-							c with
-							{
-								StunCounters =
-									c.StunCounters + Replacements.Counters(st, c.ControllerId, n),
-							}
-						)
-				)
+			Permanents(What, s).Aggregate(s, (st, c) => st.PutCounters(c.Id, CounterKinds.Stun, n))
 		);
 	}
 }
@@ -719,29 +695,17 @@ public record Proliferate(Count Times) : Effect
 					if (c.PlusOneCounters > 0)
 						s = s.AddPlusOneCounters(c.Id, 1);
 					if (c.ChargeCounters > 0)
-						s = Update(
-							s,
-							s.GetCard(c.Id) with
-							{
-								ChargeCounters = c.ChargeCounters + Replacements.Counters(s, p, 1),
-							}
-						);
+						s = s.PutCounters(c.Id, CounterKinds.Charge, 1);
 					if (c.Loyalty > 0)
 						s = Actions.Loyalty.Change(s, c.Id, 1, Controller);
 				}
 				else
-					s = Update(
-						s,
-						c with
-						{
-							MinusOneCounters =
-								c.MinusOneCounters
-								+ (c.MinusOneCounters > 0 ? Replacements.Counters(s, p, 1) : 0),
-							StunCounters =
-								c.StunCounters
-								+ (c.StunCounters > 0 ? Replacements.Counters(s, p, 1) : 0),
-						}
-					);
+				{
+					if (c.MinusOneCounters > 0)
+						s = s.PutCounters(c.Id, CounterKinds.MinusOne, 1);
+					if (c.StunCounters > 0)
+						s = s.PutCounters(c.Id, CounterKinds.Stun, 1);
+				}
 			}
 		return new(s);
 	}
@@ -786,18 +750,7 @@ public record AddChargeCounters(Ref What, Count N) : Effect
 		var n = N.Value(s, InputContext);
 		return new(
 			Permanents(What, s)
-				.Aggregate(
-					s,
-					(st, c) =>
-						Update(
-							st,
-							c with
-							{
-								ChargeCounters =
-									c.ChargeCounters + Replacements.Counters(st, c.ControllerId, n),
-							}
-						)
-				)
+				.Aggregate(s, (st, c) => st.PutCounters(c.Id, CounterKinds.Charge, n))
 		);
 	}
 }

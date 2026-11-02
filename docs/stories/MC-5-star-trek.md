@@ -221,3 +221,8 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   every later end step), Ghost's return is controlled by Ghost's controller (CR 603.7d), a De-evolve that
   lost its abilities sets no type, two `///` summaries back on their own records, Erica reuses
   `MoveChosenToAction`.
+- 2026-11-01: after batch 4b, Shayne on the two review findings left: Storied Veteran told from flashback by
+  its component is a known issue (`DesignNotes.md`); counters now go through ONE funnel —
+  `MagicState.PutCounters` for every kind (+1/+1, -1/-1, charge, stun, time, loyalty and the named ones),
+  so Yoshimaru and Brad Boimler apply in one place; `CounterWritesTests` fails on an engine file that adds
+  to a counter field itself. No game moved (both golden files unchanged).

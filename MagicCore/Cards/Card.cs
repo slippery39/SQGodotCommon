@@ -204,7 +204,33 @@ public record Card : GameObject
 	public ImmutableDictionary<string, int> Counters { get; init; } =
 		ImmutableDictionary<string, int>.Empty;
 
-	public int CountersOf(string kind) => Counters.GetValueOrDefault(kind);
+	public int CountersOf(string kind) =>
+		kind switch
+		{
+			Effects.CounterKinds.PlusOne => PlusOneCounters,
+			Effects.CounterKinds.MinusOne => MinusOneCounters,
+			Effects.CounterKinds.Charge => ChargeCounters,
+			Effects.CounterKinds.Stun => StunCounters,
+			Effects.CounterKinds.Time => TimeCounters,
+			Effects.CounterKinds.Loyalty => Loyalty,
+			_ => Counters.GetValueOrDefault(kind),
+		};
+
+	/// <summary>This card with exactly <paramref name="n"/> counters of a kind — written only by MagicState.PutCounters.</summary>
+	public Card WithCounters(string kind, int n) =>
+		kind switch
+		{
+			Effects.CounterKinds.PlusOne => this with { PlusOneCounters = n },
+			Effects.CounterKinds.MinusOne => this with { MinusOneCounters = n },
+			Effects.CounterKinds.Charge => this with { ChargeCounters = n },
+			Effects.CounterKinds.Stun => this with { StunCounters = n },
+			Effects.CounterKinds.Time => this with { TimeCounters = n },
+			Effects.CounterKinds.Loyalty => this with { Loyalty = n },
+			_ => this with
+			{
+				Counters = n == 0 ? Counters.Remove(kind) : Counters.SetItem(kind, n),
+			},
+		};
 
 	/// <summary>Dominion Supervisor: "creatures you control with counters on them" — a counter of any kind.</summary>
 	public bool HasAnyCounter =>

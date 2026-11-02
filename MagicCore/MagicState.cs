@@ -289,13 +289,6 @@ public static class MagicState
 				ControllerId = controllerId,
 				ControlledSinceTurn = s.GetGame().TurnNumber,
 				EnteredOnTurn = s.GetGame().TurnNumber,
-				// Entering with counters is putting them on (Brad Boimler applies, CR 122.6).
-				Loyalty = Rules.Replacements.Counters(s, controllerId, card.PrintedLoyalty),
-				TimeCounters = Rules.Replacements.Counters(
-					s,
-					controllerId,
-					card.GetComponent<Vanishing>()?.N ?? 0 // vanishing: "enters with N time counters"
-				),
 				CastX = x,
 				WasCast = cast,
 				HasFinalityCounter = finality,
@@ -313,7 +306,9 @@ public static class MagicState
 					),
 			}
 		);
-		// Entering with counters is putting them on (Yoshimaru applies) — after control is set.
+		// Entering with counters is putting them on (Yoshimaru, Brad Boimler: CR 122.6) — after control is set.
+		s = s.PutCounters(cardId, CounterKinds.Loyalty, card.PrintedLoyalty)
+			.PutCounters(cardId, CounterKinds.Time, card.GetComponent<Vanishing>()?.N ?? 0); // vanishing: "enters with N time counters"
 		s = s.AddPlusOneCounters(
 			cardId,
 			extraCounters
@@ -406,22 +401,35 @@ public static class MagicState
 			.Raise(new DiscardedEvent(playerId, [.. cardIds]));
 	}
 
-	/// <summary>
-	/// The ONE way +1/+1 counters are put on a permanent — Yoshimaru's "that many plus one" applies
-	/// to a creature you control (MtgCore: only to an increase, never a removal). Negative removes.
-	/// </summary>
+	/// <summary>"Put N +1/+1 counters on it" — PutCounters with that kind.</summary>
 	/// <param name="entering">It is entering with them: its own replacement doesn't apply (CR 614.12).</param>
 	public static GameState AddPlusOneCounters(
 		this GameState s,
 		int cardId,
 		int n,
 		bool entering = false
+	) => s.PutCounters(cardId, CounterKinds.PlusOne, n, entering);
+
+	/// <summary>
+	/// THE way counters of ANY kind are put on a permanent or removed — +1/+1, -1/-1, charge, stun, time,
+	/// loyalty (their own fields on Card) and the named ones (Card.Counters) — so every replacement on
+	/// putting them applies in this one place: Yoshimaru's "that many plus one" (+1/+1 on a creature you
+	/// control) and Brad Boimler's (every kind, Rules.Replacements.Counters). Never write a counter field
+	/// elsewhere; CounterWritesTests fails on one that does. Negative removes, never below 0. A named
+	/// kind raises what a Saga's chapter reads (CR 714.2b: "as the number of lore counters becomes at
+	/// least the chapter number").
+	/// </summary>
+	/// <param name="entering">It is entering with them: its own replacement doesn't apply (CR 614.12).</param>
+	public static GameState PutCounters(
+		this GameState s,
+		int cardId,
+		string kind,
+		int n,
+		bool entering = false
 	)
 	{
-		if (n == 0)
-			return s;
 		var card = s.GetCard(cardId);
-		if (card.Is(CardType.Creature))
+		if (n > 0 && kind == CounterKinds.PlusOne && card.Is(CardType.Creature))
 			n = Rules.Replacements.Apply(
 				s,
 				ReplaceableEvent.PlusOneCountersOnYourCreature,
@@ -430,36 +438,26 @@ public static class MagicState
 				exceptId: entering ? cardId : 0
 			);
 		n = Rules.Replacements.Counters(s, card.ControllerId, n);
-		return s.UpdateObject(
-			cardId,
-			card with
-			{
-				PlusOneCounters = Math.Max(0, card.PlusOneCounters + n),
-			}
-		);
-	}
-
-	/// <summary>
-	/// The ONE way counters of a named kind (Card.Counters) are put on or removed — raising what a Saga's
-	/// chapter reads (CR 714.2b: "as the number of lore counters becomes at least the chapter number").
-	/// Negative removes, never below 0.
-	/// </summary>
-	public static GameState PutCounters(this GameState s, int cardId, string kind, int n)
-	{
-		var card = s.GetCard(cardId);
 		var had = card.CountersOf(kind);
-		var now = Math.Max(0, had + Rules.Replacements.Counters(s, card.ControllerId, n));
+		var now = Math.Max(0, had + n);
 		if (now == had)
 			return s;
-		s = s.UpdateObject(
-			cardId,
-			card with
-			{
-				Counters = now == 0 ? card.Counters.Remove(kind) : card.Counters.SetItem(kind, now),
-			}
-		);
-		return now > had ? s.Raise(new CountersPutEvent(cardId, kind, had, now)) : s;
+		s = s.UpdateObject(cardId, card.WithCounters(kind, now));
+		return now > had && IsNamed(kind)
+			? s.Raise(new CountersPutEvent(cardId, kind, had, now))
+			: s;
 	}
+
+	static bool IsNamed(string kind) =>
+		kind
+			is not (
+				CounterKinds.PlusOne
+				or CounterKinds.MinusOne
+				or CounterKinds.Charge
+				or CounterKinds.Stun
+				or CounterKinds.Time
+				or CounterKinds.Loyalty
+			);
 
 	/// <summary>
 	/// THE control change (CR 108.4, Rules of Acquisition) — the same object, so its counters, damage,

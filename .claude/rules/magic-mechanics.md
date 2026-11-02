@@ -60,8 +60,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   one); nothing moves.
 - **Numeric replacements** ("… that much plus one instead") are `AmountReplacement` on a permanent,
   applied by `Rules.Replacements.Apply` inside the one place the event happens: `Damage.Deal` (and
-  `Damage.Excess`, so excess sees the replaced amount) and `MagicState.AddPlusOneCounters` — the ONE
-  way +1/+1 counters are put on, entering with them included. Lifted from MtgCore's ReplacementEngine.
+  `Damage.Excess`, so excess sees the replaced amount) and `MagicState.PutCounters` — the ONE way
+  counters of any kind are put on, entering with them included. Lifted from MtgCore's ReplacementEngine.
 - **-1/-1 counters** are `Card.MinusOneCounters`, read into `OwnPower`/`OwnToughness`; the
   state-based check cancels them against +1/+1 counters in pairs (CR 704.5q).
 - **How much combat damage a creature assigns** is `Combat.Assigns` — power, or toughness (Ghalta), or a
@@ -300,9 +300,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   ART only, never by a rule. A sealed or draft session passes its set (`CardRegistry.Get(name, set)`);
   boosters, ratings and drafts take a set code (`Boosters.Pack(set, rng)`, `CardRatings.Of(set)`,
   `Draft.New(set, seed)`). Rarity is never read from `CardData` — it isn't there.
-- **Counters of a named kind** (TRK: quest, lore, promotion — `CounterKinds`) live in ONE map, `Card.Counters`,
-  put on and removed through `MagicState.PutCounters` alone, which raises `CountersPutEvent` (how many it
-  had and has). The older kinds (+1/+1, -1/-1, charge, stun, time, loyalty, finality) keep their own fields.
+- **Counters of every kind are put on and removed through `MagicState.PutCounters` alone** (`CounterKinds`):
+  the named ones (TRK: quest, lore, promotion) in ONE map, `Card.Counters`, raising `CountersPutEvent` (how
+  many it had and has); the older kinds (+1/+1, -1/-1, charge, stun, time, loyalty) in their own fields
+  (`Card.CountersOf`/`WithCounters`). Finality is a yes/no flag, not a count. `CounterWritesTests` fails on
+  an engine file that adds to a counter field itself — it would skip every replacement.
   "A permanent with a counter on it" is ANY kind — `Is.WithAnyCounter` (`Card.HasAnyCounter`) reads every
   field and the map; a new counter field must join it. Proliferate doesn't see the map yet (no card needs it).
 - **Sagas** (CR 714) are `SagaComponent(chapters)` + `Scripting.Chapter(n, …)`: a trigger on
@@ -349,9 +351,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   until-end-of-turn effects stay), moved to its new controller's battlefield zone, summoning sick for them,
   out of combat; no zone change, no event.
 - **"That many plus one of each kind of counter"** (Brad Boimler, `CountersPlusOneThisTurn`) is
-  `Rules.Replacements.Counters`, called at EVERY place counters are put on a permanent: `PutCounters`,
-  `AddPlusOneCounters`, -1/-1, charge, stun, `Loyalty.Change`, entering with loyalty or time counters,
-  proliferate. A new counter path must call it, or Brad silently misses it.
+  `Rules.Replacements.Counters`, applied in `MagicState.PutCounters` — so it reaches every counter path:
+  effects, costs (`Loyalty.Change`), entering with loyalty, time or +1/+1 counters, proliferate.
 - **"You may cast this card from your graveyard"** (Storied Veteran) is `MayCastFromYourGraveyard`, read by
   `Playable.CanCastFromHere` — not flashback: it isn't exiled leaving the stack, it resolves onto the
   battlefield (with a finality counter, `EnterFromStackAction.Finality`).

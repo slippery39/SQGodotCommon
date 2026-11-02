@@ -49,6 +49,15 @@ public static class CounterKinds
 	public const string Lore = "lore";
 	public const string Quest = "quest";
 	public const string Promotion = "promotion";
+
+	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
+	// is still the one way any of them is put on.
+	public const string PlusOne = "+1/+1";
+	public const string MinusOne = "-1/-1";
+	public const string Charge = "charge";
+	public const string Stun = "stun";
+	public const string Time = "time";
+	public const string Loyalty = "loyalty";
 }
 
 /// <summary>What happened, for triggers — one value per event record. Grows only with a new kind of event.</summary>
