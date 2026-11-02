@@ -74,6 +74,9 @@ public static class Is
 
 	public static Filter Named(string name) => new Named(name);
 
+	/// <summary>Combadge: "with a Communicator attached to it".</summary>
+	public static Filter WithAttached(Filter attachment) => new WithAttached(attachment);
+
 	public static Filter Color(ManaColor color) => new OfColor(color);
 
 	/// <summary>Consign to Memory: "target triggered ability" — with TargetSpec.Ability.</summary>

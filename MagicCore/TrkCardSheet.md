@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 93/96 · uncommon 99/110 · rare 0/80 · mythic 0/25 · **192/311**
+**Playable:** common 96/96 · uncommon 110/110 · rare 0/80 · mythic 0/25 · **206/311**
 
 ### A Good Day to Die
 
@@ -13,7 +13,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target creature gets +2/+0 until end of turn. When that creature dies this turn, you draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `TriggeredAbilityComponent` — "When/Whenever [event], [effects]." Goes on the stack the next time a player would get…; `WheneverThisTurn` — The Naked Time, chapter II: "Whenever a creature you control enters this turn, …" — the…
+
+```csharp
+["A Good Day to Die"] =
+[
+	Spell(
+		[Creature],
+		new ModifyUntilEndOfTurn(Ref.Target(), 2, 0),
+		new WheneverThisTurn(
+			new TriggeredAbilityComponent(
+				new Trigger(EventKind.Died),
+				[new DrawCards(Ref.You, 1)]
+			)
+		)
+		{
+			About = Ref.Target(0),
+		}
+	),
+],
+```
 
 ### Andoria
 
@@ -23,7 +44,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this land enters, you gain 1 life.  
 > {T}: Add {U} or {R}.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
 
 ```csharp
 ["Andoria"] = PlanetDual(ManaColor.Blue, ManaColor.Red),
@@ -788,7 +809,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Mill four cards. You may put a permanent card from among them into your hand. If this spell is the first spell you've cast this game, you gain 2 life. (To mill four cards, put the top four cards of your library into your graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `FirstSpellYouCastThisGame` — First Contact: "If this spell is the first spell you've cast this game" — stamped as it…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MillAndMayTake` — Something Worth Saving: "Mill N. You may put a [Types] card from among them into your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["First Contact"] =
+[
+	Spell(
+		[],
+		new MillAndMayTake(4, PermanentTypes),
+		new If(new FirstSpellYouCastThisGame(), [new GainLife(Ref.You, 2)])
+	),
+],
+```
 
 ### Forest
 
@@ -796,7 +830,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests
 
 ### Free Borg Revolutionaries
 
@@ -1242,7 +1276,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > This creature can't attack alone.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Pet Sehlat"] = [new StaticEffectComponent(Is.Source, Combat.CantAttackAlone)],
+```
 
 ### Photosynthetic Physician
 
@@ -2411,7 +2451,38 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Equipped creature has "Whenever this creature attacks while you control another creature with a Communicator attached to it, this creature can't be blocked this turn."  
 > Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `GrantsTriggeredAbility` — Hive Mind Coprocessor: "Artifact creatures you control have 'Whenever this creature…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Combadge"] =
+[
+	When(TriggerEvent.SelfCast, [], new CopySpell(Ref.EventCard)),
+	new GrantsTriggeredAbility(
+		Is.AttachedToSource,
+		When(
+			TriggerEvent.SelfAttacks with
+			{
+				While = new AtLeast(
+					Count.NumberOf(
+						Ref.Permanents(
+							Is.Creature
+								& Is.Yours
+								& !Is.Source
+								& Is.WithAttached(Is.Subtype("Communicator"))
+						)
+					),
+					1
+				),
+			},
+			[],
+			new ModifyUntilEndOfTurn(Ref.Source, 0, 0, Combat.CantBeBlocked)
+		)
+	),
+	Equip("{2}"),
+],
+```
 
 ### Command Subadjunct
 
@@ -2648,7 +2719,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Whenever you draw a card, put a +1/+1 counter on Data.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Data, New Life"] =
+[
+	When(TriggerEvent.YouDrawACard, [], new AddCounters(Ref.Source, 1)),
+],
+```
 
 ### David and Carol Marcus, Creators
 
@@ -2697,7 +2777,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may have this creature enter as a copy of any artifact or creature on the battlefield, except it isn't legendary. If you do, it enters with additional counters on it equal to the same number and kinds of counters the copied permanent has on it.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `MayEnterAsCopy` — Flesh Duplicate: "You may have this creature enter as a copy of any creature on the…
+
+```csharp
+["Dominion Saboteur"] =
+[
+	new MayEnterAsCopy
+	{
+		Of = Is.Artifact | Is.Creature,
+		NotLegendary = true,
+		WithCounters = true,
+		Optional = true,
+	},
+],
+```
 
 ### Dr. McCoy, Surly Surgeon
 
@@ -2706,7 +2801,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Dr. McCoy enters, put a +1/+1 counter on another target creature you control.  
 > If another creature you control with a +1/+1 counter on it would be destroyed, instead remove all +1/+1 counters from it and all damage already dealt to it is healed.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `CountersRemovedInsteadOfDestruction` — Dr. McCoy, Surly Surgeon: "If another creature you control with a +1/+1 counter on it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Dr. McCoy, Surly Surgeon"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & Is.Yours & !Is.Source)],
+		new AddCounters(Ref.Target(), 1)
+	),
+	new CountersRemovedInsteadOfDestruction(),
+],
+```
 
 ### Energize
 
@@ -2733,7 +2842,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Strange new worlds — When Ensign Chekov enters, each opponent exiles the top X cards of their library, where X is the number of differently named lands you control. For each opponent, choose a land card that player owns exiled this way. You may play the chosen cards for as long as they remain exiled.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `ExileTopPlayable` — Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn,…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Ensign Pavel Chekov"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ExileTopPlayable
+		{
+			Of = Ref.EachOpponent,
+			N = DifferentlyNamedLands,
+			Forever = true,
+			Choose = Is.Land,
+		}
+	),
+],
+```
 
 ### Enterprise NX-01
 
@@ -3121,7 +3249,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}. Spend this mana only to cast an artifact spell or activate an ability of an artifact source.  
 > {2}, {T}: Draw a card, then discard a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Isolinear Processor"] =
+[
+	new ManaAbilityComponent(ManaColor.Colorless)
+	{
+		Restriction = ManaRestriction.OnlyArtifacts,
+	},
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{2}"),
+		[new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)]
+	)
+	{
+		Costs = [new TapSelfCost()],
+	},
+],
+```
 
 ### Jake Sisko, War Correspondent
 
@@ -3857,7 +4004,36 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Sylvia Tilly enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)  
 > At the beginning of combat on your turn, you may pay {1} and exile a card from your graveyard. When you do, put a +1/+1 counter on target creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Both` — Sylvia Tilly: "you may pay {1} and exile a card from your graveyard" — asked only when…; `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromYourGraveyard` — Temporal Conqueror: "Then return a land card from your graveyard to your hand. If you…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+
+```csharp
+["Sylvia Tilly, Joy of Discovery"] =
+[
+	When(TriggerEvent.SelfEnters, [], new Surveil(2)),
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn,
+		[],
+		new May(
+			"Pay {1} and exile a card from your graveyard?",
+			new Both(
+				new CanPay(ManaCost.Parse("{1}")),
+				new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 1)
+			),
+			[
+				new PayMana(
+					ManaCost.Parse("{1}"),
+					[
+						new ReturnFromYourGraveyard(null) { To = ZoneType.Exile },
+						new WhenYouDo([Creature], [new AddCounters(Ref.Target(), 1)]),
+					]
+				),
+			]
+		)
+	),
+],
+```
 
 ### Syndicate Liquidators
 
@@ -4526,7 +4702,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target opponent looks at the top card of your library, then exiles it face down. You look at the top two cards of their library, then exile them face down. For each card exiled this way, the player who exiled it may play it for as long as it remains exiled. Mana of any type can be spent to cast spells this way.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `ExileTopPlayable` — Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn,…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Vulcan Mind-Meld"] =
+[
+	Spell(
+		[TargetSpec.Player(Is.Opponents)],
+		new ExileTopPlayable // the opponent looks at YOUR top card and exiles it
+		{
+			By = Ref.Target(0),
+			Forever = true,
+			AnyType = true,
+			FaceDown = true,
+		},
+		new ExileTopPlayable // you look at their top two
+		{
+			Of = Ref.Target(0),
+			N = 2,
+			Forever = true,
+			AnyType = true,
+			FaceDown = true,
+		}
+	),
+],
+```
 
 ### Warp Speed
 
@@ -4536,7 +4738,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this enchantment enters, search your library for a basic land card or Planet card, reveal it, put it into your hand, then shuffle.  
 > Strange new worlds — {7}{U}{U}, Sacrifice this enchantment: Draw two cards. This ability costs {X} less to activate, where X is the number of differently named lands you control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `LandsYouControlEnterUntapped` — Warp Speed: "Lands you control enter untapped." — read by MagicState.EnterBattlefield…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Warp Speed"] =
+[
+	new LandsYouControlEnterUntapped(),
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Filter = Is.Supertype(Supertype.Basic) | Is.Subtype("Planet"),
+			FilterText = "basic land or Planet",
+			Reveal = true,
+		}
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{7}{U}{U}"),
+		[new DrawCards(Ref.You, 2)]
+	)
+	{
+		Costs = [new SacrificeSelfCost()],
+		CostChange = new(DifferentlyNamedLands.Negated),
+	},
+],
+```
 
 ### Worf, Honor-Bound Warrior
 
@@ -4574,7 +4803,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Once during each of your turns, you may cast an artifact spell from the top of your library.  
 > Spacecraft you control enter with two additional charge counters on them.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `MayCastArtifactFromLibraryTop` — Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact…; `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `YourPermanentsEnterWithCounters` — Zefram Cochrane, Warp Pioneer: "Spacecraft you control enter with two additional charge…
+
+```csharp
+["Zefram Cochrane, Warp Pioneer"] =
+[
+	new MayLookAtTopOfLibrary(),
+	new MayCastArtifactFromLibraryTop(),
+	new YourPermanentsEnterWithCounters(
+		Is.Subtype("Spacecraft"),
+		CounterKinds.Charge,
+		2
+	),
+],
+```
 
 ### Zero, Incorporeal Sensate
 
@@ -4583,7 +4827,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Lifelink  
 > When Zero enters, look at target opponent's hand. You may exile a nonland card from it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2} more to cast.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Zero, Incorporeal Sensate"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Player(Is.Opponents)],
+		new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+		{
+			Optional = true,
+			OwnerMayPlayTaxed = 2,
+		}
+	),
+],
+```
 
 ### All Good Things...
 

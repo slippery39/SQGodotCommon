@@ -127,6 +127,34 @@ public sealed record OfSubtype(string Subtype) : Filter
 		o is Card card && s.Subtypes(card).Contains(Subtype);
 }
 
+/// <summary>
+/// Combadge: "another creature with a Communicator attached to it" — a permanent with an Aura or
+/// Equipment on it that the inner filter matches.
+/// </summary>
+public sealed record WithAttached(Filter Attachment) : Filter
+{
+	public override bool ReadsPowerOrToughness() => Attachment.ReadsPowerOrToughness();
+
+	public override bool ReadsKeywords() => Attachment.ReadsKeywords();
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card && Rules.Attachments.On(s, card).Any(a => Attachment.Matches(s, a, c));
+}
+
+/// <summary>
+/// A Good Day to Die: "When that creature dies this turn" — one object, this incarnation of it (CR
+/// 400.7), bound as the spell resolves (WheneverThisTurn.About); never written in a script.
+/// </summary>
+public sealed record TheObject(int Id, int Incarnation) : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card && card.Id == Id && card.Incarnation == Incarnation;
+}
+
 /// <summary>Andromedan Automatons: "any number of cards named Andromedan Automatons".</summary>
 public sealed record Named(string Name) : Filter
 {

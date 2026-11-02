@@ -229,9 +229,11 @@ public static class Hidden
 	{
 		var libraryId = s.ZoneId(owner, ZoneType.Library);
 		var ids = s.GetChildrenIds(libraryId).ToArray();
+		// Zefram Cochrane: "You may look at the top card of your library any time."
+		var topKnown = (mine & Knowers.Owner) != 0 && s.TopIsKnownToOwner(owner);
 		var places = Enumerable
 			.Range(0, ids.Length)
-			.Where(i => (s.GetCard(ids[i]).KnownTo & mine) == 0)
+			.Where(i => (s.GetCard(ids[i]).KnownTo & mine) == 0 && !(i == 0 && topKnown))
 			.ToArray();
 		var unknown = places.Select(i => ids[i]).ToArray();
 		rng.Shuffle(unknown);

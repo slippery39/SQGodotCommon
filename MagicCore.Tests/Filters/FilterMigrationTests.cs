@@ -592,6 +592,7 @@ public class FilterMigrationTests
 		TriggerEvent.OpponentDealtNoncombatDamage,
 		TriggerEvent.YouFaceADilemma,
 		TriggerEvent.CardLeavesYourGraveyard,
+		TriggerEvent.YouDrawACard,
 	];
 
 	/// <summary>

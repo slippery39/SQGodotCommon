@@ -16,6 +16,9 @@ public record ChooseCreatureToCopyChoice : ChoiceAction
 	public int PlayerId { get; init; }
 	public int SourceId { get; init; }
 
+	/// <summary>Dominion Saboteur: "any artifact or creature" — unset is a creature.</summary>
+	public Filter? Of { get; init; }
+
 	public ChooseCreatureToCopyChoice(int playerId, int sourceId)
 	{
 		PlayerId = playerId;
@@ -23,7 +26,7 @@ public record ChooseCreatureToCopyChoice : ChoiceAction
 		MinChoices = 1;
 		MaxChoices = 1;
 		OutputKey = ChoosePermanentChoice.Chosen;
-		Prompt = "Enter as a copy of a creature?";
+		Prompt = "Enter as a copy?";
 	}
 
 	public override ImmutableList<ChoiceOption> GetOptions(
@@ -33,7 +36,10 @@ public record ChooseCreatureToCopyChoice : ChoiceAction
 		[
 			.. new[] { s.Player1Id(), s.Player2Id() }
 				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-				.Where(c => c.Id != SourceId && c.Is(CardType.Creature))
+				.Where(c =>
+					c.Id != SourceId
+					&& (Of?.Matches(s, c, new(PlayerId, SourceId)) ?? c.Is(CardType.Creature))
+				)
 				.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name }),
 		];
 
@@ -46,10 +52,18 @@ public record ChooseCreatureToCopyChoice : ChoiceAction
 /// <summary>
 /// After the choice: it becomes a copy of the chosen creature — with vanishing, if that had none.
 /// ponytail: copied just AFTER entering, so the model's own "enters with counters / tapped" don't
-/// apply (its "when this enters" triggers do); copy before EnterBattlefield's entry stamp if a card needs it.
+/// apply (its "when this enters" triggers do), nor do others' entry rules on what it copied (Dominion
+/// Saboteur copying a Spacecraft under Zefram gets no two charge counters, CR 614.12); copy before
+/// EnterBattlefield's entry stamp if a card needs it.
 /// </summary>
 public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAction
 {
+	/// <summary>Dominion Saboteur: "except it isn't legendary".</summary>
+	public bool NotLegendary { get; init; }
+
+	/// <summary>Dominion Saboteur: "with additional counters … the same number and kinds" as the copied permanent.</summary>
+	public bool WithCounters { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (
@@ -61,14 +75,18 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 		var card = s.GetCard(CardId);
 		var model = s.GetCard(id);
 		var copy = (Card)card.WithCopiableValuesOf(model).WithComponent(new EnteredAsCopy(card));
+		if (NotLegendary)
+			copy = copy with { Supertypes = copy.Supertypes & ~Supertype.Legendary };
 		if (VanishingIfNone > 0 && !s.HasAbility<Vanishing>(model))
 			foreach (var component in Vanishing.Of(VanishingIfNone))
 				copy = (Card)copy.WithComponent(component);
 		// It entered just before it became the copy: vanishing's "enters with N time counters" here.
-		return new(
-			s.UpdateObject(CardId, copy with { TimeCounters = 0 })
-				.PutCounters(CardId, CounterKinds.Time, copy.GetComponent<Vanishing>()?.N ?? 0)
-		);
+		s = s.UpdateObject(CardId, copy with { TimeCounters = 0 })
+			.PutCounters(CardId, CounterKinds.Time, copy.GetComponent<Vanishing>()?.N ?? 0);
+		if (WithCounters)
+			foreach (var (kind, n) in model.AllCounters())
+				s = s.PutCounters(CardId, kind, n, entering: true);
+		return new(s);
 	}
 }
 

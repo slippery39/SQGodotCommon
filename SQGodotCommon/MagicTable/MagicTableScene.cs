@@ -482,7 +482,8 @@ public partial class MagicTableScene : Control
 				{
 					_viewing = null;
 					Refresh();
-				}
+				},
+				_m.HumanId
 			);
 		else
 			_viewer.Close();

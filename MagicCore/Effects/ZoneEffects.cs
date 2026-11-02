@@ -15,12 +15,9 @@ public record Destroy(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) => new(All(s, Permanents(What, s)));
 
-	/// <summary>CR 701.7: each to its owner's graveyard — but not one that is indestructible.</summary>
+	/// <summary>CR 701.7: each through MagicState.Destroy — not one that is indestructible.</summary>
 	public static GameState All(GameState s, IEnumerable<Card> permanents) =>
-		permanents
-			.Where(c => !s.IsIndestructible(c))
-			.ToList()
-			.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Graveyard)));
+		s.Destroy([.. permanents.Select(c => c.Id)]);
 }
 
 /// <summary>
@@ -556,9 +553,12 @@ public record ReturnLinkedExile : Effect
 /// Temporal Conqueror: "Then return a land card from your graveyard to your hand. If you can't, create a
 /// Treasure token." — chosen, not targeted; Otherwise runs only when there is none.
 /// </summary>
-public record ReturnFromYourGraveyard(Filters.Filter Filter) : Effect
+public record ReturnFromYourGraveyard(Filters.Filter? Filter) : Effect // null: any card (Sylvia Tilly)
 {
 	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
+	/// <summary>Sylvia Tilly: "exile a card from your graveyard" — chosen as it resolves, not targeted.</summary>
+	public ZoneType To { get; init; } = ZoneType.Hand;
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -568,7 +568,7 @@ public record ReturnFromYourGraveyard(Filters.Filter Filter) : Effect
 			Ids = [.. s.CardsIn(Controller, ZoneType.Graveyard).Select(c => c.Id)],
 			Filter = Filter,
 			MinChoices = 1,
-			Prompt = "Put one into your hand",
+			Prompt = To == ZoneType.Exile ? "Exile one" : "Put one into your hand",
 		};
 		return new(
 			s.SpawnAction(
@@ -577,7 +577,7 @@ public record ReturnFromYourGraveyard(Filters.Filter Filter) : Effect
 					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
 					Steps = choice.GetOptions(s, InputContext).IsEmpty
 						? Otherwise
-						: [choice, new MoveChosenToAction(Controller, ZoneType.Hand)],
+						: [choice, new MoveChosenToAction(Controller, To)],
 				}
 			)
 		);
@@ -1206,8 +1206,8 @@ public record ExileTopPlayable : Effect
 	/// <summary>Kirk, Commanding Officer: "You may play that card this turn." — not until the end of your next.</summary>
 	public bool ThisTurn { get; init; }
 
-	/// <summary>Reckless Impulse: "Exile the top two cards of your library."</summary>
-	public int N { get; init; } = 1;
+	/// <summary>Reckless Impulse: "Exile the top two cards of your library."; Ensign Pavel Chekov: "the top X cards".</summary>
+	public Count N { get; init; } = 1;
 
 	/// <summary>
 	/// Exploratory Mission: "exile cards from the top of your library until you exile a nonland card.
@@ -1215,29 +1215,92 @@ public record ExileTopPlayable : Effect
 	/// </summary>
 	public bool UntilNonland { get; init; }
 
+	/// <summary>Vulcan Mind-Meld: "the top two cards of their library"; Chekov: "each opponent exiles the top X cards of their library" — whose library; unset is yours.</summary>
+	public Ref? Of { get; init; }
+
+	/// <summary>Vulcan Mind-Meld: "the player who exiled it may play it" — who may play them; unset is you.</summary>
+	public Ref? By { get; init; }
+
+	/// <summary>Vulcan Mind-Meld, Chekov: "for as long as it remains exiled".</summary>
+	public bool Forever { get; init; }
+
+	/// <summary>Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way."</summary>
+	public bool AnyType { get; init; }
+
+	/// <summary>Vulcan Mind-Meld: "looks at the top card …, then exiles it face down" — hidden from all but the player who may play it.</summary>
+	public bool FaceDown { get; init; }
+
+	/// <summary>
+	/// Chekov: "choose a land card that player owns exiled this way. You may play the chosen cards" —
+	/// only the one chosen (by you) becomes playable; the rest stay exiled.
+	/// </summary>
+	public Filters.Filter? Choose { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		var library = s.CardsIn(Controller, ZoneType.Library).ToList();
-		var count = UntilNonland ? library.TakeWhile(c => c.Is(CardType.Land)).Count() + 1 : N;
-		foreach (var top in library.Take(count))
+		var who = By is { } by ? All(by, s).FirstOrDefault() : Controller;
+		if (who == 0)
+			return new(s);
+		var playable = new PlayableFromExile(
+			who,
+			Forever ? int.MaxValue
+				: ThisTurn ? s.GetGame().TurnNumber
+				: Playable.EndOfNextTurnOf(s, who)
+		)
 		{
-			s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
-			if (UntilNonland && top.Is(CardType.Land))
-				continue;
-			s = Update(
-				s,
-				(Card)
-					s.GetCard(top.Id)
-						.WithComponent(
-							new PlayableFromExile(
-								Controller,
-								ThisTurn
-									? s.GetGame().TurnNumber
-									: Playable.EndOfNextTurnOf(s, Controller)
-							)
-						)
-			);
+			AnyType = AnyType,
+		};
+		var steps = ImmutableList<GameAction>.Empty;
+		foreach (var owner in Of is { } of ? All(of, s).ToList() : [Controller])
+		{
+			var library = s.CardsIn(owner, ZoneType.Library).ToList();
+			var count = UntilNonland
+				? library.TakeWhile(c => c.Is(CardType.Land)).Count() + 1
+				: N.Value(s, InputContext);
+			var exiled = library.Take(count).ToList();
+			foreach (var top in exiled)
+			{
+				s = s.MoveCard(top.Id, s.ZoneId(owner, ZoneType.Exile));
+				if (FaceDown) // known only to the one who looked (CR 406.3)
+					s = Update(
+						s,
+						(Card)
+							(
+								s.GetCard(top.Id) with
+								{
+									KnownTo = who == owner ? Knowers.Owner : Knowers.Opponent,
+								}
+							).WithComponent(new ExiledFaceDown())
+					);
+				if ((UntilNonland && top.Is(CardType.Land)) || Choose is not null)
+					continue;
+				s = Update(s, (Card)s.GetCard(top.Id).WithComponent(playable));
+			}
+			var choice = new ChooseAmongChoice
+			{
+				PlayerId = owner,
+				DeciderId = Controller,
+				Zone = ZoneType.Exile,
+				Ids = [.. exiled.Select(c => c.Id)],
+				Filter = Choose,
+				MinChoices = 1,
+				Prompt = "Choose one you may play",
+			};
+			if (Choose is not null && !choice.GetOptions(s, InputContext).IsEmpty) // none of them a land: nothing to choose
+				steps = steps.AddRange([choice, new MakeChosenPlayableAction(playable)]);
 		}
+		return steps.IsEmpty ? new(s) : new(s.SpawnAction(new PipelineAction { Steps = steps }));
+	}
+}
+
+/// <summary>Chekov, after the choice: "You may play the chosen cards for as long as they remain exiled."</summary>
+public record MakeChosenPlayableAction(PlayableFromExile Playable) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
+			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Exile))
+				s = s.UpdateObject(id, (Card)card.WithComponent(Playable));
 		return new(s);
 	}
 }
@@ -1279,6 +1342,15 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 	/// <summary>Null Summoner: "Exile that card" instead — linked to this permanent (ExiledBy).</summary>
 	public bool ExileInstead { get; init; }
 
+	/// <summary>Zero, Incorporeal Sensate: "You may exile a nonland card from it" — choosing none is allowed.</summary>
+	public bool Optional { get; init; }
+
+	/// <summary>
+	/// Zero: "For as long as that card remains exiled, its owner may play it. A spell cast this way costs
+	/// {2} more to cast." — exiled unlinked, playable by its owner with this tax (PlayableFromExile.Tax).
+	/// </summary>
+	public int? OwnerMayPlayTaxed { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
@@ -1290,24 +1362,34 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 				PlayerId = player,
 				DeciderId = Controller,
 				Types = Types,
-				MinChoices = 1,
+				MinChoices = Optional ? 0 : 1,
 				MaxChoices = 1,
-				Prompt = ExileInstead
-					? "Choose a card to exile"
-					: "Choose a card for them to discard",
+				Prompt =
+					ExileInstead || OwnerMayPlayTaxed is not null
+						? "Choose a card to exile"
+						: "Choose a card for them to discard",
 			};
 			if (!choice.GetOptions(s, InputContext).IsEmpty)
 				s = s.SpawnAction(
 					new PipelineAction
 					{
 						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
-						Steps =
-						[
-							choice,
-							ExileInstead
-								? new ExileChosenLinkedAction()
-								: new MoveChosenToGraveyardAction { PlayerId = player },
-						],
+						Steps = OwnerMayPlayTaxed is { } tax
+							?
+							[
+								choice,
+								new MoveChosenToAction(player, ZoneType.Exile),
+								new MakeChosenPlayableAction(
+									new PlayableFromExile(player, int.MaxValue) { Tax = tax }
+								),
+							]
+							:
+							[
+								choice,
+								ExileInstead
+									? new ExileChosenLinkedAction()
+									: new MoveChosenToGraveyardAction { PlayerId = player },
+							],
 					}
 				);
 		}

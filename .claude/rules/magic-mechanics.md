@@ -72,7 +72,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
   doesn't use floats (`Payment.Floats`). Manual tapping floats restricted mana AS restricted (`ManaPool.Restricted`).
   A restriction is a `ManaRestriction` the solver checks against the spell it pays for
-  (`Find(…, forSpell)`; null for an ability). Treasure and Lotus are `ManaOfOneColorComponent`
+  (`Find(…, forSpell)`), or the source of the activated ability it pays for (`forAbilityOf` —
+  Isolinear Processor's "an ability of an artifact source"). Treasure and Lotus are `ManaOfOneColorComponent`
   with `SacrificeSelf`: `Pay` sacrifices them, and the solver spends them last.
 - **Every token is made by `CreateTokens`** — so a replacement on tokens (Draconic Visitor's "artifact
   tokens are Dragons instead") is applied in that one place, under whoever `ControlledBy` names.
@@ -135,8 +136,12 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   are chosen like a sacrifice, one legal action each. A finality counter exiles a creature instead
   of letting it die (`MoveCard`); `MagicState.Untap` is the ONE untap, so a stun counter eats it.
 - **Hexproof** is checked in `TargetSpec.IsLegal` through `s.Has` (an opponent's spells and abilities
-  only; mass effects never target). **Indestructible** is `s.IsIndestructible` — the Destroy effect and
-  the lethal-damage check both ask it; 0 toughness still kills.
+  only; mass effects never target). **Destroying is `MagicState.Destroy`** — the Destroy effect and the
+  state-based check's lethal damage and deathtouch alike: indestructible (`s.IsIndestructible`) is asked
+  there, and Dr. McCoy's replacement ("instead remove all +1/+1 counters … damage healed",
+  `CountersRemovedInsteadOfDestruction`) applies there. Several at once are JUDGED together before any
+  leaves (CR 701.7) — a wrath doesn't end an indestructible grant halfway, nor kill McCoy before the creature
+  he saves — then leave in the battlefield's order. 0 toughness isn't destruction and still kills.
 - **Auras and Equipment are one mechanism** (`Card.AttachedToId`, Rules/Attachments.cs). An Aura targets
   as it is cast (`AuraComponent`) and attaches on resolving; what either grants is a live static
   (scope `Is.AttachedToSource`), never stamped. "When enchanted creature dies" looks back through
@@ -191,7 +196,10 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   adds with `s.MakeKnown`: surveil's look, a search's `Reveal` (set it whenever the text says "reveal
   it"), "reveals their hand", behold from the hand (a cost — Theorist's Sanctum's behold as it enters
   is a condition and reveals nothing, a known gap), "look at target opponent's hand" (`LookAtHand`, V'Ger —
-  the table logs what you now know there; showing it in the hand is TBL-6). A random order (Identity Echo's bottom) is NOT
+  the table logs what you now know there; showing it in the hand is TBL-6). **Exiled face down**
+  (`ExileTopPlayable.FaceDown`, Vulcan Mind-Meld) is `ExiledFaceDown` + `KnownTo` (who looked); every front
+  end asks `Card.IsHiddenFrom(viewer)` and draws a back. **Zefram's "look at the top card any time"** is
+  read, never stamped — `MagicState.TopIsKnownToOwner` (the top changes on every path). A random order (Identity Echo's bottom) is NOT
   known. A new card that looks at or reveals a hidden card must do the same, or the search's "shuffle
   what isn't known" reshuffles a card its player has seen.
 - **"From outside the game"** (Extrapolate the Impossible) is the `Sideboard` zone — Bo1 limited's
@@ -353,6 +361,28 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"That many plus one of each kind of counter"** (Brad Boimler, `CountersPlusOneThisTurn`) is
   `Rules.Replacements.Counters`, applied in `MagicState.PutCounters` — so it reaches every counter path:
   effects, costs (`Loyalty.Change`), entering with loyalty, time or +1/+1 counters, proliferate.
+- **"Whenever you draw a card"** is `DrewCardEvent`, raised by `MagicState.Draw` once per card (Data, New Life).
+- **"Can't attack alone"** (Pet Sehlat) is `Combat.CantAttackAlone`, a keyword-like grant judged on the whole
+  declaration as it finishes (`FinishAttackersAction`): one such creature declared alone doesn't attack; two
+  together each aren't alone. The table doesn't refuse the declaration yet (TBL-7).
+- **"Lands you control enter untapped"** (Warp Speed, `LandsYouControlEnterUntapped`) wins over every "enters
+  tapped" in `EnterBattlefield` — the land's own, Root Maze's, a token or a return made tapped (Shayne,
+  2026-11-01). **"[Permanents] you control enter with N additional [kind] counters"** (Zefram Cochrane) is
+  `YourPermanentsEnterWithCounters`, put on there through `PutCounters`.
+- **Playing a card from exile** is `PlayableFromExile(player, until)` on it — anyone's card, in its owner's
+  exile (`Playable.IsImpulsePlayableBy`; `Candidates` reads both exiles): `AnyType` ("mana of any type",
+  Vulcan Mind-Meld) and `Tax` (Zero's "{2} more") are read by `Costs.Of`. `ExileTopPlayable` exiles it —
+  whose library (`Of`), who plays (`By`), "for as long as it remains exiled" (`Forever`), face down, or only
+  a chosen card (`Choose`, Chekov's land). Cast or played, the card is public again (`ExiledFaceDown` is status).
+- **"Once during each of your turns, cast an artifact spell from the top of your library"** (Zefram) is
+  `Playable.LibraryTopPermission`, the permanent stamped as the cast uses it (`Card.CastFromLibraryTopOn`).
+- **"The first spell you've cast this game"** is stamped as it is cast (`OnStackComponent.FirstSpellThisGame`,
+  from `MagicPlayer.SpellsCastThisGame`), read by `FirstSpellYouCastThisGame` — a copy wasn't cast.
+- **"When that creature dies this turn, you …"** (A Good Day to Die) is `WheneverThisTurn { About }`: the
+  trigger on YOUR command-zone object, its subject bound to that one object as it resolves (`TheObject`).
+- **"Enter as a copy of any artifact or creature, except it isn't legendary, with its counters"** (Dominion
+  Saboteur) is `MayEnterAsCopy { Of, NotLegendary, WithCounters, Optional }` — the counters through
+  `PutCounters` (`Card.AllCounters`); `Optional` is a real "may" (Flesh Duplicate's stays forced).
 - **"You may cast this card from your graveyard"** (Storied Veteran) is `MayCastFromYourGraveyard`, read by
   `Playable.CanCastFromHere` — not flashback: it isn't exiled leaving the stack, it resolves onto the
   battlefield (with a finality counter, `EnterFromStackAction.Finality`).

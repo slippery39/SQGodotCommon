@@ -66,6 +66,7 @@ public static class ManaPayment
 
 	/// <param name="alsoExclude">Permanents the rest of the cost uses — sacrificed, tapped.</param>
 	/// <param name="forSpell">The spell being cast (in its zone, before it moves) — restricted mana asks what it is; null for an ability.</param>
+	/// <param name="forAbilityOf">The source of the activated ability being paid for — Isolinear Processor's mana asks.</param>
 	public static IReadOnlyList<Payment>? Find(
 		GameState s,
 		int playerId,
@@ -74,7 +75,8 @@ public static class ManaPayment
 		int excludeId = 0,
 		bool convoke = false,
 		Card? forSpell = null,
-		IReadOnlyCollection<int>? alsoExclude = null
+		IReadOnlyCollection<int>? alsoExclude = null,
+		Card? forAbilityOf = null
 	)
 	{
 		var player = s.GetPlayer(playerId);
@@ -92,7 +94,7 @@ public static class ManaPayment
 			if (c.Id == excludeId || alsoExclude?.Contains(c.Id) == true)
 				continue;
 			var yield = ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null;
-			if (yield is not null && !yield.CanPayFor(s, forSpell))
+			if (yield is not null && !yield.CanPayFor(s, forSpell, forAbilityOf))
 				yield = null; // its mana can't pay — but it may still convoke
 			// Convoke (CR 702.51): an untapped creature you control may pay {1} or one mana of its
 			// colour — Colorless is how it pays generic only. Summoning sickness doesn't matter:
@@ -127,7 +129,7 @@ public static class ManaPayment
 		// Restricted floating mana first: it can pay for less, so spend it where it can.
 		foreach (
 			var r in player.ManaPool.Restricted.Where(r =>
-				ManaAbilities.Allows(r.Restriction, s, forSpell)
+				ManaAbilities.Allows(r.Restriction, s, forSpell, forAbilityOf)
 			)
 		)
 			sources.Add(

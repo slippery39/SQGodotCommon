@@ -21,6 +21,9 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 
 	/// <summary>Kicker: "if this spell was kicked" — a copy of it is kicked too (CR 707.10).</summary>
 	public bool Kicked { get; init; }
+
+	/// <summary>First Contact: it is the first spell its caster cast this game — a copy wasn't cast (CopySpell clears it).</summary>
+	public bool FirstSpellThisGame { get; init; }
 }
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
@@ -215,6 +218,18 @@ public record CastSpellAction : GameAction
 		var card = s.GetCard(CardId);
 		var costs = CostsOf(s, card, Kicked); // read before paying: flashback's are known only in the graveyard
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
+		// Zefram Cochrane: "once during each of your turns" — this one is used.
+		if (
+			from == ZoneType.Library
+			&& Playable.LibraryTopPermission(s, card, PlayerId) is { } zefram
+		)
+			s = s.UpdateObject(
+				zefram.Id,
+				zefram with
+				{
+					CastFromLibraryTopOn = s.GetGame().TurnNumber,
+				}
+			);
 		s = ManaPayment.Pay(
 			s,
 			PlayerId,
@@ -288,8 +303,15 @@ public record CastSpellAction : GameAction
 					// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
 					CantBeCountered = proxies.Count > 0,
 					Kicked = kicked,
+					FirstSpellThisGame = s.GetPlayer(playerId).SpellsCastThisGame == 0,
 				}
 			)
+		);
+		s = s.WithPlayer(
+			s.GetPlayer(playerId) with
+			{
+				SpellsCastThisGame = s.GetPlayer(playerId).SpellsCastThisGame + 1,
+			}
 		);
 		var noncreature = card.Is(CardType.Creature) ? 0 : 1;
 		s = s.Tally(
@@ -428,7 +450,8 @@ public record ActivateAbilityAction : GameAction
 				PlayerId,
 				Costs.OfAbility(s, ability, Targets, PlayerId, CardId),
 				0,
-				alsoExclude: CostPermanents(s, ability)
+				alsoExclude: CostPermanents(s, ability),
+				forAbilityOf: s.GetCard(CardId)
 			)
 			is null
 		)
@@ -444,7 +467,8 @@ public record ActivateAbilityAction : GameAction
 			PlayerId,
 			Costs.OfAbility(s, ability, Targets, PlayerId, CardId),
 			0,
-			alsoExclude: CostPermanents(s, ability)
+			alsoExclude: CostPermanents(s, ability),
+			forAbilityOf: s.GetCard(CardId)
 		)!;
 		// Station's "its power" is read as the ability resolves — from this snapshot once the creature
 		// left (last-known information). ponytail: as it was TAPPED, not as it left — a pump between

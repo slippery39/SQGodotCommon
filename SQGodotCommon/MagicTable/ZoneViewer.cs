@@ -27,7 +27,8 @@ public partial class ZoneViewer : PanelContainer
 		Func<Card, Glow> glow,
 		Action<string?> preview,
 		Action<int> onClick,
-		Action close
+		Action close,
+		int viewerId
 	)
 	{
 		CardViews.Clear(this);
@@ -60,7 +61,11 @@ public partial class ZoneViewer : PanelContainer
 		foreach (var c in cards)
 		{
 			var id = c.Id;
-			flow.AddChild(CardViews.HandCard(s, c, glow(c), preview, () => onClick(id)));
+			flow.AddChild(
+				c.IsHiddenFrom(viewerId)
+					? CardViews.FaceDown()
+					: CardViews.HandCard(s, c, glow(c), preview, () => onClick(id))
+			);
 		}
 		if (flow.GetChildCount() == 0)
 			flow.AddChild(MtgUiStyles.Title("(empty)", 24));

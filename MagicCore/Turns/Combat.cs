@@ -76,6 +76,13 @@ public static class Combat
 	/// </summary>
 	public const string CantBlock = "Can't block";
 
+	/// <summary>
+	/// Pet Sehlat: "This creature can't attack alone." — a keyword-like grant, judged on the whole
+	/// declaration as it finishes (FinishAttackersAction): declared alone, it doesn't attack.
+	/// ponytail: the table doesn't refuse that declaration (CR 508.1d) — TBL-7.
+	/// </summary>
+	public const string CantAttackAlone = "Can't attack alone";
+
 	public static bool CanBlock(GameState s, Card blocker, Card attacker) =>
 		blocker.Is(CardType.Creature)
 		&& !blocker.IsTapped

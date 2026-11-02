@@ -146,6 +146,14 @@ public record DiscardedEvent(int PlayerId, ImmutableList<int> CardIds) : MagicEv
 	public override int By(GameState s) => PlayerId;
 }
 
+/// <summary>Data, New Life: "Whenever you draw a card" — a player drew one card; raised by MagicState.Draw, once per card.</summary>
+public record DrewCardEvent(int PlayerId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.Drew;
+
+	public override int By(GameState s) => PlayerId;
+}
+
 /// <summary>A card left its owner's graveyard, to any zone — raised by MagicState.MoveCard, every path (Vash).</summary>
 public record LeftGraveyardEvent(int PlayerId, int CardId) : MagicEvent
 {

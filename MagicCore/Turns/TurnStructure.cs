@@ -270,14 +270,18 @@ public static class StateBasedActions
 			// changed: this runs at every priority, half of each step the search simulates (AI-7.3d).
 			var field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 
-			List<Card>? dying = null;
+			List<(Card Card, bool Destroyed)>? dying = null;
 			foreach (var c in field)
 				if (c.Is(CardType.Creature) && IsLethal(s, c))
-					(dying ??= []).Add(c);
+					(dying ??= []).Add((c, s.Toughness(c) > 0)); // judged together, before any leaves
 			if (dying is not null)
 			{
-				foreach (var card in dying)
-					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+				// Lethal damage or deathtouch is destruction (CR 704.5g–h: Dr. McCoy); 0 toughness
+				// isn't (CR 704.5f). All judged together, then they leave in the battlefield's order.
+				s = s.Destroy(
+					[.. dying.Select(d => d.Card.Id)],
+					dying.Where(d => !d.Destroyed).Select(d => d.Card.Id).ToHashSet()
+				);
 				field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 			}
 

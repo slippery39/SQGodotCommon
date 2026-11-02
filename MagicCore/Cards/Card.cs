@@ -127,6 +127,11 @@ public record Card : GameObject
 	/// </summary>
 	public Knowers KnownTo { get; init; }
 
+	/// <summary>Vulcan Mind-Meld: a card exiled face down this player hasn't seen — a front end draws its back (CR 406.3).</summary>
+	public bool IsHiddenFrom(int playerId) =>
+		HasComponent<Effects.ExiledFaceDown>()
+		&& (KnownTo & (playerId == OwnerId ? Knowers.Owner : Knowers.Opponent)) == 0;
+
 	// ===== Permanent-only state — wiped by Fresh() whenever the card changes zones =====
 
 	public bool IsTapped { get; init; }
@@ -197,6 +202,9 @@ public record Card : GameObject
 	/// <summary>DOT-7 Repair Squad: "Activate only once each turn" — the TurnNumber it was last activated.</summary>
 	public int ActivatedOncePerTurnOn { get; init; }
 
+	/// <summary>Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of your library" — the TurnNumber this object let one be cast.</summary>
+	public int CastFromLibraryTopOn { get; init; }
+
 	/// <summary>
 	/// The counter kinds TRK added, by name — quest (Anthropological Mission), lore (Sagas), promotion
 	/// (Beckett Mariner). The older kinds keep their own fields; MagicState.PutCounters is the one way in.
@@ -215,6 +223,13 @@ public record Card : GameObject
 			Effects.CounterKinds.Loyalty => Loyalty,
 			_ => Counters.GetValueOrDefault(kind),
 		};
+
+	/// <summary>Dominion Saboteur: "the same number and kinds of counters the copied permanent has" — every kind on it.</summary>
+	public IEnumerable<(string Kind, int N)> AllCounters() =>
+		Effects
+			.CounterKinds.Fielded.Concat(Counters.Keys)
+			.Select(kind => (kind, CountersOf(kind)))
+			.Where(k => k.Item2 > 0);
 
 	/// <summary>This card with exactly <paramref name="n"/> counters of a kind — written only by MagicState.PutCounters.</summary>
 	public Card WithCounters(string kind, int n) =>
@@ -285,6 +300,7 @@ public record Card : GameObject
 			HasDealtCombatDamage = false,
 			ExhaustUsed = false,
 			ActivatedOncePerTurnOn = 0,
+			CastFromLibraryTopOn = 0,
 			Counters = ImmutableDictionary<string, int>.Empty,
 			Damage = 0,
 			DamagedByDeathtouch = false,
@@ -306,6 +322,7 @@ public record Card : GameObject
 				or Effects.ExiledUntilLeaves
 				or Effects.GrantedFlashback
 				or Effects.PlayableFromExile
+				or Effects.ExiledFaceDown
 				or Effects.ExiledBy
 				or Effects.ChosenColorMana
 				or CopyUntilEndOfTurn

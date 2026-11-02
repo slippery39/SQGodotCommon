@@ -99,6 +99,18 @@ public static class CardViews
 		return slot;
 	}
 
+	/// <summary>Vulcan Mind-Meld: a card exiled face down you haven't seen (Card.IsHiddenFrom) — a back, no hover.</summary>
+	public static Control FaceDown()
+	{
+		var card = Frame(Glow.None, HandSize);
+		card.AddChild(
+			Badge("face down", new Vector2(4, HandSize.Y / 2 - 18), false, 18, HandSize.X - 8)
+		);
+		var slot = new Control { CustomMinimumSize = HandSize };
+		slot.AddChild(card);
+		return slot;
+	}
+
 	/// <summary>
 	/// An Aura or Equipment, shown under the permanent it is on: a strip with its art and name,
 	/// its own hover and click target.

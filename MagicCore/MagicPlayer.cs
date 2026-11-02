@@ -14,6 +14,10 @@ public record MagicPlayer : GameObject
 
 	/// <summary>The turn before this one — "if an opponent was dealt noncombat damage last turn".</summary>
 	public TurnTally LastTurn { get; init; } = new();
+
+	/// <summary>First Contact: "If this spell is the first spell you've cast this game" — never reset.</summary>
+	public int SpellsCastThisGame { get; init; }
+
 	public int MulligansTaken { get; init; }
 	public bool HasKeptHand { get; init; }
 

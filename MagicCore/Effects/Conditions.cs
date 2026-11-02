@@ -55,6 +55,13 @@ public record Not(Condition Inner) : Condition
 		!Inner.Holds(s, context);
 }
 
+/// <summary>Sylvia Tilly: "you may pay {1} and exile a card from your graveyard" — asked only when both can be done.</summary>
+public record Both(Condition A, Condition B) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		A.Holds(s, context) && B.Holds(s, context);
+}
+
 /// <summary>The context a condition is judged in outside a resolving ability: a permanent and its controller.</summary>
 public static class Conditions
 {
@@ -87,6 +94,14 @@ public record WasKicked : Condition
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
 		s.GetObject((int)context[ContextKeys.Source]) is Card spell
 		&& spell.GetComponent<Actions.OnStackComponent>()?.Kicked == true;
+}
+
+/// <summary>First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast.</summary>
+public record FirstSpellYouCastThisGame : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetObject((int)context[ContextKeys.Source]) is Card spell
+		&& spell.GetComponent<Actions.OnStackComponent>()?.FirstSpellThisGame == true;
 }
 
 /// <summary>

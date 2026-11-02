@@ -248,6 +248,59 @@ public static class MagicState
 		s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
 
 	/// <summary>
+	/// THE way a permanent is destroyed (CR 701.7) — a Destroy effect, lethal damage and deathtouch alike
+	/// (0 toughness isn't destruction, CR 704.5f): to its owner's graveyard, unless it is indestructible
+	/// or Dr. McCoy replaces it — "instead remove all +1/+1 counters from it and all damage already dealt
+	/// to it is healed." Several at once are judged together, before any leaves (CR 701.7): a "destroy
+	/// all" doesn't end an indestructible grant halfway, nor kill McCoy before the creature he saves.
+	/// </summary>
+	/// <param name="notDestroyed">The state-based check's 0-toughness creatures: they die with the rest, in
+	/// the same order, but nothing replaces it or stops it.</param>
+	public static GameState Destroy(
+		this GameState s,
+		IReadOnlyList<int> cardIds,
+		IReadOnlySet<int>? notDestroyed = null
+	)
+	{
+		var judged = cardIds
+			.Select(s.GetCard)
+			.Where(c => notDestroyed?.Contains(c.Id) == true || !s.IsIndestructible(c))
+			.Select(c =>
+				(
+					Card: c,
+					Saved: notDestroyed?.Contains(c.Id) != true
+						&& c.Is(CardType.Creature)
+						&& c.PlusOneCounters > 0
+						&& s.CardsIn(c.ControllerId, ZoneType.Battlefield)
+							.Any(p =>
+								p.Id != c.Id && s.HasAbility<CountersRemovedInsteadOfDestruction>(p)
+							)
+				)
+			)
+			.ToList();
+		foreach (var (card, saved) in judged)
+		{
+			if (!s.IsOnBattlefield(card.Id))
+				continue;
+			if (!saved)
+			{
+				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+				continue;
+			}
+			s = s.PutCounters(card.Id, CounterKinds.PlusOne, -card.PlusOneCounters);
+			s = s.UpdateObject(
+				card.Id,
+				s.GetCard(card.Id) with
+				{
+					Damage = 0,
+					DamagedByDeathtouch = false,
+				}
+			);
+		}
+		return s;
+	}
+
+	/// <summary>
 	/// Root Maze: another permanent on the battlefield says this one enters tapped — judged under its
 	/// new controller. Never itself: its rule applies once it is there (CR 614.12).
 	/// </summary>
@@ -293,19 +346,35 @@ public static class MagicState
 				WasCast = cast,
 				HasFinalityCounter = finality,
 				IsTapped =
-					tapped
-					|| EntersTappedByAPermanent(s, card with { ControllerId = controllerId })
-					|| (
-						card.GetComponent<EntersTappedComponent>() is { } entersTapped
-						&& entersTapped.Unless?.Holds(
-							s,
-							ImmutableDictionary<string, object>
-								.Empty.Add(ContextKeys.Controller, controllerId)
-								.Add(ContextKeys.Source, card.Id)
-						) != true
+					!(
+						card.Is(CardType.Land)
+						&& s.CardsIn(controllerId, ZoneType.Battlefield)
+							.Any(s.HasAbility<LandsYouControlEnterUntapped>)
+					)
+					&& (
+						tapped
+						|| EntersTappedByAPermanent(s, card with { ControllerId = controllerId })
+						|| (
+							card.GetComponent<EntersTappedComponent>() is { } entersTapped
+							&& entersTapped.Unless?.Holds(
+								s,
+								ImmutableDictionary<string, object>
+									.Empty.Add(ContextKeys.Controller, controllerId)
+									.Add(ContextKeys.Source, card.Id)
+							) != true
+						)
 					),
 			}
 		);
+		// Zefram Cochrane: "Spacecraft you control enter with two additional charge counters on them."
+		foreach (var permanent in s.CardsIn(controllerId, ZoneType.Battlefield).ToList())
+		foreach (
+			var rule in permanent.Id == cardId
+				? []
+				: s.AbilitiesOf<YourPermanentsEnterWithCounters>(permanent)
+		)
+			if (rule.Which.Matches(s, s.GetCard(cardId), new(controllerId, permanent.Id)))
+				s = s.PutCounters(cardId, rule.Kind, rule.N, entering: true);
 		// Entering with counters is putting them on (Yoshimaru, Brad Boimler: CR 122.6) — after control is set.
 		s = s.PutCounters(cardId, CounterKinds.Loyalty, card.PrintedLoyalty)
 			.PutCounters(cardId, CounterKinds.Time, card.GetComponent<Vanishing>()?.N ?? 0); // vanishing: "enters with N time counters"
@@ -351,8 +420,16 @@ public static class MagicState
 				{
 					Steps =
 					[
-						new Actions.ChooseCreatureToCopyChoice(controllerId, cardId),
-						new Actions.BecomeCopyOfChosenAction(cardId, asCopy.VanishingIfNone),
+						new Actions.ChooseCreatureToCopyChoice(controllerId, cardId)
+						{
+							Of = asCopy.Of,
+							MinChoices = asCopy.Optional ? 0 : 1,
+						},
+						new Actions.BecomeCopyOfChosenAction(cardId, asCopy.VanishingIfNone)
+						{
+							NotLegendary = asCopy.NotLegendary,
+							WithCounters = asCopy.WithCounters,
+						},
 					],
 				}
 			);
@@ -448,16 +525,7 @@ public static class MagicState
 			: s;
 	}
 
-	static bool IsNamed(string kind) =>
-		kind
-			is not (
-				CounterKinds.PlusOne
-				or CounterKinds.MinusOne
-				or CounterKinds.Charge
-				or CounterKinds.Stun
-				or CounterKinds.Time
-				or CounterKinds.Loyalty
-			);
+	static bool IsNamed(string kind) => !CounterKinds.Fielded.Contains(kind);
 
 	/// <summary>
 	/// THE control change (CR 108.4, Rules of Acquisition) — the same object, so its counters, damage,
@@ -504,6 +572,14 @@ public static class MagicState
 			}
 		);
 
+	/// <summary>
+	/// Zefram Cochrane: "You may look at the top card of your library any time." — its owner knows it
+	/// while they control one (MayLookAtTopOfLibrary). Read where the knowledge matters (the search's
+	/// Hidden, the table's log), never stamped: the top changes on every path that moves a card.
+	/// </summary>
+	public static bool TopIsKnownToOwner(this GameState s, int playerId) =>
+		s.CardsIn(playerId, ZoneType.Battlefield).Any(s.HasAbility<MayLookAtTopOfLibrary>);
+
 	/// <summary>Draws from the top; a draw from an empty library flags the loss for the state-based check.</summary>
 	public static GameState Draw(this GameState s, int playerId, int count = 1)
 	{
@@ -520,7 +596,8 @@ public static class MagicState
 					}
 				);
 			s = s.MoveCard(top, handId)
-				.Tally(playerId, t => t with { CardsDrawn = t.CardsDrawn + 1 });
+				.Tally(playerId, t => t with { CardsDrawn = t.CardsDrawn + 1 })
+				.Raise(new DrewCardEvent(playerId));
 		}
 		return s;
 	}

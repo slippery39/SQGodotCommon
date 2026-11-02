@@ -1990,6 +1990,198 @@ public static class TrkCards
 					)
 				),
 			],
+			// ===== MC-5.3 batch 4c: the one-offs — play from exile (face down too), a destroy replacement, draw, can't attack alone, lands enter untapped, Zefram Cochrane =====
+			["Ensign Pavel Chekov"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ExileTopPlayable
+					{
+						Of = Ref.EachOpponent,
+						N = DifferentlyNamedLands,
+						Forever = true,
+						Choose = Is.Land,
+					}
+				),
+			],
+			["Warp Speed"] =
+			[
+				new LandsYouControlEnterUntapped(),
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Filter = Is.Supertype(Supertype.Basic) | Is.Subtype("Planet"),
+						FilterText = "basic land or Planet",
+						Reveal = true,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{7}{U}{U}"),
+					[new DrawCards(Ref.You, 2)]
+				)
+				{
+					Costs = [new SacrificeSelfCost()],
+					CostChange = new(DifferentlyNamedLands.Negated),
+				},
+			],
+			["Pet Sehlat"] = [new StaticEffectComponent(Is.Source, Combat.CantAttackAlone)],
+			["Combadge"] =
+			[
+				When(TriggerEvent.SelfCast, [], new CopySpell(Ref.EventCard)),
+				new GrantsTriggeredAbility(
+					Is.AttachedToSource,
+					When(
+						TriggerEvent.SelfAttacks with
+						{
+							While = new AtLeast(
+								Count.NumberOf(
+									Ref.Permanents(
+										Is.Creature
+											& Is.Yours
+											& !Is.Source
+											& Is.WithAttached(Is.Subtype("Communicator"))
+									)
+								),
+								1
+							),
+						},
+						[],
+						new ModifyUntilEndOfTurn(Ref.Source, 0, 0, Combat.CantBeBlocked)
+					)
+				),
+				Equip("{2}"),
+			],
+			["Data, New Life"] =
+			[
+				When(TriggerEvent.YouDrawACard, [], new AddCounters(Ref.Source, 1)),
+			],
+			["Dr. McCoy, Surly Surgeon"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Creature & Is.Yours & !Is.Source)],
+					new AddCounters(Ref.Target(), 1)
+				),
+				new CountersRemovedInsteadOfDestruction(),
+			],
+			["Vulcan Mind-Meld"] =
+			[
+				Spell(
+					[TargetSpec.Player(Is.Opponents)],
+					new ExileTopPlayable // the opponent looks at YOUR top card and exiles it
+					{
+						By = Ref.Target(0),
+						Forever = true,
+						AnyType = true,
+						FaceDown = true,
+					},
+					new ExileTopPlayable // you look at their top two
+					{
+						Of = Ref.Target(0),
+						N = 2,
+						Forever = true,
+						AnyType = true,
+						FaceDown = true,
+					}
+				),
+			],
+			["Zero, Incorporeal Sensate"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+					{
+						Optional = true,
+						OwnerMayPlayTaxed = 2,
+					}
+				),
+			],
+			["Dominion Saboteur"] =
+			[
+				new MayEnterAsCopy
+				{
+					Of = Is.Artifact | Is.Creature,
+					NotLegendary = true,
+					WithCounters = true,
+					Optional = true,
+				},
+			],
+			["Sylvia Tilly, Joy of Discovery"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new Surveil(2)),
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new May(
+						"Pay {1} and exile a card from your graveyard?",
+						new Both(
+							new CanPay(ManaCost.Parse("{1}")),
+							new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 1)
+						),
+						[
+							new PayMana(
+								ManaCost.Parse("{1}"),
+								[
+									new ReturnFromYourGraveyard(null) { To = ZoneType.Exile },
+									new WhenYouDo([Creature], [new AddCounters(Ref.Target(), 1)]),
+								]
+							),
+						]
+					)
+				),
+			],
+			["First Contact"] =
+			[
+				Spell(
+					[],
+					new MillAndMayTake(4, PermanentTypes),
+					new If(new FirstSpellYouCastThisGame(), [new GainLife(Ref.You, 2)])
+				),
+			],
+			["A Good Day to Die"] =
+			[
+				Spell(
+					[Creature],
+					new ModifyUntilEndOfTurn(Ref.Target(), 2, 0),
+					new WheneverThisTurn(
+						new TriggeredAbilityComponent(
+							new Trigger(EventKind.Died),
+							[new DrawCards(Ref.You, 1)]
+						)
+					)
+					{
+						About = Ref.Target(0),
+					}
+				),
+			],
+			["Isolinear Processor"] =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless)
+				{
+					Restriction = ManaRestriction.OnlyArtifacts,
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Zefram Cochrane, Warp Pioneer"] =
+			[
+				new MayLookAtTopOfLibrary(),
+				new MayCastArtifactFromLibraryTop(),
+				new YourPermanentsEnterWithCounters(
+					Is.Subtype("Spacecraft"),
+					CounterKinds.Charge,
+					2
+				),
+			],
 		};
 
 	/// <summary>A quest's threshold: "if this enchantment has N or more quest counters on it".</summary>

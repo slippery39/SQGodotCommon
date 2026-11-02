@@ -58,6 +58,9 @@ public static class CounterKinds
 	public const string Stun = "stun";
 	public const string Time = "time";
 	public const string Loyalty = "loyalty";
+
+	/// <summary>The kinds with their own field on Card — every other kind is named, in Card.Counters.</summary>
+	public static readonly string[] Fielded = [PlusOne, MinusOne, Charge, Stun, Time, Loyalty];
 }
 
 /// <summary>What happened, for triggers — one value per event record. Grows only with a new kind of event.</summary>
@@ -83,6 +86,7 @@ public enum EventKind
 	FacedDilemma, // "whenever you face a dilemma" — modes chosen for a spell or ability
 	CountersPut, // a Saga's chapter: "as the number of lore counters becomes at least N" (Trigger.Chapter)
 	LeftGraveyard, // Vash: "whenever a card leaves your graveyard" — MagicState.MoveCard, every path
+	Drew, // Data, New Life: "whenever you draw a card" — MagicState.Draw, one per card
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 }
 
@@ -341,6 +345,9 @@ public static class TriggerEvent
 		new(EventKind.SpellCast) { Subject = Filters.Is.Source, ReadFrom = ReadFrom.TheSpellCast };
 	public static readonly Trigger YouGainLife = new(EventKind.LifeGained) { By = Whose.You };
 
+	/// <summary>Data, New Life: "Whenever you draw a card" — once per card drawn.</summary>
+	public static readonly Trigger YouDrawACard = new(EventKind.Drew) { By = Whose.You };
+
 	/// <summary>"Whenever you scry or surveil" — FRA has no scry.</summary>
 	public static readonly Trigger YouSurveil = new(EventKind.Surveilled) { By = Whose.You };
 
@@ -537,6 +544,7 @@ public enum ManaRestriction
 	NotForSpellsFromHand, // Heartwood Crafter
 	OnlyPlaneswalkerSpells, // Gideon's Memorial
 	OnlyNoncreatureSpells, // Chandra, Chill of Compliance
+	OnlyArtifacts, // Isolinear Processor: "only to cast an artifact spell or activate an ability of an artifact source"
 }
 
 /// <summary>"{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).</summary>
@@ -675,7 +683,22 @@ public record FlashbackComponent(ManaCost Cost) : GameComponent
 }
 
 /// <summary>Impulse draw: this exiled card may be played by PlayerId through turn UntilTurn (Rules/Playable.cs).</summary>
-public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent;
+public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
+{
+	/// <summary>Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way." — Costs.Of.</summary>
+	public bool AnyType { get; init; }
+
+	/// <summary>Zero, Incorporeal Sensate: "A spell cast this way costs {2} more to cast." — Costs.Of.</summary>
+	public int Tax { get; init; }
+}
+
+/// <summary>
+/// Vulcan Mind-Meld: "exiles it face down" — in exile, seen only by whoever Card.KnownTo says (the
+/// player who looked). Gone with the zone change: cast or played, it is public. Card.IsHiddenFrom.
+/// ponytail: the search's Hidden.Sample doesn't guess the ones its player hasn't seen — sample them
+/// as a library is sampled if the AI misplays on that knowledge (DesignNotes).
+/// </summary>
+public record ExiledFaceDown : GameComponent;
 
 /// <summary>Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.</summary>
 public record ChoosesColorAsItEnters : GameComponent;
@@ -760,6 +783,20 @@ public record EnchantedIsCreatureType(string Subtype) : GameComponent;
 /// </summary>
 public record MayCastFromYourGraveyard : GameComponent;
 
+/// <summary>
+/// Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact spell from
+/// the top of your library." — read by Playable.LibraryTopPermission; the cast stamps this permanent
+/// (Card.CastFromLibraryTopOn).
+/// </summary>
+public record MayCastArtifactFromLibraryTop : GameComponent;
+
+/// <summary>
+/// Zefram Cochrane: "You may look at the top card of your library any time." — MagicState.TopIsKnownToOwner:
+/// the search doesn't reshuffle it, the table's log names it. ponytail: a log line, not the card face
+/// up beside your library — TBL-6 (Shayne, 2026-11-01).
+/// </summary>
+public record MayLookAtTopOfLibrary : GameComponent;
+
 /// <summary>Infinite Coursework: "… and doesn't untap during its controller's untap step" — the Aura's, not the creature's.</summary>
 public record EnchantedDoesntUntap : GameComponent;
 
@@ -782,6 +819,13 @@ public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent
 	/// <summary>Who controls it (CR 603.7d: whoever created it) — Ghost of Illyria's controller, not the exiled card's owner. 0: its host's.</summary>
 	public int ControllerId { get; init; }
 }
+
+/// <summary>
+/// Dr. McCoy, Surly Surgeon: "If another creature you control with a +1/+1 counter on it would be
+/// destroyed, instead remove all +1/+1 counters from it and all damage already dealt to it is healed."
+/// — MagicState.Destroy, every destruction.
+/// </summary>
+public record CountersRemovedInsteadOfDestruction : GameComponent;
 
 /// <summary>Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard.</summary>
 public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
@@ -814,6 +858,20 @@ public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
 public record PermanentsEnterTapped(Filters.Filter Which) : GameComponent;
 
 /// <summary>
+/// Warp Speed: "Lands you control enter untapped." — read by MagicState.EnterBattlefield over every
+/// "enters tapped": the land's own, Root Maze's, a token created tapped, "onto the battlefield tapped"
+/// (Shayne, 2026-11-01).
+/// </summary>
+public record LandsYouControlEnterUntapped : GameComponent;
+
+/// <summary>
+/// Zefram Cochrane, Warp Pioneer: "Spacecraft you control enter with two additional charge counters on
+/// them." — your permanents the filter matches, read by MagicState.EnterBattlefield; never itself.
+/// </summary>
+public record YourPermanentsEnterWithCounters(Filters.Filter Which, string Kind, int N)
+	: GameComponent;
+
+/// <summary>
 /// Flesh Duplicate: "You may have this creature enter as a copy of any creature on the battlefield,
 /// except it has vanishing N if that creature doesn't have vanishing." Applied by
 /// MagicState.EnterBattlefield: the choice as it enters, then BecomeCopyOfChosenAction.
@@ -822,6 +880,18 @@ public record MayEnterAsCopy : GameComponent
 {
 	/// <summary>"Except it has vanishing N if that creature doesn't have vanishing" — 0: no exception.</summary>
 	public int VanishingIfNone { get; init; }
+
+	/// <summary>Dominion Saboteur: "a copy of any artifact or creature on the battlefield" — what it may copy; unset is a creature.</summary>
+	public Filters.Filter? Of { get; init; }
+
+	/// <summary>Dominion Saboteur: "except it isn't legendary".</summary>
+	public bool NotLegendary { get; init; }
+
+	/// <summary>Dominion Saboteur: "it enters with additional counters on it equal to the same number and kinds of counters the copied permanent has on it".</summary>
+	public bool WithCounters { get; init; }
+
+	/// <summary>Dominion Saboteur: "you may" offered as may — a 3/3 that copies nothing is still a 3/3 (Flesh Duplicate's must is its shortcut).</summary>
+	public bool Optional { get; init; }
 }
 
 /// <summary>

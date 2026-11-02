@@ -8,11 +8,13 @@ worlds, dilemma, power 8, becomes tapped, look and take, Federation) and their 3
 batch 4a, counters of any kind (quests), Sagas, kicker, can't block, once each turn and 28 commons and
 uncommons; batch 4b, the old tags' one-offs (delayed return, leaves the graveyard, type change, a second
 resolution, a granted trigger, gain control, every counter "plus one", exile until a nonland, cast from your
-graveyard, block and target restrictions) and their 17 commons and uncommons** — 192/311 play, with the
-basics and Mugato. **Batch 4 is three sessions (Shayne, 2026-11-01); 4a and 4b are done. 4c
-(14 one-offs):** Ensign Pavel Chekov, Warp Speed (every land you control enters untapped — Shayne), Pet
-Sehlat, Combadge, Data, Dr. McCoy, Vulcan Mind-Meld, Zero, Dominion Saboteur, Sylvia Tilly, First Contact, A
-Good Day to Die, Isolinear Processor, Zefram Cochrane. Batch 4 re-tiered from the full text: Dominion
+graveyard, block and target restrictions) and their 17 commons and uncommons; batch 4c, the last 14
+commons and uncommons (play from exile — an opponent's library, face down, taxed, any type of mana; a
+destroy replacement; a draw trigger; can't attack alone; lands enter untapped; a mana restriction for
+artifacts; the first spell this game; a this-turn trigger on a target; enter as a copy with counters;
+Zefram Cochrane's three)** — 206/311 play, with the basics and Mugato: **every common and uncommon.**
+Batch 4c re-tiered from the full text: Ensign Pavel Chekov, Vulcan Mind-Meld and Zero 3 → 2 (playing from
+exile already took anyone's card). Batch 4 re-tiered from the full text: Dominion
 Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first
 spell this game), A Good Day to Die (a this-turn trigger on its target, controlled by the caster), Isolinear
 Processor (a mana restriction for artifacts), Dominion Saboteur (copies an artifact, not legendary, with

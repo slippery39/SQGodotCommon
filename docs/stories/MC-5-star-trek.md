@@ -90,6 +90,12 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   (one resolution moving cards out in two separate steps; a card cast from the graveyard while its cost
   exiles others from there, CR 601.2a vs 601.2h) — noted in `DesignNotes.md`.
 
+- 2026-11-01, Shayne (MC-5.3 batch 4c's questions): **exile face down is real** — Vulcan Mind-Meld's cards
+  are hidden from the player who didn't look (the table shows a back), not exiled face up. **Zefram
+  Cochrane's "look at the top card any time" is done as V'Ger's look: the log says what your top card is**,
+  with a note — showing it on the table goes with TBL-6. **Pet Sehlat declared alone just doesn't attack,
+  with a note**; the table refusing that declaration is a backlog story (TBL-7).
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -113,7 +119,13 @@ Open questions:
       `Trigger.OneOrMore`), type change (`s.Subtypes`), the second resolution (`IfNthResolutionThisTurn`),
       granted triggers (`GrantsTriggeredAbility`), gain control (`MagicState.GainControl`), every counter
       "plus one" (`Replacements.Counters`), cast from your graveyard (`MayCastFromYourGraveyard`),
-      `CantBeBlockedBy`, `CantBeTargetedByAbilitiesFrom`
+      `CantBeBlockedBy`, `CantBeTargetedByAbilitiesFrom`. Batch 4c (2026-11-01): exile face down
+      (`ExiledFaceDown`, `Card.IsHiddenFrom`, a back on the table), playing an opponent's exiled card
+      (`ExileTopPlayable.Of/By/Forever/Choose/AnyType`, `PlayableFromExile.Tax`), one destroy path
+      (`MagicState.Destroy`, Dr. McCoy's replacement), a draw event (`DrewCardEvent`), can't attack alone,
+      lands enter untapped, Spacecraft enter with counters, a mana restriction knowing the ability's source
+      (`ManaRestriction.OnlyArtifacts`), the first spell this game, a this-turn trigger on one object
+      (`WheneverThisTurn.About`, `TheObject`), `Is.WithAttached`, an artifact cast from the library's top
 - [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
       the 88 tier 0–1 C/U not waiting on STATION or ANY-COUNTER (re-tiered: 4 tier 3, 6 tier 2, list in
       `TrkCoverage.md`); new pieces: modal activated abilities, `PutSelfOnBottomCost`, `AddManaOfAnyOneColor`,
@@ -128,7 +140,10 @@ Open questions:
       `ReturnFromYourGraveyard`, `Trigger.CombatDamageBy`, `Exile.Linked` + `ReturnLinkedExile`,
       `WheneverThisTurn`, `ShuffleIntoLibrary.FromGraveyards`). Batch 4b done 2026-11-01: the old tags' 17
       one-offs, with the options `ExileTopPlayable.UntilNonland`, `CreateTokenCopy.OfAnExiledCard`, `GainLife`
-      counting a `Count`; `Threshold` moved to `Scripting.cs`. Waiting: 4c (14), listed in `TrkCoverage.md`
+      counting a `Count`; `Threshold` moved to `Scripting.cs`. Batch 4c
+      done 2026-11-01: the last 14 C/U (every common and uncommon now plays, 206/311), with the options
+      `MayEnterAsCopy.Of/NotLegendary/WithCounters/Optional`, `ReturnFromYourGraveyard.To`, `Both`,
+      `YouChooseTheyDiscard.Optional/OwnerMayPlayTaxed`. Next: rares and mythics
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -141,15 +156,14 @@ Open questions:
 
 ## Next
 
-**MC-5.3 batch 4b is done (2026-11-01): 192/311 play** — delayed return, leaves the graveyard, type
-change, the second resolution, granted triggers, gain control, every counter "plus one", cast from your
-graveyard, can't be blocked by / targeted by abilities from (each one's rule in `magic-mechanics.md`), with
-17 commons and uncommons. Batch 4b's shortcuts are in `DesignNotes.md` (one trigger per priority pass for
-"one or more"; Species and a sacrificed source; one resolution count per card; type change without
-timestamps; control for good only). **Next: batch 4c in a NEW session — the 14 C/U one-offs
-(`TrkCoverage.md`'s status lists them): Ensign Pavel Chekov, Warp Speed, Pet Sehlat, Combadge, Data, Dr.
-McCoy, Vulcan Mind-Meld, Zero, Dominion Saboteur, Sylvia Tilly, First Contact, A Good Day to Die,
-Isolinear Processor, Zefram Cochrane. Then MC-5.4, boosters.**
+**MC-5.3 batch 4c is done (2026-11-01): 206/311 play — every common and uncommon** (96/96 C, 110/110 U).
+New this batch, each rule in `magic-mechanics.md`: exile face down, playing an opponent's exiled card, one
+destroy path judged together, a draw event, can't attack alone, lands enter untapped, Spacecraft enter with
+counters, a mana restriction for artifacts' abilities, the first spell this game, a this-turn trigger on one
+object, enter as a copy with counters, Zefram's cast from the top. Batch 4c's shortcuts are in
+`DesignNotes.md` (Sehlat alone not refused — TBL-7; Zefram's top card a log line — TBL-6; face-down cards
+not hidden from the search; a copy misses others' entry rules). **Next: MC-5.4, boosters (sealed and draft
+on TRK) — then the rares and mythics (105) in batches, each in a NEW session.**
 Every batch starts in a NEW session
 (`/card-batch` step 0) and ends with its usage row (`tools/usage_report.py --log`,
 `docs/findings/card-batch-usage.md`) — this set tests that workflow.
@@ -221,6 +235,13 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   every later end step), Ghost's return is controlled by Ghost's controller (CR 603.7d), a De-evolve that
   lost its abilities sets no type, two `///` summaries back on their own records, Erica reuses
   `MoveChosenToAction`.
+- 2026-11-01: MC-5.3 batch 4c — Shayne's three answers in Decisions (exile face down for real; Zefram's top
+  card in the log, TBL-6; Pet Sehlat alone, TBL-7 created); 14 cards (3 C, 11 U), TRK 206/311, every C/U;
+  30 tests, 42/42 revert-checks caught; probe: 150 games, no crash, every card used; bench −7.4% (noise);
+  golden replays regenerated — 719 of 1,896 card games moved (706 deal a new card, 13 Flesh Duplicate, whose
+  copy prompt changed) and the 30 every-card random games; no other game or AI replay moved. The review's
+  fixes: a destroy is judged for all at once (an indestructible grant, McCoy beside the creature he saves),
+  Chekov asks nothing when no land was exiled.
 - 2026-11-01: after batch 4b, Shayne on the two review findings left: Storied Veteran told from flashback by
   its component is a known issue (`DesignNotes.md`); counters now go through ONE funnel —
   `MagicState.PutCounters` for every kind (+1/+1, -1/-1, charge, stun, time, loyalty and the named ones),

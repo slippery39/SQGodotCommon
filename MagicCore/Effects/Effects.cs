@@ -285,6 +285,7 @@ public record CopySpell(Ref What) : Effect
 							original.GetComponent<OnStackComponent>()! with
 							{
 								CantBeCountered = false,
+								FirstSpellThisGame = false,
 							}
 						),
 				stack
@@ -610,15 +611,34 @@ public abstract record ThisTurnEffect : GameComponent;
 /// </summary>
 public record WheneverThisTurn(TriggeredAbilityComponent Ability) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
+	/// <summary>
+	/// A Good Day to Die: "When that creature dies this turn, you draw a card." — the trigger's subject
+	/// is that one permanent, as it is now; the ability stays yours, whoever controls the creature.
+	/// </summary>
+	public Ref? About { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var ability = Ability;
+		if (About is { } about)
+		{
+			if (Permanents(about, s).FirstOrDefault() is not { } that)
+				return new(s);
+			Filters.Filter only = new Filters.TheObject(that.Id, that.Incarnation);
+			ability = ability with
+			{
+				On = ability.On with { Subject = ability.On.Subject is { } f ? f & only : only },
+			};
+		}
+		return new(
 			GetEmblem.ToCommandZone(
 				s,
 				Controller,
 				$"{Source(s).Name} (this turn)",
-				[Ability, new TriggersThisTurn()]
+				[ability, new TriggersThisTurn()]
 			)
 		);
+	}
 }
 
 /// <summary>

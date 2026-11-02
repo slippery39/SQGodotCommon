@@ -39,7 +39,23 @@ public static class Playable
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| IsCastableThroughLink(s, card, playerId)
+			|| LibraryTopPermission(s, card, playerId) is not null
 		) && CastRestrictionHolds(s, card, playerId);
+
+	/// <summary>
+	/// Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of
+	/// your library." — the permanent that lets this card be cast, if any (one not used this turn).
+	/// </summary>
+	public static Card? LibraryTopPermission(GameState s, Card card, int playerId) =>
+		card.Is(CardType.Artifact)
+		&& s.GetGame().ActivePlayerId == playerId
+		&& s.GetChildrenIds(s.ZoneId(playerId, ZoneType.Library)).FirstOrDefault() == card.Id
+			? s.CardsIn(playerId, ZoneType.Battlefield)
+				.FirstOrDefault(p =>
+					p.CastFromLibraryTopOn != s.GetGame().TurnNumber
+					&& s.HasAbility<MayCastArtifactFromLibraryTop>(p)
+				)
+			: null;
 
 	/// <summary>Proft: "You can't cast this spell unless …" — wherever and however it is cast.</summary>
 	public static bool CastRestrictionHolds(GameState s, Card card, int playerId) =>
@@ -80,6 +96,7 @@ public static class Playable
 			.Concat(s.CardsIn(playerId, ZoneType.Graveyard))
 			.Concat(s.CardsIn(playerId, ZoneType.Exile))
 			.Concat(s.CardsIn(s.OpponentOf(playerId), ZoneType.Exile)) // a prepared copy follows its creature's controller
+			.Concat(s.CardsIn(playerId, ZoneType.Library).Take(1)) // Zefram Cochrane: the top card
 			.Where(c =>
 				c.Is(CardType.Land)
 					? CanPlayLandFromHere(s, c, playerId)

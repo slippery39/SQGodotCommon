@@ -113,6 +113,9 @@ public record FinishAttackersAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var declared = Declarations.Read(InputContext, DeclareAttackerChoice.KeyPrefix).ToList();
+		// Pet Sehlat: "can't attack alone" — two of them together are each not alone.
+		if (declared is [var only] && s.Has(s.GetCard(only.CreatureId), Combat.CantAttackAlone))
+			declared = [];
 		foreach (var (id, target) in declared)
 		{
 			var card = s.GetCard(id);

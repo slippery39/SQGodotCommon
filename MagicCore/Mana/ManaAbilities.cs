@@ -60,13 +60,22 @@ public static class ManaAbilities
 	)
 	{
 		/// <summary>May this mana pay for that spell (null: an ability, or anything but a spell)?</summary>
-		public bool CanPayFor(GameState s, Card? spell) => Allows(Restriction, s, spell);
+		public bool CanPayFor(GameState s, Card? spell, Card? abilitySource = null) =>
+			Allows(Restriction, s, spell, abilitySource);
 	}
 
 	/// <summary>THE restriction check — a permanent's mana and floating mana alike.</summary>
-	public static bool Allows(ManaRestriction restriction, GameState s, Card? spell) =>
+	/// <param name="abilitySource">An activated ability's source, when the mana pays for one — Isolinear Processor asks.</param>
+	public static bool Allows(
+		ManaRestriction restriction,
+		GameState s,
+		Card? spell,
+		Card? abilitySource = null
+	) =>
 		restriction switch
 		{
+			ManaRestriction.OnlyArtifacts => (spell ?? abilitySource)?.Is(CardType.Artifact)
+				== true,
 			ManaRestriction.NotForSpellsFromHand => spell is null
 				|| !s.IsIn(spell.Id, spell.OwnerId, ZoneType.Hand),
 			ManaRestriction.OnlyPlaneswalkerSpells => spell is not null

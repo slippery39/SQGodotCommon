@@ -442,6 +442,17 @@ public sealed class MagicTableManager
 					$"seen in {State.GetPlayer(OpponentId).Name}'s hand: {string.Join(", ", news.Select(c => c.Name))}"
 				)
 			);
+		// Zefram Cochrane: "You may look at the top card of your library any time" — the log names it
+		// whenever it changes while you may look. On the table itself: TBL-6.
+		if (
+			State.TopIsKnownToOwner(HumanId)
+			&& State.CardsIn(HumanId, ZoneType.Library).FirstOrDefault() is { } top
+			&& !(
+				before.TopIsKnownToOwner(HumanId)
+				&& before.CardsIn(HumanId, ZoneType.Library).FirstOrDefault()?.Id == top.Id
+			)
+		)
+			_notes.Add((State.GetGame().TurnNumber, $"top of your library: {top.Name}"));
 	}
 
 	/// <summary>What a move revealed, logged after the move's own line.</summary>

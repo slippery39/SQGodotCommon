@@ -68,10 +68,16 @@ public static class Costs
 		var printed = free ? ManaCost.None : Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
 		if (added is not null)
 			printed = printed.Plus(added);
+		// Cast from exile by impulse: Vulcan Mind-Meld's "mana of any type", Zero's "costs {2} more".
+		var impulse = Playable.IsImpulsePlayableBy(s, card, casterId)
+			? card.GetComponent<PlayableFromExile>()
+			: null;
 		// Null Summoner: "mana of any type can be spent to cast that spell".
-		if (!free && Playable.IsCastableThroughLink(s, card, casterId))
+		if (
+			!free && (Playable.IsCastableThroughLink(s, card, casterId) || impulse?.AnyType == true)
+		)
 			printed = printed.OfAnyType();
-		var delta = addedGeneric;
+		var delta = addedGeneric + (impulse?.Tax ?? 0);
 		// Taxes and reductions on the battlefield, judged as their permanent's (Thalia, Geist).
 		foreach (var player in new[] { casterId, s.OpponentOf(casterId) })
 		foreach (var permanent in s.CardsIn(player, ZoneType.Battlefield))
