@@ -381,6 +381,22 @@ public class TrkBatch5aTests : FraBoardTest
 		Assert.That(s.GetCard(bear).PlusOneCounters, Nu.EqualTo(1), "this creature … dies");
 	}
 
+	// ===== Sulu: "if an Equipment or Spacecraft entered the battlefield under your control this turn" =====
+
+	[Test]
+	public void Sulu_ASpacecraftThatEnteredAndLeft_StillCounts()
+	{
+		var sulu = Field(Trk("Sulu, Space Swashbuckler"), me);
+		var ship = Hand(TestGames.Inline("Shuttle", "{1}", "Artifact — Spacecraft"), me);
+		Cast(ship, []);
+		Cast(Hand(TestCards.Kill(TargetSpec.Permanent(Is.Artifact)), me), [], ship);
+		Assert.That(s.IsOnBattlefield(ship), Nu.False, "it left again");
+		var hand = HandCount(me);
+		var tap = TestCards.Targeted("Tap", TargetSpec.Permanent(), new Tap(Ref.Target()));
+		Cast(Hand(tap, me), [], sulu);
+		Assert.That(HandCount(me), Nu.EqualTo(hand + 1), "it entered this turn: draw");
+	}
+
 	// ===== Romulan Bird-of-Prey: "As long as this Spacecraft isn't a creature, it has hexproof." =====
 
 	[Test]

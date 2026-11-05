@@ -5812,27 +5812,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 > First strike  
 > Whenever Sulu becomes tapped, if an Equipment or Spacecraft entered the battlefield under your control this turn, draw a card.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** TrkBatch5aTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SubtypeEnteredThisTurn` — The context a condition is judged in outside a resolving ability: a permanent and its…
 
 ```csharp
 ["Sulu, Space Swashbuckler"] =
 [
-	// ponytail: "entered … this turn" is read from what is still on the battlefield — one that
-	// entered and left again is missed. A per-turn tally if a card ever needs it (DesignNotes).
 	When(TriggerEvent.SelfBecomesTapped, [], new DrawCards(Ref.You, 1)) with
 	{
-		If = new AtLeast(
-			Count.NumberOf(
-				Ref.Permanents(
-					(Is.Subtype("Equipment") | Is.Subtype("Spacecraft"))
-						& Is.Yours
-						& Is.EnteredThisTurn
-				)
-			),
-			1
-		),
+		If = new SubtypeEnteredThisTurn(["Equipment", "Spacecraft"]),
 	},
 ],
 ```

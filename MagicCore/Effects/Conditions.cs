@@ -71,6 +71,18 @@ public record Both(Condition A, Condition B) : Condition
 }
 
 /// <summary>The context a condition is judged in outside a resolving ability: a permanent and its controller.</summary>
+/// <summary>
+/// Sulu, Space Swashbuckler: "if an Equipment or Spacecraft entered the battlefield under your control
+/// this turn" — one of these subtypes, even if it has left again (TurnTally.SubtypesEntered).
+/// </summary>
+public record SubtypeEnteredThisTurn(ImmutableArray<string> Subtypes) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetPlayer((int)context[ContextKeys.Controller])
+			.ThisTurn.SubtypesEntered.Intersect(Subtypes)
+			.Any();
+}
+
 public static class Conditions
 {
 	/// <summary>The source as it was when it triggered (CR 603.10a), else as it is now — null if gone.</summary>

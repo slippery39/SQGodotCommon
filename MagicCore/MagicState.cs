@@ -335,6 +335,11 @@ public static class MagicState
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
 		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types));
 		var card = s.GetCard(cardId);
+		if (card.Subtypes.Except(s.GetPlayer(controllerId).ThisTurn.SubtypesEntered).Any())
+			s = s.Tally(
+				controllerId,
+				t => t with { SubtypesEntered = [.. t.SubtypesEntered.Union(card.Subtypes)] }
+			);
 		s = s.UpdateObject(
 			cardId,
 			card with

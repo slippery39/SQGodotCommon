@@ -36,7 +36,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"This ability triggers only once each turn"** is `TriggeredAbilityComponent.OncePerTurn`, stamped
   on the card as it goes on the stack (`PutOnStack`) — a new object (CR 400.7) may trigger again.
 - **"Entered this turn"** is `Card.EnteredOnTurn`, stamped by `EnterBattlefield` — not
-  `ControlledSinceTurn`, which a control change would also move. **"Attacked this turn"** is
+  `ControlledSinceTurn`, which a control change would also move — it is gone once the permanent leaves.
+  **"A [subtype] entered under your control this turn"**, even one that left again (Sulu), is
+  `SubtypeEnteredThisTurn`, read from `TurnTally.SubtypesEntered` (written by `EnterBattlefield`). **"Attacked this turn"** is
   `Card.AttackedOnTurn`, stamped as attackers are declared.
 - **"Doesn't untap during your untap step"** (`DoesntUntapInYourUntapStep`) is read by the untap step
   ONLY — an untap effect still untaps it (Traxos' own trigger). A stun counter, by contrast, eats every untap.

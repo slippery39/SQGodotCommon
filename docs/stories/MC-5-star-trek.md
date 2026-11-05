@@ -110,7 +110,8 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   that cost mana (tier 3), not a stack ability.
 
 - 2026-11-04, Shayne (batch 5a's review): **Sulu's "an Equipment or Spacecraft entered … this turn" counts
-  one that has left again** — batch 5a read it from what is still there; fixed in 5b. The sprint ends here
+  one that has left again** — batch 5a read it from what is still there; fixed 2026-11-05
+  (`SubtypeEnteredThisTurn`, `TurnTally.SubtypesEntered`). The sprint ends here
   (usage 98%, the reset tomorrow): what is unfinished moves to the next sprint.
 
 Open questions:
@@ -183,8 +184,7 @@ each rule in `magic-mechanics.md`: the enters-untapped lands (Warp Speed's trigg
 hand size until your next turn, every token an Illusion (Holo-Engineer), cast from exile (Khan), "choose one
 or more" with an empty hand (Kirk), the sacrificed creature as an ability's event card (Gowron), a dying
 permanent seeing its own death (Excalbian Gamemaster — a fix in `Triggers.Collect`). Shortcut: Sulu's
-"entered this turn" counts what is still there (`DesignNotes.md`). **Next: batch 5b in a NEW session** — FIRST Sulu (Shayne: it counts an Equipment or Spacecraft that entered
-and left again this turn — a per-turn record of what entered, replacing `Is.EnteredThisTurn` there), then
+"entered this turn" counts what is still there (`DesignNotes.md`). **Next: batch 5b in a NEW session** (Sulu's "entered this turn" fixed 2026-11-05) —
 Dr. McCoy (`AtNextEndStep` on that card in the graveyard), Geordi La Forge (charge counters doubled in
 `PutCounters`, entering with them too), Starfleet Academy (a REAL mana ability that costs {5} — the payment
 solver, Shayne 2026-11-04), Collation Trimatrix and Captain Picard (tap three / seven: today

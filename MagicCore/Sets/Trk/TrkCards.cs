@@ -2566,20 +2566,9 @@ public static class TrkCards
 			],
 			["Sulu, Space Swashbuckler"] =
 			[
-				// ponytail: "entered … this turn" is read from what is still on the battlefield — one that
-				// entered and left again is missed. A per-turn tally if a card ever needs it (DesignNotes).
 				When(TriggerEvent.SelfBecomesTapped, [], new DrawCards(Ref.You, 1)) with
 				{
-					If = new AtLeast(
-						Count.NumberOf(
-							Ref.Permanents(
-								(Is.Subtype("Equipment") | Is.Subtype("Spacecraft"))
-									& Is.Yours
-									& Is.EnteredThisTurn
-							)
-						),
-						1
-					),
+					If = new SubtypeEnteredThisTurn(["Equipment", "Spacecraft"]),
 				},
 			],
 			["Tasha Yar, Out of Time"] =

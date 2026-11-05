@@ -61,4 +61,7 @@ public record TurnTally
 
 	/// <summary>Noncombat damage dealt TO this player (Command the Stage).</summary>
 	public int NoncombatDamageTaken { get; init; }
+
+	/// <summary>Sulu: "if an Equipment or Spacecraft entered the battlefield under your control this turn" — the subtypes of every permanent that entered under this player's control (MagicState.EnterBattlefield), kept though it left again.</summary>
+	public System.Collections.Immutable.ImmutableArray<string> SubtypesEntered { get; init; } = [];
 }
