@@ -320,6 +320,7 @@ public static class MagicState
 
 	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
 	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
+	/// <param name="sunburst">Sunburst: "a charge counter on it for each color of mana spent to cast it".</param>
 	public static GameState EnterBattlefield(
 		this GameState s,
 		int cardId,
@@ -329,12 +330,25 @@ public static class MagicState
 		bool tapped = false,
 		bool finality = false,
 		int attachTo = 0,
-		bool cast = false
+		bool cast = false,
+		int sunburst = 0
 	)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
 		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types));
 		var card = s.GetCard(cardId);
+		var entersTapped = card.GetComponent<EntersTappedComponent>();
+		var landsUntapped =
+			card.Is(CardType.Land)
+			&& s.CardsIn(controllerId, ZoneType.Battlefield)
+				.Any(s.HasAbility<LandsYouControlEnterUntapped>);
+		var tappedByOthers =
+			tapped || EntersTappedByAPermanent(s, card with { ControllerId = controllerId });
+		var entryContext = ImmutableDictionary<string, object>
+			.Empty.Add(ContextKeys.Controller, controllerId)
+			.Add(ContextKeys.Source, card.Id);
+		var tappedByItself =
+			entersTapped is not null && entersTapped.Unless?.Holds(s, entryContext) != true;
 		if (card.Subtypes.Except(s.GetPlayer(controllerId).ThisTurn.SubtypesEntered).Any())
 			s = s.Tally(
 				controllerId,
@@ -350,27 +364,30 @@ public static class MagicState
 				CastX = x,
 				WasCast = cast,
 				HasFinalityCounter = finality,
-				IsTapped =
-					!(
-						card.Is(CardType.Land)
-						&& s.CardsIn(controllerId, ZoneType.Battlefield)
-							.Any(s.HasAbility<LandsYouControlEnterUntapped>)
-					)
-					&& (
-						tapped
-						|| EntersTappedByAPermanent(s, card with { ControllerId = controllerId })
-						|| (
-							card.GetComponent<EntersTappedComponent>() is { } entersTapped
-							&& entersTapped.Unless?.Holds(
-								s,
-								ImmutableDictionary<string, object>
-									.Empty.Add(ContextKeys.Controller, controllerId)
-									.Add(ContextKeys.Source, card.Id)
-							) != true
-						)
-					),
+				IsTapped = !landsUntapped && (tappedByOthers || tappedByItself),
 			}
 		);
+		// The shocklands: "you may pay 2 life. If you don't, it enters tapped." Asked only when it decides.
+		if (
+			entersTapped is { UnlessYouPayLife: > 0 and var life }
+			&& tappedByItself
+			&& !landsUntapped
+			&& !tappedByOthers
+		)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = entryContext,
+					Steps =
+					[
+						new May(
+							$"Pay {life} life? If you don't, {card.Name} enters tapped.",
+							new AtLeast(Count.LifeTotalOf(Ref.You), life),
+							[new LoseLife(Ref.You, life), new Untap(Ref.Source)]
+						),
+					],
+				}
+			);
 		// Zefram Cochrane: "Spacecraft you control enter with two additional charge counters on them."
 		foreach (var permanent in s.CardsIn(controllerId, ZoneType.Battlefield).ToList())
 		foreach (
@@ -380,6 +397,7 @@ public static class MagicState
 		)
 			if (rule.Which.Matches(s, s.GetCard(cardId), new(controllerId, permanent.Id)))
 				s = s.PutCounters(cardId, rule.Kind, rule.N, entering: true);
+		s = s.PutCounters(cardId, CounterKinds.Charge, sunburst, entering: true); // Geordi doubles these
 		// Entering with counters is putting them on (Yoshimaru, Brad Boimler: CR 122.6) — after control is set.
 		s = s.PutCounters(cardId, CounterKinds.Loyalty, card.PrintedLoyalty)
 			.PutCounters(cardId, CounterKinds.Time, card.GetComponent<Vanishing>()?.N ?? 0); // vanishing: "enters with N time counters"
@@ -416,6 +434,21 @@ public static class MagicState
 					[
 						new Actions.ChooseColorChoice(controllerId),
 						new Actions.SetChosenColorAction(cardId),
+					],
+				}
+			);
+		if (card.GetComponent<ChoosesNumberAsItEnters>() is { } number)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new Actions.ChooseNumberChoice(controllerId, number.Max)
+						{
+							NamesAManaValue = true,
+							Prompt = $"{card.Name}: choose a number",
+						},
+						new Actions.SetChosenNumberAction(cardId),
 					],
 				}
 			);

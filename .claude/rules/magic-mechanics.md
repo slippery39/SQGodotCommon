@@ -425,3 +425,27 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `UntilEndOfTurn { NoMaximumHandSize }` object in your command zone, read by `TurnStructure.MaxHandSizeOf`.
 - **"Choose one. If [condition], choose one or more instead"** (Captain Kirk) is
   `TriggeredAbilityComponent.ChooseAnyNumberIf`, judged as the modes are chosen (the trigger going on the stack).
+- **The shocklands' "you may pay 2 life. If you don't, it enters tapped"** is `EntersTappedComponent { UnlessYouPayLife }`:
+  it enters tapped, and `EnterBattlefield` spawns a `May` ONLY when its own text is what taps it — not under Warp
+  Speed (untapped anyway) or Root Maze / "onto the battlefield tapped" (tapped anyway) — and the controller has
+  the life (CR 119.4). Yes is `LoseLife` (the one life-loss path) and it untaps. The AI's answer is the search's
+  (Shayne, 2026-11-05): both answers are beam nodes, so it pays when the turn's plan spends the mana.
+- **Sunburst** (`Sunburst`, Engineered Explosives) is the colours actually SPENT: the cast pays with the most
+  different colours it can for the X chosen (`ManaPayment.Find(…, mostColors)`, Shayne, 2026-11-05), records
+  them (`ManaPayment.ColorsSpent` → `OnStackComponent.ColorsSpent`), and `EnterFromStackAction` puts that many
+  charge counters through `PutCounters` (Geordi doubles them). A copy spent nothing (CR 702.44c). It never
+  sacrifices a Treasure or uses Starfleet Academy for a colour that the plain payment wouldn't have.
+- **"With mana value equal to [a number]"** counted as it resolves is `Ref.ManaValueIs` (a `Count`) on a
+  `Ref.All` — Explosives' own charge counters, read from the sacrificed source as it last was.
+- **"X target [things]"** (Dominion Infiltration) is `TargetSpec.PerX`: `StackResolution.TextOf(…, x)` makes it
+  X words, each `NotThePrevious` (`AreLegal` refuses any repeat in the chain). There is ONE legal cast per X
+  (`CastSpellAction.ChoosesTargets`): casting it asks `ChooseXTargetsChoice` (exactly X), then casts with them —
+  never a cast per set, which is 2^n and hung the fuzz probe (Shayne, 2026-11-05). The AI copies the biggest
+  (`GreedyAi`). "For each of them" is `Ref.EachTarget`.
+- **Changeling** ("every creature type") is `s.HasSubtype(card, type)`, asked one type at a time — every
+  subtype question goes there (`Is.Subtype`, Kindred Judgment), never `s.Subtypes(…).Contains`, except behold
+  (planeswalker types). Read from the card's own keywords: `s.Has` would loop through the statics' scopes.
+- **"As this enters, choose a number"** (Nyota Uhura) is `ChoosesNumberAsItEnters` → `ChosenNumber` on the
+  card (status: gone as it leaves); "a spell with mana value equal to the chosen number" is
+  `Is.ManaValueIsChosenNumber`. The AI names the mana value commonest among the opponent's nonland cards it
+  knows of, else 2 (`GreedyAi`, Shayne) — the beam doesn't branch on it (`ChooseNumberChoice.NamesAManaValue`).

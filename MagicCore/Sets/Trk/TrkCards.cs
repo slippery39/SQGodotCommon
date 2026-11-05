@@ -2800,7 +2800,92 @@ public static class TrkCards
 					}
 				),
 			],
+			// ===== MC-5.3 batch 6a: the shocklands, sunburst, X targets and changeling, a number chosen as it enters =====
+			["Blood Crypt"] = [Shockland],
+			["Breeding Pool"] = [Shockland],
+			["Godless Shrine"] = [Shockland],
+			["Hallowed Fountain"] = [Shockland],
+			["Overgrown Tomb"] = [Shockland],
+			["Sacred Foundry"] = [Shockland],
+			["Steam Vents"] = [Shockland],
+			["Stomping Ground"] = [Shockland],
+			["Temple Garden"] = [Shockland],
+			["Watery Grave"] = [Shockland],
+			["Engineered Explosives"] =
+			[
+				new Sunburst(),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[
+						new Destroy(
+							Ref.Permanents(!Is.Land) with
+							{
+								ManaValueIs = Count.ChargeCountersOn(Ref.Source),
+							}
+						),
+					]
+				)
+				{
+					Costs = [new SacrificeSelfCost()],
+				},
+			],
+			["Dominion Infiltration"] =
+			[
+				Spell(
+					[Target(Is.Creature & Is.Opponents) with { PerX = true }],
+					new CreateTokenCopy(Ref.EachTarget)
+					{
+						AddingKeywords = ["Changeling", "Haste"],
+						ExileAtNextEndStep = true,
+					}
+				),
+			],
+			["Nyota Uhura, Communications"] =
+			[
+				new ChoosesNumberAsItEnters(10),
+				When(
+					new Trigger(EventKind.SpellCast)
+					{
+						By = Whose.Opponent,
+						Subject = Is.ManaValueIsChosenNumber,
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Mirror Universe Intrusion"] =
+			[
+				new KickerComponent(ManaCost.Parse("{4}{U}{B}")),
+				Spell(
+					[
+						Target(Is.Creature & Is.Opponents) with
+						{
+							IfKicked = TargetSpec.Player(Is.Opponents),
+						},
+					],
+					new If(
+						new WasKicked(),
+						[
+							new CreateTokenCopy(
+								Ref.All(ZoneType.Battlefield, Is.Creature, Ref.Target(0))
+							)
+							{
+								AddingKeywords = ["Menace"],
+							},
+						]
+					)
+					{
+						Otherwise =
+						[
+							new CreateTokenCopy(Ref.Target(0)) { AddingKeywords = ["Menace"] },
+						],
+					}
+				),
+			],
 		};
+
+	/// <summary>The shocklands (Blood Crypt …): "As this land enters, you may pay 2 life. If you don't, it enters tapped."</summary>
+	static EntersTappedComponent Shockland => new() { UnlessYouPayLife = 2 };
 
 	/// <summary>A quest's threshold: "if this enchantment has N or more quest counters on it".</summary>
 	static Condition Quests(int n) =>

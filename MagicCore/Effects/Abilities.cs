@@ -586,10 +586,26 @@ public record ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComp
 }
 
 /// <summary>
+/// Sunburst (Engineered Explosives): "This artifact enters with a charge counter on it for each color of
+/// mana spent to cast it." — the cast pays with as many different colours as it can
+/// (ManaPayment.FindMostColors) and records them (OnStackComponent.ColorsSpent). ponytail: charge
+/// counters only, as on an artifact; a sunburst creature's +1/+1 counters wait for one.
+/// </summary>
+public record Sunburst : GameComponent;
+
+/// <summary>
 /// "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield, judged on the
 /// board it is entering, with this permanent as the source ("other lands" is !Is.Source).
 /// </summary>
-public record EntersTappedComponent(Condition? Unless = null) : GameComponent;
+public record EntersTappedComponent(Condition? Unless = null) : GameComponent
+{
+	/// <summary>
+	/// The shocklands (Blood Crypt): "As this land enters, you may pay 2 life. If you don't, it enters
+	/// tapped." — asked as it enters, only when this text is what taps it (not under Warp Speed or Root
+	/// Maze) and its controller has the life to pay (CR 119.4).
+	/// </summary>
+	public int UnlessYouPayLife { get; init; }
+}
 
 /// <summary>
 /// "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost (negative: less).
@@ -722,6 +738,15 @@ public record ChoosesColorAsItEnters : GameComponent;
 
 /// <summary>"{T}: Add one mana of the chosen color." — set as it entered; gone when it leaves.</summary>
 public record ChosenColorMana(ManaColor Color) : GameComponent;
+
+/// <summary>
+/// Nyota Uhura: "Hailing Frequencies — As Nyota Uhura enters, choose a number between 0 and 10." Applied
+/// by MagicState.EnterBattlefield; the AI names a mana value its opponent is likely to cast (GreedyAi).
+/// </summary>
+public record ChoosesNumberAsItEnters(int Max) : GameComponent;
+
+/// <summary>The number chosen as it entered (Nyota Uhura) — gone when it leaves.</summary>
+public record ChosenNumber(int N) : GameComponent;
 
 /// <summary>Stingcaster Mage: "gains flashback until end of turn. The flashback cost is equal to its mana cost." Lost on any zone change.</summary>
 public record GrantedFlashback(int OnTurn) : GameComponent;

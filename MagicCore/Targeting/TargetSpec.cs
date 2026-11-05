@@ -49,6 +49,12 @@ public record TargetSpec(From From, Filter? Filter = null)
 	public bool NotThePrevious { get; init; }
 
 	/// <summary>
+	/// Dominion Infiltration: "Choose X target creatures your opponents control" — this word X times, X as
+	/// cast, each a different object: one cast per SET, never per order (StackResolution.TextOf).
+	/// </summary>
+	public bool PerX { get; init; }
+
+	/// <summary>
 	/// Fatehold Charm: "target spell or creature" — also legal where this one says, in its own zone.
 	/// Only the outer spec's Optional and NotThePrevious are read; set them there.
 	/// </summary>
@@ -200,7 +206,8 @@ public record TargetSpec(From From, Filter? Filter = null)
 		return combos;
 	}
 
-	/// <summary>Chosen targets fit the specs: one per word, each legal, 0 only where optional.</summary>
+	/// <summary>Chosen targets fit the specs: one per word, each legal, 0 only where optional — a
+	/// NotThePrevious word never repeats one before it (X targets are all different).</summary>
 	public static bool AreLegal(
 		GameState s,
 		IReadOnlyList<TargetSpec> specs,
@@ -215,7 +222,7 @@ public record TargetSpec(From From, Filter? Filter = null)
 					targets[i] == 0
 						? spec.Optional
 						: spec.IsLegal(s, controllerId, sourceId, targets[i])
-							&& !(spec.NotThePrevious && i > 0 && targets[i] == targets[i - 1])
+							&& !(spec.NotThePrevious && targets[..i].Contains(targets[i]))
 			)
 			.All(ok => ok);
 }

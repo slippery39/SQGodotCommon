@@ -116,6 +116,24 @@ public sealed record OfSupertype(Supertype Supertypes) : Filter
 		o is Card card && card.Is(Supertypes);
 }
 
+/// <summary>
+/// Nyota Uhura: "Whenever an opponent casts a spell with mana value equal to the chosen number" — the
+/// number the source chose as it entered (ChosenNumber); X counts on the stack.
+/// </summary>
+public sealed record ManaValueIsChosenNumber : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card
+		&& s.HasObject(c.Source)
+		&& s.GetObject(c.Source) is Card source
+		&& source.GetComponent<Effects.ChosenNumber>() is { } chosen
+		&& card.ManaValueNow == chosen.N;
+}
+
 /// <summary>Koth: "a Plains"; Saheeli: "Thopters".</summary>
 public sealed record OfSubtype(string Subtype) : Filter
 {
@@ -124,7 +142,7 @@ public sealed record OfSubtype(string Subtype) : Filter
 	public override bool ReadsKeywords() => false;
 
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
-		o is Card card && s.Subtypes(card).Contains(Subtype);
+		o is Card card && s.HasSubtype(card, Subtype);
 }
 
 /// <summary>

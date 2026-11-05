@@ -87,6 +87,17 @@ public static class Characteristics
 	}
 
 	/// <summary>
+	/// Has it this subtype? Changeling (Dominion Infiltration's tokens): "It's every creature type." — asked
+	/// one type at a time, since no list holds every creature type. Read from the card's own keywords, not
+	/// s.Has: a subtype filter scopes statics, and s.Has reads the statics (it would loop) — and changeling
+	/// sets the types in layer 4, before "loses all abilities" (layer 6) could take it away. Behold keeps
+	/// Subtypes: it names planeswalker types, which IsCreatureType doesn't know aren't creature types.
+	/// </summary>
+	public static bool HasSubtype(this GameState s, Card card, string subtype) =>
+		s.Subtypes(card).Contains(subtype)
+		|| (card.Keywords.Contains("Changeling") && IsCreatureType(subtype));
+
+	/// <summary>
 	/// Whether a subtype is a creature type: anything but the land, artifact and enchantment types (CR
 	/// 205.3g–h, j). ponytail: the ones printed on cards like these sets'; add one when a set brings it.
 	/// </summary>

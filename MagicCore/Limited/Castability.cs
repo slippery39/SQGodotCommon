@@ -110,7 +110,9 @@ public static class Castability
 				{
 					var def = CardRegistry.Get(n);
 					var land = def.Data.TypeLine.Contains("Land");
-					var tapped = def.Components.OfType<EntersTappedComponent>().FirstOrDefault();
+					var tapped = def
+						.Components.OfType<EntersTappedComponent>()
+						.FirstOrDefault(t => t.UnlessYouPayLife == 0); // a shockland: untapped, for 2 life
 					var text = def.Data.OracleText ?? "";
 					var others = Regex.Match(
 						text,

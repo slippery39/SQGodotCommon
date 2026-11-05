@@ -48,6 +48,27 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		return best;
 	}
 
+	/// <summary>
+	/// Nyota Uhura (Shayne, 2026-11-05): the mana value most common among the opponent's nonland cards
+	/// this player knows of — on the battlefield, in the graveyard, exiled face up, seen in hand — the
+	/// lower on a tie; with none known, 2.
+	/// </summary>
+	int LikeliestManaValue(GameState s)
+	{
+		var opponent = s.OpponentOf(PlayerId);
+		return new[] { ZoneType.Battlefield, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Hand }
+				.SelectMany(zone =>
+					s.CardsIn(opponent, zone)
+						.Where(c => zone != ZoneType.Hand || (c.KnownTo & Knowers.Opponent) != 0)
+				)
+				.Where(c => !c.Is(CardType.Land) && !c.IsToken && !c.IsHiddenFrom(PlayerId))
+				.GroupBy(c => c.ManaCost.ManaValue)
+				.OrderByDescending(g => g.Count())
+				.ThenBy(g => g.Key)
+				.Select(g => (int?)g.Key)
+				.FirstOrDefault() ?? 2;
+	}
+
 	/// <summary>This player's answer to a pending choice. The search AI asks it for the choices it doesn't branch on.</summary>
 	public IEnumerable<int> Answer(GameState s, ChoiceAction choice)
 	{
@@ -66,6 +87,16 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		}
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
+		if (choice is ChooseXTargetsChoice)
+			// Dominion Infiltration copies them: the biggest. ponytail: power, then mana value, stands in for worth.
+			return choice
+				.Options.Select(o => s.GetCard(o.Id))
+				.OrderByDescending(s.Power)
+				.ThenByDescending(c => c.ManaCost.ManaValue)
+				.Take(choice.MinChoices)
+				.Select(c => c.Id);
+		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max })
+			return [Math.Min(LikeliestManaValue(s), max) + 1]; // option id = the number + 1
 		if (choice is ChooseColorChoice)
 			return
 			[

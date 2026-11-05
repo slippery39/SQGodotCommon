@@ -75,6 +75,96 @@ public static class ManaPayment
 
 	static readonly ImmutableArray<ManaColor> Any = [.. Enum.GetValues<ManaColor>()];
 
+	/// <summary>
+	/// Sunburst (Engineered Explosives): the payment that spends the most different colours — the player
+	/// picks X, the payment does the rest (Shayne, 2026-11-05). k of the generic as k different coloured
+	/// pips, the largest k that pays; else Find's own. Never by sacrificing a Treasure or using Starfleet
+	/// Academy that Find's own wouldn't: a colour isn't worth a resource the player didn't choose to spend.
+	/// ponytail: built for a cost of X alone (Engineered Explosives) — with coloured pips of its own the
+	/// first k-subset that pays may repeat one, and not be the most colours.
+	/// </summary>
+	static IReadOnlyList<Payment>? FindMostColors(
+		GameState s,
+		int playerId,
+		ManaCost cost,
+		int x,
+		int excludeId = 0,
+		bool convoke = false,
+		Card? forSpell = null,
+		IReadOnlyCollection<int>? alsoExclude = null,
+		Card? forAbilityOf = null
+	)
+	{
+		var plain = Find(
+			s,
+			playerId,
+			cost,
+			x,
+			excludeId,
+			convoke,
+			forSpell,
+			alsoExclude,
+			forAbilityOf
+		);
+		if (plain is null)
+			return null;
+		var generic = cost.WithGeneric(x)
+			.Symbols.Where(m => m.Kind == SymbolKind.Generic)
+			.Sum(m => m.Amount);
+		ManaColor[] colors =
+		[
+			ManaColor.White,
+			ManaColor.Blue,
+			ManaColor.Black,
+			ManaColor.Red,
+			ManaColor.Green,
+		];
+		for (var k = Math.Min(generic, colors.Length); k > 0; k--)
+			foreach (var set in Subsets(colors, k))
+				if (
+					Find(
+						s,
+						playerId,
+						cost.WithGeneric(x - k)
+							.Plus(
+								new ManaCost(
+									[.. set.Select(c => new ManaSymbol(SymbolKind.Colored, c))]
+								)
+							),
+						0,
+						excludeId,
+						convoke,
+						forSpell,
+						alsoExclude,
+						forAbilityOf
+					)
+						is { } found
+					&& found.Count(p => p.Sacrificed) <= plain.Count(p => p.Sacrificed)
+					&& found.Count(p => p.Floats) <= plain.Count(p => p.Floats)
+				)
+					return found;
+		return plain;
+	}
+
+	/// <summary>Sunburst's count: the different colours a payment spent — not {C}, not mana that only floats.</summary>
+	public static int ColorsSpent(IEnumerable<Payment> payment) =>
+		payment
+			.Where(p => !p.Floats && p.Color != ManaColor.Colorless)
+			.Select(p => p.Color)
+			.Distinct()
+			.Count();
+
+	static IEnumerable<ManaColor[]> Subsets(ManaColor[] colors, int k) =>
+		k == 0
+			?
+			[
+				[],
+			]
+		: colors.Length < k ? []
+		: Subsets(colors[1..], k - 1)
+			.Select(rest => (ManaColor[])[colors[0], .. rest])
+			.Concat(Subsets(colors[1..], k));
+
 	/// <param name="alsoExclude">Permanents the rest of the cost uses — sacrificed, tapped.</param>
 	/// <param name="forSpell">The spell being cast (in its zone, before it moves) — restricted mana asks what it is; null for an ability.</param>
 	/// <param name="forAbilityOf">The source of the activated ability being paid for — Isolinear Processor's mana asks.</param>
@@ -87,9 +177,22 @@ public static class ManaPayment
 		bool convoke = false,
 		Card? forSpell = null,
 		IReadOnlyCollection<int>? alsoExclude = null,
-		Card? forAbilityOf = null
+		Card? forAbilityOf = null,
+		bool mostColors = false
 	)
 	{
+		if (mostColors)
+			return FindMostColors(
+				s,
+				playerId,
+				cost,
+				x,
+				excludeId,
+				convoke,
+				forSpell,
+				alsoExclude,
+				forAbilityOf
+			);
 		var player = s.GetPlayer(playerId);
 		var tappable = new List<Tappable>();
 		foreach (var c in s.CardsIn(playerId, ZoneType.Battlefield))

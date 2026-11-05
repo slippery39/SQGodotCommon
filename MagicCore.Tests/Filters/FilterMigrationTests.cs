@@ -126,6 +126,7 @@ public class FilterMigrationTests
 		RefKind.EventCard,
 		RefKind.EventObject,
 		RefKind.ControllerOfEventCard,
+		RefKind.EachTarget, // the chosen targets themselves
 	];
 
 	[TestCaseSource(nameof(RefRows))]

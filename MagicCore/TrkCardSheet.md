@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 96/96 · uncommon 110/110 · rare 38/80 · mythic 10/25 · **254/311**
+**Playable:** common 96/96 · uncommon 110/110 · rare 52/80 · mythic 10/25 · **268/311**
 
 ### A Good Day to Die
 
@@ -1017,7 +1017,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests
 
 ### Make It So
 
@@ -1145,7 +1145,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests, TrkBatch6aTests
 
 ### Oberth-Class Starship
 
@@ -1313,7 +1313,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests
 
 ### Planetary Bombardment
 
@@ -1774,7 +1774,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests, RolloutTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests, RolloutTests, TrkBatch6aTests
 
 ### Tactical Officer
 
@@ -4740,7 +4740,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this enchantment enters, search your library for a basic land card or Planet card, reveal it, put it into your hand, then shuffle.  
 > Strange new worlds — {7}{U}{U}, Sacrifice this enchantment: Draw two cards. This ability costs {X} less to activate, where X is the number of differently named lands you control.
 
-**Status:** scripted · **tests naming it:** TrkBatch4cTests, TrkBatch5aTests
+**Status:** scripted · **tests naming it:** TrkBatch4cTests, TrkBatch5aTests, TrkBatch6aTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `LandsYouControlEnterUntapped` — Warp Speed: "Lands you control enter untapped." — read by MagicState.EnterBattlefield…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
 
@@ -4905,7 +4905,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {B} or {R}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch6aTests
+
+```csharp
+["Blood Crypt"] = [Shockland],
+```
 
 ### Branching Timeline
 
@@ -4946,7 +4950,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {G} or {U}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Breeding Pool"] = [Shockland],
+```
 
 ### Captain Benjamin Sisko
 
@@ -5088,7 +5096,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Choose X target creatures your opponents control. For each of them, create a token that's a copy of that creature, except it has changeling. Those tokens gain haste. Exile those tokens at the beginning of the next end step. (They're every creature type.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch6aTests
+
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Dominion Infiltration"] =
+[
+	Spell(
+		[Target(Is.Creature & Is.Opponents) with { PerX = true }],
+		new CreateTokenCopy(Ref.EachTarget)
+		{
+			AddingKeywords = ["Changeling", "Haste"],
+			ExileAtNextEndStep = true,
+		}
+	),
+],
+```
 
 ### Dr. Leonard "Bones" McCoy
 
@@ -5111,7 +5135,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 		TriggerEvent.SelfEnters,
 		1,
 		M(
-			[TargetSpec.InYourGraveyard(Is.Type(PermanentTypes) & !Is.Subtype("Doctor"))],
+			[
+				TargetSpec.InYourGraveyard(
+					Is.Type(PermanentTypes) & !Is.Subtype("Doctor")
+				),
+			],
 			new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
 		),
 		M(
@@ -5122,7 +5150,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 					[
 						new AtNextEndStep(
 							[
-								new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
+								new ReturnFromGraveyard(
+									Ref.Source,
+									ZoneType.Battlefield
+								)
 								{
 									Counters = 1,
 								},
@@ -5196,7 +5227,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Sunburst (This artifact enters with a charge counter on it for each color of mana spent to cast it.)  
 > {2}, Sacrifice this artifact: Destroy each nonland permanent with mana value equal to the number of charge counters on this artifact.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch6aTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `Sunburst` — Sunburst (Engineered Explosives): "This artifact enters with a charge counter on it for…
+
+```csharp
+["Engineered Explosives"] =
+[
+	new Sunburst(),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{2}"),
+		[
+			new Destroy(
+				Ref.Permanents(!Is.Land) with
+				{
+					ManaValueIs = Count.ChargeCountersOn(Ref.Source),
+				}
+			),
+		]
+	)
+	{
+		Costs = [new SacrificeSelfCost()],
+	},
+],
+```
 
 ### Federation Outpost
 
@@ -5287,7 +5341,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {W} or {B}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Godless Shrine"] = [Shockland],
+```
 
 ### Gowron, Eager for Battle
 
@@ -5384,7 +5442,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {W} or {U}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Hallowed Fountain"] = [Shockland],
+```
 
 ### Hit It!
 
@@ -5541,7 +5603,41 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Kicker {4}{U}{B} (You may pay an additional 4 as you cast this spell.)  
 > Create a token that's a copy of target creature an opponent controls, except it has menace. If this spell was kicked, instead for each creature target opponent controls, create a token that's a copy of that creature, except it has menace.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch6aTests
+
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `KickerComponent` — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U}…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
+
+```csharp
+["Mirror Universe Intrusion"] =
+[
+	new KickerComponent(ManaCost.Parse("{4}{U}{B}")),
+	Spell(
+		[
+			Target(Is.Creature & Is.Opponents) with
+			{
+				IfKicked = TargetSpec.Player(Is.Opponents),
+			},
+		],
+		new If(
+			new WasKicked(),
+			[
+				new CreateTokenCopy(
+					Ref.All(ZoneType.Battlefield, Is.Creature, Ref.Target(0))
+				)
+				{
+					AddingKeywords = ["Menace"],
+				},
+			]
+		)
+		{
+			Otherwise =
+			[
+				new CreateTokenCopy(Ref.Target(0)) { AddingKeywords = ["Menace"] },
+			],
+		}
+	),
+],
+```
 
 ### Ni'Var Science Academy
 
@@ -5582,7 +5678,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Hailing Frequencies — As Nyota Uhura enters, choose a number between 0 and 10.  
 > Open a Channel — Whenever an opponent casts a spell with mana value equal to the chosen number, you draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch6aTests
+
+**Engine pieces:** `ChoosesNumberAsItEnters` — Nyota Uhura: "Hailing Frequencies — As Nyota Uhura enters, choose a number between 0 and…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Nyota Uhura, Communications"] =
+[
+	new ChoosesNumberAsItEnters(10),
+	When(
+		new Trigger(EventKind.SpellCast)
+		{
+			By = Whose.Opponent,
+			Subject = Is.ManaValueIsChosenNumber,
+		},
+		[],
+		new DrawCards(Ref.You, 1)
+	),
+],
+```
 
 ### Overflow Submatrix
 
@@ -5599,7 +5713,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {B} or {G}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Overgrown Tomb"] = [Shockland],
+```
 
 ### Pah-Wraith
 
@@ -5758,7 +5876,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {R} or {W}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Sacred Foundry"] = [Shockland],
+```
 
 ### Salt Vampire
 
@@ -5842,7 +5964,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {U} or {R}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Steam Vents"] = [Shockland],
+```
 
 ### Stomping Ground
 
@@ -5851,7 +5977,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {R} or {G}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Stomping Ground"] = [Shockland],
+```
 
 ### Subcommander T'Pol
 
@@ -5939,7 +6069,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {G} or {W}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Temple Garden"] = [Shockland],
+```
 
 ### The Caretaker
 
@@ -6128,7 +6262,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {U} or {B}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Watery Grave"] = [Shockland],
+```
 
 ### Wesley Crusher, Starfleet Cadet
 
@@ -6559,11 +6697,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 		TriggerEvent.YourFirstMainPhase,
 		[],
 		new DrawCards(Ref.You, 1),
-		new If(new Not(new AtLeast(DifferentlyNamedLands, 5)), [new Discard(Ref.You, 1)])
+		new If(
+			new Not(new AtLeast(DifferentlyNamedLands, 5)),
+			[new Discard(Ref.You, 1)]
+		)
 	),
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{6}{U}"),
-		[new ModifyUntilEndOfTurn(Ref.Source, 0, 0) { SetBase = (7, 9), ForGood = true }]
+		[
+			new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+			{
+				SetBase = (7, 9),
+				ForGood = true,
+			},
+		]
 	)
 	{
 		OnlyIf = new AtLeast(DifferentlyNamedLands, 7),

@@ -68,10 +68,7 @@ public record DestroyCreaturesNotOfTypeAction(ImmutableArray<string> Types) : Ef
 			? Types[id - 1]
 			: DestroyCreaturesNotOfChosenType.NoneOfThem;
 		return new(
-			Destroy.All(
-				s,
-				Permanents(Ref.AllCreatures, s).Where(c => !s.Subtypes(c).Contains(chosen))
-			)
+			Destroy.All(s, Permanents(Ref.AllCreatures, s).Where(c => !s.HasSubtype(c, chosen)))
 		);
 	}
 }

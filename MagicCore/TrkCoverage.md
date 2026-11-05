@@ -17,13 +17,17 @@ maximum hand size, any token an Illusion, a discard choice's "then", look and ta
 sacrificed creature as an ability's event card, "choose one or more" with an empty hand, cast from exile, a
 dying permanent seeing its own death); batch 5b, 8 tier-3 rares and mythics (a delayed return on the card that
 died, charge counters doubled, a mana ability that costs mana, tap three or seven, life lost this turn, base
-P/T for good, reveal the top X)** — 254/311 play, with the basics and Mugato: **every common and
-uncommon**, 38/80 rares, 10/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
+P/T for good, reveal the top X); batch 6a, 14 tier-3 rares (the shocklands, sunburst, X targets picked as it is cast,
+changeling, a number chosen as it enters)** — 268/311 play, with the basics and Mugato: **every common and
+uncommon**, 52/80 rares, 10/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
 Trimatrix (1 → 3) and Captain Jean-Luc Picard (tap three or seven untapped), Gul Dukat (life lost this
 turn), Seven of Nine (base P/T become 7/9), Branching Timeline (reveal X, every permanent card onto the
 battlefield), Dominion Infiltration (X targets, changeling — with the one-offs), Starfleet Academy (a mana
 ability that costs mana — Shayne: a real one); Replicator 1 → 2. **Batch 5b (done 2026-11-05):** Dr. McCoy, Geordi La Forge,
-Starfleet Academy, Trimatrix, Picard, Gul Dukat, Seven of Nine, Branching Timeline. The rest: 57 tier-3 one-offs.
+Starfleet Academy, Trimatrix, Picard, Gul Dukat, Seven of Nine, Branching Timeline. The rest: 57 tier-3 one-offs, re-tiered from the full text 2026-11-05 — 11 are tier 1–2 (Sela, Antagonist
+Incorporator, Deanna Troi, Enterprise-D, The Inner Light, Will Riker, M'Benga, Deep Space 9, Captain Pike, Dathon,
+Mirror Universe Intrusion). **Batch 6a (done 2026-11-05):** the 10 shocklands, Engineered Explosives, Dominion
+Infiltration, Nyota Uhura, Mirror Universe Intrusion. Left: 43 (the story's Next groups them).
 Batch 4c re-tiered from the full text: Ensign Pavel Chekov, Vulcan Mind-Meld and Zero 3 → 2 (playing from
 exile already took anyone's card). Batch 4 re-tiered from the full text: Dominion
 Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first
@@ -64,7 +68,7 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | FED | DONE (MC-5.2, batch 3): `TrkCards.Federation` (`Count.CreatureTypesAmong`, Spacecraft left out) | — |
 | QUEST, ANY-COUNTER | DONE (batch 4a): `Card.Counters` (`PutCounters`, `RemoveCountersOfKind`, `Count.CountersOfKind`), `Is.WithAnyCounter`. Not yet: peace counters (Peace in Our Time), Brad Boimler's "plus one" of every kind (4b) | `CounterKinds` |
 | KICKER | DONE (batch 4a): `KickerComponent`, `WasKicked`, `TargetSpec.IfKicked`. Not yet: Mirror Universe Intrusion | — |
-| SHOCK | "As this land enters, you may pay 2 life. If you don't, it enters tapped." | `EntersTappedComponent(Unless)` |
+| SHOCK | DONE (batch 6a): `EntersTappedComponent { UnlessYouPayLife = 2 }` — asked as it enters, only when it decides; the search answers for the AI | — |
 | ENTERS-UNTAPPED | DONE (batch 5a): `TrkCards.EntersUntapped` — a `SelfEnters` trigger whose Subject is `!Is.Tapped`, so Warp Speed's lands trigger too | — |
 | CANT-BLOCK | DONE (batch 4a): `Combat.CantBlock`. Not yet: Storied Veteran (cast from the graveyard), De-evolve (TYPE-SET), Troubling Tribbles | — |
 | LOOK-TAKE | DONE (MC-5.2, batch 3): `LookAndTake(n, filter) { Reveal, Must, RestToGraveyard }` | — |

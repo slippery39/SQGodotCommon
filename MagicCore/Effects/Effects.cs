@@ -285,13 +285,16 @@ public record CopySpell(Ref What) : Effect
 							{
 								CantBeCountered = false,
 								FirstSpellThisGame = false,
+								ColorsSpent = 0,
 							}
 						),
 				stack
 			);
 			s = s.MoveObjectToFront(copy.Id, stack); // index 0 is the top
 			var onStack = copy.GetComponent<OnStackComponent>()!;
-			var specs = StackResolution.TextOf(copy, onStack.Modes, onStack.Kicked).Specs;
+			var specs = StackResolution
+				.TextOf(copy, onStack.Modes, onStack.Kicked, onStack.X)
+				.Specs;
 			if (specs.IsEmpty)
 				continue;
 			s = s.SpawnAction(

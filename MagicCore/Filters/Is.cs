@@ -74,6 +74,8 @@ public static class Is
 
 	public static Filter Named(string name) => new Named(name);
 
+	public static readonly Filter ManaValueIsChosenNumber = new ManaValueIsChosenNumber();
+
 	/// <summary>Combadge: "with a Communicator attached to it".</summary>
 	public static Filter WithAttached(Filter attachment) => new WithAttached(attachment);
 

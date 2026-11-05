@@ -64,6 +64,7 @@ public enum RefKind
 	EventObject, // ward: "counter it" — the spell or ability that targeted, if it is still that object
 	ControllerOfEventCard, // Tetsuko, Pursuer: "that creature's controller"
 	All, // "creatures you control", "cards in your graveyard": a zone's objects that match a filter
+	EachTarget, // Dominion Infiltration: "for each of them" — every target chosen, those still legal
 }
 
 /// <summary>
@@ -84,7 +85,14 @@ public record Ref(RefKind Kind, int Index = 0)
 	/// </summary>
 	public Ref? Of { get; init; }
 
+	/// <summary>
+	/// For All: Engineered Explosives: "each nonland permanent with mana value equal to the number of
+	/// charge counters on this artifact" — counted as it resolves (the sacrificed source as it last was).
+	/// </summary>
+	public Count? ManaValueIs { get; init; }
+
 	public static readonly Ref You = new(RefKind.You);
+	public static readonly Ref EachTarget = new(RefKind.EachTarget);
 	public static readonly Ref EachOpponent = new(RefKind.EachOpponent);
 	public static readonly Ref EachPlayer = new(RefKind.EachPlayer);
 	public static readonly Ref Source = new(RefKind.Source);
@@ -203,6 +211,7 @@ public record Ref(RefKind Kind, int Index = 0)
 				? [((Card)snapshot).ControllerId]
 			: [],
 			RefKind.All => AllIn(s, context, controller, eventCard),
+			RefKind.EachTarget => targets,
 			_ => throw new ArgumentOutOfRangeException(
 				nameof(Kind),
 				Kind,
@@ -260,9 +269,13 @@ public record Ref(RefKind Kind, int Index = 0)
 		// ZoneType's default is Hand: a Ref.All built without a zone must not quietly mean "hands".
 		var zone = Zone ?? throw new InvalidOperationException("Ref.All needs a Zone");
 		var asking = ContextKeys.Asking(context);
+		var manaValue = ManaValueIs?.Value(s, context);
 		return Whose(s, context, controller)
 			.SelectMany(p => s.CardsIn(p, zone))
-			.Where(c => Filter?.Matches(s, c, asking) ?? true)
+			.Where(c =>
+				(Filter?.Matches(s, c, asking) ?? true)
+				&& (manaValue is null || c.ManaValueNow == manaValue)
+			)
 			.Select(c => c.Id);
 	}
 

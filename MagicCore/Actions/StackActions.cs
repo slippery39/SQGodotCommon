@@ -13,6 +13,9 @@ namespace MagicCore.Actions;
 public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArray<int> Modes)
 	: GameComponent
 {
+	/// <summary>Sunburst (Engineered Explosives): the colours of mana spent to cast it — a copy spent none (CR 702.44c).</summary>
+	public int ColorsSpent { get; init; }
+
 	/// <summary>"If this spell was cast from a graveyard" — and flashback exiles it as it leaves the stack.</summary>
 	public ZoneType CastFrom { get; init; } = ZoneType.Hand;
 
@@ -91,6 +94,13 @@ public record CastSpellAction : GameAction
 	/// other rule — targets, modes, X, additional costs, "can't cast unless", payment — still applies.
 	/// </summary>
 	public bool DuringResolution { get; init; }
+
+	/// <summary>
+	/// Dominion Infiltration: "Choose X target creatures your opponents control" — the X targets are a
+	/// choice made as it is cast (ChooseXTargetsChoice), before it is paid (CR 601.2c), not one legal cast
+	/// per set: 2^n casts hung the fuzz probe (Shayne, 2026-11-05). One cast per X; Targets empty until chosen.
+	/// </summary>
+	public bool ChoosesTargets { get; init; }
 
 	/// <summary>What casting it costs beyond mana: its additional costs, then its flashback's when cast that way, then its kicker's when kicked.</summary>
 	public static ImmutableList<AdditionalCost> CostsOf(
@@ -171,14 +181,11 @@ public record CastSpellAction : GameAction
 		var text = card.GetComponent<SpellEffectsComponent>();
 		if (!Modal.IsLegal(text?.Modes ?? [], text?.Choose ?? 1, Modes, text?.ChooseAtLeast))
 			return ValidationResult.Invalid("Illegal choice of modes");
+		var specs = StackResolution.TextOf(card, Modes, Kicked, X).Specs;
 		if (
-			!TargetSpec.AreLegal(
-				s,
-				StackResolution.TextOf(card, Modes, Kicked).Specs,
-				Targets,
-				PlayerId,
-				CardId
-			)
+			ChoosesTargets
+				? !(Targets.IsEmpty && ChooseXTargetsChoice.CanChoose(s, PlayerId, CardId, specs))
+				: !TargetSpec.AreLegal(s, specs, Targets, PlayerId, CardId)
 		)
 			return ValidationResult.Invalid("Illegal targets");
 		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
@@ -210,11 +217,27 @@ public record CastSpellAction : GameAction
 		return Priority.AtInstantSpeed(s, card) || Priority.AtSorcerySpeed(s, PlayerId);
 	}
 
-	public override ActionResult Execute(GameState s) => new(Priority.Retain(Cast(s), PlayerId));
+	public override ActionResult Execute(GameState s) =>
+		new(ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId));
+
+	/// <summary>Dominion Infiltration: the X targets chosen, then this cast with them.</summary>
+	GameState ChooseTargets(GameState s, bool retain) =>
+		s.SpawnAction(
+			new PipelineAction
+			{
+				Steps =
+				[
+					new ChooseXTargetsChoice(PlayerId, CardId, X, Modes, Kicked),
+					new CastWithChosenTargetsAction(this with { ChoosesTargets = false }, retain),
+				],
+			}
+		);
 
 	/// <summary>Pays and puts it on the stack — the priority action keeps priority after; a resolution goes on.</summary>
 	public GameState Cast(GameState s)
 	{
+		if (ChoosesTargets)
+			return ChooseTargets(s, retain: false);
 		var card = s.GetCard(CardId);
 		var costs = CostsOf(s, card, Kicked); // read before paying: flashback's are known only in the graveyard
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
@@ -230,22 +253,32 @@ public record CastSpellAction : GameAction
 					CastFromLibraryTopOn = s.GetGame().TurnNumber,
 				}
 			);
-		s = ManaPayment.Pay(
+		var sunburst = card.HasComponent<Sunburst>();
+		var payment = ManaPayment.Find(
 			s,
 			PlayerId,
-			ManaPayment.Find(
-				s,
-				PlayerId,
-				CostToPay(s, card),
-				0,
-				convoke: s.Has(card, "Convoke"),
-				forSpell: card,
-				alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))]
-			)!
-		);
+			CostToPay(s, card),
+			0,
+			convoke: s.Has(card, "Convoke"),
+			forSpell: card,
+			alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))],
+			mostColors: sunburst
+		)!;
+		s = ManaPayment.Pay(s, PlayerId, payment);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
+		if (sunburst)
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							ColorsSpent = ManaPayment.ColorsSpent(payment),
+						}
+					)
+			);
 		if (Replicate == 0)
 			return s;
 		// Replicate (CR 702.56a): "when you cast this spell, copy it for each time you paid its
@@ -540,10 +573,12 @@ public static class StackResolution
 {
 	/// <summary>A spell's target words and steps for the chosen modes (the whole text when not modal).</summary>
 	/// <param name="kicked">Highly Illogical: a target word with an IfKicked reads as that instead.</param>
+	/// <param name="x">The X cast with — "X target creatures" (TargetSpec.PerX) is X words.</param>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		Card card,
 		ImmutableArray<int> modes,
-		bool kicked = false
+		bool kicked = false,
+		int x = 0
 	)
 	{
 		var (specs, steps) =
@@ -551,7 +586,20 @@ public static class StackResolution
 				? Modal.Compose(text.Targets, text.Effects, text.Modes, modes)
 			: card.GetComponent<AuraComponent>() is { } aura ? ([aura.Enchant], [])
 			: ([], []);
-		return kicked ? ([.. specs.Select(t => t.IfKicked ?? t)], steps) : (specs, steps);
+		if (kicked)
+			specs = [.. specs.Select(t => t.IfKicked ?? t)];
+		return (
+			[
+				.. specs.SelectMany(t =>
+					t.PerX
+						? Enumerable
+							.Range(0, x)
+							.Select(i => t with { PerX = false, NotThePrevious = i > 0 })
+						: [t]
+				),
+			],
+			steps
+		);
 	}
 
 	public static GameState Push(GameState s, StackAbility ability)
@@ -642,6 +690,9 @@ public static class StackResolution
 						)
 						{
 							Finality = fromGraveyard && mayCastThere, // "it enters with a finality counter on it"
+							Sunburst = permanent.HasComponent<Sunburst>()
+								? cast?.ColorsSpent ?? 0
+								: 0,
 						},
 						new ActivePlayerGetsPriorityAction(),
 					],
@@ -654,7 +705,7 @@ public static class StackResolution
 			{
 				Card spell
 					when spell.GetComponent<OnStackComponent>() is { } cast
-						&& TextOf(spell, cast.Modes, cast.Kicked) is var text => (
+						&& TextOf(spell, cast.Modes, cast.Kicked, cast.X) is var text => (
 					spell.ControllerId,
 					spell.Id,
 					spell,
@@ -722,12 +773,92 @@ public record FinishSpellAction : GameAction
 	}
 }
 
+/// <summary>
+/// Dominion Infiltration: "Choose X target creatures your opponents control" — exactly X different ones,
+/// the candidates of its X target words (all the same word). ponytail: a text whose only target words are
+/// the X ones, outside any mode, as Dominion Infiltration's; another word or a mode waits for a card that has one.
+/// </summary>
+public record ChooseXTargetsChoice : ChoiceAction
+{
+	public const string Chosen = "xTargets";
+
+	public int PlayerId { get; init; }
+	public int CardId { get; init; }
+	public int X { get; init; }
+	public ImmutableArray<int> Modes { get; init; }
+	public bool Kicked { get; init; }
+
+	public ChooseXTargetsChoice(
+		int playerId,
+		int cardId,
+		int x,
+		ImmutableArray<int> modes,
+		bool kicked
+	)
+	{
+		PlayerId = playerId;
+		CardId = cardId;
+		X = x;
+		Modes = modes;
+		Kicked = kicked;
+		MinChoices = x;
+		MaxChoices = x;
+		OutputKey = Chosen;
+		Prompt = $"Choose {x} target{(x == 1 ? "" : "s")}";
+	}
+
+	public static bool CanChoose(
+		GameState s,
+		int playerId,
+		int cardId,
+		IReadOnlyList<TargetSpec> specs
+	) => specs.Count > 0 && specs[0].Candidates(s, playerId, cardId).Count() >= specs.Count;
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		[
+			.. StackResolution
+				.TextOf(s.GetCard(CardId), Modes, Kicked, X)
+				.Specs[0]
+				.Candidates(s, PlayerId, CardId)
+				.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name }),
+		];
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+
+	public static ImmutableArray<int> Read(ImmutableDictionary<string, object> context) =>
+		context.GetValueOrDefault(Chosen) switch
+		{
+			int id => [id],
+			ImmutableList<int> ids => [.. ids.Order()],
+			_ => [],
+		};
+}
+
+/// <summary>After ChooseXTargetsChoice: the cast with those targets, in increasing order (one set, one cast).</summary>
+public record CastWithChosenTargetsAction(CastSpellAction Cast, bool Retain) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var cast = Cast with { Targets = ChooseXTargetsChoice.Read(InputContext) };
+		return Retain ? cast.Execute(s) : new(cast.Cast(s));
+	}
+}
+
 /// <summary>A resolving permanent spell enters the battlefield (CR 608.3) — then ActivePlayerGetsPriorityAction.</summary>
 public record EnterFromStackAction(int CardId, int ControllerId, int X, int AttachTo, bool Cast)
 	: GameAction
 {
 	/// <summary>Storied Veteran: "If you do, it enters with a finality counter on it."</summary>
 	public bool Finality { get; init; }
+
+	/// <summary>Sunburst: "This artifact enters with a charge counter on it for each color of mana spent to cast it."</summary>
+	public int Sunburst { get; init; }
 
 	public override ActionResult Execute(GameState s) =>
 		new(
@@ -737,7 +868,8 @@ public record EnterFromStackAction(int CardId, int ControllerId, int X, int Atta
 				X,
 				finality: Finality,
 				attachTo: AttachTo,
-				cast: Cast
+				cast: Cast,
+				sunburst: Sunburst
 			)
 		);
 }

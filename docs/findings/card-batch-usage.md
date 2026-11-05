@@ -24,3 +24,4 @@ session per batch was simulated to save 37–40%.
 | 2026-11-02 | MC-5.3: batch 4c — exile face down, play an opponent's exiled card, one destroy judged together, draw, can't attack alone, lands enter untapped, Zefram, 14 cards | 7cf44660 | 185 | 278k | 8.3M |
 | 2026-11-04 | MC-5.3: batch 5a — tier 1–2 rares and mythics, 40 cards | c6125612 | 143 | 280k | 5.6M |
 | 2026-11-05 | MC-5.3: batch 5b — delayed return on a dead card, charge doubled, a mana ability that costs mana, tap N as a set, life lost this turn, base P/T for good, reveal top X (+ sprint 4 planning), 8 cards | 9c72e4a6 | 146 | 268k | 5.8M |
+| 2026-11-05 | MC-5.3 batch 6a: shocklands, sunburst, X targets picked as cast, changeling, a number as it enters, 14 cards | 7c02dbfc | 164 | 280k | 6.5M |

@@ -110,6 +110,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-11](AI-11-learn-from-shaynes-games.md) | Learn from Shayne's games — settle where he and the oracle differ, keep what he got right | backlog |
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
 | [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | backlog |
+| [AI-19](AI-19-card-by-card-play.md) | Card-by-card play and rulings — after every card plays | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
@@ -135,5 +136,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 
-Next free id per area: AI-19 · DATA-3 · DEV-4 · LIM-4 · MC-6 · TBL-8
+Next free id per area: AI-20 · DATA-3 · DEV-4 · LIM-4 · MC-6 · TBL-8
 <!-- stories:end -->

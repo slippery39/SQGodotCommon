@@ -125,6 +125,21 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   controller); Starfleet Academy by auto-payment only (tapping it by hand gives {C}, `DesignNotes.md`);
   life loss in ONE path (two writers, not three: paying life already went through `LoseLife`).
 
+- 2026-11-05, Shayne (batch 6a's questions): the 57 re-tiered from the full text — 11 are tier 1–2 (Sela,
+  Antagonist Incorporator, Deanna Troi, Enterprise-D, The Inner Light, Will Riker, M'Benga, Deep Space 9,
+  Captain Pike, Dathon, Mirror Universe Intrusion). **Batch 6a: the 10 shocklands, Engineered Explosives,
+  Dominion Infiltration, Nyota Uhura, Mirror Universe Intrusion** — Nyota shares the as-it-enters choice and
+  "mana value equal to a number", Mirror Universe the token copy with a keyword. **A shockland's "pay 2 life"
+  is the search's to decide** (both answers are beam nodes; it pays when the turn's plan spends the mana).
+  **Sunburst: the player picks X, the payment spends as many different colours as it can**; the counters
+  are the colours actually spent. **Nyota's AI names the mana value most common among the opponent's cards
+  it knows of, else 2.** Claude's designs, taken as proposed: changeling answered per question
+  (`HasSubtype`), never a list of every type. **X targets: one cast per X, the targets picked as it is cast**
+  (Shayne, the same day) — one cast per SET was built first and hung the fuzz probe (2^n against n creatures).
+- 2026-11-05, Shayne (batch 6a's review): **every card implemented first; each card's AI use and rulings
+  are optimized after** — Engineered Explosives should pick its X for the most appropriate kills in play,
+  noted in the backlog story AI-19 (card-by-card play and rulings), where later batches add theirs.
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -182,7 +197,11 @@ Open questions:
       that died, read in its graveyard), `ChargeCountersOnYourArtifactsDoubled`, `ManaOfOneColorComponent.Cost`
       (the solver's `WithCostlyMana`), tap three or more (`CostSlot.TapSet`, `ActivateAbilityAction.TapIds`),
       `Rules.Life.Lose` and `TurnTally.LifeLost`, `ModifyUntilEndOfTurn.ForGood`,
-      `RevealUntilOntoBattlefield.Top`, `SearchLibrary.ChargeCounters`. Next: the tier-3 one-offs
+      `RevealUntilOntoBattlefield.Top`, `SearchLibrary.ChargeCounters`. Batch 6a done 2026-11-05: 14 tier-3
+      one-offs (268/311) — the shocklands (`EntersTappedComponent.UnlessYouPayLife`), sunburst (`Sunburst`,
+      `ManaPayment.Find(mostColors)`, `OnStackComponent.ColorsSpent`), `Ref.ManaValueIs`, X targets
+      (`TargetSpec.PerX`, `ChooseXTargetsChoice`, `Ref.EachTarget`), changeling (`s.HasSubtype`), a number chosen as it enters
+      (`ChoosesNumberAsItEnters`, `Is.ManaValueIsChosenNumber`, the AI's rule in `GreedyAi`). Next: the tier-3 one-offs
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -194,6 +213,20 @@ Open questions:
       (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG), scripted once each, into the collation
 
 ## Next
+
+**MC-5.3 batch 6a is done (2026-11-05): 268/311 play** — the 10 shocklands, Engineered Explosives, Dominion
+Infiltration, Nyota Uhura, Mirror Universe Intrusion. New, each rule in `magic-mechanics.md`: pay 2 life as it
+enters or it enters tapped (asked only when that decides it; the search answers for the AI), sunburst (the
+colours actually spent, the payment spending the most it can), "mana value equal to" a count, X targets (one cast
+per X, the targets then picked), changeling (asked per type), a number chosen as it enters (the AI's rule: the opponent's commonest
+known mana value, else 2). Ceilings in `DesignNotes.md`. **Next: 43 left, each batch in a NEW session.** Batch 6b,
+the cheap one: the 10 tier 1–2 cards found by the re-tier (Sela, Antagonist Incorporator, Deanna Troi,
+Enterprise-D, The Inner Light, Will Riker, M'Benga, Deep Space 9, Captain Pike, Dathon) — re-check each
+from its full text. Then the tier-3 groups, ~14 a batch: trigger twice (Crusher, Lwaxana), assimilate (Death Is
+Irrelevant, Borg Cube), control until end of turn (Worf, Intelligence Contractor; The Wrath of Khan), dilemmas this
+turn (Sisko, The Caretaker), casting from odd zones (Scotty, Overflow Submatrix, The Holodeck, Infinite Diversity,
+Q, Brazen Bluff, Discovery), Kai Winn (a name chosen as it enters — Nyota's place), and 17 one-offs; then MC-5.4
+boosters, the Stardates.
 
 **MC-5.3 batch 5b is done (2026-11-05): 254/311 play** — every common and uncommon, 38/80 R, 10/25 M. New,
 each rule in `magic-mechanics.md`: Dr. McCoy's return (a delayed trigger on the card in its graveyard),

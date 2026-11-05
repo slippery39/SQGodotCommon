@@ -325,6 +325,7 @@ public record Card : GameObject
 				or Effects.ExiledFaceDown
 				or Effects.ExiledBy
 				or Effects.ChosenColorMana
+				or Effects.ChosenNumber
 				or CopyUntilEndOfTurn
 				or EnteredAsCopy
 				or Effects.DelayedTrigger

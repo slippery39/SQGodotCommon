@@ -31,11 +31,16 @@ public record ChooseTargetChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		Spec.Candidates(s, PlayerId, SourceId)
+			// "not the one before" is any one before: a copy of Dominion Infiltration's X targets re-chosen
 			.Where(id =>
 				!(
 					Spec.NotThePrevious
-					&& context.GetValueOrDefault(KeyPrefix + (Index - 1)) is int previous
-					&& previous == id
+					&& Enumerable
+						.Range(0, Index)
+						.Any(i =>
+							context.GetValueOrDefault(KeyPrefix + i) is int previous
+							&& previous == id
+						)
 				)
 			)
 			.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name })

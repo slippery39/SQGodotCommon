@@ -197,19 +197,26 @@ public static class MagicRules
 	{
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
-		var choices = Modal
-			.Choices(text?.Modes ?? [], text?.Choose ?? 1, text?.ChooseAtLeast)
-			.SelectMany(modes =>
-				TargetSpec
-					.Combinations(
-						s,
-						StackResolution.TextOf(card, modes, kicked).Specs,
-						player,
-						card.Id
-					)
-					.Select(targets => (modes, targets))
-			)
-			.ToList();
+		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> ChoicesFor(int x) =>
+			Modal
+				.Choices(text?.Modes ?? [], text?.Choose ?? 1, text?.ChooseAtLeast)
+				.SelectMany(modes =>
+					TargetSpec
+						.Combinations(
+							s,
+							StackResolution.TextOf(card, modes, kicked, x).Specs,
+							player,
+							card.Id
+						)
+						.Select(targets => (modes, targets))
+				)
+				.ToList();
+		// Dominion Infiltration's "X target creatures": one cast per X, the targets a choice as it is cast
+		// (CastSpellAction.ChoosesTargets) — never a cast per set, 2^n against n creatures.
+		var perX = text?.Targets.Any(t => t.PerX) == true;
+		var once = perX ? null : ChoicesFor(0);
+		var atZero = once ?? ChoicesFor(0);
+		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> unchosen = [([], [])];
 		// One cast per way to pay each cost that picks a card: "sacrifice … or pay {N}" (0 is paying),
 		// a behold (any one is the same play), Twinned Vision's flashback discard.
 		var costs = CastSpellAction.CostsOf(s, card, kicked);
@@ -236,21 +243,24 @@ public static class MagicRules
 						discards.SelectMany(discard =>
 							beholds.SelectMany(beheld =>
 								returns.SelectMany(returned =>
-									choices.Select(c => new CastSpellAction
-									{
-										PlayerId = player,
-										CardId = card.Id,
-										X = payment.x,
-										WithoutPayingManaCost = payment.free,
-										Targets = c.targets,
-										Modes = c.modes,
-										SacrificeId = sacrifice,
-										DiscardId = discard,
-										BeholdId = beheld,
-										ReturnId = returned,
-										Replicate = replicates,
-										Kicked = kicked,
-									})
+									(once ?? (payment.x > 0 ? unchosen : atZero)).Select(
+										c => new CastSpellAction
+										{
+											PlayerId = player,
+											CardId = card.Id,
+											X = payment.x,
+											WithoutPayingManaCost = payment.free,
+											Targets = c.targets,
+											Modes = c.modes,
+											SacrificeId = sacrifice,
+											DiscardId = discard,
+											BeholdId = beheld,
+											ReturnId = returned,
+											Replicate = replicates,
+											Kicked = kicked,
+											ChoosesTargets = perX && payment.x > 0,
+										}
+									)
 								)
 							)
 						)
@@ -476,6 +486,7 @@ public static class MagicRules
 		typeof(ChooseFromLibraryTopChoice),
 		typeof(ChooseAmongChoice),
 		typeof(ChoosePermanentChoice),
+		typeof(ChooseXTargetsChoice),
 		typeof(ChooseCreatureToCopyChoice),
 		typeof(ChooseHostChoice),
 		typeof(DeclareAttackerChoice),

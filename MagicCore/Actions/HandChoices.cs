@@ -218,6 +218,21 @@ public record ChooseColorChoice : ChoiceAction
 	) => PlayerId;
 }
 
+/// <summary>Nyota Uhura, after the choice: the number, kept on her (ChosenNumber).</summary>
+public record SetChosenNumberAction(int CardId) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		!s.IsOnBattlefield(CardId)
+		|| InputContext.GetValueOrDefault(ChooseNumberChoice.Chosen) is not int id
+			? new(s)
+			: new(
+				s.UpdateObject(
+					CardId,
+					s.GetCard(CardId).WithComponent(new Effects.ChosenNumber(id - 1))
+				)
+			);
+}
+
 /// <summary>Room of Refuge: its mana is the chosen color — while it stays this object.</summary>
 public record SetChosenColorAction(int CardId) : GameAction
 {
@@ -321,6 +336,9 @@ public record ChooseNumberChoice : ChoiceAction
 
 	public int PlayerId { get; init; }
 	public int Max { get; init; }
+
+	/// <summary>Nyota Uhura's number is a mana value to wait for — the AI answers by its rule, never by search.</summary>
+	public bool NamesAManaValue { get; init; }
 
 	public ChooseNumberChoice(int playerId, int max)
 	{
