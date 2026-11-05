@@ -311,6 +311,8 @@ public enum CountOf
 	TotalPowerOf, // Power 8: "creatures you control have total power 8 or greater"
 	CountersOfKind, // Anthropological Mission: "three or more quest counters on [Ref]" — Count.CounterKind
 	CreatureTypesAmong, // Federation: "creature types among non-Borg creatures you control"
+	AllCountersOn, // Jadzia Dax: "the number of counters on her" — every kind
+	LifeTotalOf, // Live Long and Prosper: "Double your life total" — the players [Ref] names
 }
 
 /// <summary>
@@ -355,6 +357,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count X = new(0, null, CountOf.X);
 
 	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
+
+	/// <summary>Jadzia Dax, Living Legacy: "an amount of {G} equal to the number of counters on her" — every kind.</summary>
+	public static Count AllCountersOn(Ref r) => new(0, r, CountOf.AllCountersOn);
+
+	/// <summary>Live Long and Prosper: "Double your life total" — gain this much (CR 119.5).</summary>
+	public static Count LifeTotalOf(Ref r) => new(0, r, CountOf.LifeTotalOf);
 
 	public static Count ChargeCountersOn(Ref r) => new(0, r, CountOf.ChargeCountersOn);
 
@@ -499,6 +507,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Distinct()
 				.Count(),
 			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
+			CountOf.AllCountersOn => Cards().Sum(c => c.AllCounters().Sum(k => k.N)),
+			CountOf.LifeTotalOf => ids.Sum(id => s.GetObject(id) is MagicPlayer p ? p.Life : 0),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),

@@ -360,8 +360,17 @@ public static class Triggers
 						? []
 						: AbilitiesOf(s, died.LastKnown)
 				)
+					// "When this dies", and its own "whenever [this or another] creature … dies" seeing
+					// its own death — leaves-the-battlefield abilities look back (CR 603.10a; Excalbian
+					// Gamemaster). Another's death is matched on the battlefield.
+					// ponytail: so a creature dying ALONGSIDE others misses their deaths (a wrath: Gamemaster
+					// triggers once, not three times). Match its Died abilities against every DiedEvent in
+					// the batch if a card needs it (DesignNotes).
 					.Where(a =>
-						a.On.ReadFrom == ReadFrom.TheDyingCard
+						(
+							a.On.ReadFrom == ReadFrom.TheDyingCard
+							|| a.On.On == EventKind.Died && a.On.ReadFrom == ReadFrom.Battlefield
+						)
 						&& !a.FromGraveyard
 						&& Concerns(s, a.On, died.LastKnown, died.LastKnown)
 					)
@@ -643,20 +652,23 @@ public static class Triggers
 			var choosable = ChoosableModes(s, t);
 			if (choosable.Count < t.Ability.Choose)
 				continue; // not enough modes can be chosen: the ability is removed (CR 700.2a)
-			s = s.SpawnAction(
-				new PipelineAction
+			var choice = new ChooseModesChoice(
+				t.Source.ControllerId,
+				t.Source.Id,
+				t.Ability,
+				choosable
+			);
+			if (
+				t.Ability.ChooseAnyNumberIf is { } anyNumber
+				&& anyNumber.Holds(s, Conditions.Of(t.Source))
+			)
+				choice = choice with
 				{
-					Steps =
-					[
-						new ChooseModesChoice(
-							t.Source.ControllerId,
-							t.Source.Id,
-							t.Ability,
-							choosable
-						),
-						new QueueModalTriggerAction { Trigger = t },
-					],
-				}
+					MaxChoices = choosable.Count,
+					Prompt = "Choose one or more",
+				};
+			s = s.SpawnAction(
+				new PipelineAction { Steps = [choice, new QueueModalTriggerAction { Trigger = t }] }
 			);
 		}
 		return s.SpawnAction(new GivePriorityAction { PlayerId = priorityPlayerId });

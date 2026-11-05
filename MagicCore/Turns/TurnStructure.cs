@@ -13,13 +13,16 @@ public static class TurnStructure
 {
 	public const int MaxHandSize = 7;
 
-	/// <summary>Seven, or less while a permanent you control says so (Necrodominance: five).</summary>
+	/// <summary>Seven, or less while a permanent you control says so (Necrodominance: five); none while Deep Space Scan's "until your next turn" lasts.</summary>
 	public static int MaxHandSizeOf(GameState s, int player) =>
-		s.CardsIn(player, ZoneType.Battlefield)
-			.SelectMany(s.AbilitiesOf<Effects.MaximumHandSize>)
-			.Select(m => m.N)
-			.Append(MaxHandSize)
-			.Min();
+		s.CardsIn(player, ZoneType.Command)
+			.Any(c => c.GetComponents<UntilEndOfTurn>().Any(u => u.NoMaximumHandSize))
+			? int.MaxValue
+			: s.CardsIn(player, ZoneType.Battlefield)
+				.SelectMany(s.AbilitiesOf<Effects.MaximumHandSize>)
+				.Select(m => m.N)
+				.Append(MaxHandSize)
+				.Min();
 
 	/// <summary>
 	/// CR 117.5: every time a player would receive priority, state-based actions are checked and

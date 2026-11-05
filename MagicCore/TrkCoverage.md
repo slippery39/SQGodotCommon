@@ -12,7 +12,16 @@ graveyard, block and target restrictions) and their 17 commons and uncommons; ba
 commons and uncommons (play from exile — an opponent's library, face down, taxed, any type of mana; a
 destroy replacement; a draw trigger; can't attack alone; lands enter untapped; a mana restriction for
 artifacts; the first spell this game; a this-turn trigger on a target; enter as a copy with counters;
-Zefram Cochrane's three)** — 206/311 play, with the basics and Mugato: **every common and uncommon.**
+Zefram Cochrane's three); batch 5a, 40 tier 1–2 rares and mythics (the five enters-untapped lands, no
+maximum hand size, any token an Illusion, a discard choice's "then", look and take onto the battlefield, the
+sacrificed creature as an ability's event card, "choose one or more" with an empty hand, cast from exile, a
+dying permanent seeing its own death)** — 246/311 play, with the basics and Mugato: **every common and
+uncommon**, 34/80 rares, 6/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
+Trimatrix (1 → 3) and Captain Jean-Luc Picard (tap three or seven untapped), Gul Dukat (life lost this
+turn), Seven of Nine (base P/T become 7/9), Branching Timeline (reveal X, every permanent card onto the
+battlefield), Dominion Infiltration (X targets, changeling — with the one-offs), Starfleet Academy (a mana
+ability that costs mana — Shayne: a real one); Replicator 1 → 2. **Batch 5b:** Dr. McCoy, Geordi La Forge,
+Starfleet Academy, Trimatrix, Picard, Gul Dukat, Seven of Nine, Branching Timeline.
 Batch 4c re-tiered from the full text: Ensign Pavel Chekov, Vulcan Mind-Meld and Zero 3 → 2 (playing from
 exile already took anyone's card). Batch 4 re-tiered from the full text: Dominion
 Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first
@@ -54,7 +63,7 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | QUEST, ANY-COUNTER | DONE (batch 4a): `Card.Counters` (`PutCounters`, `RemoveCountersOfKind`, `Count.CountersOfKind`), `Is.WithAnyCounter`. Not yet: peace counters (Peace in Our Time), Brad Boimler's "plus one" of every kind (4b) | `CounterKinds` |
 | KICKER | DONE (batch 4a): `KickerComponent`, `WasKicked`, `TargetSpec.IfKicked`. Not yet: Mirror Universe Intrusion | — |
 | SHOCK | "As this land enters, you may pay 2 life. If you don't, it enters tapped." | `EntersTappedComponent(Unless)` |
-| ENTERS-UNTAPPED | "When this land enters untapped, choose one —" | `EntersTappedComponent` + a modal trigger |
+| ENTERS-UNTAPPED | DONE (batch 5a): `TrkCards.EntersUntapped` — a `SelfEnters` trigger whose Subject is `!Is.Tapped`, so Warp Speed's lands trigger too | — |
 | CANT-BLOCK | DONE (batch 4a): `Combat.CantBlock`. Not yet: Storied Veteran (cast from the graveyard), De-evolve (TYPE-SET), Troubling Tribbles | — |
 | LOOK-TAKE | DONE (MC-5.2, batch 3): `LookAndTake(n, filter) { Reveal, Must, RestToGraveyard }` | — |
 | DELAYED-RETURN | DONE (batch 4b): `Flicker.AtNextEndStep` (the delayed trigger on the exiled card); `AtNextEndStep` (one in your command zone, Erica) | — |

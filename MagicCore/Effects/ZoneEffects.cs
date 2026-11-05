@@ -380,13 +380,15 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 
 	/// <summary>
 	/// The token actually created — Draconic Visitor: an artifact token under its controller's control
-	/// is a Dragon instead (CR 614.1a). Every token goes through here, copies included.
+	/// is a Dragon instead (CR 614.1a); Holo-Engineer: any token is an Illusion. Every token goes
+	/// through here, copies included.
 	/// </summary>
 	public static Card Instead(GameState s, int controller, Card token) =>
-		token.Is(CardType.Artifact)
-		&& s.CardsIn(controller, ZoneType.Battlefield)
+		s.CardsIn(controller, ZoneType.Battlefield)
 			.SelectMany(s.AbilitiesOf<ArtifactTokensBecome>)
-			.FirstOrDefault()
+			// ponytail: the first on the battlefield wins — with Draconic Visitor AND Holo-Engineer the
+			// controller should choose which applies (CR 616.1). A choice if a deck ever runs both.
+			.FirstOrDefault(r => r.AnyToken || token.Is(CardType.Artifact))
 			is { } instead
 			? CardFactory.Create(new(instead.Token, instead.Abilities), controller)
 			: token;
@@ -417,6 +419,9 @@ public record CreateTokenCopy(Ref What) : Effect
 
 	/// <summary>Blastoneuron: "exile target creature card … from your graveyard. Create a token that's a copy of it." — a card in exile, not a permanent.</summary>
 	public bool OfAnExiledCard { get; init; }
+
+	/// <summary>Replicator: "Create a tapped token that's a copy of target token you control."</summary>
+	public bool Tapped { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -456,7 +461,7 @@ public record CreateTokenCopy(Ref What) : Effect
 				IsToken = true,
 			};
 			(s, copy) = s.AddObject(copy);
-			s = s.EnterBattlefield(copy.Id, Controller);
+			s = s.EnterBattlefield(copy.Id, Controller, tapped: Tapped);
 			// after entering: a zone change strips a delayed trigger, entering included
 			if (ExileAtNextEndStep)
 				s = ReturnFromExileUnderYourControl.Delay(
@@ -1351,6 +1356,9 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 	/// </summary>
 	public int? OwnerMayPlayTaxed { get; init; }
 
+	/// <summary>Salt Vampire: "If you do, that player exiles that card, then draws a card." — run only when a card was chosen.</summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
@@ -1382,6 +1390,7 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 								new MakeChosenPlayableAction(
 									new PlayableFromExile(player, int.MaxValue) { Tax = tax }
 								),
+								.. IfChosen(),
 							]
 							:
 							[
@@ -1389,12 +1398,16 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 								ExileInstead
 									? new ExileChosenLinkedAction()
 									: new MoveChosenToGraveyardAction { PlayerId = player },
+								.. IfChosen(),
 							],
 					}
 				);
 		}
 		return new(s);
 	}
+
+	GameAction[] IfChosen() =>
+		Then.IsEmpty ? [] : [new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen }];
 }
 
 /// <summary>The chosen cards to exile, each linked to this ability's source as it is now (CR 607.2a).</summary>
@@ -1467,6 +1480,9 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	/// <summary>Pattern Buffer Preservation: "the other into your graveyard", not the bottom.</summary>
 	public bool RestToGraveyard { get; init; }
 
+	/// <summary>Hit It!: "Put a land card from among them onto the battlefield tapped" — not into your hand.</summary>
+	public bool OntoBattlefieldTapped { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var top = s.CardsIn(Controller, ZoneType.Library)
@@ -1479,10 +1495,15 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			Ids = top,
 			Zone = ZoneType.Library,
 			Filter = Filter,
-			Prompt = Must ? "Put one into your hand" : "You may put one into your hand",
+			Prompt =
+				(Must ? "Put one " : "You may put one ")
+				+ (OntoBattlefieldTapped ? "onto the battlefield" : "into your hand"),
 			MinChoices = Must ? 1 : 0,
 		};
-		var put = new PutLookedAtAction(Controller, top, Reveal, RestToGraveyard);
+		var put = new PutLookedAtAction(Controller, top, Reveal, RestToGraveyard)
+		{
+			OntoBattlefieldTapped = OntoBattlefieldTapped,
+		};
 		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
 		return new(
 			s.SpawnAction(
@@ -1505,12 +1526,16 @@ public record PutLookedAtAction(
 	bool RestToGraveyard
 ) : GameAction
 {
+	public bool OntoBattlefieldTapped { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var taken = ChooseCardsFromHandChoice.Read(InputContext).ToHashSet();
 		foreach (var id in taken)
 		{
-			s = s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Hand));
+			s = OntoBattlefieldTapped
+				? s.EnterBattlefield(id, PlayerId, tapped: true)
+				: s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Hand));
 			if (Reveal)
 				s = s.MakeKnown(id, Knowers.Everyone);
 		}

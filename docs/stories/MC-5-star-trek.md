@@ -96,6 +96,23 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   with a note — showing it on the table goes with TBL-6. **Pet Sehlat declared alone just doesn't attack,
   with a note**; the table refusing that declaration is a backlog story (TBL-7).
 
+- 2026-11-02, Shayne: **the rares and mythics come BEFORE the boosters** (MC-5.4) — "I would rather continue
+  on with the rares and mythics first." Every card plays before a pack is opened; the plan was boosters
+  first (they are sealed and draft's critical path, and a missing rare would play vanilla). The C/U finished
+  four days ahead of plan, so both still fit before Nov 10.
+
+- 2026-11-04, Shayne (MC-5.3 batch 5's questions): the re-tier from the full text gave 24 tier 1, 19 tier
+  2 and 6 tier 3. **Batch 5 is two sessions**: 5a the 24 tier-1 cards and 16 of the tier-2 cards (40);
+  5b Dr. McCoy, Geordi La Forge, Starfleet Academy and five tier-3 cards (Collation Trimatrix, Captain
+  Picard: tap three or seven; Gul Dukat: life lost this turn; Seven of Nine: base P/T; Branching
+  Timeline). Dominion Infiltration (X targets, changeling) joins the tier-3 one-offs. **Starfleet
+  Academy's "{5}, {T}: add mana" is a REAL mana ability** — the payment solver learns mana abilities
+  that cost mana (tier 3), not a stack ability.
+
+- 2026-11-04, Shayne (batch 5a's review): **Sulu's "an Equipment or Spacecraft entered … this turn" counts
+  one that has left again** — batch 5a read it from what is still there; fixed in 5b. The sprint ends here
+  (usage 98%, the reset tomorrow): what is unfinished moves to the next sprint.
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -143,7 +160,12 @@ Open questions:
       counting a `Count`; `Threshold` moved to `Scripting.cs`. Batch 4c
       done 2026-11-01: the last 14 C/U (every common and uncommon now plays, 206/311), with the options
       `MayEnterAsCopy.Of/NotLegendary/WithCounters/Optional`, `ReturnFromYourGraveyard.To`, `Both`,
-      `YouChooseTheyDiscard.Optional/OwnerMayPlayTaxed`. Next: rares and mythics
+      `YouChooseTheyDiscard.Optional/OwnerMayPlayTaxed`. Batch 5a done 2026-11-04: 40 tier 1–2 rares and
+      mythics (246/311), with the options `CreateTokenCopy.Tapped`, `ArtifactTokensBecome.AnyToken`,
+      `YouChooseTheyDiscard.Then`, `LookAndTake.OntoBattlefieldTapped`, `TriggeredAbilityComponent.ChooseAnyNumberIf`,
+      `MayCastFromExile`, `NoMaximumHandSizeUntilYourNextTurn`, `Count.LifeTotalOf`/`AllCountersOn`, an
+      activation's event card the creature sacrificed, `TrkCards.EntersUntapped` (ENTERS-UNTAPPED); and a fix:
+      a dying permanent's own "whenever a creature dies" now sees its own death (CR 603.10a). Next: batch 5b
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -156,14 +178,35 @@ Open questions:
 
 ## Next
 
-**MC-5.3 batch 4c is done (2026-11-01): 206/311 play — every common and uncommon** (96/96 C, 110/110 U).
+**MC-5.3 batch 5a is done (2026-11-04): 246/311 play** — every common and uncommon, 34/80 R, 6/25 M. New,
+each rule in `magic-mechanics.md`: the enters-untapped lands (Warp Speed's trigger them too), no maximum
+hand size until your next turn, every token an Illusion (Holo-Engineer), cast from exile (Khan), "choose one
+or more" with an empty hand (Kirk), the sacrificed creature as an ability's event card (Gowron), a dying
+permanent seeing its own death (Excalbian Gamemaster — a fix in `Triggers.Collect`). Shortcut: Sulu's
+"entered this turn" counts what is still there (`DesignNotes.md`). **Next: batch 5b in a NEW session** — FIRST Sulu (Shayne: it counts an Equipment or Spacecraft that entered
+and left again this turn — a per-turn record of what entered, replacing `Is.EnteredThisTurn` there), then
+Dr. McCoy (`AtNextEndStep` on that card in the graveyard), Geordi La Forge (charge counters doubled in
+`PutCounters`, entering with them too), Starfleet Academy (a REAL mana ability that costs {5} — the payment
+solver, Shayne 2026-11-04), Collation Trimatrix and Captain Picard (tap three / seven: today
+`ActivatedAbilityComponent.Costs` throws past two — interview Shayne on how the N are chosen), Gul Dukat
+(life lost this turn: a tally and ONE life-loss path — damage, `LoseLife` and paying life write it in three
+places now), Seven of Nine (base P/T 7/9 for good — `UntilEndOfTurn.SetBase` is the until-end-of-turn
+version), Branching Timeline (reveal X, every permanent card onto the battlefield tapped). Then the tier-3
+one-offs (57, Dominion Infiltration among them), MC-5.4 boosters, the Stardates (MC-5.6).
+
+**MC-5.3 batch 4c was done (2026-11-01): 206/311 play — every common and uncommon** (96/96 C, 110/110 U).
 New this batch, each rule in `magic-mechanics.md`: exile face down, playing an opponent's exiled card, one
 destroy path judged together, a draw event, can't attack alone, lands enter untapped, Spacecraft enter with
 counters, a mana restriction for artifacts' abilities, the first spell this game, a this-turn trigger on one
 object, enter as a copy with counters, Zefram's cast from the top. Batch 4c's shortcuts are in
 `DesignNotes.md` (Sehlat alone not refused — TBL-7; Zefram's top card a log line — TBL-6; face-down cards
-not hidden from the search; a copy misses others' entry rules). **Next: MC-5.4, boosters (sealed and draft
-on TRK) — then the rares and mythics (105) in batches, each in a NEW session.**
+not hidden from the search; a copy misses others' entry rules). **Next: the rares and mythics (105) in
+batches, each in a NEW session — then MC-5.4, boosters.**
+
+**Changed 2026-11-02 (Shayne): the rares and mythics FIRST, then MC-5.4.** Each batch re-tiers its cards from
+the full text before building — the re-tiers mostly go UP (batch 5: six 1–2s were tier 3) — and is cut when
+too many are tier 3 (ask Shayne). The tier-3 one-offs go in batches of ~14 (the 10 shocklands are one
+mechanic: SHOCK, with Engineered Explosives' sunburst nearby).
 Every batch starts in a NEW session
 (`/card-batch` step 0) and ends with its usage row (`tools/usage_report.py --log`,
 `docs/findings/card-batch-usage.md`) — this set tests that workflow.
@@ -182,8 +225,8 @@ The plan, one or more fresh sessions per row, every card by Nov 10:
 | Nov 1 | **MC-5.5** the card registry (functionality decoupled from printings); TrkCards; tokens; the 10 Planet duals |
 | Nov 2–3 | Tier 0–1 commons, then uncommons (~118) |
 | Nov 4–6 | Station; the small mechanics (beam me up, strange new worlds, dilemma, Federation, power 8, becomes tapped, counters); Sagas, Kicker → ~185 of 206 C/U |
-| Nov 6–7 | Provisional boosters, TRK on Sealed and Draft (MC-5.4); DATA-2's rating method checked on FRA against 17lands |
-| Nov 7–9 | Rares and mythics: ~49 tier 1–2, then ~56 tier-3 one-offs in batches of ~14 |
+| Nov 2–7 | Rares and mythics: ~49 tier 1–2, then ~56 tier-3 one-offs in batches of ~14 (moved ahead of boosters — Shayne, 2026-11-02) |
+| Nov 7–9 | Provisional boosters, TRK on Sealed and Draft (MC-5.4); DATA-2's rating method checked on FRA against 17lands |
 | Nov 9–10 | The TRK rating run (ask first: long), bots on it, a draft to check; the Stardates (MC-5.6) last |
 
 Traps: scripts go in `Sets/Trk/TrkCards.cs`; a reprint FRA already scripts is never scripted again

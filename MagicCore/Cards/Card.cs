@@ -471,6 +471,9 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 
 	/// <summary>I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)" — Characteristics.Subtypes.</summary>
 	public string? BecomesCreatureType { get; init; }
+
+	/// <summary>Deep Space Scan: "You have no maximum hand size until your next turn." — on an object in your command zone; TurnStructure.MaxHandSizeOf.</summary>
+	public bool NoMaximumHandSize { get; init; }
 }
 
 /// <summary>

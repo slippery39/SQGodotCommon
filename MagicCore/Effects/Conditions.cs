@@ -18,10 +18,18 @@ public abstract record Condition
 /// </summary>
 public record Matches(Ref What, Filters.Filter Filter) : Condition
 {
+	/// <summary>
+	/// Gowron: "If you sacrificed a Klingon this way" — the event card as it was before the cost moved
+	/// it (its snapshot), so a Klingon token that ceased to exist in the graveyard still counts.
+	/// </summary>
+	public bool AsItLastWas { get; init; }
+
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
 	{
 		var asking = ContextKeys.Asking(context);
-		return What.ObjectsAsTheyWere(s, context).Any(o => Filter.Matches(s, o, asking));
+		return (
+			AsItLastWas ? What.CountedAsTheyWere(s, context) : What.ObjectsAsTheyWere(s, context)
+		).Any(o => Filter.Matches(s, o, asking));
 	}
 }
 

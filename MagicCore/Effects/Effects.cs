@@ -598,6 +598,23 @@ public record UntilYourNextTurnWhenever(TriggeredAbilityComponent Ability) : Eff
 }
 
 /// <summary>
+/// Deep Space Scan, Live Long and Prosper: "You have no maximum hand size until your next turn." — an
+/// object in your command zone, gone as your next turn begins (TurnStructure.EndUntilYourNextTurn).
+/// </summary>
+public record NoMaximumHandSizeUntilYourNextTurn : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			GetEmblem.ToCommandZone(
+				s,
+				Controller,
+				$"{Source(s).Name} (until your next turn)",
+				[new UntilEndOfTurn { UntilTurnOf = Controller, NoMaximumHandSize = true }]
+			)
+		);
+}
+
+/// <summary>
 /// "This turn" / "until end of turn" effects that belong to no permanent: each is an object in its
 /// controller's command zone, so the table shows it, and it ends as the next turn begins
 /// (TurnStructure, with the TurnTally reset). Read by <see cref="MagicState.ThisTurnEffects{T}"/>;

@@ -36,6 +36,11 @@ public static class Playable
 					|| s.HasAbility<MayCastFromYourGraveyard>(card)
 				)
 			)
+			|| (
+				s.IsIn(card.Id, playerId, ZoneType.Exile)
+				&& !card.HasComponent<ExiledFaceDown>()
+				&& s.HasAbility<MayCastFromExile>(card)
+			)
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| IsCastableThroughLink(s, card, playerId)

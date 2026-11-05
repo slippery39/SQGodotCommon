@@ -273,12 +273,6 @@ public static class FraCards
 		1
 	);
 
-	/// <summary>"Enters tapped unless you control two or more other lands".</summary>
-	static readonly Condition YouControlTwoOrMoreOtherLands = new AtLeast(
-		Count.NumberOf(Ref.Permanents(Is.Land & Is.Yours & !Is.Source)),
-		2
-	);
-
 	/// <summary>"As long as you control a Jace planeswalker".</summary>
 	static readonly Condition YouControlAJace = new AtLeast(
 		Count.NumberOf(Ref.Permanents(Is.Planeswalker & Is.Yours & Is.Subtype("Jace"))),

@@ -62,6 +62,15 @@ public static class TrkCards
 	/// <summary>Cleveland Booker, Empath: "a 2/2 red and green Worm creature token with 'This token can't block.'"</summary>
 	public static readonly CardData Worm = Token("Worm", "Creature — Worm", "2", "2", ["R", "G"]);
 
+	/// <summary>Captain Jonathan Archer: "Porthos, a legendary 1/1 green Dog creature token".</summary>
+	public static readonly CardData Porthos = Token(
+		"Porthos",
+		"Legendary Creature — Dog",
+		"1",
+		"1",
+		["G"]
+	);
+
 	/// <summary>"A tapped Planet land token named New Planet with '{T}: Add one mana of any color.'"</summary>
 	public static readonly CardData NewPlanet = Token("New Planet", "Land — Planet");
 
@@ -84,6 +93,45 @@ public static class TrkCards
 			new ManaAbilityComponent(a),
 			new ManaAbilityComponent(b),
 		];
+
+	/// <summary>
+	/// The enters-untapped lands (Federation Outpost …): "This land enters tapped unless you control two
+	/// or more other lands. When this land enters untapped, choose one — • [mode] • Surveil 1. {T}: Add
+	/// [color]." Untapped is read as it enters, so Warp Speed's lands enter untapped and trigger too.
+	/// </summary>
+	static ImmutableArray<GameComponent> EntersUntapped(string name, ManaColor color, Mode mode) =>
+		[
+			new EntersTappedComponent(YouControlTwoOrMoreOtherLands),
+			ModalWhen(
+				name,
+				TriggerEvent.SelfEnters with
+				{
+					Subject = Is.Source & !Is.Tapped,
+				},
+				1,
+				mode,
+				M([], new Surveil(1))
+			),
+			new ManaAbilityComponent(color),
+		];
+
+	/// <summary>
+	/// Captain James T. Kirk: "Whenever Captain Kirk enters or attacks, choose one. If you have no cards
+	/// in hand, choose one or more instead. • Discard a card, then draw a card. • Create a 1/1 red
+	/// Officer creature token. • Creatures you control get +1/+0 until end of turn."
+	/// </summary>
+	static TriggeredAbilityComponent CaptainKirk(Trigger on) =>
+		ModalWhen(
+			"Captain James T. Kirk",
+			on,
+			1,
+			M([], new Discard(Ref.You, 1), new DrawCards(Ref.You, 1)),
+			M([], new CreateTokens(Officer, 1)),
+			M([], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0))
+		) with
+		{
+			ChooseAnyNumberIf = new Not(new AtLeast(Count.NumberOf(Ref.CardsInYourHand), 1)),
+		};
 
 	/// <summary>"Artifact creatures you control" (Assault Drone, Locutus, Command Subadjunct).</summary>
 	static readonly Filter ArtifactCreaturesYouControl = Is.Artifact & Is.Creature & Is.Yours;
@@ -1087,8 +1135,10 @@ public static class TrkCards
 			["Sarcophagus, Ship of the Dead"] =
 			[
 				new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source) { Power = 1 },
+				// Not its own death: as a creature its "if" fails (it was one), and otherwise it can't die —
+				// but the "if" can't see it as it last was, so the look-back (CR 603.10a) would fire it.
 				When(
-					new Trigger(EventKind.Died) { Subject = Is.Creature },
+					new Trigger(EventKind.Died) { Subject = Is.Creature & !Is.Source },
 					[],
 					new AddChargeCounters(Ref.Source, 1)
 				) with
@@ -2181,6 +2231,449 @@ public static class TrkCards
 					CounterKinds.Charge,
 					2
 				),
+			],
+			// ===== MC-5.3 batch 5a: the tier 1–2 rares and mythics — enters untapped, no maximum hand size, any token an Illusion =====
+			["Armus, Skin of Evil"] =
+			[
+				When(
+					TriggerEvent.YourEndStep,
+					[TargetSpec.Player(Is.Opponents)],
+					new Discard(Ref.Target(), 2)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{B}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), -4, -4)]
+				)
+				{
+					Costs = [new DiscardSelfCost()],
+					From = ZoneType.Hand,
+					Targets = [Creature],
+				},
+			],
+			["Captain James T. Kirk"] =
+			[
+				CaptainKirk(TriggerEvent.SelfEnters),
+				CaptainKirk(TriggerEvent.SelfAttacks),
+			],
+			["Captain Jonathan Archer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Porthos, 1)),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{G}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), Federation, Federation)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Creature & Is.Yours)],
+					SorcerySpeed = true,
+				},
+			],
+			["Crystalline Entity"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Destroy(Ref.Permanents(Is.Creature & !Is.Artifact))
+				) with
+				{
+					If = new SourceWasCast(),
+				},
+			],
+			["D-7 Battle Cruiser"] =
+			[
+				.. Station(8, "Flying"),
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new CreateTokens(KlingonWarrior, 1) { SacrificeAtNextEndStep = true }
+				) with
+				{
+					If = new AtLeast(Count.ChargeCountersOn(Ref.Source), 3),
+				},
+			],
+			["Deep Space Scan"] =
+			[
+				Spell(
+					[],
+					new DrawCards(Ref.You, DifferentlyNamedLands),
+					new NoMaximumHandSizeUntilYourNextTurn()
+				),
+			],
+			["Elim Garak, Simple Tailor"] =
+			[
+				When(
+					TriggerEvent.YouFaceADilemma,
+					[],
+					new LoseLife(Ref.EachOpponent, 2),
+					new GainLife(Ref.You, 2)
+				),
+			],
+			["Encounter the Unknown"] =
+			[
+				ModalSpell(
+					"Encounter the Unknown",
+					1,
+					M([], new ExileTopPlayable { N = 2 }),
+					M([], new DealDamage(Ref.AllCreatures, 2), new DealDamage(Ref.EachPlayer, 2))
+				),
+			],
+			["Excalbian Gamemaster"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Officer, DifferentlyNamedLands)),
+				When(
+					TriggerEvent.CreatureYouControlDies,
+					[Target(Is.Creature & Is.Yours)],
+					new AddCounters(Ref.Target(), 1)
+				),
+			],
+			["Federation Outpost"] = EntersUntapped(
+				"Federation Outpost",
+				ManaColor.White,
+				M([], new GainLife(Ref.You, 2))
+			),
+			["Federation Resupply"] =
+			[
+				Spell(
+					[],
+					new SearchLibrary(CardType.None, ZoneType.Hand)
+					{
+						Filter =
+							Is.Subtype("Aura") | Is.Subtype("Equipment") | Is.Subtype("Spacecraft"),
+						FilterText = "Aura, Equipment, or Spacecraft",
+						Reveal = true,
+					}
+				),
+				BeamMeUp("{3}{W}"),
+			],
+			["General Chang, Cold Warrior"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new AddCounters(Ref.Permanents(Is.Subtype("Klingon") & Is.Yours), 1)]
+				)
+				{
+					Costs = [new SacrificeCost(Is.Creature)],
+				},
+			],
+			["Gowron, Eager for Battle"] =
+			[
+				When(
+					new Trigger(EventKind.Died) { Subject = Is.Creature & !Is.Source },
+					[],
+					new AddCounters(Ref.Source, 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Trample"),
+						new If(
+							new Matches(Ref.EventCard, Is.Subtype("Klingon"))
+							{
+								AsItLastWas = true,
+							},
+							[new DrawCards(Ref.You, 1), new LoseLife(Ref.You, 1)]
+						),
+					]
+				)
+				{
+					Costs = [new SacrificeCost(Is.Creature & !Is.Source)],
+				},
+			],
+			["Grand Nagus Zek"] =
+			[
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = Count.NumberOf(Ref.Permanents(Is.Subtype("Treasure") & Is.Yours)),
+					Toughness = Count.NumberOf(Ref.Permanents(Is.Subtype("Treasure") & Is.Yours)),
+				},
+				When(
+					new Trigger(EventKind.Died) { Subject = Is.Creature & !Is.Source },
+					[],
+					CreateTreasure(1)
+				) with
+				{
+					OncePerTurn = true,
+				},
+			],
+			["Hit It!"] =
+			[
+				new StaticEffectComponent(Is.Creature & Is.Yours, "Haste"),
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new LookAndTake(5, Is.Land)
+					{
+						Reveal = true,
+						Must = true,
+						RestToGraveyard = true,
+						OntoBattlefieldTapped = true,
+					}
+				),
+			],
+			["Holo-Engineer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(ArtifactIllusion, 1)),
+				new ArtifactTokensBecome(ArtifactIllusion, []) { AnyToken = true },
+			],
+			["Jadzia Dax, Living Legacy"] =
+			[
+				When(
+					TriggerEvent.YourFirstMainPhase,
+					[],
+					new AddCounters(Ref.Source, 1),
+					new AddMana(ManaColor.Green, Count.AllCountersOn(Ref.Source))
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{G}"),
+					[new AddCounters(Ref.Target(), 2)]
+				)
+				{
+					Costs = [new DiscardSelfCost()],
+					From = ZoneType.Hand,
+					Targets = [Creature],
+				},
+			],
+			["Khan, Vengeful Heart"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new MaySacrifice(
+						(Is.Creature | Is.Artifact) & !Is.Source,
+						[new DrawCards(Ref.You, 2)]
+					)
+				),
+				new MayCastFromExile(),
+			],
+			["Live Long and Prosper"] =
+			[
+				new CantBeCountered(),
+				Spell(
+					[],
+					new GainLife(Ref.You, Count.LifeTotalOf(Ref.You)),
+					new DrawCards(Ref.You, Count.NumberOf(Ref.CardsInYourHand)),
+					new NoMaximumHandSizeUntilYourNextTurn()
+				),
+			],
+			["MACO Strike Team"] =
+			[
+				When(
+					new Trigger(EventKind.BecameTarget)
+					{
+						Subject = Is.Creature & Is.Yours,
+						By = Whose.Opponent,
+					},
+					[],
+					new CreateTokens(Officer, 1) { Tapped = true }
+				),
+			],
+			["Ni'Var Science Academy"] = EntersUntapped(
+				"Ni'Var Science Academy",
+				ManaColor.Blue,
+				M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Flying"))
+			),
+			["Pah-Wraith"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, DifferentlyNamedLands, 0)
+				),
+			],
+			["Primary Unimatrix Adjunct"] =
+			[
+				new StaticEffectComponent(ArtifactCreaturesYouControl, "Double strike"),
+			],
+			["Q Continuum"] = EntersUntapped(
+				"Q Continuum",
+				ManaColor.Green,
+				M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), 1, 1, "Vigilance"))
+			),
+			["Quark's Bar"] = EntersUntapped(
+				"Quark's Bar",
+				ManaColor.Red,
+				M([], new DealDamage(Ref.EachOpponent, 1))
+			),
+			["Replicator"] =
+			[
+				When(TriggerEvent.SelfEnters, [], CreateFood(1)),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new CreateTokenCopy(Ref.Target()) { Tapped = true }]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Token & Is.Yours)],
+				},
+			],
+			["Romulan Bird-of-Prey"] =
+			[
+				new StaticEffectComponent(Is.Source, "Hexproof")
+				{
+					If = new Not(new Matches(Ref.Source, Is.Creature)),
+				},
+				When(
+					TriggerEvent.YouCastNoncreatureSpell,
+					[],
+					new AddChargeCounters(Ref.Source, 2)
+				) with
+				{
+					If = new Not(new Matches(Ref.Source, Is.Creature)),
+				},
+				.. Station(8, "Flying"),
+			],
+			["Salt Vampire"] =
+			[
+				// "look at" is a reveal here: the only other player is the hand's owner.
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+					{
+						Optional = true,
+						ExileInstead = true,
+						Then = [new DrawCards(Ref.Target(), 1)],
+					}
+				),
+			],
+			["Sarek, Federation Ambassador"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new DrawCards(Ref.You, Federation with { Per = 5 }),
+					// the types again, not the cards drawn: drawing changes no creature's types
+					new If(
+						new AtLeast(Federation with { Per = 5 }, 3),
+						[new AddCounters(Ref.CreaturesYouControl, 2)]
+					)
+				),
+			],
+			["Stable Wormhole"] = [When(TriggerEvent.YouAttack, [], CreateNewPlanet)],
+			["Subcommander T'Pol"] =
+			[
+				ModalWhen(
+					"Subcommander T'Pol",
+					TriggerEvent.SelfEnters,
+					1,
+					M([TargetSpec.Ability()], new Counter(Ref.Target())),
+					M(
+						[Target(Is.Artifact | Is.Creature) with { Optional = true }],
+						new Tap(Ref.Target()),
+						new AddStunCounters(Ref.Target(), 1)
+					)
+				),
+			],
+			["Sulu, Space Swashbuckler"] =
+			[
+				// ponytail: "entered … this turn" is read from what is still on the battlefield — one that
+				// entered and left again is missed. A per-turn tally if a card ever needs it (DesignNotes).
+				When(TriggerEvent.SelfBecomesTapped, [], new DrawCards(Ref.You, 1)) with
+				{
+					If = new AtLeast(
+						Count.NumberOf(
+							Ref.Permanents(
+								(Is.Subtype("Equipment") | Is.Subtype("Spacecraft"))
+									& Is.Yours
+									& Is.EnteredThisTurn
+							)
+						),
+						1
+					),
+				},
+			],
+			["Tasha Yar, Out of Time"] =
+			[
+				When(TriggerEvent.SelfDies, [], new ExileTopPlayable()),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{R}"),
+					[new CreateTokenCopy(Ref.Source) { SacrificeAtNextEndStep = true }]
+				)
+				{
+					Costs = [new ExileSelfCost()],
+					From = ZoneType.Graveyard,
+					SorcerySpeed = true,
+				},
+			],
+			["The Destruction of Praxis"] =
+			[
+				Spell(
+					[],
+					new ModifyUntilEndOfTurn(
+						Ref.AllCreatures,
+						DifferentlyNamedLands.Negated,
+						DifferentlyNamedLands.Negated
+					),
+					new If(
+						new AtLeast(DifferentlyNamedLands, 6),
+						[new CreateTokens(KlingonWarrior, 2)]
+					)
+				),
+			],
+			["The Unicomplex"] = EntersUntapped(
+				"The Unicomplex",
+				ManaColor.Black,
+				M(
+					[TargetSpec.InYourGraveyard(Is.Creature)],
+					new PutIntoLibrary(Ref.Target(), OnTop: true)
+				)
+			),
+			["Troubling Tribbles"] =
+			[
+				new StaticEffectComponent(Is.Source, Combat.CantBlock),
+				When(TriggerEvent.YourUpkeep, [], new CreateTokenCopy(Ref.Source)),
+			],
+			["U.S.S. Enterprise-A, Free Spirit"] =
+			[
+				Ward("{2}"),
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Officer, 3)),
+				.. Station(6, "Flying", "Lifelink"),
+			],
+			["U.S.S. Reliant, From Hell's Heart"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(4))],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield) { Finality = true }
+				),
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(4))],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield) { Finality = true }
+				),
+				.. Station(10, "Flying"),
+			],
+			["Wesley Crusher, Starfleet Cadet"] =
+			[
+				ModalWhen(
+					"Wesley Crusher, Starfleet Cadet",
+					TriggerEvent.SelfEnters,
+					2,
+					M(
+						[TargetSpec.Spell(!Is.Creature)],
+						new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{2}"))
+					),
+					M(
+						[Target(Is.Creature & Is.ManaValueAtMost(2))],
+						new ReturnToHand(Ref.Target())
+					),
+					M(
+						[Creature],
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBeBlocked)
+					),
+					M(
+						[TargetSpec.Player()],
+						new DrawCards(Ref.Target(), 2),
+						new Discard(Ref.Target(), 2)
+					)
+				),
+			],
+			["Year of Hell"] =
+			[
+				new SagaComponent(3),
+				Chapter(1, [], new DrawCards(Ref.EachPlayer, 1), new DealDamage(Ref.EachPlayer, 2)),
+				Chapter(2, [], new DrawCards(Ref.EachPlayer, 1), new DealDamage(Ref.EachPlayer, 2)),
+				Chapter(3, [], new DrawCards(Ref.EachPlayer, 1), new DealDamage(Ref.EachPlayer, 2)),
 			],
 		};
 

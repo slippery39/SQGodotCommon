@@ -76,7 +76,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Isolinear Processor's "an ability of an artifact source"). Treasure and Lotus are `ManaOfOneColorComponent`
   with `SacrificeSelf`: `Pay` sacrifices them, and the solver spends them last.
 - **Every token is made by `CreateTokens`** — so a replacement on tokens (Draconic Visitor's "artifact
-  tokens are Dragons instead") is applied in that one place, under whoever `ControlledBy` names.
+  tokens are Dragons instead"; Holo-Engineer's ANY token an Illusion, `ArtifactTokensBecome.AnyToken`) is
+  applied in that one place (`CreateTokens.Instead`, copies too), under whoever `ControlledBy` names.
 - **A card put onto the battlefield from anywhere enters through `MagicState.EnterBattlefield`** —
   a search, a return, a token: never a bare `MoveCard` to the battlefield, which skips its entry
   (controller, tapped, its "enters" event). `MoveChosenToAction` routes a battlefield search there.
@@ -385,4 +386,18 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `PutCounters` (`Card.AllCounters`); `Optional` is a real "may" (Flesh Duplicate's stays forced).
 - **"You may cast this card from your graveyard"** (Storied Veteran) is `MayCastFromYourGraveyard`, read by
   `Playable.CanCastFromHere` — not flashback: it isn't exiled leaving the stack, it resolves onto the
-  battlefield (with a finality counter, `EnterFromStackAction.Finality`).
+  battlefield (with a finality counter, `EnterFromStackAction.Finality`). **"… from exile"** (Khan) is
+  `MayCastFromExile` beside it — your own exile, never face down (a face-down card has no abilities).
+- **"When this land enters untapped, choose one —"** (TRK's five, `TrkCards.EntersUntapped`) is a `SelfEnters`
+  trigger whose Subject is `Is.Source & !Is.Tapped` — read as it entered, so Warp Speed's untapped lands
+  trigger too, and one entering tapped never does.
+- **A dying permanent's own "whenever a creature … dies" sees its own death** (CR 603.10a, Excalbian Gamemaster's
+  "this creature or another creature you control"): `Triggers.Collect` reads the dying card's Died triggers as
+  it last existed, not only "when this dies"; another's death is matched on the battlefield, never there.
+- **An activated ability's event card** is the creature tapped for its cost (Station's "its power") or, with
+  none tapped, the one sacrificed (Gowron: "if you sacrificed a Klingon this way" — `Matches(Ref.EventCard, …)
+  { AsItLastWas }`, its snapshot from before the cost: a sacrificed token has ceased to exist by then).
+- **"No maximum hand size until your next turn"** (Deep Space Scan) is `NoMaximumHandSizeUntilYourNextTurn`: an
+  `UntilEndOfTurn { NoMaximumHandSize }` object in your command zone, read by `TurnStructure.MaxHandSizeOf`.
+- **"Choose one. If [condition], choose one or more instead"** (Captain Kirk) is
+  `TriggeredAbilityComponent.ChooseAnyNumberIf`, judged as the modes are chosen (the trigger going on the stack).

@@ -22,6 +22,12 @@ public static class Scripting
 	/// <summary>Threshold — "as long as there are seven or more cards in your graveyard".</summary>
 	public static readonly AtLeast Threshold = new(Count.NumberOf(Ref.CardsInYourGraveyard), 7);
 
+	/// <summary>"Enters tapped unless you control two or more other lands" (FRA's slow lands, TRK's enters-untapped lands).</summary>
+	public static readonly Condition YouControlTwoOrMoreOtherLands = new AtLeast(
+		Count.NumberOf(Ref.Permanents(Is.Land & Is.Yours & !Is.Source)),
+		2
+	);
+
 	/// <summary>"Permanent card" / "nonland permanent card". No set here has battles yet.</summary>
 	public const CardType NonlandPermanentTypes =
 		CardType.Creature | CardType.Artifact | CardType.Enchantment | CardType.Planeswalker;

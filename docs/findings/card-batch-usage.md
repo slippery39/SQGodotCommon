@@ -22,3 +22,4 @@ session per batch was simulated to save 37–40%.
 | 2026-11-01 | MC-5.3: batch 4a — counters of any kind, Sagas, kicker, can't block, once each turn, 28 cards | dfef712d | 143 | 297k | 7.4M |
 | 2026-11-01 | MC-5.3: batch 4b — delayed return, leaves the graveyard, type change, second resolution, granted trigger, control, counters plus one, block/target restrictions, 17 cards | 8cd8b49f | 173 | 286k | 7.6M |
 | 2026-11-02 | MC-5.3: batch 4c — exile face down, play an opponent's exiled card, one destroy judged together, draw, can't attack alone, lands enter untapped, Zefram, 14 cards | 7cf44660 | 185 | 278k | 8.3M |
+| 2026-11-04 | MC-5.3: batch 5a — tier 1–2 rares and mythics, 40 cards | c6125612 | 143 | 280k | 5.6M |

@@ -427,6 +427,12 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 	public ImmutableList<Mode> Modes { get; init; } = [];
 	public int Choose { get; init; } = 1;
 
+	/// <summary>
+	/// Captain James T. Kirk: "choose one. If you have no cards in hand, choose one or more instead." —
+	/// judged as the modes are chosen, as it goes on the stack (CR 700.2b).
+	/// </summary>
+	public Condition? ChooseAnyNumberIf { get; init; }
+
 	/// <summary>"At …, if [condition], …" — intervening: checked as it triggers AND as it resolves (CR 603.4).</summary>
 	public Condition? If { get; init; }
 
@@ -566,7 +572,11 @@ public record ManaOfOneColorComponent(Count Amount) : GameComponent
 
 /// <summary>Draconic Visitor: "If one or more artifact tokens would be created under your control, that many [Token] are created instead."</summary>
 public record ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComponent> Abilities)
-	: GameComponent;
+	: GameComponent
+{
+	/// <summary>Holo-Engineer: "If one or more tokens would be created under your control, that many 3/3 colorless Illusion artifact creature tokens are created instead." — any token, not only artifacts.</summary>
+	public bool AnyToken { get; init; }
+}
 
 /// <summary>
 /// "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield, judged on the
@@ -782,6 +792,12 @@ public record EnchantedIsCreatureType(string Subtype) : GameComponent;
 /// (MagicState.MoveCard), so it resolves onto the battlefield (StackResolution).
 /// </summary>
 public record MayCastFromYourGraveyard : GameComponent;
+
+/// <summary>
+/// Khan, Vengeful Heart: "You may cast this card from exile." — your own exile, read by
+/// Playable.CanCastFromHere; face down it has no abilities (CR 708.2), so not then.
+/// </summary>
+public record MayCastFromExile : GameComponent;
 
 /// <summary>
 /// Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact spell from

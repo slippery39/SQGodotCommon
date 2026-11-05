@@ -472,8 +472,10 @@ public record ActivateAbilityAction : GameAction
 		)!;
 		// Station's "its power" is read as the ability resolves — from this snapshot once the creature
 		// left (last-known information). ponytail: as it was TAPPED, not as it left — a pump between
-		// the two is missed (Shayne: rare; full LKI if play shows otherwise, DesignNotes).
-		var tapped = TapId == 0 ? null : s.GetCard(TapId);
+		// the two is missed (Shayne: rare; full LKI if play shows otherwise, DesignNotes). With nothing
+		// tapped the event card is the creature sacrificed — Gowron: "If you sacrificed a Klingon this way".
+		var eventCardId = TapId != 0 ? TapId : SacrificeId;
+		var tapped = eventCardId == 0 ? null : s.GetCard(eventCardId);
 		// The taps on the state the mana search excluded them from — the same permanents; then the
 		// mana, which never uses them.
 		foreach (var cost in ability.Costs.Where(c => c.Taps))
@@ -506,7 +508,7 @@ public record ActivateAbilityAction : GameAction
 				Effects = steps,
 				Specs = specs,
 				Targets = Targets,
-				EventCardId = TapId, // "its power": the creature tapped for it
+				EventCardId = eventCardId, // "its power": the creature tapped for it, or sacrificed
 				EventSnapshot = tapped,
 			}
 		);
