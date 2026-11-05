@@ -22,6 +22,7 @@ public enum CostSlot
 	Tap, // Station: "Tap another creature you control" — which one is the player's choice
 	SecondTap, // Worf: "Tap two untapped artifacts and/or creatures" — the second one
 	Return, // Beam me up: "return a creature you control to its owner's hand"
+	TapSet, // Collation Trimatrix: "Tap three untapped artifact creatures you control" — the whole set (ActivateAbilityAction.TapIds)
 }
 
 /// <summary>A cost beyond mana — what may be chosen to pay it, whether it can be paid, and paying it.</summary>
@@ -84,7 +85,9 @@ public sealed record TapSelfCost : AdditionalCost
 /// action each (CostSlot.Tap) — Station: "Tap another creature you control", whose power is the point.
 /// "Tap two" is split into two of these as ActivatedAbilityComponent.Costs is built, the second
 /// picking into SecondTap (Worf, Honor-Bound Warrior — Shayne: the player picks both). Only an
-/// activated ability splits it: no spell or ward costs "tap two" yet.
+/// activated ability splits it: no spell or ward costs "tap two" yet. "Tap three" or more (Collation
+/// Trimatrix, Captain Jean-Luc Picard's seven Officers) is one cost picking the whole set (TapSet,
+/// ActivateAbilityAction.TapIds) — the player picks every one (Shayne, 2026-11-05).
 /// </summary>
 public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 {
@@ -94,7 +97,10 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 	/// <summary>The second of "tap two" — set by ActivatedAbilityComponent.Costs; it picks into SecondTap.</summary>
 	public bool Second { get; init; }
 
-	public override CostSlot Slot => Second ? CostSlot.SecondTap : CostSlot.Tap;
+	public override CostSlot Slot =>
+		Count >= 3 ? CostSlot.TapSet
+		: Second ? CostSlot.SecondTap
+		: CostSlot.Tap;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		s.CardsIn(playerId, ZoneType.Battlefield)

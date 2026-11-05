@@ -2664,6 +2664,142 @@ public static class TrkCards
 				Chapter(2, [], new DrawCards(Ref.EachPlayer, 1), new DealDamage(Ref.EachPlayer, 2)),
 				Chapter(3, [], new DrawCards(Ref.EachPlayer, 1), new DealDamage(Ref.EachPlayer, 2)),
 			],
+			// ===== MC-5.3 batch 5b: a delayed return on a dead card, charge counters doubled, a mana ability that costs mana, tap three or seven, life lost this turn, base P/T for good, reveal the top X =====
+			["Dr. Leonard \"Bones\" McCoy"] =
+			[
+				ModalWhen(
+					"Dr. Leonard \"Bones\" McCoy",
+					TriggerEvent.SelfEnters,
+					1,
+					M(
+						[
+							TargetSpec.InYourGraveyard(
+								Is.Type(PermanentTypes) & !Is.Subtype("Doctor")
+							),
+						],
+						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					),
+					M(
+						[Target(Is.Creature & !Is.Source) with { Optional = true }],
+						new WheneverThisTurn(
+							new TriggeredAbilityComponent(
+								new Trigger(EventKind.Died),
+								[
+									new AtNextEndStep(
+										[
+											new ReturnFromGraveyard(
+												Ref.Source,
+												ZoneType.Battlefield
+											)
+											{
+												Counters = 1,
+											},
+										]
+									)
+									{
+										On = Ref.EventCard,
+									},
+								]
+							)
+						)
+						{
+							About = Ref.Target(0),
+						}
+					)
+				),
+			],
+			["Lt. Cmdr. Geordi La Forge"] = [new ChargeCountersOnYourArtifactsDoubled()],
+			["Starfleet Academy"] =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless),
+				new ManaOfOneColorComponent(Federation) { Cost = ManaCost.Parse("{5}") },
+			],
+			["Collation Trimatrix"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new DrawCards(Ref.You, 1), new LoseLife(Ref.You, 1)]
+				)
+				{
+					Costs = [new TapUntappedCost(3, Is.Artifact & Is.Creature)],
+				},
+			],
+			["Captain Jean-Luc Picard"] =
+			[
+				new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source)
+				{
+					Power = 1,
+					Toughness = 1,
+				},
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.Creature | Is.Subtype("Spacecraft"),
+					},
+					[],
+					new CreateTokens(Officer, 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new SearchLibrary(CardType.Artifact, ZoneType.Battlefield)
+						{
+							Subtype = "Spacecraft",
+							ChargeCounters = 7,
+						},
+					]
+				)
+				{
+					Costs = [new TapUntappedCost(7, Is.Subtype("Officer"))],
+				},
+			],
+			["Gul Dukat, Colonial Prefect"] =
+			[
+				// "each opponent loses life equal to the life that player lost this turn. You gain life
+				// equal to the life lost this way" — the gain first, so both read the count before the loss.
+				When(
+					TriggerEvent.EachEndStep,
+					[],
+					new GainLife(Ref.You, Count.LifeLostThisTurnOf(Ref.EachOpponent)),
+					new LoseLife(Ref.EachOpponent, Count.LifeLostThisTurnOf(Ref.EachOpponent))
+				),
+			],
+			["Seven of Nine, Unassimilated"] =
+			[
+				When(
+					TriggerEvent.YourFirstMainPhase,
+					[],
+					new DrawCards(Ref.You, 1),
+					new If(
+						new Not(new AtLeast(DifferentlyNamedLands, 5)),
+						[new Discard(Ref.You, 1)]
+					)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{6}{U}"),
+					[
+						new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+						{
+							SetBase = (7, 9),
+							ForGood = true,
+						},
+					]
+				)
+				{
+					OnlyIf = new AtLeast(DifferentlyNamedLands, 7),
+				},
+			],
+			["Branching Timeline"] =
+			[
+				Spell(
+					[],
+					new RevealUntilOntoBattlefield(PermanentTypes)
+					{
+						Top = DifferentlyNamedLands,
+						Tapped = true,
+					}
+				),
+			],
 		};
 
 	/// <summary>A quest's threshold: "if this enchantment has N or more quest counters on it".</summary>

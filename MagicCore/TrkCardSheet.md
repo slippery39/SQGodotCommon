@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 96/96 · uncommon 110/110 · rare 34/80 · mythic 6/25 · **246/311**
+**Playable:** common 96/96 · uncommon 110/110 · rare 38/80 · mythic 10/25 · **254/311**
 
 ### A Good Day to Die
 
@@ -44,7 +44,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this land enters, you gain 1 life.  
 > {T}: Add {U} or {R}.
 
-**Status:** scripted · **tests naming it:** TrkBatch4cTests
+**Status:** scripted · **tests naming it:** TrkBatch4cTests, TrkBatch5bTests
 
 ```csharp
 ["Andoria"] = PlanetDual(ManaColor.Blue, ManaColor.Red),
@@ -157,7 +157,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this land enters, you gain 1 life.  
 > {T}: Add {R} or {W}.
 
-**Status:** scripted · **tests naming it:** TrkBatch3Tests
+**Status:** scripted · **tests naming it:** TrkBatch3Tests, TrkBatch5bTests
 
 ```csharp
 ["Bajor"] = PlanetDual(ManaColor.Red, ManaColor.White),
@@ -1313,7 +1313,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests
 
 ### Planetary Bombardment
 
@@ -4913,7 +4913,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Strange new worlds — Reveal the top X cards of your library, where X is the number of differently named lands you control. Put all permanent cards revealed this way onto the battlefield tapped and the rest on the bottom of your library in a random order.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch5bTests
+
+**Engine pieces:** `RevealUntilOntoBattlefield` — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types]…
+
+```csharp
+["Branching Timeline"] =
+[
+	Spell(
+		[],
+		new RevealUntilOntoBattlefield(PermanentTypes)
+		{
+			Top = DifferentlyNamedLands,
+			Tapped = true,
+		}
+	),
+],
+```
 
 ### Brazen Bluff
 
@@ -4984,7 +5000,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Tap three untapped artifact creatures you control: You draw a card and lose 1 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch5bTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapUntappedCost` — Tenured Tethermage: "Tap two untapped artifacts you control:" — tapping for a cost isn't…
+
+```csharp
+["Collation Trimatrix"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[new DrawCards(Ref.You, 1), new LoseLife(Ref.You, 1)]
+	)
+	{
+		Costs = [new TapUntappedCost(3, Is.Artifact & Is.Creature)],
+	},
+],
+```
 
 ### D-7 Battle Cruiser
 
@@ -5068,7 +5099,48 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Return target non-Doctor permanent card from your graveyard to your hand.  
 > • Choose up to one other target creature. When it dies this turn, return that card to the battlefield under its owner's control with a +1/+1 counter on it at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `TriggeredAbilityComponent` — "When/Whenever [event], [effects]." Goes on the stack the next time a player would get…; `WheneverThisTurn` — The Naked Time, chapter II: "Whenever a creature you control enters this turn, …" — the…
+
+```csharp
+["Dr. Leonard \"Bones\" McCoy"] =
+[
+	ModalWhen(
+		"Dr. Leonard \"Bones\" McCoy",
+		TriggerEvent.SelfEnters,
+		1,
+		M(
+			[TargetSpec.InYourGraveyard(Is.Type(PermanentTypes) & !Is.Subtype("Doctor"))],
+			new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+		),
+		M(
+			[Target(Is.Creature & !Is.Source) with { Optional = true }],
+			new WheneverThisTurn(
+				new TriggeredAbilityComponent(
+					new Trigger(EventKind.Died),
+					[
+						new AtNextEndStep(
+							[
+								new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
+								{
+									Counters = 1,
+								},
+							]
+						)
+						{
+							On = Ref.EventCard,
+						},
+					]
+				)
+			)
+			{
+				About = Ref.Target(0),
+			}
+		)
+	),
+],
+```
 
 ### Elim Garak, Simple Tailor
 
@@ -5411,7 +5483,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > If you would put one or more charge counters on an artifact you control, put twice that many charge counters on that artifact instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch5bTests
+
+**Engine pieces:** `ChargeCountersOnYourArtifactsDoubled` — Lt. Cmdr. Geordi La Forge: "If you would put one or more charge counters on an artifact…
+
+```csharp
+["Lt. Cmdr. Geordi La Forge"] = [new ChargeCountersOnYourArtifactsDoubled()],
+```
 
 ### Lwaxana Troi, Charming Guest
 
@@ -6170,7 +6248,41 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you cast a creature or Spacecraft spell, create a 1/1 red Officer creature token.  
 > Tap seven untapped Officers you control: Search your library for a Spacecraft card, put it onto the battlefield with seven charge counters on it, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch5bTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `TapUntappedCost` — Tenured Tethermage: "Tap two untapped artifacts you control:" — tapping for a cost isn't…
+
+```csharp
+["Captain Jean-Luc Picard"] =
+[
+	new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source)
+	{
+		Power = 1,
+		Toughness = 1,
+	},
+	When(
+		TriggerEvent.YouCastSpell with
+		{
+			Subject = Is.Creature | Is.Subtype("Spacecraft"),
+		},
+		[],
+		new CreateTokens(Officer, 1)
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			new SearchLibrary(CardType.Artifact, ZoneType.Battlefield)
+			{
+				Subtype = "Spacecraft",
+				ChargeCounters = 7,
+			},
+		]
+	)
+	{
+		Costs = [new TapUntappedCost(7, Is.Subtype("Officer"))],
+	},
+],
+```
 
 ### Captain Kathryn Janeway
 
@@ -6282,7 +6394,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace  
 > At the beginning of each end step, each opponent loses life equal to the life that player lost this turn. You gain life equal to the life lost this way. (Damage causes loss of life.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch5bTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Gul Dukat, Colonial Prefect"] =
+[
+	// "each opponent loses life equal to the life that player lost this turn. You gain life
+	// equal to the life lost this way" — the gain first, so both read the count before the loss.
+	When(
+		TriggerEvent.EachEndStep,
+		[],
+		new GainLife(Ref.You, Count.LifeLostThisTurnOf(Ref.EachOpponent)),
+		new LoseLife(Ref.EachOpponent, Count.LifeLostThisTurnOf(Ref.EachOpponent))
+	),
+],
+```
 
 ### Infinite Diversity
 
@@ -6420,7 +6548,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > At the beginning of your first main phase, draw a card. Then discard a card unless you control five or more differently named lands.  
 > {6}{U}: Seven of Nine's base power and toughness become 7/9. Activate only if you control seven or more differently named lands.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch5bTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Seven of Nine, Unassimilated"] =
+[
+	When(
+		TriggerEvent.YourFirstMainPhase,
+		[],
+		new DrawCards(Ref.You, 1),
+		new If(new Not(new AtLeast(DifferentlyNamedLands, 5)), [new Discard(Ref.You, 1)])
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{6}{U}"),
+		[new ModifyUntilEndOfTurn(Ref.Source, 0, 0) { SetBase = (7, 9), ForGood = true }]
+	)
+	{
+		OnlyIf = new AtLeast(DifferentlyNamedLands, 7),
+	},
+],
+```
 
 ### Starfleet Academy
 
@@ -6429,7 +6578,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > Federation — {5}, {T}: Choose a color. Add an amount of mana of that color equal to the number of creature types among non-Borg creatures you control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch5bTests
+
+**Engine pieces:** `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ManaOfOneColorComponent` — Loot, the Nexus: "{T}: Choose a color. Add one mana of that color for each [Amount]."…
+
+```csharp
+["Starfleet Academy"] =
+[
+	new ManaAbilityComponent(ManaColor.Colorless),
+	new ManaOfOneColorComponent(Federation) { Cost = ManaCost.Parse("{5}") },
+],
+```
 
 ### U.S.S. Enterprise-A, Free Spirit
 

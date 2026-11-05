@@ -267,6 +267,7 @@ public static class MagicRules
 			.Select((ability, index) => (ability, index))
 			.Where(a => a.ability.From == zone)
 			.SelectMany(a =>
+				from taps in TapSets(a.ability.Costs, s, player, card.Id).ToList() // once per ability, not per target
 				from modes in Modal.Choices(a.ability.Modes, a.ability.Choose)
 				from targets in TargetSpec.Combinations(
 					s,
@@ -311,9 +312,40 @@ public static class MagicRules
 						ExileId = exile,
 						TapId = tap,
 						SecondTapId = secondTap,
+						TapIds = taps,
 					}
 			);
 	}
+
+	/// <summary>
+	/// "Tap three" or more (Collation Trimatrix): one action per SET the player may tap — never per
+	/// order; the table clicks them in any order (Targeting). One empty set when no cost taps three.
+	/// ponytail: every combination — Picard with 9 Officers is 36 moves, with 12 it is 792; the story
+	/// on tap choices (Station, tap two, tap N) looks at narrowing them.
+	/// </summary>
+	static IEnumerable<ImmutableArray<int>> TapSets(
+		IEnumerable<AdditionalCost> costs,
+		GameState s,
+		int player,
+		int sourceId
+	) =>
+		CostList.In(costs, CostSlot.TapSet) is TapUntappedCost set
+			? Combinations([.. set.Candidates(s, player, sourceId)], set.Count)
+			:
+			[
+				[],
+			];
+
+	static IEnumerable<ImmutableArray<int>> Combinations(ImmutableArray<int> from, int k) =>
+		k == 0
+			?
+			[
+				[],
+			]
+		: from.Length < k ? []
+		: Combinations(from[1..], k - 1)
+			.Select(rest => rest.Insert(0, from[0]))
+			.Concat(Combinations(from[1..], k));
 
 	/// <summary>One per target choice — and for "−X", one per X it can pay.</summary>
 	static IEnumerable<GameAction> LoyaltyCandidates(GameState s, int player, Card card) =>
@@ -345,6 +377,16 @@ public static class MagicRules
 					? yield.Units.Length
 				: convoke && c.Is(CardType.Creature) && !c.IsTapped ? 1
 				: 0
+			)
+		// Starfleet Academy's "{5}, {T}: add N" — its N on top, still an upper bound (ManaPayment.WithCostlyMana)
+		+ s.CardsIn(player, ZoneType.Battlefield)
+			.Where(c =>
+				c.HasComponent<ManaOfOneColorComponent>() && ManaAbilities.CanPayTapCost(s, c)
+			)
+			.Sum(c =>
+				s.AbilitiesOf<ManaOfOneColorComponent>(c)
+					.Where(m => m.Cost is not null)
+					.Sum(m => Math.Max(0, m.Amount.Value(s, Conditions.Of(c))))
 			);
 
 	/// <summary>
@@ -395,12 +437,15 @@ public static class MagicRules
 	/// <summary>The permanents a cost taps, in MoveKey: Station's one as before; Worf's two in either order is one move.</summary>
 	static string Taps(GameState s, ActivateAbilityAction a)
 	{
+		var set = a.TapIds.IsDefaultOrEmpty
+			? ""
+			: $"|T{string.Join(",", a.TapIds.Select(id => Fodder(s, id)).Order(StringComparer.Ordinal))}";
 		if (a.SecondTapId == 0)
-			return a.TapId == 0 ? "" : $"|t{Fodder(s, a.TapId)}";
+			return (a.TapId == 0 ? "" : $"|t{Fodder(s, a.TapId)}") + set;
 		var pair = new[] { Fodder(s, a.TapId), Fodder(s, a.SecondTapId) }.Order(
 			StringComparer.Ordinal
 		);
-		return $"|t{pair.First()}|u{pair.Last()}";
+		return $"|t{pair.First()}|u{pair.Last()}{set}";
 	}
 
 	/// <summary>Which card a move is "from" for DistinctMoves: a permanent by id; elsewhere any copy in the same zone.</summary>

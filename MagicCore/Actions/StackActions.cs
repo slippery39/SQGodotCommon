@@ -370,6 +370,9 @@ public record ActivateAbilityAction : GameAction
 	/// <summary>Worf: "Tap two untapped artifacts and/or creatures you control" — the second one; 0 if none.</summary>
 	public int SecondTapId { get; init; }
 
+	/// <summary>Collation Trimatrix: "Tap three untapped artifact creatures you control" — the whole set, in no order; empty if none.</summary>
+	public ImmutableArray<int> TapIds { get; init; } = [];
+
 	/// <summary>An ability's target words and steps for these modes (the whole text when not modal).</summary>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		ActivatedAbilityComponent ability,
@@ -388,9 +391,17 @@ public record ActivateAbilityAction : GameAction
 			_ => throw new InvalidOperationException($"An ability's cost can't pick into {slot}"),
 		};
 
+	/// <summary>What a cost picked: its one id, or the whole set of TapIds.</summary>
+	IEnumerable<int> Picks(AdditionalCost cost) =>
+		cost.Slot == CostSlot.TapSet ? TapIds : [Chosen(cost.Slot)];
+
 	/// <summary>Permanents the non-mana part of the cost uses — never mana for the same activation.</summary>
 	List<int> CostPermanents(GameState s, ActivatedAbilityComponent ability) =>
-		[.. ability.Costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))];
+		[
+			.. ability.Costs.SelectMany(c =>
+				Picks(c).SelectMany(id => c.Uses(s, PlayerId, CardId, id))
+			),
+		];
 
 	ActivatedAbilityComponent? Ability(GameState s) =>
 		s.ActivatedAbilitiesOf(s.GetCard(CardId)).ElementAtOrDefault(AbilityIndex);
@@ -430,6 +441,14 @@ public record ActivateAbilityAction : GameAction
 			|| (SecondTapId != 0 && SecondTapId == TapId)
 		)
 			return ValidationResult.Invalid("Not a second permanent you can tap for this");
+		if (
+			CostList.In(costs, CostSlot.TapSet) is TapUntappedCost set
+				? TapIds.Length != set.Count
+					|| TapIds.Distinct().Count() != TapIds.Length
+					|| TapIds.Except(set.Candidates(s, PlayerId, CardId)).Any()
+				: !TapIds.IsDefaultOrEmpty
+		)
+			return ValidationResult.Invalid("Not permanents you can tap for this");
 		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
@@ -479,7 +498,8 @@ public record ActivateAbilityAction : GameAction
 		// The taps on the state the mana search excluded them from — the same permanents; then the
 		// mana, which never uses them.
 		foreach (var cost in ability.Costs.Where(c => c.Taps))
-			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
+		foreach (var picked in Picks(cost))
+			s = cost.Pay(s, PlayerId, CardId, picked);
 		s = ManaPayment.Pay(s, PlayerId, mana);
 		if (ability.Exhaust)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });

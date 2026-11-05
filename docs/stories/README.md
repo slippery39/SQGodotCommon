@@ -8,8 +8,8 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 ## Sprints
 
-**Current sprint: [2026-10-29](../sprints/2026-10-29.md)** — the AI plays its cards right, FRA
-drafted against bots, the powered cube started. Start there: it says which task is next.
+**Current sprint: [2026-11-05](../sprints/2026-11-05.md)** — Star Trek ready for Arena's November 10,
+then the AI's basics and the powered cube. Start there: it says which task is next.
 
 Sprints run **Thursday to Thursday**, when Shayne's Claude usage resets, so a sprint is one week's
 usage budget. **One file per sprint** in `docs/sprints/`, named by its start date (the Thursday
@@ -38,6 +38,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 8. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
 9. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
 10. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+11. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice
 11. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
 12. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
 13. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
@@ -108,6 +109,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-11](AI-11-learn-from-shaynes-games.md) | Learn from Shayne's games — settle where he and the oracle differ, keep what he got right | backlog |
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
+| [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
@@ -133,5 +135,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 
-Next free id per area: AI-18 · DATA-3 · DEV-4 · LIM-4 · MC-6 · TBL-8
+Next free id per area: AI-19 · DATA-3 · DEV-4 · LIM-4 · MC-6 · TBL-8
 <!-- stories:end -->

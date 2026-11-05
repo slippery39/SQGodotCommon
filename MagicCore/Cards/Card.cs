@@ -457,6 +457,9 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 	/// </summary>
 	public int UntilTurnOf { get; init; }
 
+	/// <summary>UntilTurnOf for an effect with no duration (Seven of Nine's base 7/9): no player's turn ends it — only leaving the battlefield.</summary>
+	public const int Never = -1;
+
 	/// <summary>"Has base power and toughness P/T" - replaces the printed numbers, under counters and pumps.</summary>
 	public (int Power, int Toughness)? SetBase { get; init; }
 

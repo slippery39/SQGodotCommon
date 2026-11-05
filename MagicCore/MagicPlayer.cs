@@ -53,6 +53,9 @@ public record TurnTally
 	public int CardsDiscarded { get; init; }
 	public int LifeGained { get; init; }
 
+	/// <summary>Gul Dukat, Colonial Prefect: "the life that player lost this turn" — counted by Rules.Life.Lose, damage included.</summary>
+	public int LifeLost { get; init; }
+
 	/// <summary>"If you've scried or surveilled this turn" — FRA has no scry, so surveils.</summary>
 	public int Surveils { get; init; }
 

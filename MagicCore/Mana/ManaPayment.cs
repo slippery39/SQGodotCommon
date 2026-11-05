@@ -3,6 +3,13 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using Tappable = (
+	int Id,
+	bool IsCreature,
+	bool SameColor,
+	System.Collections.Immutable.ImmutableArray<System.Collections.Immutable.ImmutableArray<MagicCore.ManaColor>> Units,
+	bool Sacrificed
+);
 
 namespace MagicCore;
 
@@ -60,7 +67,11 @@ public static class ManaPayment
 	record Unit(int Source, ImmutableArray<ManaColor> Colors);
 
 	/// <summary>Allowed colours for one mana; TwoBridColor set means "this, or two generic instead".</summary>
-	record Need(ImmutableArray<ManaColor> Allowed, ManaColor? TwoBridColor = null);
+	record Need(ImmutableArray<ManaColor> Allowed, ManaColor? TwoBridColor = null)
+	{
+		/// <summary>Starfleet Academy's own {5}: never paid by the mana it makes.</summary>
+		public int NotFrom { get; init; }
+	}
 
 	static readonly ImmutableArray<ManaColor> Any = [.. Enum.GetValues<ManaColor>()];
 
@@ -80,14 +91,7 @@ public static class ManaPayment
 	)
 	{
 		var player = s.GetPlayer(playerId);
-		var tappable =
-			new List<(
-				int Id,
-				bool IsCreature,
-				bool SameColor,
-				ImmutableArray<ImmutableArray<ManaColor>> Units,
-				bool Sacrificed
-			)>();
+		var tappable = new List<Tappable>();
 		foreach (var c in s.CardsIn(playerId, ZoneType.Battlefield))
 		{
 			// Its own {T} cost, or a permanent another cost sacrifices or taps: not mana for this too.
@@ -125,6 +129,110 @@ public static class ManaPayment
 			else if (convokes is { } only)
 				tappable.Add((c.Id, true, false, [only], false));
 		}
+		return Solve(s, player, tappable, Needs(cost, x), forSpell, forAbilityOf)
+			?? WithCostlyMana(
+				s,
+				player,
+				tappable,
+				cost,
+				x,
+				excludeId,
+				alsoExclude,
+				forSpell,
+				forAbilityOf
+			);
+	}
+
+	/// <summary>
+	/// Starfleet Academy: "{5}, {T}: Choose a color. Add an amount of mana of that color equal to …" —
+	/// a mana ability that costs mana, tried only when nothing else pays: its N units of one colour
+	/// join the sources in place of its plain {C}, and its own cost is owed too, never paid by the mana
+	/// it makes. What it makes beyond the cost floats, as any tapped source's does.
+	/// ponytail: its cost may be paid by mana restricted to the spell being cast (Chandra's {U}), or by a
+	/// creature convoking that spell — check the restriction per need if a deck ever mixes them.
+	/// </summary>
+	static IReadOnlyList<Payment>? WithCostlyMana(
+		GameState s,
+		MagicPlayer player,
+		List<Tappable> tappable,
+		ManaCost cost,
+		int x,
+		int excludeId,
+		IReadOnlyCollection<int>? alsoExclude,
+		Card? forSpell,
+		Card? forAbilityOf
+	)
+	{
+		foreach (var c in s.CardsIn(player.Id, ZoneType.Battlefield))
+		{
+			if (
+				!c.HasComponent<ManaOfOneColorComponent>()
+				|| c.Id == excludeId
+				|| alsoExclude?.Contains(c.Id) == true
+				|| !ManaAbilities.CanPayTapCost(s, c)
+			)
+				continue;
+			foreach (
+				var costly in s.AbilitiesOf<ManaOfOneColorComponent>(c)
+					.Where(m => m.Cost is not null)
+			)
+			{
+				var n = costly.Amount.Value(s, Conditions.Of(c));
+				if (n <= 0)
+					continue;
+				var plan = Solve(
+					s,
+					player,
+					[
+						.. tappable.Where(t => t.Id != c.Id),
+						(
+							c.Id,
+							c.Is(CardType.Creature),
+							true,
+							[.. Enumerable.Repeat(ManaAbilities.AnyColor, n)],
+							false
+						),
+					],
+					// its own cost first: the most constrained (never its own mana)
+					[
+						.. Needs(costly.Cost!, 0).Select(need => need with { NotFrom = c.Id }),
+						.. Needs(cost, x),
+					],
+					forSpell,
+					forAbilityOf
+				);
+				if (plan is not null)
+					return plan;
+			}
+		}
+		return null;
+	}
+
+	/// <summary>Most constrained first; generic last so it takes whatever colours are left.</summary>
+	static ImmutableList<Need> Needs(ManaCost cost, int x) =>
+		cost
+			.Symbols.SelectMany(sym =>
+				sym.Kind switch
+				{
+					SymbolKind.Colored => [new Need([sym.Color])],
+					SymbolKind.Hybrid => [new Need([sym.Color, sym.Color2])],
+					SymbolKind.TwoBrid => [new Need([sym.Color], sym.Color)],
+					SymbolKind.Generic => Enumerable.Repeat(new Need(Any), sym.Amount),
+					_ => Enumerable.Repeat(new Need(Any), x),
+				}
+			)
+			.OrderBy(n => n.Allowed.Length + (n.TwoBridColor is null ? 0 : 1))
+			.ToImmutableList();
+
+	static IReadOnlyList<Payment>? Solve(
+		GameState s,
+		MagicPlayer player,
+		List<Tappable> tappable,
+		ImmutableList<Need> needs,
+		Card? forSpell,
+		Card? forAbilityOf
+	)
+	{
 		var sources = new List<Source>();
 		// Restricted floating mana first: it can pay for less, so spend it where it can.
 		foreach (
@@ -156,21 +264,6 @@ public static class ManaPayment
 				)
 			);
 		var all = sources.SelectMany(src => src.Units).ToList();
-
-		// Most constrained first; generic last so it takes whatever colours are left.
-		var needs = cost
-			.Symbols.SelectMany(sym =>
-				sym.Kind switch
-				{
-					SymbolKind.Colored => [new Need([sym.Color])],
-					SymbolKind.Hybrid => [new Need([sym.Color, sym.Color2])],
-					SymbolKind.TwoBrid => [new Need([sym.Color], sym.Color)],
-					SymbolKind.Generic => Enumerable.Repeat(new Need(Any), sym.Amount),
-					_ => Enumerable.Repeat(new Need(Any), x),
-				}
-			)
-			.OrderBy(n => n.Allowed.Length + (n.TwoBridColor is null ? 0 : 1))
-			.ToImmutableList();
 
 		var search = new Search(sources, all);
 		if (!search.Solve(needs))
@@ -224,6 +317,8 @@ public static class ManaPayment
 					if (Used[i] || Tapped(source) != alreadyTapped)
 						continue;
 					var src = sources[source];
+					if (need.NotFrom != 0 && src.LandId == need.NotFrom)
+						continue;
 					var colors = Locked[source] is { } locked ? [locked] : units[i].Colors;
 					foreach (var color in colors.Where(need.Allowed.Contains))
 					{

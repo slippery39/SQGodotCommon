@@ -161,12 +161,22 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 	/// <summary>U.S.S. Voyager: "onto the battlefield tapped".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>Branching Timeline: "Reveal the top X cards of your library … Put all permanent cards revealed this way onto the battlefield" — every [Types] card among the top X, not "until".</summary>
+	public Count? Top { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var library = s.CardsIn(Controller, ZoneType.Library).ToList();
-		var hits = library.Where(c => c.Is(Types)).Take(HowMany).Select(c => c.Id).ToList();
+		var top = Top is { } t ? Math.Clamp(t.Value(s, InputContext), 0, library.Count) : -1;
+		var hits = (top >= 0 ? library.Take(top) : library)
+			.Where(c => c.Is(Types))
+			.Take(top >= 0 ? int.MaxValue : HowMany)
+			.Select(c => c.Id)
+			.ToList();
 		var revealed =
-			hits.Count < HowMany ? library.Count : library.FindIndex(c => c.Id == hits[^1]) + 1;
+			top >= 0 ? top
+			: hits.Count < HowMany ? library.Count
+			: library.FindIndex(c => c.Id == hits[^1]) + 1;
 		var rest = library.Take(revealed).Select(c => c.Id).Except(hits).ToArray();
 		foreach (var hit in hits)
 			s = s.EnterBattlefield(hit, Controller, tapped: Tapped);
@@ -1046,6 +1056,9 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>70,000 Light-Years from Home: "Its controller may search their library" — who searches; unset is you.</summary>
 	public Ref? Who { get; init; }
 
+	/// <summary>Captain Jean-Luc Picard: "put it onto the battlefield with seven charge counters on it".</summary>
+	public int ChargeCounters { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var searcher = Who is null ? Controller : All(Who, s).FirstOrDefault();
@@ -1080,7 +1093,11 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							]
 						:
 						[
-							new MoveChosenToAction(searcher, To) { Tapped = Tapped },
+							new MoveChosenToAction(searcher, To)
+							{
+								Tapped = Tapped,
+								ChargeCounters = ChargeCounters,
+							},
 							new ShuffleLibraryAction(searcher),
 						],
 					.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],

@@ -18,7 +18,11 @@ public static class ManaAbilities
 		return intrinsic
 			.Concat(s.AbilitiesOf<ManaAbilityComponent>(card).Select(m => m.Color))
 			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
-			.Concat(s.HasAbility<ManaOfOneColorComponent>(card) ? AnyColor : [])
+			.Concat(
+				s.AbilitiesOf<ManaOfOneColorComponent>(card).Any(m => m.Cost is null)
+					? AnyColor
+					: []
+			)
 			.Distinct();
 	}
 
@@ -110,7 +114,8 @@ public static class ManaAbilities
 		if (colors.IsEmpty)
 			return new([], false, ManaRestriction.None);
 		var context = Conditions.Of(card);
-		var oneColor = s.AbilitiesOf<ManaOfOneColorComponent>(card).FirstOrDefault();
+		var oneColor = s.AbilitiesOf<ManaOfOneColorComponent>(card)
+			.FirstOrDefault(m => m.Cost is null);
 		ImmutableArray<ImmutableArray<ManaColor>> units = oneColor is null
 			? [colors]
 			: [.. Enumerable.Repeat(AnyColor, Math.Max(0, oneColor.Amount.Value(s, context)))];

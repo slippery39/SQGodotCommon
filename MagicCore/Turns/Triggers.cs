@@ -298,10 +298,11 @@ public static class Triggers
 				.Where(c => AbilitiesOf(s, c).Any(a => a.FromGraveyard))
 				.Select(c => c with { ControllerId = c.OwnerId })
 		);
-		// An exiled card's delayed trigger only — never its own abilities (Ghost of Illyria's "return
-		// that card at the beginning of the next end step").
+		// An exiled or dead card's delayed trigger only — never its own abilities (Ghost of Illyria's
+		// "return that card at the beginning of the next end step"; Dr. McCoy's, on the card that died).
 		var delayedInExile = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
 			s.CardsIn(p, ZoneType.Exile)
+				.Concat(s.CardsIn(p, ZoneType.Graveyard))
 				.Where(c => c.HasComponent<DelayedTrigger>())
 				.SelectMany(c =>
 					c.GetComponents<DelayedTrigger>()

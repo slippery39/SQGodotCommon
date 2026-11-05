@@ -26,7 +26,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   chosen. The scripted mode count must match the printed bullets — `Scripting.Printed` throws otherwise.
 - **"At the beginning of [step]"** triggers on a `StepBeganEvent`, raised by `EnterStep` for upkeep,
   draw, the first main phase, beginning of combat and end. **"This turn" lives in `MagicPlayer.ThisTurn`** (a `TurnTally`:
-  lands, spells, cards drawn, life gained, surveils), REPLACED whole for BOTH players as each turn
+  lands, spells, cards drawn, life gained and lost, surveils), REPLACED whole for BOTH players as each turn
   begins — "this turn" is every turn, not only yours, and a new count cannot miss the reset. Update
   it with `s.Tally(…)`. The finished turn's tally becomes `LastTurn` ("last turn" = the turn before
   this one, whoever's). Creatures that died this turn (anyone's) are on `MagicGame`. **A tally holds
@@ -72,7 +72,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   allowed colours — several of ONE colour (Loot, the Nexus: `SameColor`), a Mountain's extra {R} under
   Molten Tide (`ExtraRedFromMountains`, a `ThisTurnEffect`), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
-  doesn't use floats (`Payment.Floats`). Manual tapping floats restricted mana AS restricted (`ManaPool.Restricted`).
+  doesn't use floats (`Payment.Floats`). **A mana ability that costs mana** (Starfleet Academy: "{5}, {T}:
+  Choose a color. Add N", `ManaOfOneColorComponent.Cost`) is never a plain tap: `Find` tries it only when
+  nothing else pays (`WithCostlyMana`), its N units of one colour in place of its {C}, its own cost owed
+  beside the spell's and never paid by the mana it makes (`Need.NotFrom`).
+  Manual tapping floats restricted mana AS restricted (`ManaPool.Restricted`).
   A restriction is a `ManaRestriction` the solver checks against the spell it pays for
   (`Find(…, forSpell)`), or the source of the activated ability it pays for (`forAbilityOf` —
   Isolinear Processor's "an ability of an artifact source"). Treasure and Lotus are `ManaOfOneColorComponent`
@@ -113,7 +117,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   attacking creature") sees its targets too, `Costs.Of(…, targets)` from the cast.
 - **Costs beyond mana are one list of `AdditionalCost`** (Effects/AdditionalCosts.cs) — activated
   abilities, a spell's `AdditionalCostsComponent`, flashback, ward. A cost that picks a card names it
-  in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`/`TapId`/`SecondTapId`/`ReturnId` (`CostSlot`) — and the table's
+  in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`/`TapId`/`SecondTapId`/`ReturnId` (`CostSlot`), a set in `TapIds` — and the table's
   `Targeting.PicksOf`/`WithoutPicks`, so it is clicked — one legal action per
   choice; `CostList` is the one place candidates, legality and "or pay" read them. Taps are paid
   first; ward pays by choosing (`PaidByChoosing`).
@@ -222,7 +226,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **A delayed trigger on a permanent** ("exile it at the beginning of the next end step") is a
   `DelayedTrigger` component: kept when it loses all abilities, not copied, gone with a zone change.
   On a card it EXILED (`Flicker.AtNextEndStep`, Ghost of Illyria: "return that card at the beginning of the
-  next end step") `Triggers.Collect` reads that one component there, never the exiled card's own abilities.
+  next end step") `Triggers.Collect` reads that one component there, never the exiled card's own abilities —
+  and on a card that DIED (`AtNextEndStep.On`, Dr. McCoy: "return that card … at the beginning of the next
+  end step"), read in the graveyard the same way; leaving the graveyard strips it (a new object).
   With no card to hold it ("return a land you control", Erica Ortegas) it is `AtNextEndStep`: an object in
   your command zone, removed once it has resolved. Set up during the end step, either waits for the next turn's.
 - **Emblems** (CR 114) are cards in their owner's COMMAND zone (`GetEmblem`): `Triggers.Collect` and
@@ -259,6 +265,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"When you cast this spell"** (`TriggerEvent.SelfCast`, Emrakul) is read from the spell on the stack.
 - **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).
+  With no duration (Seven of Nine: "base power and toughness become 7/9") it is `ModifyUntilEndOfTurn.ForGood`
+  — `UntilTurnOf = UntilEndOfTurn.Never`, which no turn ends: only leaving the battlefield.
 - **An activated ability an Aura grants** ("enchanted creature has '{T}: …'", Splinter Twin) is
   `GrantsActivatedAbility` on the Aura. `s.ActivatedAbilitiesOf(card)` is THE list activation indexes
   into — own, then granted — read by the candidates, the action and `Describe`; never
@@ -289,6 +297,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"Tap two untapped …"** (Worf, Tenured Tethermage) is the player's choice of both: `TapUntappedCost(2, …)`
   is split as `ActivatedAbilityComponent.Costs` is built into two one-pick costs (`TapId`, `SecondTapId`),
   each pair in either click order (the table), one move by `MoveKey` (the AI) — Shayne, 2026-10-31.
+  **"Tap three" or more** (Collation Trimatrix, Picard's seven Officers) is ONE cost picking the whole set
+  (`CostSlot.TapSet`, `ActivateAbilityAction.TapIds`): one legal action per set, never per order
+  (`MagicRules.TapSets`), clicked in any order on the table (`Targeting.Narrow`) — Shayne, 2026-11-05.
 - **Beam me up** (TRK) is a `FlashbackComponent` whose cost beside the mana is `BeamMeUpCost` — return a
   creature you control (`CastSpellAction.ReturnId`, one cast per creature) — so it is cast and exiled as
   flashback is (`TrkCards.BeamMeUp`). Marooned's `EnchantedCantBeBeamedUp` takes its creature out of the
@@ -364,6 +375,17 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"That many plus one of each kind of counter"** (Brad Boimler, `CountersPlusOneThisTurn`) is
   `Rules.Replacements.Counters`, applied in `MagicState.PutCounters` — so it reaches every counter path:
   effects, costs (`Loyalty.Change`), entering with loyalty, time or +1/+1 counters, proliferate.
+  **"Twice that many charge counters on an artifact you control"** (Geordi La Forge,
+  `ChargeCountersOnYourArtifactsDoubled`) is `Rules.Replacements.ChargeCounters` there too, AFTER the plus
+  one — (n + 1) × 2, the order its controller would pick (CR 616.1) — entering with them included (Picard's
+  seven become fourteen).
+- **Life is lost in `Rules.Life.Lose` alone** — damage to a player, `LoseLife`, paying life — which counts it
+  in `TurnTally.LifeLost` (Gul Dukat: "the life that player lost this turn", `Count.LifeLostThisTurnOf`).
+  His "you gain life equal to the life lost this way" is scripted gain FIRST, so both read the count before
+  the loss adds to it.
+- **"Reveal the top X, put every [type] card onto the battlefield, the rest on the bottom in a random
+  order"** (Branching Timeline) is `RevealUntilOntoBattlefield { Top }` — Identity Echo's effect, every match
+  among the top X instead of "until".
 - **"Whenever you draw a card"** is `DrewCardEvent`, raised by `MagicState.Draw` once per card (Data, New Life).
 - **"Can't attack alone"** (Pet Sehlat) is `Combat.CantAttackAlone`, a keyword-like grant judged on the whole
   declaration as it finishes (`FinishAttackersAction`): one such creature declared alone doesn't attack; two

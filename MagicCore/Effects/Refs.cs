@@ -313,6 +313,7 @@ public enum CountOf
 	CreatureTypesAmong, // Federation: "creature types among non-Borg creatures you control"
 	AllCountersOn, // Jadzia Dax: "the number of counters on her" — every kind
 	LifeTotalOf, // Live Long and Prosper: "Double your life total" — the players [Ref] names
+	LifeLostThisTurnOf, // Gul Dukat: "the life that player lost this turn" — the players [Ref] names
 }
 
 /// <summary>
@@ -363,6 +364,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	/// <summary>Live Long and Prosper: "Double your life total" — gain this much (CR 119.5).</summary>
 	public static Count LifeTotalOf(Ref r) => new(0, r, CountOf.LifeTotalOf);
+
+	/// <summary>Gul Dukat, Colonial Prefect: "equal to the life that player lost this turn" (TurnTally.LifeLost).</summary>
+	public static Count LifeLostThisTurnOf(Ref r) => new(0, r, CountOf.LifeLostThisTurnOf);
 
 	public static Count ChargeCountersOn(Ref r) => new(0, r, CountOf.ChargeCountersOn);
 
@@ -509,6 +513,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
 			CountOf.AllCountersOn => Cards().Sum(c => c.AllCounters().Sum(k => k.N)),
 			CountOf.LifeTotalOf => ids.Sum(id => s.GetObject(id) is MagicPlayer p ? p.Life : 0),
+			CountOf.LifeLostThisTurnOf => ids.Sum(id =>
+				s.GetObject(id) is MagicPlayer p ? p.ThisTurn.LifeLost : 0
+			),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),

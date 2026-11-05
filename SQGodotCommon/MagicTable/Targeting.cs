@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ImmutableGameObjects;
@@ -44,6 +45,7 @@ public static class Targeting
 				.. Cost(a.ExileId, "exile", "exiling"),
 				.. Cost(a.TapId, "tap", "tapping"),
 				.. Cost(a.SecondTapId, "tap", "tapping"),
+				.. a.TapIds.SelectMany(id => Cost(id, "tap", "tapping")), // a set, last: clicked in any order (SetRest)
 			],
 			ActivateLoyaltyAction l => [.. Targets(l.Targets)],
 			_ => [],
@@ -124,7 +126,7 @@ public static class Targeting
 	)
 	{
 		static List<string> Costs(GameAction m) =>
-			PicksOf(m).Select(p => p.Cost).OfType<string>().ToList();
+			PicksOf(m).Select(p => p.Cost).OfType<string>().Distinct().ToList(); // a set of taps is one "tapping"
 		var ways = candidates
 			.GroupBy(c => string.Join(",", PicksOf(c).Select(p => p.What)))
 			.Select(g => g.ToList())
@@ -141,13 +143,44 @@ public static class Targeting
 			.ToList();
 	}
 
-	/// <summary>The objects that may be clicked for pick <paramref name="index"/>.</summary>
+	/// <summary>The objects that may be clicked for pick <paramref name="index"/> — in a set of taps, any not clicked yet.</summary>
 	public static IReadOnlyList<int> Options(IReadOnlyList<GameAction> candidates, int index) =>
-		candidates.Select(c => PicksOf(c)[index].Id).Distinct().ToList();
+		candidates.SelectMany(c => SetRest(c, index) ?? [PicksOf(c)[index].Id]).Distinct().ToList();
 
-	/// <summary>The candidates that pick <paramref name="id"/> at <paramref name="index"/>.</summary>
+	/// <summary>
+	/// The candidates that pick <paramref name="id"/> at <paramref name="index"/>. A set of taps
+	/// (Collation Trimatrix) has no order: a candidate with the id anywhere in the rest of its set
+	/// stays, the id swapped into this place — so the next pick reads the set's unclicked rest.
+	/// </summary>
 	public static List<GameAction> Narrow(IEnumerable<GameAction> candidates, int index, int id) =>
-		candidates.Where(c => PicksOf(c)[index].Id == id).ToList();
+		candidates
+			.Select(c =>
+				SetRest(c, index) is { } rest
+					? rest.Contains(id)
+						? Swapped((ActivateAbilityAction)c, index, id)
+						: null
+					: PicksOf(c)[index].Id == id
+						? c
+						: null
+			)
+			.OfType<GameAction>()
+			.ToList();
+
+	/// <summary>A tap set's picks from <paramref name="index"/> on, or null when that pick isn't in one.</summary>
+	static IReadOnlyList<int>? SetRest(GameAction move, int index) =>
+		move is ActivateAbilityAction { TapIds.Length: > 0 } a
+		&& index - (PicksOf(move).Count - a.TapIds.Length) is >= 0 and var at
+			? a.TapIds[at..]
+			: null;
+
+	static ActivateAbilityAction Swapped(ActivateAbilityAction a, int index, int id)
+	{
+		var ids = a.TapIds.ToArray();
+		var at = index - (PicksOf(a).Count - ids.Length);
+		var from = Array.IndexOf(ids, id);
+		(ids[at], ids[from]) = (ids[from], ids[at]);
+		return a with { TapIds = [.. ids] };
+	}
 
 	/// <summary>What pick <paramref name="index"/> is, for the prompt: "target 1", "what to sacrifice".</summary>
 	public static string What(GameAction move, int index) => PicksOf(move)[index].What;
@@ -175,6 +208,7 @@ public static class Targeting
 				ExileId = 0,
 				TapId = 0,
 				SecondTapId = 0,
+				TapIds = [],
 			},
 			ActivateLoyaltyAction l => l with { Targets = [] },
 			_ => move,

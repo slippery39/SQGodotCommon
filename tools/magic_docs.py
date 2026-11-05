@@ -186,7 +186,7 @@ def parse_scripts(path):
         b = start + keys[k + 1].start() if k + 1 < len(keys) else end_all
         body = text[a:b]
         body = re.sub(r"\n\t\t\t// =====.*", "", body).rstrip()  # section banners belong to the next card
-        blocks[m.group(1)] = body
+        blocks[m.group(1).replace('\\"', '"')] = body  # C# escapes a quote: Dr. Leonard \"Bones\" McCoy
     return blocks, parse_helpers(text[:start])
 
 

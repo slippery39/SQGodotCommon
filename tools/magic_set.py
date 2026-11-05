@@ -36,7 +36,8 @@ def script_keys(set_code="FRA"):
     """Card names with a script — keys of the Cards file's Scripts dictionary only."""
     text = scripts_file(set_code).read_text(encoding="utf-8")
     start = text.find("Scripts =")
-    return set(re.findall(r'^\t\t\t\["(.+?)"\] =', text[start:], re.M)) if start >= 0 else set()
+    names = re.findall(r'^\t\t\t\["(.+?)"\] =', text[start:], re.M) if start >= 0 else []
+    return {n.replace('\\"', '"') for n in names}  # C# escapes a quote: Dr. Leonard \"Bones\" McCoy
 
 
 def all_script_keys():

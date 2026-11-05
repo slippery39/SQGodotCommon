@@ -105,6 +105,28 @@ public class TargetingTests
 	}
 
 	[Test]
+	public void TapThree_IsASet_ClickedInAnyOrder()
+	{
+		static GameAction Taps(params int[] ids) =>
+			new ActivateAbilityAction
+			{
+				PlayerId = 1,
+				CardId = 10,
+				TapIds = [.. ids],
+			};
+		List<GameAction> moves = [Taps(5, 6, 7), Taps(5, 6, 8), Taps(5, 7, 8), Taps(6, 7, 8)];
+
+		Assert.That(Targeting.Options(moves, 0), Is.EquivalentTo(new[] { 5, 6, 7, 8 }));
+		var after8 = Targeting.Narrow(moves, 0, 8);
+		Assert.That(Targeting.Options(after8, 1), Is.EquivalentTo(new[] { 5, 6, 7 }));
+		var after5 = Targeting.Narrow(after8, 1, 5);
+		Assert.That(Targeting.Options(after5, 2), Is.EquivalentTo(new[] { 6, 7 }));
+		var last = Targeting.Narrow(after5, 2, 7);
+		Assert.That(last, Has.Count.EqualTo(1));
+		Assert.That(((ActivateAbilityAction)last[0]).TapIds, Is.EquivalentTo(new[] { 5, 7, 8 }));
+	}
+
+	[Test]
 	public void SacrificeOrPay_PickDifferentNumbers_AndAreListed()
 	{
 		List<GameAction> moves =

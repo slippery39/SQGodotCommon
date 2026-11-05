@@ -106,12 +106,21 @@ public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 	/// <summary>Loyal Tutor: to the top of the library, not the bottom.</summary>
 	public bool OnTop { get; init; }
 
+	/// <summary>Captain Jean-Luc Picard: "onto the battlefield with seven charge counters on it" — entering with them (CR 122.6: Geordi doubles them).</summary>
+	public int ChargeCounters { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
 			s =
 				To == ZoneType.Battlefield
 					? s.EnterBattlefield(id, PlayerId, tapped: Tapped) // the one way in: its entry, its events
+						.PutCounters(
+							id,
+							Effects.CounterKinds.Charge,
+							ChargeCounters,
+							entering: true
+						)
 					: s.MoveCard(id, s.ZoneId(PlayerId, To), toTop: OnTop);
 		return new ActionResult(s);
 	}

@@ -520,6 +520,8 @@ public static class MagicState
 				exceptId: entering ? cardId : 0
 			);
 		n = Rules.Replacements.Counters(s, card.ControllerId, n);
+		if (n > 0 && kind == CounterKinds.Charge && card.Is(CardType.Artifact))
+			n = Rules.Replacements.ChargeCounters(s, card.ControllerId, n);
 		var had = card.CountersOf(kind);
 		var now = Math.Max(0, had + n);
 		if (now == had)

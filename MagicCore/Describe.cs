@@ -46,7 +46,12 @@ public static class Describe
 				+ (a.DiscardId != 0 ? $", discarding {Name(s, a.DiscardId)}" : "")
 				+ (a.ExileId != 0 ? $", exiling {Name(s, a.ExileId)}" : "")
 				+ (a.TapId != 0 ? $", tapping {Name(s, a.TapId)}" : "")
-				+ (a.SecondTapId != 0 ? $" and {Name(s, a.SecondTapId)}" : ""),
+				+ (a.SecondTapId != 0 ? $" and {Name(s, a.SecondTapId)}" : "")
+				+ (
+					a.TapIds.IsDefaultOrEmpty
+						? ""
+						: $", tapping {string.Join(", ", a.TapIds.Select(id => Name(s, id)))}"
+				),
 			ActivateLoyaltyAction l =>
 				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",

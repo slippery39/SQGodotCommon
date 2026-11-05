@@ -114,6 +114,17 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   (`SubtypeEnteredThisTurn`, `TurnTally.SubtypesEntered`). The sprint ends here
   (usage 98%, the reset tomorrow): what is unfinished moves to the next sprint.
 
+- 2026-11-05, Shayne (sprint 4's plan): **the order stands with Arena on November 10** — every card,
+  then the boosters (MC-5.4), then the Stardates. **The tier-3 one-offs go ~14 a batch**, each a fresh session.
+
+- 2026-11-05, Shayne (batch 5b's question): **"tap three / seven" is the player's choice of every one, one
+  legal action per set** (as Worf's two) — the easiest to build: "there is a lot of tapping creatures in
+  this set (station as well), which has ballooning choice combinations … we might want to have a new
+  story which looks into this and any potential optimizations" → AI-18. Claude's designs, taken as
+  proposed: Geordi's doubling AFTER Brad Boimler's plus one ((n + 1) × 2, always the better order for its
+  controller); Starfleet Academy by auto-payment only (tapping it by hand gives {C}, `DesignNotes.md`);
+  life loss in ONE path (two writers, not three: paying life already went through `LoseLife`).
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -166,7 +177,12 @@ Open questions:
       `YouChooseTheyDiscard.Then`, `LookAndTake.OntoBattlefieldTapped`, `TriggeredAbilityComponent.ChooseAnyNumberIf`,
       `MayCastFromExile`, `NoMaximumHandSizeUntilYourNextTurn`, `Count.LifeTotalOf`/`AllCountersOn`, an
       activation's event card the creature sacrificed, `TrkCards.EntersUntapped` (ENTERS-UNTAPPED); and a fix:
-      a dying permanent's own "whenever a creature dies" now sees its own death (CR 603.10a). Next: batch 5b
+      a dying permanent's own "whenever a creature dies" now sees its own death (CR 603.10a). Batch 5b done
+      2026-11-05: 8 tier-3 rares and mythics (254/311) — `AtNextEndStep.On` (a delayed trigger on the card
+      that died, read in its graveyard), `ChargeCountersOnYourArtifactsDoubled`, `ManaOfOneColorComponent.Cost`
+      (the solver's `WithCostlyMana`), tap three or more (`CostSlot.TapSet`, `ActivateAbilityAction.TapIds`),
+      `Rules.Life.Lose` and `TurnTally.LifeLost`, `ModifyUntilEndOfTurn.ForGood`,
+      `RevealUntilOntoBattlefield.Top`, `SearchLibrary.ChargeCounters`. Next: the tier-3 one-offs
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -179,12 +195,23 @@ Open questions:
 
 ## Next
 
-**MC-5.3 batch 5a is done (2026-11-04): 246/311 play** — every common and uncommon, 34/80 R, 6/25 M. New,
+**MC-5.3 batch 5b is done (2026-11-05): 254/311 play** — every common and uncommon, 38/80 R, 10/25 M. New,
+each rule in `magic-mechanics.md`: Dr. McCoy's return (a delayed trigger on the card in its graveyard),
+Geordi's doubled charge counters (entering too), Starfleet Academy (a mana ability that costs mana, tried by
+the solver only when nothing else pays), tap three or seven (one action per set — the AI's combinations
+are AI-18), the life lost this turn (`Rules.Life.Lose`, the one path), base P/T for good (Seven of Nine),
+reveal the top X (Branching Timeline). Shortcuts in `DesignNotes.md`: every tap set a move; the Academy by
+auto-payment only. **Next: the 57 tier-3 one-offs, ~14 a batch, each in a NEW session** (`/card-batch`
+step 0; re-tier each from its full text — `python tools/magic_set.py coverage --set TRK` lists them,
+Dominion Infiltration among them); then MC-5.4 boosters, the Stardates (MC-5.6). A name with quotes is
+escaped in C# — the doc tools unescape it now (McCoy read as unscripted until they did).
+
+**MC-5.3 batch 5a was done (2026-11-04): 246/311 play** — every common and uncommon, 34/80 R, 6/25 M. New,
 each rule in `magic-mechanics.md`: the enters-untapped lands (Warp Speed's trigger them too), no maximum
 hand size until your next turn, every token an Illusion (Holo-Engineer), cast from exile (Khan), "choose one
 or more" with an empty hand (Kirk), the sacrificed creature as an ability's event card (Gowron), a dying
 permanent seeing its own death (Excalbian Gamemaster — a fix in `Triggers.Collect`). Shortcut: Sulu's
-"entered this turn" counts what is still there (`DesignNotes.md`). **Next: batch 5b in a NEW session** (Sulu's "entered this turn" fixed 2026-11-05) —
+"entered this turn" counts what is still there (`DesignNotes.md`). **Then: batch 5b in a NEW session** (Sulu's "entered this turn" fixed 2026-11-05) —
 Dr. McCoy (`AtNextEndStep` on that card in the graveyard), Geordi La Forge (charge counters doubled in
 `PutCounters`, entering with them too), Starfleet Academy (a REAL mana ability that costs {5} — the payment
 solver, Shayne 2026-11-04), Collation Trimatrix and Captain Picard (tap three / seven: today

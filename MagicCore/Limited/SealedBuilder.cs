@@ -463,7 +463,8 @@ public static class SealedBuilder
 				var land = IsLand(CardRegistry.Get(n).Data);
 				if (
 					parts.Any(p =>
-						p is ManaOfOneColorComponent || land && p is ChoosesColorAsItEnters
+						p is ManaOfOneColorComponent { Cost: null } // Starfleet Academy's costs {5}: no fixer
+						|| land && p is ChoosesColorAsItEnters
 					)
 				)
 					return Wubrg;

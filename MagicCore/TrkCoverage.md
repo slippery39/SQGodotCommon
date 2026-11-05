@@ -15,13 +15,15 @@ artifacts; the first spell this game; a this-turn trigger on a target; enter as 
 Zefram Cochrane's three); batch 5a, 40 tier 1–2 rares and mythics (the five enters-untapped lands, no
 maximum hand size, any token an Illusion, a discard choice's "then", look and take onto the battlefield, the
 sacrificed creature as an ability's event card, "choose one or more" with an empty hand, cast from exile, a
-dying permanent seeing its own death)** — 246/311 play, with the basics and Mugato: **every common and
-uncommon**, 34/80 rares, 6/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
+dying permanent seeing its own death); batch 5b, 8 tier-3 rares and mythics (a delayed return on the card that
+died, charge counters doubled, a mana ability that costs mana, tap three or seven, life lost this turn, base
+P/T for good, reveal the top X)** — 254/311 play, with the basics and Mugato: **every common and
+uncommon**, 38/80 rares, 10/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
 Trimatrix (1 → 3) and Captain Jean-Luc Picard (tap three or seven untapped), Gul Dukat (life lost this
 turn), Seven of Nine (base P/T become 7/9), Branching Timeline (reveal X, every permanent card onto the
 battlefield), Dominion Infiltration (X targets, changeling — with the one-offs), Starfleet Academy (a mana
-ability that costs mana — Shayne: a real one); Replicator 1 → 2. **Batch 5b:** Dr. McCoy, Geordi La Forge,
-Starfleet Academy, Trimatrix, Picard, Gul Dukat, Seven of Nine, Branching Timeline.
+ability that costs mana — Shayne: a real one); Replicator 1 → 2. **Batch 5b (done 2026-11-05):** Dr. McCoy, Geordi La Forge,
+Starfleet Academy, Trimatrix, Picard, Gul Dukat, Seven of Nine, Branching Timeline. The rest: 57 tier-3 one-offs.
 Batch 4c re-tiered from the full text: Ensign Pavel Chekov, Vulcan Mind-Meld and Zero 3 → 2 (playing from
 exile already took anyone's card). Batch 4 re-tiered from the full text: Dominion
 Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first

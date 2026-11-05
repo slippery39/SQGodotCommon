@@ -56,14 +56,7 @@ public record LoseLife(Ref Who, Count Amount) : Effect
 	public override ActionResult Execute(GameState s)
 	{
 		var n = Amount.Value(s, InputContext);
-		return new(
-			All(Who, s)
-				.Aggregate(
-					s,
-					(st, p) =>
-						st.WithPlayer(st.GetPlayer(p) with { Life = st.GetPlayer(p).Life - n })
-				)
-		);
+		return new(All(Who, s).Aggregate(s, (st, p) => Life.Lose(st, p, n)));
 	}
 }
 
@@ -123,6 +116,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)".</summary>
 	public string? BecomesCreatureType { get; init; }
 
+	/// <summary>Seven of Nine, Unassimilated: "Seven of Nine's base power and toughness become 7/9." — no duration: until it leaves the battlefield.</summary>
+	public bool ForGood { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var effect = new UntilEndOfTurn(
@@ -135,7 +131,10 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			Trigger = Trigger,
 			ExileIfItWouldDie = ExileIfItWouldDie,
 			LosesAllAbilities = LosesAllAbilities,
-			UntilTurnOf = UntilYourNextTurn ? Controller : 0,
+			UntilTurnOf =
+				ForGood ? UntilEndOfTurn.Never
+				: UntilYourNextTurn ? Controller
+				: 0,
 			BecomesCreatureType = BecomesCreatureType,
 		};
 		return new(
@@ -665,19 +664,47 @@ public record WheneverThisTurn(TriggeredAbilityComponent Ability) : Effect
 /// </summary>
 public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
-			GetEmblem.ToCommandZone(
-				s,
-				Controller,
-				$"{Source(s).Name} (next end step)",
-				[
-					new DelayedTrigger(
-						new TriggeredAbilityComponent(TriggerEvent.EachEndStep, Effects)
-					),
-				]
-			)
+	/// <summary>
+	/// Dr. Leonard "Bones" McCoy: "When it dies this turn, return that card to the battlefield … at the
+	/// beginning of the next end step" — the delayed trigger on that card where it now is (its
+	/// graveyard), as Flicker's is on its exiled card: gone if the card leaves (a new object, CR 400.7);
+	/// a token never gets one. Its "this" (Ref.Source) is that card.
+	/// </summary>
+	public Ref? On { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var trigger = new DelayedTrigger(
+			new TriggeredAbilityComponent(TriggerEvent.EachEndStep, Effects)
 		);
+		if (On is { } on)
+			return new(
+				All(on, s)
+					// in its owner's graveyard, where it died to — ponytail: by id, so a card that left
+					// and came back there inside the same response would still return; stamp the
+					// incarnation it died as if that ever matters
+					.Where(id =>
+						s.HasObject(id)
+						&& s.GetObject(id) is Card { IsToken: false } card
+						&& s.IsIn(id, card.OwnerId, ZoneType.Graveyard)
+					)
+					.Aggregate(
+						s,
+						(st, id) =>
+							ReturnFromExileUnderYourControl.Delay(
+								st,
+								id,
+								trigger with
+								{
+									ControllerId = Controller, // CR 603.7d: yours
+								}
+							)
+					)
+			);
+		return new(
+			GetEmblem.ToCommandZone(s, Controller, $"{Source(s).Name} (next end step)", [trigger])
+		);
+	}
 }
 
 /// <summary>Marks WheneverThisTurn's object as a "this turn" effect, so the turn's end removes it.</summary>

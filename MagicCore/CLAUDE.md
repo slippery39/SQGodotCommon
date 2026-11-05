@@ -61,8 +61,8 @@ MagicCore/
 ├── Rules/Attachments.cs THE Aura/Equipment rules: attach, what's on a permanent, fall-off (state-based)
 ├── Rules/Playable.cs    THE "may it be cast/played from here": hand, flashback, prepared copy, impulse exile
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
-├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
-├── Rules/Replacements.cs  THE numeric replacements ("that much plus one instead") — damage, +1/+1 counters
+├── Rules/Life.cs        THE life-gain path ("whenever you gain life") and THE life-loss path (TurnTally.LifeLost)
+├── Rules/Replacements.cs  THE numeric replacements ("that much plus one", "twice that many") — damage, counters
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
 ├── Cards/CardData.cs    printed RULES data (Scryfall), one per name; CardPrinting: a set's rarity, number; Load(set)
 ├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities
@@ -129,7 +129,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board),
   `s.AbilitiesOf<T>`/`HasAbility<T>` (a permanent's own abilities — never `GetComponents`, or "loses all
   abilities" misses that rule), `Damage.Deal` (players, creatures, planeswalker
-  loyalty), `Life.Gain`, `Costs.Of`, `ManaPayment.Find`, `ManaAbilities.CanTap`/`CanPayTapCost`,
+  loyalty), `Life.Gain`/`Life.Lose`, `Costs.Of`, `ManaPayment.Find`, `ManaAbilities.CanTap`/`CanPayTapCost`,
   `TargetSpec.IsLegal` (on choosing AND resolving), `Loyalty.AbilitiesOf` (own + granted),
   `Loyalty.Change` (costs, damage, effects; never below 0), `Ref` (what "creatures you control"
   means — `Count` counts a `Ref`, it does not filter again), `MagicState.Sacrifice`,

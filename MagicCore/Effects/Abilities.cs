@@ -479,7 +479,7 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 		{
 			(1, _) or (2, true) => [tap],
 			(2, false) => [tap, tap with { Second = true }],
-			_ => throw new ArgumentException("Tap three or more: an action names two taps at most"),
+			_ => [tap], // tap three or more: one cost picking the whole set (TapIds)
 		};
 
 	readonly ImmutableList<AdditionalCost> costs = [];
@@ -568,6 +568,13 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 public record ManaOfOneColorComponent(Count Amount) : GameComponent
 {
 	public bool SacrificeSelf { get; init; }
+
+	/// <summary>
+	/// Starfleet Academy: "{5}, {T}: Choose a color. Add an amount of mana of that color equal to …" —
+	/// a mana ability that costs mana (Shayne, 2026-11-04: a real one). Never a plain tap: only
+	/// ManaPayment.Find uses it, when nothing else pays.
+	/// </summary>
+	public ManaCost? Cost { get; init; }
 }
 
 /// <summary>Draconic Visitor: "If one or more artifact tokens would be created under your control, that many [Token] are created instead."</summary>
@@ -842,6 +849,13 @@ public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent
 /// — MagicState.Destroy, every destruction.
 /// </summary>
 public record CountersRemovedInsteadOfDestruction : GameComponent;
+
+/// <summary>
+/// Lt. Cmdr. Geordi La Forge: "If you would put one or more charge counters on an artifact you
+/// control, put twice that many charge counters on that artifact instead." — Rules.Replacements.ChargeCounters,
+/// read by MagicState.PutCounters: entering with them too (CR 122.6), twice per Geordi.
+/// </summary>
+public record ChargeCountersOnYourArtifactsDoubled : GameComponent;
 
 /// <summary>Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard.</summary>
 public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;

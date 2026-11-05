@@ -43,4 +43,16 @@ public static class Replacements
 		amount <= 0
 			? amount
 			: amount + s.ThisTurnEffects<CountersPlusOneThisTurn>(controllerId).Count();
+
+	/// <summary>
+	/// Lt. Cmdr. Geordi La Forge: charge counters on an artifact its controller controls, twice that
+	/// many per Geordi — applied after Brad Boimler's plus one: of the two orders the controller may
+	/// pick (CR 616.1), (n + 1) × 2 is always the more.
+	/// </summary>
+	public static int ChargeCounters(GameState s, int controllerId, int amount) =>
+		amount <= 0
+			? amount
+			: amount
+				<< s.CardsIn(controllerId, ZoneType.Battlefield)
+					.Count(s.HasAbility<ChargeCountersOnYourArtifactsDoubled>);
 }
