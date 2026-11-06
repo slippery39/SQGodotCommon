@@ -162,7 +162,11 @@ public record ChooseAmongChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	)
 	{
-		var cards = Ids.Where(id => s.IsIn(id, PlayerId, Zone))
+		// Off the battlefield a card is in its owner's zone — Borg Cube's exiled cards are anyone's.
+		var cards = Ids.Where(id =>
+				s.HasObject(id)
+				&& s.IsIn(id, Zone == ZoneType.Battlefield ? PlayerId : s.GetCard(id).OwnerId, Zone)
+			)
 			.Select(s.GetCard)
 			.Where(c => Types == CardType.None || c.Is(Types)) // None: any card
 			.Where(c => Filter?.Matches(s, c, new(PlayerId, 0)) ?? true);
@@ -404,4 +408,21 @@ public record ChooseCastChoice : ChoiceAction
 public record EndStepAction : GameAction
 {
 	public override ActionResult Execute(GameState s) => new(TurnStructure.FinishCleanup(s));
+}
+
+/// <summary>Finishes the untap step after Lwaxana Troi's "you may choose not to untap" — a yes keeps her tapped.</summary>
+public record FinishUntapAction(int AskedId) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			TurnStructure.FinishUntap(
+				s,
+				InputContext.GetValueOrDefault(ChoosePermanentChoice.Chosen) switch
+				{
+					int => AskedId,
+					ImmutableList<int> ids when !ids.IsEmpty => AskedId,
+					_ => 0,
+				}
+			)
+		);
 }

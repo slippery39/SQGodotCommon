@@ -249,7 +249,7 @@ public static class Combat
 	/// <summary>CR 514.2: damage wears off and "until end of turn" effects end, together, in cleanup.</summary>
 	public static GameState CleanupPermanents(GameState s) =>
 		ForEachPermanent(
-			s,
+			ReturnControl(s),
 			c =>
 				c.Damage > 0
 				|| c.DamagedByDeathtouch
@@ -268,6 +268,23 @@ public static class Combat
 						.Components.RemoveAll(x => x is UntilEndOfTurn { UntilTurnOf: 0 }),
 				}
 		);
+
+	/// <summary>
+	/// Worf, Intelligence Contractor: control gained "until end of turn" ends (CR 514.2) — every such effect
+	/// at once, so it goes back to whoever had it before the FIRST (the oldest stamp), not the last.
+	/// </summary>
+	static GameState ReturnControl(GameState s)
+	{
+		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
+		foreach (var card in s.CardsIn(id, ZoneType.Battlefield).ToList())
+			if (
+				card.GetComponents<UntilEndOfTurn>()
+					.FirstOrDefault(u => u is { UntilTurnOf: 0, ReturnControlTo: > 0 }) is
+				{ } first
+			)
+				s = s.GainControl(card.Id, first.ReturnControlTo);
+		return s;
+	}
 
 	static GameState ForEachPermanent(GameState s, Func<Card, bool> where, Func<Card, Card> update)
 	{

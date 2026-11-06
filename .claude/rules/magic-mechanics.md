@@ -231,6 +231,10 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   end step"), read in the graveyard the same way; leaving the graveyard strips it (a new object).
   With no card to hold it ("return a land you control", Erica Ortegas) it is `AtNextEndStep`: an object in
   your command zone, removed once it has resolved. Set up during the end step, either waits for the next turn's.
+  **One on a permanent whose controller is someone else** (The Wrath of Khan's "at the beginning of the next
+  combat this turn, gain control of that creature", `AtBeginningOfNextCombat`) names its controller
+  (`DelayedTrigger.ControllerId`, CR 603.7d): `Triggers.Collect` reads those as it reads an exiled card's —
+  never as the permanent's own, which would make its controller "you".
 - **Emblems** (CR 114) are cards in their owner's COMMAND zone (`GetEmblem`): `Triggers.Collect` and
   the statics board read that zone beside the battlefield, so an emblem's trigger has a source
   ("this emblem deals 5 damage") and its anthem applies. Nothing removes them.
@@ -306,7 +310,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   candidates.
 - **Face a dilemma** (TRK) is `FacedDilemmaEvent`, ONE however many modes, raised where modes are chosen:
   a cast (`PutOnStack`, a cast during a resolution too), an activation with `Modes`, and a modal trigger's
-  `ChooseModesChoice` (`QueueModalTriggerAction`) — whether or not it resolves. Copies choose nothing.
+  `ChooseModesChoice` (`QueueModalTriggerAction`) — whether or not it resolves. Copies choose nothing. All three
+  go through `FacedDilemmaEvent.Face`, which also counts it for the turn (`TurnTally.DilemmasFaced`,
+  `Count.DilemmasFacedThisTurnBy`: Sisko's Officers, The Caretaker's "if you faced a dilemma this turn").
 - **"Whenever you attack WHILE …"** (power 8) is `Trigger.While` — part of the trigger condition, judged
   only as the event happens (`Triggers.Matches`); never `TriggeredAbilityComponent.If`, which is judged
   again on resolution (release notes: "it doesn't matter … when [ability] resolves").
@@ -372,7 +378,10 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `Triggers.Collect` gives it to each permanent the scope matches, and "this creature" is that one.
 - **Gaining control is `MagicState.GainControl`** — the same object (counters, damage, attachments,
   until-end-of-turn effects stay), moved to its new controller's battlefield zone, summoning sick for them,
-  out of combat; no zone change, no event.
+  out of combat; no zone change, no event. **"Until end of turn"** (Worf, Intelligence Contractor; The Wrath of
+  Khan) is `GainControl.UntilEndOfTurn`: an `UntilEndOfTurn { ReturnControlTo }` on it, given back by cleanup
+  (`Combat.CleanupPermanents`) — gone with a zone change like every until-end-of-turn effect. "Become Warriors
+  in addition to their other types" is `ModifyUntilEndOfTurn.AlsoCreatureType` (`s.Subtypes` adds it).
 - **"That many plus one of each kind of counter"** (Brad Boimler, `CountersPlusOneThisTurn`) is
   `Rules.Replacements.Counters`, applied in `MagicState.PutCounters` — so it reaches every counter path:
   effects, costs (`Loyalty.Change`), entering with loyalty, time or +1/+1 counters, proliferate.
@@ -403,7 +412,13 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   whose library (`Of`), who plays (`By`), "for as long as it remains exiled" (`Forever`), face down, or only
   a chosen card (`Choose`, Chekov's land). Cast or played, the card is public again (`ExiledFaceDown` is status).
 - **"Once during each of your turns, cast an artifact spell from the top of your library"** (Zefram) is
-  `Playable.LibraryTopPermission`, the permanent stamped as the cast uses it (`Card.CastFromLibraryTopOn`).
+  `Playable.LibraryTopPermission`, the permanent stamped as the cast uses it (`Card.PermissionUsedOn`).
+  **"Once during each of your turns, you may cast [play] … from your graveyard [or from outside the game]"**
+  (Overflow Submatrix, The Holodeck) is `MayPlayFromYourGraveyard(filter) { Finality, OutsideTheGame }`, read by
+  `Playable.GraveyardPermission` for casts AND land plays, stamping the same `PermissionUsedOn`. It is not
+  flashback: the stack records `OnStackComponent.ByPermission`, so `MoveCard` doesn't exile it and it resolves
+  onto the battlefield (`Finality`: with a finality counter). A card with its own way out of the graveyard uses
+  that. `Candidates` looks in the sideboard only while such a permanent says "outside the game".
 - **"The first spell you've cast this game"** is stamped as it is cast (`OnStackComponent.FirstSpellThisGame`,
   from `MagicPlayer.SpellsCastThisGame`), read by `FirstSpellYouCastThisGame` — a copy wasn't cast.
 - **"When that creature dies this turn, you …"** (A Good Day to Die) is `WheneverThisTurn { About }`: the
@@ -469,6 +484,39 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   every draw goes through — twice per copy (two Spocks: four).
 - **"You don't lose the game for having 0 or less life"** (Georgiou, `DontLoseForZeroLife`) is asked by the
   state-based check alone (`TurnStructure`), only once life is 0 or less; she leaves, the next check takes the game.
+- **"That ability triggers an additional time"** (CR 603.2d) is decided in `Triggers.Collect` alone
+  (`AdditionalTimes`): each pending trigger from a PERMANENT repeated — Dr. Crusher's static
+  (`LifeGainTriggersAdditionalTime`: your life gain, a permanent you control, hers included) and Lwaxana Troi's
+  link (`TriggersAdditionalTimeWhileTapped` on her, naming that object of the creature — read only while she is
+  tapped, removed by `MagicState.Untap` and by leaving). The linked creature's own "when this dies" looks back
+  and is doubled too; a DELAYED trigger hosted on a permanent isn't its ability and triggers once (CR 603.7c).
+  Nothing is looked up unless a doubler is on the battlefield. Two "until end of turn" control effects on one
+  permanent end together: it goes back to the controller before the FIRST.
+- **"You may choose not to untap [it] during your untap step"** (Lwaxana Troi, `MayChooseNotToUntap`) is a
+  yes/no the untap step asks before untapping — only while her link is live (Shayne, 2026-11-06); the rest of the
+  step is `TurnStructure.FinishUntap`, after the answer (`FinishUntapAction`).
+- **Assimilate** (Death Is Irrelevant, Borg Cube) is `Assimilate`: `EnterBattlefield` under your control, a +1/+1
+  counter, then the artifact type STAMPED with an `Animated` whose AuraId is 0 (no Aura: the state check leaves
+  it, `Card.WithoutAnimation` undoes it as it leaves and for a copy) and "Borg, loses all other creature types" an
+  `UntilEndOfTurn` that never ends. "A creature card exiled with it" is `AssimilateExiledWithSource` (this object's
+  `ExiledBy` links; "if you can't" runs the rest). `ChooseAmongChoice` finds a card off the battlefield in its
+  OWNER's zone, so a choice among anyone's exiled cards works.
+- **"Exile cards from the top until a nonland card. You may cast it without paying"** (The Caretaker — target
+  opponent's library, the rest stay exiled) and **discover N** (U.S.S. Discovery: mana value N or less, "or put it
+  into your hand", the rest on the bottom in a random order — `TrkCards.Discover`) are one effect,
+  `ExileUntilNonlandCastFree`: a yes/no, then `CastNow` free; asked only when it can be cast.
+- **"Cast any number of spells with mana value ≤ N from among the exiled cards, free"** (Sisko,
+  `ExileTopAndCastFree`) is Uldaros' choose-and-cast loop (`CastCopiesWithinBudget`) with `Originals` (the cards,
+  not copies) and `EachAtMost` (a cap on each, not a total); N counted once as it resolves.
+  **"Copy that card X times; cast the copies free"** (Infinite Diversity) is `CastCopiesOf`: one copy at a time
+  (`CastChosenCopy.MakeCopy`), each asked — a copy not cast ceases to exist (CR 704.5e).
+- **"During your main phase, each card in your graveyard has beam me up for its mana cost"** (Scotty) is
+  `GraveyardSpellsHaveBeamMeUp`, answered by `Costs.Flashback` (the ONE graveyard-cast answer): an instant or
+  sorcery, its owner's main phase, `BeamMeUpCost { ExceptId }` (never returning Scotty). One cast per spell ×
+  creature returned, as every beam-me-up card (Shayne, 2026-11-06).
+- **"That player may exile it. If they don't, you may cast a noncreature spell from your hand free"** (Brazen
+  Bluff) is `May { Who, Otherwise }` with `ExileSpell` (a card on the stack, to its owner's exile) and
+  `CastFromHandFree` (a choice among the castable, then `CastNow`).
 - **"A permanent was returned to your hand from the battlefield this turn"** (Miles O'Brien) is
   `TurnTally.PermanentsReturnedToHand` — its OWNER's, counted in `MoveCard` (battlefield → hand: bounce, beam
   me up's cost, a token too) — read by `Count.PermanentsReturnedToHandThisTurn`.

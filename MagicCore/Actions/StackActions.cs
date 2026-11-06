@@ -19,6 +19,12 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>"If this spell was cast from a graveyard" — and flashback exiles it as it leaves the stack.</summary>
 	public ZoneType CastFrom { get; init; } = ZoneType.Hand;
 
+	/// <summary>Overflow Submatrix, The Holodeck: cast from a graveyard by a permanent's permission — not flashback, so not exiled leaving the stack; it resolves onto the battlefield.</summary>
+	public bool ByPermission { get; init; }
+
+	/// <summary>Overflow Submatrix: "that artifact creature enters with a finality counter on it".</summary>
+	public bool Finality { get; init; }
+
 	/// <summary>Theorist's Proxy: this cast can't be countered — gone with the stack object, so a recast can be.</summary>
 	public bool CantBeCountered { get; init; }
 
@@ -241,16 +247,23 @@ public record CastSpellAction : GameAction
 		var card = s.GetCard(CardId);
 		var costs = CostsOf(s, card, Kicked); // read before paying: flashback's are known only in the graveyard
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
-		// Zefram Cochrane: "once during each of your turns" — this one is used.
-		if (
-			from == ZoneType.Library
-			&& Playable.LibraryTopPermission(s, card, PlayerId) is { } zefram
-		)
+		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
+		var permission = from switch
+		{
+			ZoneType.Library => Playable.LibraryTopPermission(s, card, PlayerId),
+			ZoneType.Graveyard or ZoneType.Sideboard => Playable.GraveyardPermission(
+				s,
+				card,
+				PlayerId
+			),
+			_ => null,
+		};
+		if (permission is not null)
 			s = s.UpdateObject(
-				zefram.Id,
-				zefram with
+				permission.Id,
+				permission with
 				{
-					CastFromLibraryTopOn = s.GetGame().TurnNumber,
+					PermissionUsedOn = s.GetGame().TurnNumber,
 				}
 			);
 		var sunburst = card.HasComponent<Sunburst>();
@@ -268,6 +281,19 @@ public record CastSpellAction : GameAction
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
+		if (permission is not null && from != ZoneType.Library)
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							ByPermission = true,
+							Finality = s.AbilitiesOf<MayPlayFromYourGraveyard>(permission)
+								.Any(m => m.Finality),
+						}
+					)
+			);
 		if (sunburst)
 			s = s.UpdateObject(
 				CardId,
@@ -372,7 +398,7 @@ public record CastSpellAction : GameAction
 			)
 		);
 		if (!modes.IsEmpty)
-			s = s.Raise(new Turns.FacedDilemmaEvent(playerId));
+			s = Turns.FacedDilemmaEvent.Face(s, playerId);
 		return Turns.Triggers.RaiseTargeted(s, targets, playerId, cardId);
 	}
 }
@@ -549,7 +575,7 @@ public record ActivateAbilityAction : GameAction
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		var (specs, steps) = TextOf(ability, Modes);
 		if (!Modes.IsEmpty)
-			s = s.Raise(new Turns.FacedDilemmaEvent(PlayerId));
+			s = Turns.FacedDilemmaEvent.Face(s, PlayerId);
 		s = StackResolution.Push(
 			s,
 			new StackAbility
@@ -668,7 +694,9 @@ public static class StackResolution
 					|| !aura.Enchant.IsLegal(s, permanent.ControllerId, permanent.Id, auraHost);
 			}
 			var fromGraveyard = cast?.CastFrom == ZoneType.Graveyard;
-			var mayCastThere = permanent.HasComponent<MayCastFromYourGraveyard>(); // Storied Veteran
+			var mayCastThere =
+				permanent.HasComponent<MayCastFromYourGraveyard>() // Storied Veteran
+				|| cast?.ByPermission == true; // Overflow Submatrix, The Holodeck
 			if ((fromGraveyard && !mayCastThere) || auraFizzles)
 				return Priority.Retain(
 					s.MoveCard(permanent.Id, s.ZoneId(permanent.OwnerId, ZoneType.Graveyard)), // flashback: exiled instead (MoveCard)
@@ -689,7 +717,12 @@ public static class StackResolution
 							cast is not null
 						)
 						{
-							Finality = fromGraveyard && mayCastThere, // "it enters with a finality counter on it"
+							Finality =
+								fromGraveyard
+								&& (
+									permanent.HasComponent<MayCastFromYourGraveyard>()
+									|| cast?.Finality == true
+								), // "it enters with a finality counter on it"
 							Sunburst = permanent.HasComponent<Sunburst>()
 								? cast?.ColorsSpent ?? 0
 								: 0,

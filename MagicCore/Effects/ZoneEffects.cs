@@ -113,10 +113,16 @@ public record Flicker(Ref What) : Effect
 /// <summary>
 /// Rules of Acquisition: "Gain control of target nonland permanent an opponent controls" (To: you);
 /// "Target opponent gains control of target nonland permanent you control" (To: that player) — for
-/// good, through MagicState.GainControl. ponytail: no "until end of turn" control until a card needs it.
+/// good, through MagicState.GainControl.
 /// </summary>
 public record GainControl(Ref What, Ref To) : Effect
 {
+	/// <summary>
+	/// Worf, Intelligence Contractor; The Wrath of Khan: "gain control of [it] until end of turn" — its
+	/// controller before is kept on it (UntilEndOfTurn.ReturnControlTo) and given it back in cleanup.
+	/// </summary>
+	public bool UntilEndOfTurn { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (
@@ -124,9 +130,20 @@ public record GainControl(Ref What, Ref To) : Effect
 			is not (> 0 and var player)
 		)
 			return new(s);
-		return new(
-			Permanents(What, s).ToList().Aggregate(s, (st, c) => st.GainControl(c.Id, player))
-		);
+		foreach (var c in Permanents(What, s).ToList())
+		{
+			s = s.GainControl(c.Id, player);
+			if (UntilEndOfTurn && c.ControllerId != player)
+				s = Update(
+					s,
+					(Card)
+						s.GetCard(c.Id)
+							.WithComponent(
+								new Cards.UntilEndOfTurn { ReturnControlTo = c.ControllerId }
+							)
+				);
+		}
+		return new(s);
 	}
 }
 
@@ -681,6 +698,268 @@ public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
 	}
 }
 
+/// <summary>Brazen Bluff: "That player may exile it." — a spell (a card on the stack), to its owner's exile.</summary>
+public record ExileSpell(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var stack = s.GetWellKnownId(MagicKeys.Stack);
+		foreach (var id in All(What, s).ToList())
+			if (s.GetObject(id) is Card spell && s.GetParent(id) == stack)
+				s = s.MoveCard(id, s.ZoneId(spell.OwnerId, ZoneType.Exile));
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Brazen Bluff: "you may cast a noncreature spell from your hand without paying its mana cost" — one
+/// chosen among those that can be cast free now (CastNow).
+/// </summary>
+public record CastFromHandFree(Filters.Filter What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		ImmutableList<int> castable =
+		[
+			.. s.CardsIn(Controller, ZoneType.Hand)
+				.Where(c =>
+					What.Matches(s, c, new(Controller, 0))
+					&& CastNow.CanCast(s, Controller, c, free: true)
+				)
+				.Select(c => c.Id),
+		];
+		return castable.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+						Steps =
+						[
+							new ChooseAmongChoice
+							{
+								PlayerId = Controller,
+								Ids = castable,
+								Zone = ZoneType.Hand,
+								Prompt = "You may cast one free",
+							},
+							new CastChosenFree(),
+						],
+					}
+				)
+			);
+	}
+}
+
+/// <summary>After the choice: the chosen card cast free (CastNow), if one was chosen.</summary>
+public record CastChosenFree : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		ChooseCardsFromHandChoice.Read(InputContext).FirstOrDefault() is > 0 and var id
+			? new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext,
+						Steps = [new CastNow(id, Free: true)],
+					}
+				)
+			)
+			: new(s);
+}
+
+/// <summary>
+/// Assimilate (Death Is Irrelevant, Borg Cube): "Put it onto the battlefield under your control with a
+/// +1/+1 counter. It's a Borg artifact creature and loses all other creature types." — no duration, so
+/// until it leaves: the artifact type stamped with an Animated that has no Aura (Card.WithoutAnimation
+/// undoes it as it leaves and for a copy, CR 707.2), the creature type an UntilEndOfTurn that never ends.
+/// A card, from wherever it is (a graveyard, exile).
+/// </summary>
+public record Assimilate(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			All(What, s)
+				.Where(id => s.GetObject(id) is Card && !s.IsOnBattlefield(id))
+				.ToList()
+				.Aggregate(s, (st, id) => Into(st, Controller, id))
+		);
+
+	public static GameState Into(GameState s, int playerId, int cardId)
+	{
+		s = s.EnterBattlefield(cardId, playerId);
+		if (!s.IsOnBattlefield(cardId))
+			return s;
+		s = s.AddPlusOneCounters(cardId, 1);
+		var card = s.GetCard(cardId);
+		return s.UpdateObject(
+			cardId,
+			(Card)
+				(card with { Types = card.Types | CardType.Artifact })
+					.WithComponent(
+						new Animated(0, 0, card.Types, null, card.BasePower, card.BaseToughness)
+					)
+					.WithComponent(
+						new Cards.UntilEndOfTurn
+						{
+							BecomesCreatureType = "Borg",
+							UntilTurnOf = Cards.UntilEndOfTurn.Never,
+						}
+					)
+		);
+	}
+}
+
+/// <summary>
+/// Borg Cube: "assimilate a creature card exiled with it. If you can't, exile up to one target
+/// creature." — the cards this object of the source exiled (ExiledBy, CR 607.2a), one chosen if several.
+/// </summary>
+public record AssimilateExiledWithSource(ImmutableList<GameAction> IfYouCant) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var source = Ref.Source.Resolve(s, InputContext).Any() ? Source(s) : null;
+		ImmutableList<int> linked =
+			source is null || !s.IsOnBattlefield(source.Id)
+				? []
+				:
+				[
+					.. new[] { s.Player1Id(), s.Player2Id() }
+						.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
+						.Where(c =>
+							c.Is(CardType.Creature)
+							&& c.GetComponent<ExiledBy>() is { } by
+							&& by.SourceId == source.Id
+							&& by.SourceIncarnation == source.Incarnation
+						)
+						.Select(c => c.Id),
+				];
+		if (linked.IsEmpty)
+			return new(
+				s.SpawnAction(
+					new PipelineAction { Steps = IfYouCant, PipelineContext = InputContext }
+				)
+			);
+		if (linked.Count == 1)
+			return new(Assimilate.Into(s, Controller, linked[0]));
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps =
+					[
+						new ChooseAmongChoice
+						{
+							PlayerId = Controller,
+							Ids = linked,
+							Zone = ZoneType.Exile,
+							MinChoices = 1,
+							Prompt = "Assimilate a creature card exiled with it",
+						},
+						new AssimilateChosen(),
+					],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>Borg Cube, after the choice: the chosen card assimilated.</summary>
+public record AssimilateChosen : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			ChooseCardsFromHandChoice
+				.Read(InputContext)
+				.Where(id => s.HasObject(id) && !s.IsOnBattlefield(id))
+				.Aggregate(s, (st, id) => Assimilate.Into(st, Controller, id))
+		);
+}
+
+/// <summary>
+/// The Caretaker: "target opponent exiles cards from the top of their library until they exile a
+/// nonland card. You may cast that card without paying its mana cost." — cast right then (CastNow,
+/// free), asked only when it could be; the rest stay exiled. Discover N (U.S.S. Discovery, CR 701.57):
+/// with ManaValueAtMost, OrIntoHand and RestOnBottom.
+/// </summary>
+public record ExileUntilNonlandCastFree(Ref Of) : Effect
+{
+	/// <summary>Discover 5: "until you exile a nonland card with mana value 5 or less".</summary>
+	public int? ManaValueAtMost { get; init; }
+
+	/// <summary>Discover: "Cast it without paying its mana cost or put it into your hand."</summary>
+	public bool OrIntoHand { get; init; }
+
+	/// <summary>Discover: "Put the rest on the bottom in a random order."</summary>
+	public bool RestOnBottom { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		if (
+			All(Of, s).FirstOrDefault(id => s.GetObject(id) is MagicPlayer)
+			is not (> 0 and var owner)
+		)
+			return new(s);
+		var library = s.CardsIn(owner, ZoneType.Library).ToList();
+		var hit = library.FirstOrDefault(c =>
+			!c.Is(CardType.Land)
+			&& (ManaValueAtMost is not { } most || c.ManaCost.ManaValue <= most)
+		);
+		var exiled = hit is null ? library : library.TakeWhile(c => c.Id != hit.Id).Append(hit);
+		foreach (var card in exiled.ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(owner, ZoneType.Exile));
+		if (RestOnBottom)
+		{
+			var rest = exiled.Where(c => c.Id != hit?.Id).Select(c => c.Id).ToArray();
+			(var rng, s) = s.TakeRng();
+			rng.Shuffle(rest);
+			foreach (var id in rest)
+				s = s.MoveCard(id, s.ZoneId(owner, ZoneType.Library)); // appended: the bottom
+		}
+		if (hit is null)
+			return new(s);
+		ImmutableList<GameAction> toHand = OrIntoHand
+			? [new MoveCardTo(hit.Id, ZoneType.Hand)]
+			: [];
+		if (!CastNow.CanCast(s, Controller, s.GetCard(hit.Id), free: true))
+			return new(
+				s.SpawnAction(new PipelineAction { Steps = toHand, PipelineContext = InputContext })
+			);
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+					Steps =
+					[
+						new YesNoChoice(
+							Controller,
+							OrIntoHand
+								? $"Cast {hit.Name} free? (No: into your hand)"
+								: $"Cast {hit.Name} free?"
+						),
+						new IfChosenAction([new CastNow(hit.Id, Free: true)])
+						{
+							Otherwise = toHand,
+						},
+					],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>Discover: "… or put it into your hand" — the card, if it is still where it was put (its owner's exile), to its OWNER's zone (CR 400.3).</summary>
+public record MoveCardTo(int CardId, ZoneType To) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		s.GetObject(CardId) is Card card && s.IsIn(CardId, card.OwnerId, ZoneType.Exile)
+			? new(s.MoveCard(CardId, s.ZoneId(card.OwnerId, To)))
+			: new(s);
+}
+
 /// <summary>
 /// "You may cast that card" in the middle of a resolution (CR 608.2g) — Chandra, Torch of Defiance;
 /// Uldaros' free copies. A real CastSpellAction (DuringResolution): the engine's own cast candidates,
@@ -834,6 +1113,12 @@ public record ExileOneOfTypeFromGraveyard(CardType Type) : Effect
 /// </summary>
 public record CastCopiesWithinBudget(int Budget, ImmutableList<int> Done) : Effect
 {
+	/// <summary>Captain Benjamin Sisko: "You may cast any number of spells … from among those cards" — the cards themselves, not copies.</summary>
+	public bool Originals { get; init; }
+
+	/// <summary>Sisko: "spells with mana value less than or equal to [N]" — a cap on each, not a total spent.</summary>
+	public bool EachAtMost { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var sourceId = GetInput<int>(ContextKeys.Source);
@@ -864,9 +1149,11 @@ public record CastCopiesWithinBudget(int Budget, ImmutableList<int> Done) : Effe
 							PlayerId = Controller,
 							Ids = fits,
 							Zone = ZoneType.Exile,
-							Prompt = $"Cast a copy free ({Budget} mana value left)",
+							Prompt = EachAtMost
+								? $"Cast one free (mana value {Budget} or less)"
+								: $"Cast a copy free ({Budget} mana value left)",
 						},
-						new CastChosenCopy(Budget, Done),
+						new CastChosenCopy(this),
 					],
 				}
 			)
@@ -880,9 +1167,58 @@ public record CastCopiesWithinBudget(int Budget, ImmutableList<int> Done) : Effe
 		);
 }
 
-/// <summary>The chosen card's copy, cast free — then the next choice, with what is left.</summary>
-public record CastChosenCopy(int Budget, ImmutableList<int> Done) : Effect
+/// <summary>
+/// Captain Benjamin Sisko: "Exile the top five cards of your library. You may cast any number of spells
+/// with mana value less than or equal to the number of Officers you control from among those cards
+/// without paying their mana costs." — exiled linked to this ability's source, the cap counted once as it
+/// resolves, then CastCopiesWithinBudget's choose-and-cast loop on the cards themselves. What isn't cast
+/// stays exiled.
+/// </summary>
+public record ExileTopAndCastFree(int N, Count ManaValueAtMost) : Effect
 {
+	public override ActionResult Execute(GameState s)
+	{
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		var incarnation = s.HasObject(sourceId) ? s.GetCard(sourceId).Incarnation : -1;
+		var cap = ManaValueAtMost.Value(s, InputContext);
+		foreach (var card in s.CardsIn(Controller, ZoneType.Library).Take(N).ToList())
+		{
+			s = s.MoveCard(card.Id, s.ZoneId(Controller, ZoneType.Exile));
+			s = Update(
+				s,
+				(Card)s.GetCard(card.Id).WithComponent(new ExiledBy(sourceId, incarnation))
+			);
+		}
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						new CastCopiesWithinBudget(cap, []) { Originals = true, EachAtMost = true },
+					],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>The chosen card's copy (Sisko: the card itself), cast free — then the loop's next choice, with what is left.</summary>
+public record CastChosenCopy(CastCopiesWithinBudget Loop) : Effect
+{
+	/// <summary>A copy of a card (CR 707.12), yours, in your exile — to be cast at once; one not cast ceases to exist.</summary>
+	public static (GameState, Card) MakeCopy(GameState s, int playerId, Card original) =>
+		s.AddObject(
+			new Card
+			{
+				OwnerId = playerId,
+				ControllerId = playerId,
+				IsCopy = true,
+			}.WithCopiableValuesOf(original),
+			s.ZoneId(playerId, ZoneType.Exile)
+		);
+
 	public override ActionResult Execute(GameState s)
 	{
 		var sourceId = GetInput<int>(ContextKeys.Source);
@@ -898,29 +1234,82 @@ public record CastChosenCopy(int Budget, ImmutableList<int> Done) : Effect
 				)
 			);
 		var original = s.GetCard(chosen);
+		var next = Loop with
+		{
+			Budget = Loop.EachAtMost ? Loop.Budget : Loop.Budget - original.ManaCost.ManaValue,
+			Done = Loop.Done.Add(chosen),
+		};
+		if (Loop.Originals)
+			return new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext,
+						Steps = [new CastNow(chosen, Free: true), next],
+					}
+				)
+			);
 		Card copy;
-		(s, copy) = s.AddObject(
-			new Card
-			{
-				OwnerId = Controller,
-				ControllerId = Controller,
-				IsCopy = true,
-			}.WithCopiableValuesOf(original),
-			s.ZoneId(Controller, ZoneType.Exile)
-		);
+		(s, copy) = MakeCopy(s, Controller, original);
 		return new(
 			s.SpawnAction(
 				new PipelineAction
 				{
 					PipelineContext = InputContext,
-					Steps =
-					[
-						new CastNow(copy.Id, Free: true),
-						new CastCopiesWithinBudget(
-							Budget - original.ManaCost.ManaValue,
-							Done.Add(chosen)
-						),
-					],
+					Steps = [new CastNow(copy.Id, Free: true), next],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>
+/// Infinite Diversity: "Copy that card X times … You may cast the copies without paying their mana
+/// costs." — one copy at a time, each asked; X is counted once, as it resolves. A copy not cast ceases to
+/// exist (CR 704.5e).
+/// </summary>
+public record CastCopiesOf(Ref What, Count Times) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		All(What, s).FirstOrDefault(id => s.GetObject(id) is Card) is > 0 and var id
+			? new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext,
+						Steps = [new CastCopyOf(id, Times.Value(s, InputContext))],
+					}
+				)
+			)
+			: new(s);
+}
+
+/// <summary>One of Infinite Diversity's copies — "cast it free?" — then the next, while any are left.</summary>
+public record CastCopyOf(int CardId, int Left) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (Left <= 0 || !s.HasObject(CardId))
+			return new(s);
+		Card copy;
+		(s, copy) = CastChosenCopy.MakeCopy(s, Controller, s.GetCard(CardId));
+		ImmutableList<GameAction> next = [new CastCopyOf(CardId, Left - 1)];
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+					Steps = CastNow.CanCast(s, Controller, copy, free: true)
+						?
+						[
+							new YesNoChoice(
+								Controller,
+								$"Cast a copy of {copy.Name} free? ({Left} left)"
+							),
+							new IfChosenAction([new CastNow(copy.Id, Free: true)]),
+							.. next,
+						]
+						: next,
 				}
 			)
 		);
@@ -1143,6 +1532,9 @@ public record PutIntoLibrary(Ref What, bool OnTop) : Effect
 /// <summary>Improvised Act: "You may discard a card. If you do, [Then]."</summary>
 public record MayDiscard(ImmutableList<GameAction> Then) : Effect
 {
+	/// <summary>The Wrath of Khan, chapter II: "You may exile a card from your hand. If you do, draw a card."</summary>
+	public bool Exile { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		s.CardsIn(Controller, ZoneType.Hand).Any()
 			? new(
@@ -1157,9 +1549,13 @@ public record MayDiscard(ImmutableList<GameAction> Then) : Effect
 								PlayerId = Controller,
 								MinChoices = 0,
 								MaxChoices = 1,
-								Prompt = "You may discard a card",
+								Prompt = Exile
+									? "You may exile a card from your hand"
+									: "You may discard a card",
 							},
-							new MoveChosenToGraveyardAction { PlayerId = Controller },
+							Exile
+								? new MoveChosenToAction(Controller, ZoneType.Exile)
+								: new MoveChosenToGraveyardAction { PlayerId = Controller },
 							new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
 						],
 					}

@@ -224,6 +224,11 @@ public record FacedDilemmaEvent(int PlayerId) : MagicEvent
 	public override EventKind Kind() => EventKind.FacedDilemma;
 
 	public override int By(GameState s) => PlayerId;
+
+	/// <summary>The one place a player faces a dilemma: counted for "this turn" (Sisko), then raised.</summary>
+	public static GameState Face(GameState s, int playerId) =>
+		s.Tally(playerId, t => t with { DilemmasFaced = t.DilemmasFaced + 1 })
+			.Raise(new FacedDilemmaEvent(playerId));
 }
 
 /// <summary>Raised by Rules.Life.Gain — one per life-gain event, however much (CR 119.9).</summary>
@@ -304,12 +309,19 @@ public static class Triggers
 		);
 		// An exiled or dead card's delayed trigger only — never its own abilities (Ghost of Illyria's
 		// "return that card at the beginning of the next end step"; Dr. McCoy's, on the card that died).
+		// A permanent's delayed trigger whose controller is named (The Wrath of Khan's, on the creature
+		// it will steal) is read here too; the rest stay with the permanent's own (AbilitiesOf).
 		var delayedInExile = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
 			s.CardsIn(p, ZoneType.Exile)
 				.Concat(s.CardsIn(p, ZoneType.Graveyard))
 				.Where(c => c.HasComponent<DelayedTrigger>())
+				.Concat(
+					s.CardsIn(p, ZoneType.Battlefield)
+						.Where(c => c.GetComponents<DelayedTrigger>().Any(d => d.ControllerId != 0))
+				)
 				.SelectMany(c =>
 					c.GetComponents<DelayedTrigger>()
+						.Where(d => d.ControllerId != 0 || !s.IsOnBattlefield(c.Id))
 						.Select(d =>
 							(
 								source: d.ControllerId == 0
@@ -327,6 +339,15 @@ public static class Triggers
 		var grants = permanents
 			.Where(p => p.HasComponent<GrantsTriggeredAbility>() && s.IsOnBattlefield(p.Id))
 			.SelectMany(p => s.AbilitiesOf<GrantsTriggeredAbility>(p).Select(g => (granter: p, g)))
+			.ToList();
+		// Dr. Crusher, Lwaxana Troi: "that ability triggers an additional time" — found once here.
+		var doublers = permanents
+			.Where(p =>
+				(
+					p.HasComponent<LifeGainTriggersAdditionalTime>()
+					|| p.HasComponent<TriggersAdditionalTimeWhileTapped>()
+				) && s.IsOnBattlefield(p.Id)
+			)
 			.ToList();
 		var events = WithoutSilencedEntries(s, permanents);
 		var fromTheBattlefield = permanents
@@ -346,19 +367,24 @@ public static class Triggers
 				events
 					.Where(e => Matches(s, found.source, found.a.On, e))
 					.Take(found.a.On.OneOrMore ? 1 : int.MaxValue) // "one or more": one per batch
-					.Select(e => new Pending(
-						found.source,
-						found.a,
-						EventCard(e),
-						Snapshot(s, e),
-						EventObject(s, e),
-						e switch
-						{
-							CreatureDealtDamageEvent damaged => damaged.Amount,
-							PlayerDealtDamageEvent dealt => dealt.Amount,
-							_ => 0,
-						}
-					))
+					.SelectMany(e =>
+						Enumerable.Repeat(
+							new Pending(
+								found.source,
+								found.a,
+								EventCard(e),
+								Snapshot(s, e),
+								EventObject(s, e),
+								e switch
+								{
+									CreatureDealtDamageEvent damaged => damaged.Amount,
+									PlayerDealtDamageEvent dealt => dealt.Amount,
+									_ => 0,
+								}
+							),
+							1 + AdditionalTimes(s, doublers, found.source, found.a, e)
+						)
+					)
 			);
 		var fromTheDead = s
 			.PendingGameEvents.OfType<DiedEvent>()
@@ -384,7 +410,21 @@ public static class Triggers
 						&& !a.FromGraveyard
 						&& Concerns(s, a.On, died.LastKnown, died.LastKnown)
 					)
-					.Select(a => new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown))
+					// Lwaxana's linked creature dying: its "when this dies" looks back (CR 603.10a), doubled too.
+					.SelectMany(a =>
+						Enumerable.Repeat(
+							new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown),
+							1
+								+ AdditionalTimes(
+									s,
+									doublers,
+									died.LastKnown,
+									a,
+									died,
+									lookBack: true
+								)
+						)
+					)
 					// The Aura is in the graveyard by the time triggers are collected — the state-based
 					// check takes it in the same pass — so its trigger is read from it as it was.
 					.Concat(
@@ -437,6 +477,46 @@ public static class Triggers
 			.Where(p => InterveningIfHolds(s, p))
 			.OrderBy(p => p.Source.ControllerId == active ? 0 : 1) // APNAP; stable within a player
 			.ToList();
+	}
+
+	/// <summary>
+	/// "That ability triggers an additional time" (CR 603.2d) — how many more times a permanent's
+	/// ability triggers on this event: Dr. Crusher's for your life gain and your permanents, Lwaxana's for
+	/// the one creature she named while she is tapped. A delayed trigger on a permanent isn't one of its
+	/// abilities (CR 603.7c: it triggers once). <paramref name="lookBack"/>: the source left as this happened
+	/// (a dying creature's own "when this dies"), so it is matched as it last existed.
+	/// </summary>
+	static int AdditionalTimes(
+		GameState s,
+		List<Card> doublers,
+		Card source,
+		TriggeredAbilityComponent ability,
+		GameEvent e,
+		bool lookBack = false
+	)
+	{
+		if (
+			doublers.Count == 0
+			|| !lookBack && !s.IsOnBattlefield(source.Id)
+			|| source.GetComponents<DelayedTrigger>().Any(d => d.Ability == ability)
+		)
+			return 0;
+		var n = 0;
+		foreach (var d in doublers)
+		{
+			if (
+				e is LifeGainedEvent gained
+				&& gained.PlayerId == d.ControllerId
+				&& source.ControllerId == d.ControllerId
+				&& s.HasAbility<LifeGainTriggersAdditionalTime>(d)
+			)
+				n++;
+			if (d.IsTapped)
+				foreach (var link in d.GetComponents<TriggersAdditionalTimeWhileTapped>())
+					if (link.CardId == source.Id && link.Incarnation == source.Incarnation)
+						n++;
+		}
+		return n;
 	}
 
 	/// <summary>
@@ -509,7 +589,11 @@ public static class Triggers
 							.Select(u => u.Trigger)
 							.OfType<TriggeredAbilityComponent>()
 					)
-		).Concat(card.GetComponents<DelayedTrigger>().Select(d => d.Ability)); // not its own: kept
+		).Concat(
+			card.GetComponents<DelayedTrigger>()
+				.Where(d => d.ControllerId == 0) // one with its own controller: delayedInExile
+				.Select(d => d.Ability)
+		); // not its own: kept
 
 	/// <summary>The triggered abilities a static grants this permanent — none once it lost them all.</summary>
 	static IEnumerable<TriggeredAbilityComponent> Granted(
@@ -821,7 +905,7 @@ public record QueueModalTriggerAction : GameAction
 			Trigger.Ability.Modes,
 			chosen
 		);
-		s = s.Raise(new FacedDilemmaEvent(Trigger.Source.ControllerId));
+		s = FacedDilemmaEvent.Face(s, Trigger.Source.ControllerId);
 		return new(Triggers.QueueTargets(s, Trigger, specs, steps));
 	}
 }

@@ -105,6 +105,49 @@ public static class TurnStructure
 	}
 
 	/// <summary>
+	/// The untap step's untapping (CR 502.3) and the turn's tallies reset — after Lwaxana Troi's "you may
+	/// choose not to untap" was answered, if it was asked (<paramref name="keepTapped"/>: that one stays).
+	/// </summary>
+	public static GameState FinishUntap(GameState s, int keepTapped)
+	{
+		var active = s.GetGame().ActivePlayerId;
+		// Held down by an Aura (Infinite Coursework) — found once for the step.
+		var heldDown = new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+			.Where(a => a.HasComponent<Effects.EnchantedDoesntUntap>())
+			.Select(a => (a.AttachedToId, a.AttachedToIncarnation))
+			.ToHashSet();
+		foreach (
+			var card in s.CardsIn(active, ZoneType.Battlefield)
+				.Where(c =>
+					c.IsTapped
+					&& !s.HasAbility<Effects.DoesntUntapInYourUntapStep>(c)
+					&& !heldDown.Contains((c.Id, c.Incarnation))
+					&& c.Id != keepTapped // Lwaxana Troi, kept tapped
+				)
+				.ToList()
+		)
+			s = s.Untap(card.Id);
+		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
+		{
+			s = s.WithPlayer(
+				s.GetPlayer(id) with
+				{
+					LastTurn = s.GetPlayer(id).ThisTurn,
+					ThisTurn = new(),
+				}
+			);
+			// "This turn" effects end with the tally. ponytail: at the next turn's start, not in
+			// cleanup (CR 514.2), as the tally flags they replaced did; differs only if a cleanup
+			// gives priority. Move both into cleanup if a card ever cares.
+			foreach (var effect in s.ThisTurnEffects<Effects.ThisTurnEffect>(id).ToList())
+				s = s.RemoveObject(effect.Id);
+		}
+		s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0 });
+		return EndStep(s); // nobody gets priority during untap (CR 502.4)
+	}
+
+	/// <summary>
 	/// The cleanup is done (CR 514.3): the next turn — unless something triggered or a state-based
 	/// action applies (Tinybones seeing a discard to hand size). Then players get priority in the
 	/// cleanup, and once they pass with an empty stack, another cleanup step begins (EndStep).
@@ -155,39 +198,29 @@ public static class TurnStructure
 		{
 			case Step.Untap:
 				s = EndUntilYourNextTurn(s, active);
-				// Held down by an Aura (Infinite Coursework) — found once for the step.
-				var heldDown = new[] { s.Player1Id(), s.Player2Id() }
-					.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-					.Where(a => a.HasComponent<Effects.EnchantedDoesntUntap>())
-					.Select(a => (a.AttachedToId, a.AttachedToIncarnation))
-					.ToHashSet();
-				foreach (
-					var card in s.CardsIn(active, ZoneType.Battlefield)
-						.Where(c =>
-							c.IsTapped
-							&& !s.HasAbility<Effects.DoesntUntapInYourUntapStep>(c)
-							&& !heldDown.Contains((c.Id, c.Incarnation))
-						)
-						.ToList()
-				)
-					s = s.Untap(card.Id);
-				foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
-				{
-					s = s.WithPlayer(
-						s.GetPlayer(id) with
+				// Lwaxana Troi: "You may choose not to untap [her]" — asked only while her link is live.
+				var mayStay = s.CardsIn(active, ZoneType.Battlefield)
+					.FirstOrDefault(c =>
+						c.IsTapped
+						&& s.HasAbility<Effects.MayChooseNotToUntap>(c)
+						&& c.GetComponents<Effects.TriggersAdditionalTimeWhileTapped>()
+							.Any(link =>
+								s.IsOnBattlefield(link.CardId)
+								&& s.GetCard(link.CardId).Incarnation == link.Incarnation
+							)
+					);
+				if (mayStay is not null)
+					return s.SpawnAction(
+						new PipelineAction
 						{
-							LastTurn = s.GetPlayer(id).ThisTurn,
-							ThisTurn = new(),
+							Steps =
+							[
+								new YesNoChoice(active, $"Keep {mayStay.Name} tapped?"),
+								new FinishUntapAction(mayStay.Id),
+							],
 						}
 					);
-					// "This turn" effects end with the tally. ponytail: at the next turn's start, not in
-					// cleanup (CR 514.2), as the tally flags they replaced did; differs only if a cleanup
-					// gives priority. Move both into cleanup if a card ever cares.
-					foreach (var effect in s.ThisTurnEffects<Effects.ThisTurnEffect>(id).ToList())
-						s = s.RemoveObject(effect.Id);
-				}
-				s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0 });
-				return EndStep(s); // nobody gets priority during untap (CR 502.4)
+				return FinishUntap(s, keepTapped: 0);
 
 			case Step.Draw:
 				// The starting player skips their first draw (CR 103.8a).

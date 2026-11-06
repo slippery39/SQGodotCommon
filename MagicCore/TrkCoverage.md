@@ -21,8 +21,11 @@ P/T for good, reveal the top X); batch 6a, 14 tier-3 rares (the shocklands, sunb
 changeling, a number chosen as it enters); batch 6b, the re-tier's ten (lands from the library's top, counters
 doubled on your creatures, charge counters put, combat damage as "that many", another counter of a chosen kind, a
 Spacecraft never a creature) and three tier-3 one-offs (draws doubled, no loss at 0 life, a permanent returned to
-hand this turn)** — 281/311 play, with the basics and Mugato: **every common and
-uncommon**, 61/80 rares, 14/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
+hand this turn); batch 7a, the grouped tier 3 (trigger twice, may choose not to untap, assimilate, control until
+end of turn, a delayed trigger at the next combat, dilemmas this turn, exile until a nonland and cast it free,
+discover, cast any number free from among the exiled, copies cast free, beam me up granted to the graveyard, cast
+or play from the graveyard once each turn, exile a spell)** — 295/311 play, with the basics and Mugato: **every
+common and uncommon**, 70/80 rares, 19/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
 Trimatrix (1 → 3) and Captain Jean-Luc Picard (tap three or seven untapped), Gul Dukat (life lost this
 turn), Seven of Nine (base P/T become 7/9), Branching Timeline (reveal X, every permanent card onto the
 battlefield), Dominion Infiltration (X targets, changeling — with the one-offs), Starfleet Academy (a mana
@@ -32,7 +35,11 @@ Incorporator, Deanna Troi, Enterprise-D, The Inner Light, Will Riker, M'Benga, D
 Mirror Universe Intrusion). **Batch 6a (done 2026-11-05):** the 10 shocklands, Engineered Explosives, Dominion
 Infiltration, Nyota Uhura, Mirror Universe Intrusion. **Batch 6b (done 2026-11-05):** Sela, Antagonist Incorporator,
 Deanna Troi, Will Riker, Captain Pike, M'Benga, The Inner Light, Deep Space 9 (tier 1–2); Enterprise-D, Dathon
-(re-tiered 3); Mr. Spock, Georgiou, Miles O'Brien (tier 3, added — Shayne). Left: 30 (the story's Next groups them).
+(re-tiered 3); Mr. Spock, Georgiou, Miles O'Brien (tier 3, added — Shayne). **Batch 7a (done 2026-11-06):** Dr.
+Beverly Crusher, Lwaxana Troi, Death Is Irrelevant, Borg Cube, Worf, Intelligence Contractor, The Wrath of Khan,
+Captain Benjamin Sisko, The Caretaker, Scotty, Overflow Submatrix, The Holodeck, Infinite Diversity, Brazen Bluff,
+U.S.S. Discovery — every one tier 3 from the full text; Q, Stacking the Deck moved to 7b (Shayne). Left: 16 (the
+story's Next lists them).
 Batch 4c re-tiered from the full text: Ensign Pavel Chekov, Vulcan Mind-Meld and Zero 3 → 2 (playing from
 exile already took anyone's card). Batch 4 re-tiered from the full text: Dominion
 Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first
@@ -65,8 +72,8 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | PLANET-DUAL | DONE (MC-5.5): the 10 Planet duals, `TrkCards.PlanetDual` | — |
 | STATION | DONE (MC-5.2): `TrkCards.Station(n, keywords)` — `StationComponent` (a creature at n+, read live by `Card.Is`), the station ability (the creature tapped is a choice, `ActivateAbilityAction.TapId`), a static per "n+" keyword. Another threshold's ability: `If`/`OnlyIf` = `new AtLeast(Count.ChargeCountersOn(Ref.Source), n)` | — |
 | SNW | DONE (MC-5.2, batch 3): `TrkCards.DifferentlyNamedLands` (`Count.DistinctNamesOf`) — a cost change (`.Negated`), a power, a life gain | — |
-| BEAM | DONE (MC-5.2, batch 3): `TrkCards.BeamMeUp("{2}{W}")` — a flashback with `BeamMeUpCost` (`CastSpellAction.ReturnId`); Marooned's `EnchantedCantBeBeamedUp`. Not yet: Scotty granting it (as Stingcaster Mage grants flashback) | — |
-| DILEMMA | DONE (MC-5.2, batch 3): `TriggerEvent.YouFaceADilemma` — raised by a cast, an activation and a modal trigger. Not yet: a count this turn (no C/U needs it) | — |
+| BEAM | DONE (MC-5.2, batch 3): `TrkCards.BeamMeUp("{2}{W}")` — a flashback with `BeamMeUpCost` (`CastSpellAction.ReturnId`); Marooned's `EnchantedCantBeBeamedUp`; Scotty's grant (batch 7a, `GraveyardSpellsHaveBeamMeUp`) | — |
+| DILEMMA | DONE (MC-5.2, batch 3): `TriggerEvent.YouFaceADilemma` — raised by a cast, an activation and a modal trigger; a count this turn (batch 7a, `Count.DilemmasFacedThisTurnBy`) | — |
 | SAGA | DONE (MC-5.3 batch 4a): `SagaComponent(n)` + `Chapter(n, …)` — the lore counter a turn-based action | — |
 | POWER8 | DONE (MC-5.2, batch 3): `TriggerEvent.YouAttackWithTotalPower8` (`Trigger.While`, judged as attackers are declared); `Count.TotalPowerOf` for a "then … if" | — |
 | TAPPED | DONE (MC-5.2, batch 3): `TriggerEvent.SelfBecomesTapped` — `MagicState.Tap`, every tap path | — |
@@ -79,11 +86,11 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | LOOK-TAKE | DONE (MC-5.2, batch 3): `LookAndTake(n, filter) { Reveal, Must, RestToGraveyard }` | — |
 | DELAYED-RETURN | DONE (batch 4b): `Flicker.AtNextEndStep` (the delayed trigger on the exiled card); `AtNextEndStep` (one in your command zone, Erica) | — |
 | LEAVES-GY | DONE (batch 4b): `TriggerEvent.CardLeavesYourGraveyard` (`LeftGraveyardEvent`, MoveCard); `OneOrMoreCardsLeaveYourGraveyard` — once per priority pass (Shayne). Not yet: Sela | — |
-| CONTROL | DONE for good (batch 4b): `GainControl`, `MagicState.GainControl`. Not yet: until end of turn, exchange (The Wrath of Khan, Worf) | — |
-| ASSIMILATE | Onto the battlefield under your control, +1/+1 counter, a Borg artifact creature | `ReturnFromGraveyard`, the type change |
+| CONTROL | DONE (batch 4b): `GainControl`, `MagicState.GainControl`; until end of turn (batch 7a, `GainControl.UntilEndOfTurn`) | — |
+| ASSIMILATE | DONE (batch 7a): `Assimilate`, `AssimilateExiledWithSource` | — |
 | ONCE-A-TURN | DONE (batch 4a): `ActivatedAbilityComponent.OncePerTurn` | — |
 | RESOLVED-TWICE, TYPE-SET, GRANT-TRIGGER | DONE (batch 4b): `IfNthResolutionThisTurn`; `s.Subtypes` (`ModifyUntilEndOfTurn.BecomesCreatureType`, `EnchantedIsCreatureType`); `GrantsTriggeredAbility`. Not yet: Antagonist Incorporator | — |
-| TRIGGER-TWICE | A trigger triggering an additional time (Lwaxana Troi, Dr. Beverly Crusher) | — |
+| TRIGGER-TWICE | DONE (batch 7a): `Triggers.AdditionalTimes` — `LifeGainTriggersAdditionalTime`, `TriggersAdditionalTimeWhileTapped` | — |
 
 Also needed, no tag: H.M.S. Bounty's extra turn (MtgCore's `TakeExtraTurnAction`), Borg Cube's
 affinity (a `CostChange` with a count). Genuinely new, found in neither engine: Station, dilemma,

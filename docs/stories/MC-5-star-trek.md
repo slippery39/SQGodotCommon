@@ -147,6 +147,12 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   The ten came in cheap (2.8M), so three tier-3 one-offs were proposed and **Shayne added all three**: Mr. Spock
   (draws doubled in `Draw`), Georgiou (no loss at 0 life, in the state-based check), Miles O'Brien (a
   permanent returned to hand this turn, a tally). Kobayashi Maru (modes not chosen before) waits for the one-offs.
+- 2026-11-06, Shayne (batch 7a's questions): the 15 re-tiered from the full text — every one needs a new piece
+  (13 in all). **Q, Stacking the Deck moves to 7b** (an ability gained by an exiled card, activated from exile
+  with an exile-from-hand cost, a copy cast paying its cost — three parts). **Lwaxana Troi's "you may choose not
+  to untap" is a real yes/no in the untap step** (asked while her link is live), not "stays tapped while linked".
+  **Scotty's granted beam me up stays one action per spell × creature returned** (~88 on a 12-creature board with
+  8 spells — linear per card, as every beam-me-up card is today).
 
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
@@ -215,7 +221,15 @@ Open questions:
       `WheneverThisTurn.About` on combat damage, `AddAnotherCounterOfAKind`, `RevealUntilOntoBattlefield.Exile`
       / `SacrificeAtNextEndStep`, `TrkCards.StationAbility`; then three tier-3 one-offs (281/311) — `DrawsDoubled`
       (Spock), `DontLoseForZeroLife` (Georgiou), `TurnTally.PermanentsReturnedToHand` (Miles O'Brien); the fuzz
-      probe ends a game past 300 permanents (Troubling Tribbles doubling hung it). Next: the tier-3 one-offs
+      probe ends a game past 300 permanents (Troubling Tribbles doubling hung it). Batch 7a done 2026-11-06: the
+      grouped tier 3 (295/311) — trigger twice (`LifeGainTriggersAdditionalTime`, `TriggersAdditionalTimeWhileTapped`,
+      `Triggers.AdditionalTimes`), may choose not to untap (`MayChooseNotToUntap`, `TurnStructure.FinishUntap`),
+      assimilate (`Assimilate`, `AssimilateExiledWithSource`), control until end of turn (`GainControl.UntilEndOfTurn`,
+      `ModifyUntilEndOfTurn.AlsoCreatureType`), `AtBeginningOfNextCombat` (a permanent's delayed trigger with its own
+      controller), dilemmas this turn (`FacedDilemmaEvent.Face`, `Count.DilemmasFacedThisTurnBy`),
+      `ExileUntilNonlandCastFree` (The Caretaker, discover), `ExileTopAndCastFree` (Sisko), `CastCopiesOf` (Infinite
+      Diversity), `GraveyardSpellsHaveBeamMeUp` (Scotty), `MayPlayFromYourGraveyard` (Submatrix, Holodeck),
+      `ExileSpell` + `CastFromHandFree` (Brazen Bluff), `MayDiscard.Exile`. Next: the tier-3 one-offs
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -227,6 +241,24 @@ Open questions:
       (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG), scripted once each, into the collation
 
 ## Next
+
+**MC-5.3 batch 7a is done (2026-11-06): 295/311 play** — every C/U, 70/80 R, 19/25 M. The grouped tier 3: Dr.
+Beverly Crusher, Lwaxana Troi (trigger twice; her "keep me tapped?" a real yes/no — Shayne), Death Is Irrelevant,
+Borg Cube (assimilate), Worf, Intelligence Contractor, The Wrath of Khan (control until end of turn), Captain
+Benjamin Sisko, The Caretaker (dilemmas this turn), Scotty, Overflow Submatrix, The Holodeck, Infinite Diversity,
+Brazen Bluff, U.S.S. Discovery (casting from odd zones). **Q moved to 7b** (Shayne). Each rule in
+`magic-mechanics.md`; ceilings in `DesignNotes.md` (Khan's combat trigger not ended at the turn's end, Scotty's
+cost beside a card's own, assimilate stamped just after entering, a "for good" control after an until-end-of-turn
+one, the Holodeck's sideboard only in limited, Submatrix and the Holodeck together); AI-19.5–8 (Lwaxana's answer, Bluff's opponent, the free casts, a steal
+scored as kept). The review fixed four, each with a test: two until-end-of-turn steals return to the FIRST
+controller; Lwaxana doubles her creature's "when this dies" (it looks back) but never a delayed trigger on it;
+discover's "into your hand" is the owner's hand.
+**Next: batch 7b in a NEW session — 16 left:** Q, Stacking the Deck (an ability gained by an exiled card,
+activated from exile, exile-from-hand cost, a copy cast paying its cost), Kai Winn (a name chosen as it enters),
+and the one-offs: The Needs of the Many, Peace in Our Time, Gwyndala, H.M.S. Bounty, Unlikely Timeship, Kobayashi
+Maru Scenario (designed), Lieutenant Commander Data, Quark, Captain Kathryn Janeway, Genesis Device, Rok-Tahk, All
+Good Things..., The City on the Edge of Forever, Kira Nerys, Nog — re-tier each from its full text, ~14 a batch;
+then MC-5.4 boosters, the Stardates.
 
 **MC-5.3 batch 6b is done (2026-11-05): 281/311 play** — every C/U, 61/80 R, 14/25 M. The re-tier's ten: Sela,
 Antagonist Incorporator, Deanna Troi (tier 1, card sheet); Will Riker, Captain Pike, M'Benga, The Inner Light,

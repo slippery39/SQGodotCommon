@@ -116,6 +116,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)".</summary>
 	public string? BecomesCreatureType { get; init; }
 
+	/// <summary>Worf, Intelligence Contractor: "they become Warriors in addition to their other types".</summary>
+	public string? AlsoCreatureType { get; init; }
+
 	/// <summary>Seven of Nine, Unassimilated: "Seven of Nine's base power and toughness become 7/9." — no duration: until it leaves the battlefield.</summary>
 	public bool ForGood { get; init; }
 
@@ -136,6 +139,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 				: UntilYourNextTurn ? Controller
 				: 0,
 			BecomesCreatureType = BecomesCreatureType,
+			AlsoCreatureType = AlsoCreatureType,
 		};
 		return new(
 			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
@@ -761,6 +765,62 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 			);
 		return new(
 			GetEmblem.ToCommandZone(s, Controller, $"{Source(s).Name} (next end step)", [trigger])
+		);
+	}
+}
+
+/// <summary>
+/// The Wrath of Khan, chapter I: "At the beginning of the next combat this turn, gain control of that
+/// creature until end of turn." — a delayed trigger (CR 603.7) on that permanent, yours (CR 603.7d), gone
+/// if it leaves. Its "this" (Ref.Source) is that permanent. ponytail: not removed as the turn ends — set
+/// up in a precombat main phase (a Saga's chapter I) the next combat is this turn's; stamp the turn if a
+/// card sets it up after combat.
+/// </summary>
+public record AtBeginningOfNextCombat(Ref On, ImmutableList<GameAction> Effects) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var trigger = new DelayedTrigger(
+			new TriggeredAbilityComponent(
+				TriggerEvent.Beginning(Step.BeginCombat, Whose.Any),
+				Effects
+			)
+		)
+		{
+			ControllerId = Controller,
+		};
+		return new(
+			Permanents(On, s)
+				.ToList()
+				.Aggregate(s, (st, c) => ReturnFromExileUnderYourControl.Delay(st, c.Id, trigger))
+		);
+	}
+}
+
+/// <summary>
+/// Lwaxana Troi, Charming Guest: "Choose another target creature you control. For as long as Lwaxana
+/// Troi remains tapped, if a triggered ability of that creature triggers, that ability triggers an
+/// additional time." — nothing if she is already untapped as it resolves (CR 611.2b).
+/// </summary>
+public record TriggersAdditionalTimeWhileSourceTapped(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (!Ref.Source.Resolve(s, InputContext).Any() || !s.IsOnBattlefield(Source(s).Id))
+			return new(s);
+		var source = Source(s);
+		if (!source.IsTapped || Permanents(What, s).FirstOrDefault() is not { } creature)
+			return new(s);
+		return new(
+			Update(
+				s,
+				(Card)
+					source
+						.WithoutComponents<TriggersAdditionalTimeWhileTapped>()
+						.WithComponent(
+							new TriggersAdditionalTimeWhileTapped(creature.Id, creature.Incarnation)
+						)
+			)
 		);
 	}
 }

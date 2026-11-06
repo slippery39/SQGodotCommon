@@ -35,6 +35,15 @@ Open questions:
       she keeps you in the game — and that losing her there is valued as losing (MC-5.3 batch 6b).
 - [ ] AI-19.4 Dr. M'Benga and Geordi: "if YOU would put … counters" — today an opponent's counters on your
       creature (or artifact) are doubled too; `PutCounters` would need who puts them (`DesignNotes.md`).
+- [ ] AI-19.5 Lwaxana Troi: "keep her tapped?" in the untap step is the search's yes/no — check it keeps the
+      link when the linked creature's triggers matter, and untaps her to block when they don't (MC-5.3 batch 7a).
+- [ ] AI-19.6 Brazen Bluff: the OPPONENT's "exile your spell?" is answered by their search, which sees only what
+      it knows of our hand — check it weighs the free spell; and Bluff's AI casts it only with a spell to cast free.
+- [ ] AI-19.7 The free casts in a resolution (Sisko's five, The Caretaker, discover, Infinite Diversity's copies)
+      are one yes/no or choice each — check the search casts a symmetric or harmful one only when it gains.
+- [ ] AI-19.8 Worf, Intelligence Contractor and The Wrath of Khan: a creature stolen "until end of turn"
+      (`UntilEndOfTurn.ReturnControlTo`) is scored by `Evaluator` as if kept — check a mid-turn score doesn't
+      overvalue the steal (a rollout past cleanup sees it go back) (MC-5.3 batch 7a's review).
 
 ## Next
 
@@ -44,3 +53,4 @@ MC-5 has every card playing.
 ## Log
 
 - 2026-11-05: opened with Engineered Explosives (MC-5.3 batch 6a); Deep Space 9 and Georgiou added (batch 6b).
+- 2026-11-06: Lwaxana Troi, Brazen Bluff and the free casts added (MC-5.3 batch 7a).

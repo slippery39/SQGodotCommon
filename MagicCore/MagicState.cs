@@ -153,7 +153,8 @@ public static class MagicState
 		var before = s.GetCard(cardId);
 		// Flashback (CR 702.34a): leaving the stack — resolved, countered, fizzled, bounced — it is exiled instead.
 		if (
-			before.GetComponent<Actions.OnStackComponent>() is { CastFrom: ZoneType.Graveyard }
+			before.GetComponent<Actions.OnStackComponent>()
+				is { CastFrom: ZoneType.Graveyard, ByPermission: false }
 			&& !before.HasComponent<MayCastFromYourGraveyard>() // Storied Veteran: no flashback
 			&& zoneId != s.GetWellKnownId(MagicKeys.Stack)
 		)
@@ -503,7 +504,17 @@ public static class MagicState
 		return !card.IsTapped ? s
 			: card.StunCounters > 0
 				? s.UpdateObject(cardId, card with { StunCounters = card.StunCounters - 1 })
-			: s.UpdateObject(cardId, card with { IsTapped = false });
+			: s.UpdateObject(
+				cardId,
+				// Lwaxana Troi: "for as long as [she] remains tapped" — over as she untaps.
+				(Card)
+					(
+						card with
+						{
+							IsTapped = false,
+						}
+					).WithoutComponents<TriggersAdditionalTimeWhileTapped>()
+			);
 	}
 
 	/// <summary>

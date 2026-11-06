@@ -65,6 +65,9 @@ public record TurnTally
 	/// <summary>Miles O'Brien: "a permanent was returned to your hand from the battlefield this turn" — its owner's, MagicState.MoveCard.</summary>
 	public int PermanentsReturnedToHand { get; init; }
 
+	/// <summary>Captain Benjamin Sisko: "for each dilemma you've faced this turn" — FacedDilemmaEvent.Face.</summary>
+	public int DilemmasFaced { get; init; }
+
 	/// <summary>Noncombat damage dealt TO this player (Command the Stage).</summary>
 	public int NoncombatDamageTaken { get; init; }
 

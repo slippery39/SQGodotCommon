@@ -36,6 +36,7 @@ public static class Playable
 					|| s.HasAbility<MayCastFromYourGraveyard>(card)
 				)
 			)
+			|| GraveyardPermission(s, card, playerId) is not null
 			|| (
 				s.IsIn(card.Id, playerId, ZoneType.Exile)
 				&& !card.HasComponent<ExiledFaceDown>()
@@ -57,10 +58,54 @@ public static class Playable
 		&& s.GetChildrenIds(s.ZoneId(playerId, ZoneType.Library)).FirstOrDefault() == card.Id
 			? s.CardsIn(playerId, ZoneType.Battlefield)
 				.FirstOrDefault(p =>
-					p.CastFromLibraryTopOn != s.GetGame().TurnNumber
+					p.PermissionUsedOn != s.GetGame().TurnNumber
 					&& s.HasAbility<MayCastArtifactFromLibraryTop>(p)
 				)
 			: null;
+
+	/// <summary>
+	/// Overflow Submatrix, The Holodeck: "Once during each of your turns, you may cast [play] … from your
+	/// graveyard [or from outside the game]" — the permanent that lets this card be played now (one not
+	/// used this turn), if any. A card with its own way out of the graveyard (flashback, beam me up,
+	/// Storied Veteran) uses that.
+	/// </summary>
+	public static Card? GraveyardPermission(GameState s, Card card, int playerId)
+	{
+		if (s.GetGame().ActivePlayerId != playerId || card.OwnerId != playerId)
+			return null;
+		var inGraveyard = s.IsIn(card.Id, playerId, ZoneType.Graveyard);
+		var outside =
+			!inGraveyard
+			&& s.WellKnownIds.TryGetValue(
+				MagicKeys.Zone(playerId, ZoneType.Sideboard),
+				out var sideboard
+			)
+			&& s.GetParent(card.Id) == sideboard;
+		if (
+			!inGraveyard && !outside
+			|| inGraveyard
+				&& (
+					Costs.Flashback(s, card) is not null
+					|| s.HasAbility<MayCastFromYourGraveyard>(card)
+				)
+		)
+			return null;
+		var turn = s.GetGame().TurnNumber;
+		var context = new Filters.FilterContext(playerId, card.Id);
+		return s.CardsIn(playerId, ZoneType.Battlefield)
+			.FirstOrDefault(p =>
+				p.PermissionUsedOn != turn
+				&& s.AbilitiesOf<MayPlayFromYourGraveyard>(p)
+					.Any(may =>
+						(inGraveyard || may.OutsideTheGame) && may.What.Matches(s, card, context)
+					)
+			);
+	}
+
+	/// <summary>Whether any permanent of this player lets cards be played from outside the game (The Holodeck) — Candidates looks there only then.</summary>
+	static bool MayPlayFromOutside(GameState s, int playerId) =>
+		s.CardsIn(playerId, ZoneType.Battlefield)
+			.Any(p => s.AbilitiesOf<MayPlayFromYourGraveyard>(p).Any(may => may.OutsideTheGame));
 
 	/// <summary>Proft: "You can't cast this spell unless …" — wherever and however it is cast.</summary>
 	public static bool CastRestrictionHolds(GameState s, Card card, int playerId) =>
@@ -97,6 +142,7 @@ public static class Playable
 			s.IsIn(card.Id, playerId, ZoneType.Hand)
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| IsLandPlayableFromLibraryTop(s, card, playerId)
+			|| GraveyardPermission(s, card, playerId) is not null
 		);
 
 	/// <summary>Captain Pike, Fullness of Time: "You may play lands from the top of your library." — the land drop is the only limit.</summary>
@@ -111,6 +157,9 @@ public static class Playable
 			.Concat(s.CardsIn(playerId, ZoneType.Exile))
 			.Concat(s.CardsIn(s.OpponentOf(playerId), ZoneType.Exile)) // a prepared copy follows its creature's controller
 			.Concat(s.CardsIn(playerId, ZoneType.Library).Take(1)) // Zefram Cochrane: the top card
+			.Concat(
+				MayPlayFromOutside(s, playerId) ? s.CardsIn(playerId, ZoneType.Sideboard) : [] // The Holodeck
+			)
 			.Where(c =>
 				c.Is(CardType.Land)
 					? CanPlayLandFromHere(s, c, playerId)

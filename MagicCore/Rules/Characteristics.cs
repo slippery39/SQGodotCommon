@@ -76,14 +76,24 @@ public static class Characteristics
 	public static ImmutableArray<string> Subtypes(this GameState s, Card card)
 	{
 		string? set = null;
+		List<string>? also = null;
 		foreach (var component in card.Components) // a loop, not LINQ: every subtype filter asks
-			if (component is UntilEndOfTurn { BecomesCreatureType: { } type })
-				set = type;
+			if (component is UntilEndOfTurn u)
+			{
+				if (u.BecomesCreatureType is { } type)
+					set = type;
+				if (u.AlsoCreatureType is { } more)
+					(also ??= []).Add(more); // Worf's "Warriors in addition to their other types"
+			}
 		if (set is null && BoardOf(s).TypeSet is { } typed && s.IsOnBattlefield(card.Id))
 			typed.TryGetValue((card.Id, card.Incarnation), out set);
-		return set is null || !card.Is(CardType.Creature)
-			? card.Subtypes
-			: [set, .. card.Subtypes.Where(t => t != set && !IsCreatureType(t))];
+		var subtypes =
+			set is null || !card.Is(CardType.Creature)
+				? card.Subtypes
+				: [set, .. card.Subtypes.Where(t => t != set && !IsCreatureType(t))];
+		return also is null || !card.Is(CardType.Creature)
+			? subtypes
+			: [.. subtypes, .. also.Where(t => !subtypes.Contains(t)).Distinct()];
 	}
 
 	/// <summary>

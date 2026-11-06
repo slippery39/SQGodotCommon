@@ -26,3 +26,4 @@ session per batch was simulated to save 37–40%.
 | 2026-11-05 | MC-5.3: batch 5b — delayed return on a dead card, charge doubled, a mana ability that costs mana, tap N as a set, life lost this turn, base P/T for good, reveal top X (+ sprint 4 planning), 8 cards | 9c72e4a6 | 146 | 268k | 5.8M |
 | 2026-11-05 | MC-5.3 batch 6a: shocklands, sunburst, X targets picked as cast, changeling, a number as it enters, 14 cards | 7c02dbfc | 164 | 280k | 6.5M |
 | 2026-11-05 | MC-5.3 batch 6b: the re-tier's ten (lands from the top, counters doubled, charge counters put, combat damage as that many, a counter of a chosen kind, DS9) + Spock, Georgiou, Miles; probe capped (Tribbles), 13 cards | f5c958fd | 126 | 217k | 4.0M |
+| 2026-11-06 | MC-5.3 batch 7a: TRK's grouped tier 3 (trigger twice, assimilate, control until end of turn, dilemmas this turn, casting from odd zones), 14 cards | 1343051e | 165 | 221k | 5.4M |

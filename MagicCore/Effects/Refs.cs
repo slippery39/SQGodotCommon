@@ -328,6 +328,7 @@ public enum CountOf
 	AllCountersOn, // Jadzia Dax: "the number of counters on her" — every kind
 	LifeTotalOf, // Live Long and Prosper: "Double your life total" — the players [Ref] names
 	LifeLostThisTurnOf, // Gul Dukat: "the life that player lost this turn" — the players [Ref] names
+	DilemmasFacedThisTurnBy, // Sisko: "each dilemma you've faced this turn" — the players [Ref] names
 }
 
 /// <summary>
@@ -381,6 +382,10 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	/// <summary>Gul Dukat, Colonial Prefect: "equal to the life that player lost this turn" (TurnTally.LifeLost).</summary>
 	public static Count LifeLostThisTurnOf(Ref r) => new(0, r, CountOf.LifeLostThisTurnOf);
+
+	/// <summary>Captain Benjamin Sisko: "for each dilemma you've faced this turn"; The Caretaker: "if you faced a dilemma this turn" (TurnTally.DilemmasFaced).</summary>
+	public static Count DilemmasFacedThisTurnBy(Ref r) =>
+		new(0, r, CountOf.DilemmasFacedThisTurnBy);
 
 	public static Count ChargeCountersOn(Ref r) => new(0, r, CountOf.ChargeCountersOn);
 
@@ -538,6 +543,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.LifeTotalOf => ids.Sum(id => s.GetObject(id) is MagicPlayer p ? p.Life : 0),
 			CountOf.LifeLostThisTurnOf => ids.Sum(id =>
 				s.GetObject(id) is MagicPlayer p ? p.ThisTurn.LifeLost : 0
+			),
+			CountOf.DilemmasFacedThisTurnBy => ids.Sum(id =>
+				s.GetObject(id) is MagicPlayer p ? p.ThisTurn.DilemmasFaced : 0
 			),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),

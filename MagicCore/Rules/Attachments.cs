@@ -86,7 +86,7 @@ public static class Attachments
 	{
 		foreach (var host in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
 			if (
-				host.GetComponent<Animated>() is { } a
+				host.GetComponent<Animated>() is { AuraId: not 0 } a // 0: assimilated, no Aura — until it leaves
 				&& !(
 					s.IsOnBattlefield(a.AuraId)
 					&& s.GetCard(a.AuraId) is var aura

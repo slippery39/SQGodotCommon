@@ -24,7 +24,29 @@ public static class Costs
 			return null;
 		if (card.GetComponents<GrantedFlashback>().Any(g => g.OnTurn == s.GetGame().TurnNumber))
 			return new FlashbackComponent(card.ManaCost);
-		return card.GetComponent<FlashbackComponent>();
+		return card.GetComponent<FlashbackComponent>() ?? ScottysBeamMeUp(s, card);
+	}
+
+	/// <summary>Scotty, Miracle Worker: an instant or sorcery in your graveyard, during your main phase — beam me up for its mana cost, never returning Scotty.</summary>
+	static FlashbackComponent? ScottysBeamMeUp(GameState s, Card card)
+	{
+		if (!card.Is(CardType.Instant | CardType.Sorcery))
+			return null;
+		var game = s.GetGame();
+		if (
+			game.ActivePlayerId != card.OwnerId
+			|| game.Step is not (Step.PreCombatMain or Step.PostCombatMain)
+		)
+			return null;
+		return
+			s.CardsIn(card.OwnerId, ZoneType.Battlefield)
+				.FirstOrDefault(s.HasAbility<GraveyardSpellsHaveBeamMeUp>)
+				is { } scotty
+			? new FlashbackComponent(card.ManaCost)
+			{
+				Costs = [new BeamMeUpCost { ExceptId = scotty.Id }],
+			}
+			: null;
 	}
 
 	/// <summary>

@@ -203,7 +203,7 @@ public record Card : GameObject
 	public int ActivatedOncePerTurnOn { get; init; }
 
 	/// <summary>Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of your library" — the TurnNumber this object let one be cast.</summary>
-	public int CastFromLibraryTopOn { get; init; }
+	public int PermissionUsedOn { get; init; }
 
 	/// <summary>
 	/// The counter kinds TRK added, by name — quest (Anthropological Mission), lore (Sagas), promotion
@@ -300,7 +300,7 @@ public record Card : GameObject
 			HasDealtCombatDamage = false,
 			ExhaustUsed = false,
 			ActivatedOncePerTurnOn = 0,
-			CastFromLibraryTopOn = 0,
+			PermissionUsedOn = 0,
 			Counters = ImmutableDictionary<string, int>.Empty,
 			Damage = 0,
 			DamagedByDeathtouch = false,
@@ -330,6 +330,7 @@ public record Card : GameObject
 				or EnteredAsCopy
 				or Effects.DelayedTrigger
 				or Animated
+				or Effects.TriggersAdditionalTimeWhileTapped
 				or Effects.TapsForTwoColorlessWhileExiled;
 
 	/// <summary>
@@ -478,6 +479,12 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 
 	/// <summary>Deep Space Scan: "You have no maximum hand size until your next turn." — on an object in your command zone; TurnStructure.MaxHandSizeOf.</summary>
 	public bool NoMaximumHandSize { get; init; }
+
+	/// <summary>Worf, Intelligence Contractor: "they become Warriors in addition to their other types" — Characteristics.Subtypes.</summary>
+	public string? AlsoCreatureType { get; init; }
+
+	/// <summary>Worf, Intelligence Contractor: "gain control of … until end of turn" — the player cleanup gives it back to (Combat.CleanupPermanents).</summary>
+	public int ReturnControlTo { get; init; }
 }
 
 /// <summary>
@@ -492,7 +499,7 @@ public record CopyUntilEndOfTurn(Card Original) : GameComponent;
 /// </summary>
 public record EnteredAsCopy(Card Original) : GameComponent;
 
-/// <summary>Animated by this Aura (this object of it); the rest is what it was, to put back.</summary>
+/// <summary>Animated by this Aura (this object of it); the rest is what it was, to put back. AuraId 0: by an effect with no duration, until it leaves (Assimilate).</summary>
 public record Animated(
 	int AuraId,
 	int AuraIncarnation,

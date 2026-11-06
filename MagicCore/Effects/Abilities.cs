@@ -857,9 +857,56 @@ public record MayCastFromExile : GameComponent;
 /// <summary>
 /// Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact spell from
 /// the top of your library." — read by Playable.LibraryTopPermission; the cast stamps this permanent
-/// (Card.CastFromLibraryTopOn).
+/// (Card.PermissionUsedOn).
 /// </summary>
 public record MayCastArtifactFromLibraryTop : GameComponent;
+
+/// <summary>
+/// Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature spell from your
+/// graveyard. If you cast a spell this way, that artifact creature enters with a finality counter on it."
+/// The Holodeck: "Once during each of your turns, you may play a permanent card you own from outside the
+/// game or from your graveyard." — read by Playable.GraveyardPermission; a cast or land play stamps this
+/// permanent (Card.PermissionUsedOn). Not flashback: what is cast this way isn't exiled leaving the stack.
+/// </summary>
+public record MayPlayFromYourGraveyard(Filters.Filter What) : GameComponent
+{
+	/// <summary>Overflow Submatrix: "that artifact creature enters with a finality counter on it".</summary>
+	public bool Finality { get; init; }
+
+	/// <summary>The Holodeck: "from outside the game" — the sideboard, when the game has one.</summary>
+	public bool OutsideTheGame { get; init; }
+}
+
+/// <summary>
+/// Dr. Beverly Crusher: "If you gaining life causes a triggered ability of a permanent you control to
+/// trigger, that ability triggers an additional time." — read by Triggers.Collect (CR 603.2d); her own
+/// "whenever you gain life" included.
+/// </summary>
+public record LifeGainTriggersAdditionalTime : GameComponent;
+
+/// <summary>
+/// Lwaxana Troi, Charming Guest: "For as long as Lwaxana Troi remains tapped, if a triggered ability of
+/// that creature triggers, that ability triggers an additional time." — on Lwaxana, naming that object of
+/// the creature (CR 400.7); read by Triggers.Collect while she is tapped, removed as she untaps
+/// (MagicState.Untap) or leaves.
+/// </summary>
+public record TriggersAdditionalTimeWhileTapped(int CardId, int Incarnation) : GameComponent;
+
+/// <summary>
+/// Lwaxana Troi, Charming Guest: "You may choose not to untap Lwaxana Troi during your untap step." —
+/// asked by the untap step (TurnStructure), only while her link (TriggersAdditionalTimeWhileTapped) is
+/// to a creature still there: without one, untapping costs nothing.
+/// </summary>
+public record MayChooseNotToUntap : GameComponent;
+
+/// <summary>
+/// Scotty, Miracle Worker: "During your main phase, each card in your graveyard has beam me up. The beam
+/// me up cost is equal to that spell's mana cost. Scotty can't be beamed up to cast a spell this way." —
+/// read by Costs.Flashback, for instants and sorceries (only they can be cast with beam me up).
+/// ponytail: a card with its own beam me up or flashback uses its own; offer both if a card makes the
+/// choice matter.
+/// </summary>
+public record GraveyardSpellsHaveBeamMeUp : GameComponent;
 
 /// <summary>
 /// Captain Pike, Fullness of Time: "You may play lands from the top of your library." — read by

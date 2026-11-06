@@ -96,6 +96,15 @@ public record PlayLandAction : GameAction
 
 	public override ActionResult Execute(GameState s)
 	{
+		// The Holodeck: "once during each of your turns" — a land played from the graveyard uses it.
+		if (Rules.Playable.GraveyardPermission(s, s.GetCard(CardId), PlayerId) is { } permission)
+			s = s.UpdateObject(
+				permission.Id,
+				permission with
+				{
+					PermissionUsedOn = s.GetGame().TurnNumber,
+				}
+			);
 		s = s.EnterBattlefield(CardId, PlayerId);
 		s = s.Tally(PlayerId, t => t with { LandsPlayed = t.LandsPlayed + 1 });
 		return new ActionResult(Priority.Retain(s, PlayerId));

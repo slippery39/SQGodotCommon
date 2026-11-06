@@ -3056,7 +3056,166 @@ public static class TrkCards
 					If = new AtLeast(Count.PermanentsReturnedToHandThisTurn(Ref.You), 1),
 				},
 			],
+			// ===== MC-5.3 batch 7a: the grouped tier 3 — trigger twice, assimilate, control until end of turn, dilemmas this turn, casting from odd zones =====
+			["Worf, Intelligence Contractor"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						Target(Is.Creature & Is.Opponents & Is.ManaValueAtMost(3)) with
+						{
+							Optional = true,
+						},
+					],
+					new GainControl(Ref.Target(), Ref.You) { UntilEndOfTurn = true },
+					new Untap(Ref.Target()),
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Haste")
+					{
+						AlsoCreatureType = "Warrior",
+					}
+				),
+			],
+			["The Wrath of Khan"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[Target(Is.Creature & Is.Opponents)],
+					new DealDamage(Ref.Target(), 4),
+					new AtBeginningOfNextCombat(
+						Ref.Target(),
+						[
+							new GainControl(Ref.Source, Ref.You) { UntilEndOfTurn = true },
+							new Untap(Ref.Source),
+							new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Haste"),
+						]
+					)
+				),
+				Chapter(2, [], new MayDiscard([new DrawCards(Ref.You, 1)]) { Exile = true }),
+				Chapter(3, [], new EachSacrifices(Ref.EachOpponent, !Is.Token)),
+			],
+			["Dr. Beverly Crusher"] =
+			[
+				new LifeGainTriggersAdditionalTime(),
+				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+			],
+			["Lwaxana Troi, Charming Guest"] =
+			[
+				new MayChooseNotToUntap(),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new TriggersAdditionalTimeWhileSourceTapped(Ref.Target())]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Creature & Is.Yours & !Is.Source)],
+				},
+			],
+			["Death Is Irrelevant"] =
+			[
+				new StaticEffectComponent(Is.Artifact & Is.Creature & Is.Yours, "Indestructible"),
+				When(
+					TriggerEvent.YourEndStep,
+					[TargetSpec.InAnyGraveyard(Is.Creature)],
+					new Assimilate(Ref.Target())
+				),
+			],
+			["Borg Cube"] =
+			[
+				// Affinity for artifact creatures
+				new CostChange(
+					Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Creature & Is.Yours)).Negated
+				)
+				{
+					OnItself = true,
+				},
+				BorgCubeAssimilates(TriggerEvent.SelfEnters),
+				BorgCubeAssimilates(TriggerEvent.SelfAttacks),
+				.. Station(12),
+				new StaticEffectComponent(Is.Artifact & Is.Creature & Is.Yours, "Flying")
+				{
+					If = new AtLeast(Count.ChargeCountersOn(Ref.Source), 12),
+				},
+			],
+			["U.S.S. Discovery, at Black Alert"] =
+			[
+				When(TriggerEvent.SelfEnters, [], Discover(5)),
+				When(TriggerEvent.SelfAttacks, [], Discover(5)),
+				.. Station(6, "Flying"),
+			],
+			["Captain Benjamin Sisko"] =
+			[
+				When(
+					TriggerEvent.YourEndStep,
+					[],
+					new CreateTokens(Officer, Count.DilemmasFacedThisTurnBy(Ref.You))
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{W}{U}{B}{R}{G}"),
+					[
+						new ExileTopAndCastFree(
+							5,
+							Count.NumberOf(Ref.Permanents(Is.Subtype("Officer") & Is.Yours))
+						),
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["The Caretaker"] =
+			[
+				Ward("{2}"),
+				When(
+					TriggerEvent.EachEndStep,
+					[TargetSpec.Player(Is.Opponents)],
+					new ExileUntilNonlandCastFree(Ref.Target())
+				) with
+				{
+					If = new AtLeast(Count.DilemmasFacedThisTurnBy(Ref.You), 1),
+				},
+			],
+			["Scotty, Miracle Worker"] = [new GraveyardSpellsHaveBeamMeUp()],
+			["Overflow Submatrix"] =
+			[
+				new MayPlayFromYourGraveyard(Is.Artifact & Is.Creature) { Finality = true },
+			],
+			["The Holodeck"] =
+			[
+				new MayPlayFromYourGraveyard(Is.Type(PermanentTypes)) { OutsideTheGame = true },
+			],
+			["Infinite Diversity"] =
+			[
+				Spell(
+					[TargetSpec.InYourGraveyard(Is.Instant | Is.Sorcery)],
+					new CastCopiesOf(Ref.Target(), Federation),
+					new ExileFromGraveyard(Ref.Target()),
+					new ExileSourceAndCopiesFromGraveyard(0) // "Exile Infinite Diversity."
+				),
+			],
+			["Brazen Bluff"] =
+			[
+				Spell(
+					[TargetSpec.Spell(!Is.Creature & Is.Opponents)],
+					new May("Exile your spell?", new Always(), [new ExileSpell(Ref.Target())])
+					{
+						Who = Ref.ControllerOfTarget(0),
+						Otherwise = [new CastFromHandFree(!Is.Creature)],
+					}
+				),
+			],
 		};
+
+	/// <summary>
+	/// Borg Cube: "Whenever this Spacecraft enters or attacks, assimilate a creature card exiled with it.
+	/// If you can't, exile up to one target creature."
+	/// </summary>
+	static TriggeredAbilityComponent BorgCubeAssimilates(Trigger on) =>
+		When(
+			on,
+			[Target(Is.Creature) with { Optional = true }],
+			new AssimilateExiledWithSource([new Exile(Ref.Target()) { Linked = true }])
+		);
 
 	/// <summary>Deep Space 9: "exile the top four cards of your library. Put all permanent cards exiled this way onto the battlefield."</summary>
 	static RevealUntilOntoBattlefield DeepSpace9Exile =>
@@ -3071,6 +3230,19 @@ public static class TrkCards
 		{
 			Costs = [new TapUntappedCost(1, Is.Creature & !Is.Source)],
 			SorcerySpeed = true,
+		};
+
+	/// <summary>
+	/// Discover N (U.S.S. Discovery, at Black Alert): "Exile cards from the top of your library until you
+	/// exile a nonland card with mana value N or less. Cast it without paying its mana cost or put it into
+	/// your hand. Put the rest on the bottom in a random order."
+	/// </summary>
+	static ExileUntilNonlandCastFree Discover(int n) =>
+		new(Ref.You)
+		{
+			ManaValueAtMost = n,
+			OrIntoHand = true,
+			RestOnBottom = true,
 		};
 
 	/// <summary>The shocklands (Blood Crypt …): "As this land enters, you may pay 2 life. If you don't, it enters tapped."</summary>

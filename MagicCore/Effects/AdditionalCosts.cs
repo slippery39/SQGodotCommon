@@ -131,13 +131,17 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 /// </summary>
 public sealed record BeamMeUpCost : AdditionalCost
 {
+	/// <summary>Scotty, Miracle Worker: "Scotty can't be beamed up to cast a spell this way."</summary>
+	public int ExceptId { get; init; }
+
 	public override CostSlot Slot => CostSlot.Return;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		Is
 			.Creature.Among(s, playerId, ZoneType.Battlefield, sourceId)
 			.Where(id =>
-				!MagicCore
+				id != ExceptId
+				&& !MagicCore
 					.Rules.Attachments.On(s, s.GetCard(id))
 					.Any(a => a.HasComponent<EnchantedCantBeBeamedUp>())
 			);
