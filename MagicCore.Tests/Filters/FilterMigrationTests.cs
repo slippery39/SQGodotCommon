@@ -595,6 +595,7 @@ public class FilterMigrationTests
 		TriggerEvent.YouFaceADilemma,
 		TriggerEvent.CardLeavesYourGraveyard,
 		TriggerEvent.YouDrawACard,
+		new Trigger(EventKind.AbilityActivated) { By = Whose.Opponent }, // Kai Winn: the source, Is.NamedChosenName
 	];
 
 	/// <summary>

@@ -12,7 +12,11 @@ namespace MagicCore.Rules;
 /// </summary>
 public static class Playable
 {
-	/// <summary>Impulse draw's "until the end of your next turn" — its last turn, counted from whose turn it is now.</summary>
+	/// <summary>
+	/// Impulse draw's "until the end of your next turn" — its last turn, counted from whose turn it is now.
+	/// ponytail: fixed as it is exiled, so an opponent's extra turn before yours (H.M.S. Bounty) shortens it by
+	/// one; count the player's own turns if that matters (DesignNotes).
+	/// </summary>
 	public static int EndOfNextTurnOf(GameState s, int playerId) =>
 		s.GetGame().TurnNumber + (s.GetGame().ActivePlayerId == playerId ? 2 : 1);
 
@@ -66,7 +70,7 @@ public static class Playable
 	/// <summary>
 	/// Overflow Submatrix, The Holodeck: "Once during each of your turns, you may cast [play] … from your
 	/// graveyard [or from outside the game]" — the permanent that lets this card be played now (one not
-	/// used this turn), if any. A card with its own way out of the graveyard (flashback, beam me up,
+	/// used this turn, or Nog's unlimited one first), if any. A card with its own way out of the graveyard (flashback, beam me up,
 	/// Storied Veteran) uses that.
 	/// </summary>
 	public static Card? GraveyardPermission(GameState s, Card card, int playerId)
@@ -92,13 +96,17 @@ public static class Playable
 			return null;
 		var turn = s.GetGame().TurnNumber;
 		var context = new Filters.FilterContext(playerId, card.Id);
-		return s.CardsIn(playerId, ZoneType.Battlefield)
-			.FirstOrDefault(p =>
-				p.PermissionUsedOn != turn
-				&& s.AbilitiesOf<MayPlayFromYourGraveyard>(p)
-					.Any(may =>
-						(inGraveyard || may.OutsideTheGame) && may.What.Matches(s, card, context)
-					)
+		bool Lets(Card p, bool unlimited) =>
+			s.AbilitiesOf<MayPlayFromYourGraveyard>(p)
+				.Any(may =>
+					may.Unlimited == unlimited
+					&& (inGraveyard || may.OutsideTheGame)
+					&& may.What.Matches(s, card, context)
+				);
+		var permanents = s.CardsIn(playerId, ZoneType.Battlefield);
+		return permanents.FirstOrDefault(p => Lets(p, unlimited: true))
+			?? permanents.FirstOrDefault(p =>
+				p.PermissionUsedOn != turn && Lets(p, unlimited: false)
 			);
 	}
 

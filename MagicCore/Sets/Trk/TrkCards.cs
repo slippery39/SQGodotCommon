@@ -77,6 +77,9 @@ public static class TrkCards
 		"Artifact — Equipment"
 	);
 
+	/// <summary>The City on the Edge of Forever: "a 0/1 white Human creature token with 'Permanents can't phase in.'"</summary>
+	public static readonly CardData CityHuman = Token("Human", "Creature — Human", "0", "1", ["W"]);
+
 	/// <summary>Rok-Tahk, Budding Scientist: "Murf, a legendary 0/1 green Ooze Slug creature token with indestructible".</summary>
 	public static readonly CardData Murf = Token(
 		"Murf",
@@ -1948,7 +1951,10 @@ public static class TrkCards
 					[Target(Is.Creature & Is.Yours)],
 					new AddCounters(Ref.Target(), 1),
 					new Untap(Ref.Target()),
-					new ModifyUntilEndOfTurn(Ref.Target(), 1, 1) { BecomesCreatureType = "Doctor" }
+					new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)
+					{
+						BecomesCreatureTypes = ["Doctor"],
+					}
 				),
 			],
 			["De-evolve"] =
@@ -3390,6 +3396,141 @@ public static class TrkCards
 				new AdditionalLandEachTurn(),
 				When(TriggerEvent.CreatureYouControlEnters, [], new Explore(Ref.EventCard)),
 			],
+			// ===== MC-5.3 batch 7c =====
+			["Nog, Ambitious Cadet"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[
+						new If(
+							new Matches(Ref.Source, Is.Subtype("Rogue")),
+							[
+								new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+								{
+									ForGood = true,
+									BecomesCreatureTypes = ["Ferengi", "Scout"],
+									SetBase = (3, 4),
+									Trigger = When(
+										TriggerEvent.SelfBecomesTapped,
+										[],
+										new Surveil(2)
+									),
+								},
+							]
+						),
+					]
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}"),
+					[
+						new If(
+							new Matches(Ref.Source, Is.Subtype("Scout")),
+							[
+								new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+								{
+									ForGood = true,
+									BecomesCreatureTypes = ["Ferengi", "Officer"],
+									Gains =
+									[
+										new MayPlayFromYourGraveyard(Is.Land) { Unlimited = true },
+										new AdditionalLandEachTurn(),
+									],
+								},
+							]
+						),
+					]
+				),
+			],
+			["Kai Winn, Faithless Leader"] =
+			[
+				new ChoosesNameAsItEnters(),
+				When(
+					new Trigger(EventKind.SpellCast)
+					{
+						By = Whose.Opponent,
+						Subject = Is.NamedChosenName,
+					},
+					[],
+					new LoseLife(Ref.EachOpponent, 3) // "that player": the one opponent
+				),
+				When(
+					new Trigger(EventKind.AbilityActivated)
+					{
+						By = Whose.Opponent,
+						Subject = Is.NamedChosenName,
+					},
+					[],
+					new LoseLife(Ref.EachOpponent, 3) // "that player": the one opponent
+				),
+			],
+			["H.M.S. Bounty, Unlikely Timeship"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Creature, ZoneType.Hand)
+					{
+						Subtype = "Whale",
+						Reveal = true,
+					}
+				),
+				.. Station(8, "Flying"),
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					new DrawCards(Ref.You, 1),
+					new If(
+						new AtLeast(
+							Count.NumberOf(Ref.Permanents(Is.Subtype("Whale") & Is.Yours)),
+							1
+						),
+						[new If(new HaventBegunAnExtraTurn(), [new TakeExtraTurn()])]
+					)
+				),
+			],
+			["The City on the Edge of Forever"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[],
+					new PhaseOut(Ref.Permanents(Is.Artifact | Is.Creature)),
+					new CreateTokens(CityHuman, 1) { Abilities = [new PermanentsCantPhaseIn()] }
+				),
+				Chapter(2, [], new DrawCards(Ref.You, 2), new LoseLife(Ref.EachPlayer, 2)),
+				Chapter(
+					3,
+					[],
+					new MaySacrifice(Is.Creature & Is.Token, [new GainLife(Ref.You, 5)])
+					{
+						Must = true,
+					}
+				),
+			],
+			["Q, Stacking the Deck"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ExileUntilNonlandCastFree(Ref.You)
+					{
+						ShuffleFirst = true,
+						Gains = StackTheDeck,
+					}
+				),
+			],
+		};
+
+	/// <summary>
+	/// Q, Stacking the Deck's gift: "Exile a card from your hand: Create a copy of this card. You may cast the
+	/// copy. Activate only during your turn and only if this card is exiled."
+	/// </summary>
+	static ActivatedAbilityComponent StackTheDeck =>
+		new(ManaCost.None, [new CastCopiesOf(Ref.Source, 1) { PayCost = true }])
+		{
+			From = ZoneType.Exile,
+			OnlyIf = new DuringYourTurn(),
+			Costs = [new ExileFromHandCost()],
 		};
 
 	/// <summary>

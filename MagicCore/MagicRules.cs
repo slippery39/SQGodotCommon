@@ -53,7 +53,9 @@ public static class MagicRules
 			s = s.RegisterWellKnownId(key, player.Id);
 			foreach (
 				var type in Enum.GetValues<ZoneType>()
-					.Where(t => t != ZoneType.Stack && t != ZoneType.Sideboard)
+					.Where(t =>
+						t is not (ZoneType.Stack or ZoneType.Sideboard or ZoneType.PhasedOut)
+					)
 			)
 			{
 				(s, var zone) = s.AddObject(
@@ -88,22 +90,27 @@ public static class MagicRules
 		IEnumerable<CardDefinition> cards
 	)
 	{
-		var key = MagicKeys.Zone(playerId, ZoneType.Sideboard);
 		var list = cards.ToList(); // read once: a one-shot sequence must not add nothing
 		if (list.Count == 0)
 			return s;
-		if (!s.WellKnownIds.ContainsKey(key))
-		{
-			var who = playerId == s.Player1Id() ? MagicKeys.Player1 : MagicKeys.Player2;
-			(s, var zone) = s.AddObject(
-				new Zone { Name = $"{who} {ZoneType.Sideboard}", ZoneType = ZoneType.Sideboard }, // as NewGame names zones
-				playerId
-			);
-			s = s.RegisterWellKnownId(key, zone.Id);
-		}
+		(s, var zoneId) = s.EnsureZone(playerId, ZoneType.Sideboard);
 		foreach (var card in list)
-			s = s.AddObject(CardFactory.Create(card, playerId), s.GetWellKnownId(key)).GameState;
+			s = s.AddObject(CardFactory.Create(card, playerId), zoneId).GameState;
 		return s;
+	}
+
+	/// <summary>
+	/// A per-player zone made only when first needed — the Sideboard (a game given one), PhasedOut (something
+	/// phased out) — so a game without it keeps every id. Named as NewGame names zones.
+	/// </summary>
+	public static (GameState, int) EnsureZone(this GameState s, int playerId, ZoneType type)
+	{
+		var key = MagicKeys.Zone(playerId, type);
+		if (s.WellKnownIds.TryGetValue(key, out var id))
+			return (s, id);
+		var who = playerId == s.Player1Id() ? MagicKeys.Player1 : MagicKeys.Player2;
+		(s, var zone) = s.AddObject(new Zone { Name = $"{who} {type}", ZoneType = type }, playerId);
+		return (s.RegisterWellKnownId(key, zone.Id), zone.Id);
 	}
 
 	/// <summary>
@@ -178,6 +185,7 @@ public static class MagicRules
 						),
 					.. s.CardsIn(player, ZoneType.Hand)
 						.Concat(s.CardsIn(player, ZoneType.Graveyard))
+						.Concat(s.CardsIn(player, ZoneType.Exile)) // Q's gift: "only if this card is exiled"
 						.SelectMany(c => ActivateCandidates(s, player, c)),
 				];
 		return candidates.Where(a => a.ValidateAdd(s).IsValid).ToImmutableList();

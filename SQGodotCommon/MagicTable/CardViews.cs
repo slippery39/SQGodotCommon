@@ -71,6 +71,8 @@ public static class CardViews
 			card.Rotation = Mathf.Pi / 2;
 			card.Position = new Vector2(h, 0);
 		}
+		if (IsPhasedOut(s, c))
+			slot.Modulate = new Color(1, 1, 1, 0.4f); // still visible, clearly not there (Shayne, 2026-11-06)
 		slot.AddChild(card);
 		Hook(slot, MagicArt.Key(c), preview, onClick);
 		return slot;
@@ -224,6 +226,8 @@ public static class CardViews
 	private static string Status(GameState s, Card c)
 	{
 		var parts = new List<string>();
+		if (IsPhasedOut(s, c))
+			parts.Add("PHASED OUT");
 		if (c.IsToken)
 			parts.Add("token");
 		if (c.IsCopy)
@@ -244,6 +248,10 @@ public static class CardViews
 			parts.Add("final");
 		return string.Join(" ", parts);
 	}
+
+	/// <summary>The City on the Edge of Forever: a permanent in its controller's phased-out zone (MagicCore.Rules.Phasing).</summary>
+	public static bool IsPhasedOut(GameState s, Card c) =>
+		s.GetParent(c.Id) is { } zone && s.GetObject(zone) is Zone { ZoneType: ZoneType.PhasedOut };
 
 	/// <summary>The one look of every glow — cards, player plates and stack rows alike.</summary>
 	public static StyleBoxFlat Outline(Glow glow)

@@ -96,6 +96,48 @@ public static class CardRegistry
 	/// <summary>One set's cards as it prints them — its rarities, its collector numbers.</summary>
 	public static IReadOnlyList<CardPrinting> Printings(string set) => printings[set];
 
+	/// <summary>
+	/// Kai Winn's "choose a nonland card name": every nonland name printed in the sets the game's cards
+	/// come from (every set when none says) — never the decks themselves, which would show a hidden list.
+	/// </summary>
+	public static ImmutableArray<string> NonlandNames(GameState s)
+	{
+		var inGame = new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(p =>
+				new[]
+				{
+					ZoneType.Library,
+					ZoneType.Hand,
+					ZoneType.Battlefield,
+					ZoneType.Graveyard,
+					ZoneType.Exile,
+				}.SelectMany(z => s.CardsIn(p, z))
+			)
+			.Select(c => c.Set)
+			.OfType<string>()
+			.Distinct()
+			.ToList();
+		var sets = inGame.Count > 0 ? inGame.Order(StringComparer.Ordinal).ToList() : [.. Sets];
+		return nonlandNames.GetOrAdd(
+			string.Join(",", sets),
+			_ =>
+				[
+					.. sets.SelectMany(Printings)
+						.Select(p => p.Card)
+						.Where(d => !d.TypeLine.Split("//")[0].Contains("Land"))
+						.Select(d => d.Name)
+						.Distinct()
+						.Order(StringComparer.Ordinal),
+				]
+		);
+	}
+
+	/// <summary>NonlandNames by its sets — Kai Winn enters in rollouts too, and the list never changes.</summary>
+	static readonly System.Collections.Concurrent.ConcurrentDictionary<
+		string,
+		ImmutableArray<string>
+	> nonlandNames = new();
+
 	/// <summary>A card's rules data, one per name — refusing a reprint whose rules data differs by set.</summary>
 	public static Dictionary<string, CardData> SameInEverySet(IEnumerable<CardPrinting> all)
 	{

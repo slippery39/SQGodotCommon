@@ -54,6 +54,17 @@ Open questions:
       trades a lethal or winning attack for a card, and that the AI reads twelve peace counters as a clock.
 - [ ] AI-19.13 Kobayashi Maru Scenario: Abandon Ship loses the game on its fourth upkeep — check the AI casts it
       only with a way to remove it (or a faster clock), and leaves Abandon Ship for last (MC-5.3 batch 7b).
+- [ ] AI-19.14 Kai Winn: the name is the opponent's commonest known nonland card; with NOTHING known (a turn-2 Kai)
+      it is the list's first — a blind guess. Shayne to pick the fallback (MC-5.3 batch 7c).
+- [ ] AI-19.15 Q, Stacking the Deck: each activation exiles a hand card to cast a copy, paying — check the AI doesn't
+      exile a better card than the copy, and that the exiled card with the gift is valued at all (the evaluator
+      sees an exiled card as nothing).
+- [ ] AI-19.16 H.M.S. Bounty: the extra turn is seen only inside the rollout's horizon — check it attacks with the
+      Bounty when a Whale is out, and fetches the Whale.
+- [ ] AI-19.17 The City on the Edge of Forever: chapter I reads as both boards wiped until the Human goes — check the
+      AI casts it behind on board, not ahead, and keeps (or sacrifices) the Human on purpose.
+- [ ] AI-19.18 Nog, Ambitious Cadet: check the AI pays {1} then {3} with spare mana, and plays lands from its
+      graveyard rather than holding them.
 
 ## Next
 

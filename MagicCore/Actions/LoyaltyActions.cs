@@ -105,7 +105,8 @@ public record ActivateLoyaltyAction : GameAction
 				PlayerId,
 				t => t with { LoyaltyAbilitiesActivated = t.LoyaltyAbilitiesActivated + 1 }
 			)
-			.Raise(new LoyaltyActivatedEvent(PlayerId, cost));
+			.Raise(new LoyaltyActivatedEvent(PlayerId, cost))
+			.Raise(new AbilityActivatedEvent(PlayerId, walker));
 		s = StackResolution.Push(
 			s,
 			new StackAbility

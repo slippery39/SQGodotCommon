@@ -15,6 +15,10 @@ public enum ZoneType
 	/// "Outside the game" (Bo1 limited: the pool's unplayed cards) — made only for a game given one
 	/// (MagicRules.WithSideboard), so a game without keeps every id it had.
 	Sideboard,
+
+	/// Phased-out permanents (Rules/Phasing.cs, The City on the Edge of Forever), by controller — made the
+	/// first time something phases out, so a game without phasing keeps every id.
+	PhasedOut,
 }
 
 /// <summary>

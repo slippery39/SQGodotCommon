@@ -364,7 +364,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `Trigger.OneOrMore`: one trigger per priority pass, everything that left since a player last had priority
   (Shayne, 2026-11-01).
 - **A permanent's subtypes are `s.Subtypes(card)`** (Characteristics) — never `Card.Subtypes` in a rule.
-  "Becomes a Doctor (it loses all other creature types)" until end of turn (`ModifyUntilEndOfTurn.BecomesCreatureType`)
+  "Becomes a Doctor (it loses all other creature types)" until end of turn (`ModifyUntilEndOfTurn.BecomesCreatureTypes`;
+  several too: Nog's "becomes a Ferengi Scout")
   or under an Aura (`EnchantedIsCreatureType`, De-evolve) is that one type plus the subtypes that aren't
   creature types (`Characteristics.IsCreatureType`). `Is.Subtype`, Federation's count, behold and Kindred
   Judgment read it.
@@ -552,3 +553,32 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `ExileSourceAndCopiesFromGraveyard(0)`; "exile a card from your hand" linked to a Saga (All Good Things...) is
   `MayDiscard { Exile, Must, Linked }`, and "all cards exiled with this share a card type" is
   `ExiledWithSourceShareACardType`.
+- **An ability a card GAINS** (Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard'"; Q's exiled
+  card) is `UntilEndOfTurn.Gains` — a static or activated ability read by `s.AbilitiesOf<T>` beside the card's own,
+  so every rule sees it; for good (`ModifyUntilEndOfTurn.ForGood`) it lasts until the card changes zones. A gained
+  TRIGGER is `UntilEndOfTurn.Trigger`, as Lyra's. **"You may play lands from your graveyard"** with no "once each
+  turn" is `MayPlayFromYourGraveyard { Unlimited }`, asked before a once-a-turn permission so it doesn't use one up.
+- **An ability activated from exile** (Q, Stacking the Deck's gift: "Activate only during your turn and only if this
+  card is exiled") is `ActivatedAbilityComponent.From = ZoneType.Exile` — your own exile, which `LegalActions`
+  reads beside the hand and graveyard. "Exile a card from your hand:" is `ExileFromHandCost` (one action per card).
+  "Create a copy of this card. You may cast the copy" is `CastCopiesOf { PayCost }` — `CastNow` paying its costs.
+  Q's "That nonland card gains …" is `ExileUntilNonlandCastFree { ShuffleFirst, Gains }` (in place of the cast).
+- **"As this enters, choose a nonland card name"** (Kai Winn) is `ChoosesNameAsItEnters` → `ChosenName`, the options
+  every nonland name printed in the game's sets (`CardRegistry.NonlandNames` — never the decks: that would show a
+  hidden list; Shayne, 2026-11-06), a `ChooseKeywordChoice { NamesACard }` the AI answers by rule (`GreedyAi`), never
+  searched. "With the chosen name" is `Is.NamedChosenName`. **"Activates an ability"** is `AbilityActivatedEvent`
+  (the source as it was), raised by EVERY activation: `ActivateAbilityAction`, a loyalty ability, and a MANA ability
+  — `TapForManaAction` and the payment (`ManaPayment.RaiseActivated`) alike (Shayne: "If you name Llanowar Elves and
+  they tap it for mana it would trigger her").
+- **An extra turn** (H.M.S. Bounty, CR 500.7) is `TakeExtraTurn`: its controller queued on `MagicGame.ExtraTurns`,
+  the last queued taken first by `TurnStructure.FinishCleanup`, which also sets `MagicPlayer.BegunExtraTurn`
+  ("haven't begun an extra turn this game", `HaventBegunAnExtraTurn`). `TurnNumber` counts it like any turn, so
+  every "this turn" stamp holds. Turns no longer alternate: **summoning sickness reads `MagicPlayer.TurnBeganOn`**,
+  never "the turn before".
+- **Phasing** (The City on the Edge of Forever, CR 702.26) is `Rules.Phasing`: a phased-out permanent is MOVED, with
+  `MoveObject`, to its controller's `PhasedOut` zone — no zone change: the same object, its counters, tapped state
+  and links, nothing triggers, "until it leaves" never fires — and what is attached goes with it. It phases in as
+  that controller's untap step begins, before untapping, with what is attached, unless a permanent says
+  "Permanents can't phase in" (`PermanentsCantPhaseIn`). The zone is made on first use, as the Sideboard. The table
+  shows it in its row, dimmed and badged (Shayne, 2026-11-06). **"Sacrifice a [filter]. If you do"** — not a may —
+  is `MaySacrifice { Must }`.

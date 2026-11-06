@@ -330,6 +330,7 @@ public record Card : GameObject
 				or Effects.ExiledBy
 				or Effects.ChosenColorMana
 				or Effects.ChosenNumber
+				or Effects.ChosenName
 				or CopyUntilEndOfTurn
 				or EnteredAsCopy
 				or Effects.DelayedTrigger
@@ -478,8 +479,18 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 	/// <summary>Flourishing Grapple: "loses all abilities until end of turn" — Characteristics.HasLostAllAbilities.</summary>
 	public bool LosesAllAbilities { get; init; }
 
-	/// <summary>I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)" — Characteristics.Subtypes.</summary>
-	public string? BecomesCreatureType { get; init; }
+	/// <summary>
+	/// I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)"; Nog, Ambitious
+	/// Cadet: "becomes a Ferengi Scout" — Characteristics.Subtypes.
+	/// </summary>
+	public ImmutableArray<string>? BecomesCreatureTypes { get; init; }
+
+	/// <summary>
+	/// Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard' and 'You may play an additional
+	/// land on each of your turns.'"; Q, Stacking the Deck: an exiled card's gained "Exile a card from your
+	/// hand: …" — abilities it has while this lasts, read by Characteristics.AbilitiesOf.
+	/// </summary>
+	public ImmutableList<GameComponent> Gains { get; init; } = [];
 
 	/// <summary>Deep Space Scan: "You have no maximum hand size until your next turn." — on an object in your command zone; TurnStructure.MaxHandSizeOf.</summary>
 	public bool NoMaximumHandSize { get; init; }

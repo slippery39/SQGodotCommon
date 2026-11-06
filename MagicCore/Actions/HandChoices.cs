@@ -222,6 +222,21 @@ public record ChooseColorChoice : ChoiceAction
 	) => PlayerId;
 }
 
+/// <summary>Kai Winn, after the choice: the name, kept on her (ChosenName).</summary>
+public record SetChosenNameAction(int CardId, ImmutableArray<string> Names) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		!s.IsOnBattlefield(CardId)
+		|| InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is not int id
+			? new(s)
+			: new(
+				s.UpdateObject(
+					CardId,
+					s.GetCard(CardId).WithComponent(new Effects.ChosenName(Names[id - 1]))
+				)
+			);
+}
+
 /// <summary>Nyota Uhura, after the choice: the number, kept on her (ChosenNumber).</summary>
 public record SetChosenNumberAction(int CardId) : GameAction
 {
@@ -308,6 +323,9 @@ public record ChooseKeywordChoice : ChoiceAction
 
 	public int PlayerId { get; init; }
 	public ImmutableArray<string> Keywords { get; init; }
+
+	/// <summary>Kai Winn: "choose a nonland card name" — answered by the AI's rule, never searched (GreedyAi).</summary>
+	public bool NamesACard { get; init; }
 
 	public ChooseKeywordChoice(int playerId, ImmutableArray<string> keywords)
 	{

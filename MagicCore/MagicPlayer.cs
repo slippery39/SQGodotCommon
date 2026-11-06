@@ -18,6 +18,12 @@ public record MagicPlayer : GameObject
 	/// <summary>First Contact: "If this spell is the first spell you've cast this game" — never reset.</summary>
 	public int SpellsCastThisGame { get; init; }
 
+	/// <summary>H.M.S. Bounty: "haven't begun an extra turn this game" — set as one begins.</summary>
+	public bool BegunExtraTurn { get; init; }
+
+	/// <summary>The TurnNumber this player's most recent turn began — summoning sickness (CR 302.6); 0 before their first.</summary>
+	public int TurnBeganOn { get; init; }
+
 	public int MulligansTaken { get; init; }
 	public bool HasKeptHand { get; init; }
 

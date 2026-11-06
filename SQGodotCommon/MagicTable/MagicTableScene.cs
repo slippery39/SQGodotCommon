@@ -661,6 +661,13 @@ public partial class MagicTableScene : Control
 			row.AddChild(stack);
 		}
 
+		// Phased out (The City on the Edge of Forever): still shown in its row, dimmed and badged — nothing
+		// can be done with it, so a click does nothing. What was attached shows beside it, dimmed too.
+		foreach (
+			var c in s.CardsIn(player, ZoneType.PhasedOut).Where(c => c.Is(CardType.Land) == lands)
+		)
+			row.AddChild(CardViews.Permanent(s, c, 1, glow(c), Preview, () => { }, scale));
+
 		// An Aura on an Equipment on a creature: each strip followed by what is on it.
 		void AddAttachments(VBoxContainer stack, int hostId)
 		{

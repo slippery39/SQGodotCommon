@@ -49,6 +49,13 @@ public record DuringYourTurn : Condition
 		s.GetGame().ActivePlayerId == (int)context[ContextKeys.Controller];
 }
 
+/// <summary>H.M.S. Bounty: "[if you] haven't begun an extra turn this game" — MagicPlayer.BegunExtraTurn.</summary>
+public record HaventBegunAnExtraTurn : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		!s.GetPlayer((int)context[ContextKeys.Controller]).BegunExtraTurn;
+}
+
 /// <summary>Fblthp: "If your library has no cards in it".</summary>
 public record YourLibraryIsEmpty : Condition
 {

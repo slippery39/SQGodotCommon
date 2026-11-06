@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 96/96 · uncommon 110/110 · rare 76/80 · mythic 24/25 · **306/311**
+**Playable:** common 96/96 · uncommon 110/110 · rare 80/80 · mythic 25/25 · **311/311**
 
 ### A Good Day to Die
 
@@ -830,7 +830,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests
 
 ### Free Borg Revolutionaries
 
@@ -962,7 +962,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Vigilance, ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** TrkBatch7cTests
 
 ```csharp
 ["Humpback Whales"] = [Ward("{2}"), BasicLandcycling],
@@ -985,7 +985,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[Target(Is.Creature & Is.Yours)],
 		new AddCounters(Ref.Target(), 1),
 		new Untap(Ref.Target()),
-		new ModifyUntilEndOfTurn(Ref.Target(), 1, 1) { BecomesCreatureType = "Doctor" }
+		new ModifyUntilEndOfTurn(Ref.Target(), 1, 1) { BecomesCreatureTypes = ["Doctor"] }
 	),
 ],
 ```
@@ -1313,7 +1313,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
 
 ### Planetary Bombardment
 
@@ -1550,7 +1550,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {R}.  
 > {3}, {T}: Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** TrkBatch7cTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `TapSelfCost` — "{T}:" — tap this permanent.
 
@@ -1774,7 +1774,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests, RolloutTests, TrkBatch6aTests, TrkBatch7bTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests, RolloutTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
 
 ### Tactical Officer
 
@@ -5632,7 +5632,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > 8+ | Flying  
 > Whenever H.M.S. Bounty deals combat damage to a player, draw a card. If you control a Whale and haven't begun an extra turn this game, take an extra turn after this one.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch7cTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `HaventBegunAnExtraTurn` — H.M.S. Bounty: "[if you] haven't begun an extra turn this game" —…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TakeExtraTurn` — H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on…
+
+```csharp
+["H.M.S. Bounty, Unlikely Timeship"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new SearchLibrary(CardType.Creature, ZoneType.Hand) { Subtype = "Whale", Reveal = true }
+	),
+	.. Station(8, "Flying"),
+	When(
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		[],
+		new DrawCards(Ref.You, 1),
+		new If(
+			new AtLeast(Count.NumberOf(Ref.Permanents(Is.Subtype("Whale") & Is.Yours)), 1),
+			[new If(new HaventBegunAnExtraTurn(), [new TakeExtraTurn()])]
+		)
+	),
+],
+```
 
 ### Hallowed Fountain
 
@@ -5702,7 +5725,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As Kai Winn enters, choose a nonland card name.  
 > Whenever an opponent casts a spell with the chosen name or activates an ability of a source with the chosen name, that player loses 3 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch7cTests
+
+**Engine pieces:** `ChoosesNameAsItEnters` — Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Kai Winn, Faithless Leader"] =
+[
+	new ChoosesNameAsItEnters(),
+	When(
+		new Trigger(EventKind.SpellCast)
+		{
+			By = Whose.Opponent,
+			Subject = Is.NamedChosenName,
+		},
+		[],
+		new LoseLife(Ref.EachOpponent, 3) // "that player": the one opponent
+	),
+	When(
+		new Trigger(EventKind.AbilityActivated)
+		{
+			By = Whose.Opponent,
+			Subject = Is.NamedChosenName,
+		},
+		[],
+		new LoseLife(Ref.EachOpponent, 3) // "that player": the one opponent
+	),
+],
+```
 
 ### Kira Nerys, Firebrand
 
@@ -5921,7 +5971,52 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {1}: If Nog is a Rogue, he becomes a Ferengi Scout with base power and toughness 3/4 and gains "Whenever Nog becomes tapped, surveil 2."  
 > {3}: If Nog is a Scout, he becomes a Ferengi Officer and gains "You may play lands from your graveyard" and "You may play an additional land on each of your turns."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch7cTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AdditionalLandEachTurn` — Captain Kathryn Janeway: "You may play an additional land on each of your turns." —…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `MayPlayFromYourGraveyard` — Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Nog, Ambitious Cadet"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[
+			new If(
+				new Matches(Ref.Source, Is.Subtype("Rogue")),
+				[
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+					{
+						ForGood = true,
+						BecomesCreatureTypes = ["Ferengi", "Scout"],
+						SetBase = (3, 4),
+						Trigger = When(TriggerEvent.SelfBecomesTapped, [], new Surveil(2)),
+					},
+				]
+			),
+		]
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{3}"),
+		[
+			new If(
+				new Matches(Ref.Source, Is.Subtype("Scout")),
+				[
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+					{
+						ForGood = true,
+						BecomesCreatureTypes = ["Ferengi", "Officer"],
+						Gains =
+						[
+							new MayPlayFromYourGraveyard(Is.Land) { Unlimited = true },
+							new AdditionalLandEachTurn(),
+						],
+					},
+				]
+			),
+		]
+	),
+],
+```
 
 ### Nyota Uhura, Communications
 
@@ -6418,7 +6513,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > II — You draw two cards and each player loses 2 life.  
 > III — Sacrifice a creature token. If you do, you gain 5 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch7cTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `PermanentsCantPhaseIn` — The City on the Edge of Forever's Human: "Permanents can't phase in." — read by…; `PhaseOut` — The City on the Edge of Forever: "All artifacts and creatures phase out." —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…
+
+```csharp
+["The City on the Edge of Forever"] =
+[
+	new SagaComponent(3),
+	Chapter(
+		1,
+		[],
+		new PhaseOut(Ref.Permanents(Is.Artifact | Is.Creature)),
+		new CreateTokens(CityHuman, 1) { Abilities = [new PermanentsCantPhaseIn()] }
+	),
+	Chapter(2, [], new DrawCards(Ref.You, 2), new LoseLife(Ref.EachPlayer, 2)),
+	Chapter(
+		3,
+		[],
+		new MaySacrifice(Is.Creature & Is.Token, [new GainLife(Ref.You, 5)]) { Must = true }
+	),
+],
+```
 
 ### The Destruction of Praxis
 
@@ -7309,7 +7425,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When Q enters, shuffle your library, then exile cards from the top of your library until you exile a nonland card. That nonland card gains "Exile a card from your hand: Create a copy of this card. You may cast the copy. Activate only during your turn and only if this card is exiled."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkBatch7cTests
+
+**Engine pieces:** `ExileUntilNonlandCastFree` — The Caretaker: "target opponent exiles cards from the top of their library until they…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Q, Stacking the Deck"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ExileUntilNonlandCastFree(Ref.You) { ShuffleFirst = true, Gains = StackTheDeck }
+	),
+],
+```
 
 ### Quark, Humble Proprietor
 

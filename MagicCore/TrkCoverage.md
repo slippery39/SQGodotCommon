@@ -24,8 +24,9 @@ Spacecraft never a creature) and three tier-3 one-offs (draws doubled, no loss a
 hand this turn); batch 7a, the grouped tier 3 (trigger twice, may choose not to untap, assimilate, control until
 end of turn, a delayed trigger at the next combat, dilemmas this turn, exile until a nonland and cast it free,
 discover, cast any number free from among the exiled, copies cast free, beam me up granted to the graveyard, cast
-or play from the graveyard once each turn, exile a spell); batch 7b, 11 one-offs (modes not chosen before, lose the game, can't sacrifice Treasures, enters attacking, a granted mana ability, explore, an extra land each turn, a player's hexproof and prevented damage, "that player may", counters removed from among, a token attached as made, any number of lands sacrificed, cards exiled with a Saga sharing a type)** — 306/311 play, with the basics and Mugato: **every
-common and uncommon**, 76/80 rares, 24/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
+or play from the graveyard once each turn, exile a spell); batch 7b, 11 one-offs (modes not chosen before, lose the game, can't sacrifice Treasures, enters attacking, a granted mana ability, explore, an extra land each turn, a player's hexproof and prevented damage, "that player may", counters removed from among, a token attached as made, any number of lands sacrificed, cards exiled with a Saga sharing a type); batch 7c, the last five (abilities gained for good, an ability activated
+from exile, a name chosen as it enters, "activates an ability" — mana abilities too, an extra turn, phasing)** —
+**311/311 play: TRK is complete** (96/96 C, 110/110 U, 80/80 R, 25/25 M). Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
 Trimatrix (1 → 3) and Captain Jean-Luc Picard (tap three or seven untapped), Gul Dukat (life lost this
 turn), Seven of Nine (base P/T become 7/9), Branching Timeline (reveal X, every permanent card onto the
 battlefield), Dominion Infiltration (X targets, changeling — with the one-offs), Starfleet Academy (a mana
@@ -41,8 +42,8 @@ Captain Benjamin Sisko, The Caretaker, Scotty, Overflow Submatrix, The Holodeck,
 U.S.S. Discovery — every one tier 3 from the full text; Q, Stacking the Deck moved to 7b (Shayne). **Batch 7b (done 2026-11-06):** the 16 re-tiered
 from the full text (Gwyndala tier 2, the rest tier 3); Shayne split them 11 / 5 — Gwyndala, Genesis Device, Kobayashi
 Maru Scenario, Quark, Kira Nerys, All Good Things..., Peace in Our Time, The Needs of the Many, Lieutenant Commander
-Data, Rok-Tahk, Captain Kathryn Janeway built. Left: 5 for batch 7c, each bigger than one small piece — Q, Nog,
-H.M.S. Bounty, The City on the Edge of Forever, Kai Winn (the story's Next has their designs).
+Data, Rok-Tahk, Captain Kathryn Janeway built. **Batch 7c (done 2026-11-06):** Q, Nog, H.M.S. Bounty, The City on
+the Edge of Forever, Kai Winn — all tier 3 from the full text, one session.
 Batch 4c re-tiered from the full text: Ensign Pavel Chekov, Vulcan Mind-Meld and Zero 3 → 2 (playing from
 exile already took anyone's card). Batch 4 re-tiered from the full text: Dominion
 Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first
@@ -92,7 +93,7 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | CONTROL | DONE (batch 4b): `GainControl`, `MagicState.GainControl`; until end of turn (batch 7a, `GainControl.UntilEndOfTurn`) | — |
 | ASSIMILATE | DONE (batch 7a): `Assimilate`, `AssimilateExiledWithSource` | — |
 | ONCE-A-TURN | DONE (batch 4a): `ActivatedAbilityComponent.OncePerTurn` | — |
-| RESOLVED-TWICE, TYPE-SET, GRANT-TRIGGER | DONE (batch 4b): `IfNthResolutionThisTurn`; `s.Subtypes` (`ModifyUntilEndOfTurn.BecomesCreatureType`, `EnchantedIsCreatureType`); `GrantsTriggeredAbility`. Not yet: Antagonist Incorporator | — |
+| RESOLVED-TWICE, TYPE-SET, GRANT-TRIGGER | DONE (batch 4b): `IfNthResolutionThisTurn`; `s.Subtypes` (`ModifyUntilEndOfTurn.BecomesCreatureTypes`, `EnchantedIsCreatureType`); `GrantsTriggeredAbility`. Not yet: Antagonist Incorporator | — |
 | TRIGGER-TWICE | DONE (batch 7a): `Triggers.AdditionalTimes` — `LifeGainTriggersAdditionalTime`, `TriggersAdditionalTimeWhileTapped` | — |
 
 Also needed, no tag: H.M.S. Bounty's extra turn (MtgCore's `TakeExtraTurnAction`), Borg Cube's

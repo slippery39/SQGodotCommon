@@ -19,12 +19,18 @@ public static class Combat
 	public static IEnumerable<Card> BlockersOf(GameState s, int attackerId) =>
 		s.CardsIn(Defender(s), ZoneType.Battlefield).Where(c => c.BlockingId == attackerId);
 
-	/// <summary>CR 302.6: under its controller's control continuously since their most recent turn began.</summary>
+	/// <summary>
+	/// CR 302.6: under its controller's control continuously since their most recent turn began — after an
+	/// opponent's extra turn (H.M.S. Bounty) that is not the turn before; a state saved before TurnBeganOn
+	/// existed reads the turn before.
+	/// </summary>
 	public static bool IsSummoningSick(GameState s, Card card)
 	{
 		var game = s.GetGame();
 		var mostRecentTurn =
-			game.ActivePlayerId == card.ControllerId ? game.TurnNumber : game.TurnNumber - 1;
+			game.ActivePlayerId == card.ControllerId ? game.TurnNumber
+			: s.GetPlayer(card.ControllerId).TurnBeganOn is > 0 and var began ? began
+			: game.TurnNumber - 1;
 		return card.ControlledSinceTurn >= mostRecentTurn;
 	}
 

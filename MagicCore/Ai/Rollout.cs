@@ -220,7 +220,11 @@ public static class Rollout
 
 	public static readonly Settings Default = new();
 
-	/// <summary>The turn a search's rollouts all stop at: the current one finished, then the lookahead.</summary>
+	/// <summary>
+	/// The turn a search's rollouts all stop at: the current one finished, then the lookahead. ponytail: an
+	/// absolute turn — an extra turn (H.M.S. Bounty) spends one, so the opponent's reply may fall past it;
+	/// count each player's own turns if the AI misjudges one (DesignNotes).
+	/// </summary>
 	public static int Horizon(GameState root, Settings settings) =>
 		root.GetGame().TurnNumber + 1 + settings.LookaheadTurns;
 

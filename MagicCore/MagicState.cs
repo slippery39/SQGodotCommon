@@ -36,10 +36,11 @@ public static class MagicState
 	public static IEnumerable<Card> CardsIn(this GameState s, int playerId, ZoneType type)
 	{
 		// One iterator over the ids, not GetChildren(…).Cast — it sits under every rule and the search.
-		// A sideboard exists only in a game given one (MagicRules.WithSideboard): none, no cards. Any
-		// other zone always exists — a missing one is a bug, and still throws.
+		// A sideboard exists only in a game given one (MagicRules.WithSideboard), the phased-out zone once
+		// something phased out (Rules.Phasing): none, no cards. Any other zone always exists — a missing one
+		// is a bug, and still throws.
 		if (
-			type == ZoneType.Sideboard
+			type is ZoneType.Sideboard or ZoneType.PhasedOut
 				&& !s.WellKnownIds.ContainsKey(MagicKeys.Zone(playerId, type))
 			|| !s.ParentToChildren.TryGetValue(s.ZoneId(playerId, type), out var ids)
 		)
@@ -494,6 +495,24 @@ public static class MagicState
 					],
 				}
 			);
+		if (card.HasComponent<ChoosesNameAsItEnters>())
+		{
+			var names = Sets.CardRegistry.NonlandNames(s);
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new Actions.ChooseKeywordChoice(controllerId, names)
+						{
+							NamesACard = true,
+							Prompt = $"{card.Name}: choose a nonland card name",
+						},
+						new Actions.SetChosenNameAction(cardId, names),
+					],
+				}
+			);
+		}
 		if (card.GetComponent<MayEnterAsCopy>() is { } asCopy)
 			s = s.SpawnAction(
 				new PipelineAction

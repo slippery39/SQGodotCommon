@@ -113,8 +113,14 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Garruk, Veiled Butcher: "until your next turn" instead of end of turn.</summary>
 	public bool UntilYourNextTurn { get; init; }
 
-	/// <summary>I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)".</summary>
-	public string? BecomesCreatureType { get; init; }
+	/// <summary>
+	/// I'm a Doctor, Not a . . .: "becomes a Doctor (It loses all other creature types.)"; Nog, Ambitious
+	/// Cadet: "he becomes a Ferengi Scout" — every other creature type lost.
+	/// </summary>
+	public ImmutableArray<string>? BecomesCreatureTypes { get; init; }
+
+	/// <summary>Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard'" — static or activated abilities it gains.</summary>
+	public ImmutableList<GameComponent> Gains { get; init; } = [];
 
 	/// <summary>Worf, Intelligence Contractor: "they become Warriors in addition to their other types".</summary>
 	public string? AlsoCreatureType { get; init; }
@@ -138,13 +144,24 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 				ForGood ? UntilEndOfTurn.Never
 				: UntilYourNextTurn ? Controller
 				: 0,
-			BecomesCreatureType = BecomesCreatureType,
+			BecomesCreatureTypes = BecomesCreatureTypes,
+			Gains = Gains,
 			AlsoCreatureType = AlsoCreatureType,
 		};
 		return new(
 			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
 		);
 	}
+}
+
+/// <summary>
+/// H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on MagicGame.ExtraTurns, begun by
+/// TurnStructure.FinishCleanup. Adapted from MtgCore's TakeExtraTurnAction (a count: it has one player a turn).
+/// </summary>
+public record TakeExtraTurn : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.WithGame(s.GetGame() with { ExtraTurns = s.GetGame().ExtraTurns.Add(Controller) }));
 }
 
 /// <summary>"Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters (Yoshimaru's replacement applies). Negative removes.</summary>

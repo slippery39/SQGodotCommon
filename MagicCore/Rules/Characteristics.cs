@@ -37,11 +37,26 @@ public static class Characteristics
 	/// "loses all abilities" misses that rule.
 	/// </summary>
 	public static IEnumerable<T> AbilitiesOf<T>(this GameState s, Card card)
-		where T : GameComponent =>
+		where T : GameComponent
+	{
 		// The card's own components first: most permanents have none of a kind, and then nothing to lose.
-		!card.HasComponent<T>() || s.HasLostAllAbilities(card)
-			? []
+		var gains = HasGains(card);
+		if (!gains && !card.HasComponent<T>() || s.HasLostAllAbilities(card))
+			return [];
+		return gains
+			? card.GetComponents<T>()
+				.Concat(card.GetComponents<UntilEndOfTurn>().SelectMany(u => u.Gains).OfType<T>())
 			: card.GetComponents<T>();
+	}
+
+	/// <summary>Nog, Q: has it gained abilities (UntilEndOfTurn.Gains)? Rare — a plain loop, it sits under the AI.</summary>
+	static bool HasGains(Card card)
+	{
+		foreach (var c in card.Components)
+			if (c is UntilEndOfTurn { Gains.Count: > 0 })
+				return true;
+		return false;
+	}
 
 	public static bool HasAbility<T>(this GameState s, Card card)
 		where T : GameComponent => s.AbilitiesOf<T>(card).Any();
@@ -60,7 +75,7 @@ public static class Characteristics
 			return s.AbilitiesOf<ActivatedAbilityComponent>(card); // nearly always: no Aura grants one
 		if (Lost(board, card))
 			return [];
-		var own = card.GetComponents<ActivatedAbilityComponent>();
+		var own = s.AbilitiesOf<ActivatedAbilityComponent>(card);
 		return board.Granted.TryGetValue((card.Id, card.Incarnation), out var more)
 			? own.Concat(more)
 			: own;
@@ -75,22 +90,27 @@ public static class Characteristics
 	/// </summary>
 	public static ImmutableArray<string> Subtypes(this GameState s, Card card)
 	{
-		string? set = null;
+		ImmutableArray<string>? set = null;
 		List<string>? also = null;
 		foreach (var component in card.Components) // a loop, not LINQ: every subtype filter asks
 			if (component is UntilEndOfTurn u)
 			{
-				if (u.BecomesCreatureType is { } type)
-					set = type;
+				if (u.BecomesCreatureTypes is { } types)
+					set = types;
 				if (u.AlsoCreatureType is { } more)
 					(also ??= []).Add(more); // Worf's "Warriors in addition to their other types"
 			}
-		if (set is null && BoardOf(s).TypeSet is { } typed && s.IsOnBattlefield(card.Id))
-			typed.TryGetValue((card.Id, card.Incarnation), out set);
+		if (
+			set is null
+			&& BoardOf(s).TypeSet is { } typed
+			&& s.IsOnBattlefield(card.Id)
+			&& typed.TryGetValue((card.Id, card.Incarnation), out var one)
+		)
+			set = ImmutableArray.Create(one);
 		var subtypes =
-			set is null || !card.Is(CardType.Creature)
+			set is not { } setTo || !card.Is(CardType.Creature)
 				? card.Subtypes
-				: [set, .. card.Subtypes.Where(t => t != set && !IsCreatureType(t))];
+				: [.. setTo, .. card.Subtypes.Where(t => !setTo.Contains(t) && !IsCreatureType(t))];
 		return also is null || !card.Is(CardType.Creature)
 			? subtypes
 			: [.. subtypes, .. also.Where(t => !subtypes.Contains(t)).Distinct()];

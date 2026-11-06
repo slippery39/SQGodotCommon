@@ -162,6 +162,10 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   defaults, built as proposed and noted (`DesignNotes.md`, AI-19) — Shayne answered only the split, so confirm at
   review: Kira's creature attacks the opponent, never a planeswalker; All Good Things IV with nothing exiled gains
   nothing; Data's counters are three picks after activating (364 sets on 12 creatures), the kind a rule.
+- 2026-11-06, Shayne (batch 7c's questions): all five tier 3, one session (Nog, Q, Kai, Bounty, City last).
+  **Kai Winn triggers on MANA abilities too** — "It does not say non mana abilities. If you name Llanowar Elves
+  and they tap it for mana it would trigger her." **Phased-out permanents stay visible on the table, clearly
+  marked as phased out.** Kai's name list: every nonland name printed in the game's sets.
 
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
@@ -172,7 +176,7 @@ Open questions:
 - [x] MC-5.1 The survey (a fresh session): import TRK from Scryfall (`tools/import_scryfall_set.py`), tier
       every card by what the engine needs, the new mechanics' rules read in full, a batch plan sized to
       reach sealed and draft by November 10
-- [ ] MC-5.2 The new mechanics (Station, Strange new worlds, Face a dilemma, and whatever the survey finds)
+- [x] MC-5.2 The new mechanics (Station, Strange new worlds, Face a dilemma, and whatever the survey finds)
       — Station done 2026-10-31 (batch 2): `TrkCards.Station`, a creature at its threshold read live by
       `Card.Is`, the tapped creature a real choice (`ActivateAbilityAction.TapId`), the AI's station term.
       Batch 3 (2026-10-31): beam me up (`BeamMeUpCost`), strange new worlds (`Count.DistinctNamesOf`), face
@@ -192,8 +196,9 @@ Open questions:
       (`MagicState.Destroy`, Dr. McCoy's replacement), a draw event (`DrewCardEvent`), can't attack alone,
       lands enter untapped, Spacecraft enter with counters, a mana restriction knowing the ability's source
       (`ManaRestriction.OnlyArtifacts`), the first spell this game, a this-turn trigger on one object
-      (`WheneverThisTurn.About`, `TheObject`), `Is.WithAttached`, an artifact cast from the library's top
-- [ ] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
+      (`WheneverThisTurn.About`, `TheObject`), `Is.WithAttached`, an artifact cast from the library's top. The rest came with MC-5.3's batches
+      5–7c (its list below); done 2026-11-06, every TRK card playing
+- [x] MC-5.3 Commons and uncommons in large batches, then rares and mythics — batch 1 done 2026-10-31:
       the 88 tier 0–1 C/U not waiting on STATION or ANY-COUNTER (re-tiered: 4 tier 3, 6 tier 2, list in
       `TrkCoverage.md`); new pieces: modal activated abilities, `PutSelfOnBottomCost`, `AddManaOfAnyOneColor`,
       `LookAtHand`, `Count.Plus`; FraCards' shared helpers moved to `Sets/Scripting.cs`. Batch 2 done
@@ -246,7 +251,14 @@ Open questions:
       `PreventAllDamageToYou`), "that player may" (`Ref.ActivePlayer`, `May.ThenAsThem`, `CantAttackThisTurn`),
       counters removed from among (`RemoveCountersFromAmongCost`), `CreateTokens.AttachTo`,
       `MaySacrifice.AnyNumber` + `Count.PermanentsChosen`, `MayDiscard.Must/Linked`,
-      `ExiledWithSourceShareACardType`. Next: batch 7c
+      `ExiledWithSourceShareACardType`. Batch 7c done 2026-11-06: the last five (311/311 — TRK complete) — abilities
+      gained for good (`UntilEndOfTurn.Gains`, `ModifyUntilEndOfTurn.BecomesCreatureTypes`,
+      `MayPlayFromYourGraveyard.Unlimited`), an ability activated from exile (`From = ZoneType.Exile`,
+      `ExileFromHandCost`, `CastCopiesOf.PayCost`, `ExileUntilNonlandCastFree.ShuffleFirst/Gains`), a name chosen as
+      it enters (`ChoosesNameAsItEnters`, `Is.NamedChosenName`) and "activates an ability" — mana abilities too
+      (`AbilityActivatedEvent`), an extra turn (`TakeExtraTurn`, `MagicGame.ExtraTurns`, `MagicPlayer.TurnBeganOn`
+      for summoning sickness), phasing (`Rules.Phasing`, `ZoneType.PhasedOut`, `PermanentsCantPhaseIn`),
+      `MaySacrifice.Must`
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -258,6 +270,19 @@ Open questions:
       (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG), scripted once each, into the collation
 
 ## Next
+
+**MC-5.3 batch 7c is done (2026-11-06): 311/311 — TRK is complete**, every card in the set plays. The last five, all
+tier 3 from the full text, in one session: Nog, Ambitious Cadet; Q, Stacking the Deck; Kai Winn, Faithless Leader;
+H.M.S. Bounty, Unlikely Timeship; The City on the Edge of Forever. Each rule in `magic-mechanics.md`; ceilings in
+`DesignNotes.md` (Kai's mana-ability event for nonland sources only, convoke read as an activation; an extra turn
+shortening impulse draw's window and spending a rollout turn; cleanup missing a phased-out permanent's
+until-end-of-turn effects); AI-19.14–18 (Kai's blind name with nothing known — Shayne to pick the fallback; Q's
+exiled card; the Bounty's attack; when to cast the City; Nog's levelling). Shayne's answers: Kai triggers on MANA
+abilities; phased-out permanents stay visible on the table, dimmed and badged "PHASED OUT" (`CardViews`).
+**Next: MC-5.4 in a NEW session** — TRK boosters (a provisional collation from Wizards' slot odds: MTGJSON had no
+TRK boosters on 2026-10-31 — re-check first), TRK on Sealed and Draft on the table (`SealedSession.Set` is a const
+"FRA"), bots without 17lands (the rating run is long: ask first). Then **MC-5.6**, the 30 Stardates, aimed at
+Nov 10. Sprint 4's items 7–12 are re-ordered with Shayne now that the TRK cards are finished (the sprint's plan).
 
 **MC-5.3 batch 7b is done (2026-11-06): 306/311 play** — every C/U, 76/80 R, 24/25 M. The 11 smaller one-offs
 (Shayne's split): Gwyndala (tier 2), Genesis Device, Kobayashi Maru Scenario, Quark, Kira Nerys, All Good
@@ -279,45 +304,6 @@ with `MoveObject`, phased in by the untap step unless "Permanents can't phase in
 enters — copy `ChoosesNumberAsItEnters`; the trigger needs an "ability activated" event, none outside loyalty).
 Re-tier each from its full text; when all 5 play, TRK is complete (311/311) and Next points to MC-5.4 (boosters)
 and MC-5.6 (the Stardates).
-
-The prompt that starts batch 7c (paste it into a NEW session):
-
-```
-MC-5.3 batch 7c: TRK's last 5 cards, in this fresh session (/card-batch step 0).
-Sprint 4 (docs/sprints/2026-11-05.md), item 4. Last commit: batch 7b, 306/311 TRK cards play — every
-C/U, 76/80 R, 24/25 M. 5 left, each flagged bigger than one small piece, each with a first design in the
-story's Next: Q, Stacking the Deck; Nog, Ambitious Cadet; H.M.S. Bounty, Unlikely Timeship; The City on
-the Edge of Forever; Kai Winn, Faithless Leader.
-
-Read, in order and nothing more yet: docs/stories/MC-5-star-trek.md (Decisions, Tasks, Next),
-MagicCore/TrkCoverage.md (status paragraph and the tag table), the /card-batch skill,
-MagicCore/CLAUDE.md, MagicCore/Cookbook.md. GREP MagicCore/AbilityCatalog.md for the pieces each
-card needs rather than reading it whole. Card text: python tools/magic_set.py text --set TRK "Name"
-(full names — "Q" or "H.M.S. Bounty" alone doesn't match). Grep MtgCore before each new piece
-(TakeExtraTurnAction for the Bounty).
-
-Re-tier each card from its FULL text and tell me the tiers, and each new piece's or option's design,
-before scripting. These are the set's heaviest five: if one is more than its share, propose moving it
-to its own session and ask. Phasing (City) and the extra turn (Bounty) touch the turn structure and the
-AI's rollout — say what each touches before building it. Before building any "one legal action per
-combination", count the actions it creates on a 12-creature board. Tier 2 gets one test, tier 3 tests +
-revert-checks. Probe with MAGIC_PROBE_GAMES=10 first, then the full 150. Hot path touched →
-tools/bench_vs_head.sh "FullyQualifiedName~GreedyAiTests". A card whose play or ruling we leave simple
-goes in AI-19 (now at 19.13).
-
-Test traps from 7a and 7b: a Hand(…) inside s.Act(new … { CardId = Hand(…) }) runs on the old state —
-own line; never `c is T ? [x] : …` (CSharpier skips the file) — use the On<T>(ids) helper; PassUntil
-stops at the first choice of ANY kind — wait for the type you want; answer a hand choice by id. A bare
-s.EnterBattlefield or s.PutCounters in a test puts no trigger on the stack and Resolve() returns at once
-on an empty stack — cast it, or pass priority (PassUntil a step change). In the test files `Is` is
-NUnit's: write global::MagicCore.Filters.Is.X, and Does.Contain, not Is.Contains. Activation now asks
-every cost's CanPay. GoldenCardReplay.txt is an explicit test — regenerate it with GoldenReplay.txt
-(Commands.md, "Golden replays"). In Git Bash there is no pgrep — wait on a background run's output file.
-
-When all 5 play, TRK is complete (311/311): the story's Next then points to MC-5.4 (boosters) and
-MC-5.6 (the Stardates). End with the usage row (tools/usage_report.py --log), /pre-commit, then ask
-before committing.
-```
 
 **MC-5.3 batch 7a is done (2026-11-06): 295/311 play** — every C/U, 70/80 R, 19/25 M. The grouped tier 3: Dr.
 Beverly Crusher, Lwaxana Troi (trigger twice; her "keep me tapped?" a real yes/no — Shayne), Death Is Irrelevant,

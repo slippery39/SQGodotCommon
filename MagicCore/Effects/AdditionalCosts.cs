@@ -313,6 +313,23 @@ public sealed record PutSelfOnBottomCost : AdditionalCost
 	public override string Describe() => "Put this card on the bottom of your library";
 }
 
+/// <summary>Q, Stacking the Deck's gift: "Exile a card from your hand:" — one legal action per card.</summary>
+public sealed record ExileFromHandCost : AdditionalCost
+{
+	public override CostSlot Slot => CostSlot.Exile;
+
+	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
+		s.CardsIn(playerId, ZoneType.Hand).Where(c => c.Id != sourceId).Select(c => c.Id);
+
+	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
+		[];
+
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile));
+
+	public override string Describe() => "Exile a card from your hand";
+}
+
 /// <summary>Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is !Is.Source.</summary>
 public sealed record ExileFromGraveyardCost(Filter Filter) : AdditionalCost
 {

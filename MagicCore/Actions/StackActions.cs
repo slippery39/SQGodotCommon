@@ -574,6 +574,7 @@ public record ActivateAbilityAction : GameAction
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
 		foreach (var cost in ability.Costs.Where(c => !c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
+		s = s.Raise(new Turns.AbilityActivatedEvent(PlayerId, source));
 		var (specs, steps) = TextOf(ability, Modes);
 		if (!Modes.IsEmpty)
 			s = Turns.FacedDilemmaEvent.Face(s, PlayerId);

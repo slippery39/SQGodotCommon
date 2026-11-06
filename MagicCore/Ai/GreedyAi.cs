@@ -49,25 +49,43 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 	}
 
 	/// <summary>
+	/// Kai Winn: the nonland name most common among the opponent's cards this player knows of (as Nyota's
+	/// mana value), the first in the list on a tie; with none known, the list's first. ponytail: a blind
+	/// guess when nothing is known — AI-19.14.
+	/// </summary>
+	string LikeliestName(GameState s, ImmutableArray<string> names) =>
+		KnownOpponentNonlands(s)
+			.Where(c => names.Contains(c.Name))
+			.GroupBy(c => c.Name)
+			.OrderByDescending(g => g.Count())
+			.ThenBy(g => names.IndexOf(g.Key))
+			.Select(g => g.Key)
+			.FirstOrDefault() ?? names[0];
+
+	/// <summary>The opponent's nonland cards this player knows of — on the battlefield, in the graveyard, exiled face up, seen in hand.</summary>
+	IEnumerable<Card> KnownOpponentNonlands(GameState s)
+	{
+		var opponent = s.OpponentOf(PlayerId);
+		return new[] { ZoneType.Battlefield, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Hand }
+			.SelectMany(zone =>
+				s.CardsIn(opponent, zone)
+					.Where(c => zone != ZoneType.Hand || (c.KnownTo & Knowers.Opponent) != 0)
+			)
+			.Where(c => !c.Is(CardType.Land) && !c.IsToken && !c.IsHiddenFrom(PlayerId));
+	}
+
+	/// <summary>
 	/// Nyota Uhura (Shayne, 2026-11-05): the mana value most common among the opponent's nonland cards
 	/// this player knows of — on the battlefield, in the graveyard, exiled face up, seen in hand — the
 	/// lower on a tie; with none known, 2.
 	/// </summary>
-	int LikeliestManaValue(GameState s)
-	{
-		var opponent = s.OpponentOf(PlayerId);
-		return new[] { ZoneType.Battlefield, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Hand }
-				.SelectMany(zone =>
-					s.CardsIn(opponent, zone)
-						.Where(c => zone != ZoneType.Hand || (c.KnownTo & Knowers.Opponent) != 0)
-				)
-				.Where(c => !c.Is(CardType.Land) && !c.IsToken && !c.IsHiddenFrom(PlayerId))
-				.GroupBy(c => c.ManaCost.ManaValue)
-				.OrderByDescending(g => g.Count())
-				.ThenBy(g => g.Key)
-				.Select(g => (int?)g.Key)
-				.FirstOrDefault() ?? 2;
-	}
+	int LikeliestManaValue(GameState s) =>
+		KnownOpponentNonlands(s)
+			.GroupBy(c => c.ManaCost.ManaValue)
+			.OrderByDescending(g => g.Count())
+			.ThenBy(g => g.Key)
+			.Select(g => (int?)g.Key)
+			.FirstOrDefault() ?? 2;
 
 	/// <summary>This player's answer to a pending choice. The search AI asks it for the choices it doesn't branch on.</summary>
 	public IEnumerable<int> Answer(GameState s, ChoiceAction choice)
@@ -95,6 +113,8 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 				.ThenByDescending(c => c.ManaCost.ManaValue)
 				.Take(choice.MinChoices)
 				.Select(c => c.Id);
+		if (choice is ChooseKeywordChoice { NamesACard: true } naming)
+			return [naming.Keywords.IndexOf(LikeliestName(s, naming.Keywords)) + 1];
 		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max })
 			return [Math.Min(LikeliestManaValue(s), max) + 1]; // option id = the number + 1
 		if (choice is ChooseColorChoice)

@@ -476,6 +476,8 @@ public static class ManaPayment
 		{
 			if (p.Sacrificed)
 				sacrificed.Add(p.LandId); // Treasure: "{T}, Sacrifice this"
+			if (p.LandId != 0 && !s.GetCard(p.LandId).IsTapped)
+				s = RaiseActivated(s, playerId, p.LandId);
 			if (p.LandId != 0)
 				s = s.Tap(p.LandId);
 			if (p.Restriction != ManaRestriction.None)
@@ -504,4 +506,16 @@ public static class ManaPayment
 		}
 		return sacrificed.Aggregate(s, (st, id) => st.Sacrifice(id));
 	}
+
+	/// <summary>
+	/// Kai Winn: a mana ability is an activated ability (CR 605) — "activates an ability of a source with the
+	/// chosen name" sees one tapped for mana. ponytail: a nonland source only, and a creature tapped for
+	/// convoke reads as one too (Payment doesn't say which) — no card asks about lands or convoke yet.
+	/// </summary>
+	public static GameState RaiseActivated(GameState s, int playerId, int sourceId) =>
+		s.GetCard(sourceId) is var source
+		&& !source.Is(CardType.Land)
+		&& ManaAbilities.CanTap(s, source)
+			? Turns.Triggers.Raise(s, new Turns.AbilityActivatedEvent(playerId, source))
+			: s;
 }

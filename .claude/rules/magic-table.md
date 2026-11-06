@@ -42,7 +42,7 @@ MagicTable/
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)
 ├── MagicHandView.cs      your hand: Common's Hand2D + Card2D fan (KIN's, TBL-3), Scryfall image as the
 │                         whole face, glow as a plate behind it; click AND drag → ObjectClicked
-├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), card faces (zone viewer), thumbs;
+├── CardViews.cs          permanent crops (tapped lies sideways, lands stack, phased out dimmed in its row), card faces (zone viewer), thumbs;
 │                         Hook: hover, click, hold-to-zoom for every card
 ├── PhaseBar.cs           the active player's steps (Stops shows both); each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)

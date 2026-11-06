@@ -188,6 +188,21 @@ public record BecameTargetEvent(int CardId, int ByPlayerId, int ByStackObjectId)
 	public override int By(GameState s) => ByPlayerId;
 }
 
+/// <summary>
+/// Kai Winn: "Whenever an opponent … activates an ability of a source with the chosen name" — every
+/// activation: ActivateAbilityAction, a loyalty ability, and a mana ability (TapForManaAction, ManaPayment.Pay —
+/// Shayne: "If you name Llanowar Elves and they tap it for mana it would trigger her"). The subject is the
+/// source as it was activated: a cost may have sacrificed it.
+/// </summary>
+public record AbilityActivatedEvent(int PlayerId, Cards.Card Source) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.AbilityActivated;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) => [Source];
+
+	public override int By(GameState s) => PlayerId;
+}
+
 /// <summary>"Whenever you activate a loyalty ability" — Cost is +N/−N, so "removed two or more" reads it.</summary>
 public record LoyaltyActivatedEvent(int PlayerId, int Cost) : MagicEvent
 {

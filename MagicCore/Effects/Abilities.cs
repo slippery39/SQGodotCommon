@@ -88,6 +88,7 @@ public enum EventKind
 	CountersPut, // a Saga's chapter: "as the number of lore counters becomes at least N" (Trigger.Chapter)
 	LeftGraveyard, // Vash: "whenever a card leaves your graveyard" — MagicState.MoveCard, every path
 	Drew, // Data, New Life: "whenever you draw a card" — MagicState.Draw, one per card
+	AbilityActivated, // Kai Winn: "activates an ability of a source with the chosen name" — mana abilities too
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 }
 
@@ -527,7 +528,7 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// <summary>"Activate only as a sorcery."</summary>
 	public bool SorcerySpeed { get; init; }
 
-	/// <summary>Where it is activated from: the battlefield, or a card in your hand (cycling) or graveyard.</summary>
+	/// <summary>Where it is activated from: the battlefield, or a card in your hand (cycling), graveyard or exile (Q's gift: "Activate only … if this card is exiled").</summary>
 	public ZoneType From { get; init; } = ZoneType.Battlefield;
 
 	/// <summary>Warrior's Blades' equip: "{1} less for each +1/+1 counter on the creature it targets" — the targets are known.</summary>
@@ -779,6 +780,19 @@ public record ChoosesNumberAsItEnters(int Max) : GameComponent;
 /// <summary>The number chosen as it entered (Nyota Uhura) — gone when it leaves.</summary>
 public record ChosenNumber(int N) : GameComponent;
 
+/// <summary>
+/// Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by
+/// MagicState.EnterBattlefield — the names every nonland card printed in the game's sets has
+/// (CardRegistry.NonlandNames, Shayne 2026-11-06); the AI names the opponent's commonest known (GreedyAi).
+/// </summary>
+public record ChoosesNameAsItEnters : GameComponent;
+
+/// <summary>The card name chosen as it entered (Kai Winn) — gone when it leaves.</summary>
+public record ChosenName(string Name) : GameComponent;
+
+/// <summary>The City on the Edge of Forever's Human: "Permanents can't phase in." — read by Rules.Phasing.PhaseIn.</summary>
+public record PermanentsCantPhaseIn : GameComponent;
+
 /// <summary>Stingcaster Mage: "gains flashback until end of turn. The flashback cost is equal to its mana cost." Lost on any zone change.</summary>
 public record GrantedFlashback(int OnTurn) : GameComponent;
 
@@ -883,6 +897,9 @@ public record MayPlayFromYourGraveyard(Filters.Filter What) : GameComponent
 
 	/// <summary>The Holodeck: "from outside the game" — the sideboard, when the game has one.</summary>
 	public bool OutsideTheGame { get; init; }
+
+	/// <summary>Nog, Ambitious Cadet: "You may play lands from your graveyard" — not once each turn.</summary>
+	public bool Unlimited { get; init; }
 }
 
 /// <summary>

@@ -134,6 +134,21 @@ public sealed record ManaValueIsChosenNumber : Filter
 		&& card.ManaValueNow == chosen.N;
 }
 
+/// <summary>Kai Winn: "a spell with the chosen name", "a source with the chosen name" — the name the source chose as it entered (ChosenName).</summary>
+public sealed record NamedChosenName : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card
+		&& s.HasObject(c.Source)
+		&& s.GetObject(c.Source) is Card source
+		&& source.GetComponent<Effects.ChosenName>() is { } chosen
+		&& card.Name == chosen.Name;
+}
+
 /// <summary>Koth: "a Plains"; Saheeli: "Thopters".</summary>
 public sealed record OfSubtype(string Subtype) : Filter
 {

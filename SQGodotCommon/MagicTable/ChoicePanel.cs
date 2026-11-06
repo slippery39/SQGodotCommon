@@ -53,10 +53,30 @@ public partial class ChoicePanel : PanelContainer
 		MtgUiStyles.StylePrimary(confirm, 28);
 		confirm.Pressed += () => answer(picked);
 
-		var list = new HFlowContainer();
+		var list = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
 		list.AddThemeConstantOverride("h_separation", 6);
 		list.AddThemeConstantOverride("v_separation", 6);
-		column.AddChild(list);
+		if (choice.Options.Count > 24)
+		{
+			// Kai Winn's "choose a nonland card name": hundreds — a search box over a scrolling list.
+			var search = new LineEdit { PlaceholderText = "Type to search…" };
+			search.AddThemeFontSizeOverride("font_size", 22);
+			search.TextChanged += text =>
+			{
+				foreach (var b in list.GetChildren().OfType<Button>())
+					b.Visible = b.Text.Contains(text, StringComparison.OrdinalIgnoreCase);
+			};
+			column.AddChild(search);
+			var scroll = new ScrollContainer
+			{
+				CustomMinimumSize = new Vector2(0, 420),
+				HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			};
+			scroll.AddChild(list);
+			column.AddChild(scroll);
+		}
+		else
+			column.AddChild(list);
 		var cardIds = MagicRules.OptionsAreObjects(choice);
 		foreach (var option in choice.Options)
 		{

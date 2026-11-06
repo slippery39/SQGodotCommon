@@ -145,6 +145,7 @@ public record TapForManaAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
+		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
 		s = s.Tap(CardId);
 		var player = s.GetPlayer(PlayerId);
 		var pool = player.ManaPool;

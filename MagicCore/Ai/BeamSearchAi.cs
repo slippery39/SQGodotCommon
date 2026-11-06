@@ -478,7 +478,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 							new Declare(plan, WholeAttacks.Answer(s, PlayerId, plan, attacker), key)
 					),
 			];
-		if (choice is ChooseNumberChoice { NamesAManaValue: true })
+		if (
+			choice
+			is ChooseNumberChoice { NamesAManaValue: true }
+				or ChooseKeywordChoice { NamesACard: true }
+		)
 			return [new Pick([.. greedy.Answer(s, choice)], key)]; // Nyota: a rule, not 11 rollouts (Shayne)
 		if (choice.MaxChoices != 1)
 			return options.BranchPicks && Picks(s, choice) is { } every

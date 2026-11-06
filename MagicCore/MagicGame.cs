@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MagicCore;
@@ -31,8 +32,14 @@ public record MagicGame : GameObject
 	public int StartingPlayerId { get; init; }
 	public int ActivePlayerId { get; init; }
 
-	/// <summary>Every turn counts, both players' — the starting player's first turn is 1.</summary>
+	/// <summary>Every turn counts, both players' — the starting player's first turn is 1. An extra turn counts too.</summary>
 	public int TurnNumber { get; init; }
+
+	/// <summary>
+	/// H.M.S. Bounty: "take an extra turn after this one" — whose, in the order created; the LAST is taken
+	/// first (CR 500.7), by TurnStructure.FinishCleanup.
+	/// </summary>
+	public ImmutableList<int> ExtraTurns { get; init; } = [];
 
 	public Step Step { get; init; } = Step.PreGame;
 

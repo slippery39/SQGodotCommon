@@ -812,7 +812,7 @@ public record Assimilate(Ref What) : Effect
 					.WithComponent(
 						new Cards.UntilEndOfTurn
 						{
-							BecomesCreatureType = "Borg",
+							BecomesCreatureTypes = ["Borg"],
 							UntilTurnOf = Cards.UntilEndOfTurn.Never,
 						}
 					)
@@ -904,6 +904,15 @@ public record ExileUntilNonlandCastFree(Ref Of) : Effect
 	/// <summary>Discover: "Put the rest on the bottom in a random order."</summary>
 	public bool RestOnBottom { get; init; }
 
+	/// <summary>Q, Stacking the Deck: "shuffle your library, then exile cards …".</summary>
+	public bool ShuffleFirst { get; init; }
+
+	/// <summary>
+	/// Q, Stacking the Deck: "That nonland card gains '[ability]'" — in place of the cast: an UntilEndOfTurn
+	/// that never ends, so the card has it while it stays this exiled object.
+	/// </summary>
+	public ActivatedAbilityComponent? Gains { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (
@@ -911,6 +920,8 @@ public record ExileUntilNonlandCastFree(Ref Of) : Effect
 			is not (> 0 and var owner)
 		)
 			return new(s);
+		if (ShuffleFirst)
+			s = s.Shuffle(owner);
 		var library = s.CardsIn(owner, ZoneType.Library).ToList();
 		var hit = library.FirstOrDefault(c =>
 			!c.Is(CardType.Land)
@@ -929,6 +940,21 @@ public record ExileUntilNonlandCastFree(Ref Of) : Effect
 		}
 		if (hit is null)
 			return new(s);
+		if (Gains is not null)
+			return new(
+				Update(
+					s,
+					(Card)
+						s.GetCard(hit.Id)
+							.WithComponent(
+								new UntilEndOfTurn
+								{
+									UntilTurnOf = UntilEndOfTurn.Never,
+									Gains = [Gains],
+								}
+							)
+				)
+			);
 		ImmutableList<GameAction> toHand = OrIntoHand
 			? [new MoveCardTo(hit.Id, ZoneType.Hand)]
 			: [];
@@ -1282,6 +1308,9 @@ public record CastChosenCopy(CastCopiesWithinBudget Loop) : Effect
 /// </summary>
 public record CastCopiesOf(Ref What, Count Times) : Effect
 {
+	/// <summary>Q, Stacking the Deck: "Create a copy of this card. You may cast the copy." — paying its costs.</summary>
+	public bool PayCost { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		All(What, s).FirstOrDefault(id => s.GetObject(id) is Card) is > 0 and var id
 			? new(
@@ -1289,7 +1318,10 @@ public record CastCopiesOf(Ref What, Count Times) : Effect
 					new PipelineAction
 					{
 						PipelineContext = InputContext,
-						Steps = [new CastCopyOf(id, Times.Value(s, InputContext))],
+						Steps =
+						[
+							new CastCopyOf(id, Times.Value(s, InputContext)) { Free = !PayCost },
+						],
 					}
 				)
 			)
@@ -1299,26 +1331,31 @@ public record CastCopiesOf(Ref What, Count Times) : Effect
 /// <summary>One of Infinite Diversity's copies — "cast it free?" — then the next, while any are left.</summary>
 public record CastCopyOf(int CardId, int Left) : Effect
 {
+	/// <summary>Unset: Q's copy, cast paying its costs.</summary>
+	public bool Free { get; init; } = true;
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (Left <= 0 || !s.HasObject(CardId))
 			return new(s);
 		Card copy;
 		(s, copy) = CastChosenCopy.MakeCopy(s, Controller, s.GetCard(CardId));
-		ImmutableList<GameAction> next = [new CastCopyOf(CardId, Left - 1)];
+		ImmutableList<GameAction> next = [this with { Left = Left - 1 }];
 		return new(
 			s.SpawnAction(
 				new PipelineAction
 				{
 					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps = CastNow.CanCast(s, Controller, copy, free: true)
+					Steps = CastNow.CanCast(s, Controller, copy, free: Free)
 						?
 						[
 							new YesNoChoice(
 								Controller,
-								$"Cast a copy of {copy.Name} free? ({Left} left)"
+								Free
+									? $"Cast a copy of {copy.Name} free? ({Left} left)"
+									: $"Cast a copy of {copy.Name}?"
 							),
-							new IfChosenAction([new CastNow(copy.Id, Free: true)]),
+							new IfChosenAction([new CastNow(copy.Id, Free: Free)]),
 							.. next,
 						]
 						: next,
@@ -2277,6 +2314,16 @@ public record ReturnChosenToHandAction : GameAction
 }
 
 /// <summary>
+/// The City on the Edge of Forever: "All artifacts and creatures phase out." — Rules.Phasing, each with what
+/// is attached to it.
+/// </summary>
+public record PhaseOut(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(Permanents(What, s).Select(c => c.Id).ToList().Aggregate(s, Rules.Phasing.PhaseOut));
+}
+
+/// <summary>
 /// "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the Then
 /// effects run only if something was sacrificed, with this ability's context.
 /// </summary>
@@ -2285,8 +2332,21 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 	/// <summary>Genesis Device: "Sacrifice any number of lands you control, then [Then]" — Then reads how many (Count.PermanentsChosen).</summary>
 	public bool AnyNumber { get; init; }
 
-	public override ActionResult Execute(GameState s) =>
-		new(
+	/// <summary>The City on the Edge of Forever: "Sacrifice a creature token. If you do, …" — not a may: one if you can.</summary>
+	public bool Must { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var candidates = Filters
+			.FilterChoices.Among(
+				Filter,
+				s,
+				Controller,
+				ZoneType.Battlefield,
+				GetInput<int>(ContextKeys.Source)
+			)
+			.Count(id => s.CanSacrifice(id));
+		return new(
 			s.SpawnAction(
 				new PipelineAction
 				{
@@ -2301,22 +2361,13 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 							Filter
 						)
 						{
-							Prompt = AnyNumber ? "Sacrifice any number" : "You may sacrifice",
+							Prompt =
+								AnyNumber ? "Sacrifice any number"
+								: Must ? "Sacrifice"
+								: "You may sacrifice",
 							Sacrifice = true,
-							MaxChoices = AnyNumber
-								? Math.Max(
-									1,
-									Filters
-										.FilterChoices.Among(
-											Filter,
-											s,
-											Controller,
-											ZoneType.Battlefield,
-											GetInput<int>(ContextKeys.Source)
-										)
-										.Count()
-								)
-								: 1,
+							MinChoices = Must && candidates > 0 ? 1 : 0,
+							MaxChoices = AnyNumber ? Math.Max(1, candidates) : 1,
 						},
 						new SacrificeChosenAction(),
 						new IfChosenAction(Then),
@@ -2324,6 +2375,7 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 				}
 			)
 		);
+	}
 }
 
 /// <summary>Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.</summary>

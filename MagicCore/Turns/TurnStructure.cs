@@ -63,6 +63,7 @@ public static class TurnStructure
 	{
 		var game = s.GetGame();
 		s = s.WithGame(game with { ActivePlayerId = game.StartingPlayerId, TurnNumber = 1 });
+		s = s.WithPlayer(s.GetPlayer(game.StartingPlayerId) with { TurnBeganOn = 1 });
 		return EnterStep(s, Step.Untap);
 	}
 
@@ -159,11 +160,24 @@ public static class TurnStructure
 		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 			s = s.WithPlayer(s.GetPlayer(id) with { ManaPool = ManaPool.Empty });
 		var game = s.GetGame();
+		// H.M.S. Bounty: an extra turn is taken before the next one, the last created first (CR 500.7).
+		var extra = !game.ExtraTurns.IsEmpty;
+		var next = extra ? game.ExtraTurns[^1] : s.OpponentOf(game.ActivePlayerId);
 		s = s.WithGame(
 			game with
 			{
-				ActivePlayerId = s.OpponentOf(game.ActivePlayerId),
+				ActivePlayerId = next,
 				TurnNumber = game.TurnNumber + 1,
+				ExtraTurns = extra
+					? game.ExtraTurns.RemoveAt(game.ExtraTurns.Count - 1)
+					: game.ExtraTurns,
+			}
+		);
+		s = s.WithPlayer(
+			s.GetPlayer(next) with
+			{
+				TurnBeganOn = game.TurnNumber + 1,
+				BegunExtraTurn = s.GetPlayer(next).BegunExtraTurn || extra,
 			}
 		);
 		return EnterStep(s, Step.Untap);
@@ -198,6 +212,7 @@ public static class TurnStructure
 		{
 			case Step.Untap:
 				s = EndUntilYourNextTurn(s, active);
+				s = Rules.Phasing.PhaseIn(s, active); // CR 502.1: phasing first, then untapping
 				// Lwaxana Troi: "You may choose not to untap [her]" — asked only while her link is live.
 				var mayStay = s.CardsIn(active, ZoneType.Battlefield)
 					.FirstOrDefault(c =>
