@@ -373,6 +373,51 @@ public record AddChosenColorManaAction(Count Amount) : Effect
 			: new(s);
 }
 
+/// <summary>
+/// Dathon, His Heart Open: "Choose a counter on target enchantment you control. Put another counter of
+/// that kind on it." — one kind on it: that kind, unasked; several: the kind is chosen (by name).
+/// </summary>
+public record AddAnotherCounterOfAKind(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (Permanents(What, s).FirstOrDefault() is not { } card)
+			return new(s);
+		ImmutableArray<string> kinds = [.. card.AllCounters().Select(c => c.Kind)];
+		return kinds.Length switch
+		{
+			0 => new(s),
+			1 => new(s.PutCounters(card.Id, kinds[0], 1)),
+			_ => new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext,
+						Steps =
+						[
+							new ChooseKeywordChoice(Controller, kinds)
+							{
+								Prompt = "Choose a kind of counter",
+							},
+							new AddChosenCounterAction(card.Id, kinds),
+						],
+					}
+				)
+			),
+		};
+	}
+}
+
+/// <summary>After the choice: one more counter of the chosen kind.</summary>
+public record AddChosenCounterAction(int CardId, ImmutableArray<string> Kinds) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is int id
+		&& s.IsOnBattlefield(CardId)
+			? new(s.PutCounters(CardId, Kinds[id - 1], 1))
+			: new(s);
+}
+
 /// <summary>Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn."</summary>
 public record GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords) : Effect
 {
@@ -633,6 +678,8 @@ public record WheneverThisTurn(TriggeredAbilityComponent Ability) : Effect
 	/// <summary>
 	/// A Good Day to Die: "When that creature dies this turn, you draw a card." — the trigger's subject
 	/// is that one permanent, as it is now; the ability stays yours, whoever controls the creature.
+	/// The Inner Light: "Whenever it deals combat damage to a player this turn" — a combat-damage
+	/// trigger narrows its damage source instead (the subject there is the player).
 	/// </summary>
 	public Ref? About { get; init; }
 
@@ -646,7 +693,15 @@ public record WheneverThisTurn(TriggeredAbilityComponent Ability) : Effect
 			Filters.Filter only = new Filters.TheObject(that.Id, that.Incarnation);
 			ability = ability with
 			{
-				On = ability.On with { Subject = ability.On.Subject is { } f ? f & only : only },
+				On = ability.On.CombatDamageBy is { } by
+					? ability.On with
+					{
+						CombatDamageBy = by & only,
+					}
+					: ability.On with
+					{
+						Subject = ability.On.Subject is { } f ? f & only : only,
+					},
 			};
 		}
 		return new(

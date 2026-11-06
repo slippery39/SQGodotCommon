@@ -324,7 +324,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `Draft.New(set, seed)`). Rarity is never read from `CardData` — it isn't there.
 - **Counters of every kind are put on and removed through `MagicState.PutCounters` alone** (`CounterKinds`):
   the named ones (TRK: quest, lore, promotion) in ONE map, `Card.Counters`, raising `CountersPutEvent` (how
-  many it had and has); the older kinds (+1/+1, -1/-1, charge, stun, time, loyalty) in their own fields
+  many it had and has — charge raises it too: Enterprise-D's "whenever charge counters are put on", read by
+  `Trigger.Counters`, the kind); the older kinds (+1/+1, -1/-1, charge, stun, time, loyalty) in their own fields
   (`Card.CountersOf`/`WithCounters`). Finality is a yes/no flag, not a count. `CounterWritesTests` fails on
   an engine file that adds to a counter field itself — it would skip every replacement.
   "A permanent with a counter on it" is ANY kind — `Is.WithAnyCounter` (`Card.HasAnyCounter`) reads every
@@ -376,9 +377,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `Rules.Replacements.Counters`, applied in `MagicState.PutCounters` — so it reaches every counter path:
   effects, costs (`Loyalty.Change`), entering with loyalty, time or +1/+1 counters, proliferate.
   **"Twice that many charge counters on an artifact you control"** (Geordi La Forge,
-  `ChargeCountersOnYourArtifactsDoubled`) is `Rules.Replacements.ChargeCounters` there too, AFTER the plus
+  `ChargeCountersOnYourArtifactsDoubled`) is `Rules.Replacements.Doubled<T>` there too, AFTER the plus
   one — (n + 1) × 2, the order its controller would pick (CR 616.1) — entering with them included (Picard's
-  seven become fourteen).
+  seven become fourteen). **"Twice that many of each kind on a creature you control"** (Dr. M'Benga,
+  `CountersOnYourCreaturesDoubled`) is the same `Doubled<T>`, every kind; a permanent's own doubling never
+  applies to its own entry (CR 614.12).
 - **Life is lost in `Rules.Life.Lose` alone** — damage to a player, `LoseLife`, paying life — which counts it
   in `TurnTally.LifeLost` (Gul Dukat: "the life that player lost this turn", `Count.LifeLostThisTurnOf`).
   His "you gain life equal to the life lost this way" is scripted gain FIRST, so both read the count before
@@ -449,3 +452,23 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   card (status: gone as it leaves); "a spell with mana value equal to the chosen number" is
   `Is.ManaValueIsChosenNumber`. The AI names the mana value commonest among the opponent's nonland cards it
   knows of, else 2 (`GreedyAi`, Shayne) — the beam doesn't branch on it (`ChooseNumberChoice.NamesAManaValue`).
+- **"You may play lands from the top of your library"** (Captain Pike) is `MayPlayLandsFromLibraryTop`, read by
+  `Playable.CanPlayLandFromHere` — the land drop the only limit; `Candidates` already offers the top card.
+- **"Whenever it deals combat damage to a player this turn, you draw that many"** (The Inner Light) is
+  `WheneverThisTurn { About }` on a `CombatDamageBy` trigger — About narrows the damage's SOURCE there (the
+  subject is the player) — and "that many" is the trigger's X, `PlayerDealtDamageEvent.Amount`.
+- **"Choose a counter on [it]. Put another counter of that kind on it"** (Dathon) is `AddAnotherCounterOfAKind`:
+  one kind is put unasked; several are a `ChooseKeywordChoice` of the kinds' names.
+- **A Spacecraft that is never a creature** (Deep Space 9: station, then "9+ | Creatures you control get
+  +3/+3") is `TrkCards.StationAbility` alone, no `StationComponent`; its N+ static is an `If` on its charge
+  counters. "Exile the top N, put every permanent card onto the battlefield" is
+  `RevealUntilOntoBattlefield { Top, Exile }` — the rest stay exiled.
+- **"Put onto the battlefield … sacrifice those at the beginning of your next end step"** (Will Riker) is
+  `RevealUntilOntoBattlefield.SacrificeAtNextEndStep` — the tokens' delayed trigger on each card it put there.
+- **"If you would draw a card, draw two instead"** (Mr. Spock, `DrawsDoubled`) is applied in `MagicState.Draw`, which
+  every draw goes through — twice per copy (two Spocks: four).
+- **"You don't lose the game for having 0 or less life"** (Georgiou, `DontLoseForZeroLife`) is asked by the
+  state-based check alone (`TurnStructure`), only once life is 0 or less; she leaves, the next check takes the game.
+- **"A permanent was returned to your hand from the battlefield this turn"** (Miles O'Brien) is
+  `TurnTally.PermanentsReturnedToHand` — its OWNER's, counted in `MoveCard` (battlefield → hand: bounce, beam
+  me up's cost, a token too) — read by `Count.PermanentsReturnedToHandThisTurn`.

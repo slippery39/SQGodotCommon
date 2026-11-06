@@ -195,6 +195,11 @@ public static class MagicState
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
 		).UpdateObject(cardId, before.Fresh() with { KnownTo = knownTo });
+		if (leavesBattlefield && zoneId == s.ZoneId(before.OwnerId, ZoneType.Hand)) // Miles O'Brien
+			s = s.Tally(
+				before.OwnerId,
+				t => t with { PermanentsReturnedToHand = t.PermanentsReturnedToHand + 1 }
+			);
 		if (milled) // mill, surveil, any "from your library into your graveyard" — counted in one place
 			s = s.Tally(
 				before.OwnerId,
@@ -529,10 +534,11 @@ public static class MagicState
 	/// THE way counters of ANY kind are put on a permanent or removed — +1/+1, -1/-1, charge, stun, time,
 	/// loyalty (their own fields on Card) and the named ones (Card.Counters) — so every replacement on
 	/// putting them applies in this one place: Yoshimaru's "that many plus one" (+1/+1 on a creature you
-	/// control) and Brad Boimler's (every kind, Rules.Replacements.Counters). Never write a counter field
-	/// elsewhere; CounterWritesTests fails on one that does. Negative removes, never below 0. A named
-	/// kind raises what a Saga's chapter reads (CR 714.2b: "as the number of lore counters becomes at
-	/// least the chapter number").
+	/// control), Brad Boimler's (every kind, Rules.Replacements.Counters), Geordi's and M'Benga's
+	/// doubling. Never write a counter field elsewhere; CounterWritesTests fails on one that does.
+	/// Negative removes, never below 0. A named kind, or charge, raises CountersPutEvent: what a Saga's
+	/// chapter reads (CR 714.2b: "as the number of lore counters becomes at least the chapter number")
+	/// and Enterprise-D's "charge counters are put on" (Trigger.Counters).
 	/// </summary>
 	/// <param name="entering">It is entering with them: its own replacement doesn't apply (CR 614.12).</param>
 	public static GameState PutCounters(
@@ -553,14 +559,29 @@ public static class MagicState
 				exceptId: entering ? cardId : 0
 			);
 		n = Rules.Replacements.Counters(s, card.ControllerId, n);
+		var except = entering ? cardId : 0;
 		if (n > 0 && kind == CounterKinds.Charge && card.Is(CardType.Artifact))
-			n = Rules.Replacements.ChargeCounters(s, card.ControllerId, n);
+			n = Rules.Replacements.Doubled<ChargeCountersOnYourArtifactsDoubled>(
+				s,
+				card.ControllerId,
+				n,
+				except
+			);
+		// ponytail: M'Benga's (and Geordi's) "if YOU would put" doubles whoever puts them — PutCounters
+		// doesn't know the putter. Pass it through every caller if an opponent's counters ever matter.
+		if (n > 0 && card.Is(CardType.Creature))
+			n = Rules.Replacements.Doubled<CountersOnYourCreaturesDoubled>(
+				s,
+				card.ControllerId,
+				n,
+				except
+			);
 		var had = card.CountersOf(kind);
 		var now = Math.Max(0, had + n);
 		if (now == had)
 			return s;
 		s = s.UpdateObject(cardId, card.WithCounters(kind, now));
-		return now > had && IsNamed(kind)
+		return now > had && (IsNamed(kind) || kind == CounterKinds.Charge) // Enterprise-D: "charge counters are put on"
 			? s.Raise(new CountersPutEvent(cardId, kind, had, now))
 			: s;
 	}
@@ -620,9 +641,14 @@ public static class MagicState
 	public static bool TopIsKnownToOwner(this GameState s, int playerId) =>
 		s.CardsIn(playerId, ZoneType.Battlefield).Any(s.HasAbility<MayLookAtTopOfLibrary>);
 
-	/// <summary>Draws from the top; a draw from an empty library flags the loss for the state-based check.</summary>
+	/// <summary>
+	/// Draws from the top; a draw from an empty library flags the loss for the state-based check. Every
+	/// draw comes here, so Mr. Spock's "If you would draw a card, draw two cards instead" applies in this
+	/// one place (DrawsDoubled) — twice per copy: two draw four (each new draw is replaced again).
+	/// </summary>
 	public static GameState Draw(this GameState s, int playerId, int count = 1)
 	{
+		count <<= s.CardsIn(playerId, ZoneType.Battlefield).Count(s.HasAbility<DrawsDoubled>);
 		var libraryId = s.ZoneId(playerId, ZoneType.Library);
 		var handId = s.ZoneId(playerId, ZoneType.Hand);
 		for (var i = 0; i < count; i++)

@@ -317,6 +317,7 @@ public enum CountOf
 	CreaturesDiedThisTurn, // anyone's
 	ChargeCountersOn, // Gardenize: "for each charge counter on [Ref]"
 	CardsFromLibraryToGraveyardThisTurn, // Cruel Calculations: of the player [Ref]
+	PermanentsReturnedToHandThisTurn, // Miles O'Brien: "a permanent was returned to your hand from the battlefield this turn" — of the player [Ref]
 	NonlandCardsChosen, // Seasoned Cryomancer: "nonland cards [discarded] this way" — the last hand choice
 	TotalLoyaltyOf, // Jace, Reality Sculptor: "loyalty counters among Jaces you control"
 	SubtypesAmong, // Tam: "planeswalker types among planeswalkers you control"
@@ -396,6 +397,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count CardsFromLibraryToGraveyardThisTurn(Ref player) =>
 		new(0, player, CountOf.CardsFromLibraryToGraveyardThisTurn);
 
+	public static Count PermanentsReturnedToHandThisTurn(Ref player) =>
+		new(0, player, CountOf.PermanentsReturnedToHandThisTurn);
+
 	public static readonly Count NonlandCardsChosen = new(0, null, CountOf.NonlandCardsChosen);
 
 	public static readonly Count LifeYouGainedThisTurn =
@@ -457,6 +461,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Select(s.GetObject)
 				.OfType<MagicPlayer>()
 				.Sum(p => p.ThisTurn.CardsFromLibraryToGraveyard);
+		if (Kind == CountOf.PermanentsReturnedToHandThisTurn)
+			return Of!
+				.Resolve(s, context)
+				.Select(s.GetObject)
+				.OfType<MagicPlayer>()
+				.Sum(p => p.ThisTurn.PermanentsReturnedToHand);
 		if (Kind == CountOf.CardTypesInAllGraveyards) // one pass: it sits under Tarmogoyf's P/T
 			return System.Numerics.BitOperations.PopCount(
 				(uint)

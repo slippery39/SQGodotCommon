@@ -93,8 +93,12 @@ public record DiedEvent(Card LastKnown) : MagicEvent
 	public ImmutableList<Card> Attached { get; init; } = [];
 }
 
-/// <summary>A player was dealt damage — by Rules.Damage.Deal, combat or not.</summary>
-public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId) : MagicEvent
+/// <summary>
+/// A player was dealt damage — by Rules.Damage.Deal, combat or not. The Inner Light's "you draw that
+/// many cards" is Amount — the trigger's X.
+/// </summary>
+public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId, int Amount)
+	: MagicEvent
 {
 	public override EventKind Kind() => EventKind.PlayerDealtDamage;
 
@@ -348,7 +352,12 @@ public static class Triggers
 						EventCard(e),
 						Snapshot(s, e),
 						EventObject(s, e),
-						e is CreatureDealtDamageEvent damaged ? damaged.Amount : 0
+						e switch
+						{
+							CreatureDealtDamageEvent damaged => damaged.Amount,
+							PlayerDealtDamageEvent dealt => dealt.Amount,
+							_ => 0,
+						}
 					))
 			);
 		var fromTheDead = s
@@ -549,6 +558,8 @@ public static class Triggers
 				|| lore.To < on.Chapter
 			)
 		)
+			return false;
+		if (on.Counters is { } kind && (e is not CountersPutEvent put || put.CounterKind != kind))
 			return false;
 		if (
 			on.CombatDamageBy is { } by

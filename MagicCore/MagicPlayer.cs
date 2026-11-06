@@ -62,6 +62,9 @@ public record TurnTally
 	/// <summary>Cruel Calculations: "cards that were put into [this player's] graveyard from their library this turn" — MagicState.MoveCard.</summary>
 	public int CardsFromLibraryToGraveyard { get; init; }
 
+	/// <summary>Miles O'Brien: "a permanent was returned to your hand from the battlefield this turn" — its owner's, MagicState.MoveCard.</summary>
+	public int PermanentsReturnedToHand { get; init; }
+
 	/// <summary>Noncombat damage dealt TO this player (Command the Stage).</summary>
 	public int NoncombatDamageTaken { get; init; }
 

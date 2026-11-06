@@ -18,8 +18,11 @@ sacrificed creature as an ability's event card, "choose one or more" with an emp
 dying permanent seeing its own death); batch 5b, 8 tier-3 rares and mythics (a delayed return on the card that
 died, charge counters doubled, a mana ability that costs mana, tap three or seven, life lost this turn, base
 P/T for good, reveal the top X); batch 6a, 14 tier-3 rares (the shocklands, sunburst, X targets picked as it is cast,
-changeling, a number chosen as it enters)** — 268/311 play, with the basics and Mugato: **every common and
-uncommon**, 52/80 rares, 10/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
+changeling, a number chosen as it enters); batch 6b, the re-tier's ten (lands from the library's top, counters
+doubled on your creatures, charge counters put, combat damage as "that many", another counter of a chosen kind, a
+Spacecraft never a creature) and three tier-3 one-offs (draws doubled, no loss at 0 life, a permanent returned to
+hand this turn)** — 281/311 play, with the basics and Mugato: **every common and
+uncommon**, 61/80 rares, 14/25 mythics. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
 Trimatrix (1 → 3) and Captain Jean-Luc Picard (tap three or seven untapped), Gul Dukat (life lost this
 turn), Seven of Nine (base P/T become 7/9), Branching Timeline (reveal X, every permanent card onto the
 battlefield), Dominion Infiltration (X targets, changeling — with the one-offs), Starfleet Academy (a mana
@@ -27,7 +30,9 @@ ability that costs mana — Shayne: a real one); Replicator 1 → 2. **Batch 5b 
 Starfleet Academy, Trimatrix, Picard, Gul Dukat, Seven of Nine, Branching Timeline. The rest: 57 tier-3 one-offs, re-tiered from the full text 2026-11-05 — 11 are tier 1–2 (Sela, Antagonist
 Incorporator, Deanna Troi, Enterprise-D, The Inner Light, Will Riker, M'Benga, Deep Space 9, Captain Pike, Dathon,
 Mirror Universe Intrusion). **Batch 6a (done 2026-11-05):** the 10 shocklands, Engineered Explosives, Dominion
-Infiltration, Nyota Uhura, Mirror Universe Intrusion. Left: 43 (the story's Next groups them).
+Infiltration, Nyota Uhura, Mirror Universe Intrusion. **Batch 6b (done 2026-11-05):** Sela, Antagonist Incorporator,
+Deanna Troi, Will Riker, Captain Pike, M'Benga, The Inner Light, Deep Space 9 (tier 1–2); Enterprise-D, Dathon
+(re-tiered 3); Mr. Spock, Georgiou, Miles O'Brien (tier 3, added — Shayne). Left: 30 (the story's Next groups them).
 Batch 4c re-tiered from the full text: Ensign Pavel Chekov, Vulcan Mind-Meld and Zero 3 → 2 (playing from
 exile already took anyone's card). Batch 4 re-tiered from the full text: Dominion
 Supervisor and The Doctor 1 → 2 (a counter of any kind); to 3 — Cold-Blooded Crew, First Contact (first

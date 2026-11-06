@@ -201,14 +201,7 @@ public static class TrkCards
 	static GameComponent[] Station(int creatureAt, params string[] keywords) =>
 		[
 			new StationComponent(creatureAt),
-			new ActivatedAbilityComponent(
-				ManaCost.None,
-				[new AddChargeCounters(Ref.Source, Count.PowerOf(Ref.EventCard))]
-			)
-			{
-				Costs = [new TapUntappedCost(1, Is.Creature & !Is.Source)],
-				SorcerySpeed = true,
-			},
+			StationAbility,
 			.. keywords.Select(k => new StaticEffectComponent(Is.Source, k)
 			{
 				If = new AtLeast(Count.ChargeCountersOn(Ref.Source), creatureAt),
@@ -2882,6 +2875,202 @@ public static class TrkCards
 					}
 				),
 			],
+			// ===== MC-5.3 batch 6b: the re-tier's cheap ten, then Spock, Georgiou, Miles — lands from the library's top, counters doubled, charge counters put, draws doubled, no loss at 0 life, a permanent returned to hand =====
+			["Sela, Tal Shiar Paradox"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[TargetSpec.InAnyGraveyard() with { Optional = true }],
+					new ExileFromGraveyard(Ref.Target())
+				),
+				When(
+					TriggerEvent.OneOrMoreCardsLeaveYourGraveyard,
+					[],
+					new CreateTokens(Romulan, 1) { Tapped = true }
+				),
+			],
+			["Antagonist Incorporator"] =
+			[
+				new GrantsTriggeredAbility(
+					ArtifactCreaturesYouControl,
+					When(
+						TriggerEvent.SelfDealsCombatDamageToPlayer,
+						[],
+						new May(
+							"Pay {1} to create a Borg token?",
+							new CanPay(ManaCost.Parse("{1}")),
+							[new PayMana(ManaCost.Parse("{1}"), [new CreateTokens(Borg, 1)])]
+						)
+					)
+				),
+			],
+			["Deanna Troi, Psychic Counsel"] =
+			[
+				new YourPermanentsEnterWithCounters(Is.Creature, CounterKinds.PlusOne, 1), // its own entry is skipped: "other"
+			],
+			["Will Riker, First in the Field"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new RevealUntilOntoBattlefield(CardType.Land)
+					{
+						HowMany = 2,
+						SacrificeAtNextEndStep = true,
+					}
+				),
+			],
+			["Captain Pike, Fullness of Time"] =
+			[
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = DifferentlyNamedLands,
+					Toughness = DifferentlyNamedLands,
+				},
+				new MayLookAtTopOfLibrary(),
+				new MayPlayLandsFromLibraryTop(),
+			],
+			["Dr. Joseph M'Benga"] =
+			[
+				new StaticEffectComponent(
+					Is.Creature & Is.Yours & !Is.Source & Is.WithAnyCounter,
+					"Hexproof"
+				),
+				new CountersOnYourCreaturesDoubled(),
+			],
+			["Dathon, His Heart Open"] =
+			[
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.Enchantment,
+					},
+					[],
+					new DrawCards(Ref.You, 1),
+					new If(
+						new Matches(Ref.EventCard, Is.Subtype("Saga")),
+						[new DealDamage(Ref.EachOpponent, 2)]
+					)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new AddAnotherCounterOfAKind(Ref.Target())]
+				)
+				{
+					Targets = [Target(Is.Enchantment & Is.Yours)],
+					SorcerySpeed = true,
+				},
+			],
+			["The Inner Light"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[
+						TargetSpec.InYourGraveyard(
+							Is.Creature & (Is.Color(ManaColor.Green) | Is.Color(ManaColor.White))
+						),
+					],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)
+				),
+				Chapter(
+					2,
+					[Creature],
+					new WheneverThisTurn(
+						new TriggeredAbilityComponent(
+							new Trigger(EventKind.PlayerDealtDamage)
+							{
+								CombatDamageBy = Is.Creature,
+							},
+							[new DrawCards(Ref.You, Count.X)] // "that many": the damage dealt
+						)
+					)
+					{
+						About = Ref.Target(0),
+					}
+				),
+				Chapter(
+					3,
+					[],
+					new GainLife(Ref.You, Count.GreatestPowerOf(Ref.CreaturesYouControl)),
+					CreateTreasure(1)
+				),
+			],
+			["Deep Space 9"] =
+			[
+				When(TriggerEvent.SelfEnters, [], DeepSpace9Exile),
+				When(TriggerEvent.YourUpkeep, [], DeepSpace9Exile),
+				StationAbility,
+				new StaticEffectComponent(Is.Creature & Is.Yours)
+				{
+					Power = 3,
+					Toughness = 3,
+					If = new AtLeast(Count.ChargeCountersOn(Ref.Source), 9),
+				},
+			],
+			["U.S.S. Enterprise-D, Galaxy-Class"] =
+			[
+				When(
+					new Trigger(EventKind.CountersPut)
+					{
+						Subject = Is.Source,
+						Counters = CounterKinds.Charge,
+					},
+					[],
+					new ExileTopPlayable { ThisTurn = true }
+				) with
+				{
+					OncePerTurn = true, // "for the first time each turn": the trigger is only about itself
+				},
+				.. Station(7, "Flying", "Vigilance"),
+			],
+			["Mr. Spock, Science Officer"] = [new DrawsDoubled()],
+			["Georgiou, Terran Emperor"] =
+			[
+				new DontLoseForZeroLife(),
+				When(
+					TriggerEvent.YourEndStep,
+					[],
+					new LoseLife(Ref.You, 3),
+					new DrawCards(Ref.You, 1),
+					new If(
+						new Not(new AtLeast(Count.LifeTotalOf(Ref.You), 1)),
+						[new CreateTokens(Officer, 10)]
+					)
+				),
+			],
+			["Miles O'Brien, Transporter Ops"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						Target((Is.Creature | Is.Artifact) & Is.Yours & !Is.Source) with
+						{
+							Optional = true,
+						},
+					],
+					new ReturnToHand(Ref.Target())
+				),
+				When(TriggerEvent.EachEndStep, [], new DrawCards(Ref.You, 1)) with
+				{
+					If = new AtLeast(Count.PermanentsReturnedToHandThisTurn(Ref.You), 1),
+				},
+			],
+		};
+
+	/// <summary>Deep Space 9: "exile the top four cards of your library. Put all permanent cards exiled this way onto the battlefield."</summary>
+	static RevealUntilOntoBattlefield DeepSpace9Exile =>
+		new(PermanentTypes) { Top = 4, Exile = true };
+
+	/// <summary>
+	/// The station ability alone: "Tap another creature you control: Put charge counters equal to its
+	/// power on this Spacecraft. Station only as a sorcery." — Deep Space 9 is never a creature.
+	/// </summary>
+	static ActivatedAbilityComponent StationAbility =>
+		new(ManaCost.None, [new AddChargeCounters(Ref.Source, Count.PowerOf(Ref.EventCard))])
+		{
+			Costs = [new TapUntappedCost(1, Is.Creature & !Is.Source)],
+			SorcerySpeed = true,
 		};
 
 	/// <summary>The shocklands (Blood Crypt …): "As this land enters, you may pay 2 life. If you don't, it enters tapped."</summary>

@@ -139,6 +139,14 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
 - 2026-11-05, Shayne (batch 6a's review): **every card implemented first; each card's AI use and rulings
   are optimized after** — Engineered Explosives should pick its X for the most appropriate kills in play,
   noted in the backlog story AI-19 (card-by-card play and rulings), where later batches add theirs.
+- 2026-11-05, Shayne (batch 6b's questions): the ten re-tiered from the full text — 3 tier 1, 5 tier 2, 2 tier 3
+  (Enterprise-D's "charge counters put on it for the first time each turn", Dathon's "another counter of that
+  kind") — **all ten built as designed**: charge counters raise `CountersPutEvent` (`Trigger.Counters` the kind),
+  "first time each turn" is `OncePerTurn` (the trigger is only about itself), Dathon's several kinds a
+  `ChooseKeywordChoice`; Deep Space 9 a Spacecraft never a creature (`StationAbility` alone).
+  The ten came in cheap (2.8M), so three tier-3 one-offs were proposed and **Shayne added all three**: Mr. Spock
+  (draws doubled in `Draw`), Georgiou (no loss at 0 life, in the state-based check), Miles O'Brien (a
+  permanent returned to hand this turn, a tally). Kobayashi Maru (modes not chosen before) waits for the one-offs.
 
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
@@ -201,7 +209,13 @@ Open questions:
       one-offs (268/311) — the shocklands (`EntersTappedComponent.UnlessYouPayLife`), sunburst (`Sunburst`,
       `ManaPayment.Find(mostColors)`, `OnStackComponent.ColorsSpent`), `Ref.ManaValueIs`, X targets
       (`TargetSpec.PerX`, `ChooseXTargetsChoice`, `Ref.EachTarget`), changeling (`s.HasSubtype`), a number chosen as it enters
-      (`ChoosesNumberAsItEnters`, `Is.ManaValueIsChosenNumber`, the AI's rule in `GreedyAi`). Next: the tier-3 one-offs
+      (`ChoosesNumberAsItEnters`, `Is.ManaValueIsChosenNumber`, the AI's rule in `GreedyAi`). Batch 6b done 2026-11-05:
+      the re-tier's ten (278/311) — `MayPlayLandsFromLibraryTop`, `CountersOnYourCreaturesDoubled`
+      (`Replacements.Doubled<T>`), charge counters put (`Trigger.Counters`), `PlayerDealtDamageEvent.Amount` and
+      `WheneverThisTurn.About` on combat damage, `AddAnotherCounterOfAKind`, `RevealUntilOntoBattlefield.Exile`
+      / `SacrificeAtNextEndStep`, `TrkCards.StationAbility`; then three tier-3 one-offs (281/311) — `DrawsDoubled`
+      (Spock), `DontLoseForZeroLife` (Georgiou), `TurnTally.PermanentsReturnedToHand` (Miles O'Brien); the fuzz
+      probe ends a game past 300 permanents (Troubling Tribbles doubling hung it). Next: the tier-3 one-offs
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -213,6 +227,19 @@ Open questions:
       (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG), scripted once each, into the collation
 
 ## Next
+
+**MC-5.3 batch 6b is done (2026-11-05): 281/311 play** — every C/U, 61/80 R, 14/25 M. The re-tier's ten: Sela,
+Antagonist Incorporator, Deanna Troi (tier 1, card sheet); Will Riker, Captain Pike, M'Benga, The Inner Light,
+Deep Space 9 (tier 2, a test each); Enterprise-D and Dathon (tier 3); then Mr. Spock, Georgiou and Miles
+O'Brien (tier 3, Shayne: the ten came in cheap). New, each rule in `magic-mechanics.md`:
+lands from the library's top, counters doubled on your creatures, "charge counters are put on", the combat
+damage a creature deals as "that many", another counter of a chosen kind, a Spacecraft never a creature, exile
+the top N and keep the rest exiled, draws doubled, no loss at 0 life, a permanent returned to hand this turn.
+Ceiling in `DesignNotes.md` (DS9's permanents never pass through exile); AI-19.2–3 (DS9's station progress
+unscored; Georgiou below 0 life). The fuzz probe now ends a game past 300 permanents: Troubling Tribbles,
+dealt in at random, doubled to 936 tokens and hung it. **Next: 30 left, ~14 a batch, each in a NEW session** —
+the tier-3 groups as below (trigger twice, assimilate, control until end of turn, dilemmas this turn, casting
+from odd zones, Kai Winn) and the one-offs (Kobayashi Maru …); then MC-5.4 boosters, the Stardates.
 
 **MC-5.3 batch 6a is done (2026-11-05): 268/311 play** — the 10 shocklands, Engineered Explosives, Dominion
 Infiltration, Nyota Uhura, Mirror Universe Intrusion. New, each rule in `magic-mechanics.md`: pay 2 life as it

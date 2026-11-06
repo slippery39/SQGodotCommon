@@ -45,14 +45,18 @@ public static class Replacements
 			: amount + s.ThisTurnEffects<CountersPlusOneThisTurn>(controllerId).Count();
 
 	/// <summary>
-	/// Lt. Cmdr. Geordi La Forge: charge counters on an artifact its controller controls, twice that
-	/// many per Geordi — applied after Brad Boimler's plus one: of the two orders the controller may
-	/// pick (CR 616.1), (n + 1) × 2 is always the more.
+	/// Lt. Cmdr. Geordi La Forge (T = ChargeCountersOnYourArtifactsDoubled), Dr. Joseph M'Benga
+	/// (CountersOnYourCreaturesDoubled): twice that many per such permanent — applied after Brad
+	/// Boimler's plus one: of the two orders the controller may pick (CR 616.1), (n + 1) × 2 is always
+	/// the more.
 	/// </summary>
-	public static int ChargeCounters(GameState s, int controllerId, int amount) =>
+	/// <param name="exceptId">A permanent entering right now: its own replacement doesn't apply to its entry (CR 614.12).</param>
+	public static int Doubled<T>(GameState s, int controllerId, int amount, int exceptId = 0)
+		where T : GameComponent =>
 		amount <= 0
 			? amount
 			: amount
 				<< s.CardsIn(controllerId, ZoneType.Battlefield)
-					.Count(s.HasAbility<ChargeCountersOnYourArtifactsDoubled>);
+					.Where(c => c.Id != exceptId)
+					.Count(s.HasAbility<T>);
 }

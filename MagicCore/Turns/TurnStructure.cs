@@ -266,7 +266,16 @@ public static class StateBasedActions
 		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 		{
 			var player = s.GetPlayer(id);
-			if (!player.HasLost && (player.Life <= 0 || player.AttemptedDrawFromEmptyLibrary))
+			if (
+				!player.HasLost
+				&& (
+					(
+						player.Life <= 0
+						&& !s.CardsIn(id, ZoneType.Battlefield)
+							.Any(s.HasAbility<Effects.DontLoseForZeroLife>)
+					) || player.AttemptedDrawFromEmptyLibrary
+				)
+			)
 				s = s.WithPlayer(player with { HasLost = true });
 
 			// Plain loops over one read of the battlefield, read again only once something on it

@@ -161,6 +161,12 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 	/// <summary>Branching Timeline: "Reveal the top X cards of your library … Put all permanent cards revealed this way onto the battlefield" — every [Types] card among the top X, not "until".</summary>
 	public Count? Top { get; init; }
 
+	/// <summary>Will Riker, First in the Field: "Sacrifice those lands at the beginning of your next end step." — a delayed trigger on each.</summary>
+	public bool SacrificeAtNextEndStep { get; init; }
+
+	/// <summary>Deep Space 9: "exile the top four cards of your library. Put all permanent cards exiled this way onto the battlefield." — the rest stay exiled, not to the bottom.</summary>
+	public bool Exile { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var library = s.CardsIn(Controller, ZoneType.Library).ToList();
@@ -176,7 +182,23 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 			: library.FindIndex(c => c.Id == hits[^1]) + 1;
 		var rest = library.Take(revealed).Select(c => c.Id).Except(hits).ToArray();
 		foreach (var hit in hits)
+		{
 			s = s.EnterBattlefield(hit, Controller, tapped: Tapped);
+			if (SacrificeAtNextEndStep)
+				s = ReturnFromExileUnderYourControl.Delay(
+					s,
+					hit,
+					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
+				);
+		}
+		// ponytail: Deep Space 9's permanents go library -> battlefield, never through exile; a card that
+		// watches cards leaving exile would miss them. Move them via exile if one appears.
+		if (Exile)
+		{
+			foreach (var id in rest)
+				s = s.MoveCard(id, s.ZoneId(Controller, ZoneType.Exile));
+			return new(s);
+		}
 		(var rng, s) = s.TakeRng();
 		rng.Shuffle(rest);
 		var libraryId = s.ZoneId(Controller, ZoneType.Library);

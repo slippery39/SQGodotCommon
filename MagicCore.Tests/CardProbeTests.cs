@@ -43,6 +43,18 @@ public class CardProbeTests
 		];
 	}
 
+	/// <summary>
+	/// A random game nobody wins can grow without end — Troubling Tribbles doubles every upkeep, 936 tokens
+	/// by turn 26 (batch 6b), and each step then scans them all. Past 300 permanents it counts as unfinished.
+	/// </summary>
+	static bool Overrun(GameState s)
+	{
+		var first = s.GetGame().StartingPlayerId;
+		return s.CardsIn(first, ZoneType.Battlefield).Count()
+				+ s.CardsIn(s.OpponentOf(first), ZoneType.Battlefield).Count()
+			> 300;
+	}
+
 	[Test]
 	public void Probe()
 	{
@@ -59,6 +71,7 @@ public class CardProbeTests
 		var activations = batch.ToDictionary(n => n, _ => 0);
 		var onStack = batch.ToDictionary(n => n, _ => new HashSet<int>());
 		var unfinished = 0;
+		var overrun = 0;
 		for (var seed = 1; seed <= games; seed++)
 		{
 			var rng = new Random(seed);
@@ -70,7 +83,7 @@ public class CardProbeTests
 				sideboard1: Deck(batch, seed + 20_000).Take(5),
 				sideboard2: Deck(batch, seed + 30_000).Take(5)
 			);
-			for (var i = 0; i < 20_000 && !s.IsOver(); i++)
+			for (var i = 0; i < 20_000 && !s.IsOver() && !Overrun(s); i++)
 			{
 				if (s.GetPendingChoice() is { } choice)
 				{
@@ -109,13 +122,15 @@ public class CardProbeTests
 						seen.Add(ability.Id);
 			}
 			unfinished += s.IsOver() ? 0 : 1;
+			overrun += Overrun(s) ? 1 : 0;
 		}
 		var lines = batch.Select(n =>
 			$"{n}: cast {casts[n]}, activated {activations[n]}, abilities on the stack {onStack[n].Count}"
 			+ (casts[n] + activations[n] + onStack[n].Count == 0 ? "   <-- NEVER USED" : "")
 		);
 		TestContext.Progress.WriteLine(
-			$"{games} games, {unfinished} unfinished\n" + string.Join("\n", lines)
+			$"{games} games, {unfinished} unfinished ({overrun} past 300 permanents)\n"
+				+ string.Join("\n", lines)
 		);
 		Assert.That(
 			unfinished,

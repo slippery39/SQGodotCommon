@@ -187,6 +187,29 @@ public record Trigger(EventKind On)
 					: throw new ArgumentException($"A Chapter only fits CountersPut, not {On}");
 	}
 
+	readonly string? counters;
+
+	/// <summary>
+	/// U.S.S. Enterprise-D: "Whenever one or more charge counters are put on [it]" — a CountersPut
+	/// event of this kind. MagicState.PutCounters raises it for the named kinds and charge only, so
+	/// any other kind (+1/+1 …) is refused here rather than built inert.
+	/// </summary>
+	public string? Counters
+	{
+		get => counters;
+		init =>
+			counters =
+				value is null
+				|| (
+					On == EventKind.CountersPut
+					&& (value == CounterKinds.Charge || !CounterKinds.Fielded.Contains(value))
+				)
+					? value
+					: throw new ArgumentException(
+						$"Counters fits CountersPut of a named kind or charge, not {On} / {value}"
+					);
+	}
+
 	readonly Filters.Filter? combatDamageBy;
 
 	/// <summary>
@@ -839,6 +862,21 @@ public record MayCastFromExile : GameComponent;
 public record MayCastArtifactFromLibraryTop : GameComponent;
 
 /// <summary>
+/// Captain Pike, Fullness of Time: "You may play lands from the top of your library." — read by
+/// Playable.CanPlayLandFromHere; the land drop is the only limit.
+/// </summary>
+public record MayPlayLandsFromLibraryTop : GameComponent;
+
+/// <summary>Mr. Spock, Science Officer: "If you would draw a card, draw two cards instead." — MagicState.Draw.</summary>
+public record DrawsDoubled : GameComponent;
+
+/// <summary>
+/// Georgiou, Terran Emperor: "You don't lose the game for having 0 or less life." — the state-based
+/// check (TurnStructure); she leaves, and the next check takes the game.
+/// </summary>
+public record DontLoseForZeroLife : GameComponent;
+
+/// <summary>
 /// Zefram Cochrane: "You may look at the top card of your library any time." — MagicState.TopIsKnownToOwner:
 /// the search doesn't reshuffle it, the table's log names it. ponytail: a log line, not the card face
 /// up beside your library — TBL-6 (Shayne, 2026-11-01).
@@ -877,10 +915,17 @@ public record CountersRemovedInsteadOfDestruction : GameComponent;
 
 /// <summary>
 /// Lt. Cmdr. Geordi La Forge: "If you would put one or more charge counters on an artifact you
-/// control, put twice that many charge counters on that artifact instead." — Rules.Replacements.ChargeCounters,
+/// control, put twice that many charge counters on that artifact instead." — Rules.Replacements.Doubled,
 /// read by MagicState.PutCounters: entering with them too (CR 122.6), twice per Geordi.
 /// </summary>
 public record ChargeCountersOnYourArtifactsDoubled : GameComponent;
+
+/// <summary>
+/// Dr. Joseph M'Benga: "If you would put one or more counters on a creature you control, put twice
+/// that many of each of those kinds of counters on that creature instead." — every kind,
+/// Rules.Replacements.Doubled, read by MagicState.PutCounters: entering with them too.
+/// </summary>
+public record CountersOnYourCreaturesDoubled : GameComponent;
 
 /// <summary>Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard.</summary>
 public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;

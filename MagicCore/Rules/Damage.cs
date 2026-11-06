@@ -25,7 +25,7 @@ public static class Damage
 		if (s.GetObject(targetId) is MagicPlayer player)
 		{
 			s = Life.Lose(s, player.Id, amount)
-				.Raise(new PlayerDealtDamageEvent(player.Id, combat, source.Id));
+				.Raise(new PlayerDealtDamageEvent(player.Id, combat, source.Id, amount));
 			if (!combat)
 				s = s.Tally(
 					player.Id,

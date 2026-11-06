@@ -93,7 +93,16 @@ public static class Playable
 
 	public static bool CanPlayLandFromHere(GameState s, Card card, int playerId) =>
 		card.Is(CardType.Land)
-		&& (s.IsIn(card.Id, playerId, ZoneType.Hand) || IsImpulsePlayableBy(s, card, playerId));
+		&& (
+			s.IsIn(card.Id, playerId, ZoneType.Hand)
+			|| IsImpulsePlayableBy(s, card, playerId)
+			|| IsLandPlayableFromLibraryTop(s, card, playerId)
+		);
+
+	/// <summary>Captain Pike, Fullness of Time: "You may play lands from the top of your library." — the land drop is the only limit.</summary>
+	static bool IsLandPlayableFromLibraryTop(GameState s, Card card, int playerId) =>
+		s.GetChildrenIds(s.ZoneId(playerId, ZoneType.Library)).FirstOrDefault() == card.Id
+		&& s.CardsIn(playerId, ZoneType.Battlefield).Any(s.HasAbility<MayPlayLandsFromLibraryTop>);
 
 	/// <summary>Every card this player may cast or play from where it is — hand first.</summary>
 	public static IEnumerable<Card> Candidates(GameState s, int playerId) =>

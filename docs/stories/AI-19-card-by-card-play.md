@@ -29,6 +29,12 @@ Open questions:
 - [ ] AI-19.1 Engineered Explosives: choose X for the most appropriate kills in play — today X is any the search
       tries, and the counters are the colours the payment can spend (MC-5.3 batch 6a). Also "the most colours"
       never spends a Treasure or Starfleet Academy for a colour — Shayne may want it to.
+- [ ] AI-19.2 Deep Space 9: its station progress scores nothing until 9 — the evaluator's station term reads
+      `StationComponent`, which DS9 (never a creature) has none of; value the anthem's share (MC-5.3 batch 6b).
+- [ ] AI-19.3 Georgiou, Terran Emperor: check the evaluator and rollouts read life at 0 or below sensibly while
+      she keeps you in the game — and that losing her there is valued as losing (MC-5.3 batch 6b).
+- [ ] AI-19.4 Dr. M'Benga and Geordi: "if YOU would put … counters" — today an opponent's counters on your
+      creature (or artifact) are doubled too; `PutCounters` would need who puts them (`DesignNotes.md`).
 
 ## Next
 
@@ -37,4 +43,4 @@ MC-5 has every card playing.
 
 ## Log
 
-- 2026-11-05: opened with Engineered Explosives (MC-5.3 batch 6a).
+- 2026-11-05: opened with Engineered Explosives (MC-5.3 batch 6a); Deep Space 9 and Georgiou added (batch 6b).
