@@ -62,6 +62,8 @@ become a CHOICE made after the action, not more actions.
 - **Revert-checks** (tiers 2–3): one spec (`@@ path | TestFilter` blocks) through
   `python -u tools/revert_check.py SPEC`. Every line must say `ok`; "NOT CAUGHT" means the test is
   vacuous or the revert hit the wrong line — fix the one that is wrong.
+  **The next test run must BUILD** (never `--no-build`): the DLL still holds the last revert — batch 7c
+  chased a "flaky" test that was only the stale binary.
 - **Fuzz probe** (if the batch has tier 3): `MAGIC_PROBE_CARDS="A;B;…" dotnet test MagicCore.Tests
   --filter "FullyQualifiedName~CardProbeTests"` — crashes fail it; read the per-card report, and look at
   any card marked NEVER USED (a land is played, not cast: lands always read NEVER USED — their test covers

@@ -52,6 +52,12 @@ public static class CardRatings
 				)
 		);
 
+	/// <summary>Of, or null for a set with no table yet (TRK until MC-5.4) — Kai Winn's blind pick asks.</summary>
+	public static IReadOnlyDictionary<string, double>? TryOf(string set) =>
+		Tables.ContainsKey(set) || CardDataSet.ResourceText($"{set}.17lands.json") is not null
+			? Of(set)
+			: null;
+
 	/// <summary>
 	/// Sealed's rate — the format being built for — when it rests on <see cref="MinGames"/>; else
 	/// Premier Draft's, moved onto Sealed's scale by the mean gap between the formats over the cards

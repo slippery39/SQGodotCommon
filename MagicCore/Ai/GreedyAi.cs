@@ -49,20 +49,77 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 	}
 
 	/// <summary>
-	/// Kai Winn: the nonland name most common among the opponent's cards this player knows of (as Nyota's
-	/// mana value), the first in the list on a tie; with none known, the list's first. ponytail: a blind
-	/// guess when nothing is known — AI-19.14.
+	/// Kai Winn in LIMITED (Shayne, 2026-11-06 — "in a constructed deck what you name would be determined
+	/// completely differently"), step by step: a card with an activated ability on the opponent's battlefield
+	/// (a mana or loyalty ability too); if none, a card known to be in their hand; if none, the highest-rated
+	/// common in a colour their lands show — the set's ratings, or the cheapest while a set has none (TRK
+	/// until MC-5.4); else the list's first. Several at one step: the most copies, then the list's order.
 	/// </summary>
-	string LikeliestName(GameState s, ImmutableArray<string> names) =>
-		KnownOpponentNonlands(s)
-			.Where(c => names.Contains(c.Name))
-			.GroupBy(c => c.Name)
-			.OrderByDescending(g => g.Count())
-			.ThenBy(g => names.IndexOf(g.Key))
-			.Select(g => g.Key)
-			.FirstOrDefault() ?? names[0];
+	string LikeliestName(GameState s, ImmutableArray<string> names)
+	{
+		var opponent = s.OpponentOf(PlayerId);
+		var named = names.ToHashSet();
+		string? Commonest(IEnumerable<Card> cards) =>
+			cards
+				.Where(c => !c.Is(CardType.Land) && !c.IsToken && named.Contains(c.Name))
+				.GroupBy(c => c.Name)
+				.OrderByDescending(g => g.Count())
+				.ThenBy(g => names.IndexOf(g.Key))
+				.Select(g => g.Key)
+				.FirstOrDefault();
+		var board = s.CardsIn(opponent, ZoneType.Battlefield).ToList();
+		return Commonest(
+				board.Where(c =>
+					s.ActivatedAbilitiesOf(c).Any()
+					|| ManaAbilities.ColorsOf(s, c).Any()
+					|| Loyalty.AbilitiesOf(s, c).Any()
+				)
+			)
+			?? Commonest(
+				s.CardsIn(opponent, ZoneType.Hand)
+					.Where(c => (c.KnownTo & Knowers.Opponent) != 0 && !c.IsHiddenFrom(PlayerId))
+			)
+			?? BestCommonIn(
+				board
+					.Where(c => c.Is(CardType.Land))
+					.SelectMany(c => ManaAbilities.ColorsOf(s, c))
+					.Where(c => c != ManaColor.Colorless)
+					.ToHashSet(),
+				named
+			)
+			?? names[0];
+	}
 
-	/// <summary>The opponent's nonland cards this player knows of — on the battlefield, in the graveyard, exiled face up, seen in hand.</summary>
+	/// <summary>Kai Winn's third step: the highest-rated common all of whose colours their lands show.</summary>
+	static string? BestCommonIn(HashSet<ManaColor> colors, HashSet<string> named) =>
+		colors.Count == 0
+			? null
+			: Sets
+				.CardRegistry.Sets.SelectMany(set =>
+					Sets.CardRegistry.Printings(set)
+						.Where(p =>
+							p.Rarity == "common"
+							&& named.Contains(p.Card.Name)
+							&& p.Card.Colors is { Length: > 0 } own
+							&& own.All(letter => colors.Contains(ManaCost.ColorOf(letter)))
+						)
+						.Select(p =>
+							(
+								p.Card.Name,
+								Rating: Limited
+									.CardRatings.TryOf(set)
+									?.GetValueOrDefault(p.Card.Name) ?? 0,
+								p.Card.Cmc
+							)
+						)
+				)
+				.OrderByDescending(c => c.Rating)
+				.ThenBy(c => c.Cmc)
+				.ThenBy(c => c.Name, StringComparer.Ordinal)
+				.Select(c => c.Name)
+				.FirstOrDefault();
+
+	/// <summary>Nyota Uhura: the opponent's nonland cards this player knows of — on the battlefield, in the graveyard, exiled face up, seen in hand.</summary>
 	IEnumerable<Card> KnownOpponentNonlands(GameState s)
 	{
 		var opponent = s.OpponentOf(PlayerId);

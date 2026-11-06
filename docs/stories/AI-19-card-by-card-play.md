@@ -54,8 +54,13 @@ Open questions:
       trades a lethal or winning attack for a card, and that the AI reads twelve peace counters as a clock.
 - [ ] AI-19.13 Kobayashi Maru Scenario: Abandon Ship loses the game on its fourth upkeep — check the AI casts it
       only with a way to remove it (or a faster clock), and leaves Abandon Ship for last (MC-5.3 batch 7b).
-- [ ] AI-19.14 Kai Winn: the name is the opponent's commonest known nonland card; with NOTHING known (a turn-2 Kai)
-      it is the list's first — a blind guess. Shayne to pick the fallback (MC-5.3 batch 7c).
+- [x] AI-19.14 Kai Winn: the name is the opponent's commonest known nonland card; with NOTHING known (a turn-2 Kai)
+      it is the list's first — a blind guess (MC-5.3 batch 7c). Shayne, 2026-11-06, for LIMITED ("in a constructed
+      deck what you name would be determined completely differently"): "If blind, Kai Winn should name a card that
+      has an activated ability on the opponent's side of the board, if none, it should name a card it knows is in
+      your hand (via card effects), if that's not available, it should name a common card that it can see in your
+      colors." Then (asked): it REPLACES "commonest known", step by step, the common the highest win rate. Built
+      2026-11-06 (`GreedyAi.LikeliestName`): until a set has ratings (TRK: MC-5.4) the cheapest common is named.
 - [ ] AI-19.15 Q, Stacking the Deck: each activation exiles a hand card to cast a copy, paying — check the AI doesn't
       exile a better card than the copy, and that the exiled card with the gift is valued at all (the evaluator
       sees an exiled card as nothing).

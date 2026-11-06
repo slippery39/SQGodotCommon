@@ -985,7 +985,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[Target(Is.Creature & Is.Yours)],
 		new AddCounters(Ref.Target(), 1),
 		new Untap(Ref.Target()),
-		new ModifyUntilEndOfTurn(Ref.Target(), 1, 1) { BecomesCreatureTypes = ["Doctor"] }
+		new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)
+		{
+			BecomesCreatureTypes = ["Doctor"],
+		}
 	),
 ],
 ```
@@ -1017,7 +1020,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
 
 ### Make It So
 
@@ -5642,7 +5645,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.SelfEnters,
 		[],
-		new SearchLibrary(CardType.Creature, ZoneType.Hand) { Subtype = "Whale", Reveal = true }
+		new SearchLibrary(CardType.Creature, ZoneType.Hand)
+		{
+			Subtype = "Whale",
+			Reveal = true,
+		}
 	),
 	.. Station(8, "Flying"),
 	When(
@@ -5650,7 +5657,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[],
 		new DrawCards(Ref.You, 1),
 		new If(
-			new AtLeast(Count.NumberOf(Ref.Permanents(Is.Subtype("Whale") & Is.Yours)), 1),
+			new AtLeast(
+				Count.NumberOf(Ref.Permanents(Is.Subtype("Whale") & Is.Yours)),
+				1
+			),
 			[new If(new HaventBegunAnExtraTurn(), [new TakeExtraTurn()])]
 		)
 	),
@@ -5989,7 +5999,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 						ForGood = true,
 						BecomesCreatureTypes = ["Ferengi", "Scout"],
 						SetBase = (3, 4),
-						Trigger = When(TriggerEvent.SelfBecomesTapped, [], new Surveil(2)),
+						Trigger = When(
+							TriggerEvent.SelfBecomesTapped,
+							[],
+							new Surveil(2)
+						),
 					},
 				]
 			),
@@ -6531,7 +6545,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 	Chapter(
 		3,
 		[],
-		new MaySacrifice(Is.Creature & Is.Token, [new GainLife(Ref.You, 5)]) { Must = true }
+		new MaySacrifice(Is.Creature & Is.Token, [new GainLife(Ref.You, 5)])
+		{
+			Must = true,
+		}
 	),
 ],
 ```
@@ -7435,7 +7452,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.SelfEnters,
 		[],
-		new ExileUntilNonlandCastFree(Ref.You) { ShuffleFirst = true, Gains = StackTheDeck }
+		new ExileUntilNonlandCastFree(Ref.You)
+		{
+			ShuffleFirst = true,
+			Gains = StackTheDeck,
+		}
 	),
 ],
 ```

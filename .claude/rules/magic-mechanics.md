@@ -565,8 +565,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Q's "That nonland card gains …" is `ExileUntilNonlandCastFree { ShuffleFirst, Gains }` (in place of the cast).
 - **"As this enters, choose a nonland card name"** (Kai Winn) is `ChoosesNameAsItEnters` → `ChosenName`, the options
   every nonland name printed in the game's sets (`CardRegistry.NonlandNames` — never the decks: that would show a
-  hidden list; Shayne, 2026-11-06), a `ChooseKeywordChoice { NamesACard }` the AI answers by rule (`GreedyAi`), never
-  searched. "With the chosen name" is `Is.NamedChosenName`. **"Activates an ability"** is `AbilityActivatedEvent`
+  hidden list; Shayne, 2026-11-06), a `ChooseKeywordChoice { NamesACard }` the AI answers by rule (`GreedyAi.LikeliestName`), never
+  searched — in LIMITED (Shayne, 2026-11-06), step by step: a card with an activated ability on their battlefield;
+  else one known in their hand; else the highest-rated common in a colour their lands show (`CardRatings.TryOf`). "With the chosen name" is `Is.NamedChosenName`. **"Activates an ability"** is `AbilityActivatedEvent`
   (the source as it was), raised by EVERY activation: `ActivateAbilityAction`, a loyalty ability, and a MANA ability
   — `TapForManaAction` and the payment (`ManaPayment.RaiseActivated`) alike (Shayne: "If you name Llanowar Elves and
   they tap it for mana it would trigger her").

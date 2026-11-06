@@ -332,4 +332,48 @@ public class TrkBatch7cTests : FraBoardTest
 		Assert.That(Alive(mine), Nu.True, "mine during mine");
 		Assert.That(s.GetCard(mine).PlusOneCounters, Nu.EqualTo(1), "its counters kept");
 	}
+
+	[Test]
+	public void KaiWinn_TheAiNames_AnActivatedAbilityInPlay_ThenAKnownHandCard_ThenACommonInTheirColours()
+	{
+		// Shayne, 2026-11-06 (limited): step by step.
+		Hand(Trk("Kai Winn, Faithless Leader"), me); // TRK in the game: its names are offered
+		var names = CardRegistry.NonlandNames(s);
+		var choice = new ChooseKeywordChoice(me, names) { NamesACard = true };
+		string Named() => names[new MagicCore.Ai.GreedyAi(me).Answer(s, choice).Single() - 1];
+
+		var profiteer = Field(Trk("Savvy Profiteer"), them); // "{T}: Add {R}." / "{3}, {T}: Create a Treasure"
+		Field(Trk("Kai Winn, Faithless Leader"), them);
+		Assert.That(
+			Named(),
+			Nu.EqualTo("Savvy Profiteer"),
+			"a card with an activated ability in play"
+		);
+
+		s = s.MoveCard(profiteer, s.ZoneId(them, ZoneType.Graveyard));
+		var known = Hand(Trk("Q, Stacking the Deck"), them);
+		s = s.UpdateObject(known, s.GetCard(known) with { KnownTo = Knowers.Everyone }); // seen by a card's effect
+		Hand(Trk("H.M.S. Bounty, Unlikely Timeship"), them); // not seen
+		Assert.That(
+			Named(),
+			Nu.EqualTo("Q, Stacking the Deck"),
+			"if none: a card known to be in their hand"
+		);
+
+		s = s.MoveCard(known, s.ZoneId(them, ZoneType.Graveyard));
+		foreach (
+			var land in s.CardsIn(them, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Land) && c.Name != "Island")
+				.ToList()
+		)
+			s = s.MoveCard(land.Id, s.ZoneId(them, ZoneType.Graveyard)); // TEST SETUP: they show only blue
+		var common = Named();
+		Assert.That(
+			CardRegistry
+				.Sets.SelectMany(CardRegistry.Printings)
+				.Any(p => p.Card.Name == common && p.Rarity == "common" && p.Card.Colors is ["U"]),
+			Nu.True,
+			$"if none: a common in a colour their lands show — named {common}"
+		);
+	}
 }
