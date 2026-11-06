@@ -166,6 +166,10 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   **Kai Winn triggers on MANA abilities too** — "It does not say non mana abilities. If you name Llanowar Elves
   and they tap it for mana it would trigger her." **Phased-out permanents stay visible on the table, clearly
   marked as phased out.** Kai's name list: every nonland name printed in the game's sets.
+- 2026-11-06, Shayne (after batch 7c): **Kai Winn's AI names step by step in limited** — an activated ability in
+  play, else a known hand card, else a high win-rate common in a colour their lands show (AI-19.14, built). **The
+  Stardates (MC-5.6) come NEXT, before the boosters** — "I would rather finish up the special guests". The
+  collation slot for them is MC-5.4's work; until then nothing opens them.
 
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
@@ -266,8 +270,9 @@ Open questions:
       call sites moved to it. Done 2026-10-31: `CardRegistry`, `CardPrinting`, `Card.Set`; boosters,
       ratings and drafts by set code; art in `Art/<set>/` first; `TrkCards` with the TRK tokens and the
       10 Planet duals; `TrkCardSheet.md`
-- [ ] MC-5.6 LAST, aimed at Nov 10: the 30 Stardates (SDS) — imported as TRK's guests
-      (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG), scripted once each, into the collation
+- [ ] MC-5.6 NEXT (Shayne, 2026-11-06: before MC-5.4), aimed at Nov 10: the 30 Stardates (SDS) — imported as TRK's
+      guests (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG, story MC-3), scripted once each; their pack
+      slot goes in with MC-5.4's collation
 
 ## Next
 
@@ -276,13 +281,55 @@ tier 3 from the full text, in one session: Nog, Ambitious Cadet; Q, Stacking the
 H.M.S. Bounty, Unlikely Timeship; The City on the Edge of Forever. Each rule in `magic-mechanics.md`; ceilings in
 `DesignNotes.md` (Kai's mana-ability event for nonland sources only, convoke read as an activation; an extra turn
 shortening impulse draw's window and spending a rollout turn; cleanup missing a phased-out permanent's
-until-end-of-turn effects); AI-19.14–18 (Kai's blind name with nothing known — Shayne to pick the fallback; Q's
-exiled card; the Bounty's attack; when to cast the City; Nog's levelling). Shayne's answers: Kai triggers on MANA
+until-end-of-turn effects); AI-19.15–18 (Q's exiled card; the Bounty's attack; when to cast the City; Nog's
+levelling); AI-19.14 built after (Kai's naming, step by step — Shayne). Shayne's answers: Kai triggers on MANA
 abilities; phased-out permanents stay visible on the table, dimmed and badged "PHASED OUT" (`CardViews`).
-**Next: MC-5.4 in a NEW session** — TRK boosters (a provisional collation from Wizards' slot odds: MTGJSON had no
-TRK boosters on 2026-10-31 — re-check first), TRK on Sealed and Draft on the table (`SealedSession.Set` is a const
-"FRA"), bots without 17lands (the rating run is long: ask first). Then **MC-5.6**, the 30 Stardates, aimed at
-Nov 10. Sprint 4's items 7–12 are re-ordered with Shayne now that the TRK cards are finished (the sprint's plan).
+**Next: MC-5.6, the 30 Stardates, in a NEW session (Shayne, 2026-11-06: before the boosters)** — import them as
+TRK's guests, survey and tier them, build what fits a session; then **MC-5.4** (boosters, with the Stardates'
+slot; TRK on Sealed and Draft; bots without 17lands — the rating run is long: ask first; TRK art not fetched yet).
+Sprint 4's items 7–12 are re-ordered with Shayne now that the TRK cards are finished (the sprint's plan).
+
+The prompt that starts MC-5.6 (paste it into a NEW session):
+
+```
+MC-5.6 batch 1: the 30 Stardates (SDS), TRK's Special Guests, in this fresh session (/card-batch step 0).
+Sprint 4 (docs/sprints/2026-11-05.md). Shayne, 2026-11-06: the guests BEFORE the boosters (MC-5.4).
+Last commits: cdba6d4 (TRK complete, 311/311) and 433d7fc (Kai Winn's AI naming).
+
+Read, in order and nothing more yet: docs/stories/MC-5-star-trek.md (Decisions, Tasks MC-5.5 and MC-5.6,
+Next), docs/stories/MC-3-special-guests.md (how FRA's guests were imported and scripted),
+MagicCore/TrkCoverage.md (status paragraph), the /card-batch skill, MagicCore/CLAUDE.md,
+MagicCore/Cookbook.md. GREP MagicCore/AbilityCatalog.md for each card's pieces — never read it whole.
+
+First the import: find the Stardates on Scryfall (check the set code and collector numbers — the
+story says SDS, 30 mythic borderless reprints), add TRK's entry to GUESTS in
+tools/import_scryfall_set.py the way FRA's SPG is, re-import TRK, and check the TRK.json diff adds
+only the guests. A guest FRA or TRK already scripts is NOT scripted again (CardRegistry refuses it)
+— it plays as is. Then python tools/magic_set.py coverage --set TRK and
+python tools/magic_set.py text --set TRK "Full Name" for each unscripted one.
+
+Re-tier each card from its FULL text and tell me the tiers, and each new piece's or option's design,
+before scripting. If the 30 are more than one session (more than ~14 tier 3, or one card bigger than
+its share), propose the split and ask. Grep MtgCore before each new piece. Before building any "one
+legal action per combination", count the actions it makes on a 12-creature board. Tier 2 gets one
+test, tier 3 tests + revert-checks — and the test run after revert_check must BUILD (its DLL holds the
+last revert). Probe with MAGIC_PROBE_GAMES=10 first, then the full 150. Hot path touched →
+tools/bench_vs_head.sh "FullyQualifiedName~GreedyAiTests". A card whose play or ruling we leave simple
+goes in AI-19 (now at 19.18). Their pack slot is NOT this task: it goes in with MC-5.4's collation.
+
+Test traps: a Hand(…) inside s.Act(new … { CardId = Hand(…) }) runs on the old state — own line; so does
+any helper that replaces s inside a call on s (s.MoveObject(id, ZoneOf(ref s, …)) moved to a zone that
+didn't exist yet); never `c is T ? [x] : …` (CSharpier skips the file) — use the On<T>(ids) helper;
+PassUntil stops at the first choice of ANY kind — wait for the type you want. A bare s.EnterBattlefield or
+s.PutCounters puts no trigger on the stack — cast it, or pass priority. In the test files `Is` is NUnit's:
+write global::MagicCore.Filters.Is.X, and Does.Contain. GoldenCardReplay.txt is an explicit test —
+regenerate it with GoldenReplay.txt (Commands.md, "Golden replays"). Git Bash has no pgrep — wait on a
+background run's output file.
+
+End with the usage row (tools/usage_report.py --log), /pre-commit, then ask before committing. If
+Stardates are left, the story's Next gets the prompt for the next batch; when all 30 play, Next points to
+MC-5.4 (boosters, the Stardates' slot included).
+```
 
 **MC-5.3 batch 7b is done (2026-11-06): 306/311 play** — every C/U, 76/80 R, 24/25 M. The 11 smaller one-offs
 (Shayne's split): Gwyndala (tier 2), Genesis Device, Kobayashi Maru Scenario, Quark, Kira Nerys, All Good
