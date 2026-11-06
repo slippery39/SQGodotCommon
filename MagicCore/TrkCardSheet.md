@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 96/96 · uncommon 110/110 · rare 80/80 · mythic 25/25 · **311/311**
+**Playable:** common 96/96 · uncommon 110/110 · rare 80/80 · mythic 25/55 · **311/341**
 
 ### A Good Day to Die
 
@@ -3300,7 +3300,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 {1}{U} · Legendary Creature — Human Artificer · uncommon · 1/2
 
 > Whenever Jett Reno becomes tapped, surveil 1. If her power is 4 or greater, instead draw a card.  
-> Whenever you face a dilemma, put a +1/1 counter on Jett Reno. (You face a dilemma as you choose one or more modes for a spell or ability.)
+> Whenever you face a dilemma, put a +1/+1 counter on Jett Reno. (You face a dilemma as you choose one or more modes for a spell or ability.)
 
 **Status:** scripted · no test names it
 
@@ -6966,6 +6966,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Arcum Dagsson
+
+{3}{U} · Legendary Creature — Human Artificer · mythic · 2/2
+
+> {T}: Target artifact creature's controller sacrifices it. That player may search their library for a noncreature artifact card, put it onto the battlefield, then shuffle.
+
+**Status:** NOT IMPLEMENTED
+
 ### Borg Cube
 
 {5}{W}{B} · Artifact — Spacecraft · mythic · 6/6
@@ -6998,6 +7006,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 	},
 ],
 ```
+
+### Bristly Bill, Spine Sower
+
+{1}{G} · Legendary Creature — Plant Druid · mythic · 2/2
+
+> Landfall — Whenever a land you control enters, put a +1/+1 counter on target creature.  
+> {3}{G}{G}: Double the number of +1/+1 counters on each creature you control.
+
+**Status:** NOT IMPLEMENTED
+
+### Bruvac the Grandiloquent
+
+{2}{U} · Legendary Creature — Human Advisor · mythic · 1/4
+
+> If an opponent would mill one or more cards, they mill twice that many cards instead. (To mill a card, a player puts the top card of their library into their graveyard.)
+
+**Status:** NOT IMPLEMENTED
 
 ### Captain James T. Kirk
 
@@ -7081,6 +7106,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Captain Sisay
+
+{2}{G}{W} · Legendary Creature — Human Soldier · mythic · 2/2
+
+> {T}: Search your library for a legendary card, reveal that card, put it into your hand, then shuffle.
+
+**Status:** NOT IMPLEMENTED
+
 ### Crystalline Entity
 
 {8} · Artifact Creature — Elemental · mythic · 7/7
@@ -7128,6 +7161,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 ],
 ```
+
+### Decree of Pain
+
+{6}{B}{B} · Sorcery · mythic
+
+> Destroy all creatures. They can't be regenerated. Draw a card for each creature destroyed this way.  
+> Cycling {3}{B}{B} ({3}{B}{B}, Discard this card: Draw a card.)  
+> When you cycle this card, all creatures get -2/-2 until end of turn.
+
+**Status:** NOT IMPLEMENTED
 
 ### Deep Space 9
 
@@ -7197,6 +7240,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Drivnod, Carnage Dominus
+
+{3}{B}{B} · Legendary Creature — Phyrexian Horror · mythic · 8/3
+
+> If a creature dying causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.  
+> {B/P}{B/P}, Exile three creature cards from your graveyard: Put an indestructible counter on Drivnod. ({B/P} can be paid with either {B} or 2 life.)
+
+**Status:** NOT IMPLEMENTED
+
+### Empress Galina
+
+{3}{U}{U} · Legendary Creature — Merfolk Noble · mythic · 1/3
+
+> {U}{U}, {T}: Gain control of target legendary permanent. (This effect lasts indefinitely.)
+
+**Status:** NOT IMPLEMENTED
+
+### Ertai Resurrected
+
+{2}{U}{B} · Legendary Creature — Phyrexian Human Wizard · mythic · 3/2
+
+> Flash  
+> When Ertai Resurrected enters, choose up to one —  
+> • Counter target spell, activated ability, or triggered ability. Its controller draws a card.  
+> • Destroy another target creature or planeswalker. Its controller draws a card.
+
+**Status:** NOT IMPLEMENTED
+
 ### Excalbian Gamemaster
 
 {5}{W} · Creature — Excalbian · mythic · 6/6
@@ -7219,6 +7290,15 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 ],
 ```
+
+### Flare of Fortitude
+
+{2}{W}{W} · Instant · mythic
+
+> You may sacrifice a nontoken white creature rather than pay this spell's mana cost.  
+> Until end of turn, your life total can't change, and permanents you control gain hexproof and indestructible.
+
+**Status:** NOT IMPLEMENTED
 
 ### Georgiou, Terran Emperor
 
@@ -7273,6 +7353,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Hull Breach
+
+{R}{G} · Sorcery · mythic
+
+> Choose one —  
+> • Destroy target artifact.  
+> • Destroy target enchantment.  
+> • Destroy target artifact and target enchantment.
+
+**Status:** NOT IMPLEMENTED
+
 ### Infinite Diversity
 
 {7}{R}{R} · Sorcery · mythic
@@ -7294,6 +7385,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 ],
 ```
+
+### Isshin, Two Heavens as One
+
+{R}{W}{B} · Legendary Creature — Human Samurai · mythic · 3/4
+
+> If a creature attacking causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.
+
+**Status:** NOT IMPLEMENTED
 
 ### Jadzia Dax, Living Legacy
 
@@ -7326,6 +7425,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 	},
 ],
 ```
+
+### Jhoira, Weatherlight Captain
+
+{2}{U}{R} · Legendary Creature — Human Artificer · mythic · 3/3
+
+> Whenever you cast a historic spell, draw a card. (Artifacts, legendaries, and Sagas are historic.)
+
+**Status:** NOT IMPLEMENTED
+
+### Kenrith, the Returned King
+
+{4}{W} · Legendary Creature — Human Noble · mythic · 5/5
+
+> {R}: All creatures gain trample and haste until end of turn.  
+> {1}{G}: Put a +1/+1 counter on target creature.  
+> {2}{W}: Target player gains 5 life.  
+> {3}{U}: Target player draws a card.  
+> {4}{B}: Put target creature card from a graveyard onto the battlefield under its owner's control.
+
+**Status:** NOT IMPLEMENTED
 
 ### Khan, Vengeful Heart
 
@@ -7422,6 +7541,44 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Loot, Exuberant Explorer
+
+{2}{G} · Legendary Creature — Beast Noble · mythic · 1/4
+
+> You may play an additional land on each of your turns.  
+> {4}{G}{G}, {T}: Look at the top six cards of your library. You may reveal a creature card with mana value less than or equal to the number of lands you control from among them and put it onto the battlefield. Put the rest on the bottom in a random order.
+
+**Status:** NOT IMPLEMENTED
+
+### Mikaeus, the Lunarch
+
+{X}{W} · Legendary Creature — Human Cleric · mythic · 0/0
+
+> Mikaeus enters with X +1/+1 counters on it.  
+> {T}: Put a +1/+1 counter on Mikaeus.  
+> {T}, Remove a +1/+1 counter from Mikaeus: Put a +1/+1 counter on each other creature you control.
+
+**Status:** NOT IMPLEMENTED
+
+### Minamo, School at Water's Edge
+
+ · Legendary Land · mythic
+
+> {T}: Add {U}.  
+> {U}, {T}: Untap target legendary permanent.
+
+**Status:** NOT IMPLEMENTED
+
+### Mogis, God of Slaughter
+
+{2}{B}{R} · Legendary Enchantment Creature — God · mythic · 7/5
+
+> Indestructible  
+> As long as your devotion to black and red is less than seven, Mogis isn't a creature.  
+> At the beginning of each opponent's upkeep, Mogis deals 2 damage to that player unless they sacrifice a creature of their choice.
+
+**Status:** NOT IMPLEMENTED
+
 ### Mr. Spock, Science Officer
 
 {2}{U}{U} · Legendary Creature — Vulcan Human Scientist · mythic · 2/4
@@ -7435,6 +7592,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Mr. Spock, Science Officer"] = [new DrawsDoubled()],
 ```
+
+### Phyrexian Tower
+
+ · Legendary Land · mythic
+
+> {T}: Add {C}.  
+> {T}, Sacrifice a creature: Add {B}{B}.
+
+**Status:** NOT IMPLEMENTED
+
+### Prosper, Tome-Bound
+
+{2}{B}{R} · Legendary Creature — Tiefling Warlock · mythic · 1/4
+
+> Deathtouch  
+> Mystic Arcanum — At the beginning of your end step, exile the top card of your library. Until the end of your next turn, you may play that card.  
+> Pact Boon — Whenever you play a card from exile, create a Treasure token.
+
+**Status:** NOT IMPLEMENTED
 
 ### Q, Stacking the Deck
 
@@ -7480,6 +7656,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Riku of Many Paths
+
+{G}{U}{R} · Legendary Creature — Human Wizard · mythic · 3/3
+
+> Whenever you cast a modal spell, choose up to X, where X is the number of times you chose a mode for that spell —  
+> • Exile the top card of your library. Until the end of your next turn, you may play it.  
+> • Put a +1/+1 counter on Riku. It gains trample until end of turn.  
+> • Create a 1/1 blue Bird creature token with flying.
+
+**Status:** NOT IMPLEMENTED
+
+### Rishkar, Peema Renegade
+
+{2}{G} · Legendary Creature — Elf Druid · mythic · 2/2
+
+> When Rishkar enters, put a +1/+1 counter on each of up to two target creatures.  
+> Each creature you control with a counter on it has "{T}: Add {G}."
+
+**Status:** NOT IMPLEMENTED
+
 ### Rok-Tahk, Budding Scientist
 
 {4}{G}{G} · Legendary Creature — Brikar Scientist · mythic · 5/5
@@ -7512,6 +7708,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Scotty, Miracle Worker"] = [new GraveyardSpellsHaveBeamMeUp()],
 ```
+
+### Sen Triplets
+
+{2}{W}{U}{B} · Legendary Artifact Creature — Human Wizard · mythic · 3/3
+
+> At the beginning of your upkeep, choose target opponent. This turn, that player can't cast spells or activate abilities and plays with their hand revealed. You may play lands and cast spells from that player's hand this turn.
+
+**Status:** NOT IMPLEMENTED
 
 ### Seven of Nine, Unassimilated
 
@@ -7552,6 +7756,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 ],
 ```
 
+### Sheoldred, the Apocalypse
+
+{2}{B}{B} · Legendary Creature — Phyrexian Praetor · mythic · 4/5
+
+> Deathtouch  
+> Whenever you draw a card, you gain 2 life.  
+> Whenever an opponent draws a card, they lose 2 life.
+
+**Status:** NOT IMPLEMENTED
+
+### Shizo, Death's Storehouse
+
+ · Legendary Land · mythic
+
+> {T}: Add {B}.  
+> {B}, {T}: Target legendary creature gains fear until end of turn. (It can't be blocked except by artifact creatures and/or black creatures.)
+
+**Status:** NOT IMPLEMENTED
+
+### Sisay, Weatherlight Captain
+
+{2}{W} · Legendary Creature — Human Soldier · mythic · 2/2
+
+> Sisay gets +1/+1 for each color among other legendary permanents you control.  
+> {W}{U}{B}{R}{G}: Search your library for a legendary permanent card with mana value less than Sisay's power, put that card onto the battlefield, then shuffle.
+
+**Status:** NOT IMPLEMENTED
+
 ### Starfleet Academy
 
  · Legendary Land · mythic
@@ -7570,6 +7802,51 @@ How to write a script: `MagicCore/Cookbook.md`.
 	new ManaOfOneColorComponent(Federation) { Cost = ManaCost.Parse("{5}") },
 ],
 ```
+
+### Stella Lee, Wild Card
+
+{1}{U}{R} · Legendary Creature — Human Rogue · mythic · 2/4
+
+> Whenever you cast your second spell each turn, exile the top card of your library. Until the end of your next turn, you may play that card.  
+> {T}: Copy target instant or sorcery spell you control. You may choose new targets for the copy. Activate only if you've cast three or more spells this turn.
+
+**Status:** NOT IMPLEMENTED
+
+### Talon Gates of Madara
+
+ · Land — Gate · mythic
+
+> When this land enters, up to one target creature phases out.  
+> {T}: Add {C}.  
+> {1}, {T}: Add one mana of any color.  
+> {4}: Put this card from your hand onto the battlefield.
+
+**Status:** NOT IMPLEMENTED
+
+### Tatyova, Benthic Druid
+
+{3}{G}{U} · Legendary Creature — Merfolk Druid · mythic · 3/3
+
+> Landfall — Whenever a land you control enters, you gain 1 life and draw a card.
+
+**Status:** NOT IMPLEMENTED
+
+### Thada Adel, Acquisitor
+
+{1}{U}{U} · Legendary Creature — Merfolk Rogue · mythic · 2/2
+
+> Islandwalk (This creature can't be blocked as long as defending player controls an Island.)  
+> Whenever Thada Adel deals combat damage to a player, search that player's library for an artifact card and exile it. Then that player shuffles. Until end of turn, you may play that card.
+
+**Status:** NOT IMPLEMENTED
+
+### Torbran, Thane of Red Fell
+
+{1}{R}{R}{R} · Legendary Creature — Dwarf Noble · mythic · 2/4
+
+> If a red source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 2 instead.
+
+**Status:** NOT IMPLEMENTED
 
 ### U.S.S. Enterprise-A, Free Spirit
 

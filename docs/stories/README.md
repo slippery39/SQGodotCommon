@@ -29,22 +29,23 @@ every task a sprint file names exists.
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
 1. **MC-5** — Star Trek (TRK): sealed and draft before Arena's November 10 release
-2. **LIM-2** — draft against bots: FRA first, a cube later
-3. **MC-4** — MTGA's powered cube: surveyed, then built in batches
-4. **AI-13** — Shayne's lessons as general rules for the search, each measured
-5. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-6. **AI-9** — resources priced by what they provide
-7. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
-8. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-9. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-10. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-11. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice
-11. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-12. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-13. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-14. **AI-4** — strategic plans above single actions
-15. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-16. **AI-12** — a card's threat over time, on an empty board and a busy one
+2. **MC-6** — MagicCore's pieces compose: one per family, not one per card phrase (after MC-5.4)
+3. **LIM-2** — draft against bots: FRA first, a cube later
+4. **MC-4** — MTGA's powered cube: surveyed, then built in batches
+5. **AI-13** — Shayne's lessons as general rules for the search, each measured
+6. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
+7. **AI-9** — resources priced by what they provide
+8. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
+9. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
+10. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+11. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+12. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice
+13. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+14. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+15. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+16. **AI-4** — strategic plans above single actions
+17. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+18. **AI-12** — a card's threat over time, on an empty board and a busy one
 
 ## How it works
 
@@ -106,6 +107,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
+| [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-11](AI-11-learn-from-shaynes-games.md) | Learn from Shayne's games — settle where he and the oracle differ, keep what he got right | backlog |
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
@@ -136,5 +138,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 
-Next free id per area: AI-20 · DATA-3 · DEV-4 · LIM-4 · MC-6 · TBL-8
+Next free id per area: AI-20 · DATA-3 · DEV-4 · LIM-4 · MC-7 · TBL-8
 <!-- stories:end -->

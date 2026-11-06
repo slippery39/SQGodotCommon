@@ -35,8 +35,17 @@ For each card, find the pieces in the catalog and give it a tier:
 | 2 | A tested piece with a new option or combination | One test of the new option; revert-check that line |
 | 3 | A new engine piece | Grep MtgCore first; full tests, revert-checks, probe |
 
+**Compose first (Shayne, 2026-11-06, story MC-6).** A card that differs from a piece by a number, a
+filter, a zone or an event is that piece with an OPTION — tier 2, not 3. Before calling anything a new
+piece, read the nearest existing one's code (not just its catalog line) and write down why no option on
+it fits. Never add a flag, an enum case or a one-card component beside a sibling
+(`LifeGainTriggersAdditionalTime`, `DrawsDoubled`, `ReplaceableEvent.*` were all this): generalise the
+sibling and move its old cards onto it. The MC-5.6 survey first tiered 13 Stardates as new pieces
+from catalog greps; almost all of them were options.
+
 **Grep MtgCore before building any tier-3 piece** (memory "Copy from MTG") — copy and adapt, never
-modify MtgCore. Tell Shayne the tiers and the new pieces in one short list before building.
+modify MtgCore. Tell Shayne the tiers and the new pieces in one short list before building — each
+tier-3 line naming the nearest existing piece and why it can't take an option.
 
 **Count the legal actions before building "one action per combination".** A design that offers one move
 per set of targets, creatures to tap or cards to pick grows with the board: write down how many moves it

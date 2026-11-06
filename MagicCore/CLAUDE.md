@@ -156,6 +156,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   `card.Is(Creature)` — put right by the state-based check before anyone gets priority.
 - **Every engine piece carries a `///` summary that names a card and quotes its text.** The catalog
   is generated from those summaries — a piece without one is invisible to the next session.
+- **Compose, never a sibling per card phrase** (Shayne, story MC-6): a card differing by a number, filter,
+  zone or event is an OPTION on the piece (`Count`, `Filter`, `Trigger`), never a new flag, enum case or
+  one-card component. A new piece names the nearest one and why no option fits; generalising moves old cards.
 - **Each mechanic's rules** — planeswalkers, modes, step triggers and "this turn", flashback, prepare,
   abilities from the hand and graveyard, hexproof and indestructible, Auras and Equipment, countering
   and ward, reflexive and intervening triggers — are in `.claude/rules/magic-mechanics.md`, which
@@ -178,9 +181,6 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   script would make the test check the script against itself and miss a transcription error.
 - `AutoPass`, `DistinctMoves` and `Stops` are conveniences for front ends and the AI, never rules:
   `LegalActions` stays complete.
-- **AI evaluation terms are MONOTONIC** — more of a good thing always scores more, tapering not
-  capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap
-  at 20 stopped every attack past tapped blockers; a land cap at 7 made the AI hoard lands.
 - Same serialization rule as the root `CLAUDE.md`: nothing with a delegate lives in `GameState`.
 - **CSharpier 0.29 misreads `x is SomeType ? [a] : b`** — it takes `SomeType?` for a nullable type.
   Valid C#, but the commit hook then skips formatting the whole file. Write a `switch` expression.

@@ -29,3 +29,4 @@ session per batch was simulated to save 37–40%.
 | 2026-11-06 | MC-5.3 batch 7a: TRK's grouped tier 3 (trigger twice, assimilate, control until end of turn, dilemmas this turn, casting from odd zones), 14 cards | 1343051e | 165 | 221k | 5.4M |
 | 2026-11-06 | MC-5.3 batch 7b: 11 TRK one-offs (306/311) — modes not chosen before, can't sacrifice Treasures, enters attacking, granted mana, explore, player hexproof, counters from among, 11 cards | 940bf8cb | 131 | 205k | 4.2M |
 | 2026-11-06 | MC-5.3 batch 7c: TRK's last five, tier 3 (gained abilities, an ability from exile, a chosen name + ability activated, an extra turn, phasing) — TRK complete 311/311, 5 cards | 3cb37ded | 158 | 253k | 5.5M |
+| 2026-11-06 | MC-5.6: Stardates imported + surveyed, MC-6 composition audit, 0 cards | 41778005 | 76 | 169k | 2.1M |

@@ -583,3 +583,6 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   "Permanents can't phase in" (`PermanentsCantPhaseIn`). The zone is made on first use, as the Sideboard. The table
   shows it in its row, dimmed and badged (Shayne, 2026-11-06). **"Sacrifice a [filter]. If you do"** — not a may —
   is `MaySacrifice { Must }`.
+- **AI evaluation terms are MONOTONIC** — more of a good thing always scores more, tapering not
+  capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap
+  at 20 stopped every attack past tapped blockers; a land cap at 7 made the AI hoard lands.
