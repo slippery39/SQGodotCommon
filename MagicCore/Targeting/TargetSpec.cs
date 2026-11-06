@@ -146,6 +146,13 @@ public record TargetSpec(From From, Filter? Filter = null)
 				&& From == From.Battlefield
 				&& o is Card target
 				&& FromARestrictedSource(s, target, sourceId)
+			)
+			// The Needs of the Many: "You gain hexproof" — a player, not a legal target for an opponent.
+			&& !(
+				targeting
+				&& o is MagicPlayer player
+				&& player.Id != controllerId
+				&& s.ThisTurnEffects<Effects.YouHaveHexproof>(player.Id).Any()
 			);
 	}
 

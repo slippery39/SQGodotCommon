@@ -172,6 +172,9 @@ public record Card : GameObject
 	/// <summary>TurnNumber its "triggers only once each turn" ability last triggered.</summary>
 	public int OncePerTurnTriggeredOn { get; init; }
 
+	/// <summary>Kobayashi Maru Scenario: "choose one that hasn't been chosen" — bit i is mode i, chosen by this object (TriggeredAbilityComponent.ModesNotChosenBefore).</summary>
+	public int ModesChosen { get; init; }
+
 	/// <summary>Captain Michael Burnham: how many times its ability resolved on turn ResolvedOnTurn (IfNthResolutionThisTurn).</summary>
 	public int ResolvedTimes { get; init; }
 
@@ -290,6 +293,7 @@ public record Card : GameObject
 			EnteredOnTurn = 0,
 			AttackedOnTurn = 0,
 			OncePerTurnTriggeredOn = 0,
+			ModesChosen = 0,
 			ResolvedTimes = 0,
 			ResolvedOnTurn = 0,
 			IsPrepared = false,

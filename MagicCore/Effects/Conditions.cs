@@ -134,6 +134,32 @@ public record SourceWasCast : Condition
 		Conditions.SourceAsItWas(s, context)?.WasCast == true;
 }
 
+/// <summary>
+/// All Good Things..., chapter IV: "If all cards exiled with this Saga share a card type" — the cards linked
+/// to this object of the source (ExiledBy, CR 607.2a). ponytail: none exiled is no (each chapter draws two
+/// first, so only a decked player has none).
+/// </summary>
+public record ExiledWithSourceShareACardType : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var sourceId = (int)context[ContextKeys.Source];
+		if (!s.IsOnBattlefield(sourceId))
+			return false;
+		var source = s.GetCard(sourceId);
+		var types = new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
+			.Where(c =>
+				c.GetComponent<ExiledBy>() is { } by
+				&& by.SourceId == source.Id
+				&& by.SourceIncarnation == source.Incarnation
+			)
+			.Select(c => c.Types)
+			.ToList();
+		return types.Count > 0 && types.Aggregate((a, b) => a & b) != CardType.None;
+	}
+}
+
 /// <summary>A "you may" that can always be done.</summary>
 public record Always : Condition
 {

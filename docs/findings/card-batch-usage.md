@@ -27,3 +27,4 @@ session per batch was simulated to save 37–40%.
 | 2026-11-05 | MC-5.3 batch 6a: shocklands, sunburst, X targets picked as cast, changeling, a number as it enters, 14 cards | 7c02dbfc | 164 | 280k | 6.5M |
 | 2026-11-05 | MC-5.3 batch 6b: the re-tier's ten (lands from the top, counters doubled, charge counters put, combat damage as that many, a counter of a chosen kind, DS9) + Spock, Georgiou, Miles; probe capped (Tribbles), 13 cards | f5c958fd | 126 | 217k | 4.0M |
 | 2026-11-06 | MC-5.3 batch 7a: TRK's grouped tier 3 (trigger twice, assimilate, control until end of turn, dilemmas this turn, casting from odd zones), 14 cards | 1343051e | 165 | 221k | 5.4M |
+| 2026-11-06 | MC-5.3 batch 7b: 11 TRK one-offs (306/311) — modes not chosen before, can't sacrifice Treasures, enters attacking, granted mana, explore, player hexproof, counters from among, 11 cards | 940bf8cb | 131 | 205k | 4.2M |

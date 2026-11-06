@@ -49,6 +49,7 @@ public static class CounterKinds
 	public const string Lore = "lore";
 	public const string Quest = "quest";
 	public const string Promotion = "promotion";
+	public const string Peace = "peace"; // Peace in Our Time
 
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
@@ -455,6 +456,13 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 	/// judged as the modes are chosen, as it goes on the stack (CR 700.2b).
 	/// </summary>
 	public Condition? ChooseAnyNumberIf { get; init; }
+
+	/// <summary>
+	/// Kobayashi Maru Scenario: "At the beginning of your upkeep, choose one that hasn't been chosen —" — the
+	/// modes this object chose before (Card.ModesChosen) aren't offered; none left and it is removed (CR
+	/// 700.2a). A new object starts afresh (CR 400.7).
+	/// </summary>
+	public bool ModesNotChosenBefore { get; init; }
 
 	/// <summary>"At …, if [condition], …" — intervening: checked as it triggers AND as it resolves (CR 603.4).</summary>
 	public Condition? If { get; init; }
@@ -916,6 +924,27 @@ public record MayPlayLandsFromLibraryTop : GameComponent;
 
 /// <summary>Mr. Spock, Science Officer: "If you would draw a card, draw two cards instead." — MagicState.Draw.</summary>
 public record DrawsDoubled : GameComponent;
+
+/// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — MagicState.CanSacrifice, asked by every sacrifice (costs, choices, Treasure's own mana).</summary>
+public record CantSacrificeTreasures : GameComponent;
+
+/// <summary>
+/// Kira Nerys, Firebrand: "If a creature you control would enter while you control an attacking creature,
+/// instead it enters tapped and attacking." — MagicState.EnterBattlefield. Never declared, so "whenever …
+/// attacks" doesn't trigger (CR 508.4). ponytail: it attacks the opponent, never a planeswalker — the
+/// rules let its controller choose; make it a choice if a planeswalker deck wants it.
+/// </summary>
+public record YourCreaturesEnterAttacking : GameComponent;
+
+/// <summary>
+/// Rok-Tahk, Budding Scientist: "Creatures you control have '{T}: Add {G}{G}.'" — read by ManaAbilities (a
+/// summoning-sick creature can't, CR 302.6). ponytail: one yield per permanent, so a creature with its own
+/// smaller mana ability makes this one instead; make it a choice if a creature's own ever matters more.
+/// </summary>
+public record YourCreaturesTapForMana(ManaColor Color, int Amount) : GameComponent;
+
+/// <summary>Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops.</summary>
+public record AdditionalLandEachTurn : GameComponent;
 
 /// <summary>
 /// Georgiou, Terran Emperor: "You don't lose the game for having 0 or less life." — the state-based

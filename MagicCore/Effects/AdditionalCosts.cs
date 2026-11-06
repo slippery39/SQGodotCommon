@@ -1,4 +1,5 @@
 using ImmutableGameObjects;
+using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Filters;
 
@@ -159,6 +160,10 @@ public sealed record BeamMeUpCost : AdditionalCost
 /// <summary>"Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).</summary>
 public sealed record SacrificeSelfCost : AdditionalCost
 {
+	/// <summary>Quark: a Treasure token "can't be sacrificed", so its "sacrifice this:" can't be paid.</summary>
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		s.CanSacrifice(sourceId);
+
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
 		[];
 
@@ -180,7 +185,7 @@ public sealed record SacrificeCost(Filter? Filter = null) : AdditionalCost
 	public override CostSlot Slot => CostSlot.Sacrifice;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
-		Filter.Among(s, playerId, ZoneType.Battlefield, sourceId);
+		Filter.Among(s, playerId, ZoneType.Battlefield, sourceId).Where(s.CanSacrifice);
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
 		chosen == 0 ? s : s.Sacrifice(chosen);
@@ -192,7 +197,54 @@ public sealed record SacrificeCost(Filter? Filter = null) : AdditionalCost
 		Filter is null ? new SacrificePermanents(Count) : null;
 
 	public override bool CanPayByChoosing(GameState s, int payerId) =>
-		Filter is null && s.CardsIn(payerId, ZoneType.Battlefield).Count() >= Count;
+		Filter is null
+		&& s.CardsIn(payerId, ZoneType.Battlefield).Count(c => s.CanSacrifice(c.Id)) >= Count;
+}
+
+/// <summary>
+/// Lieutenant Commander Data: "{1}, Remove three counters from among creatures you control: Draw a card." —
+/// any kinds, any of them. One action per set would be 364 on a 12-creature board, so the counters are
+/// picked after activating, one at a time (RemoveACounterFromChosenAction says which kind).
+/// </summary>
+public sealed record RemoveCountersFromAmongCost(int Count, Filter Filter) : AdditionalCost
+{
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		Filter
+			.Among(s, playerId, ZoneType.Battlefield, sourceId)
+			.Sum(id => s.GetCard(id).AllCounters().Sum(k => k.N)) >= Count;
+
+	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
+		[];
+
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		s.SpawnAction(
+			new PipelineAction
+			{
+				Steps =
+				[
+					.. Enumerable
+						.Range(0, Count)
+						.SelectMany(_ =>
+							(GameAction[])
+								[
+									new ChoosePermanentChoice(
+										playerId,
+										sourceId,
+										Filter & Is.WithAnyCounter,
+										required: true
+									)
+									{
+										Prompt = "Remove a counter from",
+									},
+									new RemoveACounterFromChosenAction(),
+								]
+						),
+				],
+			}
+		);
+
+	public override string Describe() =>
+		$"Remove {Count} counters from among creatures you control";
 }
 
 /// <summary>Cycling: "Discard this card:".</summary>

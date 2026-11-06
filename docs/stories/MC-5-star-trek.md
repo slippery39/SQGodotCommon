@@ -153,6 +153,15 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   to untap" is a real yes/no in the untap step** (asked while her link is live), not "stays tapped while linked".
   **Scotty's granted beam me up stays one action per spell × creature returned** (~88 on a 12-creature board with
   8 spells — linear per card, as every beam-me-up card is today).
+- 2026-11-06, Shayne (batch 7b's question): the 16 re-tiered from the full text — Gwyndala tier 2, the other 15
+  tier 3; five flagged bigger than one small piece. **Batch 7b is the 11 smaller ones** (Gwyndala, Genesis Device,
+  Kobayashi Maru, Quark, Kira Nerys, All Good Things..., Peace in Our Time, The Needs of the Many, Data, Rok-Tahk,
+  Janeway); **7c the five flagged** — Q (three parts), Nog (types, a trigger and statics gained for good, lands from
+  the graveyard), H.M.S. Bounty (an extra turn: `TurnStructure` and the rollout), The City on the Edge of Forever
+  (phasing as a hidden zone), Kai Winn (a name chosen as it enters, an "ability activated" event). Claude's
+  defaults, built as proposed and noted (`DesignNotes.md`, AI-19) — Shayne answered only the split, so confirm at
+  review: Kira's creature attacks the opponent, never a planeswalker; All Good Things IV with nothing exiled gains
+  nothing; Data's counters are three picks after activating (364 sets on 12 creatures), the kind a rule.
 
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
@@ -229,7 +238,15 @@ Open questions:
       controller), dilemmas this turn (`FacedDilemmaEvent.Face`, `Count.DilemmasFacedThisTurnBy`),
       `ExileUntilNonlandCastFree` (The Caretaker, discover), `ExileTopAndCastFree` (Sisko), `CastCopiesOf` (Infinite
       Diversity), `GraveyardSpellsHaveBeamMeUp` (Scotty), `MayPlayFromYourGraveyard` (Submatrix, Holodeck),
-      `ExileSpell` + `CastFromHandFree` (Brazen Bluff), `MayDiscard.Exile`. Next: the tier-3 one-offs
+      `ExileSpell` + `CastFromHandFree` (Brazen Bluff), `MayDiscard.Exile`. Batch 7b done 2026-11-06: 11 one-offs
+      (306/311) — modes not chosen before (`TriggeredAbilityComponent.ModesNotChosenBefore`, `Card.ModesChosen`),
+      `LoseTheGame`, can't sacrifice Treasures (`MagicState.CanSacrifice`), enters attacking
+      (`YourCreaturesEnterAttacking`), a granted mana ability (`YourCreaturesTapForMana`), explore (`Explore`), an
+      extra land each turn (`MagicState.LandDrops`), a player's hexproof and prevented damage (`YouHaveHexproof`,
+      `PreventAllDamageToYou`), "that player may" (`Ref.ActivePlayer`, `May.ThenAsThem`, `CantAttackThisTurn`),
+      counters removed from among (`RemoveCountersFromAmongCost`), `CreateTokens.AttachTo`,
+      `MaySacrifice.AnyNumber` + `Count.PermanentsChosen`, `MayDiscard.Must/Linked`,
+      `ExiledWithSourceShareACardType`. Next: batch 7c
 - [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
@@ -241,6 +258,66 @@ Open questions:
       (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG), scripted once each, into the collation
 
 ## Next
+
+**MC-5.3 batch 7b is done (2026-11-06): 306/311 play** — every C/U, 76/80 R, 24/25 M. The 11 smaller one-offs
+(Shayne's split): Gwyndala (tier 2), Genesis Device, Kobayashi Maru Scenario, Quark, Kira Nerys, All Good
+Things..., Peace in Our Time, The Needs of the Many, Lieutenant Commander Data, Rok-Tahk, Captain Janeway. Each
+rule in `magic-mechanics.md`; ceilings in `DesignNotes.md` (Kira attacks the opponent only, Rok-Tahk's one yield,
+Data's counter kind a rule, explore of a creature already gone, nothing exiled with All Good Things); AI-19.9–13
+(Genesis Device's lands, Data's counters, explore's keep, Peace's draw, Kobayashi Maru's Abandon Ship). The review
+fixed three, each with a test: prevented combat damage no longer counts as "dealt combat damage to a player"
+(`Damage.Prevented`); an edict under Quark takes an artifact that can be sacrificed, not the Treasure; a Treasure's
+own "sacrifice this:" can't be activated under Quark (`SacrificeSelfCost.CanPay`).
+**Next: batch 7c in a NEW session — the last 5, each flagged bigger than one small piece:** Q, Stacking the Deck
+(an ability gained by an exiled card, activated from exile with an exile-from-hand cost, a copy cast paying its
+cost — one activation per hand card), Nog, Ambitious Cadet (becomes a Scout/Officer for good: subtypes and base
+P/T, a gained "becomes tapped" trigger, gained statics — "play lands from your graveyard" unlimited, unlike
+Submatrix's, and `AdditionalLandEachTurn`), H.M.S. Bounty, Unlikely Timeship (an extra turn — MtgCore's
+`TakeExtraTurnAction`; "haven't begun an extra turn this game" a per-player flag; check `TurnStructure`'s turn
+passing and the rollout's absolute turn), The City on the Edge of Forever (phasing: a hidden per-player zone moved
+with `MoveObject`, phased in by the untap step unless "Permanents can't phase in"), Kai Winn (a name chosen as it
+enters — copy `ChoosesNumberAsItEnters`; the trigger needs an "ability activated" event, none outside loyalty).
+Re-tier each from its full text; when all 5 play, TRK is complete (311/311) and Next points to MC-5.4 (boosters)
+and MC-5.6 (the Stardates).
+
+The prompt that starts batch 7c (paste it into a NEW session):
+
+```
+MC-5.3 batch 7c: TRK's last 5 cards, in this fresh session (/card-batch step 0).
+Sprint 4 (docs/sprints/2026-11-05.md), item 4. Last commit: batch 7b, 306/311 TRK cards play — every
+C/U, 76/80 R, 24/25 M. 5 left, each flagged bigger than one small piece, each with a first design in the
+story's Next: Q, Stacking the Deck; Nog, Ambitious Cadet; H.M.S. Bounty, Unlikely Timeship; The City on
+the Edge of Forever; Kai Winn, Faithless Leader.
+
+Read, in order and nothing more yet: docs/stories/MC-5-star-trek.md (Decisions, Tasks, Next),
+MagicCore/TrkCoverage.md (status paragraph and the tag table), the /card-batch skill,
+MagicCore/CLAUDE.md, MagicCore/Cookbook.md. GREP MagicCore/AbilityCatalog.md for the pieces each
+card needs rather than reading it whole. Card text: python tools/magic_set.py text --set TRK "Name"
+(full names — "Q" or "H.M.S. Bounty" alone doesn't match). Grep MtgCore before each new piece
+(TakeExtraTurnAction for the Bounty).
+
+Re-tier each card from its FULL text and tell me the tiers, and each new piece's or option's design,
+before scripting. These are the set's heaviest five: if one is more than its share, propose moving it
+to its own session and ask. Phasing (City) and the extra turn (Bounty) touch the turn structure and the
+AI's rollout — say what each touches before building it. Before building any "one legal action per
+combination", count the actions it creates on a 12-creature board. Tier 2 gets one test, tier 3 tests +
+revert-checks. Probe with MAGIC_PROBE_GAMES=10 first, then the full 150. Hot path touched →
+tools/bench_vs_head.sh "FullyQualifiedName~GreedyAiTests". A card whose play or ruling we leave simple
+goes in AI-19 (now at 19.13).
+
+Test traps from 7a and 7b: a Hand(…) inside s.Act(new … { CardId = Hand(…) }) runs on the old state —
+own line; never `c is T ? [x] : …` (CSharpier skips the file) — use the On<T>(ids) helper; PassUntil
+stops at the first choice of ANY kind — wait for the type you want; answer a hand choice by id. A bare
+s.EnterBattlefield or s.PutCounters in a test puts no trigger on the stack and Resolve() returns at once
+on an empty stack — cast it, or pass priority (PassUntil a step change). In the test files `Is` is
+NUnit's: write global::MagicCore.Filters.Is.X, and Does.Contain, not Is.Contains. Activation now asks
+every cost's CanPay. GoldenCardReplay.txt is an explicit test — regenerate it with GoldenReplay.txt
+(Commands.md, "Golden replays"). In Git Bash there is no pgrep — wait on a background run's output file.
+
+When all 5 play, TRK is complete (311/311): the story's Next then points to MC-5.4 (boosters) and
+MC-5.6 (the Stardates). End with the usage row (tools/usage_report.py --log), /pre-commit, then ask
+before committing.
+```
 
 **MC-5.3 batch 7a is done (2026-11-06): 295/311 play** — every C/U, 70/80 R, 19/25 M. The grouped tier 3: Dr.
 Beverly Crusher, Lwaxana Troi (trigger twice; her "keep me tapped?" a real yes/no — Shayne), Death Is Irrelevant,
@@ -409,3 +486,5 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   `MagicState.PutCounters` for every kind (+1/+1, -1/-1, charge, stun, time, loyalty and the named ones),
   so Yoshimaru and Brad Boimler apply in one place; `CounterWritesTests` fails on an engine file that adds
   to a counter field itself. No game moved (both golden files unchanged).
+- 2026-11-06: batch 7b — the 16 left re-tiered (15 tier 3, five flagged); Shayne split them 11 / 5; the 11 built
+  (306/311).

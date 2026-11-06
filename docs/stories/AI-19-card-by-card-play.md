@@ -44,6 +44,16 @@ Open questions:
 - [ ] AI-19.8 Worf, Intelligence Contractor and The Wrath of Khan: a creature stolen "until end of turn"
       (`UntilEndOfTurn.ReturnControlTo`) is scored by `Evaluator` as if kept — check a mid-turn score doesn't
       overvalue the steal (a rollout past cleanup sees it go back) (MC-5.3 batch 7a's review).
+- [ ] AI-19.9 Genesis Device: which lands to sacrifice — the search branches on at most 32 sets of lands, past
+      that the greedy answer sacrifices none, so on a big board it never cashes the Device in (MC-5.3 batch 7b).
+- [ ] AI-19.10 Lieutenant Commander Data: the three counters removed — each pick a search branch; check it takes
+      them from the least useful creatures, not Data's own growth (MC-5.3 batch 7b).
+- [ ] AI-19.11 Explore (Captain Janeway): "put the card into your graveyard?" is the search's yes/no — check it
+      keeps a good draw on top and bins a dead one (MC-5.3 batch 7b).
+- [ ] AI-19.12 Peace in Our Time: each player's "draw a card and don't attack?" is their search's — check it never
+      trades a lethal or winning attack for a card, and that the AI reads twelve peace counters as a clock.
+- [ ] AI-19.13 Kobayashi Maru Scenario: Abandon Ship loses the game on its fourth upkeep — check the AI casts it
+      only with a way to remove it (or a faster clock), and leaves Abandon Ship for last (MC-5.3 batch 7b).
 
 ## Next
 
@@ -54,3 +64,4 @@ MC-5 has every card playing.
 
 - 2026-11-05: opened with Engineered Explosives (MC-5.3 batch 6a); Deep Space 9 and Georgiou added (batch 6b).
 - 2026-11-06: Lwaxana Troi, Brazen Bluff and the free casts added (MC-5.3 batch 7a).
+- 2026-11-06: Genesis Device, Data, explore, Peace in Our Time and Kobayashi Maru added (MC-5.3 batch 7b).

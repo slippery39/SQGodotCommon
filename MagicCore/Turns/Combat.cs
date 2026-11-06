@@ -32,7 +32,8 @@ public static class Combat
 		c.Is(CardType.Creature)
 		&& !c.IsTapped
 		&& (!s.Has(c, "Defender") || s.Has(c, AttacksDespiteDefender))
-		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
+		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c))
+		&& !s.ThisTurnEffects<Effects.CantAttackThisTurn>(c.ControllerId).Any(); // Peace in Our Time
 
 	/// <summary>
 	/// No spells or non-mana abilities now: Yuriko during combat, or a spell with split second on the
@@ -231,6 +232,7 @@ public static class Combat
 		// Players never leave the game; a planeswalker token hit by first strike may already be gone.
 		var players = hits.Select(h => h.TargetId)
 			.Where(id => id == s.Player1Id() || id == s.Player2Id())
+			.Where(id => !Rules.Damage.Prevented(s, id)) // The Needs of the Many: none was dealt
 			.Distinct()
 			.ToImmutableList();
 		foreach (var (source, targetId, amount) in hits)

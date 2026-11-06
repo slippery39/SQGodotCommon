@@ -803,8 +803,17 @@ public static class Triggers
 					spec.Optional || spec.Candidates(s, t.Source.ControllerId, t.Source.Id).Any()
 				)
 			)
+			.Where(m => !t.Ability.ModesNotChosenBefore || (ModesChosenBy(s, t) & (1 << m.i)) == 0)
 			.Select(m => m.i)
 			.ToImmutableList();
+
+	/// <summary>Kobayashi Maru Scenario: the modes this object of the source chose before — the live card's, while it is still that object.</summary>
+	public static int ModesChosenBy(GameState s, Pending t) =>
+		s.HasObject(t.Source.Id)
+		&& s.GetObject(t.Source.Id) is Card now
+		&& now.Incarnation == t.Source.Incarnation
+			? now.ModesChosen
+			: t.Source.ModesChosen;
 
 	/// <summary>The controller chooses each target, then the ability goes on the stack (CR 603.3d).</summary>
 	public static GameState QueueTargets(
@@ -906,6 +915,20 @@ public record QueueModalTriggerAction : GameAction
 			chosen
 		);
 		s = FacedDilemmaEvent.Face(s, Trigger.Source.ControllerId);
+		// Kobayashi Maru Scenario: "choose one that hasn't been chosen" — stamped on this object as chosen.
+		if (
+			Trigger.Ability.ModesNotChosenBefore
+			&& s.HasObject(Trigger.Source.Id)
+			&& s.GetObject(Trigger.Source.Id) is Card now
+			&& now.Incarnation == Trigger.Source.Incarnation
+		)
+			s = s.UpdateObject(
+				now.Id,
+				now with
+				{
+					ModesChosen = chosen.Aggregate(now.ModesChosen, (m, i) => m | (1 << i)),
+				}
+			);
 		return new(Triggers.QueueTargets(s, Trigger, specs, steps));
 	}
 }

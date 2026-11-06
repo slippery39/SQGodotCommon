@@ -23,8 +23,17 @@ public static class ManaAbilities
 					? AnyColor
 					: []
 			)
+			.Concat(Granted(s, card) is { } granted ? [granted.Color] : [])
 			.Distinct();
 	}
+
+	/// <summary>Rok-Tahk: "Creatures you control have '{T}: Add {G}{G}.'" — the grant this creature has from a permanent its controller controls.</summary>
+	static YourCreaturesTapForMana? Granted(GameState s, Card card) =>
+		!card.Is(CardType.Creature) || s.HasLostAllAbilities(card)
+			? null
+			: s.CardsIn(card.ControllerId, ZoneType.Battlefield)
+				.SelectMany(s.AbilitiesOf<YourCreaturesTapForMana>)
+				.FirstOrDefault();
 
 	/// <summary>Plains, Island, Swamp, Mountain, Forest — domain counts these.</summary>
 	public static bool IsBasicLandType(string subtype) => BasicLandColor(subtype) is not null;
@@ -119,6 +128,12 @@ public static class ManaAbilities
 		ImmutableArray<ImmutableArray<ManaColor>> units = oneColor is null
 			? [colors]
 			: [.. Enumerable.Repeat(AnyColor, Math.Max(0, oneColor.Amount.Value(s, context)))];
+		if (Granted(s, card) is { } granted && units.Length < granted.Amount)
+			return new(
+				[.. Enumerable.Repeat<ImmutableArray<ManaColor>>([granted.Color], granted.Amount)],
+				false,
+				ManaRestriction.None
+			);
 		// Molten Tide: "whenever you tap a Mountain for mana, add an additional {R}" — a mana
 		// ability triggering on a mana ability, so it resolves at once (CR 605.1b), as more mana.
 		if (card.Subtypes.Contains("Mountain"))
@@ -148,7 +163,9 @@ public static class ManaAbilities
 		);
 
 	public static bool CanTap(GameState s, Card card) =>
-		ColorsOf(s, card).Any() && CanPayTapCost(s, card);
+		ColorsOf(s, card).Any()
+		&& CanPayTapCost(s, card)
+		&& (!card.IsToken || s.CanSacrifice(card.Id)); // Quark: a Treasure's only mana is sacrificing it
 
 	/// <summary>Permanents that can make mana for this player right now, optionally leaving one out
 	/// (the permanent whose {T} is itself the cost being paid).</summary>

@@ -71,6 +71,22 @@ public static class TrkCards
 		["G"]
 	);
 
+	/// <summary>Gwyndala, the Progeny: "a colorless Equipment artifact token named Neuroflux Heirloom with 'Equipped creature gets +1/+1' and equip {2}".</summary>
+	public static readonly CardData NeurofluxHeirloom = Token(
+		"Neuroflux Heirloom",
+		"Artifact — Equipment"
+	);
+
+	/// <summary>Rok-Tahk, Budding Scientist: "Murf, a legendary 0/1 green Ooze Slug creature token with indestructible".</summary>
+	public static readonly CardData Murf = Token(
+		"Murf",
+		"Legendary Creature — Ooze Slug",
+		"0",
+		"1",
+		["G"],
+		["Indestructible"]
+	);
+
 	/// <summary>"A tapped Planet land token named New Planet with '{T}: Add one mana of any color.'"</summary>
 	public static readonly CardData NewPlanet = Token("New Planet", "Land — Planet");
 
@@ -3204,6 +3220,176 @@ public static class TrkCards
 					}
 				),
 			],
+			// ===== MC-5.3 batch 7b: the one-offs — modes not chosen before, can't sacrifice Treasures, enters attacking, a granted mana ability, explore, a player's hexproof and damage prevented, counters removed from among =====
+			["Gwyndala, the Progeny"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new CreateTokens(NeurofluxHeirloom, 1)
+					{
+						Abilities = [AttachedGets(1, 1), Equip("{2}")],
+						AttachTo = Ref.Source,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[
+						new BecomeCopyUntilEndOfTurn(
+							Ref.Permanents(Is.Token & Is.Yours & Is.Subtype("Equipment")),
+							Ref.Target()
+						),
+					]
+				)
+				{
+					Targets = [Target(Is.Subtype("Equipment") & Is.Yours)],
+				},
+			],
+			["Genesis Device"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.None, ZoneType.Battlefield)
+					{
+						Filter = (Is.Land & Is.Supertype(Supertype.Basic)) | Is.Subtype("Planet"),
+						FilterText = "basic land or Planet",
+						Tapped = true,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{G}{G}"),
+					[
+						new MaySacrifice(
+							Is.Land,
+							[
+								new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+								{
+									UpTo = Count.PermanentsChosen,
+									Tapped = true,
+								},
+							]
+						)
+						{
+							AnyNumber = true,
+						},
+					]
+				)
+				{
+					Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+					SorcerySpeed = true,
+				},
+			],
+			["Kobayashi Maru Scenario"] =
+			[
+				ModalWhen(
+					"Kobayashi Maru Scenario",
+					TriggerEvent.YourUpkeep,
+					1,
+					M(
+						[
+							Target(Is.Creature & Is.Opponents & Is.ManaValueAtMost(3)) with
+							{
+								Optional = true,
+							},
+						],
+						new ReturnToHand(Ref.Target())
+					),
+					M([], new DrawCards(Ref.You, 2)),
+					M([], new CreateTokens(Officer, 2)),
+					M([], new LoseTheGame())
+				) with
+				{
+					ModesNotChosenBefore = true,
+				},
+			],
+			["Quark, Humble Proprietor"] =
+			[
+				new CantSacrificeTreasures(),
+				When(TriggerEvent.EachUpkeep, [], CreateTreasure(1)),
+			],
+			["Kira Nerys, Firebrand"] =
+			[
+				new YourCreaturesEnterAttacking(),
+				When(
+					TriggerEvent.AnotherCreatureYouControlEnters,
+					[],
+					new ModifyUntilEndOfTurn(Ref.EventCard, 1, 1)
+				),
+			],
+			["All Good Things..."] =
+			[
+				new SagaComponent(4),
+				Chapter(1, [], new DrawCards(Ref.You, 2), ExileAGoodThing),
+				Chapter(2, [], new DrawCards(Ref.You, 2), ExileAGoodThing),
+				Chapter(3, [], new DrawCards(Ref.You, 2), ExileAGoodThing),
+				Chapter(
+					4,
+					[],
+					new If(new ExiledWithSourceShareACardType(), [new GainLife(Ref.You, 10)])
+				),
+			],
+			["Peace in Our Time"] =
+			[
+				When(
+					TriggerEvent.Beginning(Step.BeginCombat, Whose.Any),
+					[],
+					new May(
+						"Draw a card? If you do, you can't attack this turn.",
+						new Always(),
+						[
+							new DrawCards(Ref.You, 1),
+							new ThisTurn(new CantAttackThisTurn()),
+							new PutCounters(Ref.Source, CounterKinds.Peace, 1),
+						]
+					)
+					{
+						Who = Ref.ActivePlayer,
+						ThenAsThem = true,
+					}
+				),
+				When(TriggerEvent.YourUpkeep, [], new WinTheGame()) with
+				{
+					If = new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Peace), 12),
+				},
+			],
+			["The Needs of the Many"] =
+			[
+				new AdditionalCostsComponent([new SacrificeCost(Is.Creature)]),
+				Spell(
+					[],
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Hexproof"),
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Indestructible"),
+					new ThisTurn(new YouHaveHexproof()),
+					new ThisTurn(new PreventAllDamageToYou()),
+					new ExileSourceAndCopiesFromGraveyard(0) // "Exile The Needs of the Many."
+				),
+			],
+			["Lieutenant Commander Data"] =
+			[
+				When(
+					TriggerEvent.YouCastNoncreatureSpell with
+					{
+						By = Whose.Any,
+					},
+					[],
+					new AddCounters(Ref.Source, 1)
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new DrawCards(Ref.You, 1)])
+				{
+					Costs = [new RemoveCountersFromAmongCost(3, Is.Creature)],
+				},
+			],
+			["Rok-Tahk, Budding Scientist"] =
+			[
+				new YourCreaturesTapForMana(ManaColor.Green, 2),
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Murf, 1)),
+			],
+			["Captain Kathryn Janeway"] =
+			[
+				new AdditionalLandEachTurn(),
+				When(TriggerEvent.CreatureYouControlEnters, [], new Explore(Ref.EventCard)),
+			],
 		};
 
 	/// <summary>
@@ -3247,6 +3433,15 @@ public static class TrkCards
 
 	/// <summary>The shocklands (Blood Crypt …): "As this land enters, you may pay 2 life. If you don't, it enters tapped."</summary>
 	static EntersTappedComponent Shockland => new() { UnlessYouPayLife = 2 };
+
+	/// <summary>All Good Things..., chapters I–III: "then exile a card from your hand" — linked to this Saga for chapter IV.</summary>
+	static MayDiscard ExileAGoodThing =>
+		new([])
+		{
+			Exile = true,
+			Must = true,
+			Linked = true,
+		};
 
 	/// <summary>A quest's threshold: "if this enchantment has N or more quest counters on it".</summary>
 	static Condition Quests(int n) =>

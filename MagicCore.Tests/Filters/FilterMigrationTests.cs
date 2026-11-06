@@ -127,6 +127,7 @@ public class FilterMigrationTests
 		RefKind.EventObject,
 		RefKind.ControllerOfEventCard,
 		RefKind.EachTarget, // the chosen targets themselves
+		RefKind.ActivePlayer, // Peace in Our Time: whose turn it is
 	];
 
 	[TestCaseSource(nameof(RefRows))]

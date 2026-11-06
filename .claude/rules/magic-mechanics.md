@@ -520,3 +520,35 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"A permanent was returned to your hand from the battlefield this turn"** (Miles O'Brien) is
   `TurnTally.PermanentsReturnedToHand` — its OWNER's, counted in `MoveCard` (battlefield → hand: bounce, beam
   me up's cost, a token too) — read by `Count.PermanentsReturnedToHandThisTurn`.
+- **"Choose one that hasn't been chosen"** (Kobayashi Maru Scenario) is `TriggeredAbilityComponent.ModesNotChosenBefore`:
+  the modes chosen are stamped on that object (`Card.ModesChosen`, a bit per mode, in `QueueModalTriggerAction`) and
+  left out by `Triggers.ChoosableModes`; none left and it is removed (CR 700.2a); a new object starts afresh.
+  **"You lose the game"** is `LoseTheGame`, at once, as `WinTheGame`.
+- **"You can't sacrifice Treasure tokens"** (Quark, `CantSacrificeTreasures`) is `MagicState.CanSacrifice`, asked by
+  every sacrifice: `MagicState.Sacrifice` itself (it does nothing), `SacrificeCost`'s candidates, a
+  `ChoosePermanentChoice { Sacrifice }` (MaySacrifice, EachSacrifices, SacrificePermanents) and
+  `ManaAbilities.CanTap` (a Treasure's only mana is sacrificing it).
+- **"Enters tapped and attacking"** (Kira Nerys, `YourCreaturesEnterAttacking`) is set in `EnterBattlefield` —
+  `AttackingId` the opponent, never declared, so no "whenever … attacks" (CR 508.4); `Combat.Attackers` reads it live.
+- **"Creatures you control have '{T}: Add {G}{G}'"** (Rok-Tahk, `YourCreaturesTapForMana`) is read by
+  `ManaAbilities.ColorsOf` and `YieldOf` — the one place mana is answered — so payment, manual tapping and the X
+  bound all see it; a summoning-sick creature can't (`CanPayTapCost`).
+- **Explore** (CR 701.44, Captain Janeway) is `Explore(ref)`: the top card revealed (`MakeKnown`), a land to the
+  hand, else a +1/+1 counter through `PutCounters` and a yes/no to bin the card (`MoveCardTo { From = Library }`).
+  **"An additional land on each of your turns"** (`AdditionalLandEachTurn`) is `MagicState.LandDrops`, the one count
+  the land play and the rollout both read.
+- **A player's hexproof and prevented damage** (The Needs of the Many) are `ThisTurnEffect`s on that player:
+  `YouHaveHexproof` asked in `TargetSpec.IsLegal` (an opponent's spell or ability only), `PreventAllDamageToYou` in
+  `Damage.Deal` before anything is dealt — so no lifelink, no "dealt damage" trigger.
+- **"That player may … If they do, they …"** (Peace in Our Time) is `May { Who = Ref.ActivePlayer, ThenAsThem }`:
+  Then runs as the one who answered, so their `ThisTurn` (`CantAttackThisTurn`, read by `Combat.CanAttack`) is in
+  THEIR command zone; `Ref.Source` is still the enchantment.
+- **"Remove N counters from among creatures you control"** (Lieutenant Commander Data, `RemoveCountersFromAmongCost`)
+  is picked AFTER activating, one counter at a time (`ChoosePermanentChoice`, then `RemoveACounterFromChosenAction`:
+  a harmful kind first) — one action per set would be 364 on 12 creatures. Activation asks every cost's `CanPay`.
+- **"Create a token … Attach it to [this]"** (Gwyndala) is `CreateTokens.AttachTo`; **"sacrifice any number of
+  [lands], then … that many"** (Genesis Device) is `MaySacrifice { AnyNumber }` with `Count.PermanentsChosen`.
+- **"Exile [this spell]"** as it resolves (The Needs of the Many, Infinite Diversity) is
+  `ExileSourceAndCopiesFromGraveyard(0)`; "exile a card from your hand" linked to a Saga (All Good Things...) is
+  `MayDiscard { Exile, Must, Linked }`, and "all cards exiled with this share a card type" is
+  `ExiledWithSourceShareACardType`.

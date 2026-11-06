@@ -110,6 +110,9 @@ public record ChoosePermanentChoice : ChoiceAction
 	public int SourceId { get; init; }
 	public Filter? Filter { get; init; }
 
+	/// <summary>A sacrifice: what can't be sacrificed (Quark's Treasures) isn't offered — MagicState.CanSacrifice.</summary>
+	public bool Sacrifice { get; init; }
+
 	/// <param name="required">"Sacrifices a creature" must; "you may sacrifice" need not.</param>
 	public ChoosePermanentChoice(int playerId, int sourceId, Filter? filter, bool required = false)
 	{
@@ -127,6 +130,7 @@ public record ChoosePermanentChoice : ChoiceAction
 	) =>
 		Filter
 			.Among(s, PlayerId, ZoneType.Battlefield, SourceId)
+			.Where(id => !Sacrifice || s.CanSacrifice(id))
 			.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name })
 			.ToImmutableList();
 
@@ -221,6 +225,30 @@ public record SacrificeChosenAction : GameAction
 	{
 		foreach (var id in ChoosePermanentChoice.Read(InputContext))
 			s = s.Sacrifice(id);
+		return new ActionResult(s);
+	}
+}
+
+/// <summary>
+/// Lieutenant Commander Data's cost, after each pick: one counter off the chosen creature — a harmful kind
+/// first (stun, -1/-1), else the kind it has most of. ponytail: the kind isn't a choice; make it one if a
+/// card ever cares which.
+/// </summary>
+public record RemoveACounterFromChosenAction : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in ChoosePermanentChoice.Read(InputContext))
+			if (
+				s.IsOnBattlefield(id)
+				&& s.GetCard(id)
+					.AllCounters()
+					.OrderBy(k => k.Kind is CounterKinds.Stun or CounterKinds.MinusOne ? 0 : 1)
+					.ThenByDescending(k => k.N)
+					.FirstOrDefault()
+					is { N: > 0 } counter
+			)
+				s = s.PutCounters(id, counter.Kind, -1);
 		return new ActionResult(s);
 	}
 }

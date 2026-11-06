@@ -392,6 +392,9 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>L'Rell, Fierce Visionary: "Sacrifice it at the beginning of the next end step." — set once it has entered.</summary>
 	public bool SacrificeAtNextEndStep { get; init; }
 
+	/// <summary>Gwyndala, the Progeny: "create … Neuroflux Heirloom … Attach it to Gwyndala." — once it has entered, if that is still there.</summary>
+	public Ref? AttachTo { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var count = Count.Value(s, InputContext);
@@ -414,6 +417,12 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 					s,
 					(Card)s.GetCard(token.Id).WithComponent(new UntilEndOfTurn(Keyword: keyword))
 				);
+			if (
+				AttachTo is not null
+				&& s.IsOnBattlefield(token.Id)
+				&& Permanents(AttachTo, s).FirstOrDefault() is { } host
+			)
+				s = Attachments.Attach(s, token.Id, host.Id);
 			if (SacrificeAtNextEndStep)
 				s = ReturnFromExileUnderYourControl.Delay(
 					s,
@@ -954,8 +963,11 @@ public record ExileUntilNonlandCastFree(Ref Of) : Effect
 /// <summary>Discover: "… or put it into your hand" — the card, if it is still where it was put (its owner's exile), to its OWNER's zone (CR 400.3).</summary>
 public record MoveCardTo(int CardId, ZoneType To) : Effect
 {
+	/// <summary>Explore: "put the card back or put it into your graveyard" — where it must still be; unset is exile.</summary>
+	public ZoneType From { get; init; } = ZoneType.Exile;
+
 	public override ActionResult Execute(GameState s) =>
-		s.GetObject(CardId) is Card card && s.IsIn(CardId, card.OwnerId, ZoneType.Exile)
+		s.GetObject(CardId) is Card card && s.IsIn(CardId, card.OwnerId, From)
 			? new(s.MoveCard(CardId, s.ZoneId(card.OwnerId, To)))
 			: new(s);
 }
@@ -1316,7 +1328,7 @@ public record CastCopyOf(int CardId, int Left) : Effect
 	}
 }
 
-/// <summary>Emrakul: "Sacrifice three permanents" — the payer chooses which.</summary>
+/// <summary>Emrakul: "Sacrifice three permanents" — the payer chooses which (never what can't be sacrificed).</summary>
 public record SacrificePermanents(int N) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
@@ -1337,6 +1349,7 @@ public record SacrificePermanents(int N) : Effect
 							MinChoices = N,
 							MaxChoices = N,
 							Prompt = $"Sacrifice {N} permanents",
+							Sacrifice = true,
 						},
 						new SacrificeChosenAction(),
 					],
@@ -1529,11 +1542,68 @@ public record PutIntoLibrary(Ref What, bool OnTop) : Effect
 	}
 }
 
+/// <summary>
+/// Explore (CR 701.44) — Captain Kathryn Janeway: "that creature explores. (Reveal the top card of your
+/// library. Put that card into your hand if it's a land. Otherwise, put a +1/+1 counter on the creature,
+/// then put the card back or put it into your graveyard.)" — "your" is the creature's controller; an empty
+/// library reveals nothing and the counter still goes on. ponytail: a creature already gone explores not at
+/// all (the rules still reveal, CR 701.44c); copy its controller from last-known if a card needs it. And
+/// several exploring in one Explore would read the same top card (each "bin it?" runs after) — TRK explores
+/// one creature at a time; chain them one by one if a card explores a group.
+/// </summary>
+public record Explore(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var creature in Permanents(What, s).ToList())
+		{
+			var player = creature.ControllerId;
+			var top = s.CardsIn(player, ZoneType.Library).FirstOrDefault();
+			if (top is not null)
+				s = s.MakeKnown(top.Id, Knowers.Everyone);
+			if (top is not null && top.Is(CardType.Land))
+			{
+				s = s.MoveCard(top.Id, s.ZoneId(player, ZoneType.Hand));
+				continue;
+			}
+			s = s.PutCounters(creature.Id, CounterKinds.PlusOne, 1);
+			if (top is not null)
+				s = s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext
+							.Remove(ChoosePermanentChoice.Chosen)
+							.SetItem(ContextKeys.Controller, player),
+						Steps =
+						[
+							new YesNoChoice(player, $"Put {top.Name} into your graveyard?"),
+							new IfChosenAction(
+								[
+									new MoveCardTo(top.Id, ZoneType.Graveyard)
+									{
+										From = ZoneType.Library,
+									},
+								]
+							),
+						],
+					}
+				);
+		}
+		return new(s);
+	}
+}
+
 /// <summary>Improvised Act: "You may discard a card. If you do, [Then]."</summary>
 public record MayDiscard(ImmutableList<GameAction> Then) : Effect
 {
 	/// <summary>The Wrath of Khan, chapter II: "You may exile a card from your hand. If you do, draw a card."</summary>
 	public bool Exile { get; init; }
+
+	/// <summary>All Good Things..., chapters I–III: "then exile a card from your hand" — not optional.</summary>
+	public bool Must { get; init; }
+
+	/// <summary>All Good Things...: "all cards exiled with this Saga" — the exiled card linked to this object of the source (ExiledBy, CR 607.2a).</summary>
+	public bool Linked { get; init; }
 
 	public override ActionResult Execute(GameState s) =>
 		s.CardsIn(Controller, ZoneType.Hand).Any()
@@ -1547,15 +1617,19 @@ public record MayDiscard(ImmutableList<GameAction> Then) : Effect
 							new ChooseCardsFromHandChoice
 							{
 								PlayerId = Controller,
-								MinChoices = 0,
+								MinChoices = Must ? 1 : 0,
 								MaxChoices = 1,
-								Prompt = Exile
-									? "You may exile a card from your hand"
-									: "You may discard a card",
+								Prompt = (Must, Exile) switch
+								{
+									(true, true) => "Exile a card from your hand",
+									(true, false) => "Discard a card",
+									(false, true) => "You may exile a card from your hand",
+									_ => "You may discard a card",
+								},
 							},
-							Exile
-								? new MoveChosenToAction(Controller, ZoneType.Exile)
-								: new MoveChosenToGraveyardAction { PlayerId = Controller },
+							!Exile ? new MoveChosenToGraveyardAction { PlayerId = Controller }
+							: Linked ? new ExileChosenLinkedAction()
+							: new MoveChosenToAction(Controller, ZoneType.Exile),
 							new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
 						],
 					}
@@ -2109,7 +2183,7 @@ public record SacrificeGreatestManaValue(Ref Who, CardType Types) : Effect
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
 		{
 			var victim = s.CardsIn(player, ZoneType.Battlefield)
-				.Where(c => c.Is(Types))
+				.Where(c => c.Is(Types) && s.CanSacrifice(c.Id)) // Quark's Treasures aren't candidates
 				.OrderByDescending(c => c.ManaCost.ManaValue)
 				.FirstOrDefault();
 			if (victim is not null)
@@ -2208,6 +2282,9 @@ public record ReturnChosenToHandAction : GameAction
 /// </summary>
 public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then) : Effect
 {
+	/// <summary>Genesis Device: "Sacrifice any number of lands you control, then [Then]" — Then reads how many (Count.PermanentsChosen).</summary>
+	public bool AnyNumber { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -2224,7 +2301,22 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 							Filter
 						)
 						{
-							Prompt = "You may sacrifice",
+							Prompt = AnyNumber ? "Sacrifice any number" : "You may sacrifice",
+							Sacrifice = true,
+							MaxChoices = AnyNumber
+								? Math.Max(
+									1,
+									Filters
+										.FilterChoices.Among(
+											Filter,
+											s,
+											Controller,
+											ZoneType.Battlefield,
+											GetInput<int>(ContextKeys.Source)
+										)
+										.Count()
+								)
+								: 1,
 						},
 						new SacrificeChosenAction(),
 						new IfChosenAction(Then),
@@ -2252,6 +2344,7 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 			)
 			{
 				Prompt = $"Sacrifice ({Source(s).Name})",
+				Sacrifice = true,
 			};
 			if (!choice.GetOptions(s, InputContext).IsEmpty)
 				s = s.SpawnAction(

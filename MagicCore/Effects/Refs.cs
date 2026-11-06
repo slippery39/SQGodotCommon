@@ -65,6 +65,7 @@ public enum RefKind
 	ControllerOfEventCard, // Tetsuko, Pursuer: "that creature's controller"
 	All, // "creatures you control", "cards in your graveyard": a zone's objects that match a filter
 	EachTarget, // Dominion Infiltration: "for each of them" — every target chosen, those still legal
+	ActivePlayer, // Peace in Our Time: "on each player's turn, that player" — whose turn it is
 }
 
 /// <summary>
@@ -96,6 +97,9 @@ public record Ref(RefKind Kind, int Index = 0)
 	public static readonly Ref EachOpponent = new(RefKind.EachOpponent);
 	public static readonly Ref EachPlayer = new(RefKind.EachPlayer);
 	public static readonly Ref Source = new(RefKind.Source);
+
+	/// <summary>Peace in Our Time: "At the beginning of combat on each player's turn, that player …" — whose turn it is.</summary>
+	public static readonly Ref ActivePlayer = new(RefKind.ActivePlayer);
 	public static readonly Ref EventCard = new(RefKind.EventCard);
 	public static readonly Ref EventObject = new(RefKind.EventObject);
 	public static readonly Ref ControllerOfEventCard = new(RefKind.ControllerOfEventCard);
@@ -212,6 +216,7 @@ public record Ref(RefKind Kind, int Index = 0)
 			: [],
 			RefKind.All => AllIn(s, context, controller, eventCard),
 			RefKind.EachTarget => targets,
+			RefKind.ActivePlayer => [s.GetGame().ActivePlayerId],
 			_ => throw new ArgumentOutOfRangeException(
 				nameof(Kind),
 				Kind,
@@ -319,6 +324,7 @@ public enum CountOf
 	CardsFromLibraryToGraveyardThisTurn, // Cruel Calculations: of the player [Ref]
 	PermanentsReturnedToHandThisTurn, // Miles O'Brien: "a permanent was returned to your hand from the battlefield this turn" — of the player [Ref]
 	NonlandCardsChosen, // Seasoned Cryomancer: "nonland cards [discarded] this way" — the last hand choice
+	PermanentsChosen, // Genesis Device: "up to that many" — the last permanent choice (the lands sacrificed)
 	TotalLoyaltyOf, // Jace, Reality Sculptor: "loyalty counters among Jaces you control"
 	SubtypesAmong, // Tam: "planeswalker types among planeswalkers you control"
 	DistinctNamesOf, // Strange new worlds: "the number of differently named lands you control"
@@ -407,6 +413,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static readonly Count NonlandCardsChosen = new(0, null, CountOf.NonlandCardsChosen);
 
+	/// <summary>Genesis Device: "Sacrifice any number of lands …, then search … for up to that many" — the last permanent choice.</summary>
+	public static readonly Count PermanentsChosen = new(0, null, CountOf.PermanentsChosen);
+
 	public static readonly Count LifeYouGainedThisTurn =
 		new(0, null, CountOf.LifeYouGainedThisTurn);
 	public static readonly Count CardsYouDrewThisTurn = new(0, null, CountOf.CardsYouDrewThisTurn);
@@ -456,6 +465,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0;
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
+		if (Kind == CountOf.PermanentsChosen)
+			return ChoosePermanentChoice.Read(context).Count();
 		if (Kind == CountOf.NonlandCardsChosen)
 			return ChooseCardsFromHandChoice
 				.Read(context)

@@ -472,7 +472,7 @@ public static class Rollout
 		var tally = s.GetPlayer(who).ThisTurn;
 		// No land in hand: no land drop to look for (a land played from another zone is missed).
 		var landDone =
-			tally.LandsPlayed >= 1 + tally.ExtraLandDrops
+			tally.LandsPlayed >= s.LandDrops(who)
 			|| !s.CardsIn(who, ZoneType.Hand).Any(c => c.Is(CardType.Land));
 		// With TheirWalkers on, a walker is TheirLoyalty's alone — judged by its effect, after the plays.
 		var playable =

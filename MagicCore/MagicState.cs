@@ -251,7 +251,22 @@ public static class MagicState
 	/// </summary>
 	/// <summary>The ONE way to sacrifice: to its owner's graveyard — a creature so moved dies.</summary>
 	public static GameState Sacrifice(this GameState s, int cardId) =>
-		s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
+		!s.CanSacrifice(cardId)
+			? s
+			: s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
+
+	/// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — every sacrifice asks: costs, choices, Treasure's own mana.</summary>
+	public static bool CanSacrifice(this GameState s, int cardId) =>
+		s.GetCard(cardId) is not { IsToken: true } card
+		|| !card.Subtypes.Contains("Treasure")
+		|| !s.CardsIn(card.ControllerId, ZoneType.Battlefield)
+			.Any(s.HasAbility<CantSacrificeTreasures>);
+
+	/// <summary>How many lands this player may play this turn: one, Way of the Paradox's extra ones, and one more per Captain Janeway (AdditionalLandEachTurn).</summary>
+	public static int LandDrops(this GameState s, int playerId) =>
+		1
+		+ s.GetPlayer(playerId).ThisTurn.ExtraLandDrops
+		+ s.CardsIn(playerId, ZoneType.Battlefield).Count(s.HasAbility<AdditionalLandEachTurn>);
 
 	/// <summary>
 	/// THE way a permanent is destroyed (CR 701.7) — a Destroy effect, lethal damage and deathtouch alike
@@ -324,6 +339,16 @@ public static class MagicState
 		return false;
 	}
 
+	/// <summary>Kira Nerys: another of your creatures is attacking, and a permanent of yours says it enters attacking.</summary>
+	static bool EntersAttacking(GameState s, int cardId, int controllerId)
+	{
+		var others = s.CardsIn(controllerId, ZoneType.Battlefield)
+			.Where(c => c.Id != cardId)
+			.ToList();
+		return others.Any(c => c.AttackingId != 0)
+			&& others.Any(s.HasAbility<YourCreaturesEnterAttacking>);
+	}
+
 	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
 	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
 	/// <param name="sunburst">Sunburst: "a charge counter on it for each color of mana spent to cast it".</param>
@@ -373,6 +398,17 @@ public static class MagicState
 				IsTapped = !landsUntapped && (tappedByOthers || tappedByItself),
 			}
 		);
+		// Kira Nerys: "If a creature you control would enter while you control an attacking creature, instead
+		// it enters tapped and attacking."
+		if (card.Is(CardType.Creature) && EntersAttacking(s, cardId, controllerId))
+			s = s.UpdateObject(
+				cardId,
+				s.GetCard(cardId) with
+				{
+					IsTapped = true,
+					AttackingId = s.OpponentOf(controllerId),
+				}
+			);
 		// The shocklands: "you may pay 2 life. If you don't, it enters tapped." Asked only when it decides.
 		if (
 			entersTapped is { UnlessYouPayLife: > 0 and var life }

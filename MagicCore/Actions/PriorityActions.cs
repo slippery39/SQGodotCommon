@@ -81,7 +81,7 @@ public record PlayLandAction : GameAction
 				"Lands are played in your main phase with an empty stack"
 			);
 		var tally = s.GetPlayer(PlayerId).ThisTurn;
-		if (tally.LandsPlayed >= 1 + tally.ExtraLandDrops)
+		if (tally.LandsPlayed >= s.LandDrops(PlayerId))
 			return ValidationResult.Invalid("Already played a land this turn");
 		if (
 			!s.HasObject(CardId)

@@ -512,8 +512,9 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a card you can exile for this");
-		if (costs.Any(c => c is TapSelfCost && !c.CanPay(s, PlayerId, CardId)))
-			return ValidationResult.Invalid("Cannot pay {T}");
+		// {T}, and Lieutenant Commander Data's "remove three counters from among" (the picking is after).
+		if (costs.Any(c => c is not TapUntappedCost && !c.CanPay(s, PlayerId, CardId)))
+			return ValidationResult.Invalid("Cannot pay its cost");
 		if (ability.SorcerySpeed && !Priority.AtSorcerySpeed(s, PlayerId))
 			return ValidationResult.Invalid("Activate only as a sorcery");
 		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))

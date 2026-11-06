@@ -550,17 +550,23 @@ public record May(string Prompt, Condition Can, ImmutableList<GameAction> Then) 
 	/// <summary>"If they didn't, [Otherwise]" — run on a "no". Not run when it can't be asked.</summary>
 	public ImmutableList<GameAction> Otherwise { get; init; } = [];
 
+	/// <summary>Peace in Our Time: "that player may draw a card. If they do, they can't attack this turn" — Then runs as the one who answers ("you" is them).</summary>
+	public bool ThenAsThem { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var decider = Who is null ? Controller : All(Who, s).FirstOrDefault();
-		return !Can.Holds(s, InputContext) || decider == 0
+		var context = InputContext.Remove(ChoosePermanentChoice.Chosen);
+		if (ThenAsThem && decider != 0)
+			context = context.SetItem(ContextKeys.Controller, decider);
+		return !Can.Holds(s, ThenAsThem ? context : InputContext) || decider == 0
 			? new(s)
 			: new(
 				s.SpawnAction(
 					new PipelineAction
 					{
 						// Its own key, cleared — as MaySacrifice: a "no" must not read a stale "yes".
-						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+						PipelineContext = context,
 						Steps =
 						[
 							new YesNoChoice(decider, Prompt),
@@ -837,6 +843,15 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 
 /// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>
 public record ExtraRedFromMountains : ThisTurnEffect;
+
+/// <summary>Peace in Our Time: "they can't attack this turn" — on that player; Combat.CanAttack.</summary>
+public record CantAttackThisTurn : ThisTurnEffect;
+
+/// <summary>The Needs of the Many: "You gain hexproof until end of turn." — TargetSpec: no opponent's spell or ability targets you.</summary>
+public record YouHaveHexproof : ThisTurnEffect;
+
+/// <summary>The Needs of the Many: "Prevent all damage that would be dealt to you this turn." — Damage.Deal: none is dealt, so no lifelink either.</summary>
+public record PreventAllDamageToYou : ThisTurnEffect;
 
 /// <summary>Brad Boimler's "until end of turn … that many plus one of each of those kinds of counters" — Rules.Replacements.Counters.</summary>
 public record CountersPlusOneThisTurn : ThisTurnEffect;
@@ -1153,6 +1168,13 @@ public record WinTheGame : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		new(s.WithPlayer(s.GetPlayer(s.OpponentOf(Controller)) with { HasLost = true }));
+}
+
+/// <summary>Kobayashi Maru Scenario: "Abandon Ship — You lose the game." (CR 104.3a) — now, as WinTheGame.</summary>
+public record LoseTheGame : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.WithPlayer(s.GetPlayer(Controller) with { HasLost = true }));
 }
 
 /// <summary>
