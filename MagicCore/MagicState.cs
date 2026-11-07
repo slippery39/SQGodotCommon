@@ -518,7 +518,13 @@ public static class MagicState
 				}
 			);
 		}
-		if (card.GetComponent<MayEnterAsCopy>() is { } asCopy)
+		if (
+			card.GetComponent<MayEnterAsCopy>() is { } asCopy
+			// nothing to copy: no prompt with no options (an empty forced pick can't be answered)
+			&& new Actions.ChooseCreatureToCopyChoice(controllerId, cardId) { Of = asCopy.Of }
+				.GetOptions(s, ImmutableDictionary<string, object>.Empty)
+				.Count > 0
+		)
 			s = s.SpawnAction(
 				new PipelineAction
 				{

@@ -242,6 +242,10 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   pool reads as that set's cards** (`ArenaDeck.ReadPool(text, set)` — a TRK prerelease pool pastes in); a deck export
   (`--builds`, the deck select's paste) is still FRA's. The console's `--compare`/`--draft` take `--set=trk`.
 
+- 2026-11-07, Claude (MC-5.4.6 — **for review**): DATA-2's self-play ratings were checked on FRA first; GreedyAi's
+  (10 000 games) rank FRA at ρ 0.20 against the interim table's 0.56 on the well-sampled cards (DATA-2, findings),
+  so they are NOT run on TRK; the search AI's (beam) are checked next.
+
 Open questions:
 - Booster collation: provisional (above) until MTGJSON has TRK's — then `import_mtgjson_boosters.py trk` replaces it.
 
@@ -716,3 +720,4 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
 - 2026-11-07: MC-5.4.3 — TRK's INTERIM ratings (`Sets/TRK.ratings.json`, rarity + measured value; ρ 0.41 on FRA, Decisions); `CardRatings.Of` reads a set's own table first
 - 2026-11-07: MC-5.4.4 — TRK sealed on MagicTable (the deck select's Set button) and in the console (`--compare=seed:N --set=trk`: 9 builds × 2 opponents, 18 games played); captured: a TRK pool, the White/Black suggestion, a game to turn 1
 - 2026-11-07: MC-5.4.5 — TRK Quick Draft on the table (the Set button; bots on the INTERIM ratings + colour lean): captured a TRK pack, 42 picks to the deck builder, a run's game against seat 2 to turn 2; the bots' colours over 10 drafts W 39 / U 36 / B 34 / R 30 / G 21 of 80 (`docs/findings/limited.md`)
+- 2026-11-07: MC-5.4.6 — DATA-2's self-play ratings (`--sim-ratings`); greedy self-play checked on FRA: ρ 0.20 against the interim's 0.56 — not run on TRK; beam's next. Its first run found "Enter as a copy?" asked with nothing to copy (fixed)

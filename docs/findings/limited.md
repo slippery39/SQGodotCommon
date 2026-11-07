@@ -157,3 +157,21 @@ Ten drafts (`--draft --set=trk`, seeds 1–10), 80 bot seats, rating (TRK's INTE
 39, Blue 36, Black 34, Red 30, Green 21 seats (an even spread is 32 each) — far flatter than FRA on 17lands (Blue 55,
 Red 15 of 80, LIM-2.2), as a table that is mostly rarity gives no colour a lead. A seat averages 30.0 of its 42 picks
 in its colours, 5.7 outside, the rest colourless.
+
+## Self-play ratings (DATA-2) checked on FRA against 17lands (2026-11-07, MC-5.4.6)
+
+`--sim-ratings=fra`: each card's games-in-hand win rate over AI-vs-AI sealed games — two AI sealed decks a game
+(`SealedBuilder.Opponent`, built on FRA's 17lands ratings), a card "in hand" if a copy left its library — pulled to
+the mean below 200 games, as `CardRatings` does. Spearman's ρ against 17lands' GIH WR, beside the interim method
+(rarity median ± the CardValues rank) on the same cards:
+
+| self-play | cards (games in hand) | ρ self-play | ρ interim |
+|---|---|---|---|
+| GreedyAi, 10 000 games (17 min, 243 906 card-games) | 279 (all) | 0.10 | 0.41 |
+| | 189 (≥ 50) | 0.15 | 0.52 |
+| | 158 (≥ 200) | 0.20 | 0.56 |
+
+**GreedyAi's self-play loses to the interim table everywhere.** Its worst misses are blue value and control cards it
+can't play — Fblthp, Impossibly Lost (the lowest of all: 38.6% over 2 265 games; 17lands 59.9%), Austere Command, Jace's
+Machinations, Jace, Reality Sculptor, Sublime Epiphany, Seasoned Cryomancer, Verdant Kraken: the rate measures the
+AI's skill with a card as much as the card. 32 FRA cards never reached a game in hand (the builder rarely plays them).

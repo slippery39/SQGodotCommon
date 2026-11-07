@@ -169,6 +169,11 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 # CardRatings.Of reads <SET>.ratings.json before <SET>.17lands.json — delete it when the set gets real ratings.
 dotnet run -c Release --project MagicConsole -- --interim-ratings=trk
 
+# DATA-2: each card's games-in-hand win rate in AI-vs-AI sealed games -> sim_results/sim_ratings_<set>_<ai>.json
+# (greedy ~590 games/min on 16 cores; beam ~20). --write makes it MagicCore/Sets/<SET>.ratings.json. Check it on FRA
+# against 17lands before trusting it for a set (docs/findings/limited.md): greedy's ranked FRA worse than the interim table.
+dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000] [--ai=greedy|beam] [--write]
+
 # A Quick Draft with 8 bots (LIM-2.2): each seat's two colours and its picks in order, with rating — FRA, or --set=trk (MC-5.4)
 dotnet run -c Release --project MagicConsole -- --draft [--seed=N] [--set=trk]
 

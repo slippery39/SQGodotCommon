@@ -240,6 +240,23 @@ public class FraSpecialGuestTests : FraBoardTest
 		Assert.That(s.GetCard(duplicate).Name, Is.EqualTo("Flesh Duplicate"));
 	}
 
+	/// <summary>
+	/// Nothing to copy: no prompt at all — an empty forced pick can't be answered, and GreedyAi's look-ahead threw
+	/// on one in FRA self-play (MC-5.4.6). The 0/0 just dies, as it did when a copy was declined.
+	/// </summary>
+	[Test]
+	public void FleshDuplicate_WithNoCreatureToCopy_AsksNothing_AndDies()
+	{
+		var duplicate = Hand("Flesh Duplicate", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = duplicate });
+		Resolve(choice =>
+			choice is ChooseCreatureToCopyChoice
+				? throw new AssertionException("asked to copy with nothing to copy")
+				: choice.Options.Take(choice.MinChoices).Select(o => o.Id)
+		);
+		Assert.That(Alive(duplicate), Is.False);
+	}
+
 	/// <summary>Cleanup ends "until end of turn" copies only (review, 2026-10-23: it undid this one).</summary>
 	[Test]
 	public void FleshDuplicate_DamagedStaysACopyThroughCleanup()

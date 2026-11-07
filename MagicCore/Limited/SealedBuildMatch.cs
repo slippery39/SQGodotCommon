@@ -69,7 +69,7 @@ public static class SealedBuildMatch
 	}
 
 	/// <summary>A pool's unplayed cards outside the game, as <see cref="ArenaDeck.ReadPool"/> reads them: playable, and no basics — they're free.</summary>
-	static IReadOnlyList<CardDefinition> Outside(IEnumerable<string> cards) =>
+	internal static IReadOnlyList<CardDefinition> Outside(IEnumerable<string> cards) =>
 		[
 			.. cards
 				.Where(n => CardRegistry.IsImplemented(n) && !SealedBuilder.Basics.Contains(n))

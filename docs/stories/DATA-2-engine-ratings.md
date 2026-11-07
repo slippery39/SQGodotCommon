@@ -32,9 +32,17 @@ Open questions:
 - The simulated win rate's exact measure (games in hand, as 17lands, or another) and the games it needs
 - How many games that takes, and how long (ask before any run over ~15 minutes)
 
+- 2026-11-07, Claude (MC-5.4.6, under Shayne's MC-5.4 permission: the rating run may run unattended — **Claude's
+  defaults, for review**): the measure is **games in hand, as 17lands** — a card counts for a game if a copy left its
+  library (read from the last state); the decks are AI sealed opponents' builds; fewer than 200 games pulled to the
+  mean, as `CardRatings`. Checked on FRA against 17lands BEFORE any TRK run (MC-5.4's rule).
+
 ## Tasks
 
-- [ ] DATA-2.1 Interview the open questions
+- [ ] DATA-2.1 Interview the open questions — answered by Claude's defaults (above) for MC-5.4; Shayne to review
+- [x] DATA-2.2 `SimulatedRatings` + `MagicConsole --sim-ratings` (2026-11-07, MC-5.4.6) — checked on FRA: GreedyAi's
+      self-play ranks FRA at ρ 0.20 against the interim table's 0.56 (`docs/findings/limited.md`); its first run
+      found an unanswerable "Enter as a copy?" with nothing to copy (fixed in `EnterBattlefield`)
 
 ## Next
 
@@ -45,3 +53,4 @@ and decks for self-play).
 ## Log
 
 - 2026-10-20: created from LIM-1.4.
+- 2026-11-07: DATA-2.2 built for MC-5.4 (TRK's bots); greedy self-play checked on FRA, worse than the interim table.
