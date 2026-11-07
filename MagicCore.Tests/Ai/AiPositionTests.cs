@@ -344,7 +344,7 @@ public class AiPositionTests
 	// answered every "you may" with nothing, so the −2 was "−2 loyalty for nothing" — and the plan made as
 	// Way of the Deathbringer was cast (#257) drew, replayed at #262 without a search. Now a "you may" is
 	// answered with its chooser's best (Rollout.Settings.Mays). Played as the table plays — one AI from
-	// #257, its plan and all. The CONTROL: "you may" declined, it draws. Shayne's whole answer (2026-10-30)
+	// #257, its plan and all. Shayne's whole answer (2026-10-30)
 	// is the 4/4 from Blessed Ghoul — the test after this one.
 	[Test]
 	public void AYouMay_IsTakenInTheLookAhead_TheDeathbringersBeast()
@@ -353,37 +353,8 @@ public class AiPositionTests
 		var (before, _) = record.Replay();
 		var me = before[256].DecidingPlayerId();
 		Assert.That(before[261].DecidingPlayerId(), Is.EqualTo(me), "#262 is the AI's");
-		string AtMove262(bool mays)
-		{
-			// the control is the look-ahead as it was: Settle's own "you may" (AI-17.6) takes the −2 too
-			var ai = new BeamSearchAi(
-				me,
-				new(
-					RolloutSettings: BeamSearchAi.DefaultRollout with
-					{
-						Mays = mays,
-					},
-					Without: mays ? Evaluator.Terms.None : Evaluator.Terms.SettleChoices
-				)
-			);
-			var played = "";
-			for (var n = 257; n <= 262; n++)
-			{
-				var s = before[n - 1];
-				if (s.DecidingPlayerId() != me)
-					continue;
-				played = MoveTokens.Token(s, ai.Decide(s));
-				if (n == 257) // its plan follows the record only if it casts what was cast
-					Assert.That(MoveTokens.Same(played, record.Moves[256].Token), $"mays {mays}: #257");
-			}
-			return played;
-		}
-
-		var drew = record.Moves[261].Token;
-		Assert.That(
-			MoveTokens.Same(AtMove262(false), drew),
-			"the control: blind to the 4/4, it draws"
-		);
+		// Its CONTROL ("you may" declined, it drew at #262) was dropped 2026-11-07 (AI-9.3, Shayne): with walkers priced
+		// over their lifetime, that old look-ahead no longer casts Way of the Deathbringer at #257 at all.
 		// Since AI-17.6 it goes to combat at #262, attacks with Tinybones, then −2 — the 4/4 made this turn.
 		Assert.That(
 			DeathbringerTurn(record, before, me)
@@ -685,10 +656,13 @@ public class AiPositionTests
 	{
 		var attacker = TheyAttackWith(kind);
 
-		Assert.That(
-			BouncesIt(attacker, Evaluator.Terms.KnownHand),
-			"the control: a bounced creature priced as half a card, it bounces"
-		);
+		// The control holds for the vanilla 3/4 only since AI-9.3 (2026-11-07): the walkers' lifetime raised the blind
+		// price of an unseen card, and priced blind the plain 3/3 is now held too (Shayne: no point rebuilding it).
+		if (kind == "vanilla")
+			Assert.That(
+				BouncesIt(attacker, Evaluator.Terms.KnownHand),
+				"the control: a bounced creature priced as half a card, it bounces"
+			);
 		Assert.That(BouncesIt(attacker), Is.False, "it holds");
 	}
 
@@ -891,11 +865,9 @@ public class AiPositionTests
 	// on turn 4, two lands in play. "Keeping the island is better, keeping protege's awakening, hapatra the desert frost
 	// over jace is clearly not right. That Jace literally has the potential to win the game on its own." The search
 	// discards The Theorist, Jace Beleren — its held price (3.3, the card-value sandbox: the cast turn alone) ranks it
-	// below every other spell in hand. KNOWN DEFECT: un-ignore once AI-9.3 prices a walker over its lifetime.
+	// below every other spell in hand. Fixed by AI-9.3: priced over its lifetime (a 1/1 a turn, a card each opponent's
+	// draw step), the table puts it at its measured value, read from the table, never restated here.
 	[Test]
-	[Ignore(
-		"Known defect: a walker in hand priced by its cast turn alone (AI-9.3) — The Theorist discarded"
-	)]
 	public void TheoristDiscardedOverCommons_KeepsTheWalker()
 	{
 		var s = KeptRecords.Before("TheoristDiscardedOverCommons", 72);
@@ -903,18 +875,69 @@ public class AiPositionTests
 		Assert.That(MoveTokens.Describe(s, choice), Does.Not.Contain("The Theorist"));
 	}
 
-	/// <summary>The control: the search as it is makes the recorded play — the position still shows the defect.</summary>
+	/// <summary>
+	/// The control, the whole price reverted (`+walkernow`): the search without it AND the hand's cards measured
+	/// without it — the held price comes from the table, which the lifetime moves — makes the recorded play.
+	/// </summary>
 	[Test]
-	public void TheoristDiscardedOverCommons_Control_TheSearchDiscardsHim() =>
-		Assert.That(
-			MoveTokens.Same(
-				MoveTokens.Token(
-					KeptRecords.Before("TheoristDiscardedOverCommons", 72),
-					new BeamSearchAi(
-						KeptRecords.Before("TheoristDiscardedOverCommons", 72).DecidingPlayerId()
-					).Decide(KeptRecords.Before("TheoristDiscardedOverCommons", 72))
-				),
-				KeptRecords.Get("TheoristDiscardedOverCommons").Moves[71].Token
-			)
+	public void TheoristDiscardedOverCommons_Control_TheSearchDiscardsHim()
+	{
+		var s = KeptRecords.Before("TheoristDiscardedOverCommons", 72);
+		var me = s.DecidingPlayerId();
+		var same = Evaluator.Without(
+			Evaluator.Terms.WalkerLifetime,
+			() =>
+			{
+				var values = CardValues.Fra.ToDictionary();
+				foreach (
+					var e in CardValues.Measure(
+						[
+							.. s.CardsIn(me, ZoneType.Hand)
+								.Select(c => c.Name)
+								.Distinct()
+								.Select(CardRegistry.Get),
+						]
+					)
+				)
+					values[e.Name] = e;
+				var held = new HeldValues(values, BeamSearchAi.Settings.HeldFraction);
+				var ai = new BeamSearchAi(
+					me,
+					new BeamSearchAi.Settings(
+						RolloutSettings: BeamSearchAi.DefaultRollout with
+						{
+							Held = held,
+						}
+					)
+				);
+				return MoveTokens.Same(
+					MoveTokens.Token(s, ai.Decide(s)),
+					KeptRecords.Get("TheoristDiscardedOverCommons").Moves[71].Token
+				);
+			}
 		);
+		Assert.That(same);
+	}
+
+	// Shayne, 2026-11-07 (AI-9.3): "Usually we will always want to draw a card here. Loyalty = Life should not be a
+	// 1-1 thing … in 99.9% of cases, you are drawing a card of a jace that allows you to (assuming you can't use the
+	// loyalty for something else)". The position suite, White-Black vs White-Blue Jace seed 1, move 108: our second
+	// main phase at 4 life, a Jace token ("−1: Surveil 1", "−3: Draw a card") at 6 loyalty, our 3/2 against their 3/3
+	// deathtouch and a tapped 1/4. With each turn of the lifetime at 0.7 of the one before, the second −3 kept for
+	// later outweighed the card drawn now (the sampled draw a Plains) and the search passed; at 0.6 it draws.
+	// Revert-checked by hand (LifetimeDecay 0.7: Pass). AI-8.2's price (`+walkernow`) draws too.
+	[Test]
+	public void AJaceToken_DrawsWithItsMinusThree_RatherThanBankingTheLoyalty()
+	{
+		var suite = PositionSuite.Tracked()!;
+		var (_, s) = PositionSuite
+			.States(suite)
+			.Single(x =>
+				suite.Games[x.Position.GameIndex]
+					is { Deck1: "White-Black", Deck2: "White-Blue Jace", Seed: 1 }
+				&& x.Position.Move == 108
+			);
+		var choice = MoveTokens.Token(s, new BeamSearchAi(s.DecidingPlayerId()).Decide(s));
+		Assert.That(MoveTokens.Describe(s, choice), Is.EqualTo("Jace [−3]"));
+	}
 }

@@ -10,7 +10,7 @@ namespace MagicCore.Ai;
 /// How good a position is for one player — the score every MagicCore AI compares moves by.
 /// Card-agnostic: it reads the board, life and hand, never card text.
 /// </summary>
-public static class Evaluator
+public static partial class Evaluator
 {
 	/// <summary>A non-land card in hand when nothing measures it — the flat price every AI began with.</summary>
 	public const double FlatHandCard = 1.2;
@@ -212,6 +212,14 @@ public static class Evaluator
 		/// and an edict's sacrifice took the first listed (AI-17.6, the review of item 1) — `+shallowsettle`.
 		/// </summary>
 		SettleDeep = 8192,
+
+		/// <summary>
+		/// A planeswalker priced by its value over its lifetime (AI-9.3, Shayne: "value over time engines"):
+		/// what its abilities make each turn it lives, the turns it lives judged by the pressure on it, and
+		/// the damage it soaks (<see cref="WalkerLifetime"/>) — without it, half of one best activation
+		/// (AI-8.2's price, `+walkernow`).
+		/// </summary>
+		WalkerLifetime = 16384,
 	}
 
 	/// <summary>
@@ -301,8 +309,11 @@ public static class Evaluator
 			: (life + through - 1) / through;
 	}
 
-	/// <summary>The power that gets past <paramref name="defender"/>'s blockers in <paramref name="attacker"/>'s next attack.</summary>
-	static int Through(GameState s, int attacker, int defender)
+	/// <summary>
+	/// The power that gets past <paramref name="defender"/>'s blockers in <paramref name="attacker"/>'s next attack
+	/// — each attacker's power changed by <paramref name="bonus"/> (a walker's pump or −N/−0, AI-9.3).
+	/// </summary>
+	static int Through(GameState s, int attacker, int defender, int bonus = 0)
 	{
 		var attackers = new List<(Card Card, int Power)>();
 		foreach (var c in s.CardsIn(attacker, ZoneType.Battlefield))
@@ -310,7 +321,7 @@ public static class Evaluator
 				c.Is(CardType.Creature)
 				&& Alive(s, c)
 				&& (!s.Has(c, "Defender") || s.Has(c, Combat.AttacksDespiteDefender))
-				&& s.Power(c) - Pumps(c).Power is > 0 and var power
+				&& s.Power(c) - Pumps(c).Power + bonus is > 0 and var power
 			)
 				attackers.Add((c, power));
 		if (attackers.Count == 0)
@@ -401,18 +412,12 @@ public static class Evaluator
 		// capping. A cap makes "more" tie with "less", and a tie silently picks the passive move:
 		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
 		// opponent above it; lands capped at 7 made an 8th land worth less in play than in hand.
-		var lands = Taper(board.Count(c => c.Is(CardType.Land)), 7, 1.5, 0.4);
+		var lands = LandsValue(board.Count(c => c.Is(CardType.Land)));
 		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(c => Walker(s, c, held));
 		var others = board
 			.Where(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
 			.Sum(c => Other(s, c, keywords));
-		var life = s.GetPlayer(player).Life;
-		var lifeValue =
-			life <= 0
-				? -50
-				: Taper(life, 20, 1.0, 0.5)
-					+ (life < 6 ? life - 6 : 0) // low life hurts more
-					- (life < 6 && !IsOff(Terms.LowLifeRisk) ? (6 - life) * (6 - life) / 2.0 : 0);
+		var lifeValue = LifeValue(s.GetPlayer(player).Life);
 		// A land in hand is worth less than a spell, so playing even a surplus land scores a gain.
 		// Floating mana scores nothing: it empties at the end of the step, which Settle never reaches.
 		// With held values the opponent's hand is BLIND — one price per card, land or not (HeldValues) —
@@ -461,6 +466,17 @@ public static class Evaluator
 		return new(creatures, walkers, lands, others, hand, lifeValue, graveyard);
 	}
 
+	/// <summary>Lands in play: 1.5 each to 7, 0.4 beyond — the ONE land price (a walker's mana reads it too).</summary>
+	static double LandsValue(int lands) => Taper(lands, 7, 1.5, 0.4);
+
+	/// <summary>A player's life: the ONE life price (a walker's damage, life and soak read it too, AI-9.3).</summary>
+	static double LifeValue(int life) =>
+		life <= 0
+			? -50
+			: Taper(life, 20, 1.0, 0.5)
+				+ (life < 6 ? life - 6 : 0) // low life hurts more
+				- (life < 6 && !IsOff(Terms.LowLifeRisk) ? (6 - life) * (6 - life) / 2.0 : 0);
+
 	/// <summary>
 	/// The mana cost of the cheapest ability that returns this graveyard card itself (Blessed Ghoul's
 	/// "{2}{W/B}: Return this card from your graveyard to your hand"), or null.
@@ -493,6 +509,8 @@ public static class Evaluator
 		var loyalty = c.Loyalty * 0.35;
 		if (IsOff(Terms.WalkerUse))
 			return 2 + loyalty;
+		if (!IsOff(Terms.WalkerLifetime))
+			return WalkerLifetime(s, c, held);
 		var best = 0.0;
 		foreach (var a in Loyalty.AbilitiesOf(s, c))
 			// "Activate only if" isn't checked here: a gated ability stays unpriced (the flat body).

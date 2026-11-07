@@ -2,6 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Ai;
@@ -183,6 +184,49 @@ public class GreedyAiTests
 				Is.GreaterThan(values[3] + 2),
 				"the Beast, once affordable, is priced"
 			);
+	}
+
+	// AI-9.3: priced over its lifetime, every scripted walker's value still rises with each loyalty counter
+	// (CLAUDE.md: a cap ties more with less) — on an empty board, and with a 3/3 of theirs attacking it
+	// unblocked, so the turns it lives depend on its loyalty.
+	[TestCase(false)]
+	[TestCase(true)]
+	public void EveryWalkersLifetime_RisesWithEachCounter(bool pressed)
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var me = s.GetGame().StartingPlayerId;
+		if (pressed)
+			(s, _) = TestGames.Put(
+				s,
+				s.OpponentOf(me),
+				TestGames.Creature("Bear", "3/3"),
+				ZoneType.Battlefield
+			);
+		var walkers = CardRegistry
+			.Scripted.Where(n => CardRegistry.DataOf(n).TypeLine.Contains("Planeswalker"))
+			.ToList();
+		Assert.That(walkers, Is.Not.Empty);
+		foreach (var name in walkers)
+		{
+			var (with, walker) = TestGames.Put(s, me, CardRegistry.Get(name), ZoneType.Battlefield);
+			var values = Enumerable
+				.Range(0, 11)
+				.Select(loyalty =>
+					Evaluator.Walker(
+						with,
+						with.GetCard(walker) with
+						{
+							Loyalty = loyalty,
+						},
+						BeamSearchAi.DefaultRollout.Held
+					)
+				)
+				.ToList();
+			Assert.That(
+				values.Zip(values.Skip(1)).All(p => p.Second > p.First),
+				$"{name}: {string.Join(", ", values.Select(v => v.ToString("0.00")))}"
+			);
+		}
 	}
 
 	// Keywords (AI-5.3): of two otherwise equal 2/2s and the mana for one, the one with haste — once

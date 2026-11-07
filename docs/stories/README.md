@@ -29,7 +29,7 @@ every task a sprint file names exists.
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
 1. **MC-5** — Star Trek (TRK): sealed and draft before Arena's November 10 release
-2. **AI-9** — resources priced by what they provide: AI-9.3, a planeswalker's value over its lifetime, NEXT (Shayne, 2026-11-07 — the win-rate data is blocked on it)
+2. **AI-9** — resources priced by what they provide: AI-9.3 done (2026-11-07); AI-9.7 (Quadrant Theory boards) and AI-9.8 (the card-value table charged for mana cost) next — order Shayne's call
 3. **MC-6** — MagicCore's pieces compose: one per family, not one per card phrase (after MC-5.4)
 4. **DEV-4**, **DEV-5** — the rules file split by subsystem; one end-of-batch check script — BEFORE any new set (MC-4's cube included; Shayne, 2026-11-07)
 5. **LIM-2** — draft against bots: FRA first, a cube later

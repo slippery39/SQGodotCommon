@@ -74,6 +74,8 @@ MagicCore/
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
 ├── Ai/Evaluator.cs      THE position score every AI compares moves by (a change shows in GoldenAiReplay.txt);
 │                        HeldValues: a held card priced by its measured value — the search's setting (AI-1)
+├── Ai/Evaluator.Lifetime.cs  its planeswalker price: value over the walker's lifetime (AI-9.3) — and Effect,
+│                        THE price of one effect read from its type (damage, removal, draws, mana, emblems …)
 ├── Ai/IAi.cs            what every AI is: Decide(state) for its player, returning the move too (AiDecision); RandomAi.cs is the floor
 ├── Ai/AiMatch.cs        THE strength harness: AI vs AI, every deck pairing, seats swapped (MagicConsole --match)
 ├── Ai/EarlyStop.cs      when a match has said enough: 5pp better / worse / neither, judged on mirror pairs (--until-clear)

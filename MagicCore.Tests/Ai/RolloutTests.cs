@@ -630,14 +630,10 @@ public class RolloutTests
 	// a card? Very likely"; a Jace token depends on the board): Chandra, Torch of Defiance at 4 loyalty. The
 	// search answers the declaration's questions one at a time, as in a game, from the whole attack it
 	// chose at the first.
-	// KNOWN DEFECT (Shayne, 2026-10-29: "as long as its noted as a known defect"): the whole attack offers
-	// "the 4/4 at Chandra, the rest at the face", but the evaluator prices Chandra by her body and loyalty
-	// alone (3.40 at 4, 2.70 at 2 — her abilities unpriced, AI-9.3), so the search chips her with the 2/2
-	// and sends the 4/4 face. Un-ignore once AI-9.3 prices a walker's abilities.
+	// Ignored from AI-17.3 as a known defect (her abilities unpriced: the 2/2 chipped her, the 4/4 went face) —
+	// found passing on 2026-11-07 with AI-8.2's price as well as AI-9.3's lifetime: a later change had fixed it
+	// while it sat ignored. Kept as a plain test; it is no evidence for either price.
 	[Test]
-	[Ignore(
-		"Known defect: walker abilities unpriced (AI-9.3) — the 2/2 chips Chandra, the 4/4 goes face"
-	)]
 	public void AWholeAttack_SendsTheFourPowerAtTheWalker_TheRestAtTheFace()
 	{
 		var s = TestGames.InFirstMain();

@@ -35,3 +35,4 @@ session per batch was simulated to save 37–40%.
 | 2026-11-07 | MC-5.6 batch 3a: Riku, Prosper, Drivnod (Phyrexian mana, keyword counters, LandPlayed, modes counted), 3 cards | 5b8df0f2 | 149 | 265k | 4.9M |
 | 2026-11-07 | MC-5.6 batch 3b: Sen Triplets, Flare of Fortitude, Mogis on MC-6.15/6.9/6.13 + Granted perf fix, 3 cards | b3f0fe83 | 181 | 232k | 5.2M |
 | 2026-11-07 | MC-5.4 overnight: TRK collation, art, interim ratings, sealed + draft on the table; DATA-2 self-play checked on FRA (loses to interim); walker games -> AI-9.3 next | 872d3ed6 | 325 | 337k | 13.1M |
+| 2026-11-07 | AI-9.3: walkers priced over their lifetime, 2 positions, match no difference | d0d30868 | 144 | 217k | 4.9M |

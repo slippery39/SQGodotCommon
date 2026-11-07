@@ -1365,3 +1365,46 @@ the committed plan stays (`+noplans` kept as a switch).
 table's `Settings.Interactive`) passes as it does uncapped — 22 pass, Chandra's (AI-9.3) ignored; a
 time-capped run depends on the machine, so this is a check on a quiet one (2026-10-30), not a test.
 
+
+## A planeswalker priced over its lifetime (2026-11-07, AI-9.3)
+
+AI-8.2 priced a walker on the battlefield at half of ONE activation (a token or a draw; every other effect 0) plus
+0.35 a loyalty counter, and the card-value table measured one in hand by its cast turn alone — FRA's walkers 2.7–3.75,
+the bottom quarter. Now (`Evaluator.Terms.WalkerLifetime`, `Evaluator.Lifetime.cs`; off is `beam+walkernow`): the best
+sequence of its abilities, one a turn, over 5 turns at 0.6 each; it lives while its loyalty outlasts the power that
+gets past our blockers × the share sent at it (1 − 1 ÷ their turns to kill us); the damage it soaks at half the life
+price; every effect priced from its type (Shayne's prices: surveil 0.33 of a card, "exile the top, you may cast it"
+0.8, N mana a turn as N lands, a stopped creature its power × turns × the life price, emblems as their yield a turn).
+
+- **Monotonic only by search.** "Use an ability as soon as affordable" plans were not: the Theorist fired his −6 a
+  turn sooner at 3 loyalty than at 2 and died a turn sooner (14.45 < 15.00). A search over (turn, loyalty left)
+  is monotonic by construction; `EveryWalkersLifetime_RisesWithEachCounter` pins every scripted walker 0–10.
+- **0.6 a turn, not 0.7.** At 0.7 a Jace token at 6 loyalty passed instead of −3 (draw): the second −3, two turns
+  away, outweighed the card the search's one sampled world drew (a Plains). Soak at a full life point was not the
+  cause (lowering it to ½ alone didn't flip it), though Shayne ruled it isn't 1:1 either.
+- **Positions:** the Theorist discarded to Rank Rat (kept: the control re-measures the hand without the term and
+  discards him), the Jace token's −3 (Shayne's). `AWholeAttack_SendsTheFourPowerAtTheWalker…` (Chandra, ignored since
+  AI-17.3) was found passing at HEAD with the old price — no evidence either way.
+- **The match** (`--match=beam,beam+walkernow --until-clear`): 384 games, beam 49.2% ± 1.4pp (189–195) — no 5pp
+  difference either way. The field's only walkers are White-Blue Jace's (23–105 for both), so it sees little. Run
+  before the review's fixes below, which moved 6 more of the suite's 288 decisions.
+- **The review's fixes (/pre-commit):** a point of life priced as the life term prices it (`LifeValue`: a full
+  point at 20, where a copy of the taper gave ½; the low-life surcharge included); a "whenever you activate a
+  loyalty ability" trigger counted only on a turn it activates; a new Jace token at the walker's own price (floor
+  2); the edict's filter read; Body and the land price called, not copied; surveil's rider priced from its effects.
+- **The suite:** 18 of 288 decisions differ from `beam+walkernow`. Against the oracle re-read with the new price:
+  beam 88.2% agreement, 0.85 given up a position, 1 win missed, 0 losses walked into; `beam+walkernow` 85.8%, 1.09,
+  2, 1. GreedyAi's recorded games moved in 10 of 12 (the Jace deck, and White-Black, whose Vraska's Final Mercy
+  empowers a Jace).
+- **The card-value table** (computed from `FRA.values.json`, `FRA.17lands.json` GIH WR, cards with 500+ games): rank
+  agreement with 17lands premier 0.188 → 0.257, sealed 0.236 → 0.310. Walkers still read 27 percentiles low on
+  average: close for Ajani Unrelenting, Garruk, Veiled Butcher; far for Jace, Reality Sculptor (his Jace token's
+  draws at the sandbox's flat 1.2; his −3 blunts attacks, 0 on the stall board) and The Theorist. Ajani Resolute stays low (his life gain → loyalty loop unpriced) — 17lands rates him low too.
+- **The table's other outliers, by cause:** (1) **mana cost is free** — each card measured with its own lands; our
+  percentile minus 17lands' by mana value: 1 −21, 2 −9, 3 +1, 4 +12, 5 +20, 7+ +18 (Yargle, Goliath of Otaria +87,
+  Emrakul, the Exigent Doom +81, Karn, Gilded Guardian +75) — AI-9.8; (2) **card draw at 1.2** off a library of
+  basics (Overwrite the Multiverse, Protege's Awakening, Jace's Machinations); (3) **a symmetric board**: sweepers
+  read 0 (Austere Command, Kindred Judgment) — AI-9.7; (4) **15 cards measure 0** — instants that need their turn or
+  a stack (Icy Reception, Rise of the Deathbringer), an empty opposing hand (Mind Twist), combo pieces (Splinter
+  Twin); (5) **empty graveyards** (Tarmogoyf); (6) **mid-size bodies** the creature formula likes and 17lands doesn't
+  (Rampart Hunter, Winter, Team Player, Arni, Renowned Champion).

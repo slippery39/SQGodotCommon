@@ -95,6 +95,8 @@ public static class AiMatch
 			["notrample"] = o => o with { Without = o.Without | Evaluator.Terms.Trample },
 			// A planeswalker as a flat body and 0.35 a counter (before AI-8.2): beam+walkercount.
 			["walkercount"] = o => o with { Without = o.Without | Evaluator.Terms.WalkerUse },
+			// A planeswalker at half of one activation, not its lifetime (before AI-9.3): beam+walkernow.
+			["walkernow"] = o => o with { Without = o.Without | Evaluator.Terms.WalkerLifetime },
 			// A held instant or flash card at its plain held price, not as an option (before AI-13): beam+nooption.
 			["nooption"] = o => o with { Without = o.Without | Evaluator.Terms.HoldOption },
 			// Every card in the opponent's hand priced blind, known or not (before AI-9.5): beam+blindhand.

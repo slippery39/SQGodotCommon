@@ -1,7 +1,7 @@
 [
   {
     "Name": "Academic Ascent",
-    "Value": 2.7
+    "Value": 2.2
   },
   {
     "Name": "Aerid Konstrari",
@@ -13,11 +13,11 @@
   },
   {
     "Name": "Ajani Resolute",
-    "Value": 2.7
+    "Value": 2.2
   },
   {
     "Name": "Ajani Unrelenting",
-    "Value": 3.75
+    "Value": 16.41
   },
   {
     "Name": "Ajani's Anguish",
@@ -29,7 +29,7 @@
   },
   {
     "Name": "Arcane Amphisbaena",
-    "Value": 8
+    "Value": 7.5
   },
   {
     "Name": "Archive Arbiter",
@@ -109,11 +109,11 @@
   },
   {
     "Name": "Chandra, Chill of Compliance",
-    "Value": 3.05
+    "Value": 9.3
   },
   {
     "Name": "Chandra, Torch of Defiance",
-    "Value": 3.4
+    "Value": 10.31
   },
   {
     "Name": "Charge the Sanctum",
@@ -343,11 +343,11 @@
   },
   {
     "Name": "Garruk, Curse Breaker",
-    "Value": 8.15
+    "Value": 12.33
   },
   {
     "Name": "Garruk, Veiled Butcher",
-    "Value": 3.75
+    "Value": 15.77
   },
   {
     "Name": "Geist of Saint Thalia",
@@ -426,7 +426,7 @@
   },
   {
     "Name": "Hexhaven Battalion",
-    "Value": 23.7
+    "Value": 23.2
   },
   {
     "Name": "Hexhaven Dueling Arena",
@@ -477,11 +477,11 @@
   },
   {
     "Name": "Jace's Machinations",
-    "Value": 4.8
+    "Value": 2.8
   },
   {
     "Name": "Jace, Reality Sculptor",
-    "Value": 3.75
+    "Value": 3.68
   },
   {
     "Name": "Jiang Yanggu, Alone",
@@ -501,7 +501,7 @@
   },
   {
     "Name": "Keeper of the Quiet Hour",
-    "Value": 11.2
+    "Value": 10.7
   },
   {
     "Name": "Kindred Judgment",
@@ -627,7 +627,7 @@
   },
   {
     "Name": "Mindseeker Oculus",
-    "Value": 9.4
+    "Value": 8.4
   },
   {
     "Name": "Mountain",
@@ -648,7 +648,7 @@
   },
   {
     "Name": "No Admittance",
-    "Value": 11.85
+    "Value": 11.6
   },
   {
     "Name": "Null Summoner",
@@ -665,7 +665,7 @@
   },
   {
     "Name": "Overwrite the Multiverse",
-    "Value": 5.5
+    "Value": 3
   },
   {
     "Name": "Paradox Shaper // Omit Variables",
@@ -728,7 +728,7 @@
   },
   {
     "Name": "Protege's Awakening",
-    "Value": 4.4
+    "Value": 2.9
   },
   {
     "Name": "Prudent Fateseer // Peer Review",
@@ -831,7 +831,7 @@
   },
   {
     "Name": "Sanctum Lurker",
-    "Value": 10.85
+    "Value": 10.68
   },
   {
     "Name": "Screeching Soulbreaker",
@@ -876,7 +876,7 @@
   },
   {
     "Name": "Solve for Disappointment",
-    "Value": 2.35
+    "Value": 2.1
   },
   {
     "Name": "Something Worth Saving",
@@ -938,7 +938,7 @@
   },
   {
     "Name": "Tam's Resistance",
-    "Value": 5.9
+    "Value": 4.9
   },
   {
     "Name": "Tam, the Possibility",
@@ -991,7 +991,7 @@
   },
   {
     "Name": "The Theorist, Jace Beleren",
-    "Value": 3.3
+    "Value": 8.19
   },
   {
     "Name": "Theoretical Necromancer",
@@ -999,7 +999,7 @@
   },
   {
     "Name": "Theorist's Proxy",
-    "Value": 8.05
+    "Value": 7.3
   },
   {
     "Name": "Theorist's Sanctum",
@@ -1103,7 +1103,7 @@
   },
   {
     "Name": "Violent Echoes",
-    "Value": 16.85
+    "Value": 16.6
   },
   {
     "Name": "Void Extrapolator // Omit Variables",
@@ -1127,43 +1127,43 @@
   },
   {
     "Name": "Way of the Cryomancer",
-    "Value": 5.75
+    "Value": 4.5
   },
   {
     "Name": "Way of the Deathbringer",
-    "Value": 5.75
+    "Value": 4.5
   },
   {
     "Name": "Way of the Healer",
-    "Value": 7.25
+    "Value": 9.69
   },
   {
     "Name": "Way of the Mentor",
-    "Value": 5.75
+    "Value": 4.5
   },
   {
     "Name": "Way of the Mind Sculptor",
-    "Value": 5.75
+    "Value": 4.5
   },
   {
     "Name": "Way of the Necromancer",
-    "Value": 4.7
+    "Value": 4.2
   },
   {
     "Name": "Way of the Paradox",
-    "Value": 5.75
+    "Value": 4.5
   },
   {
     "Name": "Way of the Pyromancer",
-    "Value": 4.7
+    "Value": 4.28
   },
   {
     "Name": "Way of the Warlord",
-    "Value": 5.75
+    "Value": 8.04
   },
   {
     "Name": "Way of the Wildspeaker",
-    "Value": 10.85
+    "Value": 10.81
   },
   {
     "Name": "Whiplash Wordsmith // Vicious Verse",

@@ -49,6 +49,30 @@ a walker priced by its best ability). This story is the rest.
   −6.32 (chosen), Island −6.79, Protege's Awakening −6.87, Infinite Coursework −7.69, Hapatra −10.17, Last Gasp −10.97 —
   the walker the cheapest spell to lose, its held price 3.3 (FRA's walkers 2.7–3.75 in hand, the bottom quarter; median
   8.0). Kept: `AiPositionTests.TheoristDiscardedOverCommons_KeepsTheWalker` (ignored, the known defect) and its control.
+- 2026-11-07, Shayne (AI-9.3's scope): **value over time is not a planeswalker concept — it applies to every card that
+  stays in play** (Dark Confidant, an artifact that draws, Inferno Titan, Sun Titan). "The AI seems to only value
+  immediate impact right now … this causes it to undervalue the impact of a planeswalker" in discards, surveil and
+  scry. AI-9.3 does walkers only, to keep the scope low; build the lifetime so other permanents can plug in later.
+- 2026-11-07, Shayne, on the proposed price (what it makes a turn × the turns it lives; two plans, tick or cash;
+  turns lived = loyalty against the power that gets past our blockers; 5 turns at 0.7 each): **"a fine thing to
+  test to start."** **Every effect is priced** — mana, tap/stun, surveil/scry and ultimates/emblems included ("all of
+  those do provide value in some way"). **A walker soaks damage:** "if an opponent attacks our walker instead of us,
+  it is effectively gaining us life. This matters more at higher life totals than lower (since at lower the
+  opponent might just kill us instead)." **The card-value table needs several boards**, not one: parity with
+  nothing in play, parity in a board stall, ahead, behind — the price used the one closest to the current state.
+- 2026-11-07, Shayne, the effect prices: **surveil/scry 0.33 of a card each** ("every time you surveil a useless card
+  to the graveyard … it has effectively drawn you a card"); **"exile the top card, you may cast it" 0.8 of a card**
+  (close to a draw, "technically still worse"); **mana a turn priced exactly as that many extra lands while it is in
+  play**; stopping a creature's damage at its power × the turns × the life price; ultimates as proposed. **The several
+  boards are Quadrant Theory** — how good a card is behind, at parity, ahead; good behind AND at parity is really good,
+  good only ahead is "win-more". More boards over time as needed (enchantment or artifact removal). Built after AI-9.3,
+  as its own task (AI-9.7), so a moved position can be traced to one change.
+- 2026-11-07, Shayne, on a Jace token passing where it drew: **"Usually we will always want to draw a card here.
+  Loyalty = Life should not be a 1-1 thing"** — "in 99.9% of cases, you are drawing a card of a jace that allows you
+  to (assuming you can't use the loyalty for something else, or if you have surveil matters cards)". Soak taken at
+  half a life point (`SoakShare` 0.5) — but the soak wasn't the cause: the second −3 kept for two turns later
+  outweighed the card drawn now; each turn now 0.6 of the one before, not 0.7 (kept:
+  `AJaceToken_DrawsWithItsMinusThree_RatherThanBankingTheLoyalty`).
 
 Open questions:
 - Which first — lands has a precedent to copy (below); life moves every attack decision.
@@ -66,12 +90,50 @@ Open questions:
       evaluation (GreedyAi's golden games, the card-value table) — `docs/findings/magic-ai.md` keeps the
       formula. Still open: a life price that MEASURES better. Original task: — 1.0 a point up to 20, so 2 damage at 20 life outweighs a card
       (AI-8.1's second lever); the threat term already has the clock
-- [ ] AI-9.3 **A known defect since AI-17.3 (Shayne, 2026-10-29):** Chandra, Torch of Defiance is 3.40 at 4
+- [x] AI-9.3 **A known defect since AI-17.3 (Shayne, 2026-10-29):** Chandra, Torch of Defiance is 3.40 at 4
       loyalty and 2.70 at 2 — body and loyalty only — so a whole attack chips her with a 2/2 and sends
       the 4/4 face; the ignored `RolloutTests.AWholeAttack_SendsTheFourPowerAtTheWalker_TheRestAtTheFace`
       is this task's test. Walker effects still unpriced (damage, mana, life, pumps, exile), and a 3-loyalty Jace
       cashed for a card still scores as a loss (AI-8.2 kept the price monotonic first); our own
       walkers' use
+      **Built, not kept yet (2026-11-07):** `Evaluator.Terms.WalkerLifetime` (`+walkernow` is off),
+      `MagicCore/Ai/Evaluator.Lifetime.cs` — the best sequence of abilities, one a turn, over 5 turns at 0.6
+      each (0.7 banked a Jace token's loyalty — Decisions), the turns lived by the power past our blockers × the
+      share sent at it (1 − 1 ÷ their turns to kill us), the damage it soaks at half the life price; every effect
+      priced from its type (Decisions). Monotonic by a small search over (turn, loyalty left) — the first version
+      ("use it as soon as affordable") was not, caught by the new pin `EveryWalkersLifetime_RisesWithEachCounter`.
+      **Two positions flip**, each revert-checked: the Theorist (kept; the control re-measures the hand without
+      the term and discards him again) and the Jace token's −3 (Shayne's; at 0.7 it passes). The Chandra attack
+      test was found PASSING at HEAD with the old price — fixed by an earlier change while ignored; un-ignored as
+      a plain test, no evidence for either price. Table (regenerated): every FRA walker rose but Ajani Resolute
+      (his life-gain → loyalty loop unpriced) and Jace, Reality Sculptor (the Jace token's draws at the
+      sandbox's flat 1.2; his −3 blunts attacks, worth 0 on the stall board — AI-9.7); Jace-token spells fell
+      (Protege's Awakening, the Ways) — loyalty is no longer 0.35 a counter. Rank agreement of the whole table
+      with 17lands' GIH WR 0.227 → 0.283 (before the review's fixes). Suite (`--suite=beam`): 16 of 288 changed; oracle agreement 86.8%
+      against 88.5% for `beam+walkernow` (an oracle read with the old price), score given up 0.88 against
+      1.00, wins missed 1 against 3, losses walked into 0 against 1 — the one "Jace [−3] → Pass" left (seed 3,
+      move 43) is a won game, the pass winning sooner. Two controls drift with the table:
+      `Unsummon_IsHeld_AgainstAPlainAttacker("plain")` (the blind card price rose with the walkers) and
+      `AYouMay_…DeathbringersBeast` (without "you may", Way of the Deathbringer isn't cast at #257); GreedyAi's
+      8 golden replays moved. **The two controls dropped (Shayne, 2026-11-07: "no point")** — their main assertions
+      stay; the Unsummon control kept for the vanilla 3/4, where it still holds. **The match**
+      (`--match=beam,beam+walkernow --until-clear`): 384 games, beam 49.2% ± 1.4pp (189–195) — no difference of
+      5pp either way (the three decks' only walkers are White-Blue Jace's, 23–105 for both). **Kept (Shayne,
+      2026-11-07)**. /pre-commit's review fixed (Shayne: "make the fixes"): life priced by the life term itself
+      (`LifeValue` — a full point at 20, not ½; the low-life surcharge), an activation trigger only on a turn it
+      activates, a new Jace token at the walker's price, the edict's filter, Body and the land price called not
+      copied, surveil's rider from its effects — 6 more suite decisions moved (the match ran before them). Suite
+      accepted, the oracle re-read: beam 88.2% agreement, 0.85 given up, 1 win missed, 0 losses walked into,
+      against `beam+walkernow` 85.8%, 1.09, 2, 1; table vs 17lands premier 0.257, sealed 0.310; GreedyAi's
+      replays regenerated (10 of 12 moved); findings ("A planeswalker priced over its lifetime")
+- [ ] AI-9.7 **Quadrant Theory boards for the card-value table** (Shayne, 2026-11-07): measure each card on four
+      boards — parity empty, parity stall (today's ladders), ahead, behind — and blend the nearest boards' prices for
+      the position in hand (a pick would jump). Fixes the symmetric-sweeper limit too. Its own switch, after AI-9.3
+- [ ] AI-9.8 **The card-value table charged for mana cost** (Shayne, 2026-11-07: "discounting a cards power by its
+      mana cost is probably the way to go"): the table measures a card once castable, each with its own lands, so a
+      10-drop reads as free — against 17lands, our rank minus theirs by mana value runs −21 percentiles at 1 to +20
+      at 5 (Emrakul, the Exigent Doom +81, Yargle, Goliath of Otaria +87). Beside it, card draw at the sandbox's
+      flat 1.2 off a library of basics (findings, "AI-9.3"). Its own switch; after AI-9.7 or before — Shayne's call
 - [ ] AI-9.4 The opponent's unseen hand at a flat 2.71 a card — by what it could cast with the mana
       and colours shown; and the RISK it carries (AI-13.4, 2026-10-28): Shayne holds Ferocity of the
       Hunt against an unseen Last Gasp "until the opponent plays their removal spell first", and the
@@ -108,12 +170,11 @@ Open questions:
 
 ## Next
 
-**NEXT, before the rest of sprint 4 (Shayne, 2026-11-07): AI-9.3, a planeswalker priced by its value over its
-lifetime** (Decisions, 2026-11-07). DATA-2's self-play ratings and TRK's real ratings wait on it. Start from the
-evidence: the walker games of MC-5.4's run (`ai_reports/card-games-*.md`, each a record — `--record=FILE
---card=NAME`, `--explain=N`), the table of where each walker was castable and not cast (MC-5's Next), and the
-ignored `RolloutTests.AWholeAttack_SendsTheFourPowerAtTheWalker_TheRestAtTheFace`. Propose the price to Shayne
-before building; keep it by AI-5's rule (a position that was wrong before, and a match).
+**AI-9.3 done (2026-11-07):** walkers priced over their lifetime, kept on two positions (the match: no difference).
+Next here, both Shayne's from it: **AI-9.7** (Quadrant Theory boards for the card-value table) and **AI-9.8** (the table
+charged for mana cost) — which first is his call. DATA-2's self-play ratings and TRK's real ratings were waiting on
+AI-9.3: they need a rerun with the new AI. The table's other outliers (card draw at 1.2, 0-valued instants, empty
+graveyards) are in the findings.
 
 AI-9.5 done (2026-10-27): a known card in their hand is priced at its held value; kept on the token
 bounce, slightly worse on the suite's oracle, no difference in the match (findings). Next here:
@@ -128,3 +189,5 @@ found it hiding Way of the Wildspeaker); one switch and one match.
 - 2026-10-27: AI-9.5 added (Shayne: a known card in their hand is not an unknown one).
 - 2026-10-27: AI-9.5 built behind a switch; it fires but doesn't flip #547 (numbers in the task).
 - 2026-10-27: AI-9.5 kept (Shayne) on the token bounce; match no difference (findings).
+- 2026-11-07: AI-9.3 built (`WalkerLifetime`), the Theorist and a Jace token's −3 flip; match no difference; kept.
+- 2026-11-07: AI-9.7 and AI-9.8 added (Shayne).
