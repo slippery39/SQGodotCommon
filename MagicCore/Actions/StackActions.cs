@@ -108,17 +108,34 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public bool ChoosesTargets { get; init; }
 
-	/// <summary>What casting it costs beyond mana: its additional costs, then its flashback's when cast that way, then its kicker's when kicked.</summary>
+	/// <summary>
+	/// What casting it costs beyond mana: its additional costs, then its flashback's when cast that way, then
+	/// its kicker's when kicked, then what is paid instead of its mana cost (<paramref name="free"/>: Flare of
+	/// Fortitude's sacrifice, Playable.FreeCosts).
+	/// </summary>
 	public static ImmutableList<AdditionalCost> CostsOf(
 		GameState s,
 		Card card,
-		bool kicked = false
+		bool kicked = false,
+		ImmutableList<AdditionalCost>? free = null
 	) =>
 		[
 			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
 			.. Costs.Flashback(s, card)?.Costs ?? [],
 			.. kicked ? card.GetComponent<KickerComponent>()?.Costs ?? [] : [],
+			.. free ?? [],
 		];
+
+	/// <summary>This cast's costs beyond mana — a free cast by a permission pays the permission's (never one an effect casts).</summary>
+	ImmutableList<AdditionalCost> CostsOf(GameState s, Card card) =>
+		CostsOf(
+			s,
+			card,
+			Kicked,
+			WithoutPayingManaCost && !DuringResolution
+				? Playable.FreeCosts(s, card, PlayerId)
+				: null
+		);
 
 	int Chosen(CostSlot slot) =>
 		slot switch
@@ -142,7 +159,7 @@ public record CastSpellAction : GameAction
 			card,
 			X
 				+ Replicate * (card.GetComponent<ReplicateComponent>()?.Generic ?? 0)
-				+ CostList.OrPayOwed(CostsOf(s, card, Kicked), Chosen),
+				+ CostList.OrPayOwed(CostsOf(s, card), Chosen),
 			free: WithoutPayingManaCost,
 			targets: Targets,
 			added: Kicked ? card.GetComponent<KickerComponent>()?.Mana : null
@@ -163,11 +180,11 @@ public record CastSpellAction : GameAction
 		)
 			return ValidationResult.Invalid("You may not cast that card from where it is");
 		var card = s.GetCard(CardId);
-		if (Turns.Combat.LockedDown(s))
+		if (Turns.Combat.LockedDown(s, PlayerId))
 			return ValidationResult.Invalid("No spells now: combat lockdown or split second");
 		if (Kicked && !card.HasComponent<KickerComponent>())
 			return ValidationResult.Invalid("It has no kicker");
-		var costs = CostsOf(s, card, Kicked);
+		var costs = CostsOf(s, card);
 		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (card.Is(CardType.Land))
@@ -245,7 +262,7 @@ public record CastSpellAction : GameAction
 		if (ChoosesTargets)
 			return ChooseTargets(s, retain: false);
 		var card = s.GetCard(CardId);
-		var costs = CostsOf(s, card, Kicked); // read before paying: flashback's are known only in the graveyard
+		var costs = CostsOf(s, card); // read before paying: flashback's are known only in the graveyard
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
 		var permission = from switch
@@ -489,7 +506,7 @@ public record ActivateAbilityAction : GameAction
 		)
 			return ValidationResult.Invalid("No such ability where you can activate it");
 		var card = s.GetCard(CardId);
-		if (Turns.Combat.LockedDown(s))
+		if (Turns.Combat.LockedDown(s, PlayerId))
 			return ValidationResult.Invalid("No abilities now: combat lockdown or split second");
 		// Judged as the activating player's: a card off the battlefield may still carry an old
 		// controller (CR 108.4a — in a graveyard it is its owner's).
@@ -540,7 +557,7 @@ public record ActivateAbilityAction : GameAction
 			|| LifeForPhyrexian
 				> Costs.OfAbility(s, ability, Targets, PlayerId, CardId).PhyrexianCount
 			// CR 119.4 — only when life is paid: under Georgiou a player below 0 still activates the rest.
-			|| LifeForPhyrexian > 0 && s.GetPlayer(PlayerId).Life < 2 * LifeForPhyrexian
+			|| !MagicCore.Rules.Life.CanPay(s, PlayerId, 2 * LifeForPhyrexian)
 		)
 			return ValidationResult.Invalid("Can't pay that much life for its Phyrexian mana");
 		if (

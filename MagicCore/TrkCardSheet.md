@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 96/96 · uncommon 110/110 · rare 80/80 · mythic 52/55 · **338/341**
+**Playable:** common 96/96 · uncommon 110/110 · rare 80/80 · mythic 55/55 · **341/341**
 
 ### A Good Day to Die
 
@@ -1316,7 +1316,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Planetary Bombardment
 
@@ -3125,7 +3125,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4bTests
 
-**Engine pieces:** `Always` — A "you may" that can always be done.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GrantsTriggeredAbility` — Hive Mind Coprocessor: "Artifact creatures you control have 'Whenever this creature…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `CanPayLife` — The shocklands: "you may pay 2 life"; Hive Mind Coprocessor: "pay 1 life" — asked only…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GrantsTriggeredAbility` — Hive Mind Coprocessor: "Artifact creatures you control have 'Whenever this creature…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Hive Mind Coprocessor"] =
@@ -3137,7 +3137,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			[],
 			new May(
 				"Pay 1 life to draw a card?",
-				new Always(), // paying life is losing it (CR 119.4); at 0 the game is already over
+				new CanPayLife(1),
 				[new LoseLife(Ref.You, 1), new DrawCards(Ref.You, 1)]
 			)
 		)
@@ -5540,7 +5540,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {W} or {B}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** TrkStardateTests
 
 ```csharp
 ["Godless Shrine"] = [Shockland],
@@ -7500,7 +7500,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may sacrifice a nontoken white creature rather than pay this spell's mana cost.  
 > Until end of turn, your life total can't change, and permanents you control gain hexproof and indestructible.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkStardateTests
+
+**Engine pieces:** `LifeTotalCantChange` — Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life…; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Flare of Fortitude"] =
+[
+	new MayCastFromHandFree(Is.Source)
+	{
+		Costs = [new SacrificeCost(Is.Creature & Is.Color(ManaColor.White) & !Is.Token)],
+	},
+	Spell(
+		[],
+		new ThisTurn(new LifeTotalCantChange()),
+		new ModifyUntilEndOfTurn(Ref.Permanents(Is.Yours), 0, 0, "Hexproof"),
+		new ModifyUntilEndOfTurn(Ref.Permanents(Is.Yours), 0, 0, "Indestructible")
+	),
+],
+```
 
 ### Georgiou, Terran Emperor
 
@@ -7928,7 +7946,47 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As long as your devotion to black and red is less than seven, Mogis isn't a creature.  
 > At the beginning of each opponent's upkeep, Mogis deals 2 damage to that player unless they sacrifice a creature of their choice.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkStardateTests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `BecomesType` — A type change while its source is on the battlefield, on what Scope matches — Puppet…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
+
+```csharp
+["Mogis, God of Slaughter"] =
+[
+	new BecomesType(Is.Source)
+	{
+		Remove = CardType.Creature,
+		If = new Not(new AtLeast(Count.DevotionTo(ManaColor.Black, ManaColor.Red), 7)),
+	},
+	// "… deals 2 damage to that player unless they sacrifice a creature of their choice." — asked
+	// only when they have one (May runs no Otherwise when it can't ask).
+	When(
+		TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent),
+		[],
+		new If(
+			new AtLeast(
+				Count.NumberOf(Ref.All(ZoneType.Battlefield, Is.Creature, Ref.ActivePlayer)),
+				1
+			),
+			[
+				new May(
+					"Sacrifice a creature? If you don't, Mogis deals 2 damage to you.",
+					new Always(),
+					[new MaySacrifice(Is.Creature, []) { Must = true }]
+				)
+				{
+					Who = Ref.ActivePlayer,
+					ThenAsThem = true,
+					Otherwise = [new DealDamage(Ref.ActivePlayer, 2)],
+				},
+			]
+		)
+		{
+			Otherwise = [new DealDamage(Ref.ActivePlayer, 2)],
+		}
+	),
+],
+```
 
 ### Mr. Spock, Science Officer
 
@@ -8164,7 +8222,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > At the beginning of your upkeep, choose target opponent. This turn, that player can't cast spells or activate abilities and plays with their hand revealed. You may play lands and cast spells from that player's hand this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkStardateTests
+
+**Engine pieces:** `CantCastOrActivate` — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat,…; `LookAtHand` — V'Ger, the Intruder: "Look at target opponent's hand" — every card in it becomes known…; `MayPlayFrom` — Sen Triplets: "You may play lands and cast spells from that player's hand this turn." —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Sen Triplets"] =
+[
+	When(
+		TriggerEvent.YourUpkeep,
+		[TargetSpec.Player(Is.Opponents)],
+		new ThisTurn(new CantCastOrActivate { ManaAbilitiesToo = true }) { On = Ref.Target(0) },
+		new LookAtHand(Ref.Target(0)), // "plays with their hand revealed" — to you; they know it
+		new ThisTurn(new MayPlayFrom(ZoneType.Hand, Ref.Target(0)))
+	),
+],
+```
 
 ### Seven of Nine, Unassimilated
 

@@ -37,14 +37,35 @@ public static class ManaAbilities
 	static List<ManaAbilityComponent>? Granted(GameState s, Card card)
 	{
 		List<ManaAbilityComponent>? granted = null;
+		foreach (var (g, grant) in Grants(s))
+			if (grant.Affects.Matches(s, card, new Filters.FilterContext(g.ControllerId, g.Id)))
+				(granted ??= []).Add(grant.Ability);
+		return granted is null || s.HasLostAllAbilities(card) ? null : granted;
+	}
+
+	[ThreadStatic]
+	static GameState? grantsOf;
+
+	[ThreadStatic]
+	static List<(Card, GrantsManaAbility)>? grants;
+
+	/// <summary>
+	/// Every "grants a mana ability" on the battlefield (a gained one too), listed once per state: payment asks
+	/// per source, and a scan per source made ManaPayment.Find quadratic in permanents — 72 Troubling Tribbles
+	/// with a Station's one move per creature took minutes a step. A state never changes, so its list doesn't.
+	/// ponytail: holds each thread's last state alive until it asks again; a ConditionalWeakTable if that matters.
+	/// </summary>
+	static List<(Card, GrantsManaAbility)> Grants(GameState s)
+	{
+		if (ReferenceEquals(grantsOf, s) && grants is not null)
+			return grants;
+		var found = new List<(Card, GrantsManaAbility)>();
 		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
 		foreach (var g in s.CardsIn(player, ZoneType.Battlefield))
-		{
-			foreach (var grant in s.AbilitiesOf<GrantsManaAbility>(g)) // cheap on none — a gained grant too
-				if (grant.Affects.Matches(s, card, new Filters.FilterContext(g.ControllerId, g.Id)))
-					(granted ??= []).Add(grant.Ability);
-		}
-		return granted is null || s.HasLostAllAbilities(card) ? null : granted;
+		foreach (var grant in s.AbilitiesOf<GrantsManaAbility>(g)) // cheap on none — a gained grant too
+			found.Add((g, grant));
+		(grantsOf, grants) = (s, found);
+		return found;
 	}
 
 	/// <summary>Plains, Island, Swamp, Mountain, Forest — domain counts these.</summary>

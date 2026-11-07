@@ -1062,7 +1062,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Predictive Preparations
 
@@ -4479,14 +4479,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 > During combat, players can't cast spells or activate abilities that aren't mana abilities.  
 > Whenever a creature you control attacks a player alone, it gains double strike until end of turn.
 
-**Status:** scripted · **tests naming it:** FraUncommonCombatTests
+**Status:** scripted · **tests naming it:** FraUncommonCombatTests, TrkStardateTests
 
-**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `NoSpellsOrAbilitiesDuringCombat` — Yuriko: "During combat, players can't cast spells or activate abilities that aren't mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `CantCastOrActivate` — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat,…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Yuriko, Blade of the Mighty"] =
 [
-	new NoSpellsOrAbilitiesDuringCombat(),
+	new CantCastOrActivate { DuringCombat = true },
 	When(
 		TriggerEvent.CreatureYouControlAttacksPlayerAlone,
 		[],
@@ -5516,7 +5516,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareFinalTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `EnchantedBecomesCreature` — Puppet Crafting: "Enchanted permanent is a [Subtype] creature with base power and…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `BecomesType` — A type change while its source is on the battlefield, on what Scope matches — Puppet…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromGraveyard` — "Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to…
 
 ```csharp
 ["Puppet Crafting"] =
@@ -5524,7 +5524,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 	new AuraComponent(
 		Target(Is.Type(CardType.Artifact | CardType.Enchantment) & !Is.Subtype("Aura"))
 	),
-	new EnchantedBecomesCreature("Construct", 5, 5),
+	new BecomesType(Is.AttachedToSource)
+	{
+		Add = CardType.Creature,
+		Subtype = "Construct",
+		Power = 5,
+		Toughness = 5,
+	},
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{4}{G}"),
 		[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]
@@ -6841,7 +6847,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may cast spells with mana value less than or equal to the number of creatures you control from your hand without paying their mana costs.
 
-**Status:** scripted · **tests naming it:** FraRareOneOffTests
+**Status:** scripted · **tests naming it:** FraRareOneOffTests, TrkStardateTests
 
 **Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…
 

@@ -197,13 +197,30 @@ public static class MagicRules
 	/// One cast per affordable X. The bound is loose on purpose — ValidateAdd's payment search
 	/// decides; subtracting mana value would undercount, since one W pays a {2/W}.
 	/// </summary>
-	public static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card) =>
+	public static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
+	{
+		// Omnipresence: a free cast that costs nothing replaces the paid ones (never worse); Flare of
+		// Fortitude's, with a sacrifice, is offered beside them.
+		var free = Rules.Playable.FreeCosts(s, card, player);
+		IEnumerable<GameAction> Casts(bool kicked) =>
+			free is { IsEmpty: false }
+				? CastCandidates(s, player, card, kicked, null)
+					.Concat(CastCandidates(s, player, card, kicked, free))
+				: CastCandidates(s, player, card, kicked, free);
 		// Kicker: each cast once unkicked and once kicked — its targets and costs may differ.
-		card.HasComponent<KickerComponent>()
-			? CastCandidates(s, player, card, false).Concat(CastCandidates(s, player, card, true))
-			: CastCandidates(s, player, card, false);
+		return card.HasComponent<KickerComponent>()
+			? Casts(false).Concat(Casts(true))
+			: Casts(false);
+	}
 
-	static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card, bool kicked)
+	/// <param name="free">Cast without paying its mana cost, paying these instead (Playable.FreeCosts); null: paid.</param>
+	static IEnumerable<GameAction> CastCandidates(
+		GameState s,
+		int player,
+		Card card,
+		bool kicked,
+		ImmutableList<AdditionalCost>? free
+	)
 	{
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
@@ -229,14 +246,15 @@ public static class MagicRules
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> unchosen = [([], [])];
 		// One cast per way to pay each cost that picks a card: "sacrifice … or pay {N}" (0 is paying),
 		// a behold (any one is the same play), Twinned Vision's flashback discard.
-		var costs = CastSpellAction.CostsOf(s, card, kicked);
+		var costs = CastSpellAction.CostsOf(s, card, kicked, free);
 		var sacrifices = CostList.Options(costs, CostSlot.Sacrifice, s, player, card.Id);
 		var beholds = CostList.Options(costs, CostSlot.Behold, s, player, card.Id);
 		var discards = CostList.Options(costs, CostSlot.Discard, s, player, card.Id);
 		var returns = CostList.Options(costs, CostSlot.Return, s, player, card.Id);
 		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
-		var free = Rules.Playable.MayCastWithoutPaying(s, card, player);
-		var payments = Enumerable.Range(0, maxX + 1).Select(x => (x, free: free && x == 0));
+		IEnumerable<(int x, bool free)> payments = free is { IsEmpty: false }
+			? [(x: 0, free: true)]
+			: Enumerable.Range(0, maxX + 1).Select(x => (x, free: free is not null && x == 0));
 		// Replicate: one cast per number of payments, bounded loosely like X — ValidateAdd's payment decides.
 		var maxReplicate = card.GetComponent<ReplicateComponent>() is { } replicate
 			? Math.Max(

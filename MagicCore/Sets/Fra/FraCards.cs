@@ -2427,7 +2427,7 @@ public static class FraCards
 			// ===== Uncommons: combat and the rest =====
 			["Yuriko, Blade of the Mighty"] =
 			[
-				new NoSpellsOrAbilitiesDuringCombat(),
+				new CantCastOrActivate { DuringCombat = true },
 				When(
 					TriggerEvent.CreatureYouControlAttacksPlayerAlone,
 					[],
@@ -3321,7 +3321,13 @@ public static class FraCards
 				new AuraComponent(
 					Target(Is.Type(CardType.Artifact | CardType.Enchantment) & !Is.Subtype("Aura"))
 				),
-				new EnchantedBecomesCreature("Construct", 5, 5),
+				new BecomesType(Is.AttachedToSource)
+				{
+					Add = CardType.Creature,
+					Subtype = "Construct",
+					Power = 5,
+					Toughness = 5,
+				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}{G}"),
 					[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]

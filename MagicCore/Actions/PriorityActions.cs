@@ -140,6 +140,8 @@ public record TapForManaAction : GameAction
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
+		if (Turns.Combat.LockedDown(s, PlayerId, manaAbility: true))
+			return ValidationResult.Invalid("No mana abilities now: Sen Triplets");
 		if (SacrificeId != 0)
 			return
 				s.IsIn(CardId, PlayerId, ZoneType.Battlefield)

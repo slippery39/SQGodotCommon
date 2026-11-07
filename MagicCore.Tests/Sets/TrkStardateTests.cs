@@ -961,4 +961,298 @@ public class TrkStardateTests : FraBoardTest
 			"3 life pays for one, not two (CR 119.4)"
 		);
 	}
+
+	// ===== MC-5.6 batch 3b: Sen Triplets, Flare of Fortitude, Mogis =====
+
+	void ToMyNextMain()
+	{
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.Upkeep && x.GetGame().ActivePlayerId == me
+		);
+		Resolve();
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.PreCombatMain && x.GetGame().ActivePlayerId == me
+		);
+	}
+
+	[Test]
+	public void SenTriplets_AtYourUpkeep_TheyCantCastOrActivate_YouPlayFromTheirHand()
+	{
+		Field(Trk("Sen Triplets"), me);
+		var pump = Field(
+			new CardDefinition(
+				Bear.Data,
+				[new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new GainLife(Ref.You, 1)])]
+			),
+			them
+		);
+		ToMyNextMain();
+		var bear = Hand(Bear, them);
+		var forest = Hand(TestGames.Card("Forest"), them);
+		var trick = Hand(Gain, them);
+		var held = s.CardsIn(them, ZoneType.Hand)
+			.Where(c => c.Id != bear && c.Id != forest && c.Id != trick)
+			.ToList();
+		Assert.That(held, Nu.Not.Empty, "their hand as the trigger resolved");
+		Assert.That(
+			held.All(c => c.KnownTo.HasFlag(Knowers.Opponent)),
+			Nu.True,
+			"plays with their hand revealed"
+		);
+		Assert.That(
+			Casts(bear),
+			Nu.Not.Empty,
+			"cast spells from that player's hand — one drawn later too"
+		);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = bear });
+		Resolve();
+		Assert.That(s.GetCard(bear).ControllerId, Nu.EqualTo(me), "you cast it: yours");
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = forest });
+		Assert.That(s.IsIn(forest, me, ZoneType.Battlefield), Nu.True, "play lands from it");
+		var mine = Hand(Gain, me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = mine });
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		Assert.That(s.GetGame().PriorityPlayerId, Nu.EqualTo(them));
+		Assert.That(
+			s.LegalActions().Where(a => a is CastSpellAction or ActivateAbilityAction),
+			Nu.Empty,
+			"that player can't cast spells or activate abilities"
+		);
+		Assert.That(Casts(trick), Nu.Empty);
+		Assert.That(
+			new TapForManaAction
+			{
+				PlayerId = them,
+				CardId = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Name == "Plains").Id,
+				Color = ManaColor.White,
+			}
+				.ValidateAdd(s)
+				.IsValid,
+			Nu.False,
+			"mana abilities too"
+		);
+		Assert.That(
+			ManaPayment.Find(s, them, ManaCost.Parse("{1}"), 0),
+			Nu.Null,
+			"nothing taps to pay for them"
+		);
+		Assert.That(Alive(pump), Nu.True);
+	}
+
+	[Test]
+	public void SenTriplets_TheirNextTurn_TheLockAndThePermissionAreGone()
+	{
+		Field(Trk("Sen Triplets"), me);
+		ToMyNextMain();
+		var bear = Hand(Bear, them);
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.PreCombatMain && x.GetGame().ActivePlayerId == them
+		);
+		Assert.That(Casts(bear), Nu.Not.Empty, "their own turn: they cast it");
+		Assert.That(
+			global::MagicCore.Rules.Playable.CanCastFromHere(s, s.GetCard(bear), me),
+			Nu.False,
+			"this turn only"
+		);
+	}
+
+	static CardDefinition WhiteBear => new(Bear.Data with { Colors = ["W"] }, []);
+
+	[Test]
+	public void Flare_SacrificeANontokenWhiteCreature_RatherThanPayItsManaCost()
+	{
+		var white = Field(WhiteBear, me);
+		var token = Field(WhiteBear, me);
+		s = s.UpdateObject(token, s.GetCard(token) with { IsToken = true }); // TEST SETUP: a token
+		Field(Bear, me);
+		var flare = Hand(Trk("Flare of Fortitude"), me);
+		Assert.That(
+			Casts(flare).Select(c => (c.WithoutPayingManaCost, c.SacrificeId)),
+			Nu.EquivalentTo(new[] { (false, 0), (true, white) }),
+			"pay {2}{W}{W}, or sacrifice a NONTOKEN WHITE creature instead"
+		);
+		var untapped = s.CardsIn(me, ZoneType.Battlefield).Count(c => !c.IsTapped);
+		s = s.Act(Casts(flare).Single(c => c.WithoutPayingManaCost));
+		Resolve();
+		Assert.That(Alive(white), Nu.False, "sacrificed");
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => !c.IsTapped),
+			Nu.EqualTo(untapped - 1),
+			"no mana spent — only the creature left"
+		);
+		Assert.That(s.IsIn(flare, me, ZoneType.Graveyard), Nu.True, "it resolved");
+	}
+
+	[Test]
+	public void FreeCast_OmnipresenceInHand_IsntFreeForItself_FlareWithFlashback_PaysItsCost()
+	{
+		for (var i = 0; i < 8; i++)
+			Field(Bear, me); // creatures enough for Omnipresence's own mana value
+		var omnipresence = Hand(CardRegistry.Get("Omnipresence"), me);
+		Assert.That(
+			Casts(omnipresence).Any(c => c.WithoutPayingManaCost),
+			Nu.False,
+			"its static works from the battlefield only"
+		);
+		Field(WhiteBear, me);
+		int flare;
+		(s, flare) = TestGames.Put(s, me, Trk("Flare of Fortitude"), ZoneType.Graveyard);
+		s = s.UpdateObject(
+			flare,
+			(Card)s.GetCard(flare).WithComponent(new GrantedFlashback(s.GetGame().TurnNumber)) // TEST SETUP: Stingcaster Mage
+		);
+		Assert.That(Casts(flare), Nu.Not.Empty, "flashback");
+		Assert.That(
+			Casts(flare).Any(c => c.WithoutPayingManaCost),
+			Nu.False,
+			"flashback and 'rather than pay' don't combine (CR 118.9a)"
+		);
+	}
+
+	[Test]
+	public void Flare_YourLifeTotalCantChange_YourPermanentsGainHexproofAndIndestructible()
+	{
+		var bear = Field(Bear, me);
+		var drivnod = Field(Trk("Drivnod, Carnage Dominus"), me);
+		for (var i = 0; i < 3; i++)
+			(s, _) = TestGames.Put(s, me, Bear, ZoneType.Graveyard);
+		Cast(Hand(Trk("Flare of Fortitude"), me), []);
+		var life = Life(me);
+		Cast(Hand(Gain, me), []);
+		Assert.That(Life(me), Nu.EqualTo(life), "can't go up");
+		var hurt = TestGames.Inline("Hurt", "{1}", "Instant", null, new DealDamage(Ref.You, 3));
+		Cast(Hand(hurt, me), []);
+		Assert.That(Life(me), Nu.EqualTo(life), "can't go down: damage dealt, no life lost");
+		Assert.That(s.GetPlayer(me).ThisTurn.LifeLost, Nu.EqualTo(0));
+		Assert.That(
+			Activations(drivnod).Select(a => a.LifeForPhyrexian),
+			Nu.EquivalentTo(new[] { 0 }),
+			"no life can be paid (CR 119.8)"
+		);
+		Assert.That(global::MagicCore.Rules.Life.CanPay(s, me, 0), Nu.True, "0 can");
+		Assert.That(global::MagicCore.Rules.Life.CanPay(s, them, 2), Nu.True, "only you");
+		Assert.That(s.Has(s.GetCard(bear), "Hexproof"), Nu.True);
+		Cast(Hand(TestCards.Kill(), me), [], bear);
+		Assert.That(Alive(bear), Nu.True, "indestructible");
+	}
+
+	[Test]
+	public void Shockland_LifeTotalCantChange_EntersTapped()
+	{
+		s = GetEmblem.ToCommandZone(s, me, "Flare (this turn)", [new LifeTotalCantChange()]); // TEST SETUP: Flare resolved
+		var land = Hand(Trk("Godless Shrine"), me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = land });
+		Assert.That(s.GetPendingChoice(), Nu.Null, "no pay-2-life question");
+		Assert.That(s.GetCard(land).IsTapped, Nu.True);
+	}
+
+	[Test]
+	public void Mogis_DevotionBelowSeven_IsntACreature_AtSevenItIs()
+	{
+		Field(
+			TestCards.WithTrigger(
+				Bear,
+				new Trigger(EventKind.Entered)
+				{
+					Subject =
+						global::MagicCore.Filters.Is.Creature
+						& !global::MagicCore.Filters.Is.Source,
+				},
+				new GainLife(Ref.You, 1)
+			),
+			me
+		);
+		var mogis = Hand(Trk("Mogis, God of Slaughter"), me);
+		var life = Life(me);
+		Cast(mogis, []);
+		Assert.That(
+			s.GetCard(mogis).Is(CardType.Creature),
+			Nu.False,
+			"devotion 2: isn't a creature"
+		);
+		Assert.That(s.GetCard(mogis).Is(CardType.Enchantment), Nu.True);
+		Assert.That(Life(me), Nu.EqualTo(life), "it never entered as a creature");
+		Field(TestGames.Inline("Shrine", "{B}{B}{R}", "Artifact"), me);
+		Field(TestGames.Inline("Hybrid", "{B/R}", "Artifact"), me);
+		Cast(Hand(Gain, me), []);
+		Assert.That(
+			s.GetCard(mogis).Is(CardType.Creature),
+			Nu.False,
+			"six: a hybrid black-red symbol counts once"
+		);
+		Field(TestGames.Inline("White or red", "{W/R}", "Artifact"), me);
+		Cast(Hand(Gain, me), []);
+		Assert.That(
+			s.GetCard(mogis).Is(CardType.Creature),
+			Nu.True,
+			"seven, a hybrid counting by either half: a creature"
+		);
+		Assert.That(s.Power(s.GetCard(mogis)), Nu.EqualTo(7));
+	}
+
+	void ToTheirUpkeep()
+	{
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.Upkeep && x.GetGame().ActivePlayerId == them
+		);
+	}
+
+	[Test]
+	public void Mogis_TheirUpkeep_NoCreature_TwoDamage()
+	{
+		Field(Trk("Mogis, God of Slaughter"), me);
+		var life = Life(them);
+		ToTheirUpkeep();
+		Resolve();
+		Assert.That(Life(them), Nu.EqualTo(life - 2));
+	}
+
+	[Test]
+	public void Mogis_TheirUpkeep_TheyDontSacrifice_TwoDamage()
+	{
+		Field(Trk("Mogis, God of Slaughter"), me);
+		var bear = Field(Bear, them);
+		var life = Life(them);
+		ToTheirUpkeep();
+		Resolve();
+		Assert.That((Life(them), Alive(bear)), Nu.EqualTo((life - 2, true)));
+	}
+
+	[Test]
+	public void Mogis_TheirUpkeep_TheySacrificeACreature_NoDamage()
+	{
+		Field(Trk("Mogis, God of Slaughter"), me);
+		var bear = Field(Bear, them);
+		var life = Life(them);
+		ToTheirUpkeep();
+		Assert.That(s.GetPendingChoice(), Nu.Null);
+		s = s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
+		s = s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
+		var asked = s.GetPendingChoice();
+		Assert.That(asked, Nu.InstanceOf<YesNoChoice>());
+		Assert.That(s.DecidingPlayerId(), Nu.EqualTo(them), "a creature of THEIR choice");
+		Resolve(On<YesNoChoice>(1));
+		Assert.That((Life(them), Alive(bear)), Nu.EqualTo((life, false)));
+	}
+
+	[Test]
+	public void Yuriko_DuringCombat_ManaAbilitiesStillWork()
+	{
+		Field(CardRegistry.Get("Yuriko, Blade of the Mighty"), me);
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.BeginCombat && x.GetGame().PriorityPlayerId == me
+		);
+		Assert.That(global::MagicCore.Turns.Combat.LockedDown(s, me), Nu.True, "no spells");
+		Assert.That(global::MagicCore.Turns.Combat.LockedDown(s, them), Nu.True, "players: both");
+		Assert.That(
+			ManaPayment.Find(s, me, ManaCost.Parse("{1}"), 0),
+			Nu.Not.Null,
+			"that aren't mana abilities"
+		);
+	}
 }

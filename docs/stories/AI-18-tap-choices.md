@@ -26,6 +26,12 @@ potential optimizations." The shortcut is in `DesignNotes.md` (MagicCore known c
 
 ## Decisions
 
+- 2026-11-07, Shayne (MC-5.6 batch 3b): **identify and group permanents that are exactly the same when a choice
+  offers them** — "Ideally we would have a way to be able to identify and group permanents that are exactly the
+  same together when selecting choices." Not only tap costs: Scotty's granted beam me up (a move per spell ×
+  creature) too. The evidence: `RandomPlay_EveryScriptedCard(21)` is skipped until this lands — Troubling Tribbles
+  doubling each upkeep, every step ~n³ in permanents (41 = 8 s a turn, 73 = 90 s); un-skip it as the check.
+
 Open questions:
 - Which way: creatures that don't differ (two untapped vanilla Officer tokens) as one choice; a cost
   picked one creature at a time after activating (a pending choice, as blockers are); or the AI
@@ -44,3 +50,6 @@ Read `MagicRules.TapSets` and `Taps` (MoveKey), `ActivateAbilityAction.TapIds`, 
 ## Log
 
 - 2026-11-05: created — Shayne, answering batch 5b's "how are the N chosen".
+- 2026-11-07: Shayne chose grouping identical permanents (MC-5.6 batch 3b's seed 21, skipped until then).
+  Lifted meanwhile: `ManaAbilities.Grants`, the "grants a mana ability" sources listed once per state — the
+  scan per source had made `ManaPayment.Find` quadratic in permanents.

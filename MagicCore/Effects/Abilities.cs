@@ -966,9 +966,6 @@ public record CantBeBlockedBy(Filters.Filter Blockers) : GameComponent;
 /// </summary>
 public record CantBeTargetedByAbilitiesFrom(Filters.Filter Sources) : GameComponent;
 
-/// <summary>Yuriko: "During combat, players can't cast spells or activate abilities that aren't mana abilities."</summary>
-public record NoSpellsOrAbilitiesDuringCombat : GameComponent;
-
 /// <summary>Samut: "Instant and sorcery spells you control have split second."</summary>
 public record YourInstantsAndSorceriesHaveSplitSecond : GameComponent;
 
@@ -1123,10 +1120,31 @@ public record CountersRemovedInsteadOfDestruction : GameComponent;
 public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
 
 /// <summary>
-/// Puppet Crafting: "Enchanted permanent is a [Subtype] creature with base power and toughness P/T in
-/// addition to its other types." Stamped on the host while the Aura is on it (Attachments.Check).
+/// A type change while its source is on the battlefield, on what <see cref="Scope"/> matches — Puppet
+/// Crafting: "Enchanted permanent is a [Subtype] creature with base power and toughness P/T in addition to
+/// its other types." (Is.AttachedToSource, Add = Creature); Mogis, God of Slaughter: "As long as your
+/// devotion to black and red is less than seven, Mogis isn't a creature." (Is.Source, Remove = Creature,
+/// If). Stamped (Card.Animated), put right by the state-based check and as a permanent enters
+/// (Attachments.Retype) — every rule reads card.Is(Creature).
 /// </summary>
-public record EnchantedBecomesCreature(string Subtype, int Power, int Toughness) : GameComponent;
+public record BecomesType(Filters.Filter Scope) : GameComponent
+{
+	public Cards.CardType Add { get; init; }
+
+	/// <summary>Mogis: "isn't a creature".</summary>
+	public Cards.CardType Remove { get; init; }
+
+	/// <summary>Puppet Crafting: "a Construct", in addition to its other types.</summary>
+	public string? Subtype { get; init; }
+
+	/// <summary>Puppet Crafting: "with base power and toughness 5/5"; unset keeps its own.</summary>
+	public int? Power { get; init; }
+
+	public int? Toughness { get; init; }
+
+	/// <summary>Mogis: "As long as …" — asked of the source.</summary>
+	public Condition? If { get; init; }
+}
 
 /// <summary>
 /// Station (CR 702.184; Oberth-Class Starship: "It's an artifact creature at 6+."): a creature with its
@@ -1234,9 +1252,17 @@ public record GrantsTriggeredAbility(Filters.Filter Affects, TriggeredAbilityCom
 /// "You may cast [spells] from your hand without paying their mana costs" — Omnipresence: "spells with
 /// mana value less than or equal to the number of creatures you control" (Is.ManaValueAtMost(
 /// Count.CreaturesYouControl)), asked from its holder's side (CastSpellAction.WithoutPayingManaCost,
-/// Playable.MayCastWithoutPaying).
+/// Playable.FreeCosts). On the card itself (What = Is.Source) it is the card's own alternative cost,
+/// from wherever it is cast — Flare of Fortitude, with <see cref="Costs"/>.
 /// </summary>
-public record MayCastFromHandFree(Filters.Filter What) : GameComponent;
+public record MayCastFromHandFree(Filters.Filter What) : GameComponent
+{
+	/// <summary>
+	/// Flare of Fortitude: "You may sacrifice a nontoken white creature rather than pay this spell's mana
+	/// cost." — paid instead (CastSpellAction.SacrificeId); a free cast with a cost is offered beside the paid one.
+	/// </summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
+}
 
 /// <summary>
 /// Null Summoner: "As long as [While], you may cast the exiled card, and mana of any type can be

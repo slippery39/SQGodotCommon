@@ -106,8 +106,18 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Replace a component with `WithComponentReplaced` — `WithComponent` ADDS, and `GetComponent` reads the first.
 - **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
   lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
-- **"During combat, no spells or abilities"** (Yuriko) and **split second** (Samut) are both
-  `Combat.LockedDown`, asked by casting and activating alike — never by mana abilities or triggers.
+- **"Can't cast spells or activate abilities"** is one piece, `CantCastOrActivate` — on a permanent for every
+  player (Yuriko: `DuringCombat`), or a "this turn" effect in one player's command zone (Sen Triplets:
+  `new ThisTurn(…) { On = Ref.Target(0) }`). It and **split second** (Samut) are `Combat.LockedDown(s, player)`,
+  asked by casting and activating alike, never by triggers; a mana ability only by a lock with
+  `ManaAbilitiesToo` (Sen) — `TapForManaAction` and `ManaPayment.Find`, so nothing taps to pay for them.
+- **"You may play cards from that player's hand this turn"** (Sen Triplets) is `MayPlayFrom(zone, of)` in your
+  command zone, read by `Playable` (cast, land, `Candidates`) — the whole zone while it lasts, a card drawn
+  later too. A `ThisTurnEffect` naming a player by a `Ref` keeps who it resolved to (`Bound`).
+- **"Your life total can't change"** (Flare of Fortitude) is `LifeTotalCantChange`, read by `Life.Gain`/`Lose`:
+  damage is still dealt (lifelink, "deals damage" triggers), no life moves. **Paying life** is ONE question,
+  `Life.CanPay` (at least that much, CR 119.4; never while it can't change, 119.8) — Phyrexian mana, the
+  shocklands and Hive Mind Coprocessor (`CanPayLife(n)`), Necrodominance's number.
 - **"This spell can't be countered" for one cast** (Theorist's Proxy) is `OnStackComponent.CantBeCountered`
   — gone with the stack object, so a recast can be countered; `StackResolution.CanBeCountered` reads both.
 - **An attack limit** ("no more than one creature can attack this planeswalker") is an option
@@ -197,8 +207,13 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   events in `Triggers.Collect` before ANY ability is matched — read at the next priority, so Karn
   entering alongside a creature silences it too, as the rulings say.
 - **"Without paying its mana cost"** (Omnipresence) is `CastSpellAction.WithoutPayingManaCost`, offered
-  and checked by `Playable.MayCastWithoutPaying`: X is 0, and `Costs.Of(…, free: true)` still adds
-  taxes and additional costs.
+  and checked by `Playable.FreeCosts`: X is 0, and `Costs.Of(…, free: true)` still adds
+  taxes and additional costs. **An alternative cost on the card** (Flare of Fortitude: "sacrifice a nontoken
+  white creature rather than pay") is the same `MayCastFromHandFree(Is.Source) { Costs }`, from wherever it is
+  cast but never with flashback (two alternative costs don't combine, CR 118.9a) — only `Is.Source` counts on the
+  card itself, so Omnipresence's static is no free cast for itself; its costs join `CastSpellAction.CostsOf`, and
+  a free cast with a cost is offered BESIDE the paid one
+  (one with none replaces it — never worse).
 - **A card exiled for a linked ability** (Null Summoner) carries `ExiledBy(source, incarnation)`;
   `Playable.IsCastableThroughLink` asks the source's static (`MayCastWhatItExiled`) — so only while that
   same object is on the battlefield. "Mana of any type can be spent" is `ManaCost.OfAnyType` in `Costs.Of`.
@@ -258,11 +273,13 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Restricted floating mana** ("spend this only to cast a noncreature spell") is
   `ManaPool.Restricted`: the solver offers it first, only to a spell `ManaAbilities.Allows` — the one
   restriction check, permanents' mana too — and `Pay` takes that unit. `ManaPool.Total` excludes it.
-- **A type change from an Aura** (Puppet Crafting: "is a 5/5 Construct creature in addition") is
-  STAMPED on the host while the Aura holds it (`Card.AnimatedBy`, what it was kept in `Animated`) and put
-  back by `Attachments.Check` once it doesn't, and by `Card.Fresh` as the host leaves. Every rule reads
-  `card.Is(Creature)`, so a live layer-4 read would need every one of them; the stamp is right by the
-  time anyone gets priority.
+- **A type change** is `BecomesType(scope) { Add, Remove, Subtype, Power, Toughness, If }` — Puppet Crafting
+  (`Is.AttachedToSource`: "is a 5/5 Construct creature in addition"), Mogis (`Is.Source`, `Remove = Creature`,
+  `If` devotion < 7). STAMPED on what the scope matches (`Card.AnimatedBy`, what it was kept in `Animated`) and
+  put back by `Attachments.Check` once it doesn't, and by `Card.Fresh` as it leaves; stamped too in
+  `EnterBattlefield` before the entry event (`Attachments.Retype`), so Mogis never enters a creature. Every
+  rule reads `card.Is(Creature)`, so a live layer-4 read would need every one of them; the stamp is right by
+  the time anyone gets priority. **Devotion** is `Count.DevotionTo(colours)`: a hybrid symbol of two counts once.
 - **Station** (Edge of Eternities' mechanic; TRK's Spacecraft, MC-5.2) is `TrkCards.Station(n, keywords)`. The
   station ability's cost is `TapUntappedCost(1, …)` — tapping ONE is a choice (`ActivateAbilityAction.TapId`,
   one legal action per creature; summoning sickness doesn't matter), and that creature is the ability's

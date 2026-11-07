@@ -152,7 +152,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   is read live by Characteristics, so it stops the instant the source leaves — MtgCore's stamped
   statics went stale exactly there. "Can't be blocked" and "can attack as though it didn't have defender" are keyword-like grants
   (`Combat.CantBeBlocked`, `Combat.AttacksDespiteDefender`) — a static's scope says who.
-  ONE exception: an Aura's type change (Puppet Crafting) is stamped, because every rule reads
+  ONE exception: a type change (`BecomesType`: Puppet Crafting, Mogis) is stamped, because every rule reads
   `card.Is(Creature)` — put right by the state-based check before anyone gets priority.
 - **Every engine piece carries a `///` summary that names a card and quotes its text.** The catalog
   is generated from those summaries — a piece without one is invisible to the next session.

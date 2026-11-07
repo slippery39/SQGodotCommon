@@ -367,6 +367,11 @@ public static class MagicState
 	)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
+		// Mogis: its type change is there as it enters — no "whenever a creature enters" sees a creature.
+		s = Rules.Attachments.Retype(
+			s.UpdateObject(cardId, s.GetCard(cardId) with { ControllerId = controllerId }),
+			cardId
+		);
 		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types));
 		var card = s.GetCard(cardId);
 		var entersTapped = card.GetComponent<EntersTappedComponent>();
@@ -425,7 +430,7 @@ public static class MagicState
 					[
 						new May(
 							$"Pay {life} life? If you don't, {card.Name} enters tapped.",
-							new AtLeast(Count.LifeTotalOf(Ref.You), life),
+							new CanPayLife(life),
 							[new LoseLife(Ref.You, life), new Untap(Ref.Source)]
 						),
 					],

@@ -101,8 +101,9 @@ the Stardates fix.
       `Scripting.cs`), with no new combat rule.
 - [ ] MC-6.9 **Playing from another zone** — part done 2026-11-06 (MC-5.6): `PlayPermission { ThisTurn, Forever,
       By, AnyType }`, taken out of `ExileTopPlayable` (Kirk, Exploratory Mission, Chekov, Vulcan Mind-Meld moved) and
-      given to `SearchLibrary.Play` with `SearchLibrary.Of` (Thada). The rest after MC-5.4. (MC-5.6: Thada's search into exile, playable this turn; batch 3:
-      Sen Triplets, Prosper). `MayCastFromExile`, `MayCastFromYourGraveyard`, `MayPlayFromYourGraveyard`,
+      given to `SearchLibrary.Play` with `SearchLibrary.Of` (Thada). Batch 3a: Prosper's "play from exile" is
+      `Trigger.From`. Batch 3b (2026-11-07): Sen Triplets' `MayPlayFrom(zone, of)`, a "this turn" permission on the
+      player, read by `Playable` beside the rest. The rest after MC-5.4. `MayCastFromExile`, `MayCastFromYourGraveyard`, `MayPlayFromYourGraveyard`,
       `MayCastArtifactFromLibraryTop`, `MayPlayLandsFromLibraryTop`, `MayCastWhatItExiled`, `GrantedFlashback`,
       `CastFromHandFree`, `CastFromHandFreeUpToCreatureCount`, `ExileTopPlayable` and its options, `ExileTopMayCast`,
       `ExileTopAndCastFree`, `ExileUntilNonlandCastFree` → one permission (which zone, whose, a filter, how
@@ -117,14 +118,19 @@ the Stardates fix.
       `ReturnFromYourGraveyard`, `ReturnFromExileUnderYourControl`, `ReturnLinkedExile`, `ReturnToHand`,
       `ReturnYourPermanentToHand`, `MayPutFromHandOntoBattlefield`, `PutIntoLibrary`, `ShuffleIntoLibrary` →
       a move to a zone with options (chosen or targeted, tapped, under whose control).
-- [ ] MC-6.13 **Statics on the enchanted creature** (batch 2: Mogis's "isn't a creature" touches type change).
-      `EnchantedBecomesCreature`, `EnchantedIsCreatureType`, `EnchantedLosesAllAbilities`,
+- [ ] MC-6.13 **Statics on the enchanted creature** — part done 2026-11-07 (MC-5.6 batch 3b): `EnchantedBecomesCreature`
+      → `BecomesType(scope) { Add, Remove, Subtype, Power, Toughness, If }` (Puppet Crafting moved; Mogis's "isn't a
+      creature" on it), `Attachments.Animations` made general and run in `EnterBattlefield` too. The rest after MC-5.4:
+      `EnchantedIsCreatureType`, `EnchantedLosesAllAbilities`,
       `EnchantedDoesntUntap`, `EnchantedCantBeBeamedUp` → the general statics with the scope
       `Is.AttachedToSource`.
 - [ ] MC-6.14 **"This turn" and "this game" conditions** — `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
       `HaventBegunAnExtraTurn`, `IfNthResolutionThisTurn` → a `Count` and `AtLeast`, where a tally exists.
-- [ ] MC-6.15 **Rule-changing statics** ("can't", "doesn't", "don't"): `CantAttackThisTurn`, `CantBeCountered`,
-      `NextSpellCantBeCountered`, `NoSpellsOrAbilitiesDuringCombat`, `CantSacrificeTreasures`,
+- [ ] MC-6.15 **Rule-changing statics** — part done 2026-11-07 (MC-5.6 batch 3b): `NoSpellsOrAbilitiesDuringCombat` →
+      `CantCastOrActivate { DuringCombat, ManaAbilitiesToo }`, on a permanent (Yuriko moved) or a `ThisTurn { On }`
+      effect (Sen Triplets); `LifeTotalCantChange` (Flare of Fortitude) with paying life one question (`Life.CanPay`).
+      The rest after MC-5.4 ("can't", "doesn't", "don't"): `CantAttackThisTurn`, `CantBeCountered`,
+      `NextSpellCantBeCountered`, `CantSacrificeTreasures`,
       `DoesntUntapInYourUntapStep`, `YouHaveHexproof`, `PreventAllDamageToYou`, `DontLoseForZeroLife` … —
       look for the families among them (who, what action, a filter, how long). Batch 2's Sen Triplets ("can't
       cast spells or activate abilities") and Flare of Fortitude ("your life total can't change") should

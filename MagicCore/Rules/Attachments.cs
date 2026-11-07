@@ -71,9 +71,9 @@ public static class Attachments
 	/// <summary>
 	/// State-based (CR 704.5m/n): an Aura attached to nothing legal goes to its owner's graveyard;
 	/// an Equipment attached to something that is no longer a creature on the battlefield falls off.
-	/// Then a type change an Aura makes (Puppet Crafting) is put right: gone from a permanent the Aura
-	/// left, on one it holds. ponytail: stamped, not a live layer-4 effect — every rule reads
-	/// card.Is(Creature); the stamp is put right before anyone gets priority.
+	/// Then every type change (<see cref="BecomesType"/>: Puppet Crafting, Mogis) is put right: gone from
+	/// what its source no longer changes, on what it does. ponytail: stamped, not a live layer-4 effect —
+	/// every rule reads card.Is(Creature); one stamp per permanent; put right before anyone gets priority.
 	/// </summary>
 	public static GameState Check(GameState s, int playerId)
 	{
@@ -82,27 +82,55 @@ public static class Attachments
 		return s;
 	}
 
+	/// <summary>
+	/// The entering permanent's type change put on as it enters (MagicState.EnterBattlefield), so Mogis never
+	/// enters a creature — the rest waits for the state-based check.
+	/// </summary>
+	public static GameState Retype(GameState s, int cardId)
+	{
+		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
+		foreach (var source in s.CardsIn(player, ZoneType.Battlefield).ToList())
+		foreach (var becomes in s.AbilitiesOf<BecomesType>(source))
+			if (
+				s.GetCard(cardId) is var card
+				&& !card.HasComponent<Animated>()
+				&& Changes(s, source, becomes, card)
+			)
+				s = s.UpdateObject(cardId, card.AnimatedBy(source, becomes));
+		return s;
+	}
+
+	static bool Changes(GameState s, Card source, BecomesType becomes, Card host) =>
+		becomes.Scope.Matches(s, host, new Filters.FilterContext(source.ControllerId, source.Id))
+		&& (becomes.If is null || becomes.If.Holds(s, Conditions.Of(source)));
+
 	static GameState Animations(GameState s, int playerId)
 	{
 		foreach (var host in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
 			if (
-				host.GetComponent<Animated>() is { AuraId: not 0 } a // 0: assimilated, no Aura — until it leaves
+				host.GetComponent<Animated>() is { SourceId: not 0 } a // 0: assimilated — until it leaves
 				&& !(
-					s.IsOnBattlefield(a.AuraId)
-					&& s.GetCard(a.AuraId) is var aura
-					&& aura.Incarnation == a.AuraIncarnation
-					&& IsOn(aura, host)
-					&& s.HasAbility<EnchantedBecomesCreature>(aura)
+					s.IsOnBattlefield(a.SourceId)
+					&& s.GetCard(a.SourceId) is var source
+					&& source.Incarnation == a.SourceIncarnation
+					&& s.AbilitiesOf<BecomesType>(source).Any(b => Changes(s, source, b, host))
 				)
 			)
 				s = s.UpdateObject(host.Id, host.WithoutAnimation());
-		foreach (var aura in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
+		foreach (var source in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
+		foreach (var becomes in s.AbilitiesOf<BecomesType>(source))
+		foreach (
+			var id in new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Select(c => c.Id)
+				.ToList()
+		)
 			if (
-				s.AbilitiesOf<EnchantedBecomesCreature>(aura).FirstOrDefault() is { } becomes
-				&& HostOf(s, aura) is { } host
+				s.GetCard(id) is var host
 				&& !host.HasComponent<Animated>()
+				&& Changes(s, source, becomes, host)
 			)
-				s = s.UpdateObject(host.Id, host.AnimatedBy(aura, becomes));
+				s = s.UpdateObject(id, host.AnimatedBy(source, becomes));
 		return s;
 	}
 

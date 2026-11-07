@@ -39,7 +39,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 9. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
 10. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
 11. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-12. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice
+12. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
 13. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
 14. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
 15. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)

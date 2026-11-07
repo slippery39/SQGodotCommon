@@ -365,6 +365,7 @@ public enum CountOf
 	LifeLostThisTurnOf, // Gul Dukat: "the life that player lost this turn" — the players [Ref] names
 	DilemmasFacedThisTurnBy, // Sisko: "each dilemma you've faced this turn" — the players [Ref] names
 	ModesChosen, // Riku of Many Paths: "the number of times you chose a mode for that spell" — the spell on the stack [Ref]
+	DevotionTo, // Mogis: "your devotion to black and red" — Count.Colors
 }
 
 /// <summary>
@@ -387,6 +388,16 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static Count CountersOfKind(Ref r, string kind) =>
 		new(0, r, CountOf.CountersOfKind) { CounterKind = kind };
+
+	/// <summary>DevotionTo: which colours.</summary>
+	public ImmutableArray<ManaColor> Colors { get; init; } = [];
+
+	/// <summary>
+	/// Mogis, God of Slaughter: "your devotion to black and red" — the mana symbols of those colours among
+	/// the mana costs of permanents you control; a hybrid symbol of both counts once (CR 700.5).
+	/// </summary>
+	public static Count DevotionTo(params ManaColor[] colors) =>
+		new(0, Ref.Permanents(Is.Yours), CountOf.DevotionTo) { Colors = [.. colors] };
 
 	public static implicit operator Count(int n) => new(n);
 
@@ -605,6 +616,15 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.ModesChosen => Cards()
 				.Sum(c => c.GetComponent<Actions.OnStackComponent>()?.Modes.Length ?? 0),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
+			CountOf.DevotionTo => Cards()
+				.SelectMany(c => c.ManaCost.Symbols)
+				.Count(sym =>
+					sym.Kind is not (SymbolKind.Generic or SymbolKind.X)
+					&& (
+						Colors.Contains(sym.Color)
+						|| sym.Kind == SymbolKind.Hybrid && Colors.Contains(sym.Color2)
+					)
+				),
 			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),
 			CountOf.SubtypesAmong => Cards().SelectMany(c => s.Subtypes(c)).Distinct().Count(),
 			CountOf.DistinctNamesOf => Cards().Select(c => c.Name).Distinct().Count(),

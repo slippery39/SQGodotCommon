@@ -76,7 +76,7 @@ public record ActivateLoyaltyAction : GameAction
 			&& s.ThisTurnEffects<Effects.JaceLoyaltyAtInstantSpeed>(PlayerId).Any();
 		if (!instantSpeedJace && !Priority.AtSorcerySpeed(s, PlayerId))
 			return ValidationResult.Invalid("Loyalty abilities are sorcery speed");
-		if (Turns.Combat.LockedDown(s)) // split second or Yuriko — reachable once a Jace's is instant speed
+		if (Turns.Combat.LockedDown(s, PlayerId)) // split second, Yuriko, Sen Triplets
 			return ValidationResult.Invalid("No abilities now: combat lockdown or split second");
 		if (walker.LoyaltyActivatedOnTurn == game.TurnNumber)
 			return ValidationResult.Invalid(

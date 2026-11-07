@@ -42,26 +42,39 @@ public static class Combat
 		&& !s.ThisTurnEffects<Effects.CantAttackThisTurn>(c.ControllerId).Any(); // Peace in Our Time
 
 	/// <summary>
-	/// No spells or non-mana abilities now: Yuriko during combat, or a spell with split second on the
-	/// stack (CR 702.61 — Samut gives it to its controller's instants and sorceries). Casting and
-	/// activating both ask here; mana abilities and triggers never do.
+	/// No spells or abilities for this player now (<see cref="Effects.CantCastOrActivate"/>): Yuriko during
+	/// combat, Sen Triplets' lock this turn, or a spell with split second on the stack (CR 702.61 — Samut
+	/// gives it to its controller's instants and sorceries). Casting and activating ask here; triggers never
+	/// do. <paramref name="manaAbility"/>: asked for a mana ability — only a lock with ManaAbilitiesToo stops
+	/// one (Sen: TapForManaAction, ManaPayment).
 	/// </summary>
-	public static bool LockedDown(GameState s)
+	public static bool LockedDown(GameState s, int playerId, bool manaAbility = false)
 	{
 		// Cheap questions first: this runs for every cast and activation the AI considers.
 		var inCombat = s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat;
+		bool Stops(Effects.CantCastOrActivate l) =>
+			(inCombat || !l.DuringCombat) && (l.ManaAbilitiesToo || !manaAbility);
+		if (
+			s.ThisTurnEffects<Effects.CantCastOrActivate>(playerId)
+				.Any(c => Stops(c.GetComponent<Effects.CantCastOrActivate>()!))
+		)
+			return true;
+		// ponytail: a permanent's lock is looked for only during combat — Yuriko's is the only one; look
+		// always once a card's isn't DuringCombat (DesignNotes).
+		if (
+			inCombat
+			&& new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Any(p => s.AbilitiesOf<Effects.CantCastOrActivate>(p).Any(Stops))
+		)
+			return true;
+		if (manaAbility)
+			return false; // split second leaves mana abilities alone
 		var spells = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
 			.Select(s.GetObject)
 			.OfType<Card>()
 			.Where(c => c.Is(CardType.Instant | CardType.Sorcery))
 			.ToList();
-		if (!inCombat && spells.Count == 0)
-			return false;
-		var permanents = new[] { s.Player1Id(), s.Player2Id() }.SelectMany(p =>
-			s.CardsIn(p, ZoneType.Battlefield)
-		);
-		if (inCombat && permanents.Any(s.HasAbility<Effects.NoSpellsOrAbilitiesDuringCombat>))
-			return true;
 		return spells.Any(spell =>
 			s.CardsIn(spell.ControllerId, ZoneType.Battlefield)
 				.Any(s.HasAbility<Effects.YourInstantsAndSorceriesHaveSplitSecond>)

@@ -518,13 +518,15 @@ public record PayAnyLifeThenDraw : Effect
 						// the game, and each number is a look-ahead the AI settles.
 						new ChooseNumberChoice(
 							Controller,
-							Math.Max(
-								0,
-								Math.Min(
-									s.GetPlayer(Controller).Life - 1,
-									s.CardsIn(Controller, ZoneType.Library).Count()
+							Rules.Life.CantChange(s, Controller)
+								? 0 // CR 119.8: no life can be paid
+								: Math.Max(
+									0,
+									Math.Min(
+										s.GetPlayer(Controller).Life - 1,
+										s.CardsIn(Controller, ZoneType.Library).Count()
+									)
 								)
-							)
 						)
 						{
 							Prompt = "Pay how much life? You draw that many cards.",
@@ -855,12 +857,54 @@ public record TriggersThisTurn : ThisTurnEffect;
 /// <summary>Puts a <see cref="ThisTurnEffect"/> in your command zone for the rest of the turn.</summary>
 public record ThisTurn(ThisTurnEffect What) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(GetEmblem.ToCommandZone(s, Controller, $"{Source(s).Name} (this turn)", [What]));
+	/// <summary>Sen Triplets: "This turn, that player can't …" — whose command zone (Ref.Target(0)); unset is you.</summary>
+	public Ref? On { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var who = On is null ? Controller : All(On, s).FirstOrDefault();
+		// Sen Triplets' "that player's hand": who it names, kept as it resolves — a target can't be read later.
+		var what = What switch
+		{
+			MayPlayFrom may => may with { OwnerId = All(may.Of, s).FirstOrDefault() },
+			_ => What,
+		};
+		return who == 0
+			? new(s)
+			: new(GetEmblem.ToCommandZone(s, who, $"{Source(s).Name} (this turn)", [what]));
+	}
+}
+
+/// <summary>
+/// "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat, players can't
+/// cast spells or activate abilities that aren't mana abilities." (a permanent's: every player); Sen
+/// Triplets: "This turn, that player can't cast spells or activate abilities" (in that player's command
+/// zone, mana abilities too). Combat.LockedDown.
+/// </summary>
+public record CantCastOrActivate : ThisTurnEffect
+{
+	/// <summary>Yuriko: "During combat".</summary>
+	public bool DuringCombat { get; init; }
+
+	/// <summary>Sen Triplets: "activate abilities" — mana abilities too (Kai Winn's ruling); TapForManaAction and ManaPayment ask.</summary>
+	public bool ManaAbilitiesToo { get; init; }
+}
+
+/// <summary>
+/// Sen Triplets: "You may play lands and cast spells from that player's hand this turn." — every card in
+/// that zone while it lasts, one drawn later too; the land drop and the costs as usual. Read by Playable
+/// (CanCastFromHere, CanPlayLandFromHere, Candidates). <see cref="Of"/> is resolved as it is made (OwnerId).
+/// </summary>
+public record MayPlayFrom(ZoneType Zone, Ref Of) : ThisTurnEffect
+{
+	public int OwnerId { get; init; }
 }
 
 /// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>
 public record ExtraRedFromMountains : ThisTurnEffect;
+
+/// <summary>Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life (Gain, Lose, CanPay).</summary>
+public record LifeTotalCantChange : ThisTurnEffect;
 
 /// <summary>Peace in Our Time: "they can't attack this turn" — on that player; Combat.CanAttack.</summary>
 public record CantAttackThisTurn : ThisTurnEffect;

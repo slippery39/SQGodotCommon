@@ -2020,7 +2020,7 @@ public static class TrkCards
 						[],
 						new May(
 							"Pay 1 life to draw a card?",
-							new Always(), // paying life is losing it (CR 119.4); at 0 the game is already over
+							new CanPayLife(1),
 							[new LoseLife(Ref.You, 1), new DrawCards(Ref.You, 1)]
 						)
 					)
@@ -4015,6 +4015,73 @@ public static class TrkCards
 				{
 					Costs = [new ExileFromGraveyardCost(Is.Creature) { Count = 3 }],
 				},
+			],
+			// ===== MC-5.6 batch 3b: the Stardates — rule statics (MC-6.15), play from their hand, a type change, devotion =====
+			["Sen Triplets"] =
+			[
+				When(
+					TriggerEvent.YourUpkeep,
+					[TargetSpec.Player(Is.Opponents)],
+					new ThisTurn(new CantCastOrActivate { ManaAbilitiesToo = true })
+					{
+						On = Ref.Target(0),
+					},
+					new LookAtHand(Ref.Target(0)), // "plays with their hand revealed" — to you; they know it
+					new ThisTurn(new MayPlayFrom(ZoneType.Hand, Ref.Target(0)))
+				),
+			],
+			["Flare of Fortitude"] =
+			[
+				new MayCastFromHandFree(Is.Source)
+				{
+					Costs =
+					[
+						new SacrificeCost(Is.Creature & Is.Color(ManaColor.White) & !Is.Token),
+					],
+				},
+				Spell(
+					[],
+					new ThisTurn(new LifeTotalCantChange()),
+					new ModifyUntilEndOfTurn(Ref.Permanents(Is.Yours), 0, 0, "Hexproof"),
+					new ModifyUntilEndOfTurn(Ref.Permanents(Is.Yours), 0, 0, "Indestructible")
+				),
+			],
+			["Mogis, God of Slaughter"] =
+			[
+				new BecomesType(Is.Source)
+				{
+					Remove = CardType.Creature,
+					If = new Not(new AtLeast(Count.DevotionTo(ManaColor.Black, ManaColor.Red), 7)),
+				},
+				// "… deals 2 damage to that player unless they sacrifice a creature of their choice." — asked
+				// only when they have one (May runs no Otherwise when it can't ask).
+				When(
+					TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent),
+					[],
+					new If(
+						new AtLeast(
+							Count.NumberOf(
+								Ref.All(ZoneType.Battlefield, Is.Creature, Ref.ActivePlayer)
+							),
+							1
+						),
+						[
+							new May(
+								"Sacrifice a creature? If you don't, Mogis deals 2 damage to you.",
+								new Always(),
+								[new MaySacrifice(Is.Creature, []) { Must = true }]
+							)
+							{
+								Who = Ref.ActivePlayer,
+								ThenAsThem = true,
+								Otherwise = [new DealDamage(Ref.ActivePlayer, 2)],
+							},
+						]
+					)
+					{
+						Otherwise = [new DealDamage(Ref.ActivePlayer, 2)],
+					}
+				),
 			],
 		};
 

@@ -50,7 +50,15 @@ public static class Playable
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| IsCastableThroughLink(s, card, playerId)
 			|| LibraryTopPermission(s, card, playerId) is not null
+			|| IsPlayableFromTheirZone(s, card, playerId)
 		) && CastRestrictionHolds(s, card, playerId);
+
+	/// <summary>Sen Triplets: a card in a zone one of this player's <see cref="MayPlayFrom"/> names (that player's hand).</summary>
+	public static bool IsPlayableFromTheirZone(GameState s, Card card, int playerId) =>
+		s.ThisTurnEffects<MayPlayFrom>(playerId)
+			.Any(c =>
+				c.GetComponent<MayPlayFrom>() is { } may && s.IsIn(card.Id, may.OwnerId, may.Zone)
+			);
 
 	/// <summary>
 	/// Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of
@@ -134,14 +142,42 @@ public static class Playable
 		&& s.AbilitiesOf<MayCastWhatItExiled>(source)
 			.Any(may => may.While.Holds(s, Conditions.Of(source)));
 
-	/// <summary>Omnipresence: from your hand, a spell a MayCastFromHandFree of yours allows.</summary>
+	/// <summary>
+	/// What casting this without paying its mana cost costs instead, or null when nothing allows it:
+	/// Omnipresence's (a permanent of yours, a spell in your hand) or the card's own — Flare of Fortitude's
+	/// "rather than pay this spell's mana cost" (What = Is.Source: Omnipresence's own static is no alternative
+	/// cost for itself), from wherever it is cast but never with flashback — two alternative costs don't
+	/// combine (CR 118.9a). The one asking least.
+	/// </summary>
+	public static System.Collections.Immutable.ImmutableList<AdditionalCost>? FreeCosts(
+		GameState s,
+		Card card,
+		int playerId
+	) =>
+		(
+			s.IsIn(card.Id, playerId, ZoneType.Hand)
+				? s.CardsIn(playerId, ZoneType.Battlefield)
+					.SelectMany(p =>
+						s.AbilitiesOf<MayCastFromHandFree>(p)
+							.Where(m =>
+								m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id))
+							)
+					)
+				: []
+		)
+			.Concat(
+				Costs.Flashback(s, card) is null
+					? card
+						.Components.OfType<MayCastFromHandFree>()
+						.Where(m => m.What.Equals(Filters.Is.Source))
+					: []
+			)
+			.OrderBy(m => m.Costs.Count)
+			.FirstOrDefault()
+			?.Costs;
+
 	public static bool MayCastWithoutPaying(GameState s, Card card, int playerId) =>
-		s.IsIn(card.Id, playerId, ZoneType.Hand)
-		&& s.CardsIn(playerId, ZoneType.Battlefield)
-			.Any(p =>
-				s.AbilitiesOf<MayCastFromHandFree>(p)
-					.Any(m => m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id)))
-			);
+		FreeCosts(s, card, playerId) is not null;
 
 	public static bool CanPlayLandFromHere(GameState s, Card card, int playerId) =>
 		card.Is(CardType.Land)
@@ -150,6 +186,7 @@ public static class Playable
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| IsLandPlayableFromLibraryTop(s, card, playerId)
 			|| GraveyardPermission(s, card, playerId) is not null
+			|| IsPlayableFromTheirZone(s, card, playerId)
 		);
 
 	/// <summary>Captain Pike, Fullness of Time: "You may play lands from the top of your library." — the land drop is the only limit.</summary>
@@ -166,6 +203,12 @@ public static class Playable
 			.Concat(s.CardsIn(playerId, ZoneType.Library).Take(1)) // Zefram Cochrane: the top card
 			.Concat(
 				MayPlayFromOutside(s, playerId) ? s.CardsIn(playerId, ZoneType.Sideboard) : [] // The Holodeck
+			)
+			.Concat(
+				s.ThisTurnEffects<MayPlayFrom>(playerId) // Sen Triplets: that player's hand
+					.Select(c => c.GetComponent<MayPlayFrom>()!)
+					.Where(may => may.OwnerId != playerId)
+					.SelectMany(may => s.CardsIn(may.OwnerId, may.Zone))
 			)
 			.Where(c =>
 				c.Is(CardType.Land)

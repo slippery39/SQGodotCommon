@@ -195,12 +195,14 @@ public static class ManaPayment
 			);
 		var player = s.GetPlayer(playerId);
 		var tappable = new List<Tappable>();
+		var manaLocked = Turns.Combat.LockedDown(s, playerId, manaAbility: true); // Sen Triplets: floating mana and convoke only
 		foreach (var c in s.CardsIn(playerId, ZoneType.Battlefield))
 		{
 			// Its own {T} cost, or a permanent another cost sacrifices or taps: not mana for this too.
 			if (c.Id == excludeId || alsoExclude?.Contains(c.Id) == true)
 				continue;
-			var yield = ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null;
+			var yield =
+				!manaLocked && ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null;
 			if (yield is not null && !yield.CanPayFor(s, forSpell, forAbilityOf))
 				yield = null; // its mana can't pay — but it may still convoke
 			// Convoke (CR 702.51): an untapped creature you control may pay {1} or one mana of its

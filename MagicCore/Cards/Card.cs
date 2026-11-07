@@ -367,33 +367,27 @@ public record Card : GameObject
 		};
 
 	/// <summary>
-	/// Animated by an Aura (Puppet Crafting): a creature of that subtype with that base P/T, in
-	/// addition to what it was — and what it was, recorded to put back.
+	/// Its types changed by a <see cref="Effects.BecomesType"/> (Puppet Crafting, Mogis): types added and
+	/// removed, a subtype, a base P/T — and what it was, recorded to put back.
 	/// </summary>
-	public Card AnimatedBy(Card aura, Effects.EnchantedBecomesCreature becomes) =>
-		(Card)
+	public Card AnimatedBy(Card source, Effects.BecomesType becomes)
+	{
+		var added = becomes.Subtype is { } sub && !Subtypes.Contains(sub) ? sub : null;
+		return (Card)
 			(
 				this with
 				{
-					Types = Types | CardType.Creature,
-					Subtypes = Subtypes.Contains(becomes.Subtype)
-						? Subtypes
-						: Subtypes.Add(becomes.Subtype),
-					BasePower = becomes.Power,
-					BaseToughness = becomes.Toughness,
+					Types = (Types | becomes.Add) & ~becomes.Remove,
+					Subtypes = added is null ? Subtypes : Subtypes.Add(added),
+					BasePower = becomes.Power ?? BasePower,
+					BaseToughness = becomes.Toughness ?? BaseToughness,
 				}
 			).WithComponent(
-				new Animated(
-					aura.Id,
-					aura.Incarnation,
-					Types,
-					Subtypes.Contains(becomes.Subtype) ? null : becomes.Subtype,
-					BasePower,
-					BaseToughness
-				)
+				new Animated(source.Id, source.Incarnation, Types, added, BasePower, BaseToughness)
 			);
+	}
 
-	/// <summary>Back to what it was before an Aura animated it — the Aura left, or it does (CR 400.7).</summary>
+	/// <summary>Back to what it was before a type change — its source left or stopped, or it leaves (CR 400.7).</summary>
 	public Card WithoutAnimation() =>
 		GetComponent<Animated>() is { } a
 			? (Card)
@@ -528,10 +522,10 @@ public record CopyUntilEndOfTurn(Card Original) : GameComponent;
 /// </summary>
 public record EnteredAsCopy(Card Original) : GameComponent;
 
-/// <summary>Animated by this Aura (this object of it); the rest is what it was, to put back. AuraId 0: by an effect with no duration, until it leaves (Assimilate).</summary>
+/// <summary>Its types changed by this source's BecomesType (this object of it); the rest is what it was, to put back. SourceId 0: by an effect with no duration, until it leaves (Assimilate).</summary>
 public record Animated(
-	int AuraId,
-	int AuraIncarnation,
+	int SourceId,
+	int SourceIncarnation,
 	CardType Types,
 	string? AddedSubtype,
 	int BasePower,

@@ -173,6 +173,13 @@ public record Always : Condition
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) => true;
 }
 
+/// <summary>The shocklands: "you may pay 2 life"; Hive Mind Coprocessor: "pay 1 life" — asked only when it can be paid (Rules.Life.CanPay).</summary>
+public record CanPayLife(int N) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		Rules.Life.CanPay(s, (int)context[ContextKeys.Controller], N);
+}
+
 /// <summary>Proft: "you may pay {2}" — asked only when it can be paid.</summary>
 public record CanPay(ManaCost Cost) : Condition
 {
