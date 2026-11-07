@@ -698,3 +698,4 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   moved (Isshin; Torbran, Bruvac; Rishkar, Talon Gates, Phyrexian Tower; Sisay, Weatherlight Captain, Loot, Exuberant
   Explorer).
 - 2026-11-07: MC-5.4.1 — TRK's collation, PROVISIONAL from Wizards' published odds (MTGJSON still has none): `tools/build_trk_boosters.py` → `Sets/TRK.boosters.json`, the Stardates 1 pack in 25 (Decisions)
+- 2026-11-07: MC-5.4.2 — TRK's art from Scryfall (`tools/fetch_set_art.py trk`, the Stardates and TRK tokens too): 706 images for 355 cards, imported; the basics' TRK printings (reprints of FRA's) in `Art/trk/`, `Cards/trk/`
