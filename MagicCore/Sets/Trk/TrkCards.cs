@@ -42,6 +42,16 @@ public static class TrkCards
 		["Haste"]
 	);
 
+	/// <summary>Riku of Many Paths: "a 1/1 blue Bird creature token with flying".</summary>
+	public static readonly CardData Bird = Token(
+		"Bird",
+		"Creature — Bird",
+		"1",
+		"1",
+		["U"],
+		["Flying"]
+	);
+
 	/// <summary>"A 2/2 black Romulan creature token."</summary>
 	public static readonly CardData Romulan = Token(
 		"Romulan",
@@ -3950,6 +3960,60 @@ public static class TrkCards
 					Costs = [new TapSelfCost()],
 					Targets = [TargetSpec.Spell((Is.Instant | Is.Sorcery) & Is.Yours)],
 					OnlyIf = new AtLeast(Count.SpellsYouCastThisTurn, 3),
+				},
+			],
+			// ===== MC-5.6 batch 3a: the Stardates — a modal spell's modes counted, play from exile, Phyrexian mana, keyword counters =====
+			["Riku of Many Paths"] =
+			[
+				ModalWhen(
+					"Riku of Many Paths",
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.Modal,
+					},
+					new() { AtLeast = 0, AtMost = Count.ModesChosen(Ref.EventCard) },
+					M([], new ExileTopPlayable()),
+					M(
+						[],
+						new PutCounters(Ref.Source, 1),
+						new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Trample")
+					),
+					M([], new CreateTokens(Bird, 1))
+				),
+			],
+			["Prosper, Tome-Bound"] =
+			[
+				When(TriggerEvent.YourEndStep, [], new ExileTopPlayable()),
+				// "Whenever you play a card from exile" — cast from there, or a land played from there (two
+				// rows, as Isshin's); a prepared copy cast from exile isn't a card.
+				When(
+					new Trigger(EventKind.SpellCast)
+					{
+						By = Whose.You,
+						From = ZoneType.Exile,
+						Subject = !Is.Copy,
+					},
+					[],
+					CreateTreasure(1)
+				),
+				When(
+					new Trigger(EventKind.LandPlayed) { By = Whose.You, From = ZoneType.Exile },
+					[],
+					CreateTreasure(1)
+				),
+			],
+			["Drivnod, Carnage Dominus"] =
+			[
+				new TriggersAdditionalTime(
+					new Trigger(EventKind.Died) { Subject = Is.Creature },
+					Is.Yours
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{B/P}{B/P}"),
+					[new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Indestructible }]
+				)
+				{
+					Costs = [new ExileFromGraveyardCost(Is.Creature) { Count = 3 }],
 				},
 			],
 		};

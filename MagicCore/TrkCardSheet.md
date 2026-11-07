@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 96/96 · uncommon 110/110 · rare 80/80 · mythic 49/55 · **335/341**
+**Playable:** common 96/96 · uncommon 110/110 · rare 80/80 · mythic 52/55 · **338/341**
 
 ### A Good Day to Die
 
@@ -7389,7 +7389,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If a creature dying causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.  
 > {B/P}{B/P}, Exile three creature cards from your graveyard: Put an indestructible counter on Drivnod. ({B/P} can be paid with either {B} or 2 life.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkStardateTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileFromGraveyardCost` — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `TriggersAdditionalTime` — "If [Cause] causes a triggered ability of [WhoseAbilities] to trigger, that ability…
+
+```csharp
+["Drivnod, Carnage Dominus"] =
+[
+	new TriggersAdditionalTime(
+		new Trigger(EventKind.Died) { Subject = Is.Creature },
+		Is.Yours
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{B/P}{B/P}"),
+		[new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Indestructible }]
+	)
+	{
+		Costs = [new ExileFromGraveyardCost(Is.Creature) { Count = 3 }],
+	},
+],
+```
 
 ### Empress Galina
 
@@ -7960,7 +7979,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Mystic Arcanum — At the beginning of your end step, exile the top card of your library. Until the end of your next turn, you may play that card.  
 > Pact Boon — Whenever you play a card from exile, create a Treasure token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkStardateTests
+
+**Engine pieces:** `ExileTopPlayable` — Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn,…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Prosper, Tome-Bound"] =
+[
+	When(TriggerEvent.YourEndStep, [], new ExileTopPlayable()),
+	// "Whenever you play a card from exile" — cast from there, or a land played from there (two
+	// rows, as Isshin's); a prepared copy cast from exile isn't a card.
+	When(
+		new Trigger(EventKind.SpellCast)
+		{
+			By = Whose.You,
+			From = ZoneType.Exile,
+			Subject = !Is.Copy,
+		},
+		[],
+		CreateTreasure(1)
+	),
+	When(
+		new Trigger(EventKind.LandPlayed) { By = Whose.You, From = ZoneType.Exile },
+		[],
+		CreateTreasure(1)
+	),
+],
+```
 
 ### Q, Stacking the Deck
 
@@ -8015,7 +8060,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Put a +1/+1 counter on Riku. It gains trample until end of turn.  
 > • Create a 1/1 blue Bird creature token with flying.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** TrkStardateTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `ExileTopPlayable` — Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn,…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Riku of Many Paths"] =
+[
+	ModalWhen(
+		"Riku of Many Paths",
+		TriggerEvent.YouCastSpell with
+		{
+			Subject = Is.Modal,
+		},
+		new() { AtLeast = 0, AtMost = Count.ModesChosen(Ref.EventCard) },
+		M([], new ExileTopPlayable()),
+		M(
+			[],
+			new PutCounters(Ref.Source, 1),
+			new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Trample")
+		),
+		M([], new CreateTokens(Bird, 1))
+	),
+],
+```
 
 ### Rishkar, Peema Renegade
 

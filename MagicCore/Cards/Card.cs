@@ -423,13 +423,27 @@ public record Card : GameObject
 			? (Card)WithCopiableValuesOf(copy.Original).WithoutComponents<CopyUntilEndOfTurn>()
 			: this;
 
-	/// <summary>Printed keywords plus any granted until end of turn.</summary>
+	/// <summary>
+	/// Printed keywords plus any granted until end of turn — and a keyword counter (CR 122.1b, Drivnod's
+	/// indestructible counter): any counter named as the keyword is, lower case.
+	/// </summary>
 	public bool HasOwn(string keyword)
 	{
 		if (Keywords.Contains(keyword))
 			return true;
+		if (HasKeywordCounter(keyword))
+			return true;
 		foreach (var component in Components)
 			if (component is UntilEndOfTurn u && u.Keyword == keyword)
+				return true;
+		return false;
+	}
+
+	/// <summary>A keyword counter (CR 122.1b, Drivnod's indestructible counter): a counter named as the keyword, any case.</summary>
+	public bool HasKeywordCounter(string keyword)
+	{
+		foreach (var (kind, n) in Counters) // no allocation: this sits under s.Has, under the AI
+			if (n > 0 && string.Equals(kind, keyword, StringComparison.OrdinalIgnoreCase))
 				return true;
 		return false;
 	}

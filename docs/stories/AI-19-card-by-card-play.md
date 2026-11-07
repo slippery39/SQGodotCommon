@@ -73,6 +73,10 @@ Open questions:
 - [ ] AI-19.19 Phyrexian Tower: its "{T}, Sacrifice a creature: Add {B}{B}" is a move, one per creature, its mana
       floating (MC-5.6, Shayne). Check the search takes it only to cast with the mana that turn — and in response to
       removal on the creature, which a one-ply score won't see.
+- [ ] AI-19.20 Drivnod, Carnage Dominus: the three creature cards it exiles are picked one at a time by a one-ply
+      score (`GreedyAi.Answer`), which doesn't price a graveyard card — so it exiles the first, not the least
+      useful (a reanimation target kept). And `{B/P}` paid with life or {B} is the search's: check it pays life only
+      when the mana buys something else that turn (MC-5.6 batch 3a).
 
 ## Next
 

@@ -616,7 +616,11 @@ public static class Evaluator
 	/// </summary>
 	static bool Lasting(GameState s, Card c, string keyword, List<UntilEndOfTurn> pumps) =>
 		s.Has(c, keyword)
-		&& (c.Keywords.Contains(keyword) || !pumps.Any(u => u.Keyword == keyword))
+		&& (
+			c.Keywords.Contains(keyword)
+			|| c.HasKeywordCounter(keyword) // Drivnod's indestructible counter stays, pumped or not
+			|| !pumps.Any(u => u.Keyword == keyword)
+		)
 		&& (keyword != "Haste" || Combat.IsSummoningSick(s, c));
 }
 

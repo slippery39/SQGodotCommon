@@ -68,12 +68,14 @@ public record CombatDamageToPlayersEvent(ImmutableList<int> PlayerIds) : MagicEv
 /// <param name="SpellNumber">Stella Lee: "your second spell each turn" — which spell its caster cast this turn, any kind.</param>
 /// <param name="Copies">Way of the Cryomancer: delayed "copy that spell" triggers this cast set off.</param>
 /// <summary>A spell was cast — raised by CastSpellAction.PutOnStack (copies are not cast, and raise none).</summary>
+/// <param name="From">Prosper, Tome-Bound: "play a card from exile" — the zone it was cast from (Trigger.From).</param>
 public record SpellCastEvent(
 	int CardId,
 	int PlayerId,
 	int NoncreatureSpellNumber = 0,
 	int Copies = 0,
-	int SpellNumber = 0
+	int SpellNumber = 0,
+	ZoneType From = ZoneType.Hand
 ) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.SpellCast;
@@ -148,6 +150,20 @@ public record DiscardedEvent(int PlayerId, ImmutableList<int> CardIds) : MagicEv
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
 		CardIds.Where(s.HasObject).Select(s.GetObject);
+
+	public override int By(GameState s) => PlayerId;
+}
+
+/// <summary>
+/// A player played a land — raised by PlayLandAction alone, so a land put onto the battlefield isn't one.
+/// Prosper, Tome-Bound: "Whenever you play a card from exile" — From is where it was played from.
+/// </summary>
+public record LandPlayedEvent(int PlayerId, int CardId, ZoneType From) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.LandPlayed;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
 
 	public override int By(GameState s) => PlayerId;
 }
@@ -570,14 +586,20 @@ public static class Triggers
 	{
 		if (t.Ability.If is not { } condition)
 			return true;
+		return condition.Holds(s, ContextOf(t));
+	}
+
+	/// <summary>What a pending trigger's conditions and counts read as it triggers — its source and its event's card.</summary>
+	static ImmutableDictionary<string, object> ContextOf(Pending t)
+	{
 		var context = ImmutableDictionary<string, object>
 			.Empty.Add(ContextKeys.Controller, t.Source.ControllerId)
 			.Add(ContextKeys.Source, t.Source.Id)
 			.Add(ContextKeys.SourceSnapshot, t.Source) // a dying card as it was: "if it isn't a token"
 			.Add(ContextKeys.EventCard, t.EventCardId);
-		if (t.EventSnapshot is { } snapshot)
-			context = context.Add(ContextKeys.EventSnapshot, snapshot);
-		return condition.Holds(s, context);
+		return t.EventSnapshot is { } snapshot
+			? context.Add(ContextKeys.EventSnapshot, snapshot)
+			: context;
 	}
 
 	/// <summary>The event's card as it is now — so "that creature's controller" survives it leaving (CR 608.2h).</summary>
@@ -674,6 +696,16 @@ public static class Triggers
 		)
 			return false;
 		if (
+			on.From is { } zone
+			&& e switch
+			{
+				SpellCastEvent cast => cast.From,
+				LandPlayedEvent land => land.From,
+				_ => (ZoneType?)null,
+			} != zone
+		)
+			return false;
+		if (
 			on.CombatDamageBy is { } by
 			&& (
 				e is not PlayerDealtDamageEvent { Combat: true } damage
@@ -733,6 +765,7 @@ public static class Triggers
 			EnteredBattlefieldEvent entered => entered.CardId,
 			AttackedEvent attacked => attacked.CardId,
 			SpellCastEvent cast => cast.CardId,
+			LandPlayedEvent land => land.CardId,
 			DiedEvent died => died.LastKnown.Id,
 			BlocksEvent blocks => blocks.CardId,
 			BecameTargetEvent targeted => targeted.CardId,
@@ -774,7 +807,12 @@ public static class Triggers
 				continue;
 			}
 			var choosable = ChoosableModes(s, t);
-			var (least, most) = t.Ability.Choose.Range(s, t.Source, choosable.Count);
+			var (least, most) = t.Ability.Choose.Range(
+				s,
+				t.Source,
+				choosable.Count,
+				ContextOf(t) // Riku of Many Paths: "X is the number of times you chose a mode for that spell"
+			);
 			if (choosable.Count < least || most == 0)
 				continue; // not enough modes can be chosen (CR 700.2a) — or "up to one" with none: it would do nothing
 			var choice = new ChooseModesChoice(

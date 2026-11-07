@@ -10,6 +10,7 @@ public enum SymbolKind
 	Hybrid, // {W/U} — Color or Color2
 	TwoBrid, // {2/W} — Color, or two of anything
 	X,
+	Phyrexian, // {B/P} — Color, or 2 life: chosen with the activation (ActivateAbilityAction.LifeForPhyrexian), so the solver never sees one
 }
 
 public record ManaSymbol(
@@ -25,6 +26,34 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 	public static readonly ManaCost None = new(ImmutableArray<ManaSymbol>.Empty);
 
 	public bool HasX => Symbols.Any(s => s.Kind == SymbolKind.X);
+
+	/// <summary>Drivnod, Carnage Dominus: "{B/P}{B/P}" — how many symbols may be paid with 2 life each.</summary>
+	public int PhyrexianCount => Symbols.Count(s => s.Kind == SymbolKind.Phyrexian);
+
+	/// <summary>
+	/// The mana left to pay once <paramref name="withLife"/> of the Phyrexian symbols are paid with life
+	/// (CR 107.4f): those go, the rest are their colour.
+	/// </summary>
+	public ManaCost PayingLifeFor(int withLife)
+	{
+		if (PhyrexianCount == 0)
+			return this;
+		var left = withLife;
+		return new(
+			[
+				.. Symbols
+					.Where(sym => sym.Kind != SymbolKind.Phyrexian || left-- <= 0)
+					.Select(sym =>
+						sym.Kind == SymbolKind.Phyrexian
+							? sym with
+							{
+								Kind = SymbolKind.Colored,
+							}
+							: sym
+					),
+			]
+		);
+	}
 
 	/// <summary>CR 202.3: X is 0 everywhere but the stack; {2/W} counts 2.</summary>
 	public int ManaValue =>
@@ -128,7 +157,9 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 			return new(SymbolKind.TwoBrid, ColorOf(parts[1]));
 		if (parts.Length == 2 && parts[1] != "P")
 			return new(SymbolKind.Hybrid, ColorOf(parts[0]), ColorOf(parts[1]));
-		throw new FormatException($"Unsupported mana symbol {{{s}}}"); // Phyrexian: no FRA card has one
+		if (parts.Length == 2)
+			return new(SymbolKind.Phyrexian, ColorOf(parts[0]));
+		throw new FormatException($"Unsupported mana symbol {{{s}}}"); // {W/U/P}: no card has one
 	}
 
 	public static ManaColor ColorOf(string letter) =>
@@ -155,6 +186,7 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 					SymbolKind.Hybrid => $"{{{LetterOf(s.Color)}/{LetterOf(s.Color2)}}}",
 					SymbolKind.TwoBrid => $"{{2/{LetterOf(s.Color)}}}",
 					SymbolKind.X => "{X}",
+					SymbolKind.Phyrexian => $"{{{LetterOf(s.Color)}/P}}",
 					_ => $"{{{LetterOf(s.Color)}}}",
 				}
 			)

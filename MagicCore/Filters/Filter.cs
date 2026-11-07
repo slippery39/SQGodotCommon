@@ -335,6 +335,7 @@ public enum Property
 	Blocking,
 	DealtCombatDamage, // Ruric Thar: "as long as they haven't dealt combat damage yet"
 	Tapped, // U.S.S. Excelsior: "target tapped creature"
+	Modal, // Riku of Many Paths: "a modal spell" — its text has modes ("choose one —")
 }
 
 /// <summary>Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.</summary>
@@ -380,6 +381,8 @@ public sealed record HasProperty(Property Property) : Filter
 			Property.Blocking => card.BlockingId != 0,
 			Property.DealtCombatDamage => card.HasDealtCombatDamage,
 			Property.Tapped => card.IsTapped,
+			Property.Modal => card.GetComponent<Effects.SpellEffectsComponent>()
+				is { Modes.IsEmpty: false },
 			_ => false,
 		};
 }

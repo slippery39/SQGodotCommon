@@ -46,6 +46,9 @@ public static class Is
 
 	/// <summary>U.S.S. Excelsior: "target tapped creature".</summary>
 	public static readonly Filter Tapped = new HasProperty(Property.Tapped);
+
+	/// <summary>Riku of Many Paths: "Whenever you cast a modal spell".</summary>
+	public static readonly Filter Modal = new HasProperty(Property.Modal);
 	public static readonly Filter AttackingAPlayer = new HasProperty(Property.AttackingAPlayer);
 
 	/// <summary>"Attacks you or a planeswalker you control".</summary>

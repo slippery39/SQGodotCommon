@@ -333,6 +333,7 @@ public static class MagicRules
 					card.Id
 				)
 				from exile in CostList.Options(a.ability.Costs, CostSlot.Exile, s, player, card.Id)
+				from life in Enumerable.Range(0, a.ability.Cost.PhyrexianCount + 1) // Drivnod: {B/P} paid with mana or 2 life
 				from tap in CostList.Options(a.ability.Costs, CostSlot.Tap, s, player, card.Id)
 				from secondTap in CostList.Options(
 					a.ability.Costs,
@@ -356,6 +357,7 @@ public static class MagicRules
 						TapId = tap,
 						SecondTapId = secondTap,
 						TapIds = taps,
+						LifeForPhyrexian = life,
 					}
 			);
 	}
@@ -464,7 +466,7 @@ public static class MagicRules
 			CastSpellAction c =>
 				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}", // a beamed-up creature, kicked, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
-				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}", // modes and a tapped creature only when chosen: older keys (records, the suite) stay byte-identical
+				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>
 				$"loyalty|{loyalty.CardId}|{loyalty.AbilityIndex}|{loyalty.X}|{string.Join(",", loyalty.Targets)}",
 			_ => a, // the rest have no collection fields, so a record's own equality is the identity

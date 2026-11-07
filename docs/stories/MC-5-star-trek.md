@@ -186,6 +186,12 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   (`TriggersAdditionalTime.UntilUntapped`), a duration, not an `If` (Claude's, explained; nothing she does changed).
   **Phyrexian Tower's sacrifice is `TapForManaAction.SacrificeId`**, one legal move per creature, its mana floating. Auto-pass stops while it can be activated — left as is (Shayne:
   "a niche card that I don't expect to be played in limited that much").
+- 2026-11-07, Shayne (MC-5.6 batch 3's survey): **the six split 3a / 3b** — 3a Riku, Prosper, Drivnod (modes
+  counted, play from exile, Phyrexian mana, keyword counters, a three-card exile cost); 3b Sen Triplets, Flare of
+  Fortitude, Mogis (MC-6.15's rule statics with Yuriko moved, MC-6.13's type change with Puppet Crafting moved,
+  devotion, an alternative cost). Claude's defaults, proposed and taken: `{B/P}` is a real choice (one move per number
+  paid with life); Drivnod's three cards are picked one at a time after activating; Sen's lock includes mana
+  abilities ("activate abilities", as Kai Winn's ruling); Sen's permission is their whole hand this turn, not a stamp.
 
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
@@ -293,9 +299,21 @@ Open questions:
       2026-11-06: 17 (328/341) — the 9 tier 1, then MC-6.1–6.4 composed and their old cards moved: Isshin; Torbran,
       Bruvac; Rishkar, Talon Gates, Phyrexian Tower; Sisay, Weatherlight Captain, Loot, Exuberant Explorer.
       Batch 2 done 2026-11-06: 7 (335/341) on MC-6.5–6.8 and 6.9's permission — Mikaeus, Bristly Bill; Ertai
-      Resurrected; Decree of Pain; Shizo, Thada Adel; Stella Lee (`SpellCastEvent.SpellNumber`)
+      Resurrected; Decree of Pain; Shizo, Thada Adel; Stella Lee (`SpellCastEvent.SpellNumber`). Batch 3a done
+      2026-11-07: 3 (338/341) — Riku, Prosper, Drivnod; 3b (Sen Triplets, Flare of Fortitude, Mogis) next
 
 ## Next
+
+**MC-5.6 batch 3a is done (2026-11-07): 338/341** — 3 Stardates, the six split 3a / 3b (Shayne): Riku of Many Paths
+(`Is.Modal`; `Count.ModesChosen(Ref.EventCard)`; a trigger's `ModeChoice` counted with its own context, so "choose up to
+X" is `AtMost`); Prosper, Tome-Bound (`Trigger.From` on a `SpellCast` and on a new `LandPlayed` event — "play a card
+from exile"); Drivnod, Carnage Dominus (a row of MC-6.1's `TriggersAdditionalTime`; Phyrexian mana as
+`ActivateAbilityAction.LifeForPhyrexian`, one move per number paid with life; `ExileFromGraveyardCost { Count }` picked
+after activating, one at a time; a keyword counter read by `Card.HasOwn`). **One bug of its own, found by the per-card
+replay** (Lore 03, with the new cards taken out): the life check read "life < 2 × 0", refusing every activation below 0
+life under Georgiou — fixed, with a test. With the three taken out every golden game holds (162 random + AI, 617
+per-card): no ruling changed. Ceilings in `DesignNotes.md` (`{B/P}` on a spell; Drivnod dying alongside others);
+AI-19.20 (Drivnod's three picks, and when it pays life). AI bench: +3.7% (5 rounds, best 5.4 s vs 5.6 s), inside the run-to-run noise.
 
 **MC-5.6 batch 2 is done (2026-11-06): 335/341** — 7 Stardates on MC-6's families, each composed first and its
 old cards moved: **6.5** `PutCounters(What, N) { Kind }` / `RemoveCounters` / `RemoveCountersCost` and `Ref.It`, a
@@ -314,45 +332,60 @@ random + AI, 610 per-card): no other game changed. No AI-19 row (nothing left si
 |---|---|---|
 | 1 | DONE 2026-11-06 (17) | 6.1–6.4 |
 | 2 | DONE 2026-11-06 (7) | 6.5–6.8, 6.9's permission |
-| 3 | Drivnod (Phyrexian mana `{B/P}`, exile three from the graveyard, an indestructible counter), Sen Triplets, Flare of Fortitude, Mogis, Riku of Many Paths, Prosper (6) | re-surveyed composition first against MC-6 (6.9, 6.13, 6.15) before any design is proposed; Drivnod is a row of 6.1's `TriggersAdditionalTime`; Riku's "up to X" is `ModeChoice { AtMost = Count }` |
+| 3a | DONE 2026-11-07 (3): Riku, Prosper, Drivnod | 6.1's and 6.6's rows; Phyrexian mana, keyword counters, a three-card exile cost, "play from exile" |
+| 3b | Sen Triplets, Flare of Fortitude, Mogis (3) | 6.15 (`CantCastOrActivate`, Yuriko moved; `LifeTotalCantChange`), 6.9 (`MayPlayFrom`), 6.13 (`BecomesType`, Puppet Crafting moved), devotion, an alternative cost |
 
-The prompt that starts batch 3 (paste it into a NEW session):
+The prompt that starts batch 3b (paste it into a NEW session):
 
 ```
-MC-5.6 batch 3: the last 6 Stardates, in this fresh session (/card-batch step 0). Sprint 4
+MC-5.6 batch 3b: the last 3 Stardates, in this fresh session (/card-batch step 0). Sprint 4
 (docs/sprints/2026-11-05.md). Shayne, 2026-11-06: COMPOSITION FIRST — every card sits on an existing piece
-made general, never a sibling piece per card phrase. Batches 1–2 (24, 335/341) did MC-6.1–6.8 and 6.9's
-PlayPermission.
+made general, never a sibling piece per card phrase. Batches 1–3a (27, 338/341) did MC-6.1–6.8, 6.9's
+PlayPermission, Phyrexian mana and keyword counters.
 
 Read, in order and nothing more yet: docs/stories/MC-5-star-trek.md (Decisions from 2026-11-06, Next),
-docs/stories/MC-6-composable-pieces.md (the families; 6.9, 6.13, 6.15 open), the /card-batch skill,
-MagicCore/CLAUDE.md, MagicCore/Cookbook.md. GREP MagicCore/AbilityCatalog.md — never read it whole.
+docs/stories/MC-6-composable-pieces.md (6.9, 6.13, 6.15 open), the /card-batch skill, MagicCore/CLAUDE.md,
+MagicCore/Cookbook.md. GREP MagicCore/AbilityCatalog.md — never read it whole.
 Card text: python tools/magic_set.py text --set TRK "Full Name".
 
-The six: Drivnod, Carnage Dominus (Phyrexian mana {B/P}; "exile three creature cards from your graveyard";
-an indestructible counter; its doubling is a row of MC-6.1's TriggersAdditionalTime), Sen Triplets ("can't
-cast spells or activate abilities", play from their hand — 6.15 and 6.9), Flare of Fortitude ("your life total
-can't change" — 6.15), Mogis, God of Slaughter ("isn't a creature" — 6.13's type change; devotion), Riku of
-Many Paths (modes "up to X" — ModeChoice { AtMost = Count }), Prosper, Tome-Bound (exile-playable — 6.9's
-PlayPermission). Re-tier each from its FULL text and, for each family touched, show Shayne the composed
-piece's shape and the cards moving onto it BEFORE editing — a tier-3 line names the nearest piece and why
-no option on it fits. If the six are more than a session, propose the split and ask.
+The three, on the shapes Shayne took on 2026-11-07 (MC-5's Decisions) — re-check each against the code
+before editing, and show Shayne any shape that has to change:
+- Sen Triplets: Yuriko's NoSpellsOrAbilitiesDuringCombat → CantCastOrActivate { DuringCombat,
+  ManaAbilitiesToo }; Combat.LockedDown(s) → LockedDown(s, player) — on a permanent every player (Yuriko
+  moved), as a ThisTurnEffect in a player's command zone that player (Sen: mana abilities too, so
+  TapForManaAction asks). ThisTurn { On } (a Ref, default you). Their hand revealed (MakeKnown).
+  MayPlayFrom(Zone, OwnerId) : ThisTurnEffect in your command zone, read by Playable (CanCastFromHere,
+  CanPlayLandFromHere) and Candidates — their whole hand this turn, a card drawn later too.
+- Flare of Fortitude: MayCastFromHandFree { Costs }, read from the card itself too (Is.Source), its
+  sacrifice in CastSpellAction.SacrificeId. LifeTotalCantChange : ThisTurnEffect in Life.Gain and
+  Life.Lose; paying life refused (CR 119.8 — LifeForPhyrexian, the shocklands' May, Necrodominance's
+  number). Hexproof and indestructible until end of turn on your permanents (tier 1).
+- Mogis, God of Slaughter: EnchantedBecomesCreature → BecomesType(Filter scope) { Add, Remove, Subtype,
+  Power, Toughness, If }, stamped by the state-based check (Attachments.Animations made general) and in
+  EnterBattlefield before the entry event; Puppet Crafting moved. Count.DevotionTo(colours) (a hybrid
+  symbol counts once). The upkeep punisher from If { Otherwise } around May { Who = ActivePlayer, Otherwise }
+  (May doesn't run Otherwise when it can't ask).
 
-Process per family, as batch 2: grep MtgCore first; moved cards keep their tests; tests + revert-checks (the
-run after revert_check must BUILD); golden replays move only where a ruling changed — check by taking the
-new cards OUT and re-running RandomGameTests|GreedyAiReplayTests and, alone, CardReplayTests (batch 2 found
-Teyo's "if it's a creature" that way). A per-card replay names the card and a trace in MagicCore.Tests/bin
-(replay-<card>-NN.txt). Hot paths → tools/bench_vs_head.sh "FullyQualifiedName~GreedyAiTests" 5. Probe
-MAGIC_PROBE_GAMES=10, then 150. Tick MC-6's tasks as each lands. A play or ruling left simple goes in AI-19
-(now at 19.19).
+Process per family, as batches 2–3a: grep MtgCore first; moved cards keep their tests; tests +
+revert-checks (the run after revert_check must BUILD); golden replays move only where a ruling changed —
+take the new cards OUT (#if false around their scripts) and re-run RandomGameTests|GreedyAiReplayTests and,
+alone, CardReplayTests. A moved game names a trace in MagicCore.Tests/bin (replay-<card>-NN.txt): diff it
+against HEAD's from a worktree (GoldenReplay.Check writes a trace only on a failure — add a WriteOut there,
+in the worktree only). 3a found its own bug that way: the Phyrexian life check refused every activation
+below 0 life (Georgiou). Hot paths → tools/bench_vs_head.sh "FullyQualifiedName~GreedyAiTests" 5. Probe
+MAGIC_PROBE_GAMES=10, then 150. Tick MC-6's tasks as each lands. A play or ruling left simple goes in
+AI-19 (now at 19.20).
 
 Test traps: a Hand(…) inside s.Act(new … { CardId = Hand(…) }) runs on the old state — own line; never
 `c is T ? [x] : …` (CSharpier) — use On<T>(ids); PassUntil stops at the first choice of ANY kind; a bare
 s.EnterBattlefield or s.PutCounters puts no trigger on the stack; in the test files `Is` is NUnit's — write
 global::MagicCore.Filters.Is.X, and `Turns.` is the test folder (global::MagicCore.Turns.Combat); a 0/0 placed
 with Field dies at the next priority; an opponent's creature is summoning sick on turn 1 (no {T} costs);
-TestGames.Inline has no colours (Data with { Colors = ["R"] }). GoldenCardReplay.txt is an explicit test —
-run it ALONE. sed -i rewrites a CRLF file's endings: splice bytes. Git Bash has no pgrep.
+TestGames.Inline has no colours (Data with { Colors = ["R"] }). A filter word no card can show (Is.Modal:
+Riku's X is 0 for a non-modal spell anyway) gets a direct test. GoldenCardReplay.txt is an explicit test —
+run it ALONE. Line endings: many files are CRLF — edit with tools/edit.py, never a Python read/write in text
+mode; check endings in Python on bytes. Write edit specs with the Write tool (a Bash heredoc chokes on an
+apostrophe). Git Bash has no pgrep.
 
 End with the usage row (tools/usage_report.py --log), /pre-commit, then ask before committing. When all 30
 play (341/341), Next points to MC-5.4 (boosters, the Stardates' slot included), then MC-6's remaining families.
@@ -615,6 +648,8 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   to a counter field itself. No game moved (both golden files unchanged).
 - 2026-11-06: batch 7b — the 16 left re-tiered (15 tier 3, five flagged); Shayne split them 11 / 5; the 11 built
   (306/311).
+- 2026-11-07: MC-5.6 batch 3a — Riku, Prosper, Drivnod (338/341); the six split 3a / 3b with Shayne. The per-card
+  replay with the new cards out caught the Phyrexian life check refusing activations below 0 life (Georgiou).
 - 2026-11-06: MC-5.6 batch 1 — 17 Stardates (328/341): the 9 tier 1, then MC-6.1–6.4 composed with their old cards
   moved (Isshin; Torbran, Bruvac; Rishkar, Talon Gates, Phyrexian Tower; Sisay, Weatherlight Captain, Loot, Exuberant
   Explorer).

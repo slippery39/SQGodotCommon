@@ -364,6 +364,7 @@ public enum CountOf
 	LifeTotalOf, // Live Long and Prosper: "Double your life total" — the players [Ref] names
 	LifeLostThisTurnOf, // Gul Dukat: "the life that player lost this turn" — the players [Ref] names
 	DilemmasFacedThisTurnBy, // Sisko: "each dilemma you've faced this turn" — the players [Ref] names
+	ModesChosen, // Riku of Many Paths: "the number of times you chose a mode for that spell" — the spell on the stack [Ref]
 }
 
 /// <summary>
@@ -408,6 +409,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count X = new(0, null, CountOf.X);
 
 	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
+
+	/// <summary>Riku of Many Paths: "the number of times you chose a mode for that spell" — Count.ModesChosen(Ref.EventCard).</summary>
+	public static Count ModesChosen(Ref r) => new(0, r, CountOf.ModesChosen);
 
 	/// <summary>Jadzia Dax, Living Legacy: "an amount of {G} equal to the number of counters on her" — every kind.</summary>
 	public static Count AllCountersOn(Ref r) => new(0, r, CountOf.AllCountersOn);
@@ -598,6 +602,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				s.GetObject(id) is MagicPlayer p ? p.ThisTurn.DilemmasFaced : 0
 			),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
+			CountOf.ModesChosen => Cards()
+				.Sum(c => c.GetComponent<Actions.OnStackComponent>()?.Modes.Length ?? 0),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),
 			CountOf.SubtypesAmong => Cards().SelectMany(c => s.Subtypes(c)).Distinct().Count(),

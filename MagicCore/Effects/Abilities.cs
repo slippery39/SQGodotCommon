@@ -50,6 +50,9 @@ public static class CounterKinds
 	public const string Promotion = "promotion";
 	public const string Peace = "peace"; // Peace in Our Time
 
+	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
+	public const string Indestructible = "indestructible";
+
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
 	public const string PlusOne = "+1/+1";
@@ -89,6 +92,7 @@ public enum EventKind
 	Drew, // Data, New Life: "whenever you draw a card" — MagicState.Draw, one per card
 	AbilityActivated, // Kai Winn: "activates an ability of a source with the chosen name" — mana abilities too
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
+	LandPlayed, // Prosper, Tome-Bound: "whenever you play a card from exile" — a land played (PlayLandAction), not one put onto the battlefield
 }
 
 /// <summary>
@@ -241,6 +245,22 @@ public record Trigger(EventKind On)
 					: throw new ArgumentException(
 						$"Counters fits CountersPut of a named kind or charge, not {On} / {value}"
 					);
+	}
+
+	readonly ZoneType? from;
+
+	/// <summary>
+	/// Prosper, Tome-Bound: "Whenever you play a card from exile" — a spell cast from, or a land played from,
+	/// this zone (SpellCastEvent.From, LandPlayedEvent.From). "Play" is both: two rows, as Isshin's are.
+	/// </summary>
+	public ZoneType? From
+	{
+		get => from;
+		init =>
+			from =
+				value is null || On is EventKind.SpellCast or EventKind.LandPlayed
+					? value
+					: throw new ArgumentException($"From fits SpellCast or LandPlayed, not {On}");
 	}
 
 	readonly Filters.Filter? combatDamageBy;

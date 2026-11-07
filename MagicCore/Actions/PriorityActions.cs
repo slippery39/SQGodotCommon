@@ -106,8 +106,10 @@ public record PlayLandAction : GameAction
 					PermissionUsedOn = s.GetGame().TurnNumber,
 				}
 			);
+		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		s = s.EnterBattlefield(CardId, PlayerId);
 		s = s.Tally(PlayerId, t => t with { LandsPlayed = t.LandsPlayed + 1 });
+		s = s.Raise(new LandPlayedEvent(PlayerId, CardId, from));
 		return new ActionResult(Priority.Retain(s, PlayerId));
 	}
 }

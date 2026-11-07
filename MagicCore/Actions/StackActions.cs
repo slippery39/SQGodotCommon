@@ -395,7 +395,8 @@ public record CastSpellAction : GameAction
 				playerId,
 				noncreature * s.GetPlayer(playerId).ThisTurn.NoncreatureSpellsCast,
 				copies.Count,
-				s.GetPlayer(playerId).ThisTurn.SpellsCast
+				s.GetPlayer(playerId).ThisTurn.SpellsCast,
+				from
 			)
 		);
 		if (!modes.IsEmpty)
@@ -432,6 +433,16 @@ public record ActivateAbilityAction : GameAction
 
 	/// <summary>Collation Trimatrix: "Tap three untapped artifact creatures you control" — the whole set, in no order; empty if none.</summary>
 	public ImmutableArray<int> TapIds { get; init; } = [];
+
+	/// <summary>
+	/// Drivnod, Carnage Dominus: "{B/P}{B/P}" — how many of the Phyrexian symbols are paid with 2 life
+	/// each (CR 107.4f), one legal action per number; the rest are paid with their colour.
+	/// </summary>
+	public int LifeForPhyrexian { get; init; }
+
+	/// <summary>The mana this activation pays — its cost changes, less the symbols paid with life.</summary>
+	ManaCost Mana(GameState s, ActivatedAbilityComponent ability) =>
+		Costs.OfAbility(s, ability, Targets, PlayerId, CardId).PayingLifeFor(LifeForPhyrexian);
 
 	/// <summary>An ability's target words and steps for these modes (the whole text when not modal).</summary>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
@@ -525,10 +536,18 @@ public record ActivateAbilityAction : GameAction
 		if (!TargetSpec.AreLegal(s, TextOf(ability, Modes).Specs, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
 		if (
+			LifeForPhyrexian < 0
+			|| LifeForPhyrexian
+				> Costs.OfAbility(s, ability, Targets, PlayerId, CardId).PhyrexianCount
+			// CR 119.4 — only when life is paid: under Georgiou a player below 0 still activates the rest.
+			|| LifeForPhyrexian > 0 && s.GetPlayer(PlayerId).Life < 2 * LifeForPhyrexian
+		)
+			return ValidationResult.Invalid("Can't pay that much life for its Phyrexian mana");
+		if (
 			ManaPayment.Find(
 				s,
 				PlayerId,
-				Costs.OfAbility(s, ability, Targets, PlayerId, CardId),
+				Mana(s, ability),
 				0,
 				alsoExclude: CostPermanents(s, ability),
 				forAbilityOf: s.GetCard(CardId)
@@ -545,7 +564,7 @@ public record ActivateAbilityAction : GameAction
 		var mana = ManaPayment.Find(
 			s,
 			PlayerId,
-			Costs.OfAbility(s, ability, Targets, PlayerId, CardId),
+			Mana(s, ability),
 			0,
 			alsoExclude: CostPermanents(s, ability),
 			forAbilityOf: s.GetCard(CardId)
@@ -562,6 +581,7 @@ public record ActivateAbilityAction : GameAction
 		foreach (var picked in Picks(cost))
 			s = cost.Pay(s, PlayerId, CardId, picked);
 		s = ManaPayment.Pay(s, PlayerId, mana);
+		s = MagicCore.Rules.Life.Lose(s, PlayerId, 2 * LifeForPhyrexian);
 		if (ability.Exhaust)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });
 		if (ability.OncePerTurn)

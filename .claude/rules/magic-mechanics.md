@@ -620,6 +620,22 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   choice is the searcher's, `ChooseFromLibraryChoice.DeciderId`), exiles the card and may play it this turn.
 - **"Your second spell each turn"** (Stella Lee) is `Trigger.SpellNumber = 2` against `SpellCastEvent.SpellNumber`,
   numbered as it is cast (any kind; `NoncreatureSpellNumber` beside it).
+- **"Whenever you play a card from [zone]"** (Prosper, Tome-Bound) is `Trigger.From` on two rows: a `SpellCast`
+  (`SpellCastEvent.From`, the zone it was cast from) and a `LandPlayed` (`LandPlayedEvent`, raised by `PlayLandAction`
+  alone — a land put onto the battlefield isn't played). A prepared copy isn't a card: `Subject = !Is.Copy`.
+- **"A modal spell"** is `Is.Modal` (its text has modes); **"the number of times you chose a mode for that spell"**
+  (Riku of Many Paths) is `Count.ModesChosen(Ref.EventCard)`, read from its `OnStackComponent`. A trigger's
+  `ModeChoice` is counted with the TRIGGER's context (`Triggers.ContextOf`: its source and event card), so
+  `AtMost = Count.ModesChosen(Ref.EventCard)` is "choose up to X".
+- **Phyrexian mana** (`{B/P}`, `SymbolKind.Phyrexian`; Drivnod) is chosen with the activation:
+  `ActivateAbilityAction.LifeForPhyrexian`, one legal action per number of symbols paid with 2 life each (CR 107.4f;
+  `|pN` in `MoveKey`), only with the life to pay (CR 119.4). `ManaCost.PayingLifeFor` turns the rest into their
+  colour, so the solver never sees one — a spell with `{B/P}` throws there until a card needs it.
+- **A keyword counter** (CR 122.1b; Drivnod's indestructible counter, `CounterKinds.Indestructible`) is read by
+  `Card.HasOwn`: a counter named as the keyword, lower case, gives it — so every rule that asks `s.Has` sees it.
+- **"Exile N cards from your graveyard"** as a cost (Drivnod: three creature cards) is `ExileFromGraveyardCost { Count }`:
+  one is a legal action per card (`ExileId`, Gallia); more are picked AFTER activating, one at a time
+  (`ChooseAmongChoice`, then `MoveChosenToAction`), as `RemoveCountersCost`'s counters — never one action per set.
 - **AI evaluation terms are MONOTONIC** — more of a good thing always scores more, tapering not
   capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap
   at 20 stopped every attack past tapped blockers; a land cap at 7 made the AI hoard lands.

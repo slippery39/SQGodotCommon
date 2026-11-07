@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
@@ -353,21 +354,62 @@ public sealed record ExileFromHandCost : AdditionalCost
 	public override string Describe() => "Exile a card from your hand";
 }
 
-/// <summary>Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is !Is.Source.</summary>
+/// <summary>
+/// Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is !Is.Source; one
+/// legal action per card (ExileId). Drivnod, Carnage Dominus: "Exile three creature cards from your
+/// graveyard" is Count = 3, picked AFTER activating, one at a time, as RemoveCountersCost's counters are —
+/// one action per set would be 1,140 from twenty.
+/// </summary>
 public sealed record ExileFromGraveyardCost(Filter Filter) : AdditionalCost
 {
-	public override CostSlot Slot => CostSlot.Exile;
+	/// <summary>Drivnod: "three creature cards" — more than one is picked after activating.</summary>
+	public int Count { get; init; } = 1;
+
+	public override CostSlot Slot => Count == 1 ? CostSlot.Exile : CostSlot.None;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		Filter.Among(s, playerId, ZoneType.Graveyard, sourceId);
 
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		Count == 1 || Candidates(s, playerId, sourceId).Count() >= Count;
+
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
 		[];
 
-	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile));
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen)
+	{
+		if (Count == 1)
+			return chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile));
+		var candidates = Candidates(s, playerId, sourceId).ToImmutableList();
+		return s.SpawnAction(
+			new PipelineAction
+			{
+				Steps =
+				[
+					.. Enumerable
+						.Range(0, Count)
+						.SelectMany(_ =>
+							(GameAction[])
+								[
+									new ChooseAmongChoice
+									{
+										PlayerId = playerId,
+										Ids = candidates, // one picked already has left: no longer offered
+										MinChoices = 1,
+										Prompt = "Exile from your graveyard",
+									},
+									new MoveChosenToAction(playerId, ZoneType.Exile),
+								]
+						),
+				],
+			}
+		);
+	}
 
-	public override string Describe() => "Exile a card from your graveyard";
+	public override string Describe() =>
+		Count == 1
+			? "Exile a card from your graveyard"
+			: $"Exile {Count} cards from your graveyard";
 }
 
 /// <summary>

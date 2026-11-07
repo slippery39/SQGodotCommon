@@ -37,10 +37,18 @@ public record ModeChoice
 
 	public static implicit operator ModeChoice(int n) => new() { AtLeast = n, AtMost = n };
 
-	/// <summary>The least and most modes that may be chosen now, of <paramref name="modes"/>.</summary>
-	public (int Least, int Most) Range(GameState s, Cards.Card source, int modes)
+	/// <summary>
+	/// The least and most modes that may be chosen now, of <paramref name="modes"/> — counted with a
+	/// trigger's own context when it has one (Riku of Many Paths: "that spell" is its event's card).
+	/// </summary>
+	public (int Least, int Most) Range(
+		GameState s,
+		Cards.Card source,
+		int modes,
+		ImmutableDictionary<string, object>? context = null
+	)
 	{
-		var context = Conditions.Of(source);
+		context ??= Conditions.Of(source);
 		var most = AnyNumberIf?.Holds(s, context) == true ? modes : AtMost.Value(s, context);
 		return (AtLeast.Value(s, context), Math.Min(most, modes));
 	}

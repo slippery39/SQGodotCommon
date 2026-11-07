@@ -45,6 +45,7 @@ public static class Describe
 				+ (a.SacrificeId != 0 ? $", sacrificing {Name(s, a.SacrificeId)}" : "")
 				+ (a.DiscardId != 0 ? $", discarding {Name(s, a.DiscardId)}" : "")
 				+ (a.ExileId != 0 ? $", exiling {Name(s, a.ExileId)}" : "")
+				+ (a.LifeForPhyrexian > 0 ? $", paying {2 * a.LifeForPhyrexian} life" : "")
 				+ (a.TapId != 0 ? $", tapping {Name(s, a.TapId)}" : "")
 				+ (a.SecondTapId != 0 ? $" and {Name(s, a.SecondTapId)}" : "")
 				+ (

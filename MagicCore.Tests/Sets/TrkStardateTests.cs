@@ -699,4 +699,266 @@ public class TrkStardateTests : FraBoardTest
 		Cast(Hand(grow, me), []);
 		Assert.That(s.GetCard(relic).PlusOneCounters, Nu.EqualTo(1), "CR 122.1: any permanent");
 	}
+
+	// ===== MC-5.6 batch 3a: Riku, Prosper, Drivnod =====
+
+	/// <summary>"Choose one or more —" of three: gain 1, gain 2, gain 3.</summary>
+	static CardDefinition Charm =>
+		new(
+			TestGames.Inline("Charm", "{1}", "Instant").Data,
+			[
+				new SpellEffectsComponent([])
+				{
+					Modes =
+					[
+						Scripting.M([], new GainLife(Ref.You, 1)),
+						Scripting.M([], new GainLife(Ref.You, 2)),
+						Scripting.M([], new GainLife(Ref.You, 3)),
+					],
+					Choose = new() { AtMost = 3 },
+				},
+			]
+		);
+
+	ChooseModesChoice CastCharmChoosing(params int[] modes)
+	{
+		var charm = Hand(Charm, me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = charm,
+				Modes = [.. modes],
+			}
+		);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is ChooseModesChoice);
+		return (ChooseModesChoice)s.GetPendingChoice()!;
+	}
+
+	[Test]
+	public void Riku_TwoModesChosen_ChoosesUpToTwo_ExileAndBird()
+	{
+		Field(Trk("Riku of Many Paths"), me);
+		var choice = CastCharmChoosing(0, 1);
+		Assert.That(
+			(choice.MinChoices, choice.MaxChoices),
+			Nu.EqualTo((0, 2)),
+			"choose up to X, where X is the number of times you chose a mode for that spell"
+		);
+		s = s.Choose([0, 2]);
+		Resolve();
+		Assert.That(PlayableInExile(), Nu.EqualTo(1), "exile the top card; you may play it");
+		var bird = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Bird");
+		Assert.That(s.Has(bird, "Flying"), Nu.True, "a 1/1 blue Bird creature token with flying");
+	}
+
+	[Test]
+	public void Riku_OneModeChosen_ChoosesOne_ACounterAndTrample()
+	{
+		var riku = Field(Trk("Riku of Many Paths"), me);
+		var choice = CastCharmChoosing(2);
+		Assert.That(choice.MaxChoices, Nu.EqualTo(1), "one mode chosen: up to one");
+		s = s.Choose([1]);
+		Resolve();
+		Assert.That(s.GetCard(riku).PlusOneCounters, Nu.EqualTo(1), "a +1/+1 counter on Riku");
+		Assert.That(s.Has(s.GetCard(riku), "Trample"), Nu.True, "it gains trample");
+	}
+
+	[Test]
+	public void Riku_ANonModalSpell_DoesntTrigger()
+	{
+		var riku = Field(Trk("Riku of Many Paths"), me);
+		var gain = Hand(Gain, me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = gain });
+		Assert.That(s.GetPendingChoice(), Nu.Null, "not a modal spell");
+		Resolve();
+		Assert.That(s.GetCard(riku).PlusOneCounters, Nu.EqualTo(0));
+	}
+
+	[Test]
+	public void IsModal_ASpellWithModes_NotOneWithout()
+	{
+		// Riku can't tell: a non-modal spell's X is 0, and "up to 0" does nothing — so the word is asked directly.
+		var charm = Hand(Charm, me);
+		var gain = Hand(Gain, me);
+		var asking = new global::MagicCore.Filters.FilterContext(me, 0);
+		Assert.That(
+			global::MagicCore.Filters.Is.Modal.Matches(s, s.GetCard(charm), asking),
+			Nu.True
+		);
+		Assert.That(
+			global::MagicCore.Filters.Is.Modal.Matches(s, s.GetCard(gain), asking),
+			Nu.False
+		);
+	}
+
+	int Treasures() => s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Name == "Treasure");
+
+	int InExilePlayable(CardDefinition card)
+	{
+		int id;
+		(s, id) = TestGames.Put(s, me, card, ZoneType.Exile);
+		s = s.UpdateObject(
+			id,
+			(Card)s.GetCard(id).WithComponent(new PlayableFromExile(me, s.GetGame().TurnNumber)) // TEST SETUP: impulse
+		);
+		return id;
+	}
+
+	[Test]
+	public void Prosper_ASpellCastFromExile_MakesATreasure_FromHandDoesnt()
+	{
+		Field(Trk("Prosper, Tome-Bound"), me);
+		Cast(Hand(Gain, me), []);
+		Assert.That(Treasures(), Nu.EqualTo(0), "cast from your hand");
+		var exiled = InExilePlayable(Gain);
+		Cast(exiled, []);
+		Assert.That(Treasures(), Nu.EqualTo(1), "whenever you play a card from exile");
+	}
+
+	[Test]
+	public void Prosper_ALandPlayedFromExile_MakesATreasure()
+	{
+		Field(Trk("Prosper, Tome-Bound"), me);
+		var forest = InExilePlayable(TestGames.Card("Forest"));
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = forest });
+		Resolve();
+		Assert.That(Treasures(), Nu.EqualTo(1), "playing a land from exile is playing a card");
+	}
+
+	[Test]
+	public void Prosper_ALandPlayedFromHand_NoTreasure()
+	{
+		Field(Trk("Prosper, Tome-Bound"), me);
+		var forest = Hand(TestGames.Card("Forest"), me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = forest });
+		Resolve();
+		Assert.That(Treasures(), Nu.EqualTo(0));
+	}
+
+	[Test]
+	public void Drivnod_ACreatureDying_TriggersYourAbilitiesAnAdditionalTime()
+	{
+		Field(Trk("Drivnod, Carnage Dominus"), me);
+		Field(
+			TestCards.WithTrigger(
+				Bear,
+				TriggerEvent.CreatureYouControlDies,
+				new GainLife(Ref.You, 1)
+			),
+			me
+		);
+		var dying = Field(
+			TestCards.WithTrigger(Bear, TriggerEvent.SelfDies, new DrawCards(Ref.You, 1)),
+			me
+		);
+		var theirs = Field(
+			TestCards.WithTrigger(Bear, TriggerEvent.SelfDies, new GainLife(Ref.You, 1)),
+			them
+		);
+		var life = Life(me);
+		var hand = HandCount(me);
+		var theirLife = Life(them);
+		Cast(Hand(TestCards.Kill(), me), [], dying);
+		Assert.That(
+			Life(me),
+			Nu.EqualTo(life + 2),
+			"a creature dying: triggers an additional time"
+		);
+		Assert.That(HandCount(me), Nu.EqualTo(hand + 2), "its own 'when this dies' too");
+		Cast(Hand(TestCards.Kill(), me), [], theirs);
+		Assert.That(Life(them), Nu.EqualTo(theirLife + 1), "a permanent THEY control: once");
+	}
+
+	[Test]
+	public void Drivnod_PayLifeForPhyrexianMana_ExileThree_IndestructibleCounter()
+	{
+		var drivnod = Field(Trk("Drivnod, Carnage Dominus"), me);
+		var dead = new int[4];
+		for (var i = 0; i < 4; i++)
+			(s, dead[i]) = TestGames.Put(s, me, Bear, ZoneType.Graveyard);
+		Assert.That(
+			Activations(drivnod).Select(a => a.LifeForPhyrexian),
+			Nu.EquivalentTo(new[] { 0, 1, 2 }),
+			"{B/P}{B/P}: each paid with {B} or 2 life — one move per split"
+		);
+		var life = Life(me);
+		var untapped = s.CardsIn(me, ZoneType.Battlefield).Count(c => !c.IsTapped);
+		s = s.Act(Activations(drivnod).Single(a => a.LifeForPhyrexian == 2));
+		Assert.That(Life(me), Nu.EqualTo(life - 4), "2 life each");
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => !c.IsTapped),
+			Nu.EqualTo(untapped),
+			"no mana"
+		);
+		var first = (ChooseAmongChoice)s.GetPendingChoice()!;
+		Assert.That(first.Options.Count, Nu.EqualTo(4), "any creature card in your graveyard");
+		s = s.Choose([dead[0]]);
+		Assert.That(
+			s.GetPendingChoice()!.Options.Select(o => o.Id),
+			Nu.EquivalentTo(dead[1..]),
+			"the one exiled isn't offered again"
+		);
+		Resolve();
+		Assert.That(s.CardsIn(me, ZoneType.Exile).Count(), Nu.EqualTo(3), "exile three");
+		Assert.That(s.CardsIn(me, ZoneType.Graveyard).Count(), Nu.EqualTo(1));
+		Assert.That(
+			s.GetCard(drivnod).CountersOf(CounterKinds.Indestructible),
+			Nu.EqualTo(1),
+			"put an indestructible counter on Drivnod"
+		);
+		Cast(Hand(TestCards.Kill(), me), [], drivnod);
+		Assert.That(Alive(drivnod), Nu.True, "an indestructible counter: it has indestructible");
+	}
+
+	[Test]
+	public void BelowZeroLife_AnAbilityPayingNoLife_CanStillBeActivated()
+	{
+		// Found by the per-card replay of Lore (Georgiou kept P1 at -6): the Phyrexian life check read
+		// "life < 2 × 0" and refused every activation below 0.
+		var pump = Field(
+			new CardDefinition(
+				Bear.Data,
+				[new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new GainLife(Ref.You, 1)])]
+			),
+			me
+		);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = -3 }); // TEST SETUP: Georgiou's "don't lose"
+		Assert.That(Activations(pump), Nu.Not.Empty, "no life paid: any life total will do");
+	}
+
+	[Test]
+	public void Drivnod_PaidWithBlack_NoLife()
+	{
+		var drivnod = Field(Trk("Drivnod, Carnage Dominus"), me);
+		for (var i = 0; i < 3; i++)
+			(s, _) = TestGames.Put(s, me, Bear, ZoneType.Graveyard);
+		var life = Life(me);
+		s = s.Act(Activations(drivnod).Single(a => a.LifeForPhyrexian == 0));
+		Resolve();
+		Assert.That(Life(me), Nu.EqualTo(life), "{B}{B} paid with mana");
+		Assert.That(
+			ManaCost.Parse("{2}{B/P}").ToString(),
+			Nu.EqualTo("{2}{B/P}"),
+			"the printed form: what Parse reads (Describe shows it)"
+		);
+		Assert.That(s.GetCard(drivnod).CountersOf(CounterKinds.Indestructible), Nu.EqualTo(1));
+	}
+
+	[Test]
+	public void Drivnod_TwoCreatureCards_CantActivate_LowLife_FewerSplits()
+	{
+		var drivnod = Field(Trk("Drivnod, Carnage Dominus"), me);
+		for (var i = 0; i < 2; i++)
+			(s, _) = TestGames.Put(s, me, Bear, ZoneType.Graveyard);
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Graveyard);
+		Assert.That(Activations(drivnod), Nu.Empty, "three CREATURE cards");
+		(s, _) = TestGames.Put(s, me, Bear, ZoneType.Graveyard);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 3 }); // TEST SETUP
+		Assert.That(
+			Activations(drivnod).Select(a => a.LifeForPhyrexian),
+			Nu.EquivalentTo(new[] { 0, 1 }),
+			"3 life pays for one, not two (CR 119.4)"
+		);
+	}
 }

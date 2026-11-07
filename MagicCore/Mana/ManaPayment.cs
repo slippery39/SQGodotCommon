@@ -326,6 +326,10 @@ public static class ManaPayment
 					SymbolKind.Hybrid => [new Need([sym.Color, sym.Color2])],
 					SymbolKind.TwoBrid => [new Need([sym.Color], sym.Color)],
 					SymbolKind.Generic => Enumerable.Repeat(new Need(Any), sym.Amount),
+					// ponytail: only an activation chooses life or mana (Drivnod); a spell with {B/P} waits for its card.
+					SymbolKind.Phyrexian => throw new InvalidOperationException(
+						"A Phyrexian symbol reached the solver: pay it with ManaCost.PayingLifeFor first"
+					),
 					_ => Enumerable.Repeat(new Need(Any), x),
 				}
 			)

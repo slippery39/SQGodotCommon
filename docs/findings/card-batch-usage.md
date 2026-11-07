@@ -32,3 +32,4 @@ session per batch was simulated to save 37–40%.
 | 2026-11-06 | MC-5.6: Stardates imported + surveyed, MC-6 composition audit, 0 cards | 41778005 | 76 | 169k | 2.1M |
 | 2026-11-06 | MC-5.6 batch 1: the Stardates on MC-6.1–6.4 (9 tier 1, 4 families composed, 16 old cards moved), 17 cards | d66c1b3a | 176 | 257k | 5.8M |
 | 2026-11-06 | MC-5.6 batch 2: Stardates on MC-6.5–6.8 + 6.9's permission (counters, modes, cycling, evasion), 7 cards | 3ff48e06 | 197 | 273k | 6.6M |
+| 2026-11-07 | MC-5.6 batch 3a: Riku, Prosper, Drivnod (Phyrexian mana, keyword counters, LandPlayed, modes counted), 3 cards | 5b8df0f2 | 149 | 265k | 4.9M |

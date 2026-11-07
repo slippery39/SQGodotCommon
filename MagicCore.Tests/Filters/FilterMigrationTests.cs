@@ -598,6 +598,7 @@ public class FilterMigrationTests
 		TriggerEvent.CardLeavesYourGraveyard,
 		TriggerEvent.YouDrawACard,
 		new Trigger(EventKind.AbilityActivated) { By = Whose.Opponent }, // Kai Winn: the source, Is.NamedChosenName
+		new Trigger(EventKind.LandPlayed) { By = Whose.You }, // Prosper, Tome-Bound: From = Exile
 	];
 
 	/// <summary>

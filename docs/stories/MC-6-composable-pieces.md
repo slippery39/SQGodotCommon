@@ -45,7 +45,7 @@ the Stardates fix.
 
 - [x] MC-6.1 **Triggers an additional time** (MC-5.6: Isshin, Drivnod). Done 2026-11-06: Crusher, Lwaxana (her link
       stamped `{ UntilUntapped }` — "for as long as she remains tapped" is a duration, not an `If`) and Isshin
-      (two rows: Attacked, AttackersDeclared — Shayne) on it; Drivnod in batch 3. `LifeGainTriggersAdditionalTime`,
+      (two rows: Attacked, AttackersDeclared — Shayne) on it; Drivnod (batch 3a: a creature dying, `Is.Yours`). `LifeGainTriggersAdditionalTime`,
       `TriggersAdditionalTimeWhileSourceTapped` / `WhileTapped`, hard-coded in `Triggers.Collect` (two
       branches) → `TriggersAdditionalTime(Trigger cause, Filter whoseAbilities) { If }`, where the cause is
       checked by the one `Trigger` matcher. Crusher, Lwaxana, Isshin and Drivnod are all rows of it.
@@ -85,7 +85,8 @@ the Stardates fix.
       int; `ChooseAnyNumberIf` and `ModesNotChosenBefore` are flags beside it → min and max as `Count`s.
       Done 2026-11-06: one `ModeChoice { AtLeast, AtMost (Counts), AnyNumberIf, NotChosenBefore }` as `Choose` on the
       spell, triggered and activated components (an int converts); Sublime Epiphany, Kirk, Kobayashi Maru moved;
-      Ertai's `{ AtLeast = 0 }`. `Ref.ControllerOfTarget` reads a stack ability's controller too.
+      Ertai's `{ AtLeast = 0 }`. `Ref.ControllerOfTarget` reads a stack ability's controller too. Riku (batch 3a):
+      `{ AtLeast = 0, AtMost = Count.ModesChosen(Ref.EventCard) }`, a trigger's range counted with its own context.
 - [x] MC-6.7 **Cycling** (MC-5.6: Decree of Pain). Done 2026-11-06: `ActivatedAbilityComponent.Keyword`, carried by
       `AbilityActivatedEvent` and matched by `Trigger.Ability`; `Scripting.Cycling(cost)` and `Cycling(cost, BasicLand)`
       — the 10 landcyclers moved, `BasicLandcycling` deleted. Decree's "destroyed this way" is `Destroy.Then` with
