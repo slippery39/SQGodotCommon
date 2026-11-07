@@ -46,9 +46,12 @@ Open questions:
 
 ## Next
 
-Read `MagicCore/Limited/CardRatings.cs` (the scale and the table shape), `MagicCore/Ai/CardValues.cs`
-(what is measured today and its known limits), `Limited/SealedBuilder.cs` and `Boosters.cs` (pools
-and decks for self-play).
+**Blocked on AI-9.3 (Shayne, 2026-11-07: "our win rate data will never be good until we fix these issues").** The
+self-play ratings rank FRA worse than the interim table (greedy ρ 0.20 against 0.56 over 10 000 games; the search 0.11
+against 0.42 over 500 — `docs/findings/limited.md`), and the walker games show why for the walkers: priced in hand by
+their cast turn alone, discarded over commons. **Before the next run, fix the proxy:** "in hand" is "a copy left the
+library", so a MILLED or surveilled card counts as drawn (2 of 32 walker games) — count `DrewCardEvent` and the opening
+hand instead. Then rerun on FRA (greedy, 10 000 games, ~17 min) and compare with the interim table's 0.56.
 
 ## Log
 

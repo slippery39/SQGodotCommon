@@ -32,36 +32,16 @@ public static class DecisionReport
 		for (var g = 0; g < games; g++)
 		{
 			var (a, b) = (decks[g % decks.Count], decks[(g + 1) % decks.Count]);
-			var seed = firstSeed + g;
-			// the players named by their decks, so every description ("→ White-Black") reads as the replay does
-			var s = MagicRules.NewGame(FraDecks.All[a], FraDecks.All[b], seed, names: (a, b));
-			var first = s.DecidingPlayerId();
-			var names = new[] { first, s.OpponentOf(first) }.ToDictionary(
-				p => p,
-				p => s.GetPlayer(p).Name
+			var game = Play(
+				firstSeed + g,
+				FraDecks.All[a],
+				FraDecks.All[b],
+				(a, b),
+				$"Game {g + 1}"
 			);
-			var ais = names.Keys.ToDictionary(p => p, p => new BeamSearchAi(p));
-			md.Append($"\n## Game {g + 1}: {a} vs {b}, seed {seed}\n");
-			var replay = new Replay(md, names, s);
-			var record = GameRecord.New(seed, FraDecks.All[a], FraDecks.All[b], (a, b));
-			for (var step = 0; step < 4_000 && !s.IsOver(); step++)
-			{
-				var who = s.DecidingPlayerId();
-				var ai = ais[who];
-				var decision = ai.Decide(s);
-				replay.Move(s, who, decision, ai.FirstMoveScores, out var closeCall);
-				if (closeCall is not null)
-					close.Add(
-						$"- Game {g + 1}, turn {s.GetGame().TurnNumber}, {names[who]}: {closeCall}"
-					);
-				record = record.Add(s, MoveTokens.Token(s, decision), "ai");
-				s = decision.State;
-			}
-			replay.End(s);
-			records.Add(s.IsOver() ? record.Ended(s) : record);
-			md.Append(
-				$"\n**Result:** {(s.IsOver() ? (s.WinnerId() is { } w and > 0 ? $"{names[w]} won" : "a draw") : "unfinished")} on turn {s.GetGame().TurnNumber}.\n"
-			);
+			md.Append(game.Md);
+			close.AddRange(game.Close);
+			records.Add(game.Record);
 		}
 		var report =
 			"# AI games, move by move\n\n"
@@ -73,6 +53,70 @@ public static class DecisionReport
 			+ "\n"
 			+ md;
 		return (report, records);
+	}
+
+	/// <summary>One game, played and written: its replay section, its close calls, its record and how it ended.</summary>
+	public sealed record Played(
+		string Md,
+		IReadOnlyList<string> Close,
+		GameRecord Record,
+		GameState End
+	);
+
+	/// <summary>
+	/// One game between any two decks — FRA's built decks (<see cref="Run"/>) or sealed builds (MC-5.4: the
+	/// self-play games a card was drawn in, <c>--card-games</c>). The players are named <paramref name="names"/>,
+	/// so every description reads as the replay does. Thread-safe: everything it writes is its own.
+	/// </summary>
+	public static Played Play(
+		int seed,
+		IReadOnlyList<CardDefinition> deck1,
+		IReadOnlyList<CardDefinition> deck2,
+		(string Player1, string Player2) names,
+		string heading,
+		IReadOnlyList<CardDefinition>? sideboard1 = null,
+		IReadOnlyList<CardDefinition>? sideboard2 = null,
+		int? threads = null
+	)
+	{
+		var md = new StringBuilder();
+		var close = new List<string>();
+		var s = MagicRules.NewGame(
+			deck1,
+			deck2,
+			seed,
+			names: names,
+			sideboard1: sideboard1,
+			sideboard2: sideboard2
+		);
+		var first = s.DecidingPlayerId();
+		var named = new[] { first, s.OpponentOf(first) }.ToDictionary(
+			p => p,
+			p => s.GetPlayer(p).Name
+		);
+		var ais = named.Keys.ToDictionary(
+			p => p,
+			p => new BeamSearchAi(p, new BeamSearchAi.Settings(Threads: threads)) // 1: games run in parallel
+		);
+		md.Append($"\n## {heading}: {names.Player1} vs {names.Player2}, seed {seed}\n");
+		var replay = new Replay(md, named, s);
+		var record = GameRecord.New(seed, deck1, deck2, names, sideboard1, sideboard2);
+		for (var step = 0; step < 4_000 && !s.IsOver(); step++)
+		{
+			var who = s.DecidingPlayerId();
+			var ai = ais[who];
+			var decision = ai.Decide(s);
+			replay.Move(s, who, decision, ai.FirstMoveScores, out var closeCall);
+			if (closeCall is not null)
+				close.Add($"- {heading}, turn {s.GetGame().TurnNumber}, {named[who]}: {closeCall}");
+			record = record.Add(s, MoveTokens.Token(s, decision), "ai");
+			s = decision.State;
+		}
+		replay.End(s);
+		md.Append(
+			$"\n**Result:** {(s.IsOver() ? (s.WinnerId() is { } w and > 0 ? $"{named[w]} won" : "a draw") : "unfinished")} on turn {s.GetGame().TurnNumber}.\n"
+		);
+		return new(md.ToString(), close, s.IsOver() ? record.Ended(s) : record, s);
 	}
 
 	/// <summary>Writes one game as it goes: a turn's heading, each move, a combat declaration gathered into one line, and the changes under each.</summary>

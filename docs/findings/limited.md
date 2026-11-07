@@ -175,3 +175,23 @@ the mean below 200 games, as `CardRatings` does. Spearman's ρ against 17lands' 
 can't play — Fblthp, Impossibly Lost (the lowest of all: 38.6% over 2 265 games; 17lands 59.9%), Austere Command, Jace's
 Machinations, Jace, Reality Sculptor, Sublime Epiphany, Seasoned Cryomancer, Verdant Kraken: the rate measures the
 AI's skill with a card as much as the card. 32 FRA cards never reached a game in hand (the builder rarely plays them).
+
+The search (beam), 500 games before the 2-hour background limit stopped the run (59 min; 12 000 card-games): ρ 0.03 on
+all 279, **0.11 on the 74 with ≥ 50 games in hand (interim 0.42)**, 0.14 on the 17 with ≥ 200. Thin, but the same way
+as greedy. **Verdict (MC-5.4): TRK keeps the interim table.** Both AIs' worst misses are the walkers and blue value
+cards; the walker games below say why.
+
+## FRA's planeswalkers in self-play: why they read low (2026-11-07, MC-5.4)
+
+`--card-games=planeswalkers`: 32 games of the search on both sides, 2 lost and 2 won per walker, each one its walker was
+drawn in (CHOSEN by result, so the counts are kinds, not rates), traced with `--record=FILE --card=NAME`. Of the 32:
+cast 16 (abilities used, + and −, often several times); drawn in the last 1–2 turns 6; never castable 4 (greedy
+three-colour builds with a thin double pip — Ajani Unrelenting {4}{R}{R} on 5 Mountains, Chandra, Chill of Compliance
+{1}{U}{U} on 6 Islands); **discarded 3 — The Theorist, Jace Beleren to Rank Rat (below Protege's Awakening and Hapatra:
+the position AI-9.3 keeps), Jace, Reality Sculptor over Tam's Resistance**, Ajani Unrelenting pitched to a flashback
+while uncastable; held while castable 3 (2 in games being won; Ajani Resolute in a loss); never in hand 2 (milled — the
+rating proxy's flaw, DATA-2). **The price behind the discards:** a card in hand is priced by the card-value sandbox, the
+cast turn alone — 7 of the 8 walkers 2.7–3.75 (Ajani Resolute 2.7, the lowest card in FRA; Garruk, Curse Breaker 8.15,
+his abilities making tokens), against a median of 8.0. On the battlefield, `Evaluator.Walker`: half of ONE activation.
+Neither is a lifetime (AI-9.3). And a scoring cliff, harmless where seen: a line the rollout wins scores ~9 000, any
+other its position, so a slow walker loses to a kill in sight (Garruk, Veiled Butcher held three turns while winning).

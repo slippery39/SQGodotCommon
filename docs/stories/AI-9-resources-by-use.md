@@ -33,6 +33,22 @@ a walker priced by its best ability). This story is the rest.
 - 2026-10-27, Shayne (from AI-10.3): **a known card in the opponent's hand must not be worth the same
   as an unknown one** — a flaw in this evaluator AND MtgCore's (`MtgSimulator/WeightedStateEvaluator`
   counts each side's non-land hand cards at a flat 1.4, known or not). Try it first: AI-9.5.
+- 2026-11-07, Shayne (AI-9.3, from MC-5.4's self-play ratings — FRA's walkers read far below 17lands): **"Planeswalkers
+  are value over time engines, and need to be evaluated not just on their current impact on the board (although of
+  course, some planeswalkers can have abilities that can immediately provide huge value), but on their value created
+  over their lifetime (which could be anywhere from 1-X turns depending on if the opponent can pressure it or not)."**
+  "I do not believe that our AI players are better than the typical 17 lands player" — so a walker reading below its
+  17lands rate is the AI's fault: not cast (not valued), or the wrong abilities used. Not casting it because the game
+  is already won is fine. Today's price (`Evaluator.Walker`): half of ONE best activation (tokens and draws only;
+  every other effect 0, the flat body of 2) + 0.35 a loyalty — no lifetime, no pressure. The evidence to start from:
+  `MagicConsole --card-games=planeswalkers` (games each walker was drawn in, lost and won) and
+  `--record=FILE --card=NAME` (each turn it sat in hand: castable or not, what was done instead).
+- 2026-11-07, Shayne (AI-9.3's first position — The Theorist, Jace Beleren discarded to Rank Rat on turn 4, two lands in
+  play): **"keeping the island is better, keeping protege's awakening, hapatra the desert frost over jace is clearly not
+  right. That Jace literally has the potential to win the game on its own."** The search's scores: discard The Theorist
+  −6.32 (chosen), Island −6.79, Protege's Awakening −6.87, Infinite Coursework −7.69, Hapatra −10.17, Last Gasp −10.97 —
+  the walker the cheapest spell to lose, its held price 3.3 (FRA's walkers 2.7–3.75 in hand, the bottom quarter; median
+  8.0). Kept: `AiPositionTests.TheoristDiscardedOverCommons_KeepsTheWalker` (ignored, the known defect) and its control.
 
 Open questions:
 - Which first — lands has a precedent to copy (below); life moves every attack decision.
@@ -91,6 +107,13 @@ Open questions:
       (0.78) — slightly worse on the positions, recorded in the findings
 
 ## Next
+
+**NEXT, before the rest of sprint 4 (Shayne, 2026-11-07): AI-9.3, a planeswalker priced by its value over its
+lifetime** (Decisions, 2026-11-07). DATA-2's self-play ratings and TRK's real ratings wait on it. Start from the
+evidence: the walker games of MC-5.4's run (`ai_reports/card-games-*.md`, each a record — `--record=FILE
+--card=NAME`, `--explain=N`), the table of where each walker was castable and not cast (MC-5's Next), and the
+ignored `RolloutTests.AWholeAttack_SendsTheFourPowerAtTheWalker_TheRestAtTheFace`. Propose the price to Shayne
+before building; keep it by AI-5's rule (a position that was wrong before, and a match).
 
 AI-9.5 done (2026-10-27): a known card in their hand is priced at its held value; kept on the token
 bounce, slightly worse on the suite's oracle, no difference in the match (findings). Next here:

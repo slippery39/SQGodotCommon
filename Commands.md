@@ -92,6 +92,7 @@ dotnet run --project MagicConsole -- --record=game_records/<file>.json   # a tab
 dotnet run --project MagicConsole -- --record=game_records/<file>.json --keep=NAME --at=N   # keep it as an AI test case: MagicCore.Tests/Records/NAME.json + a test to paste into AiPositionTests (#N from the transcript)
 dotnet run -c Release --project MagicConsole -- --record=game_records/<file>.json --compare   # your choices beside the AI's (TBL-5.6): at each decision, the default search's pick and where the oracle ranks yours; ~20 s a game on 16 cores
 dotnet run -c Release --project MagicConsole -- --decisions [--games=N] [--seed=N]   # AI games as a replay to read (AI-14): ai_reports/decisions-<time>.md, and each game as a record beside it (-gameN.json) — --record=… numbers its moves, --keep=… --at=N makes a flagged one a test
+dotnet run -c Release --project MagicConsole -- --record=FILE --card=NAME   # each turn NAME sat in its holder's hand: lands, castable or not, what was done instead (MC-5.4)
 dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N   # what the search imagined before move N (AI-17): each first move, best first, with the line its score came from - our decisions, the simulated opponent, the rollout to its horizon
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
@@ -172,7 +173,13 @@ dotnet run -c Release --project MagicConsole -- --interim-ratings=trk
 # DATA-2: each card's games-in-hand win rate in AI-vs-AI sealed games -> sim_results/sim_ratings_<set>_<ai>.json
 # (greedy ~590 games/min on 16 cores; beam ~20). --write makes it MagicCore/Sets/<SET>.ratings.json. Check it on FRA
 # against 17lands before trusting it for a set (docs/findings/limited.md): greedy's ranked FRA worse than the interim table.
-dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000] [--ai=greedy|beam] [--write]
+dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000] [--ai=greedy|beam] [--first-seed=N] [--write]
+# a beam run is ~10 games/min on 16 cores: run it in chunks of seeds (--first-seed, --games=500), each its own file —
+# a background task is stopped at 2 hours and a run cut off writes NOTHING (it cost two beam runs, 2026-11-07)
+
+# Why does a card lose? Self-play games it was DRAWN in, --each lost and --each won (the search on both sides) ->
+# ai_reports/card-games-<time>.md (each game opens with every move naming the card) + a record per game (~40 min for FRA's 8)
+dotnet run -c Release --project MagicConsole -- --card-games=planeswalkers [--set=fra] [--each=2] [--seeds=3000]   # or "Name;Name"
 
 # A Quick Draft with 8 bots (LIM-2.2): each seat's two colours and its picks in order, with rating — FRA, or --set=trk (MC-5.4)
 dotnet run -c Release --project MagicConsole -- --draft [--seed=N] [--set=trk]

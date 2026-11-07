@@ -175,6 +175,10 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 		var record = GameRecord.FromJson(File.ReadAllText(recordArg["--record=".Length..]));
 		if (args.FirstOrDefault(a => a.StartsWith("--keep="))?["--keep=".Length..] is { } keep)
 			Console.WriteLine(Keep(record, keep, Arg("at")));
+		else if (
+			args.FirstOrDefault(a => a.StartsWith("--card="))?["--card=".Length..] is { } traced
+		)
+			Console.WriteLine(CardTrace(record, traced));
 		else if (flags.Contains("--compare"))
 			Console.WriteLine(RecordComparison.Compare(record).Text());
 		else if (Arg("explain") is { } explainAt)
@@ -225,6 +229,177 @@ if (flags.Contains("--decisions"))
 		File.WriteAllText(recordPath, records[g].ToJson());
 		Console.WriteLine(recordPath);
 	}
+	return;
+}
+
+// --card-games=planeswalkers | "Name;Name" [--set=fra] [--each=2] [--seeds=3000]: self-play games (the search on both
+// sides, the decks --sim-ratings plays) in which a card was DRAWN — --each its holder lost and --each it won, per card —
+// as a replay to read (ai_reports/card-games-<time>.md: each game opens with every move naming the card) and each game
+// as a record beside it (on the table: -GameArgs '--resume=FILE'). Why does a card lose? (Shayne, 2026-11-07)
+if (
+	args.FirstOrDefault(a => a.StartsWith("--card-games="))?["--card-games=".Length..] is
+	{ } cardArg
+)
+{
+	var each = Arg("each") ?? 2;
+	var printings = CardRegistry.Printings(limitedSet);
+	var cards = (
+		cardArg == "planeswalkers"
+			? printings
+				.Where(p =>
+					p.Card.TypeLine.Contains("Planeswalker")
+					&& CardRegistry.IsImplemented(p.Card.Name)
+				)
+				.Select(p => p.Card.Name)
+			: cardArg.Split(';')
+	)
+		.Distinct()
+		.ToList();
+	var clock = System.Diagnostics.Stopwatch.StartNew();
+	// the decks come from the gameSeed alone: find each card's games before playing any
+	var seeds = Arg("seeds") ?? 3000;
+	var decksOf = new MagicCore.Limited.SealedDeck[seeds + 1][];
+	Parallel.For(
+		1,
+		seeds + 1,
+		gameSeed =>
+		{
+			var (a, b) = MagicCore.Limited.SimulatedRatings.Decks(limitedSet, gameSeed);
+			decksOf[gameSeed] = [a, b];
+		}
+	);
+	var candidates = cards.ToDictionary(
+		c => c,
+		c => new Queue<int>(
+			Enumerable.Range(1, seeds).Where(s => decksOf[s].Any(d => d.Main.Contains(c)))
+		)
+	);
+	Console.WriteLine(
+		$"{seeds} seeds' decks in {clock.Elapsed.TotalSeconds:0} s: "
+			+ string.Join(", ", cards.Select(c => $"{c} {candidates[c].Count}"))
+	);
+	var kept = cards.ToDictionary(
+		c => c,
+		_ => new List<(bool Won, int Seat, MagicCore.Ai.DecisionReport.Played Game)>()
+	);
+	bool Full(string c) => kept[c].Count(k => k.Won) >= each && kept[c].Count(k => !k.Won) >= each;
+	for (var round = 1; cards.Any(c => !Full(c) && candidates[c].Count > 0); round++)
+	{
+		// a round: a few games of every card still short, all at once, each search on one thread
+		var batch = cards
+			.Where(c => !Full(c))
+			.SelectMany(c =>
+				Enumerable
+					.Range(0, 4)
+					.Select(_ => candidates[c].TryDequeue(out var s) ? (c, s) : default)
+			)
+			.Where(x => x.c is not null)
+			.ToList();
+		var played = new (string Card, int Seed, MagicCore.Ai.DecisionReport.Played Game)[
+			batch.Count
+		];
+		Parallel.For(
+			0,
+			batch.Count,
+			i =>
+			{
+				var (card, gameSeed) = batch[i];
+				var (a, b) = (decksOf[gameSeed][0], decksOf[gameSeed][1]);
+				played[i] = (
+					card,
+					gameSeed,
+					MagicCore.Ai.DecisionReport.Play(
+						gameSeed,
+						[.. a.Main.Select(n => CardRegistry.Get(n, limitedSet))],
+						[.. b.Main.Select(n => CardRegistry.Get(n, limitedSet))],
+						($"Seat 1 ({a.Button})", $"Seat 2 ({b.Button})"),
+						$"{card}, seed {gameSeed}",
+						[
+							.. a
+								.Sideboard.Where(n =>
+									CardRegistry.IsImplemented(n)
+									&& !MagicCore.Limited.SealedBuilder.Basics.Contains(n)
+								)
+								.Select(n => CardRegistry.Get(n, limitedSet)),
+						],
+						[
+							.. b
+								.Sideboard.Where(n =>
+									CardRegistry.IsImplemented(n)
+									&& !MagicCore.Limited.SealedBuilder.Basics.Contains(n)
+								)
+								.Select(n => CardRegistry.Get(n, limitedSet)),
+						],
+						threads: 1
+					)
+				);
+			}
+		);
+		foreach (var (card, gameSeed, game) in played)
+		{
+			var end = game.End;
+			var seat = decksOf[gameSeed][0].Main.Contains(card) ? 1 : 2;
+			var holder = seat == 1 ? end.Player1Id() : end.Player2Id();
+			var drawn = MagicCore
+				.Limited.SimulatedRatings.InHand(decksOf[gameSeed][seat - 1].Main, end, holder)
+				.Contains(card);
+			if (!drawn || !end.IsOver() || end.WinnerId() is not (> 0 and var theWinner))
+				continue; // never drawn, unfinished or a draw: nothing to learn about the card
+			var won = theWinner == holder;
+			if (kept[card].Count(k => k.Won == won) < each)
+				kept[card].Add((won, seat, game));
+		}
+		Console.WriteLine(
+			$"round {round}, {clock.Elapsed.TotalMinutes:0.0} min: "
+				+ string.Join(
+					", ",
+					cards.Select(c =>
+						$"{c} {kept[c].Count(k => !k.Won)}L/{kept[c].Count(k => k.Won)}W"
+					)
+				)
+		);
+	}
+
+	Directory.CreateDirectory("ai_reports");
+	var path = Path.Combine("ai_reports", $"card-games-{DateTime.Now:yyyy-MM-dd_HHmmss}.md");
+	var md = new System.Text.StringBuilder(
+		$"# {limitedSet} self-play games each card was drawn in\n\nThe search on both sides, the decks `--sim-ratings` "
+			+ $"plays. Per card, up to {each} its holder lost, then up to {each} it won. Each game opens with every move "
+			+ "naming the card; the full replay follows. Each game is also a record: `--resume=FILE` on the table.\n"
+	);
+	foreach (var card in cards)
+	{
+		md.Append($"\n# {card}\n");
+		if (kept[card].Count == 0)
+			md.Append($"\nNo game drew it in {seeds} seeds.\n");
+		foreach (var (won, seat, game) in kept[card].OrderBy(k => k.Won))
+		{
+			var file =
+				Path.ChangeExtension(path, null)
+				+ $"-{new string(card.Where(char.IsLetterOrDigit).ToArray())}-{(won ? "won" : "lost")}-{game.Record.Seed}.json";
+			File.WriteAllText(file, game.Record.ToJson());
+			var mentions = game
+				.Md.Split('\n')
+				.Where(l => l.Contains(card) && !l.StartsWith("## "))
+				.ToList();
+			md.Append(
+				$"\n**{(won ? "WON" : "LOST")} by Seat {seat}**, seed {game.Record.Seed} — record `{file}`\n\n"
+					+ $"Every move naming {card}:\n\n"
+					+ (
+						mentions.Count > 0
+							? string.Join(
+								"\n",
+								mentions.Select(l => l.StartsWith("-") ? l : $"- {l.Trim()}")
+							)
+							: "- none (drawn, never cast)"
+					)
+					+ "\n"
+					+ game.Md
+			);
+		}
+	}
+	File.WriteAllText(path, md.ToString());
+	Console.WriteLine($"{path}, {clock.Elapsed.TotalMinutes:0.0} min");
 	return;
 }
 
@@ -293,8 +468,9 @@ if (flags.Contains("--card-values"))
 	return;
 }
 
-// --sim-ratings=FRA [--games=N] [--ai=greedy] [--write]: DATA-2 — each card's games-in-hand win rate in AI-vs-AI
-// sealed games, the tallies to sim_results/sim_ratings_<set>_<ai>.json; --write makes them the set's ratings table
+// --sim-ratings=FRA [--games=N] [--ai=greedy] [--first-seed=N] [--write]: DATA-2 — each card's games-in-hand win rate in
+// AI-vs-AI sealed games, the tallies to sim_results/sim_ratings_<set>_<ai>[_<first seed>].json (a long beam run goes in
+// chunks of seeds, each its own file — a run cut off writes nothing); --write makes them the set's ratings table
 // (MagicCore/Sets/<SET>.ratings.json). Run from the solution root.
 if (
 	args.FirstOrDefault(a => a.StartsWith("--sim-ratings="))?["--sim-ratings=".Length..] is
@@ -304,11 +480,13 @@ if (
 	var set = simSet.ToUpperInvariant();
 	var ai = args.FirstOrDefault(a => a.StartsWith("--ai="))?["--ai=".Length..] ?? "greedy";
 	var games = Arg("games") ?? 2000;
+	var firstSeed = Arg("first-seed") ?? 1;
 	var clock = System.Diagnostics.Stopwatch.StartNew();
 	var tallies = MagicCore.Limited.SimulatedRatings.Measure(
 		set,
 		games,
 		ai,
+		firstSeed,
 		played: n =>
 		{
 			if (n % 100 == 0)
@@ -316,7 +494,10 @@ if (
 		}
 	);
 	Directory.CreateDirectory("sim_results");
-	var raw = Path.Combine("sim_results", $"sim_ratings_{set.ToLowerInvariant()}_{ai}.json");
+	var raw = Path.Combine(
+		"sim_results",
+		$"sim_ratings_{set.ToLowerInvariant()}_{ai}{(firstSeed == 1 ? "" : $"_{firstSeed}")}.json"
+	);
 	File.WriteAllText(
 		raw,
 		System.Text.Json.JsonSerializer.Serialize(
@@ -569,6 +750,61 @@ static string? Read()
 	if (line is null || line.Trim() == "q")
 		Environment.Exit(0);
 	return line;
+}
+
+// --record=FILE --card=NAME: why a card in hand wasn't cast (MC-5.4, Shayne: "treated as dead cards?") — each turn its
+// holder had it in hand, at their first main-phase decision: their lands (untapped / all), whether casting it was a
+// legal move then, and what they did; and every later decision of that turn where it could be cast and wasn't.
+string CardTrace(GameRecord record, string card)
+{
+	var (before, _) = record.Replay();
+	var lines = new List<string>
+	{
+		$"{card} in {record.Players[0]} vs {record.Players[1]}, seed {record.Seed}:",
+	};
+	var seen = new HashSet<int>();
+	for (var i = 0; i < before.Count; i++)
+	{
+		var s = before[i];
+		var holder = record.Moves[i].By == 1 ? s.Player1Id() : s.Player2Id();
+		var inHand = s.CardsIn(holder, ZoneType.Hand).FirstOrDefault(c => c.Name == card);
+		var game = s.GetGame();
+		if (
+			inHand is null
+			|| s.GetPendingChoice() is not null
+			|| game.ActivePlayerId != holder
+			|| game.Step is not (Step.PreCombatMain or Step.PostCombatMain)
+		)
+			continue;
+		var castable = s.LegalActions().Any(a => a is CastSpellAction c && c.CardId == inHand.Id);
+		var first = seen.Add(game.TurnNumber);
+		if (!first && !castable)
+			continue;
+		var lands = s.CardsIn(holder, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Land))
+			.ToList();
+		var did = MagicCore.Ai.MoveTokens.Describe(s, record.Moves[i].Token);
+		lines.Add(
+			$"  #{i + 1} turn {game.TurnNumber} {game.Step}: {lands.Count(l => !l.IsTapped)}/{lands.Count} lands untapped "
+				+ $"({string.Join(", ", lands.GroupBy(l => l.Name).Select(g => $"{g.Count()} {g.Key}"))}) — "
+				+ $"{(castable ? "CASTABLE" : "not castable")}; did: {did}"
+		);
+	}
+	// described from the state, not the record's Said (empty for an AI's moves); numbered from 1, as the transcript
+	var cast = Enumerable
+		.Range(0, before.Count)
+		.Where(i =>
+			MagicCore
+				.Ai.MoveTokens.Describe(before[i], record.Moves[i].Token)
+				.StartsWith($"Cast {card}")
+		)
+		.ToList();
+	lines.Add(
+		cast.Count > 0
+			? $"Cast at move {string.Join(", ", cast.Select(i => $"#{i + 1}"))}."
+			: "Never cast."
+	);
+	return string.Join("\n", lines);
 }
 
 // Copies the record into the tests and returns a test to start from: the position, what was played

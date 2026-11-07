@@ -886,4 +886,35 @@ public class AiPositionTests
 		}
 		return attacked;
 	}
+
+	// Shayne, 2026-11-07 (AI-9.3, from MC-5.4's planeswalker self-play games, seed 98): Rank Rat makes Seat 2 discard
+	// on turn 4, two lands in play. "Keeping the island is better, keeping protege's awakening, hapatra the desert frost
+	// over jace is clearly not right. That Jace literally has the potential to win the game on its own." The search
+	// discards The Theorist, Jace Beleren — its held price (3.3, the card-value sandbox: the cast turn alone) ranks it
+	// below every other spell in hand. KNOWN DEFECT: un-ignore once AI-9.3 prices a walker over its lifetime.
+	[Test]
+	[Ignore(
+		"Known defect: a walker in hand priced by its cast turn alone (AI-9.3) — The Theorist discarded"
+	)]
+	public void TheoristDiscardedOverCommons_KeepsTheWalker()
+	{
+		var s = KeptRecords.Before("TheoristDiscardedOverCommons", 72);
+		var choice = MoveTokens.Token(s, new BeamSearchAi(s.DecidingPlayerId()).Decide(s));
+		Assert.That(MoveTokens.Describe(s, choice), Does.Not.Contain("The Theorist"));
+	}
+
+	/// <summary>The control: the search as it is makes the recorded play — the position still shows the defect.</summary>
+	[Test]
+	public void TheoristDiscardedOverCommons_Control_TheSearchDiscardsHim() =>
+		Assert.That(
+			MoveTokens.Same(
+				MoveTokens.Token(
+					KeptRecords.Before("TheoristDiscardedOverCommons", 72),
+					new BeamSearchAi(
+						KeptRecords.Before("TheoristDiscardedOverCommons", 72).DecidingPlayerId()
+					).Decide(KeptRecords.Before("TheoristDiscardedOverCommons", 72))
+				),
+				KeptRecords.Get("TheoristDiscardedOverCommons").Moves[71].Token
+			)
+		);
 }

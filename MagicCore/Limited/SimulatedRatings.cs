@@ -40,10 +40,7 @@ public static class SimulatedRatings
 			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
 			seed =>
 			{
-				var (a, b) = (
-					SealedBuilder.Opponent(set, 2 * seed),
-					SealedBuilder.Opponent(set, 2 * seed + 1)
-				);
+				var (a, b) = Decks(set, seed);
 				var start = MagicRules.NewGame(
 					a.Main.Select(n => CardRegistry.Get(n, set)),
 					b.Main.Select(n => CardRegistry.Get(n, set)),
@@ -99,8 +96,12 @@ public static class SimulatedRatings
 		return new(tallies);
 	}
 
+	/// <summary>Game <paramref name="seed"/>'s two AI sealed decks, player 1's first — <c>--card-games</c> finds a card's games by them.</summary>
+	public static (SealedDeck A, SealedDeck B) Decks(string set, int seed) =>
+		(SealedBuilder.Opponent(set, 2 * seed), SealedBuilder.Opponent(set, 2 * seed + 1));
+
 	/// <summary>The deck's nonbasic names of which fewer copies are in the library at the end than the deck held.</summary>
-	static IEnumerable<string> InHand(IReadOnlyList<string> deck, GameState end, int player)
+	public static IEnumerable<string> InHand(IReadOnlyList<string> deck, GameState end, int player)
 	{
 		var library = end.CardsIn(player, ZoneType.Library)
 			.GroupBy(c => c.Name)

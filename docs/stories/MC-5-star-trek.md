@@ -246,6 +246,10 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   (10 000 games) rank FRA at ρ 0.20 against the interim table's 0.56 on the well-sampled cards (DATA-2, findings),
   so they are NOT run on TRK; the search AI's (beam) are checked next.
 
+- 2026-11-07, Claude (MC-5.4.6's verdict — **for review**): the search's self-play (500 games before the 2-hour limit)
+  ranks FRA at ρ 0.11 against the interim's 0.42 — **TRK keeps the interim table**. Shayne (2026-11-07), after the walker
+  games: AI-9.3 next — "our win rate data will never be good until we fix these issues".
+
 Open questions:
 - Booster collation: provisional (above) until MTGJSON has TRK's — then `import_mtgjson_boosters.py trk` replaces it.
 
@@ -337,7 +341,9 @@ Open questions:
       (`AbilityActivatedEvent`), an extra turn (`TakeExtraTurn`, `MagicGame.ExtraTurns`, `MagicPlayer.TurnBeganOn`
       for summoning sickness), phasing (`Rules.Phasing`, `ZoneType.PhasedOut`, `PermanentsCantPhaseIn`),
       `MaySacrifice.Must`
-- [ ] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands
+- [x] MC-5.4 TRK boosters, sealed and draft on the table, bots without 17lands — done 2026-11-07 (overnight, unattended):
+      the provisional collation, art, INTERIM ratings, sealed and draft on the table and in the console; the real
+      ratings (DATA-2) checked on FRA and NOT used — blocked on AI-9.3 (Next)
 - [x] MC-5.5 FIRST, before any card: a card's functionality decoupled from its printings — one registry
       by name across sets (one script per card; a test fails on a name scripted twice or a reprint whose
       rules text differs), printing data per set (art, rarity, collector number); `FraCards.Get`'s ~50
@@ -357,6 +363,25 @@ Open questions:
       and `LifeTotalCantChange`, 6.9's `MayPlayFrom`, 6.13's `BecomesType` (Puppet Crafting moved), devotion
 
 ## Next
+
+**MC-5.4 is done (2026-11-07): TRK sealed and draft play on MagicTable.** Run unattended overnight, then with Shayne in
+the afternoon; commits MC-5.4.1–5.4.7.
+
+- **Play it:** `./Run-Godot.ps1 MagicTable/DeckSelectScene.tscn` → the **Set** button to "Star Trek" → **Sealed** (a
+  seeded pool, or Paste Arena pool — a TRK prerelease export reads as TRK's cards) or **Draft** (Quick Draft against 7
+  bots, then the deck builder and the run). Console: `--compare=seed:N --set=trk` (builds × AI opponents),
+  `--draft --set=trk`. Captured (a pool, a build, a draft, both games to turns 1–2) — **not yet played by hand.**
+- **Provisional, each in Decisions for review:** the collation (MC-5.4.1 — Wizards' odds, treatments folded onto the
+  card); the ratings, INTERIM (MC-5.4.3 — the rarity's FRA median ± the card value's rank, ρ 0.41 on FRA); the Set
+  button and pasted pools by set (MC-5.4.4); DATA-2's measure (games in hand, MC-5.4.6).
+- **The real ratings are blocked on AI-9.3** (Shayne): self-play ranks FRA worse than the interim table (greedy 0.20,
+  the search 0.11, against 0.56 / 0.42 — `docs/findings/limited.md`), and FRA's walkers show why: priced in hand by their
+  cast turn alone, The Theorist discarded over two commons (`AiPositionTests.TheoristDiscardedOverCommons_KeepsTheWalker`,
+  ignored). Also seen, not raised: greedy builds starve double pips (4 of 32 walker games — LIM-3, ask Shayne); the
+  rating proxy counts milled cards as drawn (DATA-2's Next).
+- Found by the self-play and fixed: "Enter as a copy?" asked with nothing to copy (MC-5.4.6).
+- **Next: AI-9.3 in a FRESH session** (AI-9's Next; sprint 4 re-ordered, Shayne). Then MC-6's remaining families. Shayne's
+  playtest of TRK sealed and draft ticks the first requirement.
 
 **MC-5.6 is done (2026-11-07): 341/341 — every TRK card and every Stardate plays.** Batch 3b, the last three:
 Sen Triplets (Yuriko's lock → `CantCastOrActivate { DuringCombat, ManaAbilitiesToo }`, on a permanent or a
@@ -721,3 +746,4 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
 - 2026-11-07: MC-5.4.4 — TRK sealed on MagicTable (the deck select's Set button) and in the console (`--compare=seed:N --set=trk`: 9 builds × 2 opponents, 18 games played); captured: a TRK pool, the White/Black suggestion, a game to turn 1
 - 2026-11-07: MC-5.4.5 — TRK Quick Draft on the table (the Set button; bots on the INTERIM ratings + colour lean): captured a TRK pack, 42 picks to the deck builder, a run's game against seat 2 to turn 2; the bots' colours over 10 drafts W 39 / U 36 / B 34 / R 30 / G 21 of 80 (`docs/findings/limited.md`)
 - 2026-11-07: MC-5.4.6 — DATA-2's self-play ratings (`--sim-ratings`); greedy self-play checked on FRA: ρ 0.20 against the interim's 0.56 — not run on TRK; beam's next. Its first run found "Enter as a copy?" asked with nothing to copy (fixed)
+- 2026-11-07: MC-5.4.7 — the walker games (`--card-games`, `--record --card`): FRA's walkers priced in hand by their cast turn alone; The Theorist's discard kept as AI-9.3's position; TRK keeps the interim ratings; AI-9.3 next (Shayne)
