@@ -165,6 +165,10 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 
+# INTERIM ratings for a set 17lands hasn't seen (MC-5.4: TRK) -> MagicCore/Sets/TRK.ratings.json (~10 s); rebuild to embed.
+# CardRatings.Of reads <SET>.ratings.json before <SET>.17lands.json — delete it when the set gets real ratings.
+dotnet run -c Release --project MagicConsole -- --interim-ratings=trk
+
 # An FRA Quick Draft with 8 bots (LIM-2.2): each seat's two colours and its picks in order, with rating
 dotnet run -c Release --project MagicConsole -- --draft [--seed=N]
 

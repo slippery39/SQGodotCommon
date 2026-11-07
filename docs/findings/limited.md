@@ -133,3 +133,20 @@ until one is worth taking), ramped over 10 picks.
   Black 56.6%, White 56.1%, Red 55.4%, Green 54.1% (Sealed GIH WR) — so a rating bot overdrafts them.
 - **The decks still build:** a seat's coloured picks are 64% inside its two colours (lowest 34%), and it
   holds 23.9 coloured playables in its best pair on average; 2 seats of 80 under 17.
+
+## Interim ratings for a set 17lands hasn't seen, checked on FRA (2026-11-07, MC-5.4.3)
+
+How well a rating made without 17lands ranks FRA's cards against 17lands' GIH WR (Sealed, else Premier, ≥200
+games; basics out) — Spearman's ρ over 279 cards:
+
+| rating | ρ |
+|---|---|
+| rarity alone (each card at its rarity's median GIH WR) | 0.25 (ranked C < U < R < M instead: 0.22 — FRA's common median sits above its uncommon one) |
+| `CardValues` alone | 0.21 |
+| rarity median ± 0.02 by the CardValues rank in its rarity, unmeasured as 0 | 0.395 |
+| **the same, an unmeasured card (38 of 295) at its rarity's median** — `CardRatings.Interim` | **0.413** |
+
+The values rank far better INSIDE a rarity than across (ρ within: common 0.12, uncommon 0.33, rare 0.43, mythic
+−0.05) — across, they climb with cost. FRA's medians: common 56.65, uncommon 56.63, rare 58.07, mythic 61.56. The
+spread was picked on FRA (0.04 total; 0.02 gives 0.38, 0.06 gives 0.415), the set it is checked on — an in-sample
+fit. TRK's interim table (`Sets/TRK.ratings.json`) is this method with FRA's medians.

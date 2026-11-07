@@ -94,7 +94,7 @@ MagicCore/
 │                        Suggestions: + a splash and a greedy (up to 4 colours) build, every fixer counted (Fixes); an opponent plays one at random (LIM-3); ClosePairs/ForPair: the 4 closest pairs within 1.5 points, each one's builds (LIM-3.6)
 ├── Limited/Castability.cs  how often a deck's spells are castable on time, by simulated draws, and how often it landcycles in turns 1–4 — shown beside each suggestion (LIM-3.3, 3.7)
 ├── Limited/SealedBuildMatch.cs  candidate sealed builds (Arena exports, or a pool's whole offer) vs the same N AI sealed opponents, paired (MagicConsole --builds / --compare, LIM-1.8, 3.4)
-├── Limited/CardRatings.cs  limited ratings: FRA's 17lands GIH WR (Sealed, else Premier); NOT CardValues, which miss planeswalkers
+├── Limited/CardRatings.cs  limited ratings: a set's own Sets/<SET>.ratings.json (TRK's INTERIM: rarity + CardValues rank, --interim-ratings), else 17lands GIH WR (Sealed, else Premier); NOT raw CardValues, which miss planeswalkers
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects; Sideboard only when given one) + shared Stack; per-CONTROLLER battlefield
 ├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
 ├── Sets/FRA.positions.txt GENERATED position suite (PositionSuite; MagicConsole --suite=generate) — embedded, a test fails while stale

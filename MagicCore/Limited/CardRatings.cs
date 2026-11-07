@@ -28,35 +28,96 @@ public static class CardRatings
 	static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, double>> Tables =
 		new();
 
+	/// <summary>A set's own table, <c>Sets/&lt;SET&gt;.ratings.json</c>: the ratings as they stand (TRK's INTERIM).</summary>
+	sealed record Own(string Source, Dictionary<string, double> Cards);
+
 	/// <summary>
-	/// A set's ratings for every card of the set and its packs — 17lands' GIH WR
-	/// (<c>Sets/&lt;SET&gt;.17lands.json</c>). A set with no 17lands data needs its own table (TRK: MC-5.4).
+	/// A set's ratings for every card of the set and its packs — its own table (<c>Sets/&lt;SET&gt;.ratings.json</c>,
+	/// a set with no 17lands data: TRK, MC-5.4) if it has one, else 17lands' GIH WR (<c>Sets/&lt;SET&gt;.17lands.json</c>).
 	/// </summary>
 	public static IReadOnlyDictionary<string, double> Of(string set) =>
 		Tables.GetOrAdd(
 			set,
 			s =>
-				From17Lands(
-					JsonSerializer
-						.Deserialize<Table>(
-							CardDataSet.ResourceText($"{s}.17lands.json")
-								?? throw new InvalidOperationException(
-									$"No {s}.17lands.json. Run: python tools/import_17lands.py {s.ToLowerInvariant()}"
-								),
-							new JsonSerializerOptions
-							{
-								PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-							}
-						)!
-						.Cards
-				)
+				CardDataSet.ResourceText($"{s}.ratings.json") is { } own
+					? JsonSerializer.Deserialize<Own>(own, CaseInsensitive)!.Cards
+					: From17Lands(
+						JsonSerializer
+							.Deserialize<Table>(
+								CardDataSet.ResourceText($"{s}.17lands.json")
+									?? throw new InvalidOperationException(
+										$"No {s}.17lands.json. Run: python tools/import_17lands.py {s.ToLowerInvariant()}"
+									),
+								new JsonSerializerOptions
+								{
+									PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+								}
+							)!
+							.Cards
+					)
 		);
 
-	/// <summary>Of, or null for a set with no table yet (TRK until MC-5.4) — Kai Winn's blind pick asks.</summary>
+	static readonly JsonSerializerOptions CaseInsensitive =
+		new() { PropertyNameCaseInsensitive = true };
+
+	/// <summary>Of, or null for a set with no table yet — Kai Winn's blind pick asks.</summary>
 	public static IReadOnlyDictionary<string, double>? TryOf(string set) =>
-		Tables.ContainsKey(set) || CardDataSet.ResourceText($"{set}.17lands.json") is not null
+		Tables.ContainsKey(set)
+		|| CardDataSet.ResourceText($"{set}.ratings.json") is not null
+		|| CardDataSet.ResourceText($"{set}.17lands.json") is not null
 			? Of(set)
 			: null;
+
+	/// <summary>How far a card's value moves it inside its rarity: ±<see cref="ValueSpread"/>/2 from the median.</summary>
+	public const double ValueSpread = 0.04;
+
+	/// <summary>
+	/// INTERIM ratings for a set 17lands has never seen (TRK, MC-5.4 — DATA-2's simulated ones replace them):
+	/// each card at its rarity's median in the reference set's ratings (FRA's 17lands), moved by its measured
+	/// value's rank among its rarity's MEASURED cards (<see cref="Ai.CardValues"/>, ± <see cref="ValueSpread"/>/2;
+	/// <paramref name="values"/> holds only those). On FRA itself this ranks the cards against 17lands at
+	/// ρ 0.41 (Spearman), against 0.25 for the rarity alone and 0.21 for the values
+	/// alone (docs/findings/limited.md) — the values rank well INSIDE a rarity and badly across one, because
+	/// they climb with cost. ponytail: the spread was picked on FRA, the set it is checked on.
+	/// </summary>
+	public static Dictionary<string, double> Interim(
+		IReadOnlyList<CardPrinting> set,
+		IReadOnlyDictionary<string, double> values,
+		IReadOnlyList<CardPrinting> reference,
+		IReadOnlyDictionary<string, double> referenceRatings
+	)
+	{
+		static bool Basic(CardPrinting p) =>
+			p.Card.TypeLine.StartsWith("Basic", StringComparison.Ordinal);
+		var medians = reference
+			.Where(p => !Basic(p) && referenceRatings.ContainsKey(p.Card.Name))
+			.GroupBy(p => p.Rarity)
+			.ToDictionary(g => g.Key, g => Median(g.Select(p => referenceRatings[p.Card.Name])));
+		var all = Median(medians.Values);
+		var rated = new Dictionary<string, double>();
+		foreach (var rarity in set.Where(p => !Basic(p)).GroupBy(p => p.Rarity))
+		{
+			var median = medians.GetValueOrDefault(rarity.Key, all);
+			var measured = rarity
+				.Where(p => values.ContainsKey(p.Card.Name))
+				.Select(p => values[p.Card.Name])
+				.ToList();
+			foreach (var p in rarity)
+			{
+				// a card the sandbox couldn't measure sits at the median, not last (FRA: ρ 0.41 against 0.40)
+				if (!values.TryGetValue(p.Card.Name, out var v))
+				{
+					rated[p.Card.Name] = median;
+					continue;
+				}
+				var rank =
+					(measured.Count(x => x < v) + 0.5 * measured.Count(x => x == v))
+					/ measured.Count;
+				rated[p.Card.Name] = median + ValueSpread * (rank - 0.5);
+			}
+		}
+		return rated;
+	}
 
 	/// <summary>
 	/// Sealed's rate — the format being built for — when it rests on <see cref="MinGames"/>; else

@@ -228,6 +228,13 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   **"less than 1%"** shares evenly what a slot's stated odds leave of 100%; **within a group every card is equally
   likely**, the 30 Stardates too; Arena's TRK packs mirror paper (Wizards publishes nothing for Arena).
 
+- 2026-11-07, Claude (MC-5.4.3 — **Claude's default, for review**): **TRK's ratings are INTERIM** —
+  `Sets/TRK.ratings.json` (`MagicConsole --interim-ratings=trk`, `CardRatings.Interim`): each card at its rarity's
+  median FRA 17lands GIH WR, moved ±0.02 by its measured `CardValues` rank among its rarity (an unmeasured card at
+  the median). Checked on FRA: ρ 0.41 against 17lands, the rarity alone 0.25, the values alone 0.21
+  (`docs/findings/limited.md`). `CardRatings.Of` reads a set's `<SET>.ratings.json` before its 17lands file; the
+  basics are unrated (the bots take them last; the builder adds them free).
+
 Open questions:
 - Booster collation: provisional (above) until MTGJSON has TRK's — then `import_mtgjson_boosters.py trk` replaces it.
 
@@ -699,3 +706,4 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   Explorer).
 - 2026-11-07: MC-5.4.1 — TRK's collation, PROVISIONAL from Wizards' published odds (MTGJSON still has none): `tools/build_trk_boosters.py` → `Sets/TRK.boosters.json`, the Stardates 1 pack in 25 (Decisions)
 - 2026-11-07: MC-5.4.2 — TRK's art from Scryfall (`tools/fetch_set_art.py trk`, the Stardates and TRK tokens too): 706 images for 355 cards, imported; the basics' TRK printings (reprints of FRA's) in `Art/trk/`, `Cards/trk/`
+- 2026-11-07: MC-5.4.3 — TRK's INTERIM ratings (`Sets/TRK.ratings.json`, rarity + measured value; ρ 0.41 on FRA, Decisions); `CardRatings.Of` reads a set's own table first
