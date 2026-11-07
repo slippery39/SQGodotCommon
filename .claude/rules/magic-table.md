@@ -20,7 +20,7 @@ MagicTable/
 │                         AI, search AI; the way into Sealed and Draft, and their set (the Set button: LimitedSet,
 │                         FRA or TRK — MC-5.4); Resume a game (a record from game_records/);
 │                         TableSetup.Finished: a run's game reports its result once, then only the way back
-├── DraftSession.cs       an FRA Quick Draft (plain C#, LIM-2.3): you in seat 0 and 7 bots (MagicCore's Draft),
+├── DraftSession.cs       a Quick Draft of its Set (FRA or TRK; plain C#, LIM-2.3): you in seat 0 and 7 bots (MagicCore's Draft),
 │                         your picks as a SealedSession (Builder), the run — 7 wins or 3 losses — against
 │                         each bot's own build in turn (BotDeck, NextBot, Record). Tested
 ├── DraftScene.cs         the pack as full cards (click takes one), your picks by colour in curve order and

@@ -150,3 +150,10 @@ The values rank far better INSIDE a rarity than across (ρ within: common 0.12, 
 −0.05) — across, they climb with cost. FRA's medians: common 56.65, uncommon 56.63, rare 58.07, mythic 61.56. The
 spread was picked on FRA (0.04 total; 0.02 gives 0.38, 0.06 gives 0.415), the set it is checked on — an in-sample
 fit. TRK's interim table (`Sets/TRK.ratings.json`) is this method with FRA's medians.
+
+## TRK Quick Draft on the interim ratings: the bots' colours (2026-11-07, MC-5.4.5)
+
+Ten drafts (`--draft --set=trk`, seeds 1–10), 80 bot seats, rating (TRK's INTERIM table) plus the colour lean: White
+39, Blue 36, Black 34, Red 30, Green 21 seats (an even spread is 32 each) — far flatter than FRA on 17lands (Blue 55,
+Red 15 of 80, LIM-2.2), as a table that is mostly rarity gives no colour a lead. A seat averages 30.0 of its 42 picks
+in its colours, 5.7 outside, the rest colourless.
