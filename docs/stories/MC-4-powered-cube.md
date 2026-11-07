@@ -25,6 +25,8 @@ as his three priorities.
 
 - 2026-10-28, Shayne: **MTGA's powered cube** (not MTGO's Vintage Cube). Sprint 3 covers the survey
   and the first large batch, not the whole cube.
+- 2026-11-07, Shayne: **no new set is built before DEV-4 and DEV-5** (the rules split, one end-of-batch check
+  script) — TRK's usage review. The cube's batches count as a new set.
 
 - 2026-10-29, Shayne: **the survey's first pass is a script** (each card's Oracle text to what it
   needs), checked by hand after — not every card read in context.

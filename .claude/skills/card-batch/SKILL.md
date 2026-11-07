@@ -12,6 +12,9 @@ So this skill is built to start cold and cheap: read the short generated docs, n
 
 ## 0. Start of the batch — fresh, and small
 
+- **A NEW set (or the cube, MC-4) waits for DEV-4 and DEV-5** (Shayne, 2026-11-07): the rules file split by
+  subsystem, and one script for the end-of-batch checks. TRK cost 108M for 335 cards
+  (`docs/findings/card-batch-usage.md`); both are its lessons. If either story isn't `done`, stop and say so.
 - **One batch per session.** After a commit, the next batch starts in a NEW session (or after `/clear`)
   — never carry a finished batch's context into the next one. The handoff and these docs make a cold
   start cheap; a 400k-token context makes every call expensive.

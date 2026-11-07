@@ -30,22 +30,23 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 
 1. **MC-5** — Star Trek (TRK): sealed and draft before Arena's November 10 release
 2. **MC-6** — MagicCore's pieces compose: one per family, not one per card phrase (after MC-5.4)
-3. **LIM-2** — draft against bots: FRA first, a cube later
-4. **MC-4** — MTGA's powered cube: surveyed, then built in batches
-5. **AI-13** — Shayne's lessons as general rules for the search, each measured
-6. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-7. **AI-9** — resources priced by what they provide
-8. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
-9. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-10. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-11. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-12. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
-13. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-14. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-15. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-16. **AI-4** — strategic plans above single actions
-17. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-18. **AI-12** — a card's threat over time, on an empty board and a busy one
+3. **DEV-4**, **DEV-5** — the rules file split by subsystem; one end-of-batch check script — BEFORE any new set (MC-4's cube included; Shayne, 2026-11-07)
+4. **LIM-2** — draft against bots: FRA first, a cube later
+5. **MC-4** — MTGA's powered cube: surveyed, then built in batches
+6. **AI-13** — Shayne's lessons as general rules for the search, each measured
+7. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
+8. **AI-9** — resources priced by what they provide
+9. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
+10. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
+11. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+12. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+13. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
+14. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+15. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+16. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+17. **AI-4** — strategic plans above single actions
+18. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+19. **AI-12** — a card's threat over time, on an empty board and a busy one
 
 ## How it works
 
@@ -116,6 +117,8 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
+| [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | backlog |
+| [DEV-5](DEV-5-batch-check-script.md) | One script for a card batch's end-of-batch checks, one summary out | backlog |
 | [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | backlog |
 | [TBL-6](TBL-6-known-hand-cards.md) | Known cards in the opponent's hand show face up on the table | backlog |
 | [TBL-7](TBL-7-illegal-attack-refused.md) | The table refuses an attack the rules forbid, instead of dropping the creature | backlog |
@@ -138,5 +141,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 
-Next free id per area: AI-20 · DATA-3 · DEV-4 · LIM-4 · MC-7 · TBL-8
+Next free id per area: AI-20 · DATA-3 · DEV-6 · LIM-4 · MC-7 · TBL-8
 <!-- stories:end -->
