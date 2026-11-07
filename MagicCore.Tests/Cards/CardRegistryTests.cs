@@ -142,12 +142,12 @@ public class CardRegistryTests
 	public void ASetWithNoBoostersOrRatings_SaysWhichImportToRun()
 	{
 		Assert.That(
-			() => Boosters.Pack("TRK", new Random(1)),
-			Throws.InvalidOperationException.With.Message.Contains("import_mtgjson_boosters.py trk")
+			() => Boosters.Pack("ZZZ", new Random(1)),
+			Throws.InvalidOperationException.With.Message.Contains("import_mtgjson_boosters.py zzz")
 		);
 		Assert.That(
-			() => CardRatings.Of("TRK"),
-			Throws.InvalidOperationException.With.Message.Contains("import_17lands.py trk")
+			() => CardRatings.Of("ZZZ"),
+			Throws.InvalidOperationException.With.Message.Contains("import_17lands.py zzz")
 		);
 	}
 }

@@ -201,9 +201,35 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   Tribbles and every step is ~n³ in permanents; "ideally … group permanents that are exactly the same together when
   selecting choices" goes on the backlog (AI-18).
 
+- 2026-11-07, Shayne (MC-5.4, run OVERNIGHT, unattended — sealed and maybe draft by morning): **if MTGJSON
+  still has no TRK booster data, build a provisional collation from Wizards' published slot odds** (the
+  Stardates' slot included) without waiting, every assumption recorded for his review; **the rating run may
+  run unattended, any length**; **commit each finished step after `/pre-commit`** (never push); **fetch
+  TRK's art from Scryfall**. Claude's default, in the prompt: sealed and draft first on interim ratings,
+  DATA-2's real ratings last, swapped in only if they rank FRA acceptably against 17lands.
+- 2026-11-07, Claude (MC-5.4.1, on Shayne's permission above — **for review**): MTGJSON still has no TRK booster
+  data (checked 2026-11-07: TRK.json.gz has 586 cards, no `booster`), so **`Sets/TRK.boosters.json` is PROVISIONAL,
+  built by `tools/build_trk_boosters.py`** from Wizards' Play Booster section of
+  https://magic.wizards.com/en/news/feature/collecting-star-trek. Wizards' slots, each a sheet:
+  - **7 commons** (`common`, the 4-colour rule as FRA's) — 81 main-set commons 97.1%, the 1 Klingon-frame common 2.9%;
+    **"in 1 out of 25 Play Boosters, a Stardates card will replace a common"**: 6 commons + 1 Stardate (`specialGuest`)
+  - **3 uncommons** — main 78.1%, the 10 scene cards 7.7%, 7 LCARS 4.6%, 5 classic *Enterprise* 4.6%, 6 Klingon 5%
+  - **1 wildcard** — main C 20.8 / U 54.1 / R 16.7 / M 2.6%, Klingon U 1%, scene U 1.5%, LCARS U 1%, the rest "<1%"
+  - **1 rare or mythic** — main R 80.1 / M 12.4%, scene R 1%, LCARS R 1.8%, *Enterprise* R 1.5%, borderless land R 1%,
+    LCARS shock land 1.4%, the rest "<1%"
+  - **1 traditional foil** (Arena: a second non-foil wildcard, as FRA) — main C 51.2 / U 34.7 / R 6.3 / M 1%, Klingon U
+    1%, scene U 1.6%, LCARS U 1.1%, the rest "<1%"
+  - **1 land** — a common dual (the 10 Planets) 50% (non-foil 40 + foil 10), a basic 50% (default, holodeck, away team)
+  Claude's assumptions, each for review: **a treatment is the same card** — its odds folded onto the name, as FRA's
+  import folds them (so a card with a treatment opens more often: Worf, Honor-Bound Warrior, LCARS and Klingon, at ~3×
+  a plain uncommon); **which printing is which treatment** is read from Scryfall's collector-number runs (scene and
+  borderless lands 332–362, LCARS and its shocklands 363–401, *Enterprise* 402–425, Klingon 426–435) — they reproduce
+  every count Wizards gives (1 Klingon common; 10 / 7 / 5 / 6 uncommons), and the script stops if they ever don't;
+  **"less than 1%"** shares evenly what a slot's stated odds leave of 100%; **within a group every card is equally
+  likely**, the 30 Stardates too; Arena's TRK packs mirror paper (Wizards publishes nothing for Arena).
+
 Open questions:
-- Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
-  collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
+- Booster collation: provisional (above) until MTGJSON has TRK's — then `import_mtgjson_boosters.py trk` replaces it.
 
 ## Tasks
 
@@ -333,21 +359,49 @@ free cast for itself, and a flashback cast could also skip its mana cost (CR 118
 Is.Source` only, never with flashback. No AI-19 row. AI
 bench: −10.2% (5 rounds, best 5.3 s vs 5.9 s). Probe: 150 games, none unfinished, all three played.
 
-**Next: MC-5.4, TRK's boosters — the Stardates' slot included — in a NEW session; then MC-6's remaining families
-(after MC-5.4, MC-6's Next).** The prompt:
+**Next: MC-5.4, TRK's boosters — the Stardates' slot included — in a NEW session, OVERNIGHT and unattended
+(Shayne, 2026-11-07: Decisions); then MC-6's remaining families (after MC-5.4, MC-6's Next).** The prompt:
 
 ```
-MC-5.4: TRK boosters (a provisional collation from Wizards' published slot odds, the Stardates' slot
-included), sealed and draft on the table, bots without 17lands. Sprint 4 (docs/sprints/2026-11-05.md), item 5;
-the rating run is long — ask Shayne first. Every TRK card and Stardate plays (341/341, MC-5.6 done 2026-11-07).
+MC-5.4 OVERNIGHT: TRK sealed, then draft, playable on MagicTable by morning. Shayne is asleep — work
+unattended on the permissions below; never stop to ask. Sprint 4 (docs/sprints/2026-11-05.md), item 5;
+Arena's TRK release is Nov 10. Every TRK card and Stardate plays (341/341, MC-5.6 done 2026-11-07).
 
-Read, in order and nothing more yet: docs/stories/MC-5-star-trek.md (Requirements, Decisions — the open
-question on collation — and Next), MagicCore/CLAUDE.md (the Limited/ rows), MagicCore/Limited/Boosters.cs and
-Draft.cs (FRA's: MTGJSON sheets), tools/import_mtgjson_boosters.py. MTGJSON had no TRK booster data on
-2026-10-31: check again first. Propose the collation (each slot, its odds, the source) and the bots' ratings
-without 17lands to Shayne BEFORE building.
+Permissions (Shayne, 2026-11-07 — MC-5's Decisions): build a provisional collation from Wizards' published
+slot odds if MTGJSON still has none, every assumption recorded; long runs allowed, any length; COMMIT each
+finished step after /pre-commit passes (never push, never --no-verify); fetch TRK's art from Scryfall
+(official art first). Anything else that would need Shayne: take the conservative default, record it in
+MC-5's Decisions as "Claude's default, for review", and carry on.
 
-End with the usage row (tools/usage_report.py --log), /pre-commit, then ask before committing.
+Read, in order and nothing more yet: docs/stories/MC-5-star-trek.md (Requirements, Decisions from 2026-11-06,
+Next), docs/stories/LIM-1-sealed-draft.md and LIM-2-draft.md (how FRA's sealed and draft were built and put on
+the table), docs/stories/DATA-2-engine-ratings.md, MagicCore/CLAUDE.md (the Limited/ rows), Commands.md (how
+the table and console run sealed and draft). Grep before reading engine source; read only what you edit.
+
+Steps, each finished = tests pass, /pre-commit, a commit whose subject starts "MC-5.4.n:" — in this order, so
+the morning has the most playable thing:
+1. Collation. Check MTGJSON for TRK booster data first (tools/import_mtgjson_boosters.py). Else build
+   Sets/TRK.boosters.json from Wizards' "Collecting Star Trek" (magic.wizards.com) slot odds, the Stardates'
+   slot included; the source URL, each slot and its odds in MC-5's Decisions. Boosters open TRK packs (a test
+   on the slot counts and that a Stardate appears at about its rate).
+2. Art: start the Scryfall fetch for TRK in the background (python tools/fetch_set_art.py trk; the Stardates too).
+3. Interim ratings for TRK — fast, labelled INTERIM in the file and the story (the engine's card values where
+   they exist, else by rarity), on CardRatings' scale — so the sealed builder and the bots have a table.
+4. Sealed: TRK selectable for sealed on MagicTable and in the console — a pool, the suggested builds, an AI
+   opponent's deck, a game played. Run the table through Run-Godot.ps1 and look at a screenshot.
+5. Draft: TRK Quick Draft on the table, bots on the interim ratings plus colour lean.
+6. Real ratings (DATA-2's method: card win rates pre-simulated by self-play, not 17lands). Check the method on
+   FRA against Sets/FRA.17lands.json FIRST (the rank correlation, the worst misses, in docs/findings/); run
+   it on TRK only if it beats the interim ratings on FRA; then swap TRK's table and re-check sealed and draft.
+   Otherwise keep the interim table and write up why.
+
+Traps: sim_results/ resolves against the working directory (root CLAUDE.md); a long run goes in the
+background with its output in a file, polled by Monitor — never a foreground sleep; Git Bash has no pgrep;
+many files are CRLF — edit with tools/edit.py, specs written with the Write tool. If a step fails twice the
+same way, record it in MC-5's Next and move to the next step rather than looping.
+
+End: MC-5's Next says what plays and how to start it, what is interim, each default taken for review, the
+ratings' FRA check; the usage row (tools/usage_report.py --log "MC-5.4 overnight: …").
 ```
 
 **MC-5.6 batch 3a was done (2026-11-07): 338/341** — 3 Stardates, the six split 3a / 3b (Shayne): Riku of Many Paths
@@ -643,3 +697,4 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
 - 2026-11-06: MC-5.6 batch 1 — 17 Stardates (328/341): the 9 tier 1, then MC-6.1–6.4 composed with their old cards
   moved (Isshin; Torbran, Bruvac; Rishkar, Talon Gates, Phyrexian Tower; Sisay, Weatherlight Captain, Loot, Exuberant
   Explorer).
+- 2026-11-07: MC-5.4.1 — TRK's collation, PROVISIONAL from Wizards' published odds (MTGJSON still has none): `tools/build_trk_boosters.py` → `Sets/TRK.boosters.json`, the Stardates 1 pack in 25 (Decisions)

@@ -7509,7 +7509,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 [
 	new MayCastFromHandFree(Is.Source)
 	{
-		Costs = [new SacrificeCost(Is.Creature & Is.Color(ManaColor.White) & !Is.Token)],
+		Costs =
+		[
+			new SacrificeCost(Is.Creature & Is.Color(ManaColor.White) & !Is.Token),
+		],
 	},
 	Spell(
 		[],
@@ -7965,7 +7968,9 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[],
 		new If(
 			new AtLeast(
-				Count.NumberOf(Ref.All(ZoneType.Battlefield, Is.Creature, Ref.ActivePlayer)),
+				Count.NumberOf(
+					Ref.All(ZoneType.Battlefield, Is.Creature, Ref.ActivePlayer)
+				),
 				1
 			),
 			[
@@ -8232,7 +8237,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.YourUpkeep,
 		[TargetSpec.Player(Is.Opponents)],
-		new ThisTurn(new CantCastOrActivate { ManaAbilitiesToo = true }) { On = Ref.Target(0) },
+		new ThisTurn(new CantCastOrActivate { ManaAbilitiesToo = true })
+		{
+			On = Ref.Target(0),
+		},
 		new LookAtHand(Ref.Target(0)), // "plays with their hand revealed" — to you; they know it
 		new ThisTurn(new MayPlayFrom(ZoneType.Hand, Ref.Target(0)))
 	),

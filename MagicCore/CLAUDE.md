@@ -99,7 +99,7 @@ MagicCore/
 ├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
 ├── Sets/FRA.positions.txt GENERATED position suite (PositionSuite; MagicConsole --suite=generate) — embedded, a test fails while stale
 ├── Sets/FRA.17lands.json  computed by tools/import_17lands.py from 17lands' PUBLIC game data (never its API): GIH WR + games
-├── Sets/FRA.boosters.json  imported by tools/import_mtgjson_boosters.py — play-booster sheets by card name, never hand-edit
+├── Sets/FRA.boosters.json  imported by tools/import_mtgjson_boosters.py — play-booster sheets by card name, never hand-edit; TRK's is PROVISIONAL, tools/build_trk_boosters.py (Wizards' odds, MC-5.4)
 └── Sets/FRA.json, TRK.json   imported by tools/import_scryfall_set.py — embedded resources, never hand-edit
 ```
 

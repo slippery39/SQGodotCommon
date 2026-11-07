@@ -104,6 +104,49 @@ public class BoosterTests
 		Assert.That(guests.Where(c => !CardRegistry.IsImplemented(c.Card)), Is.Empty);
 	}
 
+	// TRK's collation is PROVISIONAL (MC-5.4: Wizards' published odds, MTGJSON having none). Wizards' own
+	// numbers: "14 Magic: The Gathering cards" — 6–7 commons, 3 uncommons, a wildcard, a rare or mythic, a
+	// traditional foil (Arena: a second wildcard), a land — and "in 1 out of 25 Play Boosters, a Stardates card
+	// will replace a common".
+	static readonly Dictionary<string, CardPrinting> Trk = CardDataSet
+		.Load("TRK")
+		.ToDictionary(p => p.Card.Name);
+
+	[Test]
+	public void TrkPacks_HaveWizardsSlots_AndEveryCardPlays()
+	{
+		foreach (var pack in Boosters.Sealed("TRK", seed: 7, packs: 2000))
+		{
+			Assert.That(pack, Has.Count.EqualTo(14));
+			var slots = pack.GroupBy(c => c.Sheet).ToDictionary(g => g.Key, g => g.Count());
+			var guest = slots.GetValueOrDefault("specialGuest");
+			Assert.That(slots["common"] + guest, Is.EqualTo(7));
+			Assert.That(slots["uncommon"], Is.EqualTo(3));
+			foreach (var one in new[] { "wildcard", "rareMythic", "foil", "land" })
+				Assert.That(slots[one], Is.EqualTo(1), one);
+			Assert.That(
+				pack.Where(c => c.Sheet == "uncommon").Select(c => Trk[c.Card].Rarity),
+				Is.All.EqualTo("uncommon")
+			);
+			Assert.That(pack.Where(c => !CardRegistry.IsImplemented(c.Card)), Is.Empty);
+		}
+	}
+
+	[Test]
+	public void TrkStardates_AreOnePackIn25()
+	{
+		const int n = 20000;
+		var withGuest = Boosters
+			.Sealed("TRK", seed: 3, packs: n)
+			.Count(p => p.Any(c => c.Sheet == "specialGuest"));
+		const double expected = 1.0 / 25;
+		Assert.That(
+			(double)withGuest / n,
+			Is.EqualTo(expected).Within(4 * Math.Sqrt(expected * (1 - expected) / n))
+		);
+		Assert.That(Boosters.Guests("TRK"), Has.Count.EqualTo(30));
+	}
+
 	[Test]
 	public void TheSameSeed_OpensTheSamePool() =>
 		Assert.That(
