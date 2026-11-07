@@ -40,16 +40,6 @@ public class TrkBatch7bTests : FraBoardTest
 	Card Named(int player, string name) =>
 		s.CardsIn(player, ZoneType.Battlefield).Single(c => c.Name == name);
 
-	/// <summary>Answers a choice of type T with these ids; any other with its minimum.</summary>
-	static Func<ChoiceAction, IEnumerable<int>> On<T>(params int[] ids)
-		where T : ChoiceAction =>
-		c =>
-			c switch
-			{
-				T => ids,
-				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
-			};
-
 	// ===== A token attached as it is made; Equipment tokens become a copy =====
 
 	[Test]

@@ -1226,7 +1226,9 @@ public static class FraCards
 					{
 						Then =
 						[
-							new ReturnChosenToHandIfManaValueAtMost(Count.LifeYouGainedThisTurn),
+							new ReturnChosenToHandIf(
+								Is.ManaValueAtMost(Count.LifeYouGainedThisTurn)
+							),
 						],
 					}
 				) with
@@ -2343,11 +2345,22 @@ public static class FraCards
 			["Tomik, Izzet Sparkmage"] =
 			[
 				Prowess,
-				new AmountReplacement(ReplaceableEvent.NoncombatDamageToOpponent, 1),
+				new NumericReplacement(ReplacedEvent.Damage)
+				{
+					Source = Is.Yours,
+					Affected = Is.Opponents,
+					Combat = false,
+					Plus = 1,
+				},
 			],
 			["Yoshimaru, Beloved Companion"] =
 			[
-				new AmountReplacement(ReplaceableEvent.PlusOneCountersOnYourCreature, 1),
+				new NumericReplacement(ReplacedEvent.Counters)
+				{
+					Affected = Is.Creature & Is.Yours,
+					CounterKind = CounterKinds.PlusOne,
+					Plus = 1,
+				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{6}"),
 					[new AddCounters(Ref.Target(), 1)]
@@ -2502,7 +2515,7 @@ public static class FraCards
 			// ===== Engine: mana that isn't one land, one mana =====
 			["Loot, the Nexus"] =
 			[
-				new ManaOfOneColorComponent(Count.DistinctPowersOf(Ref.CreaturesYouControl)),
+				ManaAbilityComponent.OfAnyOneColor(Count.DistinctPowersOf(Ref.CreaturesYouControl)),
 			],
 			["Heartwood Crafter // Soul Tether"] =
 			[
@@ -3015,7 +3028,10 @@ public static class FraCards
 				},
 				new MayCastWhatItExiled(Threshold),
 			],
-			["Omnipresence"] = [new CastFromHandFreeUpToCreatureCount()],
+			["Omnipresence"] =
+			[
+				new MayCastFromHandFree(Is.ManaValueAtMost(Count.CreaturesYouControl)),
+			],
 
 			// ===== Rares (8e): copying permanents =====
 			["Sphinx of False Conclusions"] =
@@ -3120,16 +3136,7 @@ public static class FraCards
 				Loyalty(
 					1,
 					[],
-					new Surveil(1)
-					{
-						Then =
-						[
-							new ReturnChosenToHandIfManaValueAtMost(int.MaxValue)
-							{
-								ExceptTypes = CardType.Creature | CardType.Land,
-							},
-						],
-					}
+					new Surveil(1) { Then = [new ReturnChosenToHandIf(!Is.Creature & !Is.Land)] }
 				),
 				Loyalty(
 					1,

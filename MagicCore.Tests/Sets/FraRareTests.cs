@@ -580,13 +580,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void ATreasurePaysOneManaOfAnyColour_AndIsSacrificed()
 	{
-		var treasure = Field(
-			new CardDefinition(
-				Tokens.Treasure,
-				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
-			),
-			me
-		);
+		var treasure = Field(new CardDefinition(Tokens.Treasure, [Tokens.SacrificeForMana(1)]), me);
 		s = s.UpdateObject(treasure, s.GetCard(treasure) with { IsToken = true }); // TEST SETUP
 		TapAllLands(me);
 		var spell = Hand(TestGames.Inline("Black", "{B}", "Instant"), me);
@@ -598,13 +592,7 @@ public class FraRareTests : FraBoardTest
 	[Test]
 	public void ATreasureIsSpentLast()
 	{
-		var treasure = Field(
-			new CardDefinition(
-				Tokens.Treasure,
-				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
-			),
-			me
-		);
+		var treasure = Field(new CardDefinition(Tokens.Treasure, [Tokens.SacrificeForMana(1)]), me);
 		var spell = Hand(TestGames.Inline("Black", "{B}", "Instant"), me);
 		s = s.Act(Casts(spell).Single());
 		Assert.That(Alive(treasure), "a Swamp paid; the Treasure was kept");
@@ -790,8 +778,7 @@ public class FraRareTests : FraBoardTest
 		Assert.That(s.GetCard(bear).Damage, Is.EqualTo(4));
 	}
 
-	CardDefinition TreasureToken =>
-		new(Tokens.Treasure, [new ManaOfOneColorComponent(1) { SacrificeSelf = true }]);
+	CardDefinition TreasureToken => new(Tokens.Treasure, [Tokens.SacrificeForMana(1)]);
 
 	static CardDefinition HeartwoodToken =>
 		new(
@@ -803,10 +790,7 @@ public class FraRareTests : FraBoardTest
 	public void ASummoningSickSculptureTreasure_ConvokesWithoutBeingSacrificed()
 	{
 		var sculpture = Field(
-			new CardDefinition(
-				FraCards.SculptureTreasure,
-				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
-			),
+			new CardDefinition(FraCards.SculptureTreasure, [Tokens.SacrificeForMana(1)]),
 			me
 		);
 		s = s.UpdateObject(
@@ -882,10 +866,7 @@ public class FraRareTests : FraBoardTest
 	public void AReadySculptureTreasure_ConvokesToo_RatherThanBeingSacrificed()
 	{
 		var sculpture = Field(
-			new CardDefinition(
-				FraCards.SculptureTreasure,
-				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
-			),
+			new CardDefinition(FraCards.SculptureTreasure, [Tokens.SacrificeForMana(1)]),
 			me
 		);
 		var winter = Hand("Winter, Team Player", me); // {4}{R}, convoke

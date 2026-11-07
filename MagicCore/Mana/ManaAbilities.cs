@@ -16,24 +16,36 @@ public static class ManaAbilities
 		if (intrinsic.Any() && s.HasLostAllAbilities(card))
 			return [];
 		return intrinsic
-			.Concat(s.AbilitiesOf<ManaAbilityComponent>(card).Select(m => m.Color))
-			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
 			.Concat(
-				s.AbilitiesOf<ManaOfOneColorComponent>(card).Any(m => m.Cost is null)
-					? AnyColor
-					: []
+				AbilitiesOf(s, card)
+					.Where(m => m.IsPlain)
+					.SelectMany(m => m.AnyOneColor ? AnyColor : [m.Color])
 			)
-			.Concat(Granted(s, card) is { } granted ? [granted.Color] : [])
+			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
 			.Distinct();
 	}
 
-	/// <summary>Rok-Tahk: "Creatures you control have '{T}: Add {G}{G}.'" — the grant this creature has from a permanent its controller controls.</summary>
-	static YourCreaturesTapForMana? Granted(GameState s, Card card) =>
-		!card.Is(CardType.Creature) || s.HasLostAllAbilities(card)
-			? null
-			: s.CardsIn(card.ControllerId, ZoneType.Battlefield)
-				.SelectMany(s.AbilitiesOf<YourCreaturesTapForMana>)
-				.FirstOrDefault();
+	/// <summary>THE list of a permanent's mana abilities: its own, then those granted to it (Rok-Tahk, Rishkar).</summary>
+	public static IEnumerable<ManaAbilityComponent> AbilitiesOf(GameState s, Card card)
+	{
+		var own = s.AbilitiesOf<ManaAbilityComponent>(card);
+		var granted = Granted(s, card);
+		return granted is null ? own : own.Concat(granted);
+	}
+
+	/// <summary>The mana abilities granted to it; null (no allocation) for the usual none — payment asks per source.</summary>
+	static List<ManaAbilityComponent>? Granted(GameState s, Card card)
+	{
+		List<ManaAbilityComponent>? granted = null;
+		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
+		foreach (var g in s.CardsIn(player, ZoneType.Battlefield))
+		{
+			foreach (var grant in s.AbilitiesOf<GrantsManaAbility>(g)) // cheap on none — a gained grant too
+				if (grant.Affects.Matches(s, card, new Filters.FilterContext(g.ControllerId, g.Id)))
+					(granted ??= []).Add(grant.Ability);
+		}
+		return granted is null || s.HasLostAllAbilities(card) ? null : granted;
+	}
 
 	/// <summary>Plains, Island, Swamp, Mountain, Forest — domain counts these.</summary>
 	public static bool IsBasicLandType(string subtype) => BasicLandColor(subtype) is not null;
@@ -123,17 +135,32 @@ public static class ManaAbilities
 		if (colors.IsEmpty)
 			return new([], false, ManaRestriction.None);
 		var context = Conditions.Of(card);
-		var oneColor = s.AbilitiesOf<ManaOfOneColorComponent>(card)
-			.FirstOrDefault(m => m.Cost is null);
+		// ponytail: one yield per permanent — the plain ability making the most (Loot's N, Rok-Tahk's
+		// {G}{G}, a Treasure's colour), else one unit of every colour its one-mana abilities make; so a
+		// creature with its own {G} granted {G}{G} makes only the {G}{G}. Make it a choice if that ever matters.
+		ManaAbilityComponent? first = null;
+		ManaAbilityComponent? oneColor = null;
+		var most = 0;
+		foreach (var m in AbilitiesOf(s, card)) // a loop, not LINQ: payment asks per source
+		{
+			if (!m.IsPlain)
+				continue;
+			first ??= m;
+			if (!m.AnyOneColor && m.Amount is { Kind: CountOf.Fixed, Fixed: 1 })
+				continue;
+			var n = Math.Max(0, m.Amount.Value(s, context));
+			if (oneColor is null || n > most)
+				(oneColor, most) = (m, n);
+		}
 		ImmutableArray<ImmutableArray<ManaColor>> units = oneColor is null
 			? [colors]
-			: [.. Enumerable.Repeat(AnyColor, Math.Max(0, oneColor.Amount.Value(s, context)))];
-		if (Granted(s, card) is { } granted && units.Length < granted.Amount)
-			return new(
-				[.. Enumerable.Repeat<ImmutableArray<ManaColor>>([granted.Color], granted.Amount)],
-				false,
-				ManaRestriction.None
-			);
+			:
+			[
+				.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
+					oneColor.AnyOneColor ? AnyColor : [oneColor.Color],
+					most
+				),
+			];
 		// Molten Tide: "whenever you tap a Mountain for mana, add an additional {R}" — a mana
 		// ability triggering on a mana ability, so it resolves at once (CR 605.1b), as more mana.
 		if (card.Subtypes.Contains("Mountain"))
@@ -147,12 +174,16 @@ public static class ManaAbilities
 			];
 		// ponytail: one restriction per permanent — all its mana abilities share it (Heartwood
 		// Crafter's {C}, Gideon's Memorial's five colours). Track it per unit if a card mixes them.
-		var abilities = s.AbilitiesOf<ManaAbilityComponent>(card).ToList();
 		var restriction =
-			abilities.Count > 0 && !card.Subtypes.Any(IsBasicLandType)
-				? abilities[0].Restriction
+			first is not null && !card.Subtypes.Any(IsBasicLandType)
+				? (oneColor ?? first).Restriction
 				: ManaRestriction.None;
-		return new(units, oneColor is not null, restriction, oneColor?.SacrificeSelf == true);
+		return new(
+			units,
+			oneColor?.AnyOneColor == true,
+			restriction,
+			oneColor?.SacrificesItself == true
+		);
 	}
 
 	/// <summary>{T} in ANY cost: untapped, and a creature must not be summoning sick (CR 302.6).</summary>

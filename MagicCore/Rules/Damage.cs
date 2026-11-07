@@ -75,23 +75,15 @@ public static class Damage
 		s.GetObject(targetId) is MagicPlayer shielded
 		&& s.ThisTurnEffects<Effects.PreventAllDamageToYou>(shielded.Id).Any();
 
-	static int Replaced(GameState s, Card source, int targetId, int amount, bool combat)
-	{
-		var toAnOpponent = s.GetObject(targetId) switch
-		{
-			MagicPlayer p => p.Id != source.ControllerId,
-			Card c => s.IsOnBattlefield(c.Id) && c.ControllerId != source.ControllerId,
-			_ => false,
-		};
-		return combat || !toAnOpponent
-			? amount
-			: Replacements.Apply(
-				s,
-				Effects.ReplaceableEvent.NoncombatDamageToOpponent,
-				source.ControllerId,
-				amount
-			);
-	}
+	static int Replaced(GameState s, Card source, int targetId, int amount, bool combat) =>
+		Replacements.Apply(
+			s,
+			Effects.ReplacedEvent.Damage,
+			s.GetObject(targetId),
+			amount,
+			source,
+			combat: combat
+		);
 
 	/// <summary>
 	/// CR 120.4a: how much of this damage would be beyond lethal — past a planeswalker's loyalty, or

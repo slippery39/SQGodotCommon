@@ -26,7 +26,7 @@ end of turn, a delayed trigger at the next combat, dilemmas this turn, exile unt
 discover, cast any number free from among the exiled, copies cast free, beam me up granted to the graveyard, cast
 or play from the graveyard once each turn, exile a spell); batch 7b, 11 one-offs (modes not chosen before, lose the game, can't sacrifice Treasures, enters attacking, a granted mana ability, explore, an extra land each turn, a player's hexproof and prevented damage, "that player may", counters removed from among, a token attached as made, any number of lands sacrificed, cards exiled with a Saga sharing a type); batch 7c, the last five (abilities gained for good, an ability activated
 from exile, a name chosen as it enters, "activates an ability" — mana abilities too, an extra turn, phasing)** —
-**311/311 play: TRK is complete** (96/96 C, 110/110 U, 80/80 R, 25/25 M). **The 30 Stardates (SDS #1–30, TRK's Special Guests — MC-5.6) are imported, none scripted yet: 311/341** (mythic 25/55); their tiers and batches are in MC-5's Next. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
+**311/311 play: TRK is complete** (96/96 C, 110/110 U, 80/80 R, 25/25 M). **The 30 Stardates (SDS #1–30, TRK's Special Guests — MC-5.6): batch 1 played 17 (2026-11-06, on MC-6.1–6.4's composed pieces) — 328/341** (mythic 42/55); the 13 left and their batches are in MC-5's Next. Batch 5 re-tiered from the full text (2026-11-04): to 3 — Collation
 Trimatrix (1 → 3) and Captain Jean-Luc Picard (tap three or seven untapped), Gul Dukat (life lost this
 turn), Seven of Nine (base P/T become 7/9), Branching Timeline (reveal X, every permanent card onto the
 battlefield), Dominion Infiltration (X targets, changeling — with the one-offs), Starfleet Academy (a mana
@@ -94,7 +94,7 @@ are Edge of Eternities'. Grep MtgCore before building any of these (MagicCore/CL
 | ASSIMILATE | DONE (batch 7a): `Assimilate`, `AssimilateExiledWithSource` | — |
 | ONCE-A-TURN | DONE (batch 4a): `ActivatedAbilityComponent.OncePerTurn` | — |
 | RESOLVED-TWICE, TYPE-SET, GRANT-TRIGGER | DONE (batch 4b): `IfNthResolutionThisTurn`; `s.Subtypes` (`ModifyUntilEndOfTurn.BecomesCreatureTypes`, `EnchantedIsCreatureType`); `GrantsTriggeredAbility`. Not yet: Antagonist Incorporator | — |
-| TRIGGER-TWICE | DONE (batch 7a): `Triggers.AdditionalTimes` — `LifeGainTriggersAdditionalTime`, `TriggersAdditionalTimeWhileTapped` | — |
+| TRIGGER-TWICE | DONE (batch 7a): `Triggers.AdditionalTimes` — `TriggersAdditionalTime` (MC-6.1; was `LifeGainTriggersAdditionalTime`, `TriggersAdditionalTimeWhileTapped`) | — |
 
 Also needed, no tag: H.M.S. Bounty's extra turn (MtgCore's `TakeExtraTurnAction`), Borg Cube's
 affinity (a `CostChange` with a count). Genuinely new, found in neither engine: Station, dilemma,

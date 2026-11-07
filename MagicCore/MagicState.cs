@@ -562,13 +562,13 @@ public static class MagicState
 			: s.UpdateObject(
 				cardId,
 				// Lwaxana Troi: "for as long as [she] remains tapped" — over as she untaps.
-				(Card)
-					(
-						card with
-						{
-							IsTapped = false,
-						}
-					).WithoutComponents<TriggersAdditionalTimeWhileTapped>()
+				card with
+				{
+					IsTapped = false,
+					Components = card.Components.RemoveAll(c =>
+						c is TriggersAdditionalTime { UntilUntapped: true }
+					),
+				}
 			);
 	}
 
@@ -616,32 +616,16 @@ public static class MagicState
 	)
 	{
 		var card = s.GetCard(cardId);
-		if (n > 0 && kind == CounterKinds.PlusOne && card.Is(CardType.Creature))
-			n = Rules.Replacements.Apply(
-				s,
-				ReplaceableEvent.PlusOneCountersOnYourCreature,
-				card.ControllerId,
-				n,
-				exceptId: entering ? cardId : 0
-			);
-		n = Rules.Replacements.Counters(s, card.ControllerId, n);
-		var except = entering ? cardId : 0;
-		if (n > 0 && kind == CounterKinds.Charge && card.Is(CardType.Artifact))
-			n = Rules.Replacements.Doubled<ChargeCountersOnYourArtifactsDoubled>(
-				s,
-				card.ControllerId,
-				n,
-				except
-			);
 		// ponytail: M'Benga's (and Geordi's) "if YOU would put" doubles whoever puts them — PutCounters
 		// doesn't know the putter. Pass it through every caller if an opponent's counters ever matter.
-		if (n > 0 && card.Is(CardType.Creature))
-			n = Rules.Replacements.Doubled<CountersOnYourCreaturesDoubled>(
-				s,
-				card.ControllerId,
-				n,
-				except
-			);
+		n = Rules.Replacements.Apply(
+			s,
+			ReplacedEvent.Counters,
+			card,
+			n,
+			kind: kind,
+			exceptId: entering ? cardId : 0
+		);
 		var had = card.CountersOf(kind);
 		var now = Math.Max(0, had + n);
 		if (now == had)
@@ -710,11 +694,11 @@ public static class MagicState
 	/// <summary>
 	/// Draws from the top; a draw from an empty library flags the loss for the state-based check. Every
 	/// draw comes here, so Mr. Spock's "If you would draw a card, draw two cards instead" applies in this
-	/// one place (DrawsDoubled) — twice per copy: two draw four (each new draw is replaced again).
+	/// one place (a NumericReplacement) — twice per copy: two draw four (each new draw is replaced again).
 	/// </summary>
 	public static GameState Draw(this GameState s, int playerId, int count = 1)
 	{
-		count <<= s.CardsIn(playerId, ZoneType.Battlefield).Count(s.HasAbility<DrawsDoubled>);
+		count = Rules.Replacements.Apply(s, ReplacedEvent.Draw, s.GetPlayer(playerId), count);
 		var libraryId = s.ZoneId(playerId, ZoneType.Library);
 		var handId = s.ZoneId(playerId, ZoneType.Hand);
 		for (var i = 0; i < count; i++)

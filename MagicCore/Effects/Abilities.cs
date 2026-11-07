@@ -585,29 +585,64 @@ public enum ManaRestriction
 	OnlyArtifacts, // Isolinear Processor: "only to cast an artifact spell or activate an ability of an artifact source"
 }
 
-/// <summary>"{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).</summary>
+/// <summary>
+/// A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost], [Costs]: Add
+/// [Amount] [Color]." "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype,
+/// CR 305.6); Rok-Tahk's "{T}: Add {G}{G}" (Amount 2); Loot, the Nexus: "{T}: Choose a color. Add one
+/// mana of that color for each [Amount]" (OfAnyOneColor — counted as it is tapped, the permanent its
+/// source); Treasure: "{T}, Sacrifice this: Add one mana of any color" (Costs). Read by ManaAbilities.
+/// </summary>
 public record ManaAbilityComponent(ManaColor Color) : GameComponent
 {
+	static readonly ImmutableList<AdditionalCost> TapOnly = [new TapSelfCost()];
+
 	/// <summary>"This mana can't be spent to cast spells from your hand" / "Spend this mana only to cast a planeswalker spell".</summary>
 	public ManaRestriction Restriction { get; init; }
+
+	/// <summary>How much: Rok-Tahk's {G}{G} is 2; Loot, the Nexus counts it as it is tapped.</summary>
+	public Count Amount { get; init; } = 1;
+
+	/// <summary>"Add [Amount] mana of any one color" — every unit the one colour chosen; Color is unused.</summary>
+	public bool AnyOneColor { get; init; }
+
+	/// <summary>
+	/// Starfleet Academy: "{5}, {T}: Choose a color. Add …"; Talon Gates of Madara: "{1}, {T}: Add one
+	/// mana of any color" — a mana ability that costs mana (Shayne, 2026-11-04: a real one). Never a
+	/// plain tap: only ManaPayment.Find uses it, when nothing else pays.
+	/// </summary>
+	public ManaCost? Cost { get; init; }
+
+	/// <summary>
+	/// The costs beyond mana — the shared list (AdditionalCosts.cs); "{T}" unless it says otherwise.
+	/// Treasure: [TapSelfCost, SacrificeSelfCost]. Phyrexian Tower: "{T}, Sacrifice a creature" — a cost
+	/// that picks (ChoosesCost) is never auto-paid: it is a move (TapForManaAction.SacrificeId).
+	/// ponytail: every mana ability taps (ManaAbilities.CanPayTapCost is asked of all) — a "Sacrifice
+	/// this: Add" without {T} would need CanTap to read the list.
+	/// </summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = TapOnly;
+
+	/// <summary>"Add one mana of any color" / "Choose a color. Add N of it".</summary>
+	public static ManaAbilityComponent OfAnyOneColor(Count amount) =>
+		new(ManaColor.Colorless) { Amount = amount, AnyOneColor = true };
+
+	/// <summary>A cost that picks a card (Phyrexian Tower's creature) — never paid by the solver.</summary>
+	public bool ChoosesCost => Costs.Any(c => c.Slot != CostSlot.None);
+
+	/// <summary>Treasure: it is sacrificed as it makes the mana.</summary>
+	public bool SacrificesItself => Costs.Any(c => c is SacrificeSelfCost);
+
+	/// <summary>Tapped as payment or by hand with nothing more to pay: no mana cost, nothing to pick.</summary>
+	public bool IsPlain => Cost is null && !ChoosesCost;
 }
 
 /// <summary>
-/// Loot, the Nexus: "{T}: Choose a color. Add one mana of that color for each [Amount]." Counted as
-/// it is tapped, with the permanent as its source. Treasure and Lotus: "{T}, Sacrifice this: Add
-/// [Amount] mana of any one color" (SacrificeSelf).
+/// "[Permanents] have '[mana ability]'" — Rok-Tahk, Budding Scientist: "Creatures you control have
+/// '{T}: Add {G}{G}.'"; Rishkar, Peema Renegade: "Each creature you control with a counter on it has
+/// '{T}: Add {G}.'" Read by ManaAbilities.AbilitiesOf for each permanent Affects matches (from the
+/// granter's side), as GrantsTriggeredAbility is; a permanent that lost all abilities has none.
 /// </summary>
-public record ManaOfOneColorComponent(Count Amount) : GameComponent
-{
-	public bool SacrificeSelf { get; init; }
-
-	/// <summary>
-	/// Starfleet Academy: "{5}, {T}: Choose a color. Add an amount of mana of that color equal to …" —
-	/// a mana ability that costs mana (Shayne, 2026-11-04: a real one). Never a plain tap: only
-	/// ManaPayment.Find uses it, when nothing else pays.
-	/// </summary>
-	public ManaCost? Cost { get; init; }
-}
+public record GrantsManaAbility(Filters.Filter Affects, ManaAbilityComponent Ability)
+	: GameComponent;
 
 /// <summary>Draconic Visitor: "If one or more artifact tokens would be created under your control, that many [Token] are created instead."</summary>
 public record ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComponent> Abilities)
@@ -819,14 +854,46 @@ public record AuraComponent(TargetSpec Enchant) : GameComponent;
 /// </summary>
 public record CastOnlyIf(Condition When) : GameComponent;
 
-public enum ReplaceableEvent
+/// <summary>The events a numeric replacement can change — each the ONE place it happens.</summary>
+public enum ReplacedEvent
 {
-	NoncombatDamageToOpponent, // Tomik: "a source you control … to an opponent or a permanent an opponent controls"
-	PlusOneCountersOnYourCreature, // Yoshimaru: "+1/+1 counters would be put on a creature you control"
+	Damage, // Rules.Damage.Deal (and Excess)
+	Counters, // MagicState.PutCounters — every kind, entering with them included
+	Draw, // MagicState.Draw
+	Mill, // Mill.Top
 }
 
-/// <summary>"… that much plus Bonus instead" — on a permanent; Rules.Replacements reads it where the event happens.</summary>
-public record AmountReplacement(ReplaceableEvent Event, int Bonus) : GameComponent;
+/// <summary>
+/// "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on a permanent
+/// (or a "this turn" object, ThisTurnReplacement); Rules.Replacements applies every one where the event
+/// happens. Filters are asked from its holder's side. Tomik: "a source you control would deal noncombat
+/// damage to an opponent or a permanent an opponent controls … plus 1" (Damage, Source = Is.Yours,
+/// Affected = Is.Opponents, Combat = false, Plus = 1); Torbran: "a red source you control … plus 2";
+/// Yoshimaru: "+1/+1 counters would be put on a creature you control … plus one"; Geordi: "twice that many
+/// charge counters on an artifact you control"; Dr. M'Benga: every kind on a creature you control, twice;
+/// Mr. Spock: "If you would draw a card, draw two cards instead" (Draw, Affected = Is.Yours, Times = 2);
+/// Bruvac: "If an opponent would mill one or more cards, they mill twice that many".
+/// </summary>
+public record NumericReplacement(ReplacedEvent Event) : GameComponent
+{
+	/// <summary>Damage: the source dealing it — Torbran: "a red source you control". None: any.</summary>
+	public Filters.Filter? Source { get; init; }
+
+	/// <summary>What it happens to: the player drawing or milling, the permanent getting counters, what is dealt damage (a player or a permanent). None: any.</summary>
+	public Filters.Filter? Affected { get; init; }
+
+	/// <summary>Counters: which kind (CounterKinds) — Geordi's "charge". None: every kind.</summary>
+	public string? CounterKind { get; init; }
+
+	/// <summary>Damage: Tomik's "noncombat" (false). None: either.</summary>
+	public bool? Combat { get; init; }
+
+	/// <summary>"Twice that many": 2.</summary>
+	public int Times { get; init; } = 1;
+
+	/// <summary>"That much plus N".</summary>
+	public int Plus { get; init; }
+}
 
 /// <summary>Loot, the Anomaly: "If his power is negative, he assigns combat damage as though it were positive."</summary>
 public record AssignsDamageAsThoughPowerPositive : GameComponent;
@@ -903,23 +970,28 @@ public record MayPlayFromYourGraveyard(Filters.Filter What) : GameComponent
 }
 
 /// <summary>
-/// Dr. Beverly Crusher: "If you gaining life causes a triggered ability of a permanent you control to
-/// trigger, that ability triggers an additional time." — read by Triggers.Collect (CR 603.2d); her own
-/// "whenever you gain life" included.
+/// "If [Cause] causes a triggered ability of [WhoseAbilities] to trigger, that ability triggers an
+/// additional time" (CR 603.2d) — read by Triggers.Collect. Dr. Beverly Crusher: "If you gaining life
+/// causes a triggered ability of a permanent you control to trigger" (YouGainLife, Is.Yours — her own
+/// included); Isshin: "a creature attacking" (Attacked, and AttackersDeclared: "whenever you attack");
+/// Drivnod: "a creature dying". The Cause is matched by the one Trigger matcher, from this permanent's
+/// side (By, Subject); null is any cause. WhoseAbilities is asked of the ability's source (as it last
+/// was, if it is dying).
 /// </summary>
-public record LifeGainTriggersAdditionalTime : GameComponent;
-
-/// <summary>
-/// Lwaxana Troi, Charming Guest: "For as long as Lwaxana Troi remains tapped, if a triggered ability of
-/// that creature triggers, that ability triggers an additional time." — on Lwaxana, naming that object of
-/// the creature (CR 400.7); read by Triggers.Collect while she is tapped, removed as she untaps
-/// (MagicState.Untap) or leaves.
-/// </summary>
-public record TriggersAdditionalTimeWhileTapped(int CardId, int Incarnation) : GameComponent;
+public record TriggersAdditionalTime(Trigger? Cause, Filters.Filter WhoseAbilities) : GameComponent
+{
+	/// <summary>
+	/// Lwaxana Troi, Charming Guest: "For as long as Lwaxana Troi remains tapped, if a triggered ability
+	/// of that creature triggers, …" — stamped on her by her ability (TheObject: that object of the
+	/// creature, CR 400.7), an effect's result rather than her ability; gone as she untaps
+	/// (MagicState.Untap) or leaves (Card.IsStatus).
+	/// </summary>
+	public bool UntilUntapped { get; init; }
+}
 
 /// <summary>
 /// Lwaxana Troi, Charming Guest: "You may choose not to untap Lwaxana Troi during your untap step." —
-/// asked by the untap step (TurnStructure), only while her link (TriggersAdditionalTimeWhileTapped) is
+/// asked by the untap step (TurnStructure), only while her link (TriggersAdditionalTime.UntilUntapped) is
 /// to a creature still there: without one, untapping costs nothing.
 /// </summary>
 public record MayChooseNotToUntap : GameComponent;
@@ -939,9 +1011,6 @@ public record GraveyardSpellsHaveBeamMeUp : GameComponent;
 /// </summary>
 public record MayPlayLandsFromLibraryTop : GameComponent;
 
-/// <summary>Mr. Spock, Science Officer: "If you would draw a card, draw two cards instead." — MagicState.Draw.</summary>
-public record DrawsDoubled : GameComponent;
-
 /// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — MagicState.CanSacrifice, asked by every sacrifice (costs, choices, Treasure's own mana).</summary>
 public record CantSacrificeTreasures : GameComponent;
 
@@ -952,13 +1021,6 @@ public record CantSacrificeTreasures : GameComponent;
 /// rules let its controller choose; make it a choice if a planeswalker deck wants it.
 /// </summary>
 public record YourCreaturesEnterAttacking : GameComponent;
-
-/// <summary>
-/// Rok-Tahk, Budding Scientist: "Creatures you control have '{T}: Add {G}{G}.'" — read by ManaAbilities (a
-/// summoning-sick creature can't, CR 302.6). ponytail: one yield per permanent, so a creature with its own
-/// smaller mana ability makes this one instead; make it a choice if a creature's own ever matters more.
-/// </summary>
-public record YourCreaturesTapForMana(ManaColor Color, int Amount) : GameComponent;
 
 /// <summary>Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops.</summary>
 public record AdditionalLandEachTurn : GameComponent;
@@ -1005,20 +1067,6 @@ public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent
 /// — MagicState.Destroy, every destruction.
 /// </summary>
 public record CountersRemovedInsteadOfDestruction : GameComponent;
-
-/// <summary>
-/// Lt. Cmdr. Geordi La Forge: "If you would put one or more charge counters on an artifact you
-/// control, put twice that many charge counters on that artifact instead." — Rules.Replacements.Doubled,
-/// read by MagicState.PutCounters: entering with them too (CR 122.6), twice per Geordi.
-/// </summary>
-public record ChargeCountersOnYourArtifactsDoubled : GameComponent;
-
-/// <summary>
-/// Dr. Joseph M'Benga: "If you would put one or more counters on a creature you control, put twice
-/// that many of each of those kinds of counters on that creature instead." — every kind,
-/// Rules.Replacements.Doubled, read by MagicState.PutCounters: entering with them too.
-/// </summary>
-public record CountersOnYourCreaturesDoubled : GameComponent;
 
 /// <summary>Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard.</summary>
 public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
@@ -1132,10 +1180,12 @@ public record GrantsTriggeredAbility(Filters.Filter Affects, TriggeredAbilityCom
 	: GameComponent;
 
 /// <summary>
-/// Omnipresence: "You may cast spells with mana value less than or equal to the number of creatures
-/// you control from your hand without paying their mana costs." (CastSpellAction.WithoutPayingManaCost)
+/// "You may cast [spells] from your hand without paying their mana costs" — Omnipresence: "spells with
+/// mana value less than or equal to the number of creatures you control" (Is.ManaValueAtMost(
+/// Count.CreaturesYouControl)), asked from its holder's side (CastSpellAction.WithoutPayingManaCost,
+/// Playable.MayCastWithoutPaying).
 /// </summary>
-public record CastFromHandFreeUpToCreatureCount : GameComponent;
+public record MayCastFromHandFree(Filters.Filter What) : GameComponent;
 
 /// <summary>
 /// Null Summoner: "As long as [While], you may cast the exiled card, and mana of any type can be

@@ -33,16 +33,6 @@ public class TrkBatch7cTests : FraBoardTest
 		return id;
 	}
 
-	/// <summary>Answers a choice of type T with these ids; any other with its minimum.</summary>
-	static Func<ChoiceAction, IEnumerable<int>> On<T>(params int[] ids)
-		where T : ChoiceAction =>
-		c =>
-			c switch
-			{
-				T => ids,
-				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
-			};
-
 	int UntappedLands(int player) =>
 		s.CardsIn(player, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
 

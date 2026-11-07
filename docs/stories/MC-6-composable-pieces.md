@@ -43,21 +43,31 @@ really are unique), but the families below are.
 The audit (2026-11-06): each family, its members today, and the composed piece. **MC-5.6** marks the ones
 the Stardates fix.
 
-- [ ] MC-6.1 **Triggers an additional time** (MC-5.6: Isshin, Drivnod). `LifeGainTriggersAdditionalTime`,
+- [x] MC-6.1 **Triggers an additional time** (MC-5.6: Isshin, Drivnod). Done 2026-11-06: Crusher, Lwaxana (her link
+      stamped `{ UntilUntapped }` — "for as long as she remains tapped" is a duration, not an `If`) and Isshin
+      (two rows: Attacked, AttackersDeclared — Shayne) on it; Drivnod in batch 3. `LifeGainTriggersAdditionalTime`,
       `TriggersAdditionalTimeWhileSourceTapped` / `WhileTapped`, hard-coded in `Triggers.Collect` (two
       branches) → `TriggersAdditionalTime(Trigger cause, Filter whoseAbilities) { If }`, where the cause is
       checked by the one `Trigger` matcher. Crusher, Lwaxana, Isshin and Drivnod are all rows of it.
-- [ ] MC-6.2 **Numeric replacements** (MC-5.6: Torbran, Bruvac). `DrawsDoubled`,
+- [x] MC-6.2 **Numeric replacements** (MC-5.6: Torbran, Bruvac). Done 2026-11-06: `NumericReplacement(ReplacedEvent)`
+      (Source, Affected, CounterKind, Combat, Times, Plus; Brad's a `ThisTurnReplacement`) — Spock, Geordi, M'Benga, Brad,
+      Tomik, Yoshimaru, Torbran, Bruvac; every plus, then every "twice" (a ponytail in `Rules/Replacements.cs`). `DrawsDoubled`,
       `ChargeCountersOnYourArtifactsDoubled`, `CountersOnYourCreaturesDoubled`, `CountersPlusOneThisTurn`,
       `AmountReplacement` + the `ReplaceableEvent` enum (one case per card) → one replacement: which event
       (damage, counters, draws, mill), filters for the source and the affected object or player, a counter
       kind, combat or not, and ×N or +N.
-- [ ] MC-6.3 **Mana abilities** (MC-5.6: Phyrexian Tower, Rishkar, Talon Gates). `ManaAbilityComponent`,
+- [x] MC-6.3 **Mana abilities** (MC-5.6: Phyrexian Tower, Rishkar, Talon Gates). Done 2026-11-06 in part:
+      `ManaAbilityComponent` { Amount, AnyOneColor, Cost, Costs } + `GrantsManaAbility(filter, ability)` — Loot the Nexus,
+      Treasure, Starfleet Academy, Rok-Tahk moved; a cost that picks is a move (`TapForManaAction.SacrificeId`, Tower).
+      LEFT for after MC-5.4: `ExtraRedFromMountains`, Emrakul's `TapsForTwoColorlessWhileExiled` / `LandTapsForTwoUntilThisIsCast`. `ManaAbilityComponent`,
       `ManaOfOneColorComponent` (`SacrificeSelf`, `Cost`), `YourCreaturesTapForMana`,
       `ExtraRedFromMountains`, `TapsForTwoColorlessWhileExiled`, `LandTapsForTwoUntilThisIsCast` → a mana
       ability with the shared `Costs` list and a mana cost (CR 605: an activated ability). A grant is a
       filter, as `GrantsTriggeredAbility` is. Treasure's `SacrificeSelf` becomes `Costs = [SacrificeSelfCost]`.
-- [ ] MC-6.4 **Bounds that are counted** (MC-5.6: Sisay, Loot). `StatBetween` takes int bounds, so a
+- [x] MC-6.4 **Bounds that are counted** (MC-5.6: Sisay, Loot). Done 2026-11-06 in part: `StatBetween(Stat, Count, Count)`
+      (counted with the filter's controller and source); Omnipresence → `MayCastFromHandFree(filter)`, Confidant and Chandra →
+      `ReturnChosenToHandIf(filter)`; `LookAndTake` { OntoBattlefield, Tapped }. LEFT: Sisko's `ExileTopAndCastFree` cap
+      (it is `CastCopiesWithinBudget.EachAtMost`, an int through Uldaros' loop) — a filter on that loop, with MC-6.9. `StatBetween` takes int bounds, so a
       counted bound was baked into effects instead: `ExileTopAndCastFree(N, Count ManaValueAtMost)`,
       `ReturnChosenToHandIfManaValueAtMost(Count)`, `CastFromHandFreeUpToCreatureCount` → `StatBetween`
       bounds as `Count`s (an int converts), and those effects take a filter.

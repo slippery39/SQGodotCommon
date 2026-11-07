@@ -94,17 +94,22 @@ public static class Is
 	/// <summary>"With flying" — granted keywords count.</summary>
 	public static Filter With(string keyword) => new HasKeyword(keyword);
 
-	public static Filter PowerAtLeast(int n) => new StatBetween(Stat.Power, n, int.MaxValue);
+	public static Filter PowerAtLeast(Effects.Count n) =>
+		new StatBetween(Stat.Power, n, int.MaxValue);
 
-	public static Filter PowerAtMost(int n) => new StatBetween(Stat.Power, int.MinValue, n);
+	public static Filter PowerAtMost(Effects.Count n) =>
+		new StatBetween(Stat.Power, int.MinValue, n);
 
-	public static Filter ToughnessAtLeast(int n) =>
+	public static Filter ToughnessAtLeast(Effects.Count n) =>
 		new StatBetween(Stat.Toughness, n, int.MaxValue);
 
-	public static Filter ToughnessAtMost(int n) => new StatBetween(Stat.Toughness, int.MinValue, n);
+	public static Filter ToughnessAtMost(Effects.Count n) =>
+		new StatBetween(Stat.Toughness, int.MinValue, n);
 
-	public static Filter ManaValueAtLeast(int n) =>
+	public static Filter ManaValueAtLeast(Effects.Count n) =>
 		new StatBetween(Stat.ManaValue, n, int.MaxValue);
 
-	public static Filter ManaValueAtMost(int n) => new StatBetween(Stat.ManaValue, int.MinValue, n);
+	/// <summary>Omnipresence: "mana value less than or equal to the number of creatures you control" — a Count.</summary>
+	public static Filter ManaValueAtMost(Effects.Count n) =>
+		new StatBetween(Stat.ManaValue, int.MinValue, n);
 }

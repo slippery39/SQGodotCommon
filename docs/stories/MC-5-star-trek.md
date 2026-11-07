@@ -181,6 +181,12 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   guests (`GUESTS["trk"] = "set:sds"`); Scryfall's own fixes came with it (Jett Reno's "+1/+1"; Stray from
   History and Test of Identity list their mode names as keywords), kept.
 
+- 2026-11-06, Shayne (MC-5.6 batch 1's shapes): **Isshin doubles "whenever you attack" too** — "that is what the
+  card does" — so its cause is both `Attacked` and `AttackersDeclared`. Lwaxana's link is "until she untaps"
+  (`TriggersAdditionalTime.UntilUntapped`), a duration, not an `If` (Claude's, explained; nothing she does changed).
+  **Phyrexian Tower's sacrifice is `TapForManaAction.SacrificeId`**, one legal move per creature, its mana floating. Auto-pass stops while it can be activated — left as is (Shayne:
+  "a niche card that I don't expect to be played in limited that much").
+
 Open questions:
 - Booster collation: MTGJSON has TRK's cards but NO booster data yet (checked 2026-10-31); a provisional
   collation from Wizards' published slot odds is proposed (Collecting Star Trek, magic.wizards.com).
@@ -283,27 +289,35 @@ Open questions:
 - [ ] MC-5.6 NEXT (Shayne, 2026-11-06: before MC-5.4), aimed at Nov 10: the 30 Stardates (SDS) — imported as TRK's
       guests (`GUESTS` in `tools/import_scryfall_set.py`, as FRA's SPG, story MC-3), scripted once each; their pack
       slot goes in with MC-5.4's collation. Imported and surveyed 2026-11-06 (TRK.json 341; none scripted
-      before); built on the composed pieces of MC-6.1–6.8 (Next has the tiers and the batches)
+      before); built on the composed pieces of MC-6.1–6.8 (Next has the tiers and the batches). Batch 1 done
+      2026-11-06: 17 (328/341) — the 9 tier 1, then MC-6.1–6.4 composed and their old cards moved: Isshin; Torbran,
+      Bruvac; Rishkar, Talon Gates, Phyrexian Tower; Sisay, Weatherlight Captain, Loot, Exuberant Explorer
 
 ## Next
 
-**MC-5.6 is imported and surveyed (2026-11-06); nothing is built yet.** TRK.json holds the 30 Stardates (SDS
-#1–30, after TRK's 311); `coverage --set TRK` reads 311/341. None was scripted by FRA or TRK. The survey's
-first tiering was redone **composition first** (Shayne, Decisions): every card below sits on an existing piece
-or on one of MC-6's families, made general as the card needs it, with the family's OLD cards moved onto it.
+**MC-5.6 batch 1 is done (2026-11-06): 328/341** — the 9 tier 1 (Empress Galina, Sheoldred, Tatyova, Hull
+Breach, Jhoira, Captain Sisay, Minamo, Kenrith, Arcum Dagsson) and 8 on MC-6's composed pieces: **6.1**
+`TriggersAdditionalTime(cause, whose)` (Crusher, Lwaxana moved; Isshin), **6.2** `NumericReplacement(event)` (Spock,
+Geordi, M'Benga, Brad, Tomik, Yoshimaru moved; Torbran, Bruvac), **6.3** one `ManaAbilityComponent` with the shared
+`Costs` and `GrantsManaAbility` (Loot the Nexus, Treasure, Starfleet Academy, Rok-Tahk moved; Rishkar, Talon Gates,
+Phyrexian Tower — its sacrifice a move), **6.4** `StatBetween` with `Count` bounds (Omnipresence, Confidant, Chandra
+moved; Sisay, Weatherlight Captain, Loot, Exuberant Explorer). No ruling changed: the FRA golden games didn't move;
+every per-card replay that did has a new Stardate dealt into its decks (checked by the decks' own hash). Left for
+MC-6 after MC-5.4: Molten Tide's and Emrakul's mana pieces, Sisko's per-card cap (MC-6's tasks say). AI-19.19
+(Tower). The two old one-card scans became loops: the AI bench reads +1.8% (5 rounds), noise.
 
 | Batch | Cards | Families (MC-6) |
 |---|---|---|
-| 1 | Tier 1, script only: Empress Galina, Sheoldred the Apocalypse, Tatyova, Hull Breach, Jhoira (historic = artifact, legendary or Saga), Captain Sisay, Minamo, Kenrith, Arcum Dagsson. Then Isshin; Torbran, Bruvac; Phyrexian Tower, Rishkar, Talon Gates; Sisay Weatherlight Captain, Loot Exuberant Explorer (17) | 6.1 triggers an additional time; 6.2 numeric replacements; 6.3 mana abilities (the shared `Costs`, a grant by filter; Tower's sacrifice a MOVE for the AI, never auto-paid); 6.4 counted bounds |
+| 1 | DONE 2026-11-06 (17) | 6.1–6.4 |
 | 2 | Mikaeus, Bristly Bill; Ertai Resurrected; Decree of Pain; Thada Adel, Shizo; Stella Lee (`SpellCastEvent.SpellNumber`) (7) | 6.5 counters; 6.6 modes; 6.7 cycling; 6.8 evasion; 6.9's search into exile, playable this turn |
-| 3 | Drivnod (Phyrexian mana `{B/P}`, exile three from the graveyard, an indestructible counter), Sen Triplets, Flare of Fortitude, Mogis, Riku of Many Paths, Prosper (6) | re-surveyed composition first against MC-6 (6.9, 6.13, 6.15) before any design is proposed |
+| 3 | Drivnod (Phyrexian mana `{B/P}`, exile three from the graveyard, an indestructible counter), Sen Triplets, Flare of Fortitude, Mogis, Riku of Many Paths, Prosper (6) | re-surveyed composition first against MC-6 (6.9, 6.13, 6.15) before any design is proposed; Drivnod is a row of 6.1's `TriggersAdditionalTime` |
 
-The prompt that starts batch 1 (paste it into a NEW session):
+The prompt that starts batch 2 (paste it into a NEW session):
 
 ```
-MC-5.6 batch 1: 17 Stardates on MC-6's families 6.1–6.4, in this fresh session (/card-batch step 0).
-Sprint 4 (docs/sprints/2026-11-05.md). Shayne, 2026-11-06: COMPOSITION FIRST — every card sits on an
-existing piece made general, never a sibling piece per card phrase.
+MC-5.6 batch 2: 7 Stardates on MC-6's families 6.5–6.8 and part of 6.9, in this fresh session (/card-batch
+step 0). Sprint 4 (docs/sprints/2026-11-05.md). Shayne, 2026-11-06: COMPOSITION FIRST — every card sits on an
+existing piece made general, never a sibling piece per card phrase. Batch 1 (17, 328/341) did 6.1–6.4.
 
 Read, in order and nothing more yet: docs/stories/MC-5-star-trek.md (Decisions from 2026-11-06, Next),
 docs/stories/MC-6-composable-pieces.md (the families), the /card-batch skill, MagicCore/CLAUDE.md,
@@ -311,34 +325,37 @@ MagicCore/Cookbook.md. GREP MagicCore/AbilityCatalog.md — never read it whole.
 Card text: python tools/magic_set.py text --set TRK "Full Name".
 
 The batch, in this order:
-1. The 9 tier 1 (Next's table): script, then read their card-sheet entries against the printed text.
-2. MC-6.1: TriggersAdditionalTime(Trigger cause, Filter whoseAbilities) { If } replaces
-   LifeGainTriggersAdditionalTime and the Lwaxana links (Triggers.Collect's two branches); Crusher and
-   Lwaxana move onto it, then Isshin (Drivnod waits for batch 3).
-3. MC-6.2: one numeric replacement (event, source and affected filters, counter kind, combat or not, xN or
-   +N) replaces DrawsDoubled, the two counter-doubling flags, CountersPlusOneThisTurn and the
-   ReplaceableEvent enum; Spock, Geordi, M'Benga, Brad Boimler, Tomik and Yoshimaru move onto it, then
-   Torbran and Bruvac (mill).
-4. MC-6.3: mana abilities take the shared Costs list and a mana cost (CR 605); SacrificeSelf and Cost go;
-   a grant by filter replaces YourCreaturesTapForMana. Then Rishkar, Talon Gates, Phyrexian Tower — its
-   sacrifice NEVER auto-paid, the AI gets it as a move (one per creature).
-5. MC-6.4: StatBetween's bounds become Counts; then Sisay, Weatherlight Captain and Loot, Exuberant Explorer.
+1. MC-6.5: one put and one remove, each with a kind and a Count counted per object, replace AddCounters,
+   AddChargeCounters, AddStunCounters, AddMinusOneCounters, PutCounters(kind), PutEventCardCounters,
+   AddAnotherCounterOfAKind / RemoveCounters, RemoveCountersOfKind, RemoveCountersFromAmongCost (the script
+   vocabulary — MagicState.PutCounters is already the one funnel). Then Mikaeus, the Lunarch and Bristly Bill.
+2. MC-6.6: Choose's min and max become Counts (ChooseAnyNumberIf and ModesNotChosenBefore beside it); Kirk and
+   Kobayashi Maru move onto it; then Ertai Resurrected ("up to one").
+3. MC-6.7: Cycling(cost), landcycling as cycling that searches; an ability carries its keyword's name; "when
+   you cycle" is AbilityActivated filtered to it. BasicLandcycling's cards move. Then Decree of Pain.
+4. MC-6.8: landwalk and fear are CantBeBlocked / CantBeBlockedBy under a condition or filter (helpers in
+   Scripting.cs), no new combat rule; then Shizo; Thada Adel with 6.9's "search into exile, playable this
+   turn" (the one permission part only — the rest of 6.9 is after MC-5.4).
+5. Stella Lee: "the second spell this turn" — SpellCastEvent.SpellNumber, beside NoncreatureSpellNumber.
 
 For each family: show Shayne the composed piece's shape and the cards moving onto it BEFORE editing.
 Grep MtgCore first. A moved card keeps its tests, and they must still pass. Tier 3 process for each family:
 tests + revert-checks — and the test run after revert_check must BUILD. The golden replays may move only
-where a ruling changed; say which. Hot paths (Triggers.Collect, mana payment, Draw, Damage) →
-tools/bench_vs_head.sh "FullyQualifiedName~GreedyAiTests". Probe with MAGIC_PROBE_GAMES=10, then 150.
-Tick MC-6.1–6.4 in MC-6 as each lands. A play or ruling left simple goes in AI-19 (now at 19.18).
+where a ruling changed; say which — a new card in a random deck moves its games (batch 1 checked the moved
+per-card replays against the decks' hash: every one held a new card). Hot paths (Triggers.Collect, PutCounters,
+combat) → tools/bench_vs_head.sh "FullyQualifiedName~GreedyAiTests" 5; batch 1's first cut cost +14% from LINQ
+scans over both battlefields, made loops. Probe with MAGIC_PROBE_GAMES=10, then 150. Tick MC-6.5–6.8 in MC-6 as
+each lands. A play or ruling left simple goes in AI-19 (now at 19.19).
 
 Test traps: a Hand(…) inside s.Act(new … { CardId = Hand(…) }) runs on the old state — own line; never
-`c is T ? [x] : …` (CSharpier) — use On<T>(ids); PassUntil stops at the first choice of ANY kind; a bare
-s.EnterBattlefield or s.PutCounters puts no trigger on the stack; in the test files `Is` is NUnit's —
-write global::MagicCore.Filters.Is.X. GoldenCardReplay.txt is an explicit test (Commands.md, "Golden
-replays"). Git Bash has no pgrep.
+`c is T ? [x] : …` (CSharpier) — use On<T>(ids), now in FraBoardTest; PassUntil stops at the first choice of ANY
+kind; a bare s.EnterBattlefield or s.PutCounters puts no trigger on the stack; in the test files `Is` is NUnit's
+— write global::MagicCore.Filters.Is.X; TestGames.Inline has no colours (Data with { Colors = ["R"] }).
+GoldenCardReplay.txt is an explicit test (Commands.md, "Golden replays") — run it ALONE, a combined filter skips
+it. sed -i rewrites a CRLF file's endings: splice bytes. Git Bash has no pgrep.
 
 End with the usage row (tools/usage_report.py --log), /pre-commit, then ask before committing. Next gets
-batch 2's prompt (Next's table).
+batch 3's prompt (Next's table).
 ```
 
 **MC-5.3 batch 7c is done (2026-11-06): 311/311 — TRK is complete**, every card in the set plays. The last five, all
@@ -586,3 +603,6 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
   to a counter field itself. No game moved (both golden files unchanged).
 - 2026-11-06: batch 7b — the 16 left re-tiered (15 tier 3, five flagged); Shayne split them 11 / 5; the 11 built
   (306/311).
+- 2026-11-06: MC-5.6 batch 1 — 17 Stardates (328/341): the 9 tier 1, then MC-6.1–6.4 composed with their old cards
+  moved (Isshin; Torbran, Bruvac; Rishkar, Talon Gates, Phyrexian Tower; Sisay, Weatherlight Captain, Loot, Exuberant
+  Explorer).

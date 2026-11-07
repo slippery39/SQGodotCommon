@@ -350,21 +350,17 @@ public record Surveil(int N) : Effect
 
 /// <summary>
 /// Enlightened Confidant: "If you put a card with mana value N or less into your graveyard this way,
-/// put that card into your hand." A surveil's Then.
+/// put that card into your hand" (Is.ManaValueAtMost(N)); Chandra, Chill of Compliance: "a noncreature,
+/// nonland card". A surveil's Then.
 /// </summary>
-public record ReturnChosenToHandIfManaValueAtMost(Count Max) : Effect
+public record ReturnChosenToHandIf(Filters.Filter What) : Effect
 {
-	/// <summary>Chandra, Chill of Compliance: "a noncreature, nonland card" — none of these types.</summary>
-	public CardType ExceptTypes { get; init; }
-
 	public override ActionResult Execute(GameState s)
 	{
-		var max = Max.Value(s, InputContext);
+		var asking = new Filters.FilterContext(Controller, Actions.SourceOf.Context(InputContext));
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
 			if (
-				s.IsIn(id, Controller, ZoneType.Graveyard)
-				&& s.GetCard(id).ManaCost.ManaValue <= max
-				&& !s.GetCard(id).Is(ExceptTypes)
+				s.IsIn(id, Controller, ZoneType.Graveyard) && What.Matches(s, s.GetCard(id), asking)
 			)
 				s = s.MoveCard(id, s.ZoneId(Controller, ZoneType.Hand));
 		return new(s);
@@ -1474,6 +1470,8 @@ public record Mill(Ref Who, int N) : Effect
 	/// <summary>The ONE mill: the top N into the graveyard, stopping early on a short library; the milled ids.</summary>
 	public static (GameState State, ImmutableList<int> Milled) Top(GameState s, int playerId, int n)
 	{
+		// Bruvac: "If an opponent would mill one or more cards, they mill twice that many" — every mill comes here.
+		n = Rules.Replacements.Apply(s, ReplacedEvent.Mill, s.GetPlayer(playerId), n);
 		var milled = s.CardsIn(playerId, ZoneType.Library)
 			.Take(n)
 			.Select(c => c.Id)
@@ -1730,10 +1728,13 @@ public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 	/// <summary>Grim Repriser, Proctor: "with a finality counter on it".</summary>
 	public bool Finality { get; init; }
 
+	/// <summary>Talon Gates of Madara: "Put this card from your HAND onto the battlefield" — where it must be.</summary>
+	public ZoneType From { get; init; } = ZoneType.Graveyard;
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
+			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, From))
 				s =
 					To == ZoneType.Battlefield
 						? s.EnterBattlefield(
@@ -2023,8 +2024,11 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	/// <summary>Pattern Buffer Preservation: "the other into your graveyard", not the bottom.</summary>
 	public bool RestToGraveyard { get; init; }
 
-	/// <summary>Hit It!: "Put a land card from among them onto the battlefield tapped" — not into your hand.</summary>
-	public bool OntoBattlefieldTapped { get; init; }
+	/// <summary>Hit It!: "Put a land card from among them onto the battlefield tapped"; Loot, Exuberant Explorer: "put it onto the battlefield" — not into your hand.</summary>
+	public bool OntoBattlefield { get; init; }
+
+	/// <summary>Hit It!: "… tapped".</summary>
+	public bool Tapped { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -2040,12 +2044,13 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			Filter = Filter,
 			Prompt =
 				(Must ? "Put one " : "You may put one ")
-				+ (OntoBattlefieldTapped ? "onto the battlefield" : "into your hand"),
+				+ (OntoBattlefield ? "onto the battlefield" : "into your hand"),
 			MinChoices = Must ? 1 : 0,
 		};
 		var put = new PutLookedAtAction(Controller, top, Reveal, RestToGraveyard)
 		{
-			OntoBattlefieldTapped = OntoBattlefieldTapped,
+			OntoBattlefield = OntoBattlefield,
+			Tapped = Tapped,
 		};
 		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
 		return new(
@@ -2069,15 +2074,17 @@ public record PutLookedAtAction(
 	bool RestToGraveyard
 ) : GameAction
 {
-	public bool OntoBattlefieldTapped { get; init; }
+	public bool OntoBattlefield { get; init; }
+
+	public bool Tapped { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
 		var taken = ChooseCardsFromHandChoice.Read(InputContext).ToHashSet();
 		foreach (var id in taken)
 		{
-			s = OntoBattlefieldTapped
-				? s.EnterBattlefield(id, PlayerId, tapped: true)
+			s = OntoBattlefield
+				? s.EnterBattlefield(id, PlayerId, tapped: Tapped)
 				: s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Hand));
 			if (Reveal)
 				s = s.MakeKnown(id, Knowers.Everyone);

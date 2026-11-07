@@ -134,15 +134,14 @@ public static class Playable
 		&& s.AbilitiesOf<MayCastWhatItExiled>(source)
 			.Any(may => may.While.Holds(s, Conditions.Of(source)));
 
-	/// <summary>Omnipresence: from your hand, with mana value at most the number of creatures you control.</summary>
-	public static bool MayCastWithoutPaying(GameState s, Card card, int playerId)
-	{
-		if (!s.IsIn(card.Id, playerId, ZoneType.Hand))
-			return false;
-		var yours = s.CardsIn(playerId, ZoneType.Battlefield).ToList();
-		return yours.Any(s.HasAbility<CastFromHandFreeUpToCreatureCount>)
-			&& card.ManaCost.ManaValue <= yours.Count(c => c.Is(CardType.Creature));
-	}
+	/// <summary>Omnipresence: from your hand, a spell a MayCastFromHandFree of yours allows.</summary>
+	public static bool MayCastWithoutPaying(GameState s, Card card, int playerId) =>
+		s.IsIn(card.Id, playerId, ZoneType.Hand)
+		&& s.CardsIn(playerId, ZoneType.Battlefield)
+			.Any(p =>
+				s.AbilitiesOf<MayCastFromHandFree>(p)
+					.Any(m => m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id)))
+			);
 
 	public static bool CanPlayLandFromHere(GameState s, Card card, int playerId) =>
 		card.Is(CardType.Land)

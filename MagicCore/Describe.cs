@@ -54,6 +54,8 @@ public static class Describe
 				),
 			ActivateLoyaltyAction l =>
 				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
+			TapForManaAction { SacrificeId: not 0 } t =>
+				$"Tap {Name(s, t.CardId)}, sacrificing {Name(s, t.SacrificeId)}, for {t.Color}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
 			_ => action.GetType().Name,
 		};

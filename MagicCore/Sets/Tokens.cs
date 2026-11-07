@@ -38,8 +38,11 @@ public static class Tokens
 	public static readonly CardData Treasure = Token("Treasure", "Artifact — Treasure");
 
 	/// <summary>"{T}, Sacrifice this token: Add [N] mana of any (one) color." — Treasure's and Lotus's.</summary>
-	public static ManaOfOneColorComponent SacrificeForMana(int amount) =>
-		new(amount) { SacrificeSelf = true };
+	public static ManaAbilityComponent SacrificeForMana(int amount) =>
+		ManaAbilityComponent.OfAnyOneColor(amount) with
+		{
+			Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+		};
 
 	/// <summary>"Create a Treasure token."</summary>
 	public static CreateTokens CreateTreasure(Count count) =>

@@ -157,7 +157,7 @@ public sealed record BeamMeUpCost : AdditionalCost
 	public override string Describe() => "Return a creature you control to its owner's hand";
 }
 
-/// <summary>"Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).</summary>
+/// <summary>"Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).</summary>
 public sealed record SacrificeSelfCost : AdditionalCost
 {
 	/// <summary>Quark: a Treasure token "can't be sacrificed", so its "sacrifice this:" can't be paid.</summary>

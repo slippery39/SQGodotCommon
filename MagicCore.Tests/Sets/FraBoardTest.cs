@@ -101,6 +101,16 @@ public abstract class FraBoardTest
 		return spell;
 	}
 
+	/// <summary>Answers a choice of type T with these ids; any other with its minimum.</summary>
+	protected static Func<ChoiceAction, IEnumerable<int>> On<T>(params int[] ids)
+		where T : ChoiceAction =>
+		c =>
+			c switch
+			{
+				T => ids,
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			};
+
 	protected int Life(int p) => s.GetPlayer(p).Life;
 
 	protected int HandCount(int p) => s.CardsIn(p, ZoneType.Hand).Count();

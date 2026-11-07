@@ -72,16 +72,6 @@ public class TrkBatch7aTests : FraBoardTest
 				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
 			};
 
-	/// <summary>Answers a choice of type T with these ids; any other with its minimum.</summary>
-	static Func<ChoiceAction, IEnumerable<int>> On<T>(params int[] ids)
-		where T : ChoiceAction =>
-		c =>
-			c switch
-			{
-				T => ids,
-				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
-			};
-
 	// ===== Trigger twice =====
 
 	[Test]
@@ -161,7 +151,10 @@ public class TrkBatch7aTests : FraBoardTest
 		);
 		s = s.Choose([]);
 		Assert.That(s.GetCard(lwaxana).IsTapped, Nu.False);
-		Assert.That(s.GetCard(lwaxana).HasComponent<TriggersAdditionalTimeWhileTapped>(), Nu.False);
+		Assert.That(
+			s.GetCard(lwaxana).GetComponents<TriggersAdditionalTime>().Any(t => t.UntilUntapped),
+			Nu.False
+		);
 	}
 
 	int LinkedToLwaxana(CardDefinition creature)

@@ -5,58 +5,66 @@ using MagicCore.Effects;
 namespace MagicCore.Rules;
 
 /// <summary>
-/// Numeric replacement effects (CR 614): "if [it] would happen, it happens with N more instead".
-/// Lifted from MtgCore's ReplacementEngine: scanned live where the event happens, and applied to
-/// the amount INSIDE the one action — so one event is raised and nothing can feed itself. A
-/// replacement on 0 does nothing: nothing would have happened.
+/// Numeric replacement effects (CR 614): "if [it] would happen, [twice that many / that much plus N]
+/// instead" — every NumericReplacement on either battlefield, and every ThisTurnReplacement. Lifted from
+/// MtgCore's ReplacementEngine: scanned live where the event happens, and applied to the amount INSIDE
+/// the one action — so one event is raised and nothing can feed itself. A replacement on 0 does
+/// nothing: nothing would have happened.
 ///
-/// ponytail: bonuses only — MtgCore's multipliers and prevention wait for a card that needs them.
+/// ponytail: every plus first, then every "twice" — of the orders the affected player may pick (CR 616.1)
+/// (n + 1) × 2 is always the most, which is the choice for your own; for an opponent's (Torbran beside an
+/// opponent's doubler) they would pick the least. Ask them if such a pair ever meets. Prevention is
+/// Damage.Prevented, not a replacement here.
 /// </summary>
 public static class Replacements
 {
-	/// <summary>The amount after every replacement of this kind on this player's permanents.</summary>
+	/// <summary>The amount after every replacement of this event.</summary>
+	/// <param name="affected">The player drawing or milling, the permanent getting counters, what is dealt damage.</param>
+	/// <param name="source">Damage: its source.</param>
 	/// <param name="exceptId">A permanent entering right now: its own replacement doesn't apply to its
 	/// entry — it applies once it is on the battlefield (CR 614.12).</param>
 	public static int Apply(
 		GameState s,
-		ReplaceableEvent evt,
-		int playerId,
+		ReplacedEvent evt,
+		GameObject affected,
 		int amount,
+		Card? source = null,
+		string? kind = null,
+		bool combat = false,
 		int exceptId = 0
-	) =>
-		amount <= 0
-			? amount
-			: amount
-				+ s.CardsIn(playerId, ZoneType.Battlefield)
-					.Where(c => c.Id != exceptId)
-					.SelectMany(s.AbilitiesOf<AmountReplacement>)
-					.Where(r => r.Event == evt)
-					.Sum(r => r.Bonus);
+	)
+	{
+		if (amount <= 0)
+			return amount;
+		var plus = 0;
+		var times = 1;
+		// Loops, not LINQ: every damage, draw and counter asks, and almost never finds one.
+		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
+		{
+			foreach (var holder in s.CardsIn(player, ZoneType.Battlefield))
+				if (holder.Id != exceptId)
+					foreach (var r in s.AbilitiesOf<NumericReplacement>(holder))
+						Add(r, holder);
+			foreach (var holder in s.CardsIn(player, ZoneType.Command))
+			foreach (var t in holder.GetComponents<ThisTurnReplacement>())
+				Add(t.Replacement, holder);
+		}
+		return (amount + plus) * times;
 
-	/// <summary>
-	/// Brad Boimler: "until end of turn, if one or more counters would be put on a permanent you
-	/// control, that many plus one of each of those kinds of counters are put on that permanent
-	/// instead." — called by MagicState.PutCounters alone, the one way counters of any kind are put
-	/// on (entering with them and proliferate too): +1 per such effect its controller has this turn. The finality counter is a yes/no here, so one more changes nothing.
-	/// </summary>
-	public static int Counters(GameState s, int controllerId, int amount) =>
-		amount <= 0
-			? amount
-			: amount + s.ThisTurnEffects<CountersPlusOneThisTurn>(controllerId).Count();
-
-	/// <summary>
-	/// Lt. Cmdr. Geordi La Forge (T = ChargeCountersOnYourArtifactsDoubled), Dr. Joseph M'Benga
-	/// (CountersOnYourCreaturesDoubled): twice that many per such permanent — applied after Brad
-	/// Boimler's plus one: of the two orders the controller may pick (CR 616.1), (n + 1) × 2 is always
-	/// the more.
-	/// </summary>
-	/// <param name="exceptId">A permanent entering right now: its own replacement doesn't apply to its entry (CR 614.12).</param>
-	public static int Doubled<T>(GameState s, int controllerId, int amount, int exceptId = 0)
-		where T : GameComponent =>
-		amount <= 0
-			? amount
-			: amount
-				<< s.CardsIn(controllerId, ZoneType.Battlefield)
-					.Where(c => c.Id != exceptId)
-					.Count(s.HasAbility<T>);
+		void Add(NumericReplacement r, Card holder)
+		{
+			if (r.Event != evt)
+				return;
+			var asking = new Filters.FilterContext(holder.ControllerId, holder.Id);
+			if (
+				r.Affected?.Matches(s, affected, asking) == false
+				|| r.Source is { } from && (source is null || !from.Matches(s, source, asking))
+				|| r.CounterKind is { } k && k != kind
+				|| r.Combat is { } c && c != combat
+			)
+				return;
+			plus += r.Plus;
+			times *= r.Times;
+		}
+	}
 }

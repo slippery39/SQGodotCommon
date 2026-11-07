@@ -273,26 +273,45 @@ public enum Stat
 /// <summary>
 /// Tetsuko: "power or toughness 1 or less"; Your Fate Ends Here: "mana value 3 or greater". Real
 /// P/T, through s.Power / s.Toughness — a noncreature has 0, so add Is.Creature where the text says it.
+/// A bound may be counted (an int converts): Omnipresence's "less than or equal to the number of
+/// creatures you control", Sisay's "less than Sisay's power" — counted as it is asked, with the filter's
+/// controller and source (X reads 0 here).
 /// </summary>
-public sealed record StatBetween(Stat Stat, int Min, int Max) : Filter
+public sealed record StatBetween(Stat Stat, Effects.Count Min, Effects.Count Max) : Filter
 {
-	public override bool ReadsPowerOrToughness() => Stat != Stat.ManaValue;
+	// A counted bound may read power (Sisay's): never in a P/T static's scope.
+	public override bool ReadsPowerOrToughness() =>
+		Stat != Stat.ManaValue
+		|| Min.Kind != Effects.CountOf.Fixed
+		|| Max.Kind != Effects.CountOf.Fixed;
 
 	public override bool ReadsKeywords() => false;
 
-	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
-		o is Card card
-		&& (
-			Stat switch
-			{
-				Stat.Power => s.Power(card),
-				Stat.Toughness => s.Toughness(card),
-				_ => card.ManaValueNow,
-			}
-		)
-			is var n
-		&& n >= Min
-		&& n <= Max;
+	public override bool Matches(GameState s, GameObject o, FilterContext c)
+	{
+		if (o is not Card card)
+			return false;
+		var n = Stat switch
+		{
+			Stat.Power => s.Power(card),
+			Stat.Toughness => s.Toughness(card),
+			_ => card.ManaValueNow,
+		};
+		return n >= Bound(s, Min, c) && n <= Bound(s, Max, c);
+	}
+
+	static int Bound(GameState s, Effects.Count bound, FilterContext c) =>
+		bound.Value(
+			s,
+			bound.Kind == Effects.CountOf.Fixed
+				? System.Collections.Immutable.ImmutableDictionary<string, object>.Empty
+				: System
+					.Collections.Immutable.ImmutableDictionary<string, object>.Empty.Add(
+						Effects.ContextKeys.Controller,
+						c.Controller
+					)
+					.Add(Effects.ContextKeys.Source, c.Source)
+		);
 }
 
 /// <summary>The yes/no properties HasProperty reads — one per property, never per combination.</summary>

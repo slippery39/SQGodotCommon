@@ -463,7 +463,7 @@ public static class SealedBuilder
 				var land = IsLand(CardRegistry.Get(n).Data);
 				if (
 					parts.Any(p =>
-						p is ManaOfOneColorComponent { Cost: null } // Starfleet Academy's costs {5}: no fixer
+						p is ManaAbilityComponent { AnyOneColor: true, Cost: null } // Starfleet Academy's costs {5}: no fixer
 						|| land && p is ChoosesColorAsItEnters
 					)
 				)
@@ -472,7 +472,10 @@ public static class SealedBuilder
 				[
 					.. parts
 						.OfType<ManaAbilityComponent>()
-						.Where(m => m.Restriction == ManaRestriction.None)
+						// Phyrexian Tower's {B}{B} costs a creature: no lasting source
+						.Where(m =>
+							m.Restriction == ManaRestriction.None && !m.AnyOneColor && m.IsPlain
+						)
 						.Select(m => m.Color)
 						.Concat(
 							parts
@@ -502,9 +505,8 @@ public static class SealedBuilder
 	public static bool ManaIsSpentOnce(string card)
 	{
 		var parts = Parts(CardRegistry.Get(card).Components, 0).ToList();
-		return parts.OfType<ManaOfOneColorComponent>().Any(m => m.SacrificeSelf)
-			&& !parts.OfType<ManaOfOneColorComponent>().Any(m => !m.SacrificeSelf)
-			&& !parts.OfType<ManaAbilityComponent>().Any();
+		var mana = parts.OfType<ManaAbilityComponent>().ToList();
+		return mana.Any(m => m.SacrificesItself) && mana.All(m => m.SacrificesItself);
 	}
 
 	/// <summary>
@@ -642,6 +644,7 @@ public static class SealedBuilder
 			.. CardRegistry
 				.Get(land)
 				.Components.OfType<ManaAbilityComponent>()
+				.Where(m => m.IsPlain && !m.AnyOneColor) // Phyrexian Tower's {B}{B} isn't a dual's colour
 				.Select(m => m.Color)
 				.Distinct(),
 		];

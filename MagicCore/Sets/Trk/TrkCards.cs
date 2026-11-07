@@ -2026,7 +2026,15 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfBecomesTapped,
 					[],
-					new ThisTurn(new CountersPlusOneThisTurn())
+					new ThisTurn(
+						new ThisTurnReplacement(
+							new NumericReplacement(ReplacedEvent.Counters)
+							{
+								Affected = Is.Yours,
+								Plus = 1,
+							}
+						)
+					)
 				),
 			],
 			["Exploratory Mission"] =
@@ -2421,7 +2429,8 @@ public static class TrkCards
 						Reveal = true,
 						Must = true,
 						RestToGraveyard = true,
-						OntoBattlefieldTapped = true,
+						OntoBattlefield = true,
+						Tapped = true,
 					}
 				),
 			],
@@ -2723,11 +2732,22 @@ public static class TrkCards
 					)
 				),
 			],
-			["Lt. Cmdr. Geordi La Forge"] = [new ChargeCountersOnYourArtifactsDoubled()],
+			["Lt. Cmdr. Geordi La Forge"] =
+			[
+				new NumericReplacement(ReplacedEvent.Counters)
+				{
+					Affected = Is.Artifact & Is.Yours,
+					CounterKind = CounterKinds.Charge,
+					Times = 2,
+				},
+			],
 			["Starfleet Academy"] =
 			[
 				new ManaAbilityComponent(ManaColor.Colorless),
-				new ManaOfOneColorComponent(Federation) { Cost = ManaCost.Parse("{5}") },
+				ManaAbilityComponent.OfAnyOneColor(Federation) with
+				{
+					Cost = ManaCost.Parse("{5}"),
+				},
 			],
 			["Collation Trimatrix"] =
 			[
@@ -2958,7 +2978,11 @@ public static class TrkCards
 					Is.Creature & Is.Yours & !Is.Source & Is.WithAnyCounter,
 					"Hexproof"
 				),
-				new CountersOnYourCreaturesDoubled(),
+				new NumericReplacement(ReplacedEvent.Counters)
+				{
+					Affected = Is.Creature & Is.Yours,
+					Times = 2,
+				},
 			],
 			["Dathon, His Heart Open"] =
 			[
@@ -3046,7 +3070,10 @@ public static class TrkCards
 				},
 				.. Station(7, "Flying", "Vigilance"),
 			],
-			["Mr. Spock, Science Officer"] = [new DrawsDoubled()],
+			["Mr. Spock, Science Officer"] =
+			[
+				new NumericReplacement(ReplacedEvent.Draw) { Affected = Is.Yours, Times = 2 },
+			],
 			["Georgiou, Terran Emperor"] =
 			[
 				new DontLoseForZeroLife(),
@@ -3118,7 +3145,7 @@ public static class TrkCards
 			],
 			["Dr. Beverly Crusher"] =
 			[
-				new LifeGainTriggersAdditionalTime(),
+				new TriggersAdditionalTime(TriggerEvent.YouGainLife, Is.Yours),
 				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
 			],
 			["Lwaxana Troi, Charming Guest"] =
@@ -3388,7 +3415,10 @@ public static class TrkCards
 			],
 			["Rok-Tahk, Budding Scientist"] =
 			[
-				new YourCreaturesTapForMana(ManaColor.Green, 2),
+				new GrantsManaAbility(
+					Is.Creature & Is.Yours,
+					new ManaAbilityComponent(ManaColor.Green) { Amount = 2 }
+				),
 				When(TriggerEvent.SelfEnters, [], new CreateTokens(Murf, 1)),
 			],
 			["Captain Kathryn Janeway"] =
@@ -3518,6 +3548,269 @@ public static class TrkCards
 						Gains = StackTheDeck,
 					}
 				),
+			],
+			// ===== MC-5.6 batch 1: the Stardates — tier 1 =====
+			["Empress Galina"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{U}{U}"),
+					[new GainControl(Ref.Target(), Ref.You)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Legendary)],
+				},
+			],
+			["Sheoldred, the Apocalypse"] =
+			[
+				When(TriggerEvent.YouDrawACard, [], new GainLife(Ref.You, 2)),
+				// "they" — the one opponent in a two-player game.
+				When(
+					TriggerEvent.YouDrawACard with
+					{
+						By = Whose.Opponent,
+					},
+					[],
+					new LoseLife(Ref.EachOpponent, 2)
+				),
+			],
+			["Tatyova, Benthic Druid"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					new GainLife(Ref.You, 1),
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Hull Breach"] =
+			[
+				ModalSpell(
+					"Hull Breach",
+					1,
+					M([Target(Is.Artifact)], new Destroy(Ref.Target())),
+					M([Target(Is.Enchantment)], new Destroy(Ref.Target())),
+					M(
+						[Target(Is.Artifact), Target(Is.Enchantment)],
+						new Destroy(Ref.Target(0)),
+						new Destroy(Ref.Target(1))
+					)
+				),
+			],
+			["Jhoira, Weatherlight Captain"] =
+			[
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.Artifact | Is.Legendary | Is.Subtype("Saga"),
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Captain Sisay"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new SearchLibrary(CardType.None, ZoneType.Hand)
+						{
+							Supertype = Supertype.Legendary,
+							Reveal = true,
+						},
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Minamo, School at Water's Edge"] =
+			[
+				new ManaAbilityComponent(ManaColor.Blue),
+				new ActivatedAbilityComponent(ManaCost.Parse("{U}"), [new Untap(Ref.Target())])
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Legendary)],
+				},
+			],
+			["Kenrith, the Returned King"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{R}"),
+					[
+						new ModifyUntilEndOfTurn(Ref.AllCreatures, 0, 0, "Trample"),
+						new ModifyUntilEndOfTurn(Ref.AllCreatures, 0, 0, "Haste"),
+					]
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{G}"),
+					[new AddCounters(Ref.Target(), 1)]
+				)
+				{
+					Targets = [Creature],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{W}"),
+					[new GainLife(Ref.Target(), 5)]
+				)
+				{
+					Targets = [TargetSpec.Player()],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{U}"),
+					[new DrawCards(Ref.Target(), 1)]
+				)
+				{
+					Targets = [TargetSpec.Player()],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}{B}"),
+					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)]
+				)
+				{
+					Targets = [TargetSpec.InAnyGraveyard(Is.Creature)],
+				},
+			],
+			["Arcum Dagsson"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						// The search first, while "that player" — the target's controller — is still
+						// known; nothing it finds can change the sacrifice (a noncreature artifact).
+						new SearchLibrary(CardType.Artifact, ZoneType.Battlefield)
+						{
+							Filter = !Is.Creature,
+							FilterText = "noncreature",
+							Who = Ref.ControllerOfTarget(0),
+						},
+						new Sacrifice(Ref.Target()),
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Artifact & Is.Creature)],
+				},
+			],
+			// ===== MC-5.6 batch 1: the Stardates on MC-6's composed pieces =====
+			["Isshin, Two Heavens as One"] =
+			[
+				// "a creature attacking" — each attacker's own event, and "whenever you attack" (Shayne).
+				new TriggersAdditionalTime(new Trigger(EventKind.Attacked), Is.Yours),
+				new TriggersAdditionalTime(new Trigger(EventKind.AttackersDeclared), Is.Yours),
+			],
+			["Torbran, Thane of Red Fell"] =
+			[
+				new NumericReplacement(ReplacedEvent.Damage)
+				{
+					Source = Is.Color(ManaColor.Red) & Is.Yours,
+					Affected = Is.Opponents,
+					Plus = 2,
+				},
+			],
+			["Bruvac the Grandiloquent"] =
+			[
+				new NumericReplacement(ReplacedEvent.Mill) { Affected = Is.Opponents, Times = 2 },
+			],
+			["Rishkar, Peema Renegade"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						Creature with
+						{
+							Optional = true,
+						},
+						Creature with
+						{
+							Optional = true,
+							NotThePrevious = true,
+						},
+					],
+					new AddCounters(Ref.Target(0), 1),
+					new AddCounters(Ref.Target(1), 1)
+				),
+				new GrantsManaAbility(
+					Is.Creature & Is.Yours & Is.WithAnyCounter,
+					new ManaAbilityComponent(ManaColor.Green)
+				),
+			],
+			["Talon Gates of Madara"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Creature with { Optional = true }],
+					new PhaseOut(Ref.Target())
+				),
+				new ManaAbilityComponent(ManaColor.Colorless),
+				ManaAbilityComponent.OfAnyOneColor(1) with
+				{
+					Cost = ManaCost.Parse("{1}"),
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}"),
+					[
+						new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
+						{
+							From = ZoneType.Hand,
+						},
+					]
+				)
+				{
+					From = ZoneType.Hand,
+				},
+			],
+			["Phyrexian Tower"] =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless),
+				// Never auto-paid: a move, one per creature (Shayne, 2026-11-06).
+				new ManaAbilityComponent(ManaColor.Black)
+				{
+					Amount = 2,
+					Costs = [new TapSelfCost(), new SacrificeCost(Is.Creature)],
+				},
+			],
+			["Sisay, Weatherlight Captain"] =
+			[
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = Count.ColorsAmong(Ref.Permanents(Is.Legendary & Is.Yours & !Is.Source)),
+					Toughness = Count.ColorsAmong(
+						Ref.Permanents(Is.Legendary & Is.Yours & !Is.Source)
+					),
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{W}{U}{B}{R}{G}"),
+					[
+						new SearchLibrary(CardType.None, ZoneType.Battlefield)
+						{
+							Supertype = Supertype.Legendary,
+							// "a legendary permanent card with mana value less than Sisay's power"
+							Filter =
+								!Is.Instant
+								& !Is.Sorcery
+								& Is.ManaValueAtMost(Count.PowerOf(Ref.Source) with { Plus = -1 }),
+							FilterText = "permanent",
+						},
+					]
+				),
+			],
+			["Loot, Exuberant Explorer"] =
+			[
+				new AdditionalLandEachTurn(),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}{G}{G}"),
+					[
+						new LookAndTake(6, Is.Creature & Is.ManaValueAtMost(Count.LandsYouControl))
+						{
+							Reveal = true,
+							OntoBattlefield = true,
+						},
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
 			],
 		};
 

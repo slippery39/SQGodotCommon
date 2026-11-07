@@ -23,7 +23,7 @@ public static class MoveTokens
 	{
 		if (answer is not null)
 			return "c" + string.Join(",", answer);
-		if (action is TapForManaAction tap)
+		if (action is TapForManaAction { SacrificeId: 0 } tap) // Phyrexian Tower's is a legal move: a{index}
 			return $"t{tap.CardId}:{(int)tap.Color}";
 		if (action is SandboxPutAction put)
 			return Sandbox(put.PlayerId, put.Card.Data.Name, put.Zone);

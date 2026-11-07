@@ -335,7 +335,7 @@ public record Card : GameObject
 				or EnteredAsCopy
 				or Effects.DelayedTrigger
 				or Animated
-				or Effects.TriggersAdditionalTimeWhileTapped
+				or Effects.TriggersAdditionalTime { UntilUntapped: true }
 				or Effects.TapsForTwoColorlessWhileExiled;
 
 	/// <summary>

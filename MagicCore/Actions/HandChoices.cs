@@ -5,6 +5,13 @@ using MagicCore.Turns;
 
 namespace MagicCore.Actions;
 
+/// <summary>The ability's source in a choice's context — what a counted filter bound reads (Sisay's power); 0 if none.</summary>
+public static class SourceOf
+{
+	public static int Context(ImmutableDictionary<string, object> context) =>
+		context.TryGetValue(Effects.ContextKeys.Source, out var source) ? (int)source : 0;
+}
+
 /// <summary>Pick N cards from your own hand — mulligan bottoms, discard to hand size.</summary>
 public record ChooseCardsFromHandChoice : ChoiceAction
 {
@@ -81,7 +88,7 @@ public record ChooseFromLibraryChoice : ChoiceAction
 				(Type == CardType.None || c.Is(Type)) // None: "a card"
 				&& (Supertype == Supertype.None || c.Is(Supertype))
 				&& (Subtype is null || c.Subtypes.Contains(Subtype))
-				&& (Filter?.Matches(s, c, new(PlayerId)) ?? true)
+				&& (Filter?.Matches(s, c, new(PlayerId, SourceOf.Context(context))) ?? true)
 			);
 		// Taking one, two Forests are one choice: the library is shuffled after. Taking up to
 		// several, Hexhaven Invigorator may take both — unless the names must differ (Fblthp).
@@ -169,7 +176,7 @@ public record ChooseAmongChoice : ChoiceAction
 			)
 			.Select(s.GetCard)
 			.Where(c => Types == CardType.None || c.Is(Types)) // None: any card
-			.Where(c => Filter?.Matches(s, c, new(PlayerId, 0)) ?? true);
+			.Where(c => Filter?.Matches(s, c, new(PlayerId, SourceOf.Context(context))) ?? true);
 		return (DifferentNames ? cards.DistinctBy(c => c.Name) : cards)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();

@@ -234,7 +234,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraSacrificeTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
 
 ```csharp
 ["Budding Insurgent"] =
@@ -613,7 +613,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Formidable Commons
 
@@ -664,7 +664,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCardTests, ManaTests
 
-**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Greenhouse Propagator"] =
@@ -902,7 +902,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraSacrificeTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `ShuffleIntoLibrary` — "Its owner shuffles it into their library."
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `ShuffleIntoLibrary` — "Its owner shuffles it into their library."
 
 ```csharp
 ["Living Library"] =
@@ -1007,7 +1007,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCommonTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
 
 ```csharp
 ["Murmuring Volume"] =
@@ -1139,7 +1139,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCommonTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ChoosesColorAsItEnters` — Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `TapSelfCost` — "{T}:" — tap this permanent.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ChoosesColorAsItEnters` — Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `TapSelfCost` — "{T}:" — tap this permanent.
 
 ```csharp
 ["Room of Refuge"] =
@@ -2619,7 +2619,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests
 
-**Engine pieces:** `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).
+**Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…
 
 ```csharp
 ["Heartwood Crafter // Soul Tether"] =
@@ -2643,7 +2643,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraUncommonCreatureTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `BecomePrepared` — "[It] becomes prepared" — through Rules.Prepare, which ignores one already prepared.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `BecomePrepared` — "[It] becomes prepared" — through Rules.Prepare, which ignores one already prepared.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
 
 ```csharp
 ["Hexhaven Dueling Arena"] =
@@ -2912,12 +2912,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ManaOfOneColorComponent` — Loot, the Nexus: "{T}: Choose a color. Add one mana of that color for each [Amount]."…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Loot, the Nexus"] =
 [
-	new ManaOfOneColorComponent(Count.DistinctPowersOf(Ref.CreaturesYouControl)),
+	ManaAbilityComponent.OfAnyOneColor(Count.DistinctPowersOf(Ref.CreaturesYouControl)),
 ],
 ```
 
@@ -3846,13 +3846,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests, FraUncommonReplacementTests
 
-**Engine pieces:** `AmountReplacement` — "… that much plus Bonus instead" — on a permanent; Rules.Replacements reads it where the…
+**Engine pieces:** `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…
 
 ```csharp
 ["Tomik, Izzet Sparkmage"] =
 [
 	Prowess,
-	new AmountReplacement(ReplaceableEvent.NoncombatDamageToOpponent, 1),
+	new NumericReplacement(ReplacedEvent.Damage)
+	{
+		Source = Is.Yours,
+		Affected = Is.Opponents,
+		Combat = false,
+		Plus = 1,
+	},
 ],
 ```
 
@@ -4374,14 +4380,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.  
 > {6}: Put a +1/+1 counter on target legendary creature.
 
-**Status:** scripted · **tests naming it:** FraUncommonReplacementTests
+**Status:** scripted · **tests naming it:** FraUncommonReplacementTests, TrkStardateTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `AmountReplacement` — "… that much plus Bonus instead" — on a permanent; Rules.Replacements reads it where the…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Yoshimaru, Beloved Companion"] =
 [
-	new AmountReplacement(ReplaceableEvent.PlusOneCountersOnYourCreature, 1),
+	new NumericReplacement(ReplacedEvent.Counters)
+	{
+		Affected = Is.Creature & Is.Yours,
+		CounterKind = CounterKinds.PlusOne,
+		Plus = 1,
+	},
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{6}"),
 		[new AddCounters(Ref.Target(), 1)]
@@ -4969,7 +4980,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraGraveyardTests, FraRareCopyTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `BecomeCopyUntilEndOfTurn` — Hall of Echoes: "This land becomes a copy of target creature you control until end of…; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NoLegendRule` — Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn." —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `BecomeCopyUntilEndOfTurn` — Hall of Echoes: "This land becomes a copy of target creature you control until end of…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NoLegendRule` — Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn." —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
 
 ```csharp
 ["Hall of Echoes"] =
@@ -5607,7 +5618,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Roiling Canopy"] =
@@ -5895,7 +5906,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests, FraRareTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NextSpellCantBeCountered` — Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NextSpellCantBeCountered` — Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
 
 ```csharp
 ["Theorist's Proxy"] =
@@ -6278,7 +6289,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRarePlaneswalkerTests
 
-**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `AddStunCounters` — Cryotheory Adept: "put a stun counter on it".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `LoyaltyAbilityComponent` — "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed,…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnChosenToHandIfManaValueAtMost` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `Tap` — "Tap [What]" — permanents only.
+**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `AddStunCounters` — Cryotheory Adept: "put a stun counter on it".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `LoyaltyAbilityComponent` — "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed,…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnChosenToHandIf` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `Tap` — "Tap [What]" — permanents only.
 
 ```csharp
 ["Chandra, Chill of Compliance"] =
@@ -6290,10 +6301,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		{
 			Then =
 			[
-				new ReturnChosenToHandIfManaValueAtMost(int.MaxValue)
-				{
-					ExceptTypes = CardType.Creature | CardType.Land,
-				},
+				new ReturnChosenToHandIf(!Is.Creature & !Is.Land),
 			],
 		}
 	),
@@ -6517,7 +6525,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraTriggerTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ReturnChosenToHandIfManaValueAtMost` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ReturnChosenToHandIf` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
 
 ```csharp
 ["Enlightened Confidant"] =
@@ -6529,7 +6537,9 @@ How to write a script: `MagicCore/Cookbook.md`.
 		{
 			Then =
 			[
-				new ReturnChosenToHandIfManaValueAtMost(Count.LifeYouGainedThisTurn),
+				new ReturnChosenToHandIf(
+					Is.ManaValueAtMost(Count.LifeYouGainedThisTurn)
+				),
 			],
 		}
 	) with
@@ -6819,10 +6829,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareOneOffTests
 
-**Engine pieces:** `CastFromHandFreeUpToCreatureCount` — Omnipresence: "You may cast spells with mana value less than or equal to the number of…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…
 
 ```csharp
-["Omnipresence"] = [new CastFromHandFreeUpToCreatureCount()],
+["Omnipresence"] =
+[
+	new MayCastFromHandFree(Is.ManaValueAtMost(Count.CreaturesYouControl)),
+],
 ```
 
 ### Overwrite the Multiverse

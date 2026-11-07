@@ -218,10 +218,18 @@ public static class TurnStructure
 					.FirstOrDefault(c =>
 						c.IsTapped
 						&& s.HasAbility<Effects.MayChooseNotToUntap>(c)
-						&& c.GetComponents<Effects.TriggersAdditionalTimeWhileTapped>()
+						&& c.GetComponents<Effects.TriggersAdditionalTime>()
 							.Any(link =>
-								s.IsOnBattlefield(link.CardId)
-								&& s.GetCard(link.CardId).Incarnation == link.Incarnation
+								link.UntilUntapped
+								&& new[] { s.Player1Id(), s.Player2Id() }
+									.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+									.Any(p =>
+										link.WhoseAbilities.Matches(
+											s,
+											p,
+											new Filters.FilterContext(c.ControllerId, c.Id)
+										)
+									)
 							)
 					);
 				if (mayStay is not null)

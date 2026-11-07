@@ -355,14 +355,9 @@ public static class Triggers
 			.Where(p => p.HasComponent<GrantsTriggeredAbility>() && s.IsOnBattlefield(p.Id))
 			.SelectMany(p => s.AbilitiesOf<GrantsTriggeredAbility>(p).Select(g => (granter: p, g)))
 			.ToList();
-		// Dr. Crusher, Lwaxana Troi: "that ability triggers an additional time" — found once here.
+		// Dr. Crusher, Lwaxana Troi, Isshin: "that ability triggers an additional time" — found once here.
 		var doublers = permanents
-			.Where(p =>
-				(
-					p.HasComponent<LifeGainTriggersAdditionalTime>()
-					|| p.HasComponent<TriggersAdditionalTimeWhileTapped>()
-				) && s.IsOnBattlefield(p.Id)
-			)
+			.Where(p => p.HasComponent<TriggersAdditionalTime>() && s.IsOnBattlefield(p.Id))
 			.ToList();
 		var events = WithoutSilencedEntries(s, permanents);
 		var fromTheBattlefield = permanents
@@ -496,8 +491,8 @@ public static class Triggers
 
 	/// <summary>
 	/// "That ability triggers an additional time" (CR 603.2d) — how many more times a permanent's
-	/// ability triggers on this event: Dr. Crusher's for your life gain and your permanents, Lwaxana's for
-	/// the one creature she named while she is tapped. A delayed trigger on a permanent isn't one of its
+	/// ability triggers on this event: one per TriggersAdditionalTime whose Cause matches the event and
+	/// whose WhoseAbilities matches the source. A delayed trigger on a permanent isn't one of its
 	/// abilities (CR 603.7c: it triggers once). <paramref name="lookBack"/>: the source left as this happened
 	/// (a dying creature's own "when this dies"), so it is matched as it last existed.
 	/// </summary>
@@ -519,17 +514,21 @@ public static class Triggers
 		var n = 0;
 		foreach (var d in doublers)
 		{
-			if (
-				e is LifeGainedEvent gained
-				&& gained.PlayerId == d.ControllerId
-				&& source.ControllerId == d.ControllerId
-				&& s.HasAbility<LifeGainTriggersAdditionalTime>(d)
-			)
-				n++;
-			if (d.IsTapped)
-				foreach (var link in d.GetComponents<TriggersAdditionalTimeWhileTapped>())
-					if (link.CardId == source.Id && link.Incarnation == source.Incarnation)
-						n++;
+			// Printed ones are its abilities ("loses all abilities" ends them); Lwaxana's link is an
+			// effect's result, kept while she stays tapped.
+			var rows = s.AbilitiesOf<TriggersAdditionalTime>(d)
+				.Where(t => !t.UntilUntapped)
+				.Concat(
+					d.IsTapped
+						? d.GetComponents<TriggersAdditionalTime>().Where(t => t.UntilUntapped)
+						: []
+				);
+			foreach (var t in rows)
+				if (
+					(t.Cause is null || Matches(s, d, t.Cause, e))
+					&& t.WhoseAbilities.Matches(s, source, new FilterContext(d.ControllerId, d.Id))
+				)
+					n++;
 		}
 		return n;
 	}

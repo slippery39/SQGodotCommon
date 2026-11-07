@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Turns;
 
 namespace MagicCore.Actions;
@@ -124,10 +125,30 @@ public record TapForManaAction : GameAction
 	public int CardId { get; init; }
 	public ManaColor Color { get; init; }
 
+	/// <summary>
+	/// Phyrexian Tower: "{T}, Sacrifice a creature: Add {B}{B}" — the creature sacrificed; set, this
+	/// activates its mana ability whose cost picks one (a move in LegalActions), not its plain yield.
+	/// </summary>
+	public int SacrificeId { get; init; }
+
+	ManaAbilityComponent? Chosen(GameState s) =>
+		ManaAbilities.AbilitiesOf(s, s.GetCard(CardId)).FirstOrDefault(m => m.ChoosesCost);
+
 	public override ValidationResult ValidateAdd(GameState s)
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
+		if (SacrificeId != 0)
+			return
+				s.IsIn(CardId, PlayerId, ZoneType.Battlefield)
+				&& Chosen(s) is { Cost: null } ability // ponytail: a mana cost beside a picked one isn't paid here — no card has both
+				&& (ability.AnyOneColor || ability.Color == Color)
+				&& ability.Costs.All(c => c.CanPay(s, PlayerId, CardId))
+				&& CostList
+					.Options(ability.Costs, CostSlot.Sacrifice, s, PlayerId, CardId)
+					.Contains(SacrificeId)
+				? ValidationResult.Valid
+				: ValidationResult.Invalid("That mana ability can't be activated so");
 		if (
 			!s.IsIn(CardId, PlayerId, ZoneType.Battlefield)
 			|| !ManaAbilities.CanTap(s, s.GetCard(CardId))
@@ -144,6 +165,8 @@ public record TapForManaAction : GameAction
 	/// <summary>Makes its whole yield: the chosen colour, all of it for Loot; Molten Tide's extra {R}.</summary>
 	public override ActionResult Execute(GameState s)
 	{
+		if (SacrificeId != 0)
+			return new ActionResult(Priority.Retain(WithChosenCost(s), PlayerId));
 		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
 		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
 		s = s.Tap(CardId);
@@ -167,5 +190,31 @@ public record TapForManaAction : GameAction
 		if (yield.Sacrificed)
 			s = s.Sacrifice(CardId); // Treasure: "{T}, Sacrifice this"
 		return new ActionResult(Priority.Retain(s, PlayerId));
+	}
+
+	/// <summary>Pays its costs in order (the {T}, then the creature), then adds its mana to the pool.</summary>
+	GameState WithChosenCost(GameState s)
+	{
+		var ability = Chosen(s)!;
+		var n = Math.Max(0, ability.Amount.Value(s, Conditions.Of(s.GetCard(CardId))));
+		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
+		foreach (var cost in ability.Costs.OrderByDescending(c => c.Taps))
+			s = cost.Pay(s, PlayerId, CardId, cost.Slot == CostSlot.Sacrifice ? SacrificeId : 0);
+		var player = s.GetPlayer(PlayerId);
+		var pool = Enumerable
+			.Range(0, n)
+			.Aggregate(
+				player.ManaPool,
+				(p, _) =>
+					ability.Restriction == ManaRestriction.None
+						? p.Add(Color)
+						: p with
+						{
+							Restricted = p.Restricted.Add(
+								new RestrictedMana(Color, ability.Restriction)
+							),
+						}
+			);
+		return s.WithPlayer(player with { ManaPool = pool });
 	}
 }

@@ -70,6 +70,9 @@ Open questions:
       AI casts it behind on board, not ahead, and keeps (or sacrifices) the Human on purpose.
 - [ ] AI-19.18 Nog, Ambitious Cadet: check the AI pays {1} then {3} with spare mana, and plays lands from its
       graveyard rather than holding them.
+- [ ] AI-19.19 Phyrexian Tower: its "{T}, Sacrifice a creature: Add {B}{B}" is a move, one per creature, its mana
+      floating (MC-5.6, Shayne). Check the search takes it only to cast with the mana that turn — and in response to
+      removal on the creature, which a one-ply score won't see.
 
 ## Next
 
@@ -81,3 +84,4 @@ MC-5 has every card playing.
 - 2026-11-05: opened with Engineered Explosives (MC-5.3 batch 6a); Deep Space 9 and Georgiou added (batch 6b).
 - 2026-11-06: Lwaxana Troi, Brazen Bluff and the free casts added (MC-5.3 batch 7a).
 - 2026-11-06: Genesis Device, Data, explore, Peace in Our Time and Kobayashi Maru added (MC-5.3 batch 7b).
+- 2026-11-06: Phyrexian Tower added (MC-5.6 batch 1).

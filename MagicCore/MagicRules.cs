@@ -181,7 +181,9 @@ public static class MagicRules
 						),
 					.. s.CardsIn(player, ZoneType.Battlefield)
 						.SelectMany(c =>
-							ActivateCandidates(s, player, c).Concat(LoyaltyCandidates(s, player, c))
+							ActivateCandidates(s, player, c)
+								.Concat(LoyaltyCandidates(s, player, c))
+								.Concat(ManaMoves(s, player, c))
 						),
 					.. s.CardsIn(player, ZoneType.Hand)
 						.Concat(s.CardsIn(player, ZoneType.Graveyard))
@@ -276,6 +278,29 @@ public static class MagicRules
 				)
 			);
 	}
+
+	/// <summary>
+	/// Phyrexian Tower: "{T}, Sacrifice a creature: Add {B}{B}." — a mana ability whose cost picks a card
+	/// is never auto-paid (Shayne, 2026-11-06): a move, one per creature. Every other mana ability stays
+	/// out of LegalActions (pure branching for the AI).
+	/// </summary>
+	static IEnumerable<GameAction> ManaMoves(GameState s, int player, Card card) =>
+		ManaAbilities
+			.AbilitiesOf(s, card)
+			.Where(m => m.ChoosesCost)
+			.Take(1) // ponytail: TapForManaAction.SacrificeId names the first such ability
+			.SelectMany(m =>
+				from id in CostList.Options(m.Costs, CostSlot.Sacrifice, s, player, card.Id)
+				where id != 0
+				from color in m.AnyOneColor ? ManaAbilities.AnyColor : [m.Color]
+				select new TapForManaAction
+				{
+					PlayerId = player,
+					CardId = card.Id,
+					Color = color,
+					SacrificeId = id,
+				}
+			);
 
 	/// <summary>Abilities activated from the zone the card is in — one candidate per mode, target and card-cost choice.</summary>
 	static IEnumerable<GameAction> ActivateCandidates(GameState s, int player, Card card)
@@ -398,12 +423,11 @@ public static class MagicRules
 			)
 		// Starfleet Academy's "{5}, {T}: add N" — its N on top, still an upper bound (ManaPayment.WithCostlyMana)
 		+ s.CardsIn(player, ZoneType.Battlefield)
-			.Where(c =>
-				c.HasComponent<ManaOfOneColorComponent>() && ManaAbilities.CanPayTapCost(s, c)
-			)
+			.Where(c => ManaAbilities.CanPayTapCost(s, c))
 			.Sum(c =>
-				s.AbilitiesOf<ManaOfOneColorComponent>(c)
-					.Where(m => m.Cost is not null)
+				ManaAbilities
+					.AbilitiesOf(s, c)
+					.Where(m => m.Cost is not null && !m.ChoosesCost)
 					.Sum(m => Math.Max(0, m.Amount.Value(s, Conditions.Of(c))))
 			);
 
@@ -538,6 +562,7 @@ public static class MagicRules
 			CastSpellAction c => c.CardId,
 			ActivateAbilityAction a => a.CardId,
 			ActivateLoyaltyAction l => l.CardId,
+			TapForManaAction t => t.CardId,
 			_ => 0,
 		};
 

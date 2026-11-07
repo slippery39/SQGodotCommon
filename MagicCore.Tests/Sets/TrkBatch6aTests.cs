@@ -135,13 +135,7 @@ public class TrkBatch6aTests : FraBoardTest
 	public void EngineeredExplosives_NeverSacrificesATreasureForAColour()
 	{
 		OnlyUntapped("Plains", "Plains");
-		var treasure = Field(
-			new CardDefinition(
-				Tokens.Treasure,
-				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
-			),
-			me
-		);
+		var treasure = Field(new CardDefinition(Tokens.Treasure, [Tokens.SacrificeForMana(1)]), me);
 		var ee = CastExplosives(2);
 		Assert.That(s.GetCard(ee).ChargeCounters, Nu.EqualTo(1), "two Plains: one color");
 		Assert.That(Alive(treasure), Nu.True, "the player picked X, not to spend the Treasure");

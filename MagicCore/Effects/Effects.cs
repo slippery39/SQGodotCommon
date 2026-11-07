@@ -834,15 +834,25 @@ public record TriggersAdditionalTimeWhileSourceTapped(Ref What) : Effect
 		var source = Source(s);
 		if (!source.IsTapped || Permanents(What, s).FirstOrDefault() is not { } creature)
 			return new(s);
+		var unlinked = source with
+		{
+			Components = source.Components.RemoveAll(c =>
+				c is TriggersAdditionalTime { UntilUntapped: true }
+			),
+		};
 		return new(
 			Update(
 				s,
 				(Card)
-					source
-						.WithoutComponents<TriggersAdditionalTimeWhileTapped>()
-						.WithComponent(
-							new TriggersAdditionalTimeWhileTapped(creature.Id, creature.Incarnation)
+					unlinked.WithComponent(
+						new TriggersAdditionalTime(
+							null,
+							new Filters.TheObject(creature.Id, creature.Incarnation)
 						)
+						{
+							UntilUntapped = true,
+						}
+					)
 			)
 		);
 	}
@@ -870,8 +880,12 @@ public record YouHaveHexproof : ThisTurnEffect;
 /// <summary>The Needs of the Many: "Prevent all damage that would be dealt to you this turn." — Damage.Deal: none is dealt, so no lifelink either.</summary>
 public record PreventAllDamageToYou : ThisTurnEffect;
 
-/// <summary>Brad Boimler's "until end of turn … that many plus one of each of those kinds of counters" — Rules.Replacements.Counters.</summary>
-public record CountersPlusOneThisTurn : ThisTurnEffect;
+/// <summary>
+/// A numeric replacement for the rest of the turn — Brad Boimler: "until end of turn, if one or more
+/// counters would be put on a permanent you control, that many plus one of each of those kinds of counters
+/// are put on that permanent instead." Read by Rules.Replacements beside the permanents' own.
+/// </summary>
+public record ThisTurnReplacement(NumericReplacement Replacement) : ThisTurnEffect;
 
 /// <summary>
 /// Way of the Cryomancer's granted "[−3]: When you next cast an instant or sorcery spell this turn,

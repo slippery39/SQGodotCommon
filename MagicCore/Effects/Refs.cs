@@ -448,6 +448,16 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public Count Negated => this with { Sign = -Sign, Plus = -Plus };
 
+	// The generated one prints Negated, whose own Negated … forever — a counted filter bound in a
+	// refusal's message hung on it (StatBetween, MC-6.4).
+	protected virtual bool PrintMembers(System.Text.StringBuilder builder)
+	{
+		builder.Append(
+			$"Fixed = {Fixed}, Of = {Of}, Kind = {Kind}, Sign = {Sign}, Per = {Per}, Times = {Times}, Plus = {Plus}, CounterKind = {CounterKind}"
+		);
+		return true;
+	}
+
 	/// <summary>"Is this a fixed nothing?" — a static with Power 0 and Toughness 0 changes no P/T.</summary>
 	public static bool operator ==(Count c, int n) =>
 		c.Kind == CountOf.Fixed && c.Sign * c.Fixed + c.Plus == n;

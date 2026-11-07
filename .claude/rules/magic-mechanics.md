@@ -60,10 +60,16 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"You can't cast this unless …"** is `CastOnlyIf`, read by `Playable.CanCastFromHere` — never offered.
   **"Behold a … or pay {N}"** is `CastSpellAction.BeholdId` (a card you control, or in hand, not this
   one); nothing moves.
-- **Numeric replacements** ("… that much plus one instead") are `AmountReplacement` on a permanent,
-  applied by `Rules.Replacements.Apply` inside the one place the event happens: `Damage.Deal` (and
-  `Damage.Excess`, so excess sees the replaced amount) and `MagicState.PutCounters` — the ONE way
-  counters of any kind are put on, entering with them included. Lifted from MtgCore's ReplacementEngine.
+- **Numeric replacements** ("… that much plus one / twice that many instead") are ONE piece,
+  `NumericReplacement(ReplacedEvent)` — which event (damage, counters, draw, mill), filters for the source and
+  for what it happens to (asked from its holder's side: `Is.Opponents` is a player or their permanent), a
+  counter kind, combat or not, `Times` and `Plus` — on a permanent of either player, or a this-turn object
+  (`ThisTurnReplacement`, Brad Boimler). `Rules.Replacements.Apply` applies all of them inside the one place
+  each event happens: `Damage.Deal` (and `Damage.Excess`, so excess sees the replaced amount),
+  `MagicState.PutCounters` (every counter path, entering with them included), `MagicState.Draw` and
+  `Mill.Top`. Every plus first, then every "twice" — (n + 1) × 2, the most (CR 616.1). A permanent's own
+  never applies to its own entry (CR 614.12). Lifted from MtgCore's ReplacementEngine. Never a new
+  component per card phrase (MC-6.2: `DrawsDoubled` and four siblings were this).
 - **-1/-1 counters** are `Card.MinusOneCounters`, read into `OwnPower`/`OwnToughness`; the
   state-based check cancels them against +1/+1 counters in pairs (CR 704.5q).
 - **How much combat damage a creature assigns** is `Combat.Assigns` — power, or toughness (Ghalta), or a
@@ -72,15 +78,20 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   allowed colours — several of ONE colour (Loot, the Nexus: `SameColor`), a Mountain's extra {R} under
   Molten Tide (`ExtraRedFromMountains`, a `ThisTurnEffect`), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
-  doesn't use floats (`Payment.Floats`). **A mana ability that costs mana** (Starfleet Academy: "{5}, {T}:
-  Choose a color. Add N", `ManaOfOneColorComponent.Cost`) is never a plain tap: `Find` tries it only when
+  doesn't use floats (`Payment.Floats`). **A mana ability is an activated ability** (CR 605): ONE
+  `ManaAbilityComponent` — `Amount`, `AnyOneColor`, a mana `Cost`, and the shared `Costs` list ("{T}" unless
+  it says otherwise); a grant is `GrantsManaAbility(filter, ability)` (Rok-Tahk, Rishkar), read with the
+  permanent's own by `ManaAbilities.AbilitiesOf`. **A cost that picks a card** (Phyrexian Tower's "Sacrifice a
+  creature") is never auto-paid: it is a move in `LegalActions`, one per candidate (`TapForManaAction.SacrificeId`,
+  Shayne 2026-11-06), its mana floating. **A mana ability that costs mana** (Starfleet Academy: "{5}, {T}:
+  Choose a color. Add N"; Talon Gates' "{1}, {T}", `ManaAbilityComponent.Cost`) is never a plain tap: `Find` tries it only when
   nothing else pays (`WithCostlyMana`), its N units of one colour in place of its {C}, its own cost owed
   beside the spell's and never paid by the mana it makes (`Need.NotFrom`).
   Manual tapping floats restricted mana AS restricted (`ManaPool.Restricted`).
   A restriction is a `ManaRestriction` the solver checks against the spell it pays for
   (`Find(…, forSpell)`), or the source of the activated ability it pays for (`forAbilityOf` —
-  Isolinear Processor's "an ability of an artifact source"). Treasure and Lotus are `ManaOfOneColorComponent`
-  with `SacrificeSelf`: `Pay` sacrifices them, and the solver spends them last.
+  Isolinear Processor's "an ability of an artifact source"). Treasure and Lotus are `Tokens.SacrificeForMana`
+  (`Costs = [TapSelfCost, SacrificeSelfCost]`): `Pay` sacrifices them, and the solver spends them last.
 - **Every token is made by `CreateTokens`** — so a replacement on tokens (Draconic Visitor's "artifact
   tokens are Dragons instead"; Holo-Engineer's ANY token an Illusion, `ArtifactTokensBecome.AnyToken`) is
   applied in that one place (`CreateTokens.Instead`, copies too), under whoever `ControlledBy` names.
@@ -383,15 +394,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Khan) is `GainControl.UntilEndOfTurn`: an `UntilEndOfTurn { ReturnControlTo }` on it, given back by cleanup
   (`Combat.CleanupPermanents`) — gone with a zone change like every until-end-of-turn effect. "Become Warriors
   in addition to their other types" is `ModifyUntilEndOfTurn.AlsoCreatureType` (`s.Subtypes` adds it).
-- **"That many plus one of each kind of counter"** (Brad Boimler, `CountersPlusOneThisTurn`) is
-  `Rules.Replacements.Counters`, applied in `MagicState.PutCounters` — so it reaches every counter path:
-  effects, costs (`Loyalty.Change`), entering with loyalty, time or +1/+1 counters, proliferate.
-  **"Twice that many charge counters on an artifact you control"** (Geordi La Forge,
-  `ChargeCountersOnYourArtifactsDoubled`) is `Rules.Replacements.Doubled<T>` there too, AFTER the plus
-  one — (n + 1) × 2, the order its controller would pick (CR 616.1) — entering with them included (Picard's
-  seven become fourteen). **"Twice that many of each kind on a creature you control"** (Dr. M'Benga,
-  `CountersOnYourCreaturesDoubled`) is the same `Doubled<T>`, every kind; a permanent's own doubling never
-  applies to its own entry (CR 614.12).
+- **"That many plus one of each kind of counter"** (Brad Boimler), **"twice that many charge counters on an
+  artifact you control"** (Geordi La Forge) and **"twice that many of each kind on a creature you control"**
+  (Dr. M'Benga) are `NumericReplacement(Counters)` rows (the numeric-replacement rule above) — so they reach every
+  counter path: effects, costs (`Loyalty.Change`), entering with loyalty, time, charge or +1/+1 counters
+  (Picard's seven become fourteen), proliferate.
 - **Life is lost in `Rules.Life.Lose` alone** — damage to a player, `LoseLife`, paying life — which counts it
   in `TurnTally.LifeLost` (Gul Dukat: "the life that player lost this turn", `Count.LifeLostThisTurnOf`).
   His "you gain life equal to the life lost this way" is scripted gain FIRST, so both read the count before
@@ -481,15 +488,18 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `RevealUntilOntoBattlefield { Top, Exile }` — the rest stay exiled.
 - **"Put onto the battlefield … sacrifice those at the beginning of your next end step"** (Will Riker) is
   `RevealUntilOntoBattlefield.SacrificeAtNextEndStep` — the tokens' delayed trigger on each card it put there.
-- **"If you would draw a card, draw two instead"** (Mr. Spock, `DrawsDoubled`) is applied in `MagicState.Draw`, which
-  every draw goes through — twice per copy (two Spocks: four).
+- **"If you would draw a card, draw two instead"** (Mr. Spock, `NumericReplacement(Draw) { Times = 2 }`) is applied
+  in `MagicState.Draw`, which every draw goes through — twice per copy (two Spocks: four). Bruvac's "they mill
+  twice that many" is the same in `Mill.Top`, every mill.
 - **"You don't lose the game for having 0 or less life"** (Georgiou, `DontLoseForZeroLife`) is asked by the
   state-based check alone (`TurnStructure`), only once life is 0 or less; she leaves, the next check takes the game.
 - **"That ability triggers an additional time"** (CR 603.2d) is decided in `Triggers.Collect` alone
-  (`AdditionalTimes`): each pending trigger from a PERMANENT repeated — Dr. Crusher's static
-  (`LifeGainTriggersAdditionalTime`: your life gain, a permanent you control, hers included) and Lwaxana Troi's
-  link (`TriggersAdditionalTimeWhileTapped` on her, naming that object of the creature — read only while she is
-  tapped, removed by `MagicState.Untap` and by leaving). The linked creature's own "when this dies" looks back
+  (`AdditionalTimes`): each pending trigger from a PERMANENT repeated once per `TriggersAdditionalTime(cause,
+  whoseAbilities)` whose cause the one `Triggers.Matches` accepts from the doubler's side (null: any) and whose
+  filter matches the ability's source — Dr. Crusher (`YouGainLife`, `Is.Yours`, hers included), Isshin ("a
+  creature attacking": `Attacked` and `AttackersDeclared` — "whenever you attack" too, Shayne 2026-11-06) and
+  Lwaxana Troi's link (stamped on her `{ UntilUntapped }`, `TheObject` that object of the creature — read only
+  while she is tapped, removed by `MagicState.Untap` and by leaving). The linked creature's own "when this dies" looks back
   and is doubled too; a DELAYED trigger hosted on a permanent isn't its ability and triggers once (CR 603.7c).
   Nothing is looked up unless a doubler is on the battlefield. Two "until end of turn" control effects on one
   permanent end together: it goes back to the controller before the FIRST.
@@ -531,9 +541,13 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `ManaAbilities.CanTap` (a Treasure's only mana is sacrificing it).
 - **"Enters tapped and attacking"** (Kira Nerys, `YourCreaturesEnterAttacking`) is set in `EnterBattlefield` —
   `AttackingId` the opponent, never declared, so no "whenever … attacks" (CR 508.4); `Combat.Attackers` reads it live.
-- **"Creatures you control have '{T}: Add {G}{G}'"** (Rok-Tahk, `YourCreaturesTapForMana`) is read by
+- **"Creatures you control have '{T}: Add {G}{G}'"** (Rok-Tahk, `GrantsManaAbility`) is read by
   `ManaAbilities.ColorsOf` and `YieldOf` — the one place mana is answered — so payment, manual tapping and the X
   bound all see it; a summoning-sick creature can't (`CanPayTapCost`).
+- **A counted bound in a filter** ("mana value less than Sisay's power", Omnipresence's "≤ the number of creatures
+  you control") is `StatBetween` with `Count` bounds (`Is.ManaValueAtMost(Count …)`), counted as the filter is asked
+  with its controller and source — so a choice's filter passes the ability's source (`SourceOf.Context`). X reads 0
+  there. "Cast from your hand without paying" is `MayCastFromHandFree(filter)`.
 - **Explore** (CR 701.44, Captain Janeway) is `Explore(ref)`: the top card revealed (`MakeKnown`), a land to the
   hand, else a +1/+1 counter through `PutCounters` and a yes/no to bin the card (`MoveCardTo { From = Library }`).
   **"An additional land on each of your turns"** (`AdditionalLandEachTurn`) is `MagicState.LandDrops`, the one count

@@ -269,15 +269,15 @@ public static class ManaPayment
 		foreach (var c in s.CardsIn(player.Id, ZoneType.Battlefield))
 		{
 			if (
-				!c.HasComponent<ManaOfOneColorComponent>()
-				|| c.Id == excludeId
+				c.Id == excludeId
 				|| alsoExclude?.Contains(c.Id) == true
 				|| !ManaAbilities.CanPayTapCost(s, c)
 			)
 				continue;
 			foreach (
-				var costly in s.AbilitiesOf<ManaOfOneColorComponent>(c)
-					.Where(m => m.Cost is not null)
+				var costly in ManaAbilities
+					.AbilitiesOf(s, c)
+					.Where(m => m.Cost is not null && !m.ChoosesCost)
 			)
 			{
 				var n = costly.Amount.Value(s, Conditions.Of(c));
@@ -292,7 +292,12 @@ public static class ManaPayment
 							c.Id,
 							c.Is(CardType.Creature),
 							true,
-							[.. Enumerable.Repeat(ManaAbilities.AnyColor, n)],
+							[
+								.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
+									costly.AnyOneColor ? ManaAbilities.AnyColor : [costly.Color],
+									n
+								),
+							],
 							false
 						),
 					],
