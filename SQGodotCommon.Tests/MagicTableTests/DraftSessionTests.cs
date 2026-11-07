@@ -79,4 +79,16 @@ public class DraftSessionTests
 		setup.Finished!(true);
 		Assert.That(d.Wins, Is.EqualTo(1));
 	}
+
+	[Test]
+	public void ATrkDraft_DraftsTrkPacks_IntoATrkDeckBuilder_AgainstTrkBots()
+	{
+		var d = new DraftSession(5, "TRK");
+		while (!d.IsComplete)
+			d.Pick(0);
+		var trk = MagicCore.Sets.CardRegistry.Printings("TRK").Select(p => p.Card.Name).ToHashSet();
+		Assert.That(d.Picks.Distinct(), Is.SubsetOf(trk)); // SubsetOf counts repeats
+		Assert.That(d.Builder.Set, Is.EqualTo("TRK"));
+		Assert.That(d.BotDeck(1).Main.Distinct(), Is.SubsetOf(trk));
+	}
 }

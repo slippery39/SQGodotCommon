@@ -16,11 +16,15 @@ public sealed class SealedSession
 {
 	public static IReadOnlyList<string> BasicNames => SealedBuilder.Basics;
 
-	/// <summary>
-	/// The set the pool is opened from: its boosters, its ratings, the printing its cards show.
-	/// ponytail: FRA only — MC-5.4 makes it a choice once TRK has boosters and ratings.
-	/// </summary>
-	public const string Set = "FRA";
+	/// <summary>The sets with boosters and ratings, as the deck select offers them (MC-5.4): code and name.</summary>
+	public static readonly IReadOnlyList<(string Code, string Name)> Sets =
+	[
+		("FRA", "Reality Fracture"),
+		("TRK", "Star Trek"),
+	];
+
+	/// <summary>The set the pool is opened from: its boosters, its ratings, the printing its cards show.</summary>
+	public string Set { get; }
 
 	private readonly List<string> _deck = new();
 	private readonly int[] _basics = new int[5];
@@ -33,14 +37,19 @@ public sealed class SealedSession
 		new(ReferenceEqualityComparer.Instance);
 
 	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool.</summary>
-	public SealedSession(int seed)
-		: this(Open(seed)) => Seed = seed;
+	public SealedSession(int seed, string set = "FRA")
+		: this(Boosters.SealedPool(set, seed), set: set) => Seed = seed;
 
 	/// <summary>A pool you opened elsewhere (<see cref="ArenaDeck.ReadPool"/>); what it held that the engine hasn't is <paramref name="leftOut"/>.</summary>
-	public SealedSession(IReadOnlyList<string> pool, IReadOnlyList<string>? leftOut = null)
+	public SealedSession(
+		IReadOnlyList<string> pool,
+		IReadOnlyList<string>? leftOut = null,
+		string set = "FRA"
+	)
 	{
 		Pool = pool;
 		LeftOut = leftOut ?? [];
+		Set = set;
 	}
 
 	/// <summary>The seed your pool was opened from; null for a pasted pool.</summary>
@@ -53,7 +62,8 @@ public sealed class SealedSession
 	public IReadOnlyList<string> LeftOut { get; }
 
 	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, and one of its suggested builds at random (LIM-3).</summary>
-	public static SealedDeck OpponentFor(int seed) => SealedBuilder.Opponent(Set, seed);
+	public static SealedDeck OpponentFor(int seed, string set = "FRA") =>
+		SealedBuilder.Opponent(set, seed);
 
 	/// <summary>The pool cards in your deck (basics added on top are <see cref="Basics"/>).</summary>
 	public IReadOnlyList<string> FromPool => _deck;
@@ -225,7 +235,7 @@ public sealed class SealedSession
 	/// </summary>
 	public TableSetup ToSetup(bool search, int gameSeed, SealedDeck? opponent = null)
 	{
-		opponent ??= OpponentFor(gameSeed);
+		opponent ??= OpponentFor(gameSeed, Set);
 		return new(
 			[.. Deck.Select(n => CardRegistry.Get(n, Set))],
 			[.. opponent.Main.Select(n => CardRegistry.Get(n, Set))],
@@ -248,6 +258,4 @@ public sealed class SealedSession
 		BasicNames.ToList().IndexOf(basic) is var i && i >= 0
 			? i
 			: throw new System.ArgumentException($"{basic} is not a basic land", nameof(basic));
-
-	private static IReadOnlyList<string> Open(int seed) => Boosters.SealedPool(Set, seed);
 }

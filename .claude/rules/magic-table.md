@@ -17,7 +17,8 @@ MagicTable/
 │                         to game_records/ — story TBL-5); Resume: a record's moves made again, an
 │                         undo step at each of yours, written as a new file (TBL-5.7). Tested in SQGodotCommon.Tests
 ├── DeckSelectScene.cs    the entry: both seats' decks (built-in or a pasted Arena export), seed, AI vs
-│                         AI, search AI; the way into Sealed and Draft; Resume a game (a record from game_records/);
+│                         AI, search AI; the way into Sealed and Draft, and their set (the Set button: LimitedSet,
+│                         FRA or TRK — MC-5.4); Resume a game (a record from game_records/);
 │                         TableSetup.Finished: a run's game reports its result once, then only the way back
 ├── DraftSession.cs       an FRA Quick Draft (plain C#, LIM-2.3): you in seat 0 and 7 bots (MagicCore's Draft),
 │                         your picks as a SealedSession (Builder), the run — 7 wins or 3 losses — against

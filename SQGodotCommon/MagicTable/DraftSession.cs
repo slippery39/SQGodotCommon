@@ -5,7 +5,7 @@ using MagicCore.Limited;
 namespace MagicTable;
 
 /// <summary>
-/// An FRA Quick Draft on the table, plain C# (no Godot types), story LIM-2.3: you in seat 0 and 7 bots
+/// A Quick Draft on the table (FRA or TRK — <see cref="Set"/>), plain C# (no Godot types), story LIM-2.3: you in seat 0 and 7 bots
 /// (<see cref="Draft"/>), then your 42 picks to the Sealed screen's deck builder (Shayne, 2026-10-29),
 /// then a run as Arena's Quick Draft runs — until <see cref="WinsToEnd"/> wins or
 /// <see cref="LossesToEnd"/> losses — against the bots' own decks, one after another.
@@ -18,12 +18,16 @@ public sealed class DraftSession
 	private SealedSession? _builder;
 	private readonly Dictionary<int, SealedDeck> _botDecks = new();
 
-	public DraftSession(int seed)
+	public DraftSession(int seed, string set = "FRA")
 	{
 		Seed = seed;
-		State = Draft.New(SealedSession.Set, seed);
+		Set = set;
+		State = Draft.New(set, seed);
 		PackSize = State.Seats[0].Pack.Count;
 	}
+
+	/// <summary>The set the packs are opened from (MC-5.4).</summary>
+	public string Set { get; }
 
 	/// <summary>The seed the packs were opened from — one number replays the draft.</summary>
 	public int Seed { get; }
@@ -49,13 +53,13 @@ public sealed class DraftSession
 	{
 		if (IsComplete || index < 0 || index >= Pack.Count)
 			return;
-		State = Draft.Next(State, CardRatings.Of(SealedSession.Set), seat0: index);
+		State = Draft.Next(State, CardRatings.Of(Set), seat0: index);
 	}
 
 	/// <summary>Your picks as a pool for the Sealed screen's deck builder — made once, so your deck survives each game.</summary>
 	public SealedSession Builder =>
 		_builder ??= IsComplete
-			? new SealedSession(Picks)
+			? new SealedSession(Picks, set: Set)
 			: throw new System.InvalidOperationException("the draft isn't over");
 
 	public int Wins { get; private set; }
@@ -77,7 +81,7 @@ public sealed class DraftSession
 			? deck
 			: _botDecks[seat] = SealedBuilder.Suggestions(
 				State.Seats[seat].Picks,
-				CardRatings.Of(SealedSession.Set)
+				CardRatings.Of(Set)
 			)[0];
 
 	/// <summary>A game of the run is over; once the run is over nothing more counts.</summary>

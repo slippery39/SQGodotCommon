@@ -275,4 +275,33 @@ public class SealedSessionTests
 			"a pasted pool needs its file"
 		);
 	}
+
+	[Test]
+	public void TrkSealed_OpensTrkPacks_ReadsATrkPaste_AndSetsUpATrkGame()
+	{
+		var trk = MagicCore.Sets.CardRegistry.Printings("TRK").Select(p => p.Card.Name).ToHashSet();
+		var s = new SealedSession(5, "TRK");
+		Assert.That(s.Set, Is.EqualTo("TRK"));
+		Assert.That(s.Pool, Is.EqualTo(Boosters.SealedPool("TRK", 5)));
+
+		var pasted = ArenaDeck.ReadPool(
+			string.Join('\n', s.Pool.Select(n => $"1 {n} (TRK) 1")),
+			"TRK"
+		);
+		Assert.That(pasted.LeftOut, Is.Empty, "a TRK pool reads as TRK's cards");
+		Assert.That(
+			pasted.Pool,
+			Is.EquivalentTo(s.Pool.Where(n => !SealedBuilder.Basics.Contains(n)))
+		);
+
+		s.Suggest();
+		Assert.That(s.Ready);
+		var setup = s.ToSetup(search: false, gameSeed: 3);
+		Assert.That(setup.Mine.Concat(setup.Theirs).Select(c => c.Set), Is.All.EqualTo("TRK"));
+		Assert.That(
+			setup.Theirs.Select(c => c.Data.Name).Distinct(),
+			Is.SubsetOf(trk),
+			"the AI's own TRK pool"
+		);
+	}
 }

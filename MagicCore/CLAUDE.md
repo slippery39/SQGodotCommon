@@ -70,7 +70,7 @@ MagicCore/
 ├── Sets/Fra/, Sets/Trk/ <Set>Cards.cs: a set's abilities by name — a reprint scripted ONCE (MC-5.5); Fra/EmpowerJace.cs
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named; ReadPool: a sealed
-│                        pool (every section), what isn't FRA left out by name
+│                        pool (every section) of any set (MC-5.4), what isn't that set's left out by name
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
 ├── Ai/Evaluator.cs      THE position score every AI compares moves by (a change shows in GoldenAiReplay.txt);
 │                        HeldValues: a held card priced by its measured value — the search's setting (AI-1)

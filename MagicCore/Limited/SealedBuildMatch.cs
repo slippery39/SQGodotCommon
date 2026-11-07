@@ -84,7 +84,12 @@ public static class SealedBuildMatch
 		builds * opponents / (GamesPerMinutePerCore * Environment.ProcessorCount);
 
 	/// <summary>Each build against opponents 1..<paramref name="opponents"/>, games in parallel, each search on one thread.</summary>
-	public static Result Run(IReadOnlyList<Build> builds, int opponents, string ai = "beam")
+	public static Result Run(
+		IReadOnlyList<Build> builds,
+		int opponents,
+		string ai = "beam",
+		string set = "FRA"
+	)
 	{
 		if (!AiMatch.IsKnown(ai))
 			throw new ArgumentException($"Unknown AI '{ai}' — known: {AiMatch.Usage}");
@@ -93,7 +98,7 @@ public static class SealedBuildMatch
 		var clock = Stopwatch.StartNew();
 		var rivals = Enumerable
 			.Range(1, opponents)
-			.Select(i => SealedBuilder.Opponent("FRA", i))
+			.Select(i => SealedBuilder.Opponent(set, i))
 			.ToList();
 		var games = new AiMatch.Game[builds.Count * opponents];
 		// Capped at the cores, as AiMatch.PlayAll: uncapped, the pool grows past them and games fight over them.

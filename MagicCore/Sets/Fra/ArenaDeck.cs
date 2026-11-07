@@ -26,17 +26,34 @@ public static partial class ArenaDeck
 		public bool Ok => Problems.Count == 0;
 	}
 
-	// FRA's cards only: a sealed pool or deck is FRA's until MC-5.4 reads TRK pools.
-	static readonly IReadOnlyDictionary<string, string> ByName = CardRegistry
-		.Printings("FRA")
-		.Select(p => p.Card.Name)
-		.SelectMany(name =>
-			name.Contains(" // ")
-				? new[] { (Key: name, Name: name), (Key: name.Split(" // ")[0], Name: name) }
-				: [(Key: name, Name: name)]
-		)
-		.DistinctBy(x => x.Key)
-		.ToDictionary(x => x.Key, x => x.Name, StringComparer.OrdinalIgnoreCase);
+	// A deck is FRA's cards; a sealed pool is its set's (MC-5.4: TRK pools too).
+	static readonly System.Collections.Concurrent.ConcurrentDictionary<
+		string,
+		IReadOnlyDictionary<string, string>
+	> Names = new();
+
+	// after Names: static fields initialise in order, and NamesOf reads it
+	static readonly IReadOnlyDictionary<string, string> ByName = NamesOf("FRA");
+
+	static IReadOnlyDictionary<string, string> NamesOf(string set) =>
+		Names.GetOrAdd(
+			set,
+			s =>
+				CardRegistry
+					.Printings(s)
+					.Select(p => p.Card.Name)
+					.SelectMany(name =>
+						name.Contains(" // ")
+							? new[]
+							{
+								(Key: name, Name: name),
+								(Key: name.Split(" // ")[0], Name: name),
+							}
+							: [(Key: name, Name: name)]
+					)
+					.DistinctBy(x => x.Key)
+					.ToDictionary(x => x.Key, x => x.Name, StringComparer.OrdinalIgnoreCase)
+		);
 
 	// At most three digits: a pasted "99999999999 Swamp" is a typo, not a 99-billion-card deck.
 	[GeneratedRegex(@"^(\d{1,3})x?\s+(.+?)(?:\s+\([A-Za-z0-9]+\)(?:\s+\S+)?)?$")]
@@ -91,7 +108,7 @@ public static partial class ArenaDeck
 	/// built and the sideboard alike. Unlike <see cref="Parse"/>, an unknown card never fails the
 	/// whole: it is left out and named, so a pool holding one still plays.
 	/// </summary>
-	public static PoolResult ReadPool(string text)
+	public static PoolResult ReadPool(string text, string set = "FRA")
 	{
 		var pool = new List<string>();
 		var leftOut = new List<string>();
@@ -109,7 +126,7 @@ public static partial class ArenaDeck
 				int.Parse(match.Groups[1].Value),
 				match.Groups[2].Value.Replace(" /// ", " // ")
 			);
-			if (!ByName.TryGetValue(name, out var fra))
+			if (!NamesOf(set).TryGetValue(name, out var fra))
 				leftOut.AddRange(Enumerable.Repeat(name, count));
 			else if (!Limited.SealedBuilder.Basics.Contains(fra))
 				pool.AddRange(Enumerable.Repeat(fra, count));

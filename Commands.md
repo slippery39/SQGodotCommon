@@ -169,8 +169,8 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 # CardRatings.Of reads <SET>.ratings.json before <SET>.17lands.json — delete it when the set gets real ratings.
 dotnet run -c Release --project MagicConsole -- --interim-ratings=trk
 
-# An FRA Quick Draft with 8 bots (LIM-2.2): each seat's two colours and its picks in order, with rating
-dotnet run -c Release --project MagicConsole -- --draft [--seed=N]
+# A Quick Draft with 8 bots (LIM-2.2): each seat's two colours and its picks in order, with rating — FRA, or --set=trk (MC-5.4)
+dotnet run -c Release --project MagicConsole -- --draft [--seed=N] [--set=trk]
 
 # Compare candidate SEALED builds (LIM-1.8; ~15 min for two builds at 200, 16 cores)
 dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=200]
@@ -178,7 +178,7 @@ dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=20
 #   "outside the game". Every build plays the SAME 200 AI sealed opponents (pool i opened from seed i,
 #   one of the AI's suggested builds, in a game of seed i), beam on both sides; the difference is paired by opponent.
 #   200 games show ~7pp; it says which build the AI pilots better, not which card is right
-dotnet run -c Release --project MagicConsole -- --compare=pool.txt [--builds=mine.txt] [--games=200]   # or --compare=seed:N
+dotnet run -c Release --project MagicConsole -- --compare=pool.txt [--builds=mine.txt] [--games=200] [--set=trk]   # or --compare=seed:N; --set: the pool, ratings and opponents are that set's (--builds exports are read as FRA's)
 #   every build the Sealed screen offers for that pool (LIM-3.4): its suggestions and the 4 closest pairs' builds,
 #   up to 11 (~80 min at 200, 16 cores; it prints its estimate first). With more than 3 builds (here or
 #   with --builds) each is compared with the FIRST — the best pair's two colours — not every pair.
@@ -235,7 +235,7 @@ Traps, each paid for once on the KIN branch:
   `window/size/window_*_override` (it does: 1280x720). Check a capture's real pixel size.
 - **A capture cannot hover or click**, and a still frame proves nothing about motion — nothing moves
   until state changes. KIN added debug flags (`--hover-card=N`, `--mouse=x,y`, real clicks through
-  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1 (`--tap=X,Y@F~N` holds it N frames — a long press; `--tap=X,Y@F~N>X2,Y2` drags to X2,Y2), and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N`, `--ai-vs-ai`, `--resume=FILE` (a game record replayed onto the table, Undo then steps back — pass each game arg as its own string: `-GameArgs '--resume=…','--greedy'`), `--greedy` (GreedyAi instead of the search; the deck select's checkbox — makes `--autoplay` fast) and `--put=Name:Zone` (repeatable; the sandbox into your seat — `"--put=Hunter's Axe:Battlefield"`). Its entry screen is `MagicTable/DeckSelectScene.tscn`; the flags override what it chose. The Sealed screen (`MagicTable/SealedScene.tscn`) takes `--seed=N` for its pool, or `--pool=FILE` (an Arena pool export, as if pasted). The Draft screen (`MagicTable/DraftScene.tscn`) takes `--seed=N`, and `--autopick` (the first card of every pack, straight to the deck building). Add more when a screen needs them, and send REAL input
+  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1 (`--tap=X,Y@F~N` holds it N frames — a long press; `--tap=X,Y@F~N>X2,Y2` drags to X2,Y2), and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N`, `--ai-vs-ai`, `--resume=FILE` (a game record replayed onto the table, Undo then steps back — pass each game arg as its own string: `-GameArgs '--resume=…','--greedy'`), `--greedy` (GreedyAi instead of the search; the deck select's checkbox — makes `--autoplay` fast) and `--put=Name:Zone` (repeatable; the sandbox into your seat — `"--put=Hunter's Axe:Battlefield"`). Its entry screen is `MagicTable/DeckSelectScene.tscn`; the flags override what it chose. The Sealed and Draft screens open the deck select's set (its Set button; `--set=TRK` starts on TRK — MC-5.4). The Sealed screen (`MagicTable/SealedScene.tscn`) takes `--seed=N` for its pool, or `--pool=FILE` (an Arena pool export, as if pasted). The Draft screen (`MagicTable/DraftScene.tscn`) takes `--seed=N`, and `--autopick` (the first card of every pack, straight to the deck building). Add more when a screen needs them, and send REAL input
   events through the viewport rather than calling the handler, or the capture "verifies" something
   no player can do.
 

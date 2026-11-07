@@ -4,7 +4,7 @@ using MtgGame;
 namespace MagicTable;
 
 /// <summary>
-/// FRA Quick Draft, the Arena way (story LIM-2.3): the pack in the middle as full cards — click one to
+/// A Quick Draft (the deck select's set: FRA or TRK), the Arena way (story LIM-2.3): the pack in the middle as full cards — click one to
 /// take it, every bot picking at the same time; your picks on the right by colour, each in curve order,
 /// with the curve above them; the card under the mouse on the left. When the last pack is empty your
 /// picks go to the Sealed screen's deck builder (<see cref="SealedScene.OpenDraft"/>). Every rule is
@@ -56,11 +56,14 @@ public partial class DraftScene : Control
 	{
 		var args = _argsRead ? [] : OS.GetCmdlineUserArgs();
 		_argsRead = true;
+		if (_session?.Set != DeckSelectScene.LimitedSet) // the deck select chose another set
+			_session = null;
 		_session ??= new DraftSession(
 			args.FirstOrDefault(a => a.StartsWith("--seed="))?["--seed=".Length..] is { } arg
 			&& int.TryParse(arg, out var seed)
 				? seed
-				: System.Random.Shared.Next(1, 1_000_000)
+				: System.Random.Shared.Next(1, 1_000_000),
+			DeckSelectScene.LimitedSet
 		);
 		// --autopick: take the first card of every pack — straight to the deck building (captures)
 		if (args.Contains("--autopick"))
@@ -113,7 +116,8 @@ public partial class DraftScene : Control
 					_session = new DraftSession(
 						int.TryParse(_seed.Text.Trim(), out var seed)
 							? seed
-							: System.Random.Shared.Next(1, 1_000_000)
+							: System.Random.Shared.Next(1, 1_000_000),
+						S.Set
 					);
 					Redraw();
 				}
@@ -163,7 +167,7 @@ public partial class DraftScene : Control
 			ToBuilder();
 			return;
 		}
-		_title.Text = $"Draft · seed {S.Seed}";
+		_title.Text = $"Draft {S.Set} · seed {S.Seed}";
 		_where.Text = S.Where;
 		if (_preview.Texture is null) // something to read before the first hover
 			Preview(S.Pack[0]);
@@ -211,7 +215,7 @@ public partial class DraftScene : Control
 		{
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, // before Texture (godot-frontend.md)
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set)),
+			Texture = MagicArt.Full(MagicArt.Key(card, S.Set)),
 			CustomMinimumSize = new Vector2(TileWidth, TileWidth * 1.395f),
 			TooltipText = SealedSession.Playable(card)
 				? ""
@@ -253,7 +257,7 @@ public partial class DraftScene : Control
 	private void Preview(string? card)
 	{
 		if (card is not null)
-			_preview.Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set));
+			_preview.Texture = MagicArt.Full(MagicArt.Key(card, S.Set));
 	}
 
 	/// <summary>The next visit starts a fresh draft — the deck builder's New draft.</summary>

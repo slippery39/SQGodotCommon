@@ -49,10 +49,10 @@ public partial class SealedScene : Control
 		_poolFile = null;
 	}
 
-	/// <summary>Sealed again, from the deck select: a draft's pool is never a sealed pool.</summary>
+	/// <summary>Sealed again, from the deck select: a draft's pool is never a sealed pool, nor another set's.</summary>
 	public static void OpenSealed()
 	{
-		if (_draft is null)
+		if (_draft is null && _session?.Set == DeckSelectScene.LimitedSet)
 			return;
 		(_draft, _session, _poolFile) = (null, null, null);
 	}
@@ -111,16 +111,16 @@ public partial class SealedScene : Control
 		{
 			var file = poolArg["--pool=".Length..].Trim('"');
 			var read = System.IO.File.Exists(file)
-				? ArenaDeck.ReadPool(System.IO.File.ReadAllText(file))
+				? ArenaDeck.ReadPool(System.IO.File.ReadAllText(file), DeckSelectScene.LimitedSet)
 				: null;
 			if (read is { Pool.Count: > 0 })
 			{
-				_session = new SealedSession(read.Pool, read.LeftOut);
+				_session = new SealedSession(read.Pool, read.LeftOut, DeckSelectScene.LimitedSet);
 				_poolFile = Path.GetFullPath(file);
 			}
 			else
 				GD.PushError(
-					$"--pool={file}: no such file, or no FRA cards in it — a seed's pool instead"
+					$"--pool={file}: no such file, or no {DeckSelectScene.LimitedSet} cards in it — a seed's pool instead"
 				);
 		}
 		_session ??= new SealedSession(
@@ -130,7 +130,8 @@ public partial class SealedScene : Control
 				is { } arg
 			&& int.TryParse(arg, out var seed)
 				? seed
-				: System.Random.Shared.Next(1, 1_000_000)
+				: System.Random.Shared.Next(1, 1_000_000),
+			DeckSelectScene.LimitedSet
 		);
 		MtgUiStyles.AddBackdrop(this);
 		var margin = new MarginContainer();
@@ -174,7 +175,8 @@ public partial class SealedScene : Control
 					_session = new SealedSession(
 						int.TryParse(_seed.Text.Trim(), out var seed)
 							? seed
-							: System.Random.Shared.Next(1, 1_000_000)
+							: System.Random.Shared.Next(1, 1_000_000),
+						S.Set
 					);
 					Redraw();
 				}
@@ -236,10 +238,10 @@ public partial class SealedScene : Control
 	/// <summary>Your real pool (LIM-1.7). Nothing readable keeps the pool you had, and says why.</summary>
 	private void UsePastedPool()
 	{
-		var read = ArenaDeck.ReadPool(_paste.Text);
+		var read = ArenaDeck.ReadPool(_paste.Text, S.Set);
 		if (read.Pool.Count == 0)
 		{
-			_leftOut.Text = "No FRA cards found in the paste — the pool is unchanged.";
+			_leftOut.Text = $"No {S.Set} cards found in the paste — the pool is unchanged.";
 			_leftOut.Visible = true;
 			return;
 		}
@@ -258,7 +260,7 @@ public partial class SealedScene : Control
 			GD.PushError($"sealed_pools/: {e.Message}");
 			file = null;
 		}
-		_session = new SealedSession(read.Pool, read.LeftOut);
+		_session = new SealedSession(read.Pool, read.LeftOut, S.Set);
 		_poolFile = file;
 		_simNote.Visible = false;
 		Redraw();
@@ -381,13 +383,13 @@ public partial class SealedScene : Control
 	private void Redraw()
 	{
 		_title.Text =
-			_draft is not null ? $"Draft · seed {_draft.Seed}\n{_draft.RunText}" // two lines: one widened the column
-			: S.Seed is { } seed ? $"Sealed · seed {seed}"
-			: "Sealed · your pool";
+			_draft is not null ? $"Draft {S.Set} · seed {_draft.Seed}\n{_draft.RunText}" // two lines: one widened the column
+			: S.Seed is { } seed ? $"Sealed {S.Set} · seed {seed}"
+			: $"Sealed {S.Set} · your pool";
 		_leftOut.Text =
 			S.LeftOut.Count == 0
 				? ""
-				: "Left out (not Reality Fracture cards, or unreadable): "
+				: $"Left out (not {SealedSession.Sets.First(x => x.Code == S.Set).Name} cards, or unreadable): "
 					+ string.Join(
 						", ",
 						S.LeftOut.GroupBy(c => c)
@@ -453,7 +455,7 @@ public partial class SealedScene : Control
 		{
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, // before Texture (godot-frontend.md)
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set)),
+			Texture = MagicArt.Full(MagicArt.Key(card, S.Set)),
 			CustomMinimumSize = new Vector2(TileWidth, TileWidth * 1.395f),
 			TooltipText = SealedSession.Playable(card)
 				? ""
@@ -491,7 +493,7 @@ public partial class SealedScene : Control
 	private void Preview(string? card)
 	{
 		if (card is not null)
-			_preview.Texture = MagicArt.Full(MagicArt.Key(card, SealedSession.Set));
+			_preview.Texture = MagicArt.Full(MagicArt.Key(card, S.Set));
 	}
 
 	private bool Shows(string card)

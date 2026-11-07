@@ -57,6 +57,22 @@ public partial class DeckSelectScene : Control
 		new() { Text = "Search AI (stronger, ~1 s a move)", ButtonPressed = true };
 	private readonly Button _start = new() { Text = "Start", FocusMode = FocusModeEnum.None };
 
+	/// <summary>
+	/// The set Sealed and Draft open (MC-5.4) — chosen here, kept while the game runs. <c>--set=TRK</c> on
+	/// the command line starts on it (captures of the Sealed and Draft screens run them directly).
+	/// </summary>
+	public static string LimitedSet { get; private set; } =
+		OS.GetCmdlineUserArgs()
+			.FirstOrDefault(a => a.StartsWith("--set="))
+			?["--set=".Length..].ToUpperInvariant()
+			is { } set
+		&& SealedSession.Sets.Any(s => s.Code == set)
+			? set
+			: SealedSession.Sets[0].Code;
+
+	private static string SetText() =>
+		$"Set: {SealedSession.Sets.First(s => s.Code == LimitedSet).Name}";
+
 	public override void _Ready()
 	{
 		MtgUiStyles.AddBackdrop(this);
@@ -98,6 +114,16 @@ public partial class DeckSelectScene : Control
 		MtgUiStyles.StylePrimary(resumeButton, 34);
 		resumeButton.Pressed += ChooseRecord;
 		actions.AddChild(resumeButton);
+		// one button that steps through the sets: a popup list's rect is in window pixels (magic-table rules)
+		var setButton = new Button { Text = SetText(), FocusMode = FocusModeEnum.None };
+		MtgUiStyles.StylePrimary(setButton, 34);
+		setButton.Pressed += () =>
+		{
+			var i = SealedSession.Sets.ToList().FindIndex(s => s.Code == LimitedSet);
+			LimitedSet = SealedSession.Sets[(i + 1) % SealedSession.Sets.Count].Code;
+			setButton.Text = SetText();
+		};
+		actions.AddChild(setButton);
 		var sealedButton = new Button { Text = "Sealed", FocusMode = FocusModeEnum.None };
 		MtgUiStyles.StylePrimary(sealedButton, 34);
 		sealedButton.CustomMinimumSize = new Vector2(240, 0);

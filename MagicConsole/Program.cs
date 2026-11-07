@@ -49,6 +49,10 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 // (SealedBuildMatch, LIM-1.8). Default 200: the smallest difference that shows is then ~7pp.
 // --compare=POOL.txt | seed:N: every build the Sealed screen offers for that pool — its suggestions
 // and every close pair's (LIM-3.4) — with any --builds exports beside them (yours, say).
+// --set=TRK: the pool, the ratings and the opponents are TRK's (MC-5.4); --draft takes it too.
+var limitedSet =
+	args.FirstOrDefault(a => a.StartsWith("--set="))?["--set=".Length..].ToUpperInvariant()
+	?? "FRA";
 var compareArg = args.FirstOrDefault(a => a.StartsWith("--compare="))?["--compare=".Length..];
 var buildsArg = args.FirstOrDefault(a => a.StartsWith("--builds="))?["--builds=".Length..];
 if (compareArg is not null || buildsArg is not null)
@@ -59,19 +63,21 @@ if (compareArg is not null || buildsArg is not null)
 		{
 			null => null,
 			_ when compareArg.StartsWith("seed:") => int.TryParse(compareArg[5..], out var poolSeed)
-				? MagicCore.Limited.Boosters.SealedPool("FRA", poolSeed)
+				? MagicCore.Limited.Boosters.SealedPool(limitedSet, poolSeed)
 				: throw new ArgumentException($"--compare={compareArg}: the seed isn't a number"),
-			_ => MagicCore.Sets.Fra.ArenaDeck.ReadPool(File.ReadAllText(compareArg)).Pool,
+			_ => MagicCore
+				.Sets.Fra.ArenaDeck.ReadPool(File.ReadAllText(compareArg), limitedSet)
+				.Pool,
 		};
 		if (pool is { Count: 0 })
-			throw new ArgumentException($"{compareArg}: no FRA cards in it");
+			throw new ArgumentException($"{compareArg}: no {limitedSet} cards in it");
 		var builds = (
 			pool is null
 				? []
 				: MagicCore.Limited.SealedBuildMatch.FromSuggestions(
 					MagicCore.Limited.SealedBuilder.AllBuilds(
 						pool,
-						MagicCore.Limited.CardRatings.Of("FRA")
+						MagicCore.Limited.CardRatings.Of(limitedSet)
 					)
 				)
 		)
@@ -88,7 +94,9 @@ if (compareArg is not null || buildsArg is not null)
 		Console.WriteLine(
 			$"{builds.Count} builds ({string.Join(", ", builds.Select(b => b.Name))}) x {games} opponents: ~{MagicCore.Limited.SealedBuildMatch.EstimatedMinutes(builds.Count, games):0} min"
 		);
-		Console.WriteLine(MagicCore.Limited.SealedBuildMatch.Run(builds, games).Report());
+		Console.WriteLine(
+			MagicCore.Limited.SealedBuildMatch.Run(builds, games, set: limitedSet).Report()
+		);
 	}
 	catch (Exception e) when (e is IOException or ArgumentException)
 	{
@@ -220,17 +228,19 @@ if (flags.Contains("--decisions"))
 	return;
 }
 
-// --draft [--seed=N]: an FRA Quick Draft with every seat a bot (LIM-2.2) — each seat's colours and its
+// --draft [--seed=N] [--set=TRK]: a Quick Draft with every seat a bot (LIM-2.2) — each seat's colours and its
 // picks in order, to judge the bots before the table's draft screen.
 if (flags.Contains("--draft"))
 {
-	var ratings = MagicCore.Limited.CardRatings.Of("FRA");
+	var ratings = MagicCore.Limited.CardRatings.Of(limitedSet);
 	var draftSeed = Arg("seed") ?? 1;
 	var drafted = MagicCore.Limited.Draft.RunBots(
-		MagicCore.Limited.Draft.New("FRA", draftSeed),
+		MagicCore.Limited.Draft.New(limitedSet, draftSeed),
 		ratings
 	);
-	Console.WriteLine($"FRA Quick Draft, seed {draftSeed}: 8 bots, rating plus the colour lean");
+	Console.WriteLine(
+		$"{limitedSet} Quick Draft, seed {draftSeed}: 8 bots, rating plus the colour lean"
+	);
 	Console.WriteLine();
 	for (var i = 0; i < drafted.Seats.Count; i++)
 	{

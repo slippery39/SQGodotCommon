@@ -235,6 +235,13 @@ keywords exist already (surveil, landcycling, cycling, treasure, mill, equip).
   (`docs/findings/limited.md`). `CardRatings.Of` reads a set's `<SET>.ratings.json` before its 17lands file; the
   basics are unrated (the bots take them last; the builder adds them free).
 
+- 2026-11-07, Claude (MC-5.4.4 — **Claude's defaults, for review**): **the deck select's Set button** (one button that
+  steps FRA → TRK, not a dropdown: a popup's rect is in window pixels) chooses what Sealed and Draft open
+  (`DeckSelectScene.LimitedSet`; `--set=TRK` for captures); a sealed or draft session carries its set
+  (`SealedSession.Set`, `DraftSession.Set`), so a session of the other set is replaced, never mixed. **A pasted Arena
+  pool reads as that set's cards** (`ArenaDeck.ReadPool(text, set)` — a TRK prerelease pool pastes in); a deck export
+  (`--builds`, the deck select's paste) is still FRA's. The console's `--compare`/`--draft` take `--set=trk`.
+
 Open questions:
 - Booster collation: provisional (above) until MTGJSON has TRK's — then `import_mtgjson_boosters.py trk` replaces it.
 
@@ -707,3 +714,4 @@ MC-5.4. MagicCore's `CLAUDE.md` is at its 200-line budget: move content down rat
 - 2026-11-07: MC-5.4.1 — TRK's collation, PROVISIONAL from Wizards' published odds (MTGJSON still has none): `tools/build_trk_boosters.py` → `Sets/TRK.boosters.json`, the Stardates 1 pack in 25 (Decisions)
 - 2026-11-07: MC-5.4.2 — TRK's art from Scryfall (`tools/fetch_set_art.py trk`, the Stardates and TRK tokens too): 706 images for 355 cards, imported; the basics' TRK printings (reprints of FRA's) in `Art/trk/`, `Cards/trk/`
 - 2026-11-07: MC-5.4.3 — TRK's INTERIM ratings (`Sets/TRK.ratings.json`, rarity + measured value; ρ 0.41 on FRA, Decisions); `CardRatings.Of` reads a set's own table first
+- 2026-11-07: MC-5.4.4 — TRK sealed on MagicTable (the deck select's Set button) and in the console (`--compare=seed:N --set=trk`: 9 builds × 2 opponents, 18 games played); captured: a TRK pool, the White/Black suggestion, a game to turn 1
