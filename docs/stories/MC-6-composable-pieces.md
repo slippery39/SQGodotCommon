@@ -71,21 +71,36 @@ the Stardates fix.
       counted bound was baked into effects instead: `ExileTopAndCastFree(N, Count ManaValueAtMost)`,
       `ReturnChosenToHandIfManaValueAtMost(Count)`, `CastFromHandFreeUpToCreatureCount` → `StatBetween`
       bounds as `Count`s (an int converts), and those effects take a filter.
-- [ ] MC-6.5 **Counters** (MC-5.6: Bristly Bill's per-object count, Mikaeus's kind on the cost).
+- [x] MC-6.5 **Counters** (MC-5.6: Bristly Bill's per-object count, Mikaeus's kind on the cost). Done 2026-11-06:
+      `PutCounters(What, N) { Kind }` (+1/+1 by default; no Kind is Dathon's "of a kind on it"), `RemoveCounters(What, N)
+      { Kind }` (no Kind is Mabel's rule), `RemoveCountersCost(N, Filter) { Kind }` (Data; Mikaeus's own counter, unasked)
+      and `Ref.It` — a Count counted per object (Bristly Bill's doubling, Beckett's "those counters"). ~125 uses moved.
+      Ruling: +1/+1 counters go on any permanent (CR 122.1), so Shields Up! says "if it's a creature" itself; no FRA game
+      and no every-card game moved (checked with the new Stardates taken out).
       `AddCounters` (+1/+1), `AddChargeCounters`, `AddStunCounters`, `AddMinusOneCounters`, `PutCounters(kind)`,
       `PutEventCardCounters`, `AddAnotherCounterOfAKind`; `RemoveCounters`, `RemoveCountersOfKind`,
       `RemoveCountersFromAmongCost` → one put and one remove, each with a kind and a `Count` counted per
       object. They already share one funnel (`MagicState.PutCounters`); this is the script vocabulary.
-- [ ] MC-6.6 **Modes** (MC-5.6: Ertai's "up to one"; Riku's "up to X" in batch 2). `Choose` is a fixed
+- [x] MC-6.6 **Modes** (MC-5.6: Ertai's "up to one"; Riku's "up to X" in batch 3). `Choose` is a fixed
       int; `ChooseAnyNumberIf` and `ModesNotChosenBefore` are flags beside it → min and max as `Count`s.
-- [ ] MC-6.7 **Cycling** (MC-5.6: Decree of Pain). `BasicLandcycling` is a helper with nothing saying it is
+      Done 2026-11-06: one `ModeChoice { AtLeast, AtMost (Counts), AnyNumberIf, NotChosenBefore }` as `Choose` on the
+      spell, triggered and activated components (an int converts); Sublime Epiphany, Kirk, Kobayashi Maru moved;
+      Ertai's `{ AtLeast = 0 }`. `Ref.ControllerOfTarget` reads a stack ability's controller too.
+- [x] MC-6.7 **Cycling** (MC-5.6: Decree of Pain). Done 2026-11-06: `ActivatedAbilityComponent.Keyword`, carried by
+      `AbilityActivatedEvent` and matched by `Trigger.Ability`; `Scripting.Cycling(cost)` and `Cycling(cost, BasicLand)`
+      — the 10 landcyclers moved, `BasicLandcycling` deleted. Decree's "destroyed this way" is `Destroy.Then` with
+      `Ref.ThisWay` (the ones that left), for Discard's and others' "this way" later. `BasicLandcycling` is a helper with nothing saying it is
       cycling → `Cycling(cost)`, with landcycling as cycling that searches. The ability carries its keyword's
       name (a general field, also usable for equip or station), and "when you cycle" is the `AbilityActivated`
       event filtered to it.
-- [ ] MC-6.8 **Evasion** (MC-5.6: Thada's islandwalk, Shizo's fear). `Combat.CantBeBlocked` and
+- [x] MC-6.8 **Evasion** (MC-5.6: Thada's islandwalk, Shizo's fear). Done 2026-11-06: `Scripting.Landwalk(type)` (the
+      plain unblockable under an `If`) and `Scripting.Fear` (a `CantBeBlockedBy`, granted until end of turn through
+      `ModifyUntilEndOfTurn.Gains`); no combat rule changed. `Combat.CantBeBlocked` and
       `CantBeBlockedBy(filter)` exist; landwalk and fear are those under a condition or a filter (helpers in
       `Scripting.cs`), with no new combat rule.
-- [ ] MC-6.9 **Playing from another zone** (MC-5.6: Thada's search into exile, playable this turn; batch 2:
+- [ ] MC-6.9 **Playing from another zone** — part done 2026-11-06 (MC-5.6): `PlayPermission { ThisTurn, Forever,
+      By, AnyType }`, taken out of `ExileTopPlayable` (Kirk, Exploratory Mission, Chekov, Vulcan Mind-Meld moved) and
+      given to `SearchLibrary.Play` with `SearchLibrary.Of` (Thada). The rest after MC-5.4. (MC-5.6: Thada's search into exile, playable this turn; batch 3:
       Sen Triplets, Prosper). `MayCastFromExile`, `MayCastFromYourGraveyard`, `MayPlayFromYourGraveyard`,
       `MayCastArtifactFromLibraryTop`, `MayPlayLandsFromLibraryTop`, `MayCastWhatItExiled`, `GrantedFlashback`,
       `CastFromHandFree`, `CastFromHandFreeUpToCreatureCount`, `ExileTopPlayable` and its options, `ExileTopMayCast`,

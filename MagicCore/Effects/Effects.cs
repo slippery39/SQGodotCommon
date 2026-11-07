@@ -164,48 +164,86 @@ public record TakeExtraTurn : Effect
 		new(s.WithGame(s.GetGame() with { ExtraTurns = s.GetGame().ExtraTurns.Add(Controller) }));
 }
 
-/// <summary>"Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters (Yoshimaru's replacement applies). Negative removes.</summary>
-public record AddCounters(Ref What, Count Amount) : Effect
+/// <summary>
+/// "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through MagicState.PutCounters
+/// (Yoshimaru's, Brad's and Geordi's replacements apply there). +1/+1 by default; Cryotheory Adept: { Kind =
+/// Stun }; Gardenize: { Kind = Charge }; Anthropological Mission: { Kind = Quest }. N is counted for EACH
+/// object, with Ref.It that object — Bristly Bill, Spine Sower: "Double the number of +1/+1 counters on each
+/// creature you control" is N = Count.CountersOn(Ref.It). Graft Surgeon's "put its counters on …" is one per
+/// kind, counted on Ref.EventCard as it last was.
+/// </summary>
+public record PutCounters(Ref What, Count N) : Effect
 {
-	public override ActionResult Execute(GameState s)
-	{
-		var n = Amount.Value(s, InputContext);
-		return new(
-			Permanents(What, s)
-				.Where(c => c.Is(CardType.Creature))
-				.Aggregate(s, (st, c) => st.AddPlusOneCounters(c.Id, n))
-		);
-	}
-}
+	/// <summary>
+	/// The kind. Null is Dathon, His Heart Open: "Choose a counter on target enchantment you control. Put
+	/// another counter of that kind on it." — one kind on it: that kind, unasked; several: chosen by name.
+	/// ponytail: on the first object What names only (Dathon's is a target); per object if a card says "each".
+	/// </summary>
+	public string? Kind { get; init; } = CounterKinds.PlusOne;
 
-/// <summary>Hapatra, the Desert Fang: "put X -1/-1 counters on …" — creatures only.</summary>
-public record AddMinusOneCounters(Ref What, Count Amount) : Effect
-{
 	public override ActionResult Execute(GameState s)
 	{
-		var n = Amount.Value(s, InputContext);
-		return n <= 0
-			? new(s)
-			: new(
-				Permanents(What, s)
-					.Where(c => c.Is(CardType.Creature))
-					.Aggregate(s, (st, c) => st.PutCounters(c.Id, CounterKinds.MinusOne, n))
-			);
+		if (Kind is null)
+			return OfAKindOnIt(s);
+		foreach (var c in Permanents(What, s).ToList())
+			s = s.PutCounters(c.Id, Kind, N.Value(s, InputContext.SetItem(ContextKeys.It, c.Id)));
+		return new(s);
+	}
+
+	ActionResult OfAKindOnIt(GameState s)
+	{
+		if (Permanents(What, s).FirstOrDefault() is not { } card)
+			return new(s);
+		var n = N.Value(s, InputContext.SetItem(ContextKeys.It, card.Id));
+		ImmutableArray<string> kinds = [.. card.AllCounters().Select(c => c.Kind)];
+		return kinds.Length switch
+		{
+			0 => new(s),
+			1 => new(s.PutCounters(card.Id, kinds[0], n)),
+			_ => new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext,
+						Steps =
+						[
+							new ChooseKeywordChoice(Controller, kinds)
+							{
+								Prompt = "Choose a kind of counter",
+							},
+							new AddChosenCounterAction(card.Id, kinds, n),
+						],
+					}
+				)
+			),
+		};
 	}
 }
 
 /// <summary>
-/// Mabel: "remove up to N counters from …". ponytail: no prompt — from your own permanent it
-/// removes the harmful ones (stun, -1/-1, finality), from theirs the helpful ones (+1/+1, loyalty);
-/// never the other kind. Make it a choice if a card ever wants something else.
+/// "Remove N [Kind] counters from [What]" — each object counted for itself, with Ref.It that object:
+/// Beckett Mariner's "remove those counters" is N = Count.CountersOfKind(Ref.It, Promotion). Never below 0.
 /// </summary>
-public record RemoveCounters(Ref What, int UpTo) : Effect
+public record RemoveCounters(Ref What, Count N) : Effect
 {
+	/// <summary>
+	/// The kind. Null is Mabel: "remove up to N counters from …". ponytail: no prompt — from your own
+	/// permanent it removes the harmful ones (stun, -1/-1, finality), from theirs the helpful ones (+1/+1,
+	/// loyalty); never the other kind. Make it a choice if a card ever wants something else.
+	/// </summary>
+	public string? Kind { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var target in Permanents(What, s).ToList())
 		{
-			var left = UpTo;
+			var n = N.Value(s, InputContext.SetItem(ContextKeys.It, target.Id));
+			if (Kind is not null)
+			{
+				s = s.PutCounters(target.Id, Kind, -n);
+				continue;
+			}
+			var left = n;
 			int Take(int have)
 			{
 				var n = Math.Min(have, left);
@@ -394,48 +432,13 @@ public record AddChosenColorManaAction(Count Amount) : Effect
 			: new(s);
 }
 
-/// <summary>
-/// Dathon, His Heart Open: "Choose a counter on target enchantment you control. Put another counter of
-/// that kind on it." — one kind on it: that kind, unasked; several: the kind is chosen (by name).
-/// </summary>
-public record AddAnotherCounterOfAKind(Ref What) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		if (Permanents(What, s).FirstOrDefault() is not { } card)
-			return new(s);
-		ImmutableArray<string> kinds = [.. card.AllCounters().Select(c => c.Kind)];
-		return kinds.Length switch
-		{
-			0 => new(s),
-			1 => new(s.PutCounters(card.Id, kinds[0], 1)),
-			_ => new(
-				s.SpawnAction(
-					new PipelineAction
-					{
-						PipelineContext = InputContext,
-						Steps =
-						[
-							new ChooseKeywordChoice(Controller, kinds)
-							{
-								Prompt = "Choose a kind of counter",
-							},
-							new AddChosenCounterAction(card.Id, kinds),
-						],
-					}
-				)
-			),
-		};
-	}
-}
-
-/// <summary>After the choice: one more counter of the chosen kind.</summary>
-public record AddChosenCounterAction(int CardId, ImmutableArray<string> Kinds) : Effect
+/// <summary>After the choice: N more counters of the chosen kind (PutCounters with no Kind).</summary>
+public record AddChosenCounterAction(int CardId, ImmutableArray<string> Kinds, int N = 1) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is int id
 		&& s.IsOnBattlefield(CardId)
-			? new(s.PutCounters(CardId, Kinds[id - 1], 1))
+			? new(s.PutCounters(CardId, Kinds[id - 1], N))
 			: new(s);
 }
 
@@ -614,18 +617,6 @@ public record Untap(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		new(Permanents(What, s).Aggregate(s, (st, c) => st.Untap(c.Id)));
-}
-
-/// <summary>Cryotheory Adept: "put a stun counter on it".</summary>
-public record AddStunCounters(Ref What, Count N) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var n = N.Value(s, InputContext);
-		return new(
-			Permanents(What, s).Aggregate(s, (st, c) => st.PutCounters(c.Id, CounterKinds.Stun, n))
-		);
-	}
 }
 
 /// <summary>"You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.</summary>
@@ -967,45 +958,6 @@ public record AddMana(ManaColor Color, Count Amount) : Effect
 	}
 }
 
-/// <summary>
-/// Gardenize: "put a charge counter on this enchantment"; Station: "Put charge counters equal to its
-/// power" — counted as it resolves; a negative power counts 0 (Count.Value), so none are removed.
-/// </summary>
-public record AddChargeCounters(Ref What, Count N) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var n = N.Value(s, InputContext);
-		return new(
-			Permanents(What, s)
-				.Aggregate(s, (st, c) => st.PutCounters(c.Id, CounterKinds.Charge, n))
-		);
-	}
-}
-
-/// <summary>
-/// "Put a quest counter on this enchantment" (Anthropological Mission), "a promotion counter on her"
-/// (Beckett Mariner) — a named kind, on any permanent, through MagicState.PutCounters.
-/// </summary>
-public record PutCounters(Ref What, string Kind, Count N) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var n = N.Value(s, InputContext);
-		return new(Permanents(What, s).Aggregate(s, (st, c) => st.PutCounters(c.Id, Kind, n)));
-	}
-}
-
-/// <summary>Beckett Mariner: "remove those counters" — every counter of the kind.</summary>
-public record RemoveCountersOfKind(Ref What, string Kind) : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(
-			Permanents(What, s)
-				.Aggregate(s, (st, c) => st.PutCounters(c.Id, Kind, -c.CountersOf(Kind)))
-		);
-}
-
 /// <summary>"Tap [What]" — permanents only.</summary>
 public record Tap(Ref What) : Effect
 {
@@ -1029,24 +981,6 @@ public record DamageFrom(Ref From, Ref To, Count Amount) : Effect
 			return new(s);
 		var amount = Amount.Value(s, InputContext);
 		return new(All(To, s).Aggregate(s, (st, id) => Damage.Deal(st, from, id, amount)));
-	}
-}
-
-/// <summary>Graft Surgeon: "put its counters on …" — the counters the dead card had as it last existed.</summary>
-public record PutEventCardCounters(Ref To) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var dead = GetInput<Card?>(ContextKeys.EventSnapshot);
-		s = (new AddCounters(To, dead?.PlusOneCounters ?? 0) with { InputContext = InputContext })
-			.Execute(s)
-			.GameState;
-		return (
-			new AddMinusOneCounters(To, dead?.MinusOneCounters ?? 0) with
-			{
-				InputContext = InputContext,
-			}
-		).Execute(s);
 	}
 }
 

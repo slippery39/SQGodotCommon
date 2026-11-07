@@ -202,49 +202,72 @@ public sealed record SacrificeCost(Filter? Filter = null) : AdditionalCost
 }
 
 /// <summary>
-/// Lieutenant Commander Data: "{1}, Remove three counters from among creatures you control: Draw a card." —
-/// any kinds, any of them. One action per set would be 364 on a 12-creature board, so the counters are
-/// picked after activating, one at a time (RemoveACounterFromChosenAction says which kind).
+/// "Remove N counters from among [Filter] you control" — Lieutenant Commander Data: "{1}, Remove three
+/// counters from among creatures you control: Draw a card." (any kinds, any of them); Mikaeus, the Lunarch:
+/// "{T}, Remove a +1/+1 counter from Mikaeus:" is (1, Is.Source) { Kind = +1/+1 }. One action per set would
+/// be 364 on a 12-creature board, so the counters are picked after activating, one at a time
+/// (RemoveACounterFromChosenAction says which kind) — unasked when only one permanent can give them.
 /// </summary>
-public sealed record RemoveCountersFromAmongCost(int Count, Filter Filter) : AdditionalCost
+public sealed record RemoveCountersCost(int Count, Filter Filter) : AdditionalCost
 {
+	/// <summary>Mikaeus: "a +1/+1 counter" — only this kind. None: any kinds.</summary>
+	public string? Kind { get; init; }
+
+	int On(Card c) => Kind is null ? c.AllCounters().Sum(k => k.N) : c.CountersOf(Kind);
+
+	List<int> Givers(GameState s, int playerId, int sourceId) =>
+		[
+			.. Filter
+				.Among(s, playerId, ZoneType.Battlefield, sourceId)
+				.Where(id => On(s.GetCard(id)) > 0),
+		];
+
 	public override bool CanPay(GameState s, int playerId, int sourceId) =>
-		Filter
-			.Among(s, playerId, ZoneType.Battlefield, sourceId)
-			.Sum(id => s.GetCard(id).AllCounters().Sum(k => k.N)) >= Count;
+		Givers(s, playerId, sourceId).Sum(id => On(s.GetCard(id))) >= Count;
 
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
 		[];
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		s.SpawnAction(
-			new PipelineAction
-			{
-				Steps =
-				[
-					.. Enumerable
-						.Range(0, Count)
-						.SelectMany(_ =>
-							(GameAction[])
-								[
-									new ChoosePermanentChoice(
-										playerId,
-										sourceId,
-										Filter & Is.WithAnyCounter,
-										required: true
-									)
-									{
-										Prompt = "Remove a counter from",
-									},
-									new RemoveACounterFromChosenAction(),
-								]
-						),
-				],
-			}
-		);
+		Givers(s, playerId, sourceId) is [var only] && Kind is not null
+			? s.PutCounters(only, Kind, -Count)
+			: s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						.. Enumerable
+							.Range(0, Count)
+							.SelectMany(_ =>
+								(GameAction[])
+									[
+										new ChoosePermanentChoice(
+											playerId,
+											sourceId,
+											// ponytail: a Kind other than +1/+1 still offers a permanent with only other
+											// kinds (nothing removed); a counter-kind filter leaf when a card needs one.
+											Filter
+												& (
+													Kind == CounterKinds.PlusOne
+														? Is.WithPlusOneCounter
+														: Is.WithAnyCounter
+												),
+											required: true
+										)
+										{
+											Prompt = "Remove a counter from",
+										},
+										new RemoveACounterFromChosenAction { Kind = Kind },
+									]
+							),
+					],
+				}
+			);
 
 	public override string Describe() =>
-		$"Remove {Count} counters from among creatures you control";
+		Filter == Is.Source
+			? $"Remove {Count} {(Kind is null ? "" : Kind + " ")}counter{(Count == 1 ? "" : "s")} from this"
+			: $"Remove {Count} counters from among creatures you control";
 }
 
 /// <summary>Cycling: "Discard this card:".</summary>

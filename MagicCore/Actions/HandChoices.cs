@@ -70,6 +70,9 @@ public record ChooseFromLibraryChoice : ChoiceAction
 	/// <summary>Eye of Ugin: "a colorless creature card". None means any.</summary>
 	public Filters.Filter? Filter { get; init; }
 
+	/// <summary>Thada Adel: "search that player's library" — who searches PlayerId's library; unset is its owner.</summary>
+	public int DeciderId { get; init; }
+
 	public ChooseFromLibraryChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -77,6 +80,8 @@ public record ChooseFromLibraryChoice : ChoiceAction
 		MaxChoices = 1;
 	}
 
+	// ponytail: the searcher sees an opponent's library only while choosing — the search AI's Hidden doesn't
+	// learn it. Thada Adel's searches are rare; teach Hidden if a card searches theirs often (DesignNotes).
 	/// <summary>By name, not library order — the order is hidden information.</summary>
 	public override ImmutableList<ChoiceOption> GetOptions(
 		GameState s,
@@ -88,7 +93,13 @@ public record ChooseFromLibraryChoice : ChoiceAction
 				(Type == CardType.None || c.Is(Type)) // None: "a card"
 				&& (Supertype == Supertype.None || c.Is(Supertype))
 				&& (Subtype is null || c.Subtypes.Contains(Subtype))
-				&& (Filter?.Matches(s, c, new(PlayerId, SourceOf.Context(context))) ?? true)
+				&& (
+					Filter?.Matches(
+						s,
+						c,
+						new(DeciderId != 0 ? DeciderId : PlayerId, SourceOf.Context(context))
+					) ?? true
+				)
 			);
 		// Taking one, two Forests are one choice: the library is shuffled after. Taking up to
 		// several, Hexhaven Invigorator may take both — unless the names must differ (Fblthp).
@@ -101,7 +112,7 @@ public record ChooseFromLibraryChoice : ChoiceAction
 	public override int GetDecidingPlayerId(
 		GameState s,
 		ImmutableDictionary<string, object> context
-	) => PlayerId;
+	) => DeciderId != 0 ? DeciderId : PlayerId;
 }
 
 /// <summary>The chosen cards go to a zone of their owner's — a searched land to the hand or graveyard.</summary>
@@ -116,9 +127,13 @@ public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 	/// <summary>Captain Jean-Luc Picard: "onto the battlefield with seven charge counters on it" — entering with them (CR 122.6: Geordi doubles them).</summary>
 	public int ChargeCounters { get; init; }
 
+	/// <summary>Thada Adel: "Until end of turn, you may play that card." — stamped on it in exile.</summary>
+	public Effects.PlayableFromExile? Playable { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
+		{
 			s =
 				To == ZoneType.Battlefield
 					? s.EnterBattlefield(id, PlayerId, tapped: Tapped) // the one way in: its entry, its events
@@ -129,6 +144,13 @@ public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 							entering: true
 						)
 					: s.MoveCard(id, s.ZoneId(PlayerId, To), toTop: OnTop);
+			if (
+				Playable is not null
+				&& To == ZoneType.Exile
+				&& s.IsIn(id, s.GetCard(id).OwnerId, ZoneType.Exile)
+			)
+				s = s.UpdateObject(id, (Cards.Card)s.GetCard(id).WithComponent(Playable));
+		}
 		return new ActionResult(s);
 	}
 }

@@ -50,7 +50,11 @@ file (`Sets/Fra/FraCards.cs`, `Sets/Trk/TrkCards.cs`), in the `Scripts` dictiona
 Order matters: the "wasn't attacking" check runs before the destroy, while the creature still knows.
 
 **"Choose one —"** — `ModalSpell(name, howMany, M(targets, effects…), …)`, one `M` per printed bullet
-(it refuses a count that differs). Each mode's `Ref.Target()` is its own first target.
+(it refuses a count that differs). Each mode's `Ref.Target()` is its own first target. `howMany` is a `ModeChoice`:
+an int is exactly that many, "choose up to one" is `new() { AtLeast = 0 }` (`ModalWhen` for a trigger).
+
+**Counters** — `new PutCounters(what, n)` is +1/+1; `{ Kind = CounterKinds.Stun }` any other kind;
+`RemoveCounters(what, n) { Kind }`. A count per object uses `Ref.It`: `Count.CountersOn(Ref.It)` doubles each one's.
 
 ```csharp
 ["Theorix Charm"] =
@@ -111,7 +115,10 @@ list, in the order paid: `Costs = [new TapSelfCost(), new SacrificeCost(Is.Artif
 		new May(
 			"Remove a +1/+1 counter from Guiding Hydra?",
 			new AtLeast(Count.CountersOn(Ref.Source), 1),
-			[new AddCounters(Ref.Source, -1), new AddCounters(Ref.OtherCreaturesYouControl, 1)]
+			[
+				new RemoveCounters(Ref.Source, 1) { Kind = CounterKinds.PlusOne },
+				new PutCounters(Ref.OtherCreaturesYouControl, 1),
+			]
 		)
 	),
 ],

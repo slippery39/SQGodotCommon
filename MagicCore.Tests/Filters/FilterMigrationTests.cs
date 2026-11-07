@@ -128,6 +128,8 @@ public class FilterMigrationTests
 		RefKind.ControllerOfEventCard,
 		RefKind.EachTarget, // the chosen targets themselves
 		RefKind.ActivePlayer, // Peace in Our Time: whose turn it is
+		RefKind.It, // Bristly Bill: the object an effect is acting on
+		RefKind.ThisWay, // Decree of Pain: what the effect did its thing to
 	];
 
 	[TestCaseSource(nameof(RefRows))]

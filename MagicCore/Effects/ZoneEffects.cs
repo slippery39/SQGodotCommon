@@ -13,7 +13,29 @@ namespace MagicCore.Effects;
 /// <summary>"Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).</summary>
 public record Destroy(Ref What) : Effect
 {
-	public override ActionResult Execute(GameState s) => new(All(s, Permanents(What, s)));
+	/// <summary>
+	/// Decree of Pain: "Destroy all creatures. … Draw a card for each creature destroyed this way." — run
+	/// after, with Ref.ThisWay the ones that left (indestructible ones and McCoy's saves stayed).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var them = Permanents(What, s).ToList();
+		s = All(s, them);
+		if (Then.IsEmpty)
+			return new(s);
+		var gone = them.Select(c => c.Id).Where(id => !s.IsOnBattlefield(id)).ToImmutableArray();
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.SetItem(ContextKeys.ThisWay, gone),
+					Steps = Then,
+				}
+			)
+		);
+	}
 
 	/// <summary>CR 701.7: each through MagicState.Destroy — not one that is indestructible.</summary>
 	public static GameState All(GameState s, IEnumerable<Card> permanents) =>
@@ -1512,16 +1534,26 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>70,000 Light-Years from Home: "Its controller may search their library" — who searches; unset is you.</summary>
 	public Ref? Who { get; init; }
 
+	/// <summary>
+	/// Thada Adel, Acquisitor: "search that player's library for an artifact card and exile it. Then that player
+	/// shuffles." — whose library; unset is the searcher's.
+	/// </summary>
+	public Ref? Of { get; init; }
+
+	/// <summary>Thada Adel: "Until end of turn, you may play that card." — { ThisTurn = true }; To must be Exile.</summary>
+	public PlayPermission? Play { get; init; }
+
 	/// <summary>Captain Jean-Luc Picard: "put it onto the battlefield with seven charge counters on it".</summary>
 	public int ChargeCounters { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
 		var searcher = Who is null ? Controller : All(Who, s).FirstOrDefault();
-		return searcher == 0 ? new(s) : new(Search(s, searcher));
+		var owner = Of is null ? searcher : All(Of, s).FirstOrDefault();
+		return searcher == 0 || owner == 0 ? new(s) : new(Search(s, searcher, owner));
 	}
 
-	GameState Search(GameState s, int searcher) =>
+	GameState Search(GameState s, int searcher, int owner) =>
 		s.SpawnAction(
 			new PipelineAction
 			{
@@ -1530,7 +1562,8 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 				[
 					new ChooseFromLibraryChoice
 					{
-						PlayerId = searcher,
+						PlayerId = owner,
+						DeciderId = searcher,
 						Type = Type,
 						Supertype = Supertype,
 						Subtype = Subtype,
@@ -1544,17 +1577,27 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 					.. To == ZoneType.Library
 						? (GameAction[])
 							[
-								new ShuffleLibraryAction(searcher),
-								new MoveChosenToAction(searcher, ZoneType.Library) { OnTop = true },
+								new ShuffleLibraryAction(owner),
+								new MoveChosenToAction(owner, ZoneType.Library) { OnTop = true },
 							]
 						:
 						[
-							new MoveChosenToAction(searcher, To)
+							// Onto the battlefield under the searcher's control; anywhere else, the owner's zone.
+							new MoveChosenToAction(
+								To == ZoneType.Battlefield ? searcher : owner,
+								To
+							)
 							{
 								Tapped = Tapped,
 								ChargeCounters = ChargeCounters,
+								Playable = Play is { } play
+									? play.For(
+										s,
+										play.By is { } by ? All(by, s).FirstOrDefault() : Controller
+									)
+									: null,
 							},
-							new ShuffleLibraryAction(searcher),
+							new ShuffleLibraryAction(owner),
 						],
 					.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],
 				],
@@ -1749,11 +1792,43 @@ public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 	}
 }
 
+/// <summary>
+/// "You may play that card" — the permission an effect gives a card it exiles (a PlayableFromExile, read by
+/// Rules/Playable.cs): who, and how long. Unset is you, until the end of your next turn (Blazing Crescendo).
+/// ExileTopPlayable.Play and SearchLibrary.Play (Thada Adel). MC-6.9 grows it into the one permission.
+/// </summary>
+public record PlayPermission
+{
+	/// <summary>Kirk, Commanding Officer: "You may play that card this turn."; Thada Adel: "Until end of turn".</summary>
+	public bool ThisTurn { get; init; }
+
+	/// <summary>Vulcan Mind-Meld, Chekov: "for as long as it remains exiled".</summary>
+	public bool Forever { get; init; }
+
+	/// <summary>Vulcan Mind-Meld: "the player who exiled it may play it" — who may play them; unset is you.</summary>
+	public Ref? By { get; init; }
+
+	/// <summary>Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way."</summary>
+	public bool AnyType { get; init; }
+
+	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
+	public PlayableFromExile For(GameState s, int who) =>
+		new(
+			who,
+			Forever ? int.MaxValue
+				: ThisTurn ? s.GetGame().TurnNumber
+				: Playable.EndOfNextTurnOf(s, who)
+		)
+		{
+			AnyType = AnyType,
+		};
+}
+
 /// <summary>Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn, you may play that card."</summary>
 public record ExileTopPlayable : Effect
 {
-	/// <summary>Kirk, Commanding Officer: "You may play that card this turn." — not until the end of your next.</summary>
-	public bool ThisTurn { get; init; }
+	/// <summary>Who may play them, and how long (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }.</summary>
+	public PlayPermission Play { get; init; } = new();
 
 	/// <summary>Reckless Impulse: "Exile the top two cards of your library."; Ensign Pavel Chekov: "the top X cards".</summary>
 	public Count N { get; init; } = 1;
@@ -1767,15 +1842,6 @@ public record ExileTopPlayable : Effect
 	/// <summary>Vulcan Mind-Meld: "the top two cards of their library"; Chekov: "each opponent exiles the top X cards of their library" — whose library; unset is yours.</summary>
 	public Ref? Of { get; init; }
 
-	/// <summary>Vulcan Mind-Meld: "the player who exiled it may play it" — who may play them; unset is you.</summary>
-	public Ref? By { get; init; }
-
-	/// <summary>Vulcan Mind-Meld, Chekov: "for as long as it remains exiled".</summary>
-	public bool Forever { get; init; }
-
-	/// <summary>Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way."</summary>
-	public bool AnyType { get; init; }
-
 	/// <summary>Vulcan Mind-Meld: "looks at the top card …, then exiles it face down" — hidden from all but the player who may play it.</summary>
 	public bool FaceDown { get; init; }
 
@@ -1787,18 +1853,10 @@ public record ExileTopPlayable : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var who = By is { } by ? All(by, s).FirstOrDefault() : Controller;
+		var who = Play.By is { } by ? All(by, s).FirstOrDefault() : Controller;
 		if (who == 0)
 			return new(s);
-		var playable = new PlayableFromExile(
-			who,
-			Forever ? int.MaxValue
-				: ThisTurn ? s.GetGame().TurnNumber
-				: Playable.EndOfNextTurnOf(s, who)
-		)
-		{
-			AnyType = AnyType,
-		};
+		var playable = Play.For(s, who);
 		var steps = ImmutableList<GameAction>.Empty;
 		foreach (var owner in Of is { } of ? All(of, s).ToList() : [Controller])
 		{

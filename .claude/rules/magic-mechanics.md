@@ -301,7 +301,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   trigger goes on the stack. Countering one removes it (`StackResolution.Counter`).
 - **Replicate** is `CastSpellAction.Replicate` (enumerated like X, in `MoveKey`): the cost grows by that many
   `ReplicateComponent` costs, and a triggered ability above the spell copies it that many times.
-  **"Choose one or more"** is `SpellEffectsComponent.ChooseAtLeast` — `Modal.Choices`/`IsLegal` take every size.
+  **How many modes** is one `ModeChoice` (`Choose`) on spells, triggered and activated abilities alike — `AtLeast` and
+  `AtMost` as Counts (an int converts: exactly that many); "choose one or more" is `{ AtMost = N }`, "up to one" (Ertai)
+  `{ AtLeast = 0 }`. `Modal.Choices`/`IsLegal` take the range.
 - **Necrodominance's rules each live in their one place:** a skipped draw step never begins (`EnterStep`),
   hand size is `TurnStructure.MaxHandSizeOf`, and "exile instead of your graveyard" is decided in `MoveCard`
   with the other exile-instead cases — so nothing of yours dies.
@@ -321,7 +323,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   candidates.
 - **Face a dilemma** (TRK) is `FacedDilemmaEvent`, ONE however many modes, raised where modes are chosen:
   a cast (`PutOnStack`, a cast during a resolution too), an activation with `Modes`, and a modal trigger's
-  `ChooseModesChoice` (`QueueModalTriggerAction`) — whether or not it resolves. Copies choose nothing. All three
+  `ChooseModesChoice` (`QueueModalTriggerAction`) — whether or not it resolves. Copies choose nothing, and "up to
+  one" with none chosen faces none (Ertai; with none choosable the trigger is removed). All three
   go through `FacedDilemmaEvent.Face`, which also counts it for the turn (`TurnTally.DilemmasFaced`,
   `Count.DilemmasFacedThisTurnBy`: Sisko's Officers, The Caretaker's "if you faced a dilemma this turn").
 - **"Whenever you attack WHILE …"** (power 8) is `Trigger.While` — part of the trigger condition, judged
@@ -417,8 +420,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Playing a card from exile** is `PlayableFromExile(player, until)` on it — anyone's card, in its owner's
   exile (`Playable.IsImpulsePlayableBy`; `Candidates` reads both exiles): `AnyType` ("mana of any type",
   Vulcan Mind-Meld) and `Tax` (Zero's "{2} more") are read by `Costs.Of`. `ExileTopPlayable` exiles it —
-  whose library (`Of`), who plays (`By`), "for as long as it remains exiled" (`Forever`), face down, or only
-  a chosen card (`Choose`, Chekov's land). Cast or played, the card is public again (`ExiledFaceDown` is status).
+  whose library (`Of`), who plays and how long (`Play`: `By`, "for as long as it remains exiled" `Forever`), face
+  down, or only a chosen card (`Choose`, Chekov's land). Cast or played, the card is public again (`ExiledFaceDown` is status).
 - **"Once during each of your turns, cast an artifact spell from the top of your library"** (Zefram) is
   `Playable.LibraryTopPermission`, the permanent stamped as the cast uses it (`Card.PermissionUsedOn`).
   **"Once during each of your turns, you may cast [play] … from your graveyard [or from outside the game]"**
@@ -450,7 +453,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"No maximum hand size until your next turn"** (Deep Space Scan) is `NoMaximumHandSizeUntilYourNextTurn`: an
   `UntilEndOfTurn { NoMaximumHandSize }` object in your command zone, read by `TurnStructure.MaxHandSizeOf`.
 - **"Choose one. If [condition], choose one or more instead"** (Captain Kirk) is
-  `TriggeredAbilityComponent.ChooseAnyNumberIf`, judged as the modes are chosen (the trigger going on the stack).
+  `ModeChoice.AnyNumberIf`, judged as the modes are chosen (the trigger going on the stack).
 - **The shocklands' "you may pay 2 life. If you don't, it enters tapped"** is `EntersTappedComponent { UnlessYouPayLife }`:
   it enters tapped, and `EnterBattlefield` spawns a `May` ONLY when its own text is what taps it — not under Warp
   Speed (untapped anyway) or Root Maze / "onto the battlefield tapped" (tapped anyway) — and the controller has
@@ -480,7 +483,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"Whenever it deals combat damage to a player this turn, you draw that many"** (The Inner Light) is
   `WheneverThisTurn { About }` on a `CombatDamageBy` trigger — About narrows the damage's SOURCE there (the
   subject is the player) — and "that many" is the trigger's X, `PlayerDealtDamageEvent.Amount`.
-- **"Choose a counter on [it]. Put another counter of that kind on it"** (Dathon) is `AddAnotherCounterOfAKind`:
+- **"Choose a counter on [it]. Put another counter of that kind on it"** (Dathon) is `PutCounters { Kind = null }`:
   one kind is put unasked; several are a `ChooseKeywordChoice` of the kinds' names.
 - **A Spacecraft that is never a creature** (Deep Space 9: station, then "9+ | Creatures you control get
   +3/+3") is `TrkCards.StationAbility` alone, no `StationComponent`; its N+ static is an `If` on its charge
@@ -531,7 +534,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"A permanent was returned to your hand from the battlefield this turn"** (Miles O'Brien) is
   `TurnTally.PermanentsReturnedToHand` — its OWNER's, counted in `MoveCard` (battlefield → hand: bounce, beam
   me up's cost, a token too) — read by `Count.PermanentsReturnedToHandThisTurn`.
-- **"Choose one that hasn't been chosen"** (Kobayashi Maru Scenario) is `TriggeredAbilityComponent.ModesNotChosenBefore`:
+- **"Choose one that hasn't been chosen"** (Kobayashi Maru Scenario) is `ModeChoice.NotChosenBefore`:
   the modes chosen are stamped on that object (`Card.ModesChosen`, a bit per mode, in `QueueModalTriggerAction`) and
   left out by `Triggers.ChoosableModes`; none left and it is removed (CR 700.2a); a new object starts afresh.
   **"You lose the game"** is `LoseTheGame`, at once, as `WinTheGame`.
@@ -558,7 +561,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"That player may … If they do, they …"** (Peace in Our Time) is `May { Who = Ref.ActivePlayer, ThenAsThem }`:
   Then runs as the one who answered, so their `ThisTurn` (`CantAttackThisTurn`, read by `Combat.CanAttack`) is in
   THEIR command zone; `Ref.Source` is still the enchantment.
-- **"Remove N counters from among creatures you control"** (Lieutenant Commander Data, `RemoveCountersFromAmongCost`)
+- **"Remove N counters from among creatures you control"** (Lieutenant Commander Data, `RemoveCountersCost`)
   is picked AFTER activating, one counter at a time (`ChoosePermanentChoice`, then `RemoveACounterFromChosenAction`:
   a harmful kind first) — one action per set would be 364 on 12 creatures. Activation asks every cost's `CanPay`.
 - **"Create a token … Attach it to [this]"** (Gwyndala) is `CreateTokens.AttachTo`; **"sacrifice any number of
@@ -597,6 +600,26 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   "Permanents can't phase in" (`PermanentsCantPhaseIn`). The zone is made on first use, as the Sideboard. The table
   shows it in its row, dimmed and badged (Shayne, 2026-11-06). **"Sacrifice a [filter]. If you do"** — not a may —
   is `MaySacrifice { Must }`.
+- **Counters are one put and one remove** (MC-6.5): `PutCounters(What, N) { Kind }` (+1/+1 by default) and
+  `RemoveCounters(What, N) { Kind }`, each through `MagicState.PutCounters`. **N is counted per object** with
+  `Ref.It` the one being acted on — Bristly Bill's "double the number of +1/+1 counters on each creature" is
+  `Count.CountersOn(Ref.It)`, Beckett's "remove those counters" `Count.CountersOfKind(Ref.It, kind)`. **A +1/+1 counter
+  goes on any permanent** (CR 122.1): "if it's a creature" (Teyo, Shields Up!) is the card's own `If`. A remove COST is
+  `RemoveCountersCost(N, Filter) { Kind }` — "from Mikaeus" is `(1, Is.Source)`, paid unasked when one permanent can.
+- **Cycling is a keyword ability** (MC-6.7): `Scripting.Cycling(cost)`; landcycling is `Cycling(cost, search)`, the
+  same keyword (CR 702.29e). The ability carries it (`ActivatedAbilityComponent.Keyword`), the activation event too,
+  and "when you cycle [this card]" is `Trigger(AbilityActivated) { Ability = "Cycling", Subject = Is.Source }`, read
+  from the graveyard (the card was discarded to pay). A discard-from-hand ability with no keyword isn't cycling.
+- **"[Effect]. … for each [one] [done] this way"** (Decree of Pain) is the effect's `Then` with `Ref.ThisWay` — the
+  ids it actually did it to (`Destroy`: the ones that left; an indestructible one or McCoy's save didn't).
+- **Landwalk and fear are no combat rule** (MC-6.8): `Scripting.Landwalk("Island")` is the plain "can't be blocked"
+  under an `If` (the opponent controls one); `Scripting.Fear` is a `CantBeBlockedBy`, granted until end of turn
+  through `ModifyUntilEndOfTurn.Gains` (Shizo; the keyword word beside it is only for the table).
+- **"You may play that card"** is one `PlayPermission { ThisTurn, Forever, By, AnyType }` (MC-6.9, part) — on
+  `ExileTopPlayable.Play` and on `SearchLibrary.Play`: Thada Adel searches THEIR library (`SearchLibrary.Of`; the
+  choice is the searcher's, `ChooseFromLibraryChoice.DeciderId`), exiles the card and may play it this turn.
+- **"Your second spell each turn"** (Stella Lee) is `Trigger.SpellNumber = 2` against `SpellCastEvent.SpellNumber`,
+  numbered as it is cast (any kind; `NoncreatureSpellNumber` beside it).
 - **AI evaluation terms are MONOTONIC** — more of a good thing always scores more, tapering not
   capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap
   at 20 stopped every attack past tapped blockers; a land cap at 7 made the AI hoard lands.

@@ -12,6 +12,62 @@ public record Mode(
 );
 
 /// <summary>
+/// How many modes are chosen (CR 700.2) — on a spell, a triggered and an activated ability alike. "Choose one
+/// —" is 1 (an int converts: exactly that many); Ertai Resurrected's "choose up to one —" is { AtLeast = 0 };
+/// Sublime Epiphany's "choose one or more —" is { AtMost = 5 }. Counted as the modes are chosen, with the
+/// source as "this".
+/// </summary>
+public record ModeChoice
+{
+	public Count AtLeast { get; init; } = 1;
+	public Count AtMost { get; init; } = 1;
+
+	/// <summary>
+	/// Captain James T. Kirk: "choose one. If you have no cards in hand, choose one or more instead." —
+	/// judged as the modes are chosen: then any number from AtLeast up.
+	/// </summary>
+	public Condition? AnyNumberIf { get; init; }
+
+	/// <summary>
+	/// Kobayashi Maru Scenario: "At the beginning of your upkeep, choose one that hasn't been chosen —" — the
+	/// modes this object chose before (Card.ModesChosen) aren't offered; none left and it is removed (CR
+	/// 700.2a). A new object starts afresh (CR 400.7). Read for triggered abilities.
+	/// </summary>
+	public bool NotChosenBefore { get; init; }
+
+	public static implicit operator ModeChoice(int n) => new() { AtLeast = n, AtMost = n };
+
+	/// <summary>The least and most modes that may be chosen now, of <paramref name="modes"/>.</summary>
+	public (int Least, int Most) Range(GameState s, Cards.Card source, int modes)
+	{
+		var context = Conditions.Of(source);
+		var most = AnyNumberIf?.Holds(s, context) == true ? modes : AtMost.Value(s, context);
+		return (AtLeast.Value(s, context), Math.Min(most, modes));
+	}
+
+	public bool IsLegal(
+		GameState s,
+		Cards.Card source,
+		ImmutableList<Mode> modes,
+		ImmutableArray<int> chosen
+	)
+	{
+		var (least, most) = Range(s, source, modes.Count);
+		return Modal.IsLegal(modes, least, most, chosen);
+	}
+
+	public IEnumerable<ImmutableArray<int>> Choices(
+		GameState s,
+		Cards.Card source,
+		ImmutableList<Mode> modes
+	)
+	{
+		var (least, most) = Range(s, source, modes.Count);
+		return Modal.Choices(modes, least, most);
+	}
+}
+
+/// <summary>
 /// Modal spells and abilities (CR 700.2). The chosen modes become ONE list of target words and ONE
 /// list of steps, in printed order. Before each mode's effects a <see cref="ScopeTargetsAction"/>
 /// narrows "the targets" to that mode's own slice, so a mode's effects always say Target(0) for its
@@ -44,30 +100,30 @@ public static class Modal
 	}
 
 	/// <summary>
-	/// A legal choice of modes: <paramref name="choose"/> distinct, in range (from
-	/// <paramref name="atLeast"/> for "choose one or more") — or none for a non-modal text.
+	/// A legal choice of modes: from <paramref name="least"/> to <paramref name="most"/> distinct, in
+	/// range — or none for a non-modal text.
 	/// </summary>
 	public static bool IsLegal(
 		ImmutableList<Mode> modes,
-		int choose,
-		ImmutableArray<int> chosen,
-		int? atLeast = null
+		int least,
+		int most,
+		ImmutableArray<int> chosen
 	) =>
 		modes.IsEmpty
 			? chosen.IsDefaultOrEmpty
-			: chosen.Length >= (atLeast ?? choose)
-				&& chosen.Length <= choose
+			: chosen.Length >= least
+				&& chosen.Length <= most
 				&& chosen.Distinct().Count() == chosen.Length
 				&& chosen.All(i => i >= 0 && i < modes.Count);
 
 	/// <summary>
-	/// Every way to choose <paramref name="choose"/> of the modes — or any number from
-	/// <paramref name="atLeast"/> up (just the empty choice when not modal).
+	/// Every way to choose from <paramref name="least"/> to <paramref name="most"/> of the modes (just
+	/// the empty choice when not modal).
 	/// </summary>
 	public static IEnumerable<ImmutableArray<int>> Choices(
 		ImmutableList<Mode> modes,
-		int choose,
-		int? atLeast = null
+		int least,
+		int most
 	)
 	{
 		if (modes.IsEmpty)
@@ -84,8 +140,8 @@ public static class Modal
 				: Enumerable
 					.Range(from, modes.Count - from)
 					.SelectMany(i => Pick(i + 1, left - 1).Select(rest => rest.Insert(0, i)));
-		var least = atLeast ?? choose; // more than choose is a mis-scripted card: no way to cast it, not a crash
-		return Enumerable.Range(least, Math.Max(0, choose - least + 1)).SelectMany(n => Pick(0, n));
+		// least past most is a mis-scripted card: no way to cast it, not a crash
+		return Enumerable.Range(least, Math.Max(0, most - least + 1)).SelectMany(n => Pick(0, n));
 	}
 }
 

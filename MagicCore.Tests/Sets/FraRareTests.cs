@@ -839,7 +839,7 @@ public class FraRareTests : FraBoardTest
 				[
 					new ActivatedAbilityComponent(
 						ManaCost.Parse("{1}"),
-						[new AddCounters(Ref.Source, 1)]
+						[new PutCounters(Ref.Source, 1)]
 					)
 					{
 						Costs = [new TapUntappedCost(2, MagicCore.Filters.Is.Artifact)],

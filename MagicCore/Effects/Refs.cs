@@ -41,6 +41,12 @@ public static class ContextKeys
 	/// <summary>An ability's source as it last existed — used once the source itself is gone (CR 113.7a).</summary>
 	public const string SourceSnapshot = "SourceSnapshot";
 
+	/// <summary>The object an effect is acting on right now, one at a time (Ref.It) — PutCounters, RemoveCounters.</summary>
+	public const string It = "It";
+
+	/// <summary>ImmutableArray&lt;int&gt;: what an effect did its thing to, for its Then (Ref.ThisWay) — Destroy.</summary>
+	public const string ThisWay = "ThisWay";
+
 	/// <summary>Who a filter asks for in a resolving context: "you", "this", "that creature".</summary>
 	public static Filters.FilterContext Asking(ImmutableDictionary<string, object> context) =>
 		new(
@@ -66,6 +72,8 @@ public enum RefKind
 	All, // "creatures you control", "cards in your graveyard": a zone's objects that match a filter
 	EachTarget, // Dominion Infiltration: "for each of them" — every target chosen, those still legal
 	ActivePlayer, // Peace in Our Time: "on each player's turn, that player" — whose turn it is
+	It, // Bristly Bill: "double the number of +1/+1 counters on EACH creature" — the one being acted on
+	ThisWay, // Decree of Pain: "each creature destroyed this way" — what the effect did its thing to
 }
 
 /// <summary>
@@ -100,6 +108,18 @@ public record Ref(RefKind Kind, int Index = 0)
 
 	/// <summary>Peace in Our Time: "At the beginning of combat on each player's turn, that player …" — whose turn it is.</summary>
 	public static readonly Ref ActivePlayer = new(RefKind.ActivePlayer);
+
+	/// <summary>
+	/// Bristly Bill, Spine Sower: "Double the number of +1/+1 counters on each creature you control" — the
+	/// object an effect is acting on, for a Count counted per object: Count.CountersOn(Ref.It).
+	/// </summary>
+	public static readonly Ref It = new(RefKind.It);
+
+	/// <summary>
+	/// Decree of Pain: "Draw a card for each creature destroyed this way" — in an effect's Then, what that
+	/// effect did its thing to (Destroy.Then): Count.NumberOf(Ref.ThisWay). The ids, wherever they are now.
+	/// </summary>
+	public static readonly Ref ThisWay = new(RefKind.ThisWay);
 	public static readonly Ref EventCard = new(RefKind.EventCard);
 	public static readonly Ref EventObject = new(RefKind.EventObject);
 	public static readonly Ref ControllerOfEventCard = new(RefKind.ControllerOfEventCard);
@@ -176,10 +196,15 @@ public record Ref(RefKind Kind, int Index = 0)
 			RefKind.EachOpponent => [s.OpponentOf(controller)],
 			RefKind.EachPlayer => [s.Player1Id(), s.Player2Id()],
 			RefKind.Target => [TargetAt(Index)],
-			RefKind.ControllerOfTarget => s.HasObject(TargetAt(Index))
-			&& s.GetObject(TargetAt(Index)) is Card c
-				? [c.ControllerId]
-				: [],
+			// Ertai Resurrected: "Counter target spell, activated ability, or triggered ability. Its controller draws."
+			RefKind.ControllerOfTarget => !s.HasObject(TargetAt(Index))
+				? []
+				: s.GetObject(TargetAt(Index)) switch
+				{
+					Card c => [c.ControllerId],
+					Actions.StackAbility a => [a.ControllerId],
+					_ => [],
+				},
 			// The Aura as it was (last-known, CR 608.2h) — so removing it in response changes nothing,
 			// and an Aura that left and came back on something else doesn't redirect it.
 			RefKind.SourceHost => (
@@ -217,6 +242,10 @@ public record Ref(RefKind Kind, int Index = 0)
 			RefKind.All => AllIn(s, context, controller, eventCard),
 			RefKind.EachTarget => targets,
 			RefKind.ActivePlayer => [s.GetGame().ActivePlayerId],
+			RefKind.It => context.TryGetValue(ContextKeys.It, out var it) ? [(int)it] : [],
+			RefKind.ThisWay => context.TryGetValue(ContextKeys.ThisWay, out var done)
+				? (ImmutableArray<int>)done
+				: [],
 			_ => throw new ArgumentOutOfRangeException(
 				nameof(Kind),
 				Kind,

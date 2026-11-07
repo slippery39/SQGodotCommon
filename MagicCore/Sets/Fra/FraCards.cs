@@ -281,7 +281,7 @@ public static class FraCards
 
 	/// <summary>Seed Suture: "Put a +1/+1 counter on target creature. You gain 1 life."</summary>
 	static PrepareSpellComponent SeedSuture(string card) =>
-		PrepareSpell(card, [Creature], new AddCounters(Ref.Target(), 1), new GainLife(Ref.You, 1));
+		PrepareSpell(card, [Creature], new PutCounters(Ref.Target(), 1), new GainLife(Ref.You, 1));
 
 	/// <summary>Peer Review: "Create a ... Cadet. Surveil 1."</summary>
 	static PrepareSpellComponent PeerReview(string card) =>
@@ -335,7 +335,7 @@ public static class FraCards
 			TriggerEvent.SelfEnters,
 			[Target(Is.Yours)],
 			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, keyword),
-			new AddCounters(Ref.Target(), 1),
+			new If(new Matches(Ref.Target(), Is.Creature), [new PutCounters(Ref.Target(), 1)]),
 			new AddLoyalty(Ref.Target(), 1)
 		);
 
@@ -432,7 +432,7 @@ public static class FraCards
 			],
 			["Chandra's Emberling"] =
 			[
-				When(TriggerEvent.YouCastNoncreatureSpell, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouCastNoncreatureSpell, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Arni, Renowned Champion"] =
 			[
@@ -480,7 +480,7 @@ public static class FraCards
 				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{6}"),
-					[new AddCounters(Ref.Target(), 1)]
+					[new PutCounters(Ref.Target(), 1)]
 				)
 				{
 					Targets = [Target(Is.Creature & !Is.Legendary)],
@@ -631,7 +631,7 @@ public static class FraCards
 			[
 				Spell(
 					[Creature with { Optional = true }],
-					new AddCounters(Ref.Target(), 1),
+					new PutCounters(Ref.Target(), 1),
 					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Vigilance"),
 					new EmpowerJace(4)
 				),
@@ -639,7 +639,7 @@ public static class FraCards
 			["Avatar of Burgeoning Echoes"] =
 			[
 				When(TriggerEvent.LandYouControlEnters, [], new EmpowerJace(2)),
-				Grant(-10, [Creature], new AddCounters(Ref.Target(), Count.LandsYouControl)),
+				Grant(-10, [Creature], new PutCounters(Ref.Target(), Count.LandsYouControl)),
 			],
 			["Keeper of the Quiet Hour"] = [When(TriggerEvent.SelfEnters, [], new EmpowerJace(2))],
 
@@ -753,7 +753,7 @@ public static class FraCards
 					M(
 						[Creature],
 						new ModifyUntilEndOfTurn(Ref.Target(), 2, 0, "First strike"),
-						new AddCounters(Ref.Target(), 1)
+						new PutCounters(Ref.Target(), 1)
 					)
 				),
 			],
@@ -789,7 +789,7 @@ public static class FraCards
 					M([Target(Is.Creature & Is.With("Flying"))], new DealDamage(Ref.Target(), 6)),
 					M(
 						[Creature],
-						new AddCounters(Ref.Target(), 2),
+						new PutCounters(Ref.Target(), 2),
 						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Trample")
 					),
 					M([], new AddMana(ManaColor.Colorless, 3))
@@ -892,7 +892,7 @@ public static class FraCards
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}"),
 					[
-						new AddCounters(Ref.Source, 1),
+						new PutCounters(Ref.Source, 1),
 						new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Menace"),
 					]
 				)
@@ -929,7 +929,14 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfDies,
 					[Target(Is.Creature & Is.Yours) with { Optional = true }],
-					new PutEventCardCounters(Ref.Target())
+					new PutCounters(Ref.Target(), Count.CountersOn(Ref.EventCard)),
+					new PutCounters(
+						Ref.Target(),
+						Count.CountersOfKind(Ref.EventCard, CounterKinds.MinusOne)
+					)
+					{
+						Kind = CounterKinds.MinusOne,
+					}
 				),
 			],
 			["Massacre Girl, Most Wanted"] =
@@ -940,7 +947,7 @@ public static class FraCards
 					new DealDamage(Ref.Target(), 1),
 					new GainLife(Ref.You, 1)
 				),
-				When(TriggerEvent.OpponentDealtNoncombatDamage, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.OpponentDealtNoncombatDamage, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Way of the Necromancer"] =
 			[
@@ -1073,13 +1080,13 @@ public static class FraCards
 			],
 			["Edgar, Moonlit Sovereign"] =
 			[
-				When(TriggerEvent.YourEndStep, [], new AddCounters(Ref.Source, 2)) with
+				When(TriggerEvent.YourEndStep, [], new PutCounters(Ref.Source, 2)) with
 				{
 					If = new Not(new AtLeast(Count.SpellsYouCastThisTurn, 1)),
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}{G}"),
-					[new AddCounters(Ref.YourCreaturesWithCounters, 1)]
+					[new PutCounters(Ref.YourCreaturesWithCounters, 1)]
 				),
 			],
 			["Tetsuko Umezawa, Pursuer"] =
@@ -1126,7 +1133,7 @@ public static class FraCards
 					-6,
 					[],
 					new DrawCards(Ref.You, 3),
-					new AddCounters(Ref.CreaturesYouControl, Count.NumberOf(Ref.CardsInYourHand))
+					new PutCounters(Ref.CreaturesYouControl, Count.NumberOf(Ref.CardsInYourHand))
 				),
 			],
 			["Ajani Unrelenting"] =
@@ -1151,8 +1158,8 @@ public static class FraCards
 						"Remove a +1/+1 counter from Guiding Hydra?",
 						new AtLeast(Count.CountersOn(Ref.Source), 1),
 						[
-							new AddCounters(Ref.Source, -1),
-							new AddCounters(Ref.OtherCreaturesYouControl, 1),
+							new RemoveCounters(Ref.Source, 1) { Kind = CounterKinds.PlusOne },
+							new PutCounters(Ref.OtherCreaturesYouControl, 1),
 						]
 					)
 				),
@@ -1164,7 +1171,7 @@ public static class FraCards
 					[Target(Is.Creature & Is.Yours & !Is.Source)],
 					new If(
 						new AtLeast(Count.YourSurveilsThisTurn, 1),
-						[new AddCounters(Ref.Target(), 1)]
+						[new PutCounters(Ref.Target(), 1)]
 					)
 					{
 						Otherwise = [new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)],
@@ -1258,7 +1265,7 @@ public static class FraCards
 			// ===== Whenever you surveil, entered this turn, last turn =====
 			["Denzilore Fatehold"] =
 			[
-				When(TriggerEvent.YouSurveil, [], new AddCounters(Ref.CreaturesYouControl, 1)),
+				When(TriggerEvent.YouSurveil, [], new PutCounters(Ref.CreaturesYouControl, 1)),
 			],
 			["Saheeli, Consul of Oversight"] =
 			[
@@ -1278,7 +1285,7 @@ public static class FraCards
 						[
 							new PayMana(
 								ManaCost.Parse("{2}"),
-								[new AddCounters(Ref.Source, 1), new DrawCards(Ref.You, 1)]
+								[new PutCounters(Ref.Source, 1), new DrawCards(Ref.You, 1)]
 							),
 						]
 					)
@@ -1292,7 +1299,7 @@ public static class FraCards
 				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}{R}"),
-					[new AddCounters(Ref.Target(), 1)]
+					[new PutCounters(Ref.Target(), 1)]
 				)
 				{
 					Costs = [new TapSelfCost()],
@@ -1304,7 +1311,7 @@ public static class FraCards
 				When(
 					TriggerEvent.CreatureYouControlEnters,
 					[Target(Is.Creature & Is.EnteredThisTurn)],
-					new AddCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1)
 				),
 			],
 			["Command the Stage"] =
@@ -1313,7 +1320,7 @@ public static class FraCards
 				// the Cadet: the same result without remembering which token is new.
 				Spell(
 					[],
-					new AddCounters(Ref.Permanents(Is.Token & Is.Yours & Is.Subtype("Wizard")), 1),
+					new PutCounters(Ref.Permanents(Is.Token & Is.Yours & Is.Subtype("Wizard")), 1),
 					new CreateTokens(Cadet, 1)
 				),
 				When(
@@ -1340,8 +1347,8 @@ public static class FraCards
 			[
 				Spell(
 					[Creature, Creature with { Optional = true, NotThePrevious = true }],
-					new AddCounters(Ref.Target(0), 1),
-					new AddCounters(Ref.Target(1), 1)
+					new PutCounters(Ref.Target(0), 1),
+					new PutCounters(Ref.Target(1), 1)
 				),
 				new FlashbackComponent(ManaCost.Parse("{3}{W}")),
 			],
@@ -1563,7 +1570,7 @@ public static class FraCards
 			["Hexhaven Battalion"] =
 			[
 				Spell([], new CreateTokens(Cadet, 3), new EmpowerJace(2)),
-				BasicLandcycling,
+				Cycling("{2}", BasicLand),
 			],
 			["Undulating Witness"] =
 			[
@@ -1571,13 +1578,13 @@ public static class FraCards
 					ManaCost.Parse("{2}"),
 					[new ModifyUntilEndOfTurn(Ref.Source, 1, -1)]
 				),
-				BasicLandcycling,
+				Cycling("{2}", BasicLand),
 			],
 			["Apex Witchstalker"] =
 			[
 				When(TriggerEvent.SelfEnters, [], new GainLife(Ref.You, 2)),
 				When(TriggerEvent.SelfDies, [], new GainLife(Ref.You, 2)),
-				BasicLandcycling,
+				Cycling("{2}", BasicLand),
 			],
 			["Awaken the Inferno"] =
 			[
@@ -1590,14 +1597,14 @@ public static class FraCards
 						},
 					],
 					new DealDamage(Ref.Target(0), 6),
-					new AddCounters(Ref.Target(1), 1)
+					new PutCounters(Ref.Target(1), 1)
 				),
-				BasicLandcycling,
+				Cycling("{2}", BasicLand),
 			],
 			["Vinelasher Adept"] =
 			[
-				When(TriggerEvent.SelfEnters, [Creature], new AddCounters(Ref.Target(), 3)),
-				BasicLandcycling,
+				When(TriggerEvent.SelfEnters, [Creature], new PutCounters(Ref.Target(), 3)),
+				Cycling("{2}", BasicLand),
 			],
 			["Campus Crier"] =
 			[
@@ -1612,7 +1619,10 @@ public static class FraCards
 				Prowess,
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{3}{U}"),
-					[new Tap(Ref.Target()), new AddStunCounters(Ref.Target(), 1)]
+					[
+						new Tap(Ref.Target()),
+						new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun },
+					]
 				)
 				{
 					Costs = [new ExileSelfCost()],
@@ -1695,7 +1705,7 @@ public static class FraCards
 					ManaCost.Parse("{5}{B}"),
 					[
 						new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield),
-						new AddCounters(Ref.Source, 1),
+						new PutCounters(Ref.Source, 1),
 					]
 				)
 				{
@@ -1732,7 +1742,7 @@ public static class FraCards
 					),
 					M(
 						[Creature],
-						new AddCounters(Ref.Target(), 1),
+						new PutCounters(Ref.Target(), 1),
 						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Vigilance"),
 						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Indestructible")
 					)
@@ -1789,7 +1799,7 @@ public static class FraCards
 			["Unsummon"] = [Spell([Creature], new ReturnToHand(Ref.Target()))],
 			["Inspired Tethermage"] =
 			[
-				When(TriggerEvent.YouPutLoyaltyCounters, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouPutLoyaltyCounters, [], new PutCounters(Ref.Source, 1)),
 				new ActivatedAbilityComponent(ManaCost.Parse("{6}"), [new EmpowerJace(2)]),
 			],
 			["Something Worth Saving"] =
@@ -1835,7 +1845,7 @@ public static class FraCards
 				new ChoosesColorAsItEnters(),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{5}"),
-					[new AddCounters(Ref.Target(), 2)]
+					[new PutCounters(Ref.Target(), 2)]
 				)
 				{
 					Costs = [new TapSelfCost(), new SacrificeSelfCost()],
@@ -1886,7 +1896,7 @@ public static class FraCards
 			["Unflinching Hortimancer"] =
 			[
 				Ward("{1}"),
-				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouGainLife, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Wrecking Gecko"] =
 			[
@@ -2101,7 +2111,7 @@ public static class FraCards
 				Spell(
 					[Target(!Is.Land), TargetSpec.Player()],
 					new Destroy(Ref.Target(0)),
-					new AddCounters(Ref.PermanentsOfTargetPlayer(CardType.Creature, 1), 1)
+					new PutCounters(Ref.PermanentsOfTargetPlayer(CardType.Creature, 1), 1)
 				),
 			],
 			["Vigorbloom Charm"] =
@@ -2117,7 +2127,7 @@ public static class FraCards
 					M([], new DrawCards(Ref.You, 1), new GainLife(Ref.You, 3)),
 					M(
 						[Target(Is.Creature & Is.Yours), Target(Is.Creature & Is.Opponents)],
-						new AddCounters(Ref.Target(0), 1),
+						new PutCounters(Ref.Target(0), 1),
 						new Fight(Ref.Target(0), Ref.Target(1))
 					)
 				),
@@ -2150,7 +2160,7 @@ public static class FraCards
 						Subject = Is.Land & Is.Yours & Is.Subtype("Plains"),
 					},
 					[Creature],
-					new AddCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1)
 				),
 			],
 			["Rescue Girl, First Responder"] =
@@ -2187,7 +2197,7 @@ public static class FraCards
 					TriggerEvent.SelfEnters,
 					[Target(Is.Creature & Is.Opponents) with { Optional = true }],
 					new Tap(Ref.Target()),
-					new AddStunCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun }
 				),
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}{U}"), [new Untap(Ref.Target())])
 				{
@@ -2260,7 +2270,7 @@ public static class FraCards
 			],
 			["Titanbones, Towering Heart"] =
 			[
-				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 2)),
+				When(TriggerEvent.YouGainLife, [], new PutCounters(Ref.Source, 2)),
 				When(TriggerEvent.SelfDiscarded, [], new GainLife(Ref.You, 3)) with
 				{
 					FromGraveyard = true,
@@ -2273,7 +2283,7 @@ public static class FraCards
 					[],
 					new Discard(Ref.You, 1),
 					new DrawCards(Ref.You, 1),
-					new AddCounters(Ref.EventCard, Count.CardsYouDiscardedThisTurn)
+					new PutCounters(Ref.EventCard, Count.CardsYouDiscardedThisTurn)
 				),
 			],
 			["Pia, Aether Ascetic"] =
@@ -2302,7 +2312,7 @@ public static class FraCards
 				When(
 					TriggerEvent.YouCastSpellTargetingOpponentOrTheirCreature,
 					[],
-					new AddCounters(Ref.Source, 1)
+					new PutCounters(Ref.Source, 1)
 				),
 			],
 			["Plan for All Outcomes"] =
@@ -2363,7 +2373,7 @@ public static class FraCards
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{6}"),
-					[new AddCounters(Ref.Target(), 1)]
+					[new PutCounters(Ref.Target(), 1)]
 				)
 				{
 					Targets = [Target(Is.Creature & Is.Legendary)],
@@ -2383,10 +2393,13 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfEnters,
 					[Target(Is.Creature & Is.Opponents) with { Optional = true }],
-					new AddMinusOneCounters(
+					new PutCounters(
 						Ref.Target(),
 						Count.GreatestManaValueOf(Ref.CardsInYourGraveyard)
 					)
+					{
+						Kind = CounterKinds.MinusOne,
+					}
 				),
 			],
 			["Loot, the Anomaly"] =
@@ -2643,7 +2656,7 @@ public static class FraCards
 				When(
 					TriggerEvent.YouGainLife,
 					[],
-					new AddCounters(Ref.Permanents(Is.Creature & Is.Yours & Is.Subtype("Angel")), 1)
+					new PutCounters(Ref.Permanents(Is.Creature & Is.Yours & Is.Subtype("Angel")), 1)
 				),
 			],
 			["Master of Barbs"] =
@@ -2845,7 +2858,7 @@ public static class FraCards
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}"),
 					[
-						new AddCounters(Ref.Source, 1),
+						new PutCounters(Ref.Source, 1),
 						new GainsChosenKeyword(Ref.Source, ["Trample", "Hexproof", "Haste"]),
 					]
 				)
@@ -2860,7 +2873,7 @@ public static class FraCards
 					[],
 					new MaySacrifice(Is.Land, [CreateHeartwood with { Count = 2, Tapped = true }])
 				),
-				new ActivatedAbilityComponent(ManaCost.None, [new AddCounters(Ref.Source, 2)])
+				new ActivatedAbilityComponent(ManaCost.None, [new PutCounters(Ref.Source, 2)])
 				{
 					Costs = [new TapUntappedCost(2, Is.Artifact)],
 				},
@@ -2913,7 +2926,11 @@ public static class FraCards
 			],
 			["Gardenize"] =
 			[
-				When(TriggerEvent.CreatureYouControlDies, [], new AddChargeCounters(Ref.Source, 1)),
+				When(
+					TriggerEvent.CreatureYouControlDies,
+					[],
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Charge }
+				),
 				When(
 					TriggerEvent.YourFirstMainPhase,
 					[],
@@ -2962,9 +2979,9 @@ public static class FraCards
 								[Creature],
 								[
 									new Tap(Ref.Target(0)),
-									new AddStunCounters(Ref.Target(0), 1),
+									new PutCounters(Ref.Target(0), 1) { Kind = CounterKinds.Stun },
 									new Tap(Ref.Target(1)),
-									new AddStunCounters(Ref.Target(1), 1),
+									new PutCounters(Ref.Target(1), 1) { Kind = CounterKinds.Stun },
 								]
 							)
 							{
@@ -3113,7 +3130,7 @@ public static class FraCards
 					{
 						Abilities =
 						[
-							When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+							When(TriggerEvent.YouGainLife, [], new PutCounters(Ref.Source, 1)),
 						],
 					}
 				),
@@ -3148,7 +3165,10 @@ public static class FraCards
 				),
 				new LoyaltyAbilityComponent(
 					0,
-					[new Tap(Ref.Target()), new AddStunCounters(Ref.Target(), Count.X)]
+					[
+						new Tap(Ref.Target()),
+						new PutCounters(Ref.Target(), Count.X) { Kind = CounterKinds.Stun },
+					]
 				)
 				{
 					MinusX = true,
@@ -3365,7 +3385,7 @@ public static class FraCards
 					M([TargetSpec.Player()], new DrawCards(Ref.Target(), 1))
 				) with
 				{
-					ChooseAtLeast = 1,
+					Choose = new() { AtMost = 5 },
 				},
 			],
 			["Flesh Duplicate"] = [new MayEnterAsCopy { VanishingIfNone = 3 }],

@@ -3,6 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Sets;
+using MagicCore.Targeting;
 using Nu = NUnit.Framework.Is;
 
 namespace MagicCore.Tests.Sets;
@@ -268,5 +269,434 @@ public class TrkStardateTests : FraBoardTest
 		s = s.Choose([six]);
 		Assert.That(s.IsOnBattlefield(six), Nu.True, "put it onto the battlefield");
 		Assert.That(s.GetCard(six).IsTapped, Nu.False);
+	}
+
+	// ===== MC-6.5: one put, one remove =====
+
+	ActivateAbilityAction Ability(int card, int index) =>
+		Activations(card).Single(a => a.AbilityIndex == index);
+
+	[Test]
+	public void Mikaeus_EntersWithX_TapsToGrow_ThenSpendsOneOnTheOthers()
+	{
+		var mikaeus = Hand(Trk("Mikaeus, the Lunarch"), me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = mikaeus,
+				X = 2,
+			}
+		);
+		Resolve();
+		Assert.That(
+			s.GetCard(mikaeus).PlusOneCounters,
+			Nu.EqualTo(2),
+			"enters with X +1/+1 counters"
+		);
+		s = s.UpdateObject(mikaeus, s.GetCard(mikaeus) with { ControlledSinceTurn = 0 }); // TEST SETUP: not sick
+		var bear = Field(Bear, me);
+		var theirs = Field(Bear, them);
+		s = s.Act(Ability(mikaeus, 1));
+		Assert.That(s.GetPendingChoice(), Nu.Null, "his own counter: nothing to pick");
+		Resolve();
+		Assert.That(
+			s.GetCard(mikaeus).PlusOneCounters,
+			Nu.EqualTo(1),
+			"remove a +1/+1 counter from Mikaeus"
+		);
+		Assert.That(
+			s.GetCard(bear).PlusOneCounters,
+			Nu.EqualTo(1),
+			"each other creature you control"
+		);
+		Assert.That(s.GetCard(theirs).PlusOneCounters, Nu.EqualTo(0), "not theirs");
+	}
+
+	[Test]
+	public void Mikaeus_WithoutACounter_CantSpendOne()
+	{
+		var mikaeus = Field(Trk("Mikaeus, the Lunarch"), me);
+		Assert.That(
+			Activations(mikaeus).Select(a => a.AbilityIndex),
+			Nu.EqualTo(new[] { 0 }),
+			"no +1/+1 counter to remove — only {T}: put one"
+		);
+		s = s.PutCounters(mikaeus, CounterKinds.Charge, 1); // TEST SETUP: another kind
+		Assert.That(
+			Activations(mikaeus).Count(),
+			Nu.EqualTo(1),
+			"a charge counter isn't a +1/+1 counter"
+		);
+		s = s.PutCounters(mikaeus, CounterKinds.PlusOne, 1); // TEST SETUP: a 0/0 dies without one
+		s = s.Act(Ability(mikaeus, 0));
+		Resolve();
+		Assert.That(
+			s.GetCard(mikaeus).PlusOneCounters,
+			Nu.EqualTo(2),
+			"{T}: Put a +1/+1 counter on Mikaeus"
+		);
+	}
+
+	[Test]
+	public void BristlyBill_LandfallPutsOne_ThenDoublesEachCreaturesOwn()
+	{
+		var bill = Field(Trk("Bristly Bill, Spine Sower"), me);
+		var bear = Field(Bear, me);
+		var bare = Field(Bear, me);
+		var theirs = Field(Bear, them);
+		s = s.PutCounters(theirs, CounterKinds.PlusOne, 1); // TEST SETUP
+		var forest = Hand(TestGames.Card("Forest"), me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = forest });
+		Resolve(On<ChooseTargetChoice>(bear));
+		Assert.That(
+			s.GetCard(bear).PlusOneCounters,
+			Nu.EqualTo(1),
+			"landfall: a +1/+1 counter on target creature"
+		);
+		s = s.PutCounters(bear, CounterKinds.PlusOne, 2); // TEST SETUP: three
+		s = s.PutCounters(bill, CounterKinds.PlusOne, 1); // TEST SETUP
+		s = s.Act(Activations(bill).Single());
+		Resolve();
+		Assert.That(
+			s.GetCard(bear).PlusOneCounters,
+			Nu.EqualTo(6),
+			"double the number on each creature"
+		);
+		Assert.That(s.GetCard(bill).PlusOneCounters, Nu.EqualTo(2), "each counted for itself");
+		Assert.That(s.GetCard(bare).PlusOneCounters, Nu.EqualTo(0), "twice none is none");
+		Assert.That(s.GetCard(theirs).PlusOneCounters, Nu.EqualTo(1), "creatures you control");
+	}
+
+	// ===== MC-6.6: modes =====
+
+	[Test]
+	public void Ertai_ChooseUpToOne_NoneIsAnAnswer()
+	{
+		var bear = Field(Bear, them);
+		var ertai = Hand(Trk("Ertai Resurrected"), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = ertai });
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is ChooseModesChoice);
+		var modes = (ChooseModesChoice)s.GetPendingChoice()!;
+		Assert.That((modes.MinChoices, modes.MaxChoices), Nu.EqualTo((0, 1)), "choose up to one");
+		Assert.That(modes.Prompt, Nu.EqualTo("Choose up to one"));
+		var hand = HandCount(them);
+		s = s.Choose([]);
+		Resolve();
+		Assert.That(Alive(bear), Nu.True);
+		Assert.That(HandCount(them), Nu.EqualTo(hand), "no mode: nobody draws");
+		Assert.That(
+			s.GetPlayer(me).ThisTurn.DilemmasFaced,
+			Nu.EqualTo(0),
+			"no mode chosen: no dilemma faced"
+		);
+	}
+
+	[Test]
+	public void Ertai_Destroy_ItsControllerDraws()
+	{
+		var bear = Field(Bear, them);
+		var hand = HandCount(them);
+		CastWithTrigger(Hand(Trk("Ertai Resurrected"), me), [1], bear);
+		Assert.That(Alive(bear), Nu.False, "destroy another target creature or planeswalker");
+		Assert.That(HandCount(them), Nu.EqualTo(hand + 1), "its controller draws a card");
+		Assert.That(
+			s.GetPlayer(me).ThisTurn.DilemmasFaced,
+			Nu.EqualTo(1),
+			"a mode chosen: a dilemma faced"
+		);
+	}
+
+	[Test]
+	public void Ertai_CountersAnActivatedAbility_ItsControllerDraws()
+	{
+		var pump = Field(
+			new CardDefinition(
+				Bear.Data,
+				[new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new GainLife(Ref.You, 3)])]
+			),
+			them
+		);
+		var ertai = Hand(Trk("Ertai Resurrected"), me);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(
+			new ActivateAbilityAction
+			{
+				PlayerId = them,
+				CardId = pump,
+				AbilityIndex = 0,
+			}
+		);
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		var ability = s.GetChildren(s.GetWellKnownId(MagicKeys.Stack))
+			.OfType<StackAbility>()
+			.Single();
+		var life = Life(them);
+		var hand = HandCount(them);
+		CastWithTrigger(ertai, [0], ability.Id);
+		Assert.That(Life(them), Nu.EqualTo(life), "counter target activated ability");
+		Assert.That(
+			HandCount(them),
+			Nu.EqualTo(hand + 1),
+			"its controller — the ability's — draws"
+		);
+	}
+
+	[Test]
+	public void Ertai_CountersASpell_ItsControllerDraws()
+	{
+		var spell = TheirSpellOnTheStack(
+			TestGames.Inline("Gain", "{1}", "Instant", null, new GainLife(Ref.You, 3))
+		);
+		var life = Life(them);
+		var hand = HandCount(them);
+		CastWithTrigger(Hand(Trk("Ertai Resurrected"), me), [0], spell);
+		Assert.That(Life(them), Nu.EqualTo(life), "counter target spell");
+		Assert.That(HandCount(them), Nu.EqualTo(hand + 1), "its controller draws a card");
+	}
+
+	// ===== MC-6.7: cycling =====
+
+	[Test]
+	public void DecreeOfPain_DrawsForEachCreatureDestroyedThisWay()
+	{
+		Field(Bear, me);
+		Field(Bear, them);
+		Field(Bear, them);
+		var wall = Field(TestGames.Creature("Wall", "0/4", "Indestructible"), them);
+		var hand = HandCount(me);
+		Cast(Hand(Trk("Decree of Pain"), me), []);
+		Assert.That(
+			s.CardsIn(them, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Creature))
+				.Select(c => c.Id),
+			Nu.EqualTo(new[] { wall }),
+			"destroy all creatures"
+		);
+		Assert.That(
+			HandCount(me),
+			Nu.EqualTo(hand + 3),
+			"a card for each one destroyed — not the wall"
+		);
+	}
+
+	[Test]
+	public void DecreeOfPain_Cycled_DrawsAndShrinksEveryCreature()
+	{
+		var bear = Field(Bear, them);
+		var big = Field(TestGames.Creature("Big", "3/3"), me);
+		var decree = Hand(Trk("Decree of Pain"), me);
+		var hand = HandCount(me);
+		s = s.Act(Activations(decree).Single());
+		Resolve();
+		Assert.That(HandCount(me), Nu.EqualTo(hand), "discard this card: draw a card");
+		Assert.That(Alive(bear), Nu.False, "when you cycle this card, all creatures get -2/-2");
+		Assert.That(s.Power(s.GetCard(big)), Nu.EqualTo(1));
+	}
+
+	[Test]
+	public void DecreeOfPain_AnotherCardCycled_DoesntTriggerIt()
+	{
+		var bear = Field(Bear, them);
+		var decree = Hand(Trk("Decree of Pain"), me);
+		s = s.MoveCard(decree, s.ZoneId(me, ZoneType.Graveyard)); // TEST SETUP: cycled before
+		var whale = Hand(Trk("Humpback Whales"), me);
+		s = s.Act(Activations(whale).Single());
+		Resolve();
+		Assert.That(Alive(bear), Nu.True, "when you cycle THIS card");
+	}
+
+	[Test]
+	public void Landcycling_IsCycling()
+	{
+		var whale = Hand(Trk("Humpback Whales"), me);
+		var watcher = Field(
+			TestCards.WithTrigger(
+				Bear,
+				new Trigger(EventKind.AbilityActivated) { By = Whose.You, Ability = "Cycling" },
+				new GainLife(Ref.You, 1)
+			),
+			me
+		);
+		var life = Life(me);
+		s = s.Act(Activations(whale).Single());
+		Resolve();
+		Assert.That(Life(me), Nu.EqualTo(life + 1), "basic landcycling is a cycling ability");
+		var channel = Hand(
+			new CardDefinition(
+				Bear.Data,
+				[
+					new ActivatedAbilityComponent(
+						ManaCost.Parse("{1}"),
+						[new DrawCards(Ref.You, 1)]
+					)
+					{
+						Costs = [new DiscardSelfCost()],
+						From = ZoneType.Hand,
+					},
+				]
+			),
+			me
+		);
+		s = s.Act(Activations(channel).Single());
+		Resolve();
+		Assert.That(
+			Life(me),
+			Nu.EqualTo(life + 1),
+			"discarding it for another ability isn't cycling"
+		);
+		Assert.That(Alive(watcher), Nu.True);
+	}
+
+	// ===== MC-6.8: evasion; MC-6.9's "you may play that card" =====
+
+	[Test]
+	public void ThadaAdel_Islandwalk_UnblockableWhileTheyControlAnIsland()
+	{
+		var thada = Field(Trk("Thada Adel, Acquisitor"), me);
+		var blocker = Field(Bear, them);
+		Assert.That(
+			global::MagicCore.Turns.Combat.CanBlock(s, s.GetCard(blocker), s.GetCard(thada)),
+			Nu.False,
+			"defending player controls an Island"
+		);
+		foreach (
+			var island in s.CardsIn(them, ZoneType.Battlefield)
+				.Where(c => c.Name == "Island")
+				.ToList()
+		)
+			s = s.MoveCard(island.Id, s.ZoneId(them, ZoneType.Graveyard)); // TEST SETUP
+		Assert.That(
+			global::MagicCore.Turns.Combat.CanBlock(s, s.GetCard(blocker), s.GetCard(thada)),
+			Nu.True,
+			"no Island"
+		);
+	}
+
+	[Test]
+	public void ThadaAdel_CombatDamage_ExilesTheirArtifact_PlayableThisTurn()
+	{
+		Field(Trk("Thada Adel, Acquisitor"), me);
+		var relic = TestGames.Put(
+			s,
+			them,
+			TestGames.Inline("Relic", "{1}", "Artifact"),
+			ZoneType.Library
+		);
+		s = relic.Item1;
+		AttackWithAll();
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is ChooseFromLibraryChoice);
+		var search = s.GetPendingChoice()!;
+		Assert.That(s.DecidingPlayerId(), Nu.EqualTo(me), "you search that player's library");
+		Assert.That(
+			search.Options.Select(o => o.Id),
+			Nu.EqualTo(new[] { relic.Item2 }),
+			"an artifact card"
+		);
+		s = s.Choose([relic.Item2]);
+		Assert.That(s.IsIn(relic.Item2, them, ZoneType.Exile), Nu.True, "exile it");
+		var playable = s.GetCard(relic.Item2).GetComponent<PlayableFromExile>();
+		Assert.That(playable, Nu.Not.Null, "you may play that card");
+		Assert.That(
+			(playable!.PlayerId, playable.UntilTurn),
+			Nu.EqualTo((me, s.GetGame().TurnNumber)),
+			"you, until end of turn"
+		);
+	}
+
+	[Test]
+	public void Shizo_GivesALegendFear()
+	{
+		var shizo = Field(Trk("Shizo, Death's Storehouse"), me);
+		var legend = Field(Trk("Ertai Resurrected"), me);
+		var bear = Field(Bear, them);
+		var black = Field(Bear with { Data = Bear.Data with { Colors = ["B"] } }, them);
+		Assert.That(Activations(shizo).Count(), Nu.EqualTo(1), "target legendary creature: Ertai");
+		s = s.Act(Activations(shizo).Single());
+		Resolve();
+		Assert.That(
+			global::MagicCore.Turns.Combat.CanBlock(s, s.GetCard(bear), s.GetCard(legend)),
+			Nu.False,
+			"fear: not by a green creature"
+		);
+		Assert.That(
+			global::MagicCore.Turns.Combat.CanBlock(s, s.GetCard(black), s.GetCard(legend)),
+			Nu.True,
+			"except by black creatures"
+		);
+	}
+
+	// ===== Stella Lee: the Nth spell this turn =====
+
+	static CardDefinition Gain =>
+		TestGames.Inline("Gain", "{1}", "Instant", null, new GainLife(Ref.You, 1));
+
+	int PlayableInExile() =>
+		s.CardsIn(me, ZoneType.Exile).Count(c => c.GetComponent<PlayableFromExile>() is not null);
+
+	[Test]
+	public void StellaLee_TheSecondSpellOnly_ExilesTheTopPlayable()
+	{
+		Field(Trk("Stella Lee, Wild Card"), me);
+		Cast(Hand(Gain, me), []);
+		Assert.That(PlayableInExile(), Nu.EqualTo(0), "the first spell");
+		Cast(Hand(Gain, me), []);
+		Assert.That(PlayableInExile(), Nu.EqualTo(1), "your second spell each turn");
+		Cast(Hand(Gain, me), []);
+		Assert.That(PlayableInExile(), Nu.EqualTo(1), "not the third");
+	}
+
+	[Test]
+	public void StellaLee_CopiesOnlyOnceThreeSpellsWereCast()
+	{
+		var stella = Field(Trk("Stella Lee, Wild Card"), me);
+		Cast(Hand(Gain, me), []);
+		var second = Hand(Gain, me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = second });
+		Assert.That(Activations(stella), Nu.Empty, "two spells this turn: not yet");
+		Resolve();
+		var third = Hand(Gain, me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = third });
+		var life = Life(me);
+		s = s.Act(Activations(stella).Single());
+		Resolve();
+		Assert.That(Life(me), Nu.EqualTo(life + 2), "copy target instant spell you control");
+	}
+
+	[TestCase("Teyo, Diamondblade Mage")]
+	[TestCase("Shields Up!")]
+	public void PutCounters_IfItsACreature_NotOnAnArtifact(string name)
+	{
+		var relic = Field(TestGames.Inline("Relic", "{1}", "Artifact"), me);
+		var card = Hand(CardRegistry.Get(name), me);
+		if (s.GetCard(card).Is(CardType.Creature))
+			CastWithTrigger(card, [], relic);
+		else
+			Cast(card, [], relic);
+		Assert.That(
+			s.GetCard(relic).PlusOneCounters,
+			Nu.EqualTo(0),
+			"put a +1/+1 counter on it if it's a creature"
+		);
+	}
+
+	[Test]
+	public void PutCounters_PlusOneOnANoncreature_IsPut()
+	{
+		var relic = Field(TestGames.Inline("Relic", "{1}", "Artifact"), me);
+		var grow = TestGames.Inline(
+			"Grow",
+			"{1}",
+			"Sorcery",
+			null,
+			new PutCounters(
+				Ref.Permanents(
+					global::MagicCore.Filters.Is.Yours & global::MagicCore.Filters.Is.Artifact
+				),
+				1
+			)
+		);
+		Cast(Hand(grow, me), []);
+		Assert.That(s.GetCard(relic).PlusOneCounters, Nu.EqualTo(1), "CR 122.1: any permanent");
 	}
 }

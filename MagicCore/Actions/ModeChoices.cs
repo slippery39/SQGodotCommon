@@ -18,16 +18,27 @@ public record ChooseModesChoice : ChoiceAction
 		int playerId,
 		int sourceId,
 		TriggeredAbilityComponent ability,
-		ImmutableList<int> choosable
+		ImmutableList<int> choosable,
+		int least,
+		int most
 	)
 	{
 		PlayerId = playerId;
 		SourceId = sourceId;
 		Modes = ability.Modes;
 		Choosable = choosable;
-		MinChoices = MaxChoices = ability.Choose;
+		MinChoices = least;
+		MaxChoices = most;
 		OutputKey = Chosen;
-		Prompt = ability.Choose == 1 ? "Choose one" : $"Choose {ability.Choose}";
+		Prompt = (least, most) switch
+		{
+			(1, 1) => "Choose one",
+			(0, 1) => "Choose up to one",
+			_ when least == most => $"Choose {most}",
+			(0, _) => $"Choose up to {most}",
+			(1, _) => "Choose one or more",
+			_ => $"Choose {least} to {most}",
+		};
 	}
 
 	public override ImmutableList<ChoiceOption> GetOptions(

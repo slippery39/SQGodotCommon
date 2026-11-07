@@ -73,22 +73,53 @@ public static class Scripting
 			}),
 		];
 
-	/// <summary>"Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"</summary>
-	public static ActivatedAbilityComponent BasicLandcycling =>
-		new(
-			ManaCost.Parse("{2}"),
-			[
-				new SearchLibrary(CardType.Land, ZoneType.Hand)
-				{
-					Supertype = Supertype.Basic,
-					Reveal = true,
-				},
-			]
-		)
+	/// <summary>
+	/// Cycling (CR 702.29) — Decree of Pain: "Cycling {3}{B}{B} ({3}{B}{B}, Discard this card: Draw a card.)" —
+	/// its keyword named, so "when you cycle" sees it (Trigger.Ability).
+	/// </summary>
+	public static ActivatedAbilityComponent Cycling(string cost) =>
+		new(ManaCost.Parse(cost), [new DrawCards(Ref.You, 1)])
 		{
 			Costs = [new DiscardSelfCost()],
 			From = ZoneType.Hand,
+			Keyword = "Cycling",
 		};
+
+	/// <summary>
+	/// Landcycling — cycling that searches instead of drawing (CR 702.29e): "Basic landcycling {2} ({2}, Discard
+	/// this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"
+	/// is Cycling("{2}", BasicLand).
+	/// </summary>
+	public static ActivatedAbilityComponent Cycling(string cost, SearchLibrary instead) =>
+		Cycling(cost) with
+		{
+			Effects = [instead],
+		};
+
+	/// <summary>
+	/// Landwalk (CR 702.14) — Thada Adel's "Islandwalk (This creature can't be blocked as long as defending
+	/// player controls an Island.)" is Landwalk("Island"): the plain "can't be blocked" under a condition, no
+	/// combat rule of its own. The defending player is the opponent (two players).
+	/// </summary>
+	public static StaticEffectComponent Landwalk(string landType) =>
+		new(Is.Source, Combat.CantBeBlocked)
+		{
+			If = new AtLeast(
+				Count.NumberOf(Ref.Permanents(Is.Land & Is.Opponents & Is.Subtype(landType))),
+				1
+			),
+		};
+
+	/// <summary>
+	/// Fear (CR 702.36) — Shizo: "gains fear until end of turn. (It can't be blocked except by artifact creatures
+	/// and/or black creatures.)" — CantBeBlockedBy the rest; granted with ModifyUntilEndOfTurn { Gains = [Fear] }.
+	/// </summary>
+	public static CantBeBlockedBy Fear =>
+		new(Is.Creature & !Is.Artifact & !Is.Color(ManaColor.Black));
+
+	/// <summary>Basic landcycling's search: "a basic land card, reveal it, put it into your hand".</summary>
+	public static SearchLibrary BasicLand =>
+		new(CardType.Land, ZoneType.Hand) { Supertype = Supertype.Basic, Reveal = true };
 
 	/// <summary>
 	/// "Ward {N} (Whenever this creature becomes the target of a spell or ability an opponent controls,
@@ -118,13 +149,17 @@ public static class Scripting
 		new("", [.. targets], [.. effects]);
 
 	/// <summary>"Choose one/two —" spell. The modes must match the printed bullets one for one.</summary>
-	public static SpellEffectsComponent ModalSpell(string name, int choose, params Mode[] modes) =>
-		new([]) { Modes = Printed(name, modes), Choose = choose };
+	public static SpellEffectsComponent ModalSpell(
+		string name,
+		ModeChoice choose,
+		params Mode[] modes
+	) => new([]) { Modes = Printed(name, modes), Choose = choose };
 
+	/// <summary>"When …, choose one —" — Ertai Resurrected's "choose up to one —" is new() { AtLeast = 0 }.</summary>
 	public static TriggeredAbilityComponent ModalWhen(
 		string name,
 		Trigger on,
-		int choose,
+		ModeChoice choose,
 		params Mode[] modes
 	) => new(on, []) { Modes = Printed(name, modes), Choose = choose };
 

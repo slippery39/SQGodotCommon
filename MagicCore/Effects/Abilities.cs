@@ -11,10 +11,9 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 
 	/// <summary>"Choose one/two —": the bullets. Empty for a non-modal spell.</summary>
 	public ImmutableList<Mode> Modes { get; init; } = [];
-	public int Choose { get; init; } = 1;
 
-	/// <summary>Sublime Epiphany: "Choose one or more —" is ChooseAtLeast 1, Choose every mode. Unset: exactly Choose.</summary>
-	public int? ChooseAtLeast { get; init; }
+	/// <summary>How many of the Modes (ModeChoice) — Sublime Epiphany: new() { AtMost = 5 }.</summary>
+	public ModeChoice Choose { get; init; } = 1;
 }
 
 /// <summary>
@@ -187,6 +186,38 @@ public record Trigger(EventKind On)
 				value == 0 || On == EventKind.CountersPut
 					? value
 					: throw new ArgumentException($"A Chapter only fits CountersPut, not {On}");
+	}
+
+	readonly int spellNumber;
+
+	/// <summary>
+	/// Stella Lee, Wild Card: "Whenever you cast your second spell each turn" — the SpellCast event of the
+	/// caster's Nth spell this turn, numbered as it is cast (SpellCastEvent.SpellNumber).
+	/// </summary>
+	public int SpellNumber
+	{
+		get => spellNumber;
+		init =>
+			spellNumber =
+				value == 0 || On == EventKind.SpellCast
+					? value
+					: throw new ArgumentException($"A SpellNumber only fits SpellCast, not {On}");
+	}
+
+	readonly string? ability;
+
+	/// <summary>
+	/// Decree of Pain: "When you cycle this card" — an AbilityActivated event of an ability with this
+	/// keyword (ActivatedAbilityComponent.Keyword), so landcycling is cycling too.
+	/// </summary>
+	public string? Ability
+	{
+		get => ability;
+		init =>
+			ability =
+				value is null || On == EventKind.AbilityActivated
+					? value
+					: throw new ArgumentException($"Ability only fits AbilityActivated, not {On}");
 	}
 
 	readonly string? counters;
@@ -450,20 +481,12 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 
 	/// <summary>"When this enters, choose one —": chosen as it goes on the stack (CR 700.2b).</summary>
 	public ImmutableList<Mode> Modes { get; init; } = [];
-	public int Choose { get; init; } = 1;
 
 	/// <summary>
-	/// Captain James T. Kirk: "choose one. If you have no cards in hand, choose one or more instead." —
-	/// judged as the modes are chosen, as it goes on the stack (CR 700.2b).
+	/// How many of the Modes (ModeChoice) — Ertai Resurrected: new() { AtLeast = 0 }; Kirk's AnyNumberIf and
+	/// Kobayashi Maru's NotChosenBefore are on it too.
 	/// </summary>
-	public Condition? ChooseAnyNumberIf { get; init; }
-
-	/// <summary>
-	/// Kobayashi Maru Scenario: "At the beginning of your upkeep, choose one that hasn't been chosen —" — the
-	/// modes this object chose before (Card.ModesChosen) aren't offered; none left and it is removed (CR
-	/// 700.2a). A new object starts afresh (CR 400.7).
-	/// </summary>
-	public bool ModesNotChosenBefore { get; init; }
+	public ModeChoice Choose { get; init; } = 1;
 
 	/// <summary>"At …, if [condition], …" — intervening: checked as it triggers AND as it resolves (CR 603.4).</summary>
 	public Condition? If { get; init; }
@@ -479,6 +502,12 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction> Effects)
 	: GameComponent
 {
+	/// <summary>
+	/// The keyword this ability is, if any — Decree of Pain: "Cycling {3}{B}{B}" is "Cycling" (Scripting.Cycling),
+	/// basic landcycling too (CR 702.29e: a cycling ability). What "when you cycle" reads (Trigger.Ability).
+	/// </summary>
+	public string? Keyword { get; init; }
+
 	/// <summary>
 	/// The rest of the cost, in the order it is paid — Gallia, Tragic Host: [TapSelfCost,
 	/// ExileFromGraveyardCost(Is.Creature &amp; !Is.Source)]. Taps first; the source is seen as it
@@ -523,7 +552,9 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// activated (CR 602.2b), like a spell's (ActivateAbilityAction.Modes).
 	/// </summary>
 	public ImmutableList<Mode> Modes { get; init; } = [];
-	public int Choose { get; init; } = 1;
+
+	/// <summary>How many of the Modes (ModeChoice).</summary>
+	public ModeChoice Choose { get; init; } = 1;
 
 	/// <summary>"Activate only as a sorcery."</summary>
 	public bool SorcerySpeed { get; init; }

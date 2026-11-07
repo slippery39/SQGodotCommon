@@ -65,13 +65,15 @@ public record CombatDamageToPlayersEvent(ImmutableList<int> PlayerIds) : MagicEv
 }
 
 /// <param name="NoncreatureSpellNumber">Which noncreature spell of the caster's turn this is — 0 for a creature.</param>
+/// <param name="SpellNumber">Stella Lee: "your second spell each turn" — which spell its caster cast this turn, any kind.</param>
 /// <param name="Copies">Way of the Cryomancer: delayed "copy that spell" triggers this cast set off.</param>
 /// <summary>A spell was cast — raised by CastSpellAction.PutOnStack (copies are not cast, and raise none).</summary>
 public record SpellCastEvent(
 	int CardId,
 	int PlayerId,
 	int NoncreatureSpellNumber = 0,
-	int Copies = 0
+	int Copies = 0,
+	int SpellNumber = 0
 ) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.SpellCast;
@@ -192,9 +194,11 @@ public record BecameTargetEvent(int CardId, int ByPlayerId, int ByStackObjectId)
 /// Kai Winn: "Whenever an opponent … activates an ability of a source with the chosen name" — every
 /// activation: ActivateAbilityAction, a loyalty ability, and a mana ability (TapForManaAction, ManaPayment.Pay —
 /// Shayne: "If you name Llanowar Elves and they tap it for mana it would trigger her"). The subject is the
-/// source as it was activated: a cost may have sacrificed it.
+/// source as it was activated: a cost may have sacrificed it. Keyword: the ability's (Decree of Pain's
+/// "when you cycle", Trigger.Ability).
 /// </summary>
-public record AbilityActivatedEvent(int PlayerId, Cards.Card Source) : MagicEvent
+public record AbilityActivatedEvent(int PlayerId, Cards.Card Source, string? Keyword = null)
+	: MagicEvent
 {
 	public override EventKind Kind() => EventKind.AbilityActivated;
 
@@ -660,6 +664,16 @@ public static class Triggers
 		if (on.Counters is { } kind && (e is not CountersPutEvent put || put.CounterKind != kind))
 			return false;
 		if (
+			on.Ability is { } keyword
+			&& (e is not AbilityActivatedEvent act || act.Keyword != keyword)
+		)
+			return false;
+		if (
+			on.SpellNumber > 0
+			&& (e is not SpellCastEvent numbered || numbered.SpellNumber != on.SpellNumber)
+		)
+			return false;
+		if (
 			on.CombatDamageBy is { } by
 			&& (
 				e is not PlayerDealtDamageEvent { Combat: true } damage
@@ -760,23 +774,17 @@ public static class Triggers
 				continue;
 			}
 			var choosable = ChoosableModes(s, t);
-			if (choosable.Count < t.Ability.Choose)
-				continue; // not enough modes can be chosen: the ability is removed (CR 700.2a)
+			var (least, most) = t.Ability.Choose.Range(s, t.Source, choosable.Count);
+			if (choosable.Count < least || most == 0)
+				continue; // not enough modes can be chosen (CR 700.2a) — or "up to one" with none: it would do nothing
 			var choice = new ChooseModesChoice(
 				t.Source.ControllerId,
 				t.Source.Id,
 				t.Ability,
-				choosable
+				choosable,
+				least,
+				most
 			);
-			if (
-				t.Ability.ChooseAnyNumberIf is { } anyNumber
-				&& anyNumber.Holds(s, Conditions.Of(t.Source))
-			)
-				choice = choice with
-				{
-					MaxChoices = choosable.Count,
-					Prompt = "Choose one or more",
-				};
 			s = s.SpawnAction(
 				new PipelineAction { Steps = [choice, new QueueModalTriggerAction { Trigger = t }] }
 			);
@@ -817,7 +825,9 @@ public static class Triggers
 					spec.Optional || spec.Candidates(s, t.Source.ControllerId, t.Source.Id).Any()
 				)
 			)
-			.Where(m => !t.Ability.ModesNotChosenBefore || (ModesChosenBy(s, t) & (1 << m.i)) == 0)
+			.Where(m =>
+				!t.Ability.Choose.NotChosenBefore || (ModesChosenBy(s, t) & (1 << m.i)) == 0
+			)
 			.Select(m => m.i)
 			.ToImmutableList();
 
@@ -928,10 +938,11 @@ public record QueueModalTriggerAction : GameAction
 			Trigger.Ability.Modes,
 			chosen
 		);
-		s = FacedDilemmaEvent.Face(s, Trigger.Source.ControllerId);
+		if (!chosen.IsEmpty) // Ertai's "up to one", none chosen: no dilemma faced (as a cast or activation)
+			s = FacedDilemmaEvent.Face(s, Trigger.Source.ControllerId);
 		// Kobayashi Maru Scenario: "choose one that hasn't been chosen" — stamped on this object as chosen.
 		if (
-			Trigger.Ability.ModesNotChosenBefore
+			Trigger.Ability.Choose.NotChosenBefore
 			&& s.HasObject(Trigger.Source.Id)
 			&& s.GetObject(Trigger.Source.Id) is Card now
 			&& now.Incarnation == Trigger.Source.Incarnation

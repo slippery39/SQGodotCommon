@@ -62,7 +62,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 		Field(CardRegistry.Get("Yoshimaru, Beloved Companion"), me);
 		var mine = Field(TestGames.Creature("Mine", "2/2"), me);
 		var theirs = Field(TestGames.Creature("Theirs", "2/2"), them);
-		var grow = new AddCounters(Ref.AllCreatures, 1);
+		var grow = new PutCounters(Ref.AllCreatures, 1);
 		Cast(Hand(TestGames.Inline("Grow", "{1}", "Instant", null, grow), me), []);
 		Assert.That(
 			(s.GetCard(mine).PlusOneCounters, s.GetCard(theirs).PlusOneCounters),

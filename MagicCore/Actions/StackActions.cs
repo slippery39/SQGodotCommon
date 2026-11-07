@@ -185,7 +185,7 @@ public record CastSpellAction : GameAction
 		)
 			return ValidationResult.Invalid("You may not cast that without paying its mana cost");
 		var text = card.GetComponent<SpellEffectsComponent>();
-		if (!Modal.IsLegal(text?.Modes ?? [], text?.Choose ?? 1, Modes, text?.ChooseAtLeast))
+		if (!(text?.Choose ?? 1).IsLegal(s, card, text?.Modes ?? [], Modes))
 			return ValidationResult.Invalid("Illegal choice of modes");
 		var specs = StackResolution.TextOf(card, Modes, Kicked, X).Specs;
 		if (
@@ -394,7 +394,8 @@ public record CastSpellAction : GameAction
 				cardId,
 				playerId,
 				noncreature * s.GetPlayer(playerId).ThisTurn.NoncreatureSpellsCast,
-				copies.Count
+				copies.Count,
+				s.GetPlayer(playerId).ThisTurn.SpellsCast
 			)
 		);
 		if (!modes.IsEmpty)
@@ -519,7 +520,7 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Activate only as a sorcery");
 		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
-		if (!Modal.IsLegal(ability.Modes, ability.Choose, Modes))
+		if (!ability.Choose.IsLegal(s, s.GetCard(CardId), ability.Modes, Modes))
 			return ValidationResult.Invalid("Not a legal choice of modes");
 		if (!TargetSpec.AreLegal(s, TextOf(ability, Modes).Specs, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
@@ -574,7 +575,7 @@ public record ActivateAbilityAction : GameAction
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
 		foreach (var cost in ability.Costs.Where(c => !c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
-		s = s.Raise(new Turns.AbilityActivatedEvent(PlayerId, source));
+		s = s.Raise(new Turns.AbilityActivatedEvent(PlayerId, source, ability.Keyword));
 		var (specs, steps) = TextOf(ability, Modes);
 		if (!Modes.IsEmpty)
 			s = Turns.FacedDilemmaEvent.Face(s, PlayerId);

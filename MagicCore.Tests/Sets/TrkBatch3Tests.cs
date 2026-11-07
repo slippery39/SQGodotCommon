@@ -77,8 +77,7 @@ public class TrkBatch3Tests : FraBoardTest
 						new Mode("gain 1", [], [new GainLife(Ref.You, 1)]),
 						new Mode("draw", [], [new DrawCards(Ref.You, 1)]),
 					],
-					Choose = 2,
-					ChooseAtLeast = 1,
+					Choose = new() { AtMost = 2 },
 				},
 			]
 		);

@@ -208,8 +208,8 @@ public static class MagicRules
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> ChoicesFor(int x) =>
-			Modal
-				.Choices(text?.Modes ?? [], text?.Choose ?? 1, text?.ChooseAtLeast)
+			(text?.Choose ?? 1)
+				.Choices(s, card, text?.Modes ?? [])
 				.SelectMany(modes =>
 					TargetSpec
 						.Combinations(
@@ -311,7 +311,7 @@ public static class MagicRules
 			.Where(a => a.ability.From == zone)
 			.SelectMany(a =>
 				from taps in TapSets(a.ability.Costs, s, player, card.Id).ToList() // once per ability, not per target
-				from modes in Modal.Choices(a.ability.Modes, a.ability.Choose)
+				from modes in a.ability.Choose.Choices(s, card, a.ability.Modes)
 				from targets in TargetSpec.Combinations(
 					s,
 					ActivateAbilityAction.TextOf(a.ability, modes).Specs,

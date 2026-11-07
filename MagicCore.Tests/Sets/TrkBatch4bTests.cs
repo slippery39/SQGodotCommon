@@ -435,9 +435,9 @@ public class TrkBatch4bTests : FraBoardTest
 		TapBrad(brad);
 		s = s.PutCounters(ox, CounterKinds.Quest, 1);
 		s = s.AddPlusOneCounters(ox, 1);
-		On(ox, new AddChargeCounters(Ref.Target(), 1));
-		On(ox, new AddStunCounters(Ref.Target(), 1));
-		On(elk, new AddMinusOneCounters(Ref.Target(), 1));
+		On(ox, new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Charge });
+		On(ox, new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun });
+		On(elk, new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.MinusOne });
 		s = Loyalty.Change(s, walker, 1);
 		var card = s.GetCard(ox);
 		Assert.That(

@@ -149,7 +149,10 @@ public static class TrkCards
 			M([], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0))
 		) with
 		{
-			ChooseAnyNumberIf = new Not(new AtLeast(Count.NumberOf(Ref.CardsInYourHand), 1)),
+			Choose = new()
+			{
+				AnyNumberIf = new Not(new AtLeast(Count.NumberOf(Ref.CardsInYourHand), 1)),
+			},
 		};
 
 	/// <summary>"Artifact creatures you control" (Assault Drone, Locutus, Command Subadjunct).</summary>
@@ -263,7 +266,7 @@ public static class TrkCards
 				When(
 					new Trigger(EventKind.Died) { Subject = Is.Creature & !Is.Source },
 					[],
-					new AddCounters(Ref.Source, 1)
+					new PutCounters(Ref.Source, 1)
 				) with
 				{
 					OncePerTurn = true,
@@ -282,7 +285,7 @@ public static class TrkCards
 			["Cetacean Ops"] =
 			[
 				Ward("{1}"),
-				When(TriggerEvent.YouCastNoncreatureSpell, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouCastNoncreatureSpell, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Cha'DIch Investigator"] =
 			[
@@ -318,7 +321,7 @@ public static class TrkCards
 					M(
 						[Creature with { Optional = true }],
 						new Tap(Ref.Target()),
-						new AddStunCounters(Ref.Target(), 1),
+						new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun },
 						new DrawCards(Ref.You, 1)
 					)
 				),
@@ -377,7 +380,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[Creature],
-					new AddCounters(Ref.Target(), 1),
+					new PutCounters(Ref.Target(), 1),
 					new GainLife(Ref.You, 1)
 				),
 			],
@@ -398,7 +401,7 @@ public static class TrkCards
 					[],
 					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 1)
 				),
-				BasicLandcycling,
+				Cycling("{2}", BasicLand),
 			],
 			["Fugitive Listener"] =
 			[
@@ -414,8 +417,8 @@ public static class TrkCards
 				),
 			],
 			["He's Dead, Jim"] = [Spell([Creature], new Destroy(Ref.Target()), new Surveil(1))],
-			["Horta"] = [BasicLandcycling],
-			["Humpback Whales"] = [Ward("{2}"), BasicLandcycling],
+			["Horta"] = [Cycling("{2}", BasicLand)],
+			["Humpback Whales"] = [Ward("{2}"), Cycling("{2}", BasicLand)],
 			["Interstellar Effigy"] =
 			[
 				When(
@@ -521,7 +524,7 @@ public static class TrkCards
 					M([], new GainLife(Ref.You, 3)),
 					M([], new Surveil(2))
 				),
-				BasicLandcycling,
+				Cycling("{2}", BasicLand),
 			],
 			["Saurian Explorer"] =
 			[
@@ -548,18 +551,24 @@ public static class TrkCards
 				ModalSpell(
 					"Set Phasers to . . .",
 					1,
-					M([Creature], new Tap(Ref.Target()), new AddStunCounters(Ref.Target(), 1)),
+					M(
+						[Creature],
+						new Tap(Ref.Target()),
+						new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun }
+					),
 					M([Target(Is.Creature & Is.Attacking)], new DealDamage(Ref.Target(), 3))
 				),
 			],
 			["Shields Up!"] =
 			[
-				// "If it's a creature, put a +1/+1 counter on it" — AddCounters skips a noncreature.
 				Spell(
 					[Target((Is.Artifact | Is.Creature) & Is.Yours)],
 					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Hexproof"),
 					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Indestructible"),
-					new AddCounters(Ref.Target(), 1)
+					new If(
+						new Matches(Ref.Target(), Is.Creature),
+						[new PutCounters(Ref.Target(), 1)]
+					)
 				),
 			],
 			["Silicate Surveyor"] = [When(TriggerEvent.SelfEnters, [], new ExileTopPlayable())],
@@ -649,7 +658,7 @@ public static class TrkCards
 			["Xenobotanist"] = [.. AnyColorMana(ManaRestriction.None)],
 			["Xindi Surveyors"] =
 			[
-				When(TriggerEvent.LandYouControlEnters, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.LandYouControlEnters, [], new PutCounters(Ref.Source, 1)),
 			],
 			// ===== MC-5.3 batch 1: tier 1–3 uncommons =====
 			["Academy Instructor"] =
@@ -717,7 +726,7 @@ public static class TrkCards
 					M(
 						[Target(Is.Creature & Is.Opponents)],
 						new Tap(Ref.Target()),
-						new AddStunCounters(Ref.Target(), 2)
+						new PutCounters(Ref.Target(), 2) { Kind = CounterKinds.Stun }
 					),
 					M([], CreateClue(2))
 				),
@@ -728,7 +737,7 @@ public static class TrkCards
 					"Culber and Stamets, Star-Crossed",
 					TriggerEvent.SelfEnters,
 					1,
-					M([Creature], new AddCounters(Ref.Target(), 1)),
+					M([Creature], new PutCounters(Ref.Target(), 1)),
 					M([], new AddManaOfAnyOneColor(2))
 				),
 			],
@@ -840,7 +849,7 @@ public static class TrkCards
 			["Neelix, Moral Support"] =
 			[
 				When(TriggerEvent.SelfEnters, [], CreateFood(1)),
-				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouGainLife, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Organic Avulsion Unit"] =
 			[
@@ -927,7 +936,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.BeginningOfCombatOnYourTurn,
 					[Target(Is.Creature & Is.Yours)],
-					new AddCounters(Ref.Target(), Count.LifeYouGainedThisTurn with { Plus = 1 })
+					new PutCounters(Ref.Target(), Count.LifeYouGainedThisTurn with { Plus = 1 })
 				),
 			],
 			["Spatial Anomaly"] = Anomaly("{4}{R}", [Creature], new DealDamage(Ref.Target(), 2)),
@@ -937,7 +946,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.LandYouControlEnters,
 					[Target(Is.Creature & Is.Yours)],
-					new AddCounters(Ref.Target(), 2)
+					new PutCounters(Ref.Target(), 2)
 				),
 			],
 			["Targ Wrangler"] =
@@ -953,7 +962,7 @@ public static class TrkCards
 				ModalSpell(
 					"Test of Conviction",
 					1,
-					M([], new AddCounters(Ref.CreaturesYouControl, 1)),
+					M([], new PutCounters(Ref.CreaturesYouControl, 1)),
 					M(
 						[TargetSpec.Player(Is.Opponents)],
 						new DrawCards(Ref.Target(), 1),
@@ -1022,7 +1031,7 @@ public static class TrkCards
 					TriggerEvent.SelfEnters,
 					[Target(Is.Creature & Is.Opponents)],
 					new Tap(Ref.Target()),
-					new AddStunCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun }
 				),
 				AttachedGets(3, 0),
 				Equip("{3}"),
@@ -1126,7 +1135,7 @@ public static class TrkCards
 				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}"),
-					[new AddChargeCounters(Ref.Target(), 2)]
+					[new PutCounters(Ref.Target(), 2) { Kind = CounterKinds.Charge }]
 				)
 				{
 					Costs = [new TapSelfCost()],
@@ -1140,7 +1149,7 @@ public static class TrkCards
 					TriggerEvent.SelfEnters,
 					[Target(Is.Creature & Is.Opponents)],
 					new Tap(Ref.Target()),
-					new AddStunCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun }
 				),
 				.. Station(6, "Flying", "Vigilance"),
 			],
@@ -1152,7 +1161,7 @@ public static class TrkCards
 				When(
 					new Trigger(EventKind.Died) { Subject = Is.Creature & !Is.Source },
 					[],
-					new AddChargeCounters(Ref.Source, 1)
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Charge }
 				) with
 				{
 					If = new Not(new Matches(Ref.Source, Is.Creature)),
@@ -1211,10 +1220,10 @@ public static class TrkCards
 			[
 				Spell(
 					[Creature, Creature with { Optional = true, NotThePrevious = true }],
-					new AddCounters(Ref.Target(0), 1),
-					new AddCounters(Ref.Target(1), 1),
+					new PutCounters(Ref.Target(0), 1),
+					new PutCounters(Ref.Target(1), 1),
 					// One target chosen: both counters on it. Two: one each, decided as it was cast.
-					new If(new Not(new TargetChosen(1)), [new AddCounters(Ref.Target(0), 1)])
+					new If(new Not(new TargetChosen(1)), [new PutCounters(Ref.Target(0), 1)])
 				),
 				BeamMeUp("{2}{W}"),
 			],
@@ -1297,7 +1306,7 @@ public static class TrkCards
 			],
 			["Melkotian Adjudicator"] =
 			[
-				When(TriggerEvent.YouFaceADilemma, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouFaceADilemma, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Obsidian Order Operative"] =
 			[
@@ -1365,14 +1374,14 @@ public static class TrkCards
 					}
 				),
 				// Scryfall prints "+1/1 counter": a +1/+1 counter (TrkCoverage.md).
-				When(TriggerEvent.YouFaceADilemma, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouFaceADilemma, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Hologram Janeway"] =
 			[
 				When(
 					TriggerEvent.YouAttackWithTotalPower8,
 					[Creature],
-					new AddCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1)
 				),
 			],
 			["Tactical Officer"] =
@@ -1380,7 +1389,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.YouAttackWithTotalPower8,
 					[],
-					new AddCounters(Ref.Source, 1),
+					new PutCounters(Ref.Source, 1),
 					new Untap(Ref.Source)
 				),
 			],
@@ -1410,7 +1419,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.YouAttackWithTotalPower8,
 					[],
-					new ExileTopPlayable { ThisTurn = true }
+					new ExileTopPlayable { Play = new() { ThisTurn = true } }
 				),
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new Destroy(Ref.Target())])
 				{
@@ -1426,7 +1435,7 @@ public static class TrkCards
 					[],
 					new ModifyUntilEndOfTurn(Ref.Source, Count.PowerOf(Ref.Source), 0)
 				),
-				new ActivatedAbilityComponent(ManaCost.None, [new AddCounters(Ref.Source, 1)])
+				new ActivatedAbilityComponent(ManaCost.None, [new PutCounters(Ref.Source, 1)])
 				{
 					Costs = [new TapUntappedCost(2, Is.Artifact | Is.Creature)],
 					SorcerySpeed = true,
@@ -1463,7 +1472,7 @@ public static class TrkCards
 						Subject = Is.Subtype("Spacecraft"),
 					},
 					[Creature],
-					new AddCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1)
 				),
 			],
 			["Spock, Always Your Friend"] =
@@ -1489,7 +1498,7 @@ public static class TrkCards
 			// ===== MC-5.3 batch 4a: counters of any kind, quests, Sagas, kicker, can't block, once each turn =====
 			["Dominion Supervisor"] =
 			[
-				When(TriggerEvent.SelfEnters, [Creature], new AddCounters(Ref.Target(), 1)),
+				When(TriggerEvent.SelfEnters, [Creature], new PutCounters(Ref.Target(), 1)),
 				new StaticEffectComponent(Is.Creature & Is.Yours & Is.WithAnyCounter, "Trample"),
 			],
 			["The Doctor, EMH"] =
@@ -1497,8 +1506,8 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[Creature],
-					new AddCounters(Ref.Target(), 1),
-					new AddCounters(Ref.Permanents(Is.Creature & Is.Yours & Is.WithAnyCounter), 1)
+					new PutCounters(Ref.Target(), 1),
+					new PutCounters(Ref.Permanents(Is.Creature & Is.Yours & Is.WithAnyCounter), 1)
 				),
 			],
 			["Federation Field Medic"] =
@@ -1509,7 +1518,7 @@ public static class TrkCards
 					1,
 					M(
 						[Creature],
-						new AddCounters(Ref.Target(), 1),
+						new PutCounters(Ref.Target(), 1),
 						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Vigilance")
 					),
 					M(
@@ -1540,11 +1549,17 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfBecomesTapped,
 					[],
-					new PutCounters(Ref.Source, CounterKinds.Promotion, 1),
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Promotion },
 					new If(
 						new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Promotion), 3),
 						[
-							new RemoveCountersOfKind(Ref.Source, CounterKinds.Promotion),
+							new RemoveCounters(
+								Ref.Source,
+								Count.CountersOfKind(Ref.It, CounterKinds.Promotion)
+							)
+							{
+								Kind = CounterKinds.Promotion,
+							},
 							new DealDamage(Ref.EachOpponent, 2),
 						]
 					)
@@ -1555,7 +1570,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.YouCastNoncreatureSpell,
 					[],
-					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Quest },
 					new DrawCards(Ref.You, 1),
 					new If(new Not(Quests(3)), [new Discard(Ref.You, 1)])
 				),
@@ -1565,7 +1580,7 @@ public static class TrkCards
 				When(
 					new Trigger(EventKind.Entered) { Subject = Is.Artifact & !Is.Token & Is.Yours },
 					[],
-					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Quest },
 					new If(Quests(6), [new CreateTokens(Borg, 2)])
 					{
 						Otherwise = [new CreateTokens(Borg, 1)],
@@ -1577,10 +1592,10 @@ public static class TrkCards
 				When(
 					TriggerEvent.CreatureYouControlEnters,
 					[],
-					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
-					new If(Quests(5), [new AddCounters(Ref.EventCard, 2)])
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Quest },
+					new If(Quests(5), [new PutCounters(Ref.EventCard, 2)])
 					{
-						Otherwise = [new AddCounters(Ref.EventCard, 1)],
+						Otherwise = [new PutCounters(Ref.EventCard, 1)],
 					}
 				),
 			],
@@ -1589,7 +1604,7 @@ public static class TrkCards
 				When(
 					new Trigger(EventKind.Died) { Subject = Is.Creature },
 					[TargetSpec.Player(Is.Opponents)],
-					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Quest },
 					new If(Quests(7), [new LoseLife(Ref.Target(), 2)])
 					{
 						Otherwise = [new LoseLife(Ref.Target(), 1)],
@@ -1659,7 +1674,7 @@ public static class TrkCards
 						When(
 							TriggerEvent.CreatureYouControlEnters,
 							[],
-							new AddCounters(Ref.EventCard, 1),
+							new PutCounters(Ref.EventCard, 1),
 							new ModifyUntilEndOfTurn(Ref.EventCard, 0, 0, "Haste")
 						)
 					)
@@ -1891,9 +1906,9 @@ public static class TrkCards
 			],
 			["Cold-Blooded Crew"] =
 			[
-				When(TriggerEvent.SelfEnters, [Creature], new AddCounters(Ref.Target(), 2)),
+				When(TriggerEvent.SelfEnters, [Creature], new PutCounters(Ref.Target(), 2)),
 				new CantBeBlockedBy(Is.PowerAtMost(2)),
-				BasicLandcycling,
+				Cycling("{2}", BasicLand),
 			],
 			["Species 8472"] =
 			[
@@ -1949,7 +1964,7 @@ public static class TrkCards
 			[
 				Spell(
 					[Target(Is.Creature & Is.Yours)],
-					new AddCounters(Ref.Target(), 1),
+					new PutCounters(Ref.Target(), 1),
 					new Untap(Ref.Target()),
 					new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)
 					{
@@ -1974,7 +1989,7 @@ public static class TrkCards
 					TriggerEvent.LandYouControlEnters,
 					[],
 					new DealDamage(Ref.EachOpponent, 1),
-					new IfNthResolutionThisTurn(2, [new AddCounters(Ref.Source, 1)])
+					new IfNthResolutionThisTurn(2, [new PutCounters(Ref.Source, 1)])
 				),
 			],
 			["Jake Sisko, War Correspondent"] =
@@ -2042,8 +2057,12 @@ public static class TrkCards
 				When(
 					TriggerEvent.LandYouControlEnters,
 					[],
-					new PutCounters(Ref.Source, CounterKinds.Quest, 1),
-					new ExileTopPlayable { UntilNonland = true, ThisTurn = true },
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Quest },
+					new ExileTopPlayable
+					{
+						UntilNonland = true,
+						Play = new() { ThisTurn = true },
+					},
 					new If(Quests(5), [new AddMana(ManaColor.Red, 2)])
 				),
 			],
@@ -2073,7 +2092,7 @@ public static class TrkCards
 					{
 						Of = Ref.EachOpponent,
 						N = DifferentlyNamedLands,
-						Forever = true,
+						Play = new() { Forever = true },
 						Choose = Is.Land,
 					}
 				),
@@ -2129,14 +2148,14 @@ public static class TrkCards
 			],
 			["Data, New Life"] =
 			[
-				When(TriggerEvent.YouDrawACard, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouDrawACard, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Dr. McCoy, Surly Surgeon"] =
 			[
 				When(
 					TriggerEvent.SelfEnters,
 					[Target(Is.Creature & Is.Yours & !Is.Source)],
-					new AddCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1)
 				),
 				new CountersRemovedInsteadOfDestruction(),
 			],
@@ -2146,17 +2165,19 @@ public static class TrkCards
 					[TargetSpec.Player(Is.Opponents)],
 					new ExileTopPlayable // the opponent looks at YOUR top card and exiles it
 					{
-						By = Ref.Target(0),
-						Forever = true,
-						AnyType = true,
+						Play = new()
+						{
+							By = Ref.Target(0),
+							Forever = true,
+							AnyType = true,
+						},
 						FaceDown = true,
 					},
 					new ExileTopPlayable // you look at their top two
 					{
 						Of = Ref.Target(0),
 						N = 2,
-						Forever = true,
-						AnyType = true,
+						Play = new() { Forever = true, AnyType = true },
 						FaceDown = true,
 					}
 				),
@@ -2200,7 +2221,7 @@ public static class TrkCards
 								ManaCost.Parse("{1}"),
 								[
 									new ReturnFromYourGraveyard(null) { To = ZoneType.Exile },
-									new WhenYouDo([Creature], [new AddCounters(Ref.Target(), 1)]),
+									new WhenYouDo([Creature], [new PutCounters(Ref.Target(), 1)]),
 								]
 							),
 						]
@@ -2346,7 +2367,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.CreatureYouControlDies,
 					[Target(Is.Creature & Is.Yours)],
-					new AddCounters(Ref.Target(), 1)
+					new PutCounters(Ref.Target(), 1)
 				),
 			],
 			["Federation Outpost"] = EntersUntapped(
@@ -2372,7 +2393,7 @@ public static class TrkCards
 			[
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}"),
-					[new AddCounters(Ref.Permanents(Is.Subtype("Klingon") & Is.Yours), 1)]
+					[new PutCounters(Ref.Permanents(Is.Subtype("Klingon") & Is.Yours), 1)]
 				)
 				{
 					Costs = [new SacrificeCost(Is.Creature)],
@@ -2383,7 +2404,7 @@ public static class TrkCards
 				When(
 					new Trigger(EventKind.Died) { Subject = Is.Creature & !Is.Source },
 					[],
-					new AddCounters(Ref.Source, 1)
+					new PutCounters(Ref.Source, 1)
 				),
 				new ActivatedAbilityComponent(
 					ManaCost.None,
@@ -2444,12 +2465,12 @@ public static class TrkCards
 				When(
 					TriggerEvent.YourFirstMainPhase,
 					[],
-					new AddCounters(Ref.Source, 1),
+					new PutCounters(Ref.Source, 1),
 					new AddMana(ManaColor.Green, Count.AllCountersOn(Ref.Source))
 				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}{G}"),
-					[new AddCounters(Ref.Target(), 2)]
+					[new PutCounters(Ref.Target(), 2)]
 				)
 				{
 					Costs = [new DiscardSelfCost()],
@@ -2539,7 +2560,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.YouCastNoncreatureSpell,
 					[],
-					new AddChargeCounters(Ref.Source, 2)
+					new PutCounters(Ref.Source, 2) { Kind = CounterKinds.Charge }
 				) with
 				{
 					If = new Not(new Matches(Ref.Source, Is.Creature)),
@@ -2569,7 +2590,7 @@ public static class TrkCards
 					// the types again, not the cards drawn: drawing changes no creature's types
 					new If(
 						new AtLeast(Federation with { Per = 5 }, 3),
-						[new AddCounters(Ref.CreaturesYouControl, 2)]
+						[new PutCounters(Ref.CreaturesYouControl, 2)]
 					)
 				),
 			],
@@ -2584,7 +2605,7 @@ public static class TrkCards
 					M(
 						[Target(Is.Artifact | Is.Creature) with { Optional = true }],
 						new Tap(Ref.Target()),
-						new AddStunCounters(Ref.Target(), 1)
+						new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun }
 					)
 				),
 			],
@@ -3000,7 +3021,7 @@ public static class TrkCards
 				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}"),
-					[new AddAnotherCounterOfAKind(Ref.Target())]
+					[new PutCounters(Ref.Target(), 1) { Kind = null }]
 				)
 				{
 					Targets = [Target(Is.Enchantment & Is.Yours)],
@@ -3063,7 +3084,7 @@ public static class TrkCards
 						Counters = CounterKinds.Charge,
 					},
 					[],
-					new ExileTopPlayable { ThisTurn = true }
+					new ExileTopPlayable { Play = new() { ThisTurn = true } }
 				) with
 				{
 					OncePerTurn = true, // "for the first time each turn": the trigger is only about itself
@@ -3146,7 +3167,7 @@ public static class TrkCards
 			["Dr. Beverly Crusher"] =
 			[
 				new TriggersAdditionalTime(TriggerEvent.YouGainLife, Is.Yours),
-				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+				When(TriggerEvent.YouGainLife, [], new PutCounters(Ref.Source, 1)),
 			],
 			["Lwaxana Troi, Charming Guest"] =
 			[
@@ -3333,7 +3354,7 @@ public static class TrkCards
 					M([], new LoseTheGame())
 				) with
 				{
-					ModesNotChosenBefore = true,
+					Choose = new() { NotChosenBefore = true },
 				},
 			],
 			["Quark, Humble Proprietor"] =
@@ -3373,7 +3394,7 @@ public static class TrkCards
 						[
 							new DrawCards(Ref.You, 1),
 							new ThisTurn(new CantAttackThisTurn()),
-							new PutCounters(Ref.Source, CounterKinds.Peace, 1),
+							new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Peace },
 						]
 					)
 					{
@@ -3406,11 +3427,11 @@ public static class TrkCards
 						By = Whose.Any,
 					},
 					[],
-					new AddCounters(Ref.Source, 1)
+					new PutCounters(Ref.Source, 1)
 				),
 				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new DrawCards(Ref.You, 1)])
 				{
-					Costs = [new RemoveCountersFromAmongCost(3, Is.Creature)],
+					Costs = [new RemoveCountersCost(3, Is.Creature)],
 				},
 			],
 			["Rok-Tahk, Budding Scientist"] =
@@ -3644,7 +3665,7 @@ public static class TrkCards
 				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}{G}"),
-					[new AddCounters(Ref.Target(), 1)]
+					[new PutCounters(Ref.Target(), 1)]
 				)
 				{
 					Targets = [Creature],
@@ -3727,8 +3748,8 @@ public static class TrkCards
 							NotThePrevious = true,
 						},
 					],
-					new AddCounters(Ref.Target(0), 1),
-					new AddCounters(Ref.Target(1), 1)
+					new PutCounters(Ref.Target(0), 1),
+					new PutCounters(Ref.Target(1), 1)
 				),
 				new GrantsManaAbility(
 					Is.Creature & Is.Yours & Is.WithAnyCounter,
@@ -3812,6 +3833,125 @@ public static class TrkCards
 					Costs = [new TapSelfCost()],
 				},
 			],
+			// ===== MC-5.6 batch 2: the Stardates on MC-6.5–6.8 (counters, modes, cycling, evasion) =====
+			["Mikaeus, the Lunarch"] =
+			[
+				new EntersWithCountersComponent(Count.X),
+				new ActivatedAbilityComponent(ManaCost.None, [new PutCounters(Ref.Source, 1)])
+				{
+					Costs = [new TapSelfCost()],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new PutCounters(Ref.OtherCreaturesYouControl, 1)]
+				)
+				{
+					Costs =
+					[
+						new TapSelfCost(),
+						new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.PlusOne },
+					],
+				},
+			],
+			["Bristly Bill, Spine Sower"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[Creature],
+					new PutCounters(Ref.Target(), 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{G}{G}"),
+					[new PutCounters(Ref.CreaturesYouControl, Count.CountersOn(Ref.It))]
+				),
+			],
+			["Ertai Resurrected"] =
+			[
+				// "Its controller draws a card" first: a countered ability is gone, a destroyed creature's
+				// controller is its owner — the draw needs them as they are now.
+				ModalWhen(
+					"Ertai Resurrected",
+					TriggerEvent.SelfEnters,
+					new() { AtLeast = 0 },
+					M(
+						[TargetSpec.Spell() with { Or = TargetSpec.Ability() }],
+						new DrawCards(Ref.ControllerOfTarget(0), 1),
+						new Counter(Ref.Target())
+					),
+					M(
+						[Target((Is.Creature | Is.Planeswalker) & !Is.Source)],
+						new DrawCards(Ref.ControllerOfTarget(0), 1),
+						new Destroy(Ref.Target())
+					)
+				),
+			],
+			["Decree of Pain"] =
+			[
+				Spell(
+					[],
+					new Destroy(Ref.AllCreatures)
+					{
+						Then = [new DrawCards(Ref.You, Count.NumberOf(Ref.ThisWay))],
+					}
+				),
+				Cycling("{3}{B}{B}"),
+				// "When you cycle this card" — the card is in the graveyard by then (discarded to pay).
+				When(
+					new Trigger(EventKind.AbilityActivated)
+					{
+						Subject = Is.Source,
+						By = Whose.You,
+						Ability = "Cycling",
+					},
+					[],
+					new ModifyUntilEndOfTurn(Ref.AllCreatures, -2, -2)
+				) with
+				{
+					FromGraveyard = true,
+				},
+			],
+			["Shizo, Death's Storehouse"] =
+			[
+				new ManaAbilityComponent(ManaColor.Black),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{B}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Fear") { Gains = [Fear] }] // the word for the table; the rule is Fear
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Creature & Is.Legendary)],
+				},
+			],
+			["Thada Adel, Acquisitor"] =
+			[
+				Landwalk("Island"),
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					new SearchLibrary(CardType.Artifact, ZoneType.Exile)
+					{
+						Of = Ref.EachOpponent, // the player dealt the damage
+						Play = new() { ThisTurn = true },
+					}
+				),
+			],
+			["Stella Lee, Wild Card"] =
+			[
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						SpellNumber = 2,
+					},
+					[],
+					new ExileTopPlayable()
+				),
+				new ActivatedAbilityComponent(ManaCost.None, [new CopySpell(Ref.Target())])
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [TargetSpec.Spell((Is.Instant | Is.Sorcery) & Is.Yours)],
+					OnlyIf = new AtLeast(Count.SpellsYouCastThisTurn, 3),
+				},
+			],
 		};
 
 	/// <summary>
@@ -3846,7 +3986,15 @@ public static class TrkCards
 	/// power on this Spacecraft. Station only as a sorcery." — Deep Space 9 is never a creature.
 	/// </summary>
 	static ActivatedAbilityComponent StationAbility =>
-		new(ManaCost.None, [new AddChargeCounters(Ref.Source, Count.PowerOf(Ref.EventCard))])
+		new(
+			ManaCost.None,
+			[
+				new PutCounters(Ref.Source, Count.PowerOf(Ref.EventCard))
+				{
+					Kind = CounterKinds.Charge,
+				},
+			]
+		)
 		{
 			Costs = [new TapUntappedCost(1, Is.Creature & !Is.Source)],
 			SorcerySpeed = true,

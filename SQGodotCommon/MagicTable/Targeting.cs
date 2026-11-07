@@ -81,8 +81,8 @@ public static class Targeting
 				is not { Modes.IsEmpty: false } spell
 		)
 			return null;
-		return Modal
-			.Choices(spell.Modes, spell.Choose, spell.ChooseAtLeast)
+		return spell
+			.Choose.Choices(s, s.GetCard(cardId), spell.Modes)
 			.SelectMany(combo =>
 			{
 				var text = Describe.Modes(spell.Modes, combo);

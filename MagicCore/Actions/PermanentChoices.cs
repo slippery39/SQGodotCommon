@@ -236,6 +236,9 @@ public record SacrificeChosenAction : GameAction
 /// </summary>
 public record RemoveACounterFromChosenAction : GameAction
 {
+	/// <summary>Mikaeus: only this kind (RemoveCountersCost.Kind). None: the least useful one.</summary>
+	public string? Kind { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in ChoosePermanentChoice.Read(InputContext))
@@ -243,6 +246,7 @@ public record RemoveACounterFromChosenAction : GameAction
 				s.IsOnBattlefield(id)
 				&& s.GetCard(id)
 					.AllCounters()
+					.Where(k => Kind is null || k.Kind == Kind)
 					.OrderBy(k => k.Kind is CounterKinds.Stun or CounterKinds.MinusOne ? 0 : 1)
 					.ThenByDescending(k => k.N)
 					.FirstOrDefault()
