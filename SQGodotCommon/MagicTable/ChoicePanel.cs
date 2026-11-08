@@ -53,6 +53,17 @@ public partial class ChoicePanel : PanelContainer
 		MtgUiStyles.StylePrimary(confirm, 28);
 		confirm.Pressed += () => answer(picked);
 
+		// What shows: the open graveyard's cards (when the options sit in several) that match the search.
+		var (text, tab) = ("", (int?)null);
+		var graveyardOf = new Dictionary<Button, int>();
+		void Refilter()
+		{
+			foreach (var (b, owner) in graveyardOf)
+				b.Visible =
+					(tab is null || tab == owner)
+					&& b.Text.Contains(text, StringComparison.OrdinalIgnoreCase);
+		}
+
 		var list = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
 		list.AddThemeConstantOverride("h_separation", 6);
 		list.AddThemeConstantOverride("v_separation", 6);
@@ -61,10 +72,13 @@ public partial class ChoicePanel : PanelContainer
 			// Kai Winn's "choose a nonland card name": hundreds — a search box over a scrolling list.
 			var search = new LineEdit { PlaceholderText = "Type to search…" };
 			search.AddThemeFontSizeOverride("font_size", 22);
-			search.TextChanged += text =>
+			search.TextChanged += typed =>
 			{
+				text = typed;
 				foreach (var b in list.GetChildren().OfType<Button>())
-					b.Visible = b.Text.Contains(text, StringComparison.OrdinalIgnoreCase);
+					if (!graveyardOf.ContainsKey(b))
+						b.Visible = b.Text.Contains(typed, StringComparison.OrdinalIgnoreCase);
+				Refilter();
 			};
 			column.AddChild(search);
 			var scroll = new ScrollContainer
@@ -103,6 +117,8 @@ public partial class ChoicePanel : PanelContainer
 				button.MouseEntered += () => preview(image);
 				button.MouseExited += () => preview(null);
 			}
+			if (card is not null && GraveyardOwner(s, card) is { } owner)
+				graveyardOf[button] = owner;
 			var id = option.Id;
 			if (!button.ToggleMode)
 				button.Pressed += () => answer([id]);
@@ -119,9 +135,51 @@ public partial class ChoicePanel : PanelContainer
 				};
 			list.AddChild(button);
 		}
+		// Raffi Musiker's "target card in a graveyard": every graveyard at once was a wall of cards — one
+		// player's at a time, a tab each (TBL-2.14). Your picks stay when you change tab.
+		var owners = graveyardOf.Values.Distinct().ToList();
+		if (owners.Count >= 2)
+		{
+			var tabs = new HBoxContainer();
+			tabs.AddThemeConstantOverride("separation", 6);
+			var tabButtons = new List<(Button Button, int Owner)>();
+			foreach (var owner in owners)
+			{
+				var count = graveyardOf.Values.Count(o => o == owner);
+				var tabButton = new Button
+				{
+					Text =
+						$"{(s.GetPlayer(owner).Name == "You" ? "Your" : s.GetPlayer(owner).Name + "'s")} graveyard ({count})",
+					FocusMode = FocusModeEnum.None,
+				};
+				tabButton.AddThemeFontSizeOverride("font_size", 22);
+				var shown = owner;
+				tabButton.Pressed += () =>
+				{
+					tab = shown;
+					foreach (var (other, o) in tabButtons)
+						MtgUiStyles.StyleChoice(other, selected: o == shown);
+					Refilter();
+				};
+				tabButtons.Add((tabButton, owner));
+				tabs.AddChild(tabButton);
+			}
+			column.AddChild(tabs);
+			column.MoveChild(tabs, 1); // under the question
+			tab = owners[0];
+			foreach (var (tabButton, o) in tabButtons)
+				MtgUiStyles.StyleChoice(tabButton, selected: o == tab);
+			Refilter();
+		}
 		if (multi)
 			column.AddChild(confirm);
 	}
+
+	/// <summary>The player whose graveyard holds this card, or null (the battlefield, a hand, the library).</summary>
+	private static int? GraveyardOwner(GameState s, Card c) =>
+		new[] { s.Player1Id(), s.Player2Id() }
+			.Select(p => (int?)p)
+			.FirstOrDefault(p => s.IsIn(c.Id, p!.Value, ZoneType.Graveyard));
 
 	public void Close()
 	{

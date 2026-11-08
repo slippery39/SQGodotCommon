@@ -92,8 +92,11 @@ is a bug report, never about the look.
       loses its counters another way with McCoy out is called saved too). Tested on the real game, kept
       as `MagicCore.Tests/Records/McCoySavesGarak.json` (`ACreatureSavedByDrMcCoy_SaysWhyItLived`). Which
       creatures blocked an attacker is TBL-4.3's
-- [ ] TBL-2.14 Zone viewer: show one player's graveyard at a time (Raffi Musiker's "target cards in
-      graveyards" listed everyone's at once), `ZoneViewer.cs`
+- [x] TBL-2.14 A choice whose options are cards in two or more graveyards (Raffi Musiker's "target card in a
+      graveyard") shows a tab per player — "Your graveyard (2)" / "AI's graveyard (2)" — and one graveyard at a
+      time; picks stay when you change tab, and the search box (24+ options) filters within the open one.
+      `ChoicePanel`. Captured through the real flow: Raffi cast, the exile mode, the target panel, the second tab.
+      Not pinned by a test (Godot UI). The ZoneViewer (a plate's button) already shows one zone at a time
 - [ ] TBL-2.15 Blocks and attacks pair visibly (Arena's arrows, or the blocker moves beside its attacker);
       today two creatures with the same name can't be told apart → TBL-4
 
