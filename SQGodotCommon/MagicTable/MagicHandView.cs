@@ -112,7 +112,11 @@ public sealed class MagicHandView
 	public void Track(InputEvent e)
 	{
 		var hovered =
-			CardUIManager.CurrentHoveredCard is { } h && _hand.GetCards().Contains(h) ? h : null;
+			CardUIManager.CurrentHoveredCard is { } h
+			&& _hand.GetCards().Contains(h)
+			&& (e is not InputEventMouse mouse || Over(h, mouse))
+				? h
+				: null;
 		switch (e)
 		{
 			case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }
@@ -167,6 +171,20 @@ public sealed class MagicHandView
 				(_down, _moved, _zoomed, _pressed) = (false, false, false, null);
 				break;
 		}
+	}
+
+	/// <summary>
+	/// Whether this event's OWN position is on the card's hit shape. The hover list lags the pointer
+	/// (physics picking runs once a tick, and a stalled frame — the AI's search — delivers a click
+	/// with the hover from before the pointer moved), so a click away from every card played the card
+	/// last hovered (TBL-2.8).
+	/// </summary>
+	private static bool Over(CardUI2D card, InputEventMouse e)
+	{
+		var shape = card.GetNode<CollisionShape2D>("HoverArea/CollisionShape2D");
+		return shape.Shape is RectangleShape2D box
+			&& shape.MakeInputLocal(e) is InputEventMouse local
+			&& new Rect2(-box.Size / 2, box.Size).HasPoint(local.Position);
 	}
 
 	private string? Image(CardUI2D ui) =>
