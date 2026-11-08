@@ -68,6 +68,10 @@ public partial class MagicTableScene : Control
 			MouseFilter = MouseFilterEnum.Ignore,
 		};
 	private readonly PhaseBar _phases = new();
+
+	// A hand card being dragged, and the lands paying for it would tap (TBL-8.2).
+	private int _previewFor;
+	private IReadOnlySet<int> _pays = new HashSet<int>();
 	private readonly VBoxContainer _stack = new();
 	private readonly VBoxContainer _buttons = new();
 
@@ -279,6 +283,34 @@ public partial class MagicTableScene : Control
 			_zoom.Visible = false;
 	}
 
+	/// <summary>
+	/// Arena's tap preview: while a spell is dragged out of the hand, the lands it would tap glow. Asked of
+	/// <see cref="CastSpellAction.PaymentPreview"/> — the very call the cast pays with, so it can't differ.
+	/// </summary>
+	public override void _Process(double delta)
+	{
+		var dragged =
+			Common.Cards.CardUIManager.DraggingCard is { Id: { } id } && int.TryParse(id, out var n)
+				? n
+				: 0;
+		if (dragged == _previewFor)
+			return;
+		_previewFor = dragged;
+		var s = _m.State;
+		_pays =
+			dragged == 0
+				? new HashSet<int>()
+				: Moves()
+					.OfType<CastSpellAction>()
+					.Where(a => s.IsMoveFor(a, dragged))
+					.Select(a => a.PaymentPreview(s))
+					.FirstOrDefault(p => p is not null)
+					?.Where(p => p.LandId != 0 && !p.Floats)
+					.Select(p => p.LandId)
+					.ToHashSet() ?? new HashSet<int>();
+		Refresh();
+	}
+
 	public override void _UnhandledInput(InputEvent @event)
 	{
 		if (@event is not InputEventKey { Pressed: true, Echo: false } key)
@@ -379,6 +411,7 @@ public partial class MagicTableScene : Control
 		);
 		Glow GlowOf(int id, Card? c) =>
 			_combat is { } combat ? combat.GlowOf(id, c, clickable)
+			: _pays.Contains(id) ? Glow.Pays
 			: _picked.Contains(id) ? Glow.Selected
 			: clickable.Contains(id) ? Glow.Choosable
 			: id == about ? Glow.About

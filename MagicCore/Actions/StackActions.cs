@@ -165,6 +165,34 @@ public record CastSpellAction : GameAction
 			added: Kicked ? card.GetComponent<KickerComponent>()?.Mana : null
 		);
 
+	/// <summary>
+	/// What paying for this cast taps and spends, or null if it can't be paid — THE call: validation, the cast
+	/// itself and the table's preview of a dragged card (TBL-8.2) all make it here, so what is previewed is
+	/// what is paid.
+	/// </summary>
+	public IReadOnlyList<ManaPayment.Payment>? PaymentPreview(GameState s)
+	{
+		var card = s.GetCard(CardId);
+		return FindPayment(s, card, CostsOf(s, card), card.HasComponent<Sunburst>());
+	}
+
+	IReadOnlyList<ManaPayment.Payment>? FindPayment(
+		GameState s,
+		Card card,
+		ImmutableList<AdditionalCost> costs,
+		bool mostColors
+	) =>
+		ManaPayment.Find(
+			s,
+			PlayerId,
+			CostToPay(s, card),
+			0,
+			convoke: s.Has(card, "Convoke"),
+			forSpell: card,
+			alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))],
+			mostColors: mostColors
+		);
+
 	public override ValidationResult ValidateAdd(GameState s)
 	{
 		if (!DuringResolution && Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
@@ -219,18 +247,7 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Not a creature you can return for this");
 		if (costs.Any(c => !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Cannot pay the additional cost");
-		if (
-			ManaPayment.Find(
-				s,
-				PlayerId,
-				CostToPay(s, card),
-				0,
-				convoke: s.Has(card, "Convoke"),
-				forSpell: card,
-				alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))]
-			)
-			is null
-		)
+		if (FindPayment(s, card, costs, mostColors: false) is null)
 			return ValidationResult.Invalid("Cannot pay the cost");
 		return ValidationResult.Valid;
 	}
@@ -284,16 +301,7 @@ public record CastSpellAction : GameAction
 				}
 			);
 		var sunburst = card.HasComponent<Sunburst>();
-		var payment = ManaPayment.Find(
-			s,
-			PlayerId,
-			CostToPay(s, card),
-			0,
-			convoke: s.Has(card, "Convoke"),
-			forSpell: card,
-			alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))],
-			mostColors: sunburst
-		)!;
+		var payment = FindPayment(s, card, costs, mostColors: sunburst)!;
 		s = ManaPayment.Pay(s, PlayerId, payment);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));

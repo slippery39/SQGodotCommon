@@ -20,6 +20,7 @@ public enum Glow
 	Choosable,
 	Selected,
 	About,
+	Pays, // a land a dragged spell would tap (TBL-8.2)
 }
 
 /// <summary>
@@ -267,13 +268,14 @@ public static class CardViews
 				Glow.Choosable => new Color("8fd3ff"),
 				Glow.Selected => new Color("5fd35f"),
 				Glow.About => Colors.White,
+				Glow.Pays => new Color("f0a030"),
 				_ => MtgUiStyles.DimBorder,
 			},
 		};
 		style.SetCornerRadiusAll(5);
 		style.SetBorderWidthAll(
 			glow == Glow.None ? 1
-			: glow is Glow.Choosable or Glow.Selected ? 5
+			: glow is Glow.Choosable or Glow.Selected or Glow.Pays ? 5
 			: 3
 		);
 		style.SetContentMarginAll(6);

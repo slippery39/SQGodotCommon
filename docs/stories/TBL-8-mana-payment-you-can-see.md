@@ -1,7 +1,7 @@
 ---
 id: TBL-8
 title: Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview
-status: backlog
+status: done
 area: TBL
 created: 2026-11-08
 ---
@@ -36,11 +36,17 @@ Open questions:
       moved (`EveryScriptedCard 29`, a different land tapped from step ~400) and was re-recorded. NOT done: keeping the colours the REST of the hand
       needs when two basics are equal (the `ponytail:` note on `ManaPayment`) — a Plains/Swamp split with
       {W} and {B} cards in hand still picks by order
-- [ ] TBL-8.2 The preview: the table asks the same payment function what it would tap; drag highlights those lands
+- [x] TBL-8.2 The preview (Arena's): while a spell is dragged out of the hand, the lands it would tap glow amber
+      (`Glow.Pays`), and stop when it is dropped. The table asks `CastSpellAction.PaymentPreview` — the one
+      function validation and the cast itself now call (`FindPayment`), so a preview can't differ from what is
+      paid. Polled in `MagicTableScene._Process` from Common's `CardUIManager.DraggingCard`. Captured through
+      a real drag: Raffi ({2}{B}) over three Swamps, a fourth, and Unexplored Territory — the Territory and two
+      Swamps glow, the other two don't. Only a cast, not an activated ability; floating mana isn't shown. Not
+      pinned by a test (Godot input)
 
 ## Next
 
-Start at TBL-8.1: `ManaPayment.cs` and how `MagicTableManager` pays when the player doesn't tap by hand.
+Done. Left over, by choice: the payment keeps no colour for the rest of the hand when two basics are equal (see TBL-8.1); a preview of an activated ability's cost.
 
 ## Log
 
