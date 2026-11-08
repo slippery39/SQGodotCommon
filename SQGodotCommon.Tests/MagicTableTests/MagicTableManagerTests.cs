@@ -465,6 +465,29 @@ public class MagicTableManagerTests
 		Assert.That(m.Replay().Search);
 	}
 
+	// Shayne, 2026-11-08: two Temporal Conquerors double-blocked Elim Garak and he lived, with no word
+	// why — Dr. McCoy took his +1/+1 counter instead of the destruction. A real game, kept by
+	// `--keep` (MagicCore.Tests/Records), replayed move by move.
+	[Test]
+	public void ACreatureSavedByDrMcCoy_SaysWhyItLived()
+	{
+		var root = AppContext.BaseDirectory;
+		while (!Directory.Exists(Path.Combine(root, "MagicCore.Tests")))
+			root = Path.GetDirectoryName(root)!;
+		var record = GameRecord.FromJson(
+			File.ReadAllText(
+				Path.Combine(root, "MagicCore.Tests", "Records", "McCoySavesGarak.json")
+			)
+		);
+
+		var m = MagicTableManager.Resume(record, search: false);
+
+		Assert.That(
+			m.Log.Single(l => l.Contains("would be destroyed")),
+			Does.Contain("Elim Garak, Simple Tailor").And.Contain("Dr. McCoy, Surly Surgeon")
+		);
+	}
+
 	[Test]
 	public void ALookAtTheirHand_IsLogged_CardByCard()
 	{

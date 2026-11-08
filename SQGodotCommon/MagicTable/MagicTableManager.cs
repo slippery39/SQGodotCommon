@@ -8,6 +8,7 @@ using MagicCore;
 using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Sets;
 
 namespace MagicTable;
@@ -442,6 +443,32 @@ public sealed class MagicTableManager
 					$"seen in {State.GetPlayer(OpponentId).Name}'s hand: {string.Join(", ", news.Select(c => c.Name))}"
 				)
 			);
+		// Dr. McCoy: a creature that would be destroyed loses its +1/+1 counters instead and stays — the
+		// board shows only the counters gone, so say why it lived (TBL-2.13).
+		// ponytail: read off the state, not the engine's Destroy — a creature that loses its counters
+		// some other way while McCoy is out is called saved too. An engine event if that ever shows.
+		foreach (
+			var was in before
+				.CardsIn(HumanId, ZoneType.Battlefield)
+				.Concat(before.CardsIn(OpponentId, ZoneType.Battlefield))
+		)
+			if (
+				was.PlusOneCounters > 0
+				&& State.IsOnBattlefield(was.Id)
+				&& State.GetCard(was.Id).PlusOneCounters == 0
+				&& State
+					.CardsIn(was.ControllerId, ZoneType.Battlefield)
+					.FirstOrDefault(p =>
+						p.Id != was.Id && State.HasAbility<CountersRemovedInsteadOfDestruction>(p)
+					)
+					is { } saver
+			)
+				_notes.Add(
+					(
+						State.GetGame().TurnNumber,
+						$"{was.Name} would be destroyed: its +1/+1 counters are removed instead ({saver.Name})"
+					)
+				);
 		// Zefram Cochrane: "You may look at the top card of your library any time" — the log names it
 		// whenever it changes while you may look. On the table itself: TBL-6.
 		if (
