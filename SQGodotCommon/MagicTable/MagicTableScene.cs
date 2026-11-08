@@ -1006,6 +1006,9 @@ public partial class MagicTableScene : Control
 	/// grew until the hand left the screen). ponytail: attachments under a card are not counted; a
 	/// host with several could overflow its half.
 	/// </summary>
+	/// <summary>Down to here a crowded board shrinks its cards (TBL-2.10: 10+ creatures wrapped the row and pushed the hand off the screen); past it the row wraps.</summary>
+	private const float MinBoardScale = 0.5f;
+
 	private float BoardScale(GameState s)
 	{
 		var screen = GetViewportRect().Size - new Vector2(2 * Margin, 2 * Margin);
@@ -1021,7 +1024,7 @@ public partial class MagicTableScene : Control
 		var size = CardViews.PermanentSize;
 		var byHeight = h / 2 / size.Y;
 		var byWidth = w / (fullest * (size.Y + 6));
-		return Mathf.Clamp(Mathf.Min(byHeight, byWidth), 1, 1.5f);
+		return Mathf.Clamp(Mathf.Min(byHeight, byWidth), MinBoardScale, 1.5f);
 	}
 
 	private static PanelContainer Half(PanelContainer board, params Control[] rows)
@@ -1049,8 +1052,8 @@ public partial class MagicTableScene : Control
 		return plate;
 	}
 
-	// ponytail: rows wrap (HFlow) when a side has many permanents, pushing the hand down; shrink
-	// the cards to fit (MtgGame's FitRow) if a real board overflows.
+	// ponytail: rows still wrap (HFlow) past ~20 permanents on a side, below MinBoardScale; scroll or
+	// stack identical permanents if a real board ever gets there.
 	private static HFlowContainer Row()
 	{
 		var row = new HFlowContainer
