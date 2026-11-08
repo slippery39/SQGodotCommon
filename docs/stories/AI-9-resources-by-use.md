@@ -122,7 +122,8 @@ Open questions:
       2026-11-07)**. /pre-commit's review fixed (Shayne: "make the fixes"): life priced by the life term itself
       (`LifeValue` — a full point at 20, not ½; the low-life surcharge), an activation trigger only on a turn it
       activates, a new Jace token at the walker's price, the edict's filter, Body and the land price called not
-      copied, surveil's rider from its effects — 6 more suite decisions moved (the match ran before them). Suite
+      copied, surveil's rider from its effects — 6 more suite decisions moved (the match ran before them; rerun on
+      2c5232ac: 288 games, beam 48.6% ± 1.3pp, 140–148, no 5pp difference either way). Suite
       accepted, the oracle re-read: beam 88.2% agreement, 0.85 given up, 1 win missed, 0 losses walked into,
       against `beam+walkernow` 85.8%, 1.09, 2, 1; table vs 17lands premier 0.257, sealed 0.310; GreedyAi's
       replays regenerated (10 of 12 moved); findings ("A planeswalker priced over its lifetime")
@@ -191,3 +192,4 @@ found it hiding Way of the Wildspeaker); one switch and one match.
 - 2026-10-27: AI-9.5 kept (Shayne) on the token bounce; match no difference (findings).
 - 2026-11-07: AI-9.3 built (`WalkerLifetime`), the Theorist and a Jace token's −3 flip; match no difference; kept.
 - 2026-11-07: AI-9.7 and AI-9.8 added (Shayne).
+- 2026-11-07: the match rerun on the committed version (2c5232ac): no difference.

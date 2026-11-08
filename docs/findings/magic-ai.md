@@ -1387,7 +1387,8 @@ price; every effect priced from its type (Shayne's prices: surveil 0.33 of a car
   AI-17.3) was found passing at HEAD with the old price — no evidence either way.
 - **The match** (`--match=beam,beam+walkernow --until-clear`): 384 games, beam 49.2% ± 1.4pp (189–195) — no 5pp
   difference either way. The field's only walkers are White-Blue Jace's (23–105 for both), so it sees little. Run
-  before the review's fixes below, which moved 6 more of the suite's 288 decisions.
+  before the review's fixes below, which moved 6 more of the suite's 288 decisions. **Rerun on the committed version
+  (2c5232ac): 288 games, beam 48.6% ± 1.3pp (140–148) — no 5pp difference either way**; the Jace deck 15–81 for both.
 - **The review's fixes (/pre-commit):** a point of life priced as the life term prices it (`LifeValue`: a full
   point at 20, where a copy of the taper gave ½; the low-life surcharge included); a "whenever you activate a
   loyalty ability" trigger counted only on a turn it activates; a new Jace token at the walker's own price (floor
