@@ -97,7 +97,7 @@ is a bug report, never about the look.
       time; picks stay when you change tab, and the search box (24+ options) filters within the open one.
       `ChoicePanel`. Captured through the real flow: Raffi cast, the exile mode, the target panel, the second tab.
       Not pinned by a test (Godot UI). The ZoneViewer (a plate's button) already shows one zone at a time
-- [ ] TBL-2.15 Blocks and attacks pair visibly (Arena's arrows, or the blocker moves beside its attacker);
+- [x] TBL-2.15 (done as TBL-4.3) Blocks and attacks pair visibly (Arena's arrows, or the blocker moves beside its attacker);
       today two creatures with the same name can't be told apart → TBL-4
 
 ## Next

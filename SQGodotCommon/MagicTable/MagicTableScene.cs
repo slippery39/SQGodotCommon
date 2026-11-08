@@ -10,6 +10,7 @@ using MagicCore.Cards;
 using MagicCore.Rules;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
+using MagicCore.Turns;
 using MtgGame;
 
 namespace MagicTable;
@@ -21,7 +22,7 @@ namespace MagicTable;
 /// (<see cref="BoardChoice"/>), anything else in the <see cref="ChoicePanel"/>. Space passes, Esc
 /// leaves; the AI moves on a timer.
 /// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names),
-/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>.
+/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>, <c>--resume=FILE</c> with <c>--resume-at=N</c>.
 /// </summary>
 public partial class MagicTableScene : Control
 {
@@ -193,6 +194,9 @@ public partial class MagicTableScene : Control
 		var resume = Arg("resume") is { } file
 			? GameRecord.FromJson(File.ReadAllText(file))
 			: TableSetup.Current?.Resume;
+		// --resume-at=N: only its first N moves, to stop on a position (a capture of a blocked attack).
+		if (resume is not null && int.TryParse(Arg("resume-at"), out var upTo))
+			resume = resume.Truncate(upTo);
 		if (TableSetup.Current?.Resume is not null)
 			TableSetup.Current = TableSetup.Current with { Resume = null };
 		_m = resume is not null
@@ -630,8 +634,44 @@ public partial class MagicTableScene : Control
 		CardViews.Clear(row);
 		row.CustomMinimumSize = new Vector2(0, CardViews.PermanentSize.Y * scale);
 		var onSomething = attached.SelectMany(g => g).Select(a => a.Id).ToHashSet();
+		// Combat, MTGO's way (TBL-4.3): each attacker and the creatures blocking it take the same column
+		// in the two rows, which face each other across the phase bar — so who blocks whom reads at a
+		// glance, even between two creatures of one name. Left-aligned while it lasts, so the columns meet.
+		var groups = Combat
+			.Attackers(s)
+			.Select(a => (Attacker: a, Blockers: Combat.BlockersOf(s, a.Id).ToList()))
+			.ToList();
+		var combatants = groups
+			.SelectMany(g => g.Blockers.Prepend(g.Attacker))
+			.Select(c => c.Id)
+			.ToHashSet();
+		row.Alignment =
+			groups.Count > 0 && !lands
+				? FlowContainer.AlignmentMode.Begin
+				: FlowContainer.AlignmentMode.Center;
 		var cards = s.CardsIn(player, ZoneType.Battlefield)
-			.Where(c => c.Is(CardType.Land) == lands && !onSomething.Contains(c.Id));
+			.Where(c =>
+				c.Is(CardType.Land) == lands
+				&& !onSomething.Contains(c.Id)
+				&& !combatants.Contains(c.Id)
+			);
+		if (!lands)
+			foreach (var (attacker, blockers) in groups)
+			{
+				var mine =
+					attacker.ControllerId == player
+						? [attacker]
+						: blockers.Where(b => b.ControllerId == player).ToList();
+				var column = new HBoxContainer
+				{
+					Alignment = BoxContainer.AlignmentMode.Center,
+					CustomMinimumSize = new Vector2(ColumnWidth(attacker, blockers, scale), 0),
+				};
+				column.AddThemeConstantOverride("separation", 6);
+				foreach (var c in mine)
+					column.AddChild(Permanent(c, 1));
+				row.AddChild(column);
+			}
 		// Identical lands stack, as on Arena: everything the crop shows is the same.
 		foreach (
 			var group in cards.GroupBy(c =>
@@ -639,26 +679,7 @@ public partial class MagicTableScene : Control
 			)
 		)
 		{
-			var c = group.First();
-			var view = CardViews.Permanent(
-				s,
-				c,
-				group.Count(),
-				glow(c),
-				Preview,
-				() => ObjectClicked(c.Id),
-				scale
-			);
-			if (!attached.Contains(c.Id))
-			{
-				row.AddChild(view);
-				continue;
-			}
-			var stack = new VBoxContainer();
-			stack.AddThemeConstantOverride("separation", 2);
-			stack.AddChild(view);
-			AddAttachments(stack, c.Id);
-			row.AddChild(stack);
+			row.AddChild(Permanent(group.First(), group.Count()));
 		}
 
 		// Phased out (The City on the Edge of Forever): still shown in its row, dimmed and badged — nothing
@@ -667,6 +688,27 @@ public partial class MagicTableScene : Control
 			var c in s.CardsIn(player, ZoneType.PhasedOut).Where(c => c.Is(CardType.Land) == lands)
 		)
 			row.AddChild(CardViews.Permanent(s, c, 1, glow(c), Preview, () => { }, scale));
+
+		// A permanent as a view, with what is attached to it under it.
+		Control Permanent(Card c, int count)
+		{
+			var view = CardViews.Permanent(
+				s,
+				c,
+				count,
+				glow(c),
+				Preview,
+				() => ObjectClicked(c.Id),
+				scale
+			);
+			if (!attached.Contains(c.Id))
+				return view;
+			var stack = new VBoxContainer();
+			stack.AddThemeConstantOverride("separation", 2);
+			stack.AddChild(view);
+			AddAttachments(stack, c.Id);
+			return stack;
+		}
 
 		// An Aura on an Equipment on a creature: each strip followed by what is on it.
 		void AddAttachments(VBoxContainer stack, int hostId)
@@ -679,6 +721,17 @@ public partial class MagicTableScene : Control
 				AddAttachments(stack, a.Id);
 			}
 		}
+	}
+
+	/// <summary>How wide an attacker's column is: its card, or its blockers side by side, whichever is wider (a tapped card lies sideways).</summary>
+	private static float ColumnWidth(Card attacker, List<Card> blockers, float scale)
+	{
+		float Width(Card c) =>
+			(c.IsTapped ? CardViews.PermanentSize.Y : CardViews.PermanentSize.X) * scale;
+		return Mathf.Max(
+			Width(attacker),
+			blockers.Sum(Width) + 6 * Math.Max(0, blockers.Count - 1)
+		);
 	}
 
 	private void ShowStack(GameState s, Func<int, Glow> glow)

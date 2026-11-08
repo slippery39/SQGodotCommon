@@ -108,6 +108,10 @@ MagicTable/
 - **Everything stays in view** (Shayne, 2026-10-23): a screen that doesn't fit is reorganised or
   scrolls — never clipped off the edge. Capture every screen a change touches (TBL-2.5: a new button
   pushed Start off the deck select).
+- **Combat reads by column, MTGO's way** (Shayne chose it over Arena's arrows, TBL-4.3): each attacker and
+  the creatures blocking it share one column in the two creature rows, which face each other across the
+  phase bar; the rows are left-aligned while attackers exist. Both rows build the same column widths
+  (`ColumnWidth`) — change one side and they stop meeting.
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.
 - **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
   only way to read a card), so a hold must never also play it. A new click target on a card goes

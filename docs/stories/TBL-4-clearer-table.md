@@ -52,8 +52,14 @@ Open questions:
       `Describe.Answer`, so it stays); captures `shots/tbl42-before`, `-after4`, `-zoom`, `-tools`
 - [ ] TBL-4.1 Interview Shayne: what is "busy" today, what from MTGO to keep, which Arena screens to
       match; then mockup prompts (`/match-mockup`)
-- [ ] TBL-4.3 Show who blocks whom: an arrow, or the blocker sits beside its attacker (Arena does both).
-      Shayne, 2026-11-08: two creatures of the same name, no way to tell which one the opponent blocked
+- [x] TBL-4.3 Show who blocks whom: Shayne, 2026-11-08 — two creatures of the same name, no way to tell which one
+      the opponent blocked. He compared MTGO (blockers sit across from the attacker they block) with Arena
+      (arrows) and chose MTGO's: "much simpler, the Arena one has always felt weird and hard to read". Built:
+      while attackers are declared, each attacker and its blockers share a column in the two creature rows
+      (which already face each other across the phase bar), rows left-aligned while it lasts; combatants
+      first, the rest after (`MagicTableScene.Fill`, `ColumnWidth`). Captured on two real games, in both
+      directions (Garak under-blocked by two Conquerors; my Culber blocked by Pet Sehlat + Khan). Not pinned
+      by a test (Godot layout). New debug flag `--resume-at=N` (Commands.md)
 
 ## Next
 
