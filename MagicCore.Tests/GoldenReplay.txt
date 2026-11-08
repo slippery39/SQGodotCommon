@@ -29,7 +29,7 @@ EveryScriptedCard 25 : steps=1409 turn=73 end=9[7,253,38,5,0] 0L[7,252,34,9,4] f
 EveryScriptedCard 26 : steps=1314 turn=65 end=27[8,255,29,8,3] -2L[7,263,29,3,1] final=23c97b73 | 8d19bf81 9f817859 b6ceaddb db433f92 cbcf2b68 e562832b 3997f60c c31bc87e 5def5191 5664b785 25e6d3f7 2960734e b3119bb0
 EveryScriptedCard 27 : steps=2024 turn=109 end=0L[7,236,58,2,0] 16[8,234,49,7,5] final=de8e32e6 | 3a14bd91 2dd19501 520d0bb6 bd574edd 2affaeae d48b2858 5723cffc c039e400 44b69adf ad749052 c6b4978d 38a21d80 faab6a42 28c89f28 6f01e00e 17caaad0 1bcc9f73 3b193126 ebe448a4 de90887e
 EveryScriptedCard 28 : steps=1356 turn=69 end=15[8,262,29,4,0] 0L[7,262,32,2,0] final=4764ebe1 | 62b1504a 91ec8578 de1362ba 9935fe8b bbfcce41 e567604b 3cb4da6e cf625fd4 0b4cb87f d076bfbc 6dee1af4 c0b75822 5d1c5fda
-EveryScriptedCard 29 : steps=1076 turn=52 end=0L[7,271,23,2,0] 20[8,265,21,9,1] final=0999cfb4 | 10154ebf 6dfe1511 a7238c55 2a8a63d1 db0f8e68 09281103 0326b56b caa26ceb 301552ac cd199183
+EveryScriptedCard 29 : steps=872 turn=42 end=0L[7,276,18,2,0] 20[7,275,12,10,1] final=38aa277c | 10154ebf 6dfe1511 a7238c55 2a8a63d1 ad255712 02a6137a 6c23959d 337f8761
 EveryScriptedCard 30 : steps=672 turn=34 end=26[8,279,8,8,0] -2L[7,279,13,5,0] final=5ec94ec7 | ebb1d085 90f346dc ead3a4bd dbe0845d 0b0f1320 e011802e
 RealFraDecks 01 : steps=1339 turn=58 end=26[0,1,18,20,1] 15L[0,0,21,20,0] final=b3f7cc07 | 6e97cc14 ebc7d4ca 87cad65f 7623e94b 4bf0e553 5819df2c 5c6d3f6e b2a1968a 0e282247 74c966d0 2f5eda3f 3b652e75 c632e538
 RealFraDecks 02 : steps=577 turn=24 end=0L[1,21,8,11,0] 8[0,21,9,9,1] final=9223cc85 | 36a8e42d 042ea9bf 12647772 b7e18c19 223d0b42

@@ -112,6 +112,23 @@ public class ManaPaymentTests
 		);
 	}
 
+	// Shayne, 2026-11-08: {1}{B} with two Swamps and Unexplored Territory (colourless) tapped the
+	// Swamps and kept the Territory, so the black card still in hand could not be cast.
+	[Test]
+	public void AColourlessLand_PaysTheGeneric_BeforeABasicDoes()
+	{
+		var (s, me) = Board("Swamp", "Swamp");
+		// A real card: the test needs its mana ability, which the vanilla FRA lookup has no script for.
+		(s, var territory) = TestGames.Put(
+			s,
+			me,
+			CardRegistry.Get("Unexplored Territory", "TRK"),
+			ZoneType.Battlefield
+		);
+		var paid = ManaPayment.Find(s, me, ManaCost.Parse("{1}{B}"), 0)!;
+		Assert.That(paid.Select(p => p.LandId), Does.Contain(territory));
+	}
+
 	// A mana creature tapped for a spell can no longer attack — lands go first.
 	[Test]
 	public void LandsAreTappedBeforeAManaCreature()

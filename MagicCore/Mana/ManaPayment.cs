@@ -25,7 +25,7 @@ namespace MagicCore;
 /// (ManaAbilities.YieldOf) — Loot, the Nexus makes several of one colour, a Mountain under Molten
 /// Tide an extra {R}. A permanent is tapped once, and what the payment doesn't use floats.
 ///
-/// ponytail: spends floating mana first, then lands with the fewest colours. Arena's tapper also
+/// ponytail: spends floating mana first, then lands with the fewest colours (colourless counts as none). Arena's tapper also
 /// keeps colours the rest of your hand needs. That trigger has fired — the FRA decks play duals
 /// since batch 7a, so a {1}{W} can still tap the Island a {U}{U} in hand needed. Next to build.
 /// </summary>
@@ -366,7 +366,8 @@ public static class ManaPayment
 			var (id, isCreature, sameColor, units, sacrificed) in tappable
 				.OrderBy(p => p.Sacrificed)
 				.ThenBy(p => p.IsCreature)
-				.ThenBy(p => p.Units.Sum(u => u.Length))
+				// {C} is no colour: a colourless land goes before a basic, whatever their order on the table
+				.ThenBy(p => p.Units.Sum(u => u.Count(c => c != ManaColor.Colorless)))
 		)
 			sources.Add(
 				new(
