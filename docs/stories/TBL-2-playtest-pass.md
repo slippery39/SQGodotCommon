@@ -70,16 +70,28 @@ is a bug report, never about the look.
       AI searches, and a click delivered after the stall carried the hover from before the pointer moved.
       Captured: a click on a hand card plays it, a click beside it doesn't. Not pinned by a test (Godot input)
 - [x] TBL-2.9 Auto-tapper tapped every black source with a black card in hand → TBL-8.1, fixed
-- [ ] TBL-2.10 With 10+ creatures the board's rows wrap and push the whole UI down (the `ponytail:` note
-      in `MagicTableScene.Row()` said this would happen): shrink the cards to fit (MtgGame's FitRow)
-- [ ] TBL-2.11 Cards in the hand are darker than they need to be — find which dim it is (unplayable
-      cards? the fan's shading?) and lighten it
+- [x] TBL-2.10 With 10+ creatures the board's rows wrapped and pushed the whole UI down.
+      `BoardScale` clamped the cards to at least 1×, so a row too wide for the board wrapped; it now
+      shrinks them down to `MinBoardScale` (0.5×). Captured: 14 creatures in one row, the hand and phase
+      bar where they were. Past ~20 permanents on a side the row still wraps (a `ponytail:` note). Not
+      pinned by a test (Godot layout)
+- [x] TBL-2.11 Cards in the hand are darker than they need to be (Shayne, 2026-11-08: "a slightly black
+      tint", every card, in the hand only). Cause: the card's holographic shader sat on the face's
+      container; even with `Holographic` off it drew the printed art at about half its brightness
+      (a card's art area measured 41 on screen, 93 in the image — 93 again with the shader's material
+      removed), while whites stayed white, so it read as a tint. `MagicHandView.Decorate` now drops
+      the container's material for a printed face. Found by comparing a capture's pixels with the card
+      image and switching the shader off — the algebra of the shader didn't show it. Not pinned by a test (Godot rendering)
 - [x] TBL-2.12 "Double blocking didn't work" (Elim Garak, 021555 `game_records/2026-11-08_021555_seed146333.json`,
       T13, moves #302-#305). **Not an engine bug:** both Temporal Conquerors did block (`blk` on both); one
       died, but Dr. McCoy, Surly Surgeon's "remove +1/+1 counters instead of destroying" saved Garak (4/4 →
       3/3, damage healed) — exactly his card text. The table never said so
-- [ ] TBL-2.13 …so the game log should say when a replacement saved a creature ("Elim Garak would be
-      destroyed: counters removed instead"), and a blocked-by-two attacker should read as such
+- [x] TBL-2.13 …so the log says when Dr. McCoy saved a creature: "Elim Garak, Simple Tailor would be
+      destroyed: its +1/+1 counters are removed instead (Dr. McCoy, Surly Surgeon)" — a note from
+      `MagicTableManager.Play`, read off the state like V'Ger's "seen in" (a ponytail: a creature that
+      loses its counters another way with McCoy out is called saved too). Tested on the real game, kept
+      as `MagicCore.Tests/Records/McCoySavesGarak.json` (`ACreatureSavedByDrMcCoy_SaysWhyItLived`). Which
+      creatures blocked an attacker is TBL-4.3's
 - [ ] TBL-2.14 Zone viewer: show one player's graveyard at a time (Raffi Musiker's "target cards in
       graveyards" listed everyone's at once), `ZoneViewer.cs`
 - [ ] TBL-2.15 Blocks and attacks pair visibly (Arena's arrows, or the blocker moves beside its attacker);

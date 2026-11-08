@@ -265,6 +265,9 @@ public sealed class MagicHandView
 	private static void Decorate(InternalCardUI2D card, Texture2D? image, Glow glow, string? from)
 	{
 		var container = card.GetNode<Node2D>("%CardContainer");
+		// The card's holographic shader, even switched off, drew the printed art at about half its
+		// brightness (measured: art 41 against the image's 93; with no material, 93). A real face needs none.
+		container.Material = null;
 		foreach (var layer in container.GetChildren().OfType<CanvasItem>())
 			layer.Visible = layer.Name.ToString() is "MainFrame" or FromBadge or GlowPlate;
 		var size = new Vector2(312, FrameHeight);

@@ -98,7 +98,8 @@ MagicTable/
 - **The fan is placed on the space's `ItemRectChanged`, not `Resized`** — the container MOVES the
   space after the first draw, and the fan stayed at the top of the screen, unseen.
 - **A Scryfall face hides every Card2D layer but the frame** (`Decorate`, idempotent), with
-  `FrameColor` white and `Holographic` off — the shared shader tinted the cards green. The glow is a
+  `FrameColor` white and `Holographic` off — the shared shader tinted the cards green — and the
+  container's holo material dropped: even off, it drew the art at half brightness (TBL-2.11). The glow is a
   plate behind the image: the shader's outline traces transparency, and a JPG has none.
 - **Action-column buttons wrap** (`AddButton`): a long label once grew a button off the screen.
   Lists use the plain plate in the body font; only main actions use the big oxblood style.
