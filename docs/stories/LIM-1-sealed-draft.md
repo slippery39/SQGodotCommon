@@ -107,8 +107,12 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       (two colours, a splash, a greedy splash). Not yet run on a real pool's candidates
 - [ ] LIM-1.9 The AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) weights by old
       draft boosters (10 C / 3 U / 1 R) — point it at `FRA.boosters.json`'s sheets
-- [ ] LIM-1.10 Sealed pool filters (Shayne, 2026-11-08): by rarity, and by several colours at once
-      (today `SealedScene._filter` is one string: All / one colour / multi / colourless)
+- [x] LIM-1.10 Sealed pool filters (Shayne, 2026-11-08): the colours W U B R G are toggles — several at once, a
+      card shows if it has ANY of them (a W/U card shows under either) — and a rarity row (Common, Uncommon,
+      Rare, Mythic; toggles, any of). Multi / Colourless / Lands replace the colours; All clears everything;
+      colours, kind and rarity must all hold. `SealedScene` (`PickFilter`, `Shows`). Captured: W + U + Common.
+      Shayne, 2026-11-08: "any of the colours" is right; a Special Guest counts as Mythic (the nearest to its
+      real rarity). Not pinned by a test (Godot UI)
 
 ## Next
 

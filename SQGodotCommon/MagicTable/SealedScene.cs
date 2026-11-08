@@ -31,6 +31,8 @@ public partial class SealedScene : Control
 		"Colourless",
 		"Lands",
 	];
+	private static readonly string[] Rarities = ["Common", "Uncommon", "Rare", "Mythic"];
+	private static readonly string[] ColorFilters = ["W", "U", "B", "R", "G"];
 
 	/// <summary>The event in progress — kept when the table returns here, replaced by New pool.</summary>
 	private static SealedSession? _session;
@@ -59,7 +61,11 @@ public partial class SealedScene : Control
 
 	private readonly Label _simNote = Text("", 16);
 
-	private string _filter = "All";
+	// The pool's filters (LIM-1.10): any of the picked colours (several at once), a kind that excludes
+	// colours (multicolour, colourless, lands), and any of the picked rarities; all three must hold.
+	private readonly HashSet<string> _colors = new();
+	private string _kind = "All";
+	private readonly HashSet<string> _rarities = new();
 	private readonly List<Button> _filterButtons = new();
 	private readonly HFlowContainer _pool = new() { SizeFlagsHorizontal = SizeFlags.ExpandFill };
 	private readonly VBoxContainer _deckRows = new();
@@ -289,18 +295,28 @@ public partial class SealedScene : Control
 		filters.AddThemeConstantOverride("separation", 6);
 		foreach (var filter in Filters)
 		{
-			var button = Choice(
-				filter,
-				() =>
-				{
-					_filter = filter;
-					Redraw();
-				}
-			);
+			var button = Choice(filter, () => PickFilter(filter));
 			_filterButtons.Add(button);
 			filters.AddChild(button);
 		}
 		center.AddChild(filters);
+		var rarities = new HBoxContainer();
+		rarities.AddThemeConstantOverride("separation", 6);
+		foreach (var rarity in Rarities)
+		{
+			var button = Choice(
+				rarity,
+				() =>
+				{
+					if (!_rarities.Remove(rarity))
+						_rarities.Add(rarity);
+					Redraw();
+				}
+			);
+			_filterButtons.Add(button);
+			rarities.AddChild(button);
+		}
+		center.AddChild(rarities);
 		_leftOut.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_leftOut.CustomMinimumSize = new Vector2(1, 0);
 		center.AddChild(_leftOut);
@@ -397,7 +413,7 @@ public partial class SealedScene : Control
 					);
 		_leftOut.Visible = _leftOut.Text.Length > 0;
 		foreach (var button in _filterButtons)
-			MtgUiStyles.StyleChoice(button, selected: button.Text == _filter);
+			MtgUiStyles.StyleChoice(button, selected: FilterOn(button.Text));
 
 		CardViews.Clear(_pool);
 		foreach (var card in S.Sideboard.Where(Shows).OrderBy(Order).ThenBy(c => c))
@@ -496,20 +512,71 @@ public partial class SealedScene : Control
 			_preview.Texture = MagicArt.Full(MagicArt.Key(card, S.Set));
 	}
 
+	/// <summary>A colour toggles (several at once); a kind replaces the colours; All clears every filter.</summary>
+	private void PickFilter(string filter)
+	{
+		if (filter == "All")
+		{
+			_colors.Clear();
+			_rarities.Clear();
+			_kind = "All";
+		}
+		else if (ColorFilters.Contains(filter))
+		{
+			_kind = "All";
+			if (!_colors.Remove(filter))
+				_colors.Add(filter);
+		}
+		else
+		{
+			_colors.Clear();
+			_kind = _kind == filter ? "All" : filter;
+		}
+		Redraw();
+	}
+
+	private bool FilterOn(string button) =>
+		button == "All" ? _colors.Count + _rarities.Count == 0 && _kind == "All"
+		: Rarities.Contains(button) ? _rarities.Contains(button)
+		: ColorFilters.Contains(button) ? _colors.Contains(button)
+		: _kind == button;
+
 	private bool Shows(string card)
 	{
 		var data = Data(card);
 		var land = data.TypeLine.Contains("Land");
 		var colors = data.Colors ?? [];
-		return _filter switch
+		var kind = _kind switch
 		{
-			"All" => true,
 			"Lands" => land,
 			"Colourless" => !land && colors.Length == 0,
 			"Multi" => colors.Length > 1,
-			_ => colors.Length == 1 && colors[0] == _filter,
+			_ => true,
 		};
+		return kind
+			&& (_colors.Count == 0 || colors.Any(_colors.Contains))
+			&& (_rarities.Count == 0 || _rarities.Contains(RarityOf(card)));
 	}
+
+	private Dictionary<string, string>? _rarityOf;
+	private string? _raritySet;
+
+	/// <summary>"Common" … "Mythic" from the set's printings; a card it doesn't print (a Special Guest) counts as Mythic (Shayne, 2026-11-08).</summary>
+	private string RarityOf(string card)
+	{
+		if (_raritySet != S.Set || _rarityOf is null)
+		{
+			_raritySet = S.Set;
+			_rarityOf = CardDataSet
+				.Load(S.Set)
+				.GroupBy(p => p.Card.Name)
+				.ToDictionary(g => g.Key, g => Capitalised(g.First().Rarity));
+		}
+		return _rarityOf.GetValueOrDefault(card, "Mythic");
+	}
+
+	private static string Capitalised(string word) =>
+		word.Length == 0 ? word : char.ToUpperInvariant(word[0]) + word[1..];
 
 	/// <summary>Arena's pool order: white, blue, black, red, green, multicolour, colourless, lands — then cost.</summary>
 	internal static (int, double) Order(string card)
