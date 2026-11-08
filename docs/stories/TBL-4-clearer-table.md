@@ -52,6 +52,8 @@ Open questions:
       `Describe.Answer`, so it stays); captures `shots/tbl42-before`, `-after4`, `-zoom`, `-tools`
 - [ ] TBL-4.1 Interview Shayne: what is "busy" today, what from MTGO to keep, which Arena screens to
       match; then mockup prompts (`/match-mockup`)
+- [ ] TBL-4.3 Show who blocks whom: an arrow, or the blocker sits beside its attacker (Arena does both).
+      Shayne, 2026-11-08: two creatures of the same name, no way to tell which one the opponent blocked
 
 ## Next
 

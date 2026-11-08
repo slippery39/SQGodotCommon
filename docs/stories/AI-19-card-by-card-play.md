@@ -77,6 +77,10 @@ Open questions:
       score (`GreedyAi.Answer`), which doesn't price a graveyard card — so it exiles the first, not the least
       useful (a reanimation target kept). And `{B/P}` paid with life or {B} is the search's: check it pays life only
       when the mana buys something else that turn (MC-5.6 batch 3a).
+- [ ] AI-19.21 General Chang, Cold Warrior: the AI sacrificed a 4/4 Cha'DIch Investigator and a token to
+      make him bigger at sorcery speed, nothing was dying (Shayne, 2026-11-08). Records:
+      `game_records/2026-11-08_025607_seed478788.json` #305, #309 — and #458 it sacrificed Chang HIMSELF.
+      Rebuild as a position; the sacrifice should be priced against what the creature is worth
 
 ## Next
 

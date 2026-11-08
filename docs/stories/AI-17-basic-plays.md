@@ -449,6 +449,10 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       that turn the AI expects more damage through next turn than there will be. `Through` already strips
       this turn's toughness pumps (`Pumps`); the fix strips every until-end-of-turn grant the same way (all
       three at once), measured the AI-6 way — a position with La'An's trigger resolved, the suite, a match
+- [ ] AI-17.10 Block that loses to the trick (Shayne, 2026-11-08): turn 3, the AI blocked his Astute
+      Terraformer with its own; he pumped his and killed theirs for free. Record
+      `game_records/2026-11-08_024830_seed30768236.json` #92. Rebuild as a position: does the search see his
+      open mana and the pump? Measure as AI-6 does
 
 ## Next
 

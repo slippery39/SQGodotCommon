@@ -107,6 +107,8 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       (two colours, a splash, a greedy splash). Not yet run on a real pool's candidates
 - [ ] LIM-1.9 The AI's guess at a hidden hand (`Hidden.BoosterWeighted`, AI-3.5) weights by old
       draft boosters (10 C / 3 U / 1 R) — point it at `FRA.boosters.json`'s sheets
+- [ ] LIM-1.10 Sealed pool filters (Shayne, 2026-11-08): by rarity, and by several colours at once
+      (today `SealedScene._filter` is one string: All / one colour / multi / colourless)
 
 ## Next
 

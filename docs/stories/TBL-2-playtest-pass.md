@@ -59,6 +59,31 @@ is a bug report, never about the look.
       copy no longer joins the hand row; its creature glows playable and a click on it casts the
       copy (alone, the click IS on the copy, so a modal one still asks its mode). Captured: the hand
       without it, the creature's click straight into Seed Suture's targets
+- [x] TBL-2.8 **A click away from a card sometimes plays a card** (Shayne, 2026-11-08, three times; the
+      most destructive report). A hand click plays `CardUIManager.CurrentHoveredCard`
+      (`MagicHandView.Track`), which is only refreshed once a frame from the mouse-over list
+      (`CardUIManager._Process`). Suspect: a stale hover / the raised card's mouse area. Find the cause
+      before fixing it; it is in Common, so KIN and MtgGame share it
+      Fixed in `MagicHandView.Track`: a mouse event counts as on the hovered card only if its OWN
+      position is inside the card's hit shape (`Over`), so a lagging hover can't turn a click on a land,
+      a creature or empty board into a play. Cause (inferred, not reproduced): the window stalls while the
+      AI searches, and a click delivered after the stall carried the hover from before the pointer moved.
+      Captured: a click on a hand card plays it, a click beside it doesn't. Not pinned by a test (Godot input)
+- [x] TBL-2.9 Auto-tapper tapped every black source with a black card in hand → TBL-8.1, fixed
+- [ ] TBL-2.10 With 10+ creatures the board's rows wrap and push the whole UI down (the `ponytail:` note
+      in `MagicTableScene.Row()` said this would happen): shrink the cards to fit (MtgGame's FitRow)
+- [ ] TBL-2.11 Cards in the hand are darker than they need to be — find which dim it is (unplayable
+      cards? the fan's shading?) and lighten it
+- [x] TBL-2.12 "Double blocking didn't work" (Elim Garak, 021555 `game_records/2026-11-08_021555_seed146333.json`,
+      T13, moves #302-#305). **Not an engine bug:** both Temporal Conquerors did block (`blk` on both); one
+      died, but Dr. McCoy, Surly Surgeon's "remove +1/+1 counters instead of destroying" saved Garak (4/4 →
+      3/3, damage healed) — exactly his card text. The table never said so
+- [ ] TBL-2.13 …so the game log should say when a replacement saved a creature ("Elim Garak would be
+      destroyed: counters removed instead"), and a blocked-by-two attacker should read as such
+- [ ] TBL-2.14 Zone viewer: show one player's graveyard at a time (Raffi Musiker's "target cards in
+      graveyards" listed everyone's at once), `ZoneViewer.cs`
+- [ ] TBL-2.15 Blocks and attacks pair visibly (Arena's arrows, or the blocker moves beside its attacker);
+      today two creatures with the same name can't be told apart → TBL-4
 
 ## Next
 
