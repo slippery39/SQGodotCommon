@@ -88,6 +88,7 @@ MagicCore/
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;
 │                        held cards priced by their measured value by default (AI-1); Settings.Interactive
 │                        is the ~1 s wall-clock cap for the table and console — never in a sim run
+├── Ai/BlunderLint.cs    AI-17.7: AI-vs-AI games, each decision checked for an obvious mistake and counted (a lint, never a weight)
 ├── Ai/Hidden.cs         what the search may know of the libraries and the opponent's hand: the real
 │                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3)
 ├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end; CastGains.cs: a held instant's offers in self-play, its option value (--cast-gains, AI-13.4)

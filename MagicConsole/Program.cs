@@ -213,6 +213,25 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 	return;
 }
 
+// --lint [--games=N] [--seed=N] [--ai=beam]: AI-vs-AI games with every decision checked for an obvious mistake
+// and counted (BlunderLint, AI-17.7); the report to ai_reports/lint-<time>.md. --ai=beam+nolanddrop is the old build.
+if (flags.Contains("--lint"))
+{
+	Directory.CreateDirectory("ai_reports");
+	var lintPath = Path.Combine("ai_reports", $"lint-{DateTime.Now:yyyy-MM-dd_HHmmss}.md");
+	var lintAi = args.FirstOrDefault(a => a.StartsWith("--ai="))?[5..] ?? "beam";
+	var (lint, _) = MagicCore.Ai.BlunderLint.Run(
+		Arg("games") ?? 20,
+		Arg("seed") ?? 1,
+		lintAi,
+		Arg("only")
+	);
+	File.WriteAllText(lintPath, lint);
+	Console.WriteLine(string.Join(" / ", lint.Split((char)10).Take(8)));
+	Console.WriteLine(lintPath);
+	return;
+}
+
 // --decisions [--games=N] [--seed=N]: AI-vs-AI games with every real decision written out — the
 // options ranked and what each changes, term by term (DecisionReport) — to ai_reports/.
 if (flags.Contains("--decisions"))
