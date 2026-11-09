@@ -1503,3 +1503,10 @@ a 4/4 and a 2/1 for a 1/2 → 3/4 at sorcery speed is not value, "and I wouldn't
   the Terraformer fix also in `beam`): beam 52.1% ± 1.9pp (100–92) — undecided at the cap, no loss. Cost per decision
   **4 385.4 steps against 2 393.6 (1.8x, was 2.3x)**; slowest decision **33 s against 11 s (was 173 s)**. The
   Chang plays stay fixed, and every kept position holds.
+
+## AI-9.1: a land in hand is worth what it unlocks (2026-11-09)
+
+- **Suite** (`--suite=beam`): 21 of 288 decisions changed from the committed answers against 19 with `+nolandunlock`; oracle
+  agreement 84.7% -> 85.4%; cost unchanged. One change is Pass -> Play Plains.
+- **Match** (`--match=beam,beam+nolandunlock --until-clear`, 9.9 min): beam 51.0% +- 1.0pp (49-47 in 96 games), no difference of
+  5pp either way. Cost per decision 3 148.5 steps against 3 173.8; lands played a game 7.7 against 7.6.

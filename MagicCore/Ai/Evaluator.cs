@@ -18,6 +18,9 @@ public static partial class Evaluator
 	/// <summary>A land in hand: less than a spell, so playing even a surplus land scores a gain.</summary>
 	public const double LandInHand = 0.3;
 
+	/// <summary>A land in hand that unlocks nothing (<see cref="Terms.LandUnlock"/>): a land to pitch or bin.</summary>
+	public const double LandSurplus = 0.05;
+
 	/// <summary>
 	/// Position score for <paramref name="player"/>. Permanent value counts printed stats plus counters, not
 	/// until-end-of-turn pumps — a pump is worth only what it changes before it wears off.
@@ -257,6 +260,13 @@ public static partial class Evaluator
 		/// activation was a free first step on a won line (`+nostationcap`).
 		/// </summary>
 		StationCap = 524288,
+
+		/// <summary>
+		/// A land in our hand is worth what it unlocks (AI-9.1, Shayne 2026-11-09), not a flat 0.3: a card we hold that
+		/// we could not cast without it, or more cards cast by next turn (<see cref="LandUnlock"/>); a surplus land is
+		/// worth <see cref="LandSurplus"/> (`+nolandunlock`).
+		/// </summary>
+		LandUnlock = 1048576,
 	}
 
 	/// <summary>
@@ -468,7 +478,12 @@ public static partial class Evaluator
 				&& !own
 				&& !(c.KnownTo.HasFlag(Knowers.Opponent) && !IsOff(Terms.KnownHand))
 					? held.Unknown
-				: c.Is(CardType.Land) ? LandInHand
+				: c.Is(CardType.Land)
+					? (
+						own && !IsOff(Terms.LandUnlock) && !LandUnlock.Unlocks(s, player, c)
+							? LandSurplus
+							: LandInHand
+					)
 				: held is null ? FlatHandCard
 				: own
 				&& !IsOff(Terms.HoldOption)

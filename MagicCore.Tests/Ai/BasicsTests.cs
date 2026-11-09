@@ -306,11 +306,16 @@ public class BasicsTests
 			string.Join(",", ids.Select(id => s.GetCard(id).Name));
 
 		Assert.That(search, Is.InstanceOf<ChooseFromLibraryChoice>());
+		// The CONTROL: with a land priced flat (Terms.LandUnlock off, AI-9.1) one ply sees three equal lands. Priced by
+		// what it unlocks, even one ply takes the Swamp.
+		string OnePly() =>
+			Picked(new GreedyAi(me, BeamSearchAi.DefaultRollout.Held).Answer(s, search));
 		Assert.That(
-			Picked(new GreedyAi(me, BeamSearchAi.DefaultRollout.Held).Answer(s, search)),
+			Evaluator.Without(Evaluator.Terms.LandUnlock, OnePly),
 			Is.Not.EqualTo("Swamp"),
 			"the control: one ply sees three equal lands"
 		);
+		Assert.That(OnePly(), Is.EqualTo("Swamp"));
 		Assert.That(Picked(new BeamSearchAi(me).Decide(s).Answer!), Is.EqualTo("Swamp"));
 	}
 

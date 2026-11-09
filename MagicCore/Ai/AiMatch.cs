@@ -84,6 +84,8 @@ public static class AiMatch
 			["nolanddrop"] = o => o with { Without = o.Without | Evaluator.Terms.LandDrop },
 			// A Spacecraft's charge counted past its station threshold, before 2026-11-09: beam+nostationcap.
 			["nostationcap"] = o => o with { Without = o.Without | Evaluator.Terms.StationCap },
+			// A land in hand at a flat 0.3 whatever it unlocks, before AI-9.1: beam+nolandunlock.
+			["nolandunlock"] = o => o with { Without = o.Without | Evaluator.Terms.LandUnlock },
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
@@ -300,8 +302,17 @@ public static class AiMatch
 		var perBatch = SeedsPerBatch * pairs.Count * 2;
 		var (judged, reading) = (0, EarlyStop.Judge([]));
 		// Asked under PlayAll's lock after every game: judge each whole batch now complete, in order.
+		var shown = 0;
 		bool Enough(Game?[] results)
 		{
+			var done = results.Count(r => r is not null);
+			if (done / 24 > shown) // a line every 24 games, so "how far along?" has an answer
+			{
+				shown = done / 24;
+				Console.Error.WriteLine(
+					$"match: {done} games, {judged / (pairs.Count * 2)} seeds judged, {clock.Elapsed.TotalMinutes:0.0} min, {reading.Verdict}"
+				);
+			}
 			while (reading.Verdict == EarlyStop.Verdict.Undecided && judged < results.Length)
 			{
 				var next = Math.Min(judged + perBatch, results.Length);

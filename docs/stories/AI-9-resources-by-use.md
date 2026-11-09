@@ -81,7 +81,17 @@ Open questions:
 
 ## Tasks
 
-- [ ] AI-9.1 Lands in hand by what they unlock — every land in our hand is a flat 0.3 today.
+- [ ] AI-9.1 Lands in hand by what they unlock — every land in our hand was a flat 0.3.
+      **STARTED 2026-11-09 (Shayne's rule, from the surveil report AI-17.20):** keep a land only if it unlocks a card we hold
+      or lets us do MORE next turn; otherwise it is surplus. Built: `LandUnlock.Unlocks` (pure; next turn's mana = sources +
+      lands in hand, one drop this turn if still to come and one next, then the candidate; colours matched pip by pip -
+      ponytail ceilings in its summary) with 5 position tests; `Evaluator.Terms.LandUnlock` (`+nolandunlock`) prices an OWN
+      land in hand at 0.3 if it unlocks, else `LandSurplus` 0.05. Suite: 21 of 288 changed against 19 with it off, oracle
+      agreement 84.7% -> 85.4%, cost unchanged; one change is Pass -> Play Plains. `BasicsTests.Landcycling_..`: its control
+      (one ply, blind to the colour) now needs the switch OFF - one ply picks the Swamp that unlocks the Rat. The card-value
+      sandbox measures with the term off (the tracked table is unchanged); the greedy golden replay moved in 6 games (after the review fix: land drops until we next cast = 2 only on our own turn with a drop to come, else 1; the candidate competes with the held lands for the drops - suite and match unchanged in reading, match run on the version before the fix)
+      (regenerated). MATCH (2026-11-09, 9.9 min): `beam` vs `beam+nolandunlock`, 96 games, beam 51.0% +-1.0pp (49-47), early stop: NO difference of 5pp either way, so kept by AI-5's rule; cost per decision unchanged (3148 vs 3174 steps), 7.7 vs 7.6 lands played a game. NOT done:
+      the library-top price for surveil (AI-17.15 / 17.20), the opponent's lands (blind by design)
       MtgSimulator's precedent: "a land is worth 0 on its own; its value is entirely the difference
       it makes to everything else" (`.claude/rules/sim-ai.md`)
 - [ ] AI-9.2 Life by what it buys — **tried 2026-10-28 and dropped:** Shayne's taper from 10 (a point a

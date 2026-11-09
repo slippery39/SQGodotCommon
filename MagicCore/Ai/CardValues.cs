@@ -121,7 +121,7 @@ public static class CardValues
 	/// </summary>
 	public static IReadOnlyList<Entry> Measure(IReadOnlyList<CardDefinition> cards, int seed = 7) =>
 		Evaluator.Without(
-			Evaluator.Terms.Threat | Evaluator.Terms.MoreKeywords,
+			Evaluator.Terms.Threat | Evaluator.Terms.MoreKeywords | Evaluator.Terms.LandUnlock,
 			() =>
 			{
 				var (fixture, me) = Fixture(seed);
