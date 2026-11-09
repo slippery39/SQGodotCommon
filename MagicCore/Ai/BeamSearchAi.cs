@@ -284,6 +284,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			replay.End(end);
 			var result = end.IsOver() ? (end.WinnerId() == PlayerId ? " — won" : " — lost") : "";
 			md.Append($"\n**Rollout {score:0.00}**{result}\n");
+			// where the line ended, term by term (AI-17.10): "scores 26.9" is not a diagnosis
+			md.Append(
+				$"\nEnds at: {string.Join(", ", Evaluator.Explain(end, PlayerId, RolloutSettings.Held).Where(t => Math.Abs(t.Value) >= 0.005).Select(t => $"{t.Term} {t.Value:+0.00;-0.00}"))}\n"
+			);
 		}
 		return md.ToString();
 	}

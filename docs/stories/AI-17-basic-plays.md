@@ -452,7 +452,13 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - [ ] AI-17.10 Block that loses to the trick (Shayne, 2026-11-08): turn 3, the AI blocked his Astute
       Terraformer with its own; he pumped his and killed theirs for free. Record
       `game_records/2026-11-08_024830_seed30768236.json` #92. Rebuild as a position: does the search see his
-      open mana and the pump? Measure as AI-6 does
+      open mana and the pump? Measure as AI-6 does.
+      **Cause (rollout model):** `Rollout.TheirResponse` opened only in OUR turn, and for spells only — so in
+      HIS combat, after our block, the simulated opponent had no priority and the block read as a clean trade.
+      Fix (`Evaluator.Terms.TheirCombatTricks`, `+notheircombat`): its own DeclareBlockers window, and a
+      mana-costed ability (`IsManaPump`) beside the spells. The position (`TerraformerBlock`, kept) flips to
+      "don't block" (-12.31 blocking, -4.03 not); test `ABlock_ThatLosesToTheirOpenManaPump_IsNotMade`, control
+      included. Suite: 1 of 288 changed (Jace deck, move 153, Island → Pass), oracle 88.2% → 87.8%. **Match run: 96 games, 51.0% ± 1.0pp, no 5pp difference, +4% cost: kept as the default**
 
 ## Next
 
@@ -467,6 +473,9 @@ cause (this session's guesses were wrong more often than right).
 
 ## Log
 
+- 2026-11-08: AI-17.10 — cause found (the simulated opponent had no tricks in its own combat), fix behind
+  `+notheircombat`, suite and tests green; the match is pending. `--explain` now ends each line with its
+  evaluator terms ("Ends at: …"). Details in `docs/findings/magic-ai.md`.
 - 2026-10-29: created from Shayne's two table games (LIM-2.3's playtest); both diagnosed on kept records.
 - 2026-10-29: the plan agreed — the attack as one decision (Shayne); to the top of sprint 3.
 - 2026-10-29: AI-17.2 — "you may" taken in the look-ahead; 51.0% over 192 games, kept.

@@ -220,6 +220,13 @@ public static partial class Evaluator
 		/// (AI-8.2's price, `+walkernow`).
 		/// </summary>
 		WalkerLifetime = 16384,
+
+		/// <summary>
+		/// The simulated opponent's trick in its OWN combat, once we have blocked — a spell, or a mana-costed
+		/// ability (Astute Terraformer's pump) — so a block that loses to open mana is seen (AI-17.10, Shayne's
+		/// turn 3: the AI blocked, he pumped, and it lost a creature for nothing; `+notheircombat`).
+		/// </summary>
+		TheirCombatTricks = 32768,
 	}
 
 	/// <summary>

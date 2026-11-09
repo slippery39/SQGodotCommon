@@ -1409,3 +1409,25 @@ price; every effect priced from its type (Shayne's prices: surveil 0.33 of a car
   a stack (Icy Reception, Rise of the Deathbringer), an empty opposing hand (Mind Twist), combo pieces (Splinter
   Twin); (5) **empty graveyards** (Tarmogoyf); (6) **mid-size bodies** the creature formula likes and 17lands doesn't
   (Rampart Hunter, Winter, Team Player, Arni, Renowned Champion).
+
+## AI-17.10 — a block that loses to the trick (2026-11-08)
+
+Shayne's turn 3: the AI blocked his Astute Terraformer with its own, he pumped ("{6}, less one per differently
+named land" — three lands, {3}) and killed theirs for free. Record `2026-11-08_024830_seed30768236` #92 (kept as
+`TerraformerBlock`; the record goes stale at move 324, so it is kept truncated to 100 moves).
+
+- **Reproduced, control holds:** the search blocks (c15), -3.81 against -4.03 for not blocking; `--explain` shows
+  "both Terraformers die" — the pump is never imagined.
+- **Cause: the rollout model.** `Rollout.TheirResponse` opened only in OUR turn (our spell on the stack, or our
+  attackers/blockers declared) and considered `CastSpellAction` only. In his own combat the simulated opponent
+  got no priority at all, so after any block it could not pump, cast a trick or kill a blocker — for spells and
+  abilities alike. His ability was a second gap on top (its own `ponytail:` comment named it).
+- **Fix:** `Evaluator.Terms.TheirCombatTricks` (`+notheircombat` switches it off): a window in its own
+  DeclareBlockers step once something is blocked, and `IsManaPump` — a battlefield ability whose cost has mana and
+  picks no card — beside the spells (mana bounds repeats). Free abilities and sacrifice-cost abilities stay unseen.
+- **After:** blocking -12.31 against not blocking -4.03; the AI doesn't block.
+- **Suite (`--suite=beam`, 288):** 1 changed (White-Blue Jace vs Red-Green seed 4, move 153: "Play Island" → "Pass");
+  oracle agreement 87.8% (was 88.2%, one position); cost per position 5 891.6 steps, 18.3 rollouts.
+- **Match** (`--match=beam,beam+notheircombat --until-clear`, 96 games, 17 min): beam 51.0% ± 1.0pp (49–47), no 5pp
+  difference; cost per decision 3 653.6 steps against 3 501.7 (+4%); slowest decision 68.6 s against 36.6 s. Kept.
+- **Also:** `--explain` now ends each line with the evaluator's terms ("Ends at: our creatures +48.10, …").

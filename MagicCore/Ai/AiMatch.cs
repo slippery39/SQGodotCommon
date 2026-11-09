@@ -70,6 +70,12 @@ public static class AiMatch
 			// The look-ahead's safe block counting damage once, before AI-8.3: beam+oldblocks.
 			["oldblocks"] = o => o with { Without = o.Without | Evaluator.Terms.BlockSurvival },
 			// The look-ahead's defender never gang-blocks, before AI-15: beam+nogang.
+			// The simulated opponent has no trick in its own combat, before AI-17.10: beam+notheircombat.
+			["notheircombat"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.TheirCombatTricks,
+				},
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },

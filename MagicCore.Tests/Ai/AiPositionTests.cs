@@ -28,6 +28,24 @@ public class AiPositionTests
 		them = s.OpponentOf(me);
 	}
 
+	// Shayne, 2026-11-08 (AI-17.10): turn 3, the AI blocked his Astute Terraformer with its own; he pumped
+	// his ({6} less one per differently named land: three lands, {3}) and killed theirs for free. The
+	// search imagined the trade, never the pump: the simulated opponent had no priority in its OWN combat.
+	// The CONTROL: without TheirCombatTricks the AI still blocks (c15).
+	[Test]
+	public void ABlock_ThatLosesToTheirOpenManaPump_IsNotMade()
+	{
+		var s = KeptRecords.Before("TerraformerBlock", 92);
+		string Choice(Evaluator.Terms without) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s)
+			);
+
+		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.TheirCombatTricks), "c15"), "control");
+		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), "c15"), Is.False);
+	}
+
 	// Shayne, 2026-10-09 (AI-1): the AI cast Prophesied End ("Destroy target creature. If it wasn't
 	// attacking, its controller draws a card.") on a NON-attacking Rank Rat — premium removal on a
 	// 1/1, and a card for the opponent. Rebuilt: two Plains and Prophesied End against their Rat.

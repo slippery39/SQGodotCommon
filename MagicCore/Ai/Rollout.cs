@@ -434,32 +434,67 @@ public static class Rollout
 	/// blockers are declared, the instant-speed spell whose settled result beats passing (settled the
 	/// same way) most — none if none beats it. Each response is judged at the next window again, so
 	/// there is no limit but its mana. ponytail: spells only — a free activated ability that beats
-	/// passing could repeat without end; add abilities with a count if a deck's answer is one.
+	/// passing could repeat without end — except a mana-costed one (<see cref="IsManaPump"/>), bounded by its mana.
 	/// </summary>
 	static GameAction? TheirResponse(GameState s, int who, Settings settings)
 	{
 		var game = s.GetGame();
 		var ours = s.OpponentOf(who);
+		// their own attack, once we have blocked: the trick that wins the combat (AI-17.10) — the one window of theirs
+		var theirs =
+			!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks)
+			&& game.ActivePlayerId == who
+			&& game.Step == Step.DeclareBlockers
+			&& s.StackIsEmpty()
+			&& Turns.Combat.Attackers(s).Any(c => Turns.Combat.BlockersOf(s, c.Id).Any());
 		var window =
-			game.ActivePlayerId == ours
-			&& (
-				Stops.TopOfStackControllerId(s) == ours
-				|| (
-					s.StackIsEmpty()
-					&& game.Step is Step.DeclareAttackers or Step.DeclareBlockers
-					&& Turns.Combat.Attackers(s).Any() // a combat with no attack is no window
-				)
-			);
+			theirs
+			|| game.ActivePlayerId == ours
+				&& (
+					Stops.TopOfStackControllerId(s) == ours
+					|| (
+						s.StackIsEmpty()
+						&& game.Step is Step.DeclareAttackers or Step.DeclareBlockers
+						&& Turns.Combat.Attackers(s).Any() // a combat with no attack is no window
+					)
+				);
 		if (!window)
 			return null;
 		var spells = s.DistinctMoves([.. s.LegalActions().Where(Allowed(s, who, settings))])
-			.OfType<CastSpellAction>()
+			.Where(a =>
+				a is CastSpellAction
+				|| (!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks) && IsManaPump(s, a))
+			)
 			.ToList();
 		if (spells.Count == 0)
 			return null;
 		var passing = Evaluator.Evaluate(Lookahead.Settle(Pass(s, who)), who, settings.Held);
 		var (best, score) = BestSettled(s, who, spells, settings);
 		return score > passing ? best : null;
+	}
+
+	/// <summary>
+	/// An instant-speed ability that costs mana and picks no card to pay (Astute Terraformer's "{6}: +2/+2",
+	/// less per differently named land) — a response like a trick, bounded by its mana (AI-17.10).
+	/// ponytail: a free ability, or one whose cost picks a card (a sacrifice), stays unseen; add them with a count.
+	/// </summary>
+	static bool IsManaPump(GameState s, GameAction a)
+	{
+		if (
+			a is not ActivateAbilityAction act
+			|| act.SacrificeId != 0
+			|| act.DiscardId != 0
+			|| act.ExileId != 0
+			|| act.TapId != 0
+			|| act.SecondTapId != 0
+			|| !act.TapIds.IsEmpty
+		)
+			return false;
+		var ability = s.ActivatedAbilitiesOf(s.GetCard(act.CardId))
+			.ElementAtOrDefault(act.AbilityIndex);
+		return ability is { From: ZoneType.Battlefield }
+			&& Rules.Costs.OfAbility(s, ability, act.Targets, act.PlayerId, act.CardId).ManaValue
+				> 0;
 	}
 
 	/// <summary>
