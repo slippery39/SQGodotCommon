@@ -1,4 +1,5 @@
 using ImmutableGameObjects;
+using MagicCore.Actions;
 using MagicCore.Cards;
 
 namespace MagicCore.Ai;
@@ -15,7 +16,37 @@ namespace MagicCore.Ai;
 /// </summary>
 public static class LandUnlock
 {
-	public static bool Unlocks(GameState s, int player, Card land)
+	/// <summary>
+	/// A surveil's lands, decided by the rule (AI-17.20, Shayne 2026-11-09): from the top down, a land that
+	/// <see cref="Unlocks"/> stays on top - counted as held for the lands below it - and one that does not is binned.
+	/// </summary>
+	public static (HashSet<int> Lands, List<int> Bin) Surveil(
+		GameState s,
+		ChooseFromLibraryTopChoice top
+	)
+	{
+		var (lands, bin, kept) = (new HashSet<int>(), new List<int>(), new List<Card>());
+		foreach (
+			var c in s.CardsIn(top.PlayerId, ZoneType.Library)
+				.Take(top.Count)
+				.Where(c => c.Is(CardType.Land))
+		)
+		{
+			lands.Add(c.Id);
+			if (Unlocks(s, top.PlayerId, c, kept))
+				kept.Add(c);
+			else
+				bin.Add(c.Id);
+		}
+		return (lands, bin);
+	}
+
+	public static bool Unlocks(
+		GameState s,
+		int player,
+		Card land,
+		IReadOnlyList<Card>? alsoHeld = null
+	)
 	{
 		var inHand = s.CardsIn(player, ZoneType.Hand).ToList();
 		var spells = inHand.Where(c => !c.Is(CardType.Land) && c.Id != land.Id).ToList();
@@ -31,7 +62,10 @@ public static class LandUnlock
 			.Select(c => ManaAbilities.ColorsOf(s, c).ToList())
 			.Where(colours => colours.Count > 0)
 			.ToList();
-		var held = inHand.Where(c => c.Is(CardType.Land) && c.Id != land.Id).ToList();
+		var held = inHand
+			.Where(c => c.Is(CardType.Land) && c.Id != land.Id)
+			.Concat(alsoHeld ?? [])
+			.ToList();
 		// the best lands to play: every choice of the drops we have, scored by cards cast and by cards castable
 		(int Packed, int Singles) Best(List<Card> lands)
 		{

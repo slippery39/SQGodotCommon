@@ -86,6 +86,8 @@ public static class AiMatch
 			["nostationcap"] = o => o with { Without = o.Without | Evaluator.Terms.StationCap },
 			// A land in hand at a flat 0.3 whatever it unlocks, before AI-9.1: beam+nolandunlock.
 			["nolandunlock"] = o => o with { Without = o.Without | Evaluator.Terms.LandUnlock },
+			// A surveil decided by the rollout alone, lands never binned, before AI-17.20: beam+nosurveillands.
+			["nosurveillands"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilLands },
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },

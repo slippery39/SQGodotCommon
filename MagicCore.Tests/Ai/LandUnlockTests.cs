@@ -103,4 +103,23 @@ public class LandUnlockTests
 
 		Assert.That(LandUnlock.Unlocks(s, them, s.GetCard(id)), Is.True);
 	}
+
+	// AI-17.20: a surveil keeps the land that unlocks, bins the one that does not.
+	[TestCase(3, ExpectedResult = false)]
+	[TestCase(5, ExpectedResult = true)]
+	public bool ASurveil_BinsTheTopLand_OnlyWhenItUnlocksNothing(int landsInPlay)
+	{
+		foreach (var card in s.CardsIn(me, ZoneType.Library).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(me, ZoneType.Exile)); // TEST SETUP: a library we choose
+		Put("Forest", ZoneType.Battlefield, landsInPlay);
+		Put("Saurian Explorer", ZoneType.Hand); // {3}{G}
+		Put("Forest", ZoneType.Library);
+
+		var (_, bin) = LandUnlock.Surveil(
+			s,
+			new Actions.ChooseFromLibraryTopChoice { PlayerId = me, Count = 1 }
+		);
+
+		return bin.Count == 1;
+	}
 }

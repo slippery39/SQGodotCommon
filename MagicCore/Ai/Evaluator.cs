@@ -267,6 +267,13 @@ public static partial class Evaluator
 		/// worth <see cref="LandSurplus"/> (`+nolandunlock`).
 		/// </summary>
 		LandUnlock = 1048576,
+
+		/// <summary>
+		/// A surveil bins a land that <see cref="LandUnlock"/> says unlocks nothing, and keeps one that does - a rule, not
+		/// a rollout (AI-17.20, Shayne 2026-11-09): the rollout keeps one sampled top card, so binning never gained
+		/// (`+nosurveillands`). Spells on top are still branched.
+		/// </summary>
+		SurveilLands = 2097152,
 	}
 
 	/// <summary>

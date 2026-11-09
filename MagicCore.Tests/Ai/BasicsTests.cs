@@ -257,8 +257,8 @@ public class BasicsTests
 	}
 
 	// (12) "Yes surveil excess lands that are not needed." Eight lands in play, two more on top. A choice of
-	// several picks got one cheap answer, the minimum (BeamSearchAi.Settings.BranchPicks). The CONTROL:
-	// without it, nothing goes to the graveyard.
+	// several picks got one cheap answer, the minimum (BeamSearchAi.Settings.BranchPicks); since AI-17.20 a land that
+	// unlocks nothing is binned by rule (Terms.SurveilLands). The CONTROL: with neither, nothing goes to the graveyard.
 	[TestCase(true, ExpectedResult = true)]
 	[TestCase(false, ExpectedResult = false)]
 	public bool Surveil_BinsLandsWhenFlooded(bool branchPicks)
@@ -277,7 +277,16 @@ public class BasicsTests
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = surveil });
 		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is not null);
 
-		s = new BeamSearchAi(me, new() { BranchPicks = branchPicks }).Decide(s).State;
+		s = new BeamSearchAi(
+			me,
+			new()
+			{
+				BranchPicks = branchPicks,
+				Without = branchPicks ? Evaluator.Terms.None : Evaluator.Terms.SurveilLands,
+			}
+		)
+			.Decide(s)
+			.State;
 
 		return lands.All(id => s.IsIn(id, me, ZoneType.Graveyard));
 	}

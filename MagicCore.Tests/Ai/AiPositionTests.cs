@@ -158,6 +158,22 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.Not.StartWith("Activate Sarcophagus"));
 	}
 
+	// Shayne, 2026-11-09 (AI-17.20): turn 8, Emergency Holographic Crew's surveil 2 over a Mountain and an Energize, with
+	// four lands in play and a hand of expensive spells - and the AI put nothing in the graveyard, as it never does
+	// (the four answers tied or ranked the land ahead: the rollout keeps one sampled top card). Shayne: keep a land on
+	// top only if it unlocks a card in hand or lets us do more next turn; otherwise bin it. Terms.SurveilLands
+	// (`LandUnlock.Surveil`). The CONTROL: without it the AI still answers none.
+	[Test]
+	public void ASurveil_BinsALandThatUnlocksNothing()
+	{
+		var s = KeptRecords.Before("SurveilNone", 173);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.SurveilLands), Does.EndWith("none"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Does.Contain("Mountain"));
+	}
+
 	// Shayne, 2026-11-08 (AI-17.13): the AI cast Guidance Failure main phase on Raffi Musiker and then did not
 	// attack with its Spanner Jockey and Dahar Master - "the worst play possible": cast it to be aggressive, or
 	// don't. NOT reproduced: the search of that day, today's, with plans kept or not, and caps from 10 ms to

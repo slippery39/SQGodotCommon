@@ -507,6 +507,27 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				or ChooseKeywordChoice { NamesACard: true }
 		)
 			return [new Pick([.. greedy.Answer(s, choice)], key)]; // Nyota: a rule, not 11 rollouts (Shayne)
+		// a surveil's lands by rule (LandUnlock.Surveil), its spells branched as any pick
+		if (
+			choice is ChooseFromLibraryTopChoice top
+			&& !Evaluator.IsOff(Evaluator.Terms.SurveilLands)
+		)
+		{
+			var (lands, bin) = LandUnlock.Surveil(s, top);
+			return
+			[
+				.. (
+					options.BranchPicks && Picks(s, choice) is { } all
+						? all.Select(p => p.AsEnumerable())
+						: [greedy.Answer(s, choice)]
+				)
+					.Select(p =>
+						p.Where(id => !lands.Contains(id)).Concat(bin).Order().ToImmutableList()
+					)
+					.DistinctBy(p => string.Join("|", p))
+					.Select(p => (Decision)new Pick(p, key)),
+			];
+		}
 		if (choice.MaxChoices != 1)
 			return options.BranchPicks && Picks(s, choice) is { } every
 				? [.. every.Select(p => (Decision)new Pick(p, key))]
