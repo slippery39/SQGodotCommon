@@ -1,0 +1,1413 @@
+[
+  {
+    "Name": "70,000 Light-Years from Home",
+    "Value": 14.5
+  },
+  {
+    "Name": "A Good Day to Die",
+    "Value": 0
+  },
+  {
+    "Name": "Academy Instructor",
+    "Value": 5
+  },
+  {
+    "Name": "Adversary by Algorithm",
+    "Value": 9.5
+  },
+  {
+    "Name": "All Good Things...",
+    "Value": 2.3
+  },
+  {
+    "Name": "Amok Time",
+    "Value": 14
+  },
+  {
+    "Name": "Andoria",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Andromedan Automatons",
+    "Value": 7.5
+  },
+  {
+    "Name": "Antagonist Incorporator",
+    "Value": 8
+  },
+  {
+    "Name": "Anthropological Mission",
+    "Value": 2
+  },
+  {
+    "Name": "Arcum Dagsson",
+    "Value": 7
+  },
+  {
+    "Name": "Armus, Skin of Evil",
+    "Value": 17.8
+  },
+  {
+    "Name": "Artificial Anomaly",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Assault Drone",
+    "Value": 10.5
+  },
+  {
+    "Name": "Assembly Specialist",
+    "Value": 9
+  },
+  {
+    "Name": "Astute Terraformer",
+    "Value": 7
+  },
+  {
+    "Name": "Automated Warfare System",
+    "Value": 7.8
+  },
+  {
+    "Name": "Bajor",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Bat'leth",
+    "Value": 9
+  },
+  {
+    "Name": "Battle-Scarred Survivalist",
+    "Value": 5.3
+  },
+  {
+    "Name": "Beckett Mariner, Impetuous Ensign",
+    "Value": 6.8
+  },
+  {
+    "Name": "Blastoneuron",
+    "Value": 7.8
+  },
+  {
+    "Name": "Blood Crypt",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Boarding Action",
+    "Value": 6
+  },
+  {
+    "Name": "Borg Cube",
+    "Value": 16.5
+  },
+  {
+    "Name": "Brad Boimler, Eager Ensign",
+    "Value": 7.8
+  },
+  {
+    "Name": "Branching Timeline",
+    "Value": 2
+  },
+  {
+    "Name": "Brazen Bluff",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Breeding Pool",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Bristly Bill, Spine Sower",
+    "Value": 7
+  },
+  {
+    "Name": "Bruvac the Grandiloquent",
+    "Value": 7.5
+  },
+  {
+    "Name": "Cantankerous Captain",
+    "Value": 8
+  },
+  {
+    "Name": "Captain Benjamin Sisko",
+    "Value": 7
+  },
+  {
+    "Name": "Captain James T. Kirk",
+    "Value": 11.8
+  },
+  {
+    "Name": "Captain Jean-Luc Picard",
+    "Value": 20.5
+  },
+  {
+    "Name": "Captain Jonathan Archer",
+    "Value": 14
+  },
+  {
+    "Name": "Captain Kathryn Janeway",
+    "Value": 8.3
+  },
+  {
+    "Name": "Captain Michael Burnham",
+    "Value": 10.3
+  },
+  {
+    "Name": "Captain Pike, Fullness of Time",
+    "Value": 14.5
+  },
+  {
+    "Name": "Captain Sisay",
+    "Value": 7
+  },
+  {
+    "Name": "Captain's Tutelage",
+    "Value": 5
+  },
+  {
+    "Name": "Cardassia Prime",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Cetacean Ops",
+    "Value": 9.5
+  },
+  {
+    "Name": "Cha'DIch Investigator",
+    "Value": 18
+  },
+  {
+    "Name": "Class-F Shuttlecraft",
+    "Value": 2
+  },
+  {
+    "Name": "Cleveland Booker, Empath",
+    "Value": 7
+  },
+  {
+    "Name": "Cloak and Phaser",
+    "Value": 14.3
+  },
+  {
+    "Name": "Cloistered Telepath",
+    "Value": 6
+  },
+  {
+    "Name": "Cold-Blooded Crew",
+    "Value": 17
+  },
+  {
+    "Name": "Collation Trimatrix",
+    "Value": 4.5
+  },
+  {
+    "Name": "Collective Drone",
+    "Value": 5.5
+  },
+  {
+    "Name": "Combadge",
+    "Value": 4
+  },
+  {
+    "Name": "Command Decision",
+    "Value": 14.5
+  },
+  {
+    "Name": "Command Subadjunct",
+    "Value": 6
+  },
+  {
+    "Name": "Commander Raffi Musiker",
+    "Value": 9.5
+  },
+  {
+    "Name": "Common Goal",
+    "Value": 14.5
+  },
+  {
+    "Name": "Conquest Mission",
+    "Value": 2
+  },
+  {
+    "Name": "Consider the Prime Directive",
+    "Value": 0.3
+  },
+  {
+    "Name": "Constable Odo",
+    "Value": 15
+  },
+  {
+    "Name": "Crystalline Entity",
+    "Value": 20.3
+  },
+  {
+    "Name": "Culber and Stamets, Star-Crossed",
+    "Value": 13
+  },
+  {
+    "Name": "Cybernetic Specialist",
+    "Value": 6
+  },
+  {
+    "Name": "D'Ghor Bloodletter",
+    "Value": 7
+  },
+  {
+    "Name": "D'Vana Tendi, Optimistic Ensign",
+    "Value": 9
+  },
+  {
+    "Name": "D-7 Battle Cruiser",
+    "Value": 2
+  },
+  {
+    "Name": "DOT-7 Repair Squad",
+    "Value": 10.3
+  },
+  {
+    "Name": "Dahar Master",
+    "Value": 13.5
+  },
+  {
+    "Name": "Dal R'El, Augment Orphan",
+    "Value": 9.5
+  },
+  {
+    "Name": "Daniels, Temporal Agent",
+    "Value": 7.5
+  },
+  {
+    "Name": "Data, New Life",
+    "Value": 3
+  },
+  {
+    "Name": "Dathon and Picard at El-Adrel",
+    "Value": 0
+  },
+  {
+    "Name": "Dathon, His Heart Open",
+    "Value": 9.5
+  },
+  {
+    "Name": "David and Carol Marcus, Creators",
+    "Value": 8
+  },
+  {
+    "Name": "De-evolve",
+    "Value": 8
+  },
+  {
+    "Name": "Deanna Troi, Psychic Counsel",
+    "Value": 7
+  },
+  {
+    "Name": "Death Is Irrelevant",
+    "Value": 2
+  },
+  {
+    "Name": "Decree of Pain",
+    "Value": 2.1
+  },
+  {
+    "Name": "Deep Space 9",
+    "Value": 3.6
+  },
+  {
+    "Name": "Deep Space Scan",
+    "Value": 1.5
+  },
+  {
+    "Name": "Dominion Assault Force",
+    "Value": 12
+  },
+  {
+    "Name": "Dominion Infiltration",
+    "Value": 0
+  },
+  {
+    "Name": "Dominion Saboteur",
+    "Value": 14.5
+  },
+  {
+    "Name": "Dominion Supervisor",
+    "Value": 10.8
+  },
+  {
+    "Name": "Dr. Beverly Crusher",
+    "Value": 7
+  },
+  {
+    "Name": "Dr. Joseph M'Benga",
+    "Value": 9.5
+  },
+  {
+    "Name": "Dr. Leonard \"Bones\" McCoy",
+    "Value": 8.5
+  },
+  {
+    "Name": "Dr. McCoy, Surly Surgeon",
+    "Value": 9.5
+  },
+  {
+    "Name": "Drivnod, Carnage Dominus",
+    "Value": 17
+  },
+  {
+    "Name": "Earth, Sector 001",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Eject the Warp Core",
+    "Value": 10
+  },
+  {
+    "Name": "Elim Garak, Simple Tailor",
+    "Value": 10.3
+  },
+  {
+    "Name": "Emergency Holographic Crew",
+    "Value": 10.5
+  },
+  {
+    "Name": "Emergency Medical Hologram",
+    "Value": 6
+  },
+  {
+    "Name": "Empress Galina",
+    "Value": 6.5
+  },
+  {
+    "Name": "Encounter the Unknown",
+    "Value": 0
+  },
+  {
+    "Name": "Energize",
+    "Value": 13.3
+  },
+  {
+    "Name": "Engineered Explosives",
+    "Value": 2
+  },
+  {
+    "Name": "Ensign Pavel Chekov",
+    "Value": 8.5
+  },
+  {
+    "Name": "Enterprise NX-01",
+    "Value": 2
+  },
+  {
+    "Name": "Erica Ortegas, Plucky Pilot",
+    "Value": 9.5
+  },
+  {
+    "Name": "Ertai Resurrected",
+    "Value": 22.7
+  },
+  {
+    "Name": "Excalbian Gamemaster",
+    "Value": 39.5
+  },
+  {
+    "Name": "Exploratory Mission",
+    "Value": 2
+  },
+  {
+    "Name": "Federation Field Medic",
+    "Value": 11
+  },
+  {
+    "Name": "Federation Outpost",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Federation Probe",
+    "Value": 5.3
+  },
+  {
+    "Name": "Federation Resupply",
+    "Value": 0
+  },
+  {
+    "Name": "Ferenginar",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Final Frontier",
+    "Value": 1.5
+  },
+  {
+    "Name": "First Contact",
+    "Value": 1.3
+  },
+  {
+    "Name": "Flare of Fortitude",
+    "Value": 0
+  },
+  {
+    "Name": "Forest",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Free Borg Revolutionaries",
+    "Value": 13
+  },
+  {
+    "Name": "Fugitive Listener",
+    "Value": 7.5
+  },
+  {
+    "Name": "Gabriel Lorca, Mirror Menace",
+    "Value": 14.3
+  },
+  {
+    "Name": "Gaseous Anomaly",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "General Chang, Cold Warrior",
+    "Value": 5.5
+  },
+  {
+    "Name": "Genesis Device",
+    "Value": 3.5
+  },
+  {
+    "Name": "Genesis Effect",
+    "Value": 14.5
+  },
+  {
+    "Name": "Georgiou, Terran Emperor",
+    "Value": 11.3
+  },
+  {
+    "Name": "Ghost of Illyria",
+    "Value": 10.3
+  },
+  {
+    "Name": "Godless Shrine",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Gowron, Eager for Battle",
+    "Value": 9.5
+  },
+  {
+    "Name": "Grand Nagus Zek",
+    "Value": 4.5
+  },
+  {
+    "Name": "Gray and Adira, Forever Joined",
+    "Value": 8
+  },
+  {
+    "Name": "Guidance Failure",
+    "Value": 14.5
+  },
+  {
+    "Name": "Gul Dukat, Colonial Prefect",
+    "Value": 17.8
+  },
+  {
+    "Name": "Gwyndala, the Progeny",
+    "Value": 9
+  },
+  {
+    "Name": "H.M.S. Bounty, Unlikely Timeship",
+    "Value": 2
+  },
+  {
+    "Name": "Hallowed Fountain",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "He's Dead, Jim",
+    "Value": 14.5
+  },
+  {
+    "Name": "Hemmer, Fixing What Is Broken",
+    "Value": 8
+  },
+  {
+    "Name": "Highly Illogical",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Hit It!",
+    "Value": 3.5
+  },
+  {
+    "Name": "Hive Mind Coprocessor",
+    "Value": 12
+  },
+  {
+    "Name": "Holo-Engineer",
+    "Value": 19
+  },
+  {
+    "Name": "Hologram Janeway",
+    "Value": 9.5
+  },
+  {
+    "Name": "Hologram Stalker",
+    "Value": 7
+  },
+  {
+    "Name": "Horta",
+    "Value": 19.3
+  },
+  {
+    "Name": "Hoshi Sato, Exolinguist",
+    "Value": 9.8
+  },
+  {
+    "Name": "Hull Breach",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Humpback Whales",
+    "Value": 15.5
+  },
+  {
+    "Name": "I'm a Doctor, Not a . . .",
+    "Value": 2.5
+  },
+  {
+    "Name": "Impossible Choice",
+    "Value": 5.5
+  },
+  {
+    "Name": "In the Pale Moonlight",
+    "Value": 6.5
+  },
+  {
+    "Name": "Infinite Diversity",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Interstellar Effigy",
+    "Value": 24.3
+  },
+  {
+    "Name": "Island",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Isolinear Processor",
+    "Value": 2
+  },
+  {
+    "Name": "Isshin, Two Heavens as One",
+    "Value": 10.5
+  },
+  {
+    "Name": "Jadzia Dax, Living Legacy",
+    "Value": 3
+  },
+  {
+    "Name": "Jake Sisko, War Correspondent",
+    "Value": 7
+  },
+  {
+    "Name": "Jett Reno, Problem Solver",
+    "Value": 5.5
+  },
+  {
+    "Name": "Jhoira, Weatherlight Captain",
+    "Value": 9.5
+  },
+  {
+    "Name": "Kai Winn, Faithless Leader",
+    "Value": 7.5
+  },
+  {
+    "Name": "Kenrith, the Returned King",
+    "Value": 14.5
+  },
+  {
+    "Name": "Khaaaaaaaaaaaannn!",
+    "Value": 14.5
+  },
+  {
+    "Name": "Khan, Despot by Design",
+    "Value": 19.8
+  },
+  {
+    "Name": "Khan, Vengeful Heart",
+    "Value": 12.5
+  },
+  {
+    "Name": "Kira Nerys, Firebrand",
+    "Value": 11.8
+  },
+  {
+    "Name": "Kirk, Commanding Officer",
+    "Value": 9.5
+  },
+  {
+    "Name": "Kobayashi Maru Scenario",
+    "Value": 2
+  },
+  {
+    "Name": "L'Rell, Fierce Visionary",
+    "Value": 7.5
+  },
+  {
+    "Name": "La'An Noonien-Singh, Security",
+    "Value": 11
+  },
+  {
+    "Name": "Lieutenant Commander Data",
+    "Value": 7
+  },
+  {
+    "Name": "Live Long and Prosper",
+    "Value": 10
+  },
+  {
+    "Name": "Locutus, the One Who Speaks",
+    "Value": 7
+  },
+  {
+    "Name": "Loot, Exuberant Explorer",
+    "Value": 7.5
+  },
+  {
+    "Name": "Lore, Positronic Provocateur",
+    "Value": 8
+  },
+  {
+    "Name": "Lt. Cmdr. Geordi La Forge",
+    "Value": 8.5
+  },
+  {
+    "Name": "Lwaxana Troi, Charming Guest",
+    "Value": 7
+  },
+  {
+    "Name": "MACO Strike Team",
+    "Value": 6
+  },
+  {
+    "Name": "Make It So",
+    "Value": 5.1
+  },
+  {
+    "Name": "Malfunctioning Holodeck",
+    "Value": 16.5
+  },
+  {
+    "Name": "Marooned",
+    "Value": 2
+  },
+  {
+    "Name": "Melkotian Adjudicator",
+    "Value": 6.8
+  },
+  {
+    "Name": "Mikaeus, the Lunarch",
+    "Value": 9.5
+  },
+  {
+    "Name": "Miles O'Brien, Transporter Ops",
+    "Value": 9.5
+  },
+  {
+    "Name": "Minamo, School at Water's Edge",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Mirror Universe Intrusion",
+    "Value": 15.3
+  },
+  {
+    "Name": "Mogis, God of Slaughter",
+    "Value": 2
+  },
+  {
+    "Name": "Moopsy",
+    "Value": 5.3
+  },
+  {
+    "Name": "Mountain",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Mr. Spock, Science Officer",
+    "Value": 9
+  },
+  {
+    "Name": "Mugato",
+    "Value": 17.8
+  },
+  {
+    "Name": "Munitions Enthusiast",
+    "Value": 9.3
+  },
+  {
+    "Name": "Neelix, Moral Support",
+    "Value": 6.5
+  },
+  {
+    "Name": "Ni'Var Science Academy",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Nog, Ambitious Cadet",
+    "Value": 7.8
+  },
+  {
+    "Name": "Nyota Uhura, Communications",
+    "Value": 9
+  },
+  {
+    "Name": "Oberth-Class Starship",
+    "Value": 2.3
+  },
+  {
+    "Name": "Obsidian Order Operative",
+    "Value": 10
+  },
+  {
+    "Name": "Open Communications",
+    "Value": 0.3
+  },
+  {
+    "Name": "Organic Avulsion Unit",
+    "Value": 8
+  },
+  {
+    "Name": "Orion",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Overflow Submatrix",
+    "Value": 9.5
+  },
+  {
+    "Name": "Overgrown Tomb",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Pah-Wraith",
+    "Value": 12.8
+  },
+  {
+    "Name": "Pattern Buffer Preservation",
+    "Value": 0.3
+  },
+  {
+    "Name": "Peace in Our Time",
+    "Value": 2.3
+  },
+  {
+    "Name": "Perils of the Past",
+    "Value": 0
+  },
+  {
+    "Name": "Pet Sehlat",
+    "Value": 11
+  },
+  {
+    "Name": "Phlox, Unorthodox Doctor",
+    "Value": 11.3
+  },
+  {
+    "Name": "Photosynthetic Physician",
+    "Value": 14.5
+  },
+  {
+    "Name": "Phyrexian Tower",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Picard, Leading by Example",
+    "Value": 7
+  },
+  {
+    "Name": "Plains",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Planetary Bombardment",
+    "Value": 7
+  },
+  {
+    "Name": "Planetary Patrol",
+    "Value": 7
+  },
+  {
+    "Name": "Plasma Cascade",
+    "Value": 9.5
+  },
+  {
+    "Name": "Primary Unimatrix Adjunct",
+    "Value": 8.8
+  },
+  {
+    "Name": "Prosper, Tome-Bound",
+    "Value": 8.3
+  },
+  {
+    "Name": "Pure Energy",
+    "Value": 5
+  },
+  {
+    "Name": "Q Continuum",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Q, Stacking the Deck",
+    "Value": 12
+  },
+  {
+    "Name": "Qo'noS",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Quark's Bar",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Quark, Humble Proprietor",
+    "Value": 5.5
+  },
+  {
+    "Name": "Ravenous Cosmozoan",
+    "Value": 10.3
+  },
+  {
+    "Name": "Reckless Impulse",
+    "Value": 0
+  },
+  {
+    "Name": "Red Alert!",
+    "Value": 0
+  },
+  {
+    "Name": "Relentless Drednok",
+    "Value": 5.3
+  },
+  {
+    "Name": "Replicator",
+    "Value": 4
+  },
+  {
+    "Name": "Resistance Is Futile",
+    "Value": 14.5
+  },
+  {
+    "Name": "Riku of Many Paths",
+    "Value": 9.5
+  },
+  {
+    "Name": "Risa",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Rishkar, Peema Renegade",
+    "Value": 12
+  },
+  {
+    "Name": "Rogue Artificial Intelligence",
+    "Value": 17.5
+  },
+  {
+    "Name": "Rok-Tahk, Budding Scientist",
+    "Value": 17.5
+  },
+  {
+    "Name": "Romulan Bird-of-Prey",
+    "Value": 2
+  },
+  {
+    "Name": "Romulus",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Rules of Acquisition",
+    "Value": 28.1
+  },
+  {
+    "Name": "Rutherford, Upgraded Ensign",
+    "Value": 7
+  },
+  {
+    "Name": "Saavik, Stoic Student",
+    "Value": 7
+  },
+  {
+    "Name": "Sacred Foundry",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Salt Vampire",
+    "Value": 7.8
+  },
+  {
+    "Name": "Sarcophagus, Ship of the Dead",
+    "Value": 9.5
+  },
+  {
+    "Name": "Sarek, Federation Ambassador",
+    "Value": 7
+  },
+  {
+    "Name": "Saru, Unthreatened",
+    "Value": 8.5
+  },
+  {
+    "Name": "Saurian Explorer",
+    "Value": 11
+  },
+  {
+    "Name": "Savvy Profiteer",
+    "Value": 6
+  },
+  {
+    "Name": "Scotty, Miracle Worker",
+    "Value": 8
+  },
+  {
+    "Name": "Sela, Tal Shiar Paradox",
+    "Value": 9.5
+  },
+  {
+    "Name": "Sen Triplets",
+    "Value": 9.5
+  },
+  {
+    "Name": "Set Phasers to . . .",
+    "Value": 0
+  },
+  {
+    "Name": "Seven of Nine",
+    "Value": 9
+  },
+  {
+    "Name": "Seven of Nine, Unassimilated",
+    "Value": 6
+  },
+  {
+    "Name": "Sheoldred, the Apocalypse",
+    "Value": 13.8
+  },
+  {
+    "Name": "Shields Up!",
+    "Value": 2.5
+  },
+  {
+    "Name": "Shizo, Death's Storehouse",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Shuttle Ace",
+    "Value": 12
+  },
+  {
+    "Name": "Sickbay",
+    "Value": 4.5
+  },
+  {
+    "Name": "Silicate Surveyor",
+    "Value": 12
+  },
+  {
+    "Name": "Sisay, Weatherlight Captain",
+    "Value": 7
+  },
+  {
+    "Name": "Spatial Anomaly",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Species 8472",
+    "Value": 20
+  },
+  {
+    "Name": "Spock, Always Your Friend",
+    "Value": 7
+  },
+  {
+    "Name": "Stable Wormhole",
+    "Value": 2
+  },
+  {
+    "Name": "Starfleet Academy",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Starfleet Security",
+    "Value": 4.5
+  },
+  {
+    "Name": "Starfleet Spanner Jockey",
+    "Value": 9.5
+  },
+  {
+    "Name": "Steam Vents",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Stella Lee, Wild Card",
+    "Value": 9
+  },
+  {
+    "Name": "Stomping Ground",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Storied Veteran",
+    "Value": 6
+  },
+  {
+    "Name": "Stray from History",
+    "Value": 0
+  },
+  {
+    "Name": "Subcommander T'Pol",
+    "Value": 7.5
+  },
+  {
+    "Name": "Subspace Anomaly",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Sulu, Space Swashbuckler",
+    "Value": 7.8
+  },
+  {
+    "Name": "Support Mission",
+    "Value": 2
+  },
+  {
+    "Name": "Suurok-Class Science Vessel",
+    "Value": 2.3
+  },
+  {
+    "Name": "Suus Mahna Practitioner",
+    "Value": 8.5
+  },
+  {
+    "Name": "Swamp",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Sylvia Tilly, Joy of Discovery",
+    "Value": 7
+  },
+  {
+    "Name": "Syndicate Liquidators",
+    "Value": 12.8
+  },
+  {
+    "Name": "Tactical Officer",
+    "Value": 6
+  },
+  {
+    "Name": "Tal Shiar Analyst",
+    "Value": 8.5
+  },
+  {
+    "Name": "Tal Shiar Operative",
+    "Value": 7
+  },
+  {
+    "Name": "Talon Gates of Madara",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Targ Wrangler",
+    "Value": 13.3
+  },
+  {
+    "Name": "Tasha Yar, Out of Time",
+    "Value": 6
+  },
+  {
+    "Name": "Tatyova, Benthic Druid",
+    "Value": 9.5
+  },
+  {
+    "Name": "Tea, Earl Grey, Hot",
+    "Value": 2.3
+  },
+  {
+    "Name": "Tell Me What You See",
+    "Value": 6
+  },
+  {
+    "Name": "Temple Garden",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Temporal Anomaly",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Temporal Conqueror",
+    "Value": 8.3
+  },
+  {
+    "Name": "Tenacious Drone",
+    "Value": 6
+  },
+  {
+    "Name": "Test of Conviction",
+    "Value": 12.5
+  },
+  {
+    "Name": "Test of Courage",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Test of Identity",
+    "Value": 0
+  },
+  {
+    "Name": "Test of Loyalty",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Test of Priorities",
+    "Value": 0.3
+  },
+  {
+    "Name": "Thada Adel, Acquisitor",
+    "Value": 7
+  },
+  {
+    "Name": "The Caretaker",
+    "Value": 15.5
+  },
+  {
+    "Name": "The City on the Edge of Forever",
+    "Value": 5
+  },
+  {
+    "Name": "The Destruction of Praxis",
+    "Value": 0
+  },
+  {
+    "Name": "The Doctor, EMH",
+    "Value": 14.5
+  },
+  {
+    "Name": "The Duras Sisters",
+    "Value": 8.5
+  },
+  {
+    "Name": "The Holodeck",
+    "Value": 2
+  },
+  {
+    "Name": "The Inner Light",
+    "Value": 2
+  },
+  {
+    "Name": "The Measure of a Man",
+    "Value": 16.5
+  },
+  {
+    "Name": "The Naked Time",
+    "Value": 3.5
+  },
+  {
+    "Name": "The Needs of the Many",
+    "Value": -4.5
+  },
+  {
+    "Name": "The Traveler",
+    "Value": 11
+  },
+  {
+    "Name": "The Unicomplex",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "The Wrath of Khan",
+    "Value": 14
+  },
+  {
+    "Name": "There's Coffee in that Nebula",
+    "Value": 0.3
+  },
+  {
+    "Name": "Those Old Scientists",
+    "Value": 2
+  },
+  {
+    "Name": "Torbran, Thane of Red Fell",
+    "Value": 9
+  },
+  {
+    "Name": "Transporter Malfunction",
+    "Value": 9.5
+  },
+  {
+    "Name": "Tricorder",
+    "Value": 2
+  },
+  {
+    "Name": "Troubling Tribbles",
+    "Value": 3
+  },
+  {
+    "Name": "Type-2 Phaser",
+    "Value": 2
+  },
+  {
+    "Name": "U.S.S. Cerritos, Following Up",
+    "Value": 11
+  },
+  {
+    "Name": "U.S.S. Discovery, at Black Alert",
+    "Value": 2
+  },
+  {
+    "Name": "U.S.S. Enterprise-A, Free Spirit",
+    "Value": 15.5
+  },
+  {
+    "Name": "U.S.S. Enterprise-D, Galaxy-Class",
+    "Value": 2
+  },
+  {
+    "Name": "U.S.S. Excelsior, Cutting Edge",
+    "Value": 2
+  },
+  {
+    "Name": "U.S.S. Reliant, From Hell's Heart",
+    "Value": 2
+  },
+  {
+    "Name": "U.S.S. Voyager, Lone Wanderer",
+    "Value": 2.8
+  },
+  {
+    "Name": "Una Chin-Riley, Number One",
+    "Value": 13
+  },
+  {
+    "Name": "Unexplored Territory",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "V'Ger, the Intruder",
+    "Value": 24.8
+  },
+  {
+    "Name": "Vash, Freelance Archaeologist",
+    "Value": 9
+  },
+  {
+    "Name": "Vengeance Mission",
+    "Value": 2
+  },
+  {
+    "Name": "Vexing Drone",
+    "Value": 7
+  },
+  {
+    "Name": "Vulcan",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Vulcan Mind-Meld",
+    "Value": 0
+  },
+  {
+    "Name": "Warp Core",
+    "Value": 2.3
+  },
+  {
+    "Name": "Warp Speed",
+    "Value": 2.3
+  },
+  {
+    "Name": "Watery Grave",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Wesley Crusher, Starfleet Cadet",
+    "Value": 13.7
+  },
+  {
+    "Name": "Will Riker, First in the Field",
+    "Value": 11
+  },
+  {
+    "Name": "Worf, Honor-Bound Warrior",
+    "Value": 4.5
+  },
+  {
+    "Name": "Worf, Intelligence Contractor",
+    "Value": 8.5
+  },
+  {
+    "Name": "Xenobotanist",
+    "Value": 6.5
+  },
+  {
+    "Name": "Xindi Surveyors",
+    "Value": 8.5
+  },
+  {
+    "Name": "Year of Hell",
+    "Value": 2
+  },
+  {
+    "Name": "Zefram Cochrane, Warp Pioneer",
+    "Value": 8
+  },
+  {
+    "Name": "Zero, Incorporeal Sensate",
+    "Value": 7.8
+  }
+]

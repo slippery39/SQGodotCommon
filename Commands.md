@@ -95,7 +95,7 @@ dotnet run -c Release --project MagicConsole -- --lint [--games=N] [--seed=N] [-
 dotnet run -c Release --project MagicConsole -- --decisions [--games=N] [--seed=N]   # AI games as a replay to read (AI-14): ai_reports/decisions-<time>.md, and each game as a record beside it (-gameN.json) — --record=… numbers its moves, --keep=… --at=N makes a flagged one a test
 dotnet run -c Release --project MagicConsole -- --record=FILE --card=NAME   # each turn NAME sat in its holder's hand: lands, castable or not, what was done instead (MC-5.4)
 dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N   # what the search imagined before move N (AI-17): each first move, best first, with the line its score came from - our decisions, the simulated opponent, the rollout to its horizon
-dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
+dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json and TRK.values.json (~5 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
 dotnet run -c Release --project MagicConsole -- --cast-gains [--games=400]   # regenerate MagicCore/Sets/FRA.castgains.json (~70 s)

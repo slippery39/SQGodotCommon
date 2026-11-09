@@ -53,19 +53,25 @@ public class AiPositionTests
 	// creatures away - and a sacrifice that baited that attack scored +25 (Terms.TrueDefender judges it against
 	// the blocks the rollout plays). The CONTROL: without it the AI still sacrifices.
 	[TestCase("ChangSac305", 305, "a5")]
-	[TestCase("ChangSac309", 309, "a3")]
+	[TestCase("ChangSac309", 309, "a3", true)] // flat prices: priced (AI-17.15) Pass and the sacrifice tie exactly
 	[TestCase("ChangSac458", 458, "a3")]
 	public void ASacrifice_ThatOnlyBaitsTheSimulatedAttack_IsNotMade(
 		string record,
 		int at,
-		string token
+		string token,
+		bool flat = false
 	)
 	{
 		var s = KeptRecords.Before(record, at);
 		string Choice(Evaluator.Terms without) =>
 			MoveTokens.Token(
 				s,
-				new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s)
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					flat
+						? new BeamSearchAi.Settings(Without: without).WithoutHeld()
+						: new(Without: without)
+				).Decide(s)
 			);
 
 		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.TrueDefender), token), "control");
@@ -117,11 +123,20 @@ public class AiPositionTests
 	public void WithALandToPlay_TheSearchPlaysIt_NotPass()
 	{
 		var s = KeptRecords.Before("AiSkipsLandDrop", 27);
-		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		string Chose(Evaluator.Terms without, bool flat = false) =>
+			new BeamSearchAi(
+				s.DecidingPlayerId(),
+				flat
+					? new BeamSearchAi.Settings(Without: without).WithoutHeld()
+					: new(Without: without)
+			)
+				.Decide(s)
+				.What;
 
-		Assert.That(Chose(Evaluator.Terms.LandDrop), Is.EqualTo("Pass"), "control");
+		// the position is a Star Trek game: the control is in the flat prices it was played with (AI-17.15 priced TRK)
+		Assert.That(Chose(Evaluator.Terms.LandDrop, flat: true), Is.EqualTo("Pass"), "control");
 		Assert.That(Chose(Evaluator.Terms.None), Does.StartWith("Play"));
+		Assert.That(Chose(Evaluator.Terms.None, flat: true), Does.StartWith("Play"));
 	}
 
 	// Shayne, 2026-11-08 (AI-17.12): turn 13, the AI attacked its Officer 1/1 token into Shayne's untapped Saurian
@@ -167,11 +182,25 @@ public class AiPositionTests
 	public void ASurveil_BinsALandThatUnlocksNothing()
 	{
 		var s = KeptRecords.Before("SurveilNone", 173);
-		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		string Chose(Evaluator.Terms without, bool flat = false) =>
+			new BeamSearchAi(
+				s.DecidingPlayerId(),
+				flat
+					? new BeamSearchAi.Settings(Without: without).WithoutHeld()
+					: new(Without: without)
+			)
+				.Decide(s)
+				.What;
 
-		Assert.That(Chose(Evaluator.Terms.SurveilLands), Does.EndWith("none"), "control");
+		// a Star Trek position: the control is in the flat prices it was played with (AI-17.15 priced TRK, and the
+		// priced Energize alone now moves the answer; the rule decides it either way)
+		Assert.That(
+			Chose(Evaluator.Terms.SurveilLands, flat: true),
+			Does.EndWith("none"),
+			"control"
+		);
 		Assert.That(Chose(Evaluator.Terms.None), Does.Contain("Mountain"));
+		Assert.That(Chose(Evaluator.Terms.None, flat: true), Does.Contain("Mountain"));
 	}
 
 	// Shayne, 2026-11-08 (AI-17.13): the AI cast Guidance Failure main phase on Raffi Musiker and then did not

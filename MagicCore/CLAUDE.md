@@ -100,7 +100,7 @@ MagicCore/
 ├── Limited/SealedBuildMatch.cs  candidate sealed builds (Arena exports, or a pool's whole offer) vs the same N AI sealed opponents, paired (MagicConsole --builds / --compare, LIM-1.8, 3.4)
 ├── Limited/CardRatings.cs  limited ratings: a set's own Sets/<SET>.ratings.json (TRK's INTERIM: rarity + CardValues rank, --interim-ratings), else 17lands GIH WR (Sealed, else Premier); NOT raw CardValues, which miss planeswalkers — SimulatedRatings.cs: DATA-2's games-in-hand WR from AI self-play (--sim-ratings)
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects; Sideboard only when given one) + shared Stack; per-CONTROLLER battlefield
-├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
+├── Sets/FRA.values.json, TRK.values.json GENERATED card values (one table per set, merged by name) (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
 ├── Sets/FRA.positions.txt GENERATED position suite (PositionSuite; MagicConsole --suite=generate) — embedded, a test fails while stale
 ├── Sets/FRA.17lands.json  computed by tools/import_17lands.py from 17lands' PUBLIC game data (never its API): GIH WR + games
 ├── Sets/FRA.boosters.json  imported by tools/import_mtgjson_boosters.py — play-booster sheets by card name, never hand-edit; TRK's is PROVISIONAL, tools/build_trk_boosters.py (Wizards' odds, MC-5.4)

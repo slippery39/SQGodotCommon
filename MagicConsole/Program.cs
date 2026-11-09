@@ -12,7 +12,7 @@ using MagicCore.Sets.Fra;
 //   --seed=N replays a game; --deck=N skips the deck prompt (the AI plays the next deck);
 //   --greedy: the AI is GreedyAi (one ply, instant), not the search (BeamSearchAi, ~1 s a decision).
 //   dotnet run --project MagicConsole -- --match=greedy,random --games=72   AI vs AI, measured
-//   dotnet run --project MagicConsole -- --card-values   regenerate MagicCore/Sets/FRA.values.json
+//   dotnet run --project MagicConsole -- --card-values   regenerate MagicCore/Sets/FRA.values.json and TRK.values.json
 //   dotnet run --project MagicConsole -- --record=game_records/<file>.json   replay a table game
 
 var flags = args.ToHashSet();
@@ -469,7 +469,7 @@ if (flags.Contains("--cast-gains"))
 	return;
 }
 
-// --card-values: measure every FRA card and write the tracked table (run from the solution root).
+// --card-values: measure every FRA and TRK card and write the tracked tables (run from the solution root).
 if (flags.Contains("--card-values"))
 {
 	var path = CardValues.TablePath;
@@ -479,11 +479,14 @@ if (flags.Contains("--card-values"))
 		Console.WriteLine($"Run from the solution root — no FRA.json beside {path} here.");
 		return;
 	}
-	var entries = CardValues.MeasureFra();
-	File.WriteAllText(path, CardValues.ToJson(entries));
-	Console.WriteLine(
-		$"{path}: {entries.Count} cards, {entries.Count(e => e.NotMeasured is null)} measured. Rebuild to embed it."
-	);
+	foreach (var set in CardValues.TableSets)
+	{
+		var entries = CardValues.MeasureSet(set);
+		File.WriteAllText(CardValues.TablePathFor(set), CardValues.ToJson(entries));
+		Console.WriteLine(
+			$"{CardValues.TablePathFor(set)}: {entries.Count} cards, {entries.Count(e => e.NotMeasured is null)} measured. Rebuild to embed it."
+		);
+	}
 	return;
 }
 

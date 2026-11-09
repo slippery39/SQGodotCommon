@@ -102,20 +102,22 @@ public class CardValuesTests
 	[Test]
 	public void TheTrackedTable_IsCurrent()
 	{
-		var embedded = CardValues.TableText()?.Replace("\r\n", "\n");
-
-		Assert.That(
-			embedded,
-			Is.EqualTo(CardValues.ToJson(CardValues.MeasureFra())),
-			$"{CardValues.TablePath} is stale — run: dotnet run --project MagicConsole -- --card-values"
-		);
+		foreach (var set in CardValues.TableSets)
+			Assert.That(
+				CardValues.TableText(set)?.Replace("\r\n", "\n"),
+				Is.EqualTo(CardValues.ToJson(CardValues.MeasureSet(set))),
+				$"{CardValues.TablePathFor(set)} is stale — run: dotnet run --project MagicConsole -- --card-values"
+			);
 	}
 
 	// The table loads back as what was measured: every card, by name, measured or not alike.
 	[Test]
 	public void TheTable_LoadsBackWhatWasMeasured()
 	{
-		var measured = CardValues.MeasureFra();
+		var measured = CardValues
+			.TableSets.SelectMany(CardValues.MeasureSet)
+			.DistinctBy(m => m.Name)
+			.ToList();
 
 		Assert.That(CardValues.Fra, Has.Count.EqualTo(measured.Count));
 		Assert.That(

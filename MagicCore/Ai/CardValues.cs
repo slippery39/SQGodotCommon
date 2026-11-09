@@ -67,18 +67,28 @@ public static class CardValues
 			Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // "Ajani's Anguish", not escaped as '
 		};
 
-	const string TableFile = "FRA.values.json";
+	static string TableFile(string set) => $"{set}.values.json";
 
 	/// <summary>Where the table is written, from the solution root. GENERATED — never hand-edit it:
 	/// <c>dotnet run --project MagicConsole -- --card-values</c>, and a test fails while it is stale.</summary>
-	public static string TablePath => Path.Combine("MagicCore", "Sets", TableFile);
+	public static string TablePath => TablePathFor("FRA");
+
+	/// <summary>Where a set's table is written (FRA and TRK: Star Trek's cards were flat 1.20 in hand until AI-17.15 measured them).</summary>
+	public static string TablePathFor(string set) =>
+		Path.Combine("MagicCore", "Sets", TableFile(set));
+
+	/// <summary>The sets with a tracked table.</summary>
+	public static readonly string[] TableSets = ["FRA", "TRK"];
 
 	/// <summary>Every FRA card that plays, measured, in name order — what the table holds.</summary>
-	public static IReadOnlyList<Entry> MeasureFra() =>
+	public static IReadOnlyList<Entry> MeasureFra() => MeasureSet("FRA");
+
+	/// <summary>Every card of the set that plays, measured, in name order.</summary>
+	public static IReadOnlyList<Entry> MeasureSet(string set) =>
 		Measure(
 			[
 				.. CardRegistry
-					.Printings("FRA")
+					.Printings(set)
 					.Select(p => p.Card.Name)
 					.Distinct()
 					.Where(CardRegistry.IsImplemented)
@@ -95,21 +105,24 @@ public static class CardValues
 		) + "\n";
 
 	/// <summary>The embedded table's text, or null if it was never generated.</summary>
-	public static string? TableText() => CardDataSet.ResourceText(TableFile);
+	public static string? TableText(string set = "FRA") => CardDataSet.ResourceText(TableFile(set));
 
 	/// <summary>
-	/// The FRA table by card name, parsed ONCE — the AI looks values up inside its evaluation. Empty if
+	/// The tables of every set (FRA, then TRK for a name not in FRA) by card name, parsed ONCE — the AI looks values up inside its evaluation. Empty if
 	/// the table was never generated.
 	/// </summary>
 	public static IReadOnlyDictionary<string, Entry> Fra => fra.Value;
 
 	static readonly Lazy<IReadOnlyDictionary<string, Entry>> fra =
-		new(
-			() =>
-				TableText() is { } text
-					? JsonSerializer.Deserialize<List<Entry>>(text)!.ToDictionary(e => e.Name)
-					: new Dictionary<string, Entry>()
-		);
+		new(() =>
+		{
+			var all = new Dictionary<string, Entry>();
+			foreach (var set in TableSets)
+				if (TableText(set) is { } text)
+					foreach (var e in JsonSerializer.Deserialize<List<Entry>>(text)!)
+						all.TryAdd(e.Name, e);
+			return all;
+		});
 
 	// ===== Measuring =====
 
