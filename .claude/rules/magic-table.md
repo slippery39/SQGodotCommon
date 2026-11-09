@@ -82,6 +82,10 @@ MagicTable/
 - **Every pick is clicked, even when only one is legal** (Shayne: a spell casting itself was a
   surprise; Arena and MTGO ask) — targets, then a cost's sacrifice / discard / behold / exile.
   "Sacrifice or pay" is chosen as a WAY first (`Targeting.Ways`), never listed per combination.
+- **A "may cast it" mid-resolution is cast like a card in the hand** (TBL-2.16: Common Goal off The Caretaker used
+  to list every target combination): a pending `ChooseCastChoice` runs the same `Targeting` flow over its
+  `Casts` (`StartCast`), the last pick answers the choice by index, and **"Don't cast it"** — an EMPTY answer,
+  `MinChoices` 0 — is always on screen, Esc included, so it can't strand. Restarted on every redraw while pending.
 - **A modal spell asks for its mode, always** (`Targeting.Modes`): every mode listed, one that can't
   be chosen greyed with why — Surgical Precision used to cast its only legal mode by itself.
 - **The hand is a Card2D fan, and a fan card is clicked AND dragged** (`MagicHandView`). A Card2D

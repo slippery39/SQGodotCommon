@@ -690,6 +690,9 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 /// Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card. If you
 /// don't, [Otherwise]." Cast right then (CastNow), paying its cost. Asked only when it could be cast —
 /// a land, or one you can't pay for or target with, is "don't".
+/// ponytail: "If you don't" runs on a NO to the up-front question only; backing out of the cast itself
+/// afterwards (an empty answer to ChooseCastChoice, TBL-2.16) casts nothing and skips it - make the decline answer
+/// the question again if a table player ever says yes and then backs out for the damage.
 /// </summary>
 public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
 {
@@ -1084,6 +1087,8 @@ public record CastChosenOption(ImmutableList<CastSpellAction> Options) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		InputContext.GetValueOrDefault(ChooseCastChoice.Chosen) is int id
+		&& id >= 1
+		&& id <= Options.Count // past the last is "Don't cast it"
 		&& Options[id - 1] is var cast
 		&& cast.ValidateAdd(s).IsValid
 			? new(cast.Cast(s))

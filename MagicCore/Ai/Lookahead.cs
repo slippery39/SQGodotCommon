@@ -119,8 +119,8 @@ public static class Lookahead
 		}
 		if (choice is DeclareAttackerChoice)
 			return [CombatOption.None];
-		if (choice is PayToKeepChoice)
-			return choice.Options.Select(o => o.Id).Take(1); // looking ahead: keep the spell if it can be paid
+		if (choice is PayToKeepChoice or ChooseCastChoice) // looking ahead: keep the spell if it can be paid; cast it
+			return choice.Options.Select(o => o.Id).Take(1); // (a cast choice may be left empty, MinChoices 0: TBL-2.16)
 		return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 	}
 

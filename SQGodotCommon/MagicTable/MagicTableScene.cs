@@ -396,8 +396,14 @@ public partial class MagicTableScene : Control
 			!declaring ? null
 			: sameQuestion && _combat is not null ? _combat
 			: new CombatDeclaration(choice is DeclareAttackerChoice);
-		_boardChoice = choice is null || declaring ? null : BoardChoice.For(s, choice, _onTable);
-		if (choice is null || declaring || _boardChoice is not null)
+		// "You may cast it" mid-resolution (Common Goal off The Caretaker): cast as from the hand - click the
+		// targets - never a menu of every combination (TBL-2.16). Always restarted, so Esc can't strand it.
+		var casting = choice is ChooseCastChoice;
+		if (choice is ChooseCastChoice how && _targeting is null && _plays is null)
+			StartCast(s, how);
+		_boardChoice =
+			choice is null || declaring || casting ? null : BoardChoice.For(s, choice, _onTable);
+		if (choice is null || declaring || casting || _boardChoice is not null)
 			_choice.Close();
 		else if (!sameQuestion)
 			_choice.Show(s, choice, Preview, ids => Do(() => _m.Choose(ids)));
@@ -604,13 +610,43 @@ public partial class MagicTableScene : Control
 		var index = Targeting.NextIndex(candidates, from);
 		if (index < 0 && candidates.Count == 1)
 		{
-			Do(() => _m.Act(candidates[0]));
+			// The last pick of a "may cast it": answer the choice with that cast, not a move of its own
+			if (
+				_m.State.GetPendingChoice() is ChooseCastChoice how
+				&& candidates[0] is CastSpellAction cast
+			)
+				Do(() => _m.Choose([how.Casts.IndexOf(cast) + 1]));
+			else
+				Do(() => _m.Act(candidates[0]));
 			return;
 		}
 		// Not told apart by clicks (sacrifice or pay): choose the way, then click its picks.
 		_plays = index < 0 ? ("Choose a play:", Targeting.Ways(_m.State, candidates)) : null;
 		_targeting = index < 0 ? null : (candidates, index);
 		Refresh();
+	}
+
+	/// <summary>
+	/// A pending <see cref="ChooseCastChoice"/> as the hand's cast: its casts narrowed by clicking their
+	/// targets, a list only where clicks can't tell them apart (modes, "sacrifice or pay").
+	/// </summary>
+	private void StartCast(GameState s, ChooseCastChoice how)
+	{
+		List<GameAction> casts = [.. how.Casts];
+		var index = Targeting.NextIndex(casts, 0);
+		if (index >= 0)
+			_targeting = (casts, index);
+		else
+			_plays = ("Cast it how?", Targeting.Ways(s, casts));
+	}
+
+	/// <summary>The way out of a "may cast it" once clicked into: cast nothing. Otherwise the plain cancel, which just clears.</summary>
+	private void AddCancel()
+	{
+		if (_m.State.GetPendingChoice() is ChooseCastChoice)
+			AddButton("Don't cast it  (Esc)", () => _m.Choose([]));
+		else
+			AddButton("Cancel  (Esc)", () => { });
 	}
 
 	private void PlaceHand()
@@ -842,7 +878,7 @@ public partial class MagicTableScene : Control
 					redraw: false,
 					option: true
 				);
-			AddButton("Cancel  (Esc)", () => { });
+			AddCancel();
 			return;
 		}
 		if (_plays is var (title, items))
@@ -851,7 +887,7 @@ public partial class MagicTableScene : Control
 			foreach (var (label, play) in items)
 				AddButton(label, () => Play(play, 0), redraw: false, option: true).Disabled =
 					play.Count == 0; // a mode that can't be chosen now: shown, greyed
-			AddButton("Cancel  (Esc)", () => { });
+			AddCancel();
 			return;
 		}
 		if (_combat is { } combat)

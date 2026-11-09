@@ -470,7 +470,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `PlayerId` (int): Whose hand.
   - `DeciderId` (int): Who chooses, if not the hand's owner — Solve for Disappointment: "You choose … from it."
   - `Types` (CardType): Only cards of these types ("a nonland permanent card"); None means any.
-- **`ChooseCastChoice`** — How to cast a card in the middle of a resolution: its targets, modes, X — one legal cast each.
+- **`ChooseCastChoice`** — How to cast a card in the middle of a resolution: its targets, modes, X — one legal cast each, and an empty answer casts nothing: every…
 - **`ChooseColorChoice`** — "Choose a color." Option id = ManaColor + 1: 0 means "none" across this engine, so no answer may be 0.
   - `Colors` (ImmutableArray<ManaColor>): Dal R'El: "{R} or {G}" — the colours offered; empty is all five.
 - **`ChooseCreatureToCopyChoice`** — Flesh Duplicate: "a copy of any creature on the battlefield" — anyone's, not itself. ponytail: "you may" is offered as must whenever there…

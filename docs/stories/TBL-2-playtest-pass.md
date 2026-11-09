@@ -99,9 +99,17 @@ is a bug report, never about the look.
       Not pinned by a test (Godot UI). The ZoneViewer (a plate's button) already shows one zone at a time
 - [x] TBL-2.15 (done as TBL-4.3) Blocks and attacks pair visibly (Arena's arrows, or the blocker moves beside its attacker);
       today two creatures with the same name can't be told apart → TBL-4
-- [ ] TBL-2.16 Casting from another card's permission (Shayne, 2026-11-08): Common Goal cast off The Caretaker shows a menu of
+- [x] TBL-2.16 Casting from another card's permission (Shayne, 2026-11-08): Common Goal cast off The Caretaker shows a menu of
       every target COMBINATION. Cast it as from the hand instead - click the creatures on the board - and never get
-      locked when there is no valid target: a Cancel button (don't cast it)
+      locked when there is no valid target: a Cancel button (don't cast it). Done: a pending `ChooseCastChoice`
+      (CastNow's "how to cast it", one option per legal combination) runs the hand's `Targeting` flow over its casts
+      (`MagicTableScene.StartCast`), the last pick answering the choice by index; **"Don't cast it (Esc)"** is always
+      on screen - an empty answer, `ChooseCastChoice.MinChoices` 0 with the options untouched (a first version added a
+      "Don't cast" OPTION and made every record with a cast choice stale: the offers fingerprint hashes the options,
+      found when Shayne's own game would not replay). Checked on his game: `--resume-at=1021` of
+      `2026-11-08_192946_seed1126905837`, a real click on the Saurian Explorer led to "choose target 2" with
+      "No target". Test `CastNow_ThePlayerMayDeclineTheCast`. Known ceiling (`ExileTopMayCast`): Chandra's "if you
+      don't" runs on a no to the up-front question only, not on backing out of the cast afterwards
 
 ## Next
 

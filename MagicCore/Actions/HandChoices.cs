@@ -417,7 +417,12 @@ public record ChooseNumberChoice : ChoiceAction
 	) => PlayerId;
 }
 
-/// <summary>How to cast a card in the middle of a resolution: its targets, modes, X — one legal cast each.</summary>
+/// <summary>
+/// How to cast a card in the middle of a resolution: its targets, modes, X — one legal cast each, and
+/// an empty answer casts nothing: every such cast is a "you may" (Chandra, Torch of Defiance; The Caretaker), so a
+/// player who clicked into it can back out (TBL-2.16). MinChoices 0, the options untouched - a record's offers
+/// fingerprint hashes them, and an extra "Don't cast" option made every game with a cast choice stale.
+/// </summary>
 public record ChooseCastChoice : ChoiceAction
 {
 	public const string Chosen = "cast";
@@ -429,7 +434,7 @@ public record ChooseCastChoice : ChoiceAction
 	{
 		PlayerId = playerId;
 		Casts = casts;
-		MinChoices = 1;
+		MinChoices = 0;
 		MaxChoices = 1;
 		OutputKey = Chosen;
 		Prompt = "Cast it how?";

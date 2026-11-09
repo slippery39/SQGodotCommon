@@ -365,6 +365,89 @@ public class FraRareFinalTests : FraBoardTest
 		);
 	}
 
+	// The Caretaker / Chandra "you may cast it": a player who clicked into the cast can back out
+	// (TBL-2.16) - nothing is cast. Chandra's "if you don't" belongs to saying no up front (a known
+	// ceiling, ExileTopMayCast): backing out after a yes deals neither her 2 nor the spell's 3.
+	[Test]
+	public void CastNow_ThePlayerMayDeclineTheCast()
+	{
+		var charm = new CardDefinition(
+			TestGames.Inline("Charm", "{1}", "Instant").Data,
+			[
+				new SpellEffectsComponent([])
+				{
+					Modes =
+					[
+						new Mode("• Gain 2 life.", [], [new GainLife(Ref.You, 2)]),
+						new Mode(
+							"• Each opponent loses 3 life.",
+							[],
+							[new LoseLife(Ref.EachOpponent, 3)]
+						),
+					],
+					Choose = 1,
+				},
+			]
+		); // two ways to cast it: a card with one is cast without asking
+		var chandra = ChandraOnTop(charm);
+		var life = Life(them);
+		ChandraPlusOne(
+			chandra,
+			c =>
+				c switch
+				{
+					YesNoChoice => [1],
+					ChooseCastChoice => [],
+					_ => [],
+				}
+		);
+		Assert.That(Life(them), Is.EqualTo(life), "nothing was cast: not the charm's 3");
+	}
+
+	// A cast choice may be answered with nothing (MinChoices 0, TBL-2.16), and every resolver that takes
+	// "the first MinChoices options" would then never cast: the look-ahead's cheap answer must still cast.
+	[Test]
+	public void CastNow_TheLookAheadsCheapAnswer_StillCasts()
+	{
+		var charm = new CardDefinition(
+			TestGames.Inline("Charm", "{1}", "Instant").Data,
+			[
+				new SpellEffectsComponent([])
+				{
+					Modes =
+					[
+						new Mode("• Gain 2 life.", [], [new GainLife(Ref.You, 2)]),
+						new Mode(
+							"• Each opponent loses 3 life.",
+							[],
+							[new LoseLife(Ref.EachOpponent, 3)]
+						),
+					],
+					Choose = 1,
+				},
+			]
+		);
+		var chandra = ChandraOnTop(charm);
+		List<int>? answered = null;
+		ChandraPlusOne(
+			chandra,
+			c =>
+				c switch
+				{
+					YesNoChoice => [1],
+					ChooseCastChoice how => answered = [
+						.. MagicCore.Ai.Lookahead.QuickAnswer(s, how),
+					],
+					_ => [],
+				}
+		);
+		Assert.That(
+			answered,
+			Is.Not.Null.And.Not.Empty,
+			"the cheap answer to a cast choice is a cast"
+		);
+	}
+
 	[Test]
 	public void CastNow_AnAdditionalCostIsPaid()
 	{

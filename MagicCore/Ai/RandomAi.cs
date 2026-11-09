@@ -24,7 +24,7 @@ public sealed class RandomAi(int playerId, int seed) : IAi
 					.. choice
 						.Options.Where(o => o.IsEnabled)
 						.OrderBy(_ => rng.Next())
-						.Take(choice.MinChoices)
+						.Take(choice is ChooseCastChoice ? 1 : choice.MinChoices) // a cast choice may be left empty (TBL-2.16): the floor still casts
 						.Select(o => o.Id),
 				]
 			);
