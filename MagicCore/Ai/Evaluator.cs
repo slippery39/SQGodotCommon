@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
@@ -17,6 +18,66 @@ public static partial class Evaluator
 
 	/// <summary>A land in hand: less than a spell, so playing even a surplus land scores a gain.</summary>
 	public const double LandInHand = 0.3;
+
+	/// <summary>A card exiled "you may play it" is worth this much of an unknown card (Shayne's 0.8, AI-9.3), the next one <see cref="ImpulseDiminish"/> times the last.</summary>
+	public const double ImpulseShare = 0.8;
+
+	public const double ImpulseDiminish = 0.5;
+
+	static readonly AsyncLocal<HashSet<int>?> rootImpulse = new();
+
+	/// <summary><paramref name="work"/> with the cards exiled "you may play" at <paramref name="root"/> remembered as real.</summary>
+	public static T WithRootImpulse<T>(GameState root, Func<T> work)
+	{
+		var outer = rootImpulse.Value;
+		rootImpulse.Value = [.. ImpulseCards(root, -1).Select(c => c.Id)];
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			rootImpulse.Value = outer;
+		}
+	}
+
+	/// <summary>Cards in exile with a live play permission for <paramref name="player"/> (-1: anyone's).</summary>
+	static IEnumerable<Card> ImpulseCards(GameState s, int player) =>
+		new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(o => s.CardsIn(o, ZoneType.Exile))
+			.Where(c =>
+				c.GetComponent<PlayableFromExile>() is { } p
+				&& (player < 0 || p.PlayerId == player)
+				&& s.GetGame().TurnNumber <= p.UntilTurn
+			);
+
+	/// <summary>An impulse card made INSIDE the search (not there at the root): the sample's luck, never played (<see cref="Terms.ImpulseValue"/>).</summary>
+	public static bool IsPhantomImpulse(int cardId, GameState s) =>
+		!IsOff(Terms.ImpulseValue)
+		&& rootImpulse.Value is { } root
+		&& !root.Contains(cardId)
+		&& s.HasObject(cardId)
+		&& s.GetObject(cardId) is Card c
+		&& c.GetComponent<PlayableFromExile>() is { Blind: true }
+		&& s.IsIn(cardId, c.OwnerId, ZoneType.Exile);
+
+	/// <summary>The legal moves for the search: without playing a phantom impulse card (<see cref="Terms.ImpulseValue"/>).</summary>
+	public static ImmutableList<GameAction> SearchMoves(this GameState s) =>
+		[
+			.. s.LegalActions()
+				.Where(a =>
+					MagicRules.CardOf(a) is var id && (id == 0 || !IsPhantomImpulse(id, s))
+				),
+		];
+
+	/// <summary>What the phantom impulse cards of <paramref name="player"/> are credited: a share of an unknown card each, fading.</summary>
+	static double ImpulseCredit(GameState s, int player, HeldValues held) =>
+		IsOff(Terms.ImpulseValue)
+			? 0
+			: ImpulseCards(s, player)
+				.Where(c => IsPhantomImpulse(c.Id, s))
+				.Select((_, i) => ImpulseShare * Math.Pow(ImpulseDiminish, i) * held.Unknown)
+				.Sum();
 
 	/// <summary>A land in hand that unlocks nothing (<see cref="Terms.LandUnlock"/>): a land to pitch or bin.</summary>
 	public const double LandSurplus = 0.05;
@@ -281,6 +342,15 @@ public static partial class Evaluator
 		/// (`+nosurveilspells`). Needs the held table; every card on top is then decided, none branched.
 		/// </summary>
 		SurveilSpells = 4194304,
+
+		/// <summary>
+		/// "Exile the top card, you may play it" is worth a RANDOM card, not the one the search sampled (AI-17.16, Shayne
+		/// 2026-11-09: "it shouldn't matter what the exact top card is"): inside the search a card exiled this way after the
+		/// root can't be played - the sample's luck - and is credited <see cref="ImpulseShare"/> of an unknown card, each
+		/// further one <see cref="ImpulseDiminish"/> times the one before (you can only play so much). Cards already exiled
+		/// at the root are real and play normally (`+noimpulsevalue`).
+		/// </summary>
+		ImpulseValue = 8388608,
 	}
 
 	/// <summary>
@@ -513,6 +583,8 @@ public static partial class Evaluator
 					)
 				: held.Of(c.Name)
 			);
+		if (held is not null)
+			hand += ImpulseCredit(s, player, held);
 		var graveyard = IsOff(Terms.GraveyardAccess)
 			? 0
 			: s.CardsIn(player, ZoneType.Graveyard)

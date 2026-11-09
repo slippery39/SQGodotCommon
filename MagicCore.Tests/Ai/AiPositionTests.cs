@@ -173,6 +173,43 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.Not.StartWith("Activate Sarcophagus"));
 	}
 
+	// Shayne, 2026-11-09 (AI-17.16): turn 6, three lands, the land already played - the AI attacked its Tasha Yar 2/1
+	// ("when it dies, exile the top card, you may play it") into his untapped 1/3, then exiled her from the graveyard for a
+	// copy that exiles another: a 2/1 and three mana for cards it could not use. The search treats its ONE sampled library
+	// as certain, so an exile looks good whenever the sample is kind (attack in 10 of 30 shuffles, mean margin -1.7).
+	// Shayne: "it shouldn't matter what the exact top card is" - Terms.ImpulseValue credits a random card (0.8, fading) and
+	// never plays the sample's. Over 30 shuffles: 10 attack without it, 1 with it (mean margin -6.2).
+	[Test]
+	public void TheTashaAttack_DoesNotHangOnTheSampledTopCard()
+	{
+		var s = KeptRecords.Before("TashaAttacksIntoCrew", 114);
+		int Attacks(Evaluator.Terms without)
+		{
+			var attacked = 0;
+			Parallel.For(
+				1,
+				31,
+				k =>
+				{
+					var ai = new BeamSearchAi(
+						s.DecidingPlayerId(),
+						new(Without: without, Threads: 1)
+					);
+					if (ai.Decide(s with { RngSeed = k * 7919 }).What.EndsWith("Attack You"))
+						Interlocked.Increment(ref attacked);
+				}
+			);
+			return attacked;
+		}
+
+		Assert.That(
+			Attacks(Evaluator.Terms.ImpulseValue),
+			Is.GreaterThanOrEqualTo(6),
+			"control: a kind sample attacks"
+		);
+		Assert.That(Attacks(Evaluator.Terms.None), Is.LessThanOrEqualTo(3));
+	}
+
 	// Shayne, 2026-11-09 (AI-17.20): turn 8, Emergency Holographic Crew's surveil 2 over a Mountain and an Energize, with
 	// four lands in play and a hand of expensive spells - and the AI put nothing in the graveyard, as it never does
 	// (the four answers tied or ranked the land ahead: the rollout keeps one sampled top card). Shayne: keep a land on

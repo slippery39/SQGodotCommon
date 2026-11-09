@@ -416,6 +416,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`PlayableFromExile(int PlayerId, int UntilTurn)`** — Impulse draw: this exiled card may be played by PlayerId through turn UntilTurn (Rules/Playable.cs).
   - `AnyType` (bool): Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way." — Costs.Of.
   - `Tax` (int): Zero, Incorporeal Sensate: "A spell cast this way costs {2} more to cast." — Costs.Of.
+  - `Blind` (bool): A top card of its controller's library exiled UNSEEN (ExileTopPlayable): what it is was luck, so the AI's…
 - **`PrepareSpellComponent(Cards.CardFace Face, SpellEffectsComponent Text)`** — A prepare card's spell half (CR: "a preparation card is a creature card in every zone"): its face and its text.
 - **`PreparedCopyOf(int CreatureId, int Incarnation)`** — On a prepared copy in exile: the creature (and which object of it) it belongs to.
 - **`PreventAllDamageToYou`** — The Needs of the Many: "Prevent all damage that would be dealt to you this turn." — Damage.Deal: none is dealt, so no lifelink either. [1: The Needs of the Many]

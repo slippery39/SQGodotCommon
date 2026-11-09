@@ -228,7 +228,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	public string Explain() =>
 		sampled is null
 			? "\n(no search: one option, a plan replayed, or a forced pass)\n"
-			: Evaluator.Without(options.Without, () => ExplainLines(sampled));
+			: Evaluator.Without(
+				options.Without,
+				() => Evaluator.WithRootImpulse(sampled, () => ExplainLines(sampled))
+			);
 
 	string ExplainLines(GameState s)
 	{
@@ -315,7 +318,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		firstMoveOrder.Clear();
 		bestLines.Clear();
 		sampled = null;
-		var decided = Evaluator.Without(options.Without, () => DecideHere(s));
+		var decided = Evaluator.Without(
+			options.Without,
+			() => Evaluator.WithRootImpulse(s, () => DecideHere(s))
+		);
 		totalRollouts += rollouts;
 		return decided;
 	}
@@ -479,7 +485,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	{
 		if (s.GetPendingChoice() is not { } choice)
 		{
-			var moves = s.DistinctMoves(s.LegalActions()).ToList();
+			var moves = s.DistinctMoves(s.SearchMoves()).ToList();
 			// a land is never worth passing on (Terms.LandDrop): the land first, then whatever else
 			if (!Evaluator.IsOff(Evaluator.Terms.LandDrop) && moves.Any(a => a is PlayLandAction))
 				moves.RemoveAll(a => a is PassPriorityAction);

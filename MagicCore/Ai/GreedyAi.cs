@@ -32,7 +32,7 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 
 	GameAction ChooseAction(GameState s)
 	{
-		var actions = s.DistinctMoves(s.LegalActions());
+		var actions = s.DistinctMoves(s.SearchMoves());
 		if (actions.FirstOrDefault(a => a is KeepHandAction) is { } keep)
 			return ShouldKeep(s) ? keep : actions.First(a => a is MulliganAction);
 

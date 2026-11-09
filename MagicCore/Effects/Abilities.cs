@@ -841,6 +841,12 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 
 	/// <summary>Zero, Incorporeal Sensate: "A spell cast this way costs {2} more to cast." — Costs.Of.</summary>
 	public int Tax { get; init; }
+
+	/// <summary>
+	/// A top card of its controller's library exiled UNSEEN (ExileTopPlayable): what it is was luck, so the AI's search prices it as
+	/// a random card and never plays the sample's (Evaluator Terms.ImpulseValue). A known card — Emrakul, a chosen one — is not.
+	/// </summary>
+	public bool Blind { get; init; }
 }
 
 /// <summary>

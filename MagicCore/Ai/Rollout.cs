@@ -475,7 +475,7 @@ public static class Rollout
 				);
 		if (!window)
 			return null;
-		var spells = s.DistinctMoves([.. s.LegalActions().Where(Allowed(s, who, settings))])
+		var spells = s.DistinctMoves([.. s.SearchMoves().Where(Allowed(s, who, settings))])
 			.Where(a =>
 				a is CastSpellAction
 				|| (!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks) && IsManaPump(s, a))
@@ -590,7 +590,7 @@ public static class Rollout
 		if (!Priority.AtSorcerySpeed(s, me))
 			return null;
 		var moves = s.DistinctMoves(
-			allowed is null ? s.LegalActions() : [.. s.LegalActions().Where(allowed)]
+			allowed is null ? s.SearchMoves() : [.. s.SearchMoves().Where(allowed)]
 		);
 		if (moves.OfType<PlayLandAction>().FirstOrDefault() is { } land)
 			return land;

@@ -1886,7 +1886,20 @@ public record ExileTopPlayable : Effect
 					);
 				if ((UntilNonland && top.Is(CardType.Land)) || Choose is not null)
 					continue;
-				s = Update(s, (Card)s.GetCard(top.Id).WithComponent(playable));
+				s = Update(
+					s,
+					(Card)
+						s.GetCard(top.Id)
+							.WithComponent(
+								playable with
+								{
+									Blind =
+										!FaceDown
+										&& who == owner
+										&& !top.KnownTo.HasFlag(Knowers.Owner),
+								}
+							)
+				);
 			}
 			var choice = new ChooseAmongChoice
 			{

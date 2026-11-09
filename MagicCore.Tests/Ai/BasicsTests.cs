@@ -328,6 +328,36 @@ public class BasicsTests
 		return s.IsIn(cheapId, me, ZoneType.Graveyard);
 	}
 
+	// AI-17.16 (code review): only a card exiled UNSEEN off the top is "blind" - the search credits a random card for it and
+	// never plays the sample's. One looked at first (face down, Vulcan Mind-Meld) is a real card and plays normally.
+	[TestCase(false, ExpectedResult = true)]
+	[TestCase(true, ExpectedResult = false)]
+	public bool ExileTopPlayable_IsBlind_OnlyWhenTheCardIsUnseen(bool faceDown)
+	{
+		Lands(2);
+		foreach (var card in s.CardsIn(me, ZoneType.Library).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(me, ZoneType.Exile)); // TEST SETUP: a library we choose
+		for (var i = 0; i < 3; i++)
+			Put(me, TestGames.CreatureCosting("{4}", $"Spell {i}", "4/4"), ZoneType.Library);
+		var peek = Put(
+			me,
+			Spell("Peek", "{1}", "Sorcery", null, new ExileTopPlayable { FaceDown = faceDown }),
+			ZoneType.Hand
+		);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = peek });
+		s = TestGames.PassUntil(
+			s,
+			x =>
+				x.CardsIn(me, ZoneType.Exile)
+					.Any(c => c.GetComponent<PlayableFromExile>() is not null)
+		);
+
+		return s.CardsIn(me, ZoneType.Exile)
+			.First(c => c.GetComponent<PlayableFromExile>() is not null)
+			.GetComponent<PlayableFromExile>()!
+			.Blind;
+	}
+
 	// (13) Shayne: "Tutors should fetch the highest potential value card in theory. This is kind of the same
 	// problem as surveil and scry, but just with more potential cards to choose from." Claude's reading for a
 	// landcycler: two Plains in play and a {1}{B} creature stuck in hand — the Swamp, the one basic that
