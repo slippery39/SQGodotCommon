@@ -109,6 +109,21 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.Not.EndWith("none"));
 	}
 
+	// Shayne, 2026-11-08 (AI-13.7): the AI's first turn, three Forests in hand - and it passed, then discarded to
+	// hand size. Pass -15.78 against Play Forest -21.63: the rollout scored the discarded Photosynthetic
+	// Physician's return from the graveyard (an Officer by turn 4) above the land's flat price. Terms.LandDrop: the
+	// search never passes with a land to play. The CONTROL: without it, it still passes.
+	[Test]
+	public void WithALandToPlay_TheSearchPlaysIt_NotPass()
+	{
+		var s = KeptRecords.Before("AiSkipsLandDrop", 27);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.LandDrop), Is.EqualTo("Pass"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Does.StartWith("Play"));
+	}
+
 	// Shayne, 2026-11-08 (AI-17.12): turn 13, the AI attacked its Officer 1/1 token into Shayne's untapped Saurian
 	// Explorer 4/3 with no trick, let it die, then cast a 3/3. The look-ahead's defender never blocked it, so the
 	// attack looked free; judged against the blocks the rollout plays (Terms.TrueDefender, AI-19.21) the Explorer

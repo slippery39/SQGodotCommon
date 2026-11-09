@@ -96,6 +96,19 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
 ## Tasks
 
 - [x] AI-13.1 Shayne picks the first lesson; agree how a rule steers (open questions) — 2026-10-28: patience with instant-speed cards, as a cost on casting early (Decisions)
+- [x] AI-13.7 Never pass with a land to play (Shayne's playtest, 2026-11-08: `2026-11-08_231959_seed347243` #27, the AI's
+      first turn, three Forests in hand, it passed and discarded to hand size - "pretty much a 0% chance this was
+      correct"). Pass -15.78 against Play Forest -21.63: the discarded Photosynthetic Physician returned from the graveyard
+      as an Officer by turn 4, inside the horizon, and the land's mana only shows past it. `Evaluator.Terms.LandDrop`
+      (`+nolanddrop`): `BeamSearchAi.Children` drops Pass while a land play is legal. Kept `AiSkipsLandDrop`, test
+      `WithALandToPlay_TheSearchPlaysIt_NotPass`, control included. Suite 19 changed (was 17), cost per position
+      -10% (8 024 steps), oracle 84.7% unchanged; 1529 tests. Match not run. Not yet committed
+- [ ] AI-13.8 The option value for a flash creature's protective enters (Shayne's playtest, 2026-11-08:
+      `2026-11-08_232615_seed2123881407` #145 and `232136` #216): Saru, Unthreatened cast in the MAIN phase - "almost
+      never a reason, it has flash, and bricking an opponent's removal by giving one of yours hexproof is very valuable".
+      Cast and Pass score the same (-5.36 each; an acting move wins a tie): the rollout never sees the removal Saru would
+      have answered. Offers for a protective flash enters (hexproof, protection), priced as an option when held (AI-13.4's
+      way). Position kept: `SaruMainPhase`
 - [ ] AI-13.6 The option value for sorcery-speed removal and burn, X spells included (AI-14's flag 5,
       Shayne: Ajani's Anguish for 3 at the face, No Admittance next in line — hold both: "If you draw
       lands the anguish gets better anyways, and there is always a chance the opponent plays some

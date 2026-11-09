@@ -110,6 +110,14 @@ is a bug report, never about the look.
       `2026-11-08_192946_seed1126905837`, a real click on the Saurian Explorer led to "choose target 2" with
       "No target". Test `CastNow_ThePlayerMayDeclineTheCast`. Known ceiling (`ExileTopMayCast`): Chandra's "if you
       don't" runs on a no to the up-front question only, not on backing out of the cast afterwards
+- [ ] TBL-2.17 A creature that leaves mid-combat scrambles the columns (Shayne's playtest, 2026-11-08): with blockers
+      declared, a creature removed or sacrificed before combat ends (a sacrifice, removal) breaks the attacker/blocker
+      column ordering, so attackers and blockers no longer meet - TBL-4.3's `ColumnWidth` rows. Capture: resume a record at
+      such a moment; the combat's columns must be built from the declaration, not from who is still on the board
+- [ ] TBL-2.18 The table's zones bounce (Shayne's playtest, 2026-11-08): the rows keep changing size and the UI "bounces up
+      and down", cutting off the bottom of the screen again - the permanents' scale read back from the board
+      (TBL-4.2 fixed one cause: "the scale comes from the SCREEN"); find what still resizes a row each redraw, with a
+      capture series (`-Capture`, frames over a turn), not one frame
 
 ## Next
 

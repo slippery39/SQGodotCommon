@@ -477,7 +477,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	List<Decision> Children(GameState s)
 	{
 		if (s.GetPendingChoice() is not { } choice)
-			return [.. s.DistinctMoves(s.LegalActions()).Select(a => new Move(a, s.MoveKey(a)))];
+		{
+			var moves = s.DistinctMoves(s.LegalActions()).ToList();
+			// a land is never worth passing on (Terms.LandDrop): the land first, then whatever else
+			if (!Evaluator.IsOff(Evaluator.Terms.LandDrop) && moves.Any(a => a is PlayLandAction))
+				moves.RemoveAll(a => a is PassPriorityAction);
+			return [.. moves.Select(a => new Move(a, s.MoveKey(a)))];
+		}
 		var key = ChoiceKey(choice);
 		// from any question no whole attack decides for (a fresh AI mid-declaration — the suite, --compare —
 		// plays as the table does): the questions from here on

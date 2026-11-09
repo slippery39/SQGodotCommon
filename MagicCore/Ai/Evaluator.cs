@@ -241,6 +241,15 @@ public static partial class Evaluator
 		/// (AI-17.11, Dominion Assault Force: "surveiling here is 100% the correct play"; `+nosurveilprice`).
 		/// </summary>
 		SurveilPrice = 131072,
+
+		/// <summary>
+		/// The search never passes while a land play is legal (Shayne, 2026-11-08: turn 1, three Forests in hand, the AI
+		/// passed and discarded to hand size - "pretty much a 0% chance this was correct"). The land costs nothing to
+		/// play first, whatever else follows, but a 4-turn rollout scores the mana it gives only by the land's flat
+		/// price, and a discarded card with a graveyard ability (Photosynthetic Physician) came back as an Officer
+		/// inside the horizon - so passing scored 5.85 better (`+nolanddrop`).
+		/// </summary>
+		LandDrop = 262144,
 	}
 
 	/// <summary>

@@ -434,7 +434,18 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       mistake, counted whatever the game's result — **missed lethal** first (an attack that kills through
       the defender's best blocks, not made; AI-17.3 should drive it to 0), then walked into lethal,
       self-harm (damage at its own face or creatures for nothing — AI-16's self-burn), a card thrown away
-      (cast for no effect — AI-16.4's X = 0 Anguish); each checker's exact rule agreed with Shayne first
+      (cast for no effect — AI-16.4's X = 0 Anguish); each checker's exact rule agreed with Shayne first.
+      **Scope and priority (Shayne, 2026-11-08, after the playtest):** a lint, not a weight - it never changes a
+      decision, so it cannot make the AI worse; it runs over a VERY large sample of games (hundreds) and reports each
+      class's count and its positions, so mistakes are fixed by class, ranked by how often, not by anecdote. Only
+      OBVIOUS mistakes: ones no reasonable player makes. Subtle ones (the believable kind) stay one at a time, from
+      his playtests. **First checkers to agree with him** (each with its exact rule): (1) a land to play, and passing
+      (AI-13.7 fixed one; a discard to hand size with a land in hand); (2) an attack into a bigger untapped blocker
+      with no trick and no follow-up - a creature thrown away; (3) a removal or fight with no target worth it, or
+      a free kill left unused (Amok Time, AI-17.14); (4) a "may" taken that does nothing (exile instead of surveil,
+      AI-17.11); then missed lethal / walked into lethal, self-harm, a card cast for no effect, as above. Pre-fix
+      builds can be the control: each fix since 2026-11-08 has a switch, so the lint on `beam+nolanddrop` etc. must
+      show the class the fix removed. **Moved to the FRONT of the next session** (above the F6 inspector)
 - [ ] AI-17.8 The long view (Shayne: win rate "slowly increasing over time against a more basic
       algorithm"): a fixed anchor and a long match each sprint, sized to see 1–2pp, the trend kept in
       `docs/findings/magic-ai.md` — **agreed (Shayne, 2026-10-29): the anchor is sprint 3's starting AI**,
@@ -503,6 +514,16 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       to the search before AI-17.11 is fixed (the second half of the same report)
 
 ## Next
+
+**Next session (decided 2026-11-08, Shayne):** (1) commit AI-13.7 (land drop) after `/pre-commit` - tests and records
+are in the tree; (2) the table's UI: TBL-2.17 (columns scramble when a creature leaves mid-combat) and TBL-2.18 (the
+zones bounce and cut off the bottom) - captures over a turn, not one frame; (3) **AI-17.7, the blunder lint** - bring
+Shayne the first four or five checkers' exact rules to approve BEFORE building any, then run it over a few hundred
+games (`--decisions` records, or a new mode) and read the counts; (4) then AI-14.4 (F6 inspector), AI-13.8 (Saru, a
+flash creature's protective enters) and AI-13.6. This session's lesson: the search finds exploits of its own model
+(baiting the simulated opponent, a graveyard trick inside the horizon, ties that look free) - see
+`docs/findings/magic-ai.md`, AI-17.10-14 and AI-13.7.
+
 
 **AI-17.6, what is left.** Done this session: the quick check (review item 1, two levels, every pick), the
 counter-attack always seen, graveyard access; item 9 (plans) kept after a match, item 10 (the table's cap)

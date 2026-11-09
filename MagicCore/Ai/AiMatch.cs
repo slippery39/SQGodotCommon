@@ -80,6 +80,8 @@ public static class AiMatch
 			["nodefender"] = o => o with { Without = o.Without | Evaluator.Terms.TrueDefender },
 			// A surveil on the stack is priced at nothing, before AI-17.11: beam+nosurveilprice.
 			["nosurveilprice"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilPrice },
+			// The search may pass with a land to play, before AI-13.7: beam+nolanddrop.
+			["nolanddrop"] = o => o with { Without = o.Without | Evaluator.Terms.LandDrop },
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
