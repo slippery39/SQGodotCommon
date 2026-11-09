@@ -473,10 +473,21 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       baseline (17 changed), cost the same; 1523 tests green. Not yet committed
 - [ ] AI-17.12 An attack that just loses the creature (Shayne, 2026-11-08): his 1/1 officer attacked into Shayne's 4/3
       Saurian Explorer with no trick, died, then a 3/3 was cast. Record not found yet - search the four 2026-11-08
-      19:18–19:40 records for the attack
+      19:18–19:40 records for the attack.
+      **Found and already fixed (2026-11-08):** `2026-11-08_191858_seed10869` #264, T13, the Officer 1/1 token attacked
+      into the untapped Saurian Explorer 4/3. The old look-ahead defender never blocked it; with AI-19.21's
+      `TrueDefender` the search stays home (no attack -0.30, attack -3.71). Switching only that term off brings the
+      attack back; `TheirCombatTricks` and `SurveilPrice` make no difference. Kept `OfficerAttacksIntoExplorer`,
+      test `AOneOneToken_DoesNotAttackIntoAnUntappedFourThree`, control included. Not yet committed
 - [ ] AI-17.13 Guidance Failure main phase, then no attack (Shayne, 2026-11-08; `2026-11-08_192946_seed1126905837`
       #177): Starfleet Spanner Jockey and a Dahar Master out, Raffi put on top of the library, no attack. Play it
-      main phase to attack, or hold it - "the worst play possible" is both a main-phase cast and a pass
+      main phase to attack, or hold it - "the worst play possible" is both a main-phase cast and a pass.
+      **Not reproduced (2026-11-08):** the cast (#177) scores 22.56 against 21.84 for passing, Raffi and the Fugitive
+      Listener tied; at #187-188 every search we can build attacks with both - the AI from BEFORE this session
+      (commit 79ccbb43, checked out on its own), today's, plans kept or not, caps from 10 ms to 1 s. The live game's
+      `Don't attack` stays unexplained (the record header says BeamSearchAi). Left: an undo (the table keeps one AI
+      object, with its plan, across an undone move) or a state the record does not hold. Pinned as it plays
+      (`AfterGuidanceFailure_TheAiAttacks…`, kept `GuidanceNoAttack`). **Ask Shayne: did he undo in that game?**
 - [ ] AI-17.14 Amok Time with nobody to kill (Shayne, 2026-11-08; same record #376–380): a 4/4 out against 3/1s, a 2/2
       and a 3/2, and the second target chosen as none; it could have killed one for free.
       **Cause: a defect in AI-19.21's `TrueDefender`, found here.** The simulated human's attack included Tal Shiar

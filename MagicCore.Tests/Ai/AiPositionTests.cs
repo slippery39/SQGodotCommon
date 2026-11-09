@@ -109,6 +109,37 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.Not.EndWith("none"));
 	}
 
+	// Shayne, 2026-11-08 (AI-17.12): turn 13, the AI attacked its Officer 1/1 token into Shayne's untapped Saurian
+	// Explorer 4/3 with no trick, let it die, then cast a 3/3. The look-ahead's defender never blocked it, so the
+	// attack looked free; judged against the blocks the rollout plays (Terms.TrueDefender, AI-19.21) the Explorer
+	// blocks and the Officer stays home. Fixed by that term, found by switching it off. The CONTROL: without it the
+	// AI still attacks.
+	[Test]
+	public void AOneOneToken_DoesNotAttackIntoAnUntappedFourThree()
+	{
+		var s = KeptRecords.Before("OfficerAttacksIntoExplorer", 264);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.TrueDefender), Does.EndWith("Attack You"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
+	}
+
+	// Shayne, 2026-11-08 (AI-17.13): the AI cast Guidance Failure main phase on Raffi Musiker and then did not
+	// attack with its Spanner Jockey and Dahar Master - "the worst play possible": cast it to be aggressive, or
+	// don't. NOT reproduced: the search of that day, today's, with plans kept or not, and caps from 10 ms to
+	// 1 s all attack (the record's `Don't attack`, #187-188, came from the live game). Kept as it plays now.
+	[Test]
+	public void AfterGuidanceFailure_TheAiAttacks_NotTheWorstOfBoth()
+	{
+		var s = KeptRecords.Before("GuidanceNoAttack", 187);
+		var chose = new BeamSearchAi(s.DecidingPlayerId(), BeamSearchAi.Settings.Interactive)
+			.Decide(s)
+			.What;
+
+		Assert.That(chose, Does.StartWith("Attack with").And.EndsWith("Attack You"));
+	}
+
 	// Shayne, 2026-10-09 (AI-1): the AI cast Prophesied End ("Destroy target creature. If it wasn't
 	// attacking, its controller draws a card.") on a NON-attacking Rank Rat — premium removal on a
 	// 1/1, and a card for the opponent. Rebuilt: two Plains and Prophesied End against their Rat.
