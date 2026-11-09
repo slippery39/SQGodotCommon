@@ -104,6 +104,12 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirAbilities,
 				},
+			// The next attack's clock reads this turn's grants (can't block, flying) as lasting, before AI-17.9: beam+thisturngrants.
+			["thisturngrants"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.NextTurnGrants,
+				},
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },

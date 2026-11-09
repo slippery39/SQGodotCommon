@@ -460,6 +460,14 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       that turn the AI expects more damage through next turn than there will be. `Through` already strips
       this turn's toughness pumps (`Pumps`); the fix strips every until-end-of-turn grant the same way (all
       three at once), measured the AI-6 way — a position with La'An's trigger resolved, the suite, a match
+      **BUILT (2026-11-09):** `Evaluator.Terms.NextTurnGrants` (`+thisturngrants`): `Through` meets every attacker and
+      blocker as the cleanup leaves it (`NextTurn`: each `UntilEndOfTurn { UntilTurnOf: 0 }` gone, as
+      `Combat.CleanupPermanents` strips them) - can't block, flying, can't be blocked, a granted "can't be blocked by"
+      alike. Test `TheClock_IgnoresAGrantThatEndsThisTurn` (La'An's can't-block on their blocker, flying and
+      unblockable on ours; control: the grant moves the clock). Golden games: 7 of 12 moved, all 12 pass with it forced
+      off; regenerated. Suite: unchanged (21 changed, 85.4%, 7 784 steps). The review: a copy until end of turn undone too,
+      the attacker's defender check and power read from the next-turn card; control stolen this turn and a lord's lost
+      abilities left (`ponytail:`, DesignNotes). Open until its match runs
 - [ ] AI-17.10 Block that loses to the trick (Shayne, 2026-11-08): turn 3, the AI blocked his Astute
       Terraformer with its own; he pumped his and killed theirs for free. Record
       `game_records/2026-11-08_024830_seed30768236.json` #92. Rebuild as a position: does the search see his

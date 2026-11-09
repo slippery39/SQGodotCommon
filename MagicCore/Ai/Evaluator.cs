@@ -369,6 +369,13 @@ public static partial class Evaluator
 		/// "each opponent loses 2 life" never fired, and the AI raced at 4 into it (`+notheirabilities`).
 		/// </summary>
 		TheirAbilities = 33554432,
+
+		/// <summary>
+		/// The next attack meets each creature as the cleanup leaves it (AI-17.9, Shayne: note it, fix later): La'An's
+		/// "can't block this turn", a flier or "can't be blocked" until end of turn no longer read as lasting into next
+		/// turn's clock - as its toughness and power pumps already weren't (`+thisturngrants`).
+		/// </summary>
+		NextTurnGrants = 67108864,
 	}
 
 	/// <summary>
@@ -446,8 +453,9 @@ public static partial class Evaluator
 	/// A trampler (AI-8.4) is met by the blocker that absorbs most, and gets past it what that blocker
 	/// can't absorb by the next attack — its lasting toughness, or 1 against deathtouch: Yuriko's 2/3
 	/// "stopped" a 7/5 trampler at 3 life, scoring a lethal board as no clock at all.
+	/// Each creature is met as the cleanup leaves it (AI-17.9, <see cref="NextTurn"/>).
 	/// ponytail: otherwise one blocker stops one attacker whatever their sizes; menace and first strike
-	/// are ignored, and a keyword granted until end of turn still counts (trample excepted). Blockers go
+	/// are ignored. Blockers go
 	/// to attackers in order, never two to one trampler, and a non-trampler may take the blocker a
 	/// trampler would have met — so a trampler beside a bigger attacker can be overstated. Count them
 	/// if a misjudged race is ever shown.
@@ -480,10 +488,11 @@ public static partial class Evaluator
 	static int Through(GameState s, int attacker, int defender, int bonus = 0)
 	{
 		var attackers = new List<(Card Card, int Power)>();
-		foreach (var c in s.CardsIn(attacker, ZoneType.Battlefield))
+		foreach (var now in s.CardsIn(attacker, ZoneType.Battlefield))
 			if (
-				c.Is(CardType.Creature)
-				&& Alive(s, c)
+				now.Is(CardType.Creature)
+				&& Alive(s, now)
+				&& NextTurn(now) is var c
 				&& (!s.Has(c, "Defender") || s.Has(c, Combat.AttacksDespiteDefender))
 				&& s.Power(c) - Pumps(c).Power + bonus is > 0 and var power
 			)
@@ -497,7 +506,7 @@ public static partial class Evaluator
 		var blockers = new List<Card>();
 		foreach (var c in s.CardsIn(defender, ZoneType.Battlefield))
 			if (c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))
-				blockers.Add(c.IsTapped ? c with { IsTapped = false } : c);
+				blockers.Add(NextTurn(c.IsTapped ? c with { IsTapped = false } : c));
 		// The defender blocks the biggest it can — fliers first, which only fliers and reach stop.
 		var through = 0;
 		foreach (
@@ -540,6 +549,27 @@ public static partial class Evaluator
 				"Trample",
 				[.. c.GetComponents<UntilEndOfTurn>().Where(u => u.UntilTurnOf == 0)]
 			);
+	}
+
+	/// <summary>
+	/// A creature as the cleanup leaves it (<see cref="Terms.NextTurnGrants"/>): every "until end of turn" effect gone and
+	/// a copy until end of turn undone, as <c>Combat.CleanupPermanents</c> does.
+	/// ponytail: control taken until end of turn still counts for the taker, and a lord that lost its abilities this
+	/// turn still grants nothing (the board's statics are this turn's); read both from a cleaned board if a race is
+	/// misjudged.
+	/// </summary>
+	static Card NextTurn(Card c)
+	{
+		if (
+			IsOff(Terms.NextTurnGrants)
+			|| !c.Components.Any(x => x is UntilEndOfTurn { UntilTurnOf: 0 } or CopyUntilEndOfTurn)
+		)
+			return c;
+		var back = c.WithoutCopyUntilEndOfTurn();
+		return back with
+		{
+			Components = back.Components.RemoveAll(x => x is UntilEndOfTurn { UntilTurnOf: 0 }),
+		};
 	}
 
 	/// <summary>Not dying to what is marked on it now: the state-based check's own question.</summary>

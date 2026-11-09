@@ -4,6 +4,7 @@ using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
+using MagicCore.Turns;
 
 namespace MagicCore.Tests.Ai;
 
@@ -126,6 +127,46 @@ public class GreedyAiTests
 			Assert.That(counted, Is.LessThan(ignored - 5), "a lethal clock, at 3 life");
 		else
 			Assert.That(counted, Is.EqualTo(ignored).Within(1e-9));
+	}
+
+	// AI-17.9: the next attack's clock meets each creature as the cleanup leaves it - La'An's "can't block this turn" on
+	// their blocker, flying or "can't be blocked" until end of turn on our attacker, are gone by then. The CONTROL: without
+	// the term the grant moves the clock.
+	[TestCase(true, Combat.CantBlock)]
+	[TestCase(false, "Flying")]
+	[TestCase(false, Combat.CantBeBlocked)]
+	public void TheClock_IgnoresAGrantThatEndsThisTurn(bool onTheirBlocker, string grant)
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var (me, them) = (s.GetGame().StartingPlayerId, s.OpponentOf(s.GetGame().StartingPlayerId));
+		int attacker,
+			blocker;
+		(s, attacker) = TestGames.Put(
+			s,
+			me,
+			TestGames.Creature("Attacker", "3/3"),
+			ZoneType.Battlefield
+		);
+		(s, blocker) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Blocker", "3/3"),
+			ZoneType.Battlefield
+		);
+		var on = onTheirBlocker ? blocker : attacker;
+		var granted = s.UpdateObject(
+			on,
+			s.GetCard(on).WithComponent(new UntilEndOfTurn(Keyword: grant))
+		); // TEST SETUP
+		double Clock(GameState x) =>
+			Evaluator.Explain(x, me).Where(t => t.Term.Contains("clock")).Sum(t => t.Value);
+
+		Assert.That(
+			Evaluator.Without(Evaluator.Terms.NextTurnGrants, () => Clock(granted)),
+			Is.Not.EqualTo(Clock(s)),
+			"control: the grant counted"
+		);
+		Assert.That(Clock(granted), Is.EqualTo(Clock(s)).Within(1e-9));
 	}
 
 	// AI-8.2: a planeswalker is priced by what its best affordable ability makes — and its first version

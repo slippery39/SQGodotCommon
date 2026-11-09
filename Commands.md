@@ -166,6 +166,9 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     boardonly      the simulated opponent never casts, even a card we know it holds (before AI-10.4)
 #     nooption       a held instant or flash card at its plain held price, not as an option (before AI-13.4)
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)
+#     nomanashort    a held card priced as castable however many lands short (before AI-17.21)
+#     notheirabilities  the simulated opponent never uses its permanents' abilities in its own turn (before AI-17.22)
+#     thisturngrants the next attack's clock reads this turn's grants (can't block, flying) as lasting (before AI-17.9)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 
 # INTERIM ratings for a set 17lands hasn't seen (MC-5.4: TRK) -> MagicCore/Sets/TRK.ratings.json (~10 s); rebuild to embed.
