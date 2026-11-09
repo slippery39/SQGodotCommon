@@ -330,10 +330,45 @@ public static class Rollout
 			? Do(s, who, play)
 		: settings.TheirWalkers && TheirLoyalty(s, who, settings) is { } loyalty
 			? Do(s, who, loyalty)
+		: settings.Opponent != OpponentModel.BoardOnly
+		&& TheirAbility(s, who, settings) is { } ability
+			? Do(s, who, ability)
 		: settings.Opponent == OpponentModel.Responds
 		&& TheirResponse(s, who, settings) is { } response
 			? Do(s, who, response)
 		: Pass(s, who);
+
+	/// <summary>
+	/// In its own turn, at sorcery speed: the mana-costed ability on its battlefield (<see cref="IsManaPump"/>) whose
+	/// settled result beats passing most - Artificial Anomaly's "{3}{B}, {T}, Sacrifice this land: Each opponent loses
+	/// 2 life" (AI-17.22, Shayne's playtest: the AI on 4 raced a 2/1 the drain made lethal). Bounded by its mana, as the
+	/// combat tricks are (`+notheirabilities`).
+	/// </summary>
+	static GameAction? TheirAbility(GameState s, int who, Settings settings)
+	{
+		if (
+			Evaluator.IsOff(Evaluator.Terms.TheirAbilities)
+			|| !Priority.AtSorcerySpeed(s, who)
+			|| !s.CardsIn(who, ZoneType.Battlefield).Any(c => s.ActivatedAbilitiesOf(c).Any())
+		)
+			return null;
+		// never one that taps a creature: tapped in its own main phase, the blocker is gone for our turn - a
+		// real player pings at our end step, which the look-ahead doesn't play
+		var abilities = s.DistinctMoves(
+				[
+					.. s.SearchMoves()
+						.Where(a =>
+							IsManaPump(s, a) && !TapsACreature(s, (ActivateAbilityAction)a)
+						),
+				]
+			)
+			.ToList();
+		if (abilities.Count == 0)
+			return null;
+		var passing = Evaluator.Evaluate(Lookahead.Settle(Pass(s, who)), who, settings.Held);
+		var (best, score) = BestSettled(s, who, abilities, settings);
+		return score > passing ? best : null;
+	}
 
 	[ThreadStatic]
 	static Action<GameState, int, AiDecision>? trace;
@@ -489,10 +524,16 @@ public static class Rollout
 	}
 
 	/// <summary>
-	/// An instant-speed ability that costs mana and picks no card to pay (Astute Terraformer's "{6}: +2/+2",
-	/// less per differently named land) — a response like a trick, bounded by its mana (AI-17.10).
+	/// An ability of a permanent that costs mana and picks no card to pay (Astute Terraformer's "{6}: +2/+2",
+	/// less per differently named land) — a response like a trick (AI-17.10), or an ability used in its own turn
+	/// (<see cref="TheirAbility"/>, AI-17.22); either way bounded by its mana.
 	/// ponytail: a free ability, or one whose cost picks a card (a sacrifice), stays unseen; add them with a count.
 	/// </summary>
+	static bool TapsACreature(GameState s, ActivateAbilityAction a) =>
+		s.GetCard(a.CardId) is var card
+		&& card.Is(CardType.Creature)
+		&& s.ActivatedAbilitiesOf(card).ElementAtOrDefault(a.AbilityIndex) is { TapsItself: true };
+
 	static bool IsManaPump(GameState s, GameAction a)
 	{
 		if (
@@ -518,8 +559,9 @@ public static class Rollout
 	/// the turn's tally rather than kept, because OpponentStep holds no state — the search tree calls it
 	/// too. So the two sides differ in two ways: in the search's own turn ours counts from the rollout's
 	/// start and theirs from the turn's start, and ours counts a loyalty or other ability as a play.
-	/// ponytail: no other activated abilities — the tally counts no activations, so a free one would
-	/// repeat until the decision limit; count them in the tally if a deck's plan is an ability.
+	/// ponytail: no other activated abilities here — the tally counts no activations, so a free one would
+	/// repeat until the decision limit; a mana-costed one is TheirAbility's (AI-17.22), bounded by its mana.
+	/// Count free ones in the tally if a deck's plan is one.
 	/// </summary>
 	static GameAction? TheirPlay(GameState s, int who, Settings settings)
 	{

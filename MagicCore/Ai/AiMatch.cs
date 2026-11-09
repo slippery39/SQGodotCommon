@@ -96,6 +96,14 @@ public static class AiMatch
 				},
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
+			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.
+			["nomanashort"] = o => o with { Without = o.Without | Evaluator.Terms.ManaShort },
+			// The simulated opponent never uses its permanents' abilities in its own turn, before AI-17.22: beam+notheirabilities.
+			["notheirabilities"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.TheirAbilities,
+				},
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },

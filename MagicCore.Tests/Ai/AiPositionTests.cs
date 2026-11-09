@@ -139,6 +139,46 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None, flat: true), Does.StartWith("Play"));
 	}
 
+	// Shayne, 2026-11-09 (AI-17.21): on 2 lands, no land in hand, Free Borg Revolutionaries ({3}{W}{W}, basic
+	// landcycling {2}) held - the AI passed its own turn 5, landcycled in his upkeep and played the land a turn late.
+	// The 5-drop held was priced as castable (6.9) against a land; Terms.ManaShort discounts it per land short past the first. "Its not
+	// worth keeping over a land when you have only 2 lands in play." The AI plays its turn out: a land is played in it.
+	// The CONTROL: without the term the turn ends with no land played.
+	[Test]
+	public void ALandcycler_OnTwoLands_IsCycledAndTheLandPlayed_ThisTurn()
+	{
+		var start = KeptRecords.Before("BorgLandcycleHeld", 88);
+		var ai = start.DecidingPlayerId();
+		int LandsPlayed(Evaluator.Terms without)
+		{
+			var (s, search) = (start, new BeamSearchAi(ai, new(Without: without)));
+			for (var i = 0; i < 200 && s.GetGame().TurnNumber == 5; i++)
+				s = s.DecidingPlayerId() == ai ? search.Decide(s).State : TestGames.PassOrChoose(s);
+			return s.GetGame().TurnNumber == 5
+				? throw new InvalidOperationException("turn 5 never ended")
+				: s.GetPlayer(ai).LastTurn.LandsPlayed;
+		}
+
+		Assert.That(LandsPlayed(Evaluator.Terms.ManaShort), Is.EqualTo(0), "control");
+		Assert.That(LandsPlayed(Evaluator.Terms.None), Is.EqualTo(1));
+	}
+
+	// Shayne, 2026-11-09 (AI-17.22): "trying to race me the whole game. He never kept his guy back to block. My 2/1
+	// eventually killed him." Turn 12, the AI at 4 and Shayne at 7 with a 2/1 and Artificial Anomaly in play ("{3}{B},
+	// {T}, Sacrifice this land: Each opponent loses 2 life") - the AI attacked with its Planetary Patrol and died to
+	// the 2/1 plus the drain. The look-ahead's opponent never used an ability in its own turn, so the AI counted a
+	// turn it didn't have. Terms.TheirAbilities: it does. The CONTROL: without the term the AI still attacks.
+	[Test]
+	public void AtFourLife_AgainstAVisibleDrain_ThePatrolStaysHomeToBlock()
+	{
+		var s = KeptRecords.Before("PatrolRacesIntoDrain", 287);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.TheirAbilities), Does.EndWith("Attack You"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
+	}
+
 	// Shayne, 2026-11-08 (AI-17.12): turn 13, the AI attacked its Officer 1/1 token into Shayne's untapped Saurian
 	// Explorer 4/3 with no trick, let it die, then cast a 3/3. The look-ahead's defender never blocked it, so the
 	// attack looked free; judged against the blocks the rollout plays (Terms.TrueDefender, AI-19.21) the Explorer

@@ -103,6 +103,10 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       (`+nolanddrop`): `BeamSearchAi.Children` drops Pass while a land play is legal. Kept `AiSkipsLandDrop`, test
       `WithALandToPlay_TheSearchPlaysIt_NotPass`, control included. Suite 19 changed (was 17), cost per position
       -10% (8 024 steps), oracle 84.7% unchanged; 1529 tests. Match not run. Not yet committed
+- [ ] AI-13.9 The option value for STAR TREK's instants (found 2026-11-09, Shayne asking whether "spells are options" is
+      done): `CastGains` is FRA's alone (`FRA.castgains.json`, 35 cards, no TRK name; `--cast-gains` plays FRA's sealed
+      decks), so in every TRK game a held instant or flash card falls back to its flat held price - `HoldOption` does
+      nothing there. Needs TRK self-play decks for `--cast-gains` (`--match` has none either)
 - [ ] AI-13.8 The option value for a flash creature's protective enters (Shayne's playtest, 2026-11-08:
       `2026-11-08_232615_seed2123881407` #145 and `232136` #216): Saru, Unthreatened cast in the MAIN phase - "almost
       never a reason, it has flash, and bricking an opponent's removal by giving one of yours hexproof is very valuable".

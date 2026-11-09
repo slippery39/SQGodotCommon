@@ -351,7 +351,40 @@ public static partial class Evaluator
 		/// at the root are real and play normally (`+noimpulsevalue`).
 		/// </summary>
 		ImpulseValue = 8388608,
+
+		/// <summary>
+		/// A card we hold is worth less the further we are from casting it (AI-17.21, Shayne 2026-11-09: "the Borg is a
+		/// fine 5 drop if you can get it out, but its not worth keeping over a land when you have only 2 lands in play"):
+		/// its held price times <see cref="ManaShortShare"/> per mana source short of its mana value past the first, counting
+		/// our lands in hand. One short is free - the next land draw ("if you had 4 lands, maybe you don't landcycle because
+		/// you could draw a land and play it"); discounting it made one sampled land at the horizon swing a hand of 4-drops
+		/// by 11 points (the Tasha position). Without it a 5-drop on 2 lands was priced as castable, and landcycling it
+		/// lost (`+nomanashort`).
+		/// </summary>
+		ManaShort = 16777216,
+
+		/// <summary>
+		/// The look-ahead's, beside the evaluator: the simulated opponent uses a mana-costed ability of its own permanents
+		/// in its own turn when it beats passing (<see cref="Rollout"/>'s TheirAbility, AI-17.22) - without it a visible
+		/// "each opponent loses 2 life" never fired, and the AI raced at 4 into it (`+notheirabilities`).
+		/// </summary>
+		TheirAbilities = 33554432,
 	}
+
+	/// <summary>
+	/// A held card's price kept per mana source it is short past the first (<see cref="Terms.ManaShort"/>) - chosen, not
+	/// measured: two short keeps 0.6 of it, three short (Shayne's 5-drop on 2 lands) 0.36.
+	/// </summary>
+	public const double ManaShortShare = 0.6;
+
+	/// <summary>
+	/// What <paramref name="player"/> could tap for a held card: mana sources in play plus lands in hand.
+	/// ponytail: mana value only - colours, X and one land drop a turn are not counted; LandUnlock's pip check if a
+	/// position shows a card short only on colour.
+	/// </summary>
+	static int ManaWithin(GameState s, int player) =>
+		s.CardsIn(player, ZoneType.Battlefield).Count(c => ManaAbilities.ColorsOf(s, c).Any())
+		+ s.CardsIn(player, ZoneType.Hand).Count(c => c.Is(CardType.Land));
 
 	/// <summary>
 	/// What casting a known creature again costs them, a point of mana at this (AI-13.4) — chosen, not
@@ -556,6 +589,12 @@ public static partial class Evaluator
 		// ponytail: under Hidden.Hand.Real (the default) a reveal played INSIDE the look-ahead prices
 		// their real hidden cards — a peek; Hidden.Hand.ShuffleUnseen is honest. Price a card known only
 		// at the search's root if a reveal spell is ever misjudged.
+		// counted only when a held card could be short (lazily: Evaluate is the search's innermost loop)
+		int? mana = null;
+		bool Short(Card c) =>
+			own
+			&& !IsOff(Terms.ManaShort)
+			&& c.ManaCost.ManaValue - 1 > (mana ??= ManaWithin(s, player));
 		var hand = s.CardsIn(player, ZoneType.Hand)
 			.Sum(c =>
 				held is not null
@@ -580,6 +619,12 @@ public static partial class Evaluator
 					? Math.Max(
 						held.Of(c.Name),
 						CreatureValue(s, c, keywords) - RecastPerMana * c.ManaCost.ManaValue
+					)
+				: Short(c)
+					? Math.Max(
+						FlatHandCard,
+						held.Of(c.Name)
+							* Math.Pow(ManaShortShare, c.ManaCost.ManaValue - 1 - mana!.Value)
 					)
 				: held.Of(c.Name)
 			);

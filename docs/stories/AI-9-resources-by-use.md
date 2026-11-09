@@ -150,6 +150,12 @@ Open questions:
       Hunt against an unseen Last Gasp "until the opponent plays their removal spell first", and the
       option value can't see a later answer to the enchanted creature. Its position:
       `AiPositionTests.FerocityAgainstLastGasp(known: false)` — today the AI casts it
+      **A second case (Shayne's playtest, 2026-11-09; `2026-11-09_172959_seed550615157.json` #269, T10):** the AI at 5,
+      Shayne at 13 with three small creatures; its Planetary Patrol 4/3 attacked (33.56 against -11.64 held), and his
+      unseen Khaaaaaaaaaaaannn! (X=1) killed the other Patrol, so his three attackers killed it on T11. The look-ahead's
+      opponent plays only cards the AI knows (`Rollout.Settings.KnownOnly`), so racing at 5 life risked nothing; held, two
+      blockers would have left it alive. AI-3.4 measured an opponent casting its sampled unseen hand (`+unseen`): no 5pp
+      difference then. Not kept as a record yet
 - [ ] AI-9.6 A creature's activated abilities priced by what they make, as AI-8.2 priced a walker's
       (AI-14's first reading, Shayne: Yoshimaru, Scrappy Stray, with a {6} +1/+1 ability, traded into a
       spent Rank Rat — "the AI did not properly value our 1/1 compared to theirs"); card-agnostic.

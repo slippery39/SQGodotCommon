@@ -1,0 +1,2464 @@
+{
+  "Format": 1,
+  "Seed": 152463,
+  "Players": [
+    "You",
+    "AI"
+  ],
+  "Deck1": [
+    "Boarding Action",
+    "Boarding Action",
+    "Boarding Action",
+    "Beckett Mariner, Impetuous Ensign",
+    "Khaaaaaaaaaaaannn!",
+    "Munitions Enthusiast",
+    "Munitions Enthusiast",
+    "Plasma Cascade",
+    "Planetary Bombardment",
+    "Tal Shiar Operative",
+    "Tal Shiar Operative",
+    "Salt Vampire",
+    "Type-2 Phaser",
+    "In the Pale Moonlight",
+    "D\u0027Ghor Bloodletter",
+    "He\u0027s Dead, Jim",
+    "Tal Shiar Analyst",
+    "Silicate Surveyor",
+    "Replicator",
+    "Impossible Choice",
+    "Dahar Master",
+    "Tenacious Drone",
+    "Reckless Impulse",
+    "Unexplored Territory",
+    "Artificial Anomaly",
+    "Swamp",
+    "Swamp",
+    "Swamp",
+    "Swamp",
+    "Swamp",
+    "Swamp",
+    "Swamp",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain"
+  ],
+  "Deck2": [
+    "Pah-Wraith",
+    "Kira Nerys, Firebrand",
+    "Khan, Despot by Design",
+    "Malfunctioning Holodeck",
+    "Command Decision",
+    "Command Decision",
+    "Genesis Effect",
+    "Genesis Effect",
+    "Una Chin-Riley, Number One",
+    "Silicate Surveyor",
+    "Test of Conviction",
+    "Pet Sehlat",
+    "La\u0027An Noonien-Singh, Security",
+    "Ghost of Illyria",
+    "DOT-7 Repair Squad",
+    "Transporter Malfunction",
+    "Plasma Cascade",
+    "Cantankerous Captain",
+    "The Duras Sisters",
+    "Peace in Our Time",
+    "Planetary Patrol",
+    "Planetary Patrol",
+    "Savvy Profiteer",
+    "Plains",
+    "Plains",
+    "Plains",
+    "Plains",
+    "Plains",
+    "Plains",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain",
+    "Mountain"
+  ],
+  "Sideboard1": [
+    "Tactical Officer",
+    "Temporal Conqueror",
+    "Suurok-Class Science Vessel",
+    "Malfunctioning Holodeck",
+    "Test of Courage",
+    "Una Chin-Riley, Number One",
+    "Temple Garden",
+    "Obsidian Order Operative",
+    "Risa",
+    "Relentless Drednok",
+    "Planetary Patrol",
+    "Andromedan Automatons",
+    "Cybernetic Specialist",
+    "Emergency Holographic Crew",
+    "Pure Energy",
+    "Enterprise NX-01",
+    "Locutus, the One Who Speaks",
+    "DOT-7 Repair Squad",
+    "Hallowed Fountain",
+    "Swamp",
+    "Cha\u0027DIch Investigator",
+    "Cold-Blooded Crew",
+    "Xenobotanist",
+    "Common Goal",
+    "Cloistered Telepath",
+    "Subspace Anomaly",
+    "Those Old Scientists",
+    "Humpback Whales",
+    "Kira Nerys, Firebrand",
+    "Oberth-Class Starship",
+    "Earth, Sector 001",
+    "A Good Day to Die",
+    "Suus Mahna Practitioner",
+    "Humpback Whales",
+    "First Contact",
+    "Dominion Assault Force",
+    "Test of Conviction",
+    "Hemmer, Fixing What Is Broken",
+    "Sulu, Space Swashbuckler",
+    "Plains",
+    "Cold-Blooded Crew",
+    "Federation Probe",
+    "Common Goal",
+    "Relentless Drednok",
+    "First Contact",
+    "Rutherford, Upgraded Ensign",
+    "Seven of Nine",
+    "Watery Grave",
+    "Rules of Acquisition",
+    "Island",
+    "Xenobotanist",
+    "Temporal Conqueror",
+    "Guidance Failure",
+    "A Good Day to Die",
+    "Silicate Surveyor",
+    "Cleveland Booker, Empath",
+    "Conquest Mission",
+    "Brazen Bluff",
+    "Ferenginar"
+  ],
+  "Sideboard2": [
+    "Obsidian Order Operative",
+    "Tactical Officer",
+    "Saurian Explorer",
+    "First Contact",
+    "Eject the Warp Core",
+    "Seven of Nine",
+    "Data, New Life",
+    "Wesley Crusher, Starfleet Cadet",
+    "Vulcan",
+    "Emergency Holographic Crew",
+    "Eject the Warp Core",
+    "Set Phasers to . . .",
+    "First Contact",
+    "A Good Day to Die",
+    "Sickbay",
+    "Spock, Always Your Friend",
+    "Syndicate Liquidators",
+    "Mountain",
+    "Federation Probe",
+    "Temporal Conqueror",
+    "Stray from History",
+    "Pure Energy",
+    "Dominion Assault Force",
+    "I\u0027m a Doctor, Not a . . .",
+    "Red Alert!",
+    "Resistance Is Futile",
+    "Zefram Cochrane, Warp Pioneer",
+    "The Destruction of Praxis",
+    "Seven of Nine",
+    "Orion",
+    "Pattern Buffer Preservation",
+    "Suus Mahna Practitioner",
+    "Dathon and Picard at El-Adrel",
+    "Xenobotanist",
+    "He\u0027s Dead, Jim",
+    "Melkotian Adjudicator",
+    "Spock, Always Your Friend",
+    "Hologram Stalker",
+    "Command Subadjunct",
+    "Ensign Pavel Chekov",
+    "Subcommander T\u0027Pol",
+    "Dominion Saboteur",
+    "Qo\u0027noS",
+    "A Good Day to Die",
+    "Tactical Officer",
+    "Marooned",
+    "Syndicate Liquidators",
+    "Resistance Is Futile",
+    "Sela, Tal Shiar Paradox",
+    "Cardassia Prime",
+    "Fugitive Listener",
+    "Suurok-Class Science Vessel",
+    "Rogue Artificial Intelligence",
+    "Dathon and Picard at El-Adrel",
+    "Shields Up!",
+    "Command Subadjunct",
+    "Locutus, the One Who Speaks",
+    "Open Communications",
+    "Captain Jonathan Archer",
+    "Dathon and Picard at El-Adrel",
+    "Mountain"
+  ],
+  "About": {
+    "Started": "2026-11-09T17:19:01",
+    "Player1": "human",
+    "Player2": "BeamSearchAi"
+  },
+  "Moves": [
+    {
+      "Token": "a0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "e3e305b6",
+      "Said": "Keep hand"
+    },
+    {
+      "Token": "a0",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "524d3c30",
+      "Said": "Keep hand"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a2",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "2f3dfdb1",
+      "Said": "Play Mountain"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a2",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "64f5ccce",
+      "Said": "Play Mountain"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "9de976c5",
+      "Said": "Play Swamp"
+    },
+    {
+      "Token": "a1",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "83ee06e4",
+      "Said": "Cast Boarding Action"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "c50",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "755fcecc",
+      "Said": "Attack with Klingon Warrior 2/1 token? Attack AI"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "1ca33c4c",
+      "Said": "Play Plains"
+    },
+    {
+      "Token": "a6",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "1d71f635",
+      "Said": "Cast Planetary Patrol"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "60d4423a",
+      "Said": "Pass"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "c50",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "755fcecc",
+      "Said": "Attack with Klingon Warrior 2/1 token? Attack AI"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "c0",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "5f074c15",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a3",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "60d4423a",
+      "Said": "Play Mountain"
+    },
+    {
+      "Token": "a3",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "2dd0c721",
+      "Said": "Cast Tal Shiar Analyst"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "a53cc039",
+      "Said": "Play Plains"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "4b42096d",
+      "Said": "Cast Savvy Profiteer"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "c3",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "73256869",
+      "Said": "Attack: Planetary Patrol \u2192 You"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "c0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "0bafde91",
+      "Said": "Block with Tal Shiar Analyst 3/2? Don\u0027t block"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "16189a3f",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "61fc693a",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a13",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "42693c75",
+      "Said": "Activate Tal Shiar Analyst"
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "cabb0cc5",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a4",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "7e85ccfa",
+      "Said": "Cast Planetary Bombardment \u2192 Savvy Profiteer"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "16189a3f",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "16189a3f",
+      "Said": "Pass"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "16189a3f",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "c50",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "755fcecc",
+      "Said": "Attack with Klingon Warrior 2/1 token? Attack AI"
+    },
+    {
+      "Token": "c50",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "755fcecc",
+      "Said": "Attack with Tal Shiar Analyst 3/2? Attack AI"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a4",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "e8191c32",
+      "Said": "Cast Plasma Cascade \u2192 Tal Shiar Analyst"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "c66",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "d739c36a",
+      "Said": "You may discard a card Silicate Surveyor"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "c3",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "73256869",
+      "Said": "Attack: Planetary Patrol \u2192 You"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "10afe0b9",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "10afe0b9",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a4",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "cfa8f99b",
+      "Said": "Cast Impossible Choice (Remain Fused \u2014 You draw two cards and each player loses 2 life.)"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "2f3dfdb1",
+      "Said": "Play Swamp"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "c50",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "755fcecc",
+      "Said": "Attack with Klingon Warrior 2/1 token? Attack AI"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a7",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "aad7d72a",
+      "Said": "Cast Test of Conviction (Begin Negotiations \u2014 Target opponent draws a card. You draw two cards.) \u2192 You"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "1ca33c4c",
+      "Said": "Play Plains"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "55a2e6d4",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "c3",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "73256869",
+      "Said": "Attack: Planetary Patrol \u2192 You"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "55a2e6d4",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "06ef4b68",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "06ef4b68",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a14",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "9a5ce966",
+      "Said": "Play Artificial Anomaly"
+    },
+    {
+      "Token": "a0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "2b28d165",
+      "Said": "Pass"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "29beea7c",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "c50",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "755fcecc",
+      "Said": "Attack with Klingon Warrior 2/1 token? Attack AI"
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "29beea7c",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "29beea7c",
+      "Said": "Pass"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "29beea7c",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "29beea7c",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a4",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "2b28d165",
+      "Said": "Cast Silicate Surveyor"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "f4bef869",
+      "Said": "Cast Transporter Malfunction \u2192 You"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "04effa84",
+      "Said": "Cast Command Decision (Destroy target creature with power 4 or greater.) \u2192 Silicate Surveyor"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a1",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "1ca33c4c",
+      "Said": "Play Plains"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "c3",
+      "Kind": "ai",
+      "By": 2,
+      "Offers": "73256869",
+      "Said": "Attack: Planetary Patrol \u2192 You"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 1,
+      "Offers": "7e3583cc",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "29beea7c",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "29beea7c",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a17",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "62cc1852",
+      "Said": "Play Mountain from exile"
+    },
+    {
+      "Token": "a0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "7695d95c",
+      "Said": "Pass"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "7cd3e5ec",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "c50",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "755fcecc",
+      "Said": "Attack with Klingon Warrior 2/1 token? Attack AI"
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "7cd3e5ec",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "7cd3e5ec",
+      "Said": "Pass"
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "7cd3e5ec",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "7cd3e5ec",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    },
+    {
+      "Token": "a18",
+      "Kind": "you",
+      "By": 1,
+      "Offers": "7695d95c",
+      "Said": "Activate Artificial Anomaly"
+    },
+    {
+      "Token": "a0",
+      "Kind": "stop",
+      "By": 1,
+      "Offers": "80bf1680",
+      "Said": ""
+    },
+    {
+      "Token": "a0",
+      "Kind": "rule",
+      "By": 2,
+      "Offers": "285cd350",
+      "Said": ""
+    }
+  ],
+  "End": "c4418209"
+}
