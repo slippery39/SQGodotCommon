@@ -126,3 +126,6 @@ MagicTable/
   (`MagicArt.ImageName`) — by its face's name it showed another card.
 - **The permanents' scale comes from the SCREEN, never from the board's own size** — the board
   grows with its cards, and reading it back grew them until the hand left the screen (TBL-4.2).
+  **Nor does a row's HEIGHT follow the scale** (`_rowHeight`, fixed by the screen): rows sized to the scale
+  bounced ~100 px as permanents came and went (TBL-2.18). Combat's columns come from `_columns`, the declaration,
+  not from who is still on the board (TBL-2.17).

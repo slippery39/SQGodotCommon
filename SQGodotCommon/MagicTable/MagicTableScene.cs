@@ -465,6 +465,7 @@ public partial class MagicTableScene : Control
 			.Select(a => (Card: a, Host: Attachments.HostOf(s, a)))
 			.Where(x => x.Host is not null)
 			.ToLookup(x => x.Host!.Id, x => x.Card);
+		RememberColumns(s);
 		_phases.Show(_m); // first: the scale reads its height
 		var scale = BoardScale(s);
 		Fill(_oppLands, s, _m.OpponentId, lands: true, attached, c => GlowOf(c.Id, c), scale);
@@ -701,18 +702,29 @@ public partial class MagicTableScene : Control
 	)
 	{
 		CardViews.Clear(row);
-		row.CustomMinimumSize = new Vector2(0, CardViews.PermanentSize.Y * scale);
+		row.CustomMinimumSize = new Vector2(0, _rowHeight); // fixed by the screen: rows that follow the scale bounce (TBL-2.18)
 		var onSomething = attached.SelectMany(g => g).Select(a => a.Id).ToHashSet();
 		// Combat, MTGO's way (TBL-4.3): each attacker and the creatures blocking it take the same column
 		// in the two rows, which face each other across the phase bar — so who blocks whom reads at a
 		// glance, even between two creatures of one name. Left-aligned while it lasts, so the columns meet.
-		var groups = Combat
-			.Attackers(s)
-			.Select(a => (Attacker: a, Blockers: Combat.BlockersOf(s, a.Id).ToList()))
+		var here = s.CardsIn(s.GetGame().ActivePlayerId, ZoneType.Battlefield)
+			.Concat(
+				s.CardsIn(
+					s.GetGame().ActivePlayerId == _m.HumanId ? _m.OpponentId : _m.HumanId,
+					ZoneType.Battlefield
+				)
+			)
+			.ToDictionary(c => c.Id);
+		var groups = _columns
+			.Select(g =>
+				(
+					Attacker: g.Attacker,
+					Blockers: g.Blockers.Where(here.ContainsKey).Select(id => here[id]).ToList()
+				)
+			)
 			.ToList();
 		var combatants = groups
-			.SelectMany(g => g.Blockers.Prepend(g.Attacker))
-			.Select(c => c.Id)
+			.SelectMany(g => g.Blockers.Select(c => c.Id).Append(g.Attacker))
 			.ToHashSet();
 		row.Alignment =
 			groups.Count > 0 && !lands
@@ -728,13 +740,18 @@ public partial class MagicTableScene : Control
 			foreach (var (attacker, blockers) in groups)
 			{
 				var mine =
-					attacker.ControllerId == player
-						? [attacker]
+					player == s.GetGame().ActivePlayerId
+						? here
+							.Values.Where(c => c.Id == attacker && c.ControllerId == player)
+							.ToList()
 						: blockers.Where(b => b.ControllerId == player).ToList();
 				var column = new HBoxContainer
 				{
 					Alignment = BoxContainer.AlignmentMode.Center,
-					CustomMinimumSize = new Vector2(ColumnWidth(attacker, blockers, scale), 0),
+					CustomMinimumSize = new Vector2(
+						ColumnWidth(here.GetValueOrDefault(attacker), blockers, scale),
+						0
+					),
 				};
 				column.AddThemeConstantOverride("separation", 6);
 				foreach (var c in mine)
@@ -793,15 +810,43 @@ public partial class MagicTableScene : Control
 	}
 
 	/// <summary>How wide an attacker's column is: its card, or its blockers side by side, whichever is wider (a tapped card lies sideways).</summary>
-	private static float ColumnWidth(Card attacker, List<Card> blockers, float scale)
+	private static float ColumnWidth(Card? attacker, List<Card> blockers, float scale)
 	{
 		float Width(Card c) =>
 			(c.IsTapped ? CardViews.PermanentSize.Y : CardViews.PermanentSize.X) * scale;
 		return Mathf.Max(
-			Width(attacker),
+			attacker is null ? 0 : Width(attacker),
 			blockers.Sum(Width) + 6 * Math.Max(0, blockers.Count - 1)
 		);
 	}
+
+	/// <summary>
+	/// The combat's columns, from the DECLARATION (TBL-2.17): each attacker with every creature that blocked
+	/// it, in the order first seen, kept while any attacker is left. A creature that leaves mid-combat
+	/// drops out of its column but the columns don't re-form, so attackers and blockers still meet.
+	/// </summary>
+	private void RememberColumns(GameState s)
+	{
+		var live = Combat
+			.Attackers(s)
+			.Select(a => (a.Id, Blockers: Combat.BlockersOf(s, a.Id).Select(b => b.Id).ToList()))
+			.ToList();
+		var turn = s.GetGame().TurnNumber;
+		if (live.Count == 0 || turn != _columnsTurn)
+			_columns = [];
+		_columnsTurn = turn;
+		foreach (var (id, blockers) in live)
+		{
+			var i = _columns.FindIndex(c => c.Attacker == id);
+			if (i < 0)
+				_columns.Add((id, blockers));
+			else
+				_columns[i] = (id, _columns[i].Blockers.Union(blockers).ToList());
+		}
+	}
+
+	private List<(int Attacker, List<int> Blockers)> _columns = [];
+	private int _columnsTurn;
 
 	private void ShowStack(GameState s, Func<int, Glow> glow)
 	{
@@ -1131,6 +1176,9 @@ public partial class MagicTableScene : Control
 	/// <summary>Down to here a crowded board shrinks its cards (TBL-2.10: 10+ creatures wrapped the row and pushed the hand off the screen); past it the row wraps.</summary>
 	private const float MinBoardScale = 0.5f;
 
+	/// <summary>Every permanent row's height: a half of the board's room, from the screen alone, so rows never move as cards come and go.</summary>
+	private float _rowHeight = CardViews.PermanentSize.Y;
+
 	private float BoardScale(GameState s)
 	{
 		var screen = GetViewportRect().Size - new Vector2(2 * Margin, 2 * Margin);
@@ -1144,6 +1192,7 @@ public partial class MagicTableScene : Control
 			.DefaultIfEmpty(1)
 			.Max();
 		var size = CardViews.PermanentSize;
+		_rowHeight = h / 2;
 		var byHeight = h / 2 / size.Y;
 		var byWidth = w / (fullest * (size.Y + 6));
 		return Mathf.Clamp(Mathf.Min(byHeight, byWidth), MinBoardScale, 1.5f);

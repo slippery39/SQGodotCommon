@@ -110,14 +110,20 @@ is a bug report, never about the look.
       `2026-11-08_192946_seed1126905837`, a real click on the Saurian Explorer led to "choose target 2" with
       "No target". Test `CastNow_ThePlayerMayDeclineTheCast`. Known ceiling (`ExileTopMayCast`): Chandra's "if you
       don't" runs on a no to the up-front question only, not on backing out of the cast afterwards
-- [ ] TBL-2.17 A creature that leaves mid-combat scrambles the columns (Shayne's playtest, 2026-11-08): with blockers
+- [x] TBL-2.17 A creature that leaves mid-combat scrambles the columns (Shayne's playtest, 2026-11-08): with blockers
       declared, a creature removed or sacrificed before combat ends (a sacrifice, removal) breaks the attacker/blocker
       column ordering, so attackers and blockers no longer meet - TBL-4.3's `ColumnWidth` rows. Capture: resume a record at
       such a moment; the combat's columns must be built from the declaration, not from who is still on the board
-- [ ] TBL-2.18 The table's zones bounce (Shayne's playtest, 2026-11-08): the rows keep changing size and the UI "bounces up
+      Done: `RememberColumns` keeps each attacker's column (attacker + every blocker seen) in first-seen order while an
+      attacker is left; a creature that leaves drops out, the columns don't re-form. Not reproduced on a record and not
+      captured mid-combat (no position at hand) - Shayne to check on his next game
+- [x] TBL-2.18 The table's zones bounce (Shayne's playtest, 2026-11-08): the rows keep changing size and the UI "bounces up
       and down", cutting off the bottom of the screen again - the permanents' scale read back from the board
       (TBL-4.2 fixed one cause: "the scale comes from the SCREEN"); find what still resizes a row each redraw, with a
       capture series (`-Capture`, frames over a turn), not one frame
+      Cause (logged each frame over an AI-vs-AI game): row heights followed the card SCALE - lands rows 192 -> 94 px,
+      creature rows 192 -> 290 as permanents arrived, so the lands row moved ~100 px. Now every row's height is fixed
+      from the screen (`_rowHeight`) and the cards scale inside it; the same game moves no row. Not pinned by a test (Godot layout)
 
 ## Next
 
