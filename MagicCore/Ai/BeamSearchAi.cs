@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using ImmutableGameObjects;
 using MagicCore.Actions;
+using MagicCore.Effects;
 
 namespace MagicCore.Ai;
 
@@ -482,6 +483,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			// a land is never worth passing on (Terms.LandDrop): the land first, then whatever else
 			if (!Evaluator.IsOff(Evaluator.Terms.LandDrop) && moves.Any(a => a is PlayLandAction))
 				moves.RemoveAll(a => a is PassPriorityAction);
+			// a Spacecraft that already has its threshold gains nothing from another counter (Terms.StationCap)
+			if (!Evaluator.IsOff(Evaluator.Terms.StationCap))
+				moves.RemoveAll(a => a is ActivateAbilityAction act && OverCharges(s, act));
 			return [.. moves.Select(a => new Move(a, s.MoveKey(a)))];
 		}
 		var key = ChoiceKey(choice);
@@ -511,6 +515,19 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		if (choice.MinChoices == 0)
 			picks.Insert(0, new Pick([], key));
 		return picks;
+	}
+
+	/// <summary>Station once the Spacecraft's charge is at its threshold: the ability that puts charge on it, tapping a creature.</summary>
+	static bool OverCharges(GameState s, ActivateAbilityAction act)
+	{
+		var card = s.GetCard(act.CardId);
+		var abilities = s.ActivatedAbilitiesOf(card).ToList();
+		return card.GetComponent<StationComponent>() is { } station
+			&& card.ChargeCounters >= station.CreatureAt
+			&& act.AbilityIndex < abilities.Count
+			&& abilities[act.AbilityIndex]
+				.Effects.OfType<PutCounters>()
+				.Any(p => p.Kind == CounterKinds.Charge);
 	}
 
 	/// <summary>The most combinations a choice of several picks is branched on (<see cref="Settings.BranchPicks"/>).</summary>

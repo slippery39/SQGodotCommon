@@ -119,9 +119,12 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | backlog |
 | [DEV-5](DEV-5-batch-check-script.md) | One script for a card batch's end-of-batch checks, one summary out | backlog |
+| [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | backlog |
 | [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | backlog |
+| [MC-7](MC-7-combat-damage-assignment.md) | The attacker assigns combat damage among its blockers | backlog |
 | [TBL-6](TBL-6-known-hand-cards.md) | Known cards in the opponent's hand show face up on the table | backlog |
 | [TBL-7](TBL-7-illegal-attack-refused.md) | The table refuses an attack the rules forbid, instead of dropping the creature | backlog |
+| [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner and reordering a surveil | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | done |
@@ -142,5 +145,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 
-Next free id per area: AI-20 · DATA-3 · DEV-6 · LIM-4 · MC-7 · TBL-9
+Next free id per area: AI-20 · DATA-3 · DEV-6 · LIM-5 · MC-8 · TBL-10
 <!-- stories:end -->

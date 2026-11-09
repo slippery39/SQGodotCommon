@@ -250,6 +250,13 @@ public static partial class Evaluator
 		/// inside the horizon - so passing scored 5.85 better (`+nolanddrop`).
 		/// </summary>
 		LandDrop = 262144,
+
+		/// <summary>
+		/// The search is not offered a station activation once the Spacecraft has its threshold (Shayne, 2026-11-09: 17 counters
+		/// on a Sarcophagus that animates at 10). The evaluator cannot price a counter that adds nothing, and the useless
+		/// activation was a free first step on a won line (`+nostationcap`).
+		/// </summary>
+		StationCap = 524288,
 	}
 
 	/// <summary>

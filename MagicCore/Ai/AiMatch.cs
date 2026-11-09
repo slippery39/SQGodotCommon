@@ -82,6 +82,8 @@ public static class AiMatch
 			["nosurveilprice"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilPrice },
 			// The search may pass with a land to play, before AI-13.7: beam+nolanddrop.
 			["nolanddrop"] = o => o with { Without = o.Without | Evaluator.Terms.LandDrop },
+			// A Spacecraft's charge counted past its station threshold, before 2026-11-09: beam+nostationcap.
+			["nostationcap"] = o => o with { Without = o.Without | Evaluator.Terms.StationCap },
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },

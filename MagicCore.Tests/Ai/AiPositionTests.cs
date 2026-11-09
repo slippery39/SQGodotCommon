@@ -140,6 +140,24 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
 	}
 
+	// Shayne, 2026-11-09 (AI-17.17): the AI put 17 charge counters on its Sarcophagus, Ship of the Dead, which animates at
+	// 10. A Spacecraft's value grew with charge / threshold without end, so tapping a creature for one more counter looked
+	// like value. Terms.StationCap counts it only up to the threshold. The CONTROL: without it the AI still stations.
+	[Test]
+	public void ASpacecraftPastItsThreshold_IsNotChargedFurther()
+	{
+		var s = KeptRecords.Before("SarcophagusOvercharge", 445);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(
+			Chose(Evaluator.Terms.StationCap),
+			Does.StartWith("Activate Sarcophagus"),
+			"control"
+		);
+		Assert.That(Chose(Evaluator.Terms.None), Does.Not.StartWith("Activate Sarcophagus"));
+	}
+
 	// Shayne, 2026-11-08 (AI-17.13): the AI cast Guidance Failure main phase on Raffi Musiker and then did not
 	// attack with its Spanner Jockey and Dahar Master - "the worst play possible": cast it to be aggressive, or
 	// don't. NOT reproduced: the search of that day, today's, with plans kept or not, and caps from 10 ms to
