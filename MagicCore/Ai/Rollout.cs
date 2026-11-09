@@ -359,6 +359,21 @@ public static class Rollout
 		}
 	}
 
+	/// <summary><paramref name="work"/> with nothing told to <see cref="Traced{T}"/>'s listener — a probe the search makes, not a move it imagines.</summary>
+	public static T Untraced<T>(Func<T> work)
+	{
+		var outer = trace;
+		trace = null;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			trace = outer;
+		}
+	}
+
 	/// <summary>A choice answered — a declaration's first attacker by a whole attack (<see cref="Attacks.AsOne"/>), the rest by <see cref="Answer"/>.</summary>
 	static GameState Choose(GameState s, ChoiceAction choice, int who, Settings settings) =>
 		choice is DeclareAttackerChoice ask
@@ -367,7 +382,7 @@ public static class Rollout
 			? WholeAttacks.Declare(
 				s,
 				who,
-				WholeAttacks.Best(s, who, settings.Held),
+				WholeAttacks.Best(s, who, settings.Held, settings),
 				(at, ids) => Do(at, who, ids)
 			)
 			: Do(s, who, Answer(s, choice, who, settings));

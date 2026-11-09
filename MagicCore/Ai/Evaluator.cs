@@ -227,6 +227,13 @@ public static partial class Evaluator
 		/// turn 3: the AI blocked, he pumped, and it lost a creature for nothing; `+notheircombat`).
 		/// </summary>
 		TheirCombatTricks = 32768,
+
+		/// <summary>
+		/// A simulated attacker judges each attack against the defender the rollout will actually play (the
+		/// blocks <see cref="Rollout.OpponentStep"/> chooses), not the look-ahead's weaker one — so it stops
+		/// attacking into blocks it didn't see (AI-19.21: Shayne, "I wouldn't attack"; `+nodefender`).
+		/// </summary>
+		TrueDefender = 65536,
 	}
 
 	/// <summary>

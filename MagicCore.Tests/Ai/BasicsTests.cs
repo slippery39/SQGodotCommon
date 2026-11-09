@@ -214,7 +214,14 @@ public class BasicsTests
 		Play(
 			settings: new()
 			{
-				Without = without,
+				// a control also turns off TrueDefender (AI-19.21), which would make the same play unaided
+				Without =
+					without
+					| (
+						without != Evaluator.Terms.None || attacks != Rollout.Attacks.AsOne
+							? Evaluator.Terms.TrueDefender
+							: Evaluator.Terms.None
+					),
 				RolloutSettings = BeamSearchAi.DefaultRollout with { Attacks = attacks },
 			}
 		);

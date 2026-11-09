@@ -171,23 +171,77 @@ public static class WholeAttacks
 					)
 				);
 
-	/// <summary>The candidate whose attack, settled against the look-ahead's defender, scores best for <paramref name="who"/>.</summary>
-	public static Plan Best(GameState s, int who, HeldValues? held) =>
-		Candidates(s, who, held, otherTargets: false)
-			.Select(
-				(plan, i) =>
-					(
-						plan,
-						i,
-						Score: Evaluator.Evaluate(
-							Lookahead.Settle(Declare(s, who, plan)),
-							who,
-							held
-						)
-					)
-			)
+	/// <summary>
+	/// The attack answered by the defender as the rollout plays it (<see cref="Rollout.OpponentStep"/>), when
+	/// <paramref name="defender"/> says so — else left to <see cref="Lookahead.Settle"/>'s weaker one (AI-19.21).
+	/// </summary>
+	static GameState Blocked(GameState s, int who, Rollout.Settings? defender)
+	{
+		if (defender is null || Evaluator.IsOff(Evaluator.Terms.TrueDefender))
+			return s;
+		// priority first: a defender with an instant-speed ability holds it in the declare-attackers step
+		for (
+			var i = 0;
+			i < 6
+				&& !s.IsOver()
+				&& s.GetPendingChoice() is null
+				&& s.GetGame().Step <= Step.DeclareAttackers;
+			i++
+		)
+			s = s.Act(new PassPriorityAction { PlayerId = s.DecidingPlayerId() }).AutoPass();
+		for (
+			var i = 0;
+			i < 20 && s.GetPendingChoice() is DeclareBlockerChoice b && b.PlayerId != who;
+			i++
+		)
+			s = Rollout.Untraced(() => Rollout.OpponentStep(s, b.PlayerId, defender));
+		return s;
+	}
+
+	/// <summary>How many of the look-ahead's best attacks the true defender re-judges (with "no attack" always).</summary>
+	public const int Shortlist = 3;
+
+	/// <summary>
+	/// The candidate whose attack scores best for <paramref name="who"/>. Every candidate is settled against the
+	/// look-ahead's cheap defender; with <paramref name="defender"/> (<see cref="Evaluator.Terms.TrueDefender"/>)
+	/// only the best <see cref="Shortlist"/> and "no attack" are judged again against the blocks the rollout will
+	/// play (AI-19.21). The cheap defender over-rates attacks, so the ones it over-rates are the ones on the
+	/// shortlist to be corrected. Re-judging every plan cost 2.3x a decision (6.8x on a big board, #305); the best 3
+	/// cost ~3.1x there. The best 1 is cheaper (1.9x) and flips the Chang plays, but misses the lethal attack Shayne's
+	/// Jace token position holds (it flips to Pass), so it stays 3.
+	/// ponytail: a plan good only against the real blocks yet low under the cheap ones is missed; widen the list.
+	/// </summary>
+	public static Plan Best(
+		GameState s,
+		int who,
+		HeldValues? held,
+		Rollout.Settings? defender = null
+	)
+	{
+		double Score(Plan plan, bool real) =>
+			Evaluator.Evaluate(
+				Lookahead.Settle(
+					real ? Blocked(Declare(s, who, plan), who, defender) : Declare(s, who, plan)
+				),
+				who,
+				held
+			);
+		var cheap = Candidates(s, who, held, otherTargets: false)
+			.Select((plan, i) => (plan, i, Score: Score(plan, false)))
+			.OrderByDescending(x => x.Score)
+			.ThenBy(x => x.i)
+			.ToList();
+		if (defender is null || Evaluator.IsOff(Evaluator.Terms.TrueDefender))
+			return cheap[0].plan;
+		var stay = cheap.First(x => x.plan.Targets.Count == 0);
+		return cheap
+			.Take(Shortlist)
+			.Append(stay)
+			.DistinctBy(x => x.i)
+			.Select(x => (x.plan, x.i, Score: Score(x.plan, true)))
 			.OrderByDescending(x => x.Score)
 			.ThenBy(x => x.i)
 			.First()
 			.plan;
+	}
 }

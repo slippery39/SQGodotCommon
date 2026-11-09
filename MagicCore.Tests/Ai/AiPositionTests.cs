@@ -46,6 +46,32 @@ public class AiPositionTests
 		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), "c15"), Is.False);
 	}
 
+	// Shayne, 2026-11-08 (AI-19.21): General Chang ("{1}, Sacrifice a creature: a +1/+1 counter on each
+	// Klingon"). The AI sacrificed a 4/4 and a 2/1 to make his 1/2 a 3/4 at sorcery speed, nothing dying, and
+	// at #458 Chang himself. Not the evaluator: it charged the creatures (-15 at once). The simulated HUMAN
+	// judged his attack against the look-ahead's weak defender, then met the real blocks and threw four
+	// creatures away - and a sacrifice that baited that attack scored +25 (Terms.TrueDefender judges it against
+	// the blocks the rollout plays). The CONTROL: without it the AI still sacrifices.
+	[TestCase("ChangSac305", 305, "a5")]
+	[TestCase("ChangSac309", 309, "a3")]
+	[TestCase("ChangSac458", 458, "a3")]
+	public void ASacrifice_ThatOnlyBaitsTheSimulatedAttack_IsNotMade(
+		string record,
+		int at,
+		string token
+	)
+	{
+		var s = KeptRecords.Before(record, at);
+		string Choice(Evaluator.Terms without) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s)
+			);
+
+		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.TrueDefender), token), "control");
+		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), token), Is.False);
+	}
+
 	// Shayne, 2026-10-09 (AI-1): the AI cast Prophesied End ("Destroy target creature. If it wasn't
 	// attacking, its controller draws a card.") on a NON-attacking Rank Rat — premium removal on a
 	// 1/1, and a card for the opponent. Rebuilt: two Plains and Prophesied End against their Rat.
@@ -421,6 +447,8 @@ public class AiPositionTests
 				me,
 				new()
 				{
+					// the control also turns off TrueDefender (AI-19.21), which makes the Beast unaided
+					Without = counterAttack ? Evaluator.Terms.None : Evaluator.Terms.TrueDefender,
 					RolloutSettings = BeamSearchAi.DefaultRollout with
 					{
 						CounterAttack = counterAttack,

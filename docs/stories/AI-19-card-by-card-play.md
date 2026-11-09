@@ -80,7 +80,26 @@ Open questions:
 - [ ] AI-19.21 General Chang, Cold Warrior: the AI sacrificed a 4/4 Cha'DIch Investigator and a token to
       make him bigger at sorcery speed, nothing was dying (Shayne, 2026-11-08). Records:
       `game_records/2026-11-08_025607_seed478788.json` #305, #309 — and #458 it sacrificed Chang HIMSELF.
-      Rebuild as a position; the sacrifice should be priced against what the creature is worth
+      Rebuild as a position; the sacrifice should be priced against what the creature is worth.
+      **Rebuilt and diagnosed (2026-11-08):** `ChangSac305`, `309`, `458` (kept) - the controls held.
+      **Not the evaluator:** it charges the creatures (the pair costs ~15 points at once). The simulated HUMAN
+      is what rewards it. He chooses his attack with `WholeAttacks.Best`, judged against `Lookahead.Settle`'s
+      defender (AI to 1 life, a Jockey lost), but the rollout then plays the real blocks (AI to 5, nothing
+      lost): he attacks into blocks he didn't see, and at turn 15 throws four creatures away - only when the AI
+      has sacrificed down to few bodies. That one imagined attack was worth +25 to the sacrifice line, the
+      "bait" Shayne's "I wouldn't attack" names. A second trap: `AutoPass` stops in the declare-attackers step
+      whenever the defender has an instant-speed ability (Chang's own), so a naive probe never reached the blocks.
+      **Fix:** `Evaluator.Terms.TrueDefender` (`+nodefender`) - a simulated attacker is judged against the blocks
+      `Rollout.OpponentStep` will choose. All three now flip: #305 plays the Island (+8.87, the Investigator
+      sacrifice -10.54), #309 and #458 pass; `ASacrifice_ThatOnlyBaitsTheSimulatedAttack_IsNotMade`, control
+      included. **Not yet safe as a default:** the quick check changes 17 of 288 decisions (5.9%), oracle
+      agreement 88.2% -> 84.7% (the oracle shares the old model), cost per position +59% (5 892 -> 9 342 steps);
+      two earlier controls (`FacingASwingToOneLife`, the Deathbringer's Beast) stopped provoking - the new term
+      makes those plays unaided - and were given `TrueDefender` off in their control cases. **Match run: 288 games,
+      50.7% ± 1.7pp, no 5pp difference, but 2.3x the cost and a 173 s slowest decision - so the true defender
+      re-judges a SHORTLIST (best 3 + no attack, `WholeAttacks.Shortlist`), 3.1x on the biggest board (was 6.8x).
+      Shortlist match: 192 games, 52.1% ± 1.9pp (no loss), 1.8x cost, slowest decision 33 s (was 173 s) - kept as
+      the default (2026-11-08)**
 
 ## Next
 

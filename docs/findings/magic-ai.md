@@ -1431,3 +1431,43 @@ named land" — three lands, {3}) and killed theirs for free. Record `2026-11-08
 - **Match** (`--match=beam,beam+notheircombat --until-clear`, 96 games, 17 min): beam 51.0% ± 1.0pp (49–47), no 5pp
   difference; cost per decision 3 653.6 steps against 3 501.7 (+4%); slowest decision 68.6 s against 36.6 s. Kept.
 - **Also:** `--explain` now ends each line with the evaluator's terms ("Ends at: our creatures +48.10, …").
+
+## AI-19.21 — General Chang's sacrifices (2026-11-08)
+
+`2026-11-08_025607_seed478788` #305, #309, #458 (kept as `ChangSac305/309/458`; all three controls hold). Shayne:
+a 4/4 and a 2/1 for a 1/2 → 3/4 at sorcery speed is not value, "and I wouldn't attack if he'd already sacrificed".
+
+- **The sacrifice is priced:** the pair scores -24.8 at once against -9.7 for the Island (real settings). A lone
+  Investigator sacrifice stays -17 to -24 at every horizon. Only the PAIR, in the search's world, scores +26.9, and
+  only from turn 15 on (-35.1 until the human's turn-13 attack has resolved).
+- **The swing is one imagined human attack.** In the search's world the two lines are identical through turn 13;
+  at turn 15 the Island line's human stays home, the sacrifice line's attacks and loses Reliant, Hoshi, Specialist
+  and a Veteran to blocks for nothing (AI still at 5). His "their creatures" -14.5 against -23.8 is that. He attacks
+  only once the AI has sacrificed down to four bodies - bait.
+- **Cause (rollout model):** `WholeAttacks.Best` judged each attack by `Lookahead.Settle` (its defender), but the
+  rollout answers the real block with `Rollout.OpponentStep`. Same attack, two defenders: the all-in scored 107.8
+  (AI to 1 life, a Jockey lost) and 28.6 against the real blocker (AI to 3). He over-attacks into blocks he never saw.
+  (And `AutoPass` stops in declare-attackers while the defender holds an instant-speed ability — Chang's — so a probe
+  has to pass priority itself, or it silently falls back to the weak defender: found when the switch changed nothing.)
+- **Fix:** `Evaluator.Terms.TrueDefender` (`+nodefender` off): the attack is judged after the real blocks.
+  #305 → Play Island 8.87 (sacrificing the Investigator -10.54); #309 → Pass; #458 → Pass (-35.5; the next best
+  sacrifice -44.8). `ASacrifice_ThatOnlyBaitsTheSimulatedAttack_IsNotMade` ×3, controls included.
+- **Cost, honest:** `--suite=beam` changes **17 of 288** decisions (5.9%; AI-17.10's fix alone changed 1); oracle
+  agreement 84.7% against 88.2% — but the oracle runs the old model, so it measures disagreement with it, not error;
+  cost per position 9 342.1 steps against 5 891.6 (+59%), 18.3 rollouts as before. Two earlier controls
+  (`FacingASwingToOneLife`, the Deathbringer's Beast) no longer provoke: the new term makes those plays unaided.
+- **Match** (`--match=beam,beam+nodefender --until-clear`, 288 games, 81 min, the FULL re-judgement): beam 50.7% ±
+  1.7pp (146–142) — no 5pp difference. Cost per decision **5 096.0 steps against 2 254.9 (2.3x)**; slowest decision
+  **173 s against 13.7 s**. Shayne (2026-11-08): a flat match is not the bar — the AI must stop the clear misplay at a
+  reasonable cost (a fixed misplay only shows in the games it changes; 1-2pp is real).
+- **So the cost was optimised, not the fix dropped:** `WholeAttacks.Best` settles every candidate against the cheap
+  defender and re-judges only the best `Shortlist` (3) and "no attack" against the real blocks. Per decision on #305
+  (a big board): no true defender 43.8k steps, full 296k (6.8x), best 3: 137.5k (3.1x), best 1: 81.9k (1.9x) —
+  but the best 1 flips Shayne's Jace token (AI-9.3, move 108) to Pass: the full version sees a line where the
+  human kills the AI (-8 539), the narrow one never ranks that attack. 2 plans flipped #309 back to the sacrifice.
+  Best 3 keeps every kept position and flips all the Chang plays. `--suite=beam`: 17 changed, oracle 84.7%, cost per
+  position 8 879 steps (suite positions are light; the tail is the big board).
+- **Match, the shortlist version** (`--match=beam,beam+nodefender --games=192 --until-clear`, 32 min, with
+  the Terraformer fix also in `beam`): beam 52.1% ± 1.9pp (100–92) — undecided at the cap, no loss. Cost per decision
+  **4 385.4 steps against 2 393.6 (1.8x, was 2.3x)**; slowest decision **33 s against 11 s (was 173 s)**. The
+  Chang plays stay fixed, and every kept position holds.

@@ -476,6 +476,8 @@ cause (this session's guesses were wrong more often than right).
 - 2026-11-08: AI-17.10 — cause found (the simulated opponent had no tricks in its own combat), fix behind
   `+notheircombat`, suite and tests green; the match is pending. `--explain` now ends each line with its
   evaluator terms ("Ends at: …"). Details in `docs/findings/magic-ai.md`.
+- 2026-11-08: AI-19.21 (Chang's sacrifices) diagnosed in the same session — a second rollout-model fix,
+  `+nodefender` (`Terms.TrueDefender`); its match is pending beside AI-17.10's. Findings: `magic-ai.md`.
 - 2026-10-29: created from Shayne's two table games (LIM-2.3's playtest); both diagnosed on kept records.
 - 2026-10-29: the plan agreed — the attack as one decision (Shayne); to the top of sprint 3.
 - 2026-10-29: AI-17.2 — "you may" taken in the look-ahead; 51.0% over 192 games, kept.

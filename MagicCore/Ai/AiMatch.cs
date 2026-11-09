@@ -76,6 +76,8 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirCombatTricks,
 				},
+			// A simulated attacker judged against the look-ahead's weaker defender, before AI-19.21: beam+nodefender.
+			["nodefender"] = o => o with { Without = o.Without | Evaluator.Terms.TrueDefender },
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
