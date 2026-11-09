@@ -239,6 +239,27 @@ public static partial class Evaluator
 		return total;
 	}
 
+	/// <summary>
+	/// What the surveils waiting on the stack are worth to <paramref name="me"/> (Dominion Assault Force's "choose
+	/// one - Surveil 1"): <see cref="SurveilShare"/> of a card each, the price walkers already use. A rollout cannot
+	/// see it — its one sampled top card is usually kept — so a surveil tied with a mode that does nothing (exiling a
+	/// card with no graveyard value) lost the tie to the listing order (AI-17.11, Shayne: "surveiling here is 100%
+	/// the correct play"). TRIGGERED abilities only: a walker's loyalty surveil is already priced in its lifetime (a double count made the
+	/// Jace token surveil rather than draw). ponytail: a spell's surveil is not read; add it when a card shows it.
+	/// </summary>
+	public static double PendingSurveil(GameState s, int me, HeldValues? held) =>
+		IsOff(Terms.SurveilPrice)
+			? 0
+			: s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
+				.Select(s.GetObject)
+				.OfType<Actions.StackAbility>()
+				.Where(a => a.ControllerId == me && a.Triggered)
+				.Sum(a =>
+					a.Effects.OfType<Surveil>().Sum(v => v.N)
+					* SurveilShare
+					* (held?.Unknown ?? FlatHandCard)
+				);
+
 	/// <summary>What one effect makes for <paramref name="me"/> — the ONE place each effect type is priced.</summary>
 	static double Effect(
 		GameState s,

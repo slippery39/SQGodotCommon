@@ -1410,6 +1410,21 @@ price; every effect priced from its type (Shayne's prices: surveil 0.33 of a car
   Twin); (5) **empty graveyards** (Tarmogoyf); (6) **mid-size bodies** the creature formula likes and 17lands doesn't
   (Rampart Hunter, Winter, Team Player, Arni, Renowned Champion).
 
+## AI-17.11 — Dominion Assault Force exiles instead of surveilling (2026-11-08)
+
+Records `2026-11-08_191858_seed10869` #127 (exiled the AI's own Infinite Diversity) and
+`2026-11-08_192946_seed1126905837` #294 (Shayne's Tal Shiar Operative); the AI chose surveil at #445, so it can. Played
+on the pre-fix Godot build (`MagicCore.dll` of 16:01), so none of the AI-17.10/19.21 fixes were running.
+
+- **A tie:** `--explain=127` scores exile and surveil the same, 11.52 and 11.52 (#294: 26.23 against 26.23 before the fix); the first
+  listed mode wins a tie. The rollout keeps the sampled top card (a surveil gains `max(0, next - top)`, 0 whenever the card
+  is kept), and exiling a card with no graveyard value costs nothing.
+- **Fix:** `Evaluator.Terms.SurveilPrice` - `PendingSurveil` prices a triggered surveil on the stack at `SurveilShare`
+  (0.33) of a card, added once to a search node's score (`Node.Bonus`). Now 12.44 against 11.52 and 27.14 against 26.23.
+- **Trap:** counting loyalty surveils too double-counted the walker's lifetime price and turned the Jace token's
+  "−3 draw" into "−1 surveil" (14 more suite decisions changed). Triggered abilities only.
+- **Suite:** unchanged from AI-19.21's baseline - 17 changed, 8 879.4 steps. Match: not run (it moves no suite decision).
+
 ## AI-17.10 — a block that loses to the trick (2026-11-08)
 
 Shayne's turn 3: the AI blocked his Astute Terraformer with its own, he pumped ("{6}, less one per differently

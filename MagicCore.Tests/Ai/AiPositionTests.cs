@@ -72,6 +72,26 @@ public class AiPositionTests
 		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), token), Is.False);
 	}
 
+	// Shayne, 2026-11-08 (AI-17.11): Dominion Assault Force ("choose one - exile target card from a graveyard;
+	// surveil 1"). The AI exiled its OWN Infinite Diversity and Shayne's Tal Shiar Operative: "surveiling here is
+	// 100% the correct play". Not a judgement - a TIE: the rollout's one sampled top card is kept, so surveil gained
+	// nothing, exiling a card with no graveyard value cost nothing, and the first listed mode won. A surveil on the
+	// stack now counts a third of a card (Terms.SurveilPrice). The CONTROL: without it the AI still exiles.
+	[TestCase("DominionExilesOwnCard", 127)]
+	[TestCase("DominionExilesTheirCard", 294)]
+	public void DominionAssaultForce_Surveils_RatherThanExilingACardWorthNothing(
+		string record,
+		int at
+	)
+	{
+		var s = KeptRecords.Before(record, at);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.SurveilPrice), Does.Contain("Exile"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Does.Contain("Surveil"));
+	}
+
 	// Shayne, 2026-10-09 (AI-1): the AI cast Prophesied End ("Destroy target creature. If it wasn't
 	// attacking, its controller draws a card.") on a NON-attacking Rank Rat — premium removal on a
 	// 1/1, and a card for the opponent. Rebuilt: two Plains and Prophesied End against their Rat.

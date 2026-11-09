@@ -99,6 +99,9 @@ is a bug report, never about the look.
       Not pinned by a test (Godot UI). The ZoneViewer (a plate's button) already shows one zone at a time
 - [x] TBL-2.15 (done as TBL-4.3) Blocks and attacks pair visibly (Arena's arrows, or the blocker moves beside its attacker);
       today two creatures with the same name can't be told apart → TBL-4
+- [ ] TBL-2.16 Casting from another card's permission (Shayne, 2026-11-08): Common Goal cast off The Caretaker shows a menu of
+      every target COMBINATION. Cast it as from the hand instead - click the creatures on the board - and never get
+      locked when there is no valid target: a Cancel button (don't cast it)
 
 ## Next
 

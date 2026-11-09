@@ -459,6 +459,28 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       mana-costed ability (`IsManaPump`) beside the spells. The position (`TerraformerBlock`, kept) flips to
       "don't block" (-12.31 blocking, -4.03 not); test `ABlock_ThatLosesToTheirOpenManaPump_IsNotMade`, control
       included. Suite: 1 of 288 changed (Jace deck, move 153, Island → Pass), oracle 88.2% → 87.8%. **Match run: 96 games, 51.0% ± 1.0pp, no 5pp difference, +4% cost: kept as the default**
+- [ ] AI-17.11 Dominion Assault Force exiles a card instead of surveilling (Shayne, 2026-11-08): it exiled its OWN
+      Infinite Diversity (`2026-11-08_191858_seed10869` #127–128) and Shayne's Tal Shiar Operative
+      (`2026-11-08_192946_seed1126905837` #294–295), where "surveil 1 is 100% the correct play"; the same AI chose
+      surveil at #445. Played on the pre-fix build (Godot's MagicCore.dll was 16:01). Rebuild, `--explain`, name the cause.
+      **Cause (a tie, not a judgement):** both modes scored identically in the search - the rollout
+      keeps its one sampled top card, so surveil gained nothing, exiling a card with no graveyard value cost nothing,
+      and the first listed mode won. **Fix:** `Evaluator.Terms.SurveilPrice` (`+nosurveilprice`): a TRIGGERED surveil
+      waiting on the stack counts a third of a card (`SurveilShare`, Shayne's own price) as a search-node bonus
+      (`Evaluator.PendingSurveil`). Kept `DominionExilesOwnCard` (#127) and `DominionExilesTheirCard` (#294): both
+      surveil now, controls included. Loyalty abilities excluded - a first version counted the Jace token's
+      surveil twice and made it surveil rather than draw (14 suite decisions). Suite: unchanged from the AI-19.21
+      baseline (17 changed), cost the same; 1523 tests green. Not yet committed
+- [ ] AI-17.12 An attack that just loses the creature (Shayne, 2026-11-08): his 1/1 officer attacked into Shayne's 4/3
+      Saurian Explorer with no trick, died, then a 3/3 was cast. Record not found yet - search the four 2026-11-08
+      19:18–19:40 records for the attack
+- [ ] AI-17.13 Guidance Failure main phase, then no attack (Shayne, 2026-11-08; `2026-11-08_192946_seed1126905837`
+      #177): Starfleet Spanner Jockey and a Dahar Master out, Raffi put on top of the library, no attack. Play it
+      main phase to attack, or hold it - "the worst play possible" is both a main-phase cast and a pass
+- [ ] AI-17.14 Amok Time with nobody to kill (Shayne, 2026-11-08; same record #376–380): a 4/4 out against 3/1s, a 2/2
+      and a 3/2, and the second target chosen as none; it could have killed one for free
+- [ ] AI-17.15 Exiling an opponent's graveyard card is priced at nothing, surveil at nothing: check what each is worth
+      to the search before AI-17.11 is fixed (the second half of the same report)
 
 ## Next
 

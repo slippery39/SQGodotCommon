@@ -172,7 +172,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		GameState State,
 		ImmutableList<Decision> Path,
 		ImmutableList<double> Expected,
-		double Score
+		double Score,
+		double Bonus = 0
 	);
 
 	ImmutableList<Decision> plan = [];
@@ -411,9 +412,17 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		void RollOut(int i)
 		{
 			var state = Apply(at, children[i]);
-			var score = Rollout.Score(state, PlayerId, horizon, RolloutSettings);
+			// a surveil newly waiting on the stack, which the rollout's one sampled card cannot price (AI-17.11)
+			var bonus =
+				parent.Bonus
+				+ Math.Max(
+					0,
+					Evaluator.PendingSurveil(state, PlayerId, RolloutSettings.Held)
+						- Evaluator.PendingSurveil(at, PlayerId, RolloutSettings.Held)
+				);
+			var score = Rollout.Score(state, PlayerId, horizon, RolloutSettings) + bonus;
 			Interlocked.Increment(ref rollouts);
-			nodes[i] = new Node(state, parent.Path.Add(children[i]), expected, score);
+			nodes[i] = new Node(state, parent.Path.Add(children[i]), expected, score, bonus);
 		}
 		// One thread is a plain loop: Parallel.For would still hand its work to a pool thread and wait.
 		if (options.Threads == 1)

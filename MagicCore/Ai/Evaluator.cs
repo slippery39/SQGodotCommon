@@ -234,6 +234,13 @@ public static partial class Evaluator
 		/// attacking into blocks it didn't see (AI-19.21: Shayne, "I wouldn't attack"; `+nodefender`).
 		/// </summary>
 		TrueDefender = 65536,
+
+		/// <summary>
+		/// A surveil waiting on the stack counts for what it is worth, a third of a card (<see cref="SurveilShare"/>,
+		/// Shayne) - the rollout's one sampled top card cannot show it, so it tied with a mode that does nothing
+		/// (AI-17.11, Dominion Assault Force: "surveiling here is 100% the correct play"; `+nosurveilprice`).
+		/// </summary>
+		SurveilPrice = 131072,
 	}
 
 	/// <summary>
