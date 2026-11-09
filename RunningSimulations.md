@@ -33,6 +33,12 @@ This cost two full training runs and three wrong conclusions in one session: a f
 ineffective twice when it had simply never been compiled in. The tell is maddening — unit tests pass
 (test projects rebuild correctly) while the run disagrees.
 
+**3. Every run reports progress as it goes** (Shayne, 2026-11-09). Each batch mode prints to stderr, at most every 20 s, 
+`label: done/total, minutes, running result` — e.g. `match beam vs beam+x: 48/96, 4.9 min, beam 51.0% (24-23-1)` — 
+through `RunProgress` (MagicCore/Ai). Read it (`/tmp/<run>.err` when redirected) instead of waiting for the report, which 
+only exists at the end. A `--until-clear` match between two near-identical AIs may never clear (a 50-minute run did not): 
+use a fixed `--games=N` when they differ rarely, and give a background run a timeout longer than its estimate.
+
 > *When a run contradicts a passing unit test, suspect the binary before the diagnosis.*
 
 Nuclear option when in doubt:

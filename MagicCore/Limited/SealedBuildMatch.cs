@@ -101,6 +101,7 @@ public static class SealedBuildMatch
 			.Select(i => SealedBuilder.Opponent(set, i))
 			.ToList();
 		var games = new AiMatch.Game[builds.Count * opponents];
+		var progress = new MagicCore.Ai.RunProgress("builds", games.Length);
 		// Capped at the cores, as AiMatch.PlayAll: uncapped, the pool grows past them and games fight over them.
 		Parallel.For(
 			0,
@@ -121,6 +122,16 @@ public static class SealedBuildMatch
 					sideboard2: Outside(rival.Sideboard)
 				);
 				games[i] = AiMatch.Play(ai, ai, start, build.Name, $"pool {seed}", seed, true, 1)!;
+				progress.Tick(
+					() =>
+						string.Join(
+							", ",
+							builds.Select(
+								(b, k) =>
+									$"{b.Name} {games[(k * opponents)..((k + 1) * opponents)].OfType<AiMatch.Game>().Count(g => g.Winner == 1)}W"
+							)
+						)
+				);
 			}
 		);
 		return new Result(

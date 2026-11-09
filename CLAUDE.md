@@ -47,8 +47,7 @@ C# on .NET. Windows.
 
 ## General Principles
 
-- SOLID where applicable; no oversized files
-- Functional or OOP as the problem dictates — not dogmatic about either
+- SOLID where applicable; no oversized files; functional or OOP as the problem dictates — not dogmatic about either
 - **Game logic and UI logic stay completely separated; no game logic in presentation layers**
 - Small, reviewable steps; never large all-at-once changes
 - **Never assume on vague requirements — confirm before implementing**
@@ -57,6 +56,7 @@ C# on .NET. Windows.
 - **"It looks a bit off" is a bug report, never about the look.** Text that looked too small was empty; a cramped badge showed the WRONG number. Find the cause before fixing the resemblance.
 - **Check `git status` before writing a file you believe is new.** A `cat >` over an existing test file destroyed eight tests; the only tell was the count going DOWN after tests were added.
 - **Tests read authored values, never restate them.** A literal copied out of content breaks on every balance pass while the code is right; twelve did at once.
+- **Every batch run (match, lint, sweep, sims) reports progress as it goes — games done of total, minutes, and the running RESULT** — so it can be read before it ends (Shayne, 2026-11-09; a 50-minute match once gave nothing until the end). Use `RunProgress` (MagicCore/Ai); a new run mode without it does not ship.
 
 ## Seeing what the AI is doing
 

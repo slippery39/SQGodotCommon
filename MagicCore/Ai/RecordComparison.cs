@@ -119,6 +119,7 @@ public static class RecordComparison
 			.ToList();
 		var real = yours.Where(i => PositionSuite.IsReal(before[i])).ToList();
 		var decisions = new Decision[real.Count];
+		var progress = new RunProgress("compare", real.Count);
 		Parallel.For(
 			0,
 			real.Count,
@@ -153,6 +154,10 @@ public static class RecordComparison
 					MoveTokens.Describe(s, you),
 					MoveTokens.Describe(s, searched),
 					MoveTokens.Describe(s, reading.Best)
+				);
+				progress.Tick(
+					() =>
+						$"{decisions.OfType<Decision>().Count(d => d.You != d.Search)} differ from the search"
 				);
 			}
 		);

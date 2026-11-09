@@ -33,8 +33,8 @@ public static class BlunderLint
 	{
 		var decks = FraDecks.All.Keys.ToList();
 		var found = new List<Finding>[games];
-		var done = 0;
-		var clock = System.Diagnostics.Stopwatch.StartNew();
+		var progress = new RunProgress("lint", games);
+		var flagged = 0;
 		Parallel.For(
 			0,
 			games,
@@ -51,10 +51,8 @@ public static class BlunderLint
 					FraDecks.All[decks[g % decks.Count]],
 					FraDecks.All[decks[(g + 1) % decks.Count]]
 				);
-				var n = Interlocked.Increment(ref done);
-				Console.Error.WriteLine(
-					$"lint: {n}/{games} games, {clock.Elapsed.TotalMinutes:0.0} min"
-				);
+				Interlocked.Add(ref flagged, found[g].Count);
+				progress.Tick(() => $"{flagged} flagged");
 			}
 		);
 		var all = found.SelectMany(f => f).ToList();

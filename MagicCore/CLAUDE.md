@@ -90,6 +90,7 @@ MagicCore/
 │                        is the ~1 s wall-clock cap for the table and console — never in a sim run
 ├── Ai/BlunderLint.cs    AI-17.7: AI-vs-AI games, each decision checked for an obvious mistake and counted (a lint, never a weight)
 ├── Ai/LandUnlock.cs     AI-9.1: does a land unlock a card in hand, or more casts next turn? Prices own lands in the evaluator (Terms.LandUnlock)
+├── Ai/RunProgress.cs    the progress line EVERY batch run prints (done/total, minutes, running result) - a project rule
 ├── Ai/Hidden.cs         what the search may know of the libraries and the opponent's hand: the real
 │                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3)
 ├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end; CastGains.cs: a held instant's offers in self-play, its option value (--cast-gains, AI-13.4)

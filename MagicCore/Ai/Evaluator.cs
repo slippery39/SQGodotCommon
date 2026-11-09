@@ -274,6 +274,13 @@ public static partial class Evaluator
 		/// (`+nosurveillands`). Spells on top are still branched.
 		/// </summary>
 		SurveilLands = 2097152,
+
+		/// <summary>
+		/// A surveil bins a spell priced below the expected replacement and keeps one at or above it (AI-17.20, the
+		/// spells half): the next draw is a known card or an unknown one, <see cref="HeldValues.Unknown"/> on average
+		/// (`+nosurveilspells`). Needs the held table; every card on top is then decided, none branched.
+		/// </summary>
+		SurveilSpells = 4194304,
 	}
 
 	/// <summary>

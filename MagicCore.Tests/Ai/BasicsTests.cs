@@ -291,6 +291,43 @@ public class BasicsTests
 		return lands.All(id => s.IsIn(id, me, ZoneType.Graveyard));
 	}
 
+	// AI-17.20, the spells half (Shayne, 2026-11-09): a surveil over the cheapest-priced card in the table and the dearest
+	// - the dear one stays, the cheap one (under the unknown-card average) goes. Read from the table, not restated.
+	// The CONTROL: without Terms.SurveilSpells both are kept.
+	[TestCase(false, ExpectedResult = false)]
+	[TestCase(true, ExpectedResult = true)]
+	public bool Surveil_BinsTheCheapSpell_KeepsTheDear(bool rule)
+	{
+		var held = BeamSearchAi.DefaultRollout.Held!;
+		var priced = CardValues
+			.Fra.Values.Where(e => e.NotMeasured is null)
+			.OrderBy(e => held.Of(e.Name))
+			.ToList();
+		var (cheap, dear) = (priced[0].Name, priced[^1].Name);
+		Assert.That(held.Of(cheap), Is.LessThan(held.Unknown));
+		Assert.That(held.Of(dear), Is.GreaterThan(held.Unknown));
+		Lands(2, "Forest");
+		foreach (var card in s.CardsIn(me, ZoneType.Library).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(me, ZoneType.Exile)); // TEST SETUP: a library we choose
+		var cheapId = Put(me, CardRegistry.Get(cheap), ZoneType.Library);
+		var dearId = Put(me, CardRegistry.Get(dear), ZoneType.Library);
+		for (var i = 0; i < 5; i++)
+			Put(me, TestGames.CreatureCosting("{4}", $"Spell {i}", "4/4"), ZoneType.Library);
+		var surveil = Put(me, Spell("Look", "{1}", "Sorcery", null, new Surveil(2)), ZoneType.Hand);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = surveil });
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is not null);
+
+		s = new BeamSearchAi(
+			me,
+			new() { Without = rule ? Evaluator.Terms.None : Evaluator.Terms.SurveilSpells }
+		)
+			.Decide(s)
+			.State;
+
+		Assert.That(s.IsIn(dearId, me, ZoneType.Graveyard), Is.False);
+		return s.IsIn(cheapId, me, ZoneType.Graveyard);
+	}
+
 	// (13) Shayne: "Tutors should fetch the highest potential value card in theory. This is kind of the same
 	// problem as surveil and scry, but just with more potential cards to choose from." Claude's reading for a
 	// landcycler: two Plains in play and a {1}{B} creature stuck in hand — the Swamp, the one basic that

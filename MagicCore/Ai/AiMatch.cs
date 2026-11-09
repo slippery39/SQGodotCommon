@@ -88,6 +88,12 @@ public static class AiMatch
 			["nolandunlock"] = o => o with { Without = o.Without | Evaluator.Terms.LandUnlock },
 			// A surveil decided by the rollout alone, lands never binned, before AI-17.20: beam+nosurveillands.
 			["nosurveillands"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilLands },
+			// A surveil keeps every spell and branches it by rollout, before the spells rule: beam+nosurveilspells.
+			["nosurveilspells"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.SurveilSpells,
+				},
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
@@ -304,17 +310,8 @@ public static class AiMatch
 		var perBatch = SeedsPerBatch * pairs.Count * 2;
 		var (judged, reading) = (0, EarlyStop.Judge([]));
 		// Asked under PlayAll's lock after every game: judge each whole batch now complete, in order.
-		var shown = 0;
 		bool Enough(Game?[] results)
 		{
-			var done = results.Count(r => r is not null);
-			if (done / 24 > shown) // a line every 24 games, so "how far along?" has an answer
-			{
-				shown = done / 24;
-				Console.Error.WriteLine(
-					$"match: {done} games, {judged / (pairs.Count * 2)} seeds judged, {clock.Elapsed.TotalMinutes:0.0} min, {reading.Verdict}"
-				);
-			}
 			while (reading.Verdict == EarlyStop.Verdict.Undecided && judged < results.Length)
 			{
 				var next = Math.Min(judged + perBatch, results.Length);
@@ -387,6 +384,7 @@ public static class AiMatch
 	)
 	{
 		var results = new Game?[schedule.Count];
+		var progress = new RunProgress($"match {a} vs {b}", schedule.Count);
 		int? searchThreads = sequential ? null : 1;
 		var gate = new object();
 		using var stop = new CancellationTokenSource();
@@ -409,6 +407,7 @@ public static class AiMatch
 				lock (gate)
 				{
 					results[i] = game;
+					progress.Tick(() => Standing(a, results));
 					if (enough?.Invoke(results) == true)
 					{
 						stop.Cancel();
@@ -418,6 +417,17 @@ public static class AiMatch
 			}
 		);
 		return results;
+	}
+
+	/// <summary>How the match stands: A's score over the games finished, and the wins, losses and draws behind it.</summary>
+	static string Standing(string a, Game?[] results)
+	{
+		var played = results.OfType<Game>().ToList();
+		var (win, loss) = (
+			played.Count(g => g.Winner == 1),
+			played.Count(g => g.Winner is not (0 or 1))
+		);
+		return $"{a} {played.Average(Result.ScoreOfA):P1} ({win}-{loss}-{played.Count - win - loss})";
 	}
 
 	/// <summary>A's score in each mirror pair — the independent trials (see <see cref="Result.StandardError"/>).</summary>

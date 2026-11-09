@@ -513,7 +513,15 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			&& !Evaluator.IsOff(Evaluator.Terms.SurveilLands)
 		)
 		{
-			var (lands, bin) = LandUnlock.Surveil(s, top);
+			var (decided, bin) = LandUnlock.Surveil(s, top);
+			// the spells too, when we have prices: below the unknown-card average they are binned, else kept
+			if (!Evaluator.IsOff(Evaluator.Terms.SurveilSpells) && RolloutSettings.Held is { } held)
+				foreach (var o in choice.Options.Where(o => !decided.Contains(o.Id)))
+				{
+					decided.Add(o.Id); // decided, not branched
+					if (held.Of(s.GetCard(o.Id).Name) < held.Unknown)
+						bin.Add(o.Id);
+				}
 			return
 			[
 				.. (
@@ -522,7 +530,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 						: [greedy.Answer(s, choice)]
 				)
 					.Select(p =>
-						p.Where(id => !lands.Contains(id)).Concat(bin).Order().ToImmutableList()
+						p.Where(id => !decided.Contains(id)).Concat(bin).Order().ToImmutableList()
 					)
 					.DistinctBy(p => string.Join("|", p))
 					.Select(p => (Decision)new Pick(p, key)),
