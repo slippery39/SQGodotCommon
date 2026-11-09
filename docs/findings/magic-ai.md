@@ -1410,6 +1410,23 @@ price; every effect priced from its type (Shayne's prices: surveil 0.33 of a car
   Twin); (5) **empty graveyards** (Tarmogoyf); (6) **mid-size bodies** the creature formula likes and 17lands doesn't
   (Rampart Hunter, Winter, Team Player, Arni, Renowned Champion).
 
+## AI-17.14 — Amok Time kills nothing (2026-11-08)
+
+`2026-11-08_192946_seed1126905837` #380: the second target of Amok Time's fight left empty, a free kill unused.
+
+- **Reproduced:** none 9.73 (= The Caretaker 9.73) against Tal Shiar Operative -0.87. In the "none" line the simulated
+  human attacks all-in on turn 18 and loses Raffi and the Caretaker (the AI to 15, then he is hit to 6); after a kill he
+  stays home and the board stalls, which scores lower. Bait again - the AI-19.21 pattern.
+- **Cause: `TrueDefender` was not engaged.** Scratch probe of his candidates: the "true" score equalled the cheap one in
+  5 of 6 rows, the all-in leaving the AI on 7 life with nothing blocked well. His Tal Shiar Operative's "choose one"
+  trigger leaves a pending choice after the declaration, and `Blocked` only continued with none pending - the same family
+  as the `AutoPass` trap, found in the same place.
+- **Fix:** `Blocked` drives the combat to its blocks and answers such choices. Not a pending `DeclareAttackerChoice` (a
+  creature the plan left out): `OpponentStep` re-picks the attack there, which changed the candidate being judged and
+  broke `FacingLethal_WeChumpBlock` and the Duelist (found by logging the choice type). Now -0.87 for the kill against
+  -24.05 for none.
+- **Suite:** unchanged, 17 changed and 8 879.4 steps; no suite position has an attacker trigger. 1524 tests.
+
 ## AI-17.11 — Dominion Assault Force exiles instead of surveilling (2026-11-08)
 
 Records `2026-11-08_191858_seed10869` #127 (exiled the AI's own Infinite Diversity) and

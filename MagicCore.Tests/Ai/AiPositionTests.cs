@@ -92,6 +92,23 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.Contain("Surveil"));
 	}
 
+	// Shayne, 2026-11-08 (AI-17.14): Amok Time ("target creature you control fights up to one target creature you
+	// don't control") with his 4/4 out against 3/1s, a 2/2 and a 3/2 - and the second target chosen as NONE, a
+	// free kill left. The simulated human, attacking, met the real blocks only when his attack triggered no choice:
+	// the Tal Shiar Operative's "choose one" left a pending choice and the true defender (AI-19.21) silently fell
+	// back to the weak one, so he looked to win a bloodbath - and a stall after a kill scored below it. Blocked now
+	// drives the combat through such choices. The CONTROL: with TrueDefender off the AI still chooses none.
+	[Test]
+	public void AmokTime_FightsSomething_RatherThanNothing()
+	{
+		var s = KeptRecords.Before("AmokTimeNoSecondTarget", 380);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.TrueDefender), Does.EndWith("none"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Does.Not.EndWith("none"));
+	}
+
 	// Shayne, 2026-10-09 (AI-1): the AI cast Prophesied End ("Destroy target creature. If it wasn't
 	// attacking, its controller draws a card.") on a NON-attacking Rank Rat — premium removal on a
 	// 1/1, and a card for the opponent. Rebuilt: two Plains and Prophesied End against their Rat.

@@ -478,7 +478,16 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       #177): Starfleet Spanner Jockey and a Dahar Master out, Raffi put on top of the library, no attack. Play it
       main phase to attack, or hold it - "the worst play possible" is both a main-phase cast and a pass
 - [ ] AI-17.14 Amok Time with nobody to kill (Shayne, 2026-11-08; same record #376–380): a 4/4 out against 3/1s, a 2/2
-      and a 3/2, and the second target chosen as none; it could have killed one for free
+      and a 3/2, and the second target chosen as none; it could have killed one for free.
+      **Cause: a defect in AI-19.21's `TrueDefender`, found here.** The simulated human's attack included Tal Shiar
+      Operative, whose trigger ("choose one") leaves a pending choice after the attack is declared; the probe
+      (`WholeAttacks.Blocked`) only went on when none was pending, so it silently judged the attack against the
+      WEAK defender again (the all-in read "AI to 7 life"), the human looked to win a bloodbath, and a stall after a
+      kill scored -0.87 against +9.73 for killing nothing. **Fix:** `Blocked` drives the combat to its blocks,
+      answering such choices - but never a pending attacker choice (a creature the plan left out): answering that
+      re-picked the attack, broke `FacingLethal_WeChumpBlock` and the Duelist, and was found by logging the choice
+      type. Kept `AmokTimeNoSecondTarget` (#380): it now fights the Operative (-0.87 against -24.05); control
+      included. Suite unchanged (17, 8 879.4 steps), 1524 tests green. Not yet committed
 - [ ] AI-17.15 Exiling an opponent's graveyard card is priced at nothing, surveil at nothing: check what each is worth
       to the search before AI-17.11 is fixed (the second half of the same report)
 

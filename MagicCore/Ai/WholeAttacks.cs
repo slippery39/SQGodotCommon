@@ -179,22 +179,20 @@ public static class WholeAttacks
 	{
 		if (defender is null || Evaluator.IsOff(Evaluator.Terms.TrueDefender))
 			return s;
-		// priority first: a defender with an instant-speed ability holds it in the declare-attackers step
-		for (
-			var i = 0;
-			i < 6
-				&& !s.IsOver()
-				&& s.GetPendingChoice() is null
-				&& s.GetGame().Step <= Step.DeclareAttackers;
-			i++
-		)
-			s = s.Act(new PassPriorityAction { PlayerId = s.DecidingPlayerId() }).AutoPass();
-		for (
-			var i = 0;
-			i < 20 && s.GetPendingChoice() is DeclareBlockerChoice b && b.PlayerId != who;
-			i++
-		)
-			s = Rollout.Untraced(() => Rollout.OpponentStep(s, b.PlayerId, defender));
+		// Drive the combat to its blocks: an attacker's own trigger asks a choice (Tal Shiar Operative's "choose
+		// one"), and a defender with an instant-speed ability holds priority in declare-attackers (Chang) - a
+		// probe that stopped at either silently fell back to the weak defender (AI-17.14).
+		for (var i = 0; i < 40 && !s.IsOver(); i++)
+		{
+			if (s.GetPendingChoice() is DeclareAttackerChoice) // a creature the plan left out: not ours to re-pick
+				break;
+			if (s.GetPendingChoice() is not null)
+				s = Rollout.Untraced(() => Rollout.OpponentStep(s, s.DecidingPlayerId(), defender));
+			else if (s.GetGame().Step <= Step.DeclareAttackers)
+				s = s.Act(new PassPriorityAction { PlayerId = s.DecidingPlayerId() }).AutoPass();
+			else
+				break;
+		}
 		return s;
 	}
 
