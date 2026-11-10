@@ -185,6 +185,25 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
 	}
 
+	// Shayne, 2026-10-28 (AI-14's first reading, flag 1 -> AI-13.5): turn 4, Yoshimaru, Scrappy Stray ("When Yoshimaru
+	// enters, another target creature you control fights up to one target creature an opponent controls") cast with no
+	// other creature - its fight wasted, "costs you a potential fight later on". Held now, by the measured price: since
+	// AI-17.6's Settle fought its "up to one" fight, the table prices Yoshimaru as a creature that fights, so a cast
+	// that can't is worth less than holding it (0 of 30 shuffles cast it). The CONTROL: with flat hand prices it casts.
+	[Test]
+	public void AnEntersFight_WithNothingToFight_IsHeld()
+	{
+		var s = KeptRecords.Before("YoshimaruWithNoFight", 70);
+		var me = s.DecidingPlayerId();
+
+		Assert.That(
+			new BeamSearchAi(me, new BeamSearchAi.Settings().WithoutHeld()).Decide(s).What,
+			Does.StartWith("Cast Yoshimaru"),
+			"control"
+		);
+		Assert.That(new BeamSearchAi(me).Decide(s).What, Is.EqualTo("Pass"));
+	}
+
 	// Shayne, 2026-11-08 (AI-17.12): turn 13, the AI attacked its Officer 1/1 token into Shayne's untapped Saurian
 	// Explorer 4/3 with no trick, let it die, then cast a 3/3. The look-ahead's defender never blocked it, so the
 	// attack looked free; judged against the blocks the rollout plays (Terms.TrueDefender, AI-19.21) the Explorer

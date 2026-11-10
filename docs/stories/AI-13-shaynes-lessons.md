@@ -130,10 +130,24 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       creature you need to kill"): offers measured for them too (an offer is already the best X of
       the turn), priced as an option when held. Position: `MagicConsole --decisions` game 1 seed 1,
       turn 16
+      **Hand-built and checked 2026-11-09:** four Mountains, Ajani's Anguish in hand, they at 20 with no creatures -
+      held in 30 of 30 shuffles, by its measured price (flat hand prices cast it in 20 of 30): test
+      `BasicsTests.AjanisAnguish_WithNothingToKill_IsHeld_AtTwenty`, control included. Shayne to confirm the position is
+      his flag-5 answer. **But at THEIR low life it goes at the face:** they at 6, 5 or 4, the AI casts it for 3 in 20
+      of 30 shuffles (none lethal; at 8 it holds) - the symmetric low-life price makes chip damage look good, the risk
+      noted when the burn rule was deferred (AI-17.6, 2026-10-30). That is Shayne's burn rule (player-only, repeatable,
+      or enough to burn them out) - to build when he says
 - [ ] AI-13.5 The option value for a creature whose enters ability needs a target (AI-14's first
       reading, Shayne: Yoshimaru, Scrappy Stray cast with no other creature, its fight wasted — "costs
       you a potential fight later on"): offers measured for such creatures too, cast when now beats
       the expected best of later. Position: game 1 seed 1 of `MagicConsole --decisions`, turn 4
+      **Checked 2026-11-09: the position now HOLDS** (`Records/YoshimaruWithNoFight.json` #70: Pass 9.52, cast 7.37;
+      0 of 30 shuffles cast it). No switch brings the cast back - only flat hand prices (`WithoutHeld`): since AI-17.6's
+      Settle fights an "up to one" fight, the card-value table prices Yoshimaru 16.5 (was 4.5), so held it is a creature
+      that will fight, and a cast that can't scores below it. Card-agnostic - any creature whose enters needs a target
+      gets it from its measured price. Test `AnEntersFight_WithNothingToFight_IsHeld` (control: flat prices cast). NOT
+      built: the offers version (cast when now beats the expected best of later) - the held price is fixed, so it never
+      falls as the game shortens; whether that is enough is Shayne's call
 - [x] AI-13.4 The option value, replacing the patience cost (Shayne, 2026-10-28 — Decisions):
       `CastGains` (`MagicConsole --cast-gains`: 400 self-play games of the AI's sealed decks, each
       instant or flash card's offer a turn, game-ending casts excluded, twenty mid-slice quantiles —

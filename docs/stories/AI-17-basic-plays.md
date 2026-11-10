@@ -430,6 +430,8 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
         damage in hand burns them out — otherwise a creature. Positions first (the symmetric life risk
         prices their low life higher, so check it doesn't send burn at the face against his rule)
+        **Checked 2026-11-09 (AI-13.6's position): it does.** Ajani's Anguish for 3 with nothing to kill: held at 20 and
+        at 8, cast at their face at 6, 5 and 4 in 20 of 30 shuffles - never lethal. Waiting on Shayne to build the rule
 - [ ] AI-17.7 (2026-11-09: BUILT, not yet run at scale - `MagicCore/Ai/BlunderLint.cs`, `MagicConsole --lint --games=N --seed=N --ai=beam[+switch]`; checkers: pass-with-land (postcombat main, stack empty, land legal), attack-into-bigger, wasted-removal (own target only), face-burn (damage spell at the face, non-lethal; Shayne added it 2026-11-09 after Ajani's Anguish for 1 on turn 2). NOT built: 'may does nothing', 'free kill unused'. First look: 8 search games = 97 s; attack-into-bigger fires mostly on alpha strikes (no 'follow-up' test yet) - tighten before reading its count.) Blunder counters (Shayne, 2026-10-29): over N AI games, each decision checked for a named
       mistake, counted whatever the game's result — **missed lethal** first (an attack that kills through
       the defender's best blocks, not made; AI-17.3 should drive it to 0), then walked into lethal,

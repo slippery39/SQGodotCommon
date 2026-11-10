@@ -530,4 +530,41 @@ public class BasicsTests
 		Assert.That(s.IsOnBattlefield(live), Is.False, "the live 3/3 is destroyed");
 		Assert.That(s.IsOnBattlefield(locked), Is.True);
 	}
+
+	// AI-13.6 (Shayne, 2026-10-28, AI-14's flag 5): Ajani's Anguish ("When this enchantment enters, it deals X damage to
+	// any target") for 3 at the face with nothing worth killing - "its better to just [hold] … If you draw lands the
+	// anguish gets better anyways, and there is always a chance the opponent plays some creature you need to kill".
+	// Hand-built (2026-11-09): four Mountains, they at 20 with no creatures. Held by its measured price, as Yoshimaru
+	// is. The CONTROL: with flat hand prices it is cast (counted over 30 shuffles, the sample decides each).
+	[Test]
+	public void AjanisAnguish_WithNothingToKill_IsHeld_AtTwenty()
+	{
+		Lands(4, "Mountain");
+		Put(me, CardRegistry.Get("Ajani's Anguish"), ZoneType.Hand);
+		int Casts(BeamSearchAi.Settings settings)
+		{
+			var casts = 0;
+			Parallel.For(
+				1,
+				31,
+				k =>
+				{
+					if (
+						new BeamSearchAi(me, settings)
+							.Decide(s with { RngSeed = k * 7919 })
+							.What.Contains("Anguish")
+					)
+						Interlocked.Increment(ref casts);
+				}
+			);
+			return casts;
+		}
+
+		Assert.That(
+			Casts(new BeamSearchAi.Settings(Threads: 1).WithoutHeld()),
+			Is.GreaterThanOrEqualTo(10),
+			"control"
+		);
+		Assert.That(Casts(new BeamSearchAi.Settings(Threads: 1)), Is.EqualTo(0));
+	}
 }

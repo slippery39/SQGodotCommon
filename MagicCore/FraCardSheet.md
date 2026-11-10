@@ -1006,7 +1006,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests, TrkBatch6aTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests, TrkBatch6aTests
 
 ### Murmuring Volume
 
@@ -4535,7 +4535,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this enchantment enters, it deals X damage to any target.  
 > Creatures you control have trample.
 
-**Status:** scripted · **tests naming it:** FraStaticTests
+**Status:** scripted · **tests naming it:** BasicsTests, FraStaticTests
 
 **Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
