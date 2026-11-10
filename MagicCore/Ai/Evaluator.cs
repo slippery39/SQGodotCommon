@@ -229,7 +229,9 @@ public static partial class Evaluator
 		/// A held instant or flash card of ours priced as an OPTION (AI-13, Shayne: "the expected value of
 		/// playing the spell now vs holding for a better situation"): the expected best of the offers it
 		/// meets over the turns left (<see cref="CastGains"/>, <see cref="OptionTurns"/>) — so casting it
-		/// needs a gain at least that, and the bar falls as the game shortens (`+nooption`).
+		/// needs a gain at least that, and the bar falls as the game shortens (`+nooption`). A targeted
+		/// sorcery-speed card too, at one turn (<see cref="TargetedOptions"/>); either one short of mana is
+		/// discounted as any held card (<see cref="ManaShort"/>).
 		/// </summary>
 		HoldOption = 64,
 
@@ -406,6 +408,14 @@ public static partial class Evaluator
 		/// damage above the card (`+faceburn`).
 		/// </summary>
 		SaveBurn = 268435456,
+
+		/// <summary>
+		/// A sorcery-speed card with a target to wait for - removal, burn, an Aura, a creature whose enters needs a target -
+		/// held as an option too, as instants are (<see cref="CastGains.IsOption"/>; Shayne 2026-11-09, AI-13.10): worth its
+		/// offers' average, ONE future turn - holding it costs a turn of tempo, where an instant keeps the best of the turns
+		/// left (`+instantoptions`).
+		/// </summary>
+		TargetedOptions = 536870912,
 	}
 
 	/// <summary>
@@ -662,6 +672,15 @@ public static partial class Evaluator
 			own
 			&& !IsOff(Terms.ManaShort)
 			&& c.ManaCost.ManaValue - 1 > (mana ??= ManaWithin(s, player));
+		// a held price kept ManaShortShare per source short past the first - an option's too (AI-13.10's review: a 6-mana
+		// targeted sorcery on two lands was priced as castable)
+		double ShortOf(Card c, double price) =>
+			Short(c)
+				? Math.Max(
+					FlatHandCard,
+					price * Math.Pow(ManaShortShare, c.ManaCost.ManaValue - 1 - mana!.Value)
+				)
+				: price;
 		var hand = s.CardsIn(player, ZoneType.Hand)
 			.Sum(c =>
 				held is not null
@@ -677,9 +696,17 @@ public static partial class Evaluator
 				: held is null ? FlatHandCard
 				: own
 				&& !IsOff(Terms.HoldOption)
-				&& Priority.AtInstantSpeed(s, c)
 				&& CastGains.Fra.TryGetValue(c.Name, out var offers)
-					? CastGains.ExpectedBest(offers, OptionTurns(s, player))
+				&& CastGains.IsOption(s, c)
+					// holding an instant costs nothing - it is cast in their turn; holding a sorcery-speed card costs a
+					// turn of tempo, so it counts one future turn, its average use (AI-13.10, Shayne: "a tempo cost")
+					? ShortOf(
+						c,
+						CastGains.ExpectedBest(
+							offers,
+							Priority.AtInstantSpeed(s, c) ? OptionTurns(s, player) : 1
+						)
+					)
 				// a creature of theirs we KNOW they hold (one we bounced): what it is on the board, less
 				// the mana to cast it again — a bounce gains the tempo, not the creature (AI-13.4, Shayne)
 				: !own && c.Is(CardType.Creature) && !IsOff(Terms.KnownHand)
@@ -687,13 +714,7 @@ public static partial class Evaluator
 						held.Of(c.Name),
 						CreatureValue(s, c, keywords) - RecastPerMana * c.ManaCost.ManaValue
 					)
-				: Short(c)
-					? Math.Max(
-						FlatHandCard,
-						held.Of(c.Name)
-							* Math.Pow(ManaShortShare, c.ManaCost.ManaValue - 1 - mana!.Value)
-					)
-				: held.Of(c.Name)
+				: ShortOf(c, held.Of(c.Name))
 			);
 		if (held is not null)
 			hand += ImpulseCredit(s, player, held);

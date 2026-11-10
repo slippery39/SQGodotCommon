@@ -103,7 +103,7 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       (`+nolanddrop`): `BeamSearchAi.Children` drops Pass while a land play is legal. Kept `AiSkipsLandDrop`, test
       `WithALandToPlay_TheSearchPlaysIt_NotPass`, control included. Suite 19 changed (was 17), cost per position
       -10% (8 024 steps), oracle 84.7% unchanged; 1529 tests. Match not run. Not yet committed
-- [ ] AI-13.10 Option pricing step 1 (Shayne, 2026-11-09, after Claude's three-step proposal: "lets begin with step 1
+- [x] AI-13.10 Option pricing step 1 (Shayne, 2026-11-09, after Claude's three-step proposal: "lets begin with step 1
       and leave 2 and 3 for later"; steps 2 desperation and 3 our deck are later): every card with a target held as an
       option, not only instants. **TRIED AND REVERTED (2026-11-09, patch kept in the session scratchpad):**
       `CastGains.IsOption` (instant speed, or a spell's/mode's target, an Aura, an enters-trigger target), offers in a
@@ -137,6 +137,59 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       Shayne: "I never meant to add a never skip a free draw rule". So the suite position's Pass is the LOST position's
       noise (every line ~ -8 595, 0.3 apart), not a mispriced draw; `AJaceToken_DrawsWithItsMinusThree…` pins a choice
       among dead lines and needs a position that is not lost
+      **Retried with a tempo cost (2026-11-09, Next item 1; not committed):** the first try's patch was found in an old
+      scratchpad and restored (all targeted cards: spell/mode target, Aura, enters-trigger target); a sorcery-speed
+      option is priced at `ExpectedBest` k = 1 (its average), an instant keeps k = `OptionTurns`. Tables regenerated,
+      400 games: FRA 60 cards, TRK 58 (332 s). Suite against 24 / 85.1% / 0.94: **30 changed / 83.3% / 1.20 given up**;
+      the same fresh tables with the term off (`+instantoptions`) 30 / 83.0% / 1.30 - so the regenerated tables cost the
+      drop, the term itself is +0.3pp, -0.10 given up. Fixed with it: Wildspeaker's control also switches the term off;
+      the Jace test moved to the calm position (Jace token at 6): -3 in 27 of 30 shuffles, -1 in 3, never passes (term
+      on or off). Full MagicCore tests: 1563 of 1567 passed, 2 skipped, **2 failed**:
+      `Surveil_BinsTheCheapSpell_KeepsTheDear(False)` (fresh tables - fails with the term off too, as found before) and
+      `TheoristDiscardedOverCommons_Control_TheSearchDiscardsHim` (the term only - the control no longer makes the bad
+      play). Match not run: Shayne's call
+      **Why the two break (looked into, 2026-11-09, Shayne: "could it be that we are not pricing the optionality
+      aggressive enough?"):** neither is the option price being too low or too high. *Surveil:* its "cheap" card,
+      Academic Ascent (held 1.2), had a 54.53 option price in the OLD FRA table - all 20 quantiles one value, a single
+      sample - so the control kept it for that, not for want of the rule; the fresh table has no entry, and the search
+      bins it with or without `SurveilSpells`. *Theorist control:* a sorcery-speed option at k = 1 is about its flat
+      price (Hapatra, the Desert Frost 5.50 -> 5.57); only Infinite Coursework moves (1.20 -> 2.20), enough to reorder
+      the cheap cards the control discards among. Thin entries remain in the fresh tables too (Mabel 9.13 and Yoshimaru
+      10.91 each a single value). And the suite's oracle scores were read 2026-11-07 with the OLD tables, so "agrees
+      with the oracle" partly measures agreement with the stale prices
+      **Fix 1, a minimum of offers (2026-11-09, Shayne: "lets start with 1"):** `CastGains.MinOffers` = 20 (one per
+      quantile slice); a card met fewer times gets no entry and keeps its flat held price, the console naming each left
+      out. Tables regenerated, 400 games: FRA 56 cards (out: Yoshimaru 1, Mabel 1, Perfected Theory 2, Vigorbloom Charm
+      8), TRK 48 (out: Bristly Bill 16, Captain's Tutelage 19, I'm a Doctor 19, Shields Up! 13, Make It So 10, Hologram
+      Stalker 9, Hull Breach 9, Impossible Choice 8, Pure Energy 5, Ertai Resurrected 5). Suite **29 / 83.7% / 1.20**
+      (term off 30 / 83.0% / 1.30, unchanged). Tests: the same two fail, as expected - neither card was thin in the
+      fresh tables. Next: re-read the oracle on the fresh tables (fix 2), then the two controls (fix 3)
+      **Fix 2, the oracle re-read on the fresh tables (2026-11-09, 2.0 min, `FRA.positions.txt`):** the committed answers
+      now agree 78.8% (88.2% on the old oracle). Suite **29 changed / 87.8% / 0.47 given up** over 155, 2 missed wins;
+      the term off 30 / 86.1% / 0.60, 3 missed wins. CAVEAT: the oracle is the same evaluator, term ON, read deeper - it
+      favours the term as the old one favoured the old tables; only a match judges the term. Tests: the same two fail
+      **Fix 3, the controls (2026-11-09):** the Theorist control also switches `TargetedOptions` off - passes, and so
+      does the test itself. The surveil control could NOT be rebuilt: over the 12 cheapest cards with no cast-gains
+      entry (all held at 1.2, the unknown card 2.65), the search bins the cheap card and keeps the dear one with
+      `SurveilSpells` off too - branching alone already decides it. The suite doesn't touch the rule either
+      (`+nosurveilspells` 29 / 87.8% / 0.47, identical). So the spells half (AI-17.20) is unproven on any position
+      today - its one control was the stale 54.53 price. Shayne's call: what that test and the rule become
+      **Then #173 checked (Shayne: "run 173 with the rule on and off"), 30 shuffles each:** Energize (held 6.65, the
+      unknown card 2.65) - the rule ON bins only the Mountain in 30 of 30; the spells rule OFF bins Energize with it in
+      14 of 30 (16 the Mountain alone). So the spells half IS needed - for KEEPING a good card, which the branching gets
+      wrong about half the time; binning a bad one it gets right alone. **Test moved (Shayne: "Yes please"):**
+      `Surveil_BinsTheCheapSpell_KeepsTheDear` keeps its rule-on check, no control; the control is the new
+      `AiPositionTests.ASurveil_KeepsAGoodSpellOnTop` (#173: rule off bins Energize in at least 7 of 30, on in none).
+      **Full MagicCore tests: 1565 passed, 2 skipped, 0 failed.** `+instantoptions` in Commands.md. Not committed.
+      **Match (2026-11-10): `beam` vs `beam+instantoptions` 51.0% ± 1.5pp over 192 (98-94), early stop: no difference
+      of 5pp either way (worse rejected), cost the same (3055 vs 3052 steps a decision), 19.8 min.** Keep or drop:
+      Shayne's call - **kept (2026-11-10, Shayne: "Yeah lets keep it")**. **Pre-commit fixes (Shayne: "make sure 1 and 2 are
+      fixed, no need to run the match"):** an option short of mana is discounted as any held card (`ManaShort` - it
+      skipped options, so a 5-mana targeted sorcery on one land was priced as castable; instants included now), test
+      `CastGainsTests.AnOption_ShortOfMana_IsWorthLess` (revert-checked); the instants-only docs updated. Suite
+      unchanged (29 / 87.8% / 0.47); tests 1566 passed, 2 skipped. Left for later (the review): an enters trigger
+      counts only if it is the card's own, and a modal one's targets; the 20-offer floor still leaves one game per slice
+      for instants' best-of-k; an option drawn too late in its own turn still records a 0
 - [ ] AI-13.9 The option value for STAR TREK's instants (found 2026-11-09, Shayne asking whether "spells are options" is
       done): `CastGains` is FRA's alone (`FRA.castgains.json`, 35 cards, no TRK name; `--cast-gains` plays FRA's sealed
       decks), so in every TRK game a held instant or flash card falls back to its flat held price - `HoldOption` does
@@ -217,6 +270,11 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       5pp, "worse" rejected, cost the same — kept (Shayne's rule: sensible plays count; the agreed
       position fixed). `docs/findings/magic-ai.md`
 ## Next
+
+**Now (2026-11-10):** items 1 and 2 below are built and the tests pass (AI-13.10's notes), with three fixes beside
+them: a minimum of 20 offers per table entry, the suite's oracle re-read on the fresh tables, the surveil control moved
+to #173. Match: 51.0% ± 1.5pp over 192, no difference of 5pp, worse rejected, same cost. Kept, committed
+2026-11-10. Next: steps 2 and 3 (item 3 below), Shayne's call when.
 
 **Next session (decided 2026-11-09, Shayne - one thing at a time, report before the next):**
 1. **AI-13.10, step 1 retried with a tempo cost** (Shayne: "Sure we can retry step 1 with a tempo cost"): a sorcery-speed

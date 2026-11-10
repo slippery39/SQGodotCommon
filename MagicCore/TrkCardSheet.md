@@ -1148,7 +1148,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests, TrkBatch6aTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests, TrkBatch6aTests
 
 ### Oberth-Class Starship
 
@@ -2847,7 +2847,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Return target creature an opponent controls to its owner's hand.  
 > Beam me up {3}{U} (You may cast this card from your graveyard for {3}{U} if you also return a creature you control to its owner's hand. Then exile this spell.)
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** AiPositionTests
 
 **Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.
 

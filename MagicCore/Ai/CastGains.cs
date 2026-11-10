@@ -8,9 +8,10 @@ using MagicCore.Sets;
 namespace MagicCore.Ai;
 
 /// <summary>
-/// The offers a held instant-speed card meets (story AI-13, Shayne: "the expected value of playing the
-/// spell now vs holding for a better situation"). In self-play, each turn a player holds an instant or
-/// a flash card, that turn's OFFER is the best its casting could gain — the evaluation after, settled,
+/// The offers a held OPTION meets (story AI-13, Shayne: "the expected value of playing the spell now vs
+/// holding for a better situation") - an instant or flash card, or a sorcery-speed card with a target to wait for
+/// (<see cref="IsOption"/>, AI-13.10). In self-play, each turn a player holds one (a sorcery-speed one: its own
+/// turns only), that turn's OFFER is the best its casting could gain — the evaluation after, settled,
 /// less before, with the card's held price added back — or 0 if it couldn't be cast (a cast that ends
 /// the game isn't one: the search takes a win as it comes). Optimal stopping
 /// over these offers prices the card held: <see cref="ExpectedBest"/> of the turns left.
@@ -86,9 +87,16 @@ public static class CastGains
 					}
 				)
 		);
-		return offers
-			.SelectMany(o => o)
-			.GroupBy(o => o.Card)
+		var byCard = offers.SelectMany(o => o).GroupBy(o => o.Card).ToList();
+		// a card met too few times keeps its flat held price: one lucky game made Academic Ascent a 54-point option
+		var thin = byCard.Where(g => g.Count() < MinOffers).ToList();
+		if (thin.Count > 0)
+			Console.WriteLine(
+				$"cast-gains {set}: under {MinOffers} offers, left out: "
+					+ string.Join(", ", thin.Select(g => $"{g.Key} {g.Count()}"))
+			);
+		return byCard
+			.Where(g => g.Count() >= MinOffers)
 			.ToDictionary(
 				x => x.Key,
 				x =>
@@ -105,6 +113,12 @@ public static class CastGains
 				}
 			);
 	}
+
+	/// <summary>
+	/// The fewest offers a card needs for a table entry (AI-13.10): one per quantile slice - below it a slice repeats a
+	/// sample, and a single one made all twenty (Academic Ascent at 54.53, Yoshimaru at 10.91).
+	/// </summary>
+	public const int MinOffers = 20;
 
 	static List<(string Card, double Offer)> Play(string set, int seed, HeldValues held)
 	{
@@ -136,7 +150,12 @@ public static class CastGains
 			var who = s.DecidingPlayerId();
 			foreach (var p in players)
 			foreach (
-				var card in s.CardsIn(p, ZoneType.Hand).Where(c => Priority.AtInstantSpeed(s, c))
+				var card in s.CardsIn(p, ZoneType.Hand)
+					.Where(c =>
+						IsOption(s, c)
+						// a sorcery-speed card meets an offer only in its own turns: theirs are no zero
+						&& (Priority.AtInstantSpeed(s, c) || s.GetGame().ActivePlayerId == p)
+					)
 			)
 				turnOffers.TryAdd((p, card.Name), 0);
 			if (!s.IsWaitingForChoice && s.GetGame().Step != Step.PreGame)
@@ -161,14 +180,32 @@ public static class CastGains
 
 	public const int MaxPermanents = 60;
 
-	/// <summary>What casting each instant-speed card in <paramref name="who"/>'s hand could gain right now, its best target.</summary>
+	/// <summary>
+	/// A card held as an OPTION - one whose best use may still come: instant speed (AI-13.4), or, at sorcery speed, one
+	/// with a target to wait for (Shayne, 2026-11-09, option pricing step 1): a spell's target or a mode's, an Aura, a
+	/// permanent's enters-trigger target (Yoshimaru's fight, Ajani's Anguish).
+	/// </summary>
+	public static bool IsOption(GameState s, Card c) =>
+		Priority.AtInstantSpeed(s, c)
+		|| (
+			!Evaluator.IsOff(Evaluator.Terms.TargetedOptions)
+			&& (
+				c.GetComponent<Effects.SpellEffectsComponent>() is { } spell
+					&& (spell.Targets.Count > 0 || spell.Modes.Any(m => m.Targets.Count > 0))
+				|| c.GetComponent<Effects.AuraComponent>() is not null
+				|| s.AbilitiesOf<Effects.TriggeredAbilityComponent>(c)
+					.Any(t => t.On.On == Effects.EventKind.Entered && t.Targets.Count > 0)
+			)
+		);
+
+	/// <summary>What casting each option card (<see cref="IsOption"/>) in <paramref name="who"/>'s hand could gain right now, its best target.</summary>
 	static IEnumerable<(string Card, double Gain)> Offers(GameState s, int who, HeldValues held)
 	{
 		var before = Evaluator.Evaluate(s, who, held);
 		return s.AiMoves(s.LegalActions())
 			.OfType<CastSpellAction>()
 			.Select(c => (Card: s.GetCard(c.CardId), Cast: c))
-			.Where(x => s.IsIn(x.Card.Id, who, ZoneType.Hand) && Priority.AtInstantSpeed(s, x.Card))
+			.Where(x => s.IsIn(x.Card.Id, who, ZoneType.Hand) && IsOption(s, x.Card))
 			.Select(x => (x.Card.Name, After: Lookahead.Settle(s.Act(x.Cast))))
 			// a cast that ends the game is no offer to wait for: the search takes a win as it comes
 			.Where(x => !x.After.IsOver())

@@ -93,7 +93,7 @@ MagicCore/
 ├── Ai/RunProgress.cs    the progress line EVERY batch run prints (done/total, minutes, running result) - a project rule
 ├── Ai/Hidden.cs         what the search may know of the libraries and the opponent's hand: the real
 │                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3)
-├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end; CastGains.cs: a held instant's offers in self-play, its option value (--cast-gains, AI-13.4)
+├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end; CastGains.cs: a held option's offers in self-play (instants; targeted sorcery-speed cards, AI-13.10), its option value (--cast-gains, AI-13.4)
 ├── Limited/Boosters.cs  a set's packs as Arena opens them (FRA: MTGJSON's collation; TRK: provisional; 4-colour commons) + a seeded sealed pool (LIM-1) — Draft.cs: Quick Draft, 8 seats, bots by rating + colour lean (LIM-2)
 ├── Limited/SealedBuilder.cs  pool → 40 in two colours, by any ratings table: the suggested deck AND the AI's own (LIM-1);
 │                        Suggestions: + a splash and a greedy (up to 4 colours) build, every fixer counted (Fixes); an opponent plays one at random (LIM-3); ClosePairs/ForPair: the 4 closest pairs within 1.5 points, each one's builds (LIM-3.6)

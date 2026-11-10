@@ -293,10 +293,11 @@ public class BasicsTests
 
 	// AI-17.20, the spells half (Shayne, 2026-11-09): a surveil over the cheapest-priced card in the table and the dearest
 	// - the dear one stays, the cheap one (under the unknown-card average) goes. Read from the table, not restated.
-	// The CONTROL: without Terms.SurveilSpells both are kept.
-	[TestCase(false, ExpectedResult = false)]
-	[TestCase(true, ExpectedResult = true)]
-	public bool Surveil_BinsTheCheapSpell_KeepsTheDear(bool rule)
+	// No control here: without Terms.SurveilSpells the branching bins the cheap card too (AI-13.10 - the old control
+	// kept it only for a stale 54.53 option price). The rule's control is keeping a GOOD card, on a real position:
+	// AiPositionTests.ASurveil_KeepsAGoodSpellOnTop.
+	[Test]
+	public void Surveil_BinsTheCheapSpell_KeepsTheDear()
 	{
 		var held = BeamSearchAi.DefaultRollout.Held!;
 		var priced = CardValues
@@ -317,15 +318,10 @@ public class BasicsTests
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = surveil });
 		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is not null);
 
-		s = new BeamSearchAi(
-			me,
-			new() { Without = rule ? Evaluator.Terms.None : Evaluator.Terms.SurveilSpells }
-		)
-			.Decide(s)
-			.State;
+		s = new BeamSearchAi(me).Decide(s).State;
 
 		Assert.That(s.IsIn(dearId, me, ZoneType.Graveyard), Is.False);
-		return s.IsIn(cheapId, me, ZoneType.Graveyard);
+		Assert.That(s.IsIn(cheapId, me, ZoneType.Graveyard), Is.True);
 	}
 
 	// AI-17.16 (code review): only a card exiled UNSEEN off the top is "blind" - the search credits a random card for it and

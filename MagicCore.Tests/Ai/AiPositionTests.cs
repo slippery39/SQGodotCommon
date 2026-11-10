@@ -275,6 +275,42 @@ public class AiPositionTests
 		Assert.That(Attacks(Evaluator.Terms.None), Is.LessThanOrEqualTo(3));
 	}
 
+	// AI-17.20's spells half, on the same surveil (checked 2026-11-09, AI-13.10, Shayne: "run 173 with the rule on and
+	// off"): Energize, priced above the unknown card, stays on top. Counted over 30 shuffles, the sample decides each.
+	// The CONTROL: without Terms.SurveilSpells the branching bins it too in about half (14 of 30 when checked).
+	[Test]
+	public void ASurveil_KeepsAGoodSpellOnTop()
+	{
+		var s = KeptRecords.Before("SurveilNone", 173);
+		var held = BeamSearchAi.DefaultRollout.Held!;
+		Assert.That(held.Of("Energize"), Is.GreaterThan(held.Unknown));
+		int BinsEnergize(Evaluator.Terms without)
+		{
+			var bins = 0;
+			Parallel.For(
+				1,
+				31,
+				k =>
+				{
+					if (
+						new BeamSearchAi(s.DecidingPlayerId(), new(Without: without, Threads: 1))
+							.Decide(s with { RngSeed = k * 7919 })
+							.What.Contains("Energize")
+					)
+						Interlocked.Increment(ref bins);
+				}
+			);
+			return bins;
+		}
+
+		Assert.That(
+			BinsEnergize(Evaluator.Terms.SurveilSpells),
+			Is.GreaterThanOrEqualTo(7),
+			"control"
+		);
+		Assert.That(BinsEnergize(Evaluator.Terms.None), Is.EqualTo(0));
+	}
+
 	// Shayne, 2026-11-09 (AI-17.20): turn 8, Emergency Holographic Crew's surveil 2 over a Mountain and an Energize, with
 	// four lands in play and a hand of expensive spells - and the AI put nothing in the graveyard, as it never does
 	// (the four answers tied or ranked the land ahead: the rollout keeps one sampled top card). Shayne: keep a land on
@@ -1112,7 +1148,8 @@ public class AiPositionTests
 			);
 
 		Assert.That(
-			Casts(Evaluator.Terms.WalkerUse),
+			// Tam's Resistance is a targeted sorcery, held as an option since AI-13.10 - the control holds it as a hand card
+			Casts(Evaluator.Terms.WalkerUse | Evaluator.Terms.TargetedOptions),
 			Does.StartWith("Cast Tam's Resistance"),
 			"the control: priced by count, the pump"
 		);
@@ -1171,7 +1208,8 @@ public class AiPositionTests
 
 	/// <summary>
 	/// The control, the whole price reverted (`+walkernow`): the search without it AND the hand's cards measured
-	/// without it — the held price comes from the table, which the lifetime moves — makes the recorded play.
+	/// without it — the held price comes from the table, which the lifetime moves — makes the recorded play. Sorcery-speed
+	/// options off too (AI-13.10): Infinite Coursework's option price (2.2 over its flat 1.2) reorders the cheap cards.
 	/// </summary>
 	[Test]
 	public void TheoristDiscardedOverCommons_Control_TheSearchDiscardsHim()
@@ -1179,7 +1217,7 @@ public class AiPositionTests
 		var s = KeptRecords.Before("TheoristDiscardedOverCommons", 72);
 		var me = s.DecidingPlayerId();
 		var same = Evaluator.Without(
-			Evaluator.Terms.WalkerLifetime,
+			Evaluator.Terms.WalkerLifetime | Evaluator.Terms.TargetedOptions,
 			() =>
 			{
 				var values = CardValues.Fra.ToDictionary();
@@ -1215,23 +1253,29 @@ public class AiPositionTests
 
 	// Shayne, 2026-11-07 (AI-9.3): "Usually we will always want to draw a card here. Loyalty = Life should not be a
 	// 1-1 thing … in 99.9% of cases, you are drawing a card of a jace that allows you to (assuming you can't use the
-	// loyalty for something else)". The position suite, White-Black vs White-Blue Jace seed 1, move 108: our second
-	// main phase at 4 life, a Jace token ("−1: Surveil 1", "−3: Draw a card") at 6 loyalty, our 3/2 against their 3/3
-	// deathtouch and a tapped 1/4. With each turn of the lifetime at 0.7 of the one before, the second −3 kept for
-	// later outweighed the card drawn now (the sampled draw a Plains) and the search passed; at 0.6 it draws.
-	// Revert-checked by hand (LifetimeDecay 0.7: Pass). AI-8.2's price (`+walkernow`) draws too.
+	// loyalty for something else)". First pinned on the position suite's White-Black vs White-Blue Jace seed 1 #108 -
+	// a LOST position (every line ~ -8 590, the same death), where -3 against Pass is noise between dead lines; that one
+	// is AI-17.23's. Here a CALM one (AI-13.10, 2026-11-09): a Jace token ("−1: Surveil 1", "−3: Draw a card") at 6,
+	// empty hands, 20 life each - counted over 30 shuffles, the sample decides each: it draws in most, never passes.
 	[Test]
 	public void AJaceToken_DrawsWithItsMinusThree_RatherThanBankingTheLoyalty()
 	{
-		var suite = PositionSuite.Tracked()!;
-		var (_, s) = PositionSuite
-			.States(suite)
-			.Single(x =>
-				suite.Games[x.Position.GameIndex]
-					is { Deck1: "White-Black", Deck2: "White-Blue Jace", Seed: 1 }
-				&& x.Position.Move == 108
-			);
-		var choice = MoveTokens.Token(s, new BeamSearchAi(s.DecidingPlayerId()).Decide(s));
-		Assert.That(MoveTokens.Describe(s, choice), Is.EqualTo("Jace [−3]"));
+		int jace;
+		(s, jace) = TestGames.Put(s, me, EmpowerJace.JaceToken, ZoneType.Battlefield);
+		s = s.UpdateObject(jace, s.GetCard(jace) with { Loyalty = 6, IsToken = true }); // TEST SETUP
+		var choices = new string[30];
+		Parallel.For(
+			0,
+			30,
+			k =>
+			{
+				var shuffled = s with { RngSeed = (k + 1) * 7919 };
+				var decision = new BeamSearchAi(me, new(Threads: 1)).Decide(shuffled);
+				choices[k] = MoveTokens.Describe(shuffled, MoveTokens.Token(shuffled, decision));
+			}
+		);
+		var summary = string.Join(", ", choices.CountBy(c => c).Select(x => $"{x.Key} {x.Value}"));
+		Assert.That(choices.Count(c => c == "Jace [−3]"), Is.GreaterThan(15), summary);
+		Assert.That(choices, Has.None.StartsWith("Pass"), summary);
 	}
 }

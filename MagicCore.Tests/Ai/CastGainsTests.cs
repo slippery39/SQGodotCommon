@@ -68,4 +68,62 @@ public class CastGainsTests
 			"ascending"
 		);
 	}
+
+	// AI-13.10 (Shayne, 2026-11-09): a sorcery-speed card with a target to wait for is an option too; a card with nothing
+	// to wait for is not.
+	[Test]
+	public void ATargetedSorcery_IsAnOption_AVanillaCreatureIsNot()
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var me = s.GetGame().StartingPlayerId;
+		int kill,
+			bear;
+		(s, kill) = TestGames.Put(
+			s,
+			me,
+			new CardDefinition(
+				TestGames.Inline("Kill", "{1}", "Sorcery").Data,
+				[
+					new Effects.SpellEffectsComponent([new Effects.Destroy(Effects.Ref.Target())])
+					{
+						Targets = [Targeting.TargetSpec.Creature],
+					},
+				]
+			),
+			ZoneType.Hand
+		);
+		(s, bear) = TestGames.Put(s, me, TestGames.Creature("Bear", "2/2"), ZoneType.Hand);
+		Assert.That(CastGains.IsOption(s, s.GetCard(kill)), Is.True);
+		Assert.That(CastGains.IsOption(s, s.GetCard(bear)), Is.False);
+		Assert.That(
+			Evaluator.Without(
+				Evaluator.Terms.TargetedOptions,
+				() => CastGains.IsOption(s, s.GetCard(kill))
+			),
+			Is.False,
+			"control: instants only"
+		);
+	}
+
+	// AI-13.10's review: an option held far from castable is still discounted per mana source short (Terms.ManaShort) - a
+	// 5-mana targeted sorcery on one land was priced as its full option value. Awaken the Inferno is in the table.
+	[Test]
+	public void AnOption_ShortOfMana_IsWorthLess()
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var me = s.GetGame().StartingPlayerId;
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Mountain"), ZoneType.Battlefield);
+		(s, var card) = TestGames.Put(s, me, CardRegistry.Get("Awaken the Inferno"), ZoneType.Hand);
+		Assert.That(
+			CastGains.IsOption(s, s.GetCard(card))
+				&& CastGains.Fra.ContainsKey("Awaken the Inferno")
+		);
+		var held = BeamSearchAi.DefaultRollout.Held!;
+		Assert.That(
+			Evaluator.Evaluate(s, me, held),
+			Is.LessThan(
+				Evaluator.Without(Evaluator.Terms.ManaShort, () => Evaluator.Evaluate(s, me, held))
+			)
+		);
+	}
 }

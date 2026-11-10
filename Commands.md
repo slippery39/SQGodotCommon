@@ -118,6 +118,8 @@ dotnet run -c Release --project MagicConsole -- --suite=beam
 #   went honest, AI-3.9), so it favours beam+realorder; a model change goes to step 2
 #   --accept: this AI's answers become the committed ones (after an intended behaviour change)
 #   a test says the suite is stale (the engine moved): --suite=generate (~4 min), then --suite=oracle (~1 min)
+#   after regenerating a table (--cast-gains, --card-values): --suite=oracle again - the oracle scores with the
+#   tables it was read on, so a stale one makes any fresh table look worse (AI-13.10: 83.0% stale, 86.1% re-read)
 
 # 2. The early-stop match (~10-30 min since AI-7; AI-3.4's: 9½ min), before anything becomes a default
 dotnet run -c Release --project MagicConsole -- --match=beam+casts,beam --until-clear
@@ -170,6 +172,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     notheirabilities  the simulated opponent never uses its permanents' abilities in its own turn (before AI-17.22)
 #     thisturngrants the next attack's clock reads this turn's grants (can't block, flying) as lasting (before AI-17.9)
 #     faceburn       burn at their face whenever it scores, not saved for a kill within two turns (before the burn rule)
+#     instantoptions only instants and flash held as options, not targeted sorcery-speed cards (before AI-13.10)
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 

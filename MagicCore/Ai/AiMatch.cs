@@ -104,6 +104,12 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirAbilities,
 				},
+			// Only instants and flash held as options, before AI-13.10: beam+instantoptions.
+			["instantoptions"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.TargetedOptions,
+				},
 			// Burn at their face whenever it scores, before the burn rule (AI-17.6): beam+faceburn.
 			["faceburn"] = o => o with { Without = o.Without | Evaluator.Terms.SaveBurn },
 			// A held option's turns left read in each line, not at the root, before AI-13.9: beam+liveoptionturns.
