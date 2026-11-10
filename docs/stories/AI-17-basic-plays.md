@@ -613,6 +613,20 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       within 0.3 and the sample picks (-3 in ~half of 30 shuffles). Proposed (Claude): a lost line's tie-break counts what
       is real at that point - board, hand, life - and no future-only value (a walker's banked loyalty, held options).
       Not built; agree the rule with Shayne first
+- [ ] AI-17.24 The landcycle skipped again (Shayne, 2026-11-10: "the opponent skipped his landdrop and landcycled on my
+      upkeep again ... a recurring bug"; `2026-11-10_003614_seed1911018013.json`, kept as `Records/RogueLandcycleSkipped`
+      #157): turn 8, the AI on 3 Swamps, no land in hand, Rogue Artificial Intelligence ({4}{B}{B}, basic landcycling
+      {2}) held - it passed its whole turn, then cycled in Shayne's upkeep (#178) and played the Island on turn 10.
+      **Diagnosed (`--explain=157`):** Pass 10.93, cycle-and-play 8.25. The cycle line gains one land (+1.5) but loses
+      Rogue from "our hand" (-5.25 = its held 8.75 x 0.6): the Pass line's SAMPLED draws gave it an Island on turn 10,
+      so at the horizon Rogue reads only one step short (`ManaShort`). The upkeep cycle (#178) is the sample's noise
+      (its two lines drew different cards). **Counted over 30 shuffles at #157:** cycles in 23, passes in 7
+      (`+nomanashort`: 12 / 18) - AI-17.21's discount fixed most; the game was one of the 7. Tried and reverted: the
+      discount read from the ROOT's mana (as option turns are) - 25 / 5, and the real seed still passes (8.83 vs 8.25).
+      Not in the value of the card: each decision rests on ONE sampled world (`Hidden.Sample`); a kind sample makes
+      holding look free. Options for Shayne (not started): decide over several samples at the root; or a value for
+      the land drop itself; or accept 5-7 in 30. **Moved to its own story, AI-20 (Shayne, 2026-11-10):** the one
+      guessed future is the root of this and the Tasha, surveil, impulse and Jace issues
 ## Next
 
 **Next session (decided 2026-11-08, Shayne):** (1) commit AI-13.7 (land drop) after `/pre-commit` - tests and records
