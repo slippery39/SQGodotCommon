@@ -169,6 +169,8 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     nomanashort    a held card priced as castable however many lands short (before AI-17.21)
 #     notheirabilities  the simulated opponent never uses its permanents' abilities in its own turn (before AI-17.22)
 #     thisturngrants the next attack's clock reads this turn's grants (can't block, flying) as lasting (before AI-17.9)
+#     faceburn       burn at their face whenever it scores, not saved for a kill within two turns (before the burn rule)
+#     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 
 # INTERIM ratings for a set 17lands hasn't seen (MC-5.4: TRK) -> MagicCore/Sets/TRK.ratings.json (~10 s); rebuild to embed.

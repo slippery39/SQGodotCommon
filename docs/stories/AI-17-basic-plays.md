@@ -458,7 +458,12 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         left, plus `Evaluator.Through` each turn (`ponytail:` colours, their lifegain and their answers unseen). Tests:
         `Burn_IsSaved_UntilItKillsWithinTwoTurns` (A1-A5 and the lifelinker; A3 was the miss, its control burns) and
         `AjanisAnguish_WithNothingToKill_IsHeld(5)` (control: the rule off). The tree only: the rollout's own policy
-        may still burn a face in an imagined turn. Option pricing (A6, A8, B2, B4) and the desperate-race case not built
+        may still burn a face in an imagined turn. Option pricing (A6, A8, B2, B4) and the desperate-race case not built.
+        The review: a CREATURE with a damage trigger is a body, never burn (only noncreature enters-burn, `EntersBurn`,
+        now shared with the lint); only damage that can target a player counts toward the kill
+        (`TargetSpec.CanTargetPlayers`); X spells packed last; a land counted only at sorcery speed; this turn's attack
+        only before attackers are declared. Tests `ACreatureWithADamageTrigger_IsNeverFaceBurn`,
+        `ACreatureOnlyDamageSpell_IsNotCountedTowardTheKill`. Suite unchanged (24, 85.1%). Committed c8ded261. Not matched
 - [ ] AI-17.7 (2026-11-09: BUILT, not yet run at scale - `MagicCore/Ai/BlunderLint.cs`, `MagicConsole --lint --games=N --seed=N --ai=beam[+switch]`; checkers: pass-with-land (postcombat main, stack empty, land legal), attack-into-bigger, wasted-removal (own target only), face-burn (damage spell at the face, non-lethal; Shayne added it 2026-11-09 after Ajani's Anguish for 1 on turn 2). NOT built: 'may does nothing', 'free kill unused'. First look: 8 search games = 97 s; attack-into-bigger fires mostly on alpha strikes (no 'follow-up' test yet) - tighten before reading its count.) Blunder counters (Shayne, 2026-10-29): over N AI games, each decision checked for a named
       mistake, counted whatever the game's result — **missed lethal** first (an attack that kills through
       the defender's best blocks, not made; AI-17.3 should drive it to 0), then walked into lethal,
