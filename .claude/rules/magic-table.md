@@ -31,7 +31,7 @@ MagicTable/
 │                         close pair's builds added — LIM-3.6; SimCommand: --compare for this pool — LIM-3.4),
 │                         the table setup — a FRESH
 │                         AI opponent per game, from the game's seed (OpponentFor). Tested
-├── SealedScene.cs        Arena's deck builder: pool by colour (click in), a search (LIM-4), deck list (click out), basics;
+├── SealedScene.cs        Arena's deck builder: pool by colour (click in), a search (LIM-4), the deck as cards (DeckView) or a list, basics;
 │                         Paste Arena pool (a dialog), what was left out named above the pool; a
 │                         button per suggestion in a wrapping row, named by its colours; the close
 │                         pairs in the left column (scrolling), Copy sim command above them; --seed=N
@@ -52,6 +52,8 @@ MagicTable/
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
 ├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; a click target
 ├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live
+├── DeckColumns.cs        the visual deck's layout (plain C#, LIM-5): rows of columns by mana value / creatures apart / colour
+├── DeckView.cs           the deck as overlapping cards under the pool; Wire: Godot's drag-and-drop, pool ↔ deck ↔ column
 ├── ManaSymbols.cs        a cost as Scryfall's mana symbols, BBCode for a RichTextLabel (Assets/Symbols/,
 │                         tools/fetch_mana_symbols.py) — SealedScene.CardRow, the deck list and the draft's picks
 └── MagicArt.cs           Scryfall art crop / full card by image key — "Name|SET" (MagicArt.Key): the printing's

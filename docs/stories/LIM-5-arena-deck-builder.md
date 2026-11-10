@@ -1,7 +1,7 @@
 ---
 id: LIM-5
 title: An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols
-status: in-progress
+status: done
 area: LIM
 created: 2026-11-10
 ---
@@ -22,13 +22,13 @@ colours. His two references (MTGA screenshots, 2026-11-10):
 - [x] The deck list shows costs as mana symbols (W U B R G C, generic numbers, X, hybrid), never `{B}` text
       — in the draft's picks list too (`DraftScene`)
 - [x] Colourless filters alongside the colours: W + Colourless shows both; picking it never clears the colours
-- [ ] A visual deck view as Arena's: the deck as columns of overlapping cards, one per mana value
+- [x] A visual deck view as Arena's: the deck as columns of overlapping cards, one per mana value
       (lands in their own column), the count per column; a toggle back to today's list view
-- [ ] Sort the deck view: by mana value (default), creatures / non-creatures (two rows, each by mana
+- [x] Sort the deck view: by mana value (default), creatures / non-creatures (two rows, each by mana
       value), by colour
-- [ ] Move cards: click or drag pool → deck and deck → pool; drag a card between deck columns to arrange it
+- [x] Move cards: click or drag pool → deck and deck → pool; drag a card between deck columns to arrange it
 - [x] Search by name and rules text — LIM-4 (its own story, built alongside)
-- [ ] Everything stays in view at 1920×1080 and 1280×720 — reorganise or scroll, never clip (TBL-2.5's rule)
+- [x] Everything stays in view at 1920×1080 and 1280×720 — reorganise or scroll, never clip (TBL-2.5's rule)
 
 ## Decisions
 
@@ -48,20 +48,31 @@ colours. His two references (MTGA screenshots, 2026-11-10):
       (hybrids read) and the draft's picks. Elsewhere still `{B}` text (the plate's floating mana, the log)
 - [x] LIM-5.2 Colourless combines with the colour filters (`SealedScene.PickFilter` / `Shows`) — a colour toggle now
       (`SealedSession.InColours`, tested; nonland, as before); captured with real clicks: W + Colourless shows both
-- [ ] LIM-5.3 The visual deck view: columns by mana value, a list/visual toggle; captured at both sizes
-- [ ] LIM-5.4 Sorts: mana value, creatures / non-creatures, colour
-- [ ] LIM-5.5 Moving cards: drag pool ↔ deck, drag between columns (copy the hand's 12 px drag threshold
+- [x] LIM-5.3 The visual deck view: columns by mana value, a list/visual toggle; captured at both sizes
+      `DeckColumns` (plain C#, tested: rows of columns, copies counted) and `DeckView` (Godot): under the pool, each
+      column's cards overlapping by their name line, a header "key · count", ×N on copies; Cards / List toggle
+      (Cards the default, kept between visits); a click takes a card out (a basic: one fewer). Both sizes are one
+      layout (`canvas_items` stretch); captured with a suggested build, and in List mode
+- [x] LIM-5.4 Sorts: mana value, creatures / non-creatures, colour — "Mana value" (0–6, 7+, Lands), "Creatures
+      apart" (two rows; the view scrolls to the second), "Colour" (W U B R G Multi Colourless Lands); captured each
+- [x] LIM-5.5 Moving cards: drag pool ↔ deck, drag between columns (copy the hand's 12 px drag threshold
       from `MagicHandView`; read `.claude/rules/godot-frontend.md`, "The shared card", first)
+      Godot's own Control drag-and-drop (`DeckView.Wire`), not Card2D: these are plain TextureRects, and Godot's
+      drag starts after its own threshold, so a still click stays a click. Every card takes the drop as well as
+      the space around it (a card stops the mouse). Real input: pool → deck (23 → 24, into its column), deck →
+      pool (23 → 22), a 1-drop onto the 6 column (1·2 → 1·1, 6·3 → 6·4). `--tap`'s drag now sends `Relative`:
+      Godot's Control drag adds up motion, and a drag with none never started
 
 ## Next
 
-Read `SealedScene.cs` (617 lines — the deck view should be its own file, not grow this one),
-`.claude/rules/magic-table.md`, and capture the screen before changing it
-(`./Run-Godot.ps1 MagicTable/SealedScene.tscn -Capture`, Commands.md). LIM-4's search goes in the same
-filter row.
+Built overnight 2026-11-10, unseen by Shayne: his look decides what changes (card size, the strip shown,
+Cards as the default). Code: `DeckColumns.cs` (layout, tested), `DeckView.cs` (drawing, drag-and-drop),
+`SealedScene.cs` (the toggle and sorts). Capture with `-GameArgs '--seed=7','--tap=1043,235@12'` (a suggested
+build), drags as `--tap=X,Y@F~12>X2,Y2`.
 
 ## Log
 
 - 2026-11-10: created from Shayne's notes, with two MTGA screenshots as the guide.
 - 2026-11-10: LIM-5.2 built (overnight).
 - 2026-11-10: LIM-5.1 built (overnight).
+- 2026-11-10: LIM-5.3–5.5 built (overnight); the story is done — Shayne's look at it may add tasks.

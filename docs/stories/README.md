@@ -37,7 +37,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 7. **MC-4** — MTGA's powered cube: surveyed, then built in batches
 8. **AI-13** — Shayne's lessons as general rules for the search, each measured
 9. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-10. **LIM-5**, **TBL-9**, **TBL-6**, **TBL-7** — the overnight UI list (2026-11-10; its order in the sprint file)
+10. **TBL-9**, **TBL-6**, **TBL-7** — the overnight UI list (2026-11-10; its order in the sprint file)
 11. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
 12. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
 13. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
@@ -107,7 +107,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | in-progress |
-| [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
@@ -142,6 +141,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |
 | [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | done |
+| [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | done |
 | [MC-1](MC-1-fra-cards.md) | A real-rules engine that plays every Reality Fracture card | done |
 | [MC-2](MC-2-filter-refactor.md) | One composable filter instead of six closed vocabularies | done |
 | [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | done |

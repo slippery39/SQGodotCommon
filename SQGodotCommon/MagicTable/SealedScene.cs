@@ -78,6 +78,20 @@ public partial class SealedScene : Control
 	private readonly List<Button> _filterButtons = new();
 	private readonly HFlowContainer _pool = new() { SizeFlagsHorizontal = SizeFlags.ExpandFill };
 	private readonly VBoxContainer _deckRows = new();
+	private readonly ScrollContainer _deckList =
+		new()
+		{
+			SizeFlagsVertical = SizeFlags.ExpandFill,
+			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+		};
+
+	// Arena's visual deck under the pool (LIM-5.3), or today's list at the right; kept between visits.
+	private static bool _visual = true;
+	private static DeckSort _sort = DeckSort.ManaValue;
+	private readonly Dictionary<string, string> _moved = new(); // dragged to another column, until a sort is picked
+	private readonly DeckView _deckView = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
+	private readonly HBoxContainer _sorts = new();
+	private readonly List<(Button Button, System.Func<bool> On)> _toggles = new();
 	private readonly Dictionary<string, Label> _basicCounts = new();
 	private readonly Label _deckTitle = MtgUiStyles.Title("", 28);
 	private readonly Label _title = MtgUiStyles.Title("", 34);
@@ -340,8 +354,41 @@ public partial class SealedScene : Control
 		};
 		_pool.AddThemeConstantOverride("h_separation", 6);
 		_pool.AddThemeConstantOverride("v_separation", 6);
+		_pool.MouseFilter = MouseFilterEnum.Pass;
 		scroll.AddChild(_pool);
 		center.AddChild(scroll);
+		// a deck card dropped anywhere on the pool goes back to it (LIM-5.5)
+		foreach (var target in new Control[] { scroll, _pool })
+			DeckView.Wire(target, null, DroppedOnPool);
+
+		var bar = new HBoxContainer();
+		bar.AddThemeConstantOverride("separation", 6);
+		bar.AddChild(Toggle("Cards", () => _visual, () => _visual = true));
+		bar.AddChild(Toggle("List", () => !_visual, () => _visual = false));
+		_sorts.AddThemeConstantOverride("separation", 6);
+		_sorts.AddChild(Text("   Sort:", 20));
+		foreach (
+			var (label, sort) in new[]
+			{
+				("Mana value", DeckSort.ManaValue),
+				("Creatures apart", DeckSort.CreaturesApart),
+				("Colour", DeckSort.Colour),
+			}
+		)
+			_sorts.AddChild(
+				Toggle(
+					label,
+					() => _sort == sort,
+					() =>
+					{
+						_sort = sort;
+						_moved.Clear(); // a sort picked again puts every card back
+					}
+				)
+			);
+		bar.AddChild(_sorts);
+		center.AddChild(bar);
+		center.AddChild(_deckView);
 		return center;
 	}
 
@@ -350,14 +397,9 @@ public partial class SealedScene : Control
 		var right = new VBoxContainer { CustomMinimumSize = new Vector2(400, 0) };
 		right.AddThemeConstantOverride("separation", 8);
 		right.AddChild(_deckTitle);
-		var scroll = new ScrollContainer
-		{
-			SizeFlagsVertical = SizeFlags.ExpandFill,
-			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-		};
 		_deckRows.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-		scroll.AddChild(_deckRows);
-		right.AddChild(scroll);
+		_deckList.AddChild(_deckRows);
+		right.AddChild(_deckList);
 
 		foreach (var basic in SealedSession.BasicNames)
 		{
@@ -442,6 +484,26 @@ public partial class SealedScene : Control
 		)
 			_deckRows.AddChild(DeckRow(group.Key, group.Count()));
 
+		_deckList.Visible = !_visual;
+		_deckView.Visible = _sorts.Visible = _visual;
+		foreach (var (button, on) in _toggles)
+			MtgUiStyles.StyleChoice(button, selected: on());
+		if (_visual)
+			_deckView.Show(
+				DeckColumns.Rows(S.Deck, _sort, _moved),
+				S.Set,
+				Preview,
+				card => Act(() => TakeOut(card)),
+				(what, column) =>
+					Act(() =>
+					{
+						if (!what.FromDeck)
+							S.Add(what.Card);
+						else if (column is not null)
+							_moved[what.Card] = column;
+					})
+			);
+
 		foreach (var (basic, label) in _basicCounts)
 			label.Text = S.Basics(basic).ToString();
 		CardViews.Clear(_suggestRow);
@@ -493,7 +555,31 @@ public partial class SealedScene : Control
 		if (!SealedSession.Playable(card))
 			tile.Modulate = new Color(0.45f, 0.45f, 0.45f);
 		CardViews.Hook(tile, card, Preview, () => Act(() => S.Add(card)));
+		DeckView.Wire(tile, (false, card), DroppedOnPool);
 		return tile;
+	}
+
+	private void DroppedOnPool((bool FromDeck, string Card) what)
+	{
+		if (what.FromDeck)
+			Act(() => TakeOut(what.Card));
+	}
+
+	/// <summary>One copy out of the deck: a pool card back to the pool, or one fewer of a free basic.</summary>
+	private void TakeOut(string card)
+	{
+		if (SealedSession.BasicNames.Contains(card))
+			S.SetBasics(card, S.Basics(card) - 1);
+		else
+			S.Remove(card);
+	}
+
+	/// <summary>A choice plate that redraws: on (parchment) while <paramref name="on"/> holds.</summary>
+	private Button Toggle(string text, System.Func<bool> on, System.Action pick)
+	{
+		var button = Choice(text, () => Act(pick));
+		_toggles.Add((button, on));
+		return button;
 	}
 
 	/// <summary>A deck row: count, name, cost; hover previews, a click takes one copy back out.</summary>

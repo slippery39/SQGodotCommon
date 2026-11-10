@@ -72,12 +72,17 @@ public partial class DebugTaps : Node
 			if (to != at && _frame > frame + 1 && _frame <= frame + 1 + hold)
 			{
 				var p = at.Lerp(to, (_frame - frame - 1) / (float)hold);
+				var was = at.Lerp(to, (_frame - frame - 2) / (float)hold);
 				Push(
 					new InputEventMouseMotion
 					{
 						Position = p,
 						GlobalPosition = p,
-						ButtonMask = MouseButtonMask.Left,
+						Relative = p - was, // Godot's own Control drag starts on the motion it adds up
+						ButtonMask =
+							button == MouseButton.Right
+								? MouseButtonMask.Right
+								: MouseButtonMask.Left,
 					}
 				);
 			}
