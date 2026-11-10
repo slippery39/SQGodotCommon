@@ -18,7 +18,7 @@ is a bug report, never about the look.
       turns up nothing new
 - [ ] Every report is a task here (or its own story if it is big), fixed at the root cause and
       pinned by a test that fails without the fix
-- [ ] Emblems seen on screen (never verified — TBL-1)
+- [x] Emblems seen on screen (never verified — TBL-1)
 
 ## Decisions
 
@@ -32,8 +32,12 @@ is a bug report, never about the look.
 
 ## Tasks
 
-- [ ] TBL-2.1 Emblems on screen: sandbox a planeswalker (`--put`), reach its ultimate, check the
+- [x] TBL-2.1 Emblems on screen: sandbox a planeswalker (`--put`), reach its ultimate, check the
       command zone on the player plate and in the zone viewer
+      Seen 2026-11-10: a real game (a throwaway test drove `MagicTableManager`: Chandra, Torch of Defiance put in,
+      +1 each turn, −7 on turn 9 — the record resumed on the table, not kept). The plate says "Command 1" with the
+      emblem's thumb under it; the Command button opens the zone viewer with Scryfall's own emblem card. Nothing to
+      fix. The emblems' effects are the engine's tests (`FraRarePlaneswalkerTests`)
 - [x] TBL-2.2 Shayne's first playtest session — reports become tasks below — 2026-10-20 against the
       search (W-B vs R-G): two AI plays → AI-8; the turn was unclear → TBL-4; no seed saved → TBL-5
 - [ ] TBL-2.3 If the AI ever again spends Prophesied End (or any removal) on a non-attacking 1-drop:
@@ -178,6 +182,7 @@ for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause 
   `Records/DuelistWontTrade.json`; TBL-5.7 resumed it.
 - 2026-10-23: Shayne's sealed game — the deck select off the screen (TBL-2.5), a prepared copy's
   wrong art (TBL-2.6), the prepared copy in the hand confusing (TBL-2.7). Status → in-progress.
+- 2026-11-10: TBL-2.1 — emblems seen on the plate and in the zone viewer.
 - 2026-11-10: TBL-2.19 — the table off the screen again: two uncounted causes (combat columns, Equipment), fixed with a scroll backstop.
 - 2026-10-23: Shayne decided TBL-2.7 — the prepared copy on its creature, for now; built and
   captured the same day.
