@@ -98,7 +98,7 @@ dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N   # wh
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json and TRK.values.json (~5 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
-dotnet run -c Release --project MagicConsole -- --cast-gains [--games=400]   # regenerate MagicCore/Sets/FRA.castgains.json (~70 s)
+dotnet run -c Release --project MagicConsole -- --cast-gains [--games=400] [--set=TRK]   # regenerate MagicCore/Sets/<SET>.castgains.json, every set without --set (FRA ~70 s, TRK ~3 min)
 #   each instant-speed card's offers in self-play (AI-13.4's option value); after a change to the evaluator, rerun it
 ```
 

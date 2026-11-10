@@ -472,6 +472,141 @@ public static class MagicRules
 	) => actions.DistinctBy(a => s.MoveKey(a)).ToImmutableList();
 
 	/// <summary>
+	/// The AI's moves: <see cref="DistinctMoves"/>, and in a long list one move per KIND of permanent - those exactly
+	/// the same grouped (<see cref="Twins"/>, AI-18, Shayne 2026-11-07): Common Goal over 64 Troubling Tribbles was
+	/// 14 910 casts, one per pair of Tribbles. Each move kept is a real legal move, so a record of it replays;
+	/// DistinctMoves itself never groups - records index into it (<c>MoveTokens</c>).
+	/// ponytail: only past <see cref="TwinsFrom"/> moves - grouping costs a fingerprint per permanent, and short
+	/// lists are the search's hot path; lower it if a short list ever needs it.
+	/// </summary>
+	public static ImmutableList<GameAction> AiMoves(
+		this GameState s,
+		IEnumerable<GameAction> actions
+	)
+	{
+		var list = actions as IReadOnlyCollection<GameAction> ?? [.. actions];
+		if (list.Count <= TwinsFrom)
+			return s.DistinctMoves(list);
+		var twins = twinsOf.GetValue(s, Twins);
+		return twins.Count == 0
+			? s.DistinctMoves(list)
+			: list.DistinctBy(a => s.MoveKey(AsTwins(a, twins))).ToImmutableList();
+	}
+
+	/// <summary>The move count past which <see cref="AiMoves"/> groups identical permanents (AI-18).</summary>
+	public const int TwinsFrom = 64;
+
+	static readonly ConditionalWeakTable<GameState, Dictionary<int, int>> twinsOf = new();
+
+	/// <summary>The move with every permanent it names read as its stand-in - for its key only, never played.</summary>
+	static GameAction AsTwins(GameAction a, Dictionary<int, int> twins)
+	{
+		int T(int id) => twins.TryGetValue(id, out var twin) ? twin : id;
+		ImmutableArray<int> Ts(ImmutableArray<int> ids) =>
+			ids.IsDefaultOrEmpty ? ids : [.. ids.Select(T)];
+		return a switch
+		{
+			CastSpellAction c => c with
+			{
+				Targets = Ts(c.Targets),
+				SacrificeId = T(c.SacrificeId),
+				BeholdId = T(c.BeholdId),
+				ReturnId = T(c.ReturnId),
+			},
+			ActivateAbilityAction c => c with
+			{
+				CardId = T(c.CardId),
+				Targets = Ts(c.Targets),
+				SacrificeId = T(c.SacrificeId),
+				TapId = T(c.TapId),
+				SecondTapId = T(c.SecondTapId),
+				TapIds = Ts(c.TapIds),
+			},
+			ActivateLoyaltyAction c => c with { CardId = T(c.CardId), Targets = Ts(c.Targets) },
+			_ => a,
+		};
+	}
+
+	/// <summary>
+	/// Each battlefield permanent's stand-in: the first permanent exactly like it - the same in every field once
+	/// a turn stamp is read as "this turn or not" and summoning sickness as sick or not, its abilities, counters
+	/// and keywords alike. None while anything is on the stack (a spell's targets single one out); never one in
+	/// combat, with a temporary effect on it (<see cref="Card.IsStatus"/>), metadata or children, something
+	/// attached, or a card in exile linked to it: each of those stands alone.
+	/// ponytail: the fingerprint is the record's own print with its collections listed - a new collection field on
+	/// Card must be blanked and listed here, or two permanents differing only there are grouped.
+	/// </summary>
+	static Dictionary<int, int> Twins(GameState s)
+	{
+		var twins = new Dictionary<int, int>();
+		if (!s.StackIsEmpty())
+			return twins;
+		var turn = s.GetGame().TurnNumber;
+		int Now(int stamp) => stamp == turn ? 1 : 0;
+		var players = new[] { s.Player1Id(), s.Player2Id() };
+		var cards = players.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield)).ToList();
+		var pointedAt = cards
+			.Select(c => c.AttachedToId)
+			.Concat(
+				players
+					.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
+					.SelectMany(c => c.Components)
+					.Select(x =>
+						x switch
+						{
+							ExiledBy e => e.SourceId,
+							ExiledUntilLeaves e => e.SourceId,
+							_ => 0,
+						}
+					)
+			)
+			.ToHashSet();
+		var first = new Dictionary<string, int>();
+		foreach (var c in cards)
+		{
+			if (
+				pointedAt.Contains(c.Id)
+				|| c.AttackingId != 0
+				|| c.BlockingId != 0
+				|| c.IsBlocked
+				|| !c.Metadata.IsEmpty
+				|| !c.Children.IsEmpty
+				|| c.Components.Any(Card.IsStatus)
+			)
+				continue;
+			var bare = c with
+			{
+				Id = 0,
+				Incarnation = 0,
+				EnteredOnTurn = Now(c.EnteredOnTurn),
+				ControlledSinceTurn = Turns.Combat.IsSummoningSick(s, c) ? 1 : 0,
+				AttackedOnTurn = Now(c.AttackedOnTurn),
+				LoyaltyActivatedOnTurn = Now(c.LoyaltyActivatedOnTurn),
+				OncePerTurnTriggeredOn = Now(c.OncePerTurnTriggeredOn),
+				ResolvedOnTurn = Now(c.ResolvedOnTurn),
+				ActivatedOncePerTurnOn = Now(c.ActivatedOncePerTurnOn),
+				PermissionUsedOn = Now(c.PermissionUsedOn),
+				Keywords = [],
+				Subtypes = [],
+				Colors = [],
+				Components = [],
+				Counters = ImmutableDictionary<string, int>.Empty,
+			};
+			var print = string.Join(
+				"\u0001",
+				bare,
+				string.Join(",", c.Keywords),
+				string.Join(",", c.Subtypes),
+				string.Join(",", c.Colors),
+				string.Join(",", c.Counters.OrderBy(k => k.Key, StringComparer.Ordinal)),
+				string.Join(";", c.Components)
+			);
+			twins[c.Id] = first.TryGetValue(print, out var id) ? id : first[print] = c.Id;
+		}
+		return twins;
+	}
+
+	/// <summary>
 	/// What makes two moves the SAME move: the card (a permanent by id, elsewhere any copy in the same
 	/// zone), X, targets, modes and what a cost takes. DistinctMoves groups by it, and the search AI
 	/// re-finds a planned move by it — anything that tells two legal moves apart must be in it, or a

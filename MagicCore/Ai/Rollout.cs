@@ -354,7 +354,7 @@ public static class Rollout
 			return null;
 		// never one that taps a creature: tapped in its own main phase, the blocker is gone for our turn - a
 		// real player pings at our end step, which the look-ahead doesn't play
-		var abilities = s.DistinctMoves(
+		var abilities = s.AiMoves(
 				[
 					.. s.SearchMoves()
 						.Where(a =>
@@ -462,7 +462,7 @@ public static class Rollout
 	{
 		if (!Priority.AtSorcerySpeed(s, who) || !HasUnusedWalker(s, who))
 			return null;
-		return s.DistinctMoves(s.LegalActions())
+		return s.AiMoves(s.LegalActions())
 			.OfType<ActivateLoyaltyAction>()
 			.MaxBy(a => WhatItDoes(s, a, who, settings));
 	}
@@ -510,7 +510,7 @@ public static class Rollout
 				);
 		if (!window)
 			return null;
-		var spells = s.DistinctMoves([.. s.SearchMoves().Where(Allowed(s, who, settings))])
+		var spells = s.AiMoves([.. s.SearchMoves().Where(Allowed(s, who, settings))])
 			.Where(a =>
 				a is CastSpellAction
 				|| (!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks) && IsManaPump(s, a))
@@ -631,7 +631,7 @@ public static class Rollout
 	{
 		if (!Priority.AtSorcerySpeed(s, me))
 			return null;
-		var moves = s.DistinctMoves(
+		var moves = s.AiMoves(
 			allowed is null ? s.SearchMoves() : [.. s.SearchMoves().Where(allowed)]
 		);
 		if (moves.OfType<PlayLandAction>().FirstOrDefault() is { } land)

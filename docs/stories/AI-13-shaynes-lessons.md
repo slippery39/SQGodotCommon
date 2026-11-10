@@ -107,6 +107,17 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       done): `CastGains` is FRA's alone (`FRA.castgains.json`, 35 cards, no TRK name; `--cast-gains` plays FRA's sealed
       decks), so in every TRK game a held instant or flash card falls back to its flat held price - `HoldOption` does
       nothing there. Needs TRK self-play decks for `--cast-gains` (`--match` has none either)
+      **BUILT (2026-11-09):** `CastGains` per set (`TableSets` FRA, TRK; `TRK.castgains.json`, merged by name as
+      `CardValues`); `--cast-gains [--set=TRK]` (every set without it) with a progress line. TRK: 400 games of its
+      sealed decks, 21 cards, 108 s - the first run hung on four Tribbles games (AI-18.2 groups the AI's moves; a game
+      also stops past 60 permanents). FRA's table unchanged. **What the table exposed:** a held option's turns left
+      were read in EVERY line the search compared, so a line that shortened the game also marked down its attacker's
+      held instants - with TRK's offers, the imagined Shayne at 4 life held his hasty 2/1 back and the AI raced into
+      the drain again (`AtFourLife_AgainstAVisibleDrain…` failed). `Evaluator.Terms.RootOptionTurns`
+      (`+liveoptionturns`): turns left read once, at the search's root (`WithRootImpulse`); the bar still falls decision
+      by decision, as agreed. The drain test gains it as a second control. Suite: 24 changed (21 without it): Koth held
+      back from an attack (seed 1 #60), a spell before the land (seed 3 #56), Prophesied End on Koth (Jace seed 3 #71),
+      Break Under Pressure moved from Jace seed 3 #85 to seed 4 #93; oracle 85.1% (85.4%). Not matched. Not accepted
 - [ ] AI-13.8 The option value for a flash creature's protective enters (Shayne's playtest, 2026-11-08:
       `2026-11-08_232615_seed2123881407` #145 and `232136` #216): Saru, Unthreatened cast in the MAIN phase - "almost
       never a reason, it has flash, and bricking an opponent's removal by giving one of yours hexproof is very valuable".

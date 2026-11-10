@@ -485,7 +485,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	{
 		if (s.GetPendingChoice() is not { } choice)
 		{
-			var moves = s.DistinctMoves(s.SearchMoves()).ToList();
+			var moves = s.AiMoves(s.SearchMoves()).ToList();
 			// a land is never worth passing on (Terms.LandDrop): the land first, then whatever else
 			if (!Evaluator.IsOff(Evaluator.Terms.LandDrop) && moves.Any(a => a is PlayLandAction))
 				moves.RemoveAll(a => a is PassPriorityAction);

@@ -1,4 +1,6 @@
 using MagicCore.Ai;
+using MagicCore.Cards;
+using MagicCore.Sets;
 
 namespace MagicCore.Tests.Ai;
 
@@ -53,6 +55,13 @@ public class CastGainsTests
 			Does.ContainKey("Unsummon"),
 			"run --cast-gains if the table is missing"
 		);
+		// every set's own table is in (AI-13.9: TRK's instants had no option value without one)
+		foreach (var set in CastGains.TableSets)
+			Assert.That(
+				CardDataSet.ResourceText(CastGains.TableFile(set)),
+				Is.Not.Null,
+				$"run --cast-gains --set={set}"
+			);
 		Assert.That(CastGains.Fra.Values.Select(q => q.Length), Has.All.EqualTo(20));
 		Assert.That(
 			CastGains.Fra.Values.All(q => q.Zip(q.Skip(1)).All(p => p.First <= p.Second)),

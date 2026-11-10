@@ -176,6 +176,12 @@ public class AiPositionTests
 			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
 
 		Assert.That(Chose(Evaluator.Terms.TheirAbilities), Does.EndWith("Attack You"), "control");
+		// AI-13.9: once TRK's instants had offers, options read per line made the imagined Shayne hold his 2/1 back
+		Assert.That(
+			Chose(Evaluator.Terms.RootOptionTurns),
+			Does.EndWith("Attack You"),
+			"control: options per line"
+		);
 		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
 	}
 

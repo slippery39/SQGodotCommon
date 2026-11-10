@@ -17,20 +17,33 @@ namespace MagicCore.Ai;
 /// </summary>
 public static class CastGains
 {
-	public const string TableFile = "FRA.castgains.json";
+	/// <summary>The sets with a tracked table, each measured on its own sealed decks (TRK: AI-13.9).</summary>
+	public static readonly string[] TableSets = ["FRA", "TRK"];
 
-	public static string TablePath => Path.Combine("MagicCore", "Sets", TableFile);
+	public static string TableFile(string set) => $"{set}.castgains.json";
 
-	/// <summary>Each card's offers as twenty quantiles, 2.5% to 97.5% — ascending, equally likely.</summary>
+	public static string TablePath(string set) => Path.Combine("MagicCore", "Sets", TableFile(set));
+
+	/// <summary>
+	/// Each card's offers as twenty quantiles, 2.5% to 97.5% — ascending, equally likely: every set's table by
+	/// card name, FRA first (as <see cref="CardValues.Fra"/>).
+	/// </summary>
 	public static IReadOnlyDictionary<string, double[]> Fra => fra.Value;
 
 	static readonly Lazy<IReadOnlyDictionary<string, double[]>> fra =
-		new(
-			() =>
-				CardDataSet.ResourceText(TableFile) is { } text
-					? JsonSerializer.Deserialize<Dictionary<string, double[]>>(text)!
-					: new Dictionary<string, double[]>()
-		);
+		new(() =>
+		{
+			var all = new Dictionary<string, double[]>();
+			foreach (var set in TableSets)
+				if (CardDataSet.ResourceText(TableFile(set)) is { } text)
+					foreach (
+						var (name, q) in JsonSerializer.Deserialize<Dictionary<string, double[]>>(
+							text
+						)!
+					)
+						all.TryAdd(name, q);
+			return all;
+		});
 
 	/// <summary>
 	/// The expected best of <paramref name="k"/> offers drawn from <paramref name="quantiles"/> (equally
@@ -47,11 +60,12 @@ public static class CastGains
 	}
 
 	/// <summary>
-	/// Self-play over the AI's sealed decks — pool i against pool 1000 + i, GreedyAi on both sides (fast,
-	/// and it casts as it goes) — each card's offers, as quantiles.
+	/// Self-play over the AI's sealed decks of <paramref name="set"/> — pool i against pool 1000 + i, GreedyAi on both
+	/// sides (fast, and it casts as it goes) — each card's offers, as quantiles.
 	/// </summary>
-	public static Dictionary<string, double[]> Measure(int games = 200)
+	public static Dictionary<string, double[]> Measure(string set, int games = 200)
 	{
+		var progress = new RunProgress($"cast-gains {set}", games);
 		var held = HeldValues.Fra(BeamSearchAi.Settings.HeldFraction);
 		var offers = new List<(string Card, double Offer)>[games];
 		// measured WITHOUT the option value: it's what this table prices, so with it on, each run would
@@ -63,7 +77,13 @@ public static class CastGains
 					0,
 					games,
 					new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-					g => offers[g] = Play(g + 1, held)
+					g =>
+					{
+						offers[g] = Play(set, g + 1, held);
+						progress.Tick(
+							() => $"{offers.Where(o => o is not null).Sum(o => o.Count)} offers"
+						);
+					}
 				)
 		);
 		return offers
@@ -86,12 +106,12 @@ public static class CastGains
 			);
 	}
 
-	static List<(string Card, double Offer)> Play(int seed, HeldValues held)
+	static List<(string Card, double Offer)> Play(string set, int seed, HeldValues held)
 	{
 		var decks = new[]
 		{
-			SealedBuilder.Opponent("FRA", seed),
-			SealedBuilder.Opponent("FRA", 1000 + seed),
+			SealedBuilder.Opponent(set, seed),
+			SealedBuilder.Opponent(set, 1000 + seed),
 		};
 		var s = MagicRules.NewGame(
 			decks[0].Main.Select(CardRegistry.Get),
@@ -105,7 +125,7 @@ public static class CastGains
 		// this turn's best offer per (player, held card); flushed as the turn ends
 		var turnOffers = new Dictionary<(int Player, string Card), double>();
 		var turn = s.GetGame().TurnNumber;
-		for (var step = 0; step < 5_000 && !s.IsOver(); step++)
+		for (var step = 0; step < 5_000 && !s.IsOver() && !Runaway(s, players); step++)
 		{
 			if (s.GetGame().TurnNumber != turn)
 			{
@@ -131,11 +151,21 @@ public static class CastGains
 		return found;
 	}
 
+	/// <summary>
+	/// A board past <see cref="MaxPermanents"/>: Troubling Tribbles doubling each upkeep (TRK seeds 43, 104, 226, 297)
+	/// make every move list ~n² and the game never ends. The game is scored to there.
+	/// ponytail: a cap, not a cure - the engine's own move list (LegalActions, ~0.8 s at 79 permanents) is AI-18's.
+	/// </summary>
+	static bool Runaway(GameState s, int[] players) =>
+		players.Sum(p => s.CardsIn(p, ZoneType.Battlefield).Count()) > MaxPermanents;
+
+	public const int MaxPermanents = 60;
+
 	/// <summary>What casting each instant-speed card in <paramref name="who"/>'s hand could gain right now, its best target.</summary>
 	static IEnumerable<(string Card, double Gain)> Offers(GameState s, int who, HeldValues held)
 	{
 		var before = Evaluator.Evaluate(s, who, held);
-		return s.DistinctMoves(s.LegalActions())
+		return s.AiMoves(s.LegalActions())
 			.OfType<CastSpellAction>()
 			.Select(c => (Card: s.GetCard(c.CardId), Cast: c))
 			.Where(x => s.IsIn(x.Card.Id, who, ZoneType.Hand) && Priority.AtInstantSpeed(s, x.Card))

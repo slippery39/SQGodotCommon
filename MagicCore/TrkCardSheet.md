@@ -401,7 +401,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > One or two target creatures you control each deal damage equal to their power to target creature an opponent controls.
 
-**Status:** scripted · **tests naming it:** TrkBatch4Tests
+**Status:** scripted · **tests naming it:** TrkBatch2Tests, TrkBatch4Tests
 
 **Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DamageFrom` — "[A] deals damage equal to its power (or loyalty) to [B]" - the source is A, not the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

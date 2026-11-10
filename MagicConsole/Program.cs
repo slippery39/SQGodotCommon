@@ -456,16 +456,32 @@ if (flags.Contains("--draft"))
 	return;
 }
 
-// --cast-gains [--games=N]: each instant-speed card's offers in self-play, the tracked table AI-13's
-// option value reads (run from the solution root).
+// --cast-gains [--games=N] [--set=TRK]: each instant-speed card's offers in self-play, the tracked tables AI-13's
+// option value reads, one per set (all of them without --set; run from the solution root).
 if (flags.Contains("--cast-gains"))
 {
-	var clock = System.Diagnostics.Stopwatch.StartNew();
-	var table = MagicCore.Ai.CastGains.Measure(Arg("games") ?? 200);
-	File.WriteAllText(MagicCore.Ai.CastGains.TablePath, MagicCore.Ai.CastGains.ToJson(table));
-	Console.WriteLine(
-		$"{MagicCore.Ai.CastGains.TablePath}: {table.Count} cards, {clock.Elapsed.TotalSeconds:0} s"
-	);
+	if (
+		args.Any(a => a.StartsWith("--set="))
+		&& !MagicCore.Ai.CastGains.TableSets.Contains(limitedSet)
+	)
+	{
+		Console.WriteLine(
+			$"{limitedSet} has no cast-gains table: add it to CastGains.TableSets first"
+		);
+		return;
+	}
+	foreach (
+		var set in args.Any(a => a.StartsWith("--set="))
+			? [limitedSet]
+			: MagicCore.Ai.CastGains.TableSets
+	)
+	{
+		var clock = System.Diagnostics.Stopwatch.StartNew();
+		var table = MagicCore.Ai.CastGains.Measure(set, Arg("games") ?? 200);
+		var path = MagicCore.Ai.CastGains.TablePath(set);
+		File.WriteAllText(path, MagicCore.Ai.CastGains.ToJson(table));
+		Console.WriteLine($"{path}: {table.Count} cards, {clock.Elapsed.TotalSeconds:0} s");
+	}
 	return;
 }
 

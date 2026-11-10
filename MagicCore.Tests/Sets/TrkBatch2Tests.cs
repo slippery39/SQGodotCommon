@@ -166,6 +166,29 @@ public class TrkBatch2Tests : FraBoardTest
 		);
 	}
 
+	// AI-18 (Shayne, 2026-11-07: "identify and group permanents that are exactly the same"): Common Goal over 64
+	// Troubling Tribbles was 14 910 casts and hung the TRK cast-gains run. the AI is offered one per kind of
+	// permanent (AiMoves); DistinctMoves and LegalActions stay complete. A damaged Bear is not the same Bear - it stands alone.
+	[TestCase(false)]
+	[TestCase(true)]
+	public void AiMoves_GroupsPermanentsThatAreExactlyTheSame(bool oneDamaged)
+	{
+		var goal = Hand(Trk("Common Goal"), me);
+		var bears = Enumerable.Range(0, 12).Select(_ => Field(Bear, me)).ToList();
+		Field(TestGames.Creature("Ogre", "3/3"), them);
+		if (oneDamaged)
+			s = s.UpdateObject(bears[0], s.GetCard(bears[0]) with { Damage = 1 }); // TEST SETUP
+
+		var all = Casts(goal).Count();
+		var distinct = s.AiMoves(s.LegalActions())
+			.OfType<CastSpellAction>()
+			.Count(a => a.CardId == goal);
+
+		Assert.That(all, Is.GreaterThan(MagicRules.TwinsFrom), "a list long enough to group");
+		// a Bear alone or two Bears: 2 casts; with the damaged one (D) too - D, a Bear, D and a Bear, two Bears: 4
+		Assert.That(distinct, Is.EqualTo(oneDamaged ? 4 : 2));
+	}
+
 	[Test]
 	public void Station_TheAiValuesProgressTowardItsThreshold()
 	{

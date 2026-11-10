@@ -1,7 +1,7 @@
 ---
 id: AI-18
 title: Tap choices without ballooning moves
-status: backlog
+status: in-progress
 area: AI
 created: 2026-11-05
 ---
@@ -41,6 +41,20 @@ Open questions:
 ## Tasks
 
 - [ ] AI-18.1 Measure the moves tap costs add, and their cost to the search, on TRK self-play
+- [x] AI-18.2 The AI's moves group identical permanents (2026-11-09, found as AI-13.9's TRK cast-gains run hung:
+      seed 43, Common Goal over 64 Troubling Tribbles = 14 910 casts, GreedyAi settling each): `MagicRules.AiMoves` -
+      `DistinctMoves`, and past `TwinsFrom` (64) moves one per KIND of permanent (`Twins`: every field the same once a
+      turn stamp is "this turn or not" and summoning sickness sick or not; never one with a status component, metadata
+      or something attached). The search, GreedyAi, the rollout and cast-gains call it; `DistinctMoves` is unchanged -
+      records index into it (`MoveTokens`), and grouping it first made `EveryKeptRecord_StillReplays` stale. The review:
+      `MoveKey` left exactly as it was (a grouped move's key is the key of the move with its ids read as stand-ins,
+      `AsTwins`); nothing is grouped while the stack holds anything (a spell's targets single a permanent out), nor a
+      creature in combat, one with children, or one a card in exile is linked to; the twins cached per state. Left:
+      `--compare` ranks a human's pick of a twin the search didn't keep as unranked (only past 64 moves). Seed 43's
+      turn 27: 14 916 moves -> 287, the decision 1.6 s (was > 20 s). Test `AiMoves_GroupsPermanentsThatAreExactlyTheSame`
+      (a damaged Bear stands alone). Suite unchanged by it. **Not fixed:** the engine's own list - `LegalActions` still
+      enumerates every combination (780 ms at 79 permanents, ~n² per target pair), which `RandomPlay_EveryScriptedCard(21)`
+      plays directly (still skipped), and the cast-gains run caps a game at 60 permanents (`CastGains.MaxPermanents`)
 
 ## Next
 
@@ -48,6 +62,8 @@ Read `MagicRules.TapSets` and `Taps` (MoveKey), `ActivateAbilityAction.TapIds`, 
 (`Effects/AdditionalCosts.cs`) and the table's `Targeting.Narrow`. Measure before choosing (AI-18.1).
 
 ## Log
+
+- 2026-11-09: AI-18.2 — the AI's moves group identical permanents (`AiMoves`); the engine's list is still whole.
 
 - 2026-11-05: created — Shayne, answering batch 5b's "how are the N chosen".
 - 2026-11-07: Shayne chose grouping identical permanents (MC-5.6 batch 3b's seed 21, skipped until then).

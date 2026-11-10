@@ -104,6 +104,12 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirAbilities,
 				},
+			// A held option's turns left read in each line, not at the root, before AI-13.9: beam+liveoptionturns.
+			["liveoptionturns"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.RootOptionTurns,
+				},
 			// The next attack's clock reads this turn's grants (can't block, flying) as lasting, before AI-17.9: beam+thisturngrants.
 			["thisturngrants"] = o =>
 				o with

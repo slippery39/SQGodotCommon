@@ -26,18 +26,30 @@ public static partial class Evaluator
 
 	static readonly AsyncLocal<HashSet<int>?> rootImpulse = new();
 
-	/// <summary><paramref name="work"/> with the cards exiled "you may play" at <paramref name="root"/> remembered as real.</summary>
+	static readonly AsyncLocal<Dictionary<int, int>?> rootOptionTurns = new();
+
+	/// <summary>
+	/// <paramref name="work"/> with the cards exiled "you may play" at <paramref name="root"/> remembered as real, and each
+	/// player's <see cref="OptionTurns"/> read there (<see cref="Terms.RootOptionTurns"/>).
+	/// </summary>
 	public static T WithRootImpulse<T>(GameState root, Func<T> work)
 	{
-		var outer = rootImpulse.Value;
+		var (outer, outerTurns) = (rootImpulse.Value, rootOptionTurns.Value);
 		rootImpulse.Value = [.. ImpulseCards(root, -1).Select(c => c.Id)];
+		rootOptionTurns.Value =
+			IsOff(Terms.RootOptionTurns) || IsOff(Terms.HoldOption)
+				? null
+				: new[] { root.Player1Id(), root.Player2Id() }.ToDictionary(
+					p => p,
+					p => LiveOptionTurns(root, p)
+				);
 		try
 		{
 			return work();
 		}
 		finally
 		{
-			rootImpulse.Value = outer;
+			(rootImpulse.Value, rootOptionTurns.Value) = (outer, outerTurns);
 		}
 	}
 
@@ -364,6 +376,15 @@ public static partial class Evaluator
 		ManaShort = 16777216,
 
 		/// <summary>
+		/// A held option's turns left (<see cref="OptionTurns"/>) are read at the search's root, not in each line it
+		/// compares (AI-13.9): read per line, any line that shortened the game - an attack - also marked down its
+		/// attacker's held instants, so the simulated Shayne at 4 life would not swing his hasty 2/1 at the AI on 4
+		/// (`PatrolRacesIntoDrain`, once TRK's instants had offers). The bar still falls as the game shortens, decision
+		/// by decision (`+liveoptionturns`).
+		/// </summary>
+		RootOptionTurns = 134217728,
+
+		/// <summary>
 		/// The look-ahead's, beside the evaluator: the simulated opponent uses a mana-costed ability of its own permanents
 		/// in its own turn when it beats passing (<see cref="Rollout"/>'s TheirAbility, AI-17.22) - without it a visible
 		/// "each opponent loses 2 life" never fired, and the AI raced at 4 into it (`+notheirabilities`).
@@ -407,7 +428,14 @@ public static partial class Evaluator
 	/// clocks (<see cref="TurnsToKill"/>), 1 to <see cref="MaxOptionTurns"/>.
 	/// ponytail: the clocks of the board as it stands; a game's real length moves with every play.
 	/// </summary>
-	public static int OptionTurns(GameState s, int player)
+	public static int OptionTurns(GameState s, int player) =>
+		!IsOff(Terms.RootOptionTurns)
+		&& rootOptionTurns.Value is { } root
+		&& root.TryGetValue(player, out var turns)
+			? turns
+			: LiveOptionTurns(s, player);
+
+	static int LiveOptionTurns(GameState s, int player)
 	{
 		var opponent = s.OpponentOf(player);
 		var left = Math.Min(TurnsToKill(s, opponent, player), TurnsToKill(s, player, opponent));
