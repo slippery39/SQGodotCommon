@@ -103,6 +103,21 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       (`+nolanddrop`): `BeamSearchAi.Children` drops Pass while a land play is legal. Kept `AiSkipsLandDrop`, test
       `WithALandToPlay_TheSearchPlaysIt_NotPass`, control included. Suite 19 changed (was 17), cost per position
       -10% (8 024 steps), oracle 84.7% unchanged; 1529 tests. Match not run. Not yet committed
+- [ ] AI-13.10 Option pricing step 1 (Shayne, 2026-11-09, after Claude's three-step proposal: "lets begin with step 1
+      and leave 2 and 3 for later"; steps 2 desperation and 3 our deck are later): every card with a target held as an
+      option, not only instants. **TRIED AND REVERTED (2026-11-09, patch kept in the session scratchpad):**
+      `CastGains.IsOption` (instant speed, or a spell's/mode's target, an Aura, an enters-trigger target), offers in a
+      sorcery-speed card's own turns only, `Terms.TargetedOptions` (`+instantoptions`); tables regenerated (FRA 35 -> 60
+      cards, 186 s; TRK 21 -> 58, 249 s; TRK's 21 instants identical, so the measurement itself held). Suite, against
+      24 changed / 85.1% / 0.94 given up: all targeted cards 36 / 80.2% / 1.54, and the AI PASSES where it acted (Jace's
+      -3, Way of the Wildspeaker's control); spells only (no permanents) 32 / 81.6% / 1.22, Wildspeaker still fails.
+      **Why (Claude):** holding an instant costs nothing - it is cast in their turn - but holding a sorcery-speed card
+      costs a turn of tempo, a creature most; measured offers do not charge it, so held it is priced at the best of its
+      next few chances and the AI waits for a top-quartile turn instead of developing (Shayne's B4: "a clunky hand that
+      can very easily lose to tempo"). **Found beside it: FRA's instant table is stale** - regenerated on today's AI
+      alone (step 1 off) the suite moves 24 -> 30, 83.0%, 1.30 given up, and two agreed positions break
+      (`AJaceToken_DrawsWithItsMinusThree…`, `Surveil_BinsTheCheapSpell…(False)`). Next is Shayne's call: a tempo cost on
+      holding (before step 1 is retried), and/or why the fresh FRA table breaks those two
 - [ ] AI-13.9 The option value for STAR TREK's instants (found 2026-11-09, Shayne asking whether "spells are options" is
       done): `CastGains` is FRA's alone (`FRA.castgains.json`, 35 cards, no TRK name; `--cast-gains` plays FRA's sealed
       decks), so in every TRK game a held instant or flash card falls back to its flat held price - `HoldOption` does

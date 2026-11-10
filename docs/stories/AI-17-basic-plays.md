@@ -186,7 +186,8 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   3/3 lethal): "bounce it … there is no extra potential value to be gained by holding". B4 (a sorcery kill spell, their
   only creature a 3/3, we at 20): "Depends on our hand and deck … somehting we might needd to discuss." Desperate means
   "if we are in danger of losing, or if something happening might put us in a lot more danger of losing … when we are
-  close to losing unless we play a card." Not answered yet: burning their face in a race we lose anyway.
+  close to losing unless we play a card." Burning their face in a race we lose anyway (asked after the rule was built):
+  **"Holding is fine if we are losing."** - the rule as built.
 
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
