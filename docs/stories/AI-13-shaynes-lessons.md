@@ -127,6 +127,16 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       through the stale FRA instant table: with no option prices at all (`+nooption`) the committed AI passes too.
       So the defect is future value counted when there is no future - Jace's banked loyalty, a held option - which is
       step 2 (desperation): cap those at the turns we have left
+      **Then measured (2026-11-09, Shayne: "the AI should recognize the value of getting a free draw automatically, and
+      not keep it for later because the card we are drawing off of it is not what we want"):** in a CALM hand-built
+      position (a Jace token at 6, empty hands, life 20 each) the committed AI draws in 24 of 30 shuffles, surveils
+      with -1 in 6, never passes - it already values the free draw. Two pricing changes were tried and reverted: a card
+      drawn in the search priced as our library's average (13 of 30 draws, 13 passes - worse: the walker's future draws
+      stay priced as a generic card, so banking loyalty looked dearer) and a walker's lifetime capped at the turns we
+      survive (suite position 13 -> 19 of 30, no fix). A "never skip a free draw" move filter was started and removed -
+      Shayne: "I never meant to add a never skip a free draw rule". So the suite position's Pass is the LOST position's
+      noise (every line ~ -8 595, 0.3 apart), not a mispriced draw; `AJaceToken_DrawsWithItsMinusThree…` pins a choice
+      among dead lines and needs a position that is not lost
 - [ ] AI-13.9 The option value for STAR TREK's instants (found 2026-11-09, Shayne asking whether "spells are options" is
       done): `CastGains` is FRA's alone (`FRA.castgains.json`, 35 cards, no TRK name; `--cast-gains` plays FRA's sealed
       decks), so in every TRK game a held instant or flash card falls back to its flat held price - `HoldOption` does
