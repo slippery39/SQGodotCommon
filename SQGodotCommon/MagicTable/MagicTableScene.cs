@@ -74,6 +74,10 @@ public partial class MagicTableScene : Control
 	private IReadOnlySet<int> _pays = new HashSet<int>();
 	private readonly VBoxContainer _stack = new();
 	private readonly VBoxContainer _buttons = new();
+	private readonly ScrollContainer _buttonsScroll;
+
+	/// <summary>The most room the action column's buttons take before they scroll (a long list of plays or picks).</summary>
+	private const float MaxButtonsHeight = 520;
 
 	// The developer controls, folded away (TBL-4.2): undo, sandbox, full control, the AI's pace.
 	private readonly MenuButton _tools =
@@ -147,6 +151,8 @@ public partial class MagicTableScene : Control
 	private readonly List<int> _picked = new(); // a multi board choice's picks so far
 	private HashSet<int> _onTable = new(); // what can be clicked where it is, this redraw
 	private CombatDeclaration? _combat; // your attacks or blocks, clicked on the table before submitting
+
+	public MagicTableScene() => _buttonsScroll = Scrolling(_buttons, SizeFlags.Fill);
 
 	public override void _Ready()
 	{
@@ -501,6 +507,10 @@ public partial class MagicTableScene : Control
 
 		ShowStack(s, id => GlowOf(id, null));
 		ShowButtons(s, moves);
+		_buttonsScroll.CustomMinimumSize = new Vector2(
+			0,
+			Mathf.Min(_buttons.GetCombinedMinimumSize().Y, MaxButtonsHeight)
+		);
 		var tools = _tools.GetPopup();
 		tools.SetItemChecked(tools.GetItemIndex((int)Tool.FullControl), _m.Stops.FullControl);
 		tools.SetItemChecked(tools.GetItemIndex((int)Tool.Pause), _paused);
@@ -702,7 +712,9 @@ public partial class MagicTableScene : Control
 	)
 	{
 		CardViews.Clear(row);
-		row.CustomMinimumSize = new Vector2(0, _rowHeight); // fixed by the screen: rows that follow the scale bounce (TBL-2.18)
+		// fixed by the screen: rows that follow the scale bounce (TBL-2.18); a row that still overflows
+		// scrolls inside it, never pushing the hand off the screen (TBL-2.19)
+		((Control)row.GetParent()).CustomMinimumSize = new Vector2(0, _rowHeight);
 		var onSomething = attached.SelectMany(g => g).Select(a => a.Id).ToHashSet();
 		// Combat, MTGO's way (TBL-4.3): each attacker and the creatures blocking it take the same column
 		// in the two rows, which face each other across the phase bar — so who blocks whom reads at a
@@ -1139,7 +1151,7 @@ public partial class MagicTableScene : Control
 		right.AddChild(Plate(_header));
 		right.AddChild(Plate(_stack));
 		right.AddChild(Plate(_status));
-		right.AddChild(_buttons);
+		right.AddChild(_buttonsScroll);
 		_log.AddThemeFontSizeOverride("normal_font_size", TextSize - 2);
 		_tools.AddThemeFontSizeOverride("font_size", TextSize);
 		MtgUiStyles.StyleChoice(_tools, selected: false);
@@ -1168,12 +1180,12 @@ public partial class MagicTableScene : Control
 	/// <summary>
 	/// The permanents' size (TBL-4.2: a few cards sat small in an empty centre): as big as a half of
 	/// the board holds two rows, at most 1.5×, and never so wide that the fullest row would wrap —
-	/// counted as if every card were tapped (sideways), every land its own. The room comes from the
+	/// counted as if every card were tapped (sideways). The room comes from the
 	/// SCREEN, never from the board's own size, which grows with its cards (that fed back: the cards
-	/// grew until the hand left the screen). ponytail: attachments under a card are not counted; a
-	/// host with several could overflow its half.
+	/// grew until the hand left the screen). Counted as the rows are built: a land stack is one card, a
+	/// combat's columns are in both creature rows, and attachments stack under their host (TBL-2.19).
 	/// </summary>
-	/// <summary>Down to here a crowded board shrinks its cards (TBL-2.10: 10+ creatures wrapped the row and pushed the hand off the screen); past it the row wraps.</summary>
+	/// <summary>Down to here a crowded board shrinks its cards (TBL-2.10: 10+ creatures wrapped the row and pushed the hand off the screen); past it the row scrolls.</summary>
 	private const float MinBoardScale = 0.5f;
 
 	/// <summary>Every permanent row's height: a half of the board's room, from the screen alone, so rows never move as cards come and go.</summary>
@@ -1186,14 +1198,32 @@ public partial class MagicTableScene : Control
 		var h =
 			(screen.Y - _phases.GetCombinedMinimumSize().Y - (CardViews.HandSize.Y + 12) - 12) / 2
 			- 12; // per half: two rows, less the margins and the gap between them
+		// In combat a creature row also holds a column for each of the OTHER side's attackers, as wide as its
+		// blockers (TBL-4.3) — counted here, or the row wraps (TBL-2.19).
+		var combatants = _columns.SelectMany(g => g.Blockers.Append(g.Attacker)).ToHashSet();
+		var columns = _columns.Sum(g => Math.Max(1, g.Blockers.Count));
 		var fullest = new[] { _m.HumanId, _m.OpponentId }
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield).GroupBy(c => c.Is(CardType.Land)))
-			.Select(g => g.Count())
+			.Select(g =>
+				g.Key
+					? g.Select(c => CardViews.Looks(s, c)).Distinct().Count() // identical lands stack (Fill); a glow may split one
+					: columns + g.Count(c => !combatants.Contains(c.Id))
+			)
 			.DefaultIfEmpty(1)
+			.Max();
+		// Auras and Equipment stack under their host's card, at their own height — an Aura on an Equipment
+		// too, so count them by the card at the bottom of the chain (TBL-2.19).
+		Card Root(Card c) => Attachments.HostOf(s, c) is { } host ? Root(host) : c;
+		var strips = new[] { _m.HumanId, _m.OpponentId }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+			.Where(c => Attachments.HostOf(s, c) is not null)
+			.GroupBy(c => Root(c).Id)
+			.Select(g => g.Count())
+			.DefaultIfEmpty(0)
 			.Max();
 		var size = CardViews.PermanentSize;
 		_rowHeight = h / 2;
-		var byHeight = h / 2 / size.Y;
+		var byHeight = (h / 2 - strips * CardViews.AttachmentHeight) / size.Y;
 		var byWidth = w / (fullest * (size.Y + 6));
 		return Mathf.Clamp(Mathf.Min(byHeight, byWidth), MinBoardScale, 1.5f);
 	}
@@ -1203,9 +1233,27 @@ public partial class MagicTableScene : Control
 		var column = new VBoxContainer();
 		column.AddThemeConstantOverride("separation", 4);
 		foreach (var row in rows)
-			column.AddChild(row);
+			column.AddChild(Scrolling(row, row.SizeFlagsVertical));
 		board.AddChild(column);
 		return board;
+	}
+
+	/// <summary>
+	/// A ScrollContainer reports no height of its own content, so whatever grows inside one — a row past
+	/// MinBoardScale, a long list of buttons — scrolls there instead of growing the table off the screen
+	/// (TBL-2.19: a combat's columns wrapped a row, and two Equipment under one creature, and the hand left).
+	/// </summary>
+	private static ScrollContainer Scrolling(Control content, SizeFlags vertical)
+	{
+		var scroll = new ScrollContainer
+		{
+			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			SizeFlagsVertical = vertical,
+			MouseFilter = MouseFilterEnum.Pass, // as the rows were: a Stop here would block the hand's card picking
+		};
+		content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		scroll.AddChild(content);
+		return scroll;
 	}
 
 	private static VBoxContainer Column(int width)
@@ -1223,7 +1271,7 @@ public partial class MagicTableScene : Control
 		return plate;
 	}
 
-	// ponytail: rows still wrap (HFlow) past ~20 permanents on a side, below MinBoardScale; scroll or
+	// ponytail: past ~20 permanents on a side (below MinBoardScale) a row wraps and scrolls in its place;
 	// stack identical permanents if a real board ever gets there.
 	private static HFlowContainer Row()
 	{

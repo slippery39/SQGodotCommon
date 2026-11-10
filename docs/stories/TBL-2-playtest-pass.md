@@ -124,6 +124,23 @@ is a bug report, never about the look.
       Cause (logged each frame over an AI-vs-AI game): row heights followed the card SCALE - lands rows 192 -> 94 px,
       creature rows 192 -> 290 as permanents arrived, so the lands row moved ~100 px. Now every row's height is fixed
       from the screen (`_rowHeight`) and the cards scale inside it; the same game moves no row. Not pinned by a test (Godot layout)
+- [x] TBL-2.19 The UI grew taller again and the bottom went off the screen (Shayne, 2026-11-10: "fixed before but
+      didn't hit everything"). TBL-2.5 (deck select), TBL-2.10 and TBL-2.18 (the table's rows) each fixed one cause.
+      Find the screen and what grows (a capture series over a game, both 1920x1080 and 1280x720), fix the cause,
+      and check every MagicTable screen at both sizes, not just the one reported
+      The TABLE, window maximised, size not known (Shayne, 2026-11-10)
+      Cause (a log of the laid-out table's height, over the final position of all 131 of his records and AI-vs-AI
+      games): two of his 2026-11-10 games overflowed, by TWO causes the scale didn't count. (1) In combat a
+      creature row also holds a column for each of the OTHER side's attackers (TBL-4.3): seed 1360788293, turn 10,
+      three attackers + the AI's four permanents = seven slots where the scale allowed four; the row wrapped
+      (386 px in a 192 row), table 1272 of 1080. (2) Two Equipment under one creature (seed 166540, turn 28,
+      Bat'leth and a Type-2 Phaser): 206 in 192. Fixed in `BoardScale`: it counts the combat's columns, the
+      attachment strips under a host (`CardViews.AttachmentHeight`), and a land STACK as one card (it counted every
+      land, so ten lands in three stacks shrank the board by half). And a backstop: every permanent row and the
+      action column's buttons sit in a `ScrollContainer`, which reports no height of its content, so whatever still
+      doesn't fit scrolls in place. After: no record overflows and no row scrolls. Window size is NOT a cause:
+      `canvas_items` keeps the 1920x1080 design and letterboxes (his maximised window is ~1920x1001). Captured
+      both positions after; real input through the new scroll rows: a hand click, a hand drag, a board land tapped
 
 ## Next
 
@@ -161,5 +178,6 @@ for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause 
   `Records/DuelistWontTrade.json`; TBL-5.7 resumed it.
 - 2026-10-23: Shayne's sealed game — the deck select off the screen (TBL-2.5), a prepared copy's
   wrong art (TBL-2.6), the prepared copy in the hand confusing (TBL-2.7). Status → in-progress.
+- 2026-11-10: TBL-2.19 — the table off the screen again: two uncounted causes (combat columns, Equipment), fixed with a scroll backstop.
 - 2026-10-23: Shayne decided TBL-2.7 — the prepared copy on its creature, for now; built and
   captured the same day.

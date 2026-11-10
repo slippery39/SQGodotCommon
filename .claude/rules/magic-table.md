@@ -129,3 +129,7 @@ MagicTable/
   **Nor does a row's HEIGHT follow the scale** (`_rowHeight`, fixed by the screen): rows sized to the scale
   bounced ~100 px as permanents came and went (TBL-2.18). Combat's columns come from `_columns`, the declaration,
   not from who is still on the board (TBL-2.17).
+- **`BoardScale` counts a row as `Fill` BUILDS it** (TBL-2.19): a combat's columns are in BOTH creature rows, a
+  land stack is one card, attachment strips stack under their host. Change what a row holds, change the count.
+  Behind it, each permanent row and the action buttons sit in a `ScrollContainer` (`Scrolling`): what still
+  doesn't fit scrolls in place, and the table never grows off the screen.

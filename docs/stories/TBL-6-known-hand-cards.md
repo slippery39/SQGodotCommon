@@ -1,7 +1,7 @@
 ---
 id: TBL-6
 title: Known cards in the opponent's hand show face up on the table
-status: backlog
+status: ready
 area: TBL
 created: 2026-10-31
 ---
@@ -24,8 +24,8 @@ no front end shows it — V'Ger's look goes to the game log for now (MC-5 Decisi
 
 ## Decisions
 
-Open questions:
-- Mark a known card as known (a badge), or only face up?
+- 2026-11-10, Claude (Shayne: decide what can reasonably be decided; open to change): face up AND a small eye
+  badge (hover: "Known to you"), so a face-up card in their hand can't be mistaken for one in yours.
 
 ## Tasks
 

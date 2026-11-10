@@ -37,17 +37,18 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 7. **MC-4** — MTGA's powered cube: surveyed, then built in batches
 8. **AI-13** — Shayne's lessons as general rules for the search, each measured
 9. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-10. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
-11. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-12. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-13. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-14. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
-15. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-16. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-17. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-18. **AI-4** — strategic plans above single actions
-19. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-20. **AI-12** — a card's threat over time, on an empty board and a busy one
+10. **LIM-5**, **LIM-4**, **TBL-9**, **TBL-6**, **TBL-7** — the overnight UI list (2026-11-10; its order in the sprint file)
+11. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
+12. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
+13. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+14. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+15. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
+16. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+17. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+18. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+19. **AI-4** — strategic plans above single actions
+20. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+21. **AI-12** — a card's threat over time, on an empty board and a busy one
 
 ## How it works
 
@@ -109,8 +110,13 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
+| [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | ready |
+| [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
+| [TBL-6](TBL-6-known-hand-cards.md) | Known cards in the opponent's hand show face up on the table | ready |
+| [TBL-7](TBL-7-illegal-attack-refused.md) | The table refuses an attack the rules forbid, instead of dropping the creature | ready |
+| [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-11](AI-11-learn-from-shaynes-games.md) | Learn from Shayne's games — settle where he and the oracle differ, keep what he got right | backlog |
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
@@ -121,12 +127,8 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | backlog |
 | [DEV-5](DEV-5-batch-check-script.md) | One script for a card batch's end-of-batch checks, one summary out | backlog |
-| [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | backlog |
 | [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | backlog |
 | [MC-7](MC-7-combat-damage-assignment.md) | The attacker assigns combat damage among its blockers | backlog |
-| [TBL-6](TBL-6-known-hand-cards.md) | Known cards in the opponent's hand show face up on the table | backlog |
-| [TBL-7](TBL-7-illegal-attack-refused.md) | The table refuses an attack the rules forbid, instead of dropping the creature | backlog |
-| [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner and reordering a surveil | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | done |
@@ -147,5 +149,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-5](TBL-5-game-records.md) | Game records — export a played game, replay it, compare its choices with the AI's | done |
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 
-Next free id per area: AI-21 · DATA-3 · DEV-6 · LIM-5 · MC-8 · TBL-10
+Next free id per area: AI-21 · DATA-3 · DEV-6 · LIM-6 · MC-8 · TBL-10
 <!-- stories:end -->

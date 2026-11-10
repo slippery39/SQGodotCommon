@@ -32,6 +32,9 @@ public enum Glow
 public static class CardViews
 {
 	public static readonly Vector2 PermanentSize = new(126, 168);
+
+	/// <summary>An Attachment strip under its host — a 44 px thumb (32 tall), 6 px margins — and the 2 px gap above it, rounded up. Unscaled.</summary>
+	public const float AttachmentHeight = 48;
 	public static readonly Vector2 HandSize = new(144, 200);
 
 	/// <param name="scale">Bigger when the board has room (TBL-4.2); the text keeps its size.</param>

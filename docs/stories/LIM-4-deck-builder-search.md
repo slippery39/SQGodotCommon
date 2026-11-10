@@ -1,7 +1,7 @@
 ---
 id: LIM-4
 title: Deck builder search: find cards by name and keyword
-status: backlog
+status: ready
 area: LIM
 created: 2026-11-09
 ---

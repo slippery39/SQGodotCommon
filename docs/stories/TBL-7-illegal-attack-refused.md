@@ -1,7 +1,7 @@
 ---
 id: TBL-7
 title: The table refuses an attack the rules forbid, instead of dropping the creature
-status: backlog
+status: ready
 area: TBL
 created: 2026-11-01
 ---
@@ -24,8 +24,8 @@ won't let you submit it.
 
 ## Decisions
 
-Open questions:
-- Refuse at submit (a message), or grey out the "attack" button until another creature attacks?
+- 2026-11-10, Claude (open to change): refuse at submit, with the reason shown ("Pet Sehlat can't attack
+  alone"), as Arena does — the declaration stays open to fix.
 
 ## Tasks
 

@@ -260,6 +260,10 @@ Traps, each paid for once on the KIN branch:
   the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1 (`--tap=X,Y@F~N` holds it N frames — a long press; `--tap=X,Y@F~N>X2,Y2` drags to X2,Y2), and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N`, `--ai-vs-ai`, `--resume=FILE` (a game record replayed onto the table, Undo then steps back — pass each game arg as its own string: `-GameArgs '--resume=…','--greedy'`) and `--resume-at=N` (only its first N moves: stop on a position, e.g. to capture a blocked attack), `--greedy` (GreedyAi instead of the search; the deck select's checkbox — makes `--autoplay` fast) and `--put=Name:Zone` (repeatable; the sandbox into your seat — `"--put=Hunter's Axe:Battlefield"`). Its entry screen is `MagicTable/DeckSelectScene.tscn`; the flags override what it chose. The Sealed and Draft screens open the deck select's set (its Set button; `--set=TRK` starts on TRK — MC-5.4). The Sealed screen (`MagicTable/SealedScene.tscn`) takes `--seed=N` for its pool, or `--pool=FILE` (an Arena pool export, as if pasted). The Draft screen (`MagicTable/DraftScene.tscn`) takes `--seed=N`, and `--autopick` (the first card of every pack, straight to the deck building). Add more when a screen needs them, and send REAL input
   events through the viewport rather than calling the handler, or the capture "verifies" something
   no player can do.
+- **Every MagicTable run WRITES a game record** to `game_records/` (Shayne's games live there) — a
+  `--resume` writes the resumed game as a new file, an `--ai-vs-ai` or `--autoplay` its own. A check run over
+  the records (TBL-2.19 resumed 229) doubles the folder: move what the run wrote back out afterwards
+  (`find game_records -newermt "<start time>"`).
 
 To find the frames where something animates, diff against a settled one instead of guessing timing:
 
