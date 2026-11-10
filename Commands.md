@@ -184,7 +184,8 @@ dotnet run -c Release --project MagicConsole -- --interim-ratings=trk
 # DATA-2: each card's games-in-hand win rate in AI-vs-AI sealed games -> sim_results/sim_ratings_<set>_<ai>.json
 # (greedy ~590 games/min on 16 cores; beam ~20). --write makes it MagicCore/Sets/<SET>.ratings.json. Check it on FRA
 # against 17lands before trusting it for a set (docs/findings/limited.md): greedy's ranked FRA worse than the interim table.
-dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000] [--ai=greedy|beam] [--first-seed=N] [--write]
+dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000] [--ai=greedy|beam] [--first-seed=N] [--built-on=FILE;FILE] [--write]
+# --built-on: a ROUND 2 - the decks built on a first round's ratings (its chunk files, summed) -> ..._round2.json
 # a beam run is ~10 games/min on 16 cores: run it in chunks of seeds (--first-seed, --games=500), each its own file —
 # a background task is stopped at 2 hours and a run cut off writes NOTHING (it cost two beam runs, 2026-11-07)
 

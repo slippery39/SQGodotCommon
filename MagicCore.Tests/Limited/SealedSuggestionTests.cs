@@ -157,6 +157,32 @@ public class SealedSuggestionTests
 		}
 	}
 
+	// It was one at random, so half of TRK's opponents played a greedy three-colour build (Shayne, 2026-11-10).
+	[Test]
+	public void AnOpponent_GoesPastTwoColours_OnlyWhenOnTimeWithinTheGap()
+	{
+		var (past, refused) = (0, 0);
+		for (var seed = 1; seed <= 20; seed++)
+		{
+			var builds = SealedBuilder.Suggestions(
+				Boosters.SealedPool("TRK", seed),
+				CardRatings.Of("TRK")
+			);
+			var bar = Castability.OnTime(builds[0]) - SealedBuilder.OpponentOnTimeGap;
+			var opponent = SealedBuilder.Opponent("TRK", seed);
+			Assert.That(Castability.OnTime(opponent), Is.GreaterThanOrEqualTo(bar), $"seed {seed}");
+			if (!Same(opponent, builds[0]))
+				past++;
+			if (builds.Skip(1).Any(b => Castability.OnTime(b) < bar))
+				refused++;
+		}
+		TestContext.Out.WriteLine(
+			$"20 TRK pools: {past} opponents past two colours, {refused} pools with a build refused"
+		);
+		Assert.That(past, Is.GreaterThan(0), "a build within the gap is played");
+		Assert.That(refused, Is.GreaterThan(0), "a build past it is offered and refused");
+	}
+
 	static bool Same(SealedDeck a, SealedDeck b) =>
 		a.Label == b.Label
 		&& a.Colors.SequenceEqual(b.Colors)

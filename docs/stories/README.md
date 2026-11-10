@@ -29,25 +29,26 @@ every task a sprint file names exists.
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
 1. **MC-5** — Star Trek (TRK): sealed and draft before Arena's November 10 release
-2. **AI-20** — the look-ahead stops betting on one guessed future: the most urgent AI story (Shayne, 2026-11-10); AI-20.1, his pick of approach, first
-3. **AI-9** — resources priced by what they provide: AI-9.3 done (2026-11-07); AI-9.7 (Quadrant Theory boards) and AI-9.8 (the card-value table charged for mana cost) next — order Shayne's call
-4. **MC-6** — MagicCore's pieces compose: one per family, not one per card phrase (after MC-5.4)
-5. **DEV-4**, **DEV-5** — the rules file split by subsystem; one end-of-batch check script — BEFORE any new set (MC-4's cube included; Shayne, 2026-11-07)
-6. **LIM-2** — draft against bots: FRA first, a cube later
-7. **MC-4** — MTGA's powered cube: surveyed, then built in batches
-8. **AI-13** — Shayne's lessons as general rules for the search, each measured
-9. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-10. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
-11. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-12. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-13. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-14. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
-15. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-16. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-17. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-18. **AI-4** — strategic plans above single actions
-19. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-20. **AI-12** — a card's threat over time, on an empty board and a busy one
+2. **DATA-2** — TRK's AI sealed decks rated by two rounds of self-play, the search on both sides — before the AI stories (Shayne, 2026-11-10): his aggressive decks beat the AI's slow ones
+3. **AI-20** — the look-ahead stops betting on one guessed future: the most urgent AI story (Shayne, 2026-11-10); AI-20.1, his pick of approach, first
+4. **AI-9** — resources priced by what they provide: AI-9.3 done (2026-11-07); AI-9.7 (Quadrant Theory boards) and AI-9.8 (the card-value table charged for mana cost) next — order Shayne's call
+5. **MC-6** — MagicCore's pieces compose: one per family, not one per card phrase (after MC-5.4)
+6. **DEV-4**, **DEV-5** — the rules file split by subsystem; one end-of-batch check script — BEFORE any new set (MC-4's cube included; Shayne, 2026-11-07)
+7. **LIM-2** — draft against bots: FRA first, a cube later
+8. **MC-4** — MTGA's powered cube: surveyed, then built in batches
+9. **AI-13** — Shayne's lessons as general rules for the search, each measured
+10. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
+11. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
+12. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
+13. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+14. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+15. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
+16. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+17. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+18. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+19. **AI-4** — strategic plans above single actions
+20. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+21. **AI-12** — a card's threat over time, on an empty board and a busy one
 
 ## How it works
 
@@ -104,6 +105,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-14](AI-14-see-the-ai-play.md) | See what the AI decides and why — a decision report now, an in-game inspector next | in-progress |
 | [AI-17](AI-17-basic-plays.md) | The AI misses basic plays — two found at the table, then a full review of the AI | in-progress |
 | [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | in-progress |
+| [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
@@ -117,7 +119,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-19](AI-19-card-by-card-play.md) | Card-by-card play and rulings — after every card plays | backlog |
 | [AI-20](AI-20-lookahead-unknown-cards.md) | The look-ahead stops betting on one guessed future — unknown cards handled honestly | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
-| [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | backlog |
 | [DEV-5](DEV-5-batch-check-script.md) | One script for a card batch's end-of-batch checks, one summary out | backlog |

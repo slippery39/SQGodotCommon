@@ -74,14 +74,26 @@ public static class SealedBuilder
 		Greedy = "Greedy";
 
 	/// <summary>
-	/// An AI sealed opponent: a pool opened from <paramref name="seed"/>, and one of its
-	/// <see cref="Suggestions"/> at random — streamlined or greedy, as a person might (Shayne, LIM-3).
+	/// An AI sealed opponent: a pool opened from <paramref name="seed"/>, rated by <paramref name="ratings"/> (the set's
+	/// own table if null), playing its two colours — or, past them, its greediest suggestion whose spells are castable
+	/// on time within <see cref="OpponentOnTimeGap"/> of the two colours' (Shayne, 2026-11-10, LIM-1.11: "make the
+	/// greedy builds rarer"; it was one at random, and half of TRK's opponents played three colours).
 	/// </summary>
-	public static SealedDeck Opponent(string set, int seed)
+	public static SealedDeck Opponent(
+		string set,
+		int seed,
+		IReadOnlyDictionary<string, double>? ratings = null
+	)
 	{
-		var builds = Suggestions(Boosters.SealedPool(set, seed), CardRatings.Of(set));
-		return builds[new Random(seed).Next(builds.Count)];
+		var builds = Suggestions(Boosters.SealedPool(set, seed), ratings ?? CardRatings.Of(set));
+		if (builds.Count == 1)
+			return builds[0];
+		var bar = Castability.OnTime(builds[0]) - OpponentOnTimeGap;
+		return builds.Skip(1).LastOrDefault(b => Castability.OnTime(b) >= bar) ?? builds[0];
 	}
+
+	/// <summary>How much less often on time than its two colours an opponent's build past them may be — 5 points (Shayne, 2026-11-10).</summary>
+	public const double OpponentOnTimeGap = 0.05;
 
 	/// <summary>
 	/// The builds worth suggesting from a pool (story LIM-3) — never "the optimal deck": the

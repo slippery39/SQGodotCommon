@@ -38,6 +38,10 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 - 2026-10-07, Shayne: Bo1 only for now; Bo3 and sideboarding maybe later.
 - 2026-10-09, Shayne: after the UI, his choice between this and a search AI (AI-2).
 - 2026-10-20, Shayne: **sealed first**, draft afterwards (LIM-2).
+- 2026-11-10, Shayne (LIM-1.11): **the AI sealed opponent goes past two colours only when its build is castable on
+  time within 5 points of its two colours'** (`Castability.OnTime`) — "make the greedy builds rarer … not just
+  putting all the 'best' cards in without a thought". Replaces LIM-3's one-of-its-suggestions-at-random. Chosen over
+  a fixer count (measured: 86 of TRK's 93 greedy builds already have 3+ fixers, so it separates nothing).
 - 2026-10-20, Shayne: **Arena packs** — what an Arena Direct opens. Wizards: "in MTG Arena there
   will be two non-foil wildcard slots" where paper has a foil one, mechanically identical
   contents. Arena's land-slot and Special Guest handling are unpublished, so they mirror paper.
@@ -113,6 +117,14 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       colours, kind and rarity must all hold. `SealedScene` (`PickFilter`, `Shows`). Captured: W + U + Common.
       Shayne, 2026-11-08: "any of the colours" is right; a Special Guest counts as Mythic (the nearest to its
       real rarity). Not pinned by a test (Godot UI)
+
+- [x] LIM-1.11 The opponent's greedy gate (Shayne, 2026-11-10, Decisions): `SealedBuilder.Opponent` plays its two
+      colours, or its greediest suggestion within `OpponentOnTimeGap` (0.05) of their on-time share. Measured before,
+      100 seeded pools: TRK offered a greedy three-colour build in 93 (on time 9.7 points under the two colours' 79.2%,
+      within 5 in 16), so ~half of TRK's opponents played three colours; FRA's greedy builds are 16.6 (three colours)
+      and 27.7 (four) points under. Test `AnOpponent_GoesPastTwoColours_OnlyWhenOnTimeWithinTheGap` (20 TRK pools: 7
+      past two colours, 15 with a build refused; revert-checked). Draft bots unchanged (always the two colours).
+      Every sim on AI sealed decks moves with it (DATA-2, `--cast-gains`, `--builds`)
 
 ## Next
 

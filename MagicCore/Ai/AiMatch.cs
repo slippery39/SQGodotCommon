@@ -489,8 +489,8 @@ public static class AiMatch
 	/// <summary>
 	/// One game from <paramref name="newGame"/> (a new game of decks named <paramref name="deck1"/> and
 	/// <paramref name="deck2"/> — any decks, not only FRA's: sealed builds, LIM-1.8); null if
-	/// <paramref name="stop"/> is cancelled before it ends. <paramref name="ended"/> sees the last state
-	/// (DATA-2: which cards were drawn).
+	/// <paramref name="stop"/> is cancelled before it ends. <paramref name="ended"/> sees the last state;
+	/// <paramref name="seen"/> every state a player decides in, and the last (DATA-2: which cards were in hand).
 	/// </summary>
 	public static Game? Play(
 		string a,
@@ -502,7 +502,8 @@ public static class AiMatch
 		bool aIsPlayer1,
 		int? searchThreads,
 		CancellationToken stop = default,
-		Action<GameState>? ended = null
+		Action<GameState>? ended = null,
+		Action<GameState>? seen = null
 	)
 	{
 		var s = newGame;
@@ -531,6 +532,7 @@ public static class AiMatch
 			if (stop.IsCancellationRequested)
 				return null;
 			s = s.AutoPass();
+			seen?.Invoke(s);
 			if (s.IsOver())
 				break;
 			var who = s.DecidingPlayerId();
@@ -557,6 +559,7 @@ public static class AiMatch
 				}
 		}
 
+		seen?.Invoke(s);
 		ended?.Invoke(s);
 		var winner = s.WinnerId();
 		return new Game(

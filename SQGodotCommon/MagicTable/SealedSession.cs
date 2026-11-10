@@ -62,7 +62,7 @@ public sealed class SealedSession
 	/// <summary>Cards of a pasted pool the engine doesn't have — shown, never played.</summary>
 	public IReadOnlyList<string> LeftOut { get; }
 
-	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, and one of its suggested builds at random (LIM-3).</summary>
+	/// <summary>An AI opponent: a pool opened from <paramref name="seed"/>, its two colours or a greedier build within the on-time gap (LIM-1.11).</summary>
 	public static SealedDeck OpponentFor(int seed, string set = "FRA") =>
 		SealedBuilder.Opponent(set, seed);
 
