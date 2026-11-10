@@ -618,6 +618,14 @@ public partial class MagicTableScene : Control
 	/// <summary>One move left: make it. Several told apart by a target: wait for that click. Otherwise list them.</summary>
 	private void Play(List<GameAction> candidates, int from)
 	{
+		// X first, on a spinner, before any pick is clicked (TBL-9.1)
+		if (from == 0 && Targeting.Xs(candidates).Count > 1)
+		{
+			_plays = ("Choose X:", [(PlayLabel(_m.State, candidates), candidates)]);
+			_targeting = null;
+			Refresh();
+			return;
+		}
 		var index = Targeting.NextIndex(candidates, from);
 		if (index < 0 && candidates.Count == 1)
 		{
@@ -697,9 +705,9 @@ public partial class MagicTableScene : Control
 
 	/// <summary>A play's button: in full when there is nothing left to click, its picks left out otherwise.</summary>
 	private static string PlayLabel(GameState s, List<GameAction> play) =>
-		play.Count == 1 && Targeting.PicksOf(play[0]).Count == 0
-			? Describe.Action(s, play[0])
-			: Targeting.Label(s, play[0]);
+		Targeting.Xs(play).Count > 1 ? Targeting.Label(s, Targeting.WithX(play[0], 0)) // X on its spinner
+		: play.Count == 1 && Targeting.PicksOf(play[0]).Count == 0 ? Describe.Action(s, play[0])
+		: Targeting.Label(s, play[0]);
 
 	private void Fill(
 		HFlowContainer row,
@@ -942,8 +950,11 @@ public partial class MagicTableScene : Control
 		{
 			_status.Text = title;
 			foreach (var (label, play) in items)
-				AddButton(label, () => Play(play, 0), redraw: false, option: true).Disabled =
-					play.Count == 0; // a mode that can't be chosen now: shown, greyed
+				if (Targeting.Xs(play) is { Count: > 1 } xs)
+					AddXPicker(label, play, xs);
+				else
+					AddButton(label, () => Play(play, 0), redraw: false, option: true).Disabled =
+						play.Count == 0; // a mode that can't be chosen now: shown, greyed
 			AddCancel();
 			return;
 		}
@@ -1082,6 +1093,60 @@ public partial class MagicTableScene : Control
 	/// <param name="option">One of a list (plays, targets, a choice's options): the plain plate in a
 	/// smaller font. Otherwise a main action (Pass, Attack, Submit) in the big oxblood style.</param>
 	/// <param name="picked">An option of a multi-pick choice that is picked: the selected plate.</param>
+	/// <summary>
+	/// X on a spinner (TBL-9.1, Shayne: one button per X was "terrible past a few"): − and + step it, the
+	/// box takes a typed number, bounded by the legal X values (a typed gap goes to the nearest legal one);
+	/// the play's button makes it with that X. Starts at the most X can be.
+	/// </summary>
+	private void AddXPicker(string label, List<GameAction> play, List<int> xs)
+	{
+		var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+		row.AddThemeConstantOverride("separation", 8);
+		var spin = new SpinBox
+		{
+			MinValue = xs[0],
+			MaxValue = xs[^1],
+			Step = 1,
+			Rounded = true,
+			Value = xs[^1],
+			Alignment = HorizontalAlignment.Center,
+			CustomMinimumSize = new Vector2(110, 0),
+		};
+		spin.GetLineEdit().AddThemeFontSizeOverride("font_size", TextSize + 4);
+		// its own tiny arrows: the − and + beside it do that
+		foreach (
+			var arrow in new[]
+			{
+				"updown",
+				"up",
+				"up_hover",
+				"up_pressed",
+				"up_disabled",
+				"down",
+				"down_hover",
+				"down_pressed",
+				"down_disabled",
+			}
+		)
+			spin.AddThemeIconOverride(arrow, new ImageTexture());
+		spin.AddThemeConstantOverride("buttons_width", 0);
+		spin.GetLineEdit().AddThemeStyleboxOverride("normal", MtgUiStyles.DarkPanel());
+		var x = SealedScene.Text("X =", TextSize + 2);
+		x.VerticalAlignment = VerticalAlignment.Center;
+		row.AddChild(x);
+		row.AddChild(SealedScene.Choice("−", () => spin.Value -= 1));
+		row.AddChild(spin);
+		row.AddChild(SealedScene.Choice("+", () => spin.Value += 1));
+		_buttons.AddChild(row);
+		var go = AddButton(
+			$"{label}  (X={xs[^1]})",
+			() => Play(Targeting.WithChosenX(play, (int)spin.Value), 0),
+			redraw: false,
+			option: true
+		);
+		spin.ValueChanged += value => go.Text = $"{label}  (X={(int)value})";
+	}
+
 	private Button AddButton(
 		string text,
 		Action act,

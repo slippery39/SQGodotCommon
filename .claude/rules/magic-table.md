@@ -47,7 +47,7 @@ MagicTable/
 │                         Hook: hover, click, hold-to-zoom for every card
 ├── PhaseBar.cs           the active player's steps (Stops shows both); each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
-├── Targeting.cs          click a spell, then its picks — targets, then what a cost takes (plain C#)
+├── Targeting.cs          click a spell, then its picks — X on a spinner first (Xs), targets, then what a cost takes (plain C#)
 ├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
 ├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; a click target

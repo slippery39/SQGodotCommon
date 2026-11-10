@@ -53,12 +53,13 @@ public static class Targeting
 	}
 
 	/// <summary>
-	/// A card's moves as plays: the same spell or ability with the same modes and X is one play
-	/// whatever it picks. Each play is offered once; its picks are clicked afterwards.
+	/// A card's moves as plays: the same spell or ability with the same modes is one play whatever it
+	/// picks and whatever its X — X is chosen on a spinner (<see cref="Xs"/>, TBL-9.1: one button per X
+	/// was "terrible past a few"). Each play is offered once; its picks are clicked afterwards.
 	/// </summary>
 	public static List<List<GameAction>> Plays(GameState s, IEnumerable<GameAction> moves) =>
 		moves
-			.GroupBy(m => $"{Label(s, m)}|{(m as ActivateAbilityAction)?.AbilityIndex}")
+			.GroupBy(m => $"{Label(s, WithX(m, 0))}|{(m as ActivateAbilityAction)?.AbilityIndex}")
 			.Select(g => g.ToList())
 			.ToList();
 
@@ -83,7 +84,7 @@ public static class Targeting
 			return null;
 		return spell
 			.Choose.Choices(s, s.GetCard(cardId), spell.Modes)
-			.SelectMany(combo =>
+			.Select(combo =>
 			{
 				var text = Describe.Modes(spell.Modes, combo);
 				var legal = casts.Where(c => c.Modes.Order().SequenceEqual(combo)).ToList();
@@ -93,12 +94,9 @@ public static class Targeting
 						? "no legal targets"
 						: "not possible now";
 				if (legal.Count == 0)
-					return [($"{text}  ({why})", new List<GameAction>())];
-				// X is chosen with the mode, before any target is clicked.
-				var byX = legal.GroupBy(c => c.X).ToList();
-				return byX.Select(g =>
-					(byX.Count > 1 ? $"{text} (X={g.Key})" : text, g.Cast<GameAction>().ToList())
-				);
+					return ($"{text}  ({why})", new List<GameAction>());
+				// X is chosen with the mode, on a spinner (Xs), before any target is clicked.
+				return (text, legal.Cast<GameAction>().ToList());
 			})
 			.ToList();
 	}
@@ -181,6 +179,35 @@ public static class Targeting
 		(ids[at], ids[from]) = (ids[from], ids[at]);
 		return a with { TapIds = [.. ids] };
 	}
+
+	/// <summary>The X values a play can be made with, lowest first; more than one asks for X before any pick.</summary>
+	public static List<int> Xs(IEnumerable<GameAction> play) =>
+		play.Select(XOf).OfType<int>().Distinct().Order().ToList();
+
+	/// <summary>The play's moves made with this X — the nearest legal one when it isn't (a typed 7 of 0–5).</summary>
+	public static List<GameAction> WithChosenX(List<GameAction> play, int x)
+	{
+		var nearest = Xs(play).MinBy(legal => Math.Abs(legal - x));
+		return play.Where(m => XOf(m) == nearest).ToList();
+	}
+
+	/// <summary>A move's X: a spell's {X}, a planeswalker's −X; null for anything without one.</summary>
+	static int? XOf(GameAction m) =>
+		m switch
+		{
+			CastSpellAction c => c.X,
+			ActivateLoyaltyAction l => l.X,
+			_ => null,
+		};
+
+	/// <summary>The same move with another X — the label of a play whatever its X.</summary>
+	public static GameAction WithX(GameAction m, int x) =>
+		m switch
+		{
+			CastSpellAction c => c with { X = x },
+			ActivateLoyaltyAction l => l with { X = x },
+			_ => m,
+		};
 
 	/// <summary>What pick <paramref name="index"/> is, for the prompt: "target 1", "what to sacrifice".</summary>
 	public static string What(GameAction move, int index) => PicksOf(move)[index].What;

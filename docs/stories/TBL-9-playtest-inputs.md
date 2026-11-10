@@ -1,7 +1,7 @@
 ---
 id: TBL-9
 title: Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding
-status: ready
+status: in-progress
 area: TBL
 created: 2026-11-09
 ---
@@ -12,7 +12,7 @@ Shayne's playtest, 2026-11-09. Choosing X lists every possible X as a button (te
 
 ## Requirements
 
-- [ ] X is chosen with a spin-down (+ / -) that can also be typed into, never one button per X
+- [x] X is chosen with a spin-down (+ / -) that can also be typed into, never one button per X
 - [ ] A surveil (and any "any order" choice) lets the player drag the kept cards into an order
 - [ ] The player can concede a game: right-click the table → a context menu → Concede, confirmed first
 
@@ -29,7 +29,13 @@ Shayne's playtest, 2026-11-09. Choosing X lists every possible X as a button (te
 
 ## Tasks
 
-- [ ] TBL-9.1 X picker: a spinner with +/- and direct typing, bounded by the legal X values (`ChoicePanel`/`Targeting`; today every X is listed)
+- [x] TBL-9.1 X picker: a spinner with +/- and direct typing, bounded by the legal X values (`ChoicePanel`/`Targeting`; today every X is listed)
+      Built: `Targeting.Plays` no longer splits a play by X (nor `Modes` a mode); `Play` asks X first when a play
+      still spans several (`Targeting.Xs`), and the action column draws it as `X = [−] [box] [+]` and the play's
+      button naming the X (`AddXPicker`; Godot's SpinBox, its own arrows hidden). Starts at the most X can be
+      (Claude, open to change); a typed X that isn't legal goes to the nearest legal one (`WithChosenX`). A spell's
+      {X} and a planeswalker's −X. Test `AnXSpell_IsOnePlay_ItsXChosenOnASpinner`; real input: Guiding Hydra with
+      three Plains, − twice, cast — "Cast Guiding Hydra (X=1)", one counter. Typing not driven (mouse only)
 - [ ] TBL-9.2 Surveil/"any order": drag to reorder the cards kept on top. The engine takes no order today (Decisions): add the order to the choice, check a record replays, then the table
 - [ ] TBL-9.3 Concede: a right-click context menu on the table with Concede, a confirm, the game ended as a loss
 
@@ -41,3 +47,4 @@ Read this story, then `.claude/rules/magic-table.md` (table) or `MagicCore/CLAUD
 
 - 2026-11-09: opened from Shayne's playtest notes.
 - 2026-11-10: TBL-9.3 (concede) added (Shayne); TBL-9.2's engine side found (Decisions).
+- 2026-11-10: TBL-9.1 built (overnight).

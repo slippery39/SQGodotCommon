@@ -325,4 +325,41 @@ public class TargetingTests
 		Assert.That(Targeting.NextIndex(Targeting.Narrow(moves, 0, 5), 1), Is.EqualTo(1));
 		Assert.That(moves.Select(Targeting.PicksOf).All(t => t.Count == 2));
 	}
+
+	[Test]
+	public void AnXSpell_IsOnePlay_ItsXChosenOnASpinner()
+	{
+		var m = new MagicTableManager(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], 5);
+		m.AutoplayTo(3);
+		while (m.StepAi() is not null) { }
+		foreach (
+			var (name, zone) in new[]
+			{
+				("Plains", ZoneType.Battlefield),
+				("Plains", ZoneType.Battlefield),
+				("Plains", ZoneType.Battlefield),
+				("Guiding Hydra", ZoneType.Hand),
+			}
+		)
+		{
+			while (!m.CanSandbox && m.StepAi() is not null) { }
+			m.Sandbox(m.HumanId, CardRegistry.Get(name), zone);
+		}
+		while (m.StepAi() is not null) { }
+		var s = m.State;
+		var hydra = s.CardsIn(m.HumanId, ZoneType.Hand).Single(c => c.Name == "Guiding Hydra").Id;
+		var moves = s.DistinctMoves(s.LegalActions()).Where(a => s.IsMoveFor(a, hydra)).ToList();
+		var castable = moves.OfType<CastSpellAction>().Select(c => c.X).Distinct().Order().ToList();
+		Assert.That(castable, Has.Count.GreaterThan(2), "precondition: several X castable");
+
+		var plays = Targeting.Plays(s, moves);
+
+		Assert.That(plays, Has.Count.EqualTo(1), "one play, not one per X");
+		Assert.That(Targeting.Xs(plays[0]), Is.EqualTo(castable));
+		Assert.That(
+			Targeting.WithChosenX(plays[0], 99).Cast<CastSpellAction>().Select(c => c.X),
+			Is.EqualTo(new[] { castable[^1] }),
+			"a typed X past the most is the most"
+		);
+	}
 }
