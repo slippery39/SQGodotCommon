@@ -47,6 +47,81 @@ public class FraKnowledgeTests : FraBoardTest
 		Assert.That(Known(top), Is.EqualTo(Knowers.None));
 	}
 
+	// TBL-9.2: "the rest on top of your library in any order" — a second choice when two or more are kept.
+	[Test]
+	public void ASurveilKeepingTwo_AsksTheirOrder_TheFirstPickedOnTop_StillKnown()
+	{
+		var (first, second) = (Top(me), s.CardsIn(me, ZoneType.Library).ElementAt(1).Id);
+		var look = Hand(TestGames.Inline("Look", "{U}", "Instant", null, new Surveil(2)), me);
+		var asked = false;
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = look });
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseFromLibraryTopChoice => [],
+				OrderLibraryTopChoice o => (asked = true)
+					? o.Options.Select(x => x.Id).Reverse()
+					: [],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			}
+		);
+
+		Assert.That(asked, "the order was asked");
+		Assert.That(
+			s.CardsIn(me, ZoneType.Library).Take(2).Select(c => c.Id),
+			Is.EqualTo(new[] { second, first }),
+			"reversed: the first picked on top"
+		);
+		Assert.That(
+			(Known(first), Known(second)),
+			Is.EqualTo((Knowers.Owner, Knowers.Owner)),
+			"not a zone change"
+		);
+	}
+
+	[Test]
+	public void ASurveilKeepingOne_AsksNoOrder()
+	{
+		var look = Hand(TestGames.Inline("Look", "{U}", "Instant", null, new Surveil(2)), me);
+		var asked = false;
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = look });
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseFromLibraryTopChoice c => [c.Options[0].Id],
+				OrderLibraryTopChoice => (asked = true) ? [] : [],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			}
+		);
+
+		Assert.That(asked, Is.False);
+	}
+
+	[Test]
+	public void TheAiOrdersBySpellPrice_TheDearerOnTop()
+	{
+		int cheap,
+			dear;
+		(s, cheap) = TestGames.Put(
+			s,
+			me,
+			TestGames.Inline("Cheap", "{U}", "Instant", null, new Surveil(1)),
+			ZoneType.Library
+		);
+		(s, dear) = TestGames.Put(
+			s,
+			me,
+			TestGames.Inline("Dear", "{3}{U}", "Instant", null, new Surveil(1)),
+			ZoneType.Library
+		);
+
+		Assert.That(
+			MagicCore.Ai.LandUnlock.Order(s, me, [cheap, dear], held: null),
+			Is.EqualTo(new[] { dear, cheap }),
+			"without prices, mana value stands in"
+		);
+	}
+
 	[Test]
 	public void ACardSeenOnTop_StaysKnownOnceDrawn()
 	{

@@ -566,6 +566,27 @@ public class MagicTableManagerTests
 		);
 	}
 
+	// TBL-9.2: a record from before the surveil's order was asked (#173 kept both) still resumes whole.
+	[Test]
+	public void Resume_ARecordFromBeforeTheSurveilOrder_ReplaysWhole()
+	{
+		var root = AppContext.BaseDirectory;
+		while (!Directory.Exists(Path.Combine(root, "MagicCore.Tests")))
+			root = Path.GetDirectoryName(root)!;
+		var record = GameRecord.FromJson(
+			File.ReadAllText(Path.Combine(root, "MagicCore.Tests", "Records", "SurveilNone.json"))
+		);
+
+		var m = MagicTableManager.Resume(record, search: false);
+
+		Assert.That(m.Log[^1], Does.StartWith("[resumed] all"));
+		Assert.That(
+			m.Record.Moves.Count,
+			Is.GreaterThan(record.Moves.Count),
+			"the resumed record answers the order question itself"
+		);
+	}
+
 	[Test]
 	public void ALookAtTheirHand_IsLogged_CardByCard()
 	{

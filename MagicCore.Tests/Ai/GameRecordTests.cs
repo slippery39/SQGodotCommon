@@ -217,4 +217,13 @@ public class GameRecordTests
 		Assert.That(undone.Moves, Has.Count.EqualTo(100));
 		Assert.That(MoveTokens.Offers(undone.Replay().Last), Is.EqualTo(record.Moves[100].Offers));
 	}
+
+	// TBL-9.2: a surveil's order is written o…, and two orders are the same only in the same order
+	[Test]
+	public void AnOrderAnswer_IsTheSameOnlyInTheSameOrder()
+	{
+		Assert.That(MoveTokens.Same("c41,57", "c57,41"), Is.True, "a pick of cards: any order");
+		Assert.That(MoveTokens.Same("o41,57", "o57,41"), Is.False, "an order: its order");
+		Assert.That(MoveTokens.Same("o41,57", "o41,57"), Is.True);
+	}
 }

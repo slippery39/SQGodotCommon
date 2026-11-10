@@ -671,6 +671,7 @@ public static class MagicRules
 		typeof(ChooseCardsFromHandChoice),
 		typeof(ChooseFromLibraryChoice),
 		typeof(ChooseFromLibraryTopChoice),
+		typeof(OrderLibraryTopChoice),
 		typeof(ChooseAmongChoice),
 		typeof(ChoosePermanentChoice),
 		typeof(ChooseXTargetsChoice),

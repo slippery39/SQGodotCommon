@@ -8,7 +8,7 @@ namespace MagicCore.Ai;
 /// A move as a short token, and the fingerprints that say a recording still replays — one format for
 /// the position suite (AI-6.4) and the table's game records (TBL-5). A move is its index among the
 /// position's distinct moves (<c>a3</c>), the ids answering its choice (<c>c12,15</c>; <c>c</c> for
-/// none), a manual tap (<c>t41:2</c> — card, colour; mana abilities are not legal actions), or a
+/// none) — or, where their ORDER is the answer (a surveil's kept cards, TBL-9.2), <c>o15,12</c> — a manual tap (<c>t41:2</c> — card, colour; mana abilities are not legal actions), or a
 /// sandbox placement (<c>s5:Hand:Last Gasp</c> — the playtest tool).
 /// </summary>
 public static class MoveTokens
@@ -22,7 +22,8 @@ public static class MoveTokens
 	public static string Token(GameState s, GameAction? action, IReadOnlyList<int>? answer)
 	{
 		if (answer is not null)
-			return "c" + string.Join(",", answer);
+			return (s.GetPendingChoice() is OrderLibraryTopChoice ? "o" : "c")
+				+ string.Join(",", answer);
 		if (action is TapForManaAction { SacrificeId: 0 } tap) // Phyrexian Tower's is a legal move: a{index}
 			return $"t{tap.CardId}:{(int)tap.Color}";
 		if (action is SandboxPutAction put)
@@ -46,7 +47,7 @@ public static class MoveTokens
 			return token switch
 			{
 				"c" => (null, []),
-				['c', .. var ids] => (null, [.. ids.Split(',').Select(int.Parse)]),
+				['c' or 'o', .. var ids] => (null, [.. ids.Split(',').Select(int.Parse)]),
 				['a', .. var index] => (s.DistinctMoves(s.LegalActions())[int.Parse(index)], null),
 				['t', .. var tap] => (Tap(s, tap), null), // a card id that is no card now: InvalidCast — stale
 				['s', .. var put] => (Put(put), null),
@@ -103,7 +104,8 @@ public static class MoveTokens
 			(_, var ids) => MagicCore.Describe.Answer(s, s.GetPendingChoice()!, ids!),
 		};
 
-	/// <summary>Two answers are the same if they pick the same move, or the same ids in any order.</summary>
+	/// <summary>Two answers are the same if they pick the same move, or the same ids in any order — but an
+	/// <c>o</c> answer IS its order, so only the same order is the same (TBL-9.2).</summary>
 	public static bool Same(string a, string b) =>
 		a == b
 		|| (

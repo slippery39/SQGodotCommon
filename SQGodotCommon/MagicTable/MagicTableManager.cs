@@ -146,6 +146,8 @@ public sealed class MagicTableManager
 		var declaring = false;
 		foreach (var move in record.Moves)
 		{
+			while (GameRecord.UnaskedOrder(m.State, move.Offers) is { } answer) // a record from before TBL-9.2
+				m.Play(answer, "rule");
 			if (differs is null && MoveTokens.Offers(m.State) != move.Offers)
 				differs = played + 1;
 			// A combat declaration is a move per creature but one decision of yours: one undo step.

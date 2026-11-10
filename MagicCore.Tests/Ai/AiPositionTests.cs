@@ -315,7 +315,7 @@ public class AiPositionTests
 	// four lands in play and a hand of expensive spells - and the AI put nothing in the graveyard, as it never does
 	// (the four answers tied or ranked the land ahead: the rollout keeps one sampled top card). Shayne: keep a land on
 	// top only if it unlocks a card in hand or lets us do more next turn; otherwise bin it. Terms.SurveilLands
-	// (`LandUnlock.Surveil`). The CONTROL: without it the AI still answers none.
+	// (`LandUnlock.Surveil`). The CONTROL: without it the AI bins no Mountain.
 	[Test]
 	public void ASurveil_BinsALandThatUnlocksNothing()
 	{
@@ -334,7 +334,9 @@ public class AiPositionTests
 		// priced Energize alone now moves the answer; the rule decides it either way)
 		Assert.That(
 			Chose(Evaluator.Terms.SurveilLands, flat: true),
-			Does.EndWith("none"),
+			// was EndWith("none"): "none" and "bin Energize" tied exactly (AI-17.20) and the first listed won; the
+			// order of the kept cards (TBL-9.2) broke the tie. What the control shows holds: no Mountain binned
+			Does.Not.Contain("Mountain"),
 			"control"
 		);
 		Assert.That(Chose(Evaluator.Terms.None), Does.Contain("Mountain"));

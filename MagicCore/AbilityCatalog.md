@@ -199,7 +199,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `ChargeCounters` (int): Captain Jean-Luc Picard: "put it onto the battlefield with seven charge counters on it".
 - **`ShuffleIntoLibrary(Ref What)`** — "Its owner shuffles it into their library." [3: Living Library, Fblthp, Impossibly Lost, Those Old Scientists]
   - `FromGraveyards` (bool): Those Old Scientists: "Choose up to two target cards in graveyards. The owners of those cards shuffle them…
-- **`Surveil(int N)`** — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top. ponytail: the kept cards keep their order;… [29: Way of the Healer, Yuriko, Hope from the Shadows, Eye of Jace…]
+- **`Surveil(int N)`** — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top in any order — a second choice when two or more are… [29: Way of the Healer, Yuriko, Hope from the Shadows, Eye of Jace…]
   - `Then` (ImmutableList<GameAction>): Riders on the cards put into the graveyard "this way" — they read the surveil's choice.
 - **`TakeExtraTurn`** — H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on MagicGame.ExtraTurns, begun by TurnStructure.FinishCleanup.… [1: H.M.S. Bounty, Unlikely Timeship]
 - **`Tap(Ref What)`** — "Tap [What]" — permanents only. [15: Divining Duelist, Cryotheory Adept, Hapatra, the Desert Frost…]
@@ -495,6 +495,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`ChooseXTargetsChoice`** — Dominion Infiltration: "Choose X target creatures your opponents control" — exactly X different ones, the candidates of its X target words…
 - **`DeclareAttackerChoice`** — Attack with this creature, and at whom. One per creature that can attack.
 - **`DeclareBlockerChoice`** — Block one attacker with this creature, or not. One per creature that can block something.
+- **`OrderLibraryTopChoice`** — Surveil's "the rest on top of your library in any order" (CR 701.25a, TBL-9.2): the kept cards, every one picked, the first picked going…
 - **`PayToKeepChoice`** — "Counter it unless its controller pays {N}" — Yes pays. Its own type so the AI's look-ahead can pay.
 - **`YesNoChoice`** — "You may …": Yes is picking the one option, No is picking none. Read by IfChosenAction.
 

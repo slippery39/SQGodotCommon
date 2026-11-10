@@ -327,8 +327,8 @@ public record Exile(Ref What) : Effect
 }
 
 /// <summary>
-/// CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.
-/// ponytail: the kept cards keep their order; reordering them is a second choice nobody needs at N=1.
+/// CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top in any order —
+/// a second choice when two or more are kept (TBL-9.2, Shayne 2026-11-10: option A, both players).
 /// </summary>
 public record Surveil(int N) : Effect
 {
@@ -355,6 +355,7 @@ public record Surveil(int N) : Effect
 				MaxChoices = n,
 			},
 			new MoveChosenToGraveyardAction { PlayerId = Controller },
+			new OrderKeptOnTopAction { PlayerId = Controller, Looked = n },
 			.. Then,
 		];
 		return new(

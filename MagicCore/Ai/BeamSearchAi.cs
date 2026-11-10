@@ -530,6 +530,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			choice
 			is ChooseNumberChoice { NamesAManaValue: true }
 				or ChooseKeywordChoice { NamesACard: true }
+				or OrderLibraryTopChoice // a surveil's order: a rule, not n! orders (TBL-9.2)
 		)
 			return [new Pick([.. greedy.Answer(s, choice)], key)]; // Nyota: a rule, not 11 rollouts (Shayne)
 		// a surveil's lands by rule (LandUnlock.Surveil), its spells branched as any pick

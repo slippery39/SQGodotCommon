@@ -1202,7 +1202,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests, FraPrepareTests, FraRareTests, FraUncommonCreatureTests
 
-**Engine pieces:** `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Semester Foreseer // Peer Review"] =
@@ -1426,7 +1426,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraTriggerTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Surveillance Phantasm"] =
@@ -2235,7 +2235,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraTriggerTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Eye of Jace"] =
@@ -3440,7 +3440,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraUncommonTests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Refute Destiny"] =
@@ -4129,7 +4129,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCardTests
 
-**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Way of the Healer"] =
@@ -4459,7 +4459,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraUncommonTests
 
-**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Your Fate Ends Here"] =
@@ -4506,7 +4506,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraModalTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Yuriko, Hope from the Shadows"] =
@@ -4707,7 +4707,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraPrepareTests
 
-**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Diviner of Victory // Unwind History"] =
@@ -5496,7 +5496,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraGraveyardTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Proctor of Potential"] =
@@ -6312,7 +6312,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRarePlaneswalkerTests
 
-**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `LoyaltyAbilityComponent` — "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed,…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnChosenToHandIf` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…; `Tap` — "Tap [What]" — permanents only.
+**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `LoyaltyAbilityComponent` — "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed,…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnChosenToHandIf` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…; `Tap` — "Tap [What]" — permanents only.
 
 ```csharp
 ["Chandra, Chill of Compliance"] =
@@ -6393,7 +6393,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Consider"] = [Spell([], new Surveil(1), new DrawCards(Ref.You, 1))],
@@ -6545,7 +6545,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraTriggerTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ReturnChosenToHandIf` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ReturnChosenToHandIf` — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Enlightened Confidant"] =

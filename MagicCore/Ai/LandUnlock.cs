@@ -41,6 +41,26 @@ public static class LandUnlock
 		return (lands, bin);
 	}
 
+	/// <summary>
+	/// A surveil's kept cards in the order to draw them (TBL-9.2): a land that <see cref="Unlocks"/> a card in hand
+	/// first, then the spells dearest first (the held price; mana value without one), then the lands we don't need.
+	/// ponytail: a needed land always beats the best spell — flooded or short is all it knows; weigh the two if a
+	/// position shows the spell should come first.
+	/// </summary>
+	public static IEnumerable<int> Order(
+		GameState s,
+		int player,
+		IReadOnlyList<int> kept,
+		HeldValues? held
+	) =>
+		kept.Select(s.GetCard)
+			.OrderByDescending(c => c.Is(CardType.Land) ? (Unlocks(s, player, c) ? 2 : 0) : 1)
+			.ThenByDescending(c =>
+				c.Is(CardType.Land) ? 0 : held?.Of(c.Name) ?? c.ManaCost.ManaValue
+			)
+			.Select(c => c.Id)
+			.ToList();
+
 	public static bool Unlocks(
 		GameState s,
 		int player,

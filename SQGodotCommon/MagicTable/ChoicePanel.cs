@@ -45,6 +45,11 @@ public partial class ChoicePanel : PanelContainer
 		question.AddThemeFontSizeOverride("font_size", 27);
 		question.AddThemeColorOverride("font_color", new Color("f4e29b"));
 		column.AddChild(question);
+		if (choice is OrderLibraryTopChoice)
+		{
+			ShowOrder(s, choice, preview, answer, column);
+			return;
+		}
 
 		// Several picks, or none allowed: toggles + Confirm. Exactly one: the click answers.
 		var multi = BoardChoice.IsMulti(choice);
@@ -173,6 +178,85 @@ public partial class ChoicePanel : PanelContainer
 		}
 		if (multi)
 			column.AddChild(confirm);
+	}
+
+	/// <summary>
+	/// A surveil's kept cards, in order (TBL-9.2): left is the top; drag a card onto another to put it in that
+	/// place; the button puts them back. Godot's own drag-and-drop, as the deck builder's (LIM-5.5).
+	/// </summary>
+	private static void ShowOrder(
+		GameState s,
+		ChoiceAction choice,
+		Action<string?> preview,
+		Action<IEnumerable<int>> answer,
+		VBoxContainer column
+	)
+	{
+		var order = choice.Options.Select(o => o.Id).ToList();
+		column.AddChild(
+			SealedScene.Text("Left is the top. Drag a card onto another to put it there.", 20)
+		);
+		var row = new HBoxContainer();
+		row.AddThemeConstantOverride("separation", 12);
+		column.AddChild(row);
+		void Fill()
+		{
+			CardViews.Clear(row);
+			for (var i = 0; i < order.Count; i++)
+			{
+				var (id, at) = (order[i], i);
+				var image = MagicArt.ImageName(s, s.GetCard(id));
+				var tile = new TextureRect
+				{
+					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, // before Texture (godot-frontend.md)
+					StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+					Texture = MagicArt.Full(image),
+					CustomMinimumSize = new Vector2(200, 279),
+				};
+				CardViews.Hook(tile, image, preview, null);
+				tile.SetDragForwarding(
+					Callable.From(
+						(Vector2 _) =>
+						{
+							tile.SetDragPreview(
+								new TextureRect
+								{
+									ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+									StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+									Texture = tile.Texture,
+									Size = new Vector2(140, 195),
+									Modulate = new Color(1, 1, 1, 0.85f),
+								}
+							);
+							return (Variant)id;
+						}
+					),
+					Callable.From(
+						(Vector2 _, Variant data) => data.VariantType == Variant.Type.Int
+					),
+					Callable.From(
+						(Vector2 _, Variant data) =>
+						{
+							var moved = data.AsInt32();
+							order.Remove(moved);
+							order.Insert(Math.Min(at, order.Count), moved);
+							Fill();
+						}
+					)
+				);
+				var place = new VBoxContainer();
+				place.AddChild(tile);
+				var label = SealedScene.Text(i == 0 ? "top" : $"{i + 1}", 20);
+				label.HorizontalAlignment = HorizontalAlignment.Center;
+				place.AddChild(label);
+				row.AddChild(place);
+			}
+		}
+		Fill();
+		var put = new Button { Text = "Put them back in this order" };
+		MtgUiStyles.StylePrimary(put, 28);
+		put.Pressed += () => answer(order.ToList());
+		column.AddChild(put);
 	}
 
 	/// <summary>The player whose graveyard holds this card, or null (the battlefield, a hand, the library).</summary>

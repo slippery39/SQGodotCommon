@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using ImmutableGameObjects;
+using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Sets;
 
@@ -128,6 +129,8 @@ public sealed record GameRecord
 		for (var i = 0; i < Moves.Count; i++)
 		{
 			var move = Moves[i];
+			while (UnaskedOrder(s, move.Offers) is { } answer)
+				s = MoveTokens.Apply(s, answer);
 			if (MoveTokens.Offers(s) != move.Offers)
 				throw new MoveTokens.StaleException(
 					$"move {i + 1} ({$"{move.Kind} {move.Said}".Trim()}): the position no longer offers what it did — the engine has moved"
@@ -141,6 +144,17 @@ public sealed record GameRecord
 			);
 		return (before, s);
 	}
+
+	/// <summary>
+	/// A record made before TBL-9.2 never answered a surveil's "the rest on top in any order" — the engine kept
+	/// their order then. Asked now and not answered by the record: the answer that keeps that order, so the record
+	/// replays as it played (and its move numbers stay put). Null when the record does answer it.
+	/// </summary>
+	public static string? UnaskedOrder(GameState s, string recordedOffers) =>
+		s.GetPendingChoice() is OrderLibraryTopChoice order
+		&& MoveTokens.Offers(s) != recordedOffers
+			? "o" + string.Join(",", order.Options.Select(o => o.Id))
+			: null;
 
 	/// <summary>The position before move <paramref name="at"/> (from 1, as the transcript numbers it).</summary>
 	public GameState Before(int at) =>

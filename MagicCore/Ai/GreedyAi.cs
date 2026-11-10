@@ -170,6 +170,8 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 				.ThenByDescending(c => c.ManaCost.ManaValue)
 				.Take(choice.MinChoices)
 				.Select(c => c.Id);
+		if (choice is OrderLibraryTopChoice order)
+			return LandUnlock.Order(s, order.PlayerId, [.. choice.Options.Select(o => o.Id)], held);
 		if (choice is ChooseKeywordChoice { NamesACard: true } naming)
 			return [naming.Keywords.IndexOf(LikeliestName(s, naming.Keywords)) + 1];
 		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max })
