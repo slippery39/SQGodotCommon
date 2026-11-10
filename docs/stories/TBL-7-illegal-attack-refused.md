@@ -1,7 +1,7 @@
 ---
 id: TBL-7
 title: The table refuses an attack the rules forbid, instead of dropping the creature
-status: ready
+status: done
 area: TBL
 created: 2026-11-01
 ---
@@ -17,9 +17,9 @@ won't let you submit it.
 
 ## Requirements
 
-- [ ] Declaring only creatures that can't attack alone (one Pet Sehlat) is refused at the table, with the
+- [x] Declaring only creatures that can't attack alone (one Pet Sehlat) is refused at the table, with the
       reason shown, before the declaration is submitted
-- [ ] The engine keeps judging the declaration as it finishes — the table's refusal is a convenience, the
+- [x] The engine keeps judging the declaration as it finishes — the table's refusal is a convenience, the
       rule stays in `FinishAttackersAction`
 
 ## Decisions
@@ -29,7 +29,13 @@ won't let you submit it.
 
 ## Tasks
 
-- [ ] TBL-7.1 The table checks a declaration against `Combat.CantAttackAlone` before submitting it
+- [x] TBL-7.1 The table checks a declaration against `Combat.CantAttackAlone` before submitting it
+      Found half-done: `DeclareCombat` already plays the whole declaration out before committing and refuses any
+      pick the engine dropped (a lone blocker on menace's way) — a lone Pet Sehlat was already refused, but as
+      "Pet Sehlat → AI isn't allowed". Now the refusal names the rule: "Pet Sehlat can't attack alone" (the rule
+      itself stays in `FinishAttackersAction`; the manager only says why). Test
+      `ALoneCreatureThatCantAttackAlone_IsRefusedWithWhy_NothingCommitted` (alone: refused, nothing committed;
+      with a partner: it attacks). Captured with real clicks: the reason under the declaration, still open
 
 ## Next
 
@@ -39,3 +45,4 @@ declaration in `SQGodotCommon/MagicTable/`.
 ## Log
 
 - 2026-11-01: created — Shayne, while Pet Sehlat was scripted in MC-5.3 batch 4c.
+- 2026-11-10: TBL-7.1 done (overnight) — the refusal existed; it now says why.

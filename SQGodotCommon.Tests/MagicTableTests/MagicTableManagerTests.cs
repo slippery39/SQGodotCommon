@@ -206,6 +206,64 @@ public class MagicTableManagerTests
 	}
 
 	[Test]
+	public void ALoneCreatureThatCantAttackAlone_IsRefusedWithWhy_NothingCommitted()
+	{
+		var m = New();
+		m.AutoplayTo(4); // the AI's turn: put in now, both can attack on yours
+		foreach (var name in new[] { "Pet Sehlat", "Graft Surgeon" })
+		{
+			while (!m.CanSandbox && m.AiToAct)
+				m.StepAi();
+			m.Sandbox(m.HumanId, CardRegistry.Get(name), ZoneType.Battlefield);
+		}
+		for (
+			var i = 0;
+			i < 80 && !(m.HumanToAct && m.State.GetPendingChoice() is DeclareAttackerChoice);
+			i++
+		)
+		{
+			RunAi(m);
+			if (m.HumanToAct && m.State.GetPendingChoice() is DeclareBlockerChoice)
+				m.DeclareCombat(new Dictionary<int, int>());
+			else if (m.HumanToAct && m.State.GetPendingChoice() is null)
+				m.Act(m.State.LegalActions().OfType<PassPriorityAction>().First());
+		}
+		Assert.That(
+			m.HumanToAct && m.State.GetPendingChoice() is DeclareAttackerChoice,
+			$"precondition: your declaration (turn {m.State.GetGame().TurnNumber}, {m.State.GetPendingChoice()?.GetType().Name})"
+		);
+		Assert.That(
+			m.State.CardsIn(m.HumanId, ZoneType.Battlefield).Select(c => c.Name),
+			Does.Contain("Pet Sehlat"),
+			"precondition: it survived the AI's turn"
+		);
+		var candidates = global::MagicCore.Turns.Combat.AttackCandidates(m.State);
+		var sehlat = candidates.Single(c => c.Name == "Pet Sehlat");
+		var partner = candidates.First(c => c.Id != sehlat.Id);
+		var atTheDeclaration = m.State;
+
+		var refused = m.DeclareCombat(new Dictionary<int, int> { [sehlat.Id] = m.OpponentId });
+
+		Assert.That(refused, Is.EqualTo(new[] { "Pet Sehlat can't attack alone" }));
+		Assert.That(
+			m.State,
+			Is.SameAs(atTheDeclaration),
+			"nothing committed: fix it and submit again"
+		);
+
+		refused = m.DeclareCombat(
+			new Dictionary<int, int> { [sehlat.Id] = m.OpponentId, [partner.Id] = m.OpponentId }
+		);
+
+		Assert.That(refused, Is.Empty);
+		Assert.That(
+			m.State.GetCard(sehlat.Id).AttackingId,
+			Is.EqualTo(m.OpponentId),
+			"not alone: it attacks"
+		);
+	}
+
+	[Test]
 	public void AManualTap_FloatsTheMana_AndKeepsYourPriority()
 	{
 		var m = New();

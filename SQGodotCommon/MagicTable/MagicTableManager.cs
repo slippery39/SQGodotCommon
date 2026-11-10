@@ -337,7 +337,14 @@ public sealed class MagicTableManager
 			.ToList();
 		var refused = chosen
 			.Except(took)
-			.Select(d => $"{Pair(State, d.Key, d.Value)} isn't allowed")
+			.Select(d =>
+				// the engine dropped it (FinishAttackersAction); say which rule, not just "no" (TBL-7)
+				attacking
+				&& chosen.Count == 1
+				&& State.Has(State.GetCard(d.Key), MagicCore.Turns.Combat.CantAttackAlone)
+					? $"{State.GetCard(d.Key).Name} can't attack alone"
+					: $"{Pair(State, d.Key, d.Value)} isn't allowed"
+			)
 			.ToList();
 		if (refused.Count > 0)
 			return refused;
