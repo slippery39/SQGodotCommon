@@ -169,6 +169,25 @@ simple there — MtgCore has no blocking — and was not ported with the search 
   rule: **"We need to make sure we always account for a counter attack from an opponent whenever we are
   choosing attackers ourselves."**
 
+- 2026-11-09, Shayne (the burn rule, agreed before building - Claude's cases A/B, each with a board and card text):
+  **"for burn usually you want to save it until you can actually kill the opponent."** A1-A4 agreed: lethal at their
+  face this turn (one burn, burn + an unblocked attacker, two burns) casts; not lethal holds. **A5** (they at 5, one
+  3-damage sorcery now, a second castable next turn; Claude asked "hold both … or fire one now?"): "yes, this seems
+  obvious to me" - read by Claude as FIRE ONE NOW, the kill completing next turn (to confirm) - "Its split across two turns … The exception to this is if
+  there is a known way for the opponent to gain life the next turn. Like lets say they have a 3/3 life linker. you would
+  just kill that instead." **A6** (player-only burn, they at 10): "Depends on the deck … If there is no extra value to be
+  gained by holding then you might just play it" - option pricing. **A7** (a "{T}: 1 damage" creature, they have no
+  creatures): ping their face. **A8** (they at 5 with a 3/3, one 3-damage sorcery): "Depends, do we have more burn spells
+  in our deck?" - option pricing. **How far to look:** "check can we kill this turn, we should also check if we can kill
+  the next turn as well. Kills over multiple turns after that are less reliable … so we could start there."
+  **Holding and desperation:** "the opponent should use spells when the value they get for them is good, the more
+  desperate you are (i.e. you are trying to stay alive), the less you want to hold your spells." B1 (we at 20, a vanilla
+  3/3 attacks, we hold a bounce instant): hold. B2 (the same at 5): "either hold or play it are both good". B3 (at 3, the
+  3/3 lethal): "bounce it … there is no extra potential value to be gained by holding". B4 (a sorcery kill spell, their
+  only creature a 3/3, we at 20): "Depends on our hand and deck … somehting we might needd to discuss." Desperate means
+  "if we are in danger of losing, or if something happening might put us in a lot more danger of losing … when we are
+  close to losing unless we play a card." Not answered yet: burning their face in a race we lose anyway.
+
 The plan (proposed by Claude, agreed by Shayne 2026-10-29):
 - **Fix 1 (may):** inside the look-ahead, a single optional choice (min 0, max 1) is answered with the
   chooser's best — each option settled and evaluated, as `GreedyAi.Answer` already answers a target
@@ -426,12 +445,20 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
         not a worse play: the plan's line is coherent across the turn. The question is a match: a fresh
         search at every decision (`CommitPlans` off, `+noplans`), or plans kept only inside one priority
         window. The suite cannot see this (it decides every position fresh)
-  - [ ] DEFERRED (Shayne, 2026-10-30: "hold off on the burn rule now, but note it for later") — burn at
+  - [x] DEFERRED (Shayne, 2026-10-30: "hold off on the burn rule now, but note it for later") — burn at
         their face (Shayne, 2026-10-30): only when the burn is player-only, repeatable, or the
         damage in hand burns them out — otherwise a creature. Positions first (the symmetric life risk
         prices their low life higher, so check it doesn't send burn at the face against his rule)
         **Checked 2026-11-09 (AI-13.6's position): it does.** Ajani's Anguish for 3 with nothing to kill: held at 20 and
         at 8, cast at their face at 6, 5 and 4 in 20 of 30 shuffles - never lethal. Waiting on Shayne to build the rule
+        **BUILT (2026-11-09, Shayne's answers above):** `Evaluator.Terms.SaveBurn` (`+faceburn`): the search's candidates
+        leave out a burn at their face (`BeamSearchAi.FaceBurn`: a damage-only instant or sorcery at the opponent, or a
+        damage-only enters-trigger permanent with no creature or walker of theirs to hit) unless `KillsWithinTwoTurns`:
+        their life against the burn in hand cast cheapest first with this turn's and next turn's mana, X taking what is
+        left, plus `Evaluator.Through` each turn (`ponytail:` colours, their lifegain and their answers unseen). Tests:
+        `Burn_IsSaved_UntilItKillsWithinTwoTurns` (A1-A5 and the lifelinker; A3 was the miss, its control burns) and
+        `AjanisAnguish_WithNothingToKill_IsHeld(5)` (control: the rule off). The tree only: the rollout's own policy
+        may still burn a face in an imagined turn. Option pricing (A6, A8, B2, B4) and the desperate-race case not built
 - [ ] AI-17.7 (2026-11-09: BUILT, not yet run at scale - `MagicCore/Ai/BlunderLint.cs`, `MagicConsole --lint --games=N --seed=N --ai=beam[+switch]`; checkers: pass-with-land (postcombat main, stack empty, land legal), attack-into-bigger, wasted-removal (own target only), face-burn (damage spell at the face, non-lethal; Shayne added it 2026-11-09 after Ajani's Anguish for 1 on turn 2). NOT built: 'may does nothing', 'free kill unused'. First look: 8 search games = 97 s; attack-into-bigger fires mostly on alpha strikes (no 'follow-up' test yet) - tighten before reading its count.) Blunder counters (Shayne, 2026-10-29): over N AI games, each decision checked for a named
       mistake, counted whatever the game's result — **missed lethal** first (an attack that kills through
       the defender's best blocks, not made; AI-17.3 should drive it to 0), then walked into lethal,
@@ -455,7 +482,7 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       so those switches stay; freeze a build if that gets unwieldy); **~1 500 games (±0.45pp, ~1–1.5 h)
       near each sprint's end**, asked before it runs. Not GreedyAi: the search already beats it ~75%, past
       the 70% a top player reaches, and it moves with every evaluator and look-ahead fix
-- [ ] AI-17.9 Bug (found in MC-5.3 batch 4a's review, 2026-11-01; Shayne: note it, fix later): the clock's
+- [x] AI-17.9 Bug (found in MC-5.3 batch 4a's review, 2026-11-01; Shayne: note it, fix later): the clock's
       next-attack estimate (`Evaluator.Through`) asks `Combat.CanBlock` and `s.Has` on the board as it is
       NOW, so a grant that ends this turn is read as lasting into next turn — La'An's "target creature
       can't block this turn", an attacker's flying or "can't be blocked" until end of turn. For the rest of
@@ -469,7 +496,8 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       unblockable on ours; control: the grant moves the clock). Golden games: 7 of 12 moved, all 12 pass with it forced
       off; regenerated. Suite: unchanged (21 changed, 85.4%, 7 784 steps). The review: a copy until end of turn undone too,
       the attacker's defender check and power read from the next-turn card; control stolen this turn and a lord's lost
-      abilities left (`ponytail:`, DesignNotes). Open until its match runs
+      abilities left (`ponytail:`, DesignNotes). **Match (2026-11-09): 50.0% over 96 (48-48), ± 0.0 - every mirror
+      pair split, so it changed no FRA game (few grants end this turn there); kept**
 - [ ] AI-17.10 Block that loses to the trick (Shayne, 2026-11-08): turn 3, the AI blocked his Astute
       Terraformer with its own; he pumped his and killed theirs for free. Record
       `game_records/2026-11-08_024830_seed30768236.json` #92. Rebuild as a position: does the search see his

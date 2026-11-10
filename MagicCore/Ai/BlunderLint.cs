@@ -155,11 +155,7 @@ public static class BlunderLint
 				&& picked == s.OpponentOf(who)
 				&& s.HasObject(tc.SourceId)
 				&& s.GetObject(tc.SourceId) is Card src
-				&& s.AbilitiesOf<TriggeredAbilityComponent>(src)
-					.Where(t => t.Targets.Count > 0)
-					.ToList()
-					is { Count: > 0 } trig
-				&& trig.All(t => t.Effects.All(e => e is DealDamage))
+				&& BeamSearchAi.EntersBurn(s, src)
 			)
 				burns.Add(
 					(

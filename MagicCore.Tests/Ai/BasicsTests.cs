@@ -535,10 +535,14 @@ public class BasicsTests
 	// any target") for 3 at the face with nothing worth killing - "its better to just [hold] … If you draw lands the
 	// anguish gets better anyways, and there is always a chance the opponent plays some creature you need to kill".
 	// Hand-built (2026-11-09): four Mountains, they at 20 with no creatures. Held by its measured price, as Yoshimaru
-	// is. The CONTROL: with flat hand prices it is cast (counted over 30 shuffles, the sample decides each).
-	[Test]
-	public void AjanisAnguish_WithNothingToKill_IsHeld_AtTwenty()
+	// is. The CONTROL: with flat hand prices (and the burn rule off) it is cast - counted over 30 shuffles, the sample
+	// decides each. At THEIR 5 it went at the face for 3 in 20 of 30 (their low life priced the chip damage above the
+	// card): held by the burn rule (Terms.SaveBurn), whose absence is that case's control.
+	[TestCase(20)]
+	[TestCase(5)]
+	public void AjanisAnguish_WithNothingToKill_IsHeld(int theirLife)
 	{
+		Life(them, theirLife);
 		Lands(4, "Mountain");
 		Put(me, CardRegistry.Get("Ajani's Anguish"), ZoneType.Hand);
 		int Casts(BeamSearchAi.Settings settings)
@@ -560,11 +564,139 @@ public class BasicsTests
 			return casts;
 		}
 
+		var noRule = new BeamSearchAi.Settings(Without: Evaluator.Terms.SaveBurn, Threads: 1);
 		Assert.That(
-			Casts(new BeamSearchAi.Settings(Threads: 1).WithoutHeld()),
+			Casts(theirLife == 20 ? noRule.WithoutHeld() : noRule),
 			Is.GreaterThanOrEqualTo(10),
 			"control"
 		);
 		Assert.That(Casts(new BeamSearchAi.Settings(Threads: 1)), Is.EqualTo(0));
+	}
+
+	static readonly CardDefinition Burn = Spell(
+		"Burn",
+		"{1}{R}",
+		"Sorcery",
+		TargetSpec.AnyTarget(),
+		new DealDamage(Ref.Target(), 3)
+	);
+
+	// The burn rule (Shayne, 2026-11-09): "for burn usually you want to save it until you can actually kill the
+	// opponent" - this turn or the next ("Kills over multiple turns after that are less reliable"). Each case is his,
+	// "Sorcery: deal 3 damage to any target" ({1}{R}): A1 they at 3; A2 at 5 with our 2/2 unblocked; A3 at 5, nothing
+	// else - HOLD; A4 at 5 with two and the mana for both; A5 at 5 with two, mana for one a turn (Claude's reading of
+	// his "yes": fire, the kill lands next turn); A5L the same against their 3/3 lifelinker - "you would just kill that
+	// instead". The search plays our turn out; where the burns went and their life after.
+	[TestCase("A1", 3, 2, 1, false, false, "won", "Player2")]
+	[TestCase("A2", 5, 2, 1, true, false, "won", "Player2")]
+	[TestCase("A3", 5, 2, 1, false, false, "5", "")]
+	[TestCase("A4", 5, 4, 2, false, false, "won", "Player2;Player2")]
+	[TestCase("A5", 5, 2, 2, false, false, "2", "Player2")]
+	[TestCase("A5L", 5, 2, 2, false, true, "5", "Linker")]
+	public void Burn_IsSaved_UntilItKillsWithinTwoTurns(
+		string position,
+		int life,
+		int mountains,
+		int burns,
+		bool bear,
+		bool lifelinker,
+		string theirLife,
+		string burnedAt
+	)
+	{
+		Life(them, life);
+		Lands(mountains, "Mountain");
+		for (var i = 0; i < burns; i++)
+			Put(me, Burn, ZoneType.Hand);
+		if (bear)
+			Put(me, TestGames.Creature("Bear", "2/2"));
+		if (lifelinker)
+			Put(them, TestGames.Creature("Linker", "3/3", "Lifelink"));
+
+		Assert.That(PlayOurTurn(Evaluator.Terms.None), Is.EqualTo((theirLife, burnedAt)), position);
+		if (position == "A3")
+			Assert.That(
+				PlayOurTurn(Evaluator.Terms.SaveBurn).BurnedAt,
+				Is.EqualTo("Player2"),
+				"control: it burns"
+			);
+	}
+
+	(string TheirLife, string BurnedAt) PlayOurTurn(Evaluator.Terms without)
+	{
+		var (x, ai, at) = (
+			s,
+			new BeamSearchAi(me, new(Without: without, Threads: 1)),
+			new List<string>()
+		);
+		for (
+			var i = 0;
+			i < 200 && x.GetGame().TurnNumber == s.GetGame().TurnNumber && !x.IsOver();
+			i++
+		)
+			if (x.DecidingPlayerId() == me)
+			{
+				var d = ai.Decide(x);
+				if (d.What.StartsWith("Cast Burn → "))
+					at.Add(d.What["Cast Burn → ".Length..]);
+				x = d.State;
+			}
+			else
+				x = TestGames.PassOrChoose(x);
+		return (x.IsOver() ? "won" : $"{x.GetPlayer(them).Life}", string.Join(";", at));
+	}
+
+	// The burn rule's review (2026-11-09): a CREATURE with a damage trigger is a body, never burn - Munitions Enthusiast
+	// ("When this creature dies, it deals 1 damage to any target") would otherwise never be cast onto an empty board.
+	[Test]
+	public void ACreatureWithADamageTrigger_IsNeverFaceBurn()
+	{
+		Lands(2, "Mountain");
+		var pinger = Put(
+			me,
+			new CardDefinition(
+				TestGames.Creature("Pinger", "2/2").Data,
+				[
+					new TriggeredAbilityComponent(
+						TriggerEvent.SelfEnters,
+						[new DealDamage(Ref.Target(), 1)]
+					)
+					{
+						Targets = [TargetSpec.AnyTarget()],
+					},
+				]
+			),
+			ZoneType.Hand
+		);
+		var casts = s.LegalActions()
+			.OfType<CastSpellAction>()
+			.Where(a => a.CardId == pinger)
+			.ToList();
+
+		Assert.That(casts, Is.Not.Empty);
+		Assert.That(casts.Any(a => BeamSearchAi.FaceBurn(s, a)), Is.False);
+	}
+
+	// ...and damage that can only hit a creature is no reach at their face: they at 7, "deal 3 damage to any target"
+	// and "deal 4 damage to target creature" - 3 + 4 is not a kill, so the burn is held.
+	[Test]
+	public void ACreatureOnlyDamageSpell_IsNotCountedTowardTheKill()
+	{
+		Life(them, 7);
+		Lands(4, "Mountain");
+		Put(me, Burn, ZoneType.Hand);
+		Put(
+			me,
+			Spell(
+				"Bolt",
+				"{1}{R}",
+				"Sorcery",
+				TargetSpec.Creature,
+				new DealDamage(Ref.Target(), 4)
+			),
+			ZoneType.Hand
+		);
+
+		Assert.That(PlayOurTurn(Evaluator.Terms.None), Is.EqualTo(("7", "")));
 	}
 }

@@ -117,7 +117,8 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       (`+liveoptionturns`): turns left read once, at the search's root (`WithRootImpulse`); the bar still falls decision
       by decision, as agreed. The drain test gains it as a second control. Suite: 24 changed (21 without it): Koth held
       back from an attack (seed 1 #60), a spell before the land (seed 3 #56), Prophesied End on Koth (Jace seed 3 #71),
-      Break Under Pressure moved from Jace seed 3 #85 to seed 4 #93; oracle 85.1% (85.4%). Not matched. Not accepted
+      Break Under Pressure moved from Jace seed 3 #85 to seed 4 #93; oracle 85.1% (85.4%). **Match (2026-11-09):
+      `beam` vs `beam+liveoptionturns` 51.0% ± 3.2pp over 96 (49-47), no difference - kept.** Suite not yet accepted
 - [ ] AI-13.8 The option value for a flash creature's protective enters (Shayne's playtest, 2026-11-08:
       `2026-11-08_232615_seed2123881407` #145 and `232136` #216): Saru, Unthreatened cast in the MAIN phase - "almost
       never a reason, it has flash, and bricking an opponent's removal by giving one of yours hexproof is very valuable".

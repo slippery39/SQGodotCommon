@@ -104,6 +104,8 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirAbilities,
 				},
+			// Burn at their face whenever it scores, before the burn rule (AI-17.6): beam+faceburn.
+			["faceburn"] = o => o with { Without = o.Without | Evaluator.Terms.SaveBurn },
 			// A held option's turns left read in each line, not at the root, before AI-13.9: beam+liveoptionturns.
 			["liveoptionturns"] = o =>
 				o with

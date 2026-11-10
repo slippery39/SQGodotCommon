@@ -167,6 +167,9 @@ public record TargetSpec(From From, Filter? Filter = null)
 
 	bool Covers(From zone) => From == zone || (Or?.Covers(zone) ?? false);
 
+	/// <summary>A player can be its target ("any target", "target opponent") - the burn rule's reach (AI-17.6).</summary>
+	public bool CanTargetPlayers => Covers(From.Players);
+
 	static bool OnStack(GameState s, int id) =>
 		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);
 

@@ -492,6 +492,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			// a Spacecraft that already has its threshold gains nothing from another counter (Terms.StationCap)
 			if (!Evaluator.IsOff(Evaluator.Terms.StationCap))
 				moves.RemoveAll(a => a is ActivateAbilityAction act && OverCharges(s, act));
+			// burn at their face waits for a kill within two turns (Terms.SaveBurn)
+			if (
+				!Evaluator.IsOff(Evaluator.Terms.SaveBurn)
+				&& moves.Where(a => FaceBurn(s, a)).ToList() is { Count: > 0 } burns
+				&& !KillsWithinTwoTurns(s, PlayerId)
+			)
+				moves.RemoveAll(burns.Contains);
 			return [.. moves.Select(a => new Move(a, s.MoveKey(a)))];
 		}
 		var key = ChoiceKey(choice);
@@ -551,6 +558,121 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			picks.Insert(0, new Pick([], key));
 		return picks;
 	}
+
+	/// <summary>
+	/// A burn spell at their face: an instant or sorcery that only deals damage, aimed at the opponent - or a noncreature
+	/// permanent whose enters-trigger only deals damage (Ajani's Anguish) while they have no creature or planeswalker for
+	/// it to hit. A creature is a body whatever its trigger hits. The lint's face-burn class, as a move (<see cref="BlunderLint"/>).
+	/// </summary>
+	public static bool FaceBurn(GameState s, GameAction a)
+	{
+		if (a is not CastSpellAction cast || !s.HasObject(cast.CardId))
+			return false;
+		var card = s.GetCard(cast.CardId);
+		var them = s.OpponentOf(cast.PlayerId);
+		if (card.Is(Cards.CardType.Instant) || card.Is(Cards.CardType.Sorcery))
+			return BurnOnly(card.GetComponent<SpellEffectsComponent>()?.Effects ?? [])
+				&& cast.Targets.Contains(them);
+		return EntersBurn(s, card)
+			&& !s.CardsIn(them, ZoneType.Battlefield)
+				.Any(c => c.Is(Cards.CardType.Creature) || c.Is(Cards.CardType.Planeswalker));
+	}
+
+	static bool BurnOnly(IReadOnlyCollection<GameAction> effects) =>
+		effects.Count > 0 && effects.All(e => e is DealDamage);
+
+	/// <summary>A noncreature permanent whose targeted enters-triggers only deal damage (Ajani's Anguish) - shared with the lint.</summary>
+	internal static bool EntersBurn(GameState s, Cards.Card card) =>
+		!card.Is(Cards.CardType.Creature)
+		&& s.AbilitiesOf<TriggeredAbilityComponent>(card)
+			.Where(t => t.On.On == EventKind.Entered && t.Targets.Count > 0)
+			.ToList()
+			is { Count: > 0 } triggers
+		&& triggers.All(t => BurnOnly(t.Effects));
+
+	/// <summary>A burn card in hand that can reach a player: its spell, or its enters-burn, can target one.</summary>
+	static bool FaceCapable(GameState s, Cards.Card c) =>
+		(c.Is(Cards.CardType.Instant) || c.Is(Cards.CardType.Sorcery))
+			? c.GetComponent<SpellEffectsComponent>() is { } spell
+				&& BurnOnly(spell.Effects)
+				&& spell.Targets.Any(t => t.CanTargetPlayers)
+			: EntersBurn(s, c)
+				&& s.AbilitiesOf<TriggeredAbilityComponent>(c)
+					.Any(t =>
+						t.On.On == EventKind.Entered && t.Targets.Any(x => x.CanTargetPlayers)
+					);
+
+	/// <summary>
+	/// Shayne's burn rule (AI-17.6, 2026-11-09): "save it until you can actually kill the opponent" - this turn or the
+	/// next. Their life against the damage reachable in the two: the burn in our hand cast cheapest first with each
+	/// turn's mana (now: untapped sources and a land still to play; next: every source and another land), X taking
+	/// what is left (X spells last), and what our attackers get past their blockers each turn (<see cref="Evaluator.Through"/>;
+	/// this turn's only while we can still attack).
+	/// ponytail: mana counted by source, colours ignored; this turn's attack counts every creature, sick or not, and next
+	/// turn's meets their blockers as they stand now; a count's multipliers (Times) unread; lifegain they may have
+	/// (Shayne's lifelinker) not subtracted - the search then weighs killing it; their answers to come unseen.
+	/// </summary>
+	static bool KillsWithinTwoTurns(GameState s, int me)
+	{
+		var them = s.OpponentOf(me);
+		var game = s.GetGame();
+		var ours = game.ActivePlayerId == me;
+		var sources = s.CardsIn(me, ZoneType.Battlefield)
+			.Where(c => ManaAbilities.ColorsOf(s, c).Any())
+			.ToList();
+		var hand = s.CardsIn(me, ZoneType.Hand).ToList();
+		var lands = hand.Count(c => c.Is(Cards.CardType.Land));
+		var landNow =
+			ours
+			&& Priority.AtSorcerySpeed(s, me)
+			&& s.GetPlayer(me).ThisTurn.LandsPlayed < s.LandDrops(me)
+			&& lands > 0;
+		var burns = hand.Where(c => FaceCapable(s, c))
+			.OrderBy(c => c.ManaCost.HasX)
+			.ThenBy(c => c.ManaCost.ManaValue)
+			.ToList();
+		var damage = 0;
+		foreach (
+			var mana in new[]
+			{
+				sources.Count(c => !c.IsTapped) + (landNow ? 1 : 0),
+				sources.Count + (landNow ? 1 : 0) + (lands > (landNow ? 1 : 0) ? 1 : 0),
+			}
+		)
+		{
+			var left = mana;
+			foreach (var burn in burns.ToList())
+				if (burn.ManaCost.ManaValue <= left)
+				{
+					left -= burn.ManaCost.ManaValue;
+					var x = burn.ManaCost.HasX ? left : 0;
+					left -= x;
+					damage += Damage(s, burn, x);
+					burns.Remove(burn);
+				}
+		}
+		var combat =
+			(
+				ours && game.Step <= Step.DeclareAttackers && !Turns.Combat.Attackers(s).Any()
+					? Evaluator.Through(s, me, them)
+					: 0
+			) + Evaluator.Through(s, me, them);
+		return s.GetPlayer(them).Life <= damage + combat;
+	}
+
+	/// <summary>A burn card's damage at X: its fixed amounts and X; any other count reads 0 (held, to be safe).</summary>
+	static int Damage(GameState s, Cards.Card card, int x) =>
+		(card.GetComponent<SpellEffectsComponent>()?.Effects ?? [])
+			.Concat(s.AbilitiesOf<TriggeredAbilityComponent>(card).SelectMany(t => t.Effects))
+			.OfType<DealDamage>()
+			.Sum(d =>
+				d.Amount.Kind switch
+				{
+					CountOf.Fixed => d.Amount.Fixed,
+					CountOf.X => x,
+					_ => 0,
+				}
+			);
 
 	/// <summary>Station once the Spacecraft's charge is at its threshold: the ability that puts charge on it, tapping a creature.</summary>
 	static bool OverCharges(GameState s, ActivateAbilityAction act)

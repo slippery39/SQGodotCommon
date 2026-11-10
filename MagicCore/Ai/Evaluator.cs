@@ -397,6 +397,15 @@ public static partial class Evaluator
 		/// turn's clock - as its toughness and power pumps already weren't (`+thisturngrants`).
 		/// </summary>
 		NextTurnGrants = 67108864,
+
+		/// <summary>
+		/// Burn at their face waits for a kill within two turns (AI-17.6's burn rule, Shayne 2026-11-09: "save it until
+		/// you can actually kill the opponent"): the search leaves out a damage-only spell at their face, or a
+		/// damage-only enters-trigger permanent with nothing else of theirs to hit, unless the reachable damage this
+		/// turn and next kills (<see cref="BeamSearchAi"/>'s KillsWithinTwoTurns) - their low life priced the chip
+		/// damage above the card (`+faceburn`).
+		/// </summary>
+		SaveBurn = 268435456,
 	}
 
 	/// <summary>
@@ -513,7 +522,7 @@ public static partial class Evaluator
 	/// The power that gets past <paramref name="defender"/>'s blockers in <paramref name="attacker"/>'s next attack
 	/// — each attacker's power changed by <paramref name="bonus"/> (a walker's pump or −N/−0, AI-9.3).
 	/// </summary>
-	static int Through(GameState s, int attacker, int defender, int bonus = 0)
+	internal static int Through(GameState s, int attacker, int defender, int bonus = 0)
 	{
 		var attackers = new List<(Card Card, int Power)>();
 		foreach (var now in s.CardsIn(attacker, ZoneType.Battlefield))
