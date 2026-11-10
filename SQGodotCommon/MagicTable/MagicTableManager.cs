@@ -62,7 +62,7 @@ public sealed class MagicTableManager
 	/// <summary>A folder to write <see cref="Record"/> into as the game goes; null writes nothing (tests).</summary>
 	public string? RecordTo { get; init; }
 	private string? _recordFile;
-	public bool CanUndo => _undo.Count > 0;
+	public bool CanUndo => _undo.Count > 0 || Conceded;
 
 	public MagicTableManager(
 		IReadOnlyList<CardDefinition> deck1,
@@ -201,7 +201,25 @@ public sealed class MagicTableManager
 			? new BeamSearchAi(playerId, BeamSearchAi.Settings.Interactive)
 			: new GreedyAi(playerId);
 
-	public bool IsOver => State.IsOver();
+	public bool IsOver => Conceded || State.IsOver();
+
+	/// <summary>
+	/// You conceded (TBL-9.3, CR 104.3a): the game is over and the AI won. The table's, not an engine move — the
+	/// record stays an unfinished game (its End is the engine's, which a replay checks); Undo takes it back.
+	/// </summary>
+	public bool Conceded { get; private set; }
+
+	/// <summary>Who won: the engine's answer, or the AI after a concession; 0 for a draw.</summary>
+	public int WinnerId => Conceded ? OpponentId : State.WinnerId();
+
+	public void Concede()
+	{
+		if (IsOver)
+			return;
+		Conceded = true;
+		_log.Add("You concede.");
+	}
+
 	public bool HumanToAct => !IsOver && !_ais.ContainsKey(State.DecidingPlayerId());
 	public bool AiToAct => !IsOver && _ais.ContainsKey(State.DecidingPlayerId());
 
@@ -376,6 +394,12 @@ public sealed class MagicTableManager
 	/// <summary>Back to just before your last decision — the AI's replies since then go too.</summary>
 	public void Undo()
 	{
+		if (Conceded) // the concession first, nothing before it
+		{
+			Conceded = false;
+			_log.Add("Concession taken back.");
+			return;
+		}
 		if (!CanUndo)
 			return;
 		var (state, logCount, moveCount) = _undo[^1];
@@ -512,7 +536,10 @@ public sealed class MagicTableManager
 				RecordTo,
 				$"{DateTime.Now:yyyy-MM-dd_HHmmss}_seed{Seed}.json"
 			);
-			File.WriteAllText(_recordFile, (IsOver ? Record.Ended(State) : Record).ToJson());
+			File.WriteAllText(
+				_recordFile,
+				(State.IsOver() ? Record.Ended(State) : Record).ToJson()
+			);
 		}
 		catch (Exception e) when (e is IOException or UnauthorizedAccessException)
 		{

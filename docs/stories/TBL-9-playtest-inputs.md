@@ -14,7 +14,7 @@ Shayne's playtest, 2026-11-09. Choosing X lists every possible X as a button (te
 
 - [x] X is chosen with a spin-down (+ / -) that can also be typed into, never one button per X
 - [ ] A surveil (and any "any order" choice) lets the player drag the kept cards into an order
-- [ ] The player can concede a game: right-click the table → a context menu → Concede, confirmed first
+- [x] The player can concede a game: right-click the table → a context menu → Concede, confirmed first
 
 ## Decisions
 
@@ -37,7 +37,13 @@ Shayne's playtest, 2026-11-09. Choosing X lists every possible X as a button (te
       {X} and a planeswalker's −X. Test `AnXSpell_IsOnePlay_ItsXChosenOnASpinner`; real input: Guiding Hydra with
       three Plains, − twice, cast — "Cast Guiding Hydra (X=1)", one counter. Typing not driven (mouse only)
 - [ ] TBL-9.2 Surveil/"any order": drag to reorder the cards kept on top. The engine takes no order today (Decisions): add the order to the choice, check a record replays, then the table
-- [ ] TBL-9.3 Concede: a right-click context menu on the table with Concede, a confirm, the game ended as a loss
+- [x] TBL-9.3 Concede: a right-click context menu on the table with Concede, a confirm, the game ended as a loss
+      Built: a right-click anywhere on the table but a card (that zooms it, as before — `CardViews.CardMeta` marks a
+      card) opens a menu with Concede; a dialog confirms ("It counts as a loss"); `MagicTableManager.Concede` — the
+      game over, the AI the winner (a draft run counts the loss through `TableSetup.Finished`), the record left
+      unfinished; Undo takes the concession back first. Test `Conceding_EndsTheGameForTheAi_AndUndoTakesItBack`;
+      real input (new `--rtap`, a right-click): menu → Concede → confirm → "The AI wins."; a right-click on a card
+      zoomed it, no menu
 
 ## Next
 
@@ -48,3 +54,4 @@ Read this story, then `.claude/rules/magic-table.md` (table) or `MagicCore/CLAUD
 - 2026-11-09: opened from Shayne's playtest notes.
 - 2026-11-10: TBL-9.3 (concede) added (Shayne); TBL-9.2's engine side found (Decisions).
 - 2026-11-10: TBL-9.1 built (overnight).
+- 2026-11-10: TBL-9.3 built (overnight).

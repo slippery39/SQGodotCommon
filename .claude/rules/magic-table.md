@@ -118,6 +118,9 @@ MagicTable/
   the creatures blocking it share one column in the two creature rows, which face each other across the
   phase bar; the rows are left-aligned while attackers exist. Both rows build the same column widths
   (`ColumnWidth`) — change one side and they stop meeting.
+- **A right-click is a card's zoom, or the table's menu** (TBL-9.3: Concede): `_Input` opens the menu unless the
+  pointer is on a card (`CardViews.CardMeta`, or the hand's hovered card). A concession is the MANAGER's
+  (`Conceded`): the engine never ended the game, so the record stays unfinished.
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.
 - **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
   only way to read a card), so a hold must never also play it. A new click target on a card goes

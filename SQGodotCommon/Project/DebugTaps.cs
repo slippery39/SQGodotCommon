@@ -12,18 +12,27 @@ namespace Project;
 /// directly would verify something no player can do (godot-frontend.md). Lets a capture show what
 /// a click DOES. <c>--tap=X,Y@F~N</c> holds the button N frames before letting go — a long press;
 /// <c>--tap=X,Y@F~N&gt;X2,Y2</c> moves to X2,Y2 while it holds, and lets go there — a drag.
+/// <c>--rtap=…</c> is the same with the RIGHT button (TBL-9.3's context menu).
 /// </summary>
 public partial class DebugTaps : Node
 {
-	private readonly List<(Vector2 At, int Frame, int Hold, Vector2 To)> _taps = new();
+	private readonly List<(Vector2 At, int Frame, int Hold, Vector2 To, MouseButton Button)> _taps =
+		new();
 	private int _frame;
 
 	public static DebugTaps? FromArgs()
 	{
 		var taps = new DebugTaps();
-		foreach (var arg in OS.GetCmdlineUserArgs().Where(a => a.StartsWith("--tap=")))
+		foreach (
+			var arg in OS.GetCmdlineUserArgs()
+				.Where(a => a.StartsWith("--tap=") || a.StartsWith("--rtap="))
+		)
 		{
-			var (point, rest) = (arg[6..].Split('@')[0], arg.Split('@')[1].Split('>'));
+			var right = arg.StartsWith("--rtap=");
+			var (point, rest) = (
+				arg[(right ? 7 : 6)..].Split('@')[0],
+				arg.Split('@')[1].Split('>')
+			);
 			var when = rest[0].Split('~');
 			var at = Point(point);
 			taps._taps.Add(
@@ -35,7 +44,8 @@ public partial class DebugTaps : Node
 						? int.Parse(when[1])
 					: rest.Length > 1 ? 10
 					: 0,
-					rest.Length > 1 ? Point(rest[1]) : at
+					rest.Length > 1 ? Point(rest[1]) : at,
+					right ? MouseButton.Right : MouseButton.Left
 				)
 			);
 		}
@@ -52,12 +62,12 @@ public partial class DebugTaps : Node
 	public override void _Process(double delta)
 	{
 		_frame++;
-		foreach (var (at, frame, hold, to) in _taps)
+		foreach (var (at, frame, hold, to, button) in _taps)
 		{
 			if (_frame == frame)
 				Push(new InputEventMouseMotion { Position = at, GlobalPosition = at });
 			if (_frame == frame + 1)
-				Push(Button(at, pressed: true));
+				Push(Button(at, pressed: true, button));
 			// A drag: the pointer moves toward the target while the button is held.
 			if (to != at && _frame > frame + 1 && _frame <= frame + 1 + hold)
 			{
@@ -72,18 +82,18 @@ public partial class DebugTaps : Node
 				);
 			}
 			if (_frame == frame + 1 + hold)
-				Push(Button(to, pressed: false));
+				Push(Button(to, pressed: false, button));
 		}
 	}
 
 	private void Push(InputEvent e) => GetViewport().PushInput(e);
 
-	private static InputEventMouseButton Button(Vector2 at, bool pressed) =>
+	private static InputEventMouseButton Button(Vector2 at, bool pressed, MouseButton button) =>
 		new()
 		{
 			Position = at,
 			GlobalPosition = at,
-			ButtonIndex = MouseButton.Left,
+			ButtonIndex = button,
 			Pressed = pressed,
 		};
 }

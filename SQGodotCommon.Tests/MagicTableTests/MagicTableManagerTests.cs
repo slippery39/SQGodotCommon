@@ -515,4 +515,23 @@ public class MagicTableManagerTests
 		Assert.That(theirs, Is.Not.Empty, "precondition: they hold cards");
 		Assert.That(theirs.All(seen.Contains), seen);
 	}
+
+	[Test]
+	public void Conceding_EndsTheGameForTheAi_AndUndoTakesItBack()
+	{
+		var m = new MagicTableManager(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], 5);
+		m.AutoplayTo(3);
+		Assert.That(m.IsOver, Is.False, "precondition");
+
+		m.Concede();
+
+		Assert.That(m.IsOver, Is.True);
+		Assert.That(m.WinnerId, Is.EqualTo(m.OpponentId));
+		Assert.That(m.AiToAct || m.HumanToAct, Is.False, "nobody plays on");
+		Assert.That(m.Record.End, Is.Null, "the record is not the engine's ending");
+
+		m.Undo();
+
+		Assert.That(m.IsOver, Is.False, "Undo takes the concession back, nothing before it");
+	}
 }

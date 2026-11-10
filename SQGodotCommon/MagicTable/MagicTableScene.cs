@@ -100,6 +100,16 @@ public partial class MagicTableScene : Control
 
 	private bool _paused;
 
+	// A right-click on the table (not on a card — that zooms it): Concede, confirmed first (TBL-9.3).
+	private readonly PopupMenu _context = new();
+	private readonly ConfirmationDialog _concede =
+		new()
+		{
+			Title = "Concede",
+			DialogText = "Concede this game? It counts as a loss.",
+			OkButtonText = "Concede",
+		};
+
 	// Each side's half of the battlefield: a dark wash, edged in gold on its player's turn (TBL-4.2).
 	private readonly PanelContainer _oppBoard = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
 	private readonly PanelContainer _myBoard = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -180,6 +190,7 @@ public partial class MagicTableScene : Control
 		};
 		AddChild(_timer);
 		BuildTools();
+		BuildContextMenu();
 		Action<string?> zoom = name =>
 		{
 			_zoom.Visible = name is not null;
@@ -285,6 +296,14 @@ public partial class MagicTableScene : Control
 	public override void _Input(InputEvent @event)
 	{
 		_hand.Track(@event);
+		if (
+			@event is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } right
+			&& !_m.IsOver
+			&& !OnACard()
+		)
+			// a popup is placed in WINDOW pixels — as _Input's event already is (a capture showed the
+			// screen transform applied twice: the menu at 2/3 of the click)
+			_context.Popup(new Rect2I((Vector2I)right.Position, Vector2I.Zero));
 		if (@event is InputEventMouseButton { Pressed: false })
 			_zoom.Visible = false;
 	}
@@ -902,7 +921,7 @@ public partial class MagicTableScene : Control
 	private void ShowButtons(GameState s, IReadOnlyList<GameAction> moves)
 	{
 		CardViews.Clear(_buttons);
-		var winner = s.WinnerId();
+		var winner = _m.WinnerId;
 		if (_m.IsOver)
 		{
 			_status.Text =
@@ -1042,6 +1061,30 @@ public partial class MagicTableScene : Control
 		tween.TweenProperty(_banner, "modulate", Colors.White, 0.2);
 		tween.TweenInterval(0.9);
 		tween.TweenProperty(_banner, "modulate", Colors.Transparent, 0.6);
+	}
+
+	private void BuildContextMenu()
+	{
+		_context.AddThemeFontSizeOverride("font_size", TextSize);
+		_context.AddItem("Concede", 0);
+		_context.IdPressed += _ => _concede.PopupCentered();
+		AddChild(_context);
+		_concede.GetLabel().AddThemeFontSizeOverride("font_size", TextSize);
+		_concede.GetOkButton().AddThemeFontSizeOverride("font_size", TextSize);
+		_concede.GetCancelButton().AddThemeFontSizeOverride("font_size", TextSize);
+		_concede.Confirmed += () => Do(_m.Concede);
+		AddChild(_concede);
+	}
+
+	/// <summary>Is the pointer on a card — one on the table (<see cref="CardViews.Hook"/>) or in the hand?</summary>
+	private bool OnACard()
+	{
+		if (Common.Cards.CardUIManager.CurrentHoveredCard is not null)
+			return true;
+		for (Node? n = GetViewport().GuiGetHoveredControl(); n is not null; n = n.GetParent())
+			if (n.HasMeta(CardViews.CardMeta))
+				return true;
+		return false;
 	}
 
 	private void BuildTools()

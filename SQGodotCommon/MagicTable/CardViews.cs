@@ -146,6 +146,9 @@ public static class CardViews
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
 
+	/// <summary>Marks a control <see cref="Hook"/> made a card.</summary>
+	public const string CardMeta = "card";
+
 	/// <summary>Shows a card big while it is held (TBL-4.2), null to hide it — set by the table.</summary>
 	public static Action<string?>? Zoom { get; set; }
 
@@ -164,6 +167,7 @@ public static class CardViews
 	public static void Hook(Control slot, string cardName, Action<string?> preview, Action? onClick)
 	{
 		slot.MouseFilter = Control.MouseFilterEnum.Stop;
+		slot.SetMeta(CardMeta, cardName); // a right-click here zooms; the table's context menu leaves it be
 		slot.MouseEntered += () => preview(cardName);
 		slot.MouseExited += () => preview(null);
 		var (press, zoomed, from) = (0, false, Vector2.Zero);
