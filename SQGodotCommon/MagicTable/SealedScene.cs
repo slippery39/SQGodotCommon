@@ -32,7 +32,7 @@ public partial class SealedScene : Control
 		"Lands",
 	];
 	private static readonly string[] Rarities = ["Common", "Uncommon", "Rare", "Mythic"];
-	private static readonly string[] ColorFilters = ["W", "U", "B", "R", "G"];
+	private static readonly string[] ColorFilters = ["W", "U", "B", "R", "G", "Colourless"]; // toggled together, as Arena's (LIM-5.2)
 
 	/// <summary>The event in progress — kept when the table returns here, replaced by New pool.</summary>
 	private static SealedSession? _session;
@@ -61,8 +61,8 @@ public partial class SealedScene : Control
 
 	private readonly Label _simNote = Text("", 16);
 
-	// The pool's filters (LIM-1.10): any of the picked colours (several at once), a kind that excludes
-	// colours (multicolour, colourless, lands), and any of the picked rarities; all three must hold.
+	// The pool's filters (LIM-1.10): any of the picked colours, Colourless among them (several at once), a kind
+	// that excludes colours (multicolour, lands), and any of the picked rarities; all must hold.
 	private readonly HashSet<string> _colors = new();
 	private string _kind = "All";
 	private readonly HashSet<string> _rarities = new();
@@ -564,12 +564,11 @@ public partial class SealedScene : Control
 		var kind = _kind switch
 		{
 			"Lands" => land,
-			"Colourless" => !land && colors.Length == 0,
 			"Multi" => colors.Length > 1,
 			_ => true,
 		};
 		return kind
-			&& (_colors.Count == 0 || colors.Any(_colors.Contains))
+			&& SealedSession.InColours(data, _colors)
 			&& (_rarities.Count == 0 || _rarities.Contains(RarityOf(card)))
 			&& SealedSession.Matches(data, _query.Text);
 	}

@@ -94,6 +94,19 @@ public sealed class SealedSession
 	/// <summary>Unscripted cards would play silently vanilla (MagicCore/CLAUDE.md), so they stay in the pool.</summary>
 	public static bool Playable(string card) => CardRegistry.IsImplemented(card);
 
+	/// <summary>
+	/// The colour filter (LIM-5.2): nothing picked shows everything; else a card of any picked colour, a
+	/// colourless NONLAND card when "Colourless" is picked — W + Colourless shows both, as on Arena.
+	/// </summary>
+	public static bool InColours(CardData data, IReadOnlySet<string> picked) =>
+		picked.Count == 0
+		|| (data.Colors ?? []).Any(picked.Contains)
+		|| (
+			picked.Contains("Colourless")
+			&& (data.Colors ?? []).Length == 0
+			&& !data.TypeLine.Contains("Land")
+		);
+
 	/// <summary>Every word typed appears in the card's name, type line, rules text (either face) or keywords.</summary>
 	public static bool Matches(CardData data, string query) =>
 		query

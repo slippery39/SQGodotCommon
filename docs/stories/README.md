@@ -107,10 +107,10 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | in-progress |
+| [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
-| [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [TBL-6](TBL-6-known-hand-cards.md) | Known cards in the opponent's hand show face up on the table | ready |

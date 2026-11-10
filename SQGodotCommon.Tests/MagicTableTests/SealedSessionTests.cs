@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using MagicCore;
 using MagicCore.Cards;
@@ -336,6 +337,30 @@ public class SealedSessionTests
 			SealedSession.Matches(card, "flying trample"),
 			Is.False,
 			"every word must match"
+		);
+	}
+
+	[Test]
+	public void Colourless_FiltersAlongsideTheColours()
+	{
+		CardData Card(string type, params string[] colors) =>
+			new("X", "normal", null, 1, type, null, null, null, null, colors, [], null);
+		var white = Card("Instant", "W");
+		var artifact = Card("Artifact");
+		var land = Card("Land");
+		var both = new HashSet<string> { "W", "Colourless" };
+		Assert.That(SealedSession.InColours(white, both), Is.True);
+		Assert.That(
+			SealedSession.InColours(artifact, both),
+			Is.True,
+			"Colourless keeps the colours"
+		);
+		Assert.That(SealedSession.InColours(land, both), Is.False, "a land is the Lands filter's");
+		Assert.That(SealedSession.InColours(artifact, new HashSet<string> { "W" }), Is.False);
+		Assert.That(
+			SealedSession.InColours(land, new HashSet<string>()),
+			Is.True,
+			"nothing picked hides nothing"
 		);
 	}
 }

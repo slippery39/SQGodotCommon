@@ -1,7 +1,7 @@
 ---
 id: LIM-5
 title: An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols
-status: ready
+status: in-progress
 area: LIM
 created: 2026-11-10
 ---
@@ -21,7 +21,7 @@ colours. His two references (MTGA screenshots, 2026-11-10):
 
 - [ ] The deck list shows costs as mana symbols (W U B R G C, generic numbers, X, hybrid), never `{B}` text
       — in the draft's picks list too (`DraftScene`)
-- [ ] Colourless filters alongside the colours: W + Colourless shows both; picking it never clears the colours
+- [x] Colourless filters alongside the colours: W + Colourless shows both; picking it never clears the colours
 - [ ] A visual deck view as Arena's: the deck as columns of overlapping cards, one per mana value
       (lands in their own column), the count per column; a toggle back to today's list view
 - [ ] Sort the deck view: by mana value (default), creatures / non-creatures (two rows, each by mana
@@ -43,7 +43,8 @@ colours. His two references (MTGA screenshots, 2026-11-10):
 
 - [ ] LIM-5.1 Mana symbols: fetch Scryfall's symbol SVGs, a cost → icons helper, used in the deck list and
       `DraftScene`'s picks
-- [ ] LIM-5.2 Colourless combines with the colour filters (`SealedScene.PickFilter` / `Shows`)
+- [x] LIM-5.2 Colourless combines with the colour filters (`SealedScene.PickFilter` / `Shows`) — a colour toggle now
+      (`SealedSession.InColours`, tested; nonland, as before); captured with real clicks: W + Colourless shows both
 - [ ] LIM-5.3 The visual deck view: columns by mana value, a list/visual toggle; captured at both sizes
 - [ ] LIM-5.4 Sorts: mana value, creatures / non-creatures, colour
 - [ ] LIM-5.5 Moving cards: drag pool ↔ deck, drag between columns (copy the hand's 12 px drag threshold
@@ -59,3 +60,4 @@ filter row.
 ## Log
 
 - 2026-11-10: created from Shayne's notes, with two MTGA screenshots as the guide.
+- 2026-11-10: LIM-5.2 built (overnight).
