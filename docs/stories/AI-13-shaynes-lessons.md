@@ -118,6 +118,15 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       alone (step 1 off) the suite moves 24 -> 30, 83.0%, 1.30 given up, and two agreed positions break
       (`AJaceToken_DrawsWithItsMinusThree…`, `Surveil_BinsTheCheapSpell…(False)`). Next is Shayne's call: a tempo cost on
       holding (before step 1 is retried), and/or why the fresh FRA table breaks those two
+      **Looked into (Shayne: "what doesn't make sense is not using jace and not casting wildspeaker. Those kind of have
+      fixed values"):** neither is about their value. *Wildspeaker:* the real AI still casts it; only the test's
+      CONTROL broke - it expects the pump instead, and Tam's Resistance is a targeted SORCERY, now an option and held.
+      *Jace -3:* the position (suite White-Black vs Jace seed 1 #108, the AI at 4) is LOST in every line the search
+      imagines (all ~ -8 590, the same death on turn 19); -3 against Pass is a tie-break between dead lines, and Pass
+      keeps 3 loyalty that the walker's lifetime price counts as a future draw. On the committed code the -3 won only
+      through the stale FRA instant table: with no option prices at all (`+nooption`) the committed AI passes too.
+      So the defect is future value counted when there is no future - Jace's banked loyalty, a held option - which is
+      step 2 (desperation): cap those at the turns we have left
 - [ ] AI-13.9 The option value for STAR TREK's instants (found 2026-11-09, Shayne asking whether "spells are options" is
       done): `CastGains` is FRA's alone (`FRA.castgains.json`, 35 cards, no TRK name; `--cast-gains` plays FRA's sealed
       decks), so in every TRK game a held instant or flash card falls back to its flat held price - `HoldOption` does
