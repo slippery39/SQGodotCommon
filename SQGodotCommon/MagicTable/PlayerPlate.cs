@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
+using MagicCore.Cards;
 using MtgGame;
 
 namespace MagicTable;
@@ -9,7 +10,8 @@ namespace MagicTable;
 /// <summary>
 /// One player at a glance: name and a big life total, hand and library counts, the graveyard,
 /// exile and command zones as buttons that open the <see cref="ZoneViewer"/>, emblems as art,
-/// floating mana. The whole plate is a click target too ("any target", "Attack AI").
+/// floating mana; the other player's hand as backs, a card you know face up, and your library's top
+/// while you may look at it (TBL-6). The whole plate is a click target too ("any target", "Attack AI").
 /// </summary>
 public partial class PlayerPlate : PanelContainer
 {
@@ -33,6 +35,7 @@ public partial class PlayerPlate : PanelContainer
 		Glow glow,
 		Action<string?> preview,
 		Action<ZoneType> openZone,
+		int viewer,
 		bool active = false
 	)
 	{
@@ -101,9 +104,60 @@ public partial class PlayerPlate : PanelContainer
 		if (command.GetChildCount() > 0)
 			column.AddChild(command);
 
+		// TBL-6: the other player's hand, a back per card and the ones you know face up (V'Ger's look,
+		// a reveal) — known while it stays where it is (MoveCard decides); and Zefram Cochrane's top card.
+		Control Mini(Card c, string tip)
+		{
+			var image = MagicArt.ImageName(s, c);
+			var mini = MiniCard(MagicArt.Full(image));
+			mini.TooltipText = tip;
+			CardViews.Hook(mini, image, preview, null);
+			if (glow is Glow.Choosable or Glow.Selected) // the plate is the target: it takes the click
+				mini.MouseFilter = MouseFilterEnum.Ignore;
+			return mini;
+		}
+		if (player != viewer)
+		{
+			var hand = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+			hand.AddThemeConstantOverride("h_separation", 4);
+			foreach (var c in s.CardsIn(player, ZoneType.Hand))
+				hand.AddChild(c.IsKnownTo(viewer) ? Mini(c, "Known to you") : MiniCard(Back));
+			if (hand.GetChildCount() > 0)
+				column.AddChild(hand);
+		}
+		else if (
+			s.TopIsKnownToOwner(player)
+			&& s.CardsIn(player, ZoneType.Library).FirstOrDefault() is { } topCard
+		)
+		{
+			var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+			row.AddThemeConstantOverride("separation", 8);
+			row.AddChild(Mini(topCard, "The top of your library — you may look at it"));
+			var label = Text("top of your library", TextSize - 4);
+			label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+			label.SizeFlagsHorizontal = SizeFlags.ExpandFill; // a wrapping label with no width wraps every letter
+			row.AddChild(label);
+			column.AddChild(row);
+		}
+
 		if (Floating(p.ManaPool) is { Length: > 0 } floating)
 			column.AddChild(Text($"floating {floating}", TextSize));
 	}
+
+	private static readonly Texture2D Back = GD.Load<Texture2D>(
+		"res://MtgGame/Assets/UI/card_back.png"
+	);
+
+	/// <summary>A hand card at plate size: its face, or <see cref="Back"/>.</summary>
+	private static TextureRect MiniCard(Texture2D? face) =>
+		new()
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, // before Texture (godot-frontend.md)
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			Texture = face,
+			CustomMinimumSize = new Vector2(44, 61),
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
 
 	private static string Floating(MagicCore.ManaPool pool)
 	{

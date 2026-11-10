@@ -37,6 +37,11 @@ public class FraKnowledgeTests : FraBoardTest
 		Cast(Hand(TestGames.Inline("Peek", "{U}", "Instant", null, new Surveil(1)), me), []);
 
 		Assert.That((Top(me), Known(top)), Is.EqualTo((top, Knowers.Owner)), "kept on top");
+		Assert.That(
+			(s.GetCard(top).IsKnownTo(me), s.GetCard(top).IsKnownTo(them)),
+			Is.EqualTo((true, false)),
+			"IsKnownTo reads it per player — the table shows a card face up by it (TBL-6)"
+		);
 
 		s = s.Shuffle(me);
 		Assert.That(Known(top), Is.EqualTo(Knowers.None));

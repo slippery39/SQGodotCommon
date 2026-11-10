@@ -50,7 +50,7 @@ MagicTable/
 ├── Targeting.cs          click a spell, then its picks — X on a spinner first (Xs), targets, then what a cost takes (plain C#)
 ├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
-├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; a click target
+├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; the other hand as backs, a known card face up (TBL-6); a click target
 ├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live
 ├── DeckColumns.cs        the visual deck's layout (plain C#, LIM-5): rows of columns by mana value / creatures apart / colour
 ├── DeckView.cs           the deck as overlapping cards under the pool; Wire: Godot's drag-and-drop, pool ↔ deck ↔ column

@@ -129,8 +129,11 @@ public record Card : GameObject
 
 	/// <summary>Vulcan Mind-Meld: a card exiled face down this player hasn't seen — a front end draws its back (CR 406.3).</summary>
 	public bool IsHiddenFrom(int playerId) =>
-		HasComponent<Effects.ExiledFaceDown>()
-		&& (KnownTo & (playerId == OwnerId ? Knowers.Owner : Knowers.Opponent)) == 0;
+		HasComponent<Effects.ExiledFaceDown>() && !IsKnownTo(playerId);
+
+	/// <summary>This player has seen the card where it is (V'Ger's look at a hand, a reveal) — the table shows it face up (TBL-6).</summary>
+	public bool IsKnownTo(int playerId) =>
+		(KnownTo & (playerId == OwnerId ? Knowers.Owner : Knowers.Opponent)) != 0;
 
 	// ===== Permanent-only state — wiped by Fresh() whenever the card changes zones =====
 

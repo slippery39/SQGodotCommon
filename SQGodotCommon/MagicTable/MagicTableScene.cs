@@ -481,6 +481,7 @@ public partial class MagicTableScene : Control
 					_viewing = (player, zone);
 					Refresh();
 				},
+				_m.HumanId,
 				active: player == active
 			);
 
