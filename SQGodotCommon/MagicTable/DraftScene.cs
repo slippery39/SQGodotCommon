@@ -236,20 +236,10 @@ public partial class DraftScene : Control
 		return tile;
 	}
 
-	/// <summary>A pick: its cost and name, as the deck list shows them; hover previews it.</summary>
+	/// <summary>A pick: its name and cost, as the deck list shows them; hover previews it.</summary>
 	private Control PickRow(string card)
 	{
-		var row = new PanelContainer();
-		row.AddThemeStyleboxOverride("panel", MtgUiStyles.ButtonNormal());
-		var label = SealedScene.Text(
-			$"{SealedScene.Data(card).ManaCost?.Split(" // ")[0]}  {card.Split(" // ")[0]}",
-			18
-		);
-		label.MouseFilter = MouseFilterEnum.Ignore;
-		label.ClipText = true;
-		label.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-		label.CustomMinimumSize = new Vector2(1, 0);
-		row.AddChild(label);
+		var row = SealedScene.CardRow(card, "", 18);
 		CardViews.Hook(row, card, Preview, onClick: null);
 		return row;
 	}

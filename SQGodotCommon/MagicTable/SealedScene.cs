@@ -496,26 +496,43 @@ public partial class SealedScene : Control
 		return tile;
 	}
 
-	/// <summary>
-	/// A deck row: count, cost, name; hover previews, a click takes one copy back out. ponytail: the
-	/// cost is its printed text ("{1}{W/U}") — draw pips (a RichTextLabel with the mana icons) if it
-	/// reads poorly.
-	/// </summary>
+	/// <summary>A deck row: count, name, cost; hover previews, a click takes one copy back out.</summary>
 	private Control DeckRow(string card, int copies)
+	{
+		var row = CardRow(card, $"{copies}×  ", 20);
+		CardViews.Hook(row, card, Preview, () => Act(() => S.Remove(card)));
+		return row;
+	}
+
+	/// <summary>
+	/// A card as a list row, as Arena's: the name, then its cost in mana symbols at the right (LIM-5.1) — the
+	/// deck list and the draft's picks. The name clips, never the cost: a long row must not widen the column.
+	/// </summary>
+	internal static PanelContainer CardRow(string card, string prefix, int size)
 	{
 		var row = new PanelContainer();
 		row.AddThemeStyleboxOverride("panel", MtgUiStyles.ButtonNormal());
-		var label = Text(
-			$"{copies}×  {Data(card).ManaCost?.Split(" // ")[0]}  {card.Split(" // ")[0]}",
-			20
-		);
-		label.MouseFilter = MouseFilterEnum.Ignore;
-		// a long row (Karn's five twobrid pips) must not widen the column: clip it, the preview reads it
-		label.ClipText = true;
-		label.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-		label.CustomMinimumSize = new Vector2(1, 0);
-		row.AddChild(label);
-		CardViews.Hook(row, card, Preview, () => Act(() => S.Remove(card)));
+		var line = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+		line.AddThemeConstantOverride("separation", 8);
+		var name = Text($"{prefix}{card.Split(" // ")[0]}", size);
+		name.MouseFilter = MouseFilterEnum.Ignore;
+		name.ClipText = true;
+		name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+		name.CustomMinimumSize = new Vector2(1, 0);
+		name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		line.AddChild(name);
+		var cost = new RichTextLabel
+		{
+			BbcodeEnabled = true,
+			FitContent = true,
+			AutowrapMode = TextServer.AutowrapMode.Off,
+			ScrollActive = false,
+			MouseFilter = MouseFilterEnum.Ignore,
+			SizeFlagsVertical = SizeFlags.ShrinkCenter,
+			Text = ManaSymbols.Bbcode(Data(card).ManaCost?.Split(" // ")[0], size),
+		};
+		line.AddChild(cost);
+		row.AddChild(line);
 		return row;
 	}
 

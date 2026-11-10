@@ -19,7 +19,7 @@ colours. His two references (MTGA screenshots, 2026-11-10):
 
 ## Requirements
 
-- [ ] The deck list shows costs as mana symbols (W U B R G C, generic numbers, X, hybrid), never `{B}` text
+- [x] The deck list shows costs as mana symbols (W U B R G C, generic numbers, X, hybrid), never `{B}` text
       — in the draft's picks list too (`DraftScene`)
 - [x] Colourless filters alongside the colours: W + Colourless shows both; picking it never clears the colours
 - [ ] A visual deck view as Arena's: the deck as columns of overlapping cards, one per mana value
@@ -27,7 +27,7 @@ colours. His two references (MTGA screenshots, 2026-11-10):
 - [ ] Sort the deck view: by mana value (default), creatures / non-creatures (two rows, each by mana
       value), by colour
 - [ ] Move cards: click or drag pool → deck and deck → pool; drag a card between deck columns to arrange it
-- [ ] Search by name and rules text — LIM-4 (its own story, built alongside)
+- [x] Search by name and rules text — LIM-4 (its own story, built alongside)
 - [ ] Everything stays in view at 1920×1080 and 1280×720 — reorganise or scroll, never clip (TBL-2.5's rule)
 
 ## Decisions
@@ -41,8 +41,11 @@ colours. His two references (MTGA screenshots, 2026-11-10):
 
 ## Tasks
 
-- [ ] LIM-5.1 Mana symbols: fetch Scryfall's symbol SVGs, a cost → icons helper, used in the deck list and
-      `DraftScene`'s picks
+- [x] LIM-5.1 Mana symbols: fetch Scryfall's symbol SVGs, a cost → icons helper, used in the deck list and
+      `DraftScene`'s picks — `tools/fetch_mana_symbols.py` (61 symbols: every one a cost can hold, {T}, {Q});
+      `ManaSymbols.Bbcode`; one row for both lists, `SealedScene.CardRow`: the name, then the cost at the right as
+      Arena's list. Tests: the BBCode, and every symbol FRA and TRK print has its file. Captured: the deck list
+      (hybrids read) and the draft's picks. Elsewhere still `{B}` text (the plate's floating mana, the log)
 - [x] LIM-5.2 Colourless combines with the colour filters (`SealedScene.PickFilter` / `Shows`) — a colour toggle now
       (`SealedSession.InColours`, tested; nonland, as before); captured with real clicks: W + Colourless shows both
 - [ ] LIM-5.3 The visual deck view: columns by mana value, a list/visual toggle; captured at both sizes
@@ -61,3 +64,4 @@ filter row.
 
 - 2026-11-10: created from Shayne's notes, with two MTGA screenshots as the guide.
 - 2026-11-10: LIM-5.2 built (overnight).
+- 2026-11-10: LIM-5.1 built (overnight).

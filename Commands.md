@@ -30,6 +30,7 @@ the set's tokens too, from `t<code>`), then import it before Godot can see it:
 
 ```
 SSL_CERT_FILE=C:/Python310/lib/site-packages/certifi/cacert.pem python tools/fetch_set_art.py fra
+python tools/fetch_mana_symbols.py   # Scryfall's mana symbols, once (LIM-5.1; skips files on disk)
 godot-mono --path SQGodotCommon --headless --import
 ```
 

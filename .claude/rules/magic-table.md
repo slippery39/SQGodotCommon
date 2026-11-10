@@ -52,6 +52,8 @@ MagicTable/
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
 ├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; a click target
 ├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live
+├── ManaSymbols.cs        a cost as Scryfall's mana symbols, BBCode for a RichTextLabel (Assets/Symbols/,
+│                         tools/fetch_mana_symbols.py) — SealedScene.CardRow, the deck list and the draft's picks
 └── MagicArt.cs           Scryfall art crop / full card by image key — "Name|SET" (MagicArt.Key): the printing's
                           own art in Art/<set>/ first (a reprint), else the shared folder (tools/fetch_set_art.py)
 ```
