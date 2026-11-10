@@ -220,6 +220,18 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		];
 
 	/// <summary>
+	/// The last decision's first moves, best first, named as <see cref="Explain"/> names them (a whole attack
+	/// as one line) — the table's F6 inspector (story AI-14.4). <paramref name="s"/> is the position it decided
+	/// in. Empty when it didn't search.
+	/// </summary>
+	public IReadOnlyList<(string Move, double Score)> Ranked(GameState s) =>
+		[
+			.. firstMoveOrder
+				.OrderByDescending(f => firstMoves[f])
+				.Select(f => (Describe(s, f), firstMoves[f])),
+		];
+
+	/// <summary>
 	/// What the last search imagined (AI-17): for each first move, best first, the line its reading came
 	/// from — our decisions in the tree, the simulated opponent's answers between them, then the rollout
 	/// to its horizon — written as the replay writes a game (<see cref="DecisionReport"/>), in the world

@@ -95,6 +95,7 @@ public partial class MagicTableScene : Control
 		FullControl,
 		Pause,
 		Step,
+		Inspector,
 		Speed = 10, // + the index into Speeds
 	}
 
@@ -138,6 +139,8 @@ public partial class MagicTableScene : Control
 		};
 	private readonly ChoicePanel _choice = new() { CustomMinimumSize = new Vector2(930, 0) };
 	private readonly SandboxPanel _sandbox = new();
+	private readonly AiInspector _inspector = new(); // F6 (AI-14.4)
+	private MagicTableManager.Inspection? _inspected;
 	private readonly Timer _timer = new() { WaitTime = 0.5, Autostart = true };
 	private static readonly (string Label, double Seconds)[] Speeds =
 	[
@@ -175,7 +178,7 @@ public partial class MagicTableScene : Control
 			ObjectClicked,
 			Preview,
 			t => ShowBanner(t, 36),
-			() => _choice.Visible || _viewer.Visible || _sandbox.Visible
+			() => _choice.Visible || _viewer.Visible || _sandbox.Visible || _inspector.Visible
 		);
 		// ItemRectChanged, not Resized: the container MOVES the space into place after the first draw.
 		_handSpace.ItemRectChanged += PlaceHand;
@@ -253,6 +256,8 @@ public partial class MagicTableScene : Control
 					$"{put} skipped: a choice of yours is pending — answer it, then use the Sandbox panel"
 				);
 		}
+		if (OS.GetCmdlineUserArgs().Contains("--inspector")) // F6 open from the start: it follows each search
+			OpenInspector();
 		Refresh();
 	}
 
@@ -340,9 +345,18 @@ public partial class MagicTableScene : Control
 	{
 		if (@event is not InputEventKey { Pressed: true, Echo: false } key)
 			return;
-		if (key.Keycode == Key.Escape)
+		if (key.Keycode == Key.F6)
 		{
-			if (_viewing is not null)
+			if (_inspector.Visible)
+				_inspector.Visible = false;
+			else
+				OpenInspector();
+		}
+		else if (key.Keycode == Key.Escape)
+		{
+			if (_inspector.Visible)
+				_inspector.Visible = false;
+			else if (_viewing is not null)
 			{
 				_viewing = null;
 				Refresh();
@@ -539,6 +553,8 @@ public partial class MagicTableScene : Control
 		_tools.Text = _paused ? "Tools · AI paused" : "Tools";
 		_sandbox.Allow(_m.CanSandbox);
 		_log.Text = string.Join("\n", _m.Log.TakeLast(200));
+		if (_inspector.Visible && !ReferenceEquals(_inspected, _m.LastSearch))
+			OpenInspector(); // the AI searched again: follow it
 
 		if (_viewing is (var viewPlayer, var viewZone))
 			_viewer.Show(
@@ -1064,6 +1080,12 @@ public partial class MagicTableScene : Control
 		tween.TweenProperty(_banner, "modulate", Colors.Transparent, 0.6);
 	}
 
+	private void OpenInspector()
+	{
+		_inspected = _m.LastSearch;
+		_inspector.Show(_inspected, _m.ExplainLastSearch, () => _inspector.Visible = false);
+	}
+
 	private void BuildContextMenu()
 	{
 		_context.AddThemeFontSizeOverride("font_size", TextSize);
@@ -1098,6 +1120,7 @@ public partial class MagicTableScene : Control
 		menu.AddCheckItem("Full control", (int)Tool.FullControl);
 		menu.AddCheckItem("Pause AI", (int)Tool.Pause);
 		menu.AddItem("Step the AI", (int)Tool.Step);
+		menu.AddItem("AI inspector  (F6)", (int)Tool.Inspector);
 		menu.AddSeparator("AI speed");
 		for (var i = 0; i < Speeds.Length; i++)
 			menu.AddRadioCheckItem(Speeds[i].Label, (int)Tool.Speed + i);
@@ -1118,6 +1141,9 @@ public partial class MagicTableScene : Control
 				case Tool.Pause:
 					_paused = !_paused;
 					Refresh();
+					break;
+				case Tool.Inspector:
+					OpenInspector();
 					break;
 				case Tool.Step:
 					if (_m.AiToAct)
@@ -1272,7 +1298,9 @@ public partial class MagicTableScene : Control
 
 		_banner.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		// Later children draw on top: a pending choice above an open zone viewer.
-		foreach (var panel in new Control[] { _banner, _viewer, _sandbox, _choice, _zoom })
+		foreach (
+			var panel in new Control[] { _banner, _viewer, _sandbox, _choice, _inspector, _zoom }
+		)
 		{
 			// Above the hand: Hand2D gives each card a ZIndex, which beats tree order (godot-frontend.md).
 			var overlay = new CenterContainer

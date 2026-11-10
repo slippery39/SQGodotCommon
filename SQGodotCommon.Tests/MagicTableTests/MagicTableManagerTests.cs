@@ -264,6 +264,26 @@ public class MagicTableManagerTests
 	}
 
 	[Test]
+	public void TheInspector_HasTheLastSearch_BestFirst_WithItsLines()
+	{
+		var m = New(aiVsAi: true, search: true);
+		Assert.That(m.LastSearch, Is.Null, "before any search");
+		for (var i = 0; i < 60 && m.LastSearch is null; i++)
+			m.StepAi();
+		Assert.That(m.LastSearch, Is.Not.Null, "the search decided between two or more moves");
+
+		var scores = m.LastSearch!.Ranked.Select(r => r.Score).ToList();
+
+		Assert.That(scores, Has.Count.GreaterThan(1));
+		Assert.That(scores, Is.Ordered.Descending, "best first");
+		Assert.That(
+			m.ExplainLastSearch(),
+			Does.Contain(m.LastSearch.Ranked[0].Move),
+			"its lines, while it is the latest decision"
+		);
+	}
+
+	[Test]
 	public void AManualTap_FloatsTheMana_AndKeepsYourPriority()
 	{
 		var m = New();

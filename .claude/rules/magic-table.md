@@ -40,6 +40,7 @@ MagicTable/
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer;
 │                         Tools menu (undo, sandbox, full control, pause / step / speed); the turn
 │                         banner; each side's board half (gold on its turn); permanents scaled to the room
+├── AiInspector.cs        F6: the AI's last search — its moves ranked, then each imagined line with its terms (AI-14.4)
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)
 ├── MagicHandView.cs      your hand: Common's Hand2D + Card2D fan (KIN's, TBL-3), Scryfall image as the
 │                         whole face, glow as a plate behind it; click AND drag → ObjectClicked

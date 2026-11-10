@@ -20,7 +20,7 @@ scoring change — MagicTable has none, and MagicCore's evaluator couldn't expla
 - [ ] A report of AI-vs-AI games Shayne can read: at each real decision, the position, the options
       ranked by the search's score, and what each top option changes, term by term — he flags what
       looks wrong, and each flag becomes a position or a task
-- [ ] Next sprint: an in-game inspector on MagicTable (as MtgGame's F6)
+- [x] Next sprint: an in-game inspector on MagicTable (as MtgGame's F6)
 
 ## Decisions
 
@@ -75,7 +75,17 @@ scoring change — MagicTable has none, and MagicCore's evaluator couldn't expla
 - [x] AI-14.6 Each game saved as a record beside the report (`decisions-<time>-gameN.json`), so a flag
       can be kept as a test (`--record=FILE --keep=NAME --at=N`; `--record=FILE` numbers the moves) —
       added 2026-10-28 when flag 4's game no longer replayed (AI-15.1)
-- [ ] AI-14.4 The F6 inspector on MagicTable (next sprint)
+- [x] AI-14.4 The F6 inspector on MagicTable (next sprint)
+      Built 2026-11-10 (overnight): F6 (or Tools → AI inspector) opens a panel on the AI's last SEARCHED decision —
+      who chose what on which turn, every first move it read with its line's score, best first
+      (`BeamSearchAi.Ranked`, named as `Explain` names them), then the lines themselves (`Explain`: each a game
+      the search imagined, with its terms). The manager keeps the ranked list of every search
+      (`MagicTableManager.LastSearch`); the lines only while that search is the AI's latest decision (the next
+      clears them — the panel says to pause the AI from Tools). It follows each new search while open; Esc
+      closes. `--inspector` opens it from the start (a capture can't press F6). Test
+      `TheInspector_HasTheLastSearch_BestFirst_WithItsLines`; captured on an AI-vs-AI game (turn 8, Ajani's
+      Anguish's five targets ranked, the lines under them). The Space-to-pause of MtgGame's isn't copied: Space
+      passes priority here; Tools → Pause AI does it
 
 ## Next
 
@@ -92,3 +102,4 @@ removal option is spent), not a bug.
 - 2026-10-28: created from Shayne's request; AI-14.1 and 14.2 built.
 - 2026-10-28: first reading — three flags (two real, one a report gap, fixed); the report made readable.
 - 2026-10-28: the report rebuilt as a replay (Shayne); 508 lines for 2 games.
+- 2026-11-10: AI-14.4 — the F6 inspector on MagicTable (overnight).

@@ -220,6 +220,29 @@ public sealed class MagicTableManager
 		_log.Add("You concede.");
 	}
 
+	/// <summary>An AI decision that searched: what it chose, and every first move it read, best first (F6, AI-14.4).</summary>
+	public sealed record Inspection(
+		int Turn,
+		string Who,
+		string Chose,
+		IReadOnlyList<(string Move, double Score)> Ranked
+	);
+
+	/// <summary>The last AI decision that searched among two or more moves; null before one (or with --greedy).</summary>
+	public Inspection? LastSearch { get; private set; }
+
+	private (BeamSearchAi Ai, long Decision)? _lastSearcher;
+	private long _decisions;
+
+	/// <summary>
+	/// The last search's lines, each first move's imagined game with its evaluator terms (BeamSearchAi.Explain) —
+	/// only while that search is the AI's latest decision: the next one clears what it imagined.
+	/// </summary>
+	public string ExplainLastSearch() =>
+		_lastSearcher is var (ai, at) && at == _decisions
+			? ai.Explain()
+			: "(The AI has decided again since, so its lines are gone — pause it from Tools to hold a decision.)";
+
 	public bool HumanToAct => !IsOver && !_ais.ContainsKey(State.DecidingPlayerId());
 	public bool AiToAct => !IsOver && _ais.ContainsKey(State.DecidingPlayerId());
 
@@ -236,6 +259,12 @@ public sealed class MagicTableManager
 			var turn = State.GetGame().TurnNumber;
 			var decision = _ais[who].Decide(State);
 			var what = Declared(State, decision) ?? decision.What;
+			_decisions++;
+			if (_ais[who] is BeamSearchAi search && search.Ranked(State) is { Count: > 1 } ranked)
+			{
+				LastSearch = new(turn, State.GetPlayer(who).Name, what, ranked);
+				_lastSearcher = (search, _decisions);
+			}
 			Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);
 			Settle();
 			if (what != "Pass")
