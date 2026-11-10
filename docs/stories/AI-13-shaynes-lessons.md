@@ -218,14 +218,19 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       position fixed). `docs/findings/magic-ai.md`
 ## Next
 
-Lesson 1 is built as an option value (AI-13.4) — but no agreed position depends on it yet: the bounce
-positions are held by pricing a bounced creature as itself (AI-9.5's `KnownHand`). **Next: AI-13.6**
-(sorcery-speed removal and burn as options — Ajani's Anguish for 3 at the face, game 1 seed 1 turn 16
-of `MagicConsole --decisions`) — the first position the option value itself should fix; then AI-13.5
-(creatures whose enters needs a target — Yoshimaru, turn 4). Lesson 5 (Ferocity) needs AI-9.4's risk of
-the unseen hand; lesson 3 waits on AI-12. The constants (`MaxOptionTurns` 4, `RecastPerMana` 0.5) were
-chosen, not measured. After any evaluator change, rerun `--cast-gains` — **due now**: AI-15 changed the look-ahead's blocks
-(2026-10-28) after the table was measured.
+**Next session (decided 2026-11-09, Shayne - one thing at a time, report before the next):**
+1. **AI-13.10, step 1 retried with a tempo cost** (Shayne: "Sure we can retry step 1 with a tempo cost"): a sorcery-speed
+   option counts ONE future turn - its average use (`ExpectedBest` at k = 1) - where an instant keeps the best of several
+   (holding an instant costs nothing; holding a sorcery-speed card costs a turn). The patch of the first try is lost with
+   the session scratchpad - rebuild from AI-13.10's notes (`CastGains.IsOption`, offers in a sorcery-speed card's own turns
+   only, `Terms.TargetedOptions`). Regenerate BOTH tables (`--cast-gains --games=400`, ~7 min): FRA's instant table is stale
+   on its own (it alone moves the suite 24 -> 30 and breaks two positions). Suite, the positions, then a match.
+2. With it: `WayOfTheWildspeaker_IsCastOverAPump`'s control also switches the new term off (Tam's Resistance is a
+   targeted sorcery); `AJaceToken_DrawsWithItsMinusThree…` moved to a position that is not lost (the calm Jace at 6:
+   draws 24 of 30 today, never passes) - the lost one stays AI-17.23's.
+3. Later (Shayne): step 2 (desperation - our danger shortens the horizon), step 3 (what is left in our deck).
+
+AI-13.5 and AI-13.6's positions hold by the fixed held price (pinned); the burn rule (AI-17.6) is built.
 
 ## Log
 

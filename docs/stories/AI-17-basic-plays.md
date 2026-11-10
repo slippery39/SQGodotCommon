@@ -605,6 +605,14 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       with Patrol into his board, then dead to Khaaaaaaaaaaaannn! X=1 and three attackers) is a different cause: the
       look-ahead's opponent plays only cards the AI knows (`Settings.KnownOnly`), so his unseen burn was never imagined -
       AI-9.4's risk of the unseen hand, recorded there
+- [ ] AI-17.23 A lost line still makes its plays (Shayne, 2026-11-09: "In a case where teh AI thinks its going to lose, it
+      tries to maximize its actions. I.e. it should still draw, it should still play cards etc."). AI-16.4 (a lost line
+      keeps its turn-end board) and AI-17.6 (a finished game keeps its board) are that tie-break - but it is the full
+      evaluator, which counts FUTURE value: a Jace token kept at 6 loyalty is priced for draws on turns the line never
+      reaches, so at 4 life (suite White-Black vs Jace seed 1 #108, every line lost by turn 19) Pass, -3 and -1 score
+      within 0.3 and the sample picks (-3 in ~half of 30 shuffles). Proposed (Claude): a lost line's tie-break counts what
+      is real at that point - board, hand, life - and no future-only value (a walker's banked loyalty, held options).
+      Not built; agree the rule with Shayne first
 ## Next
 
 **Next session (decided 2026-11-08, Shayne):** (1) commit AI-13.7 (land drop) after `/pre-commit` - tests and records
