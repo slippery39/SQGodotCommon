@@ -24,6 +24,16 @@ Shayne's playtest, 2026-11-09. Choosing X lists every possible X as a button (te
   TRK card scries. Spock's "bottom in any order" is random (`ZoneEffects.cs`, Shayne 2026-10-31). So
   TBL-9.2 needs an engine choice first; a new choice can make old game records stale (their offers
   fingerprint — TBL-2.16's trap), so check a record still replays.
+Open questions (TBL-9.2, written overnight 2026-11-10 — waiting on Shayne; nothing built):
+- How the kept cards' order enters the engine. The surveil choice (`ChooseFromLibraryTopChoice`) is the AI's too:
+  the search branches on it and `LandUnlock.Surveil` decides it by rule (AI-17.20); 7 cards surveil 2 or more.
+  (A) a second choice after the binning, "the rest back in any order", asked only when 2+ are kept, of BOTH
+  players (parity) — the AI answering it by rule (its dearest card on top: the held prices / LandUnlock already
+  rank them), so the search doesn't branch on orders. A recorded surveil that kept 2+ goes stale at that move.
+  (B) the order folded into the one answer (the binned ids, then the kept in order): no new decision, but the
+  choice's options change — the offers fingerprint makes every record with a surveil stale (TBL-2.16's trap) —
+  and the search's answers multiply unless it keeps today's order. (C) the table alone reorders, the AI never
+  does — breaks the AI/human parity rule; not recommended. Claude's pick: (A).
 - 2026-11-10, Claude (open to change): a concede is the table's, not an engine move — the game ends as a
   loss for you (a draft run counts it as one, `TableSetup.Finished`); the record is left as it stands.
 
@@ -47,7 +57,9 @@ Shayne's playtest, 2026-11-09. Choosing X lists every possible X as a button (te
 
 ## Next
 
-Read this story, then `.claude/rules/magic-table.md` (table) or `MagicCore/CLAUDE.md` (engine).
+TBL-9.1 and TBL-9.3 are built. TBL-9.2 waits on the open question above (Shayne's pick of A/B/C); then count
+the records it makes stale before building (a surveil that kept 2+). Read this story, then
+`.claude/rules/magic-table.md` (table) or `MagicCore/CLAUDE.md` (engine) and `LandUnlock.cs` (the AI's surveil rule).
 
 ## Log
 
@@ -55,3 +67,4 @@ Read this story, then `.claude/rules/magic-table.md` (table) or `MagicCore/CLAUD
 - 2026-11-10: TBL-9.3 (concede) added (Shayne); TBL-9.2's engine side found (Decisions).
 - 2026-11-10: TBL-9.1 built (overnight).
 - 2026-11-10: TBL-9.3 built (overnight).
+- 2026-11-10: TBL-9.2 sized and stopped at its engine decision (Decisions, open question) — not built.
