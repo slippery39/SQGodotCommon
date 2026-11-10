@@ -1,5 +1,6 @@
 using System.Linq;
 using MagicCore;
+using MagicCore.Cards;
 using MagicCore.Limited;
 using MagicCore.Sets.Fra;
 using MagicTable;
@@ -302,6 +303,39 @@ public class SealedSessionTests
 			setup.Theirs.Select(c => c.Data.Name).Distinct(),
 			Is.SubsetOf(trk),
 			"the AI's own TRK pool"
+		);
+	}
+
+	[Test]
+	public void TheSearch_ReadsNameTypeTextAndKeywords_EveryWordMustMatch()
+	{
+		var card = new CardData(
+			"Sky Warden",
+			"normal",
+			"{1}{W}",
+			2,
+			"Creature — Spirit",
+			"When this creature enters, you gain 2 life.",
+			"1",
+			"1",
+			null,
+			["W"],
+			["Flying"],
+			null
+		);
+		Assert.That(SealedSession.Matches(card, ""), Is.True, "nothing typed hides nothing");
+		Assert.That(SealedSession.Matches(card, "warden"), Is.True, "the name, any case");
+		Assert.That(SealedSession.Matches(card, "spirit"), Is.True, "the type line");
+		Assert.That(
+			SealedSession.Matches(card, "gain life"),
+			Is.True,
+			"the rules text, words apart"
+		);
+		Assert.That(SealedSession.Matches(card, "flying"), Is.True, "a keyword");
+		Assert.That(
+			SealedSession.Matches(card, "flying trample"),
+			Is.False,
+			"every word must match"
 		);
 	}
 }

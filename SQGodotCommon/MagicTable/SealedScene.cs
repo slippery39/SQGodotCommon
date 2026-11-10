@@ -66,6 +66,15 @@ public partial class SealedScene : Control
 	private readonly HashSet<string> _colors = new();
 	private string _kind = "All";
 	private readonly HashSet<string> _rarities = new();
+
+	// LIM-4: the pool narrowed by what you type — name, type line, rules text, keywords. The deck list is never filtered.
+	private readonly LineEdit _query =
+		new()
+		{
+			PlaceholderText = "Search name or text…",
+			ClearButtonEnabled = true,
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+		};
 	private readonly List<Button> _filterButtons = new();
 	private readonly HFlowContainer _pool = new() { SizeFlagsHorizontal = SizeFlags.ExpandFill };
 	private readonly VBoxContainer _deckRows = new();
@@ -316,6 +325,10 @@ public partial class SealedScene : Control
 			_filterButtons.Add(button);
 			rarities.AddChild(button);
 		}
+		_query.AddThemeFontSizeOverride("font_size", 22);
+		_query.AddThemeStyleboxOverride("normal", MtgUiStyles.DarkPanel()); // the theme draws a LineEdit with no box
+		_query.TextChanged += _ => Redraw();
+		rarities.AddChild(_query);
 		center.AddChild(rarities);
 		_leftOut.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_leftOut.CustomMinimumSize = new Vector2(1, 0);
@@ -520,6 +533,7 @@ public partial class SealedScene : Control
 			_colors.Clear();
 			_rarities.Clear();
 			_kind = "All";
+			_query.Text = "";
 		}
 		else if (ColorFilters.Contains(filter))
 		{
@@ -536,7 +550,8 @@ public partial class SealedScene : Control
 	}
 
 	private bool FilterOn(string button) =>
-		button == "All" ? _colors.Count + _rarities.Count == 0 && _kind == "All"
+		button == "All"
+			? _colors.Count + _rarities.Count == 0 && _kind == "All" && _query.Text.Trim() == ""
 		: Rarities.Contains(button) ? _rarities.Contains(button)
 		: ColorFilters.Contains(button) ? _colors.Contains(button)
 		: _kind == button;
@@ -555,7 +570,8 @@ public partial class SealedScene : Control
 		};
 		return kind
 			&& (_colors.Count == 0 || colors.Any(_colors.Contains))
-			&& (_rarities.Count == 0 || _rarities.Contains(RarityOf(card)));
+			&& (_rarities.Count == 0 || _rarities.Contains(RarityOf(card)))
+			&& SealedSession.Matches(data, _query.Text);
 	}
 
 	private Dictionary<string, string>? _rarityOf;

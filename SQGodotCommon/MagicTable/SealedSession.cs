@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using MagicCore.Cards;
 using MagicCore.Limited;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
@@ -92,6 +93,19 @@ public sealed class SealedSession
 
 	/// <summary>Unscripted cards would play silently vanilla (MagicCore/CLAUDE.md), so they stay in the pool.</summary>
 	public static bool Playable(string card) => CardRegistry.IsImplemented(card);
+
+	/// <summary>Every word typed appears in the card's name, type line, rules text (either face) or keywords.</summary>
+	public static bool Matches(CardData data, string query) =>
+		query
+			.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)
+			.All(word =>
+				new[] { data.Name, data.TypeLine, data.OracleText }
+					.Concat(data.CardFaces?.Select(f => f.OracleText) ?? [])
+					.Concat(data.Keywords)
+					.Any(text =>
+						text?.Contains(word, System.StringComparison.OrdinalIgnoreCase) == true
+					)
+			);
 
 	/// <summary>One more copy into the deck, if the sideboard still holds one and it can be played.</summary>
 	public bool Add(string card)

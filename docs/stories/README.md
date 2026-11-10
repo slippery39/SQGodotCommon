@@ -37,7 +37,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 7. **MC-4** — MTGA's powered cube: surveyed, then built in batches
 8. **AI-13** — Shayne's lessons as general rules for the search, each measured
 9. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-10. **LIM-5**, **LIM-4**, **TBL-9**, **TBL-6**, **TBL-7** — the overnight UI list (2026-11-10; its order in the sprint file)
+10. **LIM-5**, **TBL-9**, **TBL-6**, **TBL-7** — the overnight UI list (2026-11-10; its order in the sprint file)
 11. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
 12. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
 13. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
@@ -110,7 +110,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
-| [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | ready |
 | [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
@@ -142,6 +141,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |
+| [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | done |
 | [MC-1](MC-1-fra-cards.md) | A real-rules engine that plays every Reality Fracture card | done |
 | [MC-2](MC-2-filter-refactor.md) | One composable filter instead of six closed vocabularies | done |
 | [MC-3](MC-3-special-guests.md) | The 10 FRA Special Guests play | done |

@@ -31,7 +31,7 @@ MagicTable/
 │                         close pair's builds added — LIM-3.6; SimCommand: --compare for this pool — LIM-3.4),
 │                         the table setup — a FRESH
 │                         AI opponent per game, from the game's seed (OpponentFor). Tested
-├── SealedScene.cs        Arena's deck builder: pool by colour (click in), deck list (click out), basics;
+├── SealedScene.cs        Arena's deck builder: pool by colour (click in), a search (LIM-4), deck list (click out), basics;
 │                         Paste Arena pool (a dialog), what was left out named above the pool; a
 │                         button per suggestion in a wrapping row, named by its colours; the close
 │                         pairs in the left column (scrolling), Copy sim command above them; --seed=N
