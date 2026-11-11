@@ -81,7 +81,10 @@ public static class SimulatedRatings
 						}
 					);
 				}
-				catch (Exception e) when (e is InvalidOperationException or ArgumentException)
+				catch (Exception e)
+					when (e is InvalidOperationException or ArgumentException
+						|| failed is not null && e is not OperationCanceledException
+					)
 				{
 					if (failed is null)
 						throw new InvalidOperationException(

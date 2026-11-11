@@ -33,7 +33,7 @@ The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only 
 | **The work: what is being built, its requirements, decisions, tasks and next step** — one story each, referred to by ID (`AI-1`, task `AI-1.2`) | `docs/stories/` — "Next up", the current sprint (`docs/sprints/`) and every story in its `README.md` | at the start of every task; the story before working on it |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
-| Procedures | skills (`/pre-commit` before any commit; `/add-card` (MtgCore), `/card-batch` (MagicCore), `/ai-inspect`, `/regen-card-values`; art and look: `/match-mockup`, `/generate-art`, `/add-icon`) | when invoked or relevant |
+| Procedures | skills (`/pre-commit` before any commit; `/add-card` (MtgCore), `/card-batch` (MagicCore), `/ai-inspect`, `/regen-card-values`, `/sealed-test` (Shayne's deck lists, simulated); art and look: `/match-mockup`, `/generate-art`, `/add-icon`) | when invoked or relevant |
 | Commands — **run Godot scenes via `Run-Godot.ps1`** | `Commands.md` | read it |
 | Deferred decisions | `DesignNotes.md` | read it |
 | The MTG look: requirements, mockup prompts, locked style | `MtgVisualDesign.md` | before any UI/visual change |

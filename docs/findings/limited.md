@@ -221,3 +221,38 @@ so round 2's builds differ from the interim's mostly by noise among the many unm
 best 23 by rating with no curve (LIM-1, DATA-2's Why), so a cheaper rating table alone may not make a faster deck; and
 both sides are the same AI, which may not press an aggressive deck's edge the way Shayne does.
 
+## Shayne's TRK sealed lists, tested by simulation (2026-11-10, LIM-1.12)
+
+`--builds=… --both-seats` (BuildReport; the procedure is the `/sealed-test` skill): each list against the
+same AI sealed opponents, every opponent once on the play and once on the draw, the search on both sides.
+± is one standard error; "paired" is the game-by-game difference (same opponent, seat and shuffles).
+
+**Pool 1 (aggro).** RB 60.2% ± 5.1 (play 67.4, draw 53.2) against BG-r 54.1% ± 5.4, paired +5.0 ± 6.1 over
+50 opponents. Shayne played RB and went **6-3 on Arena** (3-2 first). His cuts, from the report: Tea, Earl
+Grey, Hot (IWD −20: tempo for 2 damage) and Cleveland Booker (−12), for a second Captain's Tutelage. The 40th
+card three ways, 100 opponents: **Cha'DIch Investigator 60.3% ± 3.5** against Tal Shiar Analyst 54.9 (paired
++5.8 ± 2.3) and Artificial Anomaly as a 17th land 54.9 (+5.7 ± 2.8); Analyst − Anomaly 0.0 ± 2.6. The Analyst's
+number is partly the AI's misplay (it pings in its own upkeep — AI-17.25).
+
+**Pool 2 (GB soup, splashing).** Against the AI field, 50 opponents unless said:
+
+| Test | Result |
+|---|---|
+| Riker's slot: Will Riker / Lore / a second Moopsy | 51.5 / 53.1 / 47.9%; Riker − Lore −2.1 ± 4.0, Riker − Moopsy +3.2 ± 3.2 |
+| All Good Things → Lore, beside Riker | +1.0 ± 3.1 (no difference) |
+| "Soup-Red": −Island −Swamp −All Good Things −Guidance Failure, +Forest +Mountain +Cha'DIch Investigator +Plasma Cascade (75 opponents) | +2.2 ± 5.2 (four changes, land counts among them — the pairing is lost) |
+| 5 Swamps / 4 Forests instead of 4 / 5 | −1.1 ± 3.7 (no difference) |
+| **The City on the Edge of Forever → All Good Things** | **+6.3 ± 2.9** — the final list, 59.4% |
+
+**Against his own RB list** (`--opponent`, 69 games): the soup won **36% ± 6** (on the draw 22–32%) — aggro is
+its weak matchup, and RB looks above the AI field: RB beat the AI decks 60%, the soup 64%.
+
+**What reads true and what doesn't:**
+- **One card strongly positive in every run is real:** Will Riker's IWD +26, +22, +18. One run's IWD is not:
+  Lore +28 then −7, Adversary by Algorithm +40 then −13.5 — at ~100 games a card's IWD swings ±10–20.
+- **A one-card swap overstates its size** (+5.8 for a card in hand in ~37% of games): the AI's imagined
+  library differs between the lists too. The direction holds.
+- **Cards the AI misplays read low**: Borg Cube negative in every run, and never cast in four self-play
+  games where it was drawn (AI-19.22); The City (a phasing Saga) −5, −12, −21.
+- **A repeat is consistent**: Soup-Riker 51.5% then 52.5% against the same 50 opponents.
+

@@ -184,7 +184,7 @@ dotnet run -c Release --project MagicConsole -- --interim-ratings=trk
 # DATA-2: each card's games-in-hand win rate in AI-vs-AI sealed games -> sim_results/sim_ratings_<set>_<ai>.json
 # (greedy ~590 games/min on 16 cores; beam ~20). --write makes it MagicCore/Sets/<SET>.ratings.json. Check it on FRA
 # against 17lands before trusting it for a set (docs/findings/limited.md): greedy's ranked FRA worse than the interim table.
-dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000] [--ai=greedy|beam] [--first-seed=N] [--built-on=FILE;FILE] [--write]
+dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000] [--ai=greedy|beam] [--first-seed=N] ["--built-on=FILE;FILE"] [--write]   # QUOTE --built-on: an unquoted ; ends the command
 # --built-on: a ROUND 2 - the decks built on a first round's ratings (its chunk files, summed) -> ..._round2.json
 # a beam run is ~10 games/min on 16 cores: run it in chunks of seeds (--first-seed, --games=500), each its own file —
 # a background task is stopped at 2 hours and a run cut off writes NOTHING (it cost two beam runs, 2026-11-07)
@@ -192,7 +192,7 @@ dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000]
 # DATA-2.6: do AI sealed decks built on a round's ratings (its chunk files) beat decks on the set's table? Pools in pairs,
 # each built on both; only pairs whose builds differ play. ~10 games/min (beam). --write makes those ratings the set's
 # table (MagicCore/Sets/<SET>.ratings.json) - ONLY when they won. Line also in sim_results/ratings_match_<set>.txt
-dotnet run -c Release --project MagicConsole -- --ratings-match=trk --built-on=FILE;FILE [--games=600] [--ai=beam] [--write]
+dotnet run -c Release --project MagicConsole -- --ratings-match=trk "--built-on=FILE;FILE" [--games=600] [--ai=beam] [--write]
 
 # Why does a card lose? Self-play games it was DRAWN in, --each lost and --each won (the search on both sides) ->
 # ai_reports/card-games-<time>.md (each game opens with every move naming the card) + a record per game (~40 min for FRA's 8)
@@ -206,6 +206,10 @@ dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=20
 # LIM-1.12: your lists on the play AND the draw against the same AI opponents, a player's report (win rate play/draw, turns,
 # each card's GIH / GNS / IWD, the opponents' cards you lost to) -> ai_reports/sealed-builds-<time>.md. --games = opponents.
 dotnet run -c Release --project MagicConsole -- --set=trk --builds=A.txt,B.txt --both-seats --games=50
+# options: --game-minutes=N (cap a game), --opponent=FILE (one of YOUR lists instead of the AI's decks), --first-opponent=N (new seeds). A variant that pairs cleanly - ONE swap, same position (the /sealed-test skill):
+python tools/deck_variant.py sim_results/builds/A.txt sim_results/builds/A-X.txt --swap "Old Card=New Card"   # --test: its self-check
+# games between two lists to WATCH on the table: game_records/sample-*.json (MagicTable -GameArgs '--resume=FILE') + .md
+dotnet run -c Release --project MagicConsole -- --set=trk --sample-games=A.txt,B.txt --games=6 --first-seed=501
 #   each file an Arena export (deck builder -> Export); its Sideboard section is the rest of your pool,
 #   "outside the game". Every build plays the SAME 200 AI sealed opponents (pool i opened from seed i,
 #   one of the AI's suggested builds, in a game of seed i), beam on both sides; the difference is paired by opponent.

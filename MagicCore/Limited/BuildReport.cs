@@ -105,7 +105,7 @@ public static class BuildReport
 					: (start.Player2Id(), start.Player1Id());
 				var hands = new SimulatedRatings.InHandDuring(start);
 				GameState? last = null;
-				using var clock = new CancellationTokenSource(cap);
+				using var budgetCts = new CancellationTokenSource(cap);
 				AiMatch.Game? game = null;
 				try
 				{
@@ -118,7 +118,7 @@ public static class BuildReport
 						n,
 						seat1, // the build is "a": its seat
 						1,
-						clock.Token,
+						budgetCts.Token,
 						seen: x =>
 						{
 							hands.See(x);
@@ -126,7 +126,7 @@ public static class BuildReport
 						}
 					);
 				}
-				catch (Exception e) when (e is InvalidOperationException or ArgumentException)
+				catch (Exception e) when (e is not OperationCanceledException) // any engine error drops the game, logged
 				{
 					log?.Invoke(
 						$"{build.Name} v opponent {n} (seat {(seat1 ? 1 : 2)}) FAILED, dropped: {e}"
@@ -134,7 +134,7 @@ public static class BuildReport
 				}
 				if (game is null)
 				{
-					if (clock.IsCancellationRequested && last is not null)
+					if (budgetCts.IsCancellationRequested && last is not null)
 						log?.Invoke(
 							$"{build.Name} v opponent {n}: stopped past {cap.TotalMinutes:0} min — {SimulatedRatings.Board(last)}"
 						);

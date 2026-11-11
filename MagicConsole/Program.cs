@@ -154,18 +154,35 @@ if (
 )
 {
 	var paths = samplesArg.Split(',');
-	var (deckA, deckB) = (
-		MagicCore.Limited.SealedBuildMatch.FromExport(
-			Path.GetFileNameWithoutExtension(paths[0]),
-			File.ReadAllText(paths[0]),
-			limitedSet
-		),
-		MagicCore.Limited.SealedBuildMatch.FromExport(
-			Path.GetFileNameWithoutExtension(paths[1]),
-			File.ReadAllText(paths[1]),
-			limitedSet
-		)
-	);
+	if (paths.Length != 2)
+	{
+		Console.WriteLine("--sample-games takes two exports: --sample-games=A.txt,B.txt");
+		Environment.ExitCode = 1;
+		return;
+	}
+	MagicCore.Limited.SealedBuildMatch.Build deckA,
+		deckB;
+	try
+	{
+		(deckA, deckB) = (
+			MagicCore.Limited.SealedBuildMatch.FromExport(
+				Path.GetFileNameWithoutExtension(paths[0]),
+				File.ReadAllText(paths[0]),
+				limitedSet
+			),
+			MagicCore.Limited.SealedBuildMatch.FromExport(
+				Path.GetFileNameWithoutExtension(paths[1]),
+				File.ReadAllText(paths[1]),
+				limitedSet
+			)
+		);
+	}
+	catch (Exception e) when (e is IOException or ArgumentException)
+	{
+		Console.WriteLine(e.Message);
+		Environment.ExitCode = 1;
+		return;
+	}
 	var count = Arg("games") ?? 4;
 	var firstSeed = Arg("first-seed") ?? 1;
 	var samples = new MagicCore.Ai.DecisionReport.Played[count];
@@ -675,7 +692,11 @@ if (
 	Console.WriteLine(
 		$"{raw}: {tallies.Count} cards, {counted} of {games} games counted ({ai}), {clock.Elapsed.TotalMinutes:0.0} min"
 	);
-	if (flags.Contains("--write"))
+	if (flags.Contains("--write") && builtOn is not null)
+		Console.WriteLine(
+			"NOT written: a round built on another's ratings replaces the set's table only through --ratings-match --write, which checks its decks win (DATA-2.6)."
+		);
+	else if (flags.Contains("--write"))
 		WriteRatings(
 			set,
 			MagicCore.Limited.SimulatedRatings.Rate(

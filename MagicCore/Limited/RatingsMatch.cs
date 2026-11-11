@@ -145,7 +145,10 @@ public static class RatingsMatch
 						seen: x => last = x
 					);
 				}
-				catch (Exception e) when (e is InvalidOperationException or ArgumentException)
+				catch (Exception e)
+					when (e is InvalidOperationException or ArgumentException
+						|| failed is not null && e is not OperationCanceledException
+					)
 				{
 					var where =
 						$"{set} ratings match, pair {seed} (pools {FirstPool + 2 * (seed - 1)} and {FirstPool + 2 * seed - 1}), "

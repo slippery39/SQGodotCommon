@@ -147,6 +147,10 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
 
 ## Next
 
+**Testing Shayne's own lists (LIM-1.12): the `/sealed-test` skill** — save the exports to `sim_results/builds/`,
+variants with `tools/deck_variant.py`, the run sized to about an hour, and the report read with its three caveats.
+Today's pools and results: `docs/findings/limited.md`, "Shayne's TRK sealed lists".
+
 LIM-1.7, MC-3 and LIM-1.8 are done (pools can hold a Special Guest now). **To compare builds:**
 export each candidate from Arena's deck builder into a file, then
 `dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt` (Commands.md) — ~15 min

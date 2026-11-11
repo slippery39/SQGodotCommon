@@ -98,15 +98,14 @@ Open questions:
 Shayne's call among: AI-9.8's stand-in (cost-adjusted) table, matched the same way (needs `--ratings-match` to take a
 ratings file, not only tallies); a curve in the builder; more games. DATA-2.7 (the format report) explains mismatches.
 
-**Was (overnight): DATA-2.4 running, then 2.6 by itself.** Two detached scripts (session scratchpad,
-`trk_rounds.ps1`, `trk_match.ps1`): the rounds log to `sim_results/trk_rounds.log` (RESTARTED 10:49 after a crash, below — chunk 501 of round 1 was kept;
-the script skips a chunk whose file exists) — then HALVED and restarted 11:00: round 1 is chunks 1 and 501 (501 done,
-under the old 20-min budget), round 2 chunks 1 and 501, the match 300 games; results ~15:00;
-the match waits for `done` there, rebuilds Release and plays 600 games with `--write` — which writes the new
-`TRK.ratings.json` only above 50% by 2 SE (`RatingsMatch.Result.NewWon`) — logging to `sim_results/trk_match.log`
-(KEPT / NOT KEPT; the line also in `sim_results/ratings_match_trk.txt`). Left for a session: read both rounds (DATA-2.5: `SimulatedRatings.Load`
-the chunk files `sim_ratings_trk_beam[_N].json` and `..._round2.json`), rebuild and run MagicCore.Tests if KEPT, then
-this story and `docs/findings/limited.md`.
+**To run the rounds again** (Shayne, 2026-11-10: more games, "possibly overnight", for "enough of a feel on win rates"):
+chunks of 500 (a chunk writes nothing until it ends, and a background task stops at 2 h — run the chain detached, e.g.
+`Start-Process pwsh -File <script>`, and skip a chunk whose file exists so a restart loses only the chunk running):
+round 1 `--sim-ratings=trk --ai=beam --games=500 --first-seed=1` (then 501, 1001, …) → `sim_results/sim_ratings_trk_beam[_N].json`;
+round 2 the same with `"--built-on=a.json;b.json"` (QUOTED — an unquoted `;` ends the command in PowerShell and bash, and only the first file arrives) → `..._round2.json`; then `--ratings-match=trk
+--built-on=<round 2's files> --games=300 --write` (writes `TRK.ratings.json` only if its decks win by 2 SE). A game
+past `GameBudget` (5 min) is abandoned with its board logged; one that throws is logged and dropped. At ~10 games a
+minute: 2,000 games a round ≈ 3.5 h. The 2026-11-10 run (1,000 a round) and its two stalls are in the Log.
 
 **Was (2026-11-07): blocked on AI-9.3 (Shayne: "our win rate data will never be good until we fix these issues").** The
 self-play ratings rank FRA worse than the interim table (greedy ρ 0.20 against 0.56 over 10 000 games; the search 0.11
