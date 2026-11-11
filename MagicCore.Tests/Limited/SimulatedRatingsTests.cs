@@ -64,6 +64,43 @@ public class SimulatedRatingsTests
 		Assert.That(hands.Of(s.Player2Id()), Is.EquivalentTo(new[] { "Theirs" }));
 	}
 
+	// A token board once kept three search games running for hours and held the whole run (2026-11-10).
+	[Test]
+	public void AGamePastItsBudget_IsAbandoned_TalliesNothing_AndSaysWhich()
+	{
+		var abandoned = new System.Collections.Concurrent.ConcurrentBag<int>();
+		var tallies = SimulatedRatings.Measure(
+			"FRA",
+			2,
+			firstSeed: 7,
+			abandoned: (seed, _) => abandoned.Add(seed),
+			budget: TimeSpan.Zero
+		);
+		Assert.That(tallies, Is.Empty);
+		Assert.That(abandoned, Is.EquivalentTo(new[] { 7, 8 }));
+	}
+
+	[Test]
+	public void ALongGamesBoard_SaysTheTurn_AndEachSidesPermanents_TokensMarked()
+	{
+		var s = TestGames.Started();
+		(s, _) = TestGames.Put(
+			s,
+			s.Player1Id(),
+			TestGames.Creature("Bear", "2/2"),
+			ZoneType.Battlefield
+		);
+		(s, _) = TestGames.Put(
+			s,
+			s.Player1Id(),
+			TestGames.Creature("Bear", "2/2"),
+			ZoneType.Battlefield
+		);
+		var board = SimulatedRatings.Board(s);
+		Assert.That(board, Does.StartWith($"turn {s.GetGame().TurnNumber}, P1 life"));
+		Assert.That(board, Does.Contain("2 creatures").And.Contain("2x Bear"));
+	}
+
 	[Test]
 	public void AFewGames_TallyTheCardsDrawn_TwoPlayersAGame()
 	{

@@ -26,14 +26,11 @@ public static partial class ArenaDeck
 		public bool Ok => Problems.Count == 0;
 	}
 
-	// A deck is FRA's cards; a sealed pool is its set's (MC-5.4: TRK pools too).
+	// A deck or a sealed pool is its set's (MC-5.4: TRK pools; 2026-11-10: TRK decks).
 	static readonly System.Collections.Concurrent.ConcurrentDictionary<
 		string,
 		IReadOnlyDictionary<string, string>
 	> Names = new();
-
-	// after Names: static fields initialise in order, and NamesOf reads it
-	static readonly IReadOnlyDictionary<string, string> ByName = NamesOf("FRA");
 
 	static IReadOnlyDictionary<string, string> NamesOf(string set) =>
 		Names.GetOrAdd(
@@ -51,16 +48,26 @@ public static partial class ArenaDeck
 							}
 							: [(Key: name, Name: name)]
 					)
-					.DistinctBy(x => x.Key)
-					.ToDictionary(x => x.Key, x => x.Name, StringComparer.OrdinalIgnoreCase)
+					.DistinctBy(x => Key(x.Key))
+					.ToDictionary(x => Key(x.Key), x => x.Name, StringComparer.OrdinalIgnoreCase)
 		);
+
+	/// <summary>
+	/// A name as looked up: an ellipsis spaced or not is the same ("All Good Things . . ." as Arena exports it,
+	/// "All Good Things..." as Scryfall names it — the reader once called it "not a TRK card").
+	/// </summary>
+	static string Key(string name) => Ellipsis().Replace(name, "...");
+
+	[GeneratedRegex(@"\s*\.\s*\.\s*\.")]
+	private static partial Regex Ellipsis();
 
 	// At most three digits: a pasted "99999999999 Swamp" is a typo, not a 99-billion-card deck.
 	[GeneratedRegex(@"^(\d{1,3})x?\s+(.+?)(?:\s+\([A-Za-z0-9]+\)(?:\s+\S+)?)?$")]
 	private static partial Regex CardLine();
 
-	public static Result Parse(string text)
+	public static Result Parse(string text, string set = "FRA")
 	{
+		var names = NamesOf(set);
 		var deck = new List<CardDefinition>();
 		var problems = new List<string>();
 		var lines = text.Replace("\r", "").Split('\n').Select(l => l.Trim()).ToList();
@@ -85,12 +92,16 @@ public static partial class ArenaDeck
 				int.Parse(match.Groups[1].Value),
 				match.Groups[2].Value.Replace(" /// ", " // ")
 			);
-			if (!ByName.TryGetValue(name, out var fra))
-				problems.Add($"{name}: not a Reality Fracture card");
+			if (!names.TryGetValue(Key(name), out var fra))
+				problems.Add(
+					set == "FRA"
+						? $"{name}: not a Reality Fracture card"
+						: $"{name}: not a {set} card"
+				);
 			else if (!CardRegistry.IsImplemented(fra))
 				problems.Add($"{fra}: not playable yet");
 			else
-				deck.AddRange(Enumerable.Repeat(CardRegistry.Get(fra, "FRA"), count));
+				deck.AddRange(Enumerable.Repeat(CardRegistry.Get(fra, set), count));
 		}
 		if (deck.Count == 0 && problems.Count == 0)
 			problems.Add(
@@ -126,7 +137,7 @@ public static partial class ArenaDeck
 				int.Parse(match.Groups[1].Value),
 				match.Groups[2].Value.Replace(" /// ", " // ")
 			);
-			if (!NamesOf(set).TryGetValue(name, out var fra))
+			if (!NamesOf(set).TryGetValue(Key(name), out var fra))
 				leftOut.AddRange(Enumerable.Repeat(name, count));
 			else if (!Limited.SealedBuilder.Basics.Contains(fra))
 				pool.AddRange(Enumerable.Repeat(fra, count));

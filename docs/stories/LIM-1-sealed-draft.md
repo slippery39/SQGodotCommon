@@ -126,6 +126,25 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       past two colours, 15 with a build refused; revert-checked). Draft bots unchanged (always the two colours).
       Every sim on AI sealed decks moves with it (DATA-2, `--cast-gains`, `--builds`)
 
+- [x] LIM-1.12 Shayne's own lists against AI decks, as a player reads them (Shayne, 2026-11-10: "50 matches against AI
+      decks, one on the play and one on the draw … win rate, win rate play, win rate draw, GIH win rates for cards in
+      each deck. Average turn length … cards that I lost to the most"): `BuildReport` / `--builds=… --both-seats` —
+      each opponent twice, his deck in seat 1 then seat 2 of the same seeded game (the seed's coin flip makes one of
+      the two on the play; read from the game, never assumed); GIH beside GNS and IWD; the opponents' cards by his win
+      rate in the games they held them. `ArenaDeck.Parse` takes a set (it read FRA alone). Tests `BuildReportTests`,
+      `AnotherSetsExport_ReadsWithThatSet_AndNotAsFra`. First run: his TRK RB and BG-r lists, 50 opponents — RB 60.2%
+      ± 5.1 (play 67.4, draw 53.2), BG-r 54.1% ± 5.4, RB − BG-r +5.0 ± 6.1 paired; Shayne picked RB (his pool lacks
+      removal; RB wins fast), cutting Tea, Earl Grey, Hot (IWD −20) and Cleveland Booker (−12) for a second Captain's
+      Tutelage. Second run (Shayne): the 40th card three ways — Cha'DIch Investigator, Tal Shiar Analyst, Artificial
+      Anomaly — 100 opponents, `--game-minutes=6` (new: the cap per run; 15 of BG-r's 100 were stopped at 5)
+      **Reading a report (Shayne, 2026-11-10: "the AI is kind of optimized to play decks that it itself knows how to
+      play, complicated hard to play cards it won't rate well"):** both sides are our AI, so a SIMPLE deck (aggro) is
+      piloted nearer its best than a complex one (soup: station, assimilate, Sagas, beam me up) — a swap inside one
+      archetype compares fairly, a match across archetypes leans to the simpler deck, and a bottom card that needs
+      timing is checked for a misplay before it is cut (Tal Shiar Analyst, AI-17.25). Calibrate with Shayne's real
+      records per deck against the sim's prediction (RB: ~60% sim against AI decks, 6-3 on Arena).
+      `--opponent=FILE` plays a fixed list of his instead of AI decks; `--first-opponent=N` for new seeds
+
 ## Next
 
 LIM-1.7, MC-3 and LIM-1.8 are done (pools can hold a Special Guest now). **To compare builds:**

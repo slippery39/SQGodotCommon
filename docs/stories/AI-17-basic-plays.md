@@ -627,6 +627,18 @@ The plan (proposed by Claude, agreed by Shayne 2026-10-29):
       holding look free. Options for Shayne (not started): decide over several samples at the root; or a value for
       the land drop itself; or accept 5-7 in 30. **Moved to its own story, AI-20 (Shayne, 2026-11-10):** the one
       guessed future is the root of this and the Tasha, surveil, impulse and Jace issues
+- [ ] AI-17.25 A free tap ability used at the worst time (found 2026-11-10 in LIM-1.12's sealed runs, where Tal Shiar
+      Analyst scored near the bottom of Shayne's RB deck; Shayne asked "is the opponent playing it right?"). Watched:
+      the search pings ("{T}: 1 damage to each opponent") at end of combat on its OWN turn and in its own UPKEEP, never
+      at the opponent's end step — so the 3/2 neither attacks nor blocks for the whole cycle, for the same 1 damage a
+      turn. Three seeds, same pattern. Cause (Claude's reading, not yet traced with `--explain`): pinging now and later
+      deal the same damage and nothing prices a tapped creature, so "now" wins the tie. Fix by what the AI VALUES
+      (Shayne's rule), not a timing filter: an untapped creature is worth something through the opponent's turn (a
+      blocker) and an unused free ability is an option (AI-13's option value, for activated abilities). A position:
+      the Analyst on its side, a 2/2 across, its turn — expected: no ping until the opponent's end step.
+      **Shayne's design (2026-11-10, noted, not started): AI-13's lessons ledger, lesson 6** — price a tap ability like
+      a desperation-priced card: to wait, more urgent as its last chance nears (the opponent's end step, or an untap
+      coming on the stack or in the look-ahead), earlier only for a better-than-normal opportunity.
 ## Next
 
 **Next session (decided 2026-11-08, Shayne):** (1) commit AI-13.7 (land drop) after `/pre-commit` - tests and records

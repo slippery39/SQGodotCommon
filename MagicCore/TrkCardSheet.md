@@ -626,7 +626,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Kicker—Sacrifice an artifact or creature. (You may sacrifice an artifact or creature in addition to any other costs as you cast this spell.)  
 > Target creature gets -2/-2 until end of turn. If this spell was kicked, that creature gets -6/-6 until end of turn instead.
 
-**Status:** scripted · **tests naming it:** TrkBatch4Tests
+**Status:** scripted · **tests naming it:** FraAttachmentTests, TrkBatch4Tests
 
 **Engine pieces:** `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `KickerComponent` — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U}…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
 
@@ -1057,7 +1057,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ward {2} (Whenever this artifact becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)  
 > When this artifact enters, exile target nonland permanent an opponent controls until this artifact leaves the battlefield.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** FraAttachmentTests
 
 **Engine pieces:** `ExileUntilSourceLeaves` — "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1933,7 +1933,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever equipped creature attacks, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)  
 > Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** BuildReportTests
 
 **Engine pieces:** `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
@@ -2776,7 +2776,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Enchanted creature gets -4/-0, can't block, and is a Salamander. (It loses all other creature types.)  
 > Threshold — At the beginning of each upkeep, if there are seven or more cards in your graveyard, exile enchanted creature.
 
-**Status:** scripted · **tests naming it:** TrkBatch4bTests
+**Status:** scripted · **tests naming it:** FraAttachmentTests, TrkBatch4bTests
 
 **Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `EnchantedIsCreatureType` — De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)"…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
@@ -4093,7 +4093,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace (This creature can't be blocked except by two or more creatures.)  
 > At the beginning of your end step, if this creature attacked this turn, sacrifice a nonland permanent.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** BuildReportTests
 
 **Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -4885,7 +4885,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > I, II, III — Draw two cards, then exile a card from your hand.  
 > IV — If all cards exiled with this Saga share a card type, you gain 10 life.
 
-**Status:** scripted · **tests naming it:** TrkBatch7bTests
+**Status:** scripted · **tests naming it:** ArenaDeckTests, TrkBatch7bTests
 
 **Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExiledWithSourceShareACardType` — All Good Things..., chapter IV: "If all cards exiled with this Saga share a card type" —…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…
 

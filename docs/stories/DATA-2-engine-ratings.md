@@ -42,6 +42,17 @@ Open questions:
   rounds**: round 1 rates on decks built from the interim table; round 2 rebuilds the decks on round 1's ratings and
   rates again (as MtgCore's presim, then the run). **The search on both sides** ("we should do the search ai … for
   sure"), **2,000 games a round** (~4 h each at ~8.5 games a minute). Which cards play well together: not now.
+- 2026-11-10, Shayne (11:00, after two restarts): **every round halved** — 1,000 games a round, the match 300 — and
+  **long games stopped sooner, their boards noted**: `GameBudget` 5 min (~3x a typical game; Claude's number), each
+  abandoned game logged with `SimulatedRatings.Board` (turn, life, each side's permanents, tokens marked).
+- 2026-11-10, Shayne: **the limited loop, as a person learns a format.** A stand-in rating first (AI-9.8's
+  cost-adjusted value — "evaluating cards for a prerelease without actually playing the games yet"), then games
+  (self-play), then the two compared; where a card we rated good doesn't win, find WHY before adjusting: "is the format
+  too fast? too slow? is a color in general just bad which brings win rates of other cards in that color down? Is a
+  color too good which brings win rates of other cards in that color up?" → DATA-2.7.
+- 2026-11-10, Shayne: **run DATA-2.5 and 2.6 automatically overnight.** Claude's rule for the swap (for review): round
+  2's ratings become TRK's table only if their decks score above 50% by at least 2 standard errors in the 600-game
+  match; otherwise the interim table stays and the result is written up.
 - 2026-11-10, Claude (for review): the measure of success is NOT the rank against 17lands — the rate includes how well
   this AI plays a card, which for an opponent's deck is what we want. It is whether decks built on the new ratings
   beat decks built on the interim table, the search on both sides (DATA-2.6).
@@ -60,18 +71,42 @@ Open questions:
       `--built-on` (round 2) rates a card never in hand at the mean — the builder reads every pool card and threw; test
       `ACardNeverInHand_IsRatedAtTheMean_SoARound2CanBuildOnIt` also checks round 2's decks differ (the first version
       silently built round 2 on the interim table — caught by that check, revert-checked)
-- [ ] DATA-2.4 Round 1: TRK, the search, 2,000 games in four chunks of 500 (`--first-seed=1,501,1001,1501`), the decks
+- [x] DATA-2.4 Round 1 and 2 done 2026-11-10 (halved by Shayne: 1,000 games each; two restarts — stuck games, an
+      engine crash — and one runtime fault rerun; findings, limited.md). Was: Round 1: TRK, the search, 2,000 games in four chunks of 500 (`--first-seed=1,501,1001,1501`), the decks
       on the interim table and LIM-1.11's opponent; then round 2 the same, `--built-on=` the four chunk files
-- [ ] DATA-2.5 Read both rounds: the cards they move most, the cheap-vs-expensive lean the interim table has, and how
+- [x] DATA-2.5 Read (2026-11-10, findings): the interim table rises with mana value (ρ +0.64), self-play doesn't
+      (−0.13); cheap commons top round 1. Was: Read both rounds: the cards they move most, the cheap-vs-expensive lean the interim table has, and how
       many cards reach 200 games
-- [ ] DATA-2.6 Does it make better opponents: decks built on round 2's ratings against decks built on the interim
-      table, same pools, the search on both sides (a harness to write — `SealedBuildMatch` plays builds against
-      opponents, not two ratings tables). `--write` only if they win
+- [x] DATA-2.6 **No (2026-11-10): 49.6% ± 2.9pp over 141 pairs** — TRK keeps the interim table (findings). Was: Does it make better opponents: decks built on round 2's ratings against decks built on the interim
+      table, the search on both sides. HARNESS BUILT (2026-11-10): `RatingsMatch` / `--ratings-match=trk
+      --built-on=FILES [--games=600] [--write]` — pools in pairs, each built on both tables (X new v Y old, X old v Y
+      new: each pool and seat plays both), pairs whose builds don't change skipped; tests `RatingsMatchTests`.
+      `--write` writes the summed ratings as `TRK.ratings.json` only when `NewWon` (implemented nonlands; lands read
+      the median in draft).
+      To run: 600 games, ~1 h, started by the overnight script once round 2 is done
+
+- [ ] DATA-2.7 The format report — why a card's played rate differs from its stand-in (Shayne, Decisions): per colour
+      and colour pair, the decks' win rate (a strong colour lifts its cards, a weak one sinks them — a card's rate read
+      against its colour's); the format's speed (turn a game ends, by deck speed — is it fast or slow?); and the
+      biggest mismatches, stand-in against played, each with its likely reason (colour, cost, speed, the AI's skill
+      with it — AI-14's replays or `--card-games` for the ones that don't explain). Needs `Measure` to tally the deck
+      colours and the turn each game ends (not yet recorded)
 
 ## Next
 
-**Now (2026-11-10): DATA-2.4, the two TRK rounds** — commands in its task; each chunk ~1 h, run detached or in chunks
-(a background task stops at 2 h and a cut-off run writes nothing). AI-9.3, which this was blocked on, is done.
+**Now (2026-11-10, 14:30): 2.4–2.6 done — self-play ratings don't build better decks yet (49.6% ± 2.9).** Next is
+Shayne's call among: AI-9.8's stand-in (cost-adjusted) table, matched the same way (needs `--ratings-match` to take a
+ratings file, not only tallies); a curve in the builder; more games. DATA-2.7 (the format report) explains mismatches.
+
+**Was (overnight): DATA-2.4 running, then 2.6 by itself.** Two detached scripts (session scratchpad,
+`trk_rounds.ps1`, `trk_match.ps1`): the rounds log to `sim_results/trk_rounds.log` (RESTARTED 10:49 after a crash, below — chunk 501 of round 1 was kept;
+the script skips a chunk whose file exists) — then HALVED and restarted 11:00: round 1 is chunks 1 and 501 (501 done,
+under the old 20-min budget), round 2 chunks 1 and 501, the match 300 games; results ~15:00;
+the match waits for `done` there, rebuilds Release and plays 600 games with `--write` — which writes the new
+`TRK.ratings.json` only above 50% by 2 SE (`RatingsMatch.Result.NewWon`) — logging to `sim_results/trk_match.log`
+(KEPT / NOT KEPT; the line also in `sim_results/ratings_match_trk.txt`). Left for a session: read both rounds (DATA-2.5: `SimulatedRatings.Load`
+the chunk files `sim_ratings_trk_beam[_N].json` and `..._round2.json`), rebuild and run MagicCore.Tests if KEPT, then
+this story and `docs/findings/limited.md`.
 
 **Was (2026-11-07): blocked on AI-9.3 (Shayne: "our win rate data will never be good until we fix these issues").** The
 self-play ratings rank FRA worse than the interim table (greedy ρ 0.20 against 0.56 over 10 000 games; the search 0.11
@@ -81,6 +116,21 @@ library", so a MILLED or surveilled card counts as drawn (2 of 32 walker games) 
 hand instead. Then rerun on FRA (greedy, 10 000 games, ~17 min) and compare with the interim table's 0.56.
 
 ## Log
+
+- 2026-11-10: the first overnight start (05:42) stalled at 467/500 of its first chunk: three search games on boards of
+  many tokens ran 90+ minutes each (sampled: `WholeAttacks.Best` in the rollout, settling two attacks per creature),
+  and Parallel.For's range partitioning held the 33 games queued behind them. Fixed in the harness, not the AI: a
+  game past `SimulatedRatings.GameBudget` (20 min; a typical game ~1.6 min) is abandoned between decisions, tallies
+  nothing and is logged by seed (`RatingsMatch` drops its pair). The dropped games lean to token decks — watch the
+  "abandoned" count. Restarted 08:15.
+- 2026-11-10: round 1's chunk 1 then CRASHED at game 392 (chunk 501 finished: 500 games, 3 abandoned, 83 min). The
+  cause, replayed: Malfunctioning Holodeck had exiled De-evolve; Eject the Warp Core kicked by sacrificing the Holodeck
+  brought De-evolve back mid-cast, the state check binned it before its host question came up, and the question had
+  nothing to offer — `Lookahead.Chosen`'s `MaxBy` over no picks returned null (the table would hang on it). Fixed in
+  the engine: the question is judged when asked (`Attachments.AskHostAction`); test
+  `AnAuraReturnedByACost_GoneBeforeItsQuestion_IsAskedNothing` (failed before). The Aura still goes to the graveyard
+  instead of attaching — a known ceiling (DesignNotes). And the harnesses no longer die on one game: with a `failed`
+  callback (the console's) a throwing game is logged with its seed and stack and dropped. Restarted 10:49.
 
 - 2026-10-20: created from LIM-1.4.
 - 2026-11-07: DATA-2.2 built for MC-5.4 (TRK's bots); greedy self-play checked on FRA, worse than the interim table.

@@ -101,6 +101,21 @@ Open questions:
       Shortlist match: 192 games, 52.1% ± 1.9pp (no loss), 1.8x cost, slowest decision 33 s (was 173 s) - kept as
       the default (2026-11-08)**
 
+- [ ] AI-19.22 Borg Cube (Shayne, 2026-11-10: "please look into how its playing Borg Cube, might give us some AI lessons").
+      Looked at: `--card-games="Borg Cube"` (800 seeds' decks, 45 hold it), 4 games drawn, **never cast in any** — two
+      fair (stuck on 4 lands; never in hand with the mana), one defensible (won-36: 7 mana spent on He's Dead, Jim, won),
+      one a MISS: `ai_reports/card-games-2026-11-10_202700-BorgCube-lost-91.json` #343, castable for 5 (affinity), the
+      holder at 20 against 9 — **Pass 49.98 over Cast Borg Cube 25.88**, and that seat lost. `--explain=343`: in the
+      Cube line the rollout (1) exiles their best attacker, then (2) stations the Cube by TAPPING AN ATTACKER (DOT-7)
+      and doesn't attack, (3) casts one spell a turn so the 7-drop pushes D'Ghor and Bat'leth back a turn — the
+      opponent ends at 7, not 2; the clock term falls 20 → 4.3. Lessons, each general: **(a)** the rollout's one spell
+      a turn (`Rollout.Settings.ActionsPerTurn`, never measured alone — AI-9's Next) charges an expensive spell a whole
+      turn of the rest of the curve; **(b)** the rollout stations with a creature that could attack — station with
+      what wouldn't attack (summoning sick, or an attack that does nothing); **(c)** a card exiled "with" a permanent
+      that will return it under YOUR control (assimilate on attack) is priced only as their loss, not your future
+      gain; **(d)** a station threshold's ability (12+: flying for artifact creatures) isn't priced until reached
+      (the `Other` price's own ponytail). Shayne's read stands: "maybe Borg Cube is just a 7 mana removal spell most of
+      the time" — to the AI it is less.
 ## Next
 
 Not started. Add a card here whenever a batch leaves its play or a ruling simple on purpose; start once

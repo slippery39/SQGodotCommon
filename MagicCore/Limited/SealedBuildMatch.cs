@@ -27,12 +27,12 @@ public static class SealedBuildMatch
 	/// pool's unplayed cards as the Sideboard) is outside the game. Throws, naming every problem, if the
 	/// deck has a card the engine can't play — a silent substitute would test a different deck.
 	/// </summary>
-	public static Build FromExport(string name, string text)
+	public static Build FromExport(string name, string text, string set = "FRA")
 	{
-		var deck = ArenaDeck.Parse(text);
+		var deck = ArenaDeck.Parse(text, set);
 		if (!deck.Ok)
 			throw new ArgumentException($"{name}: {string.Join("; ", deck.Problems)}");
-		var rest = ArenaDeck.ReadPool(text).Pool.ToList();
+		var rest = ArenaDeck.ReadPool(text, set).Pool.ToList();
 		foreach (var card in deck.Deck)
 			rest.Remove(card.Data.Name);
 		return new Build(

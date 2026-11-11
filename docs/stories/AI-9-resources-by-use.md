@@ -144,7 +144,15 @@ Open questions:
       mana cost is probably the way to go"): the table measures a card once castable, each with its own lands, so a
       10-drop reads as free — against 17lands, our rank minus theirs by mana value runs −21 percentiles at 1 to +20
       at 5 (Emrakul, the Exigent Doom +81, Yargle, Goliath of Otaria +87). Beside it, card draw at the sandbox's
-      flat 1.2 off a library of basics (findings, "AI-9.3"). Its own switch; after AI-9.7 or before — Shayne's call
+      flat 1.2 off a library of basics (findings, "AI-9.3"). Its own switch; after AI-9.7 or before — Shayne's call.
+      **Shape agreed 2026-11-10 (Shayne): TWO values per card** — (1) its value once in play (today's), (2) a
+      cost-adjusted value: its value against a TYPICAL card of its mana value (the table's own median at that cost —
+      Claude's: not value per mana, which crowns 1-drops and breaks at 0). (2) is the **stand-in rating** a set gets
+      before any games — "evaluating cards for a prerelease without actually playing the games yet" — what the deck
+      builder and draft bots use until self-play (DATA-2) replaces it; (1) stays the in-game base, discounted in the
+      evaluator by how far off casting it is with the mana at hand (a position's context, beside AI-9.1 and AI-13).
+      Checked on FRA against 17lands: the stand-in must beat today's interim ρ 0.41. Measured the need on TRK
+      (DATA-2.5, 2026-11-10): the interim table's rating rises with mana value at ρ 0.64; self-play's falls, −0.13
 - [ ] AI-9.4 The opponent's unseen hand at a flat 2.71 a card — by what it could cast with the mana
       and colours shown; and the RISK it carries (AI-13.4, 2026-10-28): Shayne holds Ferocity of the
       Hunt against an unseen Last Gasp "until the opponent plays their removal spell first", and the

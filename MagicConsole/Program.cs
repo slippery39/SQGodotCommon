@@ -50,6 +50,12 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 // --compare=POOL.txt | seed:N: every build the Sealed screen offers for that pool — its suggestions
 // and every close pair's (LIM-3.4) — with any --builds exports beside them (yours, say).
 // --set=TRK: the pool, the ratings and the opponents are TRK's (MC-5.4); --draft takes it too.
+// --both-seats (with --builds): each opponent twice, you on the play and on the draw, and a report a player reads —
+// win rate on the play / draw, turns, each card's GIH / GNS / IWD, the opponents' cards you lost to
+// (BuildReport, 2026-11-10) -> ai_reports/sealed-builds-<time>.md. --games=N is the opponents (2N games a build);
+// --game-minutes=N a game's cap before it is stopped (default SimulatedRatings.GameBudget, 5); --opponent=FILE plays
+// every game against that Arena export instead of the AI's builds (a new shuffle each game); --first-opponent=N starts
+// the opponents' numbers (their pools' and games' seeds) at N, so a second run plays new games.
 var limitedSet =
 	args.FirstOrDefault(a => a.StartsWith("--set="))?["--set=".Length..].ToUpperInvariant()
 	?? "FRA";
@@ -85,12 +91,44 @@ if (compareArg is not null || buildsArg is not null)
 				(buildsArg?.Split(',') ?? []).Select(path =>
 					MagicCore.Limited.SealedBuildMatch.FromExport(
 						Path.GetFileNameWithoutExtension(path),
-						File.ReadAllText(path)
+						File.ReadAllText(path),
+						limitedSet
 					)
 				)
 			)
 			.ToList();
 		var games = Arg("games") ?? MagicCore.Limited.SealedBuildMatch.DefaultOpponents;
+		if (flags.Contains("--both-seats"))
+		{
+			var detail = MagicCore.Limited.BuildReport.Run(
+				builds,
+				games,
+				limitedSet,
+				log: Console.WriteLine,
+				budget: Arg("game-minutes") is { } minutes ? TimeSpan.FromMinutes(minutes) : null,
+				against: args.FirstOrDefault(a => a.StartsWith("--opponent="))?[
+					"--opponent=".Length..
+				]
+					is { } rivalPath
+					? MagicCore.Limited.SealedBuildMatch.FromExport(
+						Path.GetFileNameWithoutExtension(rivalPath),
+						File.ReadAllText(rivalPath),
+						limitedSet
+					)
+					: null,
+				firstOpponent: Arg("first-opponent") ?? 1
+			);
+			var text = MagicCore.Limited.BuildReport.Report(detail);
+			Directory.CreateDirectory("ai_reports");
+			var file = Path.Combine(
+				"ai_reports",
+				$"sealed-builds-{DateTime.Now:yyyy-MM-dd_HHmmss}.md"
+			);
+			File.WriteAllText(file, text);
+			Console.WriteLine(text);
+			Console.WriteLine($"Written to {file}");
+			return;
+		}
 		Console.WriteLine(
 			$"{builds.Count} builds ({string.Join(", ", builds.Select(b => b.Name))}) x {games} opponents: ~{MagicCore.Limited.SealedBuildMatch.EstimatedMinutes(builds.Count, games):0} min"
 		);
@@ -102,6 +140,75 @@ if (compareArg is not null || buildsArg is not null)
 	{
 		Console.WriteLine(e.Message);
 		Environment.ExitCode = 1;
+	}
+	return;
+}
+
+// --sample-games=A.txt,B.txt [--games=4] [--first-seed=1] --set=TRK: games between two of your exports (Arena), the
+// search on both sides, saved to watch on the table (Shayne, 2026-11-10): game_records/sample-<A>-v-<B>-seed<N>.json
+// (MagicTable: -GameArgs '--resume=FILE', or the deck select's "Resume a game") + the replay to read, .md beside it.
+// The two swap seats game by game; who plays first is the seed's coin flip, printed per game.
+if (
+	args.FirstOrDefault(a => a.StartsWith("--sample-games="))?["--sample-games=".Length..] is
+	{ } samplesArg
+)
+{
+	var paths = samplesArg.Split(',');
+	var (deckA, deckB) = (
+		MagicCore.Limited.SealedBuildMatch.FromExport(
+			Path.GetFileNameWithoutExtension(paths[0]),
+			File.ReadAllText(paths[0]),
+			limitedSet
+		),
+		MagicCore.Limited.SealedBuildMatch.FromExport(
+			Path.GetFileNameWithoutExtension(paths[1]),
+			File.ReadAllText(paths[1]),
+			limitedSet
+		)
+	);
+	var count = Arg("games") ?? 4;
+	var firstSeed = Arg("first-seed") ?? 1;
+	var samples = new MagicCore.Ai.DecisionReport.Played[count];
+	var winsA = 0;
+	var progress = new MagicCore.Ai.RunProgress("sample games", count);
+	Parallel.For(
+		0,
+		count,
+		i =>
+		{
+			var (one, two) = i % 2 == 0 ? (deckA, deckB) : (deckB, deckA);
+			samples[i] = MagicCore.Ai.DecisionReport.Play(
+				firstSeed + i,
+				one.Main,
+				two.Main,
+				($"Seat 1 ({one.Name})", $"Seat 2 ({two.Name})"),
+				$"{deckA.Name} v {deckB.Name}, seed {firstSeed + i}",
+				one.Sideboard,
+				two.Sideboard,
+				threads: 1
+			);
+			var end = samples[i].End;
+			if (end.WinnerId() is var w and > 0 && (w == end.Player1Id()) == (i % 2 == 0))
+				Interlocked.Increment(ref winsA);
+			progress.Tick(() => $"{deckA.Name} won {winsA}");
+		}
+	);
+	Directory.CreateDirectory("game_records");
+	for (var i = 0; i < count; i++)
+	{
+		var (one, two) = i % 2 == 0 ? (deckA, deckB) : (deckB, deckA);
+		var end = samples[i].End;
+		string Seat(int id) => id == end.Player1Id() ? one.Name : two.Name;
+		var file = Path.Combine(
+			"game_records",
+			$"sample-{deckA.Name}-v-{deckB.Name}-seed{firstSeed + i}"
+		);
+		File.WriteAllText(file + ".json", samples[i].Record.ToJson());
+		File.WriteAllText(file + ".md", samples[i].Md);
+		Console.WriteLine(
+			$"seed {firstSeed + i}: {Seat(end.GetGame().StartingPlayerId)} on the play, "
+				+ $"{(end.WinnerId() is var w and > 0 ? Seat(w) + " won" : "no winner")} on turn {end.GetGame().TurnNumber} -> {Path.GetFullPath(file)}.json"
+		);
 	}
 	return;
 }
@@ -523,6 +630,7 @@ if (
 	// summed), DATA-2.4
 	var builtOn = args.FirstOrDefault(a => a.StartsWith("--built-on="))?["--built-on=".Length..];
 	var clock = System.Diagnostics.Stopwatch.StartNew();
+	var dropped = 0;
 	var tallies = MagicCore.Limited.SimulatedRatings.Measure(
 		set,
 		games,
@@ -531,25 +639,24 @@ if (
 		builtOn is null
 			? null
 			: MagicCore.Limited.SimulatedRatings.Rate(
-				builtOn
-					.Split(';')
-					.SelectMany(f =>
-						System.Text.Json.JsonSerializer.Deserialize<
-							Dictionary<string, MagicCore.Limited.SimulatedRatings.Tally>
-						>(File.ReadAllText(f))!
-					)
-					.GroupBy(t => t.Key)
-					.ToDictionary(
-						g => g.Key,
-						g => new MagicCore.Limited.SimulatedRatings.Tally(
-							g.Sum(t => t.Value.Games),
-							g.Sum(t => t.Value.Wins)
-						)
-					),
+				MagicCore.Limited.SimulatedRatings.Load(builtOn.Split(';')),
 				MagicCore.Limited.SimulatedRatings.Rateable(set)
 			),
-		new MagicCore.Ai.RunProgress($"{set} self-play ({ai})", games)
+		new MagicCore.Ai.RunProgress($"{set} self-play ({ai})", games),
+		(seed, board) =>
+		{
+			Interlocked.Increment(ref dropped);
+			Console.WriteLine(
+				$"game {seed} abandoned: past {MagicCore.Limited.SimulatedRatings.GameBudget.TotalMinutes:0} min — {board}"
+			);
+		},
+		failed: (seed, error) =>
+		{
+			Interlocked.Increment(ref dropped);
+			Console.WriteLine($"game {seed} FAILED, dropped: {error}");
+		}
 	);
+	var counted = games - dropped; // abandoned and failed games tally nothing
 	Directory.CreateDirectory("sim_results");
 	var raw = Path.Combine(
 		"sim_results",
@@ -566,36 +673,69 @@ if (
 		)
 	);
 	Console.WriteLine(
-		$"{raw}: {tallies.Count} cards, {games} games ({ai}), {clock.Elapsed.TotalMinutes:0.0} min"
+		$"{raw}: {tallies.Count} cards, {counted} of {games} games counted ({ai}), {clock.Elapsed.TotalMinutes:0.0} min"
 	);
 	if (flags.Contains("--write"))
-	{
-		var path = Path.Combine("MagicCore", "Sets", $"{set}.ratings.json");
-		File.WriteAllText(
-			path,
-			System.Text.Json.JsonSerializer.Serialize(
-				new
-				{
-					source = $"SIMULATED (DATA-2) — games-in-hand win rate in {games} AI-vs-AI ({ai}) sealed games of {set}"
-						+ $"{(builtOn is null ? "" : $", decks built on {builtOn}")}, "
-						+ $"short of {MagicCore.Limited.CardRatings.MinGames} games pulled to the mean. GENERATED by MagicConsole --sim-ratings, never hand-edit",
-					cards = MagicCore
-						.Limited.SimulatedRatings.Rate(
-							tallies,
-							MagicCore.Limited.SimulatedRatings.Rateable(set)
-						)
-						.OrderBy(r => r.Key, StringComparer.Ordinal)
-						.ToDictionary(r => r.Key, r => Math.Round(r.Value, 4)),
-				},
-				new System.Text.Json.JsonSerializerOptions
-				{
-					WriteIndented = true,
-					Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-				}
-			) + "\n"
+		WriteRatings(
+			set,
+			MagicCore.Limited.SimulatedRatings.Rate(
+				tallies,
+				MagicCore.Limited.SimulatedRatings.Rateable(set)
+			),
+			$"SIMULATED (DATA-2) — games-in-hand win rate in {counted} AI-vs-AI ({ai}) sealed games of {set}"
+				+ $"{(builtOn is null ? "" : $", decks built on {builtOn}")}, "
+				+ $"short of {MagicCore.Limited.CardRatings.MinGames} games pulled to the mean. GENERATED by MagicConsole --sim-ratings, never hand-edit"
 		);
-		Console.WriteLine($"{path} written. Rebuild to embed it.");
-	}
+	return;
+}
+
+// --ratings-match=TRK --built-on=FILE;FILE [--games=600] [--ai=beam]: DATA-2.6 — do AI sealed decks built on a self-play
+// round's ratings (its sim_results chunk files, summed) beat decks built on the set's table? Pools in pairs, each built on
+// both (RatingsMatch); the line goes to sim_results/ratings_match_<set>.txt too. ~10 games/min on 16 cores. Solution root.
+if (
+	args.FirstOrDefault(a => a.StartsWith("--ratings-match="))?["--ratings-match=".Length..] is
+	{ } matchSet
+)
+{
+	var set = matchSet.ToUpperInvariant();
+	var files = args.First(a => a.StartsWith("--built-on="))["--built-on=".Length..];
+	var ai = args.FirstOrDefault(a => a.StartsWith("--ai="))?["--ai=".Length..] ?? "beam";
+	var games = Arg("games") ?? 600;
+	var rated = MagicCore.Limited.SimulatedRatings.Rate(
+		MagicCore.Limited.SimulatedRatings.Load(files.Split(';')),
+		MagicCore.Limited.SimulatedRatings.Rateable(set)
+	);
+	var result = MagicCore.Limited.RatingsMatch.Run(
+		set,
+		rated,
+		games / 2,
+		ai,
+		failed: error => Console.WriteLine($"FAILED, pair dropped: {error}"),
+		abandoned: board =>
+			Console.WriteLine(
+				$"abandoned past {MagicCore.Limited.SimulatedRatings.GameBudget.TotalMinutes:0} min, pair dropped — {board}"
+			)
+	);
+	var line = result.Report($"decks on {files}", $"decks on {set}'s table");
+	Console.WriteLine(line);
+	Directory.CreateDirectory("sim_results");
+	File.WriteAllText(
+		Path.Combine("sim_results", $"ratings_match_{set.ToLowerInvariant()}.txt"),
+		line + Environment.NewLine
+	);
+	// --write: the new table becomes the set's (MagicCore/Sets/<SET>.ratings.json) — ONLY when its decks won (DATA-2.6)
+	if (flags.Contains("--write") && result.NewWon)
+		WriteRatings(
+			set,
+			rated,
+			$"SIMULATED (DATA-2) — games-in-hand win rate in AI-vs-AI ({ai}) sealed games of {set}, from {files}; short of "
+				+ $"{MagicCore.Limited.CardRatings.MinGames} games pulled to the mean. Its decks against the table before: {line}. "
+				+ "GENERATED by MagicConsole --ratings-match --write, never hand-edit"
+		);
+	else if (flags.Contains("--write"))
+		Console.WriteLine(
+			$"NOT written: the new table's decks did not win by 2 SE — {set}'s table stays."
+		);
 	return;
 }
 
@@ -933,6 +1073,30 @@ string Keep(GameRecord record, string name, int? at)
 				Assert.That(MoveTokens.Same(choice, "{{now}}"));
 			}
 		""";
+}
+
+// a set's ratings table, as CardRatings.Of reads it (MagicCore/Sets/<SET>.ratings.json, embedded: rebuild to use it)
+static void WriteRatings(string set, Dictionary<string, double> rated, string source)
+{
+	var path = Path.Combine("MagicCore", "Sets", $"{set}.ratings.json");
+	File.WriteAllText(
+		path,
+		System.Text.Json.JsonSerializer.Serialize(
+			new
+			{
+				source,
+				cards = rated
+					.OrderBy(r => r.Key, StringComparer.Ordinal)
+					.ToDictionary(r => r.Key, r => Math.Round(r.Value, 4)),
+			},
+			new System.Text.Json.JsonSerializerOptions
+			{
+				WriteIndented = true,
+				Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+			}
+		) + Environment.NewLine
+	);
+	Console.WriteLine($"{path} written. Rebuild to embed it.");
 }
 
 /// <summary>A --keep the console won't do, and why.</summary>

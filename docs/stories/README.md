@@ -30,25 +30,26 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 
 1. **MC-5** — Star Trek (TRK): sealed and draft before Arena's November 10 release
 2. **DATA-2** — TRK's AI sealed decks rated by two rounds of self-play, the search on both sides — before the AI stories (Shayne, 2026-11-10): his aggressive decks beat the AI's slow ones
-3. **AI-20** — the look-ahead stops betting on one guessed future: the most urgent AI story (Shayne, 2026-11-10); AI-20.1, his pick of approach, first
-4. **AI-9** — resources priced by what they provide: AI-9.3 done (2026-11-07); AI-9.7 (Quadrant Theory boards) and AI-9.8 (the card-value table charged for mana cost) next — order Shayne's call
-5. **MC-6** — MagicCore's pieces compose: one per family, not one per card phrase (after MC-5.4)
-6. **DEV-4**, **DEV-5** — the rules file split by subsystem; one end-of-batch check script — BEFORE any new set (MC-4's cube included; Shayne, 2026-11-07)
-7. **LIM-2** — draft against bots: FRA first, a cube later
-8. **MC-4** — MTGA's powered cube: surveyed, then built in batches
-9. **AI-13** — Shayne's lessons as general rules for the search, each measured
-10. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
-11. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
-12. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
-13. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
-14. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-15. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
-16. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-17. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
-18. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
-19. **AI-4** — strategic plans above single actions
-20. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
-21. **AI-12** — a card's threat over time, on an empty board and a busy one
+3. **AI-21** — combat on big boards: attack plans that don't grow with every token (Tribbles stalled DATA-2's sims; Shayne, 2026-11-10) — after DATA-2.6's match
+4. **AI-20** — the look-ahead stops betting on one guessed future: the most urgent AI story (Shayne, 2026-11-10); AI-20.1, his pick of approach, first
+5. **AI-9** — resources priced by what they provide: AI-9.3 done (2026-11-07); AI-9.7 (Quadrant Theory boards) and AI-9.8 (the card-value table charged for mana cost) next — order Shayne's call
+6. **MC-6** — MagicCore's pieces compose: one per family, not one per card phrase (after MC-5.4)
+7. **DEV-4**, **DEV-5** — the rules file split by subsystem; one end-of-batch check script — BEFORE any new set (MC-4's cube included; Shayne, 2026-11-07)
+8. **LIM-2** — draft against bots: FRA first, a cube later
+9. **MC-4** — MTGA's powered cube: surveyed, then built in batches
+10. **AI-13** — Shayne's lessons as general rules for the search, each measured
+11. **AI-14** — see what the AI decides: the replay now, the F6 inspector next
+12. **TBL-4** — a clearer, calmer table: the MTGA-first redesign
+13. **LIM-1** — sealed: authentic Arena FRA packs, a deck builder and an AI build, played on the table
+14. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play (KIN's hand, copied)
+15. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+16. **AI-18** — tap choices (Station, tap two, tap N): fewer moves for the same choice; identical permanents grouped (Shayne, 2026-11-07)
+17. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+18. **DATA-2** — rate cards without 17lands, checked against FRA's real rates
+19. **DATA-1** — bring in 17lands data (the sealed ratings were its first slice)
+20. **AI-4** — strategic plans above single actions
+21. **AI-11** — learn from Shayne's games: settle where he and the oracle differ, keep what he got right
+22. **AI-12** — a card's threat over time, on an empty board and a busy one
 
 ## How it works
 
@@ -111,6 +112,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
+| [AI-21](AI-21-big-board-combat.md) | Combat on big boards — attack plans that don't grow with every token | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
@@ -149,5 +151,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-21 · DATA-3 · DEV-6 · LIM-6 · MC-8 · TBL-10
+Next free id per area: AI-22 · DATA-3 · DEV-6 · LIM-6 · MC-8 · TBL-10
 <!-- stories:end -->

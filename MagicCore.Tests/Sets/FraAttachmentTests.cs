@@ -283,6 +283,36 @@ public class FraAttachmentTests : FraBoardTest
 		Assert.That((Alive(ferocity), s.GetCard(ferocity).AttachedToId), Is.EqualTo((true, bear)));
 	}
 
+	// TRK self-play (DATA-2, game 392): the Aura came back as a COST was paid, the state check took it before its
+	// question was asked, and the question had nothing to offer — the search crashed on it, the table would hang.
+	[Test]
+	public void AnAuraReturnedByACost_GoneBeforeItsQuestion_IsAskedNothing()
+	{
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		var target = Field(TestGames.Creature("Target", "2/2"), them);
+		var devolve = Field(CardRegistry.Get("De-evolve"), them);
+		s = Attachments.Attach(s, devolve, bear);
+		var holodeck = Hand("Malfunctioning Holodeck", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = holodeck });
+		Resolve(On<ChooseTargetChoice>(devolve));
+		Assert.That(s.IsIn(devolve, them, ZoneType.Exile), "the Holodeck exiled it");
+
+		var eject = Hand("Eject the Warp Core", me);
+		s = s.Act(
+			Casts(eject).First(c => c.Kicked && c.SacrificeId == holodeck && c.Targets[0] == target)
+		);
+		var empty = new List<string>();
+		Resolve(choice =>
+		{
+			if (choice.Options.Count(o => o.IsEnabled) == 0)
+				empty.Add(choice.Prompt);
+			return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
+		});
+
+		Assert.That(empty, Is.Empty, "no question with nothing to choose");
+		Assert.That(Alive(target), Is.False, "Eject resolved, kicked");
+	}
+
 	[Test]
 	public void AHostThatLeftAndCameBack_IsANewObject_NothingIsOnIt()
 	{

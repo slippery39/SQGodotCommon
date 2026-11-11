@@ -26,6 +26,36 @@ public class ArenaDeckTests
 		Assert.That(result.Deck.Any(c => c.Data.Name == "Prophesied End"), Is.False);
 	}
 
+	// Shayne's TRK sealed lists (2026-11-10): the parser knew FRA alone.
+	[Test]
+	public void AnotherSetsExport_ReadsWithThatSet_AndNotAsFra()
+	{
+		const string export = """
+			Deck
+			2 Targ Wrangler (TRK) 175
+			8 Swamp (MIR) 340
+			""";
+		var trk = ArenaDeck.Parse(export, "TRK");
+		Assert.That(trk.Ok, string.Join("; ", trk.Problems));
+		Assert.That(trk.Deck, Has.Count.EqualTo(10));
+		Assert.That(ArenaDeck.Parse(export).Ok, Is.False, "an FRA read refuses a TRK card");
+	}
+
+	// Arena spaces an ellipsis, Scryfall doesn't: Shayne's soup deck (2026-11-10) was refused for it.
+	[Test]
+	public void AnEllipsis_SpacedOrNot_IsTheSameName()
+	{
+		var result = ArenaDeck.Parse(
+			"""
+			Deck
+			1 All Good Things . . . (TRK) 226
+			""",
+			"TRK"
+		);
+		Assert.That(result.Ok, string.Join("; ", result.Problems));
+		Assert.That(result.Deck.Single().Data.Name, Is.EqualTo("All Good Things..."));
+	}
+
 	[Test]
 	public void APrepareCard_ByItsFrontFace_AndBareLinesWithoutASetCode()
 	{

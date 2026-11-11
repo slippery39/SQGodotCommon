@@ -55,17 +55,34 @@ public static class Attachments
 	/// <summary>
 	/// An Aura put onto the battlefield without being cast (Return to the Light Realms): its
 	/// controller chooses what it enchants (CR 303.4f). With nothing legal, the state check takes it.
+	/// The question is queued, and whether there is anything to ask is judged when it comes up
+	/// (<see cref="AskHostAction"/>) — an Aura returned by a COST (Malfunctioning Holodeck sacrificed for
+	/// Eject the Warp Core's kicker) meets the state check first and is gone by then.
+	/// ponytail: it should attach as it returns and never meet that check; it goes to the graveyard instead
+	/// (DesignNotes, MagicCore known ceilings).
 	/// </summary>
-	public static GameState ChooseHostAsItEnters(GameState s, int auraId)
+	public static GameState ChooseHostAsItEnters(GameState s, int auraId) =>
+		s.SpawnAction(new AskHostAction(auraId));
+
+	/// <summary>The host question of <see cref="ChooseHostAsItEnters"/>, asked only while there is a host to choose.</summary>
+	public record AskHostAction(int AuraId) : GameAction
 	{
-		var choice = new ChooseHostChoice(s.GetCard(auraId).ControllerId, auraId);
-		return choice
-			.GetOptions(s, System.Collections.Immutable.ImmutableDictionary<string, object>.Empty)
-			.IsEmpty
-			? s
-			: s.SpawnAction(
-				new PipelineAction { Steps = [choice, new AttachChosenHostAction(auraId)] }
+		public override ActionResult Execute(GameState s)
+		{
+			var choice = new ChooseHostChoice(s.GetCard(AuraId).ControllerId, AuraId);
+			return new(
+				choice
+					.GetOptions(
+						s,
+						System.Collections.Immutable.ImmutableDictionary<string, object>.Empty
+					)
+					.IsEmpty
+					? s
+					: s.SpawnAction(
+						new PipelineAction { Steps = [choice, new AttachChosenHostAction(AuraId)] }
+					)
 			);
+		}
 	}
 
 	/// <summary>

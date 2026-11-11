@@ -195,3 +195,29 @@ cast turn alone — 7 of the 8 walkers 2.7–3.75 (Ajani Resolute 2.7, the lowes
 his abilities making tokens), against a median of 8.0. On the battlefield, `Evaluator.Walker`: half of ONE activation.
 Neither is a lifetime (AI-9.3). And a scoring cliff, harmless where seen: a line the rollout wins scores ~9 000, any
 other its position, so a slow walker loses to a kill in sight (Garruk, Veiled Butcher held three turns while winning).
+
+## TRK self-play ratings, two rounds, and do they build better decks? (2026-11-10, DATA-2.4–2.6)
+
+The search on both sides (`--sim-ratings=trk --ai=beam`), Shayne's halved plan: round 1, 1,000 games on decks built
+from TRK's interim table; round 2, 1,000 games on decks built from round 1's ratings (`--built-on`); a game past 5 min
+abandoned and its board logged (57 over both rounds and the reruns, ~3–4% — Troubling Tribbles boards and long late
+games; AI-21). Cards with games in hand: round 1 281 (median 34; ≥ 100: 57; ≥ 200: 24), round 2 219 (median 41; ≥ 100:
+63; ≥ 200: 28).
+
+**The interim table rates by cost; self-play doesn't.** Rank correlation with mana value, cards with ≥ 100 games:
+interim **+0.64**, round 1 **−0.13**. Mean rating by mana value 1→6: interim 56.6 → 58.5% (climbing); round 1 50.0,
+51.9, 51.6, 49.2, 51.1, 48.4% (2–3 best, 6 worst). Round 1's ranking against the interim's: ρ −0.01. Top of round 1:
+Common Goal 59.3% (interim #92), Xindi Surveyors 57.4% (#163), Dominion Supervisor, Fugitive Listener (#179), Vexing
+Drone (#191), Xenobotanist (#200). Bottom: Suus Mahna Practitioner 41.7%, Humpback Whales 43.1% (#84), Emergency
+Holographic Crew 43.1%, Cold-Blooded Crew 46.7% (#78), Constable Odo 48.1% (#81). One card over ~150 games is ±4 points;
+the lean by cost holds over many cards.
+
+**But decks built on round 2's ratings are no better** (`--ratings-match=trk`, 300 games, pools in pairs each built on
+both tables, 0 pairs unchanged): **49.6% ± 2.9pp** (1 SE) over 141 pairs, 9 pairs dropped (a stopped game). The
+2-SE bar (> 50% + 5.8pp) not met; TRK keeps the interim table. The match can't see a gap under ~6 points.
+
+Readings, not yet tested: most cards' ratings are still pulled to the mean (median ~40 games of the 200 the pull asks),
+so round 2's builds differ from the interim's mostly by noise among the many unmeasured cards; the builder takes the
+best 23 by rating with no curve (LIM-1, DATA-2's Why), so a cheaper rating table alone may not make a faster deck; and
+both sides are the same AI, which may not press an aggressive deck's edge the way Shayne does.
+

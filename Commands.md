@@ -189,6 +189,11 @@ dotnet run -c Release --project MagicConsole -- --sim-ratings=fra [--games=2000]
 # a beam run is ~10 games/min on 16 cores: run it in chunks of seeds (--first-seed, --games=500), each its own file —
 # a background task is stopped at 2 hours and a run cut off writes NOTHING (it cost two beam runs, 2026-11-07)
 
+# DATA-2.6: do AI sealed decks built on a round's ratings (its chunk files) beat decks on the set's table? Pools in pairs,
+# each built on both; only pairs whose builds differ play. ~10 games/min (beam). --write makes those ratings the set's
+# table (MagicCore/Sets/<SET>.ratings.json) - ONLY when they won. Line also in sim_results/ratings_match_<set>.txt
+dotnet run -c Release --project MagicConsole -- --ratings-match=trk --built-on=FILE;FILE [--games=600] [--ai=beam] [--write]
+
 # Why does a card lose? Self-play games it was DRAWN in, --each lost and --each won (the search on both sides) ->
 # ai_reports/card-games-<time>.md (each game opens with every move naming the card) + a record per game (~40 min for FRA's 8)
 dotnet run -c Release --project MagicConsole -- --card-games=planeswalkers [--set=fra] [--each=2] [--seeds=3000]   # or "Name;Name"
@@ -198,6 +203,9 @@ dotnet run -c Release --project MagicConsole -- --draft [--seed=N] [--set=trk]
 
 # Compare candidate SEALED builds (LIM-1.8; ~15 min for two builds at 200, 16 cores)
 dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=200]
+# LIM-1.12: your lists on the play AND the draw against the same AI opponents, a player's report (win rate play/draw, turns,
+# each card's GIH / GNS / IWD, the opponents' cards you lost to) -> ai_reports/sealed-builds-<time>.md. --games = opponents.
+dotnet run -c Release --project MagicConsole -- --set=trk --builds=A.txt,B.txt --both-seats --games=50
 #   each file an Arena export (deck builder -> Export); its Sideboard section is the rest of your pool,
 #   "outside the game". Every build plays the SAME 200 AI sealed opponents (pool i opened from seed i,
 #   one of the AI's suggested builds, in a game of seed i), beam on both sides; the difference is paired by opponent.
