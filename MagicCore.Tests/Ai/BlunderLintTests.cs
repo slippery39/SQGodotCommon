@@ -24,4 +24,29 @@ public class BlunderLintTests
 		)
 			Assert.That(report, Does.Contain($"| {c} |"));
 	}
+
+	// AI-19's scan reads a kept TRK self-play game (the scan's first trial, seed 1): Cybernetic Specialist tapped for
+	// its ability in its own combat and left tapped (S3a), and a landcycle's search answered "none" (S5).
+	[Test]
+	public void TheScan_ReadsAKeptGame_AndFindsItsMisplays()
+	{
+		var found = BlunderLint.Check(KeptRecords.Get("LintTrkSeed1")).Found;
+
+		Assert.That(
+			found,
+			Has.Some.Matches<BlunderLint.Finding>(f =>
+				f.Class == BlunderLint.TappedEarly
+				&& f.Card == "Cybernetic Specialist"
+				&& f.Move == 285
+			)
+		);
+		Assert.That(
+			found,
+			Has.Some.Matches<BlunderLint.Finding>(f =>
+				f.Class == BlunderLint.MayDeclined
+				&& f.Card == "Free Borg Revolutionaries"
+				&& f.Move == 48
+			)
+		);
+	}
 }

@@ -110,6 +110,12 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TargetedOptions,
 				},
+			// Every stop passed costs a search level, as before AI-13.12 (part 1): beam+countpasses.
+			["countpasses"] = o => o with { FreePasses = false },
+			// Acting now wins a tie with the same move later this turn, as before AI-13.12 (part 2): beam+actnow.
+			["actnow"] = o => o with { WaitOnTies = false },
+			// Acting wins a tie by the pass bias, no potential score, before AI-13.11: beam+passbias.
+			["passbias"] = o => o with { Without = o.Without | Evaluator.Terms.Potential },
 			// Burn at their face whenever it scores, before the burn rule (AI-17.6): beam+faceburn.
 			["faceburn"] = o => o with { Without = o.Without | Evaluator.Terms.SaveBurn },
 			// A held option's turns left read in each line, not at the root, before AI-13.9: beam+liveoptionturns.

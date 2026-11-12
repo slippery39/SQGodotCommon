@@ -92,10 +92,11 @@ dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip th
 dotnet run --project MagicConsole -- --record=game_records/<file>.json   # a table game, move by move (--passes: the forced ones too); stale → names the move, exit 1
 dotnet run --project MagicConsole -- --record=game_records/<file>.json --keep=NAME --at=N   # keep it as an AI test case: MagicCore.Tests/Records/NAME.json + a test to paste into AiPositionTests (#N from the transcript)
 dotnet run -c Release --project MagicConsole -- --record=game_records/<file>.json --compare   # your choices beside the AI's (TBL-5.6): at each decision, the default search's pick and where the oracle ranks yours; ~20 s a game on 16 cores
-dotnet run -c Release --project MagicConsole -- --lint [--games=N] [--seed=N] [--ai=beam|greedy|beam+nolanddrop] [--only=SEED]   # AI-17.7 blunder counts per class -> ai_reports/lint-<time>.md; prints `lint: n/N games, min` as it goes (100 search games ~17 min on 16 cores); --only replays one seed
+dotnet run -c Release --project MagicConsole -- --lint [--games=N] [--seed=N] [--ai=beam|greedy|beam+nolanddrop] [--only=SEED]   # AI-17.7 blunder counts per class -> ai_reports/lint-<time>.md; prints `lint: n/N games, min` as it goes (100 search games ~17 min on 16 cores); --only replays one seed | `--set=trk`: that set's AI sealed decks (DATA-2's), each game kept as a record in ai_reports/lint-<time>/ and read with AI-19's per-card misplay checks S1-S6 (300 TRK games ~30 min); `--lint --records=DIR` re-reads kept records in seconds, no games played
 dotnet run -c Release --project MagicConsole -- --decisions [--games=N] [--seed=N]   # AI games as a replay to read (AI-14): ai_reports/decisions-<time>.md, and each game as a record beside it (-gameN.json) — --record=… numbers its moves, --keep=… --at=N makes a flagged one a test
 dotnet run -c Release --project MagicConsole -- --record=FILE --card=NAME   # each turn NAME sat in its holder's hand: lands, castable or not, what was done instead (MC-5.4)
 dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N   # what the search imagined before move N (AI-17): each first move, best first, with the line its score came from - our decisions, the simulated opponent, the rollout to its horizon
+dotnet run -c Release --project MagicConsole -- --record=FILE --guesses=30 --at=N   # noise or value (AI-19.23): move N decided again under 30 guesses of the hidden cards, each answer counted - a split is AI-20's one guessed future, a steady wrong answer a pricing problem (~15 s a position)
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json and TRK.values.json (~5 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
@@ -111,7 +112,7 @@ From the solution root, Release. Both are deterministic: the same command gives 
 
 ```
 # 1. The quick check (~20 s), while working: what the AI decides at 288 recorded positions
-dotnet run -c Release --project MagicConsole -- --suite=beam
+dotnet run -c Release --project MagicConsole -- --suite=beam   # --shown=N lists N changed decisions (10 by default)
 #   "changed": decisions that differ from the committed answers (0 = a pure optimisation, AI-7)
 #   "cost per position": engine steps and rollouts — the deterministic cost, not the clock
 #   "agrees with the oracle" / "score given up": against a search looking four turns ahead, read once.
@@ -174,6 +175,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     thisturngrants the next attack's clock reads this turn's grants (can't block, flying) as lasting (before AI-17.9)
 #     faceburn       burn at their face whenever it scores, not saved for a kill within two turns (before the burn rule)
 #     instantoptions only instants and flash held as options, not targeted sorcery-speed cards (before AI-13.10)
+#     passbias       acting wins a near-tie by 0.01, no potential score (before AI-13.11)
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 

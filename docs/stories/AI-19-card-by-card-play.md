@@ -1,7 +1,7 @@
 ---
 id: AI-19
 title: Card-by-card play and rulings — after every card plays
-status: backlog
+status: in-progress
 area: AI
 created: 2026-11-05
 ---
@@ -20,6 +20,46 @@ cards implemented first. Then we can optimize usage and rulings per card."
 - [ ] Each ruling listed below is exact, or its simplification is named and accepted again.
 
 ## Decisions
+
+- 2026-11-11, Shayne (the scan's VALUE list, AI-19.23 — positions in `docs/findings/magic-ai.md`): (2) Cerritos stationed
+  by a 2/2 flier, opponent at 16 with no creatures — **fine**: "opponent is still at a high life, no risk of being
+  attacked back … getting the 4/4 flyer online soon is a fine goal". (3) Cold-Blooded Crew held, no green source, five
+  lands, nothing done at 6 life — **a clear misplay**: "getting the rest of his hand online is more important than
+  holding the cold blooded crew in case he draws 4 forests … he probably should have land cycled earlier". (5) Mikaeus
+  tapped for his counter in his own upkeep — **wait for the end step**. (6) Suus Mahna tapping itself in its own upkeep —
+  "literally a waste of resources". (7) Cybernetic Specialist putting a Swamp on its library's bottom in its upkeep —
+  "almost pure negative", and the blocker lost is a cost: "pure waste of a play". (8) Re-equipping the same creature
+  (or back and forth) and other free-looking activations — **a waste, "one of the more innocent behaviors", but tapping
+  out has a cost: "now your opponent knows you have no instants to play or you can't activate abilities"**. The NOISE
+  list (landcycling in his upkeep, a landcycle fetching nothing, the Analyst's upkeep ping, Guidance Failure in its
+  upkeep) — **fixed in AI-20**. (1) Sarcophagus — a clear misplay "especially if sarcophagus would not be animated by
+  stationing it"; then found: it WAS (two stations, 3 → 6 → 10) and attacked as a 4/4 flier for the win — back to
+  Shayne. (4) Rogue Artificial Intelligence — "this one isn't clear" (its lands asked) — back to Shayne.
+- 2026-11-11, Shayne (the two sent back): (4) Rogue, one land short with its land drop unused and {2} idle — **"perfectly
+  fine now to cycle … Honestly its kind of a judgement call"** (cycling makes Automatons and a held Flare certain; holding
+  is defensible) — not a misplay to fix. (1) Sarcophagus — **still a misplay, a smaller and more advanced one: not a
+  missed on-board kill but "how to play around removal the best"**: "When swinging for the win, you have to account for,
+  can I win through them removing one of my creatures? If they do … are we going to be losing creatures to better
+  blocks … is it best to go for the slower less immediate win, but risk the opponent drawing something later". Noted,
+  **not to fix this session**; look for a more obvious station case. **Looked (Claude):** of the 80 stations flagged, 60
+  animated the ship that turn (station, then swing — the Sarcophagus question); of the other 20, 17 had a blocker that made
+  the attack poor or a trade, 2 were free attacks at high life (item 2's "fine"), and 1 was pure waste — Enterprise-D
+  stationed by a -2-power Tactical Officer, 0 counters (S6 caught it: the "changes nothing" family). No station fix now;
+  S3c to skip a station that animates the ship that turn.
+
+- 2026-11-11, Shayne (FRA's list, `docs/findings/magic-ai.md`): (F1) instants in your own upkeep — "you aren't usually
+  casting instants in your own upkeep, unless there is something you need to do in response to beginning of upkeep
+  triggers, or before you draw … it definitely should not be the default". (F2) pumps, flying and untaps in the
+  opponent's upkeep — "should all be delayed until the effect actually matters (ie. opponent attacks, then you untap your
+  creature with hapatra then block)". (F3) re-equipping — "there are use cases for equipping different creatures in a turn,
+  but we need a way to stop this when it doesn't provide any extra value". (F4) Arni's loot — not at its own end step:
+  "either loot during your main phase to find stuff to play, or loot at the opponents end step to keep it up as a
+  potential blocker" (whether to loot at all with a good hand: out of scope). (F5) a free graveyard exile — "it should
+  exile a card at every opportunity" (Timetwister-like edge cases aside). **His idea for F5 and the like: a POTENTIAL
+  score** — "exiling cards is something you should do if its free, but its not something you always want to prioritize …
+  think of the main board score as one score, then potential scores add onto it without adjusting the main score so the AI
+  can choose these better effects without it screwing up their main decision making"; and **tapping a creature is spending
+  a resource** (a potential blocker) — "always a cost benefit analysis" — potential or main, to discuss.
 
 Open questions:
 - Which cards first — by how often they are played (the TRK ratings, MC-5.4 / DATA-2), or by how wrong they look at the table?
@@ -115,14 +155,79 @@ Open questions:
       that will return it under YOUR control (assimilate on attack) is priced only as their loss, not your future
       gain; **(d)** a station threshold's ability (12+: flying for artifact creatures) isn't priced until reached
       (the `Other` price's own ponytail). Shayne's read stands: "maybe Borg Cube is just a 7 mana removal spell most of
-      the time" — to the AI it is less.
+      the time" — to the AI it is less. **Shayne at the table (2026-11-11, Arena): "Borg Cube has been nuts
+      too, way more than just a 7 mana removal spell, its pretty much a game winning card. I believe the reason why it had
+      such a low win rate is because our AI did not know how to station it properly"** — so its low sim rate is the AI's
+      play (lessons (b) and (d): stationing with attackers, the 12+ ability unpriced; and (a), (c) behind it never being
+      cast), not the card. **Counted in AI-19.23's TRK scan (300 games, 600 AI sealed decks):** in only 15 decks, drawn in
+      8 games, castable on 4 turns in all (seed 130 #347, seed 36 #407, seed 91 #343 — the same game `--card-games` found,
+      the decks are seeded — and seed 57 #663), cast once (seed 57). Two problems: the AI's sealed builder rarely plays
+      it (its rating comes from the self-play that misplays it — a loop), and castable it passes 3 times in 4. **Shayne
+      (2026-11-11): use Borg Cube as a test.** The four castable turns read: seeds 36 and 130 WON that turn
+      another way (He's Dead, Jim on Dahar Master; an attack) — passing the Cube was right; seed 57 cast it; **seed 91 #343
+      is the one miss** (kept: `Records/BorgCubeNotCast91`), now 30 of 30 guesses "Cast D'Ghor Bloodletter". So in this
+      scan the Cube's low rate is mostly the builder leaving it out and the turns it arrives late, plus that one pass —
+      the station lessons (b), (d) need a game where it is cast. **Shayne (2026-11-11), #343: Borg Cube exiling U.S.S. Cerritos** —
+      "exiling the Cerritos with the Cube actually gives more options. If we want to race we can then attack with the 3/3
+      flier, if we want to play defensive we can hold it back. Then we can actually use the 3/3 fliers untap ability over
+      the next few turns to either race and untap it, or station and untap it. Given the low life totals and high station
+      cost, in this case it might be just to race (3 hits kills the opponent anyways), but if the opponent plays something
+      that stops our attacks … we can switch to the station plan … Using the D'Ghor Bloodletter is something we can do on
+      the following turn if necessary." Pinned, ignored as the known defect: `BorgCube_ExilesTheCerritos_OverASecondBloodletter`.
+- [ ] AI-19.23 **The misplay scan** (Shayne, 2026-11-11: find the cards the AI plays wrong in TRK, then FRA — per-card
+      win rates are too noisy at ~100 games, and a misplayed card just reads "bad"). BlunderLint extended, not a
+      sibling: `--lint --set=trk --games=N` plays that set's AI sealed decks (DATA-2's), the search on both sides, a
+      game stopped past `SimulatedRatings.GameBudget`; every game kept as a record (`ai_reports/lint-<time>/seed-N.json`)
+      and READ afterwards (`BlunderLint.Check`; `--lint --records=DIR` re-reads in seconds). The checks, each rule
+      agreed with Shayne before it was built (2026-11-11):
+      **S1** a sorcery-speed card (no land, instant or flash) still castable as its holder passes its second main
+      phase, stack empty — left in hand with the mana for it unspent; "never cast": castable on 2+ turns, never cast;
+      ranked by the share of castable turns left against the median at its mana value (10+ games castable).
+      **S2** instants and flash: when cast (own/their upkeep, main 1, combat, main 2, end step; in response) and turns
+      held through their end step castable — reported, never flagged. **S3** activated abilities of permanents in play,
+      by cycle (its controller's untap to the next): (a) a creature's {T} ability used with the stack empty anywhere but
+      the opponent's end step, flagged only if it is still tapped as its controller's next turn begins (an untap
+      coming clears it — Tal Shiar Analyst); (b) usable in 3+ cycles, never used; (c) station in its own main 1 or
+      beginning of combat tapping a creature that could attack; (d) its second main phase passed with no land played
+      and a landcycling ability usable. **S4** turned around without news: an instant-speed move left at the holder's
+      last own-turn stop, made in the opponent's upkeep or draw step, the opponent having done nothing but pass and no
+      new card in the holder's hand (Shayne's landcycle in his upkeep, AI-20). **S5** a "you may" (yes/no, or a pick
+      of none or one) declined, by its source on the stack, "pay" counted apart. **S6** our spell or ability, alone on
+      the stack, resolved and changed nothing but its cost (life, mana, every zone, each permanent's state).
+      **Then each suspect decided again under 30 guesses** (AI-20.2's flip rate): NOISE (flips between guesses → AI-20)
+      or VALUE (wrong in most → the fixes). **Built (2026-11-11);** test `TheScan_ReadsAKeptGame_AndFindsItsMisplays`
+      (`Records/LintTrkSeed1`, the 4-game trial's seed 1). The trial already shows: Cybernetic Specialist and Suus Mahna
+      Practitioner tapped in their own upkeep/combat (S3a, Tal Shiar's pattern), U.S.S. Cerritos stationed with a 2/2
+      that could attack (S3c), and a landcycle's search answered "none" (#48: the cost paid, no land fetched).
+      **Run (2026-11-11, 300 TRK games, 40.6 min) and every top suspect decided under 30 guesses** — the ranked list is in
+      `docs/findings/magic-ai.md` ("AI-19.23: the misplay scan"). VALUE (the same wrong play in nearly every guess):
+      (1) paid activations that change nothing — Bat'leth / Neuroflux Heirloom re-equipped onto the same creature, DOT-7
+      untapping an untapped creature, 30/30 each; (2) Suus Mahna Practitioner tapping ITSELF, 24/30; (3) Cybernetic
+      Specialist moving a Swamp to its library's bottom in its upkeep, 30/30; (4) Mikaeus's counter in his own upkeep,
+      29/30; (5) Spacecraft stationed with an attacker, 30/30 (the real AI, not only the rollout); (6) a landcycler held
+      with mana open and no land played, 30/30 and 23/30. NOISE (AI-20): the landcycle in the opponent's upkeep (S4), a
+      landcycle's search answered "none", Tal Shiar Analyst's upkeep ping and Guidance Failure in its own upkeep (8/30
+      each). Most instant and flash casts are in their caster's own upkeep (S2) — more positions before calling it.
+      Checks to tighten (false positives): S3a counts sorcery-speed tap abilities, S6 a surveil that kept its card, S5 a
+      surveil's keep. **Reviewed with Shayne (2026-11-11, Decisions).** Checks tightened the same day: S3a skips a sorcery-speed
+      ability (it can't wait), S3c a station that animates the ship that turn, S5 and S6 a surveil's (or explore's) keep —
+      TRK re-read: S3a 157 → 139, S3c 80 → 20, S5 439 → 213, S6 92 → 70. FRA's 300-game run next.
+
 ## Next
 
-Not started. Add a card here whenever a batch leaves its play or a ruling simple on purpose; start once
-MC-5 has every card playing.
+**AI-19.23, the misplay scan** (2026-11-11): built, run (300 TRK games; 219 FRA — the run crashed in the .NET runtime
+at 219, not reproduced), reviewed with Shayne item by item (Decisions). Fixed from it the same day: AI-13.11 (the potential
+score) and AI-13.12 (the depth fix). Next: the scan again on the same seeds (`--lint --set=trk --games=300 --seed=1`, ask
+first) and compare with `ai_reports/lint-2026-11-11_020602.md` (TRK) / `lint-2026-11-11_115512` (FRA records); Borg Cube
+(AI-19.22: its pinned test, the four lessons, the builder loop); the smaller value items (Suus Mahna's bait — AI-19.21's
+family; the free graveyard exile as a potential term, F5; Arni's end-step loot). Tools: `--lint --records=DIR` re-reads in
+~20 s; `--record=FILE --guesses=30 --at=N`; `--explain` shows each line's potential. The scratch tools used for
+boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-11: AI-19.23 — the misplay scan built (BlunderLint on TRK sealed, records kept and read, S1–S6) and run on 300
+  TRK games; six VALUE misplays and four NOISE ones (`docs/findings/magic-ai.md`).
 - 2026-11-05: opened with Engineered Explosives (MC-5.3 batch 6a); Deep Space 9 and Georgiou added (batch 6b).
 - 2026-11-06: Lwaxana Troi, Brazen Bluff and the free casts added (MC-5.3 batch 7a).
 - 2026-11-06: Genesis Device, Data, explore, Peace in Our Time and Kobayashi Maru added (MC-5.3 batch 7b).

@@ -232,9 +232,25 @@ public static class Rollout
 	/// <paramref name="me"/>'s score once the game reaches <paramref name="horizon"/> (or ends — a
 	/// win or loss decayed by the turns since the search's root, which the horizon fixes).
 	/// </summary>
-	public static double Score(GameState s, int me, int horizon, Settings settings)
+	public static double Score(GameState s, int me, int horizon, Settings settings) =>
+		Score(s, me, horizon, settings, out _);
+
+	/// <summary>
+	/// <see cref="Score(GameState, int, int, Settings)"/>, and <paramref name="rootTurnEnd"/>: the last position of the
+	/// search's own turn the rollout played through (before the next turn's untap) - in the OPPONENT'S turn the last before
+	/// its end step, from where whatever we spend is free (our untap is next; Shayne's lesson 6: use it at their end step)
+	/// - or null if <paramref name="s"/> is already past it: what a line keeps up (the potential score, AI-13.11).
+	/// </summary>
+	public static double Score(
+		GameState s,
+		int me,
+		int horizon,
+		Settings settings,
+		out GameState? rootTurnEnd
+	)
 	{
 		var rootTurn = horizon - 1 - settings.LookaheadTurns;
+		rootTurnEnd = null;
 		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
 		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 		var them = s.OpponentOf(me);
@@ -260,6 +276,8 @@ public static class Rollout
 				(turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 			if (turnEnd is null && turn > rootTurn)
 				turnEnd = s;
+			if (turn == rootTurn && !FreeToSpend(s, me))
+				rootTurnEnd = s;
 
 			var who = s.DecidingPlayerId();
 			if (who != me)
@@ -290,6 +308,8 @@ public static class Rollout
 			s = Pass(s, who); // nothing worth playing
 		}
 
+		if (s.GetGame().TurnNumber == rootTurn && !FreeToSpend(s, me))
+			rootTurnEnd = s; // the game ended, or the rollout stopped, inside the turn
 		var score = Evaluator.Evaluate(s, me, settings.Held);
 		if (!s.IsOver())
 			return score;
@@ -301,6 +321,10 @@ public static class Rollout
 			? score + TurnEndBoard(turnEnd, me, settings) // lost after our turn: the board we kept
 			: score;
 	}
+
+	/// <summary>The opponent's end step or cleanup: what we spend from here is back at our untap.</summary>
+	public static bool FreeToSpend(GameState s, int me) =>
+		s.GetGame().ActivePlayerId != me && s.GetGame().Step is Step.End or Step.Cleanup;
 
 	/// <summary>A won line's tie-break, read as the search's own turn ends (or the game, if it ends first).</summary>
 	static double Progress(GameState s, int me, int them, Settings settings) =>
@@ -618,7 +642,9 @@ public static class Rollout
 	/// Our policy: on our own turn at sorcery speed, the land first, then the best-scoring
 	/// <paramref name="playable"/> move (none: the turn's plays are spent) if it leaves us no worse. "No worse", not "better" as GreedyAi asks:
 	/// a setup play scores flat, and MtgSimulator found strict improvement stops at exactly the play a
-	/// rollout exists to see. Never responds.
+	/// rollout exists to see. Never responds. An ACTIVATED ability must leave us better (with the potential score,
+	/// AI-13.11): one that scores flat changes nothing - Medic's Kitesail re-equipped onto the creature carrying it, in
+	/// every line alike, so the search's potential couldn't tell holding from spending.
 	/// </summary>
 	static GameAction? OurPlay(
 		GameState s,
@@ -644,7 +670,10 @@ public static class Rollout
 			return null;
 		var before = Evaluator.Evaluate(s, me, settings.Held);
 		var (move, score) = BestSettled(s, me, candidates, settings);
-		return score >= before ? move : null;
+		// ponytail: strict for EVERY activation, not only one that changes nothing - an engine ability that scores flat at
+		// once (a level-up, a "{T}: surveil") is no longer used by our rollout; refuse only a no-op if a position shows it.
+		var strict = move is ActivateAbilityAction && !Evaluator.IsOff(Evaluator.Terms.Potential);
+		return score > before || score == before && !strict ? move : null;
 	}
 
 	/// <summary>The move whose settled result scores best for <paramref name="who"/> — our policy's and a responding opponent's one way to judge a play.</summary>

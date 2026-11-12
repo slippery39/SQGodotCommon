@@ -136,6 +136,14 @@ the Stardates fix.
       cast spells or activate abilities") and Flare of Fortitude ("your life total can't change") should
       land on what this finds.
 
+- [ ] MC-6.16 **"Name a card" answered with the name itself** (Shayne, 2026-11-11 — deferred, after AI-19's scan): the rules
+      hold no list of names and check none — the answer is a string, unchecked (a wrong name matches nothing, as naming
+      a card nobody plays); names come from OUTSIDE the engine: the AI's helper (`GreedyAi.LikeliestName`, Shayne's rule,
+      candidates from the set being played) and a search box on the table; a record stores the string. One piece for
+      Kai Winn now and Pithing Needle, Meddling Mage later (the cube). Why now: `CardRegistry.NonlandNames` reads the
+      game's printings (the only rule that reads a printing, against MagicCore/CLAUDE.md), and a record keeps names
+      only, so a TRK game with Kai Winn replays stale — the scan leaves those records out (DesignNotes)
+
 ## Next
 
 MC-5.6 does MC-6.1–6.8 and part of 6.9 as it builds the Stardates (its story's Next has the prompt). Then this

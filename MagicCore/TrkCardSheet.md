@@ -463,7 +463,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)  
 > {1}, {T}: Put target card from your graveyard on the bottom of your library.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** BlunderLintTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutIntoLibrary` — "Put [it] on the bottom (or top) of its owner's library" — Paradox Shaper's graveyard…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -839,7 +839,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, creatures you control get +1/+1 until end of turn.  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** BlunderLintTests
 
 **Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

@@ -85,6 +85,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		int ExpandBranching = 5,
 		int RolloutBudget = 200,
 		double PassBias = 0.01,
+		double PotentialMargin = 0.1,
 		bool CommitPlans = true,
 		double DivergenceThreshold = 5.0,
 		Rollout.Settings? RolloutSettings = null,
@@ -95,7 +96,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		Evaluator.Terms Without = Evaluator.Terms.None,
 		bool WinNowOnly = true,
 		bool WholeAttacks = true,
-		bool BranchPicks = true
+		bool BranchPicks = true,
+		bool FreePasses = true,
+		int FreePassCap = 4,
+		bool WaitOnTies = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -174,7 +178,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		ImmutableList<Decision> Path,
 		ImmutableList<double> Expected,
 		double Score,
-		double Bonus = 0
+		double Bonus = 0,
+		double Potential = 0,
+		int FreePasses = 0
 	);
 
 	ImmutableList<Decision> plan = [];
@@ -190,6 +196,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	// …and the line that reading came from, in the world the search sampled (Explain, AI-17).
 	readonly Dictionary<Decision, Node> bestLines = new(ReferenceEqualityComparer.Instance);
 	GameState? sampled;
+	GameState? searchRoot; // the position this search decides in: what a line's potential counts as kept (AI-13.11)
 	readonly List<Decision> firstMoveOrder = [];
 
 	/// <summary>
@@ -256,7 +263,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		foreach (var first in firstMoveOrder.OrderByDescending(f => firstMoves[f]))
 		{
 			var line = bestLines[first];
-			md.Append($"\n## {Describe(s, first)}: {firstMoves[first]:0.00}\n");
+			md.Append(
+				$"\n## {Describe(s, first)}: {firstMoves[first]:0.00} (potential {line.Potential})\n"
+			);
 			var replay = new DecisionReport.Replay(md, names, s);
 			var at = s;
 			var end = at;
@@ -372,7 +381,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
-		s = sampled = Hidden.Sample(s, PlayerId, options.Library, options.Hand);
+		s = searchRoot = sampled = Hidden.Sample(s, PlayerId, options.Library, options.Hand);
 		(plan, planExpected, rollouts) = ([], [], 0);
 		var clock = Stopwatch.StartNew();
 		var rootTurn = s.GetGame().TurnNumber;
@@ -383,7 +392,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				?? new Pick([.. greedy.Answer(s, s.GetPendingChoice()!)], "");
 
 		var root = new Node(s, [], [], 0);
-		var beam = Expand(root, s, children, horizon);
+		// a free pass extends a line past its first decision: a one-level search (and one with no time) has none
+		bool Spent() =>
+			options.Depth <= 1
+			|| rollouts >= options.RolloutBudget
+			|| clock.Elapsed >= options.TimeLimit;
+		var beam = WithFreePasses(Expand(root, s, children, horizon), rootTurn, horizon, Spent);
 		// Below the root each kept line is one parallel batch of at most ExpandBranching rollouts; the
 		// first is estimated from the root's batch, scaled to that size (measured: a 0.8 s root of 16
 		// moves, then batches of ~0.25 s).
@@ -398,6 +412,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			var next = new List<Node>();
 			foreach (var node in Prune(beam))
 			{
+				if (node.FreePasses == Expanded)
+				{
+					next.Add(node);
+					continue;
+				}
 				var (at, leaf) = Advance(node.State, rootTurn);
 				// The turn is over on this line, or there is no time to expand it: its score already
 				// reaches the horizon.
@@ -407,7 +426,17 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					continue;
 				}
 				next.AddRange(
-					Expand(node, at, Narrow(at, Children(at), options.ExpandBranching), horizon)
+					WithFreePasses(
+						Expand(
+							node,
+							at,
+							Narrow(at, Children(at), options.ExpandBranching),
+							horizon
+						),
+						rootTurn,
+						horizon,
+						Spent
+					)
 				);
 				batches++;
 			}
@@ -439,9 +468,19 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					Evaluator.PendingSurveil(state, PlayerId, RolloutSettings.Held)
 						- Evaluator.PendingSurveil(at, PlayerId, RolloutSettings.Held)
 				);
-			var score = Rollout.Score(state, PlayerId, horizon, RolloutSettings) + bonus;
+			var score =
+				Rollout.Score(state, PlayerId, horizon, RolloutSettings, out var turnEnd) + bonus;
 			Interlocked.Increment(ref rollouts);
-			nodes[i] = new Node(state, parent.Path.Add(children[i]), expected, score, bonus);
+			// read as the search's turn ends (Rollout.Score's rootTurnEnd); a move that ended it, as the turn stood before
+			nodes[i] = new Node(
+				state,
+				parent.Path.Add(children[i]),
+				expected,
+				score,
+				bonus,
+				Potential(searchRoot!, turnEnd ?? at, PlayerId),
+				IsFreePass(at, children[i]) ? parent.FreePasses + 1 : 0
+			);
 		}
 		// One thread is a plain loop: Parallel.For would still hand its work to a pool thread and wait.
 		if (options.Threads == 1)
@@ -466,6 +505,60 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				(firstMoves[first], bestLines[first]) = (node.Score, node);
 		}
 		return [.. nodes];
+	}
+
+	/// <summary>
+	/// A pass in our own turn with nothing on the stack - only moving on to the next step (AI-13.12, the AI-17.4 review's
+	/// item 4): it costs the search no level. Without it every stop passed with an instant in hand spent one of the
+	/// <see cref="Settings.Depth"/> levels, so "cast it now" was compared with "cast it a stop later" whose turn fell past
+	/// the depth into the rollout's cheap policy - Last Gasp in its own upkeep scored 0.8 above Pass for a Divining Duelist
+	/// played worse two stops on (FRA seed 109 #306), and instants went out in their caster's own upkeep (Twinned Vision 146
+	/// of 231 casts).
+	/// </summary>
+	bool IsFreePass(GameState at, Decision d) =>
+		options.FreePasses
+		&& d is Move { Action: PassPriorityAction }
+		&& at.GetPendingChoice() is null
+		&& at.StackIsEmpty()
+		&& at.GetGame().ActivePlayerId == PlayerId;
+
+	/// <summary>A move that could as well be made later at instant speed: an instant or flash card cast (<see cref="Priority.AtInstantSpeed"/>), an ability not "as a sorcery".</summary>
+	static bool InstantSpeed(GameState s, GameAction a) =>
+		a switch
+		{
+			CastSpellAction c => Priority.AtInstantSpeed(s, s.GetCard(c.CardId)),
+			ActivateAbilityAction x => s.ActivatedAbilitiesOf(s.GetCard(x.CardId))
+				.ElementAtOrDefault(x.AbilityIndex)
+				is { SorcerySpeed: false },
+			_ => false,
+		};
+
+	/// <summary>A pass line whose next decision is already in the beam (or that ends the turn): the next level keeps it as it is.</summary>
+	const int Expanded = -1;
+
+	/// <summary>
+	/// <paramref name="level"/>, and each line that ended on a free pass (<see cref="IsFreePass"/>) expanded at once, up to
+	/// <see cref="Settings.FreePassCap"/> in a row: its next decision searched within the same level. The pass line is kept
+	/// too (passing and letting the rollout play on). Stops once <paramref name="spent"/> (the rollout budget or the time
+	/// limit, the search's own two bounds).
+	/// </summary>
+	List<Node> WithFreePasses(List<Node> level, int rootTurn, int horizon, Func<bool> spent)
+	{
+		var all = new List<Node>(level);
+		for (var k = 0; k < all.Count && !spent(); k++)
+		{
+			var node = all[k];
+			if (node.FreePasses is 0 or Expanded || node.FreePasses > options.FreePassCap)
+				continue;
+			var (at, leaf) = Advance(node.State, rootTurn);
+			all[k] = node with { FreePasses = Expanded };
+			if (leaf)
+				continue;
+			all.AddRange(
+				Expand(node, at, Narrow(at, Children(at), options.ExpandBranching), horizon)
+			);
+		}
+		return all;
 	}
 
 	/// <summary>
@@ -784,11 +877,19 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		return [.. children.Where((_, i) => keep.Contains(i))];
 	}
 
+	/// <summary>
+	/// The lines kept for the next level: the best scores, an exact tie to the higher potential (AI-13.11) - else the line
+	/// that never spends its mana ties with the ones that spend it one stop later and falls out by list order, and Best
+	/// never sees it (Medic's Kitesail re-equipped in 30 of 30 guesses).
+	/// </summary>
 	List<Node> Prune(List<Node> nodes) =>
 		[
 			.. nodes
 				.Select((n, i) => (n, i))
 				.OrderByDescending(x => x.n.Score)
+				.ThenByDescending(x =>
+					Evaluator.IsOff(Evaluator.Terms.Potential) ? 0 : x.n.Potential
+				)
 				.ThenBy(x => x.i)
 				.Take(options.BeamWidth)
 				.Select(x => x.n),
@@ -811,17 +912,71 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			)
 			.MaxBy(n => n.Score);
 
-	/// <summary>The best line; one starting with a pass must beat the best line that acts by <see cref="Settings.PassBias"/>.</summary>
+	/// <summary>
+	/// The best line. With <see cref="Evaluator.Terms.Potential"/>: of the lines within <see cref="Settings.PotentialMargin"/>
+	/// of the best main score, those that keep most up (the highest potential) - and among them, as without it, one
+	/// starting with a pass must beat the best line that acts by <see cref="Settings.PassBias"/>: where potential can't tell
+	/// two lines apart, acting still wins the near-tie (a free draw off a Jace token is taken).
+	/// </summary>
 	Node Best(List<Node> nodes)
 	{
+		if (!Evaluator.IsOff(Evaluator.Terms.Potential))
+		{
+			var top = nodes.Max(n => n.Score);
+			var close = nodes.Where(n => n.Score >= top - options.PotentialMargin).ToList();
+			var most = close.Max(n => n.Potential);
+			nodes = [.. close.Where(n => n.Potential == most)];
+		}
 		var best = nodes.MaxBy(n => n.Score)!;
-		if (!IsPass(best.Path[0]))
-			return best;
-		var acting = nodes.Where(n => !IsPass(n.Path[0])).MaxBy(n => n.Score);
-		return acting is not null && best.Score <= acting.Score + options.PassBias ? acting : best;
+		var acting = IsPass(best.Path[0])
+			? nodes.Where(n => !IsPass(n.Path[0])).MaxBy(n => n.Score)
+			: best;
+		var chosen =
+			acting is not null && (acting == best || best.Score <= acting.Score + options.PassBias)
+				? acting
+				: best;
+		return chosen == acting && Waits(nodes, acting) is { } wait ? wait : chosen;
 	}
 
+	/// <summary>
+	/// Waiting wins a tie (AI-13.12, part 2): an INSTANT-SPEED move (an instant or flash card, an ability not "as a
+	/// sorcery") that a line passing now makes later this turn, within <see cref="Settings.PotentialMargin"/> of making it
+	/// now - it sees the draw and what the opponent does first (Shayne: no instants in your own upkeep by default). Not a
+	/// sorcery-speed one: a first version deferred every creature and a Jace token's draw to the second main phase, where
+	/// drawing early lets the card be played (the calm −3 fell to 0 of 30). A pass line that never makes the move keeps
+	/// the old rule (an unseen benefit must not lose its tie to doing nothing).
+	/// </summary>
+	Node? Waits(List<Node> nodes, Node acting) =>
+		options.WaitOnTies && acting.Path[0] is Move now && InstantSpeed(searchRoot!, now.Action)
+			? nodes
+				.Where(n =>
+					IsPass(n.Path[0])
+					&& n.Score >= acting.Score - options.PotentialMargin
+					&& n.Path.Skip(1).Any(d => d is Move later && Equals(later.Key, now.Key))
+				)
+				.MaxBy(n => n.Score)
+			: null;
+
 	static bool IsPass(Decision d) => d is Move { Action: PassPriorityAction };
+
+	/// <summary>
+	/// The potential score (AI-13.11): what a line KEEPS as the search's turn ends - our creatures and mana sources untapped
+	/// at <paramref name="root"/> and still untapped at <paramref name="end"/> (a blocker and mana kept up: "tapping out
+	/// tells the opponent you have no instants", Shayne). Each counts one. Only what was there to spend: a land that enters
+	/// tapped wasn't spent - the first version counted what was untapped and played a basic over a tapped land with
+	/// nothing to cast (6 suite decisions).
+	/// ponytail: flat weights, a creature that taps for mana counted once, a land whose mana ability costs mana (Talon
+	/// Gates) not counted (`ManaAbilities.ColorsOf` reads plain ones); weigh by what each can do if a margin-sized tie
+	/// shows it matters.
+	/// </summary>
+	internal static double Potential(GameState root, GameState end, int me) =>
+		end.CardsIn(me, ZoneType.Battlefield)
+			.Count(c =>
+				!c.IsTapped
+				&& (c.Is(Cards.CardType.Creature) || ManaAbilities.ColorsOf(end, c).Any())
+				&& root.IsIn(c.Id, me, ZoneType.Battlefield)
+				&& !root.GetCard(c.Id).IsTapped
+			);
 
 	Decision Commit(Node line, int rootTurn)
 	{

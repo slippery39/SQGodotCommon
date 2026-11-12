@@ -275,7 +275,7 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 		return;
 	}
 	var check = PositionSuite.Run(tracked, name);
-	Console.WriteLine(check.Report());
+	Console.WriteLine(check.Report(Arg("shown") ?? 10)); // --shown=N: list N changed decisions
 	if (flags.Contains("--accept"))
 	{
 		File.WriteAllText(path, PositionSuite.ToText(check.Accepted));
@@ -305,6 +305,42 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 			Console.WriteLine(CardTrace(record, traced));
 		else if (flags.Contains("--compare"))
 			Console.WriteLine(RecordComparison.Compare(record).Text());
+		else if (Arg("guesses") is { } guesses && Arg("at") is { } guessAt)
+		{
+			// noise or value (AI-19.23, AI-20.2's flip rate for one position): the default search decides move N again
+			// under N different guesses of what it can't see (the hidden cards' sample is the state's RngSeed)
+			var at = record.Before(guessAt);
+			var picks = new string[guesses];
+			var guessing = new RunProgress("guesses", guesses);
+			Parallel.For(
+				1,
+				guesses + 1,
+				k =>
+				{
+					picks[k - 1] = new BeamSearchAi(
+						at.DecidingPlayerId(),
+						new BeamSearchAi.Settings(Threads: 1)
+					)
+						.Decide(at with { RngSeed = k * 7919 })
+						.What;
+					guessing.Tick(
+						() =>
+							string.Join(
+								", ",
+								picks
+									.OfType<string>()
+									.GroupBy(p => p)
+									.Select(g => $"{g.Key} {g.Count()}")
+							)
+					);
+				}
+			);
+			Console.WriteLine(
+				$"# Before #{guessAt}, {guesses} guesses (recorded: {MoveTokens.Describe(at, record.Moves[guessAt - 1].Token)})"
+			);
+			foreach (var g in picks.GroupBy(p => p).OrderByDescending(g => g.Count()))
+				Console.WriteLine($"  {g.Count(), 3}  {g.Key}");
+		}
 		else if (Arg("explain") is { } explainAt)
 		{
 			// what the default search imagined before move N (AI-17): each first move's best line
@@ -337,19 +373,30 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 	return;
 }
 
-// --lint [--games=N] [--seed=N] [--ai=beam]: AI-vs-AI games with every decision checked for an obvious mistake
-// and counted (BlunderLint, AI-17.7); the report to ai_reports/lint-<time>.md. --ai=beam+nolanddrop is the old build.
+// --lint [--games=N] [--seed=N] [--ai=beam] [--set=trk]: AI-vs-AI games with every decision checked for an obvious
+// mistake and counted (BlunderLint, AI-17.7); the report to ai_reports/lint-<time>.md. --ai=beam+nolanddrop is the old
+// build. With --set: that set's AI sealed decks (DATA-2's), each game kept as a record in ai_reports/lint-<time>/, and
+// the per-card misplay checks S1-S6 (AI-19). --lint --records=DIR reads kept records again, no games played.
 if (flags.Contains("--lint"))
 {
 	Directory.CreateDirectory("ai_reports");
 	var lintPath = Path.Combine("ai_reports", $"lint-{DateTime.Now:yyyy-MM-dd_HHmmss}.md");
 	var lintAi = args.FirstOrDefault(a => a.StartsWith("--ai="))?[5..] ?? "beam";
-	var (lint, _) = MagicCore.Ai.BlunderLint.Run(
-		Arg("games") ?? 20,
-		Arg("seed") ?? 1,
-		lintAi,
-		Arg("only")
-	);
+	var lintSet = args.Any(a => a.StartsWith("--set=")) ? limitedSet : null;
+	var recordsArg = args.FirstOrDefault(a => a.StartsWith("--records="))?["--records=".Length..];
+	var lintDir = lintSet is null ? null : Path.ChangeExtension(lintPath, null);
+	if (lintDir is not null)
+		Directory.CreateDirectory(lintDir);
+	var (lint, _) = recordsArg is not null
+		? MagicCore.Ai.BlunderLint.Read(recordsArg)
+		: MagicCore.Ai.BlunderLint.Run(
+			Arg("games") ?? 20,
+			Arg("seed") ?? 1,
+			lintAi,
+			Arg("only"),
+			lintSet,
+			lintDir
+		);
 	File.WriteAllText(lintPath, lint);
 	Console.WriteLine(string.Join(" / ", lint.Split((char)10).Take(8)));
 	Console.WriteLine(lintPath);

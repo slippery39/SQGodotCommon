@@ -248,7 +248,7 @@ number is partly the AI's misplay (it pings in its own upkeep — AI-17.25).
 its weak matchup, and RB looks above the AI field: RB beat the AI decks 60%, the soup 64%.
 
 **What reads true and what doesn't:**
-- **One card strongly positive in every run is real:** Will Riker's IWD +26, +22, +18. One run's IWD is not:
+- **One card strongly positive in every run is real:** Will Riker's IWD +26, +22, +18. Confirmed at the table (Shayne, 2026-11-11, Arena, the soup with Riker): "absolutely nuts. Just winning every game i've played him and not even close" — a card he says he wouldn't have played without the runs. One run's IWD is not:
   Lore +28 then −7, Adversary by Algorithm +40 then −13.5 — at ~100 games a card's IWD swings ±10–20.
 - **A one-card swap overstates its size** (+5.8 for a card in hand in ~37% of games): the AI's imagined
   library differs between the lists too. The direction holds.

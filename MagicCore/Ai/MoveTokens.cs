@@ -40,7 +40,7 @@ public static class MoveTokens
 		$"s{playerId}:{zone}:{card}";
 
 	/// <summary>A token against the state it applies to: the action, or the choice's ids — the one parser.</summary>
-	static (GameAction? Action, int[]? Ids) Resolve(GameState s, string token)
+	public static (GameAction? Action, int[]? Ids) Resolve(GameState s, string token)
 	{
 		try
 		{

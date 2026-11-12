@@ -63,14 +63,21 @@ public class AiPositionTests
 	)
 	{
 		var s = KeptRecords.Before(record, at);
+		// the control is the search as it was: no free passes either (AI-13.12 finds the pass there too)
 		string Choice(Evaluator.Terms without) =>
 			MoveTokens.Token(
 				s,
 				new BeamSearchAi(
 					s.DecidingPlayerId(),
-					flat
-						? new BeamSearchAi.Settings(Without: without).WithoutHeld()
-						: new(Without: without)
+					(
+						flat
+							? new BeamSearchAi.Settings(Without: without).WithoutHeld()
+							: new(Without: without)
+					) with
+					{
+						FreePasses = without == Evaluator.Terms.None,
+						WaitOnTies = without == Evaluator.Terms.None,
+					}
 				).Decide(s)
 			);
 
@@ -216,8 +223,52 @@ public class AiPositionTests
 		string Chose(Evaluator.Terms without) =>
 			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
 
-		Assert.That(Chose(Evaluator.Terms.TrueDefender), Does.EndWith("Attack You"), "control");
+		// the potential score (AI-13.11) keeps the token home too: the control switches both off
+		Assert.That(
+			Chose(Evaluator.Terms.TrueDefender | Evaluator.Terms.Potential),
+			Does.EndWith("Attack You"),
+			"control"
+		);
 		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
+	}
+
+	// Shayne, 2026-11-11 (AI-19.22, AI-19.23's scan): Borg Cube - "way more than just a 7 mana removal spell, its pretty
+	// much a game winning card" - castable 4 turns in 300 TRK self-play games, passed once where it was the play. TRK seed
+	// 91, turn 15: the AI at 20 with 5 lands (the Cube costs 5 by affinity: Borg 1/1 and DOT-7 Repair Squad 3/3 flier),
+	// Shayne at 9 with U.S.S. Cerritos a 4/4 flier, two tapped 1/1 Officers and two 2/2 Romulans. The AI casts a second
+	// D'Ghor Bloodletter. Shayne: "exiling the Cerritos with the Cube actually gives more options. If we want to race we can
+	// then attack with the 3/3 flier, if we want to play defensive we can hold it back … the D'Ghor Bloodletter is something
+	// we can do on the following turn if necessary". A KNOWN DEFECT until the Cube is priced (AI-19.22's lessons): the
+	// creature it exiles counted as their loss only, never as ours once it attacks; its 12+ unpriced; the rollout
+	// stationing with attackers and casting one spell a turn.
+	[Test]
+	[Ignore("Known defect, AI-19.22: the search casts D'Ghor Bloodletter in 30 of 30 guesses")]
+	public void BorgCube_ExilesTheCerritos_OverASecondBloodletter()
+	{
+		var s = KeptRecords.Before("BorgCubeNotCast91", 343);
+		Assert.That(
+			new BeamSearchAi(s.DecidingPlayerId()).Decide(s).What,
+			Does.StartWith("Cast Borg Cube")
+		);
+	}
+
+	// Shayne, 2026-11-11 (AI-19.23's scan, his item 8: "equipping several times on the same creature … for no benefit is a
+	// waste"; tapping out tells the opponent you have no instants): TRK self-play seed 6, turn 21, second main phase - the
+	// AI paid {2} to equip Bat'leth onto Humpback Whales, which already carried it (#461). Pass and the re-equip scored the
+	// same, 9019.20, and acting won the tie by the pass bias. Terms.Potential (AI-13.11): a near-tie goes to the line that
+	// keeps more up as the turn ends - the mana. The CONTROL: without it, the re-equip.
+	[Test]
+	public void ARe_Equip_OntoTheSameCreature_IsNotPaidFor()
+	{
+		var s = KeptRecords.Before("BatlethReEquip", 478);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		Assert.That(
+			Chose(Evaluator.Terms.Potential),
+			Does.StartWith("Activate Bat'leth"),
+			"control"
+		);
+		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Pass"));
 	}
 
 	// Shayne, 2026-11-09 (AI-17.17): the AI put 17 charge counters on its Sarcophagus, Ship of the Dead, which animates at
@@ -768,8 +819,11 @@ public class AiPositionTests
 						{
 							LostLines = lostLines,
 						},
-						// the control is the search as it was: a finished game's own board (AI-17.6) keeps it too
-						Without: lostLines ? Evaluator.Terms.None : Evaluator.Terms.EndBoard
+						// the control is the search as it was: a finished game's own board (AI-17.6) keeps it too, and so
+						// does the potential score (AI-13.11: the mana kept up)
+						Without: lostLines
+							? Evaluator.Terms.None
+							: Evaluator.Terms.EndBoard | Evaluator.Terms.Potential
 					)
 				).Decide(s)
 			);
@@ -814,19 +868,26 @@ public class AiPositionTests
 			KnownOnly = false,
 			CounterAttack = false,
 		};
+		var bounce = 0;
 		global::MagicCore.Cards.Card Target(Evaluator.Terms without)
 		{
+			// which target, not when: the old timing (AI-13.12 holds this instant to later in the turn)
 			var cast = new BeamSearchAi(
 				me,
-				new() { Without = without, RolloutSettings = boardOnly }
-			)
-				.Decide(s)
-				.Action;
+				new()
+				{
+					Without = without,
+					RolloutSettings = boardOnly,
+					FreePasses = false,
+					WaitOnTies = false,
+				}
+			).Decide(s).Action;
 			Assert.That(
 				cast,
 				Is.InstanceOf<global::MagicCore.Actions.CastSpellAction>(),
 				"the bounce is cast — if not, the suite moved: find the token bounce again"
 			);
+			bounce = ((global::MagicCore.Actions.CastSpellAction)cast!).CardId;
 			return s.GetCard(((global::MagicCore.Actions.CastSpellAction)cast!).Targets.Last());
 		}
 		Assume.That(
@@ -841,8 +902,27 @@ public class AiPositionTests
 			"the control: priced blind, a card"
 		);
 		Assert.That(Target(Evaluator.Terms.None).IsToken, "the token");
-		var today =
-			new BeamSearchAi(me).Decide(s).Action as global::MagicCore.Actions.CastSpellAction;
+		// the default search's cast of that bounce this turn - an instant may wait for a later stop (AI-13.12)
+		global::MagicCore.Actions.CastSpellAction? today = null;
+		for (
+			var (x, i) = (s, 0);
+			i < 40
+				&& today is null
+				&& !x.IsOver()
+				&& x.GetGame().TurnNumber == s.GetGame().TurnNumber;
+			i++
+		)
+		{
+			var who = x.DecidingPlayerId();
+			var d = new BeamSearchAi(who).Decide(x);
+			if (
+				who == me
+				&& d.Action is global::MagicCore.Actions.CastSpellAction c
+				&& c.CardId == bounce
+			)
+				today = c;
+			x = d.State;
+		}
 		Assert.That(
 			today is not null && s.GetCard(today.Targets.Last()).IsToken,
 			"and the default search, their swing back seen, bounces the token too"
@@ -992,7 +1072,7 @@ public class AiPositionTests
 		// price of an unseen card, and priced blind the plain 3/3 is now held too (Shayne: no point rebuilding it).
 		if (kind == "vanilla")
 			Assert.That(
-				BouncesIt(attacker, Evaluator.Terms.KnownHand),
+				BouncesIt(attacker, Evaluator.Terms.KnownHand | Evaluator.Terms.Potential), // AI-13.11 holds it too
 				"the control: a bounced creature priced as half a card, it bounces"
 			);
 		Assert.That(BouncesIt(attacker), Is.False, "it holds");
@@ -1050,7 +1130,7 @@ public class AiPositionTests
 	public void AnAura_IsntCastIntoAKnownRemovalSpell(bool known)
 	{
 		FerocityAgainstLastGasp(known);
-		bool CastsTheAura(bool knownOnly) => new BeamSearchAi(
+		bool CastsTheAura(bool knownOnly, bool asItWas = false) => new BeamSearchAi(
 				me,
 				new(
 					RolloutSettings: knownOnly
@@ -1068,12 +1148,18 @@ public class AiPositionTests
 				{
 					// the opponent model alone: AI-13's option value would hold the Aura either way
 					Without = Evaluator.Terms.HoldOption,
+					// the control is the search as it was: a flash Aura now waits for later in the turn (AI-13.12)
+					FreePasses = !asItWas,
+					WaitOnTies = !asItWas,
 				}
 			).Decide(s).Action is global::MagicCore.Actions.CastSpellAction;
 
 		if (known)
 		{
-			Assert.That(CastsTheAura(knownOnly: false), "the control: board-only, it runs into it");
+			Assert.That(
+				CastsTheAura(knownOnly: false, asItWas: true),
+				"the control: board-only, it runs into it"
+			);
 			Assert.That(CastsTheAura(knownOnly: true), Is.False, "it holds");
 		}
 		else

@@ -29,6 +29,7 @@ can give a different decision.
 | AI-17.20, AI-17.11 | a surveil never binned: the rollout keeps the one guessed top card, so binning is never seen to gain | `Terms.SurveilLands`, `SurveilSpells`, `SurveilPrice` (rules beside the search) |
 | AI-17.16 | "exile the top card, you may play it" judged by the guessed card ("it shouldn't matter what the exact top card is") | `Terms.ImpulseValue` |
 | AI-13.10, AI-17.23 | the Jace −3 against Pass decided by the guessed draw (a Plains) | moved to a calm position |
+| AI-19.23's scan, `Records/LintTrkSeed1` #48 | a basic landcycling already paid, its search answered "none" — fetching a land reorders the guessed library, so every imagined draw after it changes. Over 30 guesses (`--record=FILE --guesses=30 --at=48`): Plains 14, none 11, Island 5 | none yet |
 
 Several tests already have to count a decision over 30 guesses, because one guess decides by luck
 (`AjanisAnguish_WithNothingToKill_IsHeld`, the Tasha test, the Jace test, `ASurveil_KeepsAGoodSpellOnTop`).
@@ -102,6 +103,11 @@ built on top.
 - 2026-11-10, Shayne: **land odds, in principle (A+)** - "Land odds is fine, gives us a % chance of hitting lands for
   certain turns, then the AI can make decisions based on that." The details are to be discussed when the story
   starts: "I think we should discuss that more when we start the story."
+- 2026-11-11, Shayne (Claude's proposal): **AI-20 goes right after the misplay scan (AI-19), before the scan's value
+  fixes** — the scan decides each suspect under 30 guesses (AI-20.2's flip rate, built there once) and the NOISE ones
+  become this story's positions; the value fixes are then measured once, on the look-ahead kept. Shayne's note that
+  started it: an AI opponent skipped its land drop and landcycled in his upkeep, "for no real reason" — one guess
+  drew the card it needed, another didn't.
 
 Open questions (for Shayne, before `ready`):
 - Land odds, in detail (Shayne: discuss at the start): how the % chance of hitting lands by a given turn reaches

@@ -28,6 +28,18 @@ every task a sprint file names exists.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
+**Next session (written 2026-11-11, end of the AI session):**
+1. **Sprint 4 closes Thursday 2026-11-12:** write its review and plan sprint 5 with Shayne first
+   (`docs/sprints/2026-11-05.md`, this file's "Sprints").
+2. **DEV-6** — the second worktree for the cube lane (Shayne: tomorrow, before the day's other work).
+3. **The AI, where 2026-11-11 left it** (Shayne's order: value fixes first, then the noise — AI-20):
+   - AI-13.11 (the potential score) and AI-13.12 (the depth fix) are kept on by default and done.
+   - The misplay scan again on the same seeds (`--lint --set=trk --games=300 --seed=1`, ~40 min, ask first), to
+     compare the flagged counts with `ai_reports/lint-2026-11-11_020602.md` (TRK) and `…_115512` (FRA).
+   - Borg Cube (AI-19.22): its pinned test, the four lessons, the builder loop.
+   - Then AI-20 (land odds first), then option pricing (AI-13: lesson 5, flash creatures, removal held).
+   The scan's review, item by item, is in AI-19's Decisions; the positions in `docs/findings/magic-ai.md`.
+
 1. **MC-5** — Star Trek (TRK): sealed and draft before Arena's November 10 release
 2. **DATA-2** — TRK's AI sealed decks rated by two rounds of self-play, the search on both sides — before the AI stories (Shayne, 2026-11-10): his aggressive decks beat the AI's slow ones
 3. **AI-21** — combat on big boards: attack plans that don't grow with every token (Tribbles stalled DATA-2's sims; Shayne, 2026-11-10) — after DATA-2.6's match
@@ -106,6 +118,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-14](AI-14-see-the-ai-play.md) | See what the AI decides and why — a decision report now, an in-game inspector next | in-progress |
 | [AI-17](AI-17-basic-plays.md) | The AI misses basic plays — two found at the table, then a full review of the AI | in-progress |
 | [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | in-progress |
+| [AI-19](AI-19-card-by-card-play.md) | Card-by-card play and rulings — after every card plays | in-progress |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | in-progress |
@@ -113,12 +126,12 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
 | [AI-21](AI-21-big-board-combat.md) | Combat on big boards — attack plans that don't grow with every token | ready |
+| [DEV-6](DEV-6-two-worktrees.md) | Two lanes at once — a second worktree for the cube, merged back often | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-11](AI-11-learn-from-shaynes-games.md) | Learn from Shayne's games — settle where he and the oracle differ, keep what he got right | backlog |
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
-| [AI-19](AI-19-card-by-card-play.md) | Card-by-card play and rulings — after every card plays | backlog |
 | [AI-20](AI-20-lookahead-unknown-cards.md) | The look-ahead stops betting on one guessed future — unknown cards handled honestly | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
@@ -151,5 +164,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-22 · DATA-3 · DEV-6 · LIM-6 · MC-8 · TBL-10
+Next free id per area: AI-22 · DATA-3 · DEV-7 · LIM-6 · MC-8 · TBL-10
 <!-- stories:end -->

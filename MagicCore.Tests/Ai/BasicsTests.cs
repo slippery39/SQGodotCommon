@@ -455,6 +455,8 @@ public class BasicsTests
 		Play(
 			settings: new()
 			{
+				// the control is the search as it was: AI-13.12's free passes find the destroyer without Settle's choices
+				FreePasses = without == Evaluator.Terms.None,
 				Without = without,
 				RolloutSettings = BeamSearchAi.DefaultRollout with { ActionsPerTurn = plays },
 			}
@@ -560,7 +562,11 @@ public class BasicsTests
 			return casts;
 		}
 
-		var noRule = new BeamSearchAi.Settings(Without: Evaluator.Terms.SaveBurn, Threads: 1);
+		// the potential score (AI-13.11: the mana kept up) holds it too - the control switches both off
+		var noRule = new BeamSearchAi.Settings(
+			Without: Evaluator.Terms.SaveBurn | Evaluator.Terms.Potential,
+			Threads: 1
+		);
 		Assert.That(
 			Casts(theirLife == 20 ? noRule.WithoutHeld() : noRule),
 			Is.GreaterThanOrEqualTo(10),
@@ -612,7 +618,7 @@ public class BasicsTests
 		Assert.That(PlayOurTurn(Evaluator.Terms.None), Is.EqualTo((theirLife, burnedAt)), position);
 		if (position == "A3")
 			Assert.That(
-				PlayOurTurn(Evaluator.Terms.SaveBurn).BurnedAt,
+				PlayOurTurn(Evaluator.Terms.SaveBurn | Evaluator.Terms.Potential).BurnedAt, // AI-13.11 holds it too
 				Is.EqualTo("Player2"),
 				"control: it burns"
 			);

@@ -416,6 +416,15 @@ public static partial class Evaluator
 		/// left (`+instantoptions`).
 		/// </summary>
 		TargetedOptions = 536870912,
+
+		/// <summary>
+		/// A POTENTIAL score beside the main one (Shayne's idea, AI-13.11, 2026-11-11): lines whose main scores are within
+		/// <see cref="BeamSearchAi.Settings.PotentialMargin"/> of the best are decided by what each keeps up as the search's
+		/// own turn ends - our untapped mana sources and creatures (<see cref="BeamSearchAi.Potential"/>) - never a clear
+		/// main decision. It replaces the pass bias (acting won every tie by 0.01): Bat'leth re-equipped onto the creature
+		/// already carrying it scored 9019.20 against Pass 9019.20 (`+passbias` is the old).
+		/// </summary>
+		Potential = 1073741824,
 	}
 
 	/// <summary>

@@ -192,6 +192,73 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       unchanged (29 / 87.8% / 0.47); tests 1566 passed, 2 skipped. Left for later (the review): an enters trigger
       counts only if it is the card's own, and a modal one's targets; the 20-offer floor still leaves one game per slice
       for instants' best-of-k; an option drawn too late in its own turn still records a 0
+- [x] AI-13.11 **A potential score beside the main one** (Shayne's idea, 2026-11-11, from AI-19.23's scan — agreed to try):
+      lines are compared on the main score as today; only lines within a small margin of each other are decided by a
+      POTENTIAL score, which never changes a clear main decision ("potential scores add onto it without adjusting the main
+      score so the AI can choose these better effects without it screwing up their main decision making"). It replaces
+      `BeamSearchAi.Settings.PassBias` (acting wins a tie by 0.01 — the cause of the activations that buy nothing: Bat'leth
+      re-equipped onto its own creature scored 9019.20 against Pass 9019.20). First terms: mana kept up at instant speed
+      (it hides what we hold — Shayne: tapping out tells the opponent you have no instants) and our creatures left untapped
+      through their turn (a tap is a spent blocker — where the look-ahead imagines their attack the main score already sees
+      it); then a free graveyard exile (F5; more for a card with a way back, `Terms.GraveyardAccess`). Open: the margin
+      (exact ties, or ~0.1 — the spread one guess adds). Measured: the kept positions, the suite, a match, and the scan
+      re-run on the same seeds (`--lint --set=trk --games=300`), the flagged classes compared.
+      **Margin 0.1, configurable (Shayne, 2026-11-11):** `BeamSearchAi.Settings.PotentialMargin`. **BUILT (2026-11-11):**
+      `Evaluator.Terms.Potential` (`+passbias` is the old). `BeamSearchAi.Potential` counts our creatures and mana sources
+      untapped at the search's root AND still untapped where the line's turn ends (`Rollout.Score`'s `rootTurnEnd`) — in
+      the opponent's turn, as their end step begins (spending there is free: our untap is next, lesson 6). `Best`: the lines
+      within the margin of the best main score, the highest potential among them, then the old pass bias (where potential
+      can't tell lines apart acting still wins — without it the calm Jace token's −3 draw fell to 6 of 30); `Prune` breaks
+      an exact score tie by potential; the rollout's own policy (`Rollout.OurPlay`) makes an ACTIVATION only if it scores
+      better, not equal (spells keep "no worse" — MtgSimulator's setup-play reason). Four versions were tried, each found
+      wrong on the suite or a position first: counting what is untapped (a basic over a tapped land, 6 suite decisions);
+      measuring at the opponent's turn end (a spare {6} at their end step never spent); measuring where the SEARCHED
+      moves end (it deferred creatures to the rollout: Yargle and Chandra's Emberling not cast, an X=4 Anguish passed —
+      22 decisions, score given up 0.47 → 0.57); and the turn end without the rollout fix (the rollout re-equipped Medic's
+      Kitesail in every line, so potential tied). Positions (30 guesses, before → after): Bat'leth, Medic's Kitesail and
+      Lich's Relic re-equips 30 → 0, Cybernetic Specialist's Swamp 30 → 0, Undulating Witness's pump and Hapatra's untap in
+      the opponent's upkeep 30 → 1 and 30 → 0. NOT fixed — not ties: DOT-7 untapping an untapped creature (13 of 30; every
+      target scores 72.90 against Pass 58.20, the act not its effect — AI-13.12's family), Mikaeus in his own upkeep (a tie,
+      but every line taps him later that turn: lesson 6's own fix — the look-ahead using a free tap at their end step),
+      Suus Mahna tapping itself (9.99 against 8.01: it baits the simulated opponent into a bad attack, AI-19.21's family),
+      Arni 22 of 30, the instants at the first stop (AI-13.12). Test `ARe_Equip_OntoTheSameCreature_IsNotPaidFor`
+      (`Records/BatlethReEquip` #478, control included); six controls switch the term off too (it holds their bad play: the
+      lost line's Anguish, the Officer's attack, the vanilla Unsummon, Ajani's Anguish at 20 and 5, the A3 burn). Suite
+      against `+passbias`: 9 decisions differ — activations held in our own turn (Yoshimaru's {6}, Skilled Battlecarver's
+      pump ×2, Living Library's {6}, Eardrum Rattler), a Yoshimaru target, Last Gasp on a Cadet over Extended Absence on
+      Jace, a land before a creature, an Island over Fatehold Annex; oracle 85.1% against 87.8% (the oracle reads with the
+      pass bias), score given up 0.53 against 0.47. `--explain` shows each line's potential; `--suite --shown=N` lists N
+      changes. **Match (2026-11-11, `--match=beam,beam+passbias --until-clear`, 23.9 min): beam 50.0% ± 1.7pp over 192
+      games (96–96), no difference of 5pp either way, cost per decision 2 966 against 2 976 steps.** **Kept as the default (Shayne,
+      2026-11-11: "it makes sense")**; the suite's answers accepted
+- [x] AI-13.12 **A stop where we pass and nothing happens costs no search level** (AI-17.4 review item 4, found to bite by
+      AI-19.23's scan): Last Gasp in its own upkeep (FRA seed 109 #306) scored 0.8 above Pass because the Pass line casts the
+      same Last Gasp one stop later and its later plays fall past the search's depth into the cheap rollout policy (a
+      Duelist taps instead of looting, no land played). The bias behind instants and pumps cast at the first stop (S2: e.g.
+      Twinned Vision 146 of 231 casts in its own upkeep). After AI-13.11; then option pricing takes what the scan still shows.
+      **Agreed (Shayne, 2026-11-11: "we can try it out, worst case is that we revert"), BUILT the same day, two parts, each a
+      switch:** (1) `BeamSearchAi.Settings.FreePasses` (`+countpasses` is the old): a pass in our own turn with an empty
+      stack and no choice (`IsFreePass`) costs no level — the line's next decision is expanded within the same level
+      (`WithFreePasses`), at most `FreePassCap` (4) in a row, the pass line kept too. (2) `Settings.WaitOnTies` (`+actnow`):
+      `Best` takes a line that passes now and makes the SAME instant-speed move later this turn (an instant or flash card,
+      an ability not "as a sorcery"), within `PotentialMargin` of making it now (`Waits`). A first version waited for
+      sorcery-speed moves too and deferred creatures and a Jace token's draw to the second main phase (the calm −3 fell to
+      0 of 30) — waiting is for instant speed. Positions (30 guesses, before → after): Divining Duelist in its own upkeep
+      30 → 0, Unsummon 22 → 0, Last Gasp 20 → 10, Twinned Vision 5 → 2, DOT-7's untap 13 → 0; and lesson 6 came with it —
+      **Mikaeus in his own upkeep 29 → 1, Tal Shiar Analyst's upkeep ping 8 → 0**; Suus Mahna tapping itself 24 → 15.
+      Unchanged: Ferocity of the Hunt in its own upkeep 30 (lesson 5, option pricing), Arni's loot at its own end step 22
+      (its moment, your end step, is past the search's turn). Suite (against the AI-13.11 baseline): 23 decisions, almost
+      all instants and flash cards held to later in the turn; oracle 80.2% against 85.1% (the oracle reads with "act now"),
+      **score given up 0.42 against 0.53**, wins missed 2 both; **cost +36%: 10 610 engine steps a position against 7 804,
+      21.1 rollouts against 15.8**. Part 1 alone (`+actnow`): 8 decisions, 0.49 given up, 3 wins missed. Tests: six
+      controls and one timing-free check given the old search (the Chang, Aura, enters-trigger controls; the token bounce
+      — which target, not when — and its "today" check now follows the bounce through the turn). MagicCore.Tests: 1 584
+      pass, 3 skipped. **Match (2026-11-11, `--match=beam,beam+countpasses+actnow --until-clear`, 83.9 min): beam 52.3% ±
+      1.3pp over 600 games (314–286) — "worse" firmly rejected (log-likelihood −15.12), "better by 5pp" not reached: a ~2pp
+      lean at 1.7 SE. Cost per decision +52%: 4 365 engine steps against 2 876, 10.3 rollouts against 6.5, slowest decision
+      75 s against 62 s** (played on the build before /pre-commit's review fixes, which bound rare overruns: the rollout
+      budget and the time limit now stop the chaining; a one-level search has no free passes). **Kept on by default (Shayne,
+      2026-11-11: "Sure keep it on")**
 - [ ] AI-13.9 The option value for STAR TREK's instants (found 2026-11-09, Shayne asking whether "spells are options" is
       done): `CastGains` is FRA's alone (`FRA.castgains.json`, 35 cards, no TRK name; `--cast-gains` plays FRA's sealed
       decks), so in every TRK game a held instant or flash card falls back to its flat held price - `HoldOption` does
@@ -272,6 +339,12 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       5pp, "worse" rejected, cost the same — kept (Shayne's rule: sensible plays count; the agreed
       position fixed). `docs/findings/magic-ai.md`
 ## Next
+
+**2026-11-11 (end of session):** AI-13.11 (the potential score, Shayne's idea) kept and done; AI-13.12 (the depth fix:
+free passes, waiting wins an instant-speed tie) kept on too (52.3% over 600 games, +52% search a decision). Both came
+from AI-19.23's misplay scan. Left from the scan for this story: Ferocity of the Hunt cast in its own upkeep (lesson 5),
+flash creatures held for their turn (AI-13.8), removal held for a better target — option pricing, after AI-20 (Shayne's
+order). Read AI-13.11/13.12's notes first: four potential versions failed before the kept one, each on the suite.
 
 **Now (2026-11-10):** items 1 and 2 below are built and the tests pass (AI-13.10's notes), with three fixes beside
 them: a minimum of 20 offers per table entry, the suite's oracle re-read on the fresh tables, the surveil control moved

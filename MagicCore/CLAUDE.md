@@ -88,7 +88,7 @@ MagicCore/
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;
 │                        held cards priced by their measured value by default (AI-1); Settings.Interactive
 │                        is the ~1 s wall-clock cap for the table and console — never in a sim run
-├── Ai/BlunderLint.cs    AI-17.7: AI-vs-AI games, each decision checked for an obvious mistake and counted (a lint, never a weight)
+├── Ai/BlunderLint.cs    AI-17.7: AI games (any set's sealed decks, kept as records) each decision checked for an obvious mistake, per-card misplay checks S1–S6 (AI-19.23)
 ├── Ai/LandUnlock.cs     AI-9.1: does a land unlock a card in hand, or more casts next turn? Prices own lands in the evaluator (Terms.LandUnlock)
 ├── Ai/RunProgress.cs    the progress line EVERY batch run prints (done/total, minutes, running result) - a project rule
 ├── Ai/Hidden.cs         what the search may know of the libraries and the opponent's hand: the real

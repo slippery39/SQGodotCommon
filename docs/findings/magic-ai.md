@@ -1510,3 +1510,84 @@ a 4/4 and a 2/1 for a 1/2 → 3/4 at sorcery speed is not value, "and I wouldn't
   agreement 84.7% -> 85.4%; cost unchanged. One change is Pass -> Play Plains.
 - **Match** (`--match=beam,beam+nolandunlock --until-clear`, 9.9 min): beam 51.0% +- 1.0pp (49-47 in 96 games), no difference of
   5pp either way. Cost per decision 3 148.5 steps against 3 173.8; lands played a game 7.7 against 7.6.
+
+## AI-19.23: the misplay scan, TRK, 300 self-play games (2026-11-11)
+
+`--lint --set=trk --games=300 --seed=1` (40.6 min, 16 cores; records in `ai_reports/lint-2026-11-11_020602/`, report
+`ai_reports/lint-2026-11-11_020602.md`): TRK's AI sealed decks, the search on both sides. 21 games stopped past 5 min (read
+as far as played), 6 left out (Kai Winn's records don't replay — MC-6.16). Counts: S1 left in hand 105 (72 games), never
+cast 318 (166), S3a tapped early 157 (70), S3b never used 48, S3c station with an attacker 80 (43), S3d landcycler held
+through a missed drop 25 (20), S4 turned around 31 (29), S5 declined 439 (192), S6 no effect 92 (50); the lint's own
+attack-into-bigger 127 (89), flash-on-own-turn 19.
+
+Each suspect's flagged move decided again under 30 guesses of the hidden cards (`--record=FILE --guesses=30 --at=N`):
+**VALUE** when the flagged play wins most guesses (a pricing problem), **NOISE** when it is the minority (AI-20's one
+guessed future).
+
+**VALUE — the same wrong play in (nearly) every guess:**
+
+| # | What | Cards (count in the scan) | Position | Guesses |
+|---|---|---|---|---|
+| 1 | An activation that changes nothing, paid for | Bat'leth's equip onto the creature already carrying it (14), Neuroflux Heirloom's equip the same (17), DOT-7 Repair Squad's `{1}{W}`: untap a creature already untapped (13) | seed 6 #478 (Bat'leth to Humpback Whales, equipped at #461), seed 69 #407, seed 13 #339 | 30/30 each |
+| 2 | A creature taps itself for nothing | Suus Mahna Practitioner's "tap target creature" aimed at ITSELF in its own upkeep, 6 lands open | seed 59 #338 | 24/30 |
+| 3 | An ability for almost nothing, in its own upkeep | Cybernetic Specialist `{1},{T}`: a Swamp from its graveyard to the bottom of its library | seed 13 #163 | 30/30 |
+| 4 | A tap ability used early (Shayne's lesson 6) | Mikaeus, the Lunarch `{T}`: a counter on himself, in his own upkeep (not at their end step) | seed 83 #255 | 29/30 |
+| 5 | Station with a creature that could attack (lesson (c) — the REAL AI, not only the rollout) | Sarcophagus with MACO Strike Team; U.S.S. Cerritos with Automated Warfare System or an Officer (80 in 43 games) | seed 21 #265, seed 3 #241 | 30/30, 30/30 |
+| 6 | A landcycler held, no land played, mana open | Cold-Blooded Crew at 6 life, 5 of 5 lands untapped and NOTHING done all turn; Rogue Artificial Intelligence with exactly `{2}` open | seed 18 #319, seed 96 #258 | 30/30, 23/30 |
+
+1–4 share a likely cause, not yet traced with `--explain`: mana unspent at the turn's end is worth nothing, so a
+pointless activation ties with Pass — and an acting move wins a tie (AI-13.8 saw the same tie).
+
+**NOISE — the flagged play is the minority:**
+
+| # | What | Position | Guesses |
+|---|---|---|---|
+| 7 | Landcycling in the opponent's upkeep after passing its own turn (S4, Shayne's report) | Cold-Blooded Crew seed 16 #57, Free Borg Revolutionaries seed 31 #77, Humpback Whales seed 75 #123 | cycles 10, 8, 4 of 30 |
+| 8 | A landcycle's search answered "none" — the cost paid, no land (22 in the scan, five landcyclers) | Free Borg Revolutionaries seed 144 #365 | none 11, Forest 18, Plains 1 |
+| 9 | Tal Shiar Analyst pinging in its own upkeep | seed 32 #215 | pings 8, passes 22 |
+| 10 | An instant cast in its own upkeep | Guidance Failure seed 27 #159 | casts 8, passes 22 |
+| 11 | Automated Warfare System's "you may sacrifice … draw" | seed 3 #352 | none 16, an Officer 14 — a close call, not a misplay |
+
+**The pattern behind 9 and 10, across the scan (S2, S3):** instants and flash cards are cast in their caster's OWN
+upkeep far more than anywhere else — Guidance Failure 42 of 69 casts, He's Dead, Jim 42/63, Eject the Warp Core 37/60,
+Plasma Cascade 38/59, Dr. McCoy 10/13 — and Tal Shiar Analyst's ping 75 of 115 uses. One position each says noise, but
+the share says the first stop of its turn is where a held card goes; more positions before calling it either way.
+
+**Not misplays — the checks' own false positives, to tighten:** S3a counts SORCERY-speed tap abilities, which can't wait
+(Captain Archer's pump, 14 of the 157); S6 counts a surveil that kept its card (D'Vana Tendi's `{3}`: Surveil 1, most of
+its 27 — the look is the effect); S5 counts a surveil's "put into your graveyard: none" (a keep: Tal Shiar Operative,
+Dominion Assault Force, He's Dead, Jim, Cybernetic Specialist — 30/30 keeps each); S1 counts burn held by the agreed burn
+rule (Transporter Malfunction on turn 3, no target) and Sagas held (The Measure of a Man, 30/30 — target not checked).
+D'Vana Tendi untapping a tapped Suus Mahna (seed 8 #375) was a GOOD play: their creatures all tapped, a 3-power attacker
+freed.
+
+**Shayne's review (2026-11-11, AI-19's Decisions):** misplays — 3 (Cold-Blooded Crew), 5 (Mikaeus), 6 (Suus Mahna), 7
+(Cybernetic Specialist), 8 (re-equips and other free-looking activations: "one of the more innocent behaviors", but
+tapping out tells the opponent you hold no instant); 1 (Sarcophagus) a smaller, advanced one — the two stations DID animate
+it (3 → 6 → 10) and its 4/4 flier won that turn, but swinging with all three wins through a block plus any one removal,
+the flier line loses to a kicked Eject the Warp Core ("how to play around removal the best"), not fixed now. Not misplays:
+2 (Cerritos stationed at 16 life, "a fine goal"), 4 (Rogue held one land short: "kind of a judgement call"). The noise list
+goes to AI-20. Stations sorted: 60 of 80 animated the ship that turn; of the rest, 17 attacks into a blocker, 2 free
+attacks at high life, 1 waste (Enterprise-D stationed by a -2-power creature, 0 counters).
+
+## AI-13.11: a potential score replaces the pass bias (2026-11-11)
+
+Lines within `PotentialMargin` (0.1) of the best main score are decided by their potential — our creatures and mana
+sources untapped at the search's root and still untapped as its turn ends (in the opponent's turn: as their end step
+begins) — then by the old pass bias; the rollout makes an activation only if it scores better. Positions, 30 guesses each,
+before → after: Bat'leth, Medic's Kitesail, Lich's Relic re-equips 30 → 0; Cybernetic Specialist's Swamp 30 → 0;
+Undulating Witness's pump and Hapatra's untap in the opponent's upkeep 30 → 1, 30 → 0. Unchanged (not ties): DOT-7 (13),
+Mikaeus (29), Suus Mahna (24), Arni (22), the instants at the first stop. Suite against `+passbias`: 9 decisions differ,
+oracle 85.1% against 87.8%, score given up 0.53 against 0.47 (the oracle reads with the pass bias). **Match: beam 50.0% ±
+1.7pp over 192 games (96–96), no difference, cost per decision 2 966 against 2 976 steps.** Four versions and why each
+failed: AI-13.11 in `docs/stories/AI-13-shaynes-lessons.md`.
+
+## AI-13.12: a pass at an empty stop costs no search level; waiting wins an instant-speed tie (2026-11-11)
+
+(1) `Settings.FreePasses`: a pass in our own turn with an empty stack expands the line's next decision within the same level
+(at most 4 in a row). (2) `Settings.WaitOnTies`: a line that passes now and makes the same instant-speed move later this turn,
+within the potential margin, beats making it now. Positions, 30 guesses, before → after: Divining Duelist in its own upkeep
+30 → 0, Unsummon 22 → 0, Last Gasp 20 → 10, Twinned Vision 5 → 2, DOT-7's pointless untap 13 → 0, Mikaeus's counter in his
+own upkeep 29 → 1, Tal Shiar Analyst's upkeep ping 8 → 0. Suite: 23 decisions, score given up 0.42 against 0.53, cost +36%.
+**Match: beam 52.3% ± 1.3pp over 600 games (314–286), "worse" rejected, a 5pp gain not reached; cost per decision +52%
+(4 365 against 2 876 steps).** Story: AI-13.12 in `docs/stories/AI-13-shaynes-lessons.md`.
