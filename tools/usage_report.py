@@ -2,7 +2,7 @@
 
     python tools/usage_report.py              # the most recent session in this project
     python tools/usage_report.py SESSION_ID   # a given session (its .jsonl name)
-    python tools/usage_report.py --all        # every session, one line each
+    python tools/usage_report.py --all        # every session in every worktree (lane), one line each
     python tools/usage_report.py --log "MC-5.5 registry, 0 cards"   # this session -> a row in
                                               # docs/findings/card-batch-usage.md (one batch = one session)
 
@@ -18,12 +18,24 @@ session was simulated to save 37–40%; compare a later session's per-batch cost
 import json
 import re
 import statistics
+import subprocess
 import sys
 from collections import Counter
 from datetime import date
 from pathlib import Path
 
-PROJECT = Path.home() / ".claude" / "projects" / "c--SQGodotHelperApps-SQGodotCommon"
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def project_dir(root):
+    """Where Claude Code keeps a folder's session logs: its path with each : \\ / as a dash."""
+    return Path.home() / ".claude" / "projects" / re.sub(r"[:\\/]", "-", str(root))
+
+
+PROJECT = project_dir(ROOT)
+# DEV-6: every worktree is a lane with its own logs, and the lanes share one weekly budget
+_trees = subprocess.run(["git", "-C", str(ROOT), "worktree", "list", "--porcelain"], capture_output=True, text=True).stdout
+LANES = [project_dir(Path(l[len("worktree "):])) for l in _trees.splitlines() if l.startswith("worktree ")] or [PROJECT]
 W = dict(input_tokens=1.0, output_tokens=5.0, cache_read_input_tokens=0.1, cache_creation_input_tokens=2.0)
 
 
@@ -115,13 +127,13 @@ def main():
         print(row, end="")
         return
     if "--all" in sys.argv:
-        for f in files:
+        for f in sorted((f for d in LANES for f in d.glob("*.jsonl")), key=lambda p: p.stat().st_mtime):
             cs = calls(f)
             if cs:
                 total = sum(cost(u) for u, _, _ in cs) + subagent_cost(f.with_suffix(""))
-                print(f"{f.stem}  {len(cs):5} calls  {total / 1e6:7.1f}M")
+                print(f"{f.stem}  {f.parent.name.rsplit('-', 1)[-1]:>13}  {len(cs):5} calls  {total / 1e6:7.1f}M")
         return
-    path = PROJECT / f"{sys.argv[1]}.jsonl" if len(sys.argv) > 1 else files[-1]
+    path = next((d / f"{sys.argv[1]}.jsonl" for d in LANES if (d / f"{sys.argv[1]}.jsonl").exists()), PROJECT / f"{sys.argv[1]}.jsonl") if len(sys.argv) > 1 else files[-1]
     report(path)
 
 

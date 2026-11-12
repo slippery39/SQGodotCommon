@@ -31,7 +31,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 **Next session (written 2026-11-11, end of the AI session):**
 1. **Sprint 4 closes Thursday 2026-11-12:** write its review and plan sprint 5 with Shayne first
    (`docs/sprints/2026-11-05.md`, this file's "Sprints").
-2. **DEV-6** — the second worktree for the cube lane (Shayne: tomorrow, before the day's other work).
+2. **DEV-6** — the cube worktree is up (`D:\GameDev\SQGodotCommon-cube`); left: DEV-6.5, its first session.
 3. **The AI, where 2026-11-11 left it** (Shayne's order: value fixes first, then the noise — AI-20):
    - AI-13.11 (the potential score) and AI-13.12 (the depth fix) are kept on by default and done.
    - The misplay scan again on the same seeds (`--lint --set=trk --games=300 --seed=1`, ~40 min, ask first), to
@@ -120,13 +120,13 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | in-progress |
 | [AI-19](AI-19-card-by-card-play.md) | Card-by-card play and rulings — after every card plays | in-progress |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | in-progress |
+| [DEV-6](DEV-6-two-worktrees.md) | Two lanes at once — a second worktree for the cube, merged back often | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
 | [AI-21](AI-21-big-board-combat.md) | Combat on big boards — attack plans that don't grow with every token | ready |
-| [DEV-6](DEV-6-two-worktrees.md) | Two lanes at once — a second worktree for the cube, merged back often | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
