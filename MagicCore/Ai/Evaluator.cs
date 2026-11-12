@@ -196,7 +196,7 @@ public static partial class Evaluator
 	/// <see cref="GangBlocks"/>).
 	/// </summary>
 	[Flags]
-	public enum Terms
+	public enum Terms : long
 	{
 		None = 0,
 
@@ -425,6 +425,16 @@ public static partial class Evaluator
 		/// already carrying it scored 9019.20 against Pass 9019.20 (`+passbias` is the old).
 		/// </summary>
 		Potential = 1073741824,
+
+		/// <summary>
+		/// Damage marked on a creature counts in the POTENTIAL too (Shayne, 2026-11-11, AI-19.22: "you still need something to
+		/// finish it off afterwards"): <see cref="DamageShare"/> decides lines within the potential margin, in the search and in
+		/// the rollout's judged-alone combat answers. 1 damage costs 1 point on any creature, so #343's Cerritos 4/4 blocking a
+		/// 1/1 tied with its Romulan 2/2 blocking it (1.71 each), the tie went to "Don't block", and D'Ghor's −1/−1 finished the
+		/// Romulan (`+nodamagepotential`). The main score still charges it as lost toughness: taken out of it (his "rather than
+		/// a concrete score"), 17 tests moved and the rollout's defender at 13 ate a 1/1 with its 3/2 over trading it for a 3/2.
+		/// </summary>
+		DamagePotential = 1L << 31,
 	}
 
 	/// <summary>
@@ -626,6 +636,24 @@ public static partial class Evaluator
 		{
 			Components = back.Components.RemoveAll(x => x is UntilEndOfTurn { UntilTurnOf: 0 }),
 		};
+	}
+
+	/// <summary>
+	/// The damage still marked on creatures, as potential (<see cref="Terms.DamagePotential"/>): each creature's share of the
+	/// way to death (damage ÷ toughness, at most 1) — theirs for <paramref name="me"/>, ours against. A Romulan 2/2 with 1
+	/// marked is half in reach of a finisher, a 4/4 with 1 a quarter.
+	/// ponytail: unweighted by what the creature is worth, and blind to what could finish it; weigh by its value if a
+	/// position shows a token's damage outranking a bomb's.
+	/// </summary>
+	public static double DamageShare(GameState s, int me)
+	{
+		if (IsOff(Terms.DamagePotential))
+			return 0;
+		double Of(int player) =>
+			s.CardsIn(player, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Creature) && c.Damage > 0 && s.Toughness(c) > 0)
+				.Sum(c => Math.Min(1.0, (double)c.Damage / s.Toughness(c)));
+		return Of(s.OpponentOf(me)) - Of(me);
 	}
 
 	/// <summary>Not dying to what is marked on it now: the state-based check's own question.</summary>

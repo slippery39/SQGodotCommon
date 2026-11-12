@@ -31,6 +31,9 @@ namespace MagicCore.Ai;
 /// </summary>
 public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings = null) : IAi
 {
+	/// <summary>The default <see cref="Settings.PotentialMargin"/> - the rollout's judged-alone combat answers use it too (<see cref="Rollout"/>).</summary>
+	public const double DefaultPotentialMargin = 0.1;
+
 	/// <param name="Depth">Levels of our own decisions searched this turn, the root included.</param>
 	/// <param name="BeamWidth">Lines kept per level (MtgSimulator's live beam: 2 concrete + 2 potential).</param>
 	/// <param name="MaxBranching">Root candidates rolled out; beyond it the cheap score picks which.</param>
@@ -85,7 +88,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		int ExpandBranching = 5,
 		int RolloutBudget = 200,
 		double PassBias = 0.01,
-		double PotentialMargin = 0.1,
+		double PotentialMargin = DefaultPotentialMargin,
 		bool CommitPlans = true,
 		double DivergenceThreshold = 5.0,
 		Rollout.Settings? RolloutSettings = null,
@@ -925,7 +928,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			var top = nodes.Max(n => n.Score);
 			var close = nodes.Where(n => n.Score >= top - options.PotentialMargin).ToList();
 			var most = close.Max(n => n.Potential);
-			nodes = [.. close.Where(n => n.Potential == most)];
+			nodes = [.. close.Where(n => n.Potential >= most - 1e-9)]; // fractional since AI-19.22's damage share
 		}
 		var best = nodes.MaxBy(n => n.Score)!;
 		var acting = IsPass(best.Path[0])
@@ -967,7 +970,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// nothing to cast (6 suite decisions).
 	/// ponytail: flat weights, a creature that taps for mana counted once, a land whose mana ability costs mana (Talon
 	/// Gates) not counted (`ManaAbilities.ColorsOf` reads plain ones); weigh by what each can do if a margin-sized tie
-	/// shows it matters.
+	/// shows it matters. Plus the damage still marked (<see cref="Evaluator.DamageShare"/>, AI-19.22).
 	/// </summary>
 	internal static double Potential(GameState root, GameState end, int me) =>
 		end.CardsIn(me, ZoneType.Battlefield)
@@ -976,7 +979,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				&& (c.Is(Cards.CardType.Creature) || ManaAbilities.ColorsOf(end, c).Any())
 				&& root.IsIn(c.Id, me, ZoneType.Battlefield)
 				&& !root.GetCard(c.Id).IsTapped
-			);
+			) + Evaluator.DamageShare(end, me);
 
 	Decision Commit(Node line, int rootTurn)
 	{

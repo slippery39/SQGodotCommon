@@ -60,6 +60,11 @@ cards implemented first. Then we can optimize usage and rulings per card."
   think of the main board score as one score, then potential scores add onto it without adjusting the main score so the AI
   can choose these better effects without it screwing up their main decision making"; and **tapping a creature is spending
   a resource** (a potential blocker) — "always a cost benefit analysis" — potential or main, to discuss.
+- 2026-11-12, Shayne (AI-19.22, `Terms.DamagePotential`): marked damage in the potential, the main score still charging
+  it — "I guess thats better yeah, it at least makes more sense". The block that moved when damage left the main score
+  (Keeper of the Quiet Hour 3/2 at 13 life eating a 1/1 to 5 instead of trading with Koth 3/2 to 7) — **"defensible …
+  due to the low life … I can see go either way, so its fine. Reasonable plays is what we are looking for, not perfect
+  plays"**; at higher life he'd eat the 1/1 and keep the Keeper.
 
 Open questions:
 - Which cards first — by how often they are played (the TRK ratings, MC-5.4 / DATA-2), or by how wrong they look at the table?
@@ -174,6 +179,20 @@ Open questions:
       cost, in this case it might be just to race (3 hits kills the opponent anyways), but if the opponent plays something
       that stops our attacks … we can switch to the station plan … Using the D'Ghor Bloodletter is something we can do on
       the following turn if necessary." Pinned, ignored as the known defect: `BorgCube_ExilesTheCerritos_OverASecondBloodletter`.
+      **After AI-13.11/13.12 (2026-11-11):** the kept position still passes it, Pass 30/30, the same scores (49.98 against
+      25.88) and the same Cube line (stations with DOT-7, no attack; D'Ghor alone on turn 17). The rerun's own seed 91 went
+      another way from turn 13 and cast the Cube on turn 15: it exiled the Cerritos and won that turn.
+      **Shayne (2026-11-11): "the thing that really needs to be fixed is, why did Player 1 block the way he did?"** The
+      Pass line's Borg 1/1 is blocked by the Romulan, not the untapped Cerritos 4/4, and D'Ghor's −1/−1 finishes it — the
+      real game blocked the same way (#352-#353). Cause: Cerritos block / don't block tie exactly (1.71), since marked damage
+      costs 1 a point on any creature (`Evaluator.Body`), and the tie goes to "Don't block" (findings). **Shayne: "damage
+      dealt to creatures could also be a 'potential' score, rather than a concrete score, because you still need something
+      to finish it off afterwards" — pin it, make the change.** Built: `Terms.DamagePotential` — the damage still marked
+      counts in the potential (the search's, and the rollout's judged-alone combat tie-break); pinned
+      `TheCerritos_BlocksTheBorg_NotTheRomulanAMinusOneFinishes` (30/30). Out of the main score altogether it moved 17 tests
+      and a rollout block got worse, so the main score still charges it (findings). #343 still passes, 30/30 — a new Pass
+      line, attack then D'Ghor's −1/−1 after the Cerritos blocks DOT-7: **for Shayne to read**. Suite: 1 decision of 288
+      changed. Match not run.
 - [ ] AI-19.23 **The misplay scan** (Shayne, 2026-11-11: find the cards the AI plays wrong in TRK, then FRA — per-card
       win rates are too noisy at ~100 games, and a misplayed card just reads "bad"). BlunderLint extended, not a
       sibling: `--lint --set=trk --games=N` plays that set's AI sealed decks (DATA-2's), the search on both sides, a
@@ -212,23 +231,32 @@ Open questions:
       surveil's keep. **Reviewed with Shayne (2026-11-11, Decisions).** Checks tightened the same day: S3a skips a sorcery-speed
       ability (it can't wait), S3c a station that animates the ship that turn, S5 and S6 a surveil's (or explore's) keep —
       TRK re-read: S3a 157 → 139, S3c 80 → 20, S5 439 → 213, S6 92 → 70. FRA's 300-game run next.
+      **Rerun after AI-13.11 and AI-13.12 (2026-11-11, same seeds, 54.1 min, `ai_reports/lint-2026-11-11_215939`;
+      `docs/findings/magic-ai.md`, "the scan again"):** S3a 139 → 60, S6 70 → 24; 40 games stopped against 21 (AI-13.12's
+      cost). Gone under 30 guesses: Cybernetic Specialist (7), Suus Mahna tapping itself (6), most re-equips (8) — the
+      30/30 left are inside won lines (a turn-end-board tie-break, an exact tie). Remain: Cold-Blooded Crew held (3), 30/30
+      in three new positions; Mikaeus tapping in his own turn (5), 24/30 in a new one, not a tie; stations with an
+      attacker, 20 → 20. S1 rose (105 → 132), spread thin, not traced to the potential score.
 
 ## Next
 
 **AI-19.23, the misplay scan** (2026-11-11): built, run (300 TRK games; 219 FRA — the run crashed in the .NET runtime
 at 219, not reproduced), reviewed with Shayne item by item (Decisions). Fixed from it the same day: AI-13.11 (the potential
-score) and AI-13.12 (the depth fix). Next: the scan again on the same seeds (`--lint --set=trk --games=300 --seed=1`, ask
-first) and compare with `ai_reports/lint-2026-11-11_020602.md` (TRK) / `lint-2026-11-11_115512` (FRA records); Borg Cube
-(AI-19.22: its pinned test, the four lessons, the builder loop); the smaller value items (Suus Mahna's bait — AI-19.21's
+score) and AI-13.12 (the depth fix); the scan rerun on the same seeds (AI-19.23's task: S3a and S6 down by half or
+more, the Crew and Mikaeus remain). Next: Borg Cube (AI-19.22) — Shayne reads #343's new Pass line (attack, then the −1/−1), then the match for
+`Terms.DamagePotential` (ask first); the four lessons proposed as value changes, waiting for his go-ahead; then the Crew (3), Mikaeus (5) and the won-line ties (8); the smaller value items (Suus Mahna's bait — AI-19.21's
 family; the free graveyard exile as a potential term, F5; Arni's end-step loot). Tools: `--lint --records=DIR` re-reads in
 ~20 s; `--record=FILE --guesses=30 --at=N`; `--explain` shows each line's potential. The scratch tools used for
 boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-11: AI-19.23 — the scan rerun after AI-13.11/13.12 on the same 300 seeds; the VALUE items re-decided under 30
+  guesses (findings, "the scan again").
 - 2026-11-11: AI-19.23 — the misplay scan built (BlunderLint on TRK sealed, records kept and read, S1–S6) and run on 300
   TRK games; six VALUE misplays and four NOISE ones (`docs/findings/magic-ai.md`).
 - 2026-11-05: opened with Engineered Explosives (MC-5.3 batch 6a); Deep Space 9 and Georgiou added (batch 6b).
 - 2026-11-06: Lwaxana Troi, Brazen Bluff and the free casts added (MC-5.3 batch 7a).
 - 2026-11-06: Genesis Device, Data, explore, Peace in Our Time and Kobayashi Maru added (MC-5.3 batch 7b).
 - 2026-11-06: Phyrexian Tower added (MC-5.6 batch 1).
+- 2026-11-12: AI-19.22's pre-commit fixes — the rollout's damage tie-break off under `+passbias` (no potential), the potential tie compared within rounding.

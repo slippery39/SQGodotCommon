@@ -454,11 +454,18 @@ public static class MagicRules
 	/// <summary>
 	/// Passes for whoever must act while passing is their ONLY legal action — Arena's auto-pass,
 	/// and the first cut to the AI's decision points. Stops at any real decision or game over.
+	/// <paramref name="passed"/> sees each pass with the state it was made in (a game record keeps them).
 	/// </summary>
-	public static GameState AutoPass(this GameState s)
+	public static GameState AutoPass(
+		this GameState s,
+		Action<GameState, PassPriorityAction>? passed = null
+	)
 	{
 		while (!s.IsOver() && s.LegalActions() is [PassPriorityAction pass])
+		{
+			passed?.Invoke(s, pass);
 			s = s.Act(pass);
+		}
 		return s;
 	}
 

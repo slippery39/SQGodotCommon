@@ -716,18 +716,40 @@ public static class Rollout
 			_ => Lookahead.QuickAnswer(s, choice),
 		};
 
-	/// <summary>One attacker's or blocker's best option, judged alone: each settled for <paramref name="who"/>.</summary>
+	/// <summary>
+	/// One attacker's or blocker's best option, judged alone: each settled for <paramref name="who"/>; of those within the
+	/// potential margin of the best, the one leaving the damage marked best for it (<see cref="Evaluator.DamageShare"/>,
+	/// AI-19.22: the Cerritos 4/4 blocks the 1/1, not the Romulan 2/2 a −1/−1 then finishes).
+	/// </summary>
 	static (int Id, double Score) BestAlone(
 		GameState s,
 		ChoiceAction choice,
 		int who,
 		Settings settings
-	) =>
-		choice
+	)
+	{
+		var scored = choice
 			.Options.Select(o =>
-				(o.Id, Evaluator.Evaluate(Lookahead.Settle(s.Choose([o.Id])), who, settings.Held))
-			)
-			.MaxBy(x => x.Item2);
+			{
+				var after = Lookahead.Settle(s.Choose([o.Id]));
+				return (
+					o.Id,
+					Score: Evaluator.Evaluate(after, who, settings.Held),
+					Damage: Evaluator.DamageShare(after, who)
+				);
+			})
+			.ToList();
+		var top = scored.Max(x => x.Score);
+		if (Evaluator.IsOff(Evaluator.Terms.Potential)) // +passbias: no potential, the plain best (before AI-13.11)
+		{
+			var plain = scored.MaxBy(x => x.Score);
+			return (plain.Id, plain.Score);
+		}
+		var best = scored
+			.Where(x => x.Score >= top - BeamSearchAi.DefaultPotentialMargin)
+			.MaxBy(x => (x.Damage, x.Score));
+		return (best.Id, best.Score);
+	}
 
 	/// <summary>
 	/// AllInToo: the best answer judged alone, unless "this one and every one after attack the player"

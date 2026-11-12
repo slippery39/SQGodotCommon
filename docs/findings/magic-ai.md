@@ -1591,3 +1591,69 @@ within the potential margin, beats making it now. Positions, 30 guesses, before 
 own upkeep 29 → 1, Tal Shiar Analyst's upkeep ping 8 → 0. Suite: 23 decisions, score given up 0.42 against 0.53, cost +36%.
 **Match: beam 52.3% ± 1.3pp over 600 games (314–286), "worse" rejected, a 5pp gain not reached; cost per decision +52%
 (4 365 against 2 876 steps).** Story: AI-13.12 in `docs/stories/AI-13-shaynes-lessons.md`.
+
+## AI-19.23: the scan again after AI-13.11 and AI-13.12, same seeds (2026-11-11)
+
+`--lint --set=trk --games=300 --seed=1` (54.1 min; records `ai_reports/lint-2026-11-11_215939/`, report
+`ai_reports/lint-2026-11-11_215939.md`). **Old** is the 020602 records re-read with today's tightened checks
+(`ai_reports/lint-2026-11-11_225355.md`), so both sides count alike. The decks are the same; the games are not past the
+first decision that changed. **40 games stopped past 5 min, against 21** — AI-13.12's +52% a decision; a stopped game is
+read only as far as it was played.
+
+| class | old | new |
+|---|---|---|
+| S1 left in hand | 105 (72 games) | 132 (84) |
+| S1 never cast | 318 (166) | 381 (193) |
+| S3a tapped early | 139 (66) | **60 (40)** |
+| S3b never used | 48 | 60 |
+| S3c station with an attacker | 20 | 20 |
+| S3d landcycler held through a missed drop | 25 | 31 |
+| S4 turned around | 31 | 42 |
+| S5 may declined | 213 | 187 |
+| S6 no effect | 70 (40) | **24 (17)** |
+| attack-into-bigger / flash-on-own-turn | 127 / 19 | 112 / 26 |
+
+**The VALUE items (AI-19's Decisions), each new flagged position under 30 guesses:**
+
+| Item | Scan, old → new | Position now | Verdict |
+|---|---|---|---|
+| (8) re-equips, no-op activations | S6 Bat'leth 14 → 2, Neuroflux 17 → 3, DOT-7 13 → 3 | Bat'leth seed 57 #416 17/30 (Cast Fugitive Listener 13); DOT-7 seed 175 #291 16/30 (Pass 14); Neuroflux seed 69 #411 30/30; D'Vana Tendi's untap seed 61 #458 30/30 | mostly gone; the two 30/30 are in WON lines — Neuroflux's equip 10019.43 over Pass 10015.67 on the won line's turn-end board, D'Vana's untap an exact tie (9544.75, potential 7 each) that acting wins |
+| (6) Suus Mahna taps itself | S6 5 → 2; own-upkeep uses 25 → 9 | seed 261 #477: Pass 27/30; seed 30 #432 (a Klingon Warrior) 12/12/6 | gone — noise |
+| (7) Cybernetic Specialist's Swamp | own-upkeep uses 30 → 2 (their end step 5); tapped early 30 → 5 | seed 73 #130: Pass 30/30 | gone |
+| (5) Mikaeus's counter in his own turn | own-upkeep uses 13 → none listed | seed 183 #172 (turn 9, before his main-phase plays): 24/30 | remains in a new position — not a tie (30.21 against Pass 15.71): the two lines differ in what they imagine, not by the potential |
+| (3) Cold-Blooded Crew held, no land played | S3d 9 → 9 (Horta 4 → 9) | seeds 49 #367, 57 #334, 114 #247: Pass 30/30 each | remains |
+| Stations with an attacker | S3c 20 → 20 | — | unchanged (not addressed) |
+
+**S1's rise** is spread thin: of the top 30 cards, left in hand 3.6% → 4.8% of castable turns, the same cards at the top.
+Positions: Starfleet Spanner Jockey seed 15 #202 cast 25/30 (noise); Command Decision seed 3 #88 Pass 23/30; Horta seed 6
+#440 Pass 23/30; Amok Time seed 7 #87 Pass 30/30, not a near-tie (0.62 against −2.88: the Saga is worth 16.15 − 9.15 = 7 in
+hand and 2 on the board — the Saga price S1 already named with The Measure of a Man). Not traced to the potential score.
+
+**Borg Cube.** The kept position (`Records/BorgCubeNotCast91` #343) still passes it: **Pass 30/30** (was 30/30 Cast D'Ghor
+Bloodletter), Pass 49.98, Cube 25.88 — unchanged. The Cube line is still lessons (a) and (b): it exiles the Cerritos, stations
+by tapping DOT-7 3/3 flier and does not attack, then casts D'Ghor alone on turn 17 with Bat'leth left in hand; they end at 7
+(clock +4.29) against 2 (clock +20). **The new seed 91 game went another way from turn 13 (Bat'leth cast) and CAST the Cube
+on turn 15 (#347): it exiled the Cerritos and the attack won that turn.**
+
+**Shayne (2026-11-11): the Pass line rests on a misblock.** #343's Pass line attacks Borg 1/1 alone into the Cerritos 4/4
+and a Romulan 2/2 (both untapped); the Romulan blocks, D'Ghor's −1/−1 finishes it. The rollout's defender asks each blocker
+alone, the Cerritos first: block 1.71, don't block 1.71 — an exact tie, because "don't block" settles with the Romulan
+blocking anyway and 1 damage costs exactly 1 on either (`Body` is linear in toughness, damage subtracted). The tie goes to the
+first option, "Don't block"; the Romulan then blocks (1.71 against −2.79). The real game did the same (#352 Cerritos don't
+block, #353 Romulan blocks, #363 the −1/−1): the same AI. Damage that leaves a 2/2 one from death is priced like damage that
+leaves a 4/4 three from it.
+
+**The fix, `Terms.DamagePotential` (2026-11-11, `+nodamagepotential` is the old):** damage still marked counts in the
+potential — each creature's damage ÷ toughness, theirs for us, ours against — in the search's potential (`BeamSearchAi.
+Potential`) and as the tie-break of the rollout's judged-alone combat answers (`Rollout.BestAlone`, within the 0.1 margin).
+#352 (the real block): Cerritos blocks the Borg 30/30 (was don't block). #343: **still Pass 30/30**, now a different Pass
+line — Borg, D'Ghor and DOT-7 attack; the Cerritos blocks DOT-7 (kills a 3/3 flier, survives at 4/4 with 3 damage), the
+Romulan the Borg; D'Ghor's −1/−1 after combat finishes the Cerritos, the Romulan and both Officers; they end at 3, we at 20
+(Pass 44.31, the Cube 36.84, they at 3, we at 15). Not a misblock this time: the defender can't see D'Ghor in our hand.
+**Tried first and dropped: damage out of the main score altogether** (Shayne's "rather than a concrete score"). It cast the
+Cube 30/30 but moved 17 tests; the one read: the bounce position (White-Blue Jace vs Red-Green seed 4 #53) bounced
+Heartstring Puller over the Cadet token, because the rollout's defender at 13 now ate a 1/1 with Keeper of the Quiet Hour 3/2
+(surviving at 3/2 instead of 3/1) over trading it with Koth 3/2 — 5 life instead of 7, the horizon −37.17 against −32.55.
+Suite (tie-break only): 1 of 288 decisions changed (seed 2 #81: Compel Brutality's loyalty mode from Jace over Koth's power
+mode, both at Divining Duelist), oracle 79.9% against 80.2%, score given up 0.42 both, cost 10 594 against 10 608 steps.
+Tests: two controls also switch it off (ChangSac458, the self-burn). Match not run.

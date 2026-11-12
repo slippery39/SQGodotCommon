@@ -116,6 +116,12 @@ public static class AiMatch
 			["actnow"] = o => o with { WaitOnTies = false },
 			// Acting wins a tie by the pass bias, no potential score, before AI-13.11: beam+passbias.
 			["passbias"] = o => o with { Without = o.Without | Evaluator.Terms.Potential },
+			// Marked damage priced as lost toughness, no damage potential, before AI-19.22: beam+nodamagepotential.
+			["nodamagepotential"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.DamagePotential,
+				},
 			// Burn at their face whenever it scores, before the burn rule (AI-17.6): beam+faceburn.
 			["faceburn"] = o => o with { Without = o.Without | Evaluator.Terms.SaveBurn },
 			// A held option's turns left read in each line, not at the root, before AI-13.9: beam+liveoptionturns.
@@ -496,7 +502,9 @@ public static class AiMatch
 	/// One game from <paramref name="newGame"/> (a new game of decks named <paramref name="deck1"/> and
 	/// <paramref name="deck2"/> — any decks, not only FRA's: sealed builds, LIM-1.8); null if
 	/// <paramref name="stop"/> is cancelled before it ends. <paramref name="ended"/> sees the last state;
-	/// <paramref name="seen"/> every state a player decides in, and the last (DATA-2: which cards were in hand).
+	/// <paramref name="seen"/> every state a player decides in, and the last (DATA-2: which cards were in hand);
+	/// <paramref name="moved"/> every move with the state it was made in and its kind - "ai", or "rule" for a forced
+	/// pass - as a <see cref="GameRecord"/> keeps them.
 	/// </summary>
 	public static Game? Play(
 		string a,
@@ -509,7 +517,8 @@ public static class AiMatch
 		int? searchThreads,
 		CancellationToken stop = default,
 		Action<GameState>? ended = null,
-		Action<GameState>? seen = null
+		Action<GameState>? seen = null,
+		Action<GameState, string, string>? moved = null
 	)
 	{
 		var s = newGame;
@@ -537,7 +546,11 @@ public static class AiMatch
 		{
 			if (stop.IsCancellationRequested)
 				return null;
-			s = s.AutoPass();
+			s = s.AutoPass(
+				moved is null
+					? null
+					: (before, pass) => moved(before, MoveTokens.Token(before, pass, null), "rule")
+			);
 			seen?.Invoke(s);
 			if (s.IsOver())
 				break;
@@ -547,8 +560,9 @@ public static class AiMatch
 			var tallies = ais.Keys.ToDictionary(p => p, p => s.GetPlayer(p).ThisTurn);
 			var start = Stopwatch.GetTimestamp();
 			var rolloutsBefore = RolloutsOf(ais[who]);
-			var ((next, _), steps) = MagicRules.CountingSteps(() => ais[who].Decide(s));
-			s = next;
+			var (decision, steps) = MagicRules.CountingSteps(() => ais[who].Decide(s));
+			moved?.Invoke(s, MoveTokens.Token(s, decision), "ai");
+			s = decision.State;
 			var took = Stopwatch.GetTimestamp() - start;
 			cost[who] = (
 				cost[who].Steps + steps,

@@ -176,6 +176,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     faceburn       burn at their face whenever it scores, not saved for a kill within two turns (before the burn rule)
 #     instantoptions only instants and flash held as options, not targeted sorcery-speed cards (before AI-13.10)
 #     passbias       acting wins a near-tie by 0.01, no potential score (before AI-13.11)
+#     nodamagepotential  marked damage not in the potential, the combat tie to the first option (before AI-19.22)
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 
