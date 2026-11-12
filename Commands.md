@@ -209,7 +209,7 @@ dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=20
 # LIM-1.12: your lists on the play AND the draw against the same AI opponents, a player's report (win rate play/draw, turns,
 # each card's GIH / GNS / IWD, the opponents' cards you lost to) -> ai_reports/sealed-builds-<time>.md. --games = opponents.
 dotnet run -c Release --project MagicConsole -- --set=trk --builds=A.txt,B.txt --both-seats --games=50
-# options: --game-minutes=N (cap a game), --opponent=FILE (one of YOUR lists instead of the AI's decks), --first-opponent=N (new seeds). A variant that pairs cleanly - ONE swap, same position (the /sealed-test skill):
+# options: the report's folder (same name) keeps every game's record and games.json (cards in hand, result per game) - `--builds-records=DIR [--build=NAME]` reads why each card sat in hand (castable / short on mana / short on colour / other); --game-minutes=N (cap a game), --opponent=FILE (one of YOUR lists instead of the AI's decks), --first-opponent=N (new seeds). A variant that pairs cleanly - ONE swap, same position (the /sealed-test skill):
 python tools/deck_variant.py sim_results/builds/A.txt sim_results/builds/A-X.txt --swap "Old Card=New Card"   # --test: its self-check
 # games between two lists to WATCH on the table: game_records/sample-*.json (MagicTable -GameArgs '--resume=FILE') + .md
 dotnet run -c Release --project MagicConsole -- --set=trk --sample-games=A.txt,B.txt --games=6 --first-seed=501

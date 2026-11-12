@@ -43,4 +43,39 @@ public class BuildReportTests
 		Assert.That(report, Does.Contain("| Targ Wrangler | 2 | 100.0% | 2 | 50.0% | +50.0 |"));
 		Assert.That(report, Does.Contain("| Their Bomb | 4 | 75.0% |"));
 	}
+
+	// Shayne, 2026-11-12: "we should be saving the cards we drew for every game so we can analyze it afterwards" - a run
+	// given a folder keeps every game as a record that replays, and games.json with each finished game's cards in hand.
+	[Test]
+	public void ARunWithAFolder_KeepsEveryGame_AsARecordThatReplays()
+	{
+		var pool = SealedBuilder.Opponent("TRK", 7);
+		var build = new SealedBuildMatch.Build(
+			"Mine",
+			[.. pool.Main.Select(n => CardRegistry.Get(n, "TRK"))],
+			[.. pool.Sideboard.Select(n => CardRegistry.Get(n, "TRK"))]
+		);
+		var dir = Directory.CreateTempSubdirectory("build-records").FullName;
+		try
+		{
+			var result = BuildReport.Run([build], 1, "TRK", ai: "greedy", recordsDir: dir);
+
+			var records = Directory.GetFiles(dir, "Mine-opp1-seat*.json");
+			Assert.That(records, Has.Length.EqualTo(2), "one per seat");
+			foreach (var file in records)
+				Assert.DoesNotThrow(
+					() => MagicCore.Ai.GameRecord.FromJson(File.ReadAllText(file)).Replay(),
+					file
+				);
+			var finished = result.Games[0].OfType<BuildReport.Played>().ToList();
+			var json = File.ReadAllText(Path.Combine(dir, "games.json"));
+			Assert.That(json, Does.Contain("\"Build\": \"Mine\""));
+			foreach (var card in finished.SelectMany(g => g.Yours).Distinct())
+				Assert.That(json, Does.Contain(card), "a card in hand in a finished game");
+		}
+		finally
+		{
+			Directory.Delete(dir, recursive: true);
+		}
+	}
 }

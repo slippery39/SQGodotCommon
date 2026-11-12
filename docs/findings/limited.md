@@ -256,3 +256,103 @@ its weak matchup, and RB looks above the AI field: RB beat the AI decks 60%, the
   games where it was drawn (AI-19.22); The City (a phasing Saga) −5, −12, −21.
 - **A repeat is consistent**: Soup-Riker 51.5% then 52.5% against the same 50 opponents.
 
+
+## Pool 3 (BUG / BUGw / UBw), tested by simulation (2026-11-12, LIM-1.12)
+
+Shayne's third TRK pool, three builds; the AI on both sides; ± one standard error; `--game-minutes=6`. The AI
+included the uncommitted AI-19.22 damage potential. No 17lands numbers: TRK isn't in their public datasets yet, and
+the site's own data isn't for outside use.
+
+**Against 100 AI sealed decks** (`ai_reports/sealed-builds-2026-11-12_012140.md`, 64 min):
+
+| Build | Win rate | Play | Draw | Paired |
+|---|---|---|---|---|
+| BUGw | 58.0% ± 3.6 | 66.0 | 50.5 | − BUG +14.5 ± 4.3; − UBw +5.9 ± 4.5 |
+| UBw | 52.1% ± 3.6 | 54.7 | 49.5 | |
+| BUG | 43.5% ± 3.5 | 49.0 | 38.0 | |
+
+BUG and BUGw differ by Picard and Deanna Troi (BUGw) against Romulan Bird-of-Prey and Marooned (BUG), and two lands —
+four changes, so the size overstates it; Picard reads +16 (BUGw) and +26 (UBw), Marooned −9.7.
+
+**One-card swaps in BUGw** (100 opponents, `sealed-builds-2026-11-12_025952.md`, 96 min; BUGw 57.2% there): Temporal
+Conqueror → Xindi Surveyors −1.1 ± 2.4; Guidance Failure → Impossible Choice −4.3 ± 3.0; Final Frontier → a second
+Unexplored Territory −4.9 ± 2.5. None better — and Final Frontier, −3.3 by IWD, cost ~5 points removed (the splash's
+fixing, which an IWD can't see). 13 of BUGw's 200 games stopped at 6 min (6.5%).
+
+**Against his own lists** (100 games each): **RB** — BUGw 41.1% ± 5.1, UBw 41.2% ± 5.0, paired 0.0 ± 6.6
+(`094626`); **the Soup** — BUGw 43.2% ± 5.1, UBw 33.0% ± 5.0, paired +12.6 ± 6.7 (`101943`). Both builds trail his
+earlier decks, as the Soup trailed RB (36%).
+
+**BUGw's cards over three runs (IWD: AI field / RB / Soup):** positive in all three — Picard +16 / +28 / +16, V'Ger
++7 / +13 / +10, Astute Terraformer +8 / +9 / +15; mostly positive — Deanna +10 / +6 / +31, Mugato +18 / +26 / +1, Make
+It So +14 / +21 / −1, Romulus +33 / +3 / +15, Data +2 / −2 / +24. Negative in all three: Humpback Whales −3 / −2 / −4
+(a landcycler — the AI holds those, AI-19.23's S3d). Mixed: Lore +2 / −1 / −17, Temporal Conqueror −9 / +2 / −2,
+Cold-Blooded Crew +16 / +6 / −19.
+
+**GWb** (blue cut for white bodies: −Data, Lore, Test of Priorities, Energize, Guidance Failure, Temporal Conqueror,
+Humpback Whales, 3 Islands; +2 Cybernetic Specialist, 2 Hologram Janeway, Una Chin-Riley, Free Borg Revolutionaries,
+Vexing Drone, 3 Plains): stopped by Shayne part-way — BUGw 58% of 85, GWb 45% of 67 after 166 of 400 games; he kept
+the blue. No report.
+
+**RB and the Soup again, after AI-13.11, AI-13.12 and AI-19.22's damage potential** (100 AI decks,
+`sealed-builds-2026-11-12_115602.md`, 61 min): RB-Investigator **62.5% ± 3.5** (play 67.7, draw 57.3; Nov 10: 60.3% ±
+3.5 over the same 100), Soup-Red-AGT **61.8% ± 3.6** (play 68.1, draw 55.8; Nov 10: 59.4% ± 5.0 over the first 50 of
+them); RB − Soup +1.7 ± 4.3 paired. Both about 2 points up — inside the noise (runs not paired across days). **Borg
+Cube +5.4** (Nov 10 in this list −6.2; −15.7 to +6.3 across the soup runs) — one run's IWD, not yet a trend; its casts
+can't be counted here (a builds run keeps no records). Soup's tops: Xenobotanist +16.5, Will Riker +15.7 (positive in
+every run now: +26, +22, +18, +16), Cloak and Phaser +14.6, De-evolve +14.5. RB's: Khan +12.6, The Duras Sisters +8.9;
+bottom Battle-Scarred Survivalist −13.5, Targ Wrangler −8.9. Soup stopped 14 of 200 at 6 min (7%).
+
+## Pool 4 (RGb, 41 cards), tested by simulation (2026-11-12, LIM-1.12)
+
+Against 150 AI sealed decks, both seats (`sealed-builds-2026-11-12_132831.md`, 72 min): **51.8% ± 3.2** (play 51.2,
+draw 52.5) over 247 finished games — **53 of 300 stopped at 6 min (18%)**, most with Rok-Tahk ("creatures you control
+have {T}: Add {G}{G}" — every creature a mana source, a slow search), Treasures, Booker's Worms, Q or Discovery; at the
+stop RGb led in 11, trailed in 14, was within 3 life in 13 (15 unread) — no lean either way. IWD: Cleveland Booker
++12.7 and Q +12.7 top, Xenobotanist +8.9, First Contact +7.8, Gowron +4.6; Stray from History +1.2, Vengeance Mission
+−6.4; the removal lowest — Resistance Is Futile −11.5, Eject the Warp Core −15.9 (one run's IWD; cheap removal and an
+instant the AI times badly, AI-19.23's S2 — not a reason to cut it).
+
+**The sim against Shayne's Arena records (calibration, 2026-11-12):**
+
+| Deck | Sim, vs AI decks | Arena |
+|---|---|---|
+| RB (pool 1) | 60–62% (play 68–70, draw 51–57) | 6-3 |
+| Soup with Riker (pool 2) | 59–62% (play 67–68, draw 52–56) | 6-3 (5-1, then two losses) |
+| BUGw (pool 3) | 58% (play 66, **draw 50.5**) | 3-3, **on the draw every game**, losses to aggro |
+
+Shayne on BUGw: "The white cards were good, but I couldn't always consistently cast them early, sometimes having to wait
+until turn 5" — the splash's cost the sim also read (Final Frontier, the fixing, worth ~5 points). Three decks is
+a small sample, but each record sits where its sim number put it.
+
+**RGb again, with records** (`sealed-builds-2026-11-12_134733.md`, its folder: every game's record and games.json; the
+same 150 opponents and shuffles, so mostly the same games — not an independent repeat): 52.4% ± 3.2, 50 of 300 stopped.
+
+*Why cards sat in hand* (`--builds-records`, each own turn in hand read after the land drop; 298 records, 2 with Kai
+Winn not replayed). Short on colour — enough untapped sources, too few of a colour it needs: **Eject the Warp Core 31%
+of its turns in hand, Resistance Is Futile 29%, Planetary Bombardment ({R}) 29%**, Vengeance Mission 17%, Stray from
+History 15%, Transporter Malfunction 14%, Savvy Profiteer 14%; the green cards 0–3%. Shayne's read confirmed: the
+cheap black removal sits for want of black (2 Swamps and Qo'noS), and red's one-drop for want of red; the removal's
+"other" (10–12%; 19–21% before the reader skipped turns where the opponent held priority) is mostly no target.
+
+*Pairs* (games.json, win rate of the games in each group, ± one standard error):
+
+| Pair | Both drawn | First only | Second only | Neither |
+|---|---|---|---|---|
+| Vengeance Mission / Booker | 67.5 ± 7.4 (40) | **37.7 ± 6.2 (61)** | 57.1 ± 6.2 (63) | 52.3 ± 5.4 (86) |
+| Gowron / Booker | 63.6 ± 7.3 (44) | 49.3 ± 5.9 (73) | 59.3 ± 6.4 (59) | 43.2 ± 5.8 (74) |
+| Rok-Tahk / Booker | 64.1 ± 7.7 (39) | 45.9 ± 6.4 (61) | 59.4 ± 6.1 (64) | 46.5 ± 5.4 (86) |
+| Stray from History / Vengeance Mission | 50.0 ± 8.6 (34) | 54.0 ± 6.3 (63) | 49.3 ± 6.1 (67) | 54.7 ± 5.4 (86) |
+
+The Mission works only beside Booker: +10 with him, −15 without (an interaction of ~+25 ± 13, about two standard
+errors — a lead, not proof; games where more cards are drawn run longer, which every pair shares). Gowron and Booker
+add up rather than multiply.
+
+**RGb against RGb-All** (all three changes at once, Shayne's call: one Planetary Bombardment → a second Cleveland
+Booker, Savvy Profiteer → Warp Core, a Forest → a Swamp; 75 AI decks, `sealed-builds-2026-11-12_160908.md`, 76 min;
+a four-list single-swap run before it was stopped at 222 of 600 games, nothing clear): RGb 49.6% ± 4.5, RGb-All 52.1%
+± 4.6, **paired −4.5 ± 4.2 — leans to RGb-All, not settled**; 25 and 29 of 150 stopped at 6 min. By game length,
+paired on the same game: ≤14 turns 0.0 ± 6.4, 15–20 −6.1 ± 6.1, 21+ −6.9 ± 9.8 — RGb-All gains in the longer games
+(the running win rates had suggested the opposite: finish order follows thinking time, not turns). Short on colour,
+RGb → RGb-All: Eject the Warp Core 31% → 22%, Resistance Is Futile 27% → 20%, Stray from History 17% → 12%, Vengeance
+Mission 17% → 11%, Gowron and He's Dead, Jim 7% → 3%; Planetary Bombardment unchanged (34% → 32%: no red was added).

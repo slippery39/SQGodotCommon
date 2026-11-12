@@ -47,7 +47,8 @@ public static class BuildReport
 		Action<string>? log = null,
 		TimeSpan? budget = null,
 		SealedBuildMatch.Build? against = null,
-		int firstOpponent = 1
+		int firstOpponent = 1,
+		string? recordsDir = null
 	)
 	{
 		var cap = budget ?? SimulatedRatings.GameBudget;
@@ -105,6 +106,27 @@ public static class BuildReport
 					: (start.Player2Id(), start.Player1Id());
 				var hands = new SimulatedRatings.InHandDuring(start);
 				GameState? last = null;
+				// each game kept as a record when asked (Shayne, 2026-11-12: "see how good vengeance mission is with Booker
+				// drawn vs not"; why a black card sat in hand) - read with --record=FILE --card=NAME / --explain=N
+				var record =
+					recordsDir is null ? null
+					: seat1
+						? GameRecord.New(
+							n,
+							build.Main,
+							rivalMain,
+							(MagicKeys.Player1, MagicKeys.Player2),
+							build.Sideboard,
+							rivalOut
+						)
+					: GameRecord.New(
+						n,
+						rivalMain,
+						build.Main,
+						(MagicKeys.Player1, MagicKeys.Player2),
+						rivalOut,
+						build.Sideboard
+					);
 				using var budgetCts = new CancellationTokenSource(cap);
 				AiMatch.Game? game = null;
 				try
@@ -123,7 +145,10 @@ public static class BuildReport
 						{
 							hands.See(x);
 							last = x;
-						}
+						},
+						moved: record is null
+							? null
+							: (before, token, kind) => record = record.Add(before, token, kind)
 					);
 				}
 				catch (Exception e) when (e is not OperationCanceledException) // any engine error drops the game, logged
@@ -148,6 +173,14 @@ public static class BuildReport
 						hands.Of(me),
 						hands.Of(them)
 					);
+				if (record is not null)
+					File.WriteAllText(
+						Path.Combine(
+							recordsDir!,
+							$"{FileName(build.Name)}-opp{n}-seat{(seat1 ? 1 : 2)}.json"
+						),
+						(last is { } end && end.IsOver() ? record.Ended(end) : record).ToJson()
+					);
 				progress.Tick(
 					() =>
 						string.Join(
@@ -166,17 +199,41 @@ public static class BuildReport
 				);
 			}
 		);
+		var slices = Enumerable
+			.Range(0, builds.Count)
+			.Select(b => games[(b * perBuild)..((b + 1) * perBuild)])
+			.ToList();
+		// every finished game's cards in hand and result, per build: pairs and the like read afterwards, no replay
+		if (recordsDir is not null)
+			File.WriteAllText(
+				Path.Combine(recordsDir, "games.json"),
+				System.Text.Json.JsonSerializer.Serialize(
+					builds.Select(
+						(b, k) => new { Build = b.Name, Games = slices[k].OfType<Played>() }
+					),
+					new System.Text.Json.JsonSerializerOptions
+					{
+						WriteIndented = true,
+						Encoder = System
+							.Text
+							.Encodings
+							.Web
+							.JavaScriptEncoder
+							.UnsafeRelaxedJsonEscaping, // D'Ghor, not D'Ghor
+					}
+				)
+			);
 		return new Result(
 			builds,
-			[
-				.. Enumerable
-					.Range(0, builds.Count)
-					.Select(b => games[(b * perBuild)..((b + 1) * perBuild)]),
-			],
+			slices,
 			clock.Elapsed,
 			against is null ? "AI sealed opponents" : $"games against {against.Name}"
 		);
 	}
+
+	/// <summary>A build's name as a file name: a suggestion's "Blue/Black" is "Blue-Black".</summary>
+	public static string FileName(string build) =>
+		string.Join("-", build.Split(Path.GetInvalidFileNameChars().Append('/').ToArray()));
 
 	/// <summary>Mean and one standard error.</summary>
 	static (double Mean, double Se) Estimate(IReadOnlyList<double> xs) =>

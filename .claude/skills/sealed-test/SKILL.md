@@ -31,7 +31,7 @@ The new card takes the old one's position, so both lists get the same shuffles a
 alike until it is drawn — the paired difference is then sharp (±2.3–3 points at 100 opponents). Swaps
 come from the sideboard; a basic needs its set ("Forest=Swamp (MIR) 340"). **Several changes at once,
 or a change in land COUNTS, shift every card's position** and the pairing is lost (Soup-Red: ±5.2 at 75
-opponents, where a one-card swap gave ±2.9 at 50). One variable a run; split a bundle that comes out clear.
+opponents, where a one-card swap gave ±2.9 at 50). **Single swaps or the whole new build in one run is Shayne's call** (2026-11-12: "should be at my discretion, and I should be the one to let you know. If its vague then maybe clarify with me first") — a last card suits single swaps, a rebuild one run of his list against the list with every agreed change. Not said? Ask, with each option's size and time (a four-list single-swap run of a slow deck took ~2.5 h).
 
 ## 3. Size the run, then ask
 
@@ -54,7 +54,11 @@ dotnet run -c Release --project MagicConsole -- --set=trk --builds=sim_results/b
 ```
 
 Run it in the background, redirected to a log in `sim_results/builds/`; the progress line has each list's
-running win rate. The report goes to `ai_reports/sealed-builds-<time>.md` — give him its link.
+running win rate. The report goes to `ai_reports/sealed-builds-<time>.md` — **give him its link, as a clickable
+markdown link, the moment a run ends** (he asked, 2026-11-12). Beside it, the folder of the same name keeps every game's
+record (`<Build>-opp<N>-seat<1|2>.json`, ~50 KB each) and `games.json`: each finished game's cards in hand, seat, play or
+draw and result — read it for pairs ("Vengeance Mission with Booker drawn vs not") without replaying; `--record=FILE
+--card=NAME` shows each turn a card sat in hand, castable or not (mana and colour), and what was done instead. For the whole run at once: `--builds-records=<folder> --build=<Name>` — every card, each own turn in hand (read after the land drop): castable, short on mana, short on colour, or other (no target, timing); Kai Winn's games don't replay (counted, left out).
 
 **Against one of his lists instead of the AI's decks** (the AI's decks are weaker than his — his RB beat
 them 60% and his soup 64%): `--opponent=sim_results/builds/RB.txt`, every game that list with a fresh
@@ -78,6 +82,20 @@ dotnet run -c Release --project MagicConsole -- --set=trk --sample-games=sim_res
 - **IWD (GIH − GNS) swings ±10–20 points a run at ~100 games**: Lore read +28 in one run and −7 in the next.
   Trust a card that is strongly positive in EVERY run (Will Riker: +26, +22, +18); confirm anything else
   with a paired swap. Cheap aggressive cards read low (long games draw more cards and aggro loses them).
+- **Never call a run from its progress line.** Games finish in order of thinking time, so the running win rate
+  leans on the quick games until the end (RGb read 60% part-way and finished at 52%; a rebuild read +16 and
+  finished +4.5). Read the report's paired line.
+- **A card that reads low here but well on 17lands: check its colour before cutting it.** `--builds-records`
+  (section 3) — RGb's Eject the Warp Core (−17) and Resistance Is Futile (−11) are 58% cards on 17lands, and sat in
+  hand for want of black ~30% of their turns. Fix the mana, keep the removal.
+- **17lands** (Shayne pastes the card_data table; its public datasets had no TRK on 2026-11-12, and the site's own
+  data is not for outside use): his note — its win rates run 3–5 points high (only app users). Compare cards
+  against each other (a typical TRK card ~56–57% GIH), never a 17lands rate against a sim rate.
+- **Pairs from `games.json`** ("X with Y drawn vs not"): every "both drawn" group is ~5 points high on its own —
+  more cards seen means a longer game (RGb: 46% at ≤7 of its cards seen, 56–58% at 11+). Count only what clears
+  that; at 300 games a pair carries ±7–9.
+- **Slow decks run long:** RGb (Rok-Tahk makes every creature a mana source) ran ~4.8 games a minute with ~18%
+  stopped at 6 min — size such a run by that, not by the table above.
 
 ## 5. The three ways it misleads — say so in every report
 

@@ -14,6 +14,7 @@ using MagicCore.Sets.Fra;
 //   dotnet run --project MagicConsole -- --match=greedy,random --games=72   AI vs AI, measured
 //   dotnet run --project MagicConsole -- --card-values   regenerate MagicCore/Sets/FRA.values.json and TRK.values.json
 //   dotnet run --project MagicConsole -- --record=game_records/<file>.json   replay a table game
+//   dotnet run --project MagicConsole -- --builds-records=ai_reports/sealed-builds-<time>   why cards sat in hand
 
 var flags = args.ToHashSet();
 int? Arg(string name) =>
@@ -100,6 +101,13 @@ if (compareArg is not null || buildsArg is not null)
 		var games = Arg("games") ?? MagicCore.Limited.SealedBuildMatch.DefaultOpponents;
 		if (flags.Contains("--both-seats"))
 		{
+			// the report, and beside it a folder of every game's record and games.json (cards in hand, result)
+			Directory.CreateDirectory("ai_reports");
+			var file = Path.Combine(
+				"ai_reports",
+				$"sealed-builds-{DateTime.Now:yyyy-MM-dd_HHmmss}.md"
+			);
+			var buildsDir = Directory.CreateDirectory(Path.ChangeExtension(file, null)).FullName;
 			var detail = MagicCore.Limited.BuildReport.Run(
 				builds,
 				games,
@@ -116,14 +124,12 @@ if (compareArg is not null || buildsArg is not null)
 						limitedSet
 					)
 					: null,
-				firstOpponent: Arg("first-opponent") ?? 1
+				firstOpponent: Arg("first-opponent") ?? 1,
+				recordsDir: buildsDir
 			);
-			var text = MagicCore.Limited.BuildReport.Report(detail);
-			Directory.CreateDirectory("ai_reports");
-			var file = Path.Combine(
-				"ai_reports",
-				$"sealed-builds-{DateTime.Now:yyyy-MM-dd_HHmmss}.md"
-			);
+			var text =
+				MagicCore.Limited.BuildReport.Report(detail)
+				+ $"\nRecords: `{Path.ChangeExtension(file, null)}/` — every game (`--record=FILE --card=NAME`, `--explain=N`), and games.json (each finished game's cards in hand and result).\n";
 			File.WriteAllText(file, text);
 			Console.WriteLine(text);
 			Console.WriteLine($"Written to {file}");
@@ -283,6 +289,18 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 			$"{path}: {name}'s answers are now the committed ones. Rebuild to embed it."
 		);
 	}
+	return;
+}
+
+// --builds-records=DIR [--build=NAME]: a sealed-builds run's records, why each card sat in hand (LIM-1.13).
+if (args.FirstOrDefault(a => a.StartsWith("--builds-records=")) is { } buildsRecordsArg)
+{
+	Console.WriteLine(
+		BuildsRecords(
+			buildsRecordsArg["--builds-records=".Length..],
+			args.FirstOrDefault(a => a.StartsWith("--build="))?["--build=".Length..]
+		)
+	);
 	return;
 }
 
@@ -1075,6 +1093,120 @@ string CardTrace(GameRecord record, string card)
 			: "Never cast."
 	);
 	return string.Join("\n", lines);
+}
+
+// --builds-records=DIR [--build=NAME]: a sealed-builds run's records read for why the build's cards sat in hand (Shayne,
+// 2026-11-12: "the black cards just sat in your hand doing nothing … the mana in this deck is not amazing"). Each of the
+// build's nonland cards, at its holder's first main-phase decision of each own turn it was in hand: castable, short on
+// mana (fewer untapped sources than its mana value), short on colour (enough sources, too few of a colour it needs), or
+// neither (no target, timing). ponytail: a source counts one mana and every colour it can make, so a dual answers for both
+// colours at once and Rok-Tahk's {G}{G} counts one; count exactly if a close call hangs on it.
+string BuildsRecords(string dir, string? buildName)
+{
+	var files = Directory
+		.GetFiles(dir, "*-opp*-seat*.json")
+		.Where(f =>
+			buildName is null
+			|| Path.GetFileName(f)
+				.StartsWith(MagicCore.Limited.BuildReport.FileName(buildName) + "-opp")
+		)
+		.ToArray();
+	var tally = new System.Collections.Concurrent.ConcurrentDictionary<string, int[]>(); // card → [turns, castable, mana, colour, other, games]
+	var progress = new RunProgress("records read", files.Length);
+	var stale = 0;
+	Parallel.ForEach(
+		files,
+		file =>
+		{
+			var record = GameRecord.FromJson(File.ReadAllText(file));
+			var seat1 = file.EndsWith("-seat1.json");
+			IReadOnlyList<GameState> before;
+			try
+			{
+				(before, _) = record.Replay();
+			}
+			catch (MagicCore.Ai.MoveTokens.StaleException)
+			{
+				Interlocked.Increment(ref stale);
+				progress.Tick();
+				return;
+			}
+			var deck = seat1 ? record.Deck1 : record.Deck2;
+			var drawn = new HashSet<string>();
+			// each own turn read once, after its land drop: the first main-phase decision with a land played, or the
+			// turn's last one if none was (before it, every card reads a land short)
+			var turns = before
+				.Where(s =>
+					s.GetGame() is var g
+					&& g.ActivePlayerId == (seat1 ? s.Player1Id() : s.Player2Id())
+					&& s.DecidingPlayerId() == g.ActivePlayerId // not the opponent's priority over our spell
+					&& g.Step == Step.PreCombatMain
+					&& s.GetPendingChoice() is null
+				)
+				.GroupBy(s => s.GetGame().TurnNumber)
+				.Select(t =>
+					t.FirstOrDefault(s =>
+						s.GetPlayer(s.GetGame().ActivePlayerId).ThisTurn.LandsPlayed > 0
+					) ?? t.Last()
+				);
+			foreach (var s in turns)
+			{
+				var me = s.GetGame().ActivePlayerId;
+				var sources = s.CardsIn(me, ZoneType.Battlefield)
+					.Where(c => !c.IsTapped)
+					.Select(c => MagicCore.ManaAbilities.ColorsOf(s, c).ToList())
+					.Where(colours => colours.Count > 0)
+					.ToList();
+				var legal = s.LegalActions()
+					.OfType<CastSpellAction>()
+					.Select(a => a.CardId)
+					.ToHashSet();
+				foreach (
+					var c in s.CardsIn(me, ZoneType.Hand)
+						.Where(c => !c.Is(CardType.Land) && deck.Contains(c.Name))
+				)
+				{
+					drawn.Add(c.Name);
+					var colourShort =
+						c.ManaCost.Symbols.Where(x =>
+								x.Kind == SymbolKind.Colored && x.Color != ManaColor.Colorless
+							)
+							.GroupBy(x => x.Color)
+							.Any(g => sources.Count(src => src.Contains(g.Key)) < g.Count())
+						|| c.ManaCost.Symbols.Any(x =>
+							x.Kind == SymbolKind.Hybrid
+							&& !sources.Any(src => src.Contains(x.Color) || src.Contains(x.Color2))
+						);
+					var slot =
+						legal.Contains(c.Id) ? 1
+						: sources.Count < c.ManaCost.ManaValue ? 2
+						: colourShort ? 3
+						: 4;
+					var row = tally.GetOrAdd(c.Name, _ => new int[6]);
+					Interlocked.Increment(ref row[0]);
+					Interlocked.Increment(ref row[slot]);
+				}
+			}
+			foreach (var name in drawn)
+				Interlocked.Increment(ref tally.GetOrAdd(name, _ => new int[6])[5]);
+			progress.Tick();
+		}
+	);
+	var md = new System.Text.StringBuilder(
+		$"# Why cards sat in hand: {files.Length} records in `{dir}`{(buildName is null ? "" : $", build {buildName}")}"
+			+ $"{(stale > 0 ? $", {stale} not replayed" : "")}\n\n"
+			+ "Each own turn a card was in hand, read in the first main phase after the land drop: castable, or why not. Short on colour: enough "
+			+ "untapped mana sources, too few of a colour it needs.\n\n"
+			+ "| Card | Games in hand | Turns in hand | Castable | Short on mana | Short on colour | Other (target, timing) |\n|---|---|---|---|---|---|---|\n"
+	);
+	string Share(int n, int of) => of == 0 ? "" : $"{n} ({100.0 * n / of:0}%)";
+	foreach (
+		var (card, r) in tally.OrderByDescending(x => (double)x.Value[3] / Math.Max(1, x.Value[0]))
+	)
+		md.AppendLine(
+			$"| {card} | {r[5]} | {r[0]} | {Share(r[1], r[0])} | {Share(r[2], r[0])} | {Share(r[3], r[0])} | {Share(r[4], r[0])} |"
+		);
+	return md.ToString();
 }
 
 // Copies the record into the tests and returns a test to start from: the position, what was played

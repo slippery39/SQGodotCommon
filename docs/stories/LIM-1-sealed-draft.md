@@ -144,12 +144,29 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       timing is checked for a misplay before it is cut (Tal Shiar Analyst, AI-17.25). Calibrate with Shayne's real
       records per deck against the sim's prediction (RB: ~60% sim against AI decks, 6-3 on Arena).
       `--opponent=FILE` plays a fixed list of his instead of AI decks; `--first-opponent=N` for new seeds
+      **Pool 3 (2026-11-12, overnight):** BUG / BUGw / UBw against 100 AI decks — BUGw 58.0%, UBw 52.1%, BUG 43.5%
+      (BUGw − BUG +14.5 ± 4.3: Picard and Deanna); three one-card swaps in BUGw, none better; against his RB both 41%,
+      against his Soup BUGw 43% and UBw 33%. Recommended: BUGw as built (`docs/findings/limited.md`, "Pool 3").
+      Arena: BUGw 3-3 (on the draw every game; sim draw 50.5%), the Riker soup 6-3, RB 6-3 — each where its sim
+      number put it (findings, "calibration"). **Pool 4 (RGb, 41 cards):** 52% against 150 AI decks, ~18% of games
+      stopped (Rok-Tahk); its black removal sat for want of black ~30% of its turns in hand (LIM-1.13); his rebuild
+      (+2nd Booker, +Warp Core, +Swamp; −Planetary Bombardment, −Savvy Profiteer, −Forest) leans better, −4.5 ± 4.2.
+- [x] LIM-1.13 Every sealed-builds game kept, and why a card sat in hand (Shayne, 2026-11-12: "we should be saving
+      the cards we drew for every game so we can analyze it afterwards"; "the black cards just sat in your hand"):
+      `--both-seats` writes a folder beside its report — each game's record (`AiMatch.Play`'s `moved` hook, forced
+      passes included through `AutoPass(passed)`, ~50 KB a game) and `games.json` (each finished game's cards in
+      hand, seat, result: pairs read afterwards); `--builds-records=DIR [--build=NAME]` reads every card's own turns in
+      hand after the land drop as castable / short on mana / short on colour / other. Test
+      `ARunWithAFolder_KeepsEveryGame_AsARecordThatReplays`. ponytail: a source counts one mana and all its colours;
+      Kai Winn's games don't replay (MC-6.16), counted and left out
 
 ## Next
 
 **Testing Shayne's own lists (LIM-1.12): the `/sealed-test` skill** — save the exports to `sim_results/builds/`,
 variants with `tools/deck_variant.py`, the run sized to about an hour, and the report read with its three caveats.
-Today's pools and results: `docs/findings/limited.md`, "Shayne's TRK sealed lists".
+Today's pools and results: `docs/findings/limited.md`, "Shayne's TRK sealed lists", "Pool 3", "Pool 4" and the
+calibration table. Each run's folder (LIM-1.13) keeps every game: pairs from `games.json`, `--builds-records` for why
+cards sat in hand. Single swaps or a whole rebuild in one run is Shayne's call — ask when he hasn't said.
 
 LIM-1.7, MC-3 and LIM-1.8 are done (pools can hold a Special Guest now). **To compare builds:**
 export each candidate from Arena's deck builder into a file, then
@@ -199,3 +216,4 @@ opponent's pool is what it guesses from.
 - 2026-10-23: requirements ticked (sprint housekeeping) — all nine met: packs, collation, guests,
   commons and rate test by LIM-1.3 and MC-3, builder, suggested deck and play by LIM-1.4–1.5,
   Extrapolate by LIM-1.6. LIM-1.9 keeps the story open.
+- 2026-11-12: LIM-1.13's pre-commit fixes — a suggestion's name ("Blue/Black") as a file name; `--builds-records` reads only the build's own decisions (pool 4's removal "other" 19–21% → 10–12%, the colour shares unchanged); forced passes recorded as "rule".
