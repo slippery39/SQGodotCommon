@@ -28,17 +28,16 @@ every task a sprint file names exists.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-**Next session (written 2026-11-11, end of the AI session):**
-1. **Sprint 4 closes Thursday 2026-11-12:** write its review and plan sprint 5 with Shayne first
-   (`docs/sprints/2026-11-05.md`, this file's "Sprints").
-2. **DEV-6** — the cube worktree is up (`D:\GameDev\SQGodotCommon-cube`); left: DEV-6.5, its first session.
-3. **The AI, where 2026-11-11 left it** (Shayne's order: value fixes first, then the noise — AI-20):
-   - AI-13.11 (the potential score) and AI-13.12 (the depth fix) are kept on by default and done.
-   - The misplay scan again on the same seeds (`--lint --set=trk --games=300 --seed=1`, ~40 min, ask first), to
-     compare the flagged counts with `ai_reports/lint-2026-11-11_020602.md` (TRK) and `…_115512` (FRA).
-   - Borg Cube (AI-19.22): its pinned test, the four lessons, the builder loop.
-   - Then AI-20 (land odds first), then option pricing (AI-13: lesson 5, flash creatures, removal held).
-   The scan's review, item by item, is in AI-19's Decisions; the positions in `docs/findings/magic-ai.md`.
+**Next session (written 2026-11-12, end of the AI + sealed session):**
+1. **Sprint 4 reviewed (2026-11-12, `docs/sprints/2026-11-05.md`); sprint 5 being planned with Shayne** — his notes
+   (faster tests, a game reviewer, the AI's options pricing and Forge, AI speed for sealed runs, the cube lane overnight,
+   the MTGA look) and the open questions are in that session; the usage (~234M against the ~120M assumed) to settle first.
+2. **Committed 2026-11-12:** AI-19.22 (`Terms.DamagePotential`; its match against `beam+nodamagepotential` not run, ask
+   first) and LIM-1.13, after `/pre-commit`'s fixes.
+3. **The AI, where 2026-11-12 left it:** Borg Cube (AI-19.22) — #343 still passes it (Pass 30/30): a new Pass line,
+   attack then D'Ghor's −1/−1, waits for Shayne's read; the four lessons (a)–(d) proposed, not built. Left from the
+   scan: Cold-Blooded Crew held (3), Mikaeus in his own turn (5), the won-line ties (8). Then AI-20.
+4. **DEV-6** — the cube worktree is up (`D:\GameDev\SQGodotCommon-cube`); left: DEV-6.5, its first session.
 
 1. **MC-5** — Star Trek (TRK): sealed and draft before Arena's November 10 release
 2. **DATA-2** — TRK's AI sealed decks rated by two rounds of self-play, the search on both sides — before the AI stories (Shayne, 2026-11-10): his aggressive decks beat the AI's slow ones

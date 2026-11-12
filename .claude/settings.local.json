@@ -22,7 +22,11 @@
       "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Recurse -Filter \"*.Tests\" -Directory)",
       "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Turns\" -Filter \"*.cs\")",
       "Bash(Select-Object -ExpandProperty Name)",
-      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Actions\" -Filter \"*Select*.cs\" -Recurse)"
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Actions\" -Filter \"*Select*.cs\" -Recurse)",
+      "Bash(dotnet run *)",
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(python -c ' *)",
+      "Bash(python -)"
     ]
   }
 }
