@@ -239,26 +239,8 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
 	}
 
-	// Shayne, 2026-11-11 (AI-19.22, AI-19.23's scan): Borg Cube - "way more than just a 7 mana removal spell, its pretty
-	// much a game winning card" - castable 4 turns in 300 TRK self-play games, passed once where it was the play. TRK seed
-	// 91, turn 15: the AI at 20 with 5 lands (the Cube costs 5 by affinity: Borg 1/1 and DOT-7 Repair Squad 3/3 flier),
-	// Shayne at 9 with U.S.S. Cerritos a 4/4 flier, two tapped 1/1 Officers and two 2/2 Romulans. The AI passed (Pass
-	// 49.98, the Cube 25.88). Shayne: "exiling the Cerritos with the Cube actually gives more options". The Pass line
-	// rested on a misblock it could foresee (the next test). With that block fixed (Terms.DamagePotential) the Pass line is
-	// another: Borg, D'Ghor and DOT-7 attack, the Cerritos blocks DOT-7 and D'Ghor's -1/-1 after combat finishes it, the
-	// Romulan and both Officers (Pass 44.31, the Cube 36.84) - for Shayne to read.
-	[Test]
-	[Ignore(
-		"Known defect?, AI-19.22: Pass 30 of 30 guesses - the attack-then-sweep line, for Shayne to read"
-	)]
-	public void BorgCube_ExilesTheCerritos_OverASecondBloodletter()
-	{
-		var s = KeptRecords.Before("BorgCubeNotCast91", 343);
-		Assert.That(
-			new BeamSearchAi(s.DecidingPlayerId()).Decide(s).What,
-			Does.StartWith("Cast Borg Cube")
-		);
-	}
+	// Borg Cube #343 (AI-19.22): the AI passes for an attack-then-D'Ghor-sweep line - settled 2026-11-12, Shayne: "a
+	// reasonable play to try to make". Its general lesson, stationing priced, is AI-23.
 
 	// Shayne, 2026-11-11 (AI-19.22): "why did the romulan block the borg, when USS Cerritos is in play?" The same game, the
 	// AI's Borg 1/1 attacking alone into his untapped Cerritos 4/4 and Romulan 2/2: the Cerritos didn't block, the Romulan

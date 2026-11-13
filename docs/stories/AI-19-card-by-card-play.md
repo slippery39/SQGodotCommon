@@ -65,6 +65,9 @@ cards implemented first. Then we can optimize usage and rulings per card."
   (Keeper of the Quiet Hour 3/2 at 13 life eating a 1/1 to 5 instead of trading with Koth 3/2 to 7) — **"defensible …
   due to the low life … I can see go either way, so its fine. Reasonable plays is what we are looking for, not perfect
   plays"**; at higher life he'd eat the 1/1 and keep the Keeper.
+- 2026-11-12, Shayne (AI-19.22, #343): **the Pass is fair** — attack, then D'Ghor's −1/−1 sweeps: "Its a reasonable
+  play to try to make." The pinned test (`BorgCube_ExilesTheCerritos_OverASecondBloodletter`) is removed. The lessons
+  are general — **Spacecraft, not the Cube**: stationing priced against the attack or block given up is AI-23.
 
 Open questions:
 - Which cards first — by how often they are played (the TRK ratings, MC-5.4 / DATA-2), or by how wrong they look at the table?
@@ -260,3 +263,4 @@ boards and counts were in the session scratchpad and are gone.
 - 2026-11-06: Genesis Device, Data, explore, Peace in Our Time and Kobayashi Maru added (MC-5.3 batch 7b).
 - 2026-11-06: Phyrexian Tower added (MC-5.6 batch 1).
 - 2026-11-12: AI-19.22's pre-commit fixes — the rollout's damage tie-break off under `+passbias` (no potential), the potential tie compared within rounding.
+- 2026-11-12: AI-19.22 — #343 settled (Shayne: the Pass is reasonable); the station lessons moved to AI-23.

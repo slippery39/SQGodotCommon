@@ -108,6 +108,9 @@ built on top.
   become this story's positions; the value fixes are then measured once, on the look-ahead kept. Shayne's note that
   started it: an AI opponent skipped its land drop and landcycled in his upkeep, "for no real reason" — one guess
   drew the card it needed, another didn't.
+- 2026-11-12, Shayne: **AI-22 (speed) goes first**, limited to what AI-20 won't rewrite; AI-20 then picks the
+  search's shape (several guesses multiply its cost). Research first (sprint 5): Forge's AI and the published work on
+  hidden information in card-game search (determinization ensembles, information-set MCTS) — a findings note.
 
 Open questions (for Shayne, before `ready`):
 - Land odds, in detail (Shayne: discuss at the start): how the % chance of hitting lands by a given turn reaches
@@ -138,3 +141,4 @@ discussing the land odds' details and the opponent's draws with Shayne. Read the
 
 - 2026-11-10: created from AI-17.24 (Shayne): the landcycle, Tasha, surveil, impulse and Jace issues share one root,
   the single guessed future.
+- 2026-11-12: sprint 5 — after AI-22; the research note first.

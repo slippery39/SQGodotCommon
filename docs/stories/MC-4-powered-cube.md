@@ -30,6 +30,9 @@ as his three priorities.
 
 - 2026-10-29, Shayne: **the survey's first pass is a script** (each card's Oracle text to what it
   needs), checked by hand after — not every card read in context.
+- 2026-11-12, Shayne: **LSVPower, not MTGA's cube** (supersedes 2026-10-28): "there is a ton of overlap anyways, and
+  we can always implement MTGA Arena cube afterwards". Built in the cube lane (DEV-6), its first session overnight
+  2026-11-12, after DEV-6.5, DEV-4 and DEV-5.
 
 Open questions:
 - The list itself: Shayne exports it or gives a link (CubeCobra, or Wizards' announcement). Arena
@@ -56,3 +59,5 @@ one (memory: copy from MTG).
 
 - 2026-10-28: created at sprint 3 planning (Shayne): MTGA's powered cube; survey and first batch this
   sprint.
+- 2026-11-12: the cube is LSVPower (Shayne); his list (528 cards, the CubeCobra export's mainboard) saved as
+  `MagicCore/Sets/LSV.list.txt` — the code `LSV` is Claude's default, the cube lane may rename it.

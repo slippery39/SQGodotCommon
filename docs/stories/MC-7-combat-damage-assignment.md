@@ -33,3 +33,4 @@ Read this story, then `.claude/rules/magic-table.md` (table) or `MagicCore/CLAUD
 ## Log
 
 - 2026-11-09: opened from Shayne's playtest notes.
+- 2026-11-12, Shayne: this sprint, in the cube lane (an MC- story; an engine fix both lanes need — merged back at once).

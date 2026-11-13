@@ -30,6 +30,9 @@ between MTG Arena and MTGO, keeping the best of both — feeling more like Arena
   (a touch has none; KIN's cards take a short tap as the hover).
 - 2026-10-23: TBL-3 (the hand on Card2D) is decided — hand only, KIN's fan; the redesign builds
   around it.
+- 2026-11-12, Shayne: **animations are required, not polish** — "things happen but its not clear what"; MTGO's
+  level is enough (a card to the stack and onto the battlefield, the stack visible, arrows, damage, deaths). The
+  table is the screen that matters most. Claude gathers MTGA reference screenshots and clips; Shayne marks what to copy.
 
 Open questions:
 - Which of MTGO's strengths to keep (stops, the full log, full control, card zoom, …)?
@@ -60,6 +63,10 @@ Open questions:
       first, the rest after (`MagicTableScene.Fill`, `ColumnWidth`). Captured on two real games, in both
       directions (Garak under-blocked by two Conquerors; my Culber blocked by Pet Sehlat + Khan). Not pinned
       by a test (Godot layout). New debug flag `--resume-at=N` (Commands.md)
+- [ ] TBL-4.4 The MTGA reference: current screenshots and clips of the table, gathered into one page for Shayne to
+      mark (2018's beta guides show the layout but no motion) — then TBL-4.1's interview against it
+- [ ] TBL-4.5 Animations, MTGO's level: a cast to the stack and onto the battlefield, the stack shown while it holds
+      anything, attack and target arrows, damage numbers, deaths to the graveyard; each a short beat the eye can follow
 
 ## Next
 
@@ -82,3 +89,4 @@ Read `MtgVisualDesign.md`, `.claude/rules/magic-table.md`, TBL-3, and capture to
   naming what comes next, a one-row phase bar with Stops, a dark wash under each half, permanents
   scaled to the room, a Tools menu, hold to zoom (click on release); the AI's attacks logged as
   "Attack: X → You". Checked by capture and real input (a hold zoomed and didn't play; a click played).
+- 2026-11-12: TBL-4.4 and TBL-4.5 added (Shayne, sprint 5 planning).

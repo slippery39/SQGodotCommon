@@ -59,6 +59,9 @@ Claude's notes on the risks, each with its mitigation (to become the written rul
   deleting the folder) with uncommitted changes, or `git branch -D` on an unmerged branch; and both folders share one
   `.git`, so neither is a backup of the other — push both branches. Moving this folder breaks the D: one until
   `git worktree repair`.
+- 2026-11-12, Shayne: **the cube lane's first session overnight, 2026-11-12** — this lane idle that night (one
+  machine). Its order: DEV-6.5, DEV-4, DEV-5, MC-7, MC-6's remaining families, then MC-4 (LSVPower) import and survey.
+  The budget is no constraint this sprint (Shayne is on a larger plan).
 
 ## Tasks
 
@@ -81,3 +84,4 @@ The story is done when that passes.
 - 2026-11-11: created from Shayne's question about working on two things at once; set up tomorrow.
 - 2026-11-11 (evening): set up now instead — `mtg-real` pushed, the worktree on D:, memory found shared, the usage
   report reads both lanes, the rule written and checked to load.
+- 2026-11-12: the first cube-lane session set for tonight (sprint 5).
