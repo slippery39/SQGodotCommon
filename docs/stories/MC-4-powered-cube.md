@@ -84,6 +84,15 @@ as his three priorities.
   - **Mana Crypt: `FlipACoin { IfLost, IfWon }`**, from the seeded random. Nearest: `If` — a `Condition` must answer the
     same each time it is asked (an intervening "if" asks twice), so a random one can't be a condition.
   - **Exalted: `Scripting.Exalted`**, a trigger from tested pieces (`EventTest.Alone`, any attack target — CR 702.83a).
+- 2026-11-13, Claude — **4.3b's options**, each on the piece the card reads as: `Counter { To }` (Remand: its owner's
+  hand; Memory Lapse: the library top — only when it was countered, so an uncounterable spell stays),
+  `TakeExtraTurn { Who }` (Time Warp's target player), `Stat.PowerPlusToughness` on `StatBetween` (Cut Down's
+  "total power and toughness"), `MoveChosen { OnTop }` (Brainstorm: two of them, the second on top — "in any order"
+  is the order chosen). Swords' life is read before the exile (last-known power); Path to Exile's and Erode's search is scripted before the removal (pre-commit review: once the creature has left, "its controller" reads its owner — a stolen creature's land would go to the wrong player; as 70,000 Light-Years). Wrath's "can't be regenerated" needs
+  nothing: the engine has no regeneration yet — the card that brings it must read the flag on Wrath and Snuff Out.
+- 2026-11-13, Claude (pre-commit review, 4.3a): **a second Mana Confluence planned at 1 life pays its life too**, never
+  makes its mana free — `ManaAbilities.Used` names the ability without asking its costs again; the solver asking each
+  source against the life alone stays a known ceiling (DesignNotes), with convoke's and the coin flip's.
 - 2026-11-13, Claude — **left out of batch 1, to the batch whose piece they share:** the Spirit Guides (a mana ability
   activated from the HAND — payment reads only permanents), Delighted Halfling (one permanent with unrestricted {C} and
   restricted any-colour mana — `YieldOf` keeps one restriction per permanent — plus "that spell can't be countered").
@@ -98,26 +107,31 @@ as his three priorities.
       hand check and batch plan in Decisions) — scripts with today's primitives, needs a
       new primitive (named), or needs a new rule (extra turns, storm, ...) — and the batches planned
       in this story, the new rules first in each
-- [ ] MC-4.3 The first batch (`/card-batch`), in two parts:
+- [x] MC-4.3 The first batch (`/card-batch`), in two parts — done 2026-11-13 (what it left out: Decisions):
   - [x] MC-4.3a Power and mana, 54 cards — done 2026-11-13: the Moxen, Black Lotus, Lotus Petal, Sol Ring, Mana Crypt,
         Mana Vault, the Monoliths, the six Talismans, Llanowar Elves, Avacyn's Pilgrim, Birds, the Hierarchs (exalted),
         Dark and Cabal Ritual, Strip Mine, Wasteland, Ancient Tomb, Mishra's Workshop, City of Traitors, Gaea's Cradle,
         Tolarian Academy, Mana Confluence, the ten fetchlands and Prismatic Vista; the ten original duals unscripted. LSV
-        registered. New pieces in Decisions; 37 tests, 11/11 breaks caught; `batch_checks.py` all 7 steps (golden-out
+        registered. New pieces in Decisions; 38 tests, 12/12 breaks caught; `batch_checks.py` all 7 steps (golden-out
         unchanged: no recorded game moved by the engine; golden-in: the new cards joining the random decks moved 29
         random and 1222 card-replay games and added 176; probe 150 games, none unfinished — the three never used are
         mana-only lands, which the probe can't see).
-  - [ ] MC-4.3b The plain spells, ~23: the counters (Counterspell, Mana Leak, Mana Tithe, Spell Pierce, Memory Lapse,
-        Remand, Stern Scolding), Lightning Bolt, Burst Lightning, Swords, Path, Erode, Cut Down, Vindicate, Abrupt Decay,
-        Wrath of God, Abrade, Pyroblast, Time Walk, Time Warp, Ancestral Recall, Brainstorm
+  - [x] MC-4.3b The plain spells, 22 — done 2026-11-13: Counterspell, Mana Leak, Mana Tithe, Spell Pierce, Memory Lapse,
+        Remand, Stern Scolding, Lightning Bolt, Burst Lightning, Swords to Plowshares, Path to Exile, Erode, Cut Down,
+        Vindicate, Abrupt Decay, Wrath of God, Abrade, Pyroblast, Time Walk, Time Warp, Ancestral Recall, Brainstorm.
+        Four options (Decisions); 23 more tests, 7/7 breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged;
+        golden-in moved 29 random and 1126 card-replay games, added 88; probe 150 games, none unfinished, none unused).
 
 ## Next
 
-MC-4.3b, the plain spells (Tasks). Its options are designed: `Counter { To }` (Remand: hand; Memory Lapse: library
-top), `TakeExtraTurn { Who }` (Time Warp), `Stat.PowerPlusToughness` (Cut Down), `MoveChosen { OnTop }` (Brainstorm,
-twice). Then the cards Decisions leaves out of batch 1, with the batch whose piece they share; then batches 2–5 (the
-rest of tier 1 by colour, `MagicCore/LsvSurvey.md`). Waits for a quiet machine: `tools/bench_vs_head.sh` on 4.3a's
-payment change (`ManaAbilities.PayAsUsed` on every first tap).
+Batch 2 in a FRESH session (`/card-batch`): first the cards batch 1 left out (Decisions, 2026-11-13) with the pieces
+they share — the alternative costs (Force of Will, Force of Negation, Daze, Snuff Out, Baleful Mastery: Flare of
+Fortitude's `MayCastFromHandFree(Is.Source) { Costs }` with an `If` and a return cost), "or" additional costs (Bitter
+Triumph, Bone Shards: the cost list's `OrPay` is mana only), the mana from the hand (Spirit Guides), Delighted
+Halfling (a restriction per unit), Mana Drain, Chain Lightning, Lose Focus (a coloured replicate cost) — then the rest
+of tier 1 by colour (`MagicCore/LsvSurvey.md`, 311 left). Waits for a quiet machine: `tools/bench_vs_head.sh` on
+4.3a's payment change (`ManaAbilities.PayAsUsed` on every first tap; `Source.Kind`'s restriction key). DEV-5: the
+probe step counts the never-used cards but doesn't name them (`batch_checks.py`, probe150) — print the names; and a second run after a fix fails golden-out against the first run's golden-in files — restore the golden files from HEAD first (by hand today: `git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
 ## Log
 
@@ -130,3 +144,6 @@ payment change (`ManaAbilities.PayAsUsed` on every first tap).
 - 2026-11-13 (cube lane, sprint 5 C5): MC-4.3a — batch 1's power and mana, 54 cards; LSV registered; the mana
   restriction composed into a filter (four old cards moved), a mana ability's pain and life, a coin flip, exalted, the
   reminder-text rule. No recorded game moved by the engine; 85 of 528 play. 4.2M input-token equivalents to here.
+- 2026-11-13 (cube lane): MC-4.3b — batch 1's 22 plain spells, four options; no recorded game moved by the engine;
+  107 of 528 play. Batch 1 done (the session: 7.6M input-token equivalents, `card-batch-usage.md`). For Shayne: nothing Open — the left-out cards and their pieces are batch 2's (Next);
+  the bench on 4.3a's payment change waits for a quiet machine.

@@ -652,6 +652,9 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 	/// <summary>The question on the table; unset says where it goes.</summary>
 	public string? Prompt { get; init; }
 
+	/// <summary>Brainstorm: "put two cards from your hand on top of your library in any order" — two of these, the second on top.</summary>
+	public bool OnTop { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var prompt =
@@ -703,7 +706,11 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 						new PipelineAction { PipelineContext = context, Steps = Otherwise }
 					)
 				);
-		ImmutableList<GameAction> steps = [choice, new MoveTo(Ref.Chosen, To) { From = [From] }];
+		ImmutableList<GameAction> steps =
+		[
+			choice,
+			new MoveTo(Ref.Chosen, To) { From = [From], OnTop = OnTop },
+		];
 		if (!Then.IsEmpty || (May && !Otherwise.IsEmpty))
 			steps = steps.Add(
 				new IfChosenAction(Then)

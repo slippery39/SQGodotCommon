@@ -65,6 +65,34 @@ public static class LsvCards
 			Targets = [Target(land)],
 		};
 
+	/// <summary>Mana Leak: "Counter target [noncreature] spell unless its controller pays {N}."</summary>
+	static SpellEffectsComponent CounterUnless(string cost, Filter? spells = null) =>
+		Spell(
+			[TargetSpec.Spell(spells)],
+			new CounterUnlessPays(Ref.Target(), ManaCost.Parse(cost))
+		);
+
+	/// <summary>
+	/// Path to Exile, Erode: "Its controller may search their library for a basic land card, put it onto the
+	/// battlefield tapped, then shuffle." — scripted BEFORE the removal: once the creature has left, "its controller"
+	/// reads its owner (a new object), so a stolen creature's land would go to the wrong player (as 70,000 Light-Years).
+	/// </summary>
+	static readonly SearchLibrary ItsControllerMayFetch =
+		new(CardType.Land, ZoneType.Battlefield)
+		{
+			Supertype = Supertype.Basic,
+			Tapped = true,
+			Who = Ref.ControllerOfTarget(0),
+		};
+
+	/// <summary>Pyroblast: "… if it's blue" — any spell or permanent is a legal target; only a blue one is hit.</summary>
+	static If IfBlue(GameAction effect) =>
+		new(new Matches(Ref.Target(), Is.Color(ManaColor.Blue)), [effect]);
+
+	/// <summary>Brainstorm: "then put two cards from your hand on top of your library in any order" — one at a time, the second on top.</summary>
+	static MoveChosen PutOnTop(string prompt) =>
+		new(ZoneType.Hand, null, ZoneType.Library) { OnTop = true, Prompt = prompt };
+
 	/// <summary>The Monoliths and Mana Vault: "This artifact doesn't untap during your untap step."</summary>
 	static readonly DoesntUntap DoesntUntapItself = new(Is.Source);
 
@@ -195,5 +223,104 @@ public static class LsvCards
 			["Windswept Heath"] = [Fetch("Forest", "Plains")],
 			["Wooded Foothills"] = [Fetch("Mountain", "Forest")],
 			["Prismatic Vista"] = [Fetch(Is.Supertype(Supertype.Basic), "basic land")],
+			// ===== MC-4.3b: batch 1, spells =====
+			["Counterspell"] = [Spell([TargetSpec.Spell()], new Counter(Ref.Target()))],
+			["Mana Leak"] = [CounterUnless("{3}")],
+			["Mana Tithe"] = [CounterUnless("{1}")],
+			["Spell Pierce"] = [CounterUnless("{2}", !Is.Creature)],
+			["Memory Lapse"] =
+			[
+				Spell([TargetSpec.Spell()], new Counter(Ref.Target()) { To = ZoneType.Library }),
+			],
+			["Remand"] =
+			[
+				Spell(
+					[TargetSpec.Spell()],
+					new Counter(Ref.Target()) { To = ZoneType.Hand },
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Stern Scolding"] =
+			[
+				Spell(
+					[TargetSpec.Spell(Is.Creature & (Is.PowerAtMost(2) | Is.ToughnessAtMost(2)))],
+					new Counter(Ref.Target())
+				),
+			],
+			["Lightning Bolt"] = [Spell([TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 3))],
+			["Burst Lightning"] =
+			[
+				new KickerComponent(ManaCost.Parse("{4}")),
+				Spell(
+					[TargetSpec.AnyTarget()],
+					new If(new WasKicked(), [new DealDamage(Ref.Target(), 4)])
+					{
+						Otherwise = [new DealDamage(Ref.Target(), 2)],
+					}
+				),
+			],
+			["Swords to Plowshares"] =
+			[
+				// The power is read before it leaves (last-known information).
+				Spell(
+					[Creature],
+					new GainLife(Ref.ControllerOfTarget(0), Count.PowerOf(Ref.Target())),
+					new Exile(Ref.Target())
+				),
+			],
+			["Path to Exile"] = [Spell([Creature], ItsControllerMayFetch, new Exile(Ref.Target()))],
+			["Erode"] =
+			[
+				Spell([CreatureOrPlaneswalker], ItsControllerMayFetch, new Destroy(Ref.Target())),
+			],
+			["Cut Down"] =
+			[
+				Spell(
+					[Target(Is.Creature & Is.TotalPowerAndToughnessAtMost(5))],
+					new Destroy(Ref.Target())
+				),
+			],
+			["Vindicate"] = [Spell([Target()], new Destroy(Ref.Target()))],
+			["Abrupt Decay"] =
+			[
+				new CantBeCountered(),
+				Spell([Target(!Is.Land & Is.ManaValueAtMost(3))], new Destroy(Ref.Target())),
+			],
+			["Wrath of God"] = [Spell([], new Destroy(Ref.Permanents(Is.Creature)))],
+			["Abrade"] =
+			[
+				ModalSpell(
+					"Abrade",
+					1,
+					M([Creature], new DealDamage(Ref.Target(), 3)),
+					M([Target(Is.Artifact)], new Destroy(Ref.Target()))
+				),
+			],
+			["Pyroblast"] =
+			[
+				ModalSpell(
+					"Pyroblast",
+					1,
+					M([TargetSpec.Spell()], IfBlue(new Counter(Ref.Target()))),
+					M([Target()], IfBlue(new Destroy(Ref.Target())))
+				),
+			],
+			["Time Walk"] = [Spell([], new TakeExtraTurn())],
+			["Time Warp"] =
+			[
+				Spell([TargetSpec.Player()], new TakeExtraTurn { Who = Ref.Target() }),
+			],
+			["Ancestral Recall"] = [Spell([TargetSpec.Player()], new DrawCards(Ref.Target(), 3))],
+			["Brainstorm"] =
+			[
+				Spell(
+					[],
+					new DrawCards(Ref.You, 3),
+					PutOnTop(
+						"Put a card from your hand on top of your library (the next goes above it)"
+					),
+					PutOnTop("Put a card from your hand on top of your library — you draw it next")
+				),
+			],
 		};
 }

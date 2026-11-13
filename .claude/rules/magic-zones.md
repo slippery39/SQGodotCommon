@@ -145,6 +145,7 @@ whose subsystem it lives in.
   graveyard", "a land you control", "you may put a land card from your hand") is `MoveChosen(From, filter, To) { May,
   Then, Otherwise }` — each zone its own choice (graveyard `ChooseAmongChoice`, battlefield `ChoosePermanentChoice`,
   hand `ChooseCardsFromHandChoice`, so a record's answers still fit), then `MoveTo(Ref.Chosen)`; "if you can't" is
-  `Otherwise`, "if you do" `Then` (Temporal Conqueror, Sylvia Tilly, Erica Ortegas).
+  `Otherwise`, "if you do" `Then` (Temporal Conqueror, Sylvia Tilly, Erica Ortegas). "Put two cards from your hand on
+  top of your library in any order" (Brainstorm) is two of them `{ OnTop }`, the second on top.
 - **"[Effect]. … for each [one] [done] this way"** (Decree of Pain) is the effect's `Then` with `Ref.ThisWay` — the
   ids it actually did it to (`Destroy`: the ones that left; an indestructible one or McCoy's save didn't).

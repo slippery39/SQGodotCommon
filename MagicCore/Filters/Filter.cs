@@ -268,6 +268,7 @@ public enum Stat
 	Power,
 	Toughness,
 	ManaValue, // on the stack X counts (CR 202.3e)
+	PowerPlusToughness, // Cut Down: "total power and toughness"
 }
 
 /// <summary>
@@ -295,6 +296,7 @@ public sealed record StatBetween(Stat Stat, Effects.Count Min, Effects.Count Max
 		{
 			Stat.Power => s.Power(card),
 			Stat.Toughness => s.Toughness(card),
+			Stat.PowerPlusToughness => s.Power(card) + s.Toughness(card),
 			_ => card.ManaValueNow,
 		};
 		return n >= Bound(s, Min, c) && n <= Bound(s, Max, c);

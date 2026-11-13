@@ -689,9 +689,14 @@ public static class StackResolution
 	/// THE counter (CR 701.6): a spell goes to its owner's graveyard — through MoveCard, so flashback
 	/// still exiles it and a prepared copy still ceases to exist — and an ability is removed. A spell
 	/// that "can't be countered" stays: the counter does nothing to it, and it was still cast
-	/// (MtgCore's counter traps keep the same two rules).
+	/// (MtgCore's counter traps keep the same two rules). Remand's hand or Memory Lapse's library top
+	/// instead (<paramref name="to"/>) — "countered this way" only: one that can't be countered stays.
 	/// </summary>
-	public static GameState Counter(GameState s, int stackObjectId)
+	public static GameState Counter(
+		GameState s,
+		int stackObjectId,
+		ZoneType to = ZoneType.Graveyard
+	)
 	{
 		if (
 			!s.HasObject(stackObjectId)
@@ -701,7 +706,11 @@ public static class StackResolution
 		return s.GetObject(stackObjectId) switch
 		{
 			Card spell when !CanBeCountered(spell) => s,
-			Card spell => s.MoveCard(spell.Id, s.ZoneId(spell.OwnerId, ZoneType.Graveyard)),
+			Card spell => s.MoveCard(
+				spell.Id,
+				s.ZoneId(spell.OwnerId, to),
+				toTop: to == ZoneType.Library
+			),
 			_ => s.RemoveObject(stackObjectId),
 		};
 	}

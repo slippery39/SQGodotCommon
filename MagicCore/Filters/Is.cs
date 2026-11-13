@@ -115,6 +115,10 @@ public static class Is
 	public static Filter ToughnessAtMost(Effects.Count n) =>
 		new StatBetween(Stat.Toughness, int.MinValue, n);
 
+	/// <summary>Cut Down: "with total power and toughness 5 or less".</summary>
+	public static Filter TotalPowerAndToughnessAtMost(Effects.Count n) =>
+		new StatBetween(Stat.PowerPlusToughness, int.MinValue, n);
+
 	public static Filter ManaValueAtLeast(Effects.Count n) =>
 		new StatBetween(Stat.ManaValue, n, int.MaxValue);
 

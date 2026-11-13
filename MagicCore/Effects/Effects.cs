@@ -160,8 +160,18 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 /// </summary>
 public record TakeExtraTurn : Effect
 {
+	/// <summary>Time Warp: "Target player takes an extra turn after this one."</summary>
+	public Ref Who { get; init; } = Ref.You;
+
 	public override ActionResult Execute(GameState s) =>
-		new(s.WithGame(s.GetGame() with { ExtraTurns = s.GetGame().ExtraTurns.Add(Controller) }));
+		new(
+			s.WithGame(
+				s.GetGame() with
+				{
+					ExtraTurns = s.GetGame().ExtraTurns.AddRange(All(Who, s)),
+				}
+			)
+		);
 }
 
 /// <summary>
@@ -1093,8 +1103,14 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 /// <summary>Precise Redaction: "Counter target spell" — through StackResolution.Counter.</summary>
 public record Counter(Ref What) : Effect
 {
+	/// <summary>
+	/// Remand: "If that spell is countered this way, put it into its owner's hand instead of into that player's
+	/// graveyard" (Hand); Memory Lapse: "on top of its owner's library" (Library — the top).
+	/// </summary>
+	public ZoneType To { get; init; } = ZoneType.Graveyard;
+
 	public override ActionResult Execute(GameState s) =>
-		new(All(What, s).ToList().Aggregate(s, StackResolution.Counter));
+		new(All(What, s).ToList().Aggregate(s, (st, id) => StackResolution.Counter(st, id, To)));
 }
 
 /// <summary>After the payer's answer: pay the cost, or the spell or ability is countered.</summary>

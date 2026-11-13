@@ -129,7 +129,8 @@ whose subsystem it lives in.
 - **A counted bound in a filter** ("mana value less than Sisay's power", Omnipresence's "≤ the number of creatures
   you control") is `StatBetween` with `Count` bounds (`Is.ManaValueAtMost(Count …)`), counted as the filter is asked
   with its controller and source — so a choice's filter passes the ability's source (`SourceOf.Context`). X reads 0
-  there. "Cast from your hand without paying" is `MayCastFromHandFree(filter)`.
+  there. "Cast from your hand without paying" is `MayCastFromHandFree(filter)`. "Total power and toughness 5 or less"
+  (Cut Down) is the same filter over `Stat.PowerPlusToughness` (`Is.TotalPowerAndToughnessAtMost`).
 - **A player's hexproof and prevented damage** (The Needs of the Many) are `ThisTurnEffect`s on that player:
   `YouHaveHexproof` asked in `TargetSpec.IsLegal` (an opponent's spell or ability only), `PreventAllDamageToYou` in
   `Damage.Deal` before anything is dealt — so no lifelink, no "dealt damage" trigger.

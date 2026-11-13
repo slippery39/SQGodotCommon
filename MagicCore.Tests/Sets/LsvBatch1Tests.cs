@@ -389,6 +389,276 @@ public class LsvBatch1Tests : FraBoardTest
 		Assert.That(Alive(city), Nu.False);
 	}
 
+	// ===== MC-4.3b: counters =====
+
+	static CardDefinition Boon =>
+		TestGames.Inline("Boon", "{1}", "Instant", null, new GainLife(Ref.You, 1));
+
+	[TestCase("Counterspell")]
+	[TestCase("Mana Leak")]
+	[TestCase("Mana Tithe")]
+	[TestCase("Spell Pierce")]
+	public void Counters_TheirSpell(string name)
+	{
+		var spell = TheirSpellOnTheStack(Boon);
+		Cast(Hand(Lsv(name), me), [], spell); // "unless its controller pays": they don't
+		Assert.That(s.IsIn(spell, them, ZoneType.Graveyard), "countered");
+		Assert.That(Life(them), Nu.EqualTo(20));
+	}
+
+	[Test]
+	public void SpellPierce_TargetsOnlyANoncreatureSpell()
+	{
+		TheirSpellOnTheStack(TestGames.Creature("Bear", "2/2", "Flash"));
+		var pierce = Hand(Lsv("Spell Pierce"), me);
+		Assert.That(Casts(pierce), Nu.Empty);
+	}
+
+	[Test]
+	public void MemoryLapse_PutsItOnTopOfItsOwnersLibrary()
+	{
+		var spell = TheirSpellOnTheStack(Boon);
+		Cast(Hand(Lsv("Memory Lapse"), me), [], spell);
+		Assert.That(s.CardsIn(them, ZoneType.Library).First().Id, Nu.EqualTo(spell));
+	}
+
+	[Test]
+	public void Remand_ReturnsItToHand_AndDraws()
+	{
+		var spell = TheirSpellOnTheStack(Boon);
+		var remand = Hand(Lsv("Remand"), me);
+		var hand = HandCount(me);
+		Cast(remand, [], spell);
+		Assert.That(s.IsIn(spell, them, ZoneType.Hand), "into its owner's hand instead");
+		Assert.That(HandCount(me), Nu.EqualTo(hand - 1 + 1), "Draw a card.");
+	}
+
+	[Test]
+	public void SternScolding_CountersASmallCreatureSpell_NotABigOne()
+	{
+		var big = TheirSpellOnTheStack(TestGames.Creature("Giant", "3/3", "Flash"));
+		var scolding = Hand(Lsv("Stern Scolding"), me);
+		Assert.That(Casts(scolding), Nu.Empty, "power and toughness both 3");
+		Resolve();
+		Assert.That(Alive(big));
+
+		var small = TheirSpellOnTheStack(TestGames.Creature("Wall", "0/4", "Flash"));
+		Cast(scolding, [], small);
+		Assert.That(s.IsIn(small, them, ZoneType.Graveyard), "power 2 or less");
+	}
+
+	// ===== Burn and removal =====
+
+	[Test]
+	public void LightningBolt_ThreeToAnyTarget()
+	{
+		Cast(Hand(Lsv("Lightning Bolt"), me), [], them);
+		Assert.That(Life(them), Nu.EqualTo(17));
+	}
+
+	[Test]
+	public void BurstLightning_TwoOrKickedFour()
+	{
+		Cast(Hand(Lsv("Burst Lightning"), me), [], them);
+		Assert.That(Life(them), Nu.EqualTo(18));
+		var kicked = Hand(Lsv("Burst Lightning"), me);
+		s = s.Act(Casts(kicked).First(c => c.Kicked && c.Targets.Single() == them));
+		Resolve();
+		Assert.That(Life(them), Nu.EqualTo(18 - 4));
+	}
+
+	[Test]
+	public void SwordsToPlowshares_ExilesIt_ItsControllerGainsItsPower()
+	{
+		var giant = Field(TestGames.Creature("Giant", "3/3"), them);
+		Cast(Hand(Lsv("Swords to Plowshares"), me), [], giant);
+		Assert.That((s.IsIn(giant, them, ZoneType.Exile), Life(them)), Nu.EqualTo((true, 23)));
+	}
+
+	[TestCase("Path to Exile", ZoneType.Exile)]
+	[TestCase("Erode", ZoneType.Graveyard)]
+	public void PathAndErode_ItsControllerMayFetchABasicTapped(string name, ZoneType to)
+	{
+		var giant = Field(TestGames.Creature("Giant", "3/3"), them);
+		var lands = s.CardsIn(them, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
+		Cast(Hand(Lsv(name), me), [], giant);
+		Assert.That(s.IsIn(giant, them, to));
+		Assert.That(
+			s.CardsIn(them, ZoneType.Battlefield).Count(c => c.Is(CardType.Land)),
+			Nu.EqualTo(lands),
+			"they may decline"
+		);
+
+		var other = Field(TestGames.Creature("Giant", "3/3"), them);
+		var again = Hand(Lsv(name), me);
+		s = s.Act(Casts(again).First(c => c.Targets.Single() == other));
+		Resolve(c =>
+			c switch
+			{
+				ChooseFromLibraryChoice => c.Options.Take(1).Select(o => o.Id),
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			}
+		);
+		var fetched = s.CardsIn(them, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Land))
+			.ToList();
+		Assert.That(fetched.Count, Nu.EqualTo(lands + 1), "a basic land card onto the battlefield");
+		Assert.That(fetched.Last().IsTapped, "tapped");
+	}
+
+	[Test]
+	public void PathToExile_AStolenCreature_ItsControllerFetches()
+	{
+		var stolen = Field(TestGames.Creature("Giant", "3/3"), me);
+		s = s.GainControl(stolen, them); // TEST SETUP: mine, controlled by them
+		var mine = s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
+		var theirs = s.CardsIn(them, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
+		var path = Hand(Lsv("Path to Exile"), me);
+		s = s.Act(Casts(path).First(c => c.Targets.Single() == stolen));
+		Resolve(c =>
+			c switch
+			{
+				ChooseFromLibraryChoice => c.Options.Take(1).Select(o => o.Id),
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			}
+		);
+		Assert.That(s.IsIn(stolen, me, ZoneType.Exile), "to its owner's exile");
+		Assert.That(
+			(
+				s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land)),
+				s.CardsIn(them, ZoneType.Battlefield).Count(c => c.Is(CardType.Land))
+			),
+			Nu.EqualTo((mine, theirs + 1)),
+			"its controller searches, not its owner"
+		);
+	}
+
+	[Test]
+	public void CutDown_TotalPowerAndToughnessFiveOrLess()
+	{
+		var small = Field(TestGames.Creature("Bear", "2/3"), them);
+		var big = Field(TestGames.Creature("Giant", "3/3"), them);
+		var cut = Hand(Lsv("Cut Down"), me);
+		Assert.That(
+			Casts(cut).Select(c => c.Targets.Single()),
+			Has.Member(small).And.No.Member(big)
+		);
+		Cast(cut, [], small);
+		Assert.That(Alive(small), Nu.False);
+	}
+
+	[Test]
+	public void Vindicate_DestroysAnyPermanent()
+	{
+		var plains = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Name == "Plains").Id;
+		Cast(Hand(Lsv("Vindicate"), me), [], plains);
+		Assert.That(Alive(plains), Nu.False);
+	}
+
+	[Test]
+	public void WrathOfGod_DestroysEveryCreature()
+	{
+		var mine = Field(TestGames.Creature("Bear", "2/2"), me);
+		var theirs = Field(TestGames.Creature("Giant", "3/3"), them);
+		Cast(Hand(Lsv("Wrath of God"), me), []);
+		Assert.That((Alive(mine), Alive(theirs)), Nu.EqualTo((false, false)));
+	}
+
+	[Test]
+	public void AbruptDecay_NonlandManaValueThreeOrLess_CantBeCountered()
+	{
+		var cheap = Field(Lsv("Basalt Monolith"), them);
+		var dear = Field(TestGames.CreatureCosting("{4}", "Ogre", "4/4"), them);
+		var decay = Hand(Lsv("Abrupt Decay"), me);
+		var plains = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Name == "Plains").Id;
+		Assert.That(
+			Casts(decay).Select(c => c.Targets.Single()),
+			Has.Member(cheap).And.No.Member(plains).And.No.Member(dear)
+		);
+		s = s.Act(Casts(decay).First(c => c.Targets.Single() == cheap));
+		var counter = Hand(Lsv("Counterspell"), them);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = them,
+				CardId = counter,
+				Targets = [decay],
+			}
+		);
+		Resolve();
+		Assert.That(Alive(cheap), Nu.False, "This spell can't be countered.");
+		Assert.That(Alive(dear));
+	}
+
+	[Test]
+	public void Abrade_ThreeDamageToACreature_OrDestroyAnArtifact()
+	{
+		var giant = Field(TestGames.Creature("Giant", "3/3"), them);
+		var mox = Field(Lsv("Mox Pearl"), them);
+		Cast(Hand(Lsv("Abrade"), me), [0], giant);
+		Cast(Hand(Lsv("Abrade"), me), [1], mox);
+		Assert.That((Alive(giant), Alive(mox)), Nu.EqualTo((false, false)));
+	}
+
+	[Test]
+	public void Pyroblast_HitsOnlyWhatIsBlue()
+	{
+		var blue = Field(Lsv("Faerie Mastermind"), them);
+		var red = Field(Lsv("Goblin Welder"), them);
+		Cast(Hand(Lsv("Pyroblast"), me), [1], red);
+		Assert.That(Alive(red), "a legal target, but not blue: nothing");
+		Cast(Hand(Lsv("Pyroblast"), me), [1], blue);
+		Assert.That(Alive(blue), Nu.False);
+
+		var spell = TheirSpellOnTheStack(Lsv("Brainstorm"));
+		Cast(Hand(Lsv("Pyroblast"), me), [0], spell);
+		Assert.That(s.IsIn(spell, them, ZoneType.Graveyard), "counter target spell if it's blue");
+	}
+
+	// ===== Turns and cards =====
+
+	[Test]
+	public void TimeWalk_YouTakeAnExtraTurn_TimeWarp_TargetPlayerDoes()
+	{
+		Cast(Hand(Lsv("Time Walk"), me), []);
+		Assert.That(s.GetGame().ExtraTurns, Nu.EqualTo(new[] { me }));
+		Cast(Hand(Lsv("Time Warp"), me), [], them);
+		Assert.That(s.GetGame().ExtraTurns, Nu.EqualTo(new[] { me, them }));
+	}
+
+	[Test]
+	public void AncestralRecall_TargetPlayerDrawsThree()
+	{
+		var hand = HandCount(them);
+		Cast(Hand(Lsv("Ancestral Recall"), me), [], them);
+		Assert.That(HandCount(them), Nu.EqualTo(hand + 3));
+	}
+
+	[Test]
+	public void Brainstorm_DrawThree_PutTwoBackOnTop_InTheOrderChosen()
+	{
+		var first = Hand(TestGames.Card("Plains"), me);
+		var second = Hand(TestGames.Card("Island"), me);
+		var brainstorm = Hand(Lsv("Brainstorm"), me);
+		var hand = HandCount(me);
+		var picks = new Queue<int>([first, second]);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = brainstorm });
+		Resolve(c =>
+			c switch
+			{
+				ChooseCardsFromHandChoice => [picks.Dequeue()],
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			}
+		);
+		Assert.That(HandCount(me), Nu.EqualTo(hand - 1 + 3 - 2));
+		Assert.That(
+			s.CardsIn(me, ZoneType.Library).Take(2).Select(c => c.Id),
+			Nu.EqualTo(new[] { second, first }),
+			"the second put back is on top"
+		);
+	}
+
 	// ===== Exalted =====
 
 	[Test]

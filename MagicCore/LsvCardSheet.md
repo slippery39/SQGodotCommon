@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 3/46 · uncommon 12/86 · rare 48/279 · mythic 16/108 · **85/528**
+**Playable:** common 8/46 · uncommon 22/86 · rare 53/279 · mythic 16/108 · **107/528**
 
 ### "Name Sticker" Goblin
 
@@ -56,7 +56,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Draw three cards, then put two cards from your hand on top of your library in any order.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Brainstorm"] =
+[
+	Spell(
+		[],
+		new DrawCards(Ref.You, 3),
+		PutOnTop(
+			"Put a card from your hand on top of your library (the next goes above it)"
+		),
+		PutOnTop("Put a card from your hand on top of your library — you draw it next")
+	),
+],
+```
 
 ### Burst Lightning
 
@@ -65,7 +81,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Kicker {4} (You may pay an additional {4} as you cast this spell.)  
 > Burst Lightning deals 2 damage to any target. If this spell was kicked, it deals 4 damage instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `KickerComponent` — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U}…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
+
+```csharp
+["Burst Lightning"] =
+[
+	new KickerComponent(ManaCost.Parse("{4}")),
+	Spell(
+		[TargetSpec.AnyTarget()],
+		new If(new WasKicked(), [new DealDamage(Ref.Target(), 4)])
+		{
+			Otherwise = [new DealDamage(Ref.Target(), 2)],
+		}
+	),
+],
+```
 
 ### Cathar Commando
 
@@ -251,7 +283,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target spell unless its controller pays {3}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+```csharp
+["Mana Leak"] = [CounterUnless("{3}")],
+```
 
 ### Mana Tithe
 
@@ -259,7 +295,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target spell unless its controller pays {1}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+```csharp
+["Mana Tithe"] = [CounterUnless("{1}")],
+```
 
 ### Memory Lapse
 
@@ -267,7 +307,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target spell. If that spell is countered this way, put it on top of its owner's library instead of into that player's graveyard.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Memory Lapse"] =
+[
+	Spell([TargetSpec.Spell()], new Counter(Ref.Target()) { To = ZoneType.Library }),
+],
+```
 
 ### Mine Collapse
 
@@ -438,7 +487,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Abrade deals 3 damage to target creature.  
 > • Destroy target artifact.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Abrade"] =
+[
+	ModalSpell(
+		"Abrade",
+		1,
+		M([Creature], new DealDamage(Ref.Target(), 3)),
+		M([Target(Is.Artifact)], new Destroy(Ref.Target()))
+	),
+],
+```
 
 ### Animate Dead
 
@@ -552,7 +615,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target spell.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Counterspell"] = [Spell([TargetSpec.Spell()], new Counter(Ref.Target()))],
+```
 
 ### Cut Down
 
@@ -560,7 +629,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy target creature with total power and toughness 5 or less.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Cut Down"] =
+[
+	Spell(
+		[Target(Is.Creature & Is.TotalPowerAndToughnessAtMost(5))],
+		new Destroy(Ref.Target())
+	),
+],
+```
 
 ### Dark Ritual
 
@@ -765,7 +846,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Lightning Bolt deals 3 damage to any target.
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** ArenaDeckTests
+**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Lightning Bolt"] = [Spell([TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 3))],
+```
 
 ### Lightning Greaves
 
@@ -901,7 +988,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Path to Exile"] = [Spell([Creature], ItsControllerMayFetch, new Exile(Ref.Target()))],
+```
 
 ### Pentad Prism
 
@@ -936,7 +1029,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Counter target spell if it's blue.  
 > • Destroy target permanent if it's blue.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Pyroblast"] =
+[
+	ModalSpell(
+		"Pyroblast",
+		1,
+		M([TargetSpec.Spell()], IfBlue(new Counter(Ref.Target()))),
+		M([Target()], IfBlue(new Destroy(Ref.Target())))
+	),
+],
+```
 
 ### Rain of Filth
 
@@ -953,7 +1060,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Counter target spell. If that spell is countered this way, put it into its owner's hand instead of into that player's graveyard.  
 > Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Remand"] =
+[
+	Spell(
+		[TargetSpec.Spell()],
+		new Counter(Ref.Target()) { To = ZoneType.Hand },
+		new DrawCards(Ref.You, 1)
+	),
+],
+```
 
 ### Reprieve
 
@@ -1051,7 +1171,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target noncreature spell unless its controller pays {2}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+```csharp
+["Spell Pierce"] = [CounterUnless("{2}", !Is.Creature)],
+```
 
 ### Stern Scolding
 
@@ -1059,7 +1183,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target creature spell with power or toughness 2 or less.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Stern Scolding"] =
+[
+	Spell(
+		[TargetSpec.Spell(Is.Creature & (Is.PowerAtMost(2) | Is.ToughnessAtMost(2)))],
+		new Counter(Ref.Target())
+	),
+],
+```
 
 ### Stock Up
 
@@ -1075,7 +1211,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile target creature. Its controller gains life equal to its power.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Swords to Plowshares"] =
+[
+	// The power is read before it leaves (last-known information).
+	Spell(
+		[Creature],
+		new GainLife(Ref.ControllerOfTarget(0), Count.PowerOf(Ref.Target())),
+		new Exile(Ref.Target())
+	),
+],
+```
 
 ### Talisman of Conviction
 
@@ -1302,7 +1452,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This spell can't be countered.  
 > Destroy target nonland permanent with mana value 3 or less.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `CantBeCountered` — "This spell can't be countered." Read by StackResolution.Counter.; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Abrupt Decay"] =
+[
+	new CantBeCountered(),
+	Spell([Target(!Is.Land & Is.ManaValueAtMost(3))], new Destroy(Ref.Target())),
+],
+```
 
 ### Agent Bishop, Man in Black
 
@@ -2033,7 +2193,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy target creature or planeswalker. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Erode"] =
+[
+	Spell([CreatureOrPlaneswalker], ItsControllerMayFetch, new Destroy(Ref.Target())),
+],
+```
 
 ### Ertai Resurrected
 
@@ -2116,7 +2285,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever an opponent draws their second card each turn, you draw a card.  
 > {3}{U}: Each player draws a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** NOT IMPLEMENTED · **tests naming it:** LsvBatch1Tests
 
 ### Fallen Shinobi
 
@@ -2192,7 +2361,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may put a creature card from your hand onto the battlefield. If you do, sacrifice it unless you pay its mana cost reduced by {2}.
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** FraCommonTests, FraRareOneOffTests, FraUncommonTests, StackTests, TrkBatch4cTests
+**Status:** NOT IMPLEMENTED · **tests naming it:** FraCommonTests, FraRareOneOffTests, FraUncommonTests, LsvBatch1Tests, StackTests, TrkBatch4cTests
 
 ### Flooded Strand
 
@@ -2344,7 +2513,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Choose target artifact a player controls and target artifact card in that player's graveyard. If both targets are still legal as this ability resolves, that player simultaneously sacrifices the artifact and returns the artifact card to the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** NOT IMPLEMENTED · **tests naming it:** LsvBatch1Tests
 
 ### Godless Shrine
 
@@ -3793,7 +3962,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player takes an extra turn after this one.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TakeExtraTurn` — H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Time Warp"] =
+[
+	Spell([TargetSpec.Player()], new TakeExtraTurn { Who = Ref.Target() }),
+],
+```
 
 ### Tishana's Tidebinder
 
@@ -3967,7 +4145,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy target permanent.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Vindicate"] = [Spell([Target()], new Destroy(Ref.Target()))],
+```
 
 ### Voice of Victory
 
@@ -4102,7 +4286,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy all creatures. They can't be regenerated.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Wrath of God"] = [Spell([], new Destroy(Ref.Permanents(Is.Creature)))],
+```
 
 ### Xander's Lounge
 
@@ -5552,7 +5742,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player draws three cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Ancestral Recall"] = [Spell([TargetSpec.Player()], new DrawCards(Ref.Target(), 3))],
+```
 
 ### Black Lotus
 
@@ -5642,7 +5838,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Take an extra turn after this one.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch1Tests
+
+**Engine pieces:** `TakeExtraTurn` — H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on…
+
+```csharp
+["Time Walk"] = [Spell([], new TakeExtraTurn())],
+```
 
 ### Timetwister
 
