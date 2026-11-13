@@ -93,6 +93,21 @@ public class PositionSuiteTests
 		Assert.That(PositionSuite.Parse(PositionSuite.ToText(empty)).Games[0].Moves, Is.Empty);
 	}
 
+	// MC-7: a suite generated before the damage split was a question never answered it — the file says which,
+	// and only a new one says it records them (the tracked suite replaying is TheTrackedSuite_StillReplays).
+	[Test]
+	public void WhetherItsGamesAnswerTheDamageSplit_ReadsBack()
+	{
+		var old = new PositionSuite.Suite("greedy", [], [], SplitsRecorded: false);
+		Assert.That(PositionSuite.Parse(PositionSuite.ToText(old)).SplitsRecorded, Is.False);
+		Assert.That(
+			PositionSuite
+				.Parse(PositionSuite.ToText(old with { SplitsRecorded = true }))
+				.SplitsRecorded,
+			Is.True
+		);
+	}
+
 	// ===== The oracle (AI-6.4b), cheap here: the machinery, not its strength =====
 
 	static readonly Lazy<PositionSuite.Suite> WithOracle =

@@ -146,7 +146,7 @@ public sealed class MagicTableManager
 		var declaring = false;
 		foreach (var move in record.Moves)
 		{
-			while (GameRecord.UnaskedOrder(m.State, move.Offers) is { } answer) // a record from before TBL-9.2
+			while (GameRecord.Unasked(m.State, move.Offers) is { } answer) // a record from before TBL-9.2 or MC-7
 				m.Play(answer, "rule");
 			if (differs is null && MoveTokens.Offers(m.State) != move.Offers)
 				differs = played + 1;

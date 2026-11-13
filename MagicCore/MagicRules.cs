@@ -697,6 +697,7 @@ public static class MagicRules
 		typeof(ChooseNumberChoice),
 		typeof(YesNoChoice),
 		typeof(ChooseCastChoice),
+		typeof(AssignCombatDamageChoice),
 	];
 
 	/// <summary>

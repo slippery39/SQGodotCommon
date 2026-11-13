@@ -43,11 +43,17 @@ public static class Lookahead
 	/// A choice Settle answers by its chooser's best (<see cref="Evaluator.Terms.SettleChoices"/>, AI-17.6): one
 	/// target, or a single "you may" (none or one — a pay-to-keep pays, as the cheap answer does) — and
 	/// under <see cref="Evaluator.Terms.SettleDeep"/> any single pick, a forced sacrifice included (an edict
-	/// took the first listed: their best). Combat declarations keep their own rules (QuickAnswer).
+	/// took the first listed: their best). Combat declarations and the damage split (MC-7) keep their own rules (QuickAnswer).
 	/// </summary>
 	static bool IsChosen(ChoiceAction choice) =>
 		!Evaluator.IsOff(Evaluator.Terms.SettleChoices)
-		&& choice is not (DeclareAttackerChoice or DeclareBlockerChoice or PayToKeepChoice)
+		&& choice
+			is not (
+				DeclareAttackerChoice
+				or DeclareBlockerChoice
+				or AssignCombatDamageChoice
+				or PayToKeepChoice
+			)
 		&& choice.MaxChoices == 1
 		&& (
 			choice is ChooseTargetChoice
@@ -119,6 +125,8 @@ public static class Lookahead
 		}
 		if (choice is DeclareAttackerChoice)
 			return [CombatOption.None];
+		if (choice is AssignCombatDamageChoice divide)
+			return [divide.Default(s)];
 		if (choice is PayToKeepChoice or ChooseCastChoice) // looking ahead: keep the spell if it can be paid; cast it
 			return choice.Options.Select(o => o.Id).Take(1); // (a cast choice may be left empty, MinChoices 0: TBL-2.16)
 		return choice.Options.Take(choice.MinChoices).Select(o => o.Id);

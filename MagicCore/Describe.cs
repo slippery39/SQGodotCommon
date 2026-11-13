@@ -85,6 +85,8 @@ public static class Describe
 		{
 			DeclareAttackerChoice a => $"Attack with {Card(s, s.GetCard(a.CreatureId))}?",
 			DeclareBlockerChoice b => $"Block with {Card(s, s.GetCard(b.CreatureId))}?",
+			AssignCombatDamageChoice d =>
+				$"{Name(s, d.AttackerId)}: how much damage to {Name(s, d.BlockerId)}? ({d.Options.Count - 1} left to divide)",
 			ChooseModesChoice m => $"{Name(s, m.SourceId)}: {m.Prompt.ToLowerInvariant()}",
 			ChooseTargetChoice t =>
 				$"{Name(s, t.SourceId)}: choose target {t.Index + 1}{(t.Spec.Optional ? " (optional)" : "")}",

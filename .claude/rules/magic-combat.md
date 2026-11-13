@@ -20,6 +20,13 @@ whose subsystem it lives in.
   controller has attacking, and it attacks a player, not a planeswalker.
 - **How much combat damage a creature assigns** is `Combat.Assigns` — power, or toughness (Ghalta), or a
   negative power as positive (Loot). Combat never reads `s.Power` for damage directly.
+- **A creature blocked by two or more divides its damage as its controller chooses** (CR 510.1c since Foundations,
+  2024 — no damage assignment order, no lethal-first; trample still needs lethal on every blocker before the player,
+  702.19c). `Combat.BeginDamage` asks `AssignCombatDamageChoice` for each blocker but the last (which takes the rest),
+  in each damage step, then `DealCombatDamageAction` deals it all at once. The AI's quick answer and every replay of a
+  record or suite made before MC-7 (`GameRecord.Unasked`, `PositionSuite.Replay`) is `Combat.DefaultSplit` — the
+  split the engine made alone before; a new question like it needs the same three (QuickAnswer, `Settle`'s
+  exclusions, the replays) or the look-ahead and old records silently change.
 - **An attack limit** ("no more than one creature can attack this planeswalker") is an option
   `DeclareAttackerChoice` doesn't offer, read from the declarations already made in that pipeline.
 - **"Whenever you attack"** and **"one or more … are dealt combat damage"** are ONE event each per

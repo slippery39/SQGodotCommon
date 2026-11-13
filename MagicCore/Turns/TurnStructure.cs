@@ -260,12 +260,12 @@ public static class TurnStructure
 			case Step.FirstStrikeDamage:
 				if (!Combat.Attackers(s).Any() || !Combat.AnyFirstStrike(s))
 					return EndStep(s);
-				return GivePriority(Combat.DealDamage(s, firstStrikeStep: true), active);
+				return Combat.BeginDamage(s, firstStrikeStep: true);
 
 			case Step.CombatDamage:
 				if (!Combat.Attackers(s).Any())
 					return EndStep(s);
-				return GivePriority(Combat.DealDamage(s, firstStrikeStep: false), active);
+				return Combat.BeginDamage(s, firstStrikeStep: false);
 
 			case Step.PostCombatMain:
 				return GivePriority(Combat.EndCombat(s), active);

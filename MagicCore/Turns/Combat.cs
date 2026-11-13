@@ -191,27 +191,124 @@ public static class Combat
 			: power;
 	}
 
+	static bool StrikesIn(GameState s, Card c, bool firstStrikeStep) =>
+		firstStrikeStep
+			? s.Has(c, "First strike") || s.Has(c, "Double strike")
+			: !s.Has(c, "First strike") || s.Has(c, "Double strike");
+
+	/// <summary>
+	/// The damage step's first part (MC-7): each attacker dealing damage now that two or more creatures block
+	/// has its damage divided by its controller (CR 510.1c — "divided as its controller chooses among them";
+	/// Foundations, 2024, removed the damage assignment order and its lethal-first rule): one
+	/// <see cref="AssignCombatDamageChoice"/> per blocker but the last, which takes the rest, then
+	/// <see cref="DealCombatDamageAction"/>. Nothing to divide: the damage at once.
+	/// </summary>
+	public static GameState BeginDamage(GameState s, bool firstStrikeStep)
+	{
+		var asks = Attackers(s)
+			.Where(a => a.IsBlocked && Assigns(s, a) > 0 && StrikesIn(s, a, firstStrikeStep))
+			.SelectMany(a =>
+				BlockersOf(s, a.Id)
+					.SkipLast(1)
+					.Select(b =>
+						(GameAction)new AssignCombatDamageChoice(a.ControllerId, a.Id, b.Id)
+					)
+			)
+			.ToList();
+		if (asks.Count == 0)
+			return TurnStructure.GivePriority(
+				DealDamage(s, firstStrikeStep),
+				s.GetGame().ActivePlayerId
+			);
+		return s.SpawnAction(
+			new PipelineAction { Steps = [.. asks, new DealCombatDamageAction(firstStrikeStep)] }
+		);
+	}
+
+	/// <summary>Lethal damage to a blocker (CR 702.19b): its toughness less damage marked, 1 from deathtouch.</summary>
+	static int Lethal(GameState s, Card attacker, Card blocker) =>
+		s.Has(attacker, "Deathtouch") ? 1 : Math.Max(1, s.Toughness(blocker) - blocker.Damage);
+
+	/// <summary>
+	/// The split nobody chose — and the AI's quick answer (<see cref="AssignCombatDamageChoice.Default"/>): each
+	/// blocker in declaration order takes lethal; the rest goes to the player with trample, else onto the first.
+	/// </summary>
+	public static IReadOnlyList<(int TargetId, int Amount)> DefaultSplit(
+		GameState s,
+		Card attacker,
+		int total
+	)
+	{
+		var blockers = BlockersOf(s, attacker.Id).ToList();
+		var shares = new List<(int TargetId, int Amount)>();
+		var remaining = total;
+		foreach (var blocker in blockers)
+		{
+			var amount = Math.Min(remaining, Lethal(s, attacker, blocker));
+			shares.Add((blocker.Id, amount));
+			remaining -= amount;
+		}
+		if (remaining > 0 && s.Has(attacker, "Trample"))
+			shares.Add((attacker.AttackingId, remaining));
+		else if (remaining > 0 && shares.Count > 0)
+			shares[0] = (shares[0].TargetId, shares[0].Amount + remaining);
+		return shares;
+	}
+
+	/// <summary>
+	/// Where a blocked attacker's damage goes: as divided (<paramref name="split"/>, each blocker but the last),
+	/// the last blocker the rest — or, with trample and lethal on every blocker, lethal and the rest to the
+	/// player (CR 702.19c). One blocker, or no answers: <see cref="DefaultSplit"/>.
+	/// ponytail: with trample the last blocker never takes more than lethal — overkilling it instead of the
+	/// player is never wanted; offer it if a card makes it so.
+	/// </summary>
+	static IReadOnlyList<(int TargetId, int Amount)> Division(
+		GameState s,
+		Card attacker,
+		int total,
+		IReadOnlyDictionary<(int Attacker, int Blocker), int>? split
+	)
+	{
+		var blockers = BlockersOf(s, attacker.Id).ToList();
+		if (split is null || blockers.Count < 2 || !split.Keys.Any(k => k.Attacker == attacker.Id))
+			return DefaultSplit(s, attacker, total);
+		var shares = new List<(int TargetId, int Amount)>();
+		var remaining = total;
+		var allLethal = true;
+		foreach (var blocker in blockers.SkipLast(1))
+		{
+			var amount = Math.Min(remaining, split.GetValueOrDefault((attacker.Id, blocker.Id)));
+			shares.Add((blocker.Id, amount));
+			remaining -= amount;
+			allLethal &= amount >= Lethal(s, attacker, blocker);
+		}
+		var last = blockers[^1];
+		var toLast =
+			allLethal && s.Has(attacker, "Trample")
+				? Math.Min(remaining, Lethal(s, attacker, last))
+				: remaining;
+		shares.Add((last.Id, toLast));
+		if (remaining > toLast)
+			shares.Add((attacker.AttackingId, remaining - toLast));
+		return shares;
+	}
+
 	/// <summary>
 	/// CR 510: every combatant that deals damage in this step deals it at once — assignments are
-	/// computed from the state before any of it lands.
-	///
-	/// ponytail: the attacker's controller does not choose the split among blockers. Each blocker
-	/// in declaration order takes lethal; the excess goes to the player with trample, else onto the
-	/// first blocker. Make it a choice when the AI can use one.
+	/// computed from the state before any of it lands. <paramref name="split"/>: how each attacker's
+	/// controller divided it among two or more blockers (<see cref="BeginDamage"/>).
 	/// </summary>
-	public static GameState DealDamage(GameState s, bool firstStrikeStep)
+	public static GameState DealDamage(
+		GameState s,
+		bool firstStrikeStep,
+		IReadOnlyDictionary<(int Attacker, int Blocker), int>? split = null
+	)
 	{
 		// Read once per combatant — every assignment is from the state before any damage lands.
 		var assigned = new Dictionary<int, int>();
 		int Assigned(Card c) =>
 			assigned.TryGetValue(c.Id, out var n) ? n : assigned[c.Id] = Assigns(s, c);
-		bool Deals(Card c) =>
-			Assigned(c) > 0
-			&& (
-				firstStrikeStep
-					? s.Has(c, "First strike") || s.Has(c, "Double strike")
-					: !s.Has(c, "First strike") || s.Has(c, "Double strike")
-			);
+		bool Deals(Card c) => Assigned(c) > 0 && StrikesIn(s, c, firstStrikeStep);
 
 		var hits = new List<(Card Source, int TargetId, int Amount)>();
 		foreach (var attacker in Attackers(s).Where(Deals))
@@ -221,21 +318,8 @@ public static class Combat
 				hits.Add((attacker, attacker.AttackingId, Assigned(attacker)));
 				continue;
 			}
-			var remaining = Assigned(attacker);
-			var blockers = BlockersOf(s, attacker.Id).ToList();
-			foreach (var blocker in blockers)
-			{
-				var lethal = s.Has(attacker, "Deathtouch")
-					? 1
-					: Math.Max(1, s.Toughness(blocker) - blocker.Damage);
-				var amount = Math.Min(remaining, lethal);
-				hits.Add((attacker, blocker.Id, amount));
-				remaining -= amount;
-			}
-			if (remaining > 0 && s.Has(attacker, "Trample"))
-				hits.Add((attacker, attacker.AttackingId, remaining));
-			else if (remaining > 0 && blockers.Count > 0)
-				hits.Add((attacker, blockers[0].Id, remaining));
+			foreach (var (targetId, amount) in Division(s, attacker, Assigned(attacker), split))
+				hits.Add((attacker, targetId, amount));
 		}
 		foreach (
 			var blocker in s.CardsIn(Defender(s), ZoneType.Battlefield)

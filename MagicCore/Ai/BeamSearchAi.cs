@@ -627,6 +627,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			is ChooseNumberChoice { NamesAManaValue: true }
 				or ChooseKeywordChoice { NamesACard: true }
 				or OrderLibraryTopChoice // a surveil's order: a rule, not n! orders (TBL-9.2)
+				or AssignCombatDamageChoice // a blocked attacker's split: GreedyAi's one-ply pick, not a rollout each (MC-7)
 		)
 			return [new Pick([.. greedy.Answer(s, choice)], key)]; // Nyota: a rule, not 11 rollouts (Shayne)
 		// a surveil's lands by rule (LandUnlock.Surveil), its spells branched as any pick
@@ -837,6 +838,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		{
 			DeclareAttackerChoice a => a.CreatureId,
 			DeclareBlockerChoice b => b.CreatureId,
+			AssignCombatDamageChoice d => d.BlockerId, // a blocker blocks one attacker: one question each
 			_ => 0,
 		}}|{choice.Prompt}|{string.Join(",", choice.Options.Select(o => o.Id))}";
 

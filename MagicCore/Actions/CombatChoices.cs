@@ -95,6 +95,95 @@ public record DeclareBlockerChoice : ChoiceAction
 	) => PlayerId;
 }
 
+/// <summary>
+/// MC-7: how much of an attacker's combat damage this blocker is assigned — asked of the attacker's
+/// controller for each blocker but the last, which takes the rest (CR 510.1c: "divided as its controller
+/// chooses among them"; no order since Foundations, 2024). Option id = the amount + 1, 0 to what is left.
+/// The AI's quick answer is <see cref="Default"/>, the split the engine made before it was a choice.
+/// </summary>
+public record AssignCombatDamageChoice : ChoiceAction
+{
+	public const string KeyPrefix = "damage:";
+
+	public int PlayerId { get; init; }
+	public int AttackerId { get; init; }
+	public int BlockerId { get; init; }
+
+	public AssignCombatDamageChoice(int playerId, int attackerId, int blockerId)
+	{
+		PlayerId = playerId;
+		AttackerId = attackerId;
+		BlockerId = blockerId;
+		MinChoices = 1;
+		MaxChoices = 1;
+		OutputKey = $"{KeyPrefix}{attackerId}:{blockerId}";
+		Prompt = "Divide combat damage";
+	}
+
+	/// <summary>Each answer so far: (attacker, blocker) → the damage assigned it.</summary>
+	public static IReadOnlyDictionary<(int Attacker, int Blocker), int> Read(
+		ImmutableDictionary<string, object> context
+	) =>
+		context
+			.Where(kv => kv.Key.StartsWith(KeyPrefix) && kv.Value is int)
+			.ToDictionary(
+				kv =>
+					kv.Key[KeyPrefix.Length..].Split(':') is [var a, var b]
+						? (int.Parse(a), int.Parse(b))
+						: throw new FormatException(kv.Key),
+				kv => (int)kv.Value - 1
+			);
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	)
+	{
+		var left =
+			Combat.Assigns(s, s.GetCard(AttackerId))
+			- Read(context).Where(kv => kv.Key.Attacker == AttackerId).Sum(kv => kv.Value);
+		var name = s.GetCard(BlockerId).Name;
+		return
+		[
+			.. Enumerable
+				.Range(0, Math.Max(left, 0) + 1)
+				.Select(n => new ChoiceOption
+				{
+					Id = n + 1,
+					DisplayText = $"{n} damage to {name}",
+				}),
+		];
+	}
+
+	/// <summary>The option of <see cref="Combat.DefaultSplit"/>'s share for this blocker, within what is left.</summary>
+	public int Default(GameState s)
+	{
+		var attacker = s.GetCard(AttackerId);
+		var share = Combat
+			.DefaultSplit(s, attacker, Combat.Assigns(s, attacker))
+			.Where(x => x.TargetId == BlockerId)
+			.Sum(x => x.Amount);
+		return Math.Min(share, Options.Count - 1) + 1;
+	}
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
+/// <summary>The combat damage step once the attackers' damage is divided (MC-7): dealt at once, then priority.</summary>
+public record DealCombatDamageAction(bool FirstStrikeStep) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			TurnStructure.GivePriority(
+				Combat.DealDamage(s, FirstStrikeStep, AssignCombatDamageChoice.Read(InputContext)),
+				s.GetGame().ActivePlayerId
+			)
+		);
+}
+
 static class Declarations
 {
 	public static IEnumerable<(int CreatureId, int ChosenId)> Read(

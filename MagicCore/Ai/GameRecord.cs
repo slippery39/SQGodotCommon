@@ -129,7 +129,7 @@ public sealed record GameRecord
 		for (var i = 0; i < Moves.Count; i++)
 		{
 			var move = Moves[i];
-			while (UnaskedOrder(s, move.Offers) is { } answer)
+			while (Unasked(s, move.Offers) is { } answer)
 				s = MoveTokens.Apply(s, answer);
 			if (MoveTokens.Offers(s) != move.Offers)
 				throw new MoveTokens.StaleException(
@@ -138,6 +138,13 @@ public sealed record GameRecord
 			before.Add(s);
 			s = MoveTokens.Apply(s, move.Token);
 		}
+		// a record from before MC-7 whose last move led into a damage split it never answered
+		while (
+			End is not null
+			&& MoveTokens.Ending(s) != End
+			&& s.GetPendingChoice() is AssignCombatDamageChoice split
+		)
+			s = MoveTokens.Apply(s, $"c{split.Default(s)}");
 		if (End is not null && MoveTokens.Ending(s) != End)
 			throw new MoveTokens.StaleException(
 				"every move replays, but the game ends differently"
@@ -146,15 +153,18 @@ public sealed record GameRecord
 	}
 
 	/// <summary>
-	/// A record made before TBL-9.2 never answered a surveil's "the rest on top in any order" — the engine kept
-	/// their order then. Asked now and not answered by the record: the answer that keeps that order, so the record
-	/// replays as it played (and its move numbers stay put). Null when the record does answer it.
+	/// A question the engine asks now that it decided alone when the record was made: a surveil's "the rest on
+	/// top in any order" (before TBL-9.2 the engine kept their order) and a blocked attacker's damage divided
+	/// among its blockers (before MC-7, <see cref="Turns.Combat.DefaultSplit"/>). Asked now and not answered by the
+	/// record: the answer the engine used to give, so the record replays as it played (and its move numbers
+	/// stay put). Null when the record does answer it.
 	/// </summary>
-	public static string? UnaskedOrder(GameState s, string recordedOffers) =>
-		s.GetPendingChoice() is OrderLibraryTopChoice order
-		&& MoveTokens.Offers(s) != recordedOffers
+	public static string? Unasked(GameState s, string recordedOffers) =>
+		MoveTokens.Offers(s) == recordedOffers ? null
+		: s.GetPendingChoice() is OrderLibraryTopChoice order
 			? "o" + string.Join(",", order.Options.Select(o => o.Id))
-			: null;
+		: s.GetPendingChoice() is AssignCombatDamageChoice divide ? $"c{divide.Default(s)}"
+		: null;
 
 	/// <summary>The position before move <paramref name="at"/> (from 1, as the transcript numbers it).</summary>
 	public GameState Before(int at) =>

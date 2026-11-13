@@ -462,6 +462,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 
 ## Choices — what a player is asked
 
+- **`AssignCombatDamageChoice`** — MC-7: how much of an attacker's combat damage this blocker is assigned — asked of the attacker's controller for each blocker but the last,…
 - **`ChooseAmongChoice`** — Something Worth Saving: "You may put a [Types] card from among them into your hand."
   - `Zone` (ZoneType): Where the cards are: a graveyard (mill), or exile (Uldaros' copies to cast).
   - `DeciderId` (int): Extrapolate the Impossible: "An opponent chooses one of them." Who chooses; 0 is the cards' owner.
