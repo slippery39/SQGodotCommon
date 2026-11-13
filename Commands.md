@@ -11,6 +11,7 @@ dotnet test MtgCore.Tests
 dotnet test MtgSimulator.Tests
 dotnet test SQGodotCommon.Tests
 dotnet test MagicCore.Tests
+dotnet test MagicCore.Tests --filter "TestCategory=Performance"   # wall-clock checks, explicit: run on a quiet machine
 ```
 
 ## Import a real set's card data (MagicCore)
