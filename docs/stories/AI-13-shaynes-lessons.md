@@ -337,7 +337,15 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       `Unsummon_IsHeld_AtMove547` (a guard; their turn, so patience doesn't touch it). Suite: 4
       decisions differ from no patience. Match: **53.0% ± 1.0pp, 600 games (318–282)**, undecided at
       5pp, "worse" rejected, cost the same — kept (Shayne's rule: sensible plays count; the agreed
-      position fixed). `docs/findings/magic-ai.md`
+      position fixed). `docs/findings/magic-ai.md`- [ ] AI-13.13 Holding ties with casting when the rollout casts it anyway (Shayne's notes, TBL-10.3, 2026-11-13; kept
+      game `Records/ShayneNotesSeed1.json`). **#196** Yoshimaru cast with no creature of its own to fight — "it doesn't do
+      anything and has more potential value later on" — Pass −13.81, cast −13.81: the Pass line's rollout casts
+      Yoshimaru at once in the same main phase, so its held price (AI-13.5's check, `YoshimaruWithNoFight`) never
+      counts and acting wins the tie. **#213** Extended Absence on that 1/1 in AI 1's draw step — "a premium removal
+      spell ... on the 1/1 makes no sense" — Pass 80.47, cast 80.47, the same shape; the uncapped search picks Pass by
+      order, the table's 1 s search cast it. Wanted: a pass's line keeps the card held until a LATER turn's offer, so
+      holding is priced; AI-13.5 (the offers version for enters-target creatures) is the nearest piece
+
 ## Next
 
 **2026-11-11 (end of session):** AI-13.11 (the potential score, Shayne's idea) kept and done; AI-13.12 (the depth fix:
@@ -377,3 +385,4 @@ AI-13.5 and AI-13.6's positions hold by the fixed held price (pinned); the burn 
 - 2026-10-28: AI-13.4 — the patience cost replaced by an option value (offers from self-play, the
   expected best over the turns left) and a bounced creature priced as itself less its recast; 51.7%
   over 600 games, worse rejected; every agreed bounce position right, Ferocity to AI-9.4.
+- 2026-11-13: AI-13.13 added from Shayne's first notes session (TBL-10.3): a pass whose rollout casts the card anyway.

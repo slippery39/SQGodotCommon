@@ -192,6 +192,16 @@ Open questions:
       seed 4, move 53 (`AiPositionTests.ABounce_TakesTheToken_…`, its control without the term). Suite
       accepted, the oracle re-read: beam 82.6% agreement (given up 0.87) against beam+blindhand 83.0%
       (0.78) — slightly worse on the positions, recorded in the findings
+- [ ] AI-9.9 A land priced by HOW MUCH it unlocks, not whether (Shayne's notes, TBL-10.3, 2026-11-13; kept game
+      `Records/ShayneNotesSeed1.json`). Two positions, AI 2 (Red-Green) with Rockfall Vale its ONLY red source and four
+      red cards in hand: **#97** the Rank Rat discard — "Nobody is discarding Rockfall Vale in this situation" — Vale
+      9.43, Forest 9.18: `LandUnlock` is a yes/no on next turn's mana, both lands unlock, both 0.3; the 0.25 is the
+      rollout (keeping the Vale cast Koth, which then traded with Edgar). **#24** turn 2, Forest played over the Vale —
+      "it would actually be better to play the Rockfall Vale" (it enters tapped for free with nothing to cast; later it
+      costs a turn): an exact tie, 18.64 each, broken by list order — nobody casts anything in the rollout, so colour
+      and tapped never mattered. Read each with `MagicConsole --record=… --explain=N`. Wanted: the only source of a
+      colour the hand needs worth more than a fourth Forest; and a land that enters tapped played on the turn it costs
+      nothing. Watch AI-13's potential term here — "a basic over a tapped land" was one of its wrong versions
 
 ## Next
 
@@ -217,3 +227,4 @@ found it hiding Way of the Wildspeaker); one switch and one match.
 - 2026-11-07: AI-9.3 built (`WalkerLifetime`), the Theorist and a Jace token's −3 flip; match no difference; kept.
 - 2026-11-07: AI-9.7 and AI-9.8 added (Shayne).
 - 2026-11-07: the match rerun on the committed version (2c5232ac): no difference.
+- 2026-11-13: AI-9.9 added from Shayne's first notes session (TBL-10.3): the Vale discarded, the Forest played first.
