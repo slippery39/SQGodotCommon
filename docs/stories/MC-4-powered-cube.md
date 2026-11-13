@@ -133,6 +133,10 @@ as his three priorities.
   - Probe: 150 games, one unfinished past 300 permanents — the probe's "growth without end" case (token decks); none of
     4.4a's cards makes a permanent.
 
+- 2026-11-13, Shayne: **no speed bench for the card batches** — "its on aspects of the game that are necessary … even if
+  its slower, its not like im going to remove these changes"; the bench is for testing ways to OPTIMIZE, not for new
+  features. 4.3a's and 4.4a's waiting benches dropped; `/card-batch` says so.
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -170,9 +174,7 @@ as his three priorities.
 MC-4.4b in a FRESH session (this one stopped after 4.4a at ~290k context, the brief's limit): the Spirit Guides (a mana ability `From = Hand`, read by `ManaPayment.Find` and spent
 last; `Pay` exiles it) and Delighted Halfling (`YieldOf(…, paying)` leaves out the abilities whose restriction can't
 pay; `ManaRestriction.CantBeCountered` stamps the spell) — then MC-4.4c, the rest of tier 1 for ONE colour: red (28
-left, the fewest; W 36, U 35, B 35, G 30) if the session allows. Waits for a quiet machine: `tools/bench_vs_head.sh` on
-4.3a's payment change (`ManaAbilities.PayAsUsed` on every first tap; `Source.Kind`'s restriction key) and on 4.4's
-cast-cost changes (`CostList.Paid` per cast validation). DEV-5: the probe step counts the never-used cards but doesn't
+left, the fewest; W 36, U 35, B 35, G 30) if the session allows. DEV-5: the probe step counts the never-used cards but doesn't
 name them (`batch_checks.py`, probe150) — print the names; and a second run after a fix fails golden-out against the
 first run's golden-in files — restore the golden files from HEAD first (by hand today: `git checkout HEAD --
 MagicCore.Tests/Golden*.txt`).
@@ -195,4 +197,4 @@ MagicCore.Tests/Golden*.txt`).
   (a cost), beam me up's cost took a filter, replicate a mana cost, the delayed trigger a main phase and an X. No
   recorded game moved by the engine; free casts read differently (text only). 117 of 528 play.
   Session summary (5.7M input-token equivalents): Part 1's ten cost cards done; Part 1's three mana cards (4.4b) designed,
-  in Next, not built; Part 2 (red's tier 1) not started. For Shayne: nothing Open — the quiet-machine bench (Next).
+  in Next, not built; Part 2 (red's tier 1) not started. For Shayne: nothing Open.

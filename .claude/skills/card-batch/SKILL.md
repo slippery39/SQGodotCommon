@@ -90,8 +90,9 @@ become a CHOICE made after the action, not more actions.
   them). **Run it with `MAGIC_PROBE_GAMES=10` first** (seconds): a hang shows there, not after the full
   150's ~5 minutes or a 28-minute timeout (batch 6a). The decks also hold RANDOM scripted cards, so a slow
   card can hang a probe that doesn't name it — time the named cards one at a time to find it.
-- **Hot path touched** (MoveCard, Triggers.Collect, the state-based check, mana payment, the AI):
-  `tools/bench_vs_head.sh`.
+- **No bench for a card batch** (Shayne, 2026-11-13): a rule the cards need stays whatever it costs, so timing it
+  decides nothing. `tools/bench_vs_head.sh` is for OPTIMIZATION work — comparing ways to make a hot path (MoveCard,
+  Triggers.Collect, the state-based check, mana payment, the AI) faster.
 - **Tier 1 check:** `python tools/magic_docs.py`, then read the batch's entries in
   `MagicCore/FraCardSheet.md`: printed text against script — a missing clause, a wrong "whose", the wrong
   target kind. That replaces a test for a card made of tested pieces.
