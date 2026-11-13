@@ -2279,7 +2279,10 @@ public static class TrkCards
 			["Zefram Cochrane, Warp Pioneer"] =
 			[
 				new MayLookAtTopOfLibrary(),
-				new MayCastArtifactFromLibraryTop(),
+				new MayPlayFromZone(ZoneType.Library, Is.Artifact & !Is.Land)
+				{
+					OncePerTurn = true,
+				},
 				new PermanentsEnter(Is.Subtype("Spacecraft") & Is.Yours)
 				{
 					CounterKind = CounterKinds.Charge,
@@ -3005,7 +3008,7 @@ public static class TrkCards
 					Toughness = DifferentlyNamedLands,
 				},
 				new MayLookAtTopOfLibrary(),
-				new MayPlayLandsFromLibraryTop(),
+				new MayPlayFromZone(ZoneType.Library, Is.Land),
 			],
 			["Dr. Joseph M'Benga"] =
 			[
@@ -3262,11 +3265,19 @@ public static class TrkCards
 			["Scotty, Miracle Worker"] = [new GraveyardSpellsHaveBeamMeUp()],
 			["Overflow Submatrix"] =
 			[
-				new MayPlayFromYourGraveyard(Is.Artifact & Is.Creature) { Finality = true },
+				new MayPlayFromZone(ZoneType.Graveyard, Is.Artifact & Is.Creature)
+				{
+					OncePerTurn = true,
+					Finality = true,
+				},
 			],
 			["The Holodeck"] =
 			[
-				new MayPlayFromYourGraveyard(Is.Type(PermanentTypes)) { OutsideTheGame = true },
+				new MayPlayFromZone(ZoneType.Graveyard, Is.Type(PermanentTypes))
+				{
+					OncePerTurn = true,
+					OutsideTheGame = true,
+				},
 			],
 			["Infinite Diversity"] =
 			[
@@ -3497,7 +3508,7 @@ public static class TrkCards
 									BecomesCreatureTypes = ["Ferengi", "Officer"],
 									Gains =
 									[
-										new MayPlayFromYourGraveyard(Is.Land) { Unlimited = true },
+										new MayPlayFromZone(ZoneType.Graveyard, Is.Land),
 										new AdditionalLandEachTurn(),
 									],
 								},

@@ -4836,13 +4836,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4cTests
 
-**Engine pieces:** `MayCastArtifactFromLibraryTop` — Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact…; `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
+**Engine pieces:** `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
 
 ```csharp
 ["Zefram Cochrane, Warp Pioneer"] =
 [
 	new MayLookAtTopOfLibrary(),
-	new MayCastArtifactFromLibraryTop(),
+	new MayPlayFromZone(ZoneType.Library, Is.Artifact & !Is.Land)
+	{
+		OncePerTurn = true,
+	},
 	new PermanentsEnter(Is.Subtype("Spacecraft") & Is.Yours)
 	{
 		CounterKind = CounterKinds.Charge,
@@ -5109,7 +5112,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch6bTests
 
-**Engine pieces:** `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `MayPlayLandsFromLibraryTop` — Captain Pike, Fullness of Time: "You may play lands from the top of your library." —…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Captain Pike, Fullness of Time"] =
@@ -5120,7 +5123,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		Toughness = DifferentlyNamedLands,
 	},
 	new MayLookAtTopOfLibrary(),
-	new MayPlayLandsFromLibraryTop(),
+	new MayPlayFromZone(ZoneType.Library, Is.Land),
 ],
 ```
 
@@ -6022,7 +6025,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7cTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AdditionalLandEachTurn` — Captain Kathryn Janeway: "You may play an additional land on each of your turns." —…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `MayPlayFromYourGraveyard` — Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AdditionalLandEachTurn` — Captain Kathryn Janeway: "You may play an additional land on each of your turns." —…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Nog, Ambitious Cadet"] =
@@ -6060,7 +6063,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 						BecomesCreatureTypes = ["Ferengi", "Officer"],
 						Gains =
 						[
-							new MayPlayFromYourGraveyard(Is.Land) { Unlimited = true },
+							new MayPlayFromZone(ZoneType.Graveyard, Is.Land),
 							new AdditionalLandEachTurn(),
 						],
 					},
@@ -6106,12 +6109,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7aTests
 
-**Engine pieces:** `MayPlayFromYourGraveyard` — Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature…
+**Engine pieces:** `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…
 
 ```csharp
 ["Overflow Submatrix"] =
 [
-	new MayPlayFromYourGraveyard(Is.Artifact & Is.Creature) { Finality = true },
+	new MayPlayFromZone(ZoneType.Graveyard, Is.Artifact & Is.Creature)
+	{
+		OncePerTurn = true,
+		Finality = true,
+	},
 ],
 ```
 
@@ -6628,12 +6635,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7aTests
 
-**Engine pieces:** `MayPlayFromYourGraveyard` — Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature…
+**Engine pieces:** `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…
 
 ```csharp
 ["The Holodeck"] =
 [
-	new MayPlayFromYourGraveyard(Is.Type(PermanentTypes)) { OutsideTheGame = true },
+	new MayPlayFromZone(ZoneType.Graveyard, Is.Type(PermanentTypes))
+	{
+		OncePerTurn = true,
+		OutsideTheGame = true,
+	},
 ],
 ```
 

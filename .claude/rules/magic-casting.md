@@ -143,11 +143,11 @@ whose subsystem it lives in.
   Vulcan Mind-Meld) and `Tax` (Zero's "{2} more") are read by `Costs.Of`. `ExileTopPlayable` exiles it —
   whose library (`Of`), who plays and how long (`Play`: `By`, "for as long as it remains exiled" `Forever`), face
   down, or only a chosen card (`Choose`, Chekov's land). Cast or played, the card is public again (`ExiledFaceDown` is status).
-- **"Once during each of your turns, cast an artifact spell from the top of your library"** (Zefram) is
-  `Playable.LibraryTopPermission`, the permanent stamped as the cast uses it (`Card.PermissionUsedOn`).
-  **"Once during each of your turns, you may cast [play] … from your graveyard [or from outside the game]"**
-  (Overflow Submatrix, The Holodeck) is `MayPlayFromYourGraveyard(filter) { Finality, OutsideTheGame }`, read by
-  `Playable.GraveyardPermission` for casts AND land plays, stamping the same `PermissionUsedOn`. It is not
+- **"[Once during each of your turns,] you may play [cast] … from your graveyard / the top of your library [/ outside
+  the game]"** is ONE piece (MC-6.9), `MayPlayFromZone(From, filter) { OncePerTurn, Finality, OutsideTheGame }` —
+  Overflow Submatrix, The Holodeck, Nog's gained lands, Zefram (`!Is.Land`: "cast"), Captain Pike — read by
+  `Playable.ZonePermission` for casts AND land plays, during your turn, an unlimited rule first; a once-each-turn
+  use stamps its permanent (`Card.PermissionUsedOn`). A graveyard cast this way is not
   flashback: the stack records `OnStackComponent.ByPermission`, so `MoveCard` doesn't exile it and it resolves
   onto the battlefield (`Finality`: with a finality counter). A card with its own way out of the graveyard uses
   that. `Candidates` looks in the sideboard only while such a permanent says "outside the game".
@@ -167,8 +167,6 @@ whose subsystem it lives in.
   (`CastSpellAction.ChoosesTargets`): casting it asks `ChooseXTargetsChoice` (exactly X), then casts with them —
   never a cast per set, which is 2^n and hung the fuzz probe (Shayne, 2026-11-05). The AI copies the biggest
   (`GreedyAi`). "For each of them" is `Ref.EachTarget`.
-- **"You may play lands from the top of your library"** (Captain Pike) is `MayPlayLandsFromLibraryTop`, read by
-  `Playable.CanPlayLandFromHere` — the land drop the only limit; `Candidates` already offers the top card.
 - **"Exile cards from the top until a nonland card. You may cast it without paying"** (The Caretaker — target
   opponent's library, the rest stay exiled) and **discover N** (U.S.S. Discovery: mana value N or less, "or put it
   into your hand", the rest on the bottom in a random order — `TrkCards.Discover`) are one effect,

@@ -119,6 +119,12 @@ the Stardates fix.
       `CastFromHandFree`, `CastFromHandFreeUpToCreatureCount`, `ExileTopPlayable` and its options, `ExileTopMayCast`,
       `ExileTopAndCastFree`, `ExileUntilNonlandCastFree` → one permission (which zone, whose, a filter, how
       long, free or paid), read by `Rules/Playable.cs`, and one "exile these, they may be played" effect.
+      2026-11-12 (cube lane): the permanents' permissions — `MayPlayFromYourGraveyard`, `MayCastArtifactFromLibraryTop`,
+      `MayPlayLandsFromLibraryTop` → `MayPlayFromZone(From, filter) { OncePerTurn, Finality, OutsideTheGame }`, read by
+      ONE `Playable.ZonePermission` (casts and land plays; `GraveyardPermission`, `LibraryTopPermission` and Pike's
+      check gone). Overflow Submatrix, The Holodeck, Nog, Zefram, Pike moved; no game moved; revert-checked. A use is
+      stamped only for a once-each-turn rule (Nog's unlimited one was stamped before, read by nothing). LEFT: the card's
+      own (`MayCastFromExile`, `MayCastFromYourGraveyard`), the linked and this-turn ones, and the effects.
 - [x] MC-6.10 **Entering** — `EntersTappedComponent`, `PermanentsEnterTapped`, `LandsYouControlEnterUntapped`,
       `EntersWithCountersComponent`, `YourPermanentsEnterWithCounters`, `YourCreaturesEnterAttacking`,
       `EnteringArtifactsAndCreaturesDontTrigger` → "permanents matching a filter enter [tapped / untapped /
@@ -162,7 +168,7 @@ the Stardates fix.
 
 ## Next
 
-MC-6.9 next (playing from another zone; part done): one permission — which zone, whose, a filter, how long, free or
+MC-6.9's rest (the permanents' permissions are done): one permission — which zone, whose, a filter, how long, free or
 paid — read by `Rules/Playable.cs`, and one "exile these, they may be played" effect; LSVPower's escape, hideaway,
 cascade, plot and adventures are its next users (`MagicCore/LsvSurvey.md`). Then 6.12, 6.15, 6.14 (the order LSVPower
 needs them, MC-4's Decisions). Each step: one family, its old cards moved, the golden replays UNCHANGED (or a ruling
@@ -173,3 +179,4 @@ fixed and said), the full suite.
 - 2026-11-06: created from the MC-5.6 survey (Shayne). The audit counted the catalog's `[N: …]` use counts per
   section: effects 118 (34 used by one card), components 103 (54), conditions 18 (9), costs 13 (4).
 - 2026-11-12 (night, cube lane): MC-6.10 — entering composed (`PermanentsEnter`), four pieces gone, no game moved.
+- 2026-11-12 (night, cube lane): MC-6.9 part — the permanents' play-from-a-zone permissions composed (`MayPlayFromZone`), three pieces gone, no game moved.

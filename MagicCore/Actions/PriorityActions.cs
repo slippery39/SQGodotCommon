@@ -98,10 +98,13 @@ public record PlayLandAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		// The Holodeck: "once during each of your turns" — a land played from the graveyard uses it.
-		if (Rules.Playable.GraveyardPermission(s, s.GetCard(CardId), PlayerId) is { } permission)
+		if (
+			Rules.Playable.ZonePermission(s, s.GetCard(CardId), PlayerId) is
+			{ Rule.OncePerTurn: true, Holder: var holder }
+		)
 			s = s.UpdateObject(
-				permission.Id,
-				permission with
+				holder.Id,
+				holder with
 				{
 					PermissionUsedOn = s.GetGame().TurnNumber,
 				}

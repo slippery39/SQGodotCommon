@@ -40,7 +40,7 @@ public static class Playable
 					|| s.HasAbility<MayCastFromYourGraveyard>(card)
 				)
 			)
-			|| GraveyardPermission(s, card, playerId) is not null
+			|| ZonePermission(s, card, playerId) is not null
 			|| (
 				s.IsIn(card.Id, playerId, ZoneType.Exile)
 				&& !card.HasComponent<ExiledFaceDown>()
@@ -49,7 +49,6 @@ public static class Playable
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| IsCastableThroughLink(s, card, playerId)
-			|| LibraryTopPermission(s, card, playerId) is not null
 			|| IsPlayableFromTheirZone(s, card, playerId)
 		) && CastRestrictionHolds(s, card, playerId);
 
@@ -61,41 +60,29 @@ public static class Playable
 			);
 
 	/// <summary>
-	/// Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of
-	/// your library." — the permanent that lets this card be cast, if any (one not used this turn).
+	/// MC-6.9: the permanent and its rule that let this card be played from where it is now — its owner's graveyard,
+	/// the top of their library, or outside the game (<see cref="MayPlayFromZone"/>: Overflow Submatrix, The Holodeck,
+	/// Nog's gained ability, Zefram Cochrane, Captain Pike). Only during your turn; an unlimited rule first, then a
+	/// once-each-turn one not used this turn (<see cref="Card.PermissionUsedOn"/>). A card with its own way out of
+	/// the graveyard (flashback, beam me up, Storied Veteran) uses that.
 	/// </summary>
-	public static Card? LibraryTopPermission(GameState s, Card card, int playerId) =>
-		card.Is(CardType.Artifact)
-		&& s.GetGame().ActivePlayerId == playerId
-		&& s.GetChildrenIds(s.ZoneId(playerId, ZoneType.Library)).FirstOrDefault() == card.Id
-			? s.CardsIn(playerId, ZoneType.Battlefield)
-				.FirstOrDefault(p =>
-					p.PermissionUsedOn != s.GetGame().TurnNumber
-					&& s.HasAbility<MayCastArtifactFromLibraryTop>(p)
-				)
-			: null;
-
-	/// <summary>
-	/// Overflow Submatrix, The Holodeck: "Once during each of your turns, you may cast [play] … from your
-	/// graveyard [or from outside the game]" — the permanent that lets this card be played now (one not
-	/// used this turn, or Nog's unlimited one first), if any. A card with its own way out of the graveyard (flashback, beam me up,
-	/// Storied Veteran) uses that.
-	/// </summary>
-	public static Card? GraveyardPermission(GameState s, Card card, int playerId)
+	public static (Card Holder, MayPlayFromZone Rule)? ZonePermission(
+		GameState s,
+		Card card,
+		int playerId
+	)
 	{
 		if (s.GetGame().ActivePlayerId != playerId || card.OwnerId != playerId)
 			return null;
-		var inGraveyard = s.IsIn(card.Id, playerId, ZoneType.Graveyard);
-		var outside =
-			!inGraveyard
-			&& s.WellKnownIds.TryGetValue(
-				MagicKeys.Zone(playerId, ZoneType.Sideboard),
-				out var sideboard
-			)
-			&& s.GetParent(card.Id) == sideboard;
+		ZoneType? from =
+			s.IsIn(card.Id, playerId, ZoneType.Graveyard) ? ZoneType.Graveyard
+			: s.GetChildrenIds(s.ZoneId(playerId, ZoneType.Library)).FirstOrDefault() == card.Id
+				? ZoneType.Library
+			: IsOutsideTheGame(s, card, playerId) ? ZoneType.Sideboard
+			: null;
 		if (
-			!inGraveyard && !outside
-			|| inGraveyard
+			from is null
+			|| from == ZoneType.Graveyard
 				&& (
 					Costs.Flashback(s, card) is not null
 					|| s.HasAbility<MayCastFromYourGraveyard>(card)
@@ -104,24 +91,30 @@ public static class Playable
 			return null;
 		var turn = s.GetGame().TurnNumber;
 		var context = new Filters.FilterContext(playerId, card.Id);
-		bool Lets(Card p, bool unlimited) =>
-			s.AbilitiesOf<MayPlayFromYourGraveyard>(p)
-				.Any(may =>
-					may.Unlimited == unlimited
-					&& (inGraveyard || may.OutsideTheGame)
-					&& may.What.Matches(s, card, context)
-				);
-		var permanents = s.CardsIn(playerId, ZoneType.Battlefield);
-		return permanents.FirstOrDefault(p => Lets(p, unlimited: true))
-			?? permanents.FirstOrDefault(p =>
-				p.PermissionUsedOn != turn && Lets(p, unlimited: false)
-			);
+		(Card, MayPlayFromZone)? once = null;
+		foreach (var p in s.CardsIn(playerId, ZoneType.Battlefield))
+		foreach (var rule in s.AbilitiesOf<MayPlayFromZone>(p))
+			if (
+				(rule.From == from || from == ZoneType.Sideboard && rule.OutsideTheGame)
+				&& (!rule.OncePerTurn || p.PermissionUsedOn != turn)
+				&& rule.What.Matches(s, card, context)
+			)
+			{
+				if (!rule.OncePerTurn)
+					return (p, rule);
+				once ??= (p, rule);
+			}
+		return once;
 	}
+
+	static bool IsOutsideTheGame(GameState s, Card card, int playerId) =>
+		s.WellKnownIds.TryGetValue(MagicKeys.Zone(playerId, ZoneType.Sideboard), out var sideboard)
+		&& s.GetParent(card.Id) == sideboard;
 
 	/// <summary>Whether any permanent of this player lets cards be played from outside the game (The Holodeck) — Candidates looks there only then.</summary>
 	static bool MayPlayFromOutside(GameState s, int playerId) =>
 		s.CardsIn(playerId, ZoneType.Battlefield)
-			.Any(p => s.AbilitiesOf<MayPlayFromYourGraveyard>(p).Any(may => may.OutsideTheGame));
+			.Any(p => s.AbilitiesOf<MayPlayFromZone>(p).Any(may => may.OutsideTheGame));
 
 	/// <summary>Proft: "You can't cast this spell unless …" — wherever and however it is cast.</summary>
 	public static bool CastRestrictionHolds(GameState s, Card card, int playerId) =>
@@ -184,15 +177,9 @@ public static class Playable
 		&& (
 			s.IsIn(card.Id, playerId, ZoneType.Hand)
 			|| IsImpulsePlayableBy(s, card, playerId)
-			|| IsLandPlayableFromLibraryTop(s, card, playerId)
-			|| GraveyardPermission(s, card, playerId) is not null
+			|| ZonePermission(s, card, playerId) is not null
 			|| IsPlayableFromTheirZone(s, card, playerId)
 		);
-
-	/// <summary>Captain Pike, Fullness of Time: "You may play lands from the top of your library." — the land drop is the only limit.</summary>
-	static bool IsLandPlayableFromLibraryTop(GameState s, Card card, int playerId) =>
-		s.GetChildrenIds(s.ZoneId(playerId, ZoneType.Library)).FirstOrDefault() == card.Id
-		&& s.CardsIn(playerId, ZoneType.Battlefield).Any(s.HasAbility<MayPlayLandsFromLibraryTop>);
 
 	/// <summary>Every card this player may cast or play from where it is — hand first.</summary>
 	public static IEnumerable<Card> Candidates(GameState s, int playerId) =>

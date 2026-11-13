@@ -371,7 +371,6 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Cost` (ManaCost?): Starfleet Academy: "{5}, {T}: Choose a color. Add …"; Talon Gates of Madara: "{1}, {T}: Add one mana of any…
   - `Costs` (ImmutableList<AdditionalCost>): The costs beyond mana — the shared list (AdditionalCosts.cs); "{T}" unless it says otherwise. Treasure:…
 - **`MaximumHandSize(int N)`** — Necrodominance: "Your maximum hand size is five." The lowest applies; read by the cleanup step (TurnStructure.MaxHandSizeOf). [1: Necrodominance]
-- **`MayCastArtifactFromLibraryTop`** — Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact spell from the top of your library." — read by… [1: Zefram Cochrane, Warp Pioneer]
 - **`MayCastFromExile`** — Khan, Vengeful Heart: "You may cast this card from exile." — your own exile, read by Playable.CanCastFromHere; face down it has no… [1: Khan, Vengeful Heart]
 - **`MayCastFromHandFree(Filters.Filter What)`** — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence: "spells with mana value less than or equal to the… [2: Omnipresence, Flare of Fortitude]
   - `Costs` (ImmutableList<AdditionalCost>): Flare of Fortitude: "You may sacrifice a nontoken white creature rather than pay this spell's mana cost." —…
@@ -386,11 +385,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Optional` (bool): Dominion Saboteur: "you may" offered as may — a 3/3 that copies nothing is still a 3/3 (Flesh Duplicate's…
 - **`MayLookAtTopOfLibrary`** — Zefram Cochrane: "You may look at the top card of your library any time." — MagicState.TopIsKnownToOwner: the search doesn't reshuffle it,… [2: Zefram Cochrane, Warp Pioneer, Captain Pike, Fullness of Time]
 - **`MayPlayFrom(ZoneType Zone, Ref Of)`** — Sen Triplets: "You may play lands and cast spells from that player's hand this turn." — every card in that zone while it lasts, one drawn… [1: Sen Triplets]
-- **`MayPlayFromYourGraveyard(Filters.Filter What)`** — Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature spell from your graveyard. If you cast a spell this… [3: Overflow Submatrix, The Holodeck, Nog, Ambitious Cadet]
-  - `Finality` (bool): Overflow Submatrix: "that artifact creature enters with a finality counter on it".
-  - `OutsideTheGame` (bool): The Holodeck: "from outside the game" — the sideboard, when the game has one.
-  - `Unlimited` (bool): Nog, Ambitious Cadet: "You may play lands from your graveyard" — not once each turn.
-- **`MayPlayLandsFromLibraryTop`** — Captain Pike, Fullness of Time: "You may play lands from the top of your library." — read by Playable.CanPlayLandFromHere; the land drop… [1: Captain Pike, Fullness of Time]
+- **`MayPlayFromZone(ZoneType From, Filters.Filter What)`** — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your graveyard / the top of your library [/ outside the game]"… [5: Zefram Cochrane, Warp Pioneer, Captain Pike, Fullness of Time, Overflow Submatrix…]
 - **`NextSpellCantBeCountered`** — Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by that cast. [1: Theorist's Proxy]
 - **`NoLegendRule`** — Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn." — the state-based check. [1: Hall of Echoes]
 - **`NumericReplacement(ReplacedEvent Event)`** — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on a permanent (or a "this turn" object,… [8: Tomik, Izzet Sparkmage, Yoshimaru, Beloved Companion, Brad Boimler, Eager Ensign…]

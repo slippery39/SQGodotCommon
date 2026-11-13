@@ -998,29 +998,22 @@ public record MayCastFromYourGraveyard : GameComponent;
 public record MayCastFromExile : GameComponent;
 
 /// <summary>
-/// Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact spell from
-/// the top of your library." — read by Playable.LibraryTopPermission; the cast stamps this permanent
-/// (Card.PermissionUsedOn).
+/// MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your graveyard / the top of your
+/// library [/ outside the game]" — a permanent's permission for its controller, during their turn, read by
+/// Playable.ZonePermission for casts and land plays alike (What filters which: a "cast" says !Is.Land).
+/// Overflow Submatrix: (Graveyard, Is.Artifact &amp; Is.Creature) { OncePerTurn, Finality } — "that artifact creature
+/// enters with a finality counter on it". The Holodeck: (Graveyard, a permanent card) { OncePerTurn, OutsideTheGame }
+/// — the sideboard too, when the game has one. Nog's gained "You may play lands from your graveyard": (Graveyard,
+/// Is.Land). Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of your
+/// library." (Library, Is.Artifact &amp; !Is.Land) { OncePerTurn }. Captain Pike: "You may play lands from the top of
+/// your library." (Library, Is.Land). A once-each-turn use stamps the permanent (Card.PermissionUsedOn). Not
+/// flashback: a spell cast from the graveyard this way isn't exiled leaving the stack (OnStackComponent.ByPermission).
 /// </summary>
-public record MayCastArtifactFromLibraryTop : GameComponent;
-
-/// <summary>
-/// Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature spell from your
-/// graveyard. If you cast a spell this way, that artifact creature enters with a finality counter on it."
-/// The Holodeck: "Once during each of your turns, you may play a permanent card you own from outside the
-/// game or from your graveyard." — read by Playable.GraveyardPermission; a cast or land play stamps this
-/// permanent (Card.PermissionUsedOn). Not flashback: what is cast this way isn't exiled leaving the stack.
-/// </summary>
-public record MayPlayFromYourGraveyard(Filters.Filter What) : GameComponent
+public record MayPlayFromZone(ZoneType From, Filters.Filter What) : GameComponent
 {
-	/// <summary>Overflow Submatrix: "that artifact creature enters with a finality counter on it".</summary>
+	public bool OncePerTurn { get; init; }
 	public bool Finality { get; init; }
-
-	/// <summary>The Holodeck: "from outside the game" — the sideboard, when the game has one.</summary>
 	public bool OutsideTheGame { get; init; }
-
-	/// <summary>Nog, Ambitious Cadet: "You may play lands from your graveyard" — not once each turn.</summary>
-	public bool Unlimited { get; init; }
 }
 
 /// <summary>
@@ -1058,12 +1051,6 @@ public record MayChooseNotToUntap : GameComponent;
 /// choice matter.
 /// </summary>
 public record GraveyardSpellsHaveBeamMeUp : GameComponent;
-
-/// <summary>
-/// Captain Pike, Fullness of Time: "You may play lands from the top of your library." — read by
-/// Playable.CanPlayLandFromHere; the land drop is the only limit.
-/// </summary>
-public record MayPlayLandsFromLibraryTop : GameComponent;
 
 /// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — MagicState.CanSacrifice, asked by every sacrifice (costs, choices, Treasure's own mana).</summary>
 public record CantSacrificeTreasures : GameComponent;

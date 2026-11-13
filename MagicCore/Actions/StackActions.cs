@@ -282,20 +282,13 @@ public record CastSpellAction : GameAction
 		var costs = CostsOf(s, card); // read before paying: flashback's are known only in the graveyard
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
-		var permission = from switch
-		{
-			ZoneType.Library => Playable.LibraryTopPermission(s, card, PlayerId),
-			ZoneType.Graveyard or ZoneType.Sideboard => Playable.GraveyardPermission(
-				s,
-				card,
-				PlayerId
-			),
-			_ => null,
-		};
-		if (permission is not null)
+		var permission = from is ZoneType.Library or ZoneType.Graveyard or ZoneType.Sideboard
+			? Playable.ZonePermission(s, card, PlayerId)
+			: null;
+		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
-				permission.Id,
-				permission with
+				holder.Id,
+				holder with
 				{
 					PermissionUsedOn = s.GetGame().TurnNumber,
 				}
@@ -314,8 +307,7 @@ public record CastSpellAction : GameAction
 						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
 						{
 							ByPermission = true,
-							Finality = s.AbilitiesOf<MayPlayFromYourGraveyard>(permission)
-								.Any(m => m.Finality),
+							Finality = permission.Value.Rule.Finality,
 						}
 					)
 			);
