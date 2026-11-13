@@ -52,8 +52,8 @@ Shayne, 2026-11-09: when the opponent double-blocks, we don't get to decide how 
   end of combat and the board evaluated (`Evaluator`). (First read as "nobody is asked" — built and taken back the
   same night.) The look-ahead's rollouts still use the fixed split (`DefaultSplit`) — DesignNotes.
 - 2026-11-12, Shayne — **MC-7.3's design: a spin box on each blocker**, typed or stepped with up/down; the total can't
-  pass the damage the attacker deals, so once it is all allocated "up" no longer goes up. Claude's defaults beside it,
-  from the rules: **Confirm only once ALL of it is assigned** (CR 510.1: a creature assigns all its combat damage —
+  pass the damage the attacker deals, so once it is all allocated "up" no longer goes up. Confirmed by Shayne the same
+  night, from the rules: **Confirm only once ALL of it is assigned** (CR 510.1: a creature assigns all its combat damage —
   none can be left over); **with trample, a spin box for the defending player too**, which can take damage only
   once every blocker's box holds lethal (CR 702.19c). The table answers the engine's per-blocker questions from the
   boxes in one go (the last blocker's box is the rest).
