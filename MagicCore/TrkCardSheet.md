@@ -3976,13 +3976,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4bTests
 
-**Engine pieces:** `MayCastFromYourGraveyard` — Storied Veteran: "You may cast this card from your graveyard. If you do, it enters with…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `MayCastThisFrom` — MC-6.9: "You may cast this card from your graveyard / from exile" — the card's own…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Storied Veteran"] =
 [
 	new StaticEffectComponent(Is.Source, Combat.CantBlock),
-	new MayCastFromYourGraveyard(),
+	new MayCastThisFrom(ZoneType.Graveyard) { Finality = true },
 ],
 ```
 
@@ -7782,7 +7782,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch5aTests
 
-**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `MayCastFromExile` — Khan, Vengeful Heart: "You may cast this card from exile." — your own exile, read by…; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `MayCastThisFrom` — MC-6.9: "You may cast this card from your graveyard / from exile" — the card's own…; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Khan, Vengeful Heart"] =
@@ -7795,7 +7795,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			[new DrawCards(Ref.You, 2)]
 		)
 	),
-	new MayCastFromExile(),
+	new MayCastThisFrom(ZoneType.Exile),
 ],
 ```
 

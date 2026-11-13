@@ -2079,7 +2079,7 @@ public static class TrkCards
 			["Storied Veteran"] =
 			[
 				new StaticEffectComponent(Is.Source, Combat.CantBlock),
-				new MayCastFromYourGraveyard(),
+				new MayCastThisFrom(ZoneType.Graveyard) { Finality = true },
 			],
 			["Erica Ortegas, Plucky Pilot"] =
 			[
@@ -2501,7 +2501,7 @@ public static class TrkCards
 						[new DrawCards(Ref.You, 2)]
 					)
 				),
-				new MayCastFromExile(),
+				new MayCastThisFrom(ZoneType.Exile),
 			],
 			["Live Long and Prosper"] =
 			[

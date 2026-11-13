@@ -37,14 +37,14 @@ public static class Playable
 				s.IsIn(card.Id, playerId, ZoneType.Graveyard)
 				&& (
 					Costs.Flashback(s, card) is not null
-					|| s.HasAbility<MayCastFromYourGraveyard>(card)
+					|| s.AbilitiesOf<MayCastThisFrom>(card).Any(m => m.From == ZoneType.Graveyard)
 				)
 			)
 			|| ZonePermission(s, card, playerId) is not null
 			|| (
 				s.IsIn(card.Id, playerId, ZoneType.Exile)
 				&& !card.HasComponent<ExiledFaceDown>()
-				&& s.HasAbility<MayCastFromExile>(card)
+				&& s.AbilitiesOf<MayCastThisFrom>(card).Any(m => m.From == ZoneType.Exile)
 			)
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)
@@ -85,7 +85,7 @@ public static class Playable
 			|| from == ZoneType.Graveyard
 				&& (
 					Costs.Flashback(s, card) is not null
-					|| s.HasAbility<MayCastFromYourGraveyard>(card)
+					|| s.AbilitiesOf<MayCastThisFrom>(card).Any(m => m.From == ZoneType.Graveyard)
 				)
 		)
 			return null;

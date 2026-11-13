@@ -735,7 +735,7 @@ public static class StackResolution
 			}
 			var fromGraveyard = cast?.CastFrom == ZoneType.Graveyard;
 			var mayCastThere =
-				permanent.HasComponent<MayCastFromYourGraveyard>() // Storied Veteran
+				MayCastThisFrom.On(permanent, ZoneType.Graveyard) // Storied Veteran
 				|| cast?.ByPermission == true; // Overflow Submatrix, The Holodeck
 			if ((fromGraveyard && !mayCastThere) || auraFizzles)
 				return Priority.Retain(
@@ -760,7 +760,9 @@ public static class StackResolution
 							Finality =
 								fromGraveyard
 								&& (
-									permanent.HasComponent<MayCastFromYourGraveyard>()
+									permanent
+										.Components.OfType<MayCastThisFrom>()
+										.Any(m => m is { From: ZoneType.Graveyard, Finality: true })
 									|| cast?.Finality == true
 								), // "it enters with a finality counter on it"
 							Sunburst = permanent.HasComponent<Sunburst>()

@@ -123,8 +123,11 @@ the Stardates fix.
       `MayPlayLandsFromLibraryTop` → `MayPlayFromZone(From, filter) { OncePerTurn, Finality, OutsideTheGame }`, read by
       ONE `Playable.ZonePermission` (casts and land plays; `GraveyardPermission`, `LibraryTopPermission` and Pike's
       check gone). Overflow Submatrix, The Holodeck, Nog, Zefram, Pike moved; no game moved; revert-checked. A use is
-      stamped only for a once-each-turn rule (Nog's unlimited one was stamped before, read by nothing). LEFT: the card's
-      own (`MayCastFromExile`, `MayCastFromYourGraveyard`), the linked and this-turn ones, and the effects.
+      stamped only for a once-each-turn rule (Nog's unlimited one was stamped before, read by nothing). Then the card's own:
+      `MayCastFromExile`, `MayCastFromYourGraveyard` → `MayCastThisFrom(From) { Finality }` (Storied Veteran, Khan; no
+      game moved, revert-checked). LEFT: the linked (`MayCastWhatItExiled`) and this-turn (`MayPlayFrom`,
+      `PlayableFromExile`) permissions, and the effects (`ExileTopPlayable`, `ExileTopMayCast`, `ExileTopAndCastFree`,
+      `ExileUntilNonlandCastFree`, `CastFromHandFree`).
 - [x] MC-6.10 **Entering** — `EntersTappedComponent`, `PermanentsEnterTapped`, `LandsYouControlEnterUntapped`,
       `EntersWithCountersComponent`, `YourPermanentsEnterWithCounters`, `YourCreaturesEnterAttacking`,
       `EnteringArtifactsAndCreaturesDontTrigger` → "permanents matching a filter enter [tapped / untapped /
@@ -180,3 +183,4 @@ fixed and said), the full suite.
   section: effects 118 (34 used by one card), components 103 (54), conditions 18 (9), costs 13 (4).
 - 2026-11-12 (night, cube lane): MC-6.10 — entering composed (`PermanentsEnter`), four pieces gone, no game moved.
 - 2026-11-12 (night, cube lane): MC-6.9 part — the permanents' play-from-a-zone permissions composed (`MayPlayFromZone`), three pieces gone, no game moved.
+- 2026-11-12 (night, cube lane): MC-6.9 part — the card's own cast-from-a-zone permission composed (`MayCastThisFrom`), two pieces gone, no game moved.

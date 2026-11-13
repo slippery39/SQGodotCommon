@@ -55,7 +55,7 @@ KEYWORDS = {
     "Eternalize": (O, "CreateTokenCopy from the graveyard, changed"), "Squad": (O, "ReplicateComponent-like"),
     "Revolt": (O, "TurnTally — a permanent of yours left the battlefield"),
     "Shadow": (O, "CantBeBlockedBy — and blocks only shadow"), "Evoke": (O, "an alternative cost + sacrifice"),
-    "Escape": (O, "MayCastFromYourGraveyard + an exile cost"), "Dash": (O, "an alternative cost + haste + return"),
+    "Escape": (O, "MayCastThisFrom(Graveyard) + an exile cost"), "Dash": (O, "an alternative cost + haste + return"),
     "Ascend": (N, "the city's blessing"), "Delve": (N, "a cost paid by exiling graveyard cards"),
     "Buyback": (N, "buyback (returns to hand)"), "Overload": (N, "overload (target → each)"),
     "Splice": (N, "splice"), "Spree": (N, "spree (a cost per mode)"), "Ninjutsu": (N, "ninjutsu"),

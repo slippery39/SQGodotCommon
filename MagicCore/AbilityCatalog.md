@@ -371,10 +371,9 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Cost` (ManaCost?): Starfleet Academy: "{5}, {T}: Choose a color. Add …"; Talon Gates of Madara: "{1}, {T}: Add one mana of any…
   - `Costs` (ImmutableList<AdditionalCost>): The costs beyond mana — the shared list (AdditionalCosts.cs); "{T}" unless it says otherwise. Treasure:…
 - **`MaximumHandSize(int N)`** — Necrodominance: "Your maximum hand size is five." The lowest applies; read by the cleanup step (TurnStructure.MaxHandSizeOf). [1: Necrodominance]
-- **`MayCastFromExile`** — Khan, Vengeful Heart: "You may cast this card from exile." — your own exile, read by Playable.CanCastFromHere; face down it has no… [1: Khan, Vengeful Heart]
 - **`MayCastFromHandFree(Filters.Filter What)`** — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence: "spells with mana value less than or equal to the… [2: Omnipresence, Flare of Fortitude]
   - `Costs` (ImmutableList<AdditionalCost>): Flare of Fortitude: "You may sacrifice a nontoken white creature rather than pay this spell's mana cost." —…
-- **`MayCastFromYourGraveyard`** — Storied Veteran: "You may cast this card from your graveyard. If you do, it enters with a finality counter on it." — read by… [1: Storied Veteran]
+- **`MayCastThisFrom(ZoneType From)`** — MC-6.9: "You may cast this card from your graveyard / from exile" — the card's own permission, read by Playable.CanCastFromHere. Storied… [2: Storied Veteran, Khan, Vengeful Heart]
 - **`MayCastWhatItExiled(Condition While)`** — Null Summoner: "As long as [While], you may cast the exiled card, and mana of any type can be spent to cast that spell." On the source — a… [1: Null Summoner]
 - **`MayChooseNotToUntap`** — Lwaxana Troi, Charming Guest: "You may choose not to untap Lwaxana Troi during your untap step." — asked by the untap step… [1: Lwaxana Troi, Charming Guest]
 - **`MayEnterAsCopy`** — Flesh Duplicate: "You may have this creature enter as a copy of any creature on the battlefield, except it has vanishing N if that… [2: Flesh Duplicate, Dominion Saboteur]

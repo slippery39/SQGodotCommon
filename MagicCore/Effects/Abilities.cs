@@ -985,17 +985,20 @@ public record EnchantedLosesAllAbilities : GameComponent;
 public record EnchantedIsCreatureType(string Subtype) : GameComponent;
 
 /// <summary>
-/// Storied Veteran: "You may cast this card from your graveyard. If you do, it enters with a finality
-/// counter on it." — read by Playable.CanCastFromHere; unlike flashback it isn't exiled leaving the stack
-/// (MagicState.MoveCard), so it resolves onto the battlefield (StackResolution).
+/// MC-6.9: "You may cast this card from your graveyard / from exile" — the card's own permission, read by
+/// Playable.CanCastFromHere. Storied Veteran: (Graveyard) { Finality } — "If you do, it enters with a finality
+/// counter on it"; unlike flashback it isn't exiled leaving the stack (MagicState.MoveCard), so it resolves onto
+/// the battlefield (StackResolution). Khan, Vengeful Heart: (Exile) — your own exile; face down it has no
+/// abilities (CR 708.2), so not then.
 /// </summary>
-public record MayCastFromYourGraveyard : GameComponent;
+public record MayCastThisFrom(ZoneType From) : GameComponent
+{
+	public bool Finality { get; init; }
 
-/// <summary>
-/// Khan, Vengeful Heart: "You may cast this card from exile." — your own exile, read by
-/// Playable.CanCastFromHere; face down it has no abilities (CR 708.2), so not then.
-/// </summary>
-public record MayCastFromExile : GameComponent;
+	/// <summary>The card's own permission from <paramref name="zone"/> — what it printed, not what it was granted.</summary>
+	public static bool On(Cards.Card card, ZoneType zone) =>
+		card.Components.OfType<MayCastThisFrom>().Any(m => m.From == zone);
+}
 
 /// <summary>
 /// MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your graveyard / the top of your

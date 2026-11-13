@@ -153,10 +153,10 @@ whose subsystem it lives in.
   that. `Candidates` looks in the sideboard only while such a permanent says "outside the game".
 - **"The first spell you've cast this game"** is stamped as it is cast (`OnStackComponent.FirstSpellThisGame`,
   from `MagicPlayer.SpellsCastThisGame`), read by `FirstSpellYouCastThisGame` — a copy wasn't cast.
-- **"You may cast this card from your graveyard"** (Storied Veteran) is `MayCastFromYourGraveyard`, read by
-  `Playable.CanCastFromHere` — not flashback: it isn't exiled leaving the stack, it resolves onto the
-  battlefield (with a finality counter, `EnterFromStackAction.Finality`). **"… from exile"** (Khan) is
-  `MayCastFromExile` beside it — your own exile, never face down (a face-down card has no abilities).
+- **"You may cast this card from your graveyard / from exile"** is the card's own `MayCastThisFrom(From) { Finality }`
+  (MC-6.9), read by `Playable.CanCastFromHere` — Storied Veteran (Graveyard) is not flashback: it isn't exiled leaving
+  the stack, it resolves onto the battlefield (with a finality counter, `EnterFromStackAction.Finality`); Khan (Exile):
+  your own exile, never face down (a face-down card has no abilities).
 - **An activated ability's event card** is the creature tapped for its cost (Station's "its power") or, with
   none tapped, the one sacrificed (Gowron: "if you sacrificed a Klingon this way" — `Matches(Ref.EventCard, …)
   { AsItLastWas }`, its snapshot from before the cost: a sacrificed token has ceased to exist by then).

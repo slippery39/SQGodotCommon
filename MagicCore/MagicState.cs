@@ -156,7 +156,7 @@ public static class MagicState
 		if (
 			before.GetComponent<Actions.OnStackComponent>()
 				is { CastFrom: ZoneType.Graveyard, ByPermission: false }
-			&& !before.HasComponent<MayCastFromYourGraveyard>() // Storied Veteran: no flashback
+			&& !MayCastThisFrom.On(before, ZoneType.Graveyard) // Storied Veteran: no flashback
 			&& zoneId != s.GetWellKnownId(MagicKeys.Stack)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);

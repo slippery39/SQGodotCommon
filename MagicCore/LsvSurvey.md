@@ -56,7 +56,7 @@ built (`/card-batch` step 1).
 - **Cycling(cost, search) — a filter on the search** (5): Eagles of the North, Lórien Revealed, Troll of Khazad-dûm, Oliphaunt, Generous Ent
 - **an alternative cost + sacrifice** (5): Solitude, Subtlety, Grief, Fury, Endurance
 - **Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards)** (4): Dragon's Rage Channeler, Fear of Missing Out, Unholy Heat, Shifting Woodland
-- **MayCastFromYourGraveyard + an exile cost** (4): From the Catacombs, Bloodbraid Challenger, Phlage, Titan of Fire's Fury, Uro, Titan of Nature's Wrath
+- **MayCastThisFrom(Graveyard) + an exile cost** (4): From the Catacombs, Bloodbraid Challenger, Phlage, Titan of Fire's Fury, Uro, Titan of Nature's Wrath
 - **Surveil — a scry option (no Scry yet)** (2): Preordain, Palantír of Orthanc
 - **an alternative cost + haste + return** (2): Ragavan, Nimble Pilferer, Death-Greeter's Champion
 - **CantBeBlockedBy — and blocks only shadow** (1): Dauthi Voidwalker
@@ -473,7 +473,7 @@ built (`/card-batch` step 1).
 
 - Alpha Deathclaw (Creature — Lizard Mutant) — have: engine keyword; option: PutCounters + a 'monstrous' stamp
 - Batroc the Leaper (Legendary Creature — Human Villain) — option: KickerComponent — kicked any number of times
-- Bloodbraid Challenger (Creature — Elf Berserker) — have: engine keyword; option: MayCastFromYourGraveyard + an exile cost; option: ExileUntilNonlandCastFree — MV less
+- Bloodbraid Challenger (Creature — Elf Berserker) — have: engine keyword; option: MayCastThisFrom(Graveyard) + an exile cost; option: ExileUntilNonlandCastFree — MV less
 - Collective Brutality (Sorcery) — option: ModeChoice — a cost per extra mode
 - Dauthi Voidwalker (Creature — Dauthi Rogue) — option: CantBeBlockedBy — and blocks only shadow
 - Death-Greeter's Champion (Creature — Human Warrior) — option: PutCounters on target + granted abilities; have: engine keyword; option: an alternative cost + haste + return
@@ -493,7 +493,7 @@ built (`/card-batch` step 1).
 - Orcish Bowmasters (Creature — Orc Archer) — option: an Army token + counters; have: engine keyword
 - Palantír of Orthanc (Legendary Artifact) — have: Mill; option: Surveil — a scry option (no Scry yet)
 - Parallax Wave (Enchantment) — option: Vanishing — fade counters
-- Phlage, Titan of Fire's Fury (Legendary Creature — Elder Giant) — option: MayCastFromYourGraveyard + an exile cost
+- Phlage, Titan of Fire's Fury (Legendary Creature — Elder Giant) — option: MayCastThisFrom(Graveyard) + an exile cost
 - Preordain (Sorcery) — option: Surveil — a scry option (no Scry yet)
 - Prismatic Ending (Sorcery) — option: OnStackComponent.ColorsSpent (Sunburst) read by a Count
 - Ragavan, Nimble Pilferer (Legendary Creature — Monkey Pirate) — have: Tokens.Treasure; option: an alternative cost + haste + return
@@ -504,7 +504,7 @@ built (`/card-batch` step 1).
 - Subtlety (Creature — Elemental Incarnation) — have: engine keyword; option: an alternative cost + sacrifice
 - Troll of Khazad-dûm (Creature — Troll) — have: Cycling(cost, search); option: Cycling(cost, search) — a filter on the search; have: Scripting.Cycling
 - Unholy Heat (Instant) — option: Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards)
-- Uro, Titan of Nature's Wrath (Legendary Creature — Elder Giant) — option: MayCastFromYourGraveyard + an exile cost
+- Uro, Titan of Nature's Wrath (Legendary Creature — Elder Giant) — option: MayCastThisFrom(Graveyard) + an exile cost
 - Woodfall Primus (Creature — Treefolk Shaman) — option: a dies trigger returning it with a -1/-1 counter; have: engine keyword
 
 ### Tier 3
@@ -537,7 +537,7 @@ built (`/card-batch` step 1).
 - Feywild Caretaker (Creature — Orc Wizard) — new: dungeons
 - Figure of Fable (Creature — Kithkin) — new: protection (CR 702.16)
 - Forth Eorlingas! (Sorcery) — new: the monarch
-- From the Catacombs (Sorcery) — option: MayCastFromYourGraveyard + an exile cost; new: dungeons
+- From the Catacombs (Sorcery) — option: MayCastThisFrom(Graveyard) + an exile cost; new: dungeons
 - Galvanic Discharge (Instant) — new: energy
 - Get Lost (Instant) — have: Explore; new: Map tokens
 - Giver of Runes (Creature — Kor Cleric) — new: protection (CR 702.16)
