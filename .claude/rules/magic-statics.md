@@ -43,7 +43,8 @@ whose subsystem it lives in.
   or under an Aura (`EnchantedLosesAllAbilities`, found once per state with the statics). It reaches
   every rule because every rule reads abilities through `s.AbilitiesOf<T>`, keywords through `s.Has`,
   mana through `ManaAbilities.ColorsOf` (a basic land's intrinsic ability included). What the AURA
-  says ("doesn't untap") is the Aura's, so it still applies. No timestamps: everything goes.
+  says ("doesn't untap", `DoesntUntap(Is.AttachedToSource)`) is the Aura's, so it still applies — unless the AURA
+  loses its abilities (read with `AbilitiesOf` on the holder, MC-6.15). No timestamps: everything goes.
 - **Auras and Equipment are one mechanism** (`Card.AttachedToId`, Rules/Attachments.cs). An Aura targets
   as it is cast (`AuraComponent`) and attaches on resolving; what either grants is a live static
   (scope `Is.AttachedToSource`), never stamped. "When enchanted creature dies" looks back through

@@ -790,7 +790,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** BasicsTests, FraEngineTests
 
-**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `BecomeUnprepared` — Infinite Coursework: "It becomes unprepared."; `EnchantedDoesntUntap` — Infinite Coursework: "… and doesn't untap during its controller's untap step" — the…; `EnchantedLosesAllAbilities` — Infinite Coursework: "Enchanted creature loses all abilities" —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `BecomeUnprepared` — Infinite Coursework: "It becomes unprepared."; `DoesntUntap` — MC-6.15: "[It] doesn't untap during its controller's untap step" — the holder's rule…; `EnchantedLosesAllAbilities` — Infinite Coursework: "Enchanted creature loses all abilities" —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
 
 ```csharp
 ["Infinite Coursework"] =
@@ -803,7 +803,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new BecomeUnprepared(Ref.EnchantedCreature)
 	),
 	new EnchantedLosesAllAbilities(),
-	new EnchantedDoesntUntap(),
+	new DoesntUntap(Is.AttachedToSource),
 ],
 ```
 
@@ -3976,12 +3976,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FilterMigrationTests, FraUncommonCreatureTests
 
-**Engine pieces:** `DoesntUntapInYourUntapStep` — Traxos: "doesn't untap during your untap step" — read by the untap step ONLY; an untap…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+**Engine pieces:** `DoesntUntap` — MC-6.15: "[It] doesn't untap during its controller's untap step" — the holder's rule…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
 ```csharp
 ["Traxos, Scourge Eternal"] =
 [
-	new DoesntUntapInYourUntapStep(),
+	new DoesntUntap(Is.Source),
 	When(
 		TriggerEvent.YouCastSpell with
 		{

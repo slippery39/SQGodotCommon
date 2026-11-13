@@ -34,7 +34,10 @@ whose subsystem it lives in.
   **"A [subtype] entered under your control this turn"**, even one that left again (Sulu), is
   `SubtypeEnteredThisTurn`, read from `TurnTally.SubtypesEntered` (written by `EnterBattlefield`). **"Attacked this turn"** is
   `Card.AttackedOnTurn`, stamped as attackers are declared.
-- **"Doesn't untap during your untap step"** (`DoesntUntapInYourUntapStep`) is read by the untap step
+- **"Doesn't untap during its controller's untap step"** is ONE piece, `DoesntUntap(filter)` (MC-6.15): the HOLDER's
+  rule over what its filter matches, from its side — Traxos' own (`Is.Source`), Infinite Coursework's and Marooned's
+  (`Is.AttachedToSource`) — read with `AbilitiesOf` on the holder, so Traxos losing all abilities untaps while the
+  enchanted creature losing its own stays down. Read by the untap step
   ONLY — an untap effect still untaps it (Traxos' own trigger). A stun counter, by contrast, eats every untap.
 - **A subtype narrows a trigger or a static:** the trigger's `Subject` ("whenever a Plains you
   control enters" is `Is.Land & Is.Yours & Is.Subtype("Plains")` — no prompt for any other land) and a static's scope

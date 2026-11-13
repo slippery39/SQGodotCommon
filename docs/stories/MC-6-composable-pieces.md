@@ -73,6 +73,32 @@ really are unique), but the families below are.
   (`MoveChosen`), not a `MoveTo` option: the choice is a step the replays answer, and each zone keeps the choice type
   it had (graveyard `ChooseAmongChoice`, battlefield `ChoosePermanentChoice`, hand `ChooseCardsFromHandChoice`).
 
+- 2026-11-13, Claude (cube lane; MC-6.15): **"doesn't untap" is the holder's rule, not a keyword it grants.** A grant
+  (`StaticEffectComponent` + a keyword-like word, as `Combat.CantBlock`) would be read through `s.Has`, which drops every
+  grant on a creature that lost all abilities — Infinite Coursework's own creature would start untapping. The Aura's
+  "doesn't untap" is the Aura's effect (CR 613: losing abilities doesn't end another object's effect), so it is
+  `DoesntUntap(filter)` on the holder, as `PermanentsEnter` is.
+- 2026-11-13, Claude — **Open (for Shayne), MC-6.15: the player-side "can't"s.** Today each is a marker read in its one
+  place: a this-turn object on a player (`CantCastOrActivate`, `LifeTotalCantChange`, `CantAttackThisTurn`,
+  `YouHaveHexproof`, `PreventAllDamageToYou`) or a permanent's for its controller (`DontLoseForZeroLife`,
+  `CantSacrificeTreasures`) — only `CantCastOrActivate` is both. LSVPower varies who and how long: "your opponents can't
+  cast spells during your turn" (Voice of Victory, Jennifer Walters), "each player can't cast more than one spell each
+  turn" (Archon of Emeria), "activated abilities of artifacts, creatures and planeswalkers can't be activated" (Clarion
+  Conqueror), "each opponent can't draw more than one card each turn" (Narset, Leovold), "can't gain life for the rest of
+  the game" (Screaming Nemesis), "can't cause you to discard or sacrifice" (Tamiyo). Options:
+  **(A)** one reader for every player rule, `s.PlayerRules<T>(player)` — the player's command-zone objects (this turn, or
+  the rest of the game) AND every permanent's `T` whose `Who` filter (from the holder's side: you by default, opponents,
+  each player) matches — so any marker works from either source with any who. Cost: a battlefield scan on hot paths
+  (targeting, damage, life, casting legality — asked per move by the AI; `Combat.LockedDown` scans permanents only in
+  combat today for that reason), so it wants a per-state cache (AI-22's kind of work).
+  **(B)** keep each marker; give the one a card needs its `Who` / duration when its batch is scripted (Voice of Victory:
+  `CantCastOrActivate { Who = Is.Opponents, DuringYourTurn }`; Narset a draw-limit marker; Nemesis a rest-of-game object).
+  Nothing speculative, no hot path touched until a card pays for it.
+  **Default (B)**, with (A)'s reader at the first batch that needs a second marker on a permanent with a `Who`. Kept
+  apart either way: `CantBeCountered` (the spell's own characteristic) and `NextSpellCantBeCountered` (a one-shot the next
+  cast takes, setting `OnStackComponent.CantBeCountered` — Delighted Halfling's mana sets the same flag), and
+  `PermanentsCantPhaseIn` (one rule, its one place).
+
 ## Tasks
 
 The audit (2026-11-06): each family, its members today, and the composed piece. **MC-5.6** marks the ones
@@ -187,11 +213,17 @@ the Stardates fix.
       → `BecomesType(scope) { Add, Remove, Subtype, Power, Toughness, If }` (Puppet Crafting moved; Mogis's "isn't a
       creature" on it), `Attachments.Animations` made general and run in `EnterBattlefield` too. The rest after MC-5.4:
       `EnchantedIsCreatureType`, `EnchantedLosesAllAbilities`,
-      `EnchantedDoesntUntap`, `EnchantedCantBeBeamedUp` → the general statics with the scope
+      `EnchantedDoesntUntap` (done in 6.15: `DoesntUntap(Is.AttachedToSource)`), `EnchantedCantBeBeamedUp` → the general statics with the scope
       `Is.AttachedToSource`.
 - [ ] MC-6.14 **"This turn" and "this game" conditions** — `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
       `HaventBegunAnExtraTurn`, `IfNthResolutionThisTurn` → a `Count` and `AtLeast`, where a tally exists.
-- [ ] MC-6.15 **Rule-changing statics** — part done 2026-11-07 (MC-5.6 batch 3b): `NoSpellsOrAbilitiesDuringCombat` →
+- [ ] MC-6.15 **Rule-changing statics** — part done 2026-11-13 (cube lane): "doesn't untap during its controller's
+      untap step" → `DoesntUntap(filter)`, the holder's rule (Traxos `Is.Source`; Infinite Coursework, Marooned
+      `Is.AttachedToSource`) — `DoesntUntapInYourUntapStep` and 6.13's `EnchantedDoesntUntap` gone; no game moved; two tests (Marooned holds
+      down another player's artifact; Traxos that lost all abilities untaps, as before), revert-checked. One reading
+      changed, rules-correct and in no game: an AURA that loses its abilities no longer holds its creature down (it was
+      read with HasComponent). The player-side rest is **Open (for Shayne)** in Decisions.
+      Part done 2026-11-07 (MC-5.6 batch 3b): `NoSpellsOrAbilitiesDuringCombat` →
       `CantCastOrActivate { DuringCombat, ManaAbilitiesToo }`, on a permanent (Yuriko moved) or a `ThisTurn { On }`
       effect (Sen Triplets); `LifeTotalCantChange` (Flare of Fortitude) with paying life one question (`Life.CanPay`).
       The rest after MC-5.4 ("can't", "doesn't", "don't"): `CantAttackThisTurn`, `CantBeCountered`,

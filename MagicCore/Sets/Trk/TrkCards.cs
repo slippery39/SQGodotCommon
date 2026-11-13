@@ -1303,7 +1303,7 @@ public static class TrkCards
 						[new PayMana(ManaCost.Parse("{3}"), [new Tap(Ref.EnchantedCreature)])]
 					)
 				),
-				new EnchantedDoesntUntap(),
+				new DoesntUntap(Is.AttachedToSource),
 				new EnchantedCantBeBeamedUp(),
 			],
 			["Suus Mahna Practitioner"] =

@@ -320,10 +320,9 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`CountersRemovedInsteadOfDestruction`** — Dr. McCoy, Surly Surgeon: "If another creature you control with a +1/+1 counter on it would be destroyed, instead remove all +1/+1… [1: Dr. McCoy, Surly Surgeon]
 - **`DelayedTrigger(TriggeredAbilityComponent Ability)`** — A delayed triggered ability (CR 603.7) kept on the permanent it acts on — Vindictive Triumph's "exile it at the beginning of the next end…
   - `ControllerId` (int): Who controls it (CR 603.7d: whoever created it) — Ghost of Illyria's controller, not the exiled card's…
-- **`DoesntUntapInYourUntapStep`** — Traxos: "doesn't untap during your untap step" — read by the untap step ONLY; an untap effect still untaps it. (MtgCore's freeze blocks… [1: Traxos, Scourge Eternal]
+- **`DoesntUntap(Filters.Filter Which)`** — MC-6.15: "[It] doesn't untap during its controller's untap step" — the holder's rule over what its filter matches, asked from the holder's… [3: Traxos, Scourge Eternal, Infinite Coursework, Marooned]
 - **`DontLoseForZeroLife`** — Georgiou, Terran Emperor: "You don't lose the game for having 0 or less life." — the state-based check (TurnStructure); she leaves, and… [1: Georgiou, Terran Emperor]
 - **`EnchantedCantBeBeamedUp`** — Marooned: "Enchanted permanent … can't be beamed up." — read by BeamMeUpCost: never returned to pay one. [1: Marooned]
-- **`EnchantedDoesntUntap`** — Infinite Coursework: "… and doesn't untap during its controller's untap step" — the Aura's, not the creature's. [2: Infinite Coursework, Marooned]
 - **`EnchantedIsCreatureType(string Subtype)`** — De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)" — Characteristics.Subtypes. [1: De-evolve]
 - **`EnchantedLosesAllAbilities`** — Infinite Coursework: "Enchanted creature loses all abilities" — Characteristics.HasLostAllAbilities. [1: Infinite Coursework]
 - **`EnteredAsCopy(Card Original)`** — Flesh Duplicate: it entered as a copy — what it was, restored as it leaves the battlefield (Card.WithoutCopyEffect), never in cleanup.

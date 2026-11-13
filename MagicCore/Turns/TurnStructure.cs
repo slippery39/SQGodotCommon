@@ -112,18 +112,22 @@ public static class TurnStructure
 	public static GameState FinishUntap(GameState s, int keepTapped)
 	{
 		var active = s.GetGame().ActivePlayerId;
-		// Held down by an Aura (Infinite Coursework) — found once for the step.
-		var heldDown = new[] { s.Player1Id(), s.Player2Id() }
+		// MC-6.15: what a "doesn't untap" rule holds down (Traxos itself, Infinite Coursework's creature) — the rules
+		// found once for the step, each asked from its holder's side.
+		var holdDown = new[] { s.Player1Id(), s.Player2Id() }
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-			.Where(a => a.HasComponent<Effects.EnchantedDoesntUntap>())
-			.Select(a => (a.AttachedToId, a.AttachedToIncarnation))
-			.ToHashSet();
+			.SelectMany(h => s.AbilitiesOf<Effects.DoesntUntap>(h).Select(rule => (h, rule)))
+			.ToList();
 		foreach (
 			var card in s.CardsIn(active, ZoneType.Battlefield)
 				.Where(c =>
 					c.IsTapped
-					&& !s.HasAbility<Effects.DoesntUntapInYourUntapStep>(c)
-					&& !heldDown.Contains((c.Id, c.Incarnation))
+					&& (
+						holdDown.Count == 0
+						|| !holdDown.Any(x =>
+							x.rule.Which.Matches(s, c, new(x.h.ControllerId, x.h.Id))
+						)
+					)
 					&& c.Id != keepTapped // Lwaxana Troi, kept tapped
 				)
 				.ToList()

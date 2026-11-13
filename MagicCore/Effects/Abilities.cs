@@ -818,10 +818,13 @@ public record StaticEffectComponent(Filters.Filter Affects, string? Keyword = nu
 }
 
 /// <summary>
-/// Traxos: "doesn't untap during your untap step" — read by the untap step ONLY; an untap effect
-/// still untaps it. (MtgCore's freeze blocks every untap: Dungeon Geists' wording, not this one.)
+/// MC-6.15: "[It] doesn't untap during its controller's untap step" — the holder's rule over what its filter matches,
+/// asked from the holder's side: Traxos, Scourge Eternal's own (Is.Source), Infinite Coursework's and Marooned's
+/// "enchanted creature/permanent" (Is.AttachedToSource). Read by the untap step ONLY; an untap effect still untaps it
+/// (MtgCore's freeze blocks every untap: Dungeon Geists' wording, not this one). It is the HOLDER's ability (read with
+/// AbilitiesOf): the enchanted creature losing its own changes nothing; Traxos — or an Aura — losing its own ends it.
 /// </summary>
-public record DoesntUntapInYourUntapStep : GameComponent;
+public record DoesntUntap(Filters.Filter Which) : GameComponent;
 
 /// <summary>
 /// "Flashback [cost] (You may cast this card from your graveyard for its flashback cost. Then exile
@@ -1092,9 +1095,6 @@ public record DontLoseForZeroLife : GameComponent;
 /// up beside your library — TBL-6 (Shayne, 2026-11-01).
 /// </summary>
 public record MayLookAtTopOfLibrary : GameComponent;
-
-/// <summary>Infinite Coursework: "… and doesn't untap during its controller's untap step" — the Aura's, not the creature's.</summary>
-public record EnchantedDoesntUntap : GameComponent;
 
 /// <summary>Marooned: "Enchanted permanent … can't be beamed up." — read by BeamMeUpCost: never returned to pay one.</summary>
 public record EnchantedCantBeBeamedUp : GameComponent;

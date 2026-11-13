@@ -2276,7 +2276,7 @@ public static class FraCards
 			],
 			["Traxos, Scourge Eternal"] =
 			[
-				new DoesntUntapInYourUntapStep(),
+				new DoesntUntap(Is.Source),
 				When(
 					TriggerEvent.YouCastSpell with
 					{
@@ -2577,7 +2577,7 @@ public static class FraCards
 					new BecomeUnprepared(Ref.EnchantedCreature)
 				),
 				new EnchantedLosesAllAbilities(),
-				new EnchantedDoesntUntap(),
+				new DoesntUntap(Is.AttachedToSource),
 			],
 
 			// ===== Engine: mana that isn't one land, one mana =====

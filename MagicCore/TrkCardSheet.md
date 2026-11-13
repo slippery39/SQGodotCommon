@@ -1087,9 +1087,9 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this Aura enters, you may pay {3}. If you do, tap enchanted permanent.  
 > Enchanted permanent doesn't untap during its controller's untap step and can't be beamed up.
 
-**Status:** scripted · **tests naming it:** TrkBatch3Tests
+**Status:** scripted · **tests naming it:** FraUncommonCreatureTests, TrkBatch3Tests
 
-**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `EnchantedCantBeBeamedUp` — Marooned: "Enchanted permanent … can't be beamed up." — read by BeamMeUpCost: never…; `EnchantedDoesntUntap` — Infinite Coursework: "… and doesn't untap during its controller's untap step" — the…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `DoesntUntap` — MC-6.15: "[It] doesn't untap during its controller's untap step" — the holder's rule…; `EnchantedCantBeBeamedUp` — Marooned: "Enchanted permanent … can't be beamed up." — read by BeamMeUpCost: never…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
 
 ```csharp
 ["Marooned"] =
@@ -1104,7 +1104,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			[new PayMana(ManaCost.Parse("{3}"), [new Tap(Ref.EnchantedCreature)])]
 		)
 	),
-	new EnchantedDoesntUntap(),
+	new DoesntUntap(Is.AttachedToSource),
 	new EnchantedCantBeBeamedUp(),
 ],
 ```

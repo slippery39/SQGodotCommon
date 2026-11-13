@@ -249,6 +249,44 @@ public class FraUncommonCreatureTests : FraBoardTest
 		);
 	}
 
+	// MC-6.15: "doesn't untap" is its HOLDER's rule over what its filter matches, asked from the holder's side —
+	// Marooned holds down another player's artifact (a permanent, not only a creature) through their untap step.
+	[Test]
+	public void Marooned_HoldsDownTheirArtifact_ThroughTheirUntapStep()
+	{
+		var relic = Field(TestGames.Inline("Relic", "{2}", "Artifact"), them);
+		Cast(Hand("Marooned", me), [], relic); // "you may pay {3}": no
+		Tapped(relic);
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().ActivePlayerId == them && x.GetGame().Step == Step.PreCombatMain
+		);
+		Assert.That(s.GetCard(relic).IsTapped, Is.True);
+	}
+
+	// MC-6.15: and it is the holder's ABILITY — Traxos that lost all abilities untaps, as it did before (Infinite
+	// Coursework's creature, which loses its own, stays down: the Aura's rule, FraEngineTests).
+	[Test]
+	public void Traxos_LostAllAbilities_UntapsAgain()
+	{
+		var traxos = Field(CardRegistry.Get("Traxos, Scourge Eternal"), me);
+		var hush = Hand(
+			new CardDefinition(
+				TestGames.Inline("Hush", "{1}", "Enchantment — Aura").Data,
+				[new AuraComponent(Targeting.TargetSpec.Creature), new EnchantedLosesAllAbilities()]
+			),
+			me
+		);
+		Cast(hush, [], traxos);
+		Tapped(traxos);
+		var turn = s.GetGame().TurnNumber;
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().TurnNumber == turn + 2 && x.GetGame().Step == Step.PreCombatMain
+		);
+		Assert.That(s.GetCard(traxos).IsTapped, Is.False);
+	}
+
 	[Test]
 	public void Traxos_StaysTappedThroughYourUntapStep_ButACreatureSpellUntapsIt()
 	{
