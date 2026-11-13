@@ -1,6 +1,7 @@
 """Download a set's art from Scryfall for the MagicTable front end.
 
     python tools/fetch_set_art.py fra
+    python tools/fetch_set_art.py lsv    # a cube: its list's cards (MC-4)
 
 Per card (and per token of the set's token set, t<code>), by name slug:
   SQGodotCommon/MagicTable/Assets/Art/<slug>.jpg    art crop  — battlefield card crops
@@ -20,7 +21,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from import_scryfall_set import query
+from import_scryfall_set import cards_of, list_names
 
 ROOT = Path(__file__).resolve().parent.parent / "SQGodotCommon" / "MagicTable" / "Assets"
 SETS = Path(__file__).resolve().parent.parent / "MagicCore" / "Sets"
@@ -85,7 +86,8 @@ def printed_earlier(code):
 def main():
     code = sys.argv[1].lower()
     reprints = printed_earlier(code)
-    cards = search(query(code)) + search(f"set:t{code}")
+    # ponytail: a cube (a list) has no token set of its own — its tokens' art waits for a card that needs one
+    cards = cards_of(code) + (search(f"set:t{code}") if list_names(code) is None else [])
     fetched = skipped = 0
     for card in cards:
         for name, uris in images(card):

@@ -52,7 +52,7 @@ MagicCore/
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions: every CostChange)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
-├── FraCoverage.md / TrkCoverage.md   per set: what is scripted, what waits and why — status, not rules
+├── FraCoverage.md / TrkCoverage.md   per set: what is scripted, what waits and why — status, not rules; LsvSurvey.md: the cube's survey (GENERATED, tools/survey.py)
 ├── AbilityCatalog.md    GENERATED: every effect, trigger, ref, count, condition, component — one line each
 ├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests
 ├── Cookbook.md          how to script a card, by pattern; the tiers of checking

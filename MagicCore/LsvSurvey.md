@@ -1,0 +1,590 @@
+# LSV survey — the first pass (`tools/survey.py lsv`, MC-4.2)
+
+GENERATED — never hand-edit; the hand check and the batch plan are in `docs/stories/MC-4-powered-cube.md`.
+A tier from keywords, layout and a few text patterns only — every batch's cards are read before they are
+built (`/card-batch` step 1).
+
+**528 cards:** 31 play today (scripted in FRA/TRK, or keywords only); of the other 497, tier 1 (only pieces the engine has) 387, tier 2 (an option on a piece) 35, tier 3 (a new piece or rule) 75.
+
+## New pieces and rules, by how many cards need them
+
+- **transforming DFCs** (12): Ajani, Nacatl Pariah // Ajani, Nacatl Avenger, Sunfall, Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar, Jace, Vryn's Prodigy // Jace, Telepath Unbound, Cecil, Dark Knight // Cecil, Redeemed Paladin, Concealing Curtains // Revealing Eye, Etali, Primal Conqueror // Etali, Primal Sickness, Fable of the Mirror-Breaker // Reflection of Kiki-Jiki, Outland Liberator // Frenzied Trapbreaker, Ulvenwald Oddity // Ulvenwald Behemoth, Aang, Swift Savior // Aang and La, Ocean's Fury, Jennifer Walters // The Sensational She-Hulk
+- **protection (CR 702.16)** (8): Giver of Runes, Mother of Runes, Seasoned Dungeoneer, True-Name Nemesis, Hexdrinker, Figure of Fable, Emrakul, the Aeons Torn, The One Ring
+- **dungeons** (6): White Plume Adventurer, Seasoned Dungeoneer, Feywild Caretaker, From the Catacombs, Caves of Chaos Adventurer, Undermountain Adventurer
+- **face-down cards (morph, manifest)** (4): Abhorrent Oculus, Headliner Scarlett, Memory Jar, Shelldock Isle
+- **the monarch** (4): Palace Jailer, Okoye, Mighty and Adored, Forth Eorlingas!, Aragorn, King of Gondor
+- **Vehicles: crew** (3): Esika's Chariot, Reckoner Bankbuster, Smuggler's Copter
+- **companion** (3): Lurrus of the Dream-Den, Lutri, the Spellchaser, Zirda, the Dawnwaker
+- **modal DFCs (play either face)** (3): Witch Enchanter // Witch-Blessed Meadow, Sink into Stupor // Soporific Springs, Jennifer Walters // The Sensational She-Hulk
+- **Blood tokens** (2): Ivora, Insatiable Heir, Bloodtithe Harvester
+- **Map tokens** (2): Get Lost, Sentinel of the Nameless City
+- **a cost paid by exiling graveyard cards** (2): Dig Through Time, Treasure Cruise
+- **adventures** (2): Brazen Borrower // Petty Theft, Embereth Shieldbreaker // Battle Display
+- **energy** (2): Guide of Souls, Galvanic Discharge
+- **ninjutsu** (2): Kaito, Bane of Nightmares, Fallen Shinobi
+- **overload (target → each)** (2): Winds of Abandon, Damn
+- **splice** (2): Goryo's Vengeance, Through the Breach
+- **Classes (levels)** (1): Does Machines
+- **Incubator tokens (transform)** (1): Sunfall
+- **Mounts: saddle** (1): Caustic Bronco
+- **airbend** (1): Aang, Swift Savior // Aang and La, Ocean's Fury
+- **backgrounds (commander)** (1): Gut, True Soul Zealot
+- **bestow** (1): Springheart Nantuko
+- **buyback (returns to hand)** (1): Corpse Dance
+- **day and night** (1): Outland Liberator // Frenzied Trapbreaker
+- **earthbend** (1): Badgermole Cub
+- **emerge** (1): Crabomination
+- **exert** (1): Arena of Glory
+- **face-down 2/2s** (1): Abhorrent Oculus
+- **level up** (1): Hexdrinker
+- **miracle** (1): Metamorphosis Fanatic
+- **plot** (1): Pillage the Bog
+- **poison** (1): Etali, Primal Conqueror // Etali, Primal Sickness
+- **protect** (1): Cecil, Dark Knight // Cecil, Redeemed Paladin
+- **reconfigure** (1): Lion Sash
+- **split cards** (1): Life // Death
+- **spree (a cost per mode)** (1): Three Steps Ahead
+- **storm** (1): Brain Freeze
+- **teamwork** (1): We Say Thee Nay!
+- **the city's blessing** (1): Ocelot Pride
+- **voting** (1): Council's Judgment
+- **warp (EOE)** (1): Quantum Riddler
+- **waterbend** (1): Aang, Swift Savior // Aang and La, Ocean's Fury
+
+## Options on existing pieces
+
+- **Cycling(cost, search) — a filter on the search** (5): Eagles of the North, Lórien Revealed, Troll of Khazad-dûm, Oliphaunt, Generous Ent
+- **an alternative cost + sacrifice** (5): Solitude, Subtlety, Grief, Fury, Endurance
+- **Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards)** (4): Dragon's Rage Channeler, Fear of Missing Out, Unholy Heat, Shifting Woodland
+- **MayCastFromYourGraveyard + an exile cost** (4): From the Catacombs, Bloodbraid Challenger, Phlage, Titan of Fire's Fury, Uro, Titan of Nature's Wrath
+- **Surveil — a scry option (no Scry yet)** (2): Preordain, Palantír of Orthanc
+- **an alternative cost + haste + return** (2): Ragavan, Nimble Pilferer, Death-Greeter's Champion
+- **CantBeBlockedBy — and blocks only shadow** (1): Dauthi Voidwalker
+- **CostChange — less per artifact** (1): Emry, Lurker of the Loch
+- **CreateTokenCopy from the graveyard, changed** (1): Fanatic of Rhonas
+- **ExileTopPlayable — face down, free** (1): Shelldock Isle
+- **ExileUntilNonlandCastFree — MV less** (1): Bloodbraid Challenger
+- **KickerComponent — kicked any number of times** (1): Batroc the Leaper
+- **ModeChoice — a cost per extra mode** (1): Collective Brutality
+- **OnStackComponent.ColorsSpent (Sunburst) read by a Count** (1): Prismatic Ending
+- **PutCounters + a 'monstrous' stamp** (1): Alpha Deathclaw
+- **PutCounters on target + granted abilities** (1): Death-Greeter's Champion
+- **ReplicateComponent-like** (1): Sicarian Infiltrator
+- **TurnTally — a permanent of yours left the battlefield** (1): Fatal Push
+- **Vanishing — fade counters** (1): Parallax Wave
+- **a colour characteristic** (1): Sowing Mycospawn
+- **a dies trigger returning it with a -1/-1 counter** (1): Woodfall Primus
+- **an Army token + counters** (1): Orcish Bowmasters
+- **convoke — artifacts, generic only** (1): Kappa Cannoneer
+
+## Every card, by tier
+
+### Tier 1
+
+- "Name Sticker" Goblin (Creature — Goblin Guest) — nothing the keywords name
+- Abandoned Air Temple (Land) — nothing the keywords name
+- Abrade (Instant) — nothing the keywords name
+- Abrupt Decay (Instant) — have: CantBeCountered
+- Aether Spellbomb (Artifact) — nothing the keywords name
+- Agent Bishop, Man in Black (Legendary Creature — Human Soldier) — nothing the keywords name
+- Ancestral Recall (Instant) — nothing the keywords name
+- Ancient Tomb (Land) — nothing the keywords name
+- Animate Dead (Enchantment — Aura) — have: AuraComponent
+- Anointed Peacekeeper (Creature — Human Cleric) — have: engine keyword
+- Archon of Cruelty (Creature — Archon) — have: engine keyword
+- Archon of Emeria (Creature — Archon) — have: engine keyword
+- Arid Mesa (Land) — nothing the keywords name
+- Arwen, Mortal Queen (Legendary Creature — Elf Noble) — nothing the keywords name
+- Atraxa, Grand Unifier (Legendary Creature — Phyrexian Angel) — have: engine keyword
+- Auriok Salvagers (Creature — Human Soldier) — nothing the keywords name
+- Avacyn's Pilgrim (Creature — Human Monk) — nothing the keywords name
+- Badlands (Land — Swamp Mountain) — nothing the keywords name
+- Balance (Sorcery) — nothing the keywords name
+- Baleful Mastery (Instant) — nothing the keywords name
+- Baleful Strix (Artifact Creature — Bird) — have: engine keyword
+- Baloth Prime (Creature — Beast) — nothing the keywords name
+- Barrowgoyf (Creature — Lhurgoyf) — have: engine keyword; have: Mill
+- Basalt Monolith (Artifact) — nothing the keywords name
+- Bayou (Land — Swamp Forest) — nothing the keywords name
+- Bejeweled Warg (Creature — Wolf) — have: Tokens.Treasure; have: engine keyword
+- Bilbo, Thief in the Night (Legendary Creature — Halfling Rogue) — nothing the keywords name
+- Birds of Paradise (Creature — Bird) — have: engine keyword
+- Bitter Triumph (Instant) — nothing the keywords name
+- Black Lotus (Artifact) — nothing the keywords name
+- Black Widow, Super Spy (Legendary Creature — Human Spy Hero) — have: engine keyword
+- Blackcleave Cliffs (Land) — nothing the keywords name
+- Blazemire Verge (Land) — nothing the keywords name
+- Bleachbone Verge (Land) — nothing the keywords name
+- Bloodstained Mire (Land) — nothing the keywords name
+- Blooming Marsh (Land) — nothing the keywords name
+- Bolas's Citadel (Legendary Artifact) — have: Ref opponents (two-player)
+- Bone Shards (Sorcery) — nothing the keywords name
+- Bonehoard Dracosaur (Creature — Dinosaur Dragon) — have: engine keyword; have: Tokens.Treasure
+- Boomerang Basics (Sorcery — Lesson) — nothing the keywords name
+- Boseiju, Who Endures (Legendary Land) — have: ActivatedAbilityComponent.From hand
+- Botanical Sanctum (Land) — nothing the keywords name
+- Brainstorm (Instant) — nothing the keywords name
+- Broadside Bombardiers (Creature — Goblin Pirate) — have: Card.AttackedOnTurn + OncePerTurn; have: engine keyword
+- Burst Lightning (Instant) — have: KickerComponent
+- Cabal Ritual (Instant) — have: If + Count
+- Candelabra of Tawnos (Artifact) — nothing the keywords name
+- Cathar Commando (Creature — Human Soldier) — have: engine keyword
+- Celestial Colonnade (Land) — nothing the keywords name
+- Chain Lightning (Sorcery) — nothing the keywords name
+- Chain of Smog (Sorcery) — nothing the keywords name
+- Chaos Defiler (Artifact Creature — Demon Construct) — have: engine keyword; have: Ref opponents (two-player)
+- Chromatic Star (Artifact) — nothing the keywords name
+- Chrome Mox (Artifact) — have: Exile { Linked }
+- City of Traitors (Land) — nothing the keywords name
+- Clarion Conqueror (Creature — Dragon) — have: engine keyword
+- Cloak and Dagger, Entwined (Legendary Creature — Human Hero) — have: engine keyword
+- Coalition Relic (Artifact) — nothing the keywords name
+- Cogwork Librarian (Artifact Creature — Construct) — nothing the keywords name
+- Comet, Stellar Pup (Legendary Planeswalker — Comet) — nothing the keywords name
+- Commercial District (Land — Mountain Forest) — have: Surveil
+- Concealed Courtyard (Land) — nothing the keywords name
+- Consult the Star Charts (Instant) — have: KickerComponent
+- Containment Priest (Creature — Human Cleric) — have: engine keyword
+- Copperline Gorge (Land) — nothing the keywords name
+- Cori-Steel Cutter (Artifact — Equipment) — have: Trigger.SpellNumber; have: Equipment (Attachments)
+- Counterspell (Instant) — nothing the keywords name
+- Coveted Jewel (Artifact) — nothing the keywords name
+- Creeping Tar Pit (Land) — nothing the keywords name
+- Crucible of Worlds (Artifact) — nothing the keywords name
+- Cryogen Relic (Artifact) — nothing the keywords name
+- Currency Converter (Artifact) — have: Tokens.Treasure
+- Cut Down (Instant) — nothing the keywords name
+- Dack Fayden (Legendary Planeswalker — Dack) — nothing the keywords name
+- Dark Confidant (Creature — Human Wizard) — nothing the keywords name
+- Dark Ritual (Instant) — nothing the keywords name
+- Darkslick Shores (Land) — nothing the keywords name
+- Daze (Instant) — nothing the keywords name
+- Deep-Cavern Bat (Creature — Bat) — have: engine keyword
+- Delighted Halfling (Creature — Halfling Citizen) — have: CantBeCountered
+- Demonic Consultation (Instant) — nothing the keywords name
+- Demonic Tutor (Sorcery) — nothing the keywords name
+- Dismember (Instant) — nothing the keywords name
+- Displacer Kitten (Creature — Cat Beast) — have: a flicker (Flicker)
+- Duress (Sorcery) — nothing the keywords name
+- Echo of Eons (Sorcery) — have: FlashbackComponent
+- Elegant Parlor (Land — Mountain Plains) — have: Surveil
+- Elite Spellbinder (Creature — Human Cleric) — have: engine keyword
+- Elspeth, Storm Slayer (Legendary Planeswalker — Elspeth) — nothing the keywords name
+- Elvish Spirit Guide (Creature — Elf Spirit) — nothing the keywords name
+- Emeritus of Abundance // Regrowth (Creature — Elf Druid // Sorcery) — have: engine keyword; have: Rules/Prepare.cs
+- Emperor of Bones (Creature — Skeleton Noble) — have: PutCounters under If
+- Enduring Innocence (Enchantment Creature — Sheep Glimmer) — have: engine keyword
+- Enlightened Tutor (Instant) — nothing the keywords name
+- Entomb (Instant) — nothing the keywords name
+- Erode (Instant) — nothing the keywords name
+- Exhume (Sorcery) — nothing the keywords name
+- Exorcise (Sorcery) — nothing the keywords name
+- Expedition Map (Artifact) — nothing the keywords name
+- Expressive Iteration (Sorcery) — nothing the keywords name
+- Faerie Mastermind (Creature — Faerie Rogue) — have: engine keyword
+- Faithless Looting (Sorcery) — have: FlashbackComponent
+- Fastbond (Enchantment) — nothing the keywords name
+- Fiery Confluence (Sorcery) — have: Ref opponents (two-player)
+- Fiery Islet (Land) — nothing the keywords name
+- Figure of Destiny (Creature — Kithkin) — nothing the keywords name
+- Fire Covenant (Instant) — nothing the keywords name
+- Flame Slash (Sorcery) — nothing the keywords name
+- Flametongue Kavu (Creature — Kavu) — nothing the keywords name
+- Flash (Instant) — nothing the keywords name
+- Flooded Strand (Land) — nothing the keywords name
+- Force of Negation (Instant) — nothing the keywords name
+- Force of Vigor (Instant) — nothing the keywords name
+- Force of Will (Instant) — nothing the keywords name
+- Forensic Gadgeteer (Creature — Vedalken Artificer Detective) — have: Tokens.Clue
+- Formidable Speaker (Creature — Elf Druid) — nothing the keywords name
+- Fractured Identity (Sorcery) — nothing the keywords name
+- Frantic Search (Instant) — nothing the keywords name
+- Gaea's Cradle (Legendary Land) — nothing the keywords name
+- Gemstone Caverns (Legendary Land) — nothing the keywords name
+- Gemstone Mine (Land) — nothing the keywords name
+- Generous Plunderer (Creature — Human Rogue) — have: Tokens.Treasure; have: engine keyword
+- Ghost Vacuum (Artifact) — nothing the keywords name
+- Gitaxian Probe (Sorcery) — nothing the keywords name
+- Gleemox (Artifact) — nothing the keywords name
+- Glimmer Lens (Artifact — Equipment) — have: living weapon-like; have: Equipment (Attachments)
+- Goblin Welder (Creature — Goblin Artificer) — nothing the keywords name
+- Gollum, Riddle Master (Legendary Creature — Halfling Horror) — have: Ref opponents (two-player)
+- Golos, Tireless Pilgrim (Legendary Artifact Creature — Scout) — nothing the keywords name
+- Green Sun's Zenith (Sorcery) — nothing the keywords name
+- Grim Monolith (Artifact) — nothing the keywords name
+- Grindstone (Artifact) — have: Mill
+- Griselbrand (Legendary Creature — Demon) — have: engine keyword
+- Harvester of Misery (Creature — Spirit) — have: engine keyword
+- Haywire Mite (Artifact Creature — Insect) — nothing the keywords name
+- Hedge Maze (Land — Forest Island) — have: Surveil
+- Horizon Canopy (Land) — nothing the keywords name
+- Hullbreacher (Creature — Merfolk Pirate) — have: Tokens.Treasure; have: engine keyword
+- Hymn to Tourach (Sorcery) — nothing the keywords name
+- Icetill Explorer (Creature — Insect Scout) — have: Mill; have: Trigger on a land entering
+- Ignoble Hierarch (Creature — Goblin Shaman) — have: 'attacks alone' trigger
+- Imperial Seal (Sorcery) — nothing the keywords name
+- Indatha Triome (Land — Plains Swamp Forest) — have: Scripting.Cycling
+- Inquisition of Kozilek (Sorcery) — nothing the keywords name
+- Inspiring Vantage (Land) — nothing the keywords name
+- Inti, Seneschal of the Sun (Legendary Creature — Human Knight) — nothing the keywords name
+- Invert Polarity (Instant) — nothing the keywords name
+- Iron-Shield Elf (Creature — Elf Warrior) — nothing the keywords name
+- Jace, Wielder of Mysteries (Legendary Planeswalker — Jace) — have: Mill; have: WinTheGame / LoseTheGame
+- Jacked Rabbit (Creature — Rabbit Warrior) — have: X counters + If
+- Jetmir's Garden (Land — Mountain Forest Plains) — have: Scripting.Cycling
+- Kaldra Compleat (Legendary Artifact — Equipment) — have: s.IsIndestructible; have: Equipment (Attachments); have: CreateTokens.AttachTo
+- Karakas (Legendary Land) — nothing the keywords name
+- Karn, Scion of Urza (Legendary Planeswalker — Karn) — nothing the keywords name
+- Keen-Eyed Curator (Creature — Raccoon Scout) — nothing the keywords name
+- Ketria Triome (Land — Forest Island Mountain) — have: Scripting.Cycling
+- Knight of Autumn (Creature — Dryad Knight) — nothing the keywords name
+- Kolaghan's Command (Instant) — nothing the keywords name
+- Laelia, the Blade Reforged (Legendary Creature — Spirit Warrior) — have: engine keyword
+- Leatherhead, Swamp Stalker (Legendary Creature — Crocodile Mutant Rogue) — have: engine keyword
+- Legion Extruder (Artifact) — nothing the keywords name
+- Leovold, Emissary of Trest (Legendary Creature — Elf Advisor) — have: Ref opponents (two-player)
+- Leyline Binding (Enchantment) — have: Count.BasicLandTypesAmongLandsYouControl; have: engine keyword
+- Library of Alexandria (Land) — nothing the keywords name
+- Lightning Bolt (Instant) — nothing the keywords name
+- Lightning Greaves (Artifact — Equipment) — have: Equipment (Attachments)
+- Lim-Dûl's Vault (Instant) — nothing the keywords name
+- Lingering Souls (Sorcery) — have: FlashbackComponent
+- Lion's Eye Diamond (Artifact) — nothing the keywords name
+- Llanowar Elves (Creature — Elf Druid) — nothing the keywords name
+- Loot, the Pathfinder (Legendary Creature — Beast Noble) — have: engine keyword; have: ActivatedAbilityComponent.Exhaust
+- Loran of the Third Path (Legendary Creature — Human Artificer) — have: engine keyword
+- Lose Focus (Instant) — have: ReplicateComponent
+- Lotus Cobra (Creature — Snake) — have: Trigger on a land entering
+- Lotus Petal (Artifact) — nothing the keywords name
+- Luminarch Aspirant (Creature — Human Cleric) — nothing the keywords name
+- Lush Portico (Land — Forest Plains) — have: Surveil
+- Magda, Brazen Outlaw (Legendary Creature — Dwarf Berserker) — have: Tokens.Treasure
+- Malcolm, Alluring Scoundrel (Legendary Creature — Siren Pirate) — have: engine keyword
+- Malevolent Rumble (Sorcery) — nothing the keywords name
+- Mana Confluence (Land) — nothing the keywords name
+- Mana Crypt (Artifact) — nothing the keywords name
+- Mana Drain (Instant) — nothing the keywords name
+- Mana Leak (Instant) — nothing the keywords name
+- Mana Tithe (Instant) — nothing the keywords name
+- Mana Vault (Artifact) — nothing the keywords name
+- Manamorphose (Instant) — nothing the keywords name
+- Manifold Key (Artifact) — nothing the keywords name
+- Marsh Flats (Land) — nothing the keywords name
+- Mawloc (Creature — Tyranid) — have: X counters + If; have: fight
+- Memnarch, the Warden (Legendary Artifact Creature — Wizard) — have: s.IsIndestructible
+- Memory Lapse (Instant) — nothing the keywords name
+- Meticulous Archive (Land — Plains Island) — have: Surveil
+- Mine Collapse (Instant) — nothing the keywords name
+- Minsc & Boo, Timeless Heroes (Legendary Planeswalker — Minsc) — nothing the keywords name
+- Mishra's Bauble (Artifact) — nothing the keywords name
+- Mishra's Workshop (Land) — nothing the keywords name
+- Misty Rainforest (Land) — nothing the keywords name
+- Mole Man, Moloid Master (Legendary Creature — Human Villain) — have: Mill; have: Trigger on a land entering
+- Mox Diamond (Artifact) — nothing the keywords name
+- Mox Emerald (Artifact) — nothing the keywords name
+- Mox Jet (Artifact) — nothing the keywords name
+- Mox Opal (Legendary Artifact) — have: If + Count
+- Mox Pearl (Artifact) — nothing the keywords name
+- Mox Ruby (Artifact) — nothing the keywords name
+- Mox Sapphire (Artifact) — nothing the keywords name
+- Multiversal Passage (Land) — nothing the keywords name
+- Mystic Confluence (Instant) — nothing the keywords name
+- Mystical Tutor (Instant) — nothing the keywords name
+- Nadu, Winged Wisdom (Legendary Creature — Bird Wizard) — have: engine keyword
+- Narset, Parter of Veils (Legendary Planeswalker — Narset) — have: Ref opponents (two-player)
+- Natural Order (Sorcery) — nothing the keywords name
+- Necromancy (Enchantment) — nothing the keywords name
+- No More Lies (Instant) — nothing the keywords name
+- Noble Hierarch (Creature — Human Druid) — have: 'attacks alone' trigger
+- Nurturing Peatland (Land) — nothing the keywords name
+- Occult Epiphany (Instant) — nothing the keywords name
+- Oko, Thief of Crowns (Legendary Planeswalker — Oko) — have: Tokens.Food
+- Once Upon a Time (Instant) — have: CastNow free / MayCastFromHandFree
+- Orcish Lumberjack (Creature — Orc) — nothing the keywords name
+- Otawara, Soaring City (Legendary Land) — have: ActivatedAbilityComponent.From hand
+- Otharri, Suns' Glory (Legendary Creature — Phoenix) — have: engine keyword
+- Ouroboroid (Creature — Plant Wurm) — nothing the keywords name
+- Oust (Sorcery) — nothing the keywords name
+- Painter's Servant (Artifact Creature — Scarecrow) — nothing the keywords name
+- Path to Exile (Instant) — nothing the keywords name
+- Pentad Prism (Artifact) — have: Sunburst
+- Pest Infestation (Sorcery) — nothing the keywords name
+- Phelia, Exuberant Shepherd (Legendary Creature — Dog) — have: engine keyword
+- Phyrexian Metamorph (Artifact Creature — Phyrexian Shapeshifter) — nothing the keywords name
+- Plateau (Land — Mountain Plains) — nothing the keywords name
+- Polluted Delta (Land) — nothing the keywords name
+- Ponder (Sorcery) — nothing the keywords name
+- Portable Hole (Artifact) — nothing the keywords name
+- Portal to Phyrexia (Artifact) — have: Ref opponents (two-player)
+- Prismatic Vista (Land) — nothing the keywords name
+- Psychic Frog (Creature — Frog) — nothing the keywords name
+- Pyrite Spellbomb (Artifact) — nothing the keywords name
+- Pyroblast (Instant) — nothing the keywords name
+- Pyrogoyf (Creature — Lhurgoyf) — nothing the keywords name
+- Pyrokinesis (Instant) — nothing the keywords name
+- Questing Beast (Legendary Creature — Beast) — have: engine keyword
+- Raffine's Tower (Land — Plains Island Swamp) — have: Scripting.Cycling
+- Rain of Filth (Instant) — nothing the keywords name
+- Raph & Mikey, Troublemakers (Legendary Creature — Mutant Ninja Turtle) — have: engine keyword
+- Raucous Theater (Land — Swamp Mountain) — have: Surveil
+- Raugrin Triome (Land — Island Mountain Plains) — have: Scripting.Cycling
+- Razorverge Thicket (Land) — nothing the keywords name
+- Reanimate (Sorcery) — nothing the keywords name
+- Relic of Sauron (Artifact) — nothing the keywords name
+- Remand (Instant) — nothing the keywords name
+- Reprieve (Instant) — nothing the keywords name
+- Restless Vinestalk (Land) — nothing the keywords name
+- Retrofitter Foundry (Artifact) — nothing the keywords name
+- Robber of the Rich (Creature — Human Archer Rogue) — have: engine keyword
+- Sage of the Skies (Creature — Human Monk) — have: engine keyword
+- Saheeli, Sublime Artificer (Legendary Planeswalker — Saheeli) — nothing the keywords name
+- Sanguine Evangelist (Creature — Vampire Cleric) — have: an attack trigger pump
+- Savai Triome (Land — Mountain Plains Swamp) — have: Scripting.Cycling
+- Savannah (Land — Forest Plains) — nothing the keywords name
+- Scalding Tarn (Land) — nothing the keywords name
+- Screaming Nemesis (Creature — Spirit) — have: engine keyword
+- Scrubland (Land — Plains Swamp) — nothing the keywords name
+- Scythecat Cub (Creature — Cat) — have: engine keyword; have: Trigger on a land entering
+- Seachrome Coast (Land) — nothing the keywords name
+- Sear (Instant) — nothing the keywords name
+- Seasoned Pyromancer (Creature — Human Shaman) — nothing the keywords name
+- Sedgemoor Witch (Creature — Human Warlock) — have: a SpellCast trigger (instant or sorcery) — copies too; have: engine keyword; have: ward
+- Sensei's Divining Top (Artifact) — nothing the keywords name
+- Serra Paragon (Creature — Angel) — have: engine keyword
+- Sewer-veillance Cam (Artifact) — have: engine keyword
+- Shadowy Backstreet (Land — Plains Swamp) — have: Surveil
+- Shallow Grave (Instant) — nothing the keywords name
+- Sheoldred's Edict (Instant) — have: Ref opponents (two-player)
+- Simian Spirit Guide (Creature — Ape Spirit) — nothing the keywords name
+- Six (Legendary Creature — Treefolk) — have: engine keyword; have: Mill
+- Skateboard (Artifact — Equipment) — have: Equipment (Attachments)
+- Skullclamp (Artifact — Equipment) — have: Equipment (Attachments)
+- Skyclave Apparition (Creature — Kor Spirit) — nothing the keywords name
+- Snapcaster Mage (Creature — Human Wizard) — have: engine keyword
+- Sneak Attack (Enchantment) — nothing the keywords name
+- Snuff Out (Instant) — nothing the keywords name
+- Sol Ring (Artifact) — nothing the keywords name
+- Soul-Guide Lantern (Artifact) — have: Ref opponents (two-player)
+- Spara's Headquarters (Land — Forest Plains Island) — have: Scripting.Cycling
+- Spectacular Spider-Man (Legendary Creature — Spider Human Hero) — have: engine keyword
+- Spell Pierce (Instant) — nothing the keywords name
+- Spellseeker (Creature — Human Wizard) — nothing the keywords name
+- Spider-Woman, Stunning Savior (Legendary Creature — Spider Human Hero) — have: engine keyword
+- Spirebluff Canal (Land) — nothing the keywords name
+- Squandered Resources (Enchantment) — nothing the keywords name
+- Staff of the Storyteller (Artifact) — nothing the keywords name
+- Starting Town (Land — Town) — nothing the keywords name
+- Stern Scolding (Instant) — nothing the keywords name
+- Stock Up (Sorcery) — nothing the keywords name
+- Stoneforge Mystic (Creature — Kor Artificer) — nothing the keywords name
+- Strip Mine (Land) — nothing the keywords name
+- Sunbaked Canyon (Land) — nothing the keywords name
+- Sunken Ruins (Land) — nothing the keywords name
+- Sunset Saboteur (Creature — Human Rogue) — have: engine keyword; have: ward
+- Superior Spider-Man (Legendary Creature — Spider Human Hero) — nothing the keywords name
+- Suplex (Sorcery) — nothing the keywords name
+- Surrak, Elusive Hunter (Legendary Creature — Human Warrior) — have: engine keyword; have: CantBeCountered
+- Sword of the Meek (Artifact — Equipment) — have: Equipment (Attachments)
+- Swords to Plowshares (Instant) — nothing the keywords name
+- Sylvan Caryatid (Creature — Plant) — have: TargetSpec hexproof; have: engine keyword
+- Sylvan Safekeeper (Creature — Human Wizard) — nothing the keywords name
+- Taiga (Land — Mountain Forest) — nothing the keywords name
+- Talisman of Conviction (Artifact) — nothing the keywords name
+- Talisman of Creativity (Artifact) — nothing the keywords name
+- Talisman of Curiosity (Artifact) — nothing the keywords name
+- Talisman of Dominance (Artifact) — nothing the keywords name
+- Talisman of Indulgence (Artifact) — nothing the keywords name
+- Talisman of Progress (Artifact) — nothing the keywords name
+- Tamiyo, Collector of Tales (Legendary Planeswalker — Tamiyo) — nothing the keywords name
+- Tear Asunder (Instant) — have: KickerComponent
+- Teferi, Hero of Dominaria (Legendary Planeswalker — Teferi) — nothing the keywords name
+- Teferi, Time Raveler (Legendary Planeswalker — Teferi) — have: Ref opponents (two-player)
+- Territorial Kavu (Creature — Kavu) — have: Count.BasicLandTypesAmongLandsYouControl
+- Tersa Lightshatter (Legendary Creature — Orc Wizard) — have: engine keyword
+- Tezzeret, Cruel Captain (Legendary Planeswalker — Tezzeret) — nothing the keywords name
+- Thalia, Guardian of Thraben (Legendary Creature — Human Soldier) — have: engine keyword
+- Thassa's Oracle (Creature — Merfolk Wizard) — have: WinTheGame / LoseTheGame
+- The Fantasticar (Legendary Artifact — Vehicle) — have: engine keyword
+- The Wandering Emperor (Legendary Planeswalker) — have: engine keyword
+- The Wondrous Wasp (Legendary Creature — Human Hero) — have: engine keyword
+- Thieving Skydiver (Creature — Merfolk Rogue) — have: KickerComponent; have: engine keyword
+- Thopter Foundry (Artifact) — nothing the keywords name
+- Thoughtseize (Sorcery) — nothing the keywords name
+- Thraben Inspector (Creature — Human Soldier) — have: Tokens.Clue
+- Thundering Falls (Land — Island Mountain) — have: Surveil
+- Tidehollow Sculler (Artifact Creature — Zombie) — nothing the keywords name
+- Time Spiral (Sorcery) — nothing the keywords name
+- Time Vault (Artifact) — have: TakeExtraTurn
+- Time Walk (Sorcery) — have: TakeExtraTurn
+- Time Warp (Sorcery) — have: TakeExtraTurn
+- Timetwister (Sorcery) — nothing the keywords name
+- Tinker (Sorcery) — nothing the keywords name
+- Tishana's Tidebinder (Creature — Merfolk Wizard) — have: engine keyword
+- Titania, Protector of Argoth (Legendary Creature — Elemental) — nothing the keywords name
+- Tolarian Academy (Legendary Land) — nothing the keywords name
+- Torsten, Founder of Benalia (Legendary Creature — Human Soldier) — nothing the keywords name
+- Touch the Spirit Realm (Enchantment) — have: ActivatedAbilityComponent.From hand
+- Toxic Deluge (Sorcery) — nothing the keywords name
+- Transmute Artifact (Sorcery) — nothing the keywords name
+- Traumatic Critique (Instant) — nothing the keywords name
+- Trinket Mage (Creature — Human Wizard) — nothing the keywords name
+- Tropical Island (Land — Forest Island) — nothing the keywords name
+- Tundra (Land — Plains Island) — nothing the keywords name
+- Ugin, Eye of the Storms (Legendary Planeswalker — Ugin) — nothing the keywords name
+- Undercity Sewers (Land — Island Swamp) — have: Surveil
+- Underground Mortuary (Land — Swamp Forest) — have: Surveil
+- Underground Sea (Land — Island Swamp) — nothing the keywords name
+- Underworld Breach (Enchantment) — nothing the keywords name
+- Unearth (Sorcery) — have: Scripting.Cycling
+- Unexpectedly Absent (Instant) — nothing the keywords name
+- Upheaval (Sorcery) — nothing the keywords name
+- Ursine Monstrosity (Creature — Bear Mutant) — have: engine keyword; have: Mill
+- Urza's Bauble (Artifact) — nothing the keywords name
+- Urza's Saga (Enchantment Land — Urza's Saga) — have: SagaComponent
+- Urza, Lord High Artificer (Legendary Creature — Human Artificer) — nothing the keywords name
+- Vampiric Tutor (Instant) — nothing the keywords name
+- Vaultborn Tyrant (Creature — Dinosaur) — have: engine keyword
+- Verdant Catacombs (Land) — nothing the keywords name
+- Vicious Rivalry (Sorcery) — nothing the keywords name
+- Vindicate (Sorcery) — nothing the keywords name
+- Vivi Ornitier (Legendary Creature — Wizard) — have: Ref opponents (two-player)
+- Voice of Victory (Creature — Human Bard) — have: tokens entering attacking + sacrifice at end
+- Volcanic Island (Land — Island Mountain) — nothing the keywords name
+- Voltaic Key (Artifact) — nothing the keywords name
+- Walking Ballista (Artifact Creature — Construct) — nothing the keywords name
+- Wasteland (Land) — nothing the keywords name
+- Waterlogged Grove (Land) — nothing the keywords name
+- Wheel of Fortune (Sorcery) — nothing the keywords name
+- Windswept Heath (Land) — nothing the keywords name
+- Wishclaw Talisman (Artifact) — nothing the keywords name
+- Witherbloom Apprentice (Creature — Human Druid) — have: a SpellCast trigger (instant or sorcery) — copies too; have: Ref opponents (two-player)
+- Wizard's Rockets (Artifact) — nothing the keywords name
+- Wooded Foothills (Land) — nothing the keywords name
+- Worldspine Wurm (Creature — Wurm) — have: engine keyword
+- Wrath of God (Sorcery) — nothing the keywords name
+- Wrenn and Six (Legendary Planeswalker — Wrenn) — nothing the keywords name
+- Xander's Lounge (Land — Island Swamp Mountain) — have: Scripting.Cycling
+- Yawgmoth's Will (Sorcery) — nothing the keywords name
+- Zagoth Triome (Land — Swamp Forest Island) — have: Scripting.Cycling
+- Ziatora's Proving Ground (Land — Swamp Mountain Forest) — have: Scripting.Cycling
+- Zuran Orb (Artifact) — nothing the keywords name
+
+### Tier 2
+
+- Alpha Deathclaw (Creature — Lizard Mutant) — have: engine keyword; option: PutCounters + a 'monstrous' stamp
+- Batroc the Leaper (Legendary Creature — Human Villain) — option: KickerComponent — kicked any number of times
+- Bloodbraid Challenger (Creature — Elf Berserker) — have: engine keyword; option: MayCastFromYourGraveyard + an exile cost; option: ExileUntilNonlandCastFree — MV less
+- Collective Brutality (Sorcery) — option: ModeChoice — a cost per extra mode
+- Dauthi Voidwalker (Creature — Dauthi Rogue) — option: CantBeBlockedBy — and blocks only shadow
+- Death-Greeter's Champion (Creature — Human Warrior) — option: PutCounters on target + granted abilities; have: engine keyword; option: an alternative cost + haste + return
+- Dragon's Rage Channeler (Creature — Human Shaman) — option: Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards); have: Surveil
+- Eagles of the North (Creature — Bird Soldier) — have: engine keyword; have: Cycling(cost, search); option: Cycling(cost, search) — a filter on the search; have: Scripting.Cycling
+- Emry, Lurker of the Loch (Legendary Creature — Merfolk Wizard) — option: CostChange — less per artifact; have: Mill
+- Endurance (Creature — Elemental Incarnation) — have: engine keyword; option: an alternative cost + sacrifice
+- Fanatic of Rhonas (Creature — Snake Druid) — have: If + Count; option: CreateTokenCopy from the graveyard, changed
+- Fatal Push (Instant) — option: TurnTally — a permanent of yours left the battlefield
+- Fear of Missing Out (Enchantment Creature — Nightmare) — option: Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards)
+- Fury (Creature — Elemental Incarnation) — option: an alternative cost + sacrifice; have: engine keyword
+- Generous Ent (Creature — Treefolk) — have: engine keyword; have: Cycling(cost, search); have: Tokens.Food; option: Cycling(cost, search) — a filter on the search; have: Scripting.Cycling
+- Grief (Creature — Elemental Incarnation) — option: an alternative cost + sacrifice; have: engine keyword
+- Kappa Cannoneer (Artifact Creature — Turtle Warrior) — option: convoke — artifacts, generic only; have: ward
+- Lórien Revealed (Sorcery) — have: Cycling(cost, search); option: Cycling(cost, search) — a filter on the search; have: Scripting.Cycling
+- Oliphaunt (Creature — Elephant) — have: Cycling(cost, search); have: engine keyword; option: Cycling(cost, search) — a filter on the search; have: Scripting.Cycling
+- Orcish Bowmasters (Creature — Orc Archer) — option: an Army token + counters; have: engine keyword
+- Palantír of Orthanc (Legendary Artifact) — have: Mill; option: Surveil — a scry option (no Scry yet)
+- Parallax Wave (Enchantment) — option: Vanishing — fade counters
+- Phlage, Titan of Fire's Fury (Legendary Creature — Elder Giant) — option: MayCastFromYourGraveyard + an exile cost
+- Preordain (Sorcery) — option: Surveil — a scry option (no Scry yet)
+- Prismatic Ending (Sorcery) — option: OnStackComponent.ColorsSpent (Sunburst) read by a Count
+- Ragavan, Nimble Pilferer (Legendary Creature — Monkey Pirate) — have: Tokens.Treasure; option: an alternative cost + haste + return
+- Shifting Woodland (Land) — option: Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards)
+- Sicarian Infiltrator (Artifact Creature — Human Soldier) — have: engine keyword; option: ReplicateComponent-like
+- Solitude (Creature — Elemental Incarnation) — have: engine keyword; option: an alternative cost + sacrifice
+- Sowing Mycospawn (Creature — Eldrazi Fungus) — option: a colour characteristic; have: KickerComponent
+- Subtlety (Creature — Elemental Incarnation) — have: engine keyword; option: an alternative cost + sacrifice
+- Troll of Khazad-dûm (Creature — Troll) — have: Cycling(cost, search); option: Cycling(cost, search) — a filter on the search; have: Scripting.Cycling
+- Unholy Heat (Instant) — option: Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards)
+- Uro, Titan of Nature's Wrath (Legendary Creature — Elder Giant) — option: MayCastFromYourGraveyard + an exile cost
+- Woodfall Primus (Creature — Treefolk Shaman) — option: a dies trigger returning it with a -1/-1 counter; have: engine keyword
+
+### Tier 3
+
+- Aang, Swift Savior // Aang and La, Ocean's Fury (Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Spirit Ally) — have: engine keyword; new: airbend; new: transforming DFCs; new: waterbend
+- Abhorrent Oculus (Creature — Eye) — have: engine keyword; new: face-down 2/2s; new: face-down cards (morph, manifest); have: Ref opponents (two-player)
+- Ajani, Nacatl Pariah // Ajani, Nacatl Avenger (Legendary Creature — Cat Warrior // Legendary Planeswalker — Ajani) — new: transforming DFCs; have: Ref opponents (two-player)
+- Aragorn, King of Gondor (Legendary Creature — Human Noble) — have: engine keyword; new: the monarch
+- Arena of Glory (Land) — new: exert
+- Badgermole Cub (Creature — Badger Mole) — new: earthbend
+- Bloodtithe Harvester (Creature — Vampire) — new: Blood tokens
+- Brain Freeze (Instant) — new: storm; have: Mill
+- Brazen Borrower // Petty Theft (Creature — Faerie Rogue // Instant — Adventure) — have: engine keyword; new: adventures
+- Caustic Bronco (Creature — Snake Horse Mount) — new: Mounts: saddle; have: Ref opponents (two-player)
+- Caves of Chaos Adventurer (Creature — Human Barbarian) — have: engine keyword; new: dungeons
+- Cecil, Dark Knight // Cecil, Redeemed Paladin (Legendary Creature — Human Knight // Legendary Creature — Human Knight) — have: engine keyword; new: protect; new: transforming DFCs
+- Concealing Curtains // Revealing Eye (Creature — Wall // Creature — Eye Horror) — new: transforming DFCs; have: engine keyword
+- Corpse Dance (Instant) — new: buyback (returns to hand)
+- Council's Judgment (Sorcery) — new: voting
+- Crabomination (Creature — Crab Demon) — new: emerge
+- Damn (Sorcery) — new: overload (target → each)
+- Dig Through Time (Instant) — new: a cost paid by exiling graveyard cards
+- Does Machines (Enchantment — Class) — have: Mill; new: Classes (levels)
+- Embereth Shieldbreaker // Battle Display (Creature — Human Knight // Sorcery — Adventure) — new: adventures
+- Emrakul, the Aeons Torn (Legendary Creature — Eldrazi) — have: engine keyword; have: an attack trigger + sacrifice; new: protection (CR 702.16); have: TakeExtraTurn; have: CantBeCountered
+- Esika's Chariot (Legendary Artifact — Vehicle) — new: Vehicles: crew
+- Etali, Primal Conqueror // Etali, Primal Sickness (Legendary Creature — Elder Dinosaur // Legendary Creature — Phyrexian Elder Dinosaur) — have: s.IsIndestructible; new: transforming DFCs; have: engine keyword; new: poison
+- Fable of the Mirror-Breaker // Reflection of Kiki-Jiki (Enchantment — Saga // Enchantment Creature — Goblin Shaman) — new: transforming DFCs; have: Tokens.Treasure
+- Fallen Shinobi (Creature — Zombie Ninja) — new: ninjutsu
+- Feywild Caretaker (Creature — Orc Wizard) — new: dungeons
+- Figure of Fable (Creature — Kithkin) — new: protection (CR 702.16)
+- Forth Eorlingas! (Sorcery) — new: the monarch
+- From the Catacombs (Sorcery) — option: MayCastFromYourGraveyard + an exile cost; new: dungeons
+- Galvanic Discharge (Instant) — new: energy
+- Get Lost (Instant) — have: Explore; new: Map tokens
+- Giver of Runes (Creature — Kor Cleric) — new: protection (CR 702.16)
+- Goryo's Vengeance (Instant — Arcane) — new: splice
+- Guide of Souls (Creature — Human Cleric) — new: energy
+- Gut, True Soul Zealot (Legendary Creature — Goblin Shaman) — new: backgrounds (commander)
+- Headliner Scarlett (Legendary Creature — Human Warlock) — have: engine keyword; new: face-down cards (morph, manifest)
+- Hexdrinker (Creature — Snake) — new: level up; new: protection (CR 702.16)
+- Ivora, Insatiable Heir (Legendary Creature — Vampire Warrior) — have: engine keyword; new: Blood tokens
+- Jace, Vryn's Prodigy // Jace, Telepath Unbound (Legendary Creature — Human Wizard // Legendary Planeswalker — Jace) — new: transforming DFCs; have: Mill
+- Jennifer Walters // The Sensational She-Hulk (Legendary Creature — Human Advisor Hero // Legendary Creature — Gamma Hero) — have: engine keyword; new: transforming DFCs; new: modal DFCs (play either face)
+- Kaito, Bane of Nightmares (Legendary Planeswalker — Kaito) — have: Surveil; new: ninjutsu; have: Ref opponents (two-player)
+- Life // Death (Sorcery // Sorcery) — new: split cards
+- Lion Sash (Artifact Creature — Equipment Cat) — new: reconfigure
+- Lurrus of the Dream-Den (Legendary Creature — Cat Nightmare) — have: engine keyword; new: companion
+- Lutri, the Spellchaser (Legendary Creature — Elemental Otter) — new: companion; have: engine keyword; have: CopySpell
+- Memory Jar (Artifact) — new: face-down cards (morph, manifest)
+- Metamorphosis Fanatic (Creature — Human Cleric) — have: engine keyword; new: miracle
+- Mother of Runes (Creature — Human Cleric) — new: protection (CR 702.16)
+- Ocelot Pride (Creature — Cat) — have: engine keyword; new: the city's blessing
+- Okoye, Mighty and Adored (Legendary Creature — Human Warrior Hero) — new: the monarch
+- Outland Liberator // Frenzied Trapbreaker (Creature — Human Werewolf // Creature — Werewolf) — new: transforming DFCs; new: day and night
+- Palace Jailer (Creature — Human Soldier) — new: the monarch
+- Pillage the Bog (Sorcery) — new: plot
+- Quantum Riddler (Creature — Sphinx) — have: engine keyword; new: warp (EOE)
+- Reckoner Bankbuster (Artifact — Vehicle) — have: Tokens.Treasure; new: Vehicles: crew
+- Seasoned Dungeoneer (Creature — Human Warrior) — have: Explore; new: dungeons; new: protection (CR 702.16)
+- Sentinel of the Nameless City (Creature — Merfolk Warrior Scout) — have: engine keyword; have: Explore; new: Map tokens
+- Shelldock Isle (Land) — option: ExileTopPlayable — face down, free; new: face-down cards (morph, manifest)
+- Sink into Stupor // Soporific Springs (Instant // Land) — new: modal DFCs (play either face)
+- Smuggler's Copter (Artifact — Vehicle) — have: engine keyword; new: Vehicles: crew
+- Springheart Nantuko (Enchantment Creature — Insect Monk) — new: bestow; have: Trigger on a land entering
+- Sunfall (Sorcery) — new: Incubator tokens (transform); new: transforming DFCs
+- Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar (Legendary Creature — Moonfolk Wizard // Legendary Planeswalker — Tamiyo) — have: engine keyword; have: Tokens.Clue; new: transforming DFCs; have: TurnStructure.MaxHandSizeOf
+- The One Ring (Legendary Artifact) — have: s.IsIndestructible; new: protection (CR 702.16)
+- Three Steps Ahead (Instant) — new: spree (a cost per mode)
+- Through the Breach (Instant — Arcane) — new: splice
+- Treasure Cruise (Sorcery) — new: a cost paid by exiling graveyard cards
+- True-Name Nemesis (Creature — Merfolk Rogue) — new: protection (CR 702.16)
+- Ulvenwald Oddity // Ulvenwald Behemoth (Creature — Beast // Creature — Beast Horror) — new: transforming DFCs; have: engine keyword
+- Undermountain Adventurer (Creature — Giant Warrior) — have: engine keyword; new: dungeons
+- We Say Thee Nay! (Instant — Arcane) — new: teamwork
+- White Plume Adventurer (Creature — Orc Cleric) — new: dungeons; have: Ref opponents (two-player)
+- Winds of Abandon (Sorcery) — new: overload (target → each)
+- Witch Enchanter // Witch-Blessed Meadow (Creature — Human Warlock // Land) — new: modal DFCs (play either face)
+- Zirda, the Dawnwaker (Legendary Creature — Elemental Fox) — new: companion
+
+## Already playable
+
+Seasoned Cryomancer, Sphinx of False Conclusions, Chandra, Chill of Compliance, The Theorist, Jace Beleren, Consider, Dark Matter Manipulator, Sanctum Lurker, Sheoldred, the Apocalypse, Mind Twist, Samut, Hazoret's Champion, Stingcaster Mage, Chandra, Torch of Defiance, Ajani Unrelenting, Bristly Bill, Spine Sower, Carnivorous Cultivator // Enroot, Garruk, Curse Breaker, Theorix Charm, Ertai Resurrected, Aerid Konstrari, Avatar of Burgeoning Echoes, The Echoverse Fulcrum, Hallowed Fountain, Watery Grave, Blood Crypt, Stomping Ground, Temple Garden, Godless Shrine, Steam Vents, Overgrown Tomb, Sacred Foundry, Breeding Pool
