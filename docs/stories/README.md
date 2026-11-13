@@ -136,7 +136,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-20](AI-20-lookahead-unknown-cards.md) | The look-ahead stops betting on one guessed future — unknown cards handled honestly | backlog |
 | [AI-23](AI-23-station-priced.md) | Stationing priced — what the counters buy against the attack or block given up | backlog |
 | [AI-24](AI-24-speed-levers-left.md) | The speed levers left over from AI-22 — tried, costed or proposed, each to decide later | backlog |
-| [AI-25](AI-25-lookahead-combat-tricks.md) | The look-ahead's attacker uses its tricks after blocks — a block isn't free when the attacker can pump | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | backlog |
@@ -155,6 +154,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-15](AI-15-lookahead-gang-blocks.md) | The look-ahead's defender gang-blocks — a menace attacker isn't unblockable | done |
 | [AI-16](AI-16-won-line-self-burn.md) | A won line still counts what it spends — the AI no longer burns its own face | done |
 | [AI-22](AI-22-faster-decisions.md) | Faster AI decisions — sealed runs in minutes, not hours | done |
+| [AI-25](AI-25-lookahead-combat-tricks.md) | The look-ahead's attacker uses its tricks after blocks — a block isn't free when the attacker can pump | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [DEV-7](DEV-7-faster-tests.md) | Faster tests while working — run what a change touches, the full suite at a story's end | done |

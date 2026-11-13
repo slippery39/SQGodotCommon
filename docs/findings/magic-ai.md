@@ -1759,3 +1759,20 @@ and it **changed a decision** — `TheCerritos_BlocksTheBorg…` (two Officer to
 Identical creatures don't score identically in the look-ahead (its ties fall to the lower id), so dropping a twin's plan
 changes what the AI imagines. For AI-21: grouping twins is a behaviour change, not a shortcut, until the settle treats
 twins alike.
+
+## AI-25 — a block that loses to the attacker's sacrifice pump (2026-11-13)
+
+Shayne's first notes session (TBL-10.3), seed 1 AI vs AI: AI 2 blocked Edgar, Ancient Bloodlord 2/3 with Greenhouse
+Propagator 2/3; AI 1 paid {2} and sacrificed Rank Rat ("{2}, Sacrifice another creature or planeswalker: Put a +1/+1
+counter on Edgar"), Edgar 3/4, the Propagator dead. Kept as `ShayneNotesSeed1` #175.
+
+- **Reproduced, control holds:** the search blocks (c42), 0.95 against −1.19 for not blocking; `--explain` shows the
+  attacker doing nothing after the block.
+- **Cause:** AI-17.10's own gap, named in its `ponytail:` — `Rollout.IsManaPump` took no ability whose cost picks a card.
+- **Fix:** `Evaluator.Terms.TheirSacrificeTricks` (`+notheirsacrifices`): in the attacker's own combat after blocks
+  (AI-17.10's window) only, a mana-costed ability whose cost picks a card (sacrifice, discard, exile) counts as a trick.
+- **After:** the block line imagines "Activate Edgar, sacrificing Rank Rat"; blocking −13.10 against −1.19; no block.
+- **Suite:** 0 of 288 decisions moved by it (one change, seed 2 #81, is there with the switch off too); cost 10633 vs
+  10594 steps a position.
+- **Match:** `beam,beam+notheirsacrifices --until-clear`, 96 games: **50.0%** (48–48), no 5pp difference either way;
+  cost per decision 4364.1 vs 4399.3 steps. Kept by AI-5's rule: it fixes a reported misplay and is no worse.

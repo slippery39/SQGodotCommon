@@ -435,6 +435,14 @@ public static partial class Evaluator
 		/// a concrete score"), 17 tests moved and the rollout's defender at 13 ate a 1/1 with its 3/2 over trading it for a 3/2.
 		/// </summary>
 		DamagePotential = 1L << 31,
+
+		/// <summary>
+		/// The simulated attacker's trick after blocks may be an ability whose cost picks a card — Edgar, Ancient Bloodlord's
+		/// "{2}, Sacrifice another creature or planeswalker: Put a +1/+1 counter on Edgar" — still bounded by its mana
+		/// (AI-25, Shayne's notes 2026-11-13: "trading the 2/3 Greenhouse for a 1/1 rat"; the defender blocked a 2/3
+		/// Edgar with a 2/3, the block looked free, and the Rat's sacrifice killed the blocker; `+notheirsacrifices`).
+		/// </summary>
+		TheirSacrificeTricks = 1L << 32,
 	}
 
 	/// <summary>

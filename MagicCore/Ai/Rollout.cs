@@ -538,7 +538,15 @@ public static class Rollout
 		var spells = s.AiMoves([.. s.SearchMoves().Where(Allowed(s, who, settings))])
 			.Where(a =>
 				a is CastSpellAction
-				|| (!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks) && IsManaPump(s, a))
+				|| (
+					!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks)
+					&& IsManaPump(
+						s,
+						a,
+						// in their own combat, a cost that picks a card too (Edgar's sacrifice, AI-25)
+						picks: theirs && !Evaluator.IsOff(Evaluator.Terms.TheirSacrificeTricks)
+					)
+				)
 			)
 			.ToList();
 		if (spells.Count == 0)
@@ -552,20 +560,20 @@ public static class Rollout
 	/// An ability of a permanent that costs mana and picks no card to pay (Astute Terraformer's "{6}: +2/+2",
 	/// less per differently named land) — a response like a trick (AI-17.10), or an ability used in its own turn
 	/// (<see cref="TheirAbility"/>, AI-17.22); either way bounded by its mana.
-	/// ponytail: a free ability, or one whose cost picks a card (a sacrifice), stays unseen; add them with a count.
+	/// <paramref name="picks"/>: a cost that picks a card (a sacrifice, a discard, an exile) too — still mana-costed, so
+	/// still bounded by its mana; only the attacker's trick after blocks asks for it (AI-25: Edgar's sacrifice).
+	/// ponytail: a free ability stays unseen, and picks only in their own combat; add them with a count.
 	/// </summary>
 	static bool TapsACreature(GameState s, ActivateAbilityAction a) =>
 		s.GetCard(a.CardId) is var card
 		&& card.Is(CardType.Creature)
 		&& s.ActivatedAbilitiesOf(card).ElementAtOrDefault(a.AbilityIndex) is { TapsItself: true };
 
-	static bool IsManaPump(GameState s, GameAction a)
+	static bool IsManaPump(GameState s, GameAction a, bool picks = false)
 	{
 		if (
 			a is not ActivateAbilityAction act
-			|| act.SacrificeId != 0
-			|| act.DiscardId != 0
-			|| act.ExileId != 0
+			|| !picks && (act.SacrificeId != 0 || act.DiscardId != 0 || act.ExileId != 0)
 			|| act.TapId != 0
 			|| act.SecondTapId != 0
 			|| !act.TapIds.IsEmpty

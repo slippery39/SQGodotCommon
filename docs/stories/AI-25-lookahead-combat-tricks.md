@@ -1,7 +1,7 @@
 ---
 id: AI-25
 title: The look-ahead's attacker uses its tricks after blocks — a block isn't free when the attacker can pump
-status: backlog
+status: done
 area: AI
 created: 2026-11-13
 ---
@@ -21,33 +21,41 @@ invisible to the defender, and any "pump after blocks" card makes a block look f
 
 ## Requirements
 
-- [ ] The kept position plays as Shayne says: the search does not block Edgar with the Propagator while the attacker
+- [x] The kept position plays as Shayne says: the search does not block Edgar with the Propagator while the attacker
       has {2} and a creature to sacrifice — with a control (no mana, or nothing to sacrifice: the block stays)
-- [ ] The look-ahead's attacking side may use its activated abilities (and instants, if AI-3.6's responses don't
+- [x] The look-ahead's attacking side may use its activated abilities (and instants, if AI-3.6's responses don't
       already) after blockers are declared, when it scores — behind a switch
-- [ ] Measured the AI-6 way (the suite, then `--until-clear`), kept by AI-5's rule; cost per decision reported
+- [x] Measured the AI-6 way (the suite, then `--until-clear`), kept by AI-5's rule; cost per decision reported
 
 ## Decisions
 
 - 2026-11-13, Shayne: write the notes' causes up as stories (this one is cause C of three; A is AI-13.13, B AI-9.9).
-
-Open questions:
-- Is it the rollout's opponent model (AI-3's `OpponentStep`) or the combat step inside the tree that skips the
-  activation? Read before choosing where it goes.
+- 2026-11-13 (Claude): the skip is `Rollout.IsManaPump` — AI-17.10's trick window (`TheirResponse`, their own combat
+  after blocks) took a mana-costed ability only if its cost picked no card; its own ponytail named the ceiling ("one
+  whose cost picks a card (a sacrifice), stays unseen"). Lifted ONLY in that window, still mana-costed (bounded by
+  mana): `Evaluator.Terms.TheirSacrificeTricks`, `+notheirsacrifices`. A free ability, and picks outside their
+  combat, stay unseen.
 
 ## Tasks
 
-- [ ] AI-25.1 The position as a test: `KeptRecords.Before("ShayneNotesSeed1", 175)` (MagicCore.Tests/Records, kept
-      2026-11-13 — today's default search still blocks: the control holds), plus a hand-built control
-- [ ] AI-25.2 Find where the attacker's after-block actions are skipped (tree combat or `Rollout`), then the change
-      behind a switch, and the AI-6 measurement
+- [x] AI-25.1 The position as a test: `KeptRecords.Before("ShayneNotesSeed1", 175)` (MagicCore.Tests/Records, kept
+      2026-11-13 — today's default search still blocks: the control holds), plus a hand-built control — DONE as
+      `AiPositionTests.ABlock_ThatLosesToTheirSacrificePump_IsNotMade`, the control being the switch off (AI-17.10's
+      shape): off, it blocks (c42); on, it doesn't — the block line now imagines "Activate Edgar, sacrificing Rank
+      Rat" and scores −13.10 against Don't block −1.19
+- [x] AI-25.2 Find where the attacker's after-block actions are skipped (tree combat or `Rollout`), then the change
+      behind a switch, and the AI-6 measurement — BUILT (`IsManaPump(picks:)`); suite: 0 of 288 decisions moved by it
+      (one change, Compel Brutality's target at seed 2 #81, shows with the switch off too — older drift), cost 10633
+      vs 10594 steps (+0.4%); MagicCore.Tests 1587 passed. MATCH: 96 games, 50.0% (48–48), no difference; cost per
+      decision 4364 vs 4399 steps. KEPT (the default), `docs/findings/magic-ai.md` "AI-25"
 
 ## Next
 
-AI-25.1. Read `MagicCore/Ai/Rollout.cs` (the combat step and `OpponentStep`) and AI-3.6 (full responses) first. The
-explain command: `dotnet run -c Release --project MagicConsole -- --record=game_records/2026-11-13_131625_seed1.json
---explain=175` (the record is untracked; the kept copy is `MagicCore.Tests/Records/ShayneNotesSeed1.json`).
+Done. Left unseen on purpose (`IsManaPump`'s ponytail): a FREE ability, and a card-picking cost outside the attacker's
+own combat — a story if a position shows one.
 
 ## Log
 
 - 2026-11-13: created from Shayne's first notes session (TBL-10.3); the search's explanation read at #175.
+- 2026-11-13: built behind `TheirSacrificeTricks`; the position test passes with its control; suite unchanged by it.
+- 2026-11-13: the match — no difference over 96 games; kept as the default. Done.

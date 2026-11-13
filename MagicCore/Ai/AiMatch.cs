@@ -76,6 +76,12 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirCombatTricks,
 				},
+			// The simulated attacker's trick after blocks never picks a card for its cost (Edgar's sacrifice), before AI-25: beam+notheirsacrifices.
+			["notheirsacrifices"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.TheirSacrificeTricks,
+				},
 			// A simulated attacker judged against the look-ahead's weaker defender, before AI-19.21: beam+nodefender.
 			["nodefender"] = o => o with { Without = o.Without | Evaluator.Terms.TrueDefender },
 			// A surveil on the stack is priced at nothing, before AI-17.11: beam+nosurveilprice.

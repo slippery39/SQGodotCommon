@@ -46,6 +46,28 @@ public class AiPositionTests
 		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), "c15"), Is.False);
 	}
 
+	// Shayne, 2026-11-13 (AI-25, his first notes session): "AI2 should not block the Edgar here. Trading the 2/3
+	// Greenhouse for a 1/1 rat does not seem like a positive ev play." Edgar, Ancient Bloodlord 2/3 attacked, AI 2
+	// blocked with Greenhouse Propagator 2/3, and AI 1 paid {2} and sacrificed Rank Rat: Edgar 3/4, the Propagator
+	// dead. The look-ahead's attacker had tricks after blocks (AI-17.10) but never one whose cost picks a card.
+	// The CONTROL: without TheirSacrificeTricks the AI still blocks (c42).
+	[Test]
+	public void ABlock_ThatLosesToTheirSacrificePump_IsNotMade()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 175);
+		string Choice(Evaluator.Terms without) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s)
+			);
+
+		Assert.That(
+			MoveTokens.Same(Choice(Evaluator.Terms.TheirSacrificeTricks), "c42"),
+			"control"
+		);
+		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), "c42"), Is.False);
+	}
+
 	// Shayne, 2026-11-08 (AI-19.21): General Chang ("{1}, Sacrifice a creature: a +1/+1 counter on each
 	// Klingon"). The AI sacrificed a 4/4 and a 2/1 to make his 1/2 a 3/4 at sorcery speed, nothing dying, and
 	// at #458 Chang himself. Not the evaluator: it charged the creatures (-15 at once). The simulated HUMAN
