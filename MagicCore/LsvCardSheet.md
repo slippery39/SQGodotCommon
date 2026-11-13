@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 8/46 · uncommon 22/86 · rare 53/279 · mythic 16/108 · **107/528**
+**Playable:** common 12/46 · uncommon 24/86 · rare 55/279 · mythic 18/108 · **117/528**
 
 ### "Name Sticker" Goblin
 
@@ -48,7 +48,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As an additional cost to cast this spell, sacrifice a creature or discard a card.  
 > Destroy target creature or planeswalker.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…
+
+```csharp
+["Bone Shards"] =
+[
+	new AdditionalCostsComponent(
+		[new SacrificeCost(Is.Creature) { Or = new DiscardCost() }]
+	),
+	Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
+],
+```
 
 ### Brainstorm
 
@@ -114,7 +126,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Chain Lightning deals 3 damage to any target. Then that player or that permanent's controller may pay {R}{R}. If the player does, they may copy this spell and may choose a new target for that copy.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Chain Lightning"] =
+[
+	// "may pay {R}{R}. If the player does, they may copy this spell" — one yes: paying is only for the copy.
+	Spell(
+		[TargetSpec.AnyTarget()],
+		new DealDamage(Ref.Target(), 3),
+		new May(
+			"Pay {R}{R} to copy Chain Lightning?",
+			new CanPay(ManaCost.Parse("{R}{R}")),
+			[new PayMana(ManaCost.Parse("{R}{R}"), [new CopySpell(Ref.Source)])]
+		)
+		{
+			Who = Ref.ControllerOfTarget(0),
+			ThenAsThem = true,
+		}
+	),
+],
+```
 
 ### Chromatic Star
 
@@ -258,7 +292,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Replicate {U} (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the copies.)  
 > Counter target spell unless its controller pays {2}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ReplicateComponent` — "Replicate [cost] (When you cast this spell, copy it for each time you paid its…
+
+```csharp
+["Lose Focus"] = [new ReplicateComponent(ManaCost.Parse("{U}")), CounterUnless("{2}")],
+```
 
 ### Lórien Revealed
 
@@ -396,7 +436,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If you control a Swamp, you may pay 4 life rather than pay this spell's mana cost.  
 > Destroy target nonblack creature. It can't be regenerated.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Snuff Out"] =
+[
+	new MayCastFromHandFree(Is.Source)
+	{
+		If = new AtLeast(
+			Count.NumberOf(Ref.Permanents(Is.Yours & Is.Subtype("Swamp"))),
+			1
+		),
+		Costs = [new PayLifeCost(4)],
+	},
+	// "It can't be regenerated": the engine has no regeneration yet (Wrath of God's note, MC-4.3b).
+	Spell(
+		[Target(Is.Creature & !Is.Color(ManaColor.Black))],
+		new Destroy(Ref.Target())
+	),
+],
+```
 
 ### Suplex
 
@@ -549,7 +610,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As an additional cost to cast this spell, discard a card or pay 3 life.  
 > Destroy target creature or planeswalker.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Bitter Triumph"] =
+[
+	new AdditionalCostsComponent([new DiscardCost() { Or = new PayLifeCost(3) }]),
+	Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
+],
+```
 
 ### Bloodtithe Harvester
 
@@ -615,7 +686,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target spell.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2Tests
 
 **Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -664,7 +735,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may return an Island you control to its owner's hand rather than pay this spell's mana cost.  
 > Counter target spell unless its controller pays {1}.
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** TrkBatch4Tests
+**Status:** scripted · **tests naming it:** LsvBatch2Tests, TrkBatch4Tests
+
+**Engine pieces:** `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `ReturnToHandCost` — "Return a [Filter] you control to its owner's hand" — beam me up: "You may cast this…
+
+```csharp
+["Daze"] =
+[
+	new MayCastFromHandFree(Is.Source)
+	{
+		Costs = [new ReturnToHandCost(Is.Subtype("Island"))],
+	},
+	CounterUnless("{1}"),
+],
+```
 
 ### Deep-Cavern Bat
 
@@ -846,7 +930,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Lightning Bolt deals 3 damage to any target.
 
-**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests
+**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests, LsvBatch2Tests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -1553,7 +1637,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If the {1}{B} cost was paid, an opponent draws a card.  
 > Exile target creature or planeswalker.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `AlternativeCostWasPaid` — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Baleful Mastery"] =
+[
+	new MayCastFromHandFree(Is.Source) { Mana = ManaCost.Parse("{1}{B}") },
+	Spell(
+		[CreatureOrPlaneswalker],
+		new If(new AlternativeCostWasPaid(), [new DrawCards(Ref.EachOpponent, 1)]),
+		new Exile(Ref.Target())
+	),
+],
+```
 
 ### Baleful Strix
 
@@ -2382,7 +2480,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If it's not your turn, you may exile a blue card from your hand rather than pay this spell's mana cost.  
 > Counter target noncreature spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Force of Negation"] =
+[
+	new MayCastFromHandFree(Is.Source)
+	{
+		If = new Not(new DuringYourTurn()),
+		Costs = [ExileABlueCard],
+	},
+	Spell(
+		[TargetSpec.Spell(!Is.Creature)],
+		new Counter(Ref.Target()) { To = ZoneType.Exile }
+	),
+],
+```
 
 ### Force of Vigor
 
@@ -4760,7 +4875,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost.  
 > Counter target spell.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Force of Will"] =
+[
+	new MayCastFromHandFree(Is.Source) { Costs = [new PayLifeCost(1), ExileABlueCard] },
+	Spell([TargetSpec.Spell()], new Counter(Ref.Target())),
+],
+```
 
 ### Fury
 
@@ -5060,7 +5185,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target spell. At the beginning of your next main phase, add an amount of {C} equal to that spell's mana value.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2Tests
+
+**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Mana Drain"] =
+[
+	Spell(
+		[TargetSpec.Spell()],
+		new AtNextEndStep([new AddMana(ManaColor.Colorless, Count.X)])
+		{
+			NextMainPhase = true,
+			X = Count.GreatestManaValueOf(Ref.Target(0)),
+		},
+		new Counter(Ref.Target())
+	),
+],
+```
 
 ### Mana Vault
 

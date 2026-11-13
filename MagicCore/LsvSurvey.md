@@ -4,7 +4,7 @@ GENERATED — never hand-edit; the hand check and the batch plan are in `docs/st
 A tier from keywords, layout and a few text patterns only — every batch's cards are read before they are
 built (`/card-batch` step 1).
 
-**528 cards:** 107 play today (scripted in any set, or keywords and reminder text only); of the other 421, tier 1 (only pieces the engine has) 311, tier 2 (an option on a piece) 35, tier 3 (a new piece or rule) 75.
+**528 cards:** 117 play today (scripted in any set, or keywords and reminder text only); of the other 411, tier 1 (only pieces the engine has) 301, tier 2 (an option on a piece) 35, tier 3 (a new piece or rule) 75.
 
 ## New pieces and rules, by how many cards need them
 
@@ -93,20 +93,17 @@ built (`/card-batch` step 1).
 - Atraxa, Grand Unifier (Legendary Creature — Phyrexian Angel) — have: engine keyword
 - Auriok Salvagers (Creature — Human Soldier) — nothing the keywords name
 - Balance (Sorcery) — nothing the keywords name
-- Baleful Mastery (Instant) — nothing the keywords name
 - Baleful Strix (Artifact Creature — Bird) — have: engine keyword
 - Baloth Prime (Creature — Beast) — nothing the keywords name
 - Barrowgoyf (Creature — Lhurgoyf) — have: engine keyword; have: Mill
 - Bejeweled Warg (Creature — Wolf) — have: Tokens.Treasure; have: engine keyword
 - Bilbo, Thief in the Night (Legendary Creature — Halfling Rogue) — nothing the keywords name
-- Bitter Triumph (Instant) — nothing the keywords name
 - Black Widow, Super Spy (Legendary Creature — Human Spy Hero) — have: engine keyword
 - Blackcleave Cliffs (Land) — nothing the keywords name
 - Blazemire Verge (Land) — nothing the keywords name
 - Bleachbone Verge (Land) — nothing the keywords name
 - Blooming Marsh (Land) — nothing the keywords name
 - Bolas's Citadel (Legendary Artifact) — have: Ref opponents (two-player)
-- Bone Shards (Sorcery) — nothing the keywords name
 - Bonehoard Dracosaur (Creature — Dinosaur Dragon) — have: engine keyword; have: Tokens.Treasure
 - Boomerang Basics (Sorcery — Lesson) — nothing the keywords name
 - Boseiju, Who Endures (Legendary Land) — have: ActivatedAbilityComponent.From hand
@@ -115,7 +112,6 @@ built (`/card-batch` step 1).
 - Candelabra of Tawnos (Artifact) — nothing the keywords name
 - Cathar Commando (Creature — Human Soldier) — have: engine keyword
 - Celestial Colonnade (Land) — nothing the keywords name
-- Chain Lightning (Sorcery) — nothing the keywords name
 - Chain of Smog (Sorcery) — nothing the keywords name
 - Chaos Defiler (Artifact Creature — Demon Construct) — have: engine keyword; have: Ref opponents (two-player)
 - Chromatic Star (Artifact) — nothing the keywords name
@@ -139,7 +135,6 @@ built (`/card-batch` step 1).
 - Dack Fayden (Legendary Planeswalker — Dack) — nothing the keywords name
 - Dark Confidant (Creature — Human Wizard) — nothing the keywords name
 - Darkslick Shores (Land) — nothing the keywords name
-- Daze (Instant) — nothing the keywords name
 - Deep-Cavern Bat (Creature — Bat) — have: engine keyword
 - Delighted Halfling (Creature — Halfling Citizen) — have: CantBeCountered
 - Demonic Consultation (Instant) — nothing the keywords name
@@ -171,9 +166,7 @@ built (`/card-batch` step 1).
 - Flame Slash (Sorcery) — nothing the keywords name
 - Flametongue Kavu (Creature — Kavu) — nothing the keywords name
 - Flash (Instant) — nothing the keywords name
-- Force of Negation (Instant) — nothing the keywords name
 - Force of Vigor (Instant) — nothing the keywords name
-- Force of Will (Instant) — nothing the keywords name
 - Forensic Gadgeteer (Creature — Vedalken Artificer Detective) — have: Tokens.Clue
 - Formidable Speaker (Creature — Elf Druid) — nothing the keywords name
 - Fractured Identity (Sorcery) — nothing the keywords name
@@ -227,14 +220,12 @@ built (`/card-batch` step 1).
 - Lion's Eye Diamond (Artifact) — nothing the keywords name
 - Loot, the Pathfinder (Legendary Creature — Beast Noble) — have: engine keyword; have: ActivatedAbilityComponent.Exhaust
 - Loran of the Third Path (Legendary Creature — Human Artificer) — have: engine keyword
-- Lose Focus (Instant) — have: ReplicateComponent
 - Lotus Cobra (Creature — Snake) — have: Trigger on a land entering
 - Luminarch Aspirant (Creature — Human Cleric) — nothing the keywords name
 - Lush Portico (Land — Forest Plains) — have: Surveil
 - Magda, Brazen Outlaw (Legendary Creature — Dwarf Berserker) — have: Tokens.Treasure
 - Malcolm, Alluring Scoundrel (Legendary Creature — Siren Pirate) — have: engine keyword
 - Malevolent Rumble (Sorcery) — nothing the keywords name
-- Mana Drain (Instant) — nothing the keywords name
 - Manamorphose (Instant) — nothing the keywords name
 - Manifold Key (Artifact) — nothing the keywords name
 - Mawloc (Creature — Tyranid) — have: X counters + If; have: fight
@@ -311,7 +302,6 @@ built (`/card-batch` step 1).
 - Skyclave Apparition (Creature — Kor Spirit) — nothing the keywords name
 - Snapcaster Mage (Creature — Human Wizard) — have: engine keyword
 - Sneak Attack (Enchantment) — nothing the keywords name
-- Snuff Out (Instant) — nothing the keywords name
 - Soul-Guide Lantern (Artifact) — have: Ref opponents (two-player)
 - Spara's Headquarters (Land — Forest Plains Island) — have: Scripting.Cycling
 - Spectacular Spider-Man (Legendary Creature — Spider Human Hero) — have: engine keyword
@@ -511,4 +501,4 @@ built (`/card-batch` step 1).
 
 ## Already playable
 
-Erode, Mana Tithe, Path to Exile, Swords to Plowshares, Wrath of God, Mox Pearl, Seasoned Cryomancer, Sphinx of False Conclusions, Chandra, Chill of Compliance, The Theorist, Jace Beleren, Ancestral Recall, Brainstorm, Consider, Spell Pierce, Stern Scolding, Counterspell, Mana Leak, Memory Lapse, Remand, Time Walk, Time Warp, Mox Sapphire, Dark Matter Manipulator, Sanctum Lurker, Sheoldred, the Apocalypse, Cut Down, Dark Ritual, Cabal Ritual, Mind Twist, Mox Jet, Samut, Hazoret's Champion, Stingcaster Mage, Chandra, Torch of Defiance, Ajani Unrelenting, Burst Lightning, Lightning Bolt, Pyroblast, Abrade, Mox Ruby, Avacyn's Pilgrim, Birds of Paradise, Ignoble Hierarch, Llanowar Elves, Noble Hierarch, Bristly Bill, Spine Sower, Carnivorous Cultivator // Enroot, Garruk, Curse Breaker, Mox Emerald, Talisman of Progress, Theorix Charm, Ertai Resurrected, Talisman of Indulgence, Aerid Konstrari, Vindicate, Abrupt Decay, Avatar of Burgeoning Echoes, Talisman of Curiosity, Black Lotus, Lotus Petal, Mana Crypt, Mana Vault, Sol Ring, Grim Monolith, Talisman of Conviction, The Echoverse Fulcrum, Basalt Monolith, Talisman of Dominance, Talisman of Creativity, Hallowed Fountain, Tundra, Underground Sea, Watery Grave, Badlands, Blood Crypt, Stomping Ground, Taiga, Savannah, Temple Garden, Godless Shrine, Scrubland, Steam Vents, Volcanic Island, Bayou, Overgrown Tomb, Plateau, Sacred Foundry, Breeding Pool, Tropical Island, Ancient Tomb, Arid Mesa, Bloodstained Mire, City of Traitors, Flooded Strand, Gaea's Cradle, Mana Confluence, Marsh Flats, Mishra's Workshop, Misty Rainforest, Polluted Delta, Prismatic Vista, Scalding Tarn, Strip Mine, Tolarian Academy, Verdant Catacombs, Wasteland, Windswept Heath, Wooded Foothills
+Erode, Mana Tithe, Path to Exile, Swords to Plowshares, Wrath of God, Mox Pearl, Seasoned Cryomancer, Sphinx of False Conclusions, Chandra, Chill of Compliance, The Theorist, Jace Beleren, Ancestral Recall, Brainstorm, Consider, Spell Pierce, Stern Scolding, Counterspell, Daze, Lose Focus, Mana Drain, Mana Leak, Memory Lapse, Remand, Force of Negation, Force of Will, Time Walk, Time Warp, Mox Sapphire, Dark Matter Manipulator, Sanctum Lurker, Sheoldred, the Apocalypse, Cut Down, Dark Ritual, Bitter Triumph, Cabal Ritual, Baleful Mastery, Snuff Out, Bone Shards, Mind Twist, Mox Jet, Samut, Hazoret's Champion, Stingcaster Mage, Chandra, Torch of Defiance, Ajani Unrelenting, Burst Lightning, Lightning Bolt, Pyroblast, Abrade, Chain Lightning, Mox Ruby, Avacyn's Pilgrim, Birds of Paradise, Ignoble Hierarch, Llanowar Elves, Noble Hierarch, Bristly Bill, Spine Sower, Carnivorous Cultivator // Enroot, Garruk, Curse Breaker, Mox Emerald, Talisman of Progress, Theorix Charm, Ertai Resurrected, Talisman of Indulgence, Aerid Konstrari, Vindicate, Abrupt Decay, Avatar of Burgeoning Echoes, Talisman of Curiosity, Black Lotus, Lotus Petal, Mana Crypt, Mana Vault, Sol Ring, Grim Monolith, Talisman of Conviction, The Echoverse Fulcrum, Basalt Monolith, Talisman of Dominance, Talisman of Creativity, Hallowed Fountain, Tundra, Underground Sea, Watery Grave, Badlands, Blood Crypt, Stomping Ground, Taiga, Savannah, Temple Garden, Godless Shrine, Scrubland, Steam Vents, Volcanic Island, Bayou, Overgrown Tomb, Plateau, Sacred Foundry, Breeding Pool, Tropical Island, Ancient Tomb, Arid Mesa, Bloodstained Mire, City of Traitors, Flooded Strand, Gaea's Cradle, Mana Confluence, Marsh Flats, Mishra's Workshop, Misty Rainforest, Polluted Delta, Prismatic Vista, Scalding Tarn, Strip Mine, Tolarian Academy, Verdant Catacombs, Wasteland, Windswept Heath, Wooded Foothills

@@ -456,7 +456,7 @@ public class FraRareFinalTests : FraBoardTest
 			Components =
 			[
 				new AdditionalCostsComponent(
-					[new SacrificeCost(MagicCore.Filters.Is.Creature) { OrPay = 2 }]
+					[new SacrificeCost(MagicCore.Filters.Is.Creature) { Or = new PayManaCost(2) }]
 				),
 			],
 		};

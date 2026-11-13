@@ -123,6 +123,14 @@ public record WasKicked : Condition
 		&& spell.GetComponent<Actions.OnStackComponent>()?.Kicked == true;
 }
 
+/// <summary>Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost).</summary>
+public record AlternativeCostWasPaid : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetObject((int)context[ContextKeys.Source]) is Card spell
+		&& spell.GetComponent<Actions.OnStackComponent>()?.AlternativeCost == true;
+}
+
 /// <summary>First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast.</summary>
 public record FirstSpellYouCastThisGame : Condition
 {

@@ -929,7 +929,7 @@ public static class FraCards
 			["Silence the Echo"] =
 			[
 				new AdditionalCostsComponent(
-					[new SacrificeCost(Is.Creature | Is.Planeswalker) { OrPay = 3 }]
+					[new SacrificeCost(Is.Creature | Is.Planeswalker) { Or = new PayManaCost(3) }]
 				),
 				Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
 			],
@@ -2398,7 +2398,7 @@ public static class FraCards
 			],
 			["Countersculpt"] =
 			[
-				new AdditionalCostsComponent([new BeholdCost("Jace") { OrPay = 1 }]),
+				new AdditionalCostsComponent([new BeholdCost("Jace") { Or = new PayManaCost(1) }]),
 				Spell([TargetSpec.Spell()], new Counter(Ref.Target()), new EmpowerJace(1)),
 			],
 
@@ -3435,7 +3435,7 @@ public static class FraCards
 			// ===== MC-3: Special Guests (SPG #159–168), batch 2 =====
 			["Consign to Memory"] =
 			[
-				new ReplicateComponent(1),
+				new ReplicateComponent(ManaCost.Parse("{1}")),
 				Spell(
 					[
 						TargetSpec.Ability(Is.TriggeredAbility) with

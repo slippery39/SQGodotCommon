@@ -44,7 +44,7 @@ public static class Costs
 				is { } scotty
 			? new FlashbackComponent(card.ManaCost)
 			{
-				Costs = [new BeamMeUpCost { ExceptId = scotty.Id }],
+				Costs = [new ReturnToHandCost(Filters.Is.Creature) { ExceptId = scotty.Id }],
 			}
 			: null;
 	}

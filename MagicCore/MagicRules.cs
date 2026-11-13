@@ -200,13 +200,14 @@ public static class MagicRules
 	public static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
 	{
 		// Omnipresence: a free cast that costs nothing replaces the paid ones (never worse); Flare of
-		// Fortitude's, with a sacrifice, is offered beside them.
-		var free = Rules.Playable.FreeCosts(s, card, player);
+		// Fortitude's, with a sacrifice, and Baleful Mastery's, with mana, are offered beside them.
+		var free = Rules.Playable.FreeCast(s, card, player);
+		var asks = free is { } f && (!f.Costs.IsEmpty || f.Mana is not null);
 		IEnumerable<GameAction> Casts(bool kicked) =>
-			free is { IsEmpty: false }
-				? CastCandidates(s, player, card, kicked, null)
-					.Concat(CastCandidates(s, player, card, kicked, free))
-				: CastCandidates(s, player, card, kicked, free);
+			asks
+				? CastCandidates(s, player, card, kicked, null, false)
+					.Concat(CastCandidates(s, player, card, kicked, free!.Costs, true))
+				: CastCandidates(s, player, card, kicked, free?.Costs, false);
 		// Kicker: each cast once unkicked and once kicked — its targets and costs may differ.
 		return card.HasComponent<KickerComponent>()
 			? Casts(false).Concat(Casts(true))
@@ -214,12 +215,14 @@ public static class MagicRules
 	}
 
 	/// <param name="free">Cast without paying its mana cost, paying these instead (Playable.FreeCosts); null: paid.</param>
+	/// <param name="onlyFree">The free cast is offered beside the paid ones: only it, X = 0.</param>
 	static IEnumerable<GameAction> CastCandidates(
 		GameState s,
 		int player,
 		Card card,
 		bool kicked,
-		ImmutableList<AdditionalCost>? free
+		ImmutableList<AdditionalCost>? free,
+		bool onlyFree
 	)
 	{
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
@@ -251,8 +254,9 @@ public static class MagicRules
 		var beholds = CostList.Options(costs, CostSlot.Behold, s, player, card.Id);
 		var discards = CostList.Options(costs, CostSlot.Discard, s, player, card.Id);
 		var returns = CostList.Options(costs, CostSlot.Return, s, player, card.Id);
+		var exiles = CostList.Options(costs, CostSlot.Exile, s, player, card.Id);
 		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
-		IEnumerable<(int x, bool free)> payments = free is { IsEmpty: false }
+		IEnumerable<(int x, bool free)> payments = onlyFree
 			? [(x: 0, free: true)]
 			: Enumerable.Range(0, maxX + 1).Select(x => (x, free: free is not null && x == 0));
 		// Replicate: one cast per number of payments, bounded loosely like X — ValidateAdd's payment decides.
@@ -260,9 +264,11 @@ public static class MagicRules
 			? Math.Max(
 				0,
 				(AvailableMana(s, player, s.Has(card, "Convoke"), card) - card.ManaCost.ManaValue)
-					/ Math.Max(1, replicate.Generic)
+					/ Math.Max(1, replicate.Cost.ManaValue)
 			)
 			: 0;
+		// Bone Shards: "sacrifice a creature or discard a card" — a cast picks one half, never both or neither.
+		var either = costs.Any(c => c.Or is not null);
 		return Enumerable
 			.Range(0, maxReplicate + 1)
 			.SelectMany(replicates =>
@@ -271,30 +277,34 @@ public static class MagicRules
 						discards.SelectMany(discard =>
 							beholds.SelectMany(beheld =>
 								returns.SelectMany(returned =>
-									(once ?? (payment.x > 0 ? unchosen : atZero)).Select(
-										c => new CastSpellAction
-										{
-											PlayerId = player,
-											CardId = card.Id,
-											X = payment.x,
-											WithoutPayingManaCost = payment.free,
-											Targets = c.targets,
-											Modes = c.modes,
-											SacrificeId = sacrifice,
-											DiscardId = discard,
-											BeholdId = beheld,
-											ReturnId = returned,
-											Replicate = replicates,
-											Kicked = kicked,
-											ChoosesTargets = perX && payment.x > 0,
-										}
+									exiles.SelectMany(exiled =>
+										(once ?? (payment.x > 0 ? unchosen : atZero)).Select(
+											c => new CastSpellAction
+											{
+												PlayerId = player,
+												CardId = card.Id,
+												X = payment.x,
+												WithoutPayingManaCost = payment.free,
+												Targets = c.targets,
+												Modes = c.modes,
+												SacrificeId = sacrifice,
+												DiscardId = discard,
+												BeholdId = beheld,
+												ReturnId = returned,
+												ExileId = exiled,
+												Replicate = replicates,
+												Kicked = kicked,
+												ChoosesTargets = perX && payment.x > 0,
+											}
+										)
 									)
 								)
 							)
 						)
 					)
 				)
-			);
+			)
+			.Where(cast => !either || cast.PicksOnlyWhatIsPaid(costs));
 	}
 
 	/// <summary>
@@ -519,6 +529,7 @@ public static class MagicRules
 				SacrificeId = T(c.SacrificeId),
 				BeholdId = T(c.BeholdId),
 				ReturnId = T(c.ReturnId),
+				ExileId = T(c.ExileId),
 			},
 			ActivateAbilityAction c => c with
 			{
@@ -624,7 +635,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}", // a beamed-up creature, kicked, only when chosen: older keys stay byte-identical
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}", // a beamed-up creature, kicked, an exiled card, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>

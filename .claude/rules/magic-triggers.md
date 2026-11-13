@@ -79,6 +79,10 @@ whose subsystem it lives in.
   end step"), read in the graveyard the same way; leaving the graveyard strips it (a new object).
   With no card to hold it ("return a land you control", Erica Ortegas) it is `AtNextEndStep`: an object in
   your command zone, removed once it has resolved. Set up during the end step, either waits for the next turn's.
+  **"At the beginning of your next main phase"** (Mana Drain) is `AtNextEndStep { NextMainPhase }`: your precombat main,
+  or this turn's postcombat main when set up on your turn before it (so the postcombat main raises a `StepBeganEvent`
+  too). **A number fixed as it is set up** ("equal to that spell's mana value") is `AtNextEndStep.X`, the delayed
+  trigger's `TriggeredAbilityComponent.X` — its effects read it as `Count.X`.
   **One on a permanent whose controller is someone else** (The Wrath of Khan's "at the beginning of the next
   combat this turn, gain control of that creature", `AtBeginningOfNextCombat`) names its controller
   (`DelayedTrigger.ControllerId`, CR 603.7d): `Triggers.Collect` reads those as it reads an exiled card's —

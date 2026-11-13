@@ -86,7 +86,15 @@ whose subsystem it lives in.
   cast but never with flashback (two alternative costs don't combine, CR 118.9a) — only `Is.Source` counts on the
   card itself, so Omnipresence's static is no free cast for itself; its costs join `CastSpellAction.CostsOf`, and
   a free cast with a cost is offered BESIDE the paid one
-  (one with none replaces it — never worse).
+  (one with none replaces it — never worse). Its options (MC-4.4): `If` (Snuff Out's "if you control a Swamp", Force
+  of Negation's "if it's not your turn", judged as it is cast), `Mana` (Baleful Mastery's {1}{B} — paid instead, and
+  stamped `OnStackComponent.AlternativeCost`, read by `AlternativeCostWasPaid`; a copy has it too, CR 707.10), and in
+  `Costs` Force of Will's `PayLifeCost(1)` and `ExileFromHandCost(blue)` (`CastSpellAction.ExileId`), Daze's
+  `ReturnToHandCost(Island)` (beam me up's cost, its filter an option). `Playable.FreeCast` is the one answer.
+- **"[This cost] or [that]"** is `AdditionalCost.Or` (MC-4.4) — Silence the Echo's "or pay {3}" (`PayManaCost`),
+  Bitter Triumph's "discard a card or pay 3 life", Bone Shards' "sacrifice a creature or discard a card": the cost's
+  slot picking nothing (id 0) pays its `Or`. `CostList.Paid` is the one list validation, payment and the mana owed
+  read; a cast picking both halves or neither is never offered (`PicksOnlyWhatIsPaid`) nor valid.
 - **A card exiled for a linked ability** (Null Summoner) carries `ExiledBy(source, incarnation)`; "you may cast the
   exiled card" is the play-from-a-zone rule on the source, `MayPlayFromZone(Exile, Is.ExiledBySource) { Of, AnyTime,
   If, AnyType }` — the filter asked from the holder's side, so only while that same object is on the battlefield
@@ -115,11 +123,11 @@ whose subsystem it lives in.
   not a card); `Is.TriggeredAbility` / `Is.ActivatedAbility` read `StackAbility.Triggered`, set where a
   trigger goes on the stack. Countering one removes it (`StackResolution.Counter`).
 - **Replicate** is `CastSpellAction.Replicate` (enumerated like X, in `MoveKey`): the cost grows by that many
-  `ReplicateComponent` costs, and a triggered ability above the spell copies it that many times.
+  `ReplicateComponent` costs (a mana cost: Lose Focus' {U} adds a blue pip each time), and a triggered ability above the spell copies it that many times.
   **How many modes** is one `ModeChoice` (`Choose`) on spells, triggered and activated abilities alike — `AtLeast` and
   `AtMost` as Counts (an int converts: exactly that many); "choose one or more" is `{ AtMost = N }`, "up to one" (Ertai)
   `{ AtLeast = 0 }`. `Modal.Choices`/`IsLegal` take the range.
-- **Beam me up** (TRK) is a `FlashbackComponent` whose cost beside the mana is `BeamMeUpCost` — return a
+- **Beam me up** (TRK) is a `FlashbackComponent` whose cost beside the mana is `ReturnToHandCost(Is.Creature)` — return a
   creature you control (`CastSpellAction.ReturnId`, one cast per creature) — so it is cast and exiled as
   flashback is (`TrkCards.BeamMeUp`). Marooned's `EnchantedCantBeBeamedUp` takes its creature out of the
   candidates.
@@ -185,7 +193,7 @@ whose subsystem it lives in.
   (`CastChosenCopy.MakeCopy`), each asked — a copy not cast ceases to exist (CR 704.5e).
 - **"During your main phase, each card in your graveyard has beam me up for its mana cost"** (Scotty) is
   `GraveyardSpellsHaveBeamMeUp`, answered by `Costs.Flashback` (the ONE graveyard-cast answer): an instant or
-  sorcery, its owner's main phase, `BeamMeUpCost { ExceptId }` (never returning Scotty). One cast per spell ×
+  sorcery, its owner's main phase, `ReturnToHandCost { ExceptId }` (never returning Scotty). One cast per spell ×
   creature returned, as every beam-me-up card (Shayne, 2026-11-06).
 - **"That player may exile it. If they don't, you may cast a noncreature spell from your hand free"** (Brazen
   Bluff) is `May { Who, Otherwise }` with `MoveTo(…, Exile) { From = [Stack] }` (a card on the stack, to its owner's exile) and

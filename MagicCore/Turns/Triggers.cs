@@ -405,12 +405,14 @@ public static class Triggers
 								EventCard(e),
 								Snapshot(s, e),
 								EventObject(s, e),
-								e switch
-								{
-									CreatureDealtDamageEvent damaged => damaged.Amount,
-									PlayerDealtDamageEvent dealt => dealt.Amount,
-									_ => 0,
-								}
+								found.a.X != 0
+									? found.a.X
+									: e switch
+									{
+										CreatureDealtDamageEvent damaged => damaged.Amount,
+										PlayerDealtDamageEvent dealt => dealt.Amount,
+										_ => 0,
+									}
 							),
 							1 + AdditionalTimes(s, doublers, found.source, found.a, e)
 						)

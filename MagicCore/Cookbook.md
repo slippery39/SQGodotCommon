@@ -80,7 +80,8 @@ options (`Costs`, `Targets`, `From = ZoneType.Graveyard`, `SorcerySpeed`, …). 
 list, in the order paid: `Costs = [new TapSelfCost(), new SacrificeCost(Is.Artifact & !Is.Source)]` — also
 `SacrificeSelfCost`, `DiscardSelfCost`, `DiscardCost(filter)`, `ExileSelfCost`, `ExileFromGraveyardCost(filter)`,
 `TapUntappedCost(n, filter)`, `BeholdCost(subtype)`. The same list is a spell's additional cost
-(`new AdditionalCostsComponent([new SacrificeCost(…) { OrPay = 3 }])` — "or pay {3}"), a flashback's
+(`new AdditionalCostsComponent([new SacrificeCost(…) { Or = new PayManaCost(3) }])` — "or pay {3}"; any cost may be
+the `Or`: Bitter Triumph's `new DiscardCost() { Or = new PayLifeCost(3) }`), a flashback's
 (`FlashbackComponent(cost) { Costs = [new DiscardCost()] }`) and ward's (`CounterUnlessPays { Costs = … }`).
 **"Costs {N} more/less"** is `CostChange(amount, spellsFilter)`: on a permanent for whose spells (`By`), or
 `OnItself = true` for "this spell costs … less", with an `If`.

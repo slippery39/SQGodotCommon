@@ -218,6 +218,7 @@ public record Ref(RefKind Kind, int Index = 0)
 				{
 					Card c => [c.ControllerId],
 					Actions.StackAbility a => [a.ControllerId],
+					MagicPlayer p => [p.Id], // Chain Lightning: "that player or that permanent's controller"
 					_ => [],
 				},
 			// The Aura as it was (last-known, CR 608.2h) — so removing it in response changes nothing,
@@ -610,7 +611,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.DefaultIfEmpty(0)
 				.Max(),
 			CountOf.GreatestManaValueOf => Cards()
-				.Select(c => c.ManaCost.ManaValue)
+				.Select(c => c.ManaValueNow) // a spell on the stack: its X too (Mana Drain, CR 202.3e)
 				.DefaultIfEmpty(0)
 				.Max(),
 			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),

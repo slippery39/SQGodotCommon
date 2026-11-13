@@ -99,6 +99,40 @@ as his three priorities.
   4.3b leaves out the alternative-cost spells (Force of Will, Daze, Snuff Out, Baleful Mastery), "or" additional costs
   (Bitter Triumph, Bone Shards), Mana Drain's delayed mana, Chain Lightning's copy, Lose Focus's coloured replicate.
 
+- 2026-11-13, Claude (cube lane, batch 2) — **4.4a's pieces, each the nearest one with an option** (MC-6's rule):
+  - **The alternative costs: `MayCastFromHandFree(Is.Source)` (Flare of Fortitude's) takes `If` and `Mana`.** Snuff
+    Out's "if you control a Swamp" and Force of Negation's "if it's not your turn" are `If`; Baleful Mastery's {1}{B}
+    is `Mana`, paid instead and stamped on the stack (`OnStackComponent.AlternativeCost`, read by
+    `AlternativeCostWasPaid` — not `WasKicked`: an alternative cost isn't a kicker, CR 118.9 vs 702.33). A free cast
+    asking mana is offered BESIDE the paid one, as one asking a cost. `Playable.FreeCast` is the one answer.
+  - **Force of Will's "exile a blue card from your hand": `ExileFromHandCost(filter)`** (Q's, a filter option) —
+    `CastSpellAction.ExileId`, the slot activations already had. **Daze's "return an Island you control":
+    `ReturnToHandCost(filter)`** — beam me up's `BeamMeUpCost` generalised (its creature is now its filter); TRK's
+    beam-me-up cards and Scotty moved onto it.
+  - **"Or" between two costs: `AdditionalCost.Or` (a cost) replaces `OrPay` (an int)** — nearest: `OrPay`, whose "or"
+    was mana only. Silence the Echo and Countersculpt moved onto `Or = new PayManaCost(n)`; Bitter Triumph is
+    `DiscardCost { Or = PayLifeCost(3) }`, Bone Shards `SacrificeCost(Is.Creature) { Or = DiscardCost() }`.
+    `CostList.Paid` resolves each "or" by what its slot picked; a cast picking both halves or neither is refused.
+  - **Lose Focus' replicate {U}: `ReplicateComponent(ManaCost)`** — was `(int Generic)`; Consign to Memory moved.
+  - **Mana Drain: `AtNextEndStep { NextMainPhase, X }`** — Erica Ortegas' delayed trigger in the command zone, its
+    step an option (your precombat main, or this turn's postcombat main when set up before it — the card's
+    rulings; the postcombat main now raises `StepBeganEvent`), and a number fixed as it is set up
+    (`TriggeredAbilityComponent.X`, read as `Count.X`). "That spell's mana value" is `GreatestManaValueOf`, which now
+    reads a spell's X on the stack (`ManaValueNow`, CR 202.3e).
+  - **Chain Lightning: `May { Who = ControllerOfTarget, ThenAsThem }`** (Peace in Our Time's) with `PayMana` and
+    `CopySpell` — `ControllerOfTarget` of a PLAYER target is that player. "May pay {R}{R}. If the player does, they
+    may copy" is one yes: paying is only for the copy.
+  - Force of Negation's "exile it instead" is `Counter { To = Exile }` (4.3b's option). Snuff Out's "can't be
+    regenerated" waits for regeneration, as Wrath's.
+  - Pre-commit review: a cast for an alternative cost now READS differently — "(not paying its mana cost)" in
+    `Describe` (the table groups plays by their text, so Baleful Mastery's two casts were one play); a cast made
+    during a resolution is left as it was (a choice's option text is in a record's fingerprint). The golden traces
+    hold that text, so every game with a free cast (Flare of Fortitude, Omnipresence, the new cards) moved — verified
+    text only: with the suffix blanked every golden passed. Mana Drain cast in your upkeep or draw step pays at
+    THIS turn's precombat main (the review's catch).
+  - Probe: 150 games, one unfinished past 300 permanents — the probe's "growth without end" case (token decks); none of
+    4.4a's cards makes a permanent.
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -121,17 +155,27 @@ as his three priorities.
         Vindicate, Abrupt Decay, Wrath of God, Abrade, Pyroblast, Time Walk, Time Warp, Ancestral Recall, Brainstorm.
         Four options (Decisions); 23 more tests, 7/7 breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged;
         golden-in moved 29 random and 1126 card-replay games, added 88; probe 150 games, none unfinished, none unused).
+- [ ] MC-4.4 The second batch (`/card-batch`, sprint 5 C5), in parts:
+  - [x] MC-4.4a The costs batch 1 left out, 10 — done 2026-11-13: Force of Will, Force of Negation, Daze, Snuff Out,
+        Baleful Mastery (an alternative cost on the card), Bitter Triumph, Bone Shards ("or" costs), Lose Focus
+        (coloured replicate), Chain Lightning, Mana Drain. Options in Decisions (Silence the Echo, Countersculpt,
+        Consign to Memory and the beam-me-up cards moved); 11 tests, 13/13 breaks caught; `batch_checks.py` all 7 steps
+        (golden-out unchanged; golden-in moved 29 random and 600 card-replay games, added 40; then the review's
+        `Describe` text, above)
+  - [ ] MC-4.4b The mana batch 1 left out: Elvish and Simian Spirit Guide (mana from the hand), Delighted Halfling
+  - [ ] MC-4.4c The rest of tier 1 for one colour (`LsvSurvey.md`), if the session allows
 
 ## Next
 
-Batch 2 in a FRESH session (`/card-batch`): first the cards batch 1 left out (Decisions, 2026-11-13) with the pieces
-they share — the alternative costs (Force of Will, Force of Negation, Daze, Snuff Out, Baleful Mastery: Flare of
-Fortitude's `MayCastFromHandFree(Is.Source) { Costs }` with an `If` and a return cost), "or" additional costs (Bitter
-Triumph, Bone Shards: the cost list's `OrPay` is mana only), the mana from the hand (Spirit Guides), Delighted
-Halfling (a restriction per unit), Mana Drain, Chain Lightning, Lose Focus (a coloured replicate cost) — then the rest
-of tier 1 by colour (`MagicCore/LsvSurvey.md`, 311 left). Waits for a quiet machine: `tools/bench_vs_head.sh` on
-4.3a's payment change (`ManaAbilities.PayAsUsed` on every first tap; `Source.Kind`'s restriction key). DEV-5: the
-probe step counts the never-used cards but doesn't name them (`batch_checks.py`, probe150) — print the names; and a second run after a fix fails golden-out against the first run's golden-in files — restore the golden files from HEAD first (by hand today: `git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
+MC-4.4b in a FRESH session (this one stopped after 4.4a at ~290k context, the brief's limit): the Spirit Guides (a mana ability `From = Hand`, read by `ManaPayment.Find` and spent
+last; `Pay` exiles it) and Delighted Halfling (`YieldOf(…, paying)` leaves out the abilities whose restriction can't
+pay; `ManaRestriction.CantBeCountered` stamps the spell) — then MC-4.4c, the rest of tier 1 for ONE colour: red (28
+left, the fewest; W 36, U 35, B 35, G 30) if the session allows. Waits for a quiet machine: `tools/bench_vs_head.sh` on
+4.3a's payment change (`ManaAbilities.PayAsUsed` on every first tap; `Source.Kind`'s restriction key) and on 4.4's
+cast-cost changes (`CostList.Paid` per cast validation). DEV-5: the probe step counts the never-used cards but doesn't
+name them (`batch_checks.py`, probe150) — print the names; and a second run after a fix fails golden-out against the
+first run's golden-in files — restore the golden files from HEAD first (by hand today: `git checkout HEAD --
+MagicCore.Tests/Golden*.txt`).
 
 ## Log
 
@@ -147,3 +191,8 @@ probe step counts the never-used cards but doesn't name them (`batch_checks.py`,
 - 2026-11-13 (cube lane): MC-4.3b — batch 1's 22 plain spells, four options; no recorded game moved by the engine;
   107 of 528 play. Batch 1 done (the session: 7.6M input-token equivalents, `card-batch-usage.md`). For Shayne: nothing Open — the left-out cards and their pieces are batch 2's (Next);
   the bench on 4.3a's payment change waits for a quiet machine.
+- 2026-11-13 (cube lane, sprint 5 C5): MC-4.4a — batch 2's alternative and "or" costs, 10 cards; `OrPay` became `Or`
+  (a cost), beam me up's cost took a filter, replicate a mana cost, the delayed trigger a main phase and an X. No
+  recorded game moved by the engine; free casts read differently (text only). 117 of 528 play.
+  Session summary (5.7M input-token equivalents): Part 1's ten cost cards done; Part 1's three mana cards (4.4b) designed,
+  in Next, not built; Part 2 (red's tier 1) not started. For Shayne: nothing Open — the quiet-machine bench (Next).

@@ -33,6 +33,13 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 
 	/// <summary>First Contact: it is the first spell its caster cast this game — a copy wasn't cast (CopySpell clears it).</summary>
 	public bool FirstSpellThisGame { get; init; }
+
+	/// <summary>
+	/// Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card itself
+	/// (MayCastFromHandFree(Is.Source)), not for its mana cost or by another permission — a copy
+	/// has it too, as it is kicked (CR 707.10).
+	/// </summary>
+	public bool AlternativeCost { get; init; }
 }
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
@@ -82,13 +89,16 @@ public record CastSpellAction : GameAction
 	/// <summary>The card beheld for a "behold … or pay" cost; 0 when paying instead.</summary>
 	public int BeholdId { get; init; }
 
-	/// <summary>Beam me up: the creature returned to its owner's hand; 0 if none is owed.</summary>
+	/// <summary>Beam me up: the creature returned to its owner's hand (Daze: the Island); 0 if none is owed.</summary>
 	public int ReturnId { get; init; }
+
+	/// <summary>Force of Will: the blue card exiled from your hand; 0 if none is owed.</summary>
+	public int ExileId { get; init; }
 
 	/// <summary>Omnipresence: cast without paying its mana cost — X is 0 (CR 107.3c).</summary>
 	public bool WithoutPayingManaCost { get; init; }
 
-	/// <summary>Consign to Memory: how many times its replicate cost is paid — that many copies.</summary>
+	/// <summary>Consign to Memory, Lose Focus: how many times its replicate cost is paid — that many copies.</summary>
 	public int Replicate { get; init; }
 
 	/// <summary>Kicker: its kicker cost is paid too (KickerComponent).</summary>
@@ -145,25 +155,55 @@ public record CastSpellAction : GameAction
 			CostSlot.Discard => DiscardId,
 			CostSlot.Behold => BeholdId,
 			CostSlot.Return => ReturnId,
+			CostSlot.Exile => ExileId,
 			_ => throw new InvalidOperationException($"A spell's cost can't pick into {slot}"),
 		};
 
 	/// <summary>
-	/// The total cost: X and whatever is paid instead of a sacrifice are in it, so ManaPayment is
-	/// asked for X = 0 — and a reduction applies to the total (CR 601.2f).
+	/// Bone Shards' casts, before validating them: the slots it picks are exactly the slots of the costs it pays —
+	/// one half of each "or", never both, never neither (ValidateAdd refuses the rest anyway; this is cheap).
 	/// </summary>
-	ManaCost CostToPay(GameState s, Card card) =>
-		Costs.Of(
+	public bool PicksOnlyWhatIsPaid(ImmutableList<AdditionalCost> costs)
+	{
+		var paid = CostList.Paid(costs, Chosen).Select(c => c.Slot).ToHashSet();
+		return costs
+			.SelectMany(c => c.Or is { } or ? [c.Slot, or.Slot] : new[] { c.Slot })
+			.Where(slot => slot != CostSlot.None)
+			.All(slot => paid.Contains(slot) == (Chosen(slot) != 0));
+	}
+
+	/// <summary>The costs this cast pays: each "or" resolved by what it picked (CostList.Paid).</summary>
+	ImmutableList<AdditionalCost> Paid(GameState s, Card card) =>
+		CostList.Paid(CostsOf(s, card), Chosen);
+
+	/// <summary>
+	/// The total cost: X and whatever is paid instead of a sacrifice are in it, so ManaPayment is
+	/// asked for X = 0 — and a reduction applies to the total (CR 601.2f). Mana beside the printed cost:
+	/// the kicker's, the replicate cost's each time (Lose Focus' {U}), and what is paid instead of the mana
+	/// cost (Baleful Mastery's {1}{B}).
+	/// </summary>
+	ManaCost CostToPay(GameState s, Card card)
+	{
+		var added = Kicked ? card.GetComponent<KickerComponent>()?.Mana : null;
+		if (
+			WithoutPayingManaCost
+			&& !DuringResolution
+			&& Playable.FreeCast(s, card, PlayerId)?.Mana is { } instead
+		)
+			added = added?.Plus(instead) ?? instead;
+		if (card.GetComponent<ReplicateComponent>() is { } replicate)
+			for (var i = 0; i < Replicate; i++)
+				added = added?.Plus(replicate.Cost) ?? replicate.Cost;
+		return Costs.Of(
 			s,
 			PlayerId,
 			card,
-			X
-				+ Replicate * (card.GetComponent<ReplicateComponent>()?.Generic ?? 0)
-				+ CostList.OrPayOwed(CostsOf(s, card), Chosen),
+			X + CostList.ManaOwed(Paid(s, card)),
 			free: WithoutPayingManaCost,
 			targets: Targets,
-			added: Kicked ? card.GetComponent<KickerComponent>()?.Mana : null
+			added: added
 		);
+	}
 
 	/// <summary>
 	/// What paying for this cast taps and spends, or null if it can't be paid — THE call: validation, the cast
@@ -173,7 +213,7 @@ public record CastSpellAction : GameAction
 	public IReadOnlyList<ManaPayment.Payment>? PaymentPreview(GameState s)
 	{
 		var card = s.GetCard(CardId);
-		return FindPayment(s, card, CostsOf(s, card), card.HasComponent<Sunburst>());
+		return FindPayment(s, card, Paid(s, card), card.HasComponent<Sunburst>());
 	}
 
 	IReadOnlyList<ManaPayment.Payment>? FindPayment(
@@ -212,9 +252,11 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("No spells now: combat lockdown or split second");
 		if (Kicked && !card.HasComponent<KickerComponent>())
 			return ValidationResult.Invalid("It has no kicker");
-		var costs = CostsOf(s, card);
+		var costs = Paid(s, card);
 		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
+		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
+			return ValidationResult.Invalid("Not a card you can exile for this");
 		if (card.Is(CardType.Land))
 			return ValidationResult.Invalid("Lands are played, not cast");
 		if (!DuringResolution && !CanCastNow(s, card))
@@ -244,7 +286,7 @@ public record CastSpellAction : GameAction
 		if (!CostList.Fits(costs, CostSlot.Behold, BeholdId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a card you can behold for this");
 		if (!CostList.Fits(costs, CostSlot.Return, ReturnId, s, PlayerId, CardId))
-			return ValidationResult.Invalid("Not a creature you can return for this");
+			return ValidationResult.Invalid("Not a permanent you can return for this");
 		if (costs.Any(c => !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Cannot pay the additional cost");
 		if (FindPayment(s, card, costs, mostColors: false) is null)
@@ -279,7 +321,12 @@ public record CastSpellAction : GameAction
 		if (ChoosesTargets)
 			return ChooseTargets(s, retain: false);
 		var card = s.GetCard(CardId);
-		var costs = CostsOf(s, card); // read before paying: flashback's are known only in the graveyard
+		var costs = Paid(s, card); // read before paying: flashback's are known only in the graveyard
+		var alternative =
+			WithoutPayingManaCost
+			&& !DuringResolution
+			&& Playable.FreeCast(s, card, PlayerId) is { } freeCast
+			&& freeCast.What.Equals(Filters.Is.Source);
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
 		var permission = from is ZoneType.Library or ZoneType.Graveyard or ZoneType.Sideboard
@@ -299,6 +346,17 @@ public record CastSpellAction : GameAction
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
+		if (alternative)
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							AlternativeCost = true,
+						}
+					)
+			);
 		if (permission is not null && from != ZoneType.Library)
 			s = s.UpdateObject(
 				CardId,

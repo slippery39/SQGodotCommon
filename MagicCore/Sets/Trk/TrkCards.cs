@@ -212,10 +212,10 @@ public static class TrkCards
 	/// <summary>
 	/// Beam me up [cost] (MC-5.2): "You may cast this card from your graveyard for [cost] if you also
 	/// return a creature you control to its owner's hand. Then exile this spell." — a flashback whose
-	/// cost beside the mana is <see cref="BeamMeUpCost"/>.
+	/// cost beside the mana is <see cref="ReturnToHandCost"/>.
 	/// </summary>
 	static FlashbackComponent BeamMeUp(string cost) =>
-		new(ManaCost.Parse(cost)) { Costs = [new BeamMeUpCost()] };
+		new(ManaCost.Parse(cost)) { Costs = [new ReturnToHandCost(Is.Creature)] };
 
 	/// <summary>Strange new worlds (MC-5.2): "the number of differently named lands you control".</summary>
 	static Count DifferentlyNamedLands => Count.DistinctNamesOf(Ref.LandsYouControl);

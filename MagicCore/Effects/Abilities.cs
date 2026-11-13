@@ -17,11 +17,11 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 }
 
 /// <summary>
-/// "Replicate {N} (When you cast this spell, copy it for each time you paid its replicate cost. You
-/// may choose new targets for the copies.)" — CastSpellAction.Replicate. ponytail: a generic cost
-/// only (Consign to Memory's {1}); a coloured one would add symbols, not generic.
+/// "Replicate [cost] (When you cast this spell, copy it for each time you paid its replicate cost. You
+/// may choose new targets for the copies.)" — CastSpellAction.Replicate: Consign to Memory's {1}, Lose
+/// Focus' {U} — the cost added once per payment, beside the spell's own.
 /// </summary>
-public record ReplicateComponent(int Generic) : GameComponent;
+public record ReplicateComponent(ManaCost Cost) : GameComponent;
 
 /// <summary>
 /// A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore counter.
@@ -499,6 +499,12 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 {
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
 
+	/// <summary>
+	/// Mana Drain's delayed trigger: "add an amount of {C} equal to that spell's mana value" — a number fixed as it
+	/// was set up (AtNextEndStep.X), its effects' X when it triggers. 0: the event's ("that much damage").
+	/// </summary>
+	public int X { get; init; }
+
 	/// <summary>"When this enters, choose one —": chosen as it goes on the stack (CR 700.2b).</summary>
 	public ImmutableList<Mode> Modes { get; init; } = [];
 
@@ -758,7 +764,8 @@ public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComp
 
 /// <summary>
 /// "As an additional cost to cast this spell, …" — Silence the Echo: [SacrificeCost(Is.Creature |
-/// Is.Planeswalker) { OrPay = 3 }]; Countersculpt: [BeholdCost("Jace") { OrPay = 1 }].
+/// Is.Planeswalker) { Or = new PayManaCost(3) }]; Countersculpt: [BeholdCost("Jace") { Or = new PayManaCost(1) }];
+/// Bitter Triumph: [DiscardCost() { Or = new PayLifeCost(3) }]; Bone Shards: [SacrificeCost(Is.Creature) { Or = new DiscardCost() }].
 /// </summary>
 public record AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs) : GameComponent;
 
@@ -1109,7 +1116,7 @@ public record DontLoseForZeroLife : GameComponent;
 /// </summary>
 public record MayLookAtTopOfLibrary : GameComponent;
 
-/// <summary>Marooned: "Enchanted permanent … can't be beamed up." — read by BeamMeUpCost: never returned to pay one.</summary>
+/// <summary>Marooned: "Enchanted permanent … can't be beamed up." — read by ReturnToHandCost: never returned to pay one.</summary>
 public record EnchantedCantBeBeamedUp : GameComponent;
 
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
@@ -1283,8 +1290,15 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 	/// <summary>
 	/// Flare of Fortitude: "You may sacrifice a nontoken white creature rather than pay this spell's mana
 	/// cost." — paid instead (CastSpellAction.SacrificeId); a free cast with a cost is offered beside the paid one.
+	/// Force of Will: [PayLifeCost(1), ExileFromHandCost(blue)]; Daze: [ReturnToHandCost(Island)].
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
+
+	/// <summary>Snuff Out: "If you control a Swamp, you may pay 4 life rather than …"; Force of Negation: "If it's not your turn" — judged as it is cast.</summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Baleful Mastery: "You may pay {1}{B} rather than pay this spell's mana cost." — mana paid instead (AlternativeCostWasPaid reads it).</summary>
+	public ManaCost? Mana { get; init; }
 }
 
 /// <summary>On a card a permanent exiled for a linked ability (CR 607.2a) — which object of it.</summary>

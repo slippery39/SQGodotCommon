@@ -760,10 +760,30 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 	/// </summary>
 	public Ref? On { get; init; }
 
+	/// <summary>
+	/// Mana Drain: "At the beginning of your next main phase" — your precombat main, or this turn's postcombat main
+	/// when set up during your turn before it (CR 505.1: both are main phases; the card's rulings).
+	/// </summary>
+	public bool NextMainPhase { get; init; }
+
+	/// <summary>Mana Drain: "equal to that spell's mana value" — counted as it is set up, the delayed trigger's X.</summary>
+	public Count? X { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var game = s.GetGame();
 		var trigger = new DelayedTrigger(
-			new TriggeredAbilityComponent(TriggerEvent.EachEndStep, Effects)
+			new TriggeredAbilityComponent(
+				!NextMainPhase ? TriggerEvent.EachEndStep
+					: game.ActivePlayerId == Controller
+					&& game.Step is >= Step.PreCombatMain and < Step.PostCombatMain
+						? TriggerEvent.Beginning(Step.PostCombatMain, Whose.You)
+					: TriggerEvent.YourFirstMainPhase,
+				Effects
+			)
+			{
+				X = X?.Value(s, InputContext) ?? 0,
+			}
 		);
 		if (On is { } on)
 			return new(
@@ -790,7 +810,12 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 					)
 			);
 		return new(
-			GetEmblem.ToCommandZone(s, Controller, $"{Source(s).Name} (next end step)", [trigger])
+			GetEmblem.ToCommandZone(
+				s,
+				Controller,
+				$"{Source(s).Name} ({(NextMainPhase ? "next main phase" : "next end step")})",
+				[trigger]
+			)
 		);
 	}
 }

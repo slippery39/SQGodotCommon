@@ -198,9 +198,17 @@ public static class TurnStructure
 			&& s.CardsIn(active, ZoneType.Battlefield).Any(s.HasAbility<Effects.SkipYourDrawStep>)
 		)
 			return EndStep(s);
-		// "At the beginning of …" (CR 503.1a, 504.2, 505.4, 507.1, 513.1a) — the main phase is the first one
-		// only: Gardenize's "your first main phase".
-		if (step is Step.Upkeep or Step.Draw or Step.PreCombatMain or Step.BeginCombat or Step.End)
+		// "At the beginning of …" (CR 503.1a, 504.2, 505.4, 507.1, 513.1a) — Gardenize's "your first main phase";
+		// the second main phase too, for Mana Drain's "your next main phase" (a trigger names its step).
+		if (
+			step
+			is Step.Upkeep
+				or Step.Draw
+				or Step.PreCombatMain
+				or Step.BeginCombat
+				or Step.PostCombatMain
+				or Step.End
+		)
 			s = s.Raise(new StepBeganEvent(step));
 		// CR 714.3b: a turn-based action, no stack — "as a player's precombat main phase begins, that
 		// player puts a lore counter on each Saga they control" (Shayne, 2026-11-01).

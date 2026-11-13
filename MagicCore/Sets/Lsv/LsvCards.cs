@@ -66,6 +66,9 @@ public static class LsvCards
 		};
 
 	/// <summary>Mana Leak: "Counter target [noncreature] spell unless its controller pays {N}."</summary>
+	/// <summary>Force of Will, Force of Negation: "exile a blue card from your hand" (not this one).</summary>
+	static ExileFromHandCost ExileABlueCard => new(Is.Color(ManaColor.Blue));
+
 	static SpellEffectsComponent CounterUnless(string cost, Filter? spells = null) =>
 		Spell(
 			[TargetSpec.Spell(spells)],
@@ -311,6 +314,99 @@ public static class LsvCards
 				Spell([TargetSpec.Player()], new TakeExtraTurn { Who = Ref.Target() }),
 			],
 			["Ancestral Recall"] = [Spell([TargetSpec.Player()], new DrawCards(Ref.Target(), 3))],
+			// ===== batch 2 (MC-4.4a): the costs batch 1 left out =====
+			["Force of Will"] =
+			[
+				new MayCastFromHandFree(Is.Source) { Costs = [new PayLifeCost(1), ExileABlueCard] },
+				Spell([TargetSpec.Spell()], new Counter(Ref.Target())),
+			],
+			["Force of Negation"] =
+			[
+				new MayCastFromHandFree(Is.Source)
+				{
+					If = new Not(new DuringYourTurn()),
+					Costs = [ExileABlueCard],
+				},
+				Spell(
+					[TargetSpec.Spell(!Is.Creature)],
+					new Counter(Ref.Target()) { To = ZoneType.Exile }
+				),
+			],
+			["Daze"] =
+			[
+				new MayCastFromHandFree(Is.Source)
+				{
+					Costs = [new ReturnToHandCost(Is.Subtype("Island"))],
+				},
+				CounterUnless("{1}"),
+			],
+			["Snuff Out"] =
+			[
+				new MayCastFromHandFree(Is.Source)
+				{
+					If = new AtLeast(
+						Count.NumberOf(Ref.Permanents(Is.Yours & Is.Subtype("Swamp"))),
+						1
+					),
+					Costs = [new PayLifeCost(4)],
+				},
+				// "It can't be regenerated": the engine has no regeneration yet (Wrath of God's note, MC-4.3b).
+				Spell(
+					[Target(Is.Creature & !Is.Color(ManaColor.Black))],
+					new Destroy(Ref.Target())
+				),
+			],
+			["Baleful Mastery"] =
+			[
+				new MayCastFromHandFree(Is.Source) { Mana = ManaCost.Parse("{1}{B}") },
+				Spell(
+					[CreatureOrPlaneswalker],
+					new If(new AlternativeCostWasPaid(), [new DrawCards(Ref.EachOpponent, 1)]),
+					new Exile(Ref.Target())
+				),
+			],
+			["Bitter Triumph"] =
+			[
+				new AdditionalCostsComponent([new DiscardCost() { Or = new PayLifeCost(3) }]),
+				Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
+			],
+			["Bone Shards"] =
+			[
+				new AdditionalCostsComponent(
+					[new SacrificeCost(Is.Creature) { Or = new DiscardCost() }]
+				),
+				Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
+			],
+			["Lose Focus"] = [new ReplicateComponent(ManaCost.Parse("{U}")), CounterUnless("{2}")],
+			["Chain Lightning"] =
+			[
+				// "may pay {R}{R}. If the player does, they may copy this spell" — one yes: paying is only for the copy.
+				Spell(
+					[TargetSpec.AnyTarget()],
+					new DealDamage(Ref.Target(), 3),
+					new May(
+						"Pay {R}{R} to copy Chain Lightning?",
+						new CanPay(ManaCost.Parse("{R}{R}")),
+						[new PayMana(ManaCost.Parse("{R}{R}"), [new CopySpell(Ref.Source)])]
+					)
+					{
+						Who = Ref.ControllerOfTarget(0),
+						ThenAsThem = true,
+					}
+				),
+			],
+			["Mana Drain"] =
+			[
+				Spell(
+					[TargetSpec.Spell()],
+					new AtNextEndStep([new AddMana(ManaColor.Colorless, Count.X)])
+					{
+						NextMainPhase = true,
+						X = Count.GreatestManaValueOf(Ref.Target(0)),
+					},
+					new Counter(Ref.Target())
+				),
+			],
 			["Brainstorm"] =
 			[
 				Spell(

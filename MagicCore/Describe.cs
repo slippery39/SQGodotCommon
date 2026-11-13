@@ -29,6 +29,13 @@ public static class Describe
 					: ""
 				)
 				+ (c.X > 0 ? $" (X={c.X})" : "")
+				// Baleful Mastery's {1}{B}, Snuff Out's life: told from the paid cast beside it (a resolution's free
+				// cast is a choice's option, whose text a record's fingerprint hashes — left as it was)
+				+ (
+					c.WithoutPayingManaCost && !c.DuringResolution
+						? " (not paying its mana cost)"
+						: ""
+				)
 				+ (c.Replicate > 0 ? $" (replicate ×{c.Replicate})" : "")
 				+ (c.Kicked ? " (kicked)" : "")
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
@@ -36,7 +43,8 @@ public static class Describe
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")
 				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : "")
 				+ (c.BeholdId != 0 ? $", beholding {Name(s, c.BeholdId)}" : "")
-				+ (c.ReturnId != 0 ? $", returning {Name(s, c.ReturnId)}" : ""),
+				+ (c.ReturnId != 0 ? $", returning {Name(s, c.ReturnId)}" : "")
+				+ (c.ExileId != 0 ? $", exiling {Name(s, c.ExileId)}" : ""),
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{WhichAbility(s, a)}"
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")

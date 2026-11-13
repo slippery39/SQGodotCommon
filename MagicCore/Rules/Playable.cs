@@ -134,17 +134,14 @@ public static class Playable
 		|| only.When.Holds(s, Conditions.Of(card with { ControllerId = playerId }));
 
 	/// <summary>
-	/// What casting this without paying its mana cost costs instead, or null when nothing allows it:
-	/// Omnipresence's (a permanent of yours, a spell in your hand) or the card's own — Flare of Fortitude's
+	/// What allows casting this without paying its mana cost, or null when nothing does: Omnipresence's (a
+	/// permanent of yours, a spell in your hand) or the card's own alternative cost — Flare of Fortitude's
 	/// "rather than pay this spell's mana cost" (What = Is.Source: Omnipresence's own static is no alternative
 	/// cost for itself), from wherever it is cast but never with flashback — two alternative costs don't
-	/// combine (CR 118.9a). The one asking least.
+	/// combine (CR 118.9a). Its If holds (Snuff Out: "if you control a Swamp"; Force of Negation: "if it's not
+	/// your turn"), judged as its caster's. The one asking least: no costs and no mana first.
 	/// </summary>
-	public static System.Collections.Immutable.ImmutableList<AdditionalCost>? FreeCosts(
-		GameState s,
-		Card card,
-		int playerId
-	) =>
+	public static MayCastFromHandFree? FreeCast(GameState s, Card card, int playerId) =>
 		(
 			s.IsIn(card.Id, playerId, ZoneType.Hand)
 				? s.CardsIn(playerId, ZoneType.Battlefield)
@@ -152,6 +149,7 @@ public static class Playable
 						s.AbilitiesOf<MayCastFromHandFree>(p)
 							.Where(m =>
 								m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id))
+								&& (m.If?.Holds(s, Conditions.Of(p)) ?? true)
 							)
 					)
 				: []
@@ -160,15 +158,27 @@ public static class Playable
 				Costs.Flashback(s, card) is null
 					? card
 						.Components.OfType<MayCastFromHandFree>()
-						.Where(m => m.What.Equals(Filters.Is.Source))
+						.Where(m =>
+							m.What.Equals(Filters.Is.Source)
+							&& (
+								m.If?.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
+								?? true
+							)
+						)
 					: []
 			)
-			.OrderBy(m => m.Costs.Count)
-			.FirstOrDefault()
-			?.Costs;
+			.OrderBy(m => m.Costs.Count + (m.Mana is null ? 0 : 1))
+			.FirstOrDefault();
+
+	/// <summary>What the free cast costs beyond mana (<see cref="FreeCast"/>), or null when nothing allows one.</summary>
+	public static System.Collections.Immutable.ImmutableList<AdditionalCost>? FreeCosts(
+		GameState s,
+		Card card,
+		int playerId
+	) => FreeCast(s, card, playerId)?.Costs;
 
 	public static bool MayCastWithoutPaying(GameState s, Card card, int playerId) =>
-		FreeCosts(s, card, playerId) is not null;
+		FreeCast(s, card, playerId) is not null;
 
 	public static bool CanPlayLandFromHere(GameState s, Card card, int playerId) =>
 		card.Is(CardType.Land)
