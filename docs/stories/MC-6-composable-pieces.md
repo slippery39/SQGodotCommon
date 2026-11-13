@@ -99,6 +99,24 @@ really are unique), but the families below are.
   cast takes, setting `OnStackComponent.CantBeCountered` — Delighted Halfling's mana sets the same flag), and
   `PermanentsCantPhaseIn` (one rule, its one place).
 
+- 2026-11-13, Claude — **Open (for Shayne), MC-6.14: the "this turn / this game" conditions.** The four read four
+  different things: `FirstSpellYouCastThisGame` a stamp on the stack object (it must be — a spell cast in response would
+  change a count read later, as `Trigger.SpellNumber` is stamped), `SubtypeEnteredThisTurn` a set of subtype NAMES in
+  the tally, `HaventBegunAnExtraTurn` a player flag, `IfNthResolutionThisTurn` a per-card count the effect itself
+  writes as it resolves. No count sits under them today, so "a `Count` and `AtLeast`" means new data. Options:
+  **(A)** make each a count: `Count.SpellNumberThisGame(Ref.Source)` (an int stamp for the bool) under
+  `Not(AtLeast(…, 2))`; `Count.ExtraTurnsBegunThisGame` (an int for the flag); `Count.EnteredThisTurn(filter)`, the
+  tally keeping what entered as it entered so a filter can ask it; `Count.TimesResolvedThisTurn(Ref.Source)`, the stamp
+  moved into every resolution, with an "exactly" condition — four one-card conditions become counts, plus a condition
+  and a stamp on every resolution.
+  **(B)** keep the four; LSVPower's "this turn" texts land on counts that exist or one a batch adds: "if you gained
+  life this turn" (Ocelot Pride: `LifeYouGainedThisTurn`), "if you've cast another spell this turn" (Sage of the Skies:
+  a spells-cast count beside `NoncreatureSpellsYouCastThisTurn`), revolt (Fatal Push: a new tally, "a permanent left the
+  battlefield under your control"), "if it wasn't the first land you played this turn" (Fastbond: the land's number,
+  stamped as it is played), "the second time … instead" (Scythecat Cub: `IfNthResolutionThisTurn { Otherwise }`), "the
+  first spell you've cast this game" (Once Upon a Time: `FirstSpellYouCastThisGame` on its free cast).
+  **Default (B)**: no two of the four share a datum, so (A) renames them without removing a rule; nothing built.
+
 ## Tasks
 
 The audit (2026-11-06): each family, its members today, and the composed piece. **MC-5.6** marks the ones
@@ -215,7 +233,8 @@ the Stardates fix.
       `EnchantedIsCreatureType`, `EnchantedLosesAllAbilities`,
       `EnchantedDoesntUntap` (done in 6.15: `DoesntUntap(Is.AttachedToSource)`), `EnchantedCantBeBeamedUp` → the general statics with the scope
       `Is.AttachedToSource`.
-- [ ] MC-6.14 **"This turn" and "this game" conditions** — `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
+- [ ] MC-6.14 **"This turn" and "this game" conditions** — analysed 2026-11-13, nothing built: **Open (for Shayne)** in
+      Decisions (default: keep the four, counts as LSVPower's batches need them). `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
       `HaventBegunAnExtraTurn`, `IfNthResolutionThisTurn` → a `Count` and `AtLeast`, where a tally exists.
 - [ ] MC-6.15 **Rule-changing statics** — part done 2026-11-13 (cube lane): "doesn't untap during its controller's
       untap step" → `DoesntUntap(filter)`, the holder's rule (Traxos `Is.Source`; Infinite Coursework, Marooned
@@ -243,10 +262,14 @@ the Stardates fix.
 
 ## Next
 
-6.15 the "can't" statics, then 6.14 the "this turn / this game" conditions (the order LSVPower needs them, MC-4's
-Decisions). 6.12 is done: LSVPower's reanimation, bounce, tuck and flicker land on `MoveTo`, "return a … you
-control / from your graveyard" on `MoveChosen`. Each step: one family, its old cards moved, the golden replays
-UNCHANGED (or a ruling fixed and said), the full suite.
+**Shayne first: the two 2026-11-13 Open decisions** — 6.15's player-side "can't"s (one reader for permanents and this-turn
+objects with a `Who`, or options per card at batch time; default the latter) and 6.14's conditions (counts, or keep the
+four; default keep). With both at their defaults, C4 is done as far as LSVPower needs: what is left of MC-6 (6.11
+chosen as it enters, 6.13's other Aura statics, 6.16 naming a card) is small for the cube (6.11: 4 cards, 6.16: 3 by MC-4's
+grep; 6.13 not counted) and can follow the batches. Then MC-4's batch 1 in a fresh session (`/card-batch`). If Shayne picks 6.15's (A): the reader
+`s.PlayerRules<T>(player)` over the command zone and every permanent's `T` with `Who`, a per-state cache for the hot
+paths (`TargetSpec.IsLegal`, `Damage.Deal`, `Life`, `Combat.LockedDown`), then the markers moved one by one with the
+golden replays unchanged.
 
 ## Log
 
@@ -261,3 +284,8 @@ UNCHANGED (or a ruling fixed and said), the full suite.
   three new tests, 8/8 breaks caught. Stopped before 6.12 (context; its design is in Next). For Shayne: the three
   2026-11-13 Decisions (two shapes of "may play"; Sisko's cap counted once, CR 608.2h; Brazen Bluff's hand cast kept apart).
 - 2026-11-13: Shayne confirmed all three MC-6.9 Decisions as built — nothing waits on him from MC-6.9.
+- 2026-11-13 (cube lane, sprint 5 C4): MC-6.12 done — `MoveTo` (what a Ref names: nine pieces plus `ExileFromGraveyard`,
+  `ExileSpell`) and `MoveChosen` (a chosen card, each zone's choice kept), twelve pieces gone; CR 111.8 for every move.
+  MC-6.15 part — `DoesntUntap(filter)`, the holder's rule; two pieces gone. Every golden file unchanged both times;
+  seven tests, 12/12 breaks caught. For Shayne: the two Open decisions (6.15's player-side rules, 6.14's conditions),
+  each with options and a default — nothing else waits on him.
