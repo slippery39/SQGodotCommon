@@ -94,7 +94,8 @@ really are unique), but the families below are.
   **(B)** keep each marker; give the one a card needs its `Who` / duration when its batch is scripted (Voice of Victory:
   `CantCastOrActivate { Who = Is.Opponents, DuringYourTurn }`; Narset a draw-limit marker; Nemesis a rest-of-game object).
   Nothing speculative, no hot path touched until a card pays for it.
-  **Default (B)**, with (A)'s reader at the first batch that needs a second marker on a permanent with a `Who`. Kept
+  **Default (B)**, with (A)'s reader at the first batch that needs a second marker on a permanent with a `Who`.
+  **Shayne, 2026-11-13: (B)** — options per card as LSVPower's batches need them. Kept
   apart either way: `CantBeCountered` (the spell's own characteristic) and `NextSpellCantBeCountered` (a one-shot the next
   cast takes, setting `OnStackComponent.CantBeCountered` — Delighted Halfling's mana sets the same flag), and
   `PermanentsCantPhaseIn` (one rule, its one place).
@@ -116,6 +117,7 @@ really are unique), but the families below are.
   stamped as it is played), "the second time … instead" (Scythecat Cub: `IfNthResolutionThisTurn { Otherwise }`), "the
   first spell you've cast this game" (Once Upon a Time: `FirstSpellYouCastThisGame` on its free cast).
   **Default (B)**: no two of the four share a datum, so (A) renames them without removing a rule; nothing built.
+  **Shayne, 2026-11-13: (B)** — keep the four; counts added as the batches need them.
 
 ## Tasks
 
@@ -233,15 +235,16 @@ the Stardates fix.
       `EnchantedIsCreatureType`, `EnchantedLosesAllAbilities`,
       `EnchantedDoesntUntap` (done in 6.15: `DoesntUntap(Is.AttachedToSource)`), `EnchantedCantBeBeamedUp` → the general statics with the scope
       `Is.AttachedToSource`.
-- [ ] MC-6.14 **"This turn" and "this game" conditions** — analysed 2026-11-13, nothing built: **Open (for Shayne)** in
-      Decisions (default: keep the four, counts as LSVPower's batches need them). `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
+- [x] MC-6.14 **"This turn" and "this game" conditions** — closed 2026-11-13 by decision, nothing built: the four
+      kept (Shayne: (B), Decisions); LSVPower's counts are added by the batches that need them. `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
       `HaventBegunAnExtraTurn`, `IfNthResolutionThisTurn` → a `Count` and `AtLeast`, where a tally exists.
-- [ ] MC-6.15 **Rule-changing statics** — part done 2026-11-13 (cube lane): "doesn't untap during its controller's
+- [x] MC-6.15 **Rule-changing statics** — closed 2026-11-13: done 2026-11-13 (cube lane): "doesn't untap during its controller's
       untap step" → `DoesntUntap(filter)`, the holder's rule (Traxos `Is.Source`; Infinite Coursework, Marooned
       `Is.AttachedToSource`) — `DoesntUntapInYourUntapStep` and 6.13's `EnchantedDoesntUntap` gone; no game moved; two tests (Marooned holds
       down another player's artifact; Traxos that lost all abilities untaps, as before), revert-checked. One reading
       changed, rules-correct and in no game: an AURA that loses its abilities no longer holds its creature down (it was
-      read with HasComponent). The player-side rest is **Open (for Shayne)** in Decisions.
+      read with HasComponent). The player-side rest stays one marker each, given a `Who` /
+      duration when a card needs it (Shayne: (B), Decisions).
       Part done 2026-11-07 (MC-5.6 batch 3b): `NoSpellsOrAbilitiesDuringCombat` →
       `CantCastOrActivate { DuringCombat, ManaAbilitiesToo }`, on a permanent (Yuriko moved) or a `ThisTurn { On }`
       effect (Sen Triplets); `LifeTotalCantChange` (Flare of Fortitude) with paying life one question (`Life.CanPay`).
@@ -262,14 +265,11 @@ the Stardates fix.
 
 ## Next
 
-**Shayne first: the two 2026-11-13 Open decisions** — 6.15's player-side "can't"s (one reader for permanents and this-turn
-objects with a `Who`, or options per card at batch time; default the latter) and 6.14's conditions (counts, or keep the
-four; default keep). With both at their defaults, C4 is done as far as LSVPower needs: what is left of MC-6 (6.11
-chosen as it enters, 6.13's other Aura statics, 6.16 naming a card) is small for the cube (6.11: 4 cards, 6.16: 3 by MC-4's
-grep; 6.13 not counted) and can follow the batches. Then MC-4's batch 1 in a fresh session (`/card-batch`). If Shayne picks 6.15's (A): the reader
-`s.PlayerRules<T>(player)` over the command zone and every permanent's `T` with `Who`, a per-state cache for the hot
-paths (`TargetSpec.IsLegal`, `Damage.Deal`, `Life`, `Combat.LockedDown`), then the markers moved one by one with the
-golden replays unchanged.
+C4 is done as far as LSVPower needs: Shayne took (B) on both 2026-11-13 decisions — 6.15's player-side "can't"s get
+`Who` / duration options per card at batch time, 6.14's conditions stay, counts added as batches need them. What is left
+of MC-6 (6.11 chosen as it enters, 6.13's other Aura statics, 6.16 naming a card) is small for the cube (6.11: 4 cards,
+6.16: 3 by MC-4's grep; 6.13 not counted) and follows the batches. Next: MC-4's batch 1 in a fresh session
+(`/card-batch`); each new piece a card needs names its nearest MC-6 piece.
 
 ## Log
 
@@ -289,3 +289,4 @@ golden replays unchanged.
   MC-6.15 part — `DoesntUntap(filter)`, the holder's rule; two pieces gone. Every golden file unchanged both times;
   seven tests, 12/12 breaks caught. For Shayne: the two Open decisions (6.15's player-side rules, 6.14's conditions),
   each with options and a default — nothing else waits on him.
+- 2026-11-13: Shayne took (B) on both Open decisions (6.15, 6.14) — tasks closed, nothing waits on him from MC-6.
