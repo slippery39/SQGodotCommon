@@ -1,7 +1,7 @@
 ---
 id: AI-22
 title: Faster AI decisions — sealed runs in minutes, not hours
-status: ready
+status: done
 area: AI
 created: 2026-11-12
 ---
@@ -33,10 +33,10 @@ AI-7 profiled and optimised the search once (done) — this is the second pass, 
 - [x] AI-22.1 Profile: a sealed run's decisions (pool 4's RGb, a Rok-Tahk board, a Tribble board), by method — done
       2026-11-12 on RGb (findings "AI-22.1"): rollouts 90%, the rollout's attack plans 50%, AI-13.12's free passes 36%,
       the engine's per-step checks ~40%; a Tribble board not yet profiled
-- [ ] AI-22.2 The levers, ranked by what the profile shows, each measured (suite changed 0, cost per decision)
-- [ ] AI-22.3 AI-21's steps and AI-18.1 where the profile points at them
-- [ ] AI-22.4 The before/after sealed run, in `docs/findings/magic-ai.md`
-- [ ] AI-22.5 (Claude's proposal, 2026-11-12, for Shayne) **A game's cap in engine steps, not minutes** — sealed runs,
+- [x] AI-22.2 The levers, ranked by what the profile shows, each measured (suite changed 0, cost per decision)
+- [x] AI-22.3 AI-21's steps and AI-18.1 where the profile points at them — moved: AI-21 (attack plans), AI-24 (the rest)
+- [x] AI-22.4 The before/after sealed run, in `docs/findings/magic-ai.md` — the engine shortcuts −11%, every game identical
+- [x] AI-22.5 → AI-24 (Claude's proposal, 2026-11-12, for Shayne) **A game's cap in engine steps, not minutes** — sealed runs,
       the scan and self-play stop a game past 5 wall-clock minutes, so under load more games stop and the RESULT
       changes (`.claude/rules/two-lanes.md`: quiet-machine tasks). A cap counted in engine steps (the cost line's unit,
       deterministic) makes them "any time" tasks — the same answer however busy the machine is; the minutes stay as a
@@ -44,11 +44,9 @@ AI-7 profiled and optimised the search once (done) — this is the second pass, 
 
 ## Next
 
-**For Shayne (AI-22.2's results, findings "AI-22.2"):** `shortlist2` (sealed −18%, match 50.0%, suite identical) and
-`freepasses2` (cost −5.7%, match 50.5%, suite identical) are switches, OFF; together a sealed run −22%. Both change
-some moves in TRK games (4 of 16 each). His call: make either the default (then `/pre-commit`, the suite accepted,
-the switch renamed as the OLD behaviour, as every kept change), or drop it. Not built: the state-based skip (needs an
-engine audit first), attacker grouping (AI-21), reused combat answers.
+**Done (2026-11-13, Shayne closed it):** the engine shortcuts kept — on, no switch — a sealed run ~11% faster with every
+move identical. Everything else (shortlist2, freepasses2, the step cap, no-blockers, the state-based audit, mana
+caching, twin plans) is AI-24, to go over later.
 
 ## Log
 
@@ -56,3 +54,5 @@ engine audit first), attacker grouping (AI-21), reused combat answers.
 - 2026-11-12: AI-22.1 started — a profile of pool 4's RGb, 8 opponents on both seats (`dotnet-trace`, thread-time samples). AI-22.5 proposed.
 - 2026-11-12: AI-22.1 done (findings): the CardsIn guess tested and reverted — the leaves misattribute.
 - 2026-11-12/13: AI-22.2 overnight — four switches tried (shortlist2/1, freepasses2/1), two matched, three ideas costed and not built (findings); `--builds … --ai=NAME`.
+- 2026-11-13: the engine shortcuts built behind `MAGIC_SHORTCUTS` (sealed −11%, decisions identical); twin plans tried, reverted (findings).
+- 2026-11-13: closed (Shayne). The engine shortcuts made permanent (the switch removed, tests and suite re-run); the rest moved to AI-24.

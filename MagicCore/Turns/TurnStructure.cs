@@ -430,6 +430,11 @@ public static class StateBasedActions
 			// CR 704.5d: a token anywhere but the battlefield ceases to exist.
 			foreach (var zone in OffTheBattlefield)
 			{
+				if (
+					zone is ZoneType.Hand or ZoneType.Library
+					&& !s.GetGame().TokenOrCopyInHandOrLibrary
+				)
+					continue; // AI-22: none went there (MoveCard raises the flag)
 				List<Card>? gone = null;
 				foreach (var c in s.CardsIn(id, zone))
 					if (c.IsToken || Rules.Prepare.IsDeadCopy(s, c))
@@ -439,6 +444,8 @@ public static class StateBasedActions
 						s = s.RemoveObject(card.Id);
 			}
 		}
+		if (s.GetGame().TokenOrCopyInHandOrLibrary) // both players' read: lowered
+			s = s.WithGame(s.GetGame() with { TokenOrCopyInHandOrLibrary = false });
 		return s;
 	}
 
