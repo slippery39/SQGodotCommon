@@ -475,7 +475,15 @@ public static class SealedBuilder
 				var land = IsLand(CardRegistry.Get(n).Data);
 				if (
 					parts.Any(p =>
-						p is ManaAbilityComponent { AnyOneColor: true, Cost: null } // Starfleet Academy's costs {5}: no fixer
+						// Starfleet Academy's costs {5}, Delighted Halfling's casts only legends: no fixer
+						p
+							is ManaAbilityComponent
+							{
+								AnyOneColor: true,
+								Cost: null,
+								From: ZoneType.Battlefield,
+							} m
+							&& m.Restriction == ManaRestriction.None
 						|| land && p is ChoosesColorAsItEnters
 					)
 				)
@@ -485,8 +493,12 @@ public static class SealedBuilder
 					.. parts
 						.OfType<ManaAbilityComponent>()
 						// Phyrexian Tower's {B}{B} costs a creature: no lasting source
+						// a Spirit Guide's mana is spent from the hand once: no lasting source either
 						.Where(m =>
-							m.Restriction == ManaRestriction.None && !m.AnyOneColor && m.IsPlain
+							m.Restriction == ManaRestriction.None
+							&& !m.AnyOneColor
+							&& m.IsPlain
+							&& m.From == ZoneType.Battlefield
 						)
 						.Select(m => m.Color)
 						.Concat(

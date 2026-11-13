@@ -4,7 +4,7 @@ GENERATED — never hand-edit; the hand check and the batch plan are in `docs/st
 A tier from keywords, layout and a few text patterns only — every batch's cards are read before they are
 built (`/card-batch` step 1).
 
-**528 cards:** 117 play today (scripted in any set, or keywords and reminder text only); of the other 411, tier 1 (only pieces the engine has) 301, tier 2 (an option on a piece) 35, tier 3 (a new piece or rule) 75.
+**528 cards:** 120 play today (scripted in any set, or keywords and reminder text only); of the other 408, tier 1 (only pieces the engine has) 298, tier 2 (an option on a piece) 35, tier 3 (a new piece or rule) 75.
 
 ## New pieces and rules, by how many cards need them
 
@@ -136,7 +136,6 @@ built (`/card-batch` step 1).
 - Dark Confidant (Creature — Human Wizard) — nothing the keywords name
 - Darkslick Shores (Land) — nothing the keywords name
 - Deep-Cavern Bat (Creature — Bat) — have: engine keyword
-- Delighted Halfling (Creature — Halfling Citizen) — have: CantBeCountered
 - Demonic Consultation (Instant) — nothing the keywords name
 - Demonic Tutor (Sorcery) — nothing the keywords name
 - Dismember (Instant) — nothing the keywords name
@@ -146,7 +145,6 @@ built (`/card-batch` step 1).
 - Elegant Parlor (Land — Mountain Plains) — have: Surveil
 - Elite Spellbinder (Creature — Human Cleric) — have: engine keyword
 - Elspeth, Storm Slayer (Legendary Planeswalker — Elspeth) — nothing the keywords name
-- Elvish Spirit Guide (Creature — Elf Spirit) — nothing the keywords name
 - Emeritus of Abundance // Regrowth (Creature — Elf Druid // Sorcery) — have: engine keyword; have: Rules/Prepare.cs
 - Emperor of Bones (Creature — Skeleton Noble) — have: PutCounters under If
 - Enduring Innocence (Enchantment Creature — Sheep Glimmer) — have: engine keyword
@@ -295,7 +293,6 @@ built (`/card-batch` step 1).
 - Shadowy Backstreet (Land — Plains Swamp) — have: Surveil
 - Shallow Grave (Instant) — nothing the keywords name
 - Sheoldred's Edict (Instant) — have: Ref opponents (two-player)
-- Simian Spirit Guide (Creature — Ape Spirit) — nothing the keywords name
 - Six (Legendary Creature — Treefolk) — have: engine keyword; have: Mill
 - Skateboard (Artifact — Equipment) — have: Equipment (Attachments)
 - Skullclamp (Artifact — Equipment) — have: Equipment (Attachments)
@@ -501,4 +498,4 @@ built (`/card-batch` step 1).
 
 ## Already playable
 
-Erode, Mana Tithe, Path to Exile, Swords to Plowshares, Wrath of God, Mox Pearl, Seasoned Cryomancer, Sphinx of False Conclusions, Chandra, Chill of Compliance, The Theorist, Jace Beleren, Ancestral Recall, Brainstorm, Consider, Spell Pierce, Stern Scolding, Counterspell, Daze, Lose Focus, Mana Drain, Mana Leak, Memory Lapse, Remand, Force of Negation, Force of Will, Time Walk, Time Warp, Mox Sapphire, Dark Matter Manipulator, Sanctum Lurker, Sheoldred, the Apocalypse, Cut Down, Dark Ritual, Bitter Triumph, Cabal Ritual, Baleful Mastery, Snuff Out, Bone Shards, Mind Twist, Mox Jet, Samut, Hazoret's Champion, Stingcaster Mage, Chandra, Torch of Defiance, Ajani Unrelenting, Burst Lightning, Lightning Bolt, Pyroblast, Abrade, Chain Lightning, Mox Ruby, Avacyn's Pilgrim, Birds of Paradise, Ignoble Hierarch, Llanowar Elves, Noble Hierarch, Bristly Bill, Spine Sower, Carnivorous Cultivator // Enroot, Garruk, Curse Breaker, Mox Emerald, Talisman of Progress, Theorix Charm, Ertai Resurrected, Talisman of Indulgence, Aerid Konstrari, Vindicate, Abrupt Decay, Avatar of Burgeoning Echoes, Talisman of Curiosity, Black Lotus, Lotus Petal, Mana Crypt, Mana Vault, Sol Ring, Grim Monolith, Talisman of Conviction, The Echoverse Fulcrum, Basalt Monolith, Talisman of Dominance, Talisman of Creativity, Hallowed Fountain, Tundra, Underground Sea, Watery Grave, Badlands, Blood Crypt, Stomping Ground, Taiga, Savannah, Temple Garden, Godless Shrine, Scrubland, Steam Vents, Volcanic Island, Bayou, Overgrown Tomb, Plateau, Sacred Foundry, Breeding Pool, Tropical Island, Ancient Tomb, Arid Mesa, Bloodstained Mire, City of Traitors, Flooded Strand, Gaea's Cradle, Mana Confluence, Marsh Flats, Mishra's Workshop, Misty Rainforest, Polluted Delta, Prismatic Vista, Scalding Tarn, Strip Mine, Tolarian Academy, Verdant Catacombs, Wasteland, Windswept Heath, Wooded Foothills
+Erode, Mana Tithe, Path to Exile, Swords to Plowshares, Wrath of God, Mox Pearl, Seasoned Cryomancer, Sphinx of False Conclusions, Chandra, Chill of Compliance, The Theorist, Jace Beleren, Ancestral Recall, Brainstorm, Consider, Spell Pierce, Stern Scolding, Counterspell, Daze, Lose Focus, Mana Drain, Mana Leak, Memory Lapse, Remand, Force of Negation, Force of Will, Time Walk, Time Warp, Mox Sapphire, Dark Matter Manipulator, Sanctum Lurker, Sheoldred, the Apocalypse, Cut Down, Dark Ritual, Bitter Triumph, Cabal Ritual, Baleful Mastery, Snuff Out, Bone Shards, Mind Twist, Mox Jet, Samut, Hazoret's Champion, Stingcaster Mage, Simian Spirit Guide, Chandra, Torch of Defiance, Ajani Unrelenting, Burst Lightning, Lightning Bolt, Pyroblast, Abrade, Chain Lightning, Mox Ruby, Avacyn's Pilgrim, Birds of Paradise, Delighted Halfling, Ignoble Hierarch, Llanowar Elves, Noble Hierarch, Bristly Bill, Spine Sower, Carnivorous Cultivator // Enroot, Elvish Spirit Guide, Garruk, Curse Breaker, Mox Emerald, Talisman of Progress, Theorix Charm, Ertai Resurrected, Talisman of Indulgence, Aerid Konstrari, Vindicate, Abrupt Decay, Avatar of Burgeoning Echoes, Talisman of Curiosity, Black Lotus, Lotus Petal, Mana Crypt, Mana Vault, Sol Ring, Grim Monolith, Talisman of Conviction, The Echoverse Fulcrum, Basalt Monolith, Talisman of Dominance, Talisman of Creativity, Hallowed Fountain, Tundra, Underground Sea, Watery Grave, Badlands, Blood Crypt, Stomping Ground, Taiga, Savannah, Temple Garden, Godless Shrine, Scrubland, Steam Vents, Volcanic Island, Bayou, Overgrown Tomb, Plateau, Sacred Foundry, Breeding Pool, Tropical Island, Ancient Tomb, Arid Mesa, Bloodstained Mire, City of Traitors, Flooded Strand, Gaea's Cradle, Mana Confluence, Marsh Flats, Mishra's Workshop, Misty Rainforest, Polluted Delta, Prismatic Vista, Scalding Tarn, Strip Mine, Tolarian Academy, Verdant Catacombs, Wasteland, Windswept Heath, Wooded Foothills

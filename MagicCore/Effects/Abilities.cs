@@ -647,6 +647,12 @@ public readonly record struct ManaRestriction(Filters.Filter? Spells)
 
 	/// <summary>Heartwood Crafter: "This mana can't be spent to cast spells from your hand."</summary>
 	public bool NotFromHand { get; init; }
+
+	/// <summary>
+	/// Delighted Halfling: "Spend this mana only to cast a legendary spell, and that spell can't be countered." — a
+	/// spell this mana paid for is stamped OnStackComponent.CantBeCountered (ManaPayment.MakesUncounterable).
+	/// </summary>
+	public bool CantBeCountered { get; init; }
 }
 
 /// <summary>
@@ -690,6 +696,12 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// this: Add" without {T} would need CanTap to read the list.
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = TapOnly;
+
+	/// <summary>
+	/// Elvish Spirit Guide: "Exile this card from your hand: Add {G}." (Costs = [ExileSelfCost]) — a mana ability of a
+	/// card in that zone, never of the permanent; ManaPayment.Find spends it only when nothing on the battlefield pays.
+	/// </summary>
+	public ZoneType From { get; init; } = ZoneType.Battlefield;
 
 	/// <summary>"Add one mana of any color" / "Choose a color. Add N of it".</summary>
 	public static ManaAbilityComponent OfAnyOneColor(Count amount) =>

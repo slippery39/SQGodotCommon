@@ -308,7 +308,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `If` (Condition?): Mogis: "As long as …" — asked of the source.
 - **`CantAttackThisTurn`** — Peace in Our Time: "they can't attack this turn" — on that player; Combat.CanAttack. [1: Peace in Our Time]
 - **`CantBeBlockedBy(Filters.Filter Blockers)`** — Cold-Blooded Crew: "This creature can't be blocked by creatures with power 2 or less."; Species 8472: "… by artifact creatures." — the… [2: Cold-Blooded Crew, Species 8472]
-- **`CantBeCountered`** — "This spell can't be countered." Read by StackResolution.Counter. [3: Ruric Thar, Magecrusher, Abrupt Decay, Live Long and Prosper]
+- **`CantBeCountered`** — "This spell can't be countered." Read by StackResolution.Counter. [4: Ruric Thar, Magecrusher, Abrupt Decay, Delighted Halfling…]
 - **`CantBeTargetedByAbilitiesFrom(Filters.Filter Sources)`** — Species 8472: "This creature can't be the target of abilities from artifact sources your opponents control." — abilities only, never… [1: Species 8472]
 - **`CantCastOrActivate`** — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat, players can't cast spells or activate abilities… [2: Yuriko, Blade of the Mighty, Sen Triplets]
   - `DuringCombat` (bool): Yuriko: "During combat".
@@ -361,13 +361,14 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`LoyaltyAbilityComponent(int Cost, ImmutableList<GameAction> Effects)`** — "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed, once per turn per permanent; the cost adds or… [1: Chandra, Chill of Compliance]
   - `MinusX` (bool): "−X:" — the activator chooses X (up to its loyalty); X reaches the effects (Count.X).
   - `OnlyIf` (Condition?): Jace, Reality Sculptor: "Activate only if …".
-- **`ManaAbilityComponent(ManaColor Color)`** — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost], [Costs]: Add [Amount] [Color]." "{T}: Add {C}." on a… [27: Greenhouse Propagator, Murmuring Volume, Hexhaven Dueling Arena…]
+- **`ManaAbilityComponent(ManaColor Color)`** — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost], [Costs]: Add [Amount] [Color]." "{T}: Add {C}." on a… [28: Greenhouse Propagator, Murmuring Volume, Hexhaven Dueling Arena…]
   - `Restriction` (ManaRestriction): "This mana can't be spent to cast spells from your hand" / "Spend this mana only to cast a planeswalker…
   - `Amount` (Count): How much: Rok-Tahk's {G}{G} is 2; Loot, the Nexus counts it as it is tapped.
   - `DealsDamageToYou` (int): Talisman of Conviction: "{T}: Add {R} or {W}. This artifact deals 1 damage to you."; Ancient Tomb's 2 —…
   - `AnyOneColor` (bool): "Add [Amount] mana of any one color" — every unit the one colour chosen; Color is unused.
   - `Cost` (ManaCost?): Starfleet Academy: "{5}, {T}: Choose a color. Add …"; Talon Gates of Madara: "{1}, {T}: Add one mana of any…
   - `Costs` (ImmutableList<AdditionalCost>): The costs beyond mana — the shared list (AdditionalCosts.cs); "{T}" unless it says otherwise. Treasure:…
+  - `From` (ZoneType): Elvish Spirit Guide: "Exile this card from your hand: Add {G}." (Costs = [ExileSelfCost]) — a mana ability…
 - **`MaximumHandSize(int N)`** — Necrodominance: "Your maximum hand size is five." The lowest applies; read by the cleanup step (TurnStructure.MaxHandSizeOf). [1: Necrodominance]
 - **`MayCastFromHandFree(Filters.Filter What)`** — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence: "spells with mana value less than or equal to the… [7: Omnipresence, Force of Will, Force of Negation…]
   - `Costs` (ImmutableList<AdditionalCost>): Flare of Fortitude: "You may sacrifice a nontoken white creature rather than pay this spell's mana cost." —…
@@ -457,6 +458,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`YourPlaneswalkersSurviveZeroLoyalty`** — Sanctum Lurker: "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty." [1: Sanctum Lurker]
   - `Abilities` (bool): Isolinear Processor: "only to cast an artifact spell or activate an ability of an artifact source" — Spells…
   - `NotFromHand` (bool): Heartwood Crafter: "This mana can't be spent to cast spells from your hand."
+  - `CantBeCountered` (bool): Delighted Halfling: "Spend this mana only to cast a legendary spell, and that spell can't be countered." — a…
 
 ## Choices — what a player is asked
 

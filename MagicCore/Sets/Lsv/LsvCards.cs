@@ -418,5 +418,20 @@ public static class LsvCards
 					PutOnTop("Put a card from your hand on top of your library — you draw it next")
 				),
 			],
+			// ===== MC-4.4b: the mana batch 1 left out =====
+			["Elvish Spirit Guide"] = [SpiritGuide(ManaColor.Green)],
+			["Simian Spirit Guide"] = [SpiritGuide(ManaColor.Red)],
+			["Delighted Halfling"] =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless),
+				ManaAbilityComponent.OfAnyOneColor(1) with
+				{
+					Restriction = new(Is.Legendary) { CantBeCountered = true },
+				},
+			],
 		};
+
+	/// <summary>"Exile this card from your hand: Add {G}." — a mana ability of the card in hand.</summary>
+	static ManaAbilityComponent SpiritGuide(ManaColor color) =>
+		new(color) { From = ZoneType.Hand, Costs = [new ExileSelfCost()] };
 }

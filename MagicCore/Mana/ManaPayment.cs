@@ -141,10 +141,14 @@ public static class ManaPayment
 						is { } found
 					&& found.Count(p => p.Sacrificed) <= plain.Count(p => p.Sacrificed)
 					&& found.Count(p => p.Floats) <= plain.Count(p => p.Floats)
+					&& FromHand(s, playerId, found) <= FromHand(s, playerId, plain) // nor a Spirit Guide
 				)
 					return found;
 		return plain;
 	}
+
+	static int FromHand(GameState s, int playerId, IEnumerable<Payment> payment) =>
+		payment.Count(p => p.LandId != 0 && s.IsIn(p.LandId, playerId, ZoneType.Hand));
 
 	/// <summary>Sunburst's count: the different colours a payment spent — not {C}, not mana that only floats.</summary>
 	public static int ColorsSpent(IEnumerable<Payment> payment) =>
@@ -202,9 +206,11 @@ public static class ManaPayment
 			if (c.Id == excludeId || alsoExclude?.Contains(c.Id) == true)
 				continue;
 			var yield =
-				!manaLocked && ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null;
-			if (yield is not null && !yield.CanPayFor(s, forSpell, forAbilityOf))
-				yield = null; // its mana can't pay — but it may still convoke
+				!manaLocked && ManaAbilities.CanTap(s, c)
+					? ManaAbilities.YieldOf(s, c, (forSpell, forAbilityOf))
+					: null;
+			if (yield is { Units.IsEmpty: true })
+				yield = null; // its mana can't pay (YieldOf left out what can't) — but it may still convoke
 			// Convoke (CR 702.51): an untapped creature you control may pay {1} or one mana of its
 			// colour — Colorless is how it pays generic only. Summoning sickness doesn't matter:
 			// tapping for convoke isn't a {T} cost. A one-mana creature may pay either way.
@@ -235,6 +241,11 @@ public static class ManaPayment
 				tappable.Add((c.Id, true, false, [only], false));
 		}
 		return Solve(s, player, tappable, Needs(cost, x), forSpell, forAbilityOf)
+			?? (
+				manaLocked
+					? null
+					: FromHand(s, player, cost, x, tappable, forSpell, forAbilityOf, alsoExclude)
+			)
 			?? WithCostlyMana(
 				s,
 				player,
@@ -246,6 +257,50 @@ public static class ManaPayment
 				forSpell,
 				forAbilityOf
 			);
+	}
+
+	/// <summary>
+	/// Elvish Spirit Guide: "Exile this card from your hand: Add {G}." — tried only when the battlefield can't pay: the
+	/// hand's mana joins the sources after every permanent (a card spent is dearer than a tap). Pay exiles it.
+	/// ponytail: not with Starfleet Academy's costly mana (WithCostlyMana) — no deck mixes them yet.
+	/// </summary>
+	static IReadOnlyList<Payment>? FromHand(
+		GameState s,
+		MagicPlayer player,
+		ManaCost cost,
+		int x,
+		List<Tappable> tappable,
+		Card? forSpell,
+		Card? forAbilityOf,
+		IReadOnlyCollection<int>? alsoExclude
+	)
+	{
+		List<Tappable> hand =
+		[
+			.. ManaAbilities
+				.FromHand(s, player.Id, forSpell, forAbilityOf)
+				.Where(h => alsoExclude?.Contains(h.Card.Id) != true) // Force of Will's exiled card
+				.Select(h =>
+					(
+						h.Card.Id,
+						false,
+						h.Ability.AnyOneColor,
+						(ImmutableArray<ImmutableArray<ManaColor>>)
+							[
+								.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
+									h.Ability.AnyOneColor
+										? ManaAbilities.AnyColor
+										: [h.Ability.Color],
+									Math.Max(0, h.Ability.Amount.Value(s, Conditions.Of(h.Card)))
+								),
+							],
+						false
+					)
+				),
+		];
+		return hand.Count == 0
+			? null
+			: Solve(s, player, tappable, Needs(cost, x), forSpell, forAbilityOf, last: hand);
 	}
 
 	/// <summary>
@@ -344,7 +399,8 @@ public static class ManaPayment
 		List<Tappable> tappable,
 		ImmutableList<Need> needs,
 		Card? forSpell,
-		Card? forAbilityOf
+		Card? forAbilityOf,
+		List<Tappable>? last = null
 	)
 	{
 		var sources = new List<Source>();
@@ -368,6 +424,7 @@ public static class ManaPayment
 				.ThenBy(p => p.IsCreature)
 				// {C} is no colour: a colourless land goes before a basic, whatever their order on the table
 				.ThenBy(p => p.Units.Sum(u => u.Count(c => c != ManaColor.Colorless)))
+				.Concat(last ?? []) // the hand's (Spirit Guides): after everything
 		)
 			sources.Add(
 				new(
@@ -484,10 +541,40 @@ public static class ManaPayment
 	public static GameState Pay(GameState s, int playerId, IEnumerable<Payment> payments)
 	{
 		var sacrificed = new HashSet<int>();
+		var exiled = new HashSet<int>();
 		foreach (var p in payments)
 		{
 			if (p.Sacrificed)
 				sacrificed.Add(p.LandId); // Treasure: "{T}, Sacrifice this"
+			// A Spirit Guide: exiled from the hand (its ExileSelfCost) once, never tapped; what it made beyond floats.
+			if (exiled.Contains(p.LandId))
+			{
+				if (p.Floats)
+					s = s.WithPlayer(
+						s.GetPlayer(playerId) with
+						{
+							ManaPool = s.GetPlayer(playerId).ManaPool.Add(p.Color, 1),
+						}
+					);
+				continue;
+			}
+			if (p.LandId != 0 && s.IsIn(p.LandId, playerId, ZoneType.Hand))
+			{
+				exiled.Add(p.LandId);
+				// Kai Winn: activating it is activating an ability (CR 605), as a land's or creature's
+				s = Turns.Triggers.Raise(
+					s,
+					new Turns.AbilityActivatedEvent(playerId, s.GetCard(p.LandId))
+				);
+				s = ManaAbilities.PayAsUsed(
+					s,
+					playerId,
+					s.GetCard(p.LandId),
+					p.Color,
+					ZoneType.Hand
+				);
+				continue;
+			}
 			var firstTap = p.LandId != 0 && !s.GetCard(p.LandId).IsTapped;
 			if (firstTap)
 				s = RaiseActivated(s, playerId, p.LandId);
@@ -521,6 +608,28 @@ public static class ManaPayment
 		}
 		return sacrificed.Aggregate(s, (st, id) => st.Sacrifice(id));
 	}
+
+	/// <summary>
+	/// Delighted Halfling: "Spend this mana only to cast a legendary spell, and that spell can't be countered." — did this
+	/// payment spend such mana (floating, or made by the ability that paid)? Asked before Pay, while the sources are there.
+	/// </summary>
+	public static bool MakesUncounterable(
+		GameState s,
+		int playerId,
+		IEnumerable<Payment> payment
+	) =>
+		payment.Any(p =>
+			!p.Floats
+			&& (
+				p.LandId == 0 ? p.Restriction
+				: s.IsIn(p.LandId, playerId, ZoneType.Hand)
+					? ManaAbilities
+						.Used(s, s.GetCard(p.LandId), p.Color, ZoneType.Hand)
+						?.Restriction
+				: ManaAbilities.Used(s, s.GetCard(p.LandId), p.Color)?.Restriction
+			)
+				is { CantBeCountered: true }
+		);
 
 	/// <summary>
 	/// Kai Winn: a mana ability is an activated ability (CR 605) — "activates an ability of a source with the

@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 12/46 · uncommon 24/86 · rare 55/279 · mythic 18/108 · **117/528**
+**Playable:** common 13/46 · uncommon 25/86 · rare 56/279 · mythic 18/108 · **120/528**
 
 ### "Name Sticker" Goblin
 
@@ -427,7 +427,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile this card from your hand: Add {R}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2bTests
+
+```csharp
+["Simian Spirit Guide"] = [SpiritGuide(ManaColor.Red)],
+```
 
 ### Snuff Out
 
@@ -791,7 +795,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile this card from your hand: Add {G}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2bTests
+
+```csharp
+["Elvish Spirit Guide"] = [SpiritGuide(ManaColor.Green)],
+```
 
 ### Embereth Shieldbreaker // Battle Display
 
@@ -930,7 +938,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Lightning Bolt deals 3 damage to any target.
 
-**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests, LsvBatch2Tests
+**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2bTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -2188,7 +2196,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {T}: Add one mana of any color. Spend this mana only to cast a legendary spell, and that spell can't be countered.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2bTests
+
+**Engine pieces:** `CantBeCountered` — "This spell can't be countered." Read by StackResolution.Counter.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…
+
+```csharp
+["Delighted Halfling"] =
+[
+	new ManaAbilityComponent(ManaColor.Colorless),
+	ManaAbilityComponent.OfAnyOneColor(1) with
+	{
+		Restriction = new(Is.Legendary) { CantBeCountered = true },
+	},
+],
+```
 
 ### Dig Through Time
 

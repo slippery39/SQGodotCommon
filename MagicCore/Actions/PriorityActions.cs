@@ -136,6 +136,17 @@ public record TapForManaAction : GameAction
 	/// </summary>
 	public int SacrificeId { get; init; }
 
+	/// <summary>
+	/// What tapping it makes, for this colour: its yield, else what its unrestricted abilities make — Delighted
+	/// Halfling's {C}, beside its any colour for legendary spells.
+	/// </summary>
+	ManaAbilities.Yield YieldFor(GameState s) =>
+		ManaAbilities.YieldOf(s, s.GetCard(CardId)) is var all
+		&& !all.Units.IsEmpty
+		&& all.Units[0].Contains(Color)
+			? all
+			: ManaAbilities.YieldOf(s, s.GetCard(CardId), (null, null));
+
 	ManaAbilityComponent? Chosen(GameState s) =>
 		ManaAbilities.AbilitiesOf(s, s.GetCard(CardId)).FirstOrDefault(m => m.ChoosesCost);
 
@@ -163,7 +174,7 @@ public record TapForManaAction : GameAction
 			return ValidationResult.Invalid(
 				"Not a permanent you control that can tap for mana now"
 			);
-		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
+		var yield = YieldFor(s);
 		if (yield.Units.IsEmpty || !yield.Units[0].Contains(Color))
 			return ValidationResult.Invalid($"Cannot produce {Color}");
 		return ValidationResult.Valid;
@@ -174,7 +185,7 @@ public record TapForManaAction : GameAction
 	{
 		if (SacrificeId != 0)
 			return new ActionResult(Priority.Retain(WithChosenCost(s), PlayerId));
-		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
+		var yield = YieldFor(s);
 		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
 		s = s.Tap(CardId);
 		s = ManaAbilities.PayAsUsed(s, PlayerId, s.GetCard(CardId), Color);

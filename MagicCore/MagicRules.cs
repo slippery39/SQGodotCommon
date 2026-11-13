@@ -445,7 +445,9 @@ public static class MagicRules
 			.ManaPool.Restricted.Count(r => ManaAbilities.Allows(r.Restriction, s, spell))
 		+ s.CardsIn(player, ZoneType.Battlefield)
 			.Sum(c =>
-				(ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null) is { } yield
+				// Delighted Halfling: its {C} for a nonlegendary spell, its colours for a legendary one
+				(ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c, (spell, null)) : null)
+					is { } yield
 				&& yield.CanPayFor(s, spell)
 					? yield.Units.Length
 				: convoke && c.Is(CardType.Creature) && !c.IsTapped ? 1
@@ -459,7 +461,11 @@ public static class MagicRules
 					.AbilitiesOf(s, c)
 					.Where(m => m.Cost is not null && !m.ChoosesCost)
 					.Sum(m => Math.Max(0, m.Amount.Value(s, Conditions.Of(c))))
-			);
+			)
+		// Spirit Guides: mana from the hand
+		+ ManaAbilities
+			.FromHand(s, player, spell, null)
+			.Sum(h => Math.Max(0, h.Ability.Amount.Value(s, Conditions.Of(h.Card))));
 
 	/// <summary>
 	/// Passes for whoever must act while passing is their ONLY legal action — Arena's auto-pass,

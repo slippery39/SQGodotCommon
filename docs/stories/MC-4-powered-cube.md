@@ -137,6 +137,31 @@ as his three priorities.
   its slower, its not like im going to remove these changes"; the bench is for testing ways to OPTIMIZE, not for new
   features. 4.3a's and 4.4a's waiting benches dropped; `/card-batch` says so.
 
+- 2026-11-13, Claude (cube lane, batch 2) — **4.4b's pieces, each the nearest one with an option** (MC-6's rule):
+  - **The Spirit Guides: `ManaAbilityComponent.From = Hand`** with `Costs = [ExileSelfCost]` — nearest: the mana ability
+    itself; `ActivatedAbilityComponent.From` (landcycling, Q) is an option already, but an activated ability uses the
+    stack and is a move in `LegalActions`, and mana abilities are neither (payment taps what it needs). So the mana
+    ability took the same option: `ManaAbilities.AbilitiesOf(…, from)` keeps each zone's apart (a Guide on the
+    battlefield makes nothing), `ManaPayment.Find` adds the hand's mana only when the battlefield can't pay and after
+    every permanent (`FromHand`: never the spell being cast, never Force of Will's exiled card), `Pay` exiles it and
+    raises the activation (Kai Winn names it: rules-true, as Shayne's mana-ability ruling), and the X bound counts it.
+  - **Delighted Halfling: `YieldOf(…, paying)` and `ManaRestriction.CantBeCountered`** — nearest: `YieldOf`'s one
+    restriction per permanent, which would make its {C} restricted too. The yield now leaves out the abilities whose
+    mana can't pay for the spell being paid (Payment passes it; unset reads as before, so no old card moved); tapped by
+    hand, a colour the restricted yield lacks comes from the unrestricted abilities (its {C}). "That spell can't be
+    countered" is a rider on the restriction, stamped as `OnStackComponent.CantBeCountered` (Theorist's Proxy's) when the
+    payment spent such mana (`ManaPayment.MakesUncounterable`). `Used` no longer reads "any colour" as {C}, so the
+    {C} is the free one whatever the ability order.
+  - Known ceilings (DesignNotes): hand mana is spent only by payment (no manual float), never beside Starfleet
+    Academy's costly mana; the Halfling's yield for a legendary spell is its any colour alone, so a legendary {C} pip
+    can't use its {C} (none in the cube).
+  - Pre-commit review: Sunburst no longer spends a Spirit Guide for a colour the plain payment didn't need; the X bound
+    asks the Halfling's yield for that spell (its {C} counts for a nonlegendary X); the sealed builder counts neither a
+    Guide nor the Halfling as a fixer; `Pay` exiles a hand card once. Ceilings added (DesignNotes): a Halfling convoking
+    a legendary spell would stamp it, and the AI's colour reads see the Halfling as every colour. Left as designed:
+    `CantBeCountered` on the restriction (the rider floats with the mana in the pool), and the hand scan on a failed
+    payment (no bench for card batches).
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -166,18 +191,36 @@ as his three priorities.
         Consign to Memory and the beam-me-up cards moved); 11 tests, 13/13 breaks caught; `batch_checks.py` all 7 steps
         (golden-out unchanged; golden-in moved 29 random and 600 card-replay games, added 40; then the review's
         `Describe` text, above)
-  - [ ] MC-4.4b The mana batch 1 left out: Elvish and Simian Spirit Guide (mana from the hand), Delighted Halfling
+  - [x] MC-4.4b The mana batch 1 left out, 3 — done 2026-11-13: Elvish and Simian Spirit Guide (mana from the hand),
+        Delighted Halfling. Two options (Decisions); 16 tests, 15/15 breaks caught; `batch_checks.py` all 7 steps
+        (golden-out unchanged: no recorded game moved by the engine; golden-in moved 29 random and 192 card-replay games,
+        added 12; probe 150 games, none unfinished — the Guides' mana from the hand is a payment, which the probe's counts
+        don't see, as a land's)
   - [ ] MC-4.4c The rest of tier 1 for one colour (`LsvSurvey.md`), if the session allows
 
 ## Next
 
-MC-4.4b in a FRESH session (this one stopped after 4.4a at ~290k context, the brief's limit): the Spirit Guides (a mana ability `From = Hand`, read by `ManaPayment.Find` and spent
-last; `Pay` exiles it) and Delighted Halfling (`YieldOf(…, paying)` leaves out the abilities whose restriction can't
-pay; `ManaRestriction.CantBeCountered` stamps the spell) — then MC-4.4c, the rest of tier 1 for ONE colour: red (28
-left, the fewest; W 36, U 35, B 35, G 30) if the session allows. DEV-5: the probe step counts the never-used cards but doesn't
-name them (`batch_checks.py`, probe150) — print the names; and a second run after a fix fails golden-out against the
-first run's golden-in files — restore the golden files from HEAD first (by hand today: `git checkout HEAD --
-MagicCore.Tests/Golden*.txt`).
+MC-4.4c — red's tier 1 (`LsvSurvey.md` listed 28; Simian Spirit Guide is 4.4b's, so 27), read card by card
+2026-11-13 and split in two:
+- **4.4c part 1, tested pieces (11):** Flame Slash, Sear, Flametongue Kavu, Wheel of Fortune (`DiscardHand`/`DrawCards`
+  of `Ref.EachPlayer`), Faithless Looting (flashback), Mine Collapse (`MayCastFromHandFree(Is.Source) { If =
+  DuringYourTurn, Costs = [SacrificeCost(Mountain)] }`), Suplex (Essence Burn's `ExileIfItWouldDie`), Legion Extruder (a
+  Golem token), Seasoned Pyromancer (Seasoned Cryomancer's `Discard { Then }` + `Count.NonlandCardsChosen` — but it
+  discards FIRST, maybe from a hand of 0–1: test that count), Pyrogoyf (Tarmogoyf's count; `DamageFrom(Ref.EventCard,
+  …)` for "that creature deals"), Generous Plunderer (`May` + `WhenYouDo` + `CreateTokens { ControlledBy, Tapped }`).
+- **4.4c part 2, options or new pieces (16)** — the survey's "nothing the keywords name" hid them: Broadside
+  Bombardiers (boast: `OncePerTurn` + attacked this turn, "2 plus the sacrificed permanent's mana value"), Cori-Steel
+  Cutter (flurry: `SpellNumber = 2`, a token you MAY attach), Bonehoard Dracosaur (tokens by what was exiled "this way"),
+  Inti (reflexive on a discard; "whenever you discard one or more" → play until your NEXT end step), Laelia ("cards put
+  into exile from your library and/or graveyard" — a new event?), Magda ("sacrifice five Treasures", Dwarf tapped),
+  Tersa ("discard up to two, draw that many"; a RANDOM card exiled from the graveyard), Sneak Attack (a creature from the
+  hand, haste, sacrificed at the next end step — `MoveChosen` + `SacrificeAtNextEndStep`), Robber of the Rich ("spend
+  mana as though any colour", "during any turn you attacked with a Rogue"), Screaming Nemesis ("can't gain life for the
+  rest of the game"), Orcish Lumberjack (three mana in any combination of {R}/{G}), Fiery Confluence (the same mode
+  more than once), Pyrokinesis (4 damage divided among ANY number of targets), Underworld Breach (escape), "Name
+  Sticker" Goblin (a d20 and "enters from anywhere other than…"), Goblin Welder (two targets, simultaneous swap).
+Each part its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used card, and a
+re-run after a fix needs the golden files restored from HEAD by hand (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
 ## Log
 
@@ -198,3 +241,6 @@ MagicCore.Tests/Golden*.txt`).
   recorded game moved by the engine; free casts read differently (text only). 117 of 528 play.
   Session summary (5.7M input-token equivalents): Part 1's ten cost cards done; Part 1's three mana cards (4.4b) designed,
   in Next, not built; Part 2 (red's tier 1) not started. For Shayne: nothing Open.
+- 2026-11-13 (cube lane, sprint 5 C5): MC-4.4b — the Spirit Guides and Delighted Halfling; a mana ability FROM THE HAND
+  (`ManaAbilityComponent.From`), a yield per spell paid for, and the uncounterable rider. No recorded game moved by the
+  engine; 120 of 528 play. For Shayne: nothing Open.

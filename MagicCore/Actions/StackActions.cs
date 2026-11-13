@@ -342,18 +342,25 @@ public record CastSpellAction : GameAction
 			);
 		var sunburst = card.HasComponent<Sunburst>();
 		var payment = FindPayment(s, card, costs, mostColors: sunburst)!;
+		var uncounterable = ManaPayment.MakesUncounterable(s, PlayerId, payment);
 		s = ManaPayment.Pay(s, PlayerId, payment);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
-		if (alternative)
+		if (alternative || uncounterable)
 			s = s.UpdateObject(
 				CardId,
 				s.GetCard(CardId)
 					.WithComponentReplaced(
 						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
 						{
-							AlternativeCost = true,
+							AlternativeCost = alternative,
+							// Delighted Halfling's mana: "that spell can't be countered"
+							CantBeCountered =
+								uncounterable
+								|| s.GetCard(CardId)
+									.GetComponent<OnStackComponent>()!
+									.CantBeCountered,
 						}
 					)
 			);

@@ -38,6 +38,16 @@ whose subsystem it lives in.
   the spell paid for (Mishra's Workshop: `new(Is.Artifact)`, "artifact spells"; Chandra's `new(!Is.Creature)`), with
   `Abilities` the ability's source too (Isolinear Processor), `NotFromHand` Heartwood Crafter's. `default` is none.
   Read by `ManaAbilities.Allows` alone; never a new case per card.
+  `CantBeCountered` (Delighted Halfling: "and that spell can't be countered") stamps the spell it paid for
+  (`ManaPayment.MakesUncounterable`, asked before `Pay`: floating, or the ability `Used` names). **A permanent whose
+  abilities differ in restriction** (the Halfling's free {C} beside its legendary-only colours) is answered per payment:
+  `YieldOf(…, paying)` leaves out the abilities whose mana can't pay for that spell; tapped by hand, a colour its
+  restricted yield lacks comes from its unrestricted abilities (`TapForManaAction.YieldFor`).
+- **A mana ability of a card in the HAND** (the Spirit Guides: "Exile this card from your hand: Add {G}") is
+  `ManaAbilityComponent.From = Hand` with `Costs = [ExileSelfCost]` — `ManaAbilities.AbilitiesOf(…, from)` keeps each
+  zone's apart, so it is no mana on the battlefield. `ManaPayment.Find` spends it only when the battlefield can't pay,
+  after every permanent (`FromHand`, never the spell being cast or a card another cost uses); `Pay` exiles it and raises
+  the activation (Kai Winn). The X bound counts it (`AvailableMana`).
 - **What a mana ability costs beyond {T}, and the damage it deals you** (Mana Confluence's `PayLifeCost(1)`; the
   Talismans' and Ancient Tomb's `DealsDamageToYou`) are paid by `ManaAbilities.PayAsUsed` — manual tapping
   (`TapForManaAction`) and payment (`ManaPayment.Pay`) alike — for the ability that made the colour (`Used`: the one
