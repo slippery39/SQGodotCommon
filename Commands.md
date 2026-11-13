@@ -60,6 +60,7 @@ python -u tools/revert_check.py SPEC                # @@ path | TestFilter — b
 MAGIC_PROBE_CARDS="A;B" dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardProbeTests"
 tools/bench_vs_head.sh [filter] [rounds]            # timing vs HEAD (builds HEAD in a worktree)
 python tools/usage_report.py [SESSION_ID | --all]   # what a Claude session cost, by batch
+python -u tools/batch_checks.py "A;B" [--revert SPEC] [--bench] [--from STEP]  # every end-of-batch check, one summary (DEV-5)
 ```
 
 ### Golden replays — "did this change any behaviour?" (MagicCore)

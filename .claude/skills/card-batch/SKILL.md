@@ -69,6 +69,14 @@ become a CHOICE made after the action, not more actions.
 
 ## 3. Check, by tier
 
+- **The end-of-batch checks are ONE command** (DEV-5), once the batch's own tests pass:
+  `python -u tools/batch_checks.py "Card A;Card B" [--revert SPEC] [--bench]` — build; the golden replays
+  with the batch's cards OUT (`MAGIC_UNSCRIPTED`, no file edited: the engine change must move no recorded
+  game), then regenerated with them IN (which games moved); the revert-checks; the probe at 10 then 150; the
+  bench; the full suite; the docs check. One summary; it stops at the first failure with the lines that
+  matter (`--from STEP` resumes). It takes ~15 minutes: ask Shayne first, as for any long run. A golden-out
+  failure in a batch that MOVED old cards onto a new piece can be intended — read the trace it names. The
+  bullets below say what each step is for and what to read in it.
 - **Tiers 2–3: a test that the ability FIRES**, through real casting (`FraBoardTest`, `TestCards`).
   New test file: check `git status` first; never overwrite.
 - **Revert-checks** (tiers 2–3): one spec (`@@ path | TestFilter` blocks) through

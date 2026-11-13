@@ -40,7 +40,36 @@ public static class CardRegistry
 
 	// Lazy: a set's Scripts initializer may read the printed data above (FraCards' Printed).
 	static readonly Lazy<Dictionary<string, ImmutableArray<GameComponent>>> Scripts =
-		new(() => Merge(printings, ("FRA", FraCards.Scripts), ("TRK", TrkCards.Scripts)));
+		new(
+			() =>
+				LeftUnscripted(
+					Merge(printings, ("FRA", FraCards.Scripts), ("TRK", TrkCards.Scripts))
+				)
+		);
+
+	/// <summary>
+	/// <c>MAGIC_UNSCRIPTED="A;B"</c> plays those cards as unscripted — out of every random deck and card
+	/// replay — so the end-of-batch check (<c>tools/batch_checks.py</c>, DEV-5) can run the golden replays
+	/// with a batch's new cards out, editing no file. A name that isn't scripted throws: a typo would leave
+	/// the card in and read as an engine change.
+	/// </summary>
+	static Dictionary<string, ImmutableArray<GameComponent>> LeftUnscripted(
+		Dictionary<string, ImmutableArray<GameComponent>> scripts
+	)
+	{
+		var names = Environment.GetEnvironmentVariable("MAGIC_UNSCRIPTED") ?? "";
+		foreach (
+			var name in names.Split(
+				';',
+				StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+			)
+		)
+			if (!scripts.Remove(name))
+				throw new InvalidOperationException(
+					$"MAGIC_UNSCRIPTED names '{name}', which isn't scripted"
+				);
+		return scripts;
+	}
 
 	/// <summary>Keywords the engine implements; a text line made only of these needs no script.</summary>
 	public static readonly ImmutableHashSet<string> EngineKeywords = ImmutableHashSet.Create(
