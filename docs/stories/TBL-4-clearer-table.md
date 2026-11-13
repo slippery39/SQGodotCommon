@@ -121,12 +121,13 @@ Open questions:
 
 ## Next
 
-**TBL-4.5's first rows are built — Shayne to watch a real game** (the captures ran at 10 fps; 0.2 s at full speed
-is unseen by eye). Open edges, should they bite: a tapped card flies upright (the flier is the full card); the
-graveyard's count and the log change at the start of the beat, before the card arrives; a land joining a land stack
-shows the new count at once; a dying creature shows no damage number (decided); a token that dies dims where it
-was and goes (it leaves the game, so no graveyard to fly to); `--beat=` off the five presets ticks none in Tools. Then A4 (tapping turns over a beat)
-and A7 (a trigger's source pulses) — both from the same diff (`Moved`'s siblings in `TableChanges`).
+**TBL-4.5, 4.6, 4.7 built and committed (2026-11-13)** — beats (cast, resolve, settle, deaths, damage, life,
+abilities going on the stack), Normal 0.8 s; their hand face up (Tools); shorter permanents; the combat row
+(instant, no flight); target arrows on the stack. Open, Shayne to answer: should a creature resolving onto the
+battlefield or dying fly as the CROP rather than the full card (it lands as the crop)? Then A4 (tapping turns over a
+beat). Open edges: a tapped card flies upright; the graveyard count and the log change as a beat starts; a land
+joining a stack shows its count at once; during combat every card shrinks ~35% (six rows) — reserve the band, or
+shrink only the lands, if that jars; a target off screen gets no arrow.
 
 **TBL-4.2 is done** — Shayne: "fine for now" (2026-10-23).
 Open edges, should they bite: the pass label is by step alone ("To combat" in main 1 even with no
