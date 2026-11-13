@@ -183,6 +183,8 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     instantoptions only instants and flash held as options, not targeted sorcery-speed cards (before AI-13.10)
 #     passbias       acting wins a near-tie by 0.01, no potential score (before AI-13.11)
 #     nodamagepotential  marked damage not in the potential, the combat tie to the first option (before AI-19.22)
+#     shortlist2 / shortlist1  AI-22 experiments (OFF by default): 2 or 1 attack plans re-judged against the rollout's real blocks, not 3
+#     freepasses2 / freepasses1  AI-22 experiments (OFF by default): at most 2 or 1 free passes in a row, not 4
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
 #     shuffle        the default library, kept as a name; beam-casts = beam+casts
 
@@ -215,7 +217,7 @@ dotnet run -c Release --project MagicConsole -- --builds=a.txt,b.txt [--games=20
 # LIM-1.12: your lists on the play AND the draw against the same AI opponents, a player's report (win rate play/draw, turns,
 # each card's GIH / GNS / IWD, the opponents' cards you lost to) -> ai_reports/sealed-builds-<time>.md. --games = opponents.
 dotnet run -c Release --project MagicConsole -- --set=trk --builds=A.txt,B.txt --both-seats --games=50
-# options: the report's folder (same name) keeps every game's record and games.json (cards in hand, result per game) - `--builds-records=DIR [--build=NAME]` reads why each card sat in hand (castable / short on mana / short on colour / other); --game-minutes=N (cap a game), --opponent=FILE (one of YOUR lists instead of the AI's decks), --first-opponent=N (new seeds). A variant that pairs cleanly - ONE swap, same position (the /sealed-test skill):
+# options: the report's folder (same name) keeps every game's record and games.json (cards in hand, result per game) - `--builds-records=DIR [--build=NAME]` reads why each card sat in hand (castable / short on mana / short on colour / other); --game-minutes=N (cap a game), --opponent=FILE (one of YOUR lists instead of the AI's decks), --first-opponent=N (new seeds), --ai=NAME (any --match AI, e.g. beam+shortlist2; beam by default). A variant that pairs cleanly - ONE swap, same position (the /sealed-test skill):
 python tools/deck_variant.py sim_results/builds/A.txt sim_results/builds/A-X.txt --swap "Old Card=New Card"   # --test: its self-check
 # games between two lists to WATCH on the table: game_records/sample-*.json (MagicTable -GameArgs '--resume=FILE') + .md
 dotnet run -c Release --project MagicConsole -- --set=trk --sample-games=A.txt,B.txt --games=6 --first-seed=501

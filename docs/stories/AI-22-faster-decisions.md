@@ -44,15 +44,15 @@ AI-7 profiled and optimised the search once (done) — this is the second pass, 
 
 ## Next
 
-AI-22.2 — the levers, to choose with Shayne (AI-7.2's way), from the profile: (a) the rollout's attack plans
-(`WholeAttacks.Best`, 50%: fewer plans — AI-21's grouping of identical attackers, a plan menu; or plans scored without
-settling every one); (b) AI-13.12's free passes (36%: where in the search they're worth their cost); (c) the engine's
-per-step checks (state-based actions, triggers — skipped when nothing changed). Each measured the AI-7 way: `--suite=beam`
-"changed" 0 (or a switch and a match), the cost line, allocated bytes; wall clock in pairs only, on a quiet machine.
-**Trap:** this profile's leaves are false (findings) — read callers.
+**For Shayne (AI-22.2's results, findings "AI-22.2"):** `shortlist2` (sealed −18%, match 50.0%, suite identical) and
+`freepasses2` (cost −5.7%, match 50.5%, suite identical) are switches, OFF; together a sealed run −22%. Both change
+some moves in TRK games (4 of 16 each). His call: make either the default (then `/pre-commit`, the suite accepted,
+the switch renamed as the OLD behaviour, as every kept change), or drop it. Not built: the state-based skip (needs an
+engine audit first), attacker grouping (AI-21), reused combat answers.
 
 ## Log
 
 - 2026-11-12: created from Shayne's sprint-5 notes.
 - 2026-11-12: AI-22.1 started — a profile of pool 4's RGb, 8 opponents on both seats (`dotnet-trace`, thread-time samples). AI-22.5 proposed.
 - 2026-11-12: AI-22.1 done (findings): the CardsIn guess tested and reverted — the leaves misattribute.
+- 2026-11-12/13: AI-22.2 overnight — four switches tried (shortlist2/1, freepasses2/1), two matched, three ideas costed and not built (findings); `--builds … --ai=NAME`.

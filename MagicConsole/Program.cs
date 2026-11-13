@@ -125,7 +125,8 @@ if (compareArg is not null || buildsArg is not null)
 					)
 					: null,
 				firstOpponent: Arg("first-opponent") ?? 1,
-				recordsDir: buildsDir
+				recordsDir: buildsDir,
+				ai: args.FirstOrDefault(a => a.StartsWith("--ai="))?["--ai=".Length..] ?? "beam"
 			);
 			var text =
 				MagicCore.Limited.BuildReport.Report(detail)

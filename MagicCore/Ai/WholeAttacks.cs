@@ -233,7 +233,7 @@ public static class WholeAttacks
 			return cheap[0].plan;
 		var stay = cheap.First(x => x.plan.Targets.Count == 0);
 		return cheap
-			.Take(Shortlist)
+			.Take(defender.AttackShortlist)
 			.Append(stay)
 			.DistinctBy(x => x.i)
 			.Select(x => (x.plan, x.i, Score: Score(x.plan, true)))
