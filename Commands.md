@@ -12,6 +12,11 @@ dotnet test MtgSimulator.Tests
 dotnet test SQGodotCommon.Tests
 dotnet test MagicCore.Tests
 dotnet test MagicCore.Tests --filter "TestCategory=Performance"   # wall-clock checks, explicit: run on a quiet machine
+# DEV-7: classes run in parallel (the full suite ~3 min 15 s on a quiet machine). WHILE WORKING run the slice your change
+# touches; the full suite at a story's end and before every commit (/pre-commit). Engine, rules or cards (7 s):
+dotnet test MagicCore.Tests --filter "FullyQualifiedName!~MagicCore.Tests.Ai&FullyQualifiedName!~MagicCore.Tests.Limited&FullyQualifiedName!~RandomGameTests&FullyQualifiedName!~GoldenReplay"
+# the AI or sealed (MagicCore/Ai, MagicCore/Limited; ~3 min - most of the suite):
+dotnet test MagicCore.Tests --filter "FullyQualifiedName~MagicCore.Tests.Ai|FullyQualifiedName~MagicCore.Tests.Limited"
 ```
 
 ## Import a real set's card data (MagicCore)

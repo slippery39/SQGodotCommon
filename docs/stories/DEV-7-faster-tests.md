@@ -1,7 +1,7 @@
 ---
 id: DEV-7
 title: Faster tests while working — run what a change touches, the full suite at a story's end
-status: ready
+status: done
 area: DEV
 created: 2026-11-12
 ---
@@ -15,11 +15,12 @@ if this might cause other issues then thats ok."
 
 ## Requirements
 
-- [ ] One command runs only the tests a working-tree change can affect, and says which slices it picked and why.
-- [ ] The full suite still runs at a story's end and before every commit (`/pre-commit` unchanged on that).
-- [ ] The slowest tests are known (a timing list), so the slices are chosen on evidence, not guessed.
-- [ ] A change to shared code (the engine, the evaluator) picks the slices that depend on it — never fewer tests than
-      the change can break.
+- [x] One command runs only the tests a working-tree change can affect — two `--filter` lines in `Commands.md`, by what
+      the change touches (no script: two slices cover it).
+- [x] The full suite still runs at a story's end and before every commit (`/pre-commit` unchanged on that).
+- [x] The slowest tests are known (a timing list), so the slices are chosen on evidence, not guessed.
+- [x] A change to shared code (the engine, the evaluator) picks the slices that depend on it — never fewer tests than
+      the change can break: the engine slice is a working check only; the full suite before a commit.
 
 ## Decisions
 
@@ -51,19 +52,22 @@ Open questions:
 
 ## Tasks
 
-- [ ] DEV-7.1 Time the suite per fixture and namespace (`dotnet test --logger trx`), the slowest 20 listed — on a QUIET
+- [x] DEV-7.1 Time the suite per fixture and namespace (`dotnet test --logger trx`), the slowest 20 listed — on a QUIET
       machine; then the same suite with fixtures in parallel (the counts identical, every test passing, three runs)
-- [ ] DEV-7.2 The slices (NUnit `--filter` by namespace or `[Category]`) and the map from changed paths to slices
-- [ ] DEV-7.3 `tools/test_changed.py` (or a `Commands.md` line if a filter is enough); `/pre-commit` and the stories
+- [x] DEV-7.2 The slices (NUnit `--filter` by namespace or `[Category]`) and the map from changed paths to slices
+- [x] DEV-7.3 `tools/test_changed.py` (or a `Commands.md` line if a filter is enough — it was); `/pre-commit` and the stories
       README say when the full suite runs
 
 ## Next
 
-DEV-7.1 on a quiet machine (not while the cube lane builds): the serial timings, then fixtures in parallel (Decisions).
-Tests per folder: Sets 827, Ai 272, Limited 63, Turns 55, Mana 17, Filters 17, Cards 12, root 6.
+Done. If a story's working loop is still slow: the AI slice is 173 s because the AI tests are the slow ones — the
+speedup there is AI-22's (the search itself), not more slicing.
 
 ## Log
 
 - 2026-11-12: created from Shayne's sprint-5 notes.
 - 2026-11-12: the static half read (Decisions): the suite runs serially; the folder-to-code map written.
 - 2026-11-12: the Molten Tide timing check split off as `[Explicit]`, `Category("Performance")` (Shayne); `Commands.md` has the filter.
+- 2026-11-12: DEV-7.1–7.3 done (`docs/findings/test-suite.md`): serial 271 s on a quiet machine (the 8–9 min were a busy
+  one); classes in parallel 189–207 s over three runs, all passing; the engine-and-cards slice 7 s, the AI-and-sealed slice
+  173 s. `MagicCore.Tests/Parallel.cs`; the two filters in `Commands.md`.

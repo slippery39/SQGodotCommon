@@ -32,37 +32,37 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 **Next session (written 2026-11-12, evening — the cube lane running its first session):**
 1. **For Shayne to read:** the AI-20 research note (`docs/findings/ai-research.md`, its questions are AI-20.1's) and the
    MTGA reference to mark (`docs/mockups/magictable/mtga-reference.md`). The DamagePotential match: no difference, kept.
-2. **DEV-7.1, then AI-22.1** — both measure wall-clock time: only on a quiet machine, not while the cube lane builds.
+2. Faster tests are done (the full suite ~3 min in parallel; while working, `Commands.md`'s slices — cards and engine 7 s).
+   **AI-22.1 next** — it measures wall-clock time: only on a quiet machine, not while the cube lane builds.
 3. **The cube lane** (`D:\GameDev\SQGodotCommon-cube`) is on C1–C5; this lane runs nothing heavy until it ends.
 
-1. **DEV-7** — faster tests: what a change touches while working, the full suite at a story's end
-2. **AI-22** — faster AI decisions for sealed runs: profiled, then the levers AI-20 won't rewrite
-3. **AI-21** — combat on big boards (Tribbles), with AI-22 where its profile points
-4. **AI-20** — the look-ahead stops betting on one guessed future: research (Forge, hidden-information search) first, then Shayne's pick
-5. **AI-19** — the scan's value leftovers: Cold-Blooded Crew, Mikaeus, won-line ties
-6. **AI-23** — stationing priced: the positions first, Shayne confirms
-7. **TBL-4** — the MTGA reference page (TBL-4.4), then animations at MTGO's level (TBL-4.5)
-8. **TBL-10** — the game reviewer: step, rewind, notes, the AI's next decision while paused
-9. **DEV-6** — the cube lane's first session (DEV-6.5), tonight
-10. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
-11. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
-12. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
-13. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
-14. **AI-18** — tap choices: AI-18.1's measurement folded into AI-22's profile
-15. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
-16. **AI-13** — Shayne's lessons as general rules for the search, each measured
-17. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
-18. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
-19. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
-20. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
-21. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-22. **MC-5** — Star Trek: every task done; its requirements to tick and close
-23. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
-24. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-25. **DATA-1** — bring in 17lands data
-26. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
-27. **AI-4** — strategic plans above single actions
-28. **AI-12** — a card's threat over time
+1. **AI-22** — faster AI decisions for sealed runs: profiled, then the levers AI-20 won't rewrite
+2. **AI-21** — combat on big boards (Tribbles), with AI-22 where its profile points
+3. **AI-20** — the look-ahead stops betting on one guessed future: research (Forge, hidden-information search) first, then Shayne's pick
+4. **AI-19** — the scan's value leftovers: Cold-Blooded Crew, Mikaeus, won-line ties
+5. **AI-23** — stationing priced: the positions first, Shayne confirms
+6. **TBL-4** — the MTGA reference page (TBL-4.4), then animations at MTGO's level (TBL-4.5)
+7. **TBL-10** — the game reviewer: step, rewind, notes, the AI's next decision while paused
+8. **DEV-6** — the cube lane's first session (DEV-6.5), tonight
+9. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
+10. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
+11. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
+12. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
+13. **AI-18** — tap choices: AI-18.1's measurement folded into AI-22's profile
+14. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
+15. **AI-13** — Shayne's lessons as general rules for the search, each measured
+16. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
+17. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
+18. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
+19. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
+20. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+21. **MC-5** — Star Trek: every task done; its requirements to tick and close
+22. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
+23. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+24. **DATA-1** — bring in 17lands data
+25. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
+26. **AI-4** — strategic plans above single actions
+27. **AI-12** — a card's threat over time
 
 ## How it works
 
@@ -129,7 +129,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
 | [AI-21](AI-21-big-board-combat.md) | Combat on big boards — attack plans that don't grow with every token | ready |
 | [AI-22](AI-22-faster-decisions.md) | Faster AI decisions — sealed runs in minutes, not hours | ready |
-| [DEV-7](DEV-7-faster-tests.md) | Faster tests while working — run what a change touches, the full suite at a story's end | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
@@ -156,6 +155,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-16](AI-16-won-line-self-burn.md) | A won line still counts what it spends — the AI no longer burns its own face | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
+| [DEV-7](DEV-7-faster-tests.md) | Faster tests while working — run what a change touches, the full suite at a story's end | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |
 | [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | done |
 | [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | done |
