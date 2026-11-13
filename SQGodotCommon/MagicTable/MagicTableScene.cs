@@ -102,6 +102,7 @@ public partial class MagicTableScene : Control
 		FullControl,
 		Pause,
 		ShowHand,
+		Note,
 		Step,
 		Inspector,
 		Speed = 10, // + the index into Speeds
@@ -402,6 +403,8 @@ public partial class MagicTableScene : Control
 			Do(() => _m.Act(pass));
 		else if (key.Keycode == Key.Z && key.CtrlPressed)
 			Do(_m.Undo);
+		else if (key.Keycode == Key.N && !key.CtrlPressed)
+			OpenNote();
 	}
 
 	/// <summary>Every input goes through here: apply it, then redraw.</summary>
@@ -1129,8 +1132,56 @@ public partial class MagicTableScene : Control
 		_inspector.Show(_inspected, _m.ExplainLastSearch, () => _inspector.Visible = false);
 	}
 
+	// A note for Claude (TBL-10.3): the AI waits while it is written, the position saved with it (GameNotes).
+	private readonly ConfirmationDialog _note =
+		new()
+		{
+			Title = "Note — for Claude to analyse",
+			OkButtonText = "Save note",
+			MinSize = new Vector2I(900, 420),
+		};
+	private readonly TextEdit _noteText =
+		new()
+		{
+			PlaceholderText = "What looks wrong, or worth a look, at this moment?",
+			WrapMode = TextEdit.LineWrappingMode.Boundary,
+		};
+	private bool _pausedBeforeNote;
+
+	private void OpenNote()
+	{
+		if (_note.Visible)
+			return;
+		_pausedBeforeNote = _paused;
+		_paused = true;
+		_noteText.Text = "";
+		_note.PopupCentered();
+		_noteText.GrabFocus();
+	}
+
+	private void CloseNote(bool save)
+	{
+		_paused = _pausedBeforeNote;
+		if (save && _noteText.Text.Trim() is { Length: > 0 } text)
+			ShowBanner(
+				GameNotes.Write(_m, text) is { } path
+					? $"Note saved — {System.IO.Path.GetFileName(path)}"
+					: "Not saved: this game keeps no record yet",
+				28
+			);
+		Refresh();
+	}
+
 	private void BuildContextMenu()
 	{
+		_noteText.AddThemeFontSizeOverride("font_size", TextSize);
+		_noteText.SizeFlagsVertical = SizeFlags.ExpandFill;
+		_note.AddChild(_noteText);
+		_note.GetOkButton().AddThemeFontSizeOverride("font_size", TextSize);
+		_note.GetCancelButton().AddThemeFontSizeOverride("font_size", TextSize);
+		_note.Confirmed += () => CloseNote(save: true);
+		_note.Canceled += () => CloseNote(save: false);
+		AddChild(_note);
 		_context.AddThemeFontSizeOverride("font_size", TextSize);
 		_context.AddItem("Concede", 0);
 		_context.IdPressed += _ => _concede.PopupCentered();
@@ -1163,6 +1214,7 @@ public partial class MagicTableScene : Control
 		menu.AddCheckItem("Full control", (int)Tool.FullControl);
 		menu.AddCheckItem("Pause AI", (int)Tool.Pause);
 		menu.AddCheckItem("Show their hand", (int)Tool.ShowHand);
+		menu.AddItem("Write a note  (N)", (int)Tool.Note);
 		menu.AddItem("Step the AI", (int)Tool.Step);
 		menu.AddItem("AI inspector  (F6)", (int)Tool.Inspector);
 		menu.AddSeparator("AI speed");
@@ -1191,6 +1243,9 @@ public partial class MagicTableScene : Control
 				case Tool.Pause:
 					_paused = !_paused;
 					Refresh();
+					break;
+				case Tool.Note:
+					OpenNote();
 					break;
 				case Tool.ShowHand:
 					_showHand = !_showHand;

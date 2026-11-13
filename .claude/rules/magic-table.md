@@ -43,6 +43,9 @@ MagicTable/
 ├── MagicTableScene.Motion.cs  the animations (TBL-4.5): each move a BEAT (Tools · Animation, --beat=S; 0.8 s) —
 │                         cards fly from where they were drawn to where they are, deaths dim, numbers float, life counts
 ├── TableChanges.cs       what one move changed, for the beats: a diff of two states by id (plain C#). Tested
+├── GameNotes.cs          Shayne's notes for Claude (TBL-10.3): Tools · Write a note / N pauses the AI; each note is
+│                         appended to <record>.notes.md beside its record — text, move number (reopen with
+│                         --resume-at), the board as names, the last log lines, the AI's last search. Tested
 ├── TargetArrows.cs       an arrow from each stack row to its targets while it is on the stack (TBL-4.5); the plates
 │                         are tagged with their player's id so a player is a target too
 ├── AiInspector.cs        F6: the AI's last search — its moves ranked, then each imagined line with its terms (AI-14.4)

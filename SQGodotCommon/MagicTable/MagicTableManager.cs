@@ -62,6 +62,9 @@ public sealed class MagicTableManager
 	/// <summary>A folder to write <see cref="Record"/> into as the game goes; null writes nothing (tests).</summary>
 	public string? RecordTo { get; init; }
 	private string? _recordFile;
+
+	/// <summary>Where the record is written, once it has been — the notes go beside it (<see cref="GameNotes"/>).</summary>
+	public string? RecordFile => _recordFile;
 	public bool CanUndo => _undo.Count > 0 || Conceded;
 
 	/// <summary>
