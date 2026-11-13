@@ -461,6 +461,13 @@ public static partial class Evaluator
 		/// discard it now?"; `+noblocktricks`).
 		/// </summary>
 		BlocksSeeTricks = 1L << 34,
+
+		/// <summary>
+		/// In our own turn, the cards a hand over its maximum size will discard at cleanup — the cheapest — count nothing
+		/// (AI-13.13, Shayne's notes 2026-11-13: Yoshimaru cast early because the look-ahead, keeping it, discarded Koth to
+		/// hand size on turn 12 instead of casting it then — it never saw the cleanup coming; `+nohandsize`).
+		/// </summary>
+		HandSize = 1L << 35,
 	}
 
 	/// <summary>
@@ -750,8 +757,8 @@ public static partial class Evaluator
 			ShortBy(c) is > 0 and var n
 				? Math.Max(FlatHandCard, price * Math.Pow(ManaShortShare, n))
 				: price;
-		var hand = s.CardsIn(player, ZoneType.Hand)
-			.Sum(c =>
+		var prices = s.CardsIn(player, ZoneType.Hand)
+			.Select(c =>
 				held is not null
 				&& !own
 				&& !(c.KnownTo.HasFlag(Knowers.Opponent) && !IsOff(Terms.KnownHand))
@@ -784,7 +791,21 @@ public static partial class Evaluator
 						CreatureValue(s, c, keywords) - RecastPerMana * c.ManaCost.ManaValue
 					)
 				: ShortOf(c, held.Of(c.Name))
-			);
+			)
+			.ToList();
+		// In our own turn, a hand over its maximum loses its cheapest cards at cleanup: they count nothing - so the
+		// look-ahead casts one rather than discard it, and keeping a card until the hand is full isn't charged a card
+		// (AI-13.13, Shayne: "you would wait until you were forced to discard to actually play something for minimal
+		// value, not before"; `+nohandsize`).
+		var over =
+			own
+			&& !IsOff(Terms.HandSize)
+			&& s.GetGame().ActivePlayerId == player
+			&& s.GetGame().Step != Step.Cleanup
+			&& prices.Count > 0
+				? prices.Count - TurnStructure.MaxHandSizeOf(s, player) // the statics walked only here
+				: 0;
+		var hand = over > 0 ? prices.OrderBy(p => p).Skip(over).Sum() : prices.Sum();
 		if (held is not null)
 			hand += ImpulseCredit(s, player, held);
 		var graveyard = IsOff(Terms.GraveyardAccess)

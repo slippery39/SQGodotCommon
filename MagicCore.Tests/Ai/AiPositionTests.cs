@@ -104,6 +104,22 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Discard 1 Forest"));
 	}
 
+	// Shayne, 2026-11-13 (AI-13.13, his notes): AI 2 cast Yoshimaru with no creature of its own to fight - "it doesn't do
+	// anything and has more potential value later on". Pass and the cast tied: keeping it, the look-ahead discarded Koth
+	// to hand size on turn 12 rather than cast Yoshimaru then - it never saw the cleanup coming - so keeping it cost a
+	// card. Now a hand over its maximum prices the cards it will discard at nothing: Yoshimaru is kept and cast on turn
+	// 12, "when you were forced to discard". The CONTROL: without HandSize it casts now.
+	[Test]
+	public void ACardIsKeptUntilTheHandIsFull_NotCastEarly()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 196);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.HandSize), Does.StartWith("Cast Yoshimaru"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Pass"));
+	}
+
 	// Shayne, 2026-11-08 (AI-19.21): General Chang ("{1}, Sacrifice a creature: a +1/+1 counter on each
 	// Klingon"). The AI sacrificed a 4/4 and a 2/1 to make his 1/2 a 3/4 at sorcery speed, nothing dying, and
 	// at #458 Chang himself. Not the evaluator: it charged the creatures (-15 at once). The simulated HUMAN

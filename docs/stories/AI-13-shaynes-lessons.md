@@ -337,7 +337,7 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       `Unsummon_IsHeld_AtMove547` (a guard; their turn, so patience doesn't touch it). Suite: 4
       decisions differ from no patience. Match: **53.0% ± 1.0pp, 600 games (318–282)**, undecided at
       5pp, "worse" rejected, cost the same — kept (Shayne's rule: sensible plays count; the agreed
-      position fixed). `docs/findings/magic-ai.md`- [ ] AI-13.13 Holding ties with casting when the rollout casts it anyway (Shayne's notes, TBL-10.3, 2026-11-13; kept
+      position fixed). `docs/findings/magic-ai.md`- [x] AI-13.13 Holding ties with casting when the rollout casts it anyway (Shayne's notes, TBL-10.3, 2026-11-13; kept
       game `Records/ShayneNotesSeed1.json`). **#196** Yoshimaru cast with no creature of its own to fight — "it doesn't do
       anything and has more potential value later on" — Pass −13.81, cast −13.81: the Pass line's rollout casts
       Yoshimaru at once in the same main phase, so its held price (AI-13.5's check, `YoshimaruWithNoFight`) never
@@ -346,6 +346,17 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       off); in the game the AI cast it, carrying out the plan it committed to at an earlier decision. Not the table's
       1 s cap (corrected 2026-11-13): the same game uncapped is identical, all 386 moves, reproduced in code. Wanted: a pass's line keeps the card held until a LATER turn's offer, so
       holding is priced; AI-13.5 (the offers version for enters-target creatures) is the nearest piece
+      **#196 DIAGNOSED AND BUILT 2026-11-13:** not the pass handing the card to the rollout. In the search's sampled
+      library, keeping Yoshimaru left AI 2 (colour-screwed by its #97 discard) with eight cards on turn 12, and the
+      rollout DISCARDED Koth to hand size rather than cast Yoshimaru then — its turn-12 choice (cast or keep) was judged
+      before cleanup, so the discard was never seen: keeping cost a card (−32.08 against −27.86). Shayne: "you would wait
+      until you were forced to discard to actually play something for minimal value, not before."
+      `Evaluator.Terms.HandSize` (`+nohandsize`): in our own turn, before cleanup, a hand over its maximum prices its
+      cheapest excess at nothing. Now both lines −27.86, the potential tie-break (3 vs 1) keeps it: Pass, Yoshimaru cast
+      on turn 12. Test `ACardIsKeptUntilTheHandIsFull_NotCastEarly` (control: the term off casts). Suite 0 of 288 moved,
+      cost unchanged; MagicCore.Tests 1590 passed. MATCH: 96 games, 51.0% (49–47), no difference, cost −1%; KEPT
+      (findings "AI-13.13"). **#213 moved to AI-20** (Shayne, 2026-11-13: the
+      look-ahead's opponent never does anything with its unknown hand, so premium removal looks cheap — not a tie problem)
 
 ## Next
 
@@ -387,3 +398,4 @@ AI-13.5 and AI-13.6's positions hold by the fixed held price (pinned); the burn 
   expected best over the turns left) and a bounced creature priced as itself less its recast; 51.7%
   over 600 games, worse rejected; every agreed bounce position right, Ferocity to AI-9.4.
 - 2026-11-13: AI-13.13 added from Shayne's first notes session (TBL-10.3): a pass whose rollout casts the card anyway.
+- 2026-11-13: AI-13.13 done — `HandSize` kept (match 51.0%); #213 to AI-20.

@@ -76,6 +76,8 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirCombatTricks,
 				},
+			// A hand over its maximum priced whole in our turn, before AI-13.13: beam+nohandsize.
+			["nohandsize"] = o => o with { Without = o.Without | Evaluator.Terms.HandSize },
 			// The rollout's own blocks never see the attacker's trick, before AI-25.3: beam+noblocktricks.
 			["noblocktricks"] = o =>
 				o with

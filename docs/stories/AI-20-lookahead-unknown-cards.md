@@ -152,3 +152,10 @@ discussing the land odds' details and the opponent's draws with Shayne. Read the
   a Forest over Rockfall Vale ("it would actually be better to play the Rockfall Vale" — free tapped now, both colours
   next turn). An exact tie, 18.64 each: with this hand only a red 2-drop DRAWN would separate the orders, and the one
   sampled library held none — an option on unknown draws, this story's.
+- 2026-11-13: a third position from Shayne's notes, and his diagnosis (`Records/ShayneNotesSeed1.json` #213, from AI-13.13):
+  AI 1 spends Extended Absence on a 1/1 Yoshimaru — exiling it, the drain and a faster clock (8.0) just beat keeping
+  premium removal (7.7, its measured option over 4 turns). AI 2 holds Koth, two Heartstring Pullers, Chandra's
+  Emberling and Marwyn, unknown to AI 1 — and the look-ahead's opponent casts only cards we know (AI-10.4's KnownOnly),
+  so no threat ever comes. Shayne: "the AI can see the perfect future. It knows that the opponent is [not] going to do
+  anything so it ends up using its premium cards on scrappy targets because it won't get punished for it … an extension
+  of the look ahead issue." The open question "does the opponent draw/hold unknown cards, priced how" is this one.

@@ -1808,3 +1808,20 @@ passes in combat, so AI-25's trick window never reached them.
 - **Match:** `beam,beam+noblocktricks --until-clear`, 192 games: **48.4% ± 0.9pp** (93–99) — NO difference of 5pp; the
   point estimate leans negative (1.8 SE). Cost per decision 4626.4 vs 4570.6 (+1.2%). Kept by AI-5's rule (no difference,
   a recorded blunder fixed with a test), as AI-5's 95–97 at 192 was. Watch it: a rerun on more seeds if a sealed run dips.
+
+## AI-13.13 — a card kept until the hand is full (2026-11-13)
+
+Shayne's notes (`ShayneNotesSeed1` #196): AI 2 cast Yoshimaru with no creature to fight — "it doesn't do anything and has
+more potential value later on". Pass and the cast tied (−13.81, later −27.86).
+
+- **Cause:** not "the pass hands the card to the rollout". In the search's sampled library, AI 2 (colour-screwed by its
+  #97 discard) kept Yoshimaru into an eight-card hand on turn 12 and the rollout DISCARDED Koth to hand size rather than
+  cast Yoshimaru — its cast-or-keep choice was judged before cleanup, so the discard was never seen: keeping cost a card
+  (hold-all-turn −32.08 against cast-now −27.86, probed on the sampled library; on the real one hold led, −14.97 vs −17.79).
+- **Fix:** `Evaluator.Terms.HandSize` (`+nohandsize`): in our own turn, before cleanup, a hand over its maximum prices its
+  cheapest excess at nothing — Shayne: "wait until you were forced to discard to actually play something".
+- **After:** both lines −27.86; the potential tie-break (3 vs 1) keeps it; Yoshimaru is cast on turn 12.
+- **Suite:** 0 of 288 moved, cost unchanged. **Match:** `beam,beam+nohandsize --until-clear`, 96 games: **51.0% ± 1.0pp**
+  (49–47), no 5pp difference; cost 4485.7 vs 4532.1 steps a decision. Kept.
+- **#213 (Extended Absence on the 1/1) is AI-20's:** exiling it, the drain and the clock (8.0) beat keeping the removal
+  (7.7) because the look-ahead's opponent never casts its unknown hand — no future target ever comes.
