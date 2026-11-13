@@ -85,9 +85,17 @@ Open questions:
       first, the rest after (`MagicTableScene.Fill`, `ColumnWidth`). Captured on two real games, in both
       directions (Garak under-blocked by two Conquerors; my Culber blocked by Pet Sehlat + Khan). Not pinned
       by a test (Godot layout). New debug flag `--resume-at=N` (Commands.md)
-- [ ] TBL-4.6 A combat row (Shayne, 2026-11-13: "attackers was hard to follow"): when attackers are declared they
+- [x] TBL-4.6 A combat row (Shayne, 2026-11-13: "attackers was hard to follow"): when attackers are declared they
       move into a row of their own, apart from the rest of the board, and blockers join them — so who attacks and
-      who blocks is clear. Builds on TBL-4.3's columns; the move is a beat (a card whose place changed flies there)
+      who blocks is clear. Builds on TBL-4.3's columns; the move is a beat (a card whose place changed flies there).
+      BUILT (2026-11-13), awaiting Shayne's look: a red-edged band under the phase bar while there is combat, a
+      column per attacker, the opponent's side on top; TBL-4.3's columns in the creature rows are gone
+      (`ColumnWidth` deleted). The cost: six rows share the board while it is open, so every card shrinks ~35%
+      for the combat (1.38x → 0.86x at 1280x720) and grows back after. Captured: AI vs AI turn 6 and turn 14 (two
+      attackers, a blocker flying under the second), and your block by real clicks — your creature, then the
+      attacker in the band, then Block (`shots/tbl46-a` … `-d`). Shayne, watching it: no flight into or out of the
+      band — it showed the full card, then went back to the crop; "I would rather it just be instant". Now they
+      appear there at once; the declaration still holds a beat
 - [x] TBL-4.7 Shorter permanents: the stats and loyalty moved up off the crop's unused bottom margin, the rows less
       tall — room for what the table lacks (the opponent's hand, the combat row). BUILT (2026-11-13): 140 tall, not
       168; stats, count and status on the art (`CardViews.ArtShare`), the name below as many lines as fit. Alone it

@@ -121,10 +121,13 @@ MagicTable/
 - **Everything stays in view** (Shayne, 2026-10-23): a screen that doesn't fit is reorganised or
   scrolls — never clipped off the edge. Capture every screen a change touches (TBL-2.5: a new button
   pushed Start off the deck select).
-- **Combat reads by column, MTGO's way** (Shayne chose it over Arena's arrows, TBL-4.3): each attacker and
-  the creatures blocking it share one column in the two creature rows, which face each other across the
-  phase bar; the rows are left-aligned while attackers exist. Both rows build the same column widths
-  (`ColumnWidth`) — change one side and they stop meeting.
+- **Combat has a row of its own, read by column** (TBL-4.6; MTGO's pairing, TBL-4.3 — Shayne chose it over Arena's
+  arrows): while there is combat a red-edged band opens under the phase bar (`FillCombat`), and every attacker and
+  blocker of the declaration (`_columns`) leaves its creature row for it — one column per attacker, the opponent's
+  side on top, yours below. Clicks reach them there as anywhere (`ObjectClicked` by id). Joining or leaving the
+  band is a beat though no zone changed (`Fighting`), but NOT a flight — they appear there at once (Shayne: the
+  flier showed the full card, then the crop; "I would rather it just be instant"). The band has a fixed height (`2 * _rowHeight`):
+  inside a ScrollContainer, which reports none of its content's, it collapsed to a line.
 - **A right-click is a card's zoom, or the table's menu** (TBL-9.3: Concede): `_Input` opens the menu unless the
   pointer is on a card (`CardViews.CardMeta`, or the hand's hovered card). A concession is the MANAGER's
   (`Conceded`): the engine never ended the game, so the record stays unfinished.
@@ -152,7 +155,7 @@ MagicTable/
   **Nor does a row's HEIGHT follow the scale** (`_rowHeight`, fixed by the screen): rows sized to the scale
   bounced ~100 px as permanents came and went (TBL-2.18). Combat's columns come from `_columns`, the declaration,
   not from who is still on the board (TBL-2.17).
-- **`BoardScale` counts a row as `Fill` BUILDS it** (TBL-2.19): a combat's columns are in BOTH creature rows, a
-  land stack is one card, attachment strips stack under their host. Change what a row holds, change the count.
+- **`BoardScale` counts a row as `Fill` BUILDS it** (TBL-2.19): six equal rows while the combat band is open, four
+  otherwise; combatants count in the band, not their row; a land stack is one card, attachment strips stack under their host. Change what a row holds, change the count.
   Behind it, each permanent row and the action buttons sit in a `ScrollContainer` (`Scrolling`): what still
   doesn't fit scrolls in place, and the table never grows off the screen.

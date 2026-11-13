@@ -58,6 +58,11 @@ public partial class MagicTableScene : Control
 	private readonly HFlowContainer _myField = Row();
 	private readonly HFlowContainer _myLands = Row();
 
+	// The combat row (TBL-4.6): in the middle, only while there is combat; edged red.
+	private readonly HBoxContainer _combatRow =
+		new() { Alignment = BoxContainer.AlignmentMode.Center };
+	private readonly PanelContainer _combatPanel = new() { Visible = false };
+
 	// Your hand: Common's fan (TBL-3), a Node2D placed over this space — the column reserves the room,
 	// it can't contain a Node2D. Ignores the mouse: card hover is physics picking, which any Control
 	// that stops the mouse above it blocks (godot-frontend.md).
@@ -535,6 +540,7 @@ public partial class MagicTableScene : Control
 		Fill(_oppField, s, _m.OpponentId, lands: false, attached, c => GlowOf(c.Id, c), scale);
 		Fill(_myField, s, _m.HumanId, lands: false, attached, c => GlowOf(c.Id, c), scale);
 		Fill(_myLands, s, _m.HumanId, lands: true, attached, c => GlowOf(c.Id, c), scale);
+		FillCombat(s, attached, c => GlowOf(c.Id, c), scale);
 
 		var hand = s.CardsIn(_m.HumanId, ZoneType.Hand).ToList();
 		// Anything castable from elsewhere (flashback, impulse exile) joins the hand row — but a
@@ -784,60 +790,13 @@ public partial class MagicTableScene : Control
 		// scrolls inside it, never pushing the hand off the screen (TBL-2.19)
 		((Control)row.GetParent()).CustomMinimumSize = new Vector2(0, _rowHeight);
 		var onSomething = attached.SelectMany(g => g).Select(a => a.Id).ToHashSet();
-		// Combat, MTGO's way (TBL-4.3): each attacker and the creatures blocking it take the same column
-		// in the two rows, which face each other across the phase bar — so who blocks whom reads at a
-		// glance, even between two creatures of one name. Left-aligned while it lasts, so the columns meet.
-		var here = s.CardsIn(s.GetGame().ActivePlayerId, ZoneType.Battlefield)
-			.Concat(
-				s.CardsIn(
-					s.GetGame().ActivePlayerId == _m.HumanId ? _m.OpponentId : _m.HumanId,
-					ZoneType.Battlefield
-				)
-			)
-			.ToDictionary(c => c.Id);
-		var groups = _columns
-			.Select(g =>
-				(
-					Attacker: g.Attacker,
-					Blockers: g.Blockers.Where(here.ContainsKey).Select(id => here[id]).ToList()
-				)
-			)
-			.ToList();
-		var combatants = groups
-			.SelectMany(g => g.Blockers.Select(c => c.Id).Append(g.Attacker))
-			.ToHashSet();
-		row.Alignment =
-			groups.Count > 0 && !lands
-				? FlowContainer.AlignmentMode.Begin
-				: FlowContainer.AlignmentMode.Center;
+		var combatants = Combatants();
 		var cards = s.CardsIn(player, ZoneType.Battlefield)
 			.Where(c =>
 				c.Is(CardType.Land) == lands
 				&& !onSomething.Contains(c.Id)
-				&& !combatants.Contains(c.Id)
+				&& !combatants.Contains(c.Id) // in the combat row (FillCombat)
 			);
-		if (!lands)
-			foreach (var (attacker, blockers) in groups)
-			{
-				var mine =
-					player == s.GetGame().ActivePlayerId
-						? here
-							.Values.Where(c => c.Id == attacker && c.ControllerId == player)
-							.ToList()
-						: blockers.Where(b => b.ControllerId == player).ToList();
-				var column = new HBoxContainer
-				{
-					Alignment = BoxContainer.AlignmentMode.Center,
-					CustomMinimumSize = new Vector2(
-						ColumnWidth(here.GetValueOrDefault(attacker), blockers, scale),
-						0
-					),
-				};
-				column.AddThemeConstantOverride("separation", 6);
-				foreach (var c in mine)
-					column.AddChild(Permanent(c, 1));
-				row.AddChild(column);
-			}
 		// Identical lands stack, as on Arena: everything the crop shows is the same.
 		foreach (
 			var group in cards.GroupBy(c =>
@@ -848,10 +807,10 @@ public partial class MagicTableScene : Control
 			row.AddChild(
 				group.Count() > 1 // a land stack: every land in it (Permanent tags its one card)
 					? CardViews.Tag(
-						Permanent(group.First(), group.Count()),
+						PermanentView(s, group.First(), group.Count(), attached, glow, scale),
 						[.. group.Select(c => c.Id)]
 					)
-					: Permanent(group.First(), 1)
+					: PermanentView(s, group.First(), 1, attached, glow, scale)
 			);
 		}
 
@@ -861,50 +820,87 @@ public partial class MagicTableScene : Control
 			var c in s.CardsIn(player, ZoneType.PhasedOut).Where(c => c.Is(CardType.Land) == lands)
 		)
 			row.AddChild(CardViews.Permanent(s, c, 1, glow(c), Preview, () => { }, scale));
+	}
 
-		// A permanent as a view, with what is attached to it under it.
-		Control Permanent(Card c, int count)
+	/// <summary>
+	/// The combat row (TBL-4.6, Shayne: "attackers was hard to follow"): in the middle, only while there is combat.
+	/// Each attacker takes a column with the creatures blocking it — MTGO's pairing (TBL-4.3) — the opponent's side
+	/// on top, yours below, so who attacks and who blocks whom reads at a glance, apart from the rest of the board.
+	/// </summary>
+	private void FillCombat(
+		GameState s,
+		ILookup<int, Card> attached,
+		Func<Card, Glow> glow,
+		float scale
+	)
+	{
+		CardViews.Clear(_combatRow);
+		_combatPanel.Visible = _columns.Count > 0;
+		// its two rows' height: a ScrollContainer reports none of its content's, and the band collapsed to a line
+		((Control)_combatRow.GetParent()).CustomMinimumSize = new Vector2(0, 2 * _rowHeight + 4);
+		foreach (var (attacker, blockers) in _columns)
 		{
-			var view = CardViews.Permanent(
-				s,
-				c,
-				count,
-				glow(c),
-				Preview,
-				() => ObjectClicked(c.Id),
-				scale
-			);
-			if (!attached.Contains(c.Id))
-				return view;
-			var stack = new VBoxContainer();
-			stack.AddThemeConstantOverride("separation", 2);
-			stack.AddChild(view);
-			AddAttachments(stack, c.Id);
-			return stack;
+			var column = new VBoxContainer();
+			column.AddThemeConstantOverride("separation", 4);
+			foreach (var side in new[] { _m.OpponentId, _m.HumanId })
+			{
+				var half = new HBoxContainer
+				{
+					Alignment = BoxContainer.AlignmentMode.Center,
+					CustomMinimumSize = new Vector2(0, _rowHeight),
+				};
+				half.AddThemeConstantOverride("separation", 6);
+				foreach (var id in blockers.Prepend(attacker))
+					if (s.IsOnBattlefield(id) && s.GetCard(id) is { } c && c.ControllerId == side)
+						half.AddChild(PermanentView(s, c, 1, attached, glow, scale));
+				column.AddChild(half);
+			}
+			_combatRow.AddChild(column);
 		}
+	}
+
+	/// <summary>Who is in the combat row: every attacker and blocker of the declaration (<see cref="_columns"/>).</summary>
+	private HashSet<int> Combatants() =>
+		[.. _columns.SelectMany(g => g.Blockers.Prepend(g.Attacker))];
+
+	/// <summary>A permanent as a view, with what is attached to it under it.</summary>
+	private Control PermanentView(
+		GameState s,
+		Card c,
+		int count,
+		ILookup<int, Card> attached,
+		Func<Card, Glow> glow,
+		float scale
+	)
+	{
+		var view = CardViews.Permanent(
+			s,
+			c,
+			count,
+			glow(c),
+			Preview,
+			() => ObjectClicked(c.Id),
+			scale
+		);
+		if (!attached.Contains(c.Id))
+			return view;
+		var stack = new VBoxContainer();
+		stack.AddThemeConstantOverride("separation", 2);
+		stack.AddChild(view);
+		AddAttachments(c.Id);
+		return stack;
 
 		// An Aura on an Equipment on a creature: each strip followed by what is on it.
-		void AddAttachments(VBoxContainer stack, int hostId)
+		void AddAttachments(int hostId)
 		{
 			foreach (var a in attached[hostId])
 			{
 				stack.AddChild(
 					CardViews.Attachment(a, glow(a), Preview, () => ObjectClicked(a.Id))
 				);
-				AddAttachments(stack, a.Id);
+				AddAttachments(a.Id);
 			}
 		}
-	}
-
-	/// <summary>How wide an attacker's column is: its card, or its blockers side by side, whichever is wider (a tapped card lies sideways).</summary>
-	private static float ColumnWidth(Card? attacker, List<Card> blockers, float scale)
-	{
-		float Width(Card c) =>
-			(c.IsTapped ? CardViews.PermanentSize.Y : CardViews.PermanentSize.X) * scale;
-		return Mathf.Max(
-			attacker is null ? 0 : Width(attacker),
-			blockers.Sum(Width) + 6 * Math.Max(0, blockers.Count - 1)
-		);
 	}
 
 	/// <summary>
@@ -1328,6 +1324,13 @@ public partial class MagicTableScene : Control
 		_oppField.SizeFlagsVertical = _myField.SizeFlagsVertical = SizeFlags.ExpandFill;
 		center.AddChild(Half(_oppBoard, _oppLands, _oppField));
 		center.AddChild(_phases);
+		var band = CardViews.Board(active: false);
+		band.BorderColor = new Color("d0583a"); // Glow.Attacking's red
+		band.SetBorderWidthAll(3);
+		_combatPanel.AddThemeStyleboxOverride("panel", band);
+		_combatRow.AddThemeConstantOverride("separation", 16);
+		_combatPanel.AddChild(Scrolling(_combatRow, SizeFlags.Fill));
+		center.AddChild(_combatPanel);
 		center.AddChild(Half(_myBoard, _myField, _myLands));
 		center.AddChild(_handSpace);
 		columns.AddChild(center);
@@ -1382,20 +1385,23 @@ public partial class MagicTableScene : Control
 	{
 		var screen = GetViewportRect().Size - new Vector2(2 * Margin, 2 * Margin);
 		var w = screen.X - LeftWidth - RightWidth - 2 * Gap - 8; // less the half's own margins
-		var h =
-			(screen.Y - _phases.GetCombinedMinimumSize().Y - (CardViews.HandSize.Y + 12) - 12) / 2
-			- 12; // per half: two rows, less the margins and the gap between them
-		// In combat a creature row also holds a column for each of the OTHER side's attackers, as wide as its
-		// blockers (TBL-4.3) — counted here, or the row wraps (TBL-2.19).
-		var combatants = _columns.SelectMany(g => g.Blockers.Append(g.Attacker)).ToHashSet();
+		// Two rows a half, and while there is combat the combat row's two more (TBL-4.6): every row the same
+		// height, less each panel's margins (12) and the gaps between them.
+		var combat = _columns.Count > 0;
+		var (rows, panels) = combat ? (6, 3) : (4, 2);
+		var room = screen.Y - _phases.GetCombinedMinimumSize().Y - (CardViews.HandSize.Y + 12) - 12;
+		var rowHeight = (room - 12 - 12 * panels - (combat ? 8 : 0)) / rows; // the band's border and its gap
+		// The combat row's columns side by side, each as wide as its wider side — counted here, or it wraps (TBL-2.19).
+		var combatants = Combatants();
 		var columns = _columns.Sum(g => Math.Max(1, g.Blockers.Count));
 		var fullest = new[] { _m.HumanId, _m.OpponentId }
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield).GroupBy(c => c.Is(CardType.Land)))
 			.Select(g =>
 				g.Key
 					? g.Select(c => CardViews.Looks(s, c)).Distinct().Count() // identical lands stack (Fill); a glow may split one
-					: columns + g.Count(c => !combatants.Contains(c.Id))
+					: g.Count(c => !combatants.Contains(c.Id))
 			)
+			.Append(columns)
 			.DefaultIfEmpty(1)
 			.Max();
 		// Auras and Equipment stack under their host's card, at their own height — an Aura on an Equipment
@@ -1409,8 +1415,8 @@ public partial class MagicTableScene : Control
 			.DefaultIfEmpty(0)
 			.Max();
 		var size = CardViews.PermanentSize;
-		_rowHeight = h / 2;
-		var byHeight = (h / 2 - strips * CardViews.AttachmentHeight) / size.Y;
+		_rowHeight = rowHeight;
+		var byHeight = (rowHeight - strips * CardViews.AttachmentHeight) / size.Y;
 		var byWidth = w / (fullest * (size.Y + 6));
 		return Mathf.Clamp(Mathf.Min(byHeight, byWidth), MinBoardScale, 1.5f);
 	}
@@ -1462,11 +1468,9 @@ public partial class MagicTableScene : Control
 	// stack identical permanents if a real board ever gets there.
 	private static HFlowContainer Row()
 	{
-		var row = new HFlowContainer
-		{
-			CustomMinimumSize = new Vector2(0, CardViews.PermanentSize.Y),
-			Alignment = FlowContainer.AlignmentMode.Center,
-		};
+		// No height of its own: its scroll holds _rowHeight (Fill). An unscaled card's height here overflowed every
+		// row once six shared the screen (TBL-4.6) — each row scrolled.
+		var row = new HFlowContainer { Alignment = FlowContainer.AlignmentMode.Center };
 		row.AddThemeConstantOverride("h_separation", 6);
 		return row;
 	}

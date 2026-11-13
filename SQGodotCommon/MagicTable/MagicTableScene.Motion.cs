@@ -77,7 +77,7 @@ public partial class MagicTableScene
 			{
 				var changes = Between(shown, next);
 				_onScreen = next;
-				if (changes.Count == 0)
+				if (changes.Count == 0 && Fighting(shown).SetEquals(Fighting(next)))
 					continue; // a pass: nothing to see, no time
 				// Where each card starts, read BEFORE the redraw rebuilds the rows and plates (a zone button's place).
 				var drawn = Rects(Nodes());
@@ -115,6 +115,21 @@ public partial class MagicTableScene
 	}
 
 	private const string RestMeta = "rest";
+
+	/// <summary>
+	/// Every attacker and blocker in this state — a beat when it changes, though no card changed zones. The combat
+	/// row redraws with them in it at once, unanimated (Shayne, 2026-11-13: a flight there showed the full card,
+	/// then the crop — "I would rather it just be instant").
+	/// </summary>
+	private static HashSet<int> Fighting(GameState s)
+	{
+		var attackers = MagicCore.Turns.Combat.Attackers(s).Select(a => a.Id).ToList();
+		return
+		[
+			.. attackers,
+			.. attackers.SelectMany(a => MagicCore.Turns.Combat.BlockersOf(s, a)).Select(b => b.Id),
+		];
+	}
 
 	/// <summary>
 	/// What each moving card will land as, hidden at once — before a frame shows it — so it appears as it lands:
