@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
+using MagicCore.Actions;
 using MagicCore.Cards;
 
 namespace MagicTable;
@@ -22,6 +23,9 @@ public static class TableChanges
 
 	/// <summary>A token or copy that left and ceased to exist (CR 704.5d-e): a token dying is gone from the state.</summary>
 	public sealed record Gone(Card Was) : Change;
+
+	/// <summary>A triggered or activated ability that went on the stack — its source pulses (A7).</summary>
+	public sealed record Triggered(int StackId, int SourceId) : Change;
 
 	/// <summary>Damage marked on a permanent still there — one that died lost its damage with it.</summary>
 	public sealed record Damaged(int CardId, int Amount) : Change;
@@ -53,6 +57,13 @@ public static class TableChanges
 				&& ZoneOf(before, was.Id) is ZoneType.Battlefield or ZoneType.Stack
 			)
 				changes.Add(new Gone(was));
+		foreach (
+			var ability in after
+				.GetChildren(after.GetWellKnownId(MagicKeys.Stack))
+				.OfType<StackAbility>()
+				.Where(a => !before.HasObject(a.Id))
+		)
+			changes.Add(new Triggered(ability.Id, ability.SourceId));
 		foreach (var id in new[] { after.Player1Id(), after.Player2Id() })
 			if (
 				before.GetPlayer(id).Life is var from

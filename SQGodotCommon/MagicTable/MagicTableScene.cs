@@ -62,6 +62,7 @@ public partial class MagicTableScene : Control
 	private readonly HBoxContainer _combatRow =
 		new() { Alignment = BoxContainer.AlignmentMode.Center };
 	private readonly PanelContainer _combatPanel = new() { Visible = false };
+	private readonly TargetArrows _arrows = new(); // the stack's targets (TBL-4.5)
 
 	// Your hand: Common's fan (TBL-3), a Node2D placed over this space — the column reserves the room,
 	// it can't contain a Node2D. Ignores the mouse: card hover is physics picking, which any Control
@@ -569,6 +570,20 @@ public partial class MagicTableScene : Control
 		);
 
 		ShowStack(s, id => GlowOf(id, null));
+		// The plates are where a player is targeted; the arrows find everything by its tag.
+		CardViews.Tag(_oppPlate, _m.OpponentId);
+		CardViews.Tag(_myPlate, _m.HumanId);
+		_arrows.Pairs =
+		[
+			.. s.GetChildren(s.GetWellKnownId(MagicKeys.Stack))
+				.SelectMany(o => (
+						o switch
+						{
+							StackAbility a => a.Targets,
+							_ => o.GetComponent<OnStackComponent>()?.Targets ?? [],
+						}
+					).Where(t => t != 0 && t != o.Id).Distinct().Select(t => (o.Id, t))),
+		];
 		ShowButtons(s, moves);
 		_buttonsScroll.CustomMinimumSize = new Vector2(
 			0,
@@ -1365,6 +1380,8 @@ public partial class MagicTableScene : Control
 			overlay.AddChild(panel);
 			AddChild(overlay);
 		}
+		_arrows.Rects = () => Rects(Nodes());
+		AddChild(_arrows);
 	}
 
 	/// <summary>

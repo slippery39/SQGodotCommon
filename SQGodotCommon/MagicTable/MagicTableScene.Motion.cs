@@ -205,6 +205,15 @@ public partial class MagicTableScene
 					);
 					starts.Add(_ => fade(where));
 					break;
+				case Triggered triggered: // its stack row and its source pulse (A7)
+					starts.Add(_ =>
+					{
+						var now = Nodes();
+						foreach (var id in new[] { triggered.StackId, triggered.SourceId })
+							if (now.GetValueOrDefault(id) is { } node)
+								Settle(node);
+					});
+					break;
 				case Damaged damaged:
 					starts.Add(to =>
 					{

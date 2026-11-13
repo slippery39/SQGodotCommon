@@ -12,7 +12,7 @@ public class TableChangesTests
 {
 	/// <summary>
 	/// A whole AI-vs-AI game, one step per move: the diff sees what the table animates (TBL-4.5) — casts, what
-	/// resolves where, land drops, draws, deaths, damage and life — and a manager not animating keeps nothing.
+	/// resolves where, land drops, draws, deaths, damage, life and abilities going on the stack — and a manager not animating keeps nothing.
 	/// GreedyAi plays it: seed 1 has a creature surviving damage (15 has none); a change in how it plays can
 	/// move that — pick another seed that has every kind (2, 5, 7 and 8 did).
 	/// </summary>
@@ -68,6 +68,7 @@ public class TableChangesTests
 			Assert.That(Saw(ZoneType.Battlefield, ZoneType.Graveyard), "a death");
 			Assert.That(changes.OfType<Life>().Any(l => l.To < l.From), "life lost");
 			Assert.That(changes.OfType<Damaged>().Any(), "damage marked on a survivor");
+			Assert.That(changes.OfType<Triggered>().Any(), "an ability going on the stack");
 		});
 	}
 }

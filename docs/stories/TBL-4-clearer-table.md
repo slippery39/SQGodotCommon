@@ -107,6 +107,11 @@ Open questions:
       anything, attack and target arrows, damage numbers, deaths to the graveyard; each a short beat the eye can follow.
       First: A1–A3 (cast, resolve, settle), A5 (damage, deaths), A6 (life counting); then A4 (tap), A7 (trigger pulse),
       and the stack made followable (Shayne: unclear WHEN something went on it and WHAT it targets): target arrows.
+      STACK BUILT (2026-11-13): `TargetArrows` — an orange arrow from each stack row to each target on screen (a
+      card, a player's plate) while the spell or ability is on the stack; an ability going on the stack is a beat of
+      its own, its row and its source pulsing (A7; `TableChanges.Triggered`). Captured: Extended Absence's arrow to
+      Greenhouse Propagator from its cast to its resolution (`shots/tbl45-arrow` frames 187–193). A target off screen
+      (a graveyard's card) gets no arrow
       FIRST ROWS BUILT (2026-11-13), awaiting Shayne's look: `TableChanges` (the diff, tested on a whole game),
       `MagicTableManager.Animate`/`TakeSteps`, `MagicTableScene.Motion.cs` (the beats); Tools · Animation and `--beat=`.
       Captured at `--beat=0.8` (10 fps, 8 frames a beat), each frame-diffed: an AI's land drop and cast from its hand
