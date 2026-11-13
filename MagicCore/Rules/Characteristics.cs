@@ -219,6 +219,12 @@ public static class Characteristics
 
 		/// <summary>De-evolve's creature type, by host (id, incarnation); null when no Aura sets one.</summary>
 		public Dictionary<(int, int), string>? TypeSet { get; init; }
+
+		/// <summary>An Aura, or anything attached, on the battlefield — what <c>Attachments.Detach</c> can act on (AI-22).</summary>
+		public bool Attachments { get; init; }
+
+		/// <summary>A type change on the battlefield, stamped or that can stamp — what <c>Attachments.Animations</c> can act on (AI-22).</summary>
+		public bool TypeChanges { get; init; }
 	}
 
 	static readonly HashSet<(int, int)> NoneStripped = [];
@@ -231,6 +237,13 @@ public static class Characteristics
 	// (keep two entries if one ever must), and each thread keeps its last state alive until the next.
 	[ThreadStatic]
 	static (GameState? State, Board? Board) lastBoard;
+
+	/// <summary>
+	/// Whether the state-based check's attachment passes can find anything (AI-22): an Aura or an attached
+	/// card; a type change stamped (<see cref="Animated"/>) or one that can stamp. Read from the board already built.
+	/// </summary>
+	public static (bool Attachments, bool TypeChanges) AttachmentWork(GameState s) =>
+		BoardOf(s) is var board ? (board.Attachments, board.TypeChanges) : default;
 
 	static Board BoardOf(GameState s)
 	{
@@ -246,21 +259,34 @@ public static class Characteristics
 		HashSet<(int, int)>? stripped = null;
 		List<(Card Aura, GrantsActivatedAbility Grant)>? grants = null;
 		Dictionary<(int, int), string>? typeSet = null;
+		bool attachments = false,
+			typeChanges = false;
 		foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
 		foreach (
 			var c in state
 				.CardsIn(p, ZoneType.Battlefield)
 				.Concat(state.CardsIn(p, ZoneType.Command))
 		) // emblems too
-		foreach (var component in c.Components)
-			if (component is StaticEffectComponent effect)
-				statics.Add((c, effect));
-			else if (component is EnchantedLosesAllAbilities)
-				(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
-			else if (component is GrantsActivatedAbility grant && c.AttachedToId != 0)
-				(grants ??= []).Add((c, grant));
-			else if (component is EnchantedIsCreatureType type && c.AttachedToId != 0)
-				(typeSet ??= [])[(c.AttachedToId, c.AttachedToIncarnation)] = type.Subtype;
+		{
+			attachments |= c.AttachedToId != 0;
+			foreach (var component in c.Components)
+			{
+				// AI-22: what the state-based check's attachment passes can act on, noted in the same pass
+				attachments |= component is AuraComponent;
+				typeChanges |=
+					component is Animated or BecomesType
+					|| component is UntilEndOfTurn { Gains.Count: > 0 } u
+						&& u.Gains.Any(g => g is BecomesType);
+				if (component is StaticEffectComponent effect)
+					statics.Add((c, effect));
+				else if (component is EnchantedLosesAllAbilities)
+					(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
+				else if (component is GrantsActivatedAbility grant && c.AttachedToId != 0)
+					(grants ??= []).Add((c, grant));
+				else if (component is EnchantedIsCreatureType type && c.AttachedToId != 0)
+					(typeSet ??= [])[(c.AttachedToId, c.AttachedToIncarnation)] = type.Subtype;
+			}
+		}
 		var lost = new Board([], stripped ?? NoneStripped);
 		// An Aura that lost its abilities sets no type either.
 		if (typeSet is not null)
@@ -275,6 +301,8 @@ public static class Characteristics
 		var live = grants?.Where(g => !Lost(lost, g.Aura)).ToList();
 		return lost with
 		{
+			Attachments = attachments,
+			TypeChanges = typeChanges,
 			TypeSet = typeSet,
 			Granted = live is null or []
 				? null

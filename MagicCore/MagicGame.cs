@@ -29,6 +29,12 @@ public enum Step
 /// <summary>Root object. Owns the shared Stack zone and both players.</summary>
 public record MagicGame : GameObject
 {
+	/// <summary>
+	/// A token or a copy went to a hand or a library since the last state-based check, which scans those two zones
+	/// only while it is up (AI-22: that scan ran at every check). Raised by MoveCard, the only way in.
+	/// </summary>
+	public bool TokenOrCopyInHandOrLibrary { get; init; }
+
 	public int StartingPlayerId { get; init; }
 	public int ActivePlayerId { get; init; }
 

@@ -197,6 +197,13 @@ public static class MagicState
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
 		).UpdateObject(cardId, before.Fresh() with { KnownTo = knownTo });
+		if (
+			(before.IsToken || before.IsCopy)
+			&& new[] { s.Player1Id(), s.Player2Id() }.Any(p =>
+				zoneId == s.ZoneId(p, ZoneType.Hand) || zoneId == s.ZoneId(p, ZoneType.Library)
+			)
+		) // AI-22: the state-based check scans hands and libraries for these only when one went there
+			s = s.WithGame(s.GetGame() with { TokenOrCopyInHandOrLibrary = true });
 		if (leavesBattlefield && zoneId == s.ZoneId(before.OwnerId, ZoneType.Hand)) // Miles O'Brien
 			s = s.Tally(
 				before.OwnerId,

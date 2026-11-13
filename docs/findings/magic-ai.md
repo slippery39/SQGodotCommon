@@ -1735,3 +1735,27 @@ difference either way; cost per decision 4 249 against 4 588 engine steps (−7.
   may cost more than it saves. AI-21's work, gated on the board's size as `AiMoves` is.
 - **Reusing combat answers within a decision:** the engine has no state fingerprint, and record equality compares
   collections by reference, so equal boards reached by different lines would mostly miss.
+
+## AI-22.2: shortcuts that skip work which can find nothing (2026-11-13)
+
+Shayne's idea (a cheap fact first, the expensive check only when it can matter). The profile put the state-based
+check at 23.3% of a sealed decision: its own zone reads 7.6% (scanning both hands and libraries for tokens at every
+check among them), detaching Auras and Equipment 4.6%, type changes (`Animations`) 3.7%.
+
+**Built, then made permanent (Shayne, 2026-11-13 — the switch `MAGIC_SHORTCUTS` removed):** (1) the board pass, already made per state for the check,
+notes whether anything is attached or an Aura, and whether any type change is stamped or can stamp — the two
+attachment passes run only then; (2) `MoveCard` raises a flag on the game when a token or a copy goes to a hand or a
+library, and the token check scans those two zones only while it's up (every other move into them only reorders a zone).
+
+| | off | on |
+|---|---|---|
+| tests (1 588, golden replays included) | all pass | all pass |
+| position suite | 48.8 / 48.3 s | 44.8 / 44.8 s (**−7.6%**), engine steps and decisions identical |
+| sealed run (RGb, 16 games) | 224 / 220 s | 195 / 199 s (**−11%**), all 16 games move for move identical |
+
+**Tried and reverted — twin attack plans** (`MAGIC_TWIN_PLANS`, Shayne's gate: 5+ attackers, two sharing a name, then
+AI-18's `Twins`; one "alone" and "all but" plan per identical creature at the same target): the suite's steps −0.25%,
+and it **changed a decision** — `TheCerritos_BlocksTheBorg…` (two Officer tokens, two Romulans) no longer blocks.
+Identical creatures don't score identically in the look-ahead (its ties fall to the lower id), so dropping a twin's plan
+changes what the AI imagines. For AI-21: grouping twins is a behaviour change, not a shortcut, until the settle treats
+twins alike.

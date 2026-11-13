@@ -94,8 +94,11 @@ public static class Attachments
 	/// </summary>
 	public static GameState Check(GameState s, int playerId)
 	{
-		s = Detach(s, playerId);
-		s = Animations(s, playerId);
+		// AI-22: each pass only when the board has something it can act on (the board is already built for the check)
+		if (Characteristics.AttachmentWork(s).Attachments)
+			s = Detach(s, playerId);
+		if (Characteristics.AttachmentWork(s).TypeChanges)
+			s = Animations(s, playerId);
 		return s;
 	}
 
