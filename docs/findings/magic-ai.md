@@ -1660,3 +1660,35 @@ Tests: two controls also switch it off (ChangSac458, the self-burn). **Match (20
 --until-clear` — 50.0% over 96 games (48–48), no 5pp difference either way, stopped at the first check; cost per decision
 4 380 against 4 444 engine steps (−1.5%), rollouts 10.3 both; spells cast 9.7 against 9.8. Kept (Shayne's rule: a
 reasonable play fixed at no cost).** Borg Cube #343's Pass settled as fair (Shayne, 2026-11-12).
+
+## AI-22.1: where a sealed run's time goes (2026-11-12)
+
+`dotnet-trace collect --profile dotnet-sampled-thread-time` (the Windows profile; `cpu-sampling` is Linux-only now) over
+`--set=trk --builds=sim_results/builds/RGb.txt --both-seats --games=8` — pool 4's RGb, 16 games in parallel, 5 min, none
+stopped, server collector, Release, a quiet machine. Shares are of all time with an engine frame on the stack (idle
+threads left out), INCLUSIVE — what runs under each; they overlap. Scripts in the session scratchpad
+(`prof_report.py`, `prof_drill.py` over the Speedscope conversion).
+
+| Under | Share |
+|---|---|
+| `BeamSearchAi.Search` | 91.8% |
+| `Rollout.Score` — the rollouts | **89.7%** |
+| `Rollout.Choose` — the rollout policy's choices | 59.9% |
+| `WholeAttacks.Best` — the rollout's attack plans, each settled with the defender's blocks | **50.1%** |
+| `Lookahead.Settle` | 43.5% |
+| `TurnStructure.GivePriority` (the engine's every pass: state-based actions 23.3%, triggers) | 40.1% |
+| `BeamSearchAi.WithFreePasses` — AI-13.12's free passes | **36.1%** |
+| `WholeAttacks.Blocked` | 31.1% |
+| `Rollout.Answer` / `Rollout.BestAlone` (the defender's judged-alone blocks) | 29.1% / 19.6% |
+
+`Rollout.Choose` is 97% from `Rollout.Score`; `WholeAttacks.Best` 100% from `Rollout.Choose`.
+
+**Leaves don't read (AI-7's trap again):** "self" time put 44% in `MagicState.CardsIn` with 97% of it under an array copy
+(`BulkMoveWithWriteBarrier`). CardsIn only loops a zone's ids; the guess — `ImmutableList`'s enumerator growing its node
+stack — was tested by an index loop and **made no difference** (the position suite 45.3 / 49.5 s before, 48.2 / 46.1 s
+after, decisions identical), and was reverted. CardsIn is called from the engine's per-step checks (state-based actions
+17%, triggers 14%, the board's characteristics 13%, attachments 13%) — many calls, not a slow one. Read callers.
+
+**What it says:** nine-tenths of a sealed decision is the rollouts, and half of ALL the time is the rollout's attack
+planning on an ordinary RGb board — AI-21's subject is not only Tribbles. AI-13.12's free passes hold 36%. The engine's
+per-step checks are the third block.
