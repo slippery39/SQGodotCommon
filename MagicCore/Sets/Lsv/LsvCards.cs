@@ -429,7 +429,136 @@ public static class LsvCards
 					Restriction = new(Is.Legendary) { CantBeCountered = true },
 				},
 			],
+			// ===== MC-4.4c part 1: red's tier 1, tested pieces =====
+			["Flame Slash"] = [Spell([Creature], new DealDamage(Ref.Target(), 4))],
+			["Sear"] = [Spell([CreatureOrPlaneswalker], new DealDamage(Ref.Target(), 4))],
+			["Flametongue Kavu"] =
+			[
+				When(TriggerEvent.SelfEnters, [Creature], new DealDamage(Ref.Target(), 4)),
+			],
+			["Wheel of Fortune"] =
+			[
+				Spell([], new DiscardHand(Ref.EachPlayer), new DrawCards(Ref.EachPlayer, 7)),
+			],
+			["Faithless Looting"] =
+			[
+				Spell([], new DrawCards(Ref.You, 2), new Discard(Ref.You, 2)),
+				new FlashbackComponent(ManaCost.Parse("{2}{R}")),
+			],
+			["Mine Collapse"] =
+			[
+				new MayCastFromHandFree(Is.Source)
+				{
+					If = new DuringYourTurn(),
+					Costs = [new SacrificeCost(Is.Land & Is.Subtype("Mountain"))],
+				},
+				Spell([CreatureOrPlaneswalker], new DealDamage(Ref.Target(), 5)),
+			],
+			["Suplex"] =
+			[
+				ModalSpell(
+					"Suplex",
+					1,
+					M(
+						[Creature],
+						new DealDamage(Ref.Target(), 3),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true }
+					),
+					M([Target(Is.Artifact)], new Exile(Ref.Target()))
+				),
+			],
+			["Legion Extruder"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.AnyTarget()],
+					new DealDamage(Ref.Target(), 2)
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new CreateTokens(Golem, 1)])
+				{
+					Costs = [new TapSelfCost(), new SacrificeCost(Is.Artifact & !Is.Source)],
+				},
+			],
+			["Seasoned Pyromancer"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Discard(Ref.You, 2)
+					{
+						Then =
+						[
+							new DrawCards(Ref.You, 2),
+							new CreateTokens(Elemental, Count.NonlandCardsChosen),
+						],
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{R}{R}"),
+					[new CreateTokens(Elemental, 2)]
+				)
+				{
+					Costs = [new ExileSelfCost()],
+					From = ZoneType.Graveyard,
+				},
+			],
+			["Pyrogoyf"] =
+			[
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = Count.CardTypesInAllGraveyards,
+					Toughness = Count.CardTypesInAllGraveyards,
+				},
+				// "this creature or another Lhurgoyf creature you control" — "that creature deals"
+				When(
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Creature & Is.Yours & (Is.Source | Is.Subtype("Lhurgoyf")),
+					},
+					[TargetSpec.AnyTarget()],
+					new DamageFrom(Ref.EventCard, Ref.Target(), Count.PowerOf(Ref.EventCard))
+				),
+			],
+			["Generous Plunderer"] =
+			[
+				When(
+					TriggerEvent.YourUpkeep,
+					[],
+					new May(
+						"Create a Treasure token?",
+						new Always(),
+						[
+							CreateTreasure(1),
+							new WhenYouDo(
+								[TargetSpec.Player(Is.Opponents)],
+								[
+									CreateTreasure(1) with
+									{
+										ControlledBy = Ref.Target(),
+										Tapped = true,
+									},
+								]
+							),
+						]
+					)
+				),
+				// "defending player" — the one opponent
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new DealDamage(
+						Ref.EachOpponent,
+						Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Opponents))
+					)
+				),
+			],
 		};
+
+	/// <summary>Seasoned Pyromancer: "a 1/1 red Elemental creature token".</summary>
+	static CardData Elemental => Token("Elemental", "Creature — Elemental", "1", "1", ["R"]);
+
+	/// <summary>Legion Extruder: "a 3/3 colorless Golem artifact creature token".</summary>
+	static CardData Golem => Token("Golem", "Artifact Creature — Golem", "3", "3");
 
 	/// <summary>"Exile this card from your hand: Add {G}." — a mana ability of the card in hand.</summary>
 	static ManaAbilityComponent SpiritGuide(ManaColor color) =>

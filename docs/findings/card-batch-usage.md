@@ -58,3 +58,4 @@ after the split is DEV-4.3.
 | 2026-11-13 | MC-4.3b: LSV batch 1 plain spells, 22 cards, 4 options | 0d5f7560 | 177 | 297k | 7.6M |
 | 2026-11-13 | MC-4.4a: batch 2's alternative and or costs, 10 cards | 14ab6621 | 143 | 290k | 5.7M |
 | 2026-11-13 | MC-4.4b: the Spirit Guides and Delighted Halfling, mana from the hand and a yield per spell, 3 cards | 3368d9ff | 114 | 213k | 3.9M |
+| 2026-11-13 | MC-4.4c1: red's tier 1, the tested pieces, 11 cards | 3368d9ff | 133 | 227k | 4.6M |

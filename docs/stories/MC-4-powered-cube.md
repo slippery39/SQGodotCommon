@@ -162,6 +162,13 @@ as his three priorities.
     `CantBeCountered` on the restriction (the rider floats with the mana in the pool), and the hand scan on a failed
     payment (no bench for card batches).
 
+- 2026-11-13, Claude (cube lane) — **4.4c: red's tier 1 read card by card, split in two.** The survey tiers by keywords
+  and a few patterns; read, 11 of red's 27 are tested pieces (4.4c1) and 16 need an option or a new piece (4.4c2, the
+  list in Next). 4.4c1's notes: Seasoned Pyromancer discards FIRST, so its count reads a hand of two discarded without
+  a choice (`Count.NonlandCardsChosen` — tested); Pyrogoyf's "that creature deals" is `DamageFrom(Ref.EventCard, …)`,
+  its power read as it resolves; Generous Plunderer's "defending player" is the one opponent; the tokens (Elemental,
+  Golem) are properties, not fields — a static field declared below `Scripts` is still null when the scripts are built.
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -196,19 +203,19 @@ as his three priorities.
         (golden-out unchanged: no recorded game moved by the engine; golden-in moved 29 random and 192 card-replay games,
         added 12; probe 150 games, none unfinished — the Guides' mana from the hand is a payment, which the probe's counts
         don't see, as a land's)
-  - [ ] MC-4.4c The rest of tier 1 for one colour (`LsvSurvey.md`), if the session allows
+  - [ ] MC-4.4c Red's tier 1 (`LsvSurvey.md` listed 28; Simian Spirit Guide went with 4.4b), read card by card and
+        split in two (Decisions):
+    - [x] MC-4.4c1 The tested pieces, 11 — done 2026-11-13: Flame Slash, Sear, Flametongue Kavu, Wheel of Fortune,
+          Faithless Looting, Mine Collapse, Suplex, Legion Extruder, Seasoned Pyromancer, Pyrogoyf, Generous Plunderer.
+          Scripts only, no engine change; 14 tests; `batch_checks.py` all 7 steps (golden-out unchanged; golden-in moved
+          29 random and 649 card-replay games, added 44; probe 150 games, none unfinished, every card used)
+    - [ ] MC-4.4c2 The options and new pieces, 16 (Next)
 
 ## Next
 
-MC-4.4c — red's tier 1 (`LsvSurvey.md` listed 28; Simian Spirit Guide is 4.4b's, so 27), read card by card
-2026-11-13 and split in two:
-- **4.4c part 1, tested pieces (11):** Flame Slash, Sear, Flametongue Kavu, Wheel of Fortune (`DiscardHand`/`DrawCards`
-  of `Ref.EachPlayer`), Faithless Looting (flashback), Mine Collapse (`MayCastFromHandFree(Is.Source) { If =
-  DuringYourTurn, Costs = [SacrificeCost(Mountain)] }`), Suplex (Essence Burn's `ExileIfItWouldDie`), Legion Extruder (a
-  Golem token), Seasoned Pyromancer (Seasoned Cryomancer's `Discard { Then }` + `Count.NonlandCardsChosen` — but it
-  discards FIRST, maybe from a hand of 0–1: test that count), Pyrogoyf (Tarmogoyf's count; `DamageFrom(Ref.EventCard,
-  …)` for "that creature deals"), Generous Plunderer (`May` + `WhenYouDo` + `CreateTokens { ControlledBy, Tapped }`).
-- **4.4c part 2, options or new pieces (16)** — the survey's "nothing the keywords name" hid them: Broadside
+MC-4.4c2 — red's last 16, each read 2026-11-13; the survey's "nothing the keywords name" hid an option or a
+new piece in every one (each the nearest piece with an option first — MC-6's rule):
+- Broadside
   Bombardiers (boast: `OncePerTurn` + attacked this turn, "2 plus the sacrificed permanent's mana value"), Cori-Steel
   Cutter (flurry: `SpellNumber = 2`, a token you MAY attach), Bonehoard Dracosaur (tokens by what was exiled "this way"),
   Inti (reflexive on a discard; "whenever you discard one or more" → play until your NEXT end step), Laelia ("cards put
@@ -244,3 +251,5 @@ re-run after a fix needs the golden files restored from HEAD by hand (`git check
 - 2026-11-13 (cube lane, sprint 5 C5): MC-4.4b — the Spirit Guides and Delighted Halfling; a mana ability FROM THE HAND
   (`ManaAbilityComponent.From`), a yield per spell paid for, and the uncounterable rider. No recorded game moved by the
   engine; 120 of 528 play. For Shayne: nothing Open.
+- 2026-11-13 (cube lane, sprint 5 C5): MC-4.4c1 — red's 11 tier-1 cards made of tested pieces, scripts only; 131 of
+  528 play. Red's other 16 need options or pieces (4.4c2, Next). For Shayne: nothing Open.

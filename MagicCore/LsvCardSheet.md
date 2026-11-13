@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 13/46 · uncommon 25/86 · rare 56/279 · mythic 18/108 · **120/528**
+**Playable:** common 17/46 · uncommon 27/86 · rare 57/279 · mythic 22/108 · **131/528**
 
 ### "Name Sticker" Goblin
 
@@ -225,7 +225,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Draw two cards, then discard two cards.  
 > Flashback {2}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `FlashbackComponent` — "Flashback [cost] (You may cast this card from your graveyard for its flashback cost.…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Faithless Looting"] =
+[
+	Spell([], new DrawCards(Ref.You, 2), new Discard(Ref.You, 2)),
+	new FlashbackComponent(ManaCost.Parse("{2}{R}")),
+],
+```
 
 ### Flame Slash
 
@@ -233,7 +243,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Flame Slash deals 4 damage to target creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Flame Slash"] = [Spell([Creature], new DealDamage(Ref.Target(), 4))],
+```
 
 ### Frantic Search
 
@@ -365,7 +381,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If it's your turn, you may sacrifice a Mountain rather than pay this spell's mana cost.  
 > Mine Collapse deals 5 damage to target creature or planeswalker.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…
+
+```csharp
+["Mine Collapse"] =
+[
+	new MayCastFromHandFree(Is.Source)
+	{
+		If = new DuringYourTurn(),
+		Costs = [new SacrificeCost(Is.Land & Is.Subtype("Mountain"))],
+	},
+	Spell([CreatureOrPlaneswalker], new DealDamage(Ref.Target(), 5)),
+],
+```
 
 ### Oliphaunt
 
@@ -471,7 +501,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Suplex deals 3 damage to target creature. If that creature would die this turn, exile it instead.  
 > • Exile target artifact.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Suplex"] =
+[
+	ModalSpell(
+		"Suplex",
+		1,
+		M(
+			[Creature],
+			new DealDamage(Ref.Target(), 3),
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true }
+		),
+		M([Target(Is.Artifact)], new Exile(Ref.Target()))
+	),
+],
+```
 
 ### Thraben Inspector
 
@@ -868,7 +916,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, it deals 4 damage to target creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Flametongue Kavu"] =
+[
+	When(TriggerEvent.SelfEnters, [Creature], new DealDamage(Ref.Target(), 4)),
+],
+```
 
 ### Gut, True Soul Zealot
 
@@ -1191,7 +1248,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Sear deals 4 damage to target creature or planeswalker.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sear"] = [Spell([CreatureOrPlaneswalker], new DealDamage(Ref.Target(), 4))],
+```
 
 ### Sheoldred's Edict
 
@@ -3363,7 +3426,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Pyrogoyf's power is equal to the number of card types among cards in all graveyards and its toughness is equal to that number plus 1.  
 > Whenever this creature or another Lhurgoyf creature you control enters, that creature deals damage equal to its power to any target.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DamageFrom` — "[A] deals damage equal to its power (or loyalty) to [B]" - the source is A, not the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Pyrogoyf"] =
+[
+	new StaticEffectComponent(Is.Source)
+	{
+		Power = Count.CardTypesInAllGraveyards,
+		Toughness = Count.CardTypesInAllGraveyards,
+	},
+	// "this creature or another Lhurgoyf creature you control" — "that creature deals"
+	When(
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Creature & Is.Yours & (Is.Source | Is.Subtype("Lhurgoyf")),
+		},
+		[TargetSpec.AnyTarget()],
+		new DamageFrom(Ref.EventCard, Ref.Target(), Count.PowerOf(Ref.EventCard))
+	),
+],
+```
 
 ### Pyrokinesis
 
@@ -4995,7 +5080,39 @@ How to write a script: `MagicCore/Cookbook.md`.
 > At the beginning of your upkeep, you may create a Treasure token. When you do, target opponent creates a tapped Treasure token.  
 > Whenever this creature attacks, it deals damage to defending player equal to the number of artifacts they control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+
+```csharp
+["Generous Plunderer"] =
+[
+	When(
+		TriggerEvent.YourUpkeep,
+		[],
+		new May(
+			"Create a Treasure token?",
+			new Always(),
+			[
+				CreateTreasure(1),
+				new WhenYouDo(
+					[TargetSpec.Player(Is.Opponents)],
+					[CreateTreasure(1) with { ControlledBy = Ref.Target(), Tapped = true }]
+				),
+			]
+		)
+	),
+	// "defending player" — the one opponent
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new DealDamage(
+			Ref.EachOpponent,
+			Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Opponents))
+		)
+	),
+],
+```
 
 ### Gollum, Riddle Master
 
@@ -5142,7 +5259,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this artifact enters, it deals 2 damage to any target.  
 > {2}, {T}, Sacrifice another artifact: Create a 3/3 colorless Golem artifact creature token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Legion Extruder"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.AnyTarget()],
+		new DealDamage(Ref.Target(), 2)
+	),
+	new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new CreateTokens(Golem, 1)])
+	{
+		Costs = [new TapSelfCost(), new SacrificeCost(Is.Artifact & !Is.Source)],
+	},
+],
+```
 
 ### Leovold, Emissary of Trest
 
@@ -5489,7 +5623,35 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, discard two cards, then draw two cards. For each nonland card discarded this way, create a 1/1 red Elemental creature token.  
 > {3}{R}{R}, Exile this card from your graveyard: Create two 1/1 red Elemental creature tokens.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileSelfCost` — "Exile this card from your graveyard:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Seasoned Pyromancer"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new Discard(Ref.You, 2)
+		{
+			Then =
+			[
+				new DrawCards(Ref.You, 2),
+				new CreateTokens(Elemental, Count.NonlandCardsChosen),
+			],
+		}
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{3}{R}{R}"),
+		[new CreateTokens(Elemental, 2)]
+	)
+	{
+		Costs = [new ExileSelfCost()],
+		From = ZoneType.Graveyard,
+	},
+],
+```
 
 ### Serra Paragon
 
@@ -5868,7 +6030,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Each player discards their hand, then draws seven cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2cTests
+
+**Engine pieces:** `DiscardHand` — Ajani Unrelenting: "Discard your hand" — the whole hand, so there is nothing to choose.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Wheel of Fortune"] =
+[
+	Spell([], new DiscardHand(Ref.EachPlayer), new DrawCards(Ref.EachPlayer, 7)),
+],
+```
 
 ### Worldspine Wurm
 
