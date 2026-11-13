@@ -29,6 +29,8 @@ reading decision reports (AI-14.3) and feeds AI-11 (learning from his games).
 
 - 2026-11-12, Shayne: animations are part of following the play, on the table generally, not reviewer-only
   (TBL-4) — "things happen but its not clear what"; MTGO's level of motion is enough.
+- 2026-11-13, Shayne: the replay's speed is the table's animation beat (TBL-4.5: 0.8 s since watching it, set in Tools / `--beat=`) —
+  one setting, changeable while it plays.
 
 Open questions:
 - Notes: plain text per step in a file beside the record (Claude's proposal)?

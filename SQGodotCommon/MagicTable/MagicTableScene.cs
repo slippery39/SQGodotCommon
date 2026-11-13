@@ -22,7 +22,8 @@ namespace MagicTable;
 /// (<see cref="BoardChoice"/>), anything else in the <see cref="ChoicePanel"/>. Space passes, Esc
 /// leaves; the AI moves on a timer.
 /// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names),
-/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>, <c>--resume=FILE</c> with <c>--resume-at=N</c>.
+/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>, <c>--resume=FILE</c> with <c>--resume-at=N</c>,
+/// <c>--show-hand</c> (their hand face up), <c>--beat=S</c> (the animation beat in seconds, 0 for none — MagicTableScene.Motion.cs).
 /// </summary>
 public partial class MagicTableScene : Control
 {
@@ -94,12 +95,18 @@ public partial class MagicTableScene : Control
 		Sandbox,
 		FullControl,
 		Pause,
+		ShowHand,
 		Step,
 		Inspector,
 		Speed = 10, // + the index into Speeds
+		Beat = 20, // + the index into Beats (TBL-4.5)
 	}
 
 	private bool _paused;
+
+	// Their hand face up (Shayne, 2026-11-13: watching a game, "to see what they have in hand and determine whether
+	// or not they are making reasonable plays"). A viewer's switch, not a rule: Tools, or --show-hand.
+	private bool _showHand = OS.GetCmdlineUserArgs().Contains("--show-hand");
 
 	// A right-click on the table (not on a card — that zooms it): Concede, confirmed first (TBL-9.3).
 	private readonly PopupMenu _context = new();
@@ -161,6 +168,7 @@ public partial class MagicTableScene : Control
 	// The state last drawn. GetPendingChoice() builds a NEW choice object on every call, so "is this
 	// still the same question?" compares the immutable state, which changes only when something happens.
 	private GameState? _shownState;
+	private bool _shownAnimating; // drawn mid-beat, the question unasked: the same state is a NEW question after
 	private readonly List<int> _picked = new(); // a multi board choice's picks so far
 	private HashSet<int> _onTable = new(); // what can be clicked where it is, this redraw
 	private CombatDeclaration? _combat; // your attacks or blocks, clicked on the table before submitting
@@ -188,10 +196,20 @@ public partial class MagicTableScene : Control
 		// The AI moves on the timer; Pause stops it, Step makes one move, the speed sets the beat.
 		_timer.Timeout += () =>
 		{
-			if (!_paused && _m.AiToAct)
+			if (!_paused && _m.AiToAct && _onScreen is null) // the AI waits for the table to catch up
 				Do(() => _m.StepAi());
 		};
 		AddChild(_timer);
+		// --beat=S: an animation beat of S seconds (0: none) — Tools sets it while playing (TBL-4.5)
+		if (
+			double.TryParse(
+				Arg("beat"),
+				System.Globalization.NumberStyles.Float,
+				System.Globalization.CultureInfo.InvariantCulture,
+				out var beat
+			)
+		)
+			_beat = beat;
 		BuildTools();
 		BuildContextMenu();
 		Action<string?> zoom = name =>
@@ -385,13 +403,16 @@ public partial class MagicTableScene : Control
 	{
 		_plays = null;
 		_targeting = null;
+		_m.Animate = _beat > 0; // before the change: the first move made is shown too
 		change();
-		Refresh();
+		QueueBeats();
+		if (_onScreen is null) // the beats redraw as they play
+			Refresh();
 	}
 
 	/// <summary>The human's distinct moves right now; none while a choice is pending or it is not their turn to decide.</summary>
 	private IReadOnlyList<GameAction> Moves() =>
-		_m.HumanToAct && !_m.State.IsWaitingForChoice
+		_onScreen is null && _m.HumanToAct && !_m.State.IsWaitingForChoice
 			? _m.State.DistinctMoves(_m.State.LegalActions())
 			: [];
 
@@ -408,7 +429,7 @@ public partial class MagicTableScene : Control
 
 	private void Refresh()
 	{
-		var s = _m.State;
+		var s = _onScreen ?? _m.State;
 		var game = s.GetGame();
 		var moves = Moves();
 		// A prepared creature → its castable copy, from the legal moves themselves (TBL-2.7): wherever
@@ -423,8 +444,8 @@ public partial class MagicTableScene : Control
 			.DistinctBy(x => x.Creature!.Id)
 			.ToDictionary(x => x.Creature!.Id, x => x.Copy);
 
-		var choice = _m.HumanToAct ? s.GetPendingChoice() : null;
-		var sameQuestion = ReferenceEquals(s, _shownState);
+		var choice = _m.HumanToAct && _onScreen is null ? s.GetPendingChoice() : null;
+		var sameQuestion = ReferenceEquals(s, _shownState) && !_shownAnimating;
 		if (!sameQuestion)
 			_picked.Clear();
 		_onTable = OnTable(s);
@@ -447,6 +468,7 @@ public partial class MagicTableScene : Control
 		else if (!sameQuestion)
 			_choice.Show(s, choice, Preview, ids => Do(() => _m.Choose(ids)));
 		_shownState = s;
+		_shownAnimating = _onScreen is not null;
 
 		var clickable = Clickable();
 		var about = OnItsCreature(
@@ -496,7 +518,8 @@ public partial class MagicTableScene : Control
 					Refresh();
 				},
 				_m.HumanId,
-				active: player == active
+				active: player == active,
+				showHand: _showHand
 			);
 
 		// Auras and Equipment sit under their host — on its side of the table, whoever controls them.
@@ -506,7 +529,7 @@ public partial class MagicTableScene : Control
 			.Where(x => x.Host is not null)
 			.ToLookup(x => x.Host!.Id, x => x.Card);
 		RememberColumns(s);
-		_phases.Show(_m); // first: the scale reads its height
+		_phases.Show(_m, s); // first: the scale reads its height
 		var scale = BoardScale(s);
 		Fill(_oppLands, s, _m.OpponentId, lands: true, attached, c => GlowOf(c.Id, c), scale);
 		Fill(_oppField, s, _m.OpponentId, lands: false, attached, c => GlowOf(c.Id, c), scale);
@@ -548,6 +571,7 @@ public partial class MagicTableScene : Control
 		var tools = _tools.GetPopup();
 		tools.SetItemChecked(tools.GetItemIndex((int)Tool.FullControl), _m.Stops.FullControl);
 		tools.SetItemChecked(tools.GetItemIndex((int)Tool.Pause), _paused);
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.ShowHand), _showHand);
 		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Undo), !_m.CanUndo);
 		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Step), !_m.AiToAct);
 		_tools.Text = _paused ? "Tools · AI paused" : "Tools";
@@ -821,7 +845,14 @@ public partial class MagicTableScene : Control
 			)
 		)
 		{
-			row.AddChild(Permanent(group.First(), group.Count()));
+			row.AddChild(
+				group.Count() > 1 // a land stack: every land in it (Permanent tags its one card)
+					? CardViews.Tag(
+						Permanent(group.First(), group.Count()),
+						[.. group.Select(c => c.Id)]
+					)
+					: Permanent(group.First(), 1)
+			);
 		}
 
 		// Phased out (The City on the Edge of Forever): still shown in its row, dimmed and badged — nothing
@@ -931,7 +962,7 @@ public partial class MagicTableScene : Control
 			plate.AddChild(row);
 			var id = obj.Id;
 			CardViews.Hook(plate, name, Preview, () => ObjectClicked(id));
-			_stack.AddChild(plate);
+			_stack.AddChild(CardViews.Tag(plate, id));
 		}
 	}
 
@@ -939,7 +970,7 @@ public partial class MagicTableScene : Control
 	{
 		CardViews.Clear(_buttons);
 		var winner = _m.WinnerId;
-		if (_m.IsOver)
+		if (_m.IsOver && _onScreen is null)
 		{
 			_status.Text =
 				winner == 0 ? "Draw."
@@ -1037,11 +1068,12 @@ public partial class MagicTableScene : Control
 			}
 			return;
 		}
-		_status.Text = _m.HumanToAct
-			? s.IsWaitingForChoice
-				? "Your choice."
-				: $"Your priority — {s.GetGame().Step}"
-			: "AI is thinking…";
+		_status.Text =
+			_m.HumanToAct && _onScreen is null
+				? s.IsWaitingForChoice
+					? "Your choice."
+					: $"Your priority — {s.GetGame().Step}"
+				: "AI is thinking…";
 		foreach (var move in moves.Where(a => MagicRules.CardOf(a) == 0))
 			AddButton(
 				move is PassPriorityAction ? $"{PassLabel(s)}  (Space)" : Describe.Action(s, move),
@@ -1119,12 +1151,19 @@ public partial class MagicTableScene : Control
 		menu.AddSeparator();
 		menu.AddCheckItem("Full control", (int)Tool.FullControl);
 		menu.AddCheckItem("Pause AI", (int)Tool.Pause);
+		menu.AddCheckItem("Show their hand", (int)Tool.ShowHand);
 		menu.AddItem("Step the AI", (int)Tool.Step);
 		menu.AddItem("AI inspector  (F6)", (int)Tool.Inspector);
 		menu.AddSeparator("AI speed");
 		for (var i = 0; i < Speeds.Length; i++)
 			menu.AddRadioCheckItem(Speeds[i].Label, (int)Tool.Speed + i);
 		menu.SetItemChecked(menu.GetItemIndex((int)Tool.Speed + 2), true);
+		menu.AddSeparator("Animation");
+		for (var i = 0; i < Beats.Length; i++)
+		{
+			menu.AddRadioCheckItem(Beats[i].Label, (int)Tool.Beat + i);
+			menu.SetItemChecked(menu.GetItemIndex((int)Tool.Beat + i), Beats[i].Seconds == _beat);
+		}
 		menu.IdPressed += id =>
 		{
 			switch ((Tool)id)
@@ -1142,12 +1181,23 @@ public partial class MagicTableScene : Control
 					_paused = !_paused;
 					Refresh();
 					break;
+				case Tool.ShowHand:
+					_showHand = !_showHand;
+					if (_onScreen is null) // mid-beat, the next beat redraws
+						Refresh();
+					break;
 				case Tool.Inspector:
 					OpenInspector();
 					break;
 				case Tool.Step:
 					if (_m.AiToAct)
 						Do(() => _m.StepAi());
+					break;
+				case >= Tool.Beat:
+					var beat = (int)id - (int)Tool.Beat;
+					_beat = Beats[beat].Seconds;
+					for (var i = 0; i < Beats.Length; i++)
+						menu.SetItemChecked(menu.GetItemIndex((int)Tool.Beat + i), i == beat);
 					break;
 				default:
 					var speed = (int)id - (int)Tool.Speed;

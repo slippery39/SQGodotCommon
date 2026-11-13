@@ -1,4 +1,5 @@
 using System;
+using ImmutableGameObjects;
 using MagicCore;
 using MtgGame;
 
@@ -39,10 +40,11 @@ public partial class PhaseBar : VBoxContainer
 
 	private bool _bothRows;
 
-	public void Show(MagicTableManager m)
+	/// <param name="s">The state on the table — while animations play, behind the manager's (TBL-4.5).</param>
+	public void Show(MagicTableManager m, GameState s)
 	{
 		CardViews.Clear(this);
-		var game = m.State.GetGame();
+		var game = s.GetGame();
 		var activeIsMine = game.ActivePlayerId == m.HumanId;
 		foreach (var mine in new[] { false, true })
 		{
@@ -52,7 +54,7 @@ public partial class PhaseBar : VBoxContainer
 			var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
 			row.AddThemeConstantOverride("separation", 2);
 			AddChild(row);
-			row.AddChild(Label(m.State.GetPlayer(mine ? m.HumanId : m.OpponentId).Name, 60));
+			row.AddChild(Label(s.GetPlayer(mine ? m.HumanId : m.OpponentId).Name, 60));
 			foreach (var (step, label) in Steps)
 			{
 				var current =

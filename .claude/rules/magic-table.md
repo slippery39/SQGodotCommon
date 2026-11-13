@@ -40,6 +40,9 @@ MagicTable/
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer;
 │                         Tools menu (undo, sandbox, full control, pause / step / speed); the turn
 │                         banner; each side's board half (gold on its turn); permanents scaled to the room
+├── MagicTableScene.Motion.cs  the animations (TBL-4.5): each move a BEAT (Tools · Animation, --beat=S; 0.8 s) —
+│                         cards fly from where they were drawn to where they are, deaths dim, numbers float, life counts
+├── TableChanges.cs       what one move changed, for the beats: a diff of two states by id (plain C#). Tested
 ├── AiInspector.cs        F6: the AI's last search — its moves ranked, then each imagined line with its terms (AI-14.4)
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)
 ├── MagicHandView.cs      your hand: Common's Hand2D + Card2D fan (KIN's, TBL-3), Scryfall image as the
@@ -51,7 +54,8 @@ MagicTable/
 ├── Targeting.cs          click a spell, then its picks — X on a spinner first (Xs), targets, then what a cost takes (plain C#)
 ├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
-├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; the other hand as backs, a known card face up (TBL-6); a click target
+├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; the other hand as backs, a known card face up (TBL-6),
+│                         all of it face up with Tools · Show their hand / --show-hand; a click target
 ├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live
 ├── DeckColumns.cs        the visual deck's layout (plain C#, LIM-5): rows of columns by mana value / creatures apart / colour
 ├── DeckView.cs           the deck as overlapping cards under the pool; Wire: Godot's drag-and-drop, pool ↔ deck ↔ column
@@ -124,6 +128,17 @@ MagicTable/
 - **A right-click is a card's zoom, or the table's menu** (TBL-9.3: Concede): `_Input` opens the menu unless the
   pointer is on a card (`CardViews.CardMeta`, or the hand's hovered card). A concession is the MANAGER's
   (`Conceded`): the engine never ended the game, so the record stays unfinished.
+- **The animations read a DIFF of two states, never MagicCore's staged events** (TBL-4.5): those are cleared within
+  the move and raised only where a trigger needs one. The manager keeps each move's state only while `Animate` is on
+  (the scene's, so tests and runs keep nothing); each move is one beat, all it changed moving together. While beats
+  play, `Refresh` draws `_onScreen` (the beat reached), `Moves()` is empty and the AI's timer waits. A card is found
+  on screen by its tag (`CardViews.Tag`) — **a new view of an object must be tagged, or it never animates**. Seen
+  once each: `Animate` switched on AFTER the first input missed that move (your first cast appeared at once); a flier
+  made after the layout frame left a frame with the card gone — make it first, launch it after. A rect is read only
+  after a frame has laid its row out (`PlayBeats` waits one first — a precaution, not a seen bug). Found in review:
+  a state drawn MID-BEAT is never "the same question" (`_shownAnimating`) — the last beat draws the final state with
+  its choice withheld, and the panel then never opened; and `PlayBeats` ends in a `finally`, or a throw leaves
+  `_onScreen` set and the table waiting forever (no clicks, no AI).
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.
 - **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
   only way to read a card), so a hold must never also play it. A new click target on a card goes

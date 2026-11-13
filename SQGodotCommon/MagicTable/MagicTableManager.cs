@@ -64,6 +64,22 @@ public sealed class MagicTableManager
 	private string? _recordFile;
 	public bool CanUndo => _undo.Count > 0 || Conceded;
 
+	/// <summary>
+	/// The table's animations (TBL-4.5): while on, each move's state is kept, in order, for <see cref="TakeSteps"/>.
+	/// Off by default, so tests and runs keep nothing.
+	/// </summary>
+	public bool Animate { get; set; }
+
+	private readonly List<GameState> _steps = new();
+
+	/// <summary>The state after each move since the last call, oldest first.</summary>
+	public List<GameState> TakeSteps()
+	{
+		var steps = _steps.ToList();
+		_steps.Clear();
+		return steps;
+	}
+
 	public MagicTableManager(
 		IReadOnlyList<CardDefinition> deck1,
 		IReadOnlyList<CardDefinition> deck2,
@@ -443,6 +459,7 @@ public sealed class MagicTableManager
 		var (state, logCount, moveCount) = _undo[^1];
 		_undo.RemoveAt(_undo.Count - 1);
 		State = state;
+		_steps.Clear();
 		_log.RemoveRange(logCount, _log.Count - logCount);
 		Record = Record.Truncate(moveCount);
 		// The search commits to a plan; one made past the undone decisions would replay out of order.
@@ -484,6 +501,8 @@ public sealed class MagicTableManager
 		var before = State;
 		var seen = KnownInOpponentsHand(before).Select(c => c.Id).ToHashSet();
 		State = next;
+		if (Animate)
+			_steps.Add(next);
 		// V'Ger's "look at target opponent's hand", a revealed search: the log says what you now know is
 		// there — only cards that came from a hidden zone (a bounced creature was seen already).
 		// Noted after the line of the move that caused it (Write, Save). In the hand itself: TBL-6.

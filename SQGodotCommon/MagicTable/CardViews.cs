@@ -79,7 +79,7 @@ public static class CardViews
 			slot.Modulate = new Color(1, 1, 1, 0.4f); // still visible, clearly not there (Shayne, 2026-11-06)
 		slot.AddChild(card);
 		Hook(slot, MagicArt.Key(c), preview, onClick);
-		return slot;
+		return Tag(slot, c.Id);
 	}
 
 	/// <param name="from">Where a card castable from outside the hand is ("graveyard", "exile"); null in hand.</param>
@@ -132,7 +132,7 @@ public static class CardViews
 		row.AddChild(name);
 		strip.AddChild(row);
 		Hook(strip, MagicArt.Key(a), preview, onClick);
-		return strip;
+		return Tag(strip, a.Id);
 	}
 
 	/// <summary>A small art crop for lists (the stack, choice options).</summary>
@@ -148,6 +148,16 @@ public static class CardViews
 
 	/// <summary>Marks a control <see cref="Hook"/> made a card.</summary>
 	public const string CardMeta = "card";
+
+	/// <summary>The object ids a control shows (a land stack shows several) — where the animations find a card (TBL-4.5).</summary>
+	public const string IdsMeta = "ids";
+
+	public static T Tag<T>(T node, params int[] ids)
+		where T : Control
+	{
+		node.SetMeta(IdsMeta, ids);
+		return node;
+	}
 
 	/// <summary>Shows a card big while it is held (TBL-4.2), null to hide it — set by the table.</summary>
 	public static Action<string?>? Zoom { get; set; }
