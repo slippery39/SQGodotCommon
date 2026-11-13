@@ -61,10 +61,11 @@ as his three priorities.
   batch, by how many cards wait on it: transforming DFCs 12, protection 8, dungeons 6, the monarch 4, face-down 4,
   crew 3, companion 3, modal DFCs 3, then the one- and two-card rules (`LsvSurvey.md` has the list).
 
-Open questions (for Shayne):
-- The cube's draft (packs, size, seats), for LIM-2 — Claude's default: 3 packs of 15, 8 seats, as CubeCobra's.
-- One-card mechanics that only one card wants (storm: Brain Freeze; voting: Council's Judgment; spree, splice …):
-  built, or the card left out of the cube for now? Claude's default: built, last, one batch of them.
+- 2026-11-12, Shayne (reviewing the plan): **the batch plan as written** — "I'm not in a rush", so no playable subset
+  of the cube first. **The draft: 3 packs of 15, 8 seats** (CubeCobra's); custom draft settings deferred. **Every
+  mechanic is built, even for one or two cards** (storm, voting, spree, splice, day/night, backgrounds, warp, the
+  bending abilities, dungeons, companion …) — "we may implement different cards using those mechanics later. If we
+  build them now that means we don't need to build them later."
 
 ## Tasks
 
@@ -90,3 +91,4 @@ power-and-mana cards named in the plan, register LSV in `CardRegistry.Sets`, add
 - 2026-11-12: the cube is LSVPower (Shayne); his list (528 cards, the CubeCobra export's mainboard) saved as
   `MagicCore/Sets/LSV.list.txt` — the code `LSV` is Claude's default, the cube lane may rename it.
 - 2026-11-12 (night, cube lane): MC-4.1 imported by name with art, MC-4.2's first pass by script and its hand check started; the batch plan written.
+- 2026-11-12: Shayne took the batch plan, the draft default, and every mechanic built.

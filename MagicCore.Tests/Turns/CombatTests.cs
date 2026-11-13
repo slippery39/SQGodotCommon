@@ -348,6 +348,27 @@ public class CombatTests
 		Assert.That(Alive(first) || Alive(second), Is.False);
 	}
 
+	// MC-7 (Shayne, 2026-11-12): nobody is asked — the split is the one worth most to the attacker's board,
+	// GreedyAi's pick (the table and console answer it so for the human). Declared first, the vanilla 2/2 would
+	// take lethal by the old order; the value pick kills the flier with lifelink instead.
+	[Test]
+	public void TheValuePick_KillsTheBlockerWorthMore_NotTheFirstDeclared()
+	{
+		var attacker = Put(me, "3/3");
+		var vanilla = Put(them, "2/2");
+		var flier = Put(them, "2/2", "Flying", "Lifelink");
+
+		Attack(attacker);
+		Block((vanilla, attacker), (flier, attacker));
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is AssignCombatDamageChoice);
+		var split = (AssignCombatDamageChoice)s.GetPendingChoice()!;
+		s = s.Choose(new MagicCore.Ai.GreedyAi(me).Answer(s, split));
+		ToSecondMain();
+
+		Assert.That(Alive(flier), Is.False, "the one worth more");
+		Assert.That(Alive(vanilla), Is.True);
+	}
+
 	// The look-ahead's quick answer is the split made before it was a choice: lethal in declaration order,
 	// the rest onto the first — so the AI's rollouts see combat as they did.
 	[Test]

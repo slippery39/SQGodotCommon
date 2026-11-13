@@ -35,7 +35,8 @@ in the rest. Shayne, 2026-11-07: a prerequisite before any new set.
   `MAGIC_UNSCRIPTED="A;B"`, read once where `CardRegistry` merges the sets' scripts: nothing to restore, so a
   killed run can't leave a file half-reverted, and it works whichever file a set's scripts are in. A name that
   isn't scripted throws (a typo would leave the card in and read as an engine change). The one env var MagicCore
-  reads; nothing outside the tests sets it.
+  reads; nothing outside the tests sets it. **Shayne, 2026-11-12: taken.** The run (~15 min) is asked once per batch,
+  then run.
 - 2026-11-12, Claude: a hang is named by `dotnet test --blame-hang` ("The test running when the crash
   occurred"), the step's timeout kills the tree; a probe hung at 10 games times each card alone. The bench runs
   only with `--bench` (the skill's "hot path touched"); `--from STEP` resumes after a fix.

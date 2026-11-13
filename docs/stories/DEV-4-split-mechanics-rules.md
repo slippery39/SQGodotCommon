@@ -34,7 +34,8 @@ session (~6% of a 5M batch) — and growing with every set. Shayne, 2026-11-07, 
   `Mana/` (`docs/findings/card-batch-usage.md`). So the cut is by ENGINE subsystem, and a card script, card test or
   `Effects/` file loads all six mechanics files — a scripter needs every "phrase → piece" rule. The saving is in the
   sessions that never script a card: 22 of the last 58 loaded the whole file from an `Ai/`, `Limited/` or one engine
-  file. For review: kept, since the measured cost to a batch is +5% of one load.
+  file. For review: kept, since the measured cost to a batch is +5% of one load. **Shayne, 2026-11-12: kept as is**
+  (not a grep-only phrase index).
 - 2026-11-12, Claude: the seven files — `magic-casting` (casting, activating, the stack, modes, targets),
   `magic-triggers` (triggers, turns, "this turn"), `magic-combat`, `magic-mana` (mana and costs), `magic-zones`
   (moving cards, entering, tokens, hidden information, control), `magic-statics` (characteristics, counters,

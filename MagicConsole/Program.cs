@@ -922,7 +922,9 @@ while (!s.IsOver())
 
 	Header(s);
 	Board(s);
-	if (s.GetPendingChoice() is { } choice)
+	if (s.GetPendingChoice() is AssignCombatDamageChoice split) // MC-7: divided by value, never asked (as the table)
+		s = s.Choose(new GreedyAi(human).Answer(s, split));
+	else if (s.GetPendingChoice() is { } choice)
 		s = s.Choose(AskChoice(s, choice));
 	else
 	{
