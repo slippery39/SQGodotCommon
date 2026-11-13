@@ -72,7 +72,8 @@ whose subsystem it lives in.
   on the bottom in a random order") is `LookAndTake` — `Must`, `RestToGraveyard`, `Reveal` (known to
   everyone). The rest go down as Identity Echo's: a random order, not known.
 - **A linked "the exiled card"** (The Measure of a Man) is `Exile { Linked }` (stamps `ExiledBy` with this
-  object of the source) and `ReturnLinkedExile` — nothing once the source has left (CR 607.2a).
+  object of the source) and `MoveTo(Ref.All(Exile, Is.ExiledBySource), Battlefield)` — the filter asked from the source,
+  so nothing once it has left (CR 607.2a).
 - **Gaining control is `MagicState.GainControl`** — the same object (counters, damage, attachments,
   until-end-of-turn effects stay), moved to its new controller's battlefield zone, summoning sick for them,
   out of combat; no zone change, no event. **"Until end of turn"** (Worf, Intelligence Contractor; The Wrath of
@@ -111,7 +112,7 @@ whose subsystem it lives in.
   `ChoosePermanentChoice { Sacrifice }` (MaySacrifice, EachSacrifices, SacrificePermanents) and
   `ManaAbilities.CanTap` (a Treasure's only mana is sacrificing it).
 - **Explore** (CR 701.44, Captain Janeway) is `Explore(ref)`: the top card revealed (`MakeKnown`), a land to the
-  hand, else a +1/+1 counter through `PutCounters` and a yes/no to bin the card (`MoveCardTo { From = Library }`).
+  hand, else a +1/+1 counter through `PutCounters` and a yes/no to bin the card (`MoveTo(Ref.Id(card)) { From = [Library] }`).
   **"An additional land on each of your turns"** (`AdditionalLandEachTurn`) is `MagicState.LandDrops`, the one count
   the land play and the rollout both read.
 - **"Create a token … Attach it to [this]"** (Gwyndala) is `CreateTokens.AttachTo`; **"sacrifice any number of
@@ -135,5 +136,15 @@ whose subsystem it lives in.
   "Permanents can't phase in" (`PermanentsCantPhaseIn`). The zone is made on first use, as the Sideboard. The table
   shows it in its row, dimmed and badged (Shayne, 2026-11-06). **"Sacrifice a [filter]. If you do"** — not a may —
   is `MaySacrifice { Must }`.
+- **Moving a card a Ref names is ONE piece, `MoveTo(What, To) { From, Tapped, Counters, Finality, UnderYourControl,
+  ExileAtNextEndStep, OnTop, Shuffle }`** (MC-6.12): to its OWNER's zone (CR 400.3), onto the battlefield through
+  `EnterBattlefield` under its owner unless `UnderYourControl` (Vindictive Triumph). `From` is where it must still be —
+  `[Graveyard]` its owner's ("return … from your graveyard", Talon Gates' `[Hand]`), `[Battlefield, Stack]` anyone's
+  (Unsummon's "spell or creature"), empty anywhere (Paradox Shaper); `Shuffle` is its owner's, once per card (Fblthp).
+  A token that has left the battlefield moves nowhere (CR 111.8). **A CHOSEN move** ("return a land card from your
+  graveyard", "a land you control", "you may put a land card from your hand") is `MoveChosen(From, filter, To) { May,
+  Then, Otherwise }` — each zone its own choice (graveyard `ChooseAmongChoice`, battlefield `ChoosePermanentChoice`,
+  hand `ChooseCardsFromHandChoice`, so a record's answers still fit), then `MoveTo(Ref.Chosen)`; "if you can't" is
+  `Otherwise`, "if you do" `Then` (Temporal Conqueror, Sylvia Tilly, Erica Ortegas).
 - **"[Effect]. … for each [one] [done] this way"** (Decree of Pain) is the effect's `Then` with `Ref.ThisWay` — the
   ids it actually did it to (`Destroy`: the ones that left; an indestructible one or McCoy's save didn't).

@@ -318,7 +318,13 @@ public static class FraCards
 	static ActivatedAbilityComponent ReturnsWithFinality(string cost, Condition onlyIf) =>
 		new(
 			ManaCost.Parse(cost),
-			[new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield) { Finality = true }]
+			[
+				new MoveTo(Ref.Source, ZoneType.Battlefield)
+				{
+					From = [ZoneType.Graveyard],
+					Finality = true,
+				},
+			]
 		)
 		{
 			From = ZoneType.Graveyard,
@@ -776,7 +782,10 @@ public static class FraCards
 					M([], new DrawCards(Ref.You, 1), new EmpowerJace(2)),
 					M(
 						[TargetSpec.Spell() with { Or = TargetSpec.Creature }],
-						new ReturnToHand(Ref.Target())
+						new MoveTo(Ref.Target(), ZoneType.Hand)
+						{
+							From = [ZoneType.Battlefield, ZoneType.Stack],
+						}
 					),
 					M([], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 2))
 				),
@@ -864,7 +873,13 @@ public static class FraCards
 			[
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{6}"),
-					[new ShuffleIntoLibrary(Ref.Target())]
+					[
+						new MoveTo(Ref.Target(), ZoneType.Library)
+						{
+							From = [ZoneType.Battlefield],
+							Shuffle = true,
+						},
+					]
 				)
 				{
 					Costs = [new SacrificeSelfCost()],
@@ -1127,7 +1142,10 @@ public static class FraCards
 							Optional = true,
 						},
 					],
-					new ReturnToHand(Ref.Target())
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+					{
+						From = [ZoneType.Battlefield, ZoneType.Stack],
+					}
 				),
 				Loyalty(
 					-6,
@@ -1183,7 +1201,7 @@ public static class FraCards
 				When(
 					TriggerEvent.BeginningOfCombatOnYourTurn,
 					[],
-					new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
+					new MoveTo(Ref.Source, ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
 				) with
 				{
 					If = new AtLeast(Count.CreaturesDiedThisTurn, 2),
@@ -1326,7 +1344,7 @@ public static class FraCards
 				When(
 					TriggerEvent.EachUpkeep,
 					[],
-					new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)
+					new MoveTo(Ref.Source, ZoneType.Hand) { From = [ZoneType.Graveyard] }
 				) with
 				{
 					If = new AtLeast(Count.NoncombatDamageToOpponentsLastTurn, 1),
@@ -1339,7 +1357,11 @@ public static class FraCards
 			[
 				Spell(
 					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield) { Counters = 1 }
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						Counters = 1,
+					}
 				),
 				new FlashbackComponent(ManaCost.Parse("{4}{W}")),
 			],
@@ -1415,7 +1437,10 @@ public static class FraCards
 				PrepareSpell(
 					"Diviner of Victory // Unwind History",
 					[Target(Is.Creature & Is.Opponents & Is.ManaValueAtMost(3))],
-					new ReturnToHand(Ref.Target()),
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+					{
+						From = [ZoneType.Battlefield, ZoneType.Stack],
+					},
 					new Surveil(1)
 				),
 			],
@@ -1478,7 +1503,7 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfDealsCombatDamageToPlayer,
 					[TargetSpec.InYourGraveyard(Is.Land)],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 				),
 				PrepareSpell(
 					"Carnivorous Cultivator // Enroot",
@@ -1506,7 +1531,7 @@ public static class FraCards
 				PreparesAtYourUpkeep,
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}"),
-					[new PutIntoLibrary(Ref.Target(), OnTop: false)]
+					[new MoveTo(Ref.Target(), ZoneType.Library)]
 				)
 				{
 					Targets = [TargetSpec.InYourGraveyard()],
@@ -1635,7 +1660,7 @@ public static class FraCards
 			[
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{3}{B}"),
-					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
+					[new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }]
 				)
 				{
 					Costs = [new ExileSelfCost()],
@@ -1647,7 +1672,7 @@ public static class FraCards
 			[
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}{W/B}"),
-					[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]
+					[new MoveTo(Ref.Source, ZoneType.Hand) { From = [ZoneType.Graveyard] }]
 				)
 				{
 					From = ZoneType.Graveyard,
@@ -1671,8 +1696,9 @@ public static class FraCards
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}{B}"),
 					[
-						new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
+						new MoveTo(Ref.Source, ZoneType.Battlefield)
 						{
+							From = [ZoneType.Graveyard],
 							Tapped = true,
 							Counters = 1,
 						},
@@ -1704,7 +1730,10 @@ public static class FraCards
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{5}{B}"),
 					[
-						new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield),
+						new MoveTo(Ref.Target(), ZoneType.Battlefield)
+						{
+							From = [ZoneType.Graveyard],
+						},
 						new PutCounters(Ref.Source, 1),
 					]
 				)
@@ -1724,7 +1753,7 @@ public static class FraCards
 				new StaticEffectComponent(Is.Land & Is.Yours, "Hexproof"),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}"),
-					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
+					[new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }]
 				)
 				{
 					Targets = [TargetSpec.InYourGraveyard(Is.Land)],
@@ -1738,7 +1767,7 @@ public static class FraCards
 					1,
 					M(
 						[TargetSpec.InYourGraveyard(Is.Legendary)],
-						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+						new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 					),
 					M(
 						[Creature],
@@ -1752,17 +1781,17 @@ public static class FraCards
 			[
 				Spell(
 					[],
-					new ReturnFromGraveyard(
-						Ref.YourGraveyard(NonlandPermanentTypes),
-						ZoneType.Battlefield
-					)
+					new MoveTo(Ref.YourGraveyard(NonlandPermanentTypes), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+					}
 				),
 			],
 			["Restore with Empathy"] =
 			[
 				Spell(
 					[TargetSpec.InYourGraveyard(Is.Type(PermanentTypes))],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand),
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] },
 					new GainLife(Ref.You, 4)
 				),
 			],
@@ -1775,7 +1804,7 @@ public static class FraCards
 								& Is.ManaValueAtMost(6)
 						),
 					],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield),
+					new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] },
 					new EmpowerJace(2)
 				),
 			],
@@ -1796,7 +1825,16 @@ public static class FraCards
 					[new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 1)]
 				),
 			],
-			["Unsummon"] = [Spell([Creature], new ReturnToHand(Ref.Target()))],
+			["Unsummon"] =
+			[
+				Spell(
+					[Creature],
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+					{
+						From = [ZoneType.Battlefield, ZoneType.Stack],
+					}
+				),
+			],
 			["Inspired Tethermage"] =
 			[
 				When(TriggerEvent.YouPutLoyaltyCounters, [], new PutCounters(Ref.Source, 1)),
@@ -1824,7 +1862,7 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfAttacks,
 					[TargetSpec.InAnyGraveyard() with { Optional = true }],
-					new ExileFromGraveyard(Ref.Target())
+					new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] }
 				),
 			],
 			["Murmuring Volume"] =
@@ -1924,7 +1962,11 @@ public static class FraCards
 				When(
 					TriggerEvent.AttachedCreatureDies,
 					[],
-					new ReturnFromGraveyard(Ref.EventCard, ZoneType.Battlefield) { Tapped = true }
+					new MoveTo(Ref.EventCard, ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						Tapped = true,
+					}
 				),
 			],
 			["Hunter's Axe"] =
@@ -2061,13 +2103,13 @@ public static class FraCards
 						"Put it on top of your library and take 2 damage? (No: it goes on the bottom.)",
 						new Always(),
 						[
-							new PutIntoLibrary(Ref.Target(), OnTop: true),
+							new MoveTo(Ref.Target(), ZoneType.Library) { OnTop = true },
 							new DealDamage(Ref.OwnerOfTarget(), 2),
 						]
 					)
 					{
 						Who = Ref.OwnerOfTarget(),
-						Otherwise = [new PutIntoLibrary(Ref.Target(), OnTop: false)],
+						Otherwise = [new MoveTo(Ref.Target(), ZoneType.Library)],
 					}
 				),
 			],
@@ -2083,8 +2125,9 @@ public static class FraCards
 							new WhenYouDo(
 								[TargetSpec.InYourGraveyard(Is.Land)],
 								[
-									new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)
+									new MoveTo(Ref.Target(), ZoneType.Battlefield)
 									{
+										From = [ZoneType.Graveyard],
 										Tapped = true,
 									},
 								]
@@ -2165,7 +2208,15 @@ public static class FraCards
 			],
 			["Rescue Girl, First Responder"] =
 			[
-				new ActivatedAbilityComponent(ManaCost.None, [new ReturnToHand(Ref.Target())])
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new MoveTo(Ref.Target(), ZoneType.Hand)
+						{
+							From = [ZoneType.Battlefield, ZoneType.Stack],
+						},
+					]
+				)
 				{
 					Costs = [new TapSelfCost()],
 					Targets = [Target(Is.Yours & !Is.Source)],
@@ -2323,11 +2374,11 @@ public static class FraCards
 					new May(
 						"Put it on top of your library? (No: the bottom.)",
 						new Always(),
-						[new PutIntoLibrary(Ref.Target(), OnTop: true)]
+						[new MoveTo(Ref.Target(), ZoneType.Library) { OnTop = true }]
 					)
 					{
 						Who = Ref.OwnerOfTarget(),
-						Otherwise = [new PutIntoLibrary(Ref.Target(), OnTop: false)],
+						Otherwise = [new MoveTo(Ref.Target(), ZoneType.Library)],
 					}
 				),
 				When(TriggerEvent.YouCastFirstNoncreatureSpellEachTurn, [], new EmpowerJace(1)),
@@ -2474,7 +2525,11 @@ public static class FraCards
 					[],
 					new DrawCards(Ref.You, 2),
 					new If(new YourLibraryIsEmpty(), [new WinTheGame()]),
-					new ShuffleIntoLibrary(Ref.Source)
+					new MoveTo(Ref.Source, ZoneType.Library)
+					{
+						From = [ZoneType.Battlefield],
+						Shuffle = true,
+					}
 				),
 			],
 			["Fblthp, Knows the Way"] =
@@ -3097,8 +3152,10 @@ public static class FraCards
 						new Matches(Ref.Target(0), Is.ManaValueAtMost(3)),
 						[
 							new Exile(Ref.Target()),
-							new ReturnFromExileUnderYourControl(Ref.Target())
+							new MoveTo(Ref.Target(), ZoneType.Battlefield)
 							{
+								From = [ZoneType.Exile],
+								UnderYourControl = true,
 								Tapped = true,
 								ExileAtNextEndStep = true,
 							},
@@ -3347,7 +3404,7 @@ public static class FraCards
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}{G}"),
-					[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]
+					[new MoveTo(Ref.Source, ZoneType.Hand) { From = [ZoneType.Graveyard] }]
 				)
 				{
 					From = ZoneType.Graveyard,
@@ -3403,7 +3460,13 @@ public static class FraCards
 					5,
 					M([TargetSpec.Spell()], new Counter(Ref.Target())),
 					M([TargetSpec.Ability()], new Counter(Ref.Target())),
-					M([Target(!Is.Land)], new ReturnToHand(Ref.Target())),
+					M(
+						[Target(!Is.Land)],
+						new MoveTo(Ref.Target(), ZoneType.Hand)
+						{
+							From = [ZoneType.Battlefield, ZoneType.Stack],
+						}
+					),
 					M([Target(Is.Creature & Is.Yours)], new CreateTokenCopy(Ref.Target())),
 					M([TargetSpec.Player()], new DrawCards(Ref.Target(), 1))
 				) with

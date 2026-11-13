@@ -341,7 +341,7 @@ public static class TrkCards
 				When(TriggerEvent.SelfEnters, [], new Surveil(1)),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}"),
-					[new PutIntoLibrary(Ref.Target(), OnTop: false)]
+					[new MoveTo(Ref.Target(), ZoneType.Library)]
 				)
 				{
 					Costs = [new TapSelfCost()],
@@ -381,7 +381,10 @@ public static class TrkCards
 					"Dominion Assault Force",
 					TriggerEvent.SelfEnters,
 					1,
-					M([TargetSpec.InAnyGraveyard()], new ExileFromGraveyard(Ref.Target())),
+					M(
+						[TargetSpec.InAnyGraveyard()],
+						new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] }
+					),
 					M([], new Surveil(1))
 				),
 			],
@@ -434,7 +437,10 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[Target(Is.Creature & Is.Opponents)],
-					new ReturnToHand(Ref.Target())
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+					{
+						From = [ZoneType.Battlefield, ZoneType.Stack],
+					}
 				),
 			],
 			["Make It So"] =
@@ -721,7 +727,7 @@ public static class TrkCards
 					1,
 					M(
 						[TargetSpec.InAnyGraveyard() with { Optional = true }],
-						new ExileFromGraveyard(Ref.Target()),
+						new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] },
 						new GainLife(Ref.You, 2)
 					),
 					M([], CreateClue(1), new LoseLife(Ref.You, 2))
@@ -778,7 +784,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[TargetSpec.InYourGraveyard(Is.Creature)],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 				),
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new GainLife(Ref.You, 2)])
 				{
@@ -928,7 +934,10 @@ public static class TrkCards
 								Is.Artifact & Is.Creature & Is.ManaValueAtMost(3)
 							),
 						],
-						new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)
+						new MoveTo(Ref.Target(), ZoneType.Battlefield)
+						{
+							From = [ZoneType.Graveyard],
+						}
 					)
 				),
 			],
@@ -987,7 +996,7 @@ public static class TrkCards
 					1,
 					M(
 						[TargetSpec.InAnyGraveyard()],
-						new ExileFromGraveyard(Ref.Target()),
+						new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] },
 						new GainLife(Ref.You, 2)
 					),
 					M(
@@ -1022,12 +1031,12 @@ public static class TrkCards
 					1,
 					M(
 						[TargetSpec.InAnyGraveyard()],
-						new ExileFromGraveyard(Ref.Target()),
+						new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] },
 						new DrawCards(Ref.You, 1)
 					),
 					M(
 						[TargetSpec.InYourGraveyard(Is.Creature)],
-						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+						new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 					)
 				),
 			],
@@ -1084,7 +1093,7 @@ public static class TrkCards
 					1,
 					M(
 						[TargetSpec.InYourGraveyard(Is.Subtype("Spacecraft"))],
-						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+						new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 					),
 					M([], new Surveil(2))
 				),
@@ -1101,11 +1110,11 @@ public static class TrkCards
 					new May(
 						"Put it on top of your library? (No: it goes on the bottom.)",
 						new Always(),
-						[new PutIntoLibrary(Ref.Target(), OnTop: true)]
+						[new MoveTo(Ref.Target(), ZoneType.Library) { OnTop = true }]
 					)
 					{
 						Who = Ref.OwnerOfTarget(),
-						Otherwise = [new PutIntoLibrary(Ref.Target(), OnTop: false)],
+						Otherwise = [new MoveTo(Ref.Target(), ZoneType.Library)],
 					}
 				),
 			],
@@ -1123,8 +1132,8 @@ public static class TrkCards
 								NotThePrevious = true,
 							},
 						],
-						new ReturnFromGraveyard(Ref.Target(0), ZoneType.Hand),
-						new ReturnFromGraveyard(Ref.Target(1), ZoneType.Hand)
+						new MoveTo(Ref.Target(0), ZoneType.Hand) { From = [ZoneType.Graveyard] },
+						new MoveTo(Ref.Target(1), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 					),
 					M(
 						[TargetSpec.Player(Is.Opponents)],
@@ -1244,7 +1253,13 @@ public static class TrkCards
 			],
 			["Energize"] =
 			[
-				Spell([Target(Is.Creature & Is.Opponents)], new ReturnToHand(Ref.Target())),
+				Spell(
+					[Target(Is.Creature & Is.Opponents)],
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+					{
+						From = [ZoneType.Battlefield, ZoneType.Stack],
+					}
+				),
 				BeamMeUp("{3}{U}"),
 			],
 			["Transporter Malfunction"] =
@@ -1339,7 +1354,12 @@ public static class TrkCards
 						[
 							new PayMana(
 								ManaCost.Parse("{B}"),
-								[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]
+								[
+									new MoveTo(Ref.Source, ZoneType.Hand)
+									{
+										From = [ZoneType.Graveyard],
+									},
+								]
 							),
 						]
 					)
@@ -1369,7 +1389,12 @@ public static class TrkCards
 					new May(
 						"Return Tell Me What You See to your hand?",
 						new Always(),
-						[new ReturnToHand(Ref.Source)]
+						[
+							new MoveTo(Ref.Source, ZoneType.Hand)
+							{
+								From = [ZoneType.Battlefield, ZoneType.Stack],
+							},
+						]
 					)
 				),
 			],
@@ -1639,7 +1664,7 @@ public static class TrkCards
 				Chapter(
 					3,
 					[TargetSpec.InYourGraveyard(Is.Creature)],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 				),
 			],
 			["In the Pale Moonlight"] =
@@ -1662,7 +1687,12 @@ public static class TrkCards
 					new Exile(Ref.Target()) { Linked = true }
 				),
 				Chapter(2, [], CreateClue(1)),
-				Chapter(3, [], new ReturnLinkedExile(), new GainLife(Ref.You, 2)),
+				Chapter(
+					3,
+					[],
+					new MoveTo(Ref.All(ZoneType.Exile, Is.ExiledBySource), ZoneType.Battlefield),
+					new GainLife(Ref.You, 2)
+				),
 			],
 			["The Naked Time"] =
 			[
@@ -1703,7 +1733,7 @@ public static class TrkCards
 							Optional = true,
 						},
 					],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 				),
 				Chapter(
 					3,
@@ -1718,8 +1748,16 @@ public static class TrkCards
 							NotThePrevious = true,
 						},
 					],
-					new ShuffleIntoLibrary(Ref.Target(0)) { FromGraveyards = true },
-					new ShuffleIntoLibrary(Ref.Target(1)) { FromGraveyards = true }
+					new MoveTo(Ref.Target(0), ZoneType.Library)
+					{
+						From = [ZoneType.Graveyard],
+						Shuffle = true,
+					},
+					new MoveTo(Ref.Target(1), ZoneType.Library)
+					{
+						From = [ZoneType.Graveyard],
+						Shuffle = true,
+					}
 				),
 			],
 			["Eject the Warp Core"] =
@@ -1870,7 +1908,10 @@ public static class TrkCards
 					TriggerEvent.SelfEnters,
 					[],
 					new Mill(Ref.You, 3),
-					new ReturnFromYourGraveyard(Is.Land) { Otherwise = [CreateTreasure(1)] }
+					new MoveChosen(ZoneType.Graveyard, Is.Land, ZoneType.Hand)
+					{
+						Otherwise = [CreateTreasure(1)],
+					}
 				),
 			],
 			["Andromedan Automatons"] =
@@ -1931,7 +1972,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))],
-					new ExileFromGraveyard(Ref.Target()),
+					new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] },
 					new CreateTokenCopy(Ref.Target())
 					{
 						OfAnExiledCard = true,
@@ -1951,7 +1992,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[TargetSpec.InYourGraveyard(Is.Type(PermanentTypes))],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 				),
 				When(
 					TriggerEvent.CardLeavesYourGraveyard,
@@ -2086,10 +2127,17 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfBecomesTapped,
 					[],
-					new MayPutFromHandOntoBattlefield(
-						CardType.Land,
-						[new AtNextEndStep([new ReturnYourPermanentToHand(Is.Land)])]
-					)
+					new MoveChosen(ZoneType.Hand, Is.Land, ZoneType.Battlefield)
+					{
+						May = true,
+						Then =
+						[
+							new AtNextEndStep(
+								[new MoveChosen(ZoneType.Battlefield, Is.Land, ZoneType.Hand)]
+							),
+						],
+						Prompt = "Put a land card from your hand onto the battlefield?",
+					}
 				),
 			],
 			// ===== MC-5.3 batch 4c: the one-offs — play from exile (face down too), a destroy replacement, draw, can't attack alone, lands enter untapped, Zefram Cochrane =====
@@ -2230,7 +2278,7 @@ public static class TrkCards
 							new PayMana(
 								ManaCost.Parse("{1}"),
 								[
-									new ReturnFromYourGraveyard(null) { To = ZoneType.Exile },
+									new MoveChosen(ZoneType.Graveyard, null, ZoneType.Exile),
 									new WhenYouDo([Creature], [new PutCounters(Ref.Target(), 1)]),
 								]
 							),
@@ -2662,7 +2710,7 @@ public static class TrkCards
 				ManaColor.Black,
 				M(
 					[TargetSpec.InYourGraveyard(Is.Creature)],
-					new PutIntoLibrary(Ref.Target(), OnTop: true)
+					new MoveTo(Ref.Target(), ZoneType.Library) { OnTop = true }
 				)
 			),
 			["Troubling Tribbles"] =
@@ -2681,12 +2729,20 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(4))],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield) { Finality = true }
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						Finality = true,
+					}
 				),
 				When(
 					TriggerEvent.SelfDealsCombatDamageToPlayer,
 					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(4))],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield) { Finality = true }
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						Finality = true,
+					}
 				),
 				.. Station(10, "Flying"),
 			],
@@ -2702,7 +2758,10 @@ public static class TrkCards
 					),
 					M(
 						[Target(Is.Creature & Is.ManaValueAtMost(2))],
-						new ReturnToHand(Ref.Target())
+						new MoveTo(Ref.Target(), ZoneType.Hand)
+						{
+							From = [ZoneType.Battlefield, ZoneType.Stack],
+						}
 					),
 					M(
 						[Creature],
@@ -2735,7 +2794,7 @@ public static class TrkCards
 								Is.Type(PermanentTypes) & !Is.Subtype("Doctor")
 							),
 						],
-						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+						new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
 					),
 					M(
 						[Target(Is.Creature & !Is.Source) with { Optional = true }],
@@ -2745,11 +2804,9 @@ public static class TrkCards
 								[
 									new AtNextEndStep(
 										[
-											new ReturnFromGraveyard(
-												Ref.Source,
-												ZoneType.Battlefield
-											)
+											new MoveTo(Ref.Source, ZoneType.Battlefield)
 											{
+												From = [ZoneType.Graveyard],
 												Counters = 1,
 											},
 										]
@@ -2957,7 +3014,7 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfAttacks,
 					[TargetSpec.InAnyGraveyard() with { Optional = true }],
-					new ExileFromGraveyard(Ref.Target())
+					new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] }
 				),
 				When(
 					TriggerEvent.OneOrMoreCardsLeaveYourGraveyard,
@@ -3055,7 +3112,7 @@ public static class TrkCards
 							Is.Creature & (Is.Color(ManaColor.Green) | Is.Color(ManaColor.White))
 						),
 					],
-					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)
+					new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
 				),
 				Chapter(
 					2,
@@ -3136,7 +3193,10 @@ public static class TrkCards
 							Optional = true,
 						},
 					],
-					new ReturnToHand(Ref.Target())
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+					{
+						From = [ZoneType.Battlefield, ZoneType.Stack],
+					}
 				),
 				When(TriggerEvent.EachEndStep, [], new DrawCards(Ref.You, 1)) with
 				{
@@ -3298,7 +3358,7 @@ public static class TrkCards
 				Spell(
 					[TargetSpec.InYourGraveyard(Is.Instant | Is.Sorcery)],
 					new CastCopiesOf(Ref.Target(), Federation),
-					new ExileFromGraveyard(Ref.Target()),
+					new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Graveyard] },
 					new ExileSourceAndCopiesFromGraveyard(0) // "Exile Infinite Diversity."
 				),
 			],
@@ -3306,7 +3366,11 @@ public static class TrkCards
 			[
 				Spell(
 					[TargetSpec.Spell(!Is.Creature & Is.Opponents)],
-					new May("Exile your spell?", new Always(), [new ExileSpell(Ref.Target())])
+					new May(
+						"Exile your spell?",
+						new Always(),
+						[new MoveTo(Ref.Target(), ZoneType.Exile) { From = [ZoneType.Stack] }]
+					)
 					{
 						Who = Ref.ControllerOfTarget(0),
 						Otherwise = [new CastFromHandFree(!Is.Creature)],
@@ -3386,7 +3450,10 @@ public static class TrkCards
 								Optional = true,
 							},
 						],
-						new ReturnToHand(Ref.Target())
+						new MoveTo(Ref.Target(), ZoneType.Hand)
+						{
+							From = [ZoneType.Battlefield, ZoneType.Stack],
+						}
 					),
 					M([], new DrawCards(Ref.You, 2)),
 					M([], new CreateTokens(Officer, 2)),
@@ -3726,7 +3793,7 @@ public static class TrkCards
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}{B}"),
-					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)]
+					[new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }]
 				)
 				{
 					Targets = [TargetSpec.InAnyGraveyard(Is.Creature)],
@@ -3810,12 +3877,7 @@ public static class TrkCards
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}"),
-					[
-						new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
-						{
-							From = ZoneType.Hand,
-						},
-					]
+					[new MoveTo(Ref.Source, ZoneType.Battlefield) { From = [ZoneType.Hand] }]
 				)
 				{
 					From = ZoneType.Hand,

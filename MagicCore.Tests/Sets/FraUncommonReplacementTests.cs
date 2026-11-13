@@ -90,8 +90,9 @@ public class FraUncommonReplacementTests : FraBoardTest
 			CardRegistry.Get("Yoshimaru, Beloved Companion"),
 			ZoneType.Graveyard
 		);
-		var back = new ReturnFromGraveyard(Ref.CardsInYourGraveyard, ZoneType.Battlefield)
+		var back = new MoveTo(Ref.CardsInYourGraveyard, ZoneType.Battlefield)
 		{
+			From = [ZoneType.Graveyard],
 			Counters = 1,
 		};
 		Cast(Hand(TestGames.Inline("Back", "{1}", "Sorcery", null, back), me), []);

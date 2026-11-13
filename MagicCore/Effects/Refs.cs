@@ -74,6 +74,8 @@ public enum RefKind
 	ActivePlayer, // Peace in Our Time: "on each player's turn, that player" — whose turn it is
 	It, // Bristly Bill: "double the number of +1/+1 counters on EACH creature" — the one being acted on
 	ThisWay, // Decree of Pain: "each creature destroyed this way" — what the effect did its thing to
+	Chosen, // Temporal Conqueror: "return a land card from your graveyard" — the card(s) just chosen (MoveChosen)
+	Id, // explore's revealed card, discover's exiled one — a card the engine named as it built the step
 }
 
 /// <summary>
@@ -120,6 +122,19 @@ public record Ref(RefKind Kind, int Index = 0)
 	/// effect did its thing to (Destroy.Then): Count.NumberOf(Ref.ThisWay). The ids, wherever they are now.
 	/// </summary>
 	public static readonly Ref ThisWay = new(RefKind.ThisWay);
+
+	/// <summary>
+	/// MC-6.12: Temporal Conqueror's "a land card from your graveyard", chosen as it resolves — in the steps after a
+	/// choice, what it picked (ChooseCardsFromHandChoice.Chosen; MoveChosen moves it with MoveTo).
+	/// </summary>
+	public static readonly Ref Chosen = new(RefKind.Chosen);
+
+	/// <summary>
+	/// MC-6.12: explore's "put the card back or put it into your graveyard" — one card the engine already knows by
+	/// id as it builds the step (the revealed card), never from a script.
+	/// </summary>
+	public static Ref Id(int cardId) => new(RefKind.Id, cardId);
+
 	public static readonly Ref EventCard = new(RefKind.EventCard);
 	public static readonly Ref EventObject = new(RefKind.EventObject);
 	public static readonly Ref ControllerOfEventCard = new(RefKind.ControllerOfEventCard);
@@ -246,6 +261,8 @@ public record Ref(RefKind Kind, int Index = 0)
 			RefKind.ThisWay => context.TryGetValue(ContextKeys.ThisWay, out var done)
 				? (ImmutableArray<int>)done
 				: [],
+			RefKind.Chosen => ChooseCardsFromHandChoice.Read(context),
+			RefKind.Id => [Index],
 			_ => throw new ArgumentOutOfRangeException(
 				nameof(Kind),
 				Kind,

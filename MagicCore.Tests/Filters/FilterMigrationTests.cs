@@ -130,6 +130,8 @@ public class FilterMigrationTests
 		RefKind.ActivePlayer, // Peace in Our Time: whose turn it is
 		RefKind.It, // Bristly Bill: the object an effect is acting on
 		RefKind.ThisWay, // Decree of Pain: what the effect did its thing to
+		RefKind.Chosen, // Temporal Conqueror: the card just chosen (MoveChosen)
+		RefKind.Id, // explore's revealed card: an id the engine knows as it builds the step
 	];
 
 	[TestCaseSource(nameof(RefRows))]

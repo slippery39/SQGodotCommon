@@ -26,6 +26,9 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 	/// <summary>Only cards of these types ("a nonland permanent card"); None means any.</summary>
 	public CardType Types { get; init; }
 
+	/// <summary>MoveChosen's filter on a hand — Erica Ortegas: "a land card from your hand"; none is any.</summary>
+	public Filters.Filter? Filter { get; init; }
+
 	public ChooseCardsFromHandChoice() => OutputKey = Chosen;
 
 	public override ImmutableList<ChoiceOption> GetOptions(
@@ -34,6 +37,7 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 	) =>
 		s.CardsIn(PlayerId, ZoneType.Hand)
 			.Where(c => Types == CardType.None || c.Is(Types))
+			.Where(c => Filter?.Matches(s, c, new(PlayerId, SourceOf.Context(context))) ?? true)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();
 

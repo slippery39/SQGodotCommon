@@ -67,6 +67,12 @@ really are unique), but the families below are.
   among [a Ref] now" when a second hand card needs it (LSVPower: none in the survey's play-from-another-zone list).
   **Shayne, 2026-11-13: confirmed** — leave it; "a niche ability we can revisit later".
 
+- 2026-11-13, Claude (cube lane; MC-6.12): **"a token that has left the battlefield can't move" (CR 111.8) is MoveTo's,
+  for every move** — the old exile return alone asked it; a token is off the battlefield only inside one resolution
+  (the state-based check takes it before anyone acts), so no game could tell. **A chosen move is its own piece**
+  (`MoveChosen`), not a `MoveTo` option: the choice is a step the replays answer, and each zone keeps the choice type
+  it had (graveyard `ChooseAmongChoice`, battlefield `ChoosePermanentChoice`, hand `ChooseCardsFromHandChoice`).
+
 ## Tasks
 
 The audit (2026-11-06): each family, its members today, and the composed piece. **MC-5.6** marks the ones
@@ -165,10 +171,18 @@ the Stardates fix.
       `EnteringArtifactsAndCreaturesDontTrigger`.
 - [ ] MC-6.11 **Chosen as it enters** — `ChoosesColorAsItEnters`, `ChoosesNameAsItEnters`,
       `ChoosesNumberAsItEnters` (+ their `Chosen*` markers) → one component, by what is chosen.
-- [ ] MC-6.12 **Moving a card** — `ReturnFromGraveyard` (moves from any zone, despite its name),
-      `ReturnFromYourGraveyard`, `ReturnFromExileUnderYourControl`, `ReturnLinkedExile`, `ReturnToHand`,
-      `ReturnYourPermanentToHand`, `MayPutFromHandOntoBattlefield`, `PutIntoLibrary`, `ShuffleIntoLibrary` →
-      a move to a zone with options (chosen or targeted, tapped, under whose control).
+- [x] MC-6.12 **Moving a card** — done 2026-11-13 (cube lane): `MoveTo(What, To) { From (zones it must still be in;
+      empty anywhere), Tapped, Counters, Finality, UnderYourControl, ExileAtNextEndStep, OnTop, Shuffle }` — 60 uses:
+      `ReturnFromGraveyard` (`From = [Graveyard]`, Talon Gates' `[Hand]`), `ReturnToHand` (`[Battlefield, Stack]`),
+      `PutIntoLibrary`, `ShuffleIntoLibrary` (`Shuffle`), `ReturnFromExileUnderYourControl` (Vindictive Triumph; Ghost of
+      Illyria's delayed return), `ReturnLinkedExile` (`Ref.All(Exile, Is.ExiledBySource)`, The Measure of a Man),
+      `MoveCardTo` (explore, discover: `Ref.Id`), and two the audit hadn't listed, `ExileFromGraveyard` and `ExileSpell`.
+      The chosen ones → `MoveChosen(From, filter, To) { May, Then, Otherwise }`, then `MoveTo(Ref.Chosen)`, each zone
+      keeping its choice type: `ReturnFromYourGraveyard` (Temporal Conqueror, Sylvia), `ReturnYourPermanentToHand` +
+      `ReturnChosenToHandAction`, `MayPutFromHandOntoBattlefield` (Erica; `ChooseCardsFromHandChoice.Filter`). Twelve
+      pieces gone; every golden file unchanged; five tests (owner's hand, hand filter, From, shuffle, CR 111.8),
+      revert-checked. Ruling: a token that left the battlefield moves nowhere (CR 111.8) for every move — only the
+      exile return asked it before; no game moved (a token off the battlefield lives only inside a resolution).
 - [ ] MC-6.13 **Statics on the enchanted creature** — part done 2026-11-07 (MC-5.6 batch 3b): `EnchantedBecomesCreature`
       → `BecomesType(scope) { Add, Remove, Subtype, Power, Toughness, If }` (Puppet Crafting moved; Mogis's "isn't a
       creature" on it), `Attachments.Animations` made general and run in `EnterBattlefield` too. The rest after MC-5.4:
@@ -197,24 +211,10 @@ the Stardates fix.
 
 ## Next
 
-MC-6.12 moving a card, then 6.15 the "can't" statics, then 6.14 the "this turn / this game" conditions (the order
-LSVPower needs them, MC-4's Decisions). MC-6.9 is done: LSVPower's escape, hideaway, cascade, plot and adventures land
-on `MayPlayFromZone`, `MayCastThisFrom` and `ExileTopPlayable`/`PlayPermission` (cascade is `Until` + `Now`). Each
-step: one family, its old cards moved, the golden replays UNCHANGED (or a ruling fixed and said), the full suite.
-
-**6.12, read 2026-11-13 (not started; ~65 uses in `ZoneEffects.cs`, both sets).** Two shapes, as 6.9 found:
-- A move of what a `Ref` names — `ReturnFromGraveyard(What, To) { From, Counters, Tapped, Finality }` (35 uses; already
-  the near-general one), `ReturnToHand` (battlefield or stack), `PutIntoLibrary(What, OnTop)`, `ShuffleIntoLibrary
-  { FromGraveyards }` (move, then shuffle, per card), `ReturnFromExileUnderYourControl { Tapped, ExileAtNextEndStep,
-  UnderItsOwnersControl }` (no tokens), `ReturnLinkedExile` (= `Ref.All(Exile, Is.ExiledBySource, Ref.EachPlayer)` to
-  the battlefield under its owner — the 6.9 filter), `MoveCardTo(id, To) { From }` → one `MoveTo(What, To) { From
-  (zones it must be in: Graveyard, Battlefield, Stack, Exile…; unset anywhere), Tapped, Counters, Finality, UnderYourControl,
-  OnTop, Shuffle, ExileAtNextEndStep }`. Keep each old `From` check exactly — which zones each accepts is what the
-  golden replays will catch.
-- A CHOSEN move (not targeted) — `ReturnFromYourGraveyard(filter) { To, Otherwise }`, `ReturnYourPermanentToHand
-  (filter)`, `MayPutFromHandOntoBattlefield(types, Then)`: a choice over your zone + filter, min/max, then `MoveChosenTo`;
-  "if you can't" `Otherwise`, "if you do" `Then`. Their choice types differ (`ChooseAmongChoice`,
-  `ChoosePermanentChoice`, `ChooseCardsFromHandChoice`) — keep each card's, or the random replays move.
+6.15 the "can't" statics, then 6.14 the "this turn / this game" conditions (the order LSVPower needs them, MC-4's
+Decisions). 6.12 is done: LSVPower's reanimation, bounce, tuck and flicker land on `MoveTo`, "return a … you
+control / from your graveyard" on `MoveChosen`. Each step: one family, its old cards moved, the golden replays
+UNCHANGED (or a ruling fixed and said), the full suite.
 
 ## Log
 

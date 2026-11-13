@@ -769,7 +769,7 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 					.Aggregate(
 						s,
 						(st, id) =>
-							ReturnFromExileUnderYourControl.Delay(
+							MoveTo.Delay(
 								st,
 								id,
 								trigger with
@@ -806,9 +806,7 @@ public record AtBeginningOfNextCombat(Ref On, ImmutableList<GameAction> Effects)
 			ControllerId = Controller,
 		};
 		return new(
-			Permanents(On, s)
-				.ToList()
-				.Aggregate(s, (st, c) => ReturnFromExileUnderYourControl.Delay(st, c.Id, trigger))
+			Permanents(On, s).ToList().Aggregate(s, (st, c) => MoveTo.Delay(st, c.Id, trigger))
 		);
 	}
 }

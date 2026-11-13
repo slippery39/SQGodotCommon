@@ -318,7 +318,8 @@ public static partial class Evaluator
 							_ => 0,
 						}
 					);
-			case ReturnToHand r:
+			case MoveTo { To: ZoneType.Hand } r
+				when r.From.IsEmpty || r.From.Contains(ZoneType.Battlefield):
 				// A bounce gains what the evaluator loses them: the creature, less what it is worth held —
 				// at most its value less the mana to cast it again (KnownHand), all of a token's.
 				return Creatures(r.What)

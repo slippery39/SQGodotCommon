@@ -187,7 +187,7 @@ whose subsystem it lives in.
   sorcery, its owner's main phase, `BeamMeUpCost { ExceptId }` (never returning Scotty). One cast per spell ×
   creature returned, as every beam-me-up card (Shayne, 2026-11-06).
 - **"That player may exile it. If they don't, you may cast a noncreature spell from your hand free"** (Brazen
-  Bluff) is `May { Who, Otherwise }` with `ExileSpell` (a card on the stack, to its owner's exile) and
+  Bluff) is `May { Who, Otherwise }` with `MoveTo(…, Exile) { From = [Stack] }` (a card on the stack, to its owner's exile) and
   `CastFromHandFree` (a choice among the castable, then `CastNow`).
 - **"Choose one that hasn't been chosen"** (Kobayashi Maru Scenario) is `ModeChoice.NotChosenBefore`:
   the modes chosen are stamped on that object (`Card.ModesChosen`, a bit per mode, in `QueueModalTriggerAction`) and

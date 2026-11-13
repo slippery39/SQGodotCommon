@@ -786,7 +786,7 @@ public static partial class Evaluator
 				- (life < 6 && !IsOff(Terms.LowLifeRisk) ? (6 - life) * (6 - life) / 2.0 : 0);
 
 	/// <summary>
-	/// The mana cost of the cheapest ability that returns this graveyard card itself (Blessed Ghoul's
+	/// The mana cost of the cheapest ability that returns this graveyard card itself — a MoveTo from the graveyard (Blessed Ghoul's
 	/// "{2}{W/B}: Return this card from your graveyard to your hand"), or null.
 	/// ponytail: the mana only — an extra cost (a finality counter, "activate only if") is not priced, and a
 	/// graveyard ability that exiles the card for an effect (Campus Crier) gives it no value; price them if
@@ -797,7 +797,9 @@ public static partial class Evaluator
 			.Where(a =>
 				a.From == ZoneType.Graveyard
 				&& a.Effects.Any(e =>
-					e is ReturnFromGraveyard { What: var what } && what == Ref.Source
+					e is MoveTo { To: ZoneType.Hand or ZoneType.Battlefield } m
+					&& m.What == Ref.Source
+					&& (m.From.IsEmpty || m.From.Contains(ZoneType.Graveyard))
 				)
 			)
 			.Select(a => a.Cost)

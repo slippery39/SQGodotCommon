@@ -111,7 +111,7 @@ public record Flicker(Ref What) : Effect
 	static readonly TriggeredAbilityComponent ReturnItAtTheEndStep =
 		new(
 			TriggerEvent.EachEndStep,
-			[new ReturnFromExileUnderYourControl(Ref.Source) { UnderItsOwnersControl = true }]
+			[new MoveTo(Ref.Source, ZoneType.Battlefield) { From = [ZoneType.Exile] }]
 		);
 
 	public override ActionResult Execute(GameState s)
@@ -121,7 +121,7 @@ public record Flicker(Ref What) : Effect
 			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Exile));
 			if (!card.IsToken && s.IsIn(card.Id, card.OwnerId, ZoneType.Exile))
 				s = AtNextEndStep
-					? ReturnFromExileUnderYourControl.Delay(
+					? MoveTo.Delay(
 						s,
 						card.Id,
 						new DelayedTrigger(ReturnItAtTheEndStep) { ControllerId = Controller } // CR 603.7d: yours
@@ -224,11 +224,7 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 		{
 			s = s.EnterBattlefield(hit, Controller, tapped: Tapped);
 			if (SacrificeAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					hit,
-					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, hit, MoveTo.SacrificeItAtTheEndStep);
 		}
 		// ponytail: Deep Space 9's permanents go library -> battlefield, never through exile; a card that
 		// watches cards leaving exile would miss them. Move them via exile if one appears.
@@ -292,7 +288,7 @@ public record Exile(Ref What) : Effect
 
 	/// <summary>
 	/// The Measure of a Man: "I — Exile up to one target …" whose III returns "the exiled card" — linked
-	/// to this object of the source (ExiledBy, CR 607.2a); ReturnLinkedExile brings it back.
+	/// to this object of the source (ExiledBy, CR 607.2a); MoveTo(Ref.All(Exile, Is.ExiledBySource)) brings it back.
 	/// </summary>
 	public bool Linked { get; init; }
 
@@ -443,11 +439,7 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 			)
 				s = Attachments.Attach(s, token.Id, host.Id);
 			if (SacrificeAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					token.Id,
-					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, token.Id, MoveTo.SacrificeItAtTheEndStep);
 		}
 		return new(s);
 	}
@@ -538,36 +530,51 @@ public record CreateTokenCopy(Ref What) : Effect
 			s = s.EnterBattlefield(copy.Id, Controller, tapped: Tapped);
 			// after entering: a zone change strips a delayed trigger, entering included
 			if (ExileAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					copy.Id,
-					ReturnFromExileUnderYourControl.ExileItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, copy.Id, MoveTo.ExileItAtTheEndStep);
 			if (SacrificeAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					copy.Id,
-					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, copy.Id, MoveTo.SacrificeItAtTheEndStep);
 		}
 		return new(s);
 	}
 }
 
 /// <summary>
-/// Vindictive Triumph: "return it to the battlefield tapped under your control. Exile it at the
-/// beginning of the next end step." — a card exiled earlier in this resolution; a token that left
-/// can't come back (CR 111.8).
+/// MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) — "return this card from your
+/// graveyard to the battlefield" (Darklight Phoenix), "return target creature to its owner's hand" (Unsummon), "put
+/// target nonland permanent on the bottom of its owner's library" (Paradox Shaper), "its owner shuffles it into their
+/// library" (Fblthp), "return it to the battlefield tapped under your control. Exile it at the beginning of the next end
+/// step" (Vindictive Triumph), "return the exiled card" (The Measure of a Man: <c>Ref.All(Exile, Is.ExiledBySource)</c>).
+/// Onto the battlefield through EnterBattlefield, under its owner unless <see cref="UnderYourControl"/>. A token that
+/// has left the battlefield moves nowhere (CR 111.8).
 /// </summary>
-public record ReturnFromExileUnderYourControl(Ref What) : Effect
+public record MoveTo(Ref What, ZoneType To) : Effect
 {
+	/// <summary>
+	/// Where it must be now — "from your graveyard" is [Graveyard] (its owner's), Unsummon's "spell or creature"
+	/// [Battlefield, Stack] (anyone's), Talon Gates' "from your hand" [Hand]. Empty: wherever it is (Paradox Shaper).
+	/// </summary>
+	public ImmutableList<ZoneType> From { get; init; } = [];
+
+	/// <summary>Gallia, Tragic Host: "to the battlefield tapped".</summary>
 	public bool Tapped { get; init; }
 
-	/// <summary>"Exile it at the beginning of the next end step" — a delayed trigger on it.</summary>
+	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
+	public int Counters { get; init; }
+
+	/// <summary>Grim Repriser, Proctor: "with a finality counter on it".</summary>
+	public bool Finality { get; init; }
+
+	/// <summary>Vindictive Triumph: "under your control" — unset is its owner's (Ghost of Illyria, The Measure of a Man).</summary>
+	public bool UnderYourControl { get; init; }
+
+	/// <summary>Vindictive Triumph: "Exile it at the beginning of the next end step" — a delayed trigger on it.</summary>
 	public bool ExileAtNextEndStep { get; init; }
 
-	/// <summary>Ghost of Illyria: "Return that card to the battlefield under its owner's control".</summary>
-	public bool UnderItsOwnersControl { get; init; }
+	/// <summary>Clash of Elements: "on top of its owner's library" — unset is the bottom.</summary>
+	public bool OnTop { get; init; }
+
+	/// <summary>Fblthp, Those Old Scientists: "shuffles it into their library" — its owner shuffles, once per card.</summary>
+	public bool Shuffle { get; init; }
 
 	/// <summary>"Exile it at the beginning of the next end step" — CreateTokenCopy's too.</summary>
 	internal static readonly DelayedTrigger ExileItAtTheEndStep =
@@ -581,85 +588,131 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 	internal static GameState Delay(GameState s, int id, DelayedTrigger trigger) =>
 		Update(s, (Card)s.GetCard(id).WithComponent(trigger));
 
+	bool IsWhereItMustBe(GameState s, Card card) =>
+		From.IsEmpty
+		|| From.Any(zone =>
+			zone switch
+			{
+				ZoneType.Battlefield => s.IsOnBattlefield(card.Id),
+				ZoneType.Stack => s.GetParent(card.Id) == s.GetWellKnownId(MagicKeys.Stack),
+				_ => s.IsIn(card.Id, card.OwnerId, zone),
+			}
+		);
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in All(What, s).ToList())
 		{
 			if (
-				s.GetObject(id) is not Card { IsToken: false } card
-				|| !s.IsIn(id, card.OwnerId, ZoneType.Exile)
+				s.GetObject(id) is not Card card
+				|| !IsWhereItMustBe(s, card)
+				|| (card.IsToken && !s.IsOnBattlefield(id))
 			)
 				continue;
-			s = s.EnterBattlefield(
-				id,
-				UnderItsOwnersControl ? card.OwnerId : Controller,
-				tapped: Tapped
-			);
-			if (ExileAtNextEndStep)
-				s = Delay(s, id, ExileItAtTheEndStep);
+			if (To == ZoneType.Battlefield)
+			{
+				s = s.EnterBattlefield(
+					id,
+					UnderYourControl ? Controller : card.OwnerId,
+					extraCounters: Counters,
+					tapped: Tapped,
+					finality: Finality
+				);
+				if (ExileAtNextEndStep)
+					s = Delay(s, id, ExileItAtTheEndStep);
+				continue;
+			}
+			s = s.MoveCard(id, s.ZoneId(card.OwnerId, To), toTop: OnTop);
+			if (Shuffle && To == ZoneType.Library)
+				s = s.Shuffle(card.OwnerId);
 		}
 		return new(s);
 	}
 }
 
 /// <summary>
-/// The Measure of a Man: "III — Return the exiled card to the battlefield under its owner's control." —
-/// every card this object of the source exiled (Exile.Linked); nothing once the source left (CR 607.2a).
+/// MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your hand. If you can't, create a
+/// Treasure token" (Temporal Conqueror), "exile a card from your graveyard" (Sylvia Tilly), "you may put a land card
+/// from your hand onto the battlefield. If you do, …" and "return a land you control to its owner's hand" (Erica
+/// Ortegas). The controller picks one of their From zone's cards the filter matches (null: any), then MoveTo. Each zone
+/// keeps its own choice: a graveyard's is ChooseAmongChoice, the battlefield's ChoosePermanentChoice, the hand's
+/// ChooseCardsFromHandChoice.
 /// </summary>
-public record ReturnLinkedExile : Effect
+public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : Effect
 {
-	public override ActionResult Execute(GameState s)
-	{
-		if (!Ref.Source.Resolve(s, InputContext).Any() || !s.IsOnBattlefield(Source(s).Id))
-			return new(s);
-		var source = Source(s);
-		foreach (
-			var card in new[] { s.Player1Id(), s.Player2Id() }
-				.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
-				.Where(c =>
-					c.GetComponent<ExiledBy>() is { } by
-					&& by.SourceId == source.Id
-					&& by.SourceIncarnation == source.Incarnation
-				)
-				.ToList()
-		)
-			s = s.EnterBattlefield(card.Id, card.OwnerId);
-		return new(s);
-	}
-}
+	/// <summary>Erica Ortegas: "you MAY put" — none is an answer, and it is asked even with nothing to pick.</summary>
+	public bool May { get; init; }
 
-/// <summary>
-/// Temporal Conqueror: "Then return a land card from your graveyard to your hand. If you can't, create a
-/// Treasure token." — chosen, not targeted; Otherwise runs only when there is none.
-/// </summary>
-public record ReturnFromYourGraveyard(Filters.Filter? Filter) : Effect // null: any card (Sylvia Tilly)
-{
+	/// <summary>Erica Ortegas: "If you do, …" — after a pick.</summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	/// <summary>Temporal Conqueror: "If you can't, create a Treasure token." — nothing to pick; with May, "if you don't".</summary>
 	public ImmutableList<GameAction> Otherwise { get; init; } = [];
 
-	/// <summary>Sylvia Tilly: "exile a card from your graveyard" — chosen as it resolves, not targeted.</summary>
-	public ZoneType To { get; init; } = ZoneType.Hand;
+	/// <summary>The question on the table; unset says where it goes.</summary>
+	public string? Prompt { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
-		var choice = new ChooseAmongChoice
+		var prompt =
+			Prompt
+			?? To switch
+			{
+				ZoneType.Hand when From == ZoneType.Battlefield => "Return to its owner's hand",
+				ZoneType.Hand => "Put one into your hand",
+				ZoneType.Exile => "Exile one",
+				ZoneType.Battlefield => "Put one onto the battlefield",
+				_ => $"Put one into your {To.ToString().ToLowerInvariant()}",
+			};
+		ChoiceAction choice = From switch
 		{
-			PlayerId = Controller,
-			Ids = [.. s.CardsIn(Controller, ZoneType.Graveyard).Select(c => c.Id)],
-			Filter = Filter,
-			MinChoices = 1,
-			Prompt = To == ZoneType.Exile ? "Exile one" : "Put one into your hand",
-		};
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
-					Steps = choice.GetOptions(s, InputContext).IsEmpty
-						? Otherwise
-						: [choice, new MoveChosenToAction(Controller, To)],
-				}
+			ZoneType.Graveyard => new ChooseAmongChoice
+			{
+				PlayerId = Controller,
+				Ids = [.. s.CardsIn(Controller, ZoneType.Graveyard).Select(c => c.Id)],
+				Filter = Filter,
+				MinChoices = May ? 0 : 1,
+				Prompt = prompt,
+			},
+			ZoneType.Battlefield => new ChoosePermanentChoice(
+				Controller,
+				GetInput<int>(ContextKeys.Source),
+				Filter,
+				required: !May
 			)
-		);
+			{
+				Prompt = prompt,
+				OutputKey = ChooseCardsFromHandChoice.Chosen, // Ref.Chosen reads one key
+			},
+			ZoneType.Hand => new ChooseCardsFromHandChoice
+			{
+				PlayerId = Controller,
+				Filter = Filter,
+				MinChoices = May ? 0 : 1,
+				MaxChoices = 1,
+				Prompt = prompt,
+			},
+			_ => throw new NotSupportedException($"a chosen move from {From}"),
+		};
+		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
+		if (!May && choice.GetOptions(s, InputContext).IsEmpty)
+			return Otherwise.IsEmpty
+				? new(s)
+				: new(
+					s.SpawnAction(
+						new PipelineAction { PipelineContext = context, Steps = Otherwise }
+					)
+				);
+		ImmutableList<GameAction> steps = [choice, new MoveTo(Ref.Chosen, To) { From = [From] }];
+		if (!Then.IsEmpty || (May && !Otherwise.IsEmpty))
+			steps = steps.Add(
+				new IfChosenAction(Then)
+				{
+					Key = ChooseCardsFromHandChoice.Chosen,
+					Otherwise = May ? Otherwise : [],
+				}
+			);
+		return new(s.SpawnAction(new PipelineAction { PipelineContext = context, Steps = steps }));
 	}
 }
 
@@ -683,19 +736,6 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 						.WithComponentReplaced(new CopyUntilEndOfTurn(original))
 			);
 		}
-		return new(s);
-	}
-}
-
-/// <summary>Brazen Bluff: "That player may exile it." — a spell (a card on the stack), to its owner's exile.</summary>
-public record ExileSpell(Ref What) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var stack = s.GetWellKnownId(MagicKeys.Stack);
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card spell && s.GetParent(id) == stack)
-				s = s.MoveCard(id, s.ZoneId(spell.OwnerId, ZoneType.Exile));
 		return new(s);
 	}
 }
@@ -865,18 +905,6 @@ public record AssimilateChosen : Effect
 				.Where(id => s.HasObject(id) && !s.IsOnBattlefield(id))
 				.Aggregate(s, (st, id) => Assimilate.Into(st, Controller, id))
 		);
-}
-
-/// <summary>Discover: "… or put it into your hand" — the card, if it is still where it was put (its owner's exile), to its OWNER's zone (CR 400.3).</summary>
-public record MoveCardTo(int CardId, ZoneType To) : Effect
-{
-	/// <summary>Explore: "put the card back or put it into your graveyard" — where it must still be; unset is exile.</summary>
-	public ZoneType From { get; init; } = ZoneType.Exile;
-
-	public override ActionResult Execute(GameState s) =>
-		s.GetObject(CardId) is Card card && s.IsIn(CardId, card.OwnerId, From)
-			? new(s.MoveCard(CardId, s.ZoneId(card.OwnerId, To)))
-			: new(s);
 }
 
 /// <summary>
@@ -1434,21 +1462,6 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 }
 
 /// <summary>
-/// "Put [it] on the bottom (or top) of its owner's library" — Paradox Shaper's graveyard card,
-/// Clash of Elements' permanent.
-/// </summary>
-public record PutIntoLibrary(Ref What, bool OnTop) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card card)
-				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Library), toTop: OnTop);
-		return new(s);
-	}
-}
-
-/// <summary>
 /// Explore (CR 701.44) — Captain Kathryn Janeway: "that creature explores. (Reveal the top card of your
 /// library. Put that card into your hand if it's a land. Otherwise, put a +1/+1 counter on the creature,
 /// then put the card back or put it into your graveyard.)" — "your" is the creature's controller; an empty
@@ -1485,9 +1498,9 @@ public record Explore(Ref What) : Effect
 							new YesNoChoice(player, $"Put {top.Name} into your graveyard?"),
 							new IfChosenAction(
 								[
-									new MoveCardTo(top.Id, ZoneType.Graveyard)
+									new MoveTo(Ref.Id(top.Id), ZoneType.Graveyard)
 									{
-										From = ZoneType.Library,
+										From = [ZoneType.Library],
 									},
 								]
 							),
@@ -1585,39 +1598,6 @@ public record GainFlashbackThisTurn(Ref What) : Effect
 						)
 				)
 		);
-}
-
-/// <summary>"Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to your hand" (Command the Stage).</summary>
-public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
-{
-	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
-	public int Counters { get; init; }
-
-	/// <summary>Gallia, Tragic Host: "to the battlefield tapped".</summary>
-	public bool Tapped { get; init; }
-
-	/// <summary>Grim Repriser, Proctor: "with a finality counter on it".</summary>
-	public bool Finality { get; init; }
-
-	/// <summary>Talon Gates of Madara: "Put this card from your HAND onto the battlefield" — where it must be.</summary>
-	public ZoneType From { get; init; } = ZoneType.Graveyard;
-
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, From))
-				s =
-					To == ZoneType.Battlefield
-						? s.EnterBattlefield(
-							id,
-							card.OwnerId,
-							extraCounters: Counters,
-							tapped: Tapped,
-							finality: Finality
-						)
-						: s.MoveCard(id, s.ZoneId(card.OwnerId, To));
-		return new(s);
-	}
 }
 
 /// <summary>
@@ -1860,7 +1840,7 @@ public record ExileTopPlayable : Effect
 		ImmutableList<GameAction> declined =
 		[
 			.. Play.OrIntoHand && that is not null
-				? [new MoveCardTo(that.Id, ZoneType.Hand)]
+				? [new MoveTo(Ref.Id(that.Id), ZoneType.Hand) { From = [ZoneType.Exile] }]
 				: Array.Empty<GameAction>(),
 			.. Play.Otherwise,
 		];
@@ -1903,18 +1883,6 @@ public record MakeChosenPlayableAction(PlayableFromExile Playable) : GameAction
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
 			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Exile))
 				s = s.UpdateObject(id, (Card)card.WithComponent(Playable));
-		return new(s);
-	}
-}
-
-/// <summary>Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.</summary>
-public record ExileFromGraveyard(Ref What) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
-				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Exile));
 		return new(s);
 	}
 }
@@ -2234,41 +2202,6 @@ public record Discard(Ref Who, int Count) : Effect
 	}
 }
 
-/// <summary>"Return target spell or creature to its owner's hand" - from the battlefield or the stack.</summary>
-public record ReturnToHand(Ref What) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var stack = s.GetWellKnownId(MagicKeys.Stack);
-		var cards = All(What, s)
-			.Where(id => s.IsOnBattlefield(id) || s.GetParent(id) == stack)
-			.Select(s.GetCard)
-			.ToList();
-		return new(
-			cards.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Hand)))
-		);
-	}
-}
-
-/// <summary>"Its owner shuffles it into their library."</summary>
-public record ShuffleIntoLibrary(Ref What) : Effect
-{
-	/// <summary>Those Old Scientists: "Choose up to two target cards in graveyards. The owners of those cards shuffle them into their libraries."</summary>
-	public bool FromGraveyards { get; init; }
-
-	public override ActionResult Execute(GameState s)
-	{
-		var cards = FromGraveyards
-			? All(What, s)
-				.Where(id => s.GetObject(id) is Card c && s.IsIn(id, c.OwnerId, ZoneType.Graveyard))
-				.Select(s.GetCard)
-			: Permanents(What, s);
-		foreach (var card in cards.ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Library)).Shuffle(card.OwnerId);
-		return new(s);
-	}
-}
-
 /// <summary>
 /// Break Under Pressure: each player named sacrifices one of their [Types] with the greatest mana value.
 /// ponytail: on a tie the first is taken; the rules let that player choose among the tied.
@@ -2286,89 +2219,6 @@ public record SacrificeGreatestManaValue(Ref Who, CardType Types) : Effect
 			if (victim is not null)
 				s = s.Sacrifice(victim.Id);
 		}
-		return new(s);
-	}
-}
-
-/// <summary>
-/// Erica Ortegas: "you may put a land card from your hand onto the battlefield. If you do, [Then]" —
-/// chosen from your hand, entering through EnterBattlefield.
-/// </summary>
-public record MayPutFromHandOntoBattlefield(CardType Types, ImmutableList<GameAction> Then) : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
-					Steps =
-					[
-						new ChooseCardsFromHandChoice
-						{
-							PlayerId = Controller,
-							Types = Types,
-							MinChoices = 0,
-							MaxChoices = 1,
-							Prompt =
-								$"Put a {Types.ToString().ToLowerInvariant()} card from your hand onto the battlefield?",
-						},
-						new MoveChosenToAction(Controller, ZoneType.Battlefield),
-						new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
-					],
-				}
-			)
-		);
-}
-
-/// <summary>
-/// Erica Ortegas: "return a land you control to its owner's hand" — chosen as it resolves, not
-/// targeted; nothing when you control none.
-/// </summary>
-public record ReturnYourPermanentToHand(Filters.Filter Filter) : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		!Filters
-			.FilterChoices.Among(
-				Filter,
-				s,
-				Controller,
-				ZoneType.Battlefield,
-				GetInput<int>(ContextKeys.Source)
-			)
-			.Any()
-			? new(s)
-			: new(
-				s.SpawnAction(
-					new PipelineAction
-					{
-						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-						Steps =
-						[
-							new ChoosePermanentChoice(
-								Controller,
-								GetInput<int>(ContextKeys.Source),
-								Filter,
-								required: true
-							)
-							{
-								Prompt = "Return to its owner's hand",
-							},
-							new ReturnChosenToHandAction(),
-						],
-					}
-				)
-			);
-}
-
-/// <summary>After the choice: the chosen permanent to its owner's hand.</summary>
-public record ReturnChosenToHandAction : GameAction
-{
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in ChoosePermanentChoice.Read(InputContext))
-			if (s.IsOnBattlefield(id))
-				s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Hand));
 		return new(s);
 	}
 }
