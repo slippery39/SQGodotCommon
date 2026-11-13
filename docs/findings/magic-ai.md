@@ -1656,4 +1656,7 @@ Heartstring Puller over the Cadet token, because the rollout's defender at 13 no
 (surviving at 3/2 instead of 3/1) over trading it with Koth 3/2 — 5 life instead of 7, the horizon −37.17 against −32.55.
 Suite (tie-break only): 1 of 288 decisions changed (seed 2 #81: Compel Brutality's loyalty mode from Jace over Koth's power
 mode, both at Divining Duelist), oracle 79.9% against 80.2%, score given up 0.42 both, cost 10 594 against 10 608 steps.
-Tests: two controls also switch it off (ChangSac458, the self-burn). Match not run.
+Tests: two controls also switch it off (ChangSac458, the self-burn). **Match (2026-11-12): `--match=beam,beam+nodamagepotential
+--until-clear` — 50.0% over 96 games (48–48), no 5pp difference either way, stopped at the first check; cost per decision
+4 380 against 4 444 engine steps (−1.5%), rollouts 10.3 both; spells cast 9.7 against 9.8. Kept (Shayne's rule: a
+reasonable play fixed at no cost).** Borg Cube #343's Pass settled as fair (Shayne, 2026-11-12).

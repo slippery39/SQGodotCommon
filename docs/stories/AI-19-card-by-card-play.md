@@ -264,3 +264,4 @@ boards and counts were in the session scratchpad and are gone.
 - 2026-11-06: Phyrexian Tower added (MC-5.6 batch 1).
 - 2026-11-12: AI-19.22's pre-commit fixes — the rollout's damage tie-break off under `+passbias` (no potential), the potential tie compared within rounding.
 - 2026-11-12: AI-19.22 — #343 settled (Shayne: the Pass is reasonable); the station lessons moved to AI-23.
+- 2026-11-12: AI-19.22's match — `beam` vs `beam+nodamagepotential` 50.0% over 96 (48–48), no difference, cost −1.5%; `Terms.DamagePotential` kept (`docs/findings/magic-ai.md`).

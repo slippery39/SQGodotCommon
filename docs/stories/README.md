@@ -29,12 +29,11 @@ every task a sprint file names exists.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-**Next session (written 2026-11-12, sprint 5 planned):**
-1. **The DamagePotential match** was started at planning (`--match=beam,beam+nodamagepotential --until-clear`) — its
-   result into `docs/findings/magic-ai.md` and AI-19.22's log; a flat result keeps it (Shayne's rule: reasonable plays).
-2. **DEV-7.1** — time the test suite; then AI-22.1 (profile a sealed run). The sprint file has the order.
-3. **The cube lane's first session is tonight (2026-11-12)** in `D:\GameDev\SQGodotCommon-cube` — this lane runs
-   nothing heavy while it does. Its prompt was given to Shayne at planning; LSVPower's list from him.
+**Next session (written 2026-11-12, evening — the cube lane running its first session):**
+1. **For Shayne to read:** the AI-20 research note (`docs/findings/ai-research.md`, its questions are AI-20.1's) and the
+   MTGA reference to mark (`docs/mockups/magictable/mtga-reference.md`). The DamagePotential match: no difference, kept.
+2. **DEV-7.1, then AI-22.1** — both measure wall-clock time: only on a quiet machine, not while the cube lane builds.
+3. **The cube lane** (`D:\GameDev\SQGodotCommon-cube`) is on C1–C5; this lane runs nothing heavy until it ends.
 
 1. **DEV-7** — faster tests: what a change touches while working, the full suite at a story's end
 2. **AI-22** — faster AI decisions for sealed runs: profiled, then the levers AI-20 won't rewrite
