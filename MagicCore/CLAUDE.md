@@ -167,8 +167,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   one-card component. A new piece names the nearest one and why no option fits; generalising moves old cards.
 - **Each mechanic's rules** — planeswalkers, modes, step triggers and "this turn", flashback, prepare,
   abilities from the hand and graveyard, hexproof and indestructible, Auras and Equipment, countering
-  and ward, reflexive and intervening triggers — are in `.claude/rules/magic-mechanics.md`, which
-  loads with any MagicCore file. Add a new mechanic's rule there, not here.
+  and ward, reflexive and intervening triggers — are in `.claude/rules/magic-<subsystem>.md` (casting, triggers, combat, mana, zones, statics,
+  ai — DEV-4), each loading with its own engine files and all with a card script. Add a new rule there, not here.
 - **A spell or ability whose targets are ALL illegal on resolution does nothing** (CR 608.2b) — the
   drain on Extended Absence included. Partially illegal: those targets read as 0 to the effects.
 - **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered.

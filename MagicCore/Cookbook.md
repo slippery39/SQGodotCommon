@@ -3,7 +3,7 @@
 How a card becomes playable, by pattern, with real FRA scripts to copy. For **what pieces exist**, read
 `MagicCore/AbilityCatalog.md` (generated); for **every card's script next to its printed text**,
 `MagicCore/<Set>CardSheet.md` (generated, one per set). The rules each mechanic follows are in
-`.claude/rules/magic-mechanics.md`.
+`.claude/rules/magic-*.md` (one per subsystem).
 
 ## How a card is built
 
@@ -101,7 +101,7 @@ list, in the order paid: `Costs = [new TapSelfCost(), new SacrificeCost(Is.Artif
 ```
 
 **"If …" on a trigger** — an *intervening* if ("When/At …, if X, …") is `When(…) with { If = condition }`
-— checked as it triggers AND as it resolves. Never a bare `If` effect for that (rule in magic-mechanics.md).
+— checked as it triggers AND as it resolves. Never a bare `If` effect for that (rule in magic-triggers.md).
 
 **"You may … If you do, …"** — `new May(prompt, canDoIt, [the doing, then the rest])`:
 

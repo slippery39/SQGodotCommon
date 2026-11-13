@@ -36,3 +36,21 @@ session per batch was simulated to save 37–40%.
 | 2026-11-07 | MC-5.6 batch 3b: Sen Triplets, Flare of Fortitude, Mogis on MC-6.15/6.9/6.13 + Granted perf fix, 3 cards | b3f0fe83 | 181 | 232k | 5.2M |
 | 2026-11-07 | MC-5.4 overnight: TRK collation, art, interim ratings, sealed + draft on the table; DATA-2 self-play checked on FRA (loses to interim); walker games -> AI-9.3 next | 872d3ed6 | 325 | 337k | 13.1M |
 | 2026-11-07 | AI-9.3: walkers priced over their lifetime, 2 positions, match no difference | d0d30868 | 144 | 217k | 4.9M |
+
+## DEV-4: the mechanics rules split by subsystem (2026-11-12)
+
+**Before:** `.claude/rules/magic-mechanics.md`, 65.7 KB (~16k tokens), loaded by ANY MagicCore file. Of the last
+58 `mtg-real` sessions, 45 loaded it: 23 card batches or card-script edits (7,220 calls after it loaded) and **22
+others** — AI, sealed and table work that opened an `Ai/`, `Limited/` or engine file (12,785 calls).
+
+**Which files a batch opens** (the last ten `/card-batch` sessions, Read/Write/Edit and Bash paths): `Effects/` in
+every one, then `Sets/` scripts and `MagicCore.Tests/Sets/`, `Actions/`, `Turns/`, `Rules/`, `Mana/`, `Filters/`. A
+batch touches nearly every subsystem, so a batch saves nothing; the split pays in the other sessions.
+
+**After:** seven files, every rule in exactly one — casting 20.1 KB, triggers 14.3, statics 13.2, zones 13.1,
+mana 6.8, combat 2.9, ai 0.9. A card script, card test or `Effects/` file loads the six mechanics files (69.3 KB,
++5% for their headers); an engine file loads its own subsystem's; `Ai/` loads 0.9 KB; `Limited/` nothing.
+
+**Estimate (an upper bound — some of the 22 opened an engine file too):** at 0.1 per cache read, ~16k × 12,785 ×
+0.1 ≈ **20M** over those 22 sessions (~0.9M each) not spent; card batches pay ~+0.02M each. A real batch's row
+after the split is DEV-4.3.

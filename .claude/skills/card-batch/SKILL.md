@@ -19,7 +19,7 @@ So this skill is built to start cold and cheap: read the short generated docs, n
   — never carry a finished batch's context into the next one. The handoff and these docs make a cold
   start cheap; a 400k-token context makes every call expensive.
 - **Read, in this order, and nothing more yet:** the handoff's "next" section, `MagicCore/Cookbook.md`
-  (how scripts are written). `.claude/rules/magic-mechanics.md` loads itself when you open an engine file.
+  (how scripts are written). The mechanics' rules load themselves (`.claude/rules/magic-*.md`, one per subsystem — all of them once you open a card script).
 - **Grep `MagicCore/AbilityCatalog.md`, don't read it whole** (what pieces exist — instead of the engine
   source). It is ~40k tokens, and everything read stays in the context every later call re-reads:
   `grep -n "Station\|charge" MagicCore/AbilityCatalog.md` for the pieces the batch's cards name; its
@@ -94,7 +94,7 @@ become a CHOICE made after the action, not more actions.
 ## 4. Docs, review, commit
 
 - `python tools/magic_docs.py` (catalog + sheet), `python tools/magic_set.py coverage` → the coverage
-  line in `MagicCore/FraCoverage.md`; new mechanics' rules in `.claude/rules/magic-mechanics.md`;
+  line in `MagicCore/FraCoverage.md`; new mechanics' rules in the one `.claude/rules/magic-<subsystem>.md` they live in;
   deliberate simplifications in `DesignNotes.md` ("MagicCore known ceilings", append in binary, CRLF).
 - `/pre-commit`. Point its code review at the ENGINE changes: tier 0–1 card scripts are checked by the
   card sheet, not line by line. Fix each finding with a test that fails without the fix.
