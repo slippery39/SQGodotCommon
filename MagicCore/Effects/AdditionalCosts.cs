@@ -211,19 +211,47 @@ public sealed record SacrificeSelfCost : AdditionalCost
 /// <summary>
 /// "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none: any
 /// permanent); Silence the Echo's "sacrifice a creature or pay {3}" with Or. Emrakul's ward
-/// "sacrifice three permanents" is Count = 3, paid by choosing.
+/// "sacrifice three permanents" is Count = 3, paid by choosing. Magda, Brazen Outlaw's "Sacrifice five
+/// Treasures:" is Count = 5 with a filter: picked AFTER activating, all at once — one action per set would be
+/// 252 from ten Treasures (as ExileFromGraveyardCost's Count).
 /// </summary>
 public sealed record SacrificeCost(Filter? Filter = null) : AdditionalCost
 {
 	public int Count { get; init; } = 1;
 
-	public override CostSlot Slot => CostSlot.Sacrifice;
+	public override CostSlot Slot => Count == 1 ? CostSlot.Sacrifice : CostSlot.None;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		Filter.Among(s, playerId, ZoneType.Battlefield, sourceId).Where(s.CanSacrifice);
 
+	/// <summary>
+	/// ponytail: Count &gt; 1 picks nothing in the action, so Uses names none and the mana payment may sacrifice one of
+	/// them (a Treasure) first — harmless while no such cost has a mana cost beside it (Magda's has none); reserve
+	/// Count candidates from the payment if one ever does.
+	/// </summary>
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		Count == 1 || Candidates(s, playerId, sourceId).Count() >= Count;
+
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		chosen == 0 ? s : s.Sacrifice(chosen);
+		Count > 1
+			? s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new ChoosePermanentChoice(playerId, sourceId, Filter, required: true)
+						{
+							MinChoices = Count,
+							MaxChoices = Count,
+							Prompt = $"Sacrifice {Count}",
+							Sacrifice = true,
+						},
+						new SacrificeChosenAction(),
+					],
+				}
+			)
+		: chosen == 0 ? s
+		: s.Sacrifice(chosen);
 
 	public override string Describe() =>
 		Count == 1 ? "Sacrifice a permanent" : $"Sacrifice {Count} permanents";

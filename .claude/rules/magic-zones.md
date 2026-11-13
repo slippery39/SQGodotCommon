@@ -148,4 +148,7 @@ whose subsystem it lives in.
   `Otherwise`, "if you do" `Then` (Temporal Conqueror, Sylvia Tilly, Erica Ortegas). "Put two cards from your hand on
   top of your library in any order" (Brainstorm) is two of them `{ OnTop }`, the second on top.
 - **"[Effect]. … for each [one] [done] this way"** (Decree of Pain) is the effect's `Then` with `Ref.ThisWay` — the
-  ids it actually did it to (`Destroy`: the ones that left; an indestructible one or McCoy's save didn't).
+  ids it actually did it to (`Destroy`: the ones that left; an indestructible one or McCoy's save didn't;
+  `CreateTokens`: the tokens made — Cori-Steel Cutter's "You may attach this Equipment to it"; `ExileTopPlayable`:
+  the cards exiled). **"Discard up to two cards, then draw that many"** (Tersa) is `Discard { UpTo, Then }` with
+  `Count.NumberOf(Ref.Chosen)`, the cards the discard chose.

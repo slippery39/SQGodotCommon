@@ -169,6 +169,37 @@ as his three priorities.
   its power read as it resolves; Generous Plunderer's "defending player" is the one opponent; the tokens (Elemental,
   Golem) are properties, not fields — a static field declared below `Scripts` is still null when the scripts are built.
 
+- 2026-11-13, Claude (cube lane) — **4.4c2 surveyed: 13 of the 16 are options, 3 need a new rule** (MC-6's rule, each
+  read against the nearest piece's code). Parts: **2a** Bombardiers, Cori-Steel Cutter, Dracosaur, Inti, Magda, Tersa;
+  **2b** Sneak Attack (`MoveChosen` + `AtNextEndStep { On }` widened from a dead card to a permanent), Orcish Lumberjack
+  (a mana ability's "any combination of" colours), Fiery Confluence (`ModeChoice` repeating a mode — `Compose` already
+  takes repeats), Screaming Nemesis (`LifeTotalCantChange` for gaining only, kept for the rest of the game), Goblin
+  Welder (a target "in that player's graveyard"; "if both still legal" is `Both(Matches…)`), Robber of the Rich
+  (`AtLeast` against a Count, `PlayPermission.If`, cast only, an attacked-subtype tally), Underworld Breach (escape is
+  `MayPlayFromZone` with `Costs` — not flashback: an escaped card isn't exiled); then a part per new rule — **2c** Laelia
+  (`LeftGraveyardEvent` generalised to a zone-change event with From/To, library→exile raised too), **2d** "Name
+  Sticker" Goblin (`EnteredBattlefieldEvent.From`, and a die roll: `FlipACoin` can't take it — a coin flip isn't a die
+  roll, CR 705/706), **2e** Pyrokinesis (damage divided among ANY number of targets — Pure Energy's two-target split is
+  2^n target sets; the targets a choice after casting, as PerX's).
+- 2026-11-13, Claude — **4.4c2a's options**, each on the piece the card reads as: `CreateTokens.Then` and
+  `ExileTopPlayable.Then` with `Ref.ThisWay` (Decree of Pain's pattern: Cori-Steel Cutter's "you may attach this
+  Equipment to it", Dracosaur's "if you exiled a land card this way"); `ExileTopPlayable { From = Graveyard, AtRandom }`
+  (Tersa); `Discard.UpTo` with `Count.NumberOf(Ref.Chosen)` ("discard up to two, then draw that many");
+  `PlayPermission.UntilYourNextEndStep` (Inti — a known ceiling: through that whole turn, DesignNotes);
+  `SacrificeCost.Count` on an activation, the set picked after activating as Drivnod's exile (Magda's "Sacrifice five
+  Treasures" — 252 actions per set from ten). Prowess moved to `Scripting` (the Monk token is LSV's). Bombardiers'
+  boast is `OncePerTurn` + `OnlyIf(Matches(Source, AttackedThisTurn))`, "the sacrificed permanent's mana value" the
+  ability's event card (`GreatestManaValueOf(Ref.EventCard) { Plus = 2 }`) — tested, no engine change.
+  Pre-commit review: a card Tersa exiles from the graveyard was marked `Blind` (priced by the AI as an unseen card) —
+  now only a library card is (tested, caught). Ceilings added (DesignNotes): `SacrificeCost.Count` beside a mana cost
+  could pay with a Treasure it is about to need; its `Describe` says "permanents". Left as cleanups: one "run `Then` with
+  `ThisWay`" helper for the three copies, `PlayPermission`'s durations as one enum, `From` beside the library-only
+  `ShuffleFirst`/`RestOnBottom`.
+- 2026-11-13, Claude — **Open (for Shayne): the AI never discards to Tersa's "discard up to two".** `GreedyAi` answers a
+  hand choice with its minimum unless it is "up to one", so an "up to two" is answered with none: the AI's Tersa
+  draws nothing. Default: left to the AI lane (a rule for "up to N" hand choices — discard the cards it values least
+  below what a draw is worth); Tersa still plays, only her looting is lost.
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -209,25 +240,29 @@ as his three priorities.
           Faithless Looting, Mine Collapse, Suplex, Legion Extruder, Seasoned Pyromancer, Pyrogoyf, Generous Plunderer.
           Scripts only, no engine change; 14 tests; `batch_checks.py` all 7 steps (golden-out unchanged; golden-in moved
           29 random and 649 card-replay games, added 44; probe 150 games, none unfinished, every card used)
-    - [ ] MC-4.4c2 The options and new pieces, 16 (Next)
+    - [ ] MC-4.4c2 The options and new pieces, 16 — surveyed and split in five parts (Decisions):
+      - [x] MC-4.4c2a Options, 6 — done 2026-11-13: Broadside Bombardiers, Cori-Steel Cutter, Bonehoard Dracosaur, Inti,
+            Magda, Tersa Lightshatter. Six options (Decisions); 7 tests, 9/9 breaks caught; `batch_checks.py` all 7 steps
+            (golden-out unchanged; golden-in moved 29 random and 336 card-replay games, added 24; probe 150 games, none
+            unfinished, every card used — Magda's search 3 times)
+      - [ ] MC-4.4c2b Options, 7 (Next)
+      - [ ] MC-4.4c2c Laelia — the zone-change event
+      - [ ] MC-4.4c2d "Name Sticker" Goblin — entering from a zone, a die roll
+      - [ ] MC-4.4c2e Pyrokinesis — damage divided among any number of targets
 
 ## Next
 
-MC-4.4c2 — red's last 16, each read 2026-11-13; the survey's "nothing the keywords name" hid an option or a
-new piece in every one (each the nearest piece with an option first — MC-6's rule):
-- Broadside
-  Bombardiers (boast: `OncePerTurn` + attacked this turn, "2 plus the sacrificed permanent's mana value"), Cori-Steel
-  Cutter (flurry: `SpellNumber = 2`, a token you MAY attach), Bonehoard Dracosaur (tokens by what was exiled "this way"),
-  Inti (reflexive on a discard; "whenever you discard one or more" → play until your NEXT end step), Laelia ("cards put
-  into exile from your library and/or graveyard" — a new event?), Magda ("sacrifice five Treasures", Dwarf tapped),
-  Tersa ("discard up to two, draw that many"; a RANDOM card exiled from the graveyard), Sneak Attack (a creature from the
-  hand, haste, sacrificed at the next end step — `MoveChosen` + `SacrificeAtNextEndStep`), Robber of the Rich ("spend
-  mana as though any colour", "during any turn you attacked with a Rogue"), Screaming Nemesis ("can't gain life for the
-  rest of the game"), Orcish Lumberjack (three mana in any combination of {R}/{G}), Fiery Confluence (the same mode
-  more than once), Pyrokinesis (4 damage divided among ANY number of targets), Underworld Breach (escape), "Name
-  Sticker" Goblin (a d20 and "enters from anywhere other than…"), Goblin Welder (two targets, simultaneous swap).
-Each part its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used card, and a
-re-run after a fix needs the golden files restored from HEAD by hand (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
+MC-4.4c2b — seven options, each designed in Decisions (4.4c2's survey; the nearest code already read): Sneak Attack,
+Orcish Lumberjack, Fiery Confluence, Screaming Nemesis, Goblin Welder, Robber of the Rich, Underworld Breach. Notes
+from reading: `AtNextEndStep.On` keeps only graveyard cards today (widen to a permanent on the battlefield — a
+`DelayedTrigger` on a permanent is already read); `Modal.Choices`/`IsLegal` refuse repeats, `Compose` takes them;
+`TargetSpec.Combinations`/`AreLegal` are where Welder's "that player's graveyard" goes; `PlayableFromExile` has no `If`
+(judge it with the PERMISSION holder as controller — the card's own controller is the opponent); `CastSpellAction.CostsOf`
+adds no permission's costs (Breach's escape: add `Playable.ZonePermission(…).Rule.Costs` for a graveyard cast without
+its own flashback); `SubtypeEnteredThisTurn` reads `TurnTally.SubtypesEntered` (Robber: an attacked list beside it).
+Then 2c, 2d, 2e, each its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
+card, and a re-run after a fix needs the golden files restored from HEAD by hand
+(`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
 ## Log
 
@@ -253,3 +288,6 @@ re-run after a fix needs the golden files restored from HEAD by hand (`git check
   engine; 120 of 528 play. For Shayne: nothing Open.
 - 2026-11-13 (cube lane, sprint 5 C5): MC-4.4c1 — red's 11 tier-1 cards made of tested pieces, scripts only; 131 of
   528 play. Red's other 16 need options or pieces (4.4c2, Next). For Shayne: nothing Open.
+- 2026-11-13 (cube lane, sprint 5 C5): MC-4.4c2a — red's 16 surveyed (13 options, 3 new rules; five parts), part a's
+  six cards on six options; no recorded game moved by the engine; 137 of 528 play. For Shayne: one Open (the AI and
+  "discard up to two").

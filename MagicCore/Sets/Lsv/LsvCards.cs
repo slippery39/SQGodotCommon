@@ -552,7 +552,164 @@ public static class LsvCards
 					)
 				),
 			],
+			// ===== MC-4.4c2a: red's options =====
+			["Broadside Bombardiers"] =
+			[
+				// Boast: "Activate only if this creature attacked this turn and only once each turn." The sacrificed
+				// permanent is the ability's event card, its mana value read as it last was.
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new DealDamage(
+							Ref.Target(),
+							Count.GreatestManaValueOf(Ref.EventCard) with
+							{
+								Plus = 2,
+							}
+						),
+					]
+				)
+				{
+					Keyword = "Boast",
+					Costs = [new SacrificeCost((Is.Creature | Is.Artifact) & !Is.Source)],
+					Targets = [TargetSpec.AnyTarget()],
+					OnlyIf = new Matches(Ref.Source, Is.AttackedThisTurn),
+					OncePerTurn = true,
+				},
+			],
+			["Cori-Steel Cutter"] =
+			[
+				AttachedGets(1, 1),
+				new StaticEffectComponent(Is.AttachedToSource, "Trample"),
+				new StaticEffectComponent(Is.AttachedToSource, "Haste"),
+				// Flurry — "Whenever you cast your second spell each turn"
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						SpellNumber = 2,
+					},
+					[],
+					new CreateTokens(Monk, 1)
+					{
+						Abilities = [Prowess],
+						Then =
+						[
+							new May(
+								"Attach Cori-Steel Cutter to the Monk?",
+								new Always(),
+								[new AttachSourceTo(Ref.ThisWay)]
+							),
+						],
+					}
+				),
+				Equip("{1}{R}"),
+			],
+			["Bonehoard Dracosaur"] =
+			[
+				When(
+					TriggerEvent.YourUpkeep,
+					[],
+					new ExileTopPlayable
+					{
+						N = 2,
+						Play = new() { ThisTurn = true },
+						Then =
+						[
+							new If(
+								new Matches(Ref.ThisWay, Is.Land),
+								[new CreateTokens(Dinosaur, 1)]
+							),
+							new If(new Matches(Ref.ThisWay, !Is.Land), [CreateTreasure(1)]),
+						],
+					}
+				),
+			],
+			["Inti, Seneschal of the Sun"] =
+			[
+				When(
+					TriggerEvent.YouAttack,
+					[],
+					new MayDiscard(
+						[
+							new WhenYouDo(
+								[Target(Is.Creature & Is.Attacking)],
+								[
+									new PutCounters(Ref.Target(), 1),
+									new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Trample"),
+								]
+							),
+						]
+					)
+				),
+				When(
+					TriggerEvent.APlayerDiscards with
+					{
+						By = Whose.You,
+					},
+					[],
+					new ExileTopPlayable { Play = new() { UntilYourNextEndStep = true } }
+				),
+			],
+			["Magda, Brazen Outlaw"] =
+			[
+				new StaticEffectComponent(Is.Creature & Is.Yours & Is.Subtype("Dwarf") & !Is.Source)
+				{
+					Power = 1,
+				},
+				When(
+					new Trigger(EventKind.BecameTapped)
+					{
+						Subject = Is.Yours & Is.Subtype("Dwarf"),
+					},
+					[],
+					CreateTreasure(1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new SearchLibrary(CardType.None, ZoneType.Battlefield)
+						{
+							Filter = Is.Artifact | Is.Subtype("Dragon"),
+							FilterText = "artifact or Dragon",
+						},
+					]
+				)
+				{
+					Costs = [new SacrificeCost(Is.Artifact & Is.Subtype("Treasure")) { Count = 5 }],
+				},
+			],
+			["Tersa Lightshatter"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Discard(Ref.You, 2)
+					{
+						UpTo = true,
+						Then = [new DrawCards(Ref.You, Count.NumberOf(Ref.Chosen))],
+					}
+				),
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new ExileTopPlayable
+					{
+						From = ZoneType.Graveyard,
+						AtRandom = true,
+						Play = new() { ThisTurn = true },
+					}
+				) with
+				{
+					If = new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 7),
+				},
+			],
 		};
+
+	/// <summary>Cori-Steel Cutter: "a 1/1 white Monk creature token with prowess".</summary>
+	static CardData Monk => Token("Monk", "Creature — Monk", "1", "1", ["W"]);
+
+	/// <summary>Bonehoard Dracosaur: "a 3/1 red Dinosaur creature token".</summary>
+	static CardData Dinosaur => Token("Dinosaur", "Creature — Dinosaur", "3", "1", ["R"]);
 
 	/// <summary>Seasoned Pyromancer: "a 1/1 red Elemental creature token".</summary>
 	static CardData Elemental => Token("Elemental", "Creature — Elemental", "1", "1", ["R"]);

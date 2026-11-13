@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 17/46 · uncommon 27/86 · rare 57/279 · mythic 22/108 · **131/528**
+**Playable:** common 17/46 · uncommon 27/86 · rare 62/279 · mythic 23/108 · **137/528**
 
 ### "Name Sticker" Goblin
 
@@ -642,7 +642,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}{C}{C}.  
 > {3}: Untap this artifact.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2c2Tests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
@@ -1914,7 +1914,36 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace, haste  
 > Boast — Sacrifice another creature or artifact: This creature deals damage equal to 2 plus the sacrificed permanent's mana value to any target. (Activate only if this creature attacked this turn and only once each turn.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Broadside Bombardiers"] =
+[
+	// Boast: "Activate only if this creature attacked this turn and only once each turn." The sacrificed
+	// permanent is the ability's event card, its mana value read as it last was.
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			new DealDamage(
+				Ref.Target(),
+				Count.GreatestManaValueOf(Ref.EventCard) with
+				{
+					Plus = 2,
+				}
+			),
+		]
+	)
+	{
+		Keyword = "Boast",
+		Costs = [new SacrificeCost((Is.Creature | Is.Artifact) & !Is.Source)],
+		Targets = [TargetSpec.AnyTarget()],
+		OnlyIf = new Matches(Ref.Source, Is.AttackedThisTurn),
+		OncePerTurn = true,
+	},
+],
+```
 
 ### Candelabra of Tawnos
 
@@ -2134,7 +2163,39 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flurry — Whenever you cast your second spell each turn, create a 1/1 white Monk creature token with prowess. You may attach this Equipment to it. (Whenever you cast a noncreature spell, the token gets +1/+1 until end of turn.)  
 > Equip {1}{R}
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `AttachSourceTo` — Equip: "Attach to target creature you control." This Equipment, to the target.; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Cori-Steel Cutter"] =
+[
+	AttachedGets(1, 1),
+	new StaticEffectComponent(Is.AttachedToSource, "Trample"),
+	new StaticEffectComponent(Is.AttachedToSource, "Haste"),
+	// Flurry — "Whenever you cast your second spell each turn"
+	When(
+		TriggerEvent.YouCastSpell with
+		{
+			SpellNumber = 2,
+		},
+		[],
+		new CreateTokens(Monk, 1)
+		{
+			Abilities = [Prowess],
+			Then =
+			[
+				new May(
+					"Attach Cori-Steel Cutter to the Monk?",
+					new Always(),
+					[new AttachSourceTo(Ref.ThisWay)]
+				),
+			],
+		}
+	),
+	Equip("{1}{R}"),
+],
+```
 
 ### Corpse Dance
 
@@ -2887,7 +2948,38 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you attack, you may discard a card. When you do, put a +1/+1 counter on target attacking creature. It gains trample until end of turn.  
 > Whenever you discard one or more cards, exile the top card of your library. You may play that card until your next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+
+```csharp
+["Inti, Seneschal of the Sun"] =
+[
+	When(
+		TriggerEvent.YouAttack,
+		[],
+		new MayDiscard(
+			[
+				new WhenYouDo(
+					[Target(Is.Creature & Is.Attacking)],
+					[
+						new PutCounters(Ref.Target(), 1),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Trample"),
+					]
+				),
+			]
+		)
+	),
+	When(
+		TriggerEvent.APlayerDiscards with
+		{
+			By = Whose.You,
+		},
+		[],
+		new ExileTopPlayable { Play = new() { UntilYourNextEndStep = true } }
+	),
+],
+```
 
 ### Invert Polarity
 
@@ -3082,7 +3174,37 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever a Dwarf you control becomes tapped, create a Treasure token.  
 > Sacrifice five Treasures: Search your library for an artifact or Dragon card, put that card onto the battlefield, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Magda, Brazen Outlaw"] =
+[
+	new StaticEffectComponent(Is.Creature & Is.Yours & Is.Subtype("Dwarf") & !Is.Source)
+	{
+		Power = 1,
+	},
+	When(
+		new Trigger(EventKind.BecameTapped) { Subject = Is.Yours & Is.Subtype("Dwarf") },
+		[],
+		CreateTreasure(1)
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			new SearchLibrary(CardType.None, ZoneType.Battlefield)
+			{
+				Filter = Is.Artifact | Is.Subtype("Dragon"),
+				FilterText = "artifact or Dragon",
+			},
+		]
+	)
+	{
+		Costs = [new SacrificeCost(Is.Artifact & Is.Subtype("Treasure")) { Count = 5 }],
+	},
+],
+```
 
 ### Malcolm, Alluring Scoundrel
 
@@ -4091,7 +4213,37 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Tersa Lightshatter enters, discard up to two cards, then draw that many cards.  
 > Whenever Tersa Lightshatter attacks, if there are seven or more cards in your graveyard, exile a card at random from your graveyard. You may play that card this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Tersa Lightshatter"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new Discard(Ref.You, 2)
+		{
+			UpTo = true,
+			Then = [new DrawCards(Ref.You, Count.NumberOf(Ref.Chosen))],
+		}
+	),
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new ExileTopPlayable
+		{
+			From = ZoneType.Graveyard,
+			AtRandom = true,
+			Play = new() { ThisTurn = true },
+		}
+	) with
+	{
+		If = new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 7),
+	},
+],
+```
 
 ### Thalia, Guardian of Thraben
 
@@ -4729,7 +4881,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying, first strike  
 > At the beginning of your upkeep, exile the top two cards of your library. You may play them this turn. If you exiled a land card this way, create a 3/1 red Dinosaur creature token. If you exiled a nonland card this way, create a Treasure token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Bonehoard Dracosaur"] =
+[
+	When(
+		TriggerEvent.YourUpkeep,
+		[],
+		new ExileTopPlayable
+		{
+			N = 2,
+			Play = new() { ThisTurn = true },
+			Then =
+			[
+				new If(
+					new Matches(Ref.ThisWay, Is.Land),
+					[new CreateTokens(Dinosaur, 1)]
+				),
+				new If(new Matches(Ref.ThisWay, !Is.Land), [CreateTreasure(1)]),
+			],
+		}
+	),
+],
+```
 
 ### Brazen Borrower // Petty Theft
 
@@ -5097,7 +5274,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 				CreateTreasure(1),
 				new WhenYouDo(
 					[TargetSpec.Player(Is.Opponents)],
-					[CreateTreasure(1) with { ControlledBy = Ref.Target(), Tapped = true }]
+					[
+						CreateTreasure(1) with
+						{
+							ControlledBy = Ref.Target(),
+							Tapped = true,
+						},
+					]
 				),
 			]
 		)

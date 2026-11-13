@@ -155,10 +155,13 @@ whose subsystem it lives in.
   effect, `ExileTopPlayable`** (MC-6.9): the top N or `Until` a card matches (Exploratory Mission, The Caretaker:
   `!Is.Land`; discover: and mana value N or less), whose library (`Of`), `ShuffleFirst` (Q), face down, the rest to the
   bottom (`RestOnBottom`), or only a chosen card (`Choose`, Chekov's land). **What may be played is ONE `PlayPermission`**:
-  who and how long (`By`, `ThisTurn`, "for as long as it remains exiled" `Forever`) — a mark on the card — or **`Now`**,
+  who and how long (`By`, `ThisTurn`, "for as long as it remains exiled" `Forever`, Inti's "until your next end step"
+  `UntilYourNextEndStep`) — a mark on the card — or **`Now`**,
   a cast as it resolves and never a mark (Chandra; `Free`: The Caretaker, discover's `OrIntoHand`; Sisko's `AnyNumber`
   under `ManaValueAtMost`, counted once, CR 608.2h), with "if you don't" (`Otherwise`). Q's card `Gains` an ability
-  instead. Cast or played, the card is public again (`ExiledFaceDown` is status).
+  instead. Cast or played, the card is public again (`ExiledFaceDown` is status). Tersa Lightshatter's "exile a card at
+  random from your graveyard" is the same effect `{ From = Graveyard, AtRandom }`; "if you exiled a land card this way"
+  (Bonehoard Dracosaur) is its `Then`, with `Ref.ThisWay` the cards exiled.
 - **"[Once during each of your turns,] you may play [cast] … from your graveyard / the top of your library [/ outside
   the game / exile / that player's hand]"** is ONE piece (MC-6.9), `MayPlayFromZone(From, filter) { OncePerTurn,
   Finality, OutsideTheGame, Of, AnyTime, If, AnyType }` — Overflow Submatrix, The Holodeck, Nog's gained lands, Zefram

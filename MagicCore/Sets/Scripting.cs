@@ -75,6 +75,14 @@ public static class Scripting
 			new ModifyUntilEndOfTurn(Ref.EventCard, 1, 1)
 		);
 
+	/// <summary>
+	/// "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of
+	/// turn.)" A scripted trigger, not an engine keyword: Ruric Thar has it twice, and each instance
+	/// triggers separately (CR 702.108b). Cori-Steel Cutter's Monk token too.
+	/// </summary>
+	public static TriggeredAbilityComponent Prowess =>
+		When(TriggerEvent.YouCastNoncreatureSpell, [], new ModifyUntilEndOfTurn(Ref.Source, 1, 1));
+
 	/// <summary>"{T}: Add one mana of any color." — five abilities, one per colour, sharing a restriction.</summary>
 	public static GameComponent[] AnyColorMana(ManaRestriction restriction) =>
 		[

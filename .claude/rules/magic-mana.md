@@ -95,3 +95,6 @@ whose subsystem it lives in.
 - **"Exile N cards from your graveyard"** as a cost (Drivnod: three creature cards) is `ExileFromGraveyardCost { Count }`:
   one is a legal action per card (`ExileId`, Gallia); more are picked AFTER activating, one at a time
   (`ChooseAmongChoice`, then `MoveChosenToAction`), as `RemoveCountersCost`'s counters — never one action per set.
+  **"Sacrifice five Treasures"** (Magda) is `SacrificeCost(filter) { Count = 5 }` the same way: no pick in the action
+  (`CostSlot.None`), offered only with five to sacrifice, the set chosen after activating (`ChoosePermanentChoice
+  { Sacrifice }`, then `SacrificeChosenAction`).

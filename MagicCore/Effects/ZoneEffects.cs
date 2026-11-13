@@ -410,9 +410,16 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>Gwyndala, the Progeny: "create … Neuroflux Heirloom … Attach it to Gwyndala." — once it has entered, if that is still there.</summary>
 	public Ref? AttachTo { get; init; }
 
+	/// <summary>
+	/// Cori-Steel Cutter: "create a 1/1 white Monk creature token with prowess. You may attach this Equipment to it." —
+	/// run after, with Ref.ThisWay the tokens created (as Destroy.Then, Decree of Pain).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var count = Count.Value(s, InputContext);
+		var made = ImmutableArray.CreateBuilder<int>();
 		var counters = Counters.Value(s, InputContext);
 		var controller = ControlledBy is null ? Controller : All(ControlledBy, s).FirstOrDefault();
 		if (controller == 0)
@@ -426,6 +433,7 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 		{
 			var token = template with { IsToken = true };
 			(s, token) = s.AddObject(token);
+			made.Add(token.Id);
 			s = s.EnterBattlefield(token.Id, controller, extraCounters: counters, tapped: Tapped);
 			if (GainsUntilEndOfTurn is { } keyword)
 				s = Update(
@@ -441,7 +449,20 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 			if (SacrificeAtNextEndStep)
 				s = MoveTo.Delay(s, token.Id, MoveTo.SacrificeItAtTheEndStep);
 		}
-		return new(s);
+		return Then.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							made.ToImmutable()
+						),
+						Steps = Then,
+					}
+				)
+			);
 	}
 
 	/// <summary>
@@ -1654,12 +1675,23 @@ public record PlayPermission
 	/// <summary>Discover: "Cast it without paying its mana cost or put it into your hand."</summary>
 	public bool OrIntoHand { get; init; }
 
+	/// <summary>
+	/// Inti, Seneschal of the Sun: "You may play that card until your next end step." — this turn's when it is yours and
+	/// its end step hasn't begun, else your next turn's. ponytail: through that whole turn, as ThisTurn is — so the card
+	/// is still playable in that end step and cleanup; end it as the end step begins if a card ever cares.
+	/// </summary>
+	public bool UntilYourNextEndStep { get; init; }
+
 	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
 	public PlayableFromExile For(GameState s, int who) =>
 		new(
 			who,
 			Forever ? int.MaxValue
 				: ThisTurn ? s.GetGame().TurnNumber
+				: UntilYourNextEndStep
+				&& s.GetGame().ActivePlayerId == who
+				&& s.GetGame().Step < Step.End
+					? s.GetGame().TurnNumber
 				: Playable.EndOfNextTurnOf(s, who)
 		)
 		{
@@ -1712,6 +1744,21 @@ public record ExileTopPlayable : Effect
 	/// </summary>
 	public ActivatedAbilityComponent? Gains { get; init; }
 
+	/// <summary>
+	/// Tersa Lightshatter: "exile a card at random from your graveyard" — the zone the cards come from (Graveyard); unset
+	/// is the library's top.
+	/// </summary>
+	public ZoneType From { get; init; } = ZoneType.Library;
+
+	/// <summary>Tersa Lightshatter: "a card at random" — the N taken in a random order (s.TakeRng), not from the top.</summary>
+	public bool AtRandom { get; init; }
+
+	/// <summary>
+	/// Bonehoard Dracosaur: "If you exiled a land card this way, create … If you exiled a nonland card this way, create
+	/// a Treasure token." — run after, with Ref.ThisWay the cards exiled.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var who = Play.By is { } by ? All(by, s).FirstOrDefault() : Controller;
@@ -1722,6 +1769,7 @@ public record ExileTopPlayable : Effect
 		var cap = Play.ManaValueAtMost?.Value(s, InputContext) ?? int.MaxValue;
 		var playable = Play.For(s, who);
 		var steps = ImmutableList<GameAction>.Empty;
+		var done = ImmutableArray.CreateBuilder<int>();
 		foreach (
 			var owner in Of is { } of
 				? All(of, s).Where(id => s.GetObject(id) is MagicPlayer).ToList()
@@ -1730,7 +1778,14 @@ public record ExileTopPlayable : Effect
 		{
 			if (ShuffleFirst)
 				s = s.Shuffle(owner);
-			var library = s.CardsIn(owner, ZoneType.Library).ToList();
+			var library = s.CardsIn(owner, From).ToList();
+			if (AtRandom)
+			{
+				var order = library.ToArray();
+				(var shuffler, s) = s.TakeRng();
+				shuffler.Shuffle(order);
+				library = [.. order];
+			}
 			var context = new Filters.FilterContext(Controller, sourceId);
 			var hit = Until is { } until
 				? library.FirstOrDefault(c => until.Matches(s, c, context))
@@ -1742,6 +1797,7 @@ public record ExileTopPlayable : Effect
 			foreach (var top in exiled)
 			{
 				s = s.MoveCard(top.Id, s.ZoneId(owner, ZoneType.Exile));
+				done.Add(top.Id);
 				if (FaceDown) // known only to the one who looked (CR 406.3)
 					s = Update(
 						s,
@@ -1774,7 +1830,8 @@ public record ExileTopPlayable : Effect
 								playable with
 								{
 									Blind =
-										!FaceDown
+										From == ZoneType.Library // a graveyard card was public (Tersa)
+										&& !FaceDown
 										&& who == owner
 										&& !top.KnownTo.HasFlag(Knowers.Owner),
 								}
@@ -1832,6 +1889,14 @@ public record ExileTopPlayable : Effect
 			if (Choose is not null && !choice.GetOptions(s, InputContext).IsEmpty) // none of them a land: nothing to choose
 				steps = steps.AddRange([choice, new MakeChosenPlayableAction(playable)]);
 		}
+		if (!Then.IsEmpty)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.SetItem(ContextKeys.ThisWay, done.ToImmutable()),
+					Steps = Then,
+				}
+			);
 		return steps.IsEmpty ? new(s) : new(s.SpawnAction(new PipelineAction { Steps = steps }));
 	}
 
@@ -2172,6 +2237,9 @@ public record Discard(Ref Who, int Count) : Effect
 	/// <summary>Seasoned Cryomancer: "When you discard one or more nonland cards this way" — run after, reading the discarded.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
 
+	/// <summary>Tersa Lightshatter: "discard up to two cards, then draw that many cards" — none is an answer.</summary>
+	public bool UpTo { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s))
@@ -2195,9 +2263,9 @@ public record Discard(Ref Who, int Count) : Effect
 							new ChooseCardsFromHandChoice
 							{
 								PlayerId = player,
-								MinChoices = n,
+								MinChoices = UpTo ? 0 : n,
 								MaxChoices = n,
-								Prompt = $"Discard {n}",
+								Prompt = UpTo ? $"Discard up to {n}" : $"Discard {n}",
 							},
 							new MoveChosenToGraveyardAction { PlayerId = player },
 							.. Then,

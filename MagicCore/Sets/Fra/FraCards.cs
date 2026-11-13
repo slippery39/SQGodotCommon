@@ -242,14 +242,6 @@ public static class FraCards
 			new ManaAbilityComponent(b),
 		];
 
-	/// <summary>
-	/// "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of
-	/// turn.)" A scripted trigger, not an engine keyword: Ruric Thar has it twice, and each instance
-	/// triggers separately (CR 702.108b).
-	/// </summary>
-	static TriggeredAbilityComponent Prowess =>
-		When(TriggerEvent.YouCastNoncreatureSpell, [], new ModifyUntilEndOfTurn(Ref.Source, 1, 1));
-
 	// ===== Prepare: a card's spell half, from its second face in FRA.json =====
 
 	static readonly EntersPreparedComponent EntersPrepared = new();
