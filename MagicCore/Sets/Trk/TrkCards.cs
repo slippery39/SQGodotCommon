@@ -2314,7 +2314,7 @@ public static class TrkCards
 			[
 				new ManaAbilityComponent(ManaColor.Colorless)
 				{
-					Restriction = ManaRestriction.OnlyArtifacts,
+					Restriction = new(Is.Artifact) { Abilities = true },
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}"),

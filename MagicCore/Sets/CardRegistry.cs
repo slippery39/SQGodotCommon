@@ -3,6 +3,7 @@ using System.Text.Json;
 using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Sets.Fra;
+using MagicCore.Sets.Lsv;
 using MagicCore.Sets.Trk;
 
 namespace MagicCore.Sets;
@@ -17,7 +18,7 @@ namespace MagicCore.Sets;
 public static class CardRegistry
 {
 	/// <summary>The sets the engine plays, oldest first — a reprint's default printing is its first.</summary>
-	public static readonly ImmutableArray<string> Sets = ["FRA", "TRK"];
+	public static readonly ImmutableArray<string> Sets = ["FRA", "TRK", "LSV"];
 
 	static readonly Dictionary<string, IReadOnlyList<CardPrinting>> printings = Sets.ToDictionary(
 		s => s,
@@ -43,7 +44,12 @@ public static class CardRegistry
 		new(
 			() =>
 				LeftUnscripted(
-					Merge(printings, ("FRA", FraCards.Scripts), ("TRK", TrkCards.Scripts))
+					Merge(
+						printings,
+						("FRA", FraCards.Scripts),
+						("TRK", TrkCards.Scripts),
+						("LSV", LsvCards.Scripts)
+					)
 				)
 		);
 
@@ -103,7 +109,11 @@ public static class CardRegistry
 		);
 	}
 
-	/// <summary>Scripted, or nothing in its text but keywords the engine already implements.</summary>
+	/// <summary>
+	/// Scripted, or nothing in its text but keywords the engine already implements and reminder text —
+	/// a line wholly in parentheses has no rules force (CR 207.2): Tundra's "({T}: Add {W} or {U}.)" is its
+	/// land types' mana, made by the subtypes (CR 305.6), as a basic land's is.
+	/// </summary>
 	public static bool IsImplemented(string name) =>
 		Scripts.Value.ContainsKey(name)
 		|| Data[name].TypeLine.StartsWith("Basic Land") // mana from the subtype, CR 305.6
@@ -111,8 +121,10 @@ public static class CardRegistry
 			Data[name].CardFaces is null
 			&& (Data[name].OracleText ?? "")
 				.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-				.All(line => line.Split(", ").All(EngineKeywords.Contains))
+				.All(line => IsReminderOnly(line) || line.Split(", ").All(EngineKeywords.Contains))
 		);
+
+	static bool IsReminderOnly(string line) => line.StartsWith('(') && line.EndsWith(')');
 
 	public static IEnumerable<string> Scripted => Scripts.Value.Keys;
 

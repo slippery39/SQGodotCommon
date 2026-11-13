@@ -626,14 +626,21 @@ public record GrantsLoyaltyAbility(LoyaltyAbilityComponent Ability) : GameCompon
 /// <summary>Sanctum Lurker: "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty."</summary>
 public record YourPlaneswalkersSurviveZeroLoyalty : GameComponent;
 
-/// <summary>What a permanent's mana may pay for.</summary>
-public enum ManaRestriction
+/// <summary>
+/// What mana may pay for (MC-4): "Spend this mana only to cast [Spells]" — Mishra's Workshop: artifact spells
+/// (<c>new(Is.Artifact)</c>); Gideon's Memorial: a planeswalker spell; Chandra, Chill of Compliance: a noncreature
+/// spell. The filter is asked of the spell being paid for. <c>default</c> is no restriction. Read by
+/// <c>ManaAbilities.Allows</c> alone — a permanent's mana and floating mana alike.
+/// </summary>
+public readonly record struct ManaRestriction(Filters.Filter? Spells)
 {
-	None,
-	NotForSpellsFromHand, // Heartwood Crafter
-	OnlyPlaneswalkerSpells, // Gideon's Memorial
-	OnlyNoncreatureSpells, // Chandra, Chill of Compliance
-	OnlyArtifacts, // Isolinear Processor: "only to cast an artifact spell or activate an ability of an artifact source"
+	public static readonly ManaRestriction None = default;
+
+	/// <summary>Isolinear Processor: "only to cast an artifact spell or activate an ability of an artifact source" — Spells asked of the ability's source too.</summary>
+	public bool Abilities { get; init; }
+
+	/// <summary>Heartwood Crafter: "This mana can't be spent to cast spells from your hand."</summary>
+	public bool NotFromHand { get; init; }
 }
 
 /// <summary>
@@ -652,6 +659,12 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 
 	/// <summary>How much: Rok-Tahk's {G}{G} is 2; Loot, the Nexus counts it as it is tapped.</summary>
 	public Count Amount { get; init; } = 1;
+
+	/// <summary>
+	/// Talisman of Conviction: "{T}: Add {R} or {W}. This artifact deals 1 damage to you."; Ancient Tomb's 2 —
+	/// dealt as this ability makes the mana (ManaAbilities.PayAsUsed), through Damage.Deal.
+	/// </summary>
+	public int DealsDamageToYou { get; init; }
 
 	/// <summary>"Add [Amount] mana of any one color" — every unit the one colour chosen; Color is unused.</summary>
 	public bool AnyOneColor { get; init; }

@@ -67,6 +67,29 @@ as his three priorities.
   bending abilities, dungeons, companion …) — "we may implement different cards using those mechanics later. If we
   build them now that means we don't need to build them later."
 
+- 2026-11-13, Claude (cube lane, batch 1): **split as it splits — 4.3a power and mana, 4.3b the plain spells**, LSV
+  registered with 4.3a (no golden game moved by registering it: `NonlandNames` reads the game's own sets). 4.3a is 54
+  cards — 44 scripted, the ten original duals by the reminder-text rule (`CardRegistry.IsImplemented`: a line wholly in
+  parentheses has no rules force, CR 207.2; `magic_set.py` mirrors it).
+- 2026-11-13, Claude — **4.3a's new pieces, each the nearest one extended** (MC-6's rule):
+  - **Mishra's Workshop: `ManaRestriction` composed** into `ManaRestriction(Spells) { Abilities, NotFromHand }` — a
+    filter on the spell paid for. Nearest: `OnlyArtifacts`, which also pays an artifact's ABILITY; the Workshop's mana
+    can't (its rulings), and an enum case takes no option, so the four old cases became one filter and their cards
+    (Heartwood Crafter, Gideon's Memorial, Chandra, Isolinear Processor) moved onto it. No game moved.
+  - **The Talismans, Ancient Tomb: `ManaAbilityComponent.DealsDamageToYou`**; **Mana Confluence, the fetchlands:
+    `PayLifeCost(n)`** in the shared costs list. Nearest: the cost list itself — damage is not a cost (it is dealt, so
+    prevention applies; CR 605.1a's ability makes the mana AND deals it), and no life cost was in the list (Phyrexian
+    mana and the shocklands pay life outside it). Both paid by ONE `ManaAbilities.PayAsUsed`, for the ability that made
+    the colour (a Talisman's {C} is painless). Known ceiling (DesignNotes): the solver doesn't weigh the pain.
+  - **Mana Crypt: `FlipACoin { IfLost, IfWon }`**, from the seeded random. Nearest: `If` — a `Condition` must answer the
+    same each time it is asked (an intervening "if" asks twice), so a random one can't be a condition.
+  - **Exalted: `Scripting.Exalted`**, a trigger from tested pieces (`EventTest.Alone`, any attack target — CR 702.83a).
+- 2026-11-13, Claude — **left out of batch 1, to the batch whose piece they share:** the Spirit Guides (a mana ability
+  activated from the HAND — payment reads only permanents), Delighted Halfling (one permanent with unrestricted {C} and
+  restricted any-colour mana — `YieldOf` keeps one restriction per permanent — plus "that spell can't be countered").
+  4.3b leaves out the alternative-cost spells (Force of Will, Daze, Snuff Out, Baleful Mastery), "or" additional costs
+  (Bitter Triumph, Bone Shards), Mana Drain's delayed mana, Chain Lightning's copy, Lose Focus's coloured replicate.
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -75,14 +98,26 @@ as his three priorities.
       hand check and batch plan in Decisions) — scripts with today's primitives, needs a
       new primitive (named), or needs a new rule (extra turns, storm, ...) — and the batches planned
       in this story, the new rules first in each
-- [ ] MC-4.3 The first batch, one large one in a fresh session (`/card-batch`)
+- [ ] MC-4.3 The first batch (`/card-batch`), in two parts:
+  - [x] MC-4.3a Power and mana, 54 cards — done 2026-11-13: the Moxen, Black Lotus, Lotus Petal, Sol Ring, Mana Crypt,
+        Mana Vault, the Monoliths, the six Talismans, Llanowar Elves, Avacyn's Pilgrim, Birds, the Hierarchs (exalted),
+        Dark and Cabal Ritual, Strip Mine, Wasteland, Ancient Tomb, Mishra's Workshop, City of Traitors, Gaea's Cradle,
+        Tolarian Academy, Mana Confluence, the ten fetchlands and Prismatic Vista; the ten original duals unscripted. LSV
+        registered. New pieces in Decisions; 37 tests, 11/11 breaks caught; `batch_checks.py` all 7 steps (golden-out
+        unchanged: no recorded game moved by the engine; golden-in: the new cards joining the random decks moved 29
+        random and 1222 card-replay games and added 176; probe 150 games, none unfinished — the three never used are
+        mana-only lands, which the probe can't see).
+  - [ ] MC-4.3b The plain spells, ~23: the counters (Counterspell, Mana Leak, Mana Tithe, Spell Pierce, Memory Lapse,
+        Remand, Stern Scolding), Lightning Bolt, Burst Lightning, Swords, Path, Erode, Cut Down, Vindicate, Abrupt Decay,
+        Wrath of God, Abrade, Pyroblast, Time Walk, Time Warp, Ancestral Recall, Brainstorm
 
 ## Next
 
-Shayne reviews the batch plan and the two open questions (Decisions). The cube lane first does MC-6's families the
-cube needs (C4: 6.10, 6.9, 6.12, 6.15, 6.14 — MC-6's Next), then batch 1 in a FRESH session (`/card-batch`, with
-`tools/batch_checks.py` — DEV-5.3 — and its usage row for DEV-4.3): read `MagicCore/LsvSurvey.md`'s tier 1, take the
-power-and-mana cards named in the plan, register LSV in `CardRegistry.Sets`, add the reminder-text rule for the duals.
+MC-4.3b, the plain spells (Tasks). Its options are designed: `Counter { To }` (Remand: hand; Memory Lapse: library
+top), `TakeExtraTurn { Who }` (Time Warp), `Stat.PowerPlusToughness` (Cut Down), `MoveChosen { OnTop }` (Brainstorm,
+twice). Then the cards Decisions leaves out of batch 1, with the batch whose piece they share; then batches 2–5 (the
+rest of tier 1 by colour, `MagicCore/LsvSurvey.md`). Waits for a quiet machine: `tools/bench_vs_head.sh` on 4.3a's
+payment change (`ManaAbilities.PayAsUsed` on every first tap).
 
 ## Log
 
@@ -92,3 +127,6 @@ power-and-mana cards named in the plan, register LSV in `CardRegistry.Sets`, add
   `MagicCore/Sets/LSV.list.txt` — the code `LSV` is Claude's default, the cube lane may rename it.
 - 2026-11-12 (night, cube lane): MC-4.1 imported by name with art, MC-4.2's first pass by script and its hand check started; the batch plan written.
 - 2026-11-12: Shayne took the batch plan, the draft default, and every mechanic built.
+- 2026-11-13 (cube lane, sprint 5 C5): MC-4.3a — batch 1's power and mana, 54 cards; LSV registered; the mana
+  restriction composed into a filter (four old cards moved), a mana ability's pain and life, a coin flip, exalted, the
+  reminder-text rule. No recorded game moved by the engine; 85 of 528 play. 4.2M input-token equivalents to here.

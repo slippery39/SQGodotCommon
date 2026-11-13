@@ -42,6 +42,8 @@ whose subsystem it lives in.
   together each aren't alone. The table doesn't refuse the declaration yet (TBL-7).
 - **"Enters tapped and attacking"** (Kira Nerys, `PermanentsEnter(Is.Creature & Is.Yours) { Attacking }`) is set in `EnterBattlefield` —
   `AttackingId` the opponent, never declared, so no "whenever … attacks" (CR 508.4); `Combat.Attackers` reads it live.
+- **Exalted** (CR 702.83, Noble Hierarch) is a scripted trigger, `Scripting.Exalted`, not an engine keyword: a creature
+  you control attacking alone (`EventTest.Alone` — a player or a planeswalker), each instance on its own.
 - **Landwalk and fear are no combat rule** (MC-6.8): `Scripting.Landwalk("Island")` is the plain "can't be blocked"
   under an `If` (the opponent controls one); `Scripting.Fear` is a `CantBeBlockedBy`, granted until end of turn
   through `ModifyUntilEndOfTurn.Gains` (Shizo; the keyword word beside it is only for the table).

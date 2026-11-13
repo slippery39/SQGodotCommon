@@ -283,8 +283,8 @@ def sheet(code, title, types, blocks, users_of_card, tests):
     for c in cards:
         name, oracle = c["name"], magic_set.oracle(c)
         status = magic_set.status(c, set(blocks), keywords) or "NOT IMPLEMENTED"
-        if status == "keywords only":
-            status = "keywords only — needs no script"
+        if status in ("keywords only", "reminder text only"):
+            status += " — needs no script"
         counts[c["rarity"]][1] += 1
         counts[c["rarity"]][0] += status != "NOT IMPLEMENTED"
         e = [f"### {name}", "",

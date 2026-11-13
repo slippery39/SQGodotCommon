@@ -2591,7 +2591,7 @@ public static class FraCards
 				SoulTether("Heartwood Crafter // Soul Tether"),
 				new ManaAbilityComponent(ManaColor.Colorless)
 				{
-					Restriction = ManaRestriction.NotForSpellsFromHand,
+					Restriction = new(null) { NotFromHand = true },
 				},
 			],
 			["Pyre Rhymer // Molten Tide"] =
@@ -2937,7 +2937,7 @@ public static class FraCards
 			[
 				new StaticEffectComponent(Is.Creature & Is.Yours & Is.Token) { Power = 1 },
 				new StaticEffectComponent(Is.Creature & Is.Yours & Is.Token, "Vigilance"),
-				.. AnyColorMana(ManaRestriction.OnlyPlaneswalkerSpells),
+				.. AnyColorMana(new(Is.Planeswalker)),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}{W}"),
 					[new DealDamage(Ref.Target(), 4)]
@@ -3218,14 +3218,7 @@ public static class FraCards
 					[],
 					new Surveil(1) { Then = [new ReturnChosenToHandIf(!Is.Creature & !Is.Land)] }
 				),
-				Loyalty(
-					1,
-					[],
-					new AddMana(ManaColor.Blue)
-					{
-						Restriction = ManaRestriction.OnlyNoncreatureSpells,
-					}
-				),
+				Loyalty(1, [], new AddMana(ManaColor.Blue) { Restriction = new(!Is.Creature) }),
 				new LoyaltyAbilityComponent(
 					0,
 					[

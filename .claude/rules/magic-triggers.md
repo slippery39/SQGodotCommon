@@ -144,7 +144,7 @@ whose subsystem it lives in.
 - **"You may choose not to untap [it] during your untap step"** (Lwaxana Troi, `MayChooseNotToUntap`) is a
   yes/no the untap step asks before untapping — only while her link is live (Shayne, 2026-11-06); the rest of the
   step is `TurnStructure.FinishUntap`, after the answer (`FinishUntapAction`).
-- **An extra turn** (H.M.S. Bounty, CR 500.7) is `TakeExtraTurn`: its controller queued on `MagicGame.ExtraTurns`,
+- **An extra turn** (H.M.S. Bounty, Time Walk, CR 500.7) is `TakeExtraTurn` (Time Warp's target player: `Who`): queued on `MagicGame.ExtraTurns`,
   the last queued taken first by `TurnStructure.FinishCleanup`, which also sets `MagicPlayer.BegunExtraTurn`
   ("haven't begun an extra turn this game", `HaventBegunAnExtraTurn`). `TurnNumber` counts it like any turn, so
   every "this turn" stamp holds. Turns no longer alternate: **summoning sickness reads `MagicPlayer.TurnBeganOn`**,

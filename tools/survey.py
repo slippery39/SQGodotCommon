@@ -143,7 +143,7 @@ def main():
              "GENERATED — never hand-edit; the hand check and the batch plan are in `docs/stories/MC-4-powered-cube.md`.",
              "A tier from keywords, layout and a few text patterns only — every batch's cards are read before they are",
              "built (`/card-batch` step 1).", "",
-             f"**{len(cards)} cards:** {len(played)} play today (scripted in FRA/TRK, or keywords only); "
+             f"**{len(cards)} cards:** {len(played)} play today (scripted in any set, or keywords and reminder text only); "
              f"of the other {len(todo)}, tier 1 (only pieces the engine has) {tiers[1]}, tier 2 (an option on a piece) "
              f"{tiers[2]}, tier 3 (a new piece or rule) {tiers[3]}.", "",
              "## New pieces and rules, by how many cards need them", ""]

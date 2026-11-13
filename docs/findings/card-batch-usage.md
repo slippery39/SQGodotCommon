@@ -54,3 +54,4 @@ mana 6.8, combat 2.9, ai 0.9. A card script, card test or `Effects/` file loads 
 **Estimate (an upper bound — some of the 22 opened an engine file too):** at 0.1 per cache read, ~16k × 12,785 ×
 0.1 ≈ **20M** over those 22 sessions (~0.9M each) not spent; card batches pay ~+0.02M each. A real batch's row
 after the split is DEV-4.3.
+| 2026-11-13 | MC-4.3a: LSV batch 1 power and mana, 54 cards (44 scripted + 10 duals), 4 new pieces | 0d5f7560 | 128 | 247k | 4.2M |

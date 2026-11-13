@@ -158,6 +158,21 @@ public sealed record BeamMeUpCost : AdditionalCost
 	public override string Describe() => "Return a creature you control to its owner's hand";
 }
 
+/// <summary>
+/// "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana Confluence: "{T}, Pay 1
+/// life: Add one mana of any color." Payable only with that much life, never while it can't change (Life.CanPay).
+/// </summary>
+public sealed record PayLifeCost(int Amount) : AdditionalCost
+{
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		Rules.Life.CanPay(s, playerId, Amount);
+
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		Rules.Life.Lose(s, playerId, Amount);
+
+	public override string Describe() => $"Pay {Amount} life";
+}
+
 /// <summary>"Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).</summary>
 public sealed record SacrificeSelfCost : AdditionalCost
 {

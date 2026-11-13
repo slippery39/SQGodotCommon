@@ -77,6 +77,9 @@ whose subsystem it lives in.
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).
   With no duration (Seven of Nine: "base power and toughness become 7/9") it is `ModifyUntilEndOfTurn.ForGood`
   — `UntilTurnOf = UntilEndOfTurn.Never`, which no turn ends: only leaving the battlefield.
+- **A card with only engine keywords and reminder text needs no script** (`CardRegistry.IsImplemented`): a line
+  wholly in parentheses has no rules force (CR 207.2) — the original duals' "({T}: Add {W} or {U}.)" is their land
+  types' mana (CR 305.6), made by the subtypes as a basic land's is. `tools/magic_set.py` mirrors the rule.
 - **One card, a printing per set (MC-5.5).** `CardRegistry` is the one lookup across sets: a card's
   rules data and script exist once; its printing (`CardPrinting`: rarity, collector number) is per set,
   and a card in play carries its printing's set (`Card.Set`, kept through zone changes) — read for its

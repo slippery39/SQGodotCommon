@@ -34,6 +34,17 @@ whose subsystem it lives in.
   (`Find(…, forSpell)`), or the source of the activated ability it pays for (`forAbilityOf` —
   Isolinear Processor's "an ability of an artifact source"). Treasure and Lotus are `Tokens.SacrificeForMana`
   (`Costs = [TapSelfCost, SacrificeSelfCost]`): `Pay` sacrifices them, and the solver spends them last.
+- **What mana may pay for is ONE `ManaRestriction(Spells) { Abilities, NotFromHand }`** (MC-4) — a filter asked of
+  the spell paid for (Mishra's Workshop: `new(Is.Artifact)`, "artifact spells"; Chandra's `new(!Is.Creature)`), with
+  `Abilities` the ability's source too (Isolinear Processor), `NotFromHand` Heartwood Crafter's. `default` is none.
+  Read by `ManaAbilities.Allows` alone; never a new case per card.
+- **What a mana ability costs beyond {T}, and the damage it deals you** (Mana Confluence's `PayLifeCost(1)`; the
+  Talismans' and Ancient Tomb's `DealsDamageToYou`) are paid by `ManaAbilities.PayAsUsed` — manual tapping
+  (`TapForManaAction`) and payment (`ManaPayment.Pay`) alike — for the ability that made the colour (`Used`: the one
+  making the most, then the one costing least, so a Talisman's {C} is painless). An ability whose costs can't be paid
+  makes no mana (`Usable`: Confluence at 0 life). ponytail: the solver doesn't weigh the pain — it tries a source's
+  colours in its abilities' order ({C} first, so generic is paid painlessly), and two life-paying sources are each
+  checked against the life alone.
 - **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
   lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
 - **Cost changes all live in `Costs.Of`**: each is a `CostChange` — on a permanent, for the spells

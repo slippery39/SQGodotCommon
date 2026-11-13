@@ -65,7 +65,8 @@ whose subsystem it lives in.
   are chosen like a sacrifice, one legal action each. A finality counter exiles a creature instead
   of letting it die (`MoveCard`); `MagicState.Untap` is the ONE untap, so a stun counter eats it.
 - **Countering is `StackResolution.Counter`** — a spell to its graveyard through MoveCard (flashback and
-  prepared copies still hold), an ability removed, "can't be countered" untouched. "Unless its
+  prepared copies still hold), an ability removed, "can't be countered" untouched — or "instead" to its owner's hand
+  (Remand) or library top (Memory Lapse): `Counter { To }`, only when it was countered. "Unless its
   controller pays" asks that player (`CounterUnlessPays`). **Ward** is a trigger whose "it" is the
   targeting spell or ability, carried as the event card of `BecameTargetEvent`.
 - **A target is a zone and a filter** (`TargetSpec(From, Filter)`): the zone says where candidates

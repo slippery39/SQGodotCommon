@@ -43,7 +43,7 @@ public static class ManaPayment
 		ManaColor Color,
 		bool Floats = false,
 		bool Sacrificed = false,
-		ManaRestriction Restriction = ManaRestriction.None
+		ManaRestriction Restriction = default
 	);
 
 	/// <summary>
@@ -56,11 +56,11 @@ public static class ManaPayment
 		bool SameColor,
 		ImmutableArray<Unit> Units,
 		bool Sacrificed = false,
-		ManaRestriction Restriction = ManaRestriction.None
+		ManaRestriction Restriction = default
 	)
 	{
 		public string Kind { get; } =
-			$"{LandId == 0}|{IsCreature}|{SameColor}|{Sacrificed}|{Restriction}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
+			$"{LandId == 0}|{IsCreature}|{SameColor}|{Sacrificed}|{(Restriction == default ? "" : Restriction.ToString())}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
 	}
 
 	/// <summary>One mana a source makes, and the colours it may be.</summary>
@@ -488,10 +488,13 @@ public static class ManaPayment
 		{
 			if (p.Sacrificed)
 				sacrificed.Add(p.LandId); // Treasure: "{T}, Sacrifice this"
-			if (p.LandId != 0 && !s.GetCard(p.LandId).IsTapped)
+			var firstTap = p.LandId != 0 && !s.GetCard(p.LandId).IsTapped;
+			if (firstTap)
 				s = RaiseActivated(s, playerId, p.LandId);
 			if (p.LandId != 0)
 				s = s.Tap(p.LandId);
+			if (firstTap) // Talismans' damage, Mana Confluence's life: once, for the colour it made
+				s = ManaAbilities.PayAsUsed(s, playerId, s.GetCard(p.LandId), p.Color);
 			if (p.Restriction != ManaRestriction.None)
 			{
 				var pool = s.GetPlayer(playerId).ManaPool;

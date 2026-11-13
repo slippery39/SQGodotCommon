@@ -57,7 +57,7 @@ whose subsystem it lives in.
   `sideboard1/2`, and tests), made after both decks: a game without keeps every id it had —
   the golden replays and the position suite's move tokens hold ids. `CardsIn` of a missing sideboard
   is empty. A card leaving it was revealed, so `MoveCard` makes it known to everyone.
-- **Randomness** (a discard at random, a random order) takes `s.TakeRng()`, so a seeded game replays.
+- **Randomness** (a discard at random, a random order, Mana Crypt's coin flip: `FlipACoin`) takes `s.TakeRng()`, so a seeded game replays.
   A search for several cards may take two of a name unless `SearchLibrary.DifferentNames` (Fblthp).
   A spell that exiles itself as it resolves (Sphinx's Approach) is left there by `FinishSpellAction`.
 - **How OTHER permanents enter is one piece, `PermanentsEnter(filter) { Tapped, Untapped, CounterKind, Counters,

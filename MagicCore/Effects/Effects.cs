@@ -1201,6 +1201,27 @@ public record IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then) : E
 	}
 }
 
+/// <summary>
+/// Mana Crypt: "flip a coin. If you lose the flip, this artifact deals 3 damage to you." — a fair flip, taken
+/// from the game's seeded random (s.TakeRng(), so a recorded game replays); the steps run as If's do.
+/// </summary>
+public record FlipACoin(ImmutableList<GameAction> IfLost) : Effect
+{
+	/// <summary>"If you win the flip, …".</summary>
+	public ImmutableList<GameAction> IfWon { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		(var rng, s) = s.TakeRng();
+		var steps = rng.Next(2) == 0 ? IfWon : IfLost;
+		return steps.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(new PipelineAction { Steps = steps, PipelineContext = InputContext })
+			);
+	}
+}
+
 /// <summary>"If [condition], [effects]" — the effects run in order with this ability's context.</summary>
 public record If(Condition When, ImmutableList<GameAction> Then) : Effect
 {

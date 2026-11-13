@@ -64,6 +64,17 @@ public static class Scripting
 			effects
 		);
 
+	/// <summary>
+	/// Exalted (CR 702.83a): "Whenever a creature you control attacks alone, that creature gets +1/+1 until end of
+	/// turn." — alone at a player or a planeswalker; each instance triggers on its own (Noble Hierarch).
+	/// </summary>
+	public static TriggeredAbilityComponent Exalted =>
+		When(
+			new Trigger(EventKind.Attacked) { Subject = Filters.Is.Yours, Also = EventTest.Alone },
+			[],
+			new ModifyUntilEndOfTurn(Ref.EventCard, 1, 1)
+		);
+
 	/// <summary>"{T}: Add one mana of any color." — five abilities, one per colour, sharing a restriction.</summary>
 	public static GameComponent[] AnyColorMana(ManaRestriction restriction) =>
 		[

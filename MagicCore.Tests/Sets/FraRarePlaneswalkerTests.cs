@@ -245,8 +245,14 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 				{
 					Restricted =
 					[
-						new RestrictedMana(ManaColor.Blue, ManaRestriction.OnlyNoncreatureSpells),
-						new RestrictedMana(ManaColor.Blue, ManaRestriction.OnlyNoncreatureSpells),
+						new RestrictedMana(
+							ManaColor.Blue,
+							new(!global::MagicCore.Filters.Is.Creature)
+						),
+						new RestrictedMana(
+							ManaColor.Blue,
+							new(!global::MagicCore.Filters.Is.Creature)
+						),
 					],
 				},
 			}

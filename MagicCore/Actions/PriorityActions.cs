@@ -177,6 +177,7 @@ public record TapForManaAction : GameAction
 		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
 		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
 		s = s.Tap(CardId);
+		s = ManaAbilities.PayAsUsed(s, PlayerId, s.GetCard(CardId), Color);
 		var player = s.GetPlayer(PlayerId);
 		var pool = player.ManaPool;
 		foreach (var unit in yield.Units.Select((u, i) => (Colors: u, First: i == 0)))

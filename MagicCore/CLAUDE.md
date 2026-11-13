@@ -54,7 +54,7 @@ MagicCore/
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
 ├── FraCoverage.md / TrkCoverage.md   per set: what is scripted, what waits and why — status, not rules; LsvSurvey.md: the cube's survey (GENERATED, tools/survey.py)
 ├── AbilityCatalog.md    GENERATED: every effect, trigger, ref, count, condition, component — one line each
-├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests
+├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests (Trk-, LsvCardSheet.md too)
 ├── Cookbook.md          how to script a card, by pattern; the tiers of checking
 ├── DesignAudit.md       2026-10-10: what was reinvented instead of reused from MtgCore, and MtgCore's own flaws
 ├── FilterRefactorPlan.md  DONE (story MC-2): one composable Filter replacing the closed enums — the design and why
@@ -67,7 +67,7 @@ MagicCore/
 ├── Cards/CardData.cs    printed RULES data (Scryfall), one per name; CardPrinting: a set's rarity, number; Load(set)
 ├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities
 ├── Sets/CardRegistry.cs EVERY set's cards by name: Get(name[, set]), IsImplemented, Printings(set); Tokens.cs: Treasure, Clue, Food; Scripting.cs: the helpers every set scripts with (When, Spell, M …)
-├── Sets/Fra/, Sets/Trk/ <Set>Cards.cs: a set's abilities by name — a reprint scripted ONCE (MC-5.5); Fra/EmpowerJace.cs
+├── Sets/Fra/, Sets/Trk/, Sets/Lsv/ <Set>Cards.cs: a set's abilities by name (LSV: the LSVPower cube, MC-4) — a reprint scripted ONCE (MC-5.5); Fra/EmpowerJace.cs
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named; ReadPool: a sealed
 │                        pool (every section) of any set (MC-5.4), what isn't that set's left out by name
