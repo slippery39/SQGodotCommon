@@ -31,7 +31,14 @@ public enum Glow
 /// </summary>
 public static class CardViews
 {
-	public static readonly Vector2 PermanentSize = new(126, 168);
+	/// <summary>
+	/// The art, then the name below it; stats, count and status sit ON the art (TBL-4.7, Shayne: the bottom only held
+	/// the stats over an unused margin) — 140 tall, not 168, for the combat row's room.
+	/// </summary>
+	public static readonly Vector2 PermanentSize = new(126, 140);
+
+	/// <summary>The art's share of a permanent's height (92 of 140 at scale 1, as before).</summary>
+	private const float ArtShare = 0.66f;
 
 	/// <summary>An Attachment strip under its host — a 44 px thumb (32 tall), 6 px margins — and the 2 px gap above it, rounded up. Unscaled.</summary>
 	public const float AttachmentHeight = 48;
@@ -51,16 +58,20 @@ public static class CardViews
 		var size = PermanentSize * scale;
 		var (w, h) = (size.X, size.Y);
 		var card = Frame(glow, size);
+		var art = h * ArtShare;
 		card.AddChild(
-			Art(MagicArt.Crop(MagicArt.Key(c)), new Vector2(w - 6, h * 0.55f), new Vector2(3, 3))
+			Art(MagicArt.Crop(MagicArt.Key(c)), new Vector2(w - 6, art), new Vector2(3, 3))
 		);
-		card.AddChild(Text(c.Name, 16, new Vector2(4, h * 0.55f + 3), w - 8, wrap: true));
+		var name = Text(c.Name, 16, new Vector2(4, art + 3), w - 8, wrap: true);
+		// The text keeps its size as the card shrinks: as many lines as fit under the art, at least one.
+		name.MaxLinesVisible = Math.Max(1, (int)((h - art - 4) / 21));
+		card.AddChild(name);
 
 		var stats = Stats(s, c);
 		if (stats != "")
-			card.AddChild(Badge(stats, new Vector2(w - 60, h - 36), c.Damage > 0));
+			card.AddChild(Badge(stats, new Vector2(w - 60, art - 31), c.Damage > 0));
 		if (count > 1)
-			card.AddChild(Badge($"×{count}", new Vector2(4, h - 36), false));
+			card.AddChild(Badge($"×{count}", new Vector2(4, art - 31), false));
 		if (Status(s, c) is { Length: > 0 } status)
 			card.AddChild(Badge(status, new Vector2(4, 4), false, 16, w - 8)); // on the art, clear of the name
 

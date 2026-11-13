@@ -52,6 +52,9 @@ between MTG Arena and MTGO, keeping the best of both — feeling more like Arena
   whether or not they are making reasonable plays. That was the point of it"; backs do nothing for him. Built: Tools
   · Show their hand (and `--show-hand`) — their hand in their plate, face up and readable (118x164, wrapping three
   across; hover / hold zooms), and their cards fly face up. A viewer's switch, off by default (a live game hides it).
+- 2026-11-13, Shayne: the combat row sits in the MIDDLE, between the two halves (where the phase bar is), and only
+  while there is combat (TBL-4.6). A target arrow shows only while its spell or ability is ON THE STACK — not while
+  picking targets — "for now and see how it looks" (TBL-4.5).
 
 Open questions:
 - Which of MTGO's strengths to keep (stops, the full log, full control, card zoom, …)?
@@ -85,8 +88,11 @@ Open questions:
 - [ ] TBL-4.6 A combat row (Shayne, 2026-11-13: "attackers was hard to follow"): when attackers are declared they
       move into a row of their own, apart from the rest of the board, and blockers join them — so who attacks and
       who blocks is clear. Builds on TBL-4.3's columns; the move is a beat (a card whose place changed flies there)
-- [ ] TBL-4.7 Shorter permanents: the stats and loyalty moved up off the crop's unused bottom margin, the rows less
-      tall — room for what the table lacks (the opponent's hand, the combat row)
+- [x] TBL-4.7 Shorter permanents: the stats and loyalty moved up off the crop's unused bottom margin, the rows less
+      tall — room for what the table lacks (the opponent's hand, the combat row). BUILT (2026-11-13): 140 tall, not
+      168; stats, count and status on the art (`CardViews.ArtShare`), the name below as many lines as fit. Alone it
+      frees nothing — a row's height comes from the screen, so the cards just scale up to fill it (captured:
+      `shots/tbl45-b` frame 219 vs `shots/tbl47-after`); the room appears when TBL-4.6's row takes its band
 - [ ] TBL-4.4 The MTGA reference: current screenshots and clips of the table, gathered into one page for Shayne to
       mark (2018's beta guides show the layout but no motion) — then TBL-4.1's interview against it
 - [ ] TBL-4.5 Animations, MTGO's level: a cast to the stack and onto the battlefield, the stack shown while it holds

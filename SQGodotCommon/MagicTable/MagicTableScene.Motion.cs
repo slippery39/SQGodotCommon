@@ -218,7 +218,7 @@ public partial class MagicTableScene
 	/// <summary>A card's picture where it was, now; given where it lands, it flies there over the beat and what it lands as settles.</summary>
 	private Action<Rect2> Fly(Texture2D? face, Rect2 start, bool dies, CanvasItem? lands)
 	{
-		var size = CardViews.PermanentSize;
+		var size = CardViews.HandSize; // a whole card's shape
 		float Fit(Rect2 r) => Mathf.Min(r.Size.X / size.X, r.Size.Y / size.Y);
 		var ghost = new TextureRect
 		{
@@ -320,7 +320,7 @@ public partial class MagicTableScene
 			ZoneType.Hand when owner == _m.HumanId => _handSpace.GetGlobalRect(),
 			_ => plate.ZoneRect(zone),
 		};
-		var size = CardViews.PermanentSize * 0.5f;
+		var size = CardViews.HandSize * 0.45f;
 		return new Rect2(place.GetCenter() - size / 2, size);
 	}
 
