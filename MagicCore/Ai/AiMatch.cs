@@ -112,6 +112,12 @@ public static class AiMatch
 				},
 			// Every stop passed costs a search level, as before AI-13.12 (part 1): beam+countpasses.
 			["countpasses"] = o => o with { FreePasses = false },
+			// AI-22 experiments, not defaults: fewer free passes in a row (beam+freepasses2 / +freepasses1, the default 4) and
+			// fewer attack plans re-judged against the rollout's real blocks (beam+shortlist2 / +shortlist1, the default 3).
+			["freepasses2"] = o => o with { FreePassCap = 2 },
+			["freepasses1"] = o => o with { FreePassCap = 1 },
+			["shortlist2"] = WithRollout(r => r with { AttackShortlist = 2 }),
+			["shortlist1"] = WithRollout(r => r with { AttackShortlist = 1 }),
 			// Acting now wins a tie with the same move later this turn, as before AI-13.12 (part 2): beam+actnow.
 			["actnow"] = o => o with { WaitOnTies = false },
 			// Acting wins a tie by the pass bias, no potential score, before AI-13.11: beam+passbias.

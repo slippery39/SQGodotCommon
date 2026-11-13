@@ -1656,4 +1656,82 @@ Heartstring Puller over the Cadet token, because the rollout's defender at 13 no
 (surviving at 3/2 instead of 3/1) over trading it with Koth 3/2 — 5 life instead of 7, the horizon −37.17 against −32.55.
 Suite (tie-break only): 1 of 288 decisions changed (seed 2 #81: Compel Brutality's loyalty mode from Jace over Koth's power
 mode, both at Divining Duelist), oracle 79.9% against 80.2%, score given up 0.42 both, cost 10 594 against 10 608 steps.
-Tests: two controls also switch it off (ChangSac458, the self-burn). Match not run.
+Tests: two controls also switch it off (ChangSac458, the self-burn). **Match (2026-11-12): `--match=beam,beam+nodamagepotential
+--until-clear` — 50.0% over 96 games (48–48), no 5pp difference either way, stopped at the first check; cost per decision
+4 380 against 4 444 engine steps (−1.5%), rollouts 10.3 both; spells cast 9.7 against 9.8. Kept (Shayne's rule: a
+reasonable play fixed at no cost).** Borg Cube #343's Pass settled as fair (Shayne, 2026-11-12).
+
+## AI-22.1: where a sealed run's time goes (2026-11-12)
+
+`dotnet-trace collect --profile dotnet-sampled-thread-time` (the Windows profile; `cpu-sampling` is Linux-only now) over
+`--set=trk --builds=sim_results/builds/RGb.txt --both-seats --games=8` — pool 4's RGb, 16 games in parallel, 5 min, none
+stopped, server collector, Release, a quiet machine. Shares are of all time with an engine frame on the stack (idle
+threads left out), INCLUSIVE — what runs under each; they overlap. Scripts in the session scratchpad
+(`prof_report.py`, `prof_drill.py` over the Speedscope conversion).
+
+| Under | Share |
+|---|---|
+| `BeamSearchAi.Search` | 91.8% |
+| `Rollout.Score` — the rollouts | **89.7%** |
+| `Rollout.Choose` — the rollout policy's choices | 59.9% |
+| `WholeAttacks.Best` — the rollout's attack plans, each settled with the defender's blocks | **50.1%** |
+| `Lookahead.Settle` | 43.5% |
+| `TurnStructure.GivePriority` (the engine's every pass: state-based actions 23.3%, triggers) | 40.1% |
+| `BeamSearchAi.WithFreePasses` — AI-13.12's free passes | **36.1%** |
+| `WholeAttacks.Blocked` | 31.1% |
+| `Rollout.Answer` / `Rollout.BestAlone` (the defender's judged-alone blocks) | 29.1% / 19.6% |
+
+`Rollout.Choose` is 97% from `Rollout.Score`; `WholeAttacks.Best` 100% from `Rollout.Choose`.
+
+**Leaves don't read (AI-7's trap again):** "self" time put 44% in `MagicState.CardsIn` with 97% of it under an array copy
+(`BulkMoveWithWriteBarrier`). CardsIn only loops a zone's ids; the guess — `ImmutableList`'s enumerator growing its node
+stack — was tested by an index loop and **made no difference** (the position suite 45.3 / 49.5 s before, 48.2 / 46.1 s
+after, decisions identical), and was reverted. CardsIn is called from the engine's per-step checks (state-based actions
+17%, triggers 14%, the board's characteristics 13%, attachments 13%) — many calls, not a slow one. Read callers.
+
+**What it says:** nine-tenths of a sealed decision is the rollouts, and half of ALL the time is the rollout's attack
+planning on an ordinary RGb board — AI-21's subject is not only Tribbles. AI-13.12's free passes hold 36%. The engine's
+per-step checks are the third block.
+
+## AI-22.2: the levers tried (2026-11-12, overnight, for Shayne's pick)
+
+Every switch is a model name, default OFF (`beam+shortlist2`, `+shortlist1`, `+freepasses2`, `+freepasses1`; `AiMatch`),
+so nothing changed for the default AI. `--builds … --ai=NAME` now runs a sealed test under any of them.
+
+**The position suite (288 positions, deterministic cost):**
+
+| Switch | Engine steps / position | Decisions changed (baseline's 1 incl.) | Oracle / given up | Wall |
+|---|---|---|---|---|
+| `beam` | 10 594 | 1 | 79.9% / 0.42 | 49–50 s |
+| `+shortlist2` | 9 656 (−8.9%) | 1 — identical | 79.9% / 0.42 | 45 s |
+| `+shortlist1` | 8 697 (−17.9%) | 7 | 78.8% / 0.44; misses 3 wins (2), walks into 2 losses (0) | 40 s |
+| `+freepasses2` | 10 063 (−5.0%) | 1 — identical | 79.9% / 0.42 | 47 s |
+| `+freepasses1` | 9 245 (−12.7%) | 2 | 79.9% / 0.43 | 44 s |
+| `+countpasses` (AI-13.12 off) | 7 806 (−26.3%) | 14 | 83.0% / 0.48 | 40 s |
+| `+shortlist2+freepasses2` | 9 169 (−13.4%) | 1 — identical | — | — |
+
+**A real sealed run** (pool 4's RGb, 8 opponents both seats, 16 games; each run deterministic — the two `beam` runs
+gave identical games): `beam` 218 / 215 s; `+shortlist2+freepasses2` 170 / 168 s (**−22%**); `+shortlist2` alone 176 s
+(**−18%**); `+freepasses2` alone 226 s (its games went differently, so their lengths differ — 16 games can't show its
+−5%). **Neither is decision-neutral on TRK boards, though the suite said so:** each changes the moves in 4 of the 16
+games (first split at moves 162–345 of 390–625), both together 7. Win rates 56.3% (beam), 62.5%, 56.3%, 68.8% — 16 games
+read nothing.
+
+**Matches (`--until-clear`, FRA's decks):** `beam+shortlist2` vs `beam` **50.0% ± 1.5pp over 192 games (96–96)**, no 5pp
+difference either way; cost per decision 4 249 against 4 588 engine steps (−7.4%), rollouts 10.6 / 10.5.
+`beam+freepasses2` vs `beam` **50.5% ± 1.6pp over 192 games (97–95)**, no difference; cost per decision 4 228 against
+4 486 steps (−5.7%), rollouts 9.7 / 10.6.
+
+**Not built:**
+- **Skipping the state-based check when no event was staged** (the trigger scan already does: AI-7.3d). Counted with
+  temporary code over the suite and a sealed sample: 58–59% of check rounds stage no event, **but 0.4–0.7% of those
+  still acted** (6 959 / 15 691) — a creature at toughness ≤ 0 from a −X/−X (Samut, Divining Duelist, Greenhouse
+  Propagator), a planeswalker at 0 loyalty, a token left the battlefield. Those state changes stage no event, so a skip
+  would leave them alive. Safe only after every such change stages one (an engine audit); then up to ~13% of a
+  decision (the check is 23% inclusive, skipped in ~58%). "Nothing changed" by object identity doesn't work either: a
+  priority pass rewrites the game object in the same map as the cards.
+- **Grouping identical attackers** in the rollout's plans (AI-18's `Twins`): it pays only on boards of identical
+  creatures (Tribbles, tokens) and costs a fingerprint per creature at every rollout combat, so on an ordinary board it
+  may cost more than it saves. AI-21's work, gated on the board's size as `AiMoves` is.
+- **Reusing combat answers within a decision:** the engine has no state fingerprint, and record equality compares
+  collections by reference, so equal boards reached by different lines would mostly miss.

@@ -142,3 +142,4 @@ discussing the land odds' details and the opponent's draws with Shayne. Read the
 - 2026-11-10: created from AI-17.24 (Shayne): the landcycle, Tasha, surveil, impulse and Jace issues share one root,
   the single guessed future.
 - 2026-11-12: sprint 5 — after AI-22; the research note first.
+- 2026-11-12: the research note — Cowling et al. on MTG (several guessed futures, one budget split), ISMCTS, Forge — in `docs/findings/ai-research.md`; its questions are AI-20.1's.

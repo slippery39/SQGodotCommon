@@ -104,7 +104,8 @@ public static class Rollout
 		bool KnownOnly = true,
 		bool LostLines = true,
 		bool Mays = true,
-		bool CounterAttack = true
+		bool CounterAttack = true,
+		int AttackShortlist = WholeAttacks.Shortlist
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>

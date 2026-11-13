@@ -382,7 +382,23 @@ public class FraEngineTests : FraBoardTest
 	}
 
 	[Test]
+	public void ManyMountainsUnderMoltenTide_AnUnpayableCostIsRefused() =>
+		Assert.That(FindUnpayableUnderMoltenTide(), Is.Null);
+
+	// The wall-clock half, apart so the suite never fails on a busy machine (two lanes, parallel tests - DEV-7).
+	[Test, Explicit("performance: wall-clock, run on a quiet machine"), Category("Performance")]
 	public void ManyMountainsUnderMoltenTide_AnUnpayableCostFailsFast()
+	{
+		var clock = System.Diagnostics.Stopwatch.StartNew();
+		FindUnpayableUnderMoltenTide();
+		Assert.That(
+			clock.ElapsedMilliseconds,
+			Is.LessThan(500),
+			"identical Mountains are one choice"
+		);
+	}
+
+	IReadOnlyList<ManaPayment.Payment>? FindUnpayableUnderMoltenTide()
 	{
 		for (var i = 0; i < 8; i++)
 			Field(TestGames.Card("Mountain"), me);
@@ -392,16 +408,7 @@ public class FraEngineTests : FraBoardTest
 			var m in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Name == "Mountain").ToList()
 		)
 			s = s.UpdateObject(m.Id, m with { IsTapped = false }); // TEST SETUP: 12 Mountains, 24 {R}
-		var clock = System.Diagnostics.Stopwatch.StartNew();
-		Assert.That(
-			ManaPayment.Find(s, me, ManaCost.Parse("{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{W}"), 0),
-			Is.Null
-		);
-		Assert.That(
-			clock.ElapsedMilliseconds,
-			Is.LessThan(500),
-			"identical Mountains are one choice"
-		);
+		return ManaPayment.Find(s, me, ManaCost.Parse("{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{W}"), 0);
 	}
 
 	// ===== 7f-3: copying a spell =====

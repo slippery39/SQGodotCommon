@@ -19,7 +19,16 @@ This repository has two worktrees, each a lane with its own VS Code window and C
 - **Per folder, not in git:** `sim_results/` (run `/regen-card-values` once — four tests need it), `ai_reports/`,
   `game_records/`, `.godot/`. **Shared:** Claude's memory (it follows the repository) and Godot's `user://`, so F7
   scenarios and settings saved in one lane appear in the other.
-- **One machine:** a game's budget is wall-clock, so no long sim while the other lane builds or tests heavily.
+- **One machine — two kinds of task (Shayne, 2026-11-12: he often runs several projects at once; "long running and time
+  sensitive are not the same"; 50% slower is fine when he needn't be there).** Label a task by whether LOAD CHANGES ITS
+  RESULT, not by how long it takes:
+  - **Quiet machine** — the result changes under load: performance measurements (profiles, timings,
+    `TestCategory=Performance`), and every run with a WALL-CLOCK cap — a game stopped past its minutes reads as unfinished
+    or is dropped: sealed runs (`--builds … --both-seats`, `--compare`, `--game-minutes`, default 5), the misplay scan
+    (`--lint`), self-play ratings and the ratings match (`--sim-ratings`, `--ratings-match`). Ask Shayne before one;
+    he keeps the machine quiet.
+  - **Any time, unattended** — only slower: `--match` (an uncapped AI: the same games, cost per decision deterministic),
+    `--suite`, `--guesses`, `--cast-gains`, `--card-values`, the tests but Performance, builds, card batches, docs.
 - **One weekly Claude budget:** `python tools/usage_report.py --all` lists both lanes' sessions.
 - After a merge, `git diff --stat` on `Commands.md` (it mixes CRLF and LF). `.claude/settings.local.json` is tracked
   but holds only permissions — on a conflict, keep both lists.

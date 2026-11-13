@@ -90,3 +90,4 @@ Read `MtgVisualDesign.md`, `.claude/rules/magic-table.md`, TBL-3, and capture to
   scaled to the room, a Tools menu, hold to zoom (click on release); the AI's attacks logged as
   "Attack: X → You". Checked by capture and real input (a hold zoomed and didn't play; a click played).
 - 2026-11-12: TBL-4.4 and TBL-4.5 added (Shayne, sprint 5 planning).
+- 2026-11-12: TBL-4.4's page gathered — `docs/mockups/magictable/mtga-reference.md`, each row for Shayne to mark copy / skip / later; his own Arena screenshots asked for.
