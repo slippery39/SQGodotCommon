@@ -56,9 +56,15 @@ Open questions:
 
 ## Next
 
-**Notes (TBL-10.3) are in use** — "analyze my notes" means read `game_records/*.notes.md`, reopen each position with
+**Notes (TBL-10.3) are in use**; Shayne's first session (2026-11-13) became AI-9.9, AI-13.13 and AI-25, the game kept as
+`MagicCore.Tests/Records/ShayneNotesSeed1.json`. The uncapped AI on the table: `--full-ai` or Tools · Full AI (the
+notes' "AI's last search" is the capped one otherwise — at #213 the two differed on a tie). Built 2026-11-13: a pause holds the
+queued beats too (P, Tools, Space in AI vs AI, the note box), and a note saves the position ON SCREEN — its move, its
+transcript lines (numbered as the reopen counts), the last search decided before it. — "analyze my notes" means read `game_records/*.notes.md`, reopen each position with
 the note's command, and weigh the AI's last search there. Then TBL-10.1. Read TBL-5 (records, `--resume`, Undo), AI-14.4 (the F6 inspector) and `MagicTable/CLAUDE.md`.
 
 ## Log
 
 - 2026-11-12: created from Shayne's sprint-5 notes.
+- 2026-11-13: Shayne's first notes session read with `MagicConsole --explain`: three causes, written up as AI-9.9, AI-13.13, AI-25; the table's AI uncappable (`--full-ai`, Tools).
+- 2026-11-13, Shayne: the note box should pause the animations too, and a pause key — P (and Space in AI vs AI) pause the game, beats included; a note saves the position on screen (`GameNotesTests`: a note behind the game lists no later move). Captured: the box held the table still from its frame to Cancel (`shots/pause-a`).

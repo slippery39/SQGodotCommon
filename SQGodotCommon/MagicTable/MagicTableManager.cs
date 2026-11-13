@@ -212,15 +212,33 @@ public sealed class MagicTableManager
 		{
 			RecordTo = RecordTo,
 			Stops = Stops,
+			FullSearch = FullSearch,
 		};
 
 	private readonly IReadOnlyList<CardDefinition> _sideboard1;
+
+	/// <summary>
+	/// The search without the table's time cap (~1 s a decision) — the one a sealed run plays (Shayne, 2026-11-13: "try
+	/// without the 1 second cap and see if I can note any differences"). Slower: the table waits on each decision.
+	/// Switchable mid-game — both AIs are made again, as Undo makes them.
+	/// </summary>
+	public bool FullSearch
+	{
+		get => _fullSearch;
+		set
+		{
+			_fullSearch = value;
+			foreach (var id in _ais.Keys.ToList())
+				_ais[id] = NewAi(id);
+		}
+	}
+	private bool _fullSearch;
 	private readonly IReadOnlyList<CardDefinition> _sideboard2;
 
 	private IAi NewAi(int playerId) =>
-		Search
-			? new BeamSearchAi(playerId, BeamSearchAi.Settings.Interactive)
-			: new GreedyAi(playerId);
+		!Search ? new GreedyAi(playerId)
+		: FullSearch ? new BeamSearchAi(playerId)
+		: new BeamSearchAi(playerId, BeamSearchAi.Settings.Interactive);
 
 	public bool IsOver => Conceded || State.IsOver();
 
@@ -247,7 +265,19 @@ public sealed class MagicTableManager
 		string Who,
 		string Chose,
 		IReadOnlyList<(string Move, double Score)> Ranked
-	);
+	)
+	{
+		/// <summary>The record's move count when it decided: its move is the next one (a note's "before this move").</summary>
+		public int AtMove { get; init; }
+	}
+
+	private readonly List<Inspection> _searches = new();
+
+	/// <summary>
+	/// The last search decided before move <paramref name="moves"/> was reached — a note on a position the table still
+	/// shows, while the game has run ahead (TBL-10.3). Kept for the last 64 searches.
+	/// </summary>
+	public Inspection? SearchBefore(int moves) => _searches.LastOrDefault(i => i.AtMove < moves);
 
 	/// <summary>The last AI decision that searched among two or more moves; null before one (or with --greedy).</summary>
 	public Inspection? LastSearch { get; private set; }
@@ -283,7 +313,13 @@ public sealed class MagicTableManager
 			_decisions++;
 			if (_ais[who] is BeamSearchAi search && search.Ranked(State) is { Count: > 1 } ranked)
 			{
-				LastSearch = new(turn, State.GetPlayer(who).Name, what, ranked);
+				LastSearch = new(turn, State.GetPlayer(who).Name, what, ranked)
+				{
+					AtMove = Record.Moves.Count,
+				};
+				_searches.Add(LastSearch);
+				if (_searches.Count > 64)
+					_searches.RemoveAt(0);
 				_lastSearcher = (search, _decisions);
 			}
 			Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);

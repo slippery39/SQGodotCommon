@@ -18,8 +18,18 @@ namespace MagicTable;
 /// </summary>
 public static class GameNotes
 {
-	/// <summary>Appends a note at the game's current position; returns the notes file, or null when the game keeps no record.</summary>
-	public static string? Write(MagicTableManager m, string text, DateTime? at = null)
+	/// <summary>
+	/// Appends a note; returns the notes file, or null when the game keeps no record. The position is the one ON SCREEN
+	/// — <paramref name="moves"/> into the record, <paramref name="shown"/> drawn — which may trail the game while its
+	/// moves' animations wait (Shayne: a note is about what he sees); the game's own position when they're omitted.
+	/// </summary>
+	public static string? Write(
+		MagicTableManager m,
+		string text,
+		GameState? shown = null,
+		int? moves = null,
+		DateTime? at = null
+	)
 	{
 		if (m.RecordFile is not { } record)
 			return null;
@@ -28,7 +38,16 @@ public static class GameNotes
 		using var file = File.AppendText(path);
 		if (fresh)
 			file.Write(Header(m, record));
-		file.Write(Note(m, record, text, at ?? DateTime.Now));
+		file.Write(
+			Note(
+				m,
+				record,
+				text,
+				shown ?? m.State,
+				moves ?? m.Record.Moves.Count,
+				at ?? DateTime.Now
+			)
+		);
 		return path;
 	}
 
@@ -37,11 +56,16 @@ public static class GameNotes
 		+ $"Seed {m.Seed} · {m.State.GetPlayer(m.HumanId).Name} (seat 1) v {m.State.GetPlayer(m.OpponentId).Name}"
 		+ $"{(m.AiVsAi ? " · AI vs AI" : "")}\n";
 
-	private static string Note(MagicTableManager m, string record, string text, DateTime at)
+	private static string Note(
+		MagicTableManager m,
+		string record,
+		string text,
+		GameState s,
+		int moves,
+		DateTime at
+	)
 	{
-		var s = m.State;
 		var game = s.GetGame();
-		var moves = m.Record.Moves.Count;
 		var lines = new List<string>
 		{
 			"",
@@ -66,13 +90,16 @@ public static class GameNotes
 					)
 			);
 		lines.Add("");
-		lines.Add("Last moves:");
-		lines.AddRange(m.Log.TakeLast(8).Select(l => $"- {l}"));
-		if (m.LastSearch is { } search)
+		lines.Add("Last moves (numbered as the reopen command counts):");
+		// The record's own lines up to this position: the log runs ahead of a position still on screen.
+		lines.AddRange(
+			m.Record.Truncate(moves).Transcript().SkipLast(1).TakeLast(8).Select(l => $"- {l}")
+		);
+		if (m.SearchBefore(moves) is { } search)
 		{
 			lines.Add("");
 			lines.Add(
-				$"The AI's last search (turn {search.Turn}, {search.Who} chose {search.Chose}):"
+				$"The AI's last search before this position (move {search.AtMove + 1}, turn {search.Turn}, {search.Who} chose {search.Chose}):"
 			);
 			lines.AddRange(
 				search.Ranked.Take(6).Select((r, i) => $"{i + 1}. {r.Move} — {r.Score:0.00}")

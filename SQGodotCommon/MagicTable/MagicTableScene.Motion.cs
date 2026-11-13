@@ -34,7 +34,15 @@ public partial class MagicTableScene
 	];
 
 	private double _beat = 0.8;
-	private readonly Queue<GameState> _beats = new();
+	private readonly Queue<(GameState State, int Moves)> _beats = new(); // each with its move count in the record
+
+	/// <summary>The record's move count of the state on screen while beats play — a note's position (TBL-10.3).</summary>
+	private int _onScreenMoves;
+
+	/// <summary>The state on the table and its move count: what a note is about (Shayne: what he sees).</summary>
+	private (GameState State, int Moves) Shown() =>
+		_onScreen is { } s ? (s, _onScreenMoves) : (_m.State, _m.Record.Moves.Count);
+
 	private bool _playing;
 
 	/// <summary>While beats play: the state on the table. Null when it shows the game as it is.</summary>
@@ -51,13 +59,15 @@ public partial class MagicTableScene
 			&& ReferenceEquals(steps[^1], _m.State)
 		)
 		{
-			_onScreen ??= shown;
-			foreach (var step in steps)
-				_beats.Enqueue(step);
+			var first = _m.Record.Moves.Count - steps.Count; // the moves before these: one step a move
+			if (_onScreen is null)
+				(_onScreen, _onScreenMoves) = (shown, first);
+			for (var i = 0; i < steps.Count; i++)
+				_beats.Enqueue((steps[i], first + i + 1));
 			if (!_playing)
 				PlayBeats();
 		}
-		else if (!ReferenceEquals(_beats.LastOrDefault() ?? _onScreen, _m.State))
+		else if (!ReferenceEquals(_beats.Count > 0 ? _beats.Last().State : _onScreen, _m.State))
 		{
 			// An undo, a new game, the animations switched off: nothing to move towards — show it as it is.
 			_beats.Clear();
@@ -73,8 +83,16 @@ public partial class MagicTableScene
 			// What is on screen may have been drawn this very frame (the AI's step as the last beat ended): wait
 			// for its layout before reading where anything is.
 			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-			while (_onScreen is { } shown && _beats.TryDequeue(out var next))
+			while (true)
 			{
+				// Paused — Tools, P, or a note being written: hold here, the beat in motion finished (Shayne:
+				// "it should pause the animations as well, not just stop any new events from occurring").
+				while (_paused && _onScreen is not null && IsInsideTree())
+					await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+				if (_onScreen is not { } shown || !_beats.TryDequeue(out var beat))
+					break;
+				var next = beat.State;
+				_onScreenMoves = beat.Moves;
 				var changes = Between(shown, next);
 				_onScreen = next;
 				if (changes.Count == 0 && Fighting(shown).SetEquals(Fighting(next)))

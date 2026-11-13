@@ -12,7 +12,8 @@ that shaped it, and what was built, are story TBL-1 (`docs/stories/`); playtesti
 ```
 MagicTable/
 ├── MagicTableManager.cs  THE bridge to MagicCore (plain C#, no Godot types): game, seed, replay,
-│                         stops, one AI move per StepAi (the search capped at ~1 s, or GreedyAi),
+│                         stops, one AI move per StepAi (the search capped at ~1 s — FullSearch / --full-ai /
+│                         Tools uncaps it, switchable mid-game — or GreedyAi),
 │                         undo, log, the game record (every move via Play, from its token, written
 │                         to game_records/ — story TBL-5); Resume: a record's moves made again, an
 │                         undo step at each of yours, written as a new file (TBL-5.7). Tested in SQGodotCommon.Tests
@@ -43,7 +44,7 @@ MagicTable/
 ├── MagicTableScene.Motion.cs  the animations (TBL-4.5): each move a BEAT (Tools · Animation, --beat=S; 0.8 s) —
 │                         cards fly from where they were drawn to where they are, deaths dim, numbers float, life counts
 ├── TableChanges.cs       what one move changed, for the beats: a diff of two states by id (plain C#). Tested
-├── GameNotes.cs          Shayne's notes for Claude (TBL-10.3): Tools · Write a note / N pauses the AI; each note is
+├── GameNotes.cs          Shayne's notes for Claude (TBL-10.3): Tools · Write a note / N pauses the game; each note is
 │                         appended to <record>.notes.md beside its record — text, move number (reopen with
 │                         --resume-at), the board as names, the last log lines, the AI's last search. Tested
 ├── TargetArrows.cs       an arrow from each stack row to its targets while it is on the stack (TBL-4.5); the plates
@@ -146,7 +147,10 @@ MagicTable/
   after a frame has laid its row out (`PlayBeats` waits one first — a precaution, not a seen bug). Found in review:
   a state drawn MID-BEAT is never "the same question" (`_shownAnimating`) — the last beat draws the final state with
   its choice withheld, and the panel then never opened; and `PlayBeats` ends in a `finally`, or a throw leaves
-  `_onScreen` set and the table waiting forever (no clicks, no AI).
+  `_onScreen` set and the table waiting forever (no clicks, no AI). **A pause holds the beats too** (P, Tools, Space in
+  AI vs AI, or a note being written — Shayne: "it should pause the animations as well"): `PlayBeats` waits at the next
+  beat. Each queued beat carries its record move count (`_onScreenMoves`), so a note saves the position ON SCREEN
+  (`Shown()`), not the game's, which may be a decision ahead.
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.
 - **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
   only way to read a card), so a hold must never also play it. A new click target on a card goes

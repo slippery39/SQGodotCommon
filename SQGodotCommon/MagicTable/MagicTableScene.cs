@@ -23,7 +23,7 @@ namespace MagicTable;
 /// leaves; the AI moves on a timer.
 /// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names),
 /// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>, <c>--resume=FILE</c> with <c>--resume-at=N</c>,
-/// <c>--show-hand</c> (their hand face up), <c>--beat=S</c> (the animation beat in seconds, 0 for none — MagicTableScene.Motion.cs).
+/// <c>--show-hand</c> (their hand face up), <c>--full-ai</c> (the search uncapped), <c>--beat=S</c> (the animation beat in seconds, 0 for none — MagicTableScene.Motion.cs).
 /// </summary>
 public partial class MagicTableScene : Control
 {
@@ -103,6 +103,7 @@ public partial class MagicTableScene : Control
 		Pause,
 		ShowHand,
 		Note,
+		FullAi,
 		Step,
 		Inspector,
 		Speed = 10, // + the index into Speeds
@@ -256,6 +257,7 @@ public partial class MagicTableScene : Control
 					: TableSetup.Current?.Seed ?? Random.Shared.Next(1, int.MaxValue),
 				Stops.Arena
 			);
+		_m.FullSearch = OS.GetCmdlineUserArgs().Contains("--full-ai"); // before --autoplay plays with it
 		if (int.TryParse(Arg("autoplay"), out var turn))
 			_m.AutoplayTo(turn);
 		// --put=Name:Zone (repeatable): the sandbox from the command line, into your seat. Without
@@ -405,6 +407,9 @@ public partial class MagicTableScene : Control
 			Do(_m.Undo);
 		else if (key.Keycode == Key.N && !key.CtrlPressed)
 			OpenNote();
+		// P pauses the game — the AI and the animations; in AI vs AI Space does too (it has nothing to pass there)
+		else if (key.Keycode == Key.P || key.Keycode == Key.Space && _m.AiVsAi)
+			TogglePause();
 	}
 
 	/// <summary>Every input goes through here: apply it, then redraw.</summary>
@@ -594,11 +599,12 @@ public partial class MagicTableScene : Control
 		);
 		var tools = _tools.GetPopup();
 		tools.SetItemChecked(tools.GetItemIndex((int)Tool.FullControl), _m.Stops.FullControl);
-		tools.SetItemChecked(tools.GetItemIndex((int)Tool.Pause), _paused);
 		tools.SetItemChecked(tools.GetItemIndex((int)Tool.ShowHand), _showHand);
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.FullAi), _m.FullSearch);
+		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.FullAi), !_m.Search);
 		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Undo), !_m.CanUndo);
 		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Step), !_m.AiToAct);
-		_tools.Text = _paused ? "Tools · AI paused" : "Tools";
+		ShowPaused();
 		_sandbox.Allow(_m.CanSandbox);
 		_log.Text = string.Join("\n", _m.Log.TakeLast(200));
 		if (_inspector.Visible && !ReferenceEquals(_inspected, _m.LastSearch))
@@ -1005,7 +1011,12 @@ public partial class MagicTableScene : Control
 			AddButton("Replay this seed", () => _m = _m.Replay());
 			AddButton(
 				"New game",
-				() => _m = NewGame(Random.Shared.Next(1, int.MaxValue), _m.Stops)
+				() =>
+				{
+					var full = _m.FullSearch;
+					_m = NewGame(Random.Shared.Next(1, int.MaxValue), _m.Stops);
+					_m.FullSearch = full;
+				}
 			);
 			return;
 		}
@@ -1148,12 +1159,27 @@ public partial class MagicTableScene : Control
 		};
 	private bool _pausedBeforeNote;
 
+	private void TogglePause()
+	{
+		_paused = !_paused;
+		ShowPaused();
+	}
+
+	/// <summary>The pause on show — set at once, as a redraw waits while beats play.</summary>
+	private void ShowPaused()
+	{
+		var tools = _tools.GetPopup();
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.Pause), _paused);
+		_tools.Text = _paused ? "Tools · paused" : "Tools";
+	}
+
 	private void OpenNote()
 	{
 		if (_note.Visible)
 			return;
 		_pausedBeforeNote = _paused;
 		_paused = true;
+		ShowPaused();
 		_noteText.Text = "";
 		_note.PopupCentered();
 		_noteText.GrabFocus();
@@ -1164,7 +1190,7 @@ public partial class MagicTableScene : Control
 		_paused = _pausedBeforeNote;
 		if (save && _noteText.Text.Trim() is { Length: > 0 } text)
 			ShowBanner(
-				GameNotes.Write(_m, text) is { } path
+				GameNotes.Write(_m, text, Shown().State, Shown().Moves) is { } path
 					? $"Note saved — {System.IO.Path.GetFileName(path)}"
 					: "Not saved: this game keeps no record yet",
 				28
@@ -1212,9 +1238,10 @@ public partial class MagicTableScene : Control
 		menu.AddItem("Sandbox", (int)Tool.Sandbox);
 		menu.AddSeparator();
 		menu.AddCheckItem("Full control", (int)Tool.FullControl);
-		menu.AddCheckItem("Pause AI", (int)Tool.Pause);
+		menu.AddCheckItem("Pause  (P)", (int)Tool.Pause);
 		menu.AddCheckItem("Show their hand", (int)Tool.ShowHand);
 		menu.AddItem("Write a note  (N)", (int)Tool.Note);
+		menu.AddCheckItem("Full AI (no 1 s cap)", (int)Tool.FullAi);
 		menu.AddItem("Step the AI", (int)Tool.Step);
 		menu.AddItem("AI inspector  (F6)", (int)Tool.Inspector);
 		menu.AddSeparator("AI speed");
@@ -1241,7 +1268,10 @@ public partial class MagicTableScene : Control
 					Do(() => _m.Stops = _m.Stops with { FullControl = !_m.Stops.FullControl });
 					break;
 				case Tool.Pause:
-					_paused = !_paused;
+					TogglePause();
+					break;
+				case Tool.FullAi:
+					_m.FullSearch = !_m.FullSearch;
 					Refresh();
 					break;
 				case Tool.Note:

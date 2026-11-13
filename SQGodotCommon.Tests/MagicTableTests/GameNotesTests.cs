@@ -14,6 +14,7 @@ public class GameNotesTests
 	/// <summary>
 	/// TBL-10.3: notes go beside the record, one header then each note — and the move a note names reopens THAT
 	/// position: the record cut to it and resumed is where the note was written. Without that a note points nowhere.
+	/// A note on a position the table still shows, behind the game, lists no move after it.
 	/// </summary>
 	[Test]
 	public void ANote_IsWrittenBesideTheRecord_AndItsMoveReopensThePosition()
@@ -56,6 +57,13 @@ public class GameNotesTests
 				Assert.That(text, Does.Contain($"## Move {moves} "));
 				Assert.That(text, Does.Contain(named), "the cards, by name");
 			});
+
+			// A note on a position still on screen while the game ran ahead: its move, its lines, nothing after it.
+			var k = moves - 10;
+			GameNotes.Write(m, "Behind", m.Record.Before(k + 1), k);
+			var behind = File.ReadAllText(path!).Split("## Move")[^1];
+			Assert.That(behind, Does.StartWith($" {k} ").And.Contain("Behind"));
+			Assert.That(behind, Does.Not.Contain($"- #{k + 1} "), "no move after the position");
 
 			var record = GameRecord.FromJson(File.ReadAllText(m.RecordFile!)).Truncate(moves);
 			var reopened = MagicTableManager.Resume(record, search: false);
