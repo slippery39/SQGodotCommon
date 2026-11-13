@@ -53,16 +53,19 @@ really are unique), but the families below are.
   `Is.ExiledBySource` (asked from the holder, so CR 607.2a's "that same object" is the filter), Sen Triplets' its `Hand`
   row in the command zone. A MARK on one card — `PlayableFromExile`, what `ExileTopPlayable`/`SearchLibrary` leave
   through `PlayPermission`: it must die with the card's zone change (CR 400.7), which a mark does for free and a rule
-  naming an id would have to re-check. Both read by `Playable`.
+  naming an id would have to re-check. Both read by `Playable`. **Shayne, 2026-11-13: confirmed** — "different enough to
+  be two pieces. One is for an entire zone (i.e. marks the zone), one is for individual cards."
 - 2026-11-13, Claude: **"you may cast that card" as it resolves is the same `PlayPermission`, `Now`** — never a mark
   (a test: Chandra's declined card isn't castable later). Sisko's cap stays a `Count` counted ONCE as it resolves, not
   a filter asked at each choice: CR 608.2h ("determined only once, when the effect is applied"), so a free cast's own
   sacrifice of an Officer can't lower it. MC-6.4's note asked for "a filter on that loop"; the rule says otherwise.
-  The planeswalker price of a cast now (`Evaluator.Lifetime`) now reads every `Now`, not only Chandra's — no
+  **Shayne, 2026-11-13: confirmed** — counted once, as the ability resolves: "All spells cast this way are cast together
+  at the same time (or else it would say you may cast it this turn)." The planeswalker price of a cast now (`Evaluator.Lifetime`) now reads every `Now`, not only Chandra's — no
   planeswalker or emblem uses the others, so nothing scores differently today.
 - 2026-11-13, Claude: **Brazen Bluff's `CastFromHandFree(filter)` stays** — it moves nothing (not "exile these"), and
   it is the one hand-cast-now card; its choose-one step is Sisko's loop at most once. Merge them into one "cast from
   among [a Ref] now" when a second hand card needs it (LSVPower: none in the survey's play-from-another-zone list).
+  **Shayne, 2026-11-13: confirmed** — leave it; "a niche ability we can revisit later".
 
 ## Tasks
 
@@ -225,3 +228,4 @@ step: one family, its old cards moved, the golden replays UNCHANGED (or a ruling
   (Chandra, The Caretaker, discover, Q, Sisko, Exploratory Mission); five pieces gone, every golden file unchanged,
   three new tests, 8/8 breaks caught. Stopped before 6.12 (context; its design is in Next). For Shayne: the three
   2026-11-13 Decisions (two shapes of "may play"; Sisko's cap counted once, CR 608.2h; Brazen Bluff's hand cast kept apart).
+- 2026-11-13: Shayne confirmed all three MC-6.9 Decisions as built — nothing waits on him from MC-6.9.
