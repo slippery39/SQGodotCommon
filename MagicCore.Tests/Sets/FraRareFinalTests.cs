@@ -367,7 +367,7 @@ public class FraRareFinalTests : FraBoardTest
 
 	// The Caretaker / Chandra "you may cast it": a player who clicked into the cast can back out
 	// (TBL-2.16) - nothing is cast. Chandra's "if you don't" belongs to saying no up front (a known
-	// ceiling, ExileTopMayCast): backing out after a yes deals neither her 2 nor the spell's 3.
+	// ceiling, ExileTopPlayable.CastThatCard): backing out after a yes deals neither her 2 nor the spell's 3.
 	[Test]
 	public void CastNow_ThePlayerMayDeclineTheCast()
 	{

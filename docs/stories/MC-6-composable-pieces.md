@@ -48,6 +48,21 @@ really are unique), but the families below are.
   old piece read only its controller's permanents (Deanna Troi, Zefram).
 - 2026-11-12, Claude: **MC-6.10 before 6.9** — LSVPower's survey (MC-4) needs both (57 cards enter-related, 53
   play-from-another-zone), and 6.10 is the smaller, self-contained family; 6.9 is next.
+- 2026-11-13, Claude (cube lane; MC-6.9, for review): **two shapes of "may play", not one.** A RULE over a zone —
+  `MayPlayFromZone`, on a permanent or (now) a `ThisTurn` object: Null Summoner's linked card is its `Exile` row with
+  `Is.ExiledBySource` (asked from the holder, so CR 607.2a's "that same object" is the filter), Sen Triplets' its `Hand`
+  row in the command zone. A MARK on one card — `PlayableFromExile`, what `ExileTopPlayable`/`SearchLibrary` leave
+  through `PlayPermission`: it must die with the card's zone change (CR 400.7), which a mark does for free and a rule
+  naming an id would have to re-check. Both read by `Playable`.
+- 2026-11-13, Claude: **"you may cast that card" as it resolves is the same `PlayPermission`, `Now`** — never a mark
+  (a test: Chandra's declined card isn't castable later). Sisko's cap stays a `Count` counted ONCE as it resolves, not
+  a filter asked at each choice: CR 608.2h ("determined only once, when the effect is applied"), so a free cast's own
+  sacrifice of an Officer can't lower it. MC-6.4's note asked for "a filter on that loop"; the rule says otherwise.
+  The planeswalker price of a cast now (`Evaluator.Lifetime`) now reads every `Now`, not only Chandra's — no
+  planeswalker or emblem uses the others, so nothing scores differently today.
+- 2026-11-13, Claude: **Brazen Bluff's `CastFromHandFree(filter)` stays** — it moves nothing (not "exile these"), and
+  it is the one hand-cast-now card; its choose-one step is Sisko's loop at most once. Merge them into one "cast from
+  among [a Ref] now" when a second hand card needs it (LSVPower: none in the survey's play-from-another-zone list).
 
 ## Tasks
 
@@ -110,7 +125,15 @@ the Stardates fix.
       `ModifyUntilEndOfTurn.Gains`); no combat rule changed. `Combat.CantBeBlocked` and
       `CantBeBlockedBy(filter)` exist; landwalk and fear are those under a condition or a filter (helpers in
       `Scripting.cs`), with no new combat rule.
-- [ ] MC-6.9 **Playing from another zone** — part done 2026-11-06 (MC-5.6): `PlayPermission { ThisTurn, Forever,
+- [x] MC-6.9 **Playing from another zone** — done 2026-11-13 (cube lane): the linked and this-turn permissions →
+      `MayPlayFromZone` rows (`Of`, `OwnerId`, `AnyTime`, `If`, `AnyType`; a `ThisTurnEffect` too; `Is.ExiledBySource`,
+      `Is.AnyCard`) — Null Summoner, Sen Triplets moved, `MayCastWhatItExiled`, `MayPlayFrom`,
+      `Playable.IsCastableThroughLink` / `IsPlayableFromTheirZone` gone. The effects → `ExileTopPlayable { Until,
+      ShuffleFirst, RestOnBottom, Gains }` with `PlayPermission { Now, Free, AnyNumber, ManaValueAtMost, Otherwise,
+      OrIntoHand }` — Chandra, Torch of Defiance, The Caretaker, discover (U.S.S. Discovery), Q, Sisko, Exploratory
+      Mission moved; `ExileTopMayCast`, `ExileTopAndCastFree`, `ExileUntilNonlandCastFree` and `UntilNonland` gone.
+      Every golden file unchanged; two tests (Null Summoner's other object and their turn; Chandra's no-mark),
+      revert-checked. Kept: `PlayableFromExile` (the mark) and Bluff's `CastFromHandFree` — Decisions. Earlier: part done 2026-11-06 (MC-5.6): `PlayPermission { ThisTurn, Forever,
       By, AnyType }`, taken out of `ExileTopPlayable` (Kirk, Exploratory Mission, Chekov, Vulcan Mind-Meld moved) and
       given to `SearchLibrary.Play` with `SearchLibrary.Of` (Thada). Batch 3a: Prosper's "play from exile" is
       `Trigger.From`. Batch 3b (2026-11-07): Sen Triplets' `MayPlayFrom(zone, of)`, a "this turn" permission on the
@@ -171,11 +194,24 @@ the Stardates fix.
 
 ## Next
 
-MC-6.9's rest (the permanents' permissions are done): one permission — which zone, whose, a filter, how long, free or
-paid — read by `Rules/Playable.cs`, and one "exile these, they may be played" effect; LSVPower's escape, hideaway,
-cascade, plot and adventures are its next users (`MagicCore/LsvSurvey.md`). Then 6.12, 6.15, 6.14 (the order LSVPower
-needs them, MC-4's Decisions). Each step: one family, its old cards moved, the golden replays UNCHANGED (or a ruling
-fixed and said), the full suite.
+MC-6.12 moving a card, then 6.15 the "can't" statics, then 6.14 the "this turn / this game" conditions (the order
+LSVPower needs them, MC-4's Decisions). MC-6.9 is done: LSVPower's escape, hideaway, cascade, plot and adventures land
+on `MayPlayFromZone`, `MayCastThisFrom` and `ExileTopPlayable`/`PlayPermission` (cascade is `Until` + `Now`). Each
+step: one family, its old cards moved, the golden replays UNCHANGED (or a ruling fixed and said), the full suite.
+
+**6.12, read 2026-11-13 (not started; ~65 uses in `ZoneEffects.cs`, both sets).** Two shapes, as 6.9 found:
+- A move of what a `Ref` names — `ReturnFromGraveyard(What, To) { From, Counters, Tapped, Finality }` (35 uses; already
+  the near-general one), `ReturnToHand` (battlefield or stack), `PutIntoLibrary(What, OnTop)`, `ShuffleIntoLibrary
+  { FromGraveyards }` (move, then shuffle, per card), `ReturnFromExileUnderYourControl { Tapped, ExileAtNextEndStep,
+  UnderItsOwnersControl }` (no tokens), `ReturnLinkedExile` (= `Ref.All(Exile, Is.ExiledBySource, Ref.EachPlayer)` to
+  the battlefield under its owner — the 6.9 filter), `MoveCardTo(id, To) { From }` → one `MoveTo(What, To) { From
+  (zones it must be in: Graveyard, Battlefield, Stack, Exile…; unset anywhere), Tapped, Counters, Finality, UnderYourControl,
+  OnTop, Shuffle, ExileAtNextEndStep }`. Keep each old `From` check exactly — which zones each accepts is what the
+  golden replays will catch.
+- A CHOSEN move (not targeted) — `ReturnFromYourGraveyard(filter) { To, Otherwise }`, `ReturnYourPermanentToHand
+  (filter)`, `MayPutFromHandOntoBattlefield(types, Then)`: a choice over your zone + filter, min/max, then `MoveChosenTo`;
+  "if you can't" `Otherwise`, "if you do" `Then`. Their choice types differ (`ChooseAmongChoice`,
+  `ChoosePermanentChoice`, `ChooseCardsFromHandChoice`) — keep each card's, or the random replays move.
 
 ## Log
 
@@ -184,3 +220,8 @@ fixed and said), the full suite.
 - 2026-11-12 (night, cube lane): MC-6.10 — entering composed (`PermanentsEnter`), four pieces gone, no game moved.
 - 2026-11-12 (night, cube lane): MC-6.9 part — the permanents' play-from-a-zone permissions composed (`MayPlayFromZone`), three pieces gone, no game moved.
 - 2026-11-12 (night, cube lane): MC-6.9 part — the card's own cast-from-a-zone permission composed (`MayCastThisFrom`), two pieces gone, no game moved.
+- 2026-11-13 (cube lane, sprint 5 C4): MC-6.9 done — the linked and this-turn permissions onto `MayPlayFromZone`
+  (Null Summoner, Sen Triplets), the four exile/cast-now effects onto `ExileTopPlayable` + `PlayPermission.Now`
+  (Chandra, The Caretaker, discover, Q, Sisko, Exploratory Mission); five pieces gone, every golden file unchanged,
+  three new tests, 8/8 breaks caught. Stopped before 6.12 (context; its design is in Next). For Shayne: the three
+  2026-11-13 Decisions (two shapes of "may play"; Sisko's cap counted once, CR 608.2h; Brazen Bluff's hand cast kept apart).

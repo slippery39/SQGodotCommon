@@ -62,8 +62,8 @@ built (`/card-batch` step 1).
 - **CantBeBlockedBy — and blocks only shadow** (1): Dauthi Voidwalker
 - **CostChange — less per artifact** (1): Emry, Lurker of the Loch
 - **CreateTokenCopy from the graveyard, changed** (1): Fanatic of Rhonas
+- **ExileTopPlayable — Until MV less, Play.Now** (1): Bloodbraid Challenger
 - **ExileTopPlayable — face down, free** (1): Shelldock Isle
-- **ExileUntilNonlandCastFree — MV less** (1): Bloodbraid Challenger
 - **KickerComponent — kicked any number of times** (1): Batroc the Leaper
 - **ModeChoice — a cost per extra mode** (1): Collective Brutality
 - **OnStackComponent.ColorsSpent (Sunburst) read by a Count** (1): Prismatic Ending
@@ -473,7 +473,7 @@ built (`/card-batch` step 1).
 
 - Alpha Deathclaw (Creature — Lizard Mutant) — have: engine keyword; option: PutCounters + a 'monstrous' stamp
 - Batroc the Leaper (Legendary Creature — Human Villain) — option: KickerComponent — kicked any number of times
-- Bloodbraid Challenger (Creature — Elf Berserker) — have: engine keyword; option: MayCastThisFrom(Graveyard) + an exile cost; option: ExileUntilNonlandCastFree — MV less
+- Bloodbraid Challenger (Creature — Elf Berserker) — have: engine keyword; option: MayCastThisFrom(Graveyard) + an exile cost; option: ExileTopPlayable — Until MV less, Play.Now
 - Collective Brutality (Sorcery) — option: ModeChoice — a cost per extra mode
 - Dauthi Voidwalker (Creature — Dauthi Rogue) — option: CantBeBlockedBy — and blocks only shadow
 - Death-Greeter's Champion (Creature — Human Warrior) — option: PutCounters on target + granted abilities; have: engine keyword; option: an alternative cost + haste + return

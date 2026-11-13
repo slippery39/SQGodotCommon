@@ -2070,7 +2070,7 @@ public static class TrkCards
 					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Quest },
 					new ExileTopPlayable
 					{
-						UntilNonland = true,
+						Until = !Is.Land,
 						Play = new() { ThisTurn = true },
 					},
 					new If(Quests(5), [new AddMana(ManaColor.Red, 2)])
@@ -3240,10 +3240,19 @@ public static class TrkCards
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}{W}{U}{B}{R}{G}"),
 					[
-						new ExileTopAndCastFree(
-							5,
-							Count.NumberOf(Ref.Permanents(Is.Subtype("Officer") & Is.Yours))
-						),
+						new ExileTopPlayable
+						{
+							N = 5,
+							Play = new()
+							{
+								Now = true,
+								Free = true,
+								AnyNumber = true,
+								ManaValueAtMost = Count.NumberOf(
+									Ref.Permanents(Is.Subtype("Officer") & Is.Yours)
+								),
+							},
+						},
 					]
 				)
 				{
@@ -3256,7 +3265,12 @@ public static class TrkCards
 				When(
 					TriggerEvent.EachEndStep,
 					[TargetSpec.Player(Is.Opponents)],
-					new ExileUntilNonlandCastFree(Ref.Target())
+					new ExileTopPlayable
+					{
+						Of = Ref.Target(),
+						Until = !Is.Land,
+						Play = new() { Now = true, Free = true },
+					}
 				) with
 				{
 					If = new AtLeast(Count.DilemmasFacedThisTurnBy(Ref.You), 1),
@@ -3588,9 +3602,10 @@ public static class TrkCards
 				When(
 					TriggerEvent.SelfEnters,
 					[],
-					new ExileUntilNonlandCastFree(Ref.You)
+					new ExileTopPlayable
 					{
 						ShuffleFirst = true,
+						Until = !Is.Land,
 						Gains = StackTheDeck,
 					}
 				),
@@ -4042,7 +4057,9 @@ public static class TrkCards
 						On = Ref.Target(0),
 					},
 					new LookAtHand(Ref.Target(0)), // "plays with their hand revealed" — to you; they know it
-					new ThisTurn(new MayPlayFrom(ZoneType.Hand, Ref.Target(0)))
+					new ThisTurn(
+						new MayPlayFromZone(ZoneType.Hand, Is.AnyCard) { Of = Ref.Target(0) }
+					)
 				),
 			],
 			["Flare of Fortitude"] =
@@ -4151,12 +4168,17 @@ public static class TrkCards
 	/// exile a nonland card with mana value N or less. Cast it without paying its mana cost or put it into
 	/// your hand. Put the rest on the bottom in a random order."
 	/// </summary>
-	static ExileUntilNonlandCastFree Discover(int n) =>
-		new(Ref.You)
+	static ExileTopPlayable Discover(int n) =>
+		new()
 		{
-			ManaValueAtMost = n,
-			OrIntoHand = true,
+			Until = !Is.Land & Is.ManaValueAtMost(n),
 			RestOnBottom = true,
+			Play = new()
+			{
+				Now = true,
+				Free = true,
+				OrIntoHand = true,
+			},
 		};
 
 	/// <summary>The shocklands (Blood Crypt …): "As this land enters, you may pay 2 life. If you don't, it enters tapped."</summary>

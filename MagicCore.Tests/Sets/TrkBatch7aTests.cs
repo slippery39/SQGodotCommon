@@ -509,11 +509,18 @@ public class TrkBatch7aTests : FraBoardTest
 			[
 				new SpellEffectsComponent(
 					[
-						new ExileUntilNonlandCastFree(Ref.You)
+						new ExileTopPlayable
 						{
-							ManaValueAtMost = 5,
-							OrIntoHand = true,
+							Until =
+								!global::MagicCore.Filters.Is.Land
+								& global::MagicCore.Filters.Is.ManaValueAtMost(5),
 							RestOnBottom = true,
+							Play = new()
+							{
+								Now = true,
+								Free = true,
+								OrIntoHand = true,
+							},
 						},
 					]
 				),

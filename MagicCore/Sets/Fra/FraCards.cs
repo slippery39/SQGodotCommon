@@ -3043,7 +3043,13 @@ public static class FraCards
 				{
 					If = new SourceWasCast(),
 				},
-				new MayCastWhatItExiled(Threshold),
+				new MayPlayFromZone(ZoneType.Exile, Is.ExiledBySource)
+				{
+					Of = Ref.EachPlayer,
+					AnyTime = true,
+					If = Threshold,
+					AnyType = true,
+				},
 			],
 			["Omnipresence"] =
 			[
@@ -3182,7 +3188,18 @@ public static class FraCards
 			],
 			["Chandra, Torch of Defiance"] =
 			[
-				Loyalty(1, [], new ExileTopMayCast([new DealDamage(Ref.EachOpponent, 2)])),
+				Loyalty(
+					1,
+					[],
+					new ExileTopPlayable
+					{
+						Play = new()
+						{
+							Now = true,
+							Otherwise = [new DealDamage(Ref.EachOpponent, 2)],
+						},
+					}
+				),
 				Loyalty(1, [], new AddMana(ManaColor.Red, 2)),
 				Loyalty(-3, [Creature], new DealDamage(Ref.Target(), 4)),
 				Loyalty(

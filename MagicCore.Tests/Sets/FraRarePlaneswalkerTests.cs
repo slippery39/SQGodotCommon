@@ -354,6 +354,19 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 	}
 
 	[Test]
+	public void ChandraTorch_PlusOne_Declined_NoPermissionIsLeftOnTheCard()
+	{
+		var chandra = Walker("Chandra, Torch of Defiance");
+		var other = OnTop(TestGames.Inline("Other", "{1}", "Sorcery"));
+		Activate(chandra, 0, answer: _ => []);
+		Assert.That(
+			(s.IsIn(other, me, ZoneType.Exile), Casts(other).Any()),
+			Is.EqualTo((true, false)),
+			"\"you may cast that card\" is as it resolves, never later"
+		);
+	}
+
+	[Test]
 	public void ChandraTorch_PlusOneRR_MinusThreeFour_MinusSevenEmblem()
 	{
 		var chandra = Walker("Chandra, Torch of Defiance", 7);

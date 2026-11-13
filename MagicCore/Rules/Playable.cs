@@ -48,23 +48,15 @@ public static class Playable
 			)
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)
-			|| IsCastableThroughLink(s, card, playerId)
-			|| IsPlayableFromTheirZone(s, card, playerId)
 		) && CastRestrictionHolds(s, card, playerId);
 
-	/// <summary>Sen Triplets: a card in a zone one of this player's <see cref="MayPlayFrom"/> names (that player's hand).</summary>
-	public static bool IsPlayableFromTheirZone(GameState s, Card card, int playerId) =>
-		s.ThisTurnEffects<MayPlayFrom>(playerId)
-			.Any(c =>
-				c.GetComponent<MayPlayFrom>() is { } may && s.IsIn(card.Id, may.OwnerId, may.Zone)
-			);
-
 	/// <summary>
-	/// MC-6.9: the permanent and its rule that let this card be played from where it is now — its owner's graveyard,
-	/// the top of their library, or outside the game (<see cref="MayPlayFromZone"/>: Overflow Submatrix, The Holodeck,
-	/// Nog's gained ability, Zefram Cochrane, Captain Pike). Only during your turn; an unlimited rule first, then a
-	/// once-each-turn one not used this turn (<see cref="Card.PermissionUsedOn"/>). A card with its own way out of
-	/// the graveyard (flashback, beam me up, Storied Veteran) uses that.
+	/// MC-6.9: the holder and its rule that let this card be played from where it is now — its owner's graveyard,
+	/// the top of their library, outside the game, exile or hand (<see cref="MayPlayFromZone"/>: Overflow Submatrix,
+	/// The Holodeck, Nog's gained ability, Zefram Cochrane, Captain Pike, Null Summoner; Sen Triplets' "this turn" in the
+	/// command zone). During your turn unless the rule says AnyTime; an unlimited rule first, then a once-each-turn one
+	/// not used this turn (<see cref="Card.PermissionUsedOn"/>). A card with its own way out of the graveyard
+	/// (flashback, beam me up, Storied Veteran) uses that. The filter and If are asked from the holder's side.
 	/// </summary>
 	public static (Card Holder, MayPlayFromZone Rule)? ZonePermission(
 		GameState s,
@@ -72,13 +64,20 @@ public static class Playable
 		int playerId
 	)
 	{
-		if (s.GetGame().ActivePlayerId != playerId || card.OwnerId != playerId)
+		// Under the AI's every candidate: nothing to scan, or none that applies now, is the common answer.
+		var yourTurn = s.GetGame().ActivePlayerId == playerId;
+		var rules = ZoneRules(s, playerId).Where(r => yourTurn || r.Rule.AnyTime).ToList();
+		if (rules.Count == 0)
 			return null;
+		var owner = card.OwnerId;
 		ZoneType? from =
-			s.IsIn(card.Id, playerId, ZoneType.Graveyard) ? ZoneType.Graveyard
-			: s.GetChildrenIds(s.ZoneId(playerId, ZoneType.Library)).FirstOrDefault() == card.Id
+			s.IsIn(card.Id, owner, ZoneType.Graveyard) ? ZoneType.Graveyard
+			: s.GetChildrenIds(s.ZoneId(owner, ZoneType.Library)).FirstOrDefault() == card.Id
 				? ZoneType.Library
-			: IsOutsideTheGame(s, card, playerId) ? ZoneType.Sideboard
+			: IsOutsideTheGame(s, card, owner) ? ZoneType.Sideboard
+			: s.IsIn(card.Id, owner, ZoneType.Exile) && !card.HasComponent<ExiledFaceDown>()
+				? ZoneType.Exile
+			: s.IsIn(card.Id, owner, ZoneType.Hand) ? ZoneType.Hand
 			: null;
 		if (
 			from is null
@@ -90,14 +89,18 @@ public static class Playable
 		)
 			return null;
 		var turn = s.GetGame().TurnNumber;
-		var context = new Filters.FilterContext(playerId, card.Id);
 		(Card, MayPlayFromZone)? once = null;
-		foreach (var p in s.CardsIn(playerId, ZoneType.Battlefield))
-		foreach (var rule in s.AbilitiesOf<MayPlayFromZone>(p))
+		foreach (var (p, rule) in rules)
 			if (
 				(rule.From == from || from == ZoneType.Sideboard && rule.OutsideTheGame)
 				&& (!rule.OncePerTurn || p.PermissionUsedOn != turn)
-				&& rule.What.Matches(s, card, context)
+				&& (
+					rule.OwnerId != 0 ? rule.OwnerId == owner
+					: rule.Of is null ? owner == playerId
+					: rule.Of.Resolve(s, Conditions.Of(p)).Contains(owner)
+				)
+				&& rule.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id))
+				&& (rule.If is null || rule.If.Holds(s, Conditions.Of(p)))
 			)
 			{
 				if (!rule.OncePerTurn)
@@ -106,6 +109,15 @@ public static class Playable
 			}
 		return once;
 	}
+
+	/// <summary>This player's play-from-a-zone rules: on their permanents, then "this turn" ones in their command zone.</summary>
+	static IEnumerable<(Card Holder, MayPlayFromZone Rule)> ZoneRules(GameState s, int playerId) =>
+		s.CardsIn(playerId, ZoneType.Battlefield)
+			.SelectMany(p => s.AbilitiesOf<MayPlayFromZone>(p).Select(rule => (p, rule)))
+			.Concat(
+				s.ThisTurnEffects<MayPlayFromZone>(playerId)
+					.Select(c => (c, c.GetComponent<MayPlayFromZone>()!))
+			);
 
 	static bool IsOutsideTheGame(GameState s, Card card, int playerId) =>
 		s.WellKnownIds.TryGetValue(MagicKeys.Zone(playerId, ZoneType.Sideboard), out var sideboard)
@@ -120,20 +132,6 @@ public static class Playable
 	public static bool CastRestrictionHolds(GameState s, Card card, int playerId) =>
 		card.GetComponent<CastOnlyIf>() is not { } only
 		|| only.When.Holds(s, Conditions.Of(card with { ControllerId = playerId }));
-
-	/// <summary>
-	/// Null Summoner: the card it exiled, cast by its controller while its condition holds — and only
-	/// while it is that same object on the battlefield (a static ability, CR 607.2a).
-	/// </summary>
-	public static bool IsCastableThroughLink(GameState s, Card card, int playerId) =>
-		card.GetComponent<ExiledBy>() is { } link
-		&& s.IsIn(card.Id, card.OwnerId, ZoneType.Exile)
-		&& s.IsOnBattlefield(link.SourceId)
-		&& s.GetCard(link.SourceId) is var source
-		&& source.Incarnation == link.SourceIncarnation
-		&& source.ControllerId == playerId
-		&& s.AbilitiesOf<MayCastWhatItExiled>(source)
-			.Any(may => may.While.Holds(s, Conditions.Of(source)));
 
 	/// <summary>
 	/// What casting this without paying its mana cost costs instead, or null when nothing allows it:
@@ -178,7 +176,6 @@ public static class Playable
 			s.IsIn(card.Id, playerId, ZoneType.Hand)
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| ZonePermission(s, card, playerId) is not null
-			|| IsPlayableFromTheirZone(s, card, playerId)
 		);
 
 	/// <summary>Every card this player may cast or play from where it is — hand first.</summary>
@@ -192,10 +189,10 @@ public static class Playable
 				MayPlayFromOutside(s, playerId) ? s.CardsIn(playerId, ZoneType.Sideboard) : [] // The Holodeck
 			)
 			.Concat(
-				s.ThisTurnEffects<MayPlayFrom>(playerId) // Sen Triplets: that player's hand
-					.Select(c => c.GetComponent<MayPlayFrom>()!)
-					.Where(may => may.OwnerId != playerId)
-					.SelectMany(may => s.CardsIn(may.OwnerId, may.Zone))
+				s.ThisTurnEffects<MayPlayFromZone>(playerId) // Sen Triplets: that player's hand
+					.Select(c => c.GetComponent<MayPlayFromZone>()!)
+					.Where(may => may.OwnerId is not 0 && may.OwnerId != playerId)
+					.SelectMany(may => s.CardsIn(may.OwnerId, may.From))
 			)
 			.Where(c =>
 				c.Is(CardType.Land)

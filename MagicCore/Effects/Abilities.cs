@@ -1011,12 +1011,31 @@ public record MayCastThisFrom(ZoneType From) : GameComponent
 /// library." (Library, Is.Artifact &amp; !Is.Land) { OncePerTurn }. Captain Pike: "You may play lands from the top of
 /// your library." (Library, Is.Land). A once-each-turn use stamps the permanent (Card.PermissionUsedOn). Not
 /// flashback: a spell cast from the graveyard this way isn't exiled leaving the stack (OnStackComponent.ByPermission).
+/// Null Summoner: "As long as [threshold], you may cast the exiled card, and mana of any type can be spent to cast that
+/// spell." (Exile, Is.ExiledBySource) { Of = Ref.EachPlayer, AnyTime, If, AnyType } — the card it exiled, whoever owns it, while that
+/// same object is on the battlefield (CR 607.2a). Sen Triplets: "You may play lands and cast spells from that player's
+/// hand this turn." — (Hand, any card) { Of = Ref.Target(0) } in a ThisTurn: the whole zone while it lasts.
 /// </summary>
-public record MayPlayFromZone(ZoneType From, Filters.Filter What) : GameComponent
+public record MayPlayFromZone(ZoneType From, Filters.Filter What) : ThisTurnEffect
 {
 	public bool OncePerTurn { get; init; }
 	public bool Finality { get; init; }
 	public bool OutsideTheGame { get; init; }
+
+	/// <summary>Whose zone; unset is yours. Resolved from the holder's side; in a ThisTurn, bound as it is made (OwnerId).</summary>
+	public Ref? Of { get; init; }
+
+	/// <summary>Of as it resolved, for a "this turn" permission (Sen Triplets: a target can't be read later).</summary>
+	public int OwnerId { get; init; }
+
+	/// <summary>Null Summoner: no "during your turn" — at whatever speed the card itself may be cast.</summary>
+	public bool AnyTime { get; init; }
+
+	/// <summary>Null Summoner: "As long as [threshold]" — judged from the holder's side.</summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Null Summoner: "mana of any type can be spent to cast that spell" — Costs.Of.</summary>
+	public bool AnyType { get; init; }
 }
 
 /// <summary>
@@ -1254,13 +1273,6 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
 }
-
-/// <summary>
-/// Null Summoner: "As long as [While], you may cast the exiled card, and mana of any type can be
-/// spent to cast that spell." On the source — a static, so only while it is on the battlefield;
-/// the card it exiled is <see cref="ExiledBy"/> it (Rules/Playable.cs).
-/// </summary>
-public record MayCastWhatItExiled(Condition While) : GameComponent;
 
 /// <summary>On a card a permanent exiled for a linked ability (CR 607.2a) — which object of it.</summary>
 public record ExiledBy(int SourceId, int SourceIncarnation) : GameComponent;

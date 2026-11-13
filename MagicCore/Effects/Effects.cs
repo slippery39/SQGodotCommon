@@ -866,7 +866,10 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 		// Sen Triplets' "that player's hand": who it names, kept as it resolves — a target can't be read later.
 		var what = What switch
 		{
-			MayPlayFrom may => may with { OwnerId = All(may.Of, s).FirstOrDefault() },
+			MayPlayFromZone { Of: { } of } may => may with
+			{
+				OwnerId = All(of, s).FirstOrDefault(),
+			},
 			_ => What,
 		};
 		return who == 0
@@ -888,16 +891,6 @@ public record CantCastOrActivate : ThisTurnEffect
 
 	/// <summary>Sen Triplets: "activate abilities" — mana abilities too (Kai Winn's ruling); TapForManaAction and ManaPayment ask.</summary>
 	public bool ManaAbilitiesToo { get; init; }
-}
-
-/// <summary>
-/// Sen Triplets: "You may play lands and cast spells from that player's hand this turn." — every card in
-/// that zone while it lasts, one drawn later too; the land drop and the costs as usual. Read by Playable
-/// (CanCastFromHere, CanPlayLandFromHere, Candidates). <see cref="Of"/> is resolved as it is made (OwnerId).
-/// </summary>
-public record MayPlayFrom(ZoneType Zone, Ref Of) : ThisTurnEffect
-{
-	public int OwnerId { get; init; }
 }
 
 /// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>

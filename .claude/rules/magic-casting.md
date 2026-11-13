@@ -43,9 +43,10 @@ whose subsystem it lives in.
   `new ThisTurn(…) { On = Ref.Target(0) }`). It and **split second** (Samut) are `Combat.LockedDown(s, player)`,
   asked by casting and activating alike, never by triggers; a mana ability only by a lock with
   `ManaAbilitiesToo` (Sen) — `TapForManaAction` and `ManaPayment.Find`, so nothing taps to pay for them.
-- **"You may play cards from that player's hand this turn"** (Sen Triplets) is `MayPlayFrom(zone, of)` in your
-  command zone, read by `Playable` (cast, land, `Candidates`) — the whole zone while it lasts, a card drawn
-  later too. A `ThisTurnEffect` naming a player by a `Ref` keeps who it resolved to (`Bound`).
+- **"You may play cards from that player's hand this turn"** (Sen Triplets) is the play-from-a-zone rule
+  (`MayPlayFromZone(Hand, Is.AnyCard) { Of }`) in a `ThisTurn` — your command zone, read by `Playable.ZonePermission`
+  beside your permanents' rules (cast, land, `Candidates`): the whole zone while it lasts, a card drawn later too. A
+  `ThisTurnEffect` naming a player by a `Ref` keeps who it resolved to (`MayPlayFromZone.OwnerId`).
 - **"This spell can't be countered" for one cast** (Theorist's Proxy) is `OnStackComponent.CantBeCountered`
   — gone with the stack object, so a recast can be countered; `StackResolution.CanBeCountered` reads both.
 - **Casting from the graveyard (flashback):** `Costs.Flashback` is the ONE answer to "may this card
@@ -85,9 +86,10 @@ whose subsystem it lives in.
   card itself, so Omnipresence's static is no free cast for itself; its costs join `CastSpellAction.CostsOf`, and
   a free cast with a cost is offered BESIDE the paid one
   (one with none replaces it — never worse).
-- **A card exiled for a linked ability** (Null Summoner) carries `ExiledBy(source, incarnation)`;
-  `Playable.IsCastableThroughLink` asks the source's static (`MayCastWhatItExiled`) — so only while that
-  same object is on the battlefield. "Mana of any type can be spent" is `ManaCost.OfAnyType` in `Costs.Of`.
+- **A card exiled for a linked ability** (Null Summoner) carries `ExiledBy(source, incarnation)`; "you may cast the
+  exiled card" is the play-from-a-zone rule on the source, `MayPlayFromZone(Exile, Is.ExiledBySource) { Of, AnyTime,
+  If, AnyType }` — the filter asked from the holder's side, so only while that same object is on the battlefield
+  (CR 607.2a). "Mana of any type can be spent" is `ManaCost.OfAnyType` in `Costs.Of`.
 - **"−X" loyalty** is `LoyaltyAbilityComponent.MinusX`: one legal action per X up to the loyalty, X on
   the stack for the effects. "Activate only if" is `LoyaltyAbilityComponent.OnlyIf`.
 - **Casting in the middle of a resolution** ("you may cast that card", Chandra, Torch of Defiance;
@@ -140,13 +142,19 @@ whose subsystem it lives in.
   counted on the source as it resolves (`Card.ResolvedTimes`, by turn), the rest run on exactly the Nth.
 - **Playing a card from exile** is `PlayableFromExile(player, until)` on it — anyone's card, in its owner's
   exile (`Playable.IsImpulsePlayableBy`; `Candidates` reads both exiles): `AnyType` ("mana of any type",
-  Vulcan Mind-Meld) and `Tax` (Zero's "{2} more") are read by `Costs.Of`. `ExileTopPlayable` exiles it —
-  whose library (`Of`), who plays and how long (`Play`: `By`, "for as long as it remains exiled" `Forever`), face
-  down, or only a chosen card (`Choose`, Chekov's land). Cast or played, the card is public again (`ExiledFaceDown` is status).
+  Vulcan Mind-Meld) and `Tax` (Zero's "{2} more") are read by `Costs.Of`. **"Exile these, they may be played" is ONE
+  effect, `ExileTopPlayable`** (MC-6.9): the top N or `Until` a card matches (Exploratory Mission, The Caretaker:
+  `!Is.Land`; discover: and mana value N or less), whose library (`Of`), `ShuffleFirst` (Q), face down, the rest to the
+  bottom (`RestOnBottom`), or only a chosen card (`Choose`, Chekov's land). **What may be played is ONE `PlayPermission`**:
+  who and how long (`By`, `ThisTurn`, "for as long as it remains exiled" `Forever`) — a mark on the card — or **`Now`**,
+  a cast as it resolves and never a mark (Chandra; `Free`: The Caretaker, discover's `OrIntoHand`; Sisko's `AnyNumber`
+  under `ManaValueAtMost`, counted once, CR 608.2h), with "if you don't" (`Otherwise`). Q's card `Gains` an ability
+  instead. Cast or played, the card is public again (`ExiledFaceDown` is status).
 - **"[Once during each of your turns,] you may play [cast] … from your graveyard / the top of your library [/ outside
-  the game]"** is ONE piece (MC-6.9), `MayPlayFromZone(From, filter) { OncePerTurn, Finality, OutsideTheGame }` —
-  Overflow Submatrix, The Holodeck, Nog's gained lands, Zefram (`!Is.Land`: "cast"), Captain Pike — read by
-  `Playable.ZonePermission` for casts AND land plays, during your turn, an unlimited rule first; a once-each-turn
+  the game / exile / that player's hand]"** is ONE piece (MC-6.9), `MayPlayFromZone(From, filter) { OncePerTurn,
+  Finality, OutsideTheGame, Of, AnyTime, If, AnyType }` — Overflow Submatrix, The Holodeck, Nog's gained lands, Zefram
+  (`!Is.Land`: "cast"), Captain Pike, Null Summoner, Sen Triplets (a `ThisTurn`) — read by `Playable.ZonePermission`
+  for casts AND land plays, during your turn unless `AnyTime`, never a face-down card, an unlimited rule first; a once-each-turn
   use stamps its permanent (`Card.PermissionUsedOn`). A graveyard cast this way is not
   flashback: the stack records `OnStackComponent.ByPermission`, so `MoveCard` doesn't exile it and it resolves
   onto the battlefield (`Finality`: with a finality counter). A card with its own way out of the graveyard uses
@@ -167,13 +175,11 @@ whose subsystem it lives in.
   (`CastSpellAction.ChoosesTargets`): casting it asks `ChooseXTargetsChoice` (exactly X), then casts with them —
   never a cast per set, which is 2^n and hung the fuzz probe (Shayne, 2026-11-05). The AI copies the biggest
   (`GreedyAi`). "For each of them" is `Ref.EachTarget`.
-- **"Exile cards from the top until a nonland card. You may cast it without paying"** (The Caretaker — target
-  opponent's library, the rest stay exiled) and **discover N** (U.S.S. Discovery: mana value N or less, "or put it
-  into your hand", the rest on the bottom in a random order — `TrkCards.Discover`) are one effect,
-  `ExileUntilNonlandCastFree`: a yes/no, then `CastNow` free; asked only when it can be cast.
-- **"Cast any number of spells with mana value ≤ N from among the exiled cards, free"** (Sisko,
-  `ExileTopAndCastFree`) is Uldaros' choose-and-cast loop (`CastCopiesWithinBudget`) with `Originals` (the cards,
-  not copies) and `EachAtMost` (a cap on each, not a total); N counted once as it resolves.
+- **"You may cast that card [free]"** as it resolves (`PlayPermission.Now` on `ExileTopPlayable` — Chandra, The
+  Caretaker, discover: `TrkCards.Discover`) is a yes/no, then `CastNow`; asked only when it can be cast.
+  **"Cast any number of spells with mana value ≤ N from among the exiled cards, free"** (Sisko, `Now { AnyNumber }`)
+  is Uldaros' choose-and-cast loop (`CastCopiesWithinBudget`) with `Originals` (the cards, linked while it runs, not
+  copies) and `EachAtMost` (a cap on each, not a total); N counted once as it resolves.
   **"Copy that card X times; cast the copies free"** (Infinite Diversity) is `CastCopiesOf`: one copy at a time
   (`CastChosenCopy.MakeCopy`), each asked — a copy not cast ceases to exist (CR 704.5e).
 - **"During your main phase, each card in your graveyard has beam me up for its mana cost"** (Scotty) is
@@ -194,12 +200,12 @@ whose subsystem it lives in.
   card is exiled") is `ActivatedAbilityComponent.From = ZoneType.Exile` — your own exile, which `LegalActions`
   reads beside the hand and graveyard. "Exile a card from your hand:" is `ExileFromHandCost` (one action per card).
   "Create a copy of this card. You may cast the copy" is `CastCopiesOf { PayCost }` — `CastNow` paying its costs.
-  Q's "That nonland card gains …" is `ExileUntilNonlandCastFree { ShuffleFirst, Gains }` (in place of the cast).
+  Q's "That nonland card gains …" is `ExileTopPlayable { ShuffleFirst, Until, Gains }` (in place of a permission).
 - **Cycling is a keyword ability** (MC-6.7): `Scripting.Cycling(cost)`; landcycling is `Cycling(cost, search)`, the
   same keyword (CR 702.29e). The ability carries it (`ActivatedAbilityComponent.Keyword`), the activation event too,
   and "when you cycle [this card]" is `Trigger(AbilityActivated) { Ability = "Cycling", Subject = Is.Source }`, read
   from the graveyard (the card was discarded to pay). A discard-from-hand ability with no keyword isn't cycling.
-- **"You may play that card"** is one `PlayPermission { ThisTurn, Forever, By, AnyType }` (MC-6.9, part) — on
+- **"You may play that card"** is one `PlayPermission` (MC-6.9; above) — on
   `ExileTopPlayable.Play` and on `SearchLibrary.Play`: Thada Adel searches THEIR library (`SearchLibrary.Of`; the
   choice is the searcher's, `ChooseFromLibraryChoice.DeciderId`), exiles the card and may play it this turn.
 - **"A modal spell"** is `Is.Modal` (its text has modes); **"the number of times you chose a mode for that spell"**

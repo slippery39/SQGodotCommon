@@ -361,8 +361,8 @@ public static partial class Evaluator
 			case ReturnChosenToHandIf:
 				// "If you put a [card] into your graveyard this way, put it into your hand": a draw, only if.
 				return IfShare * card;
-			case ExileTopMayCast e:
-				return Math.Max(ExileCastShare * card, Sum(e.Otherwise));
+			case ExileTopPlayable { Play.Now: true } e:
+				return Math.Max(ExileCastShare * card, Sum(e.Play.Otherwise));
 			case EachSacrifices e:
 				return Ids(e.Who)
 					.Select(s.GetObject)

@@ -62,7 +62,7 @@ KEYWORDS = {
     "Crew": (N, "Vehicles: crew"), "Reconfigure": (N, "reconfigure"), "Saddle": (N, "Mounts: saddle"),
     "Companion": (N, "companion"), "Bestow": (N, "bestow"), "Incubate": (N, "Incubator tokens (transform)"),
     "Manifest": (N, "face-down 2/2s"), "Manifest dread": (N, "face-down 2/2s"), "Plot": (N, "plot"),
-    "Emerge": (N, "emerge"), "Miracle": (N, "miracle"), "Storm": (N, "storm"), "Cascade": (O, "ExileUntilNonlandCastFree — MV less"),
+    "Emerge": (N, "emerge"), "Miracle": (N, "miracle"), "Storm": (N, "storm"), "Cascade": (O, "ExileTopPlayable — Until MV less, Play.Now"),
     "Daybound": (N, "day and night"), "Nightbound": (N, "day and night"), "Level Up": (N, "level up"),
     "Protection": (N, "protection (CR 702.16)"), "Exert": (N, "exert"), "Transform": (N, "transforming DFCs"),
     "Warp": (N, "warp (EOE)"), "Earthbend": (N, "earthbend"), "Airbend": (N, "airbend"), "Waterbend": (N, "waterbend"),

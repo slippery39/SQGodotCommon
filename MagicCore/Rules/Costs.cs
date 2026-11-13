@@ -96,7 +96,12 @@ public static class Costs
 			: null;
 		// Null Summoner: "mana of any type can be spent to cast that spell".
 		if (
-			!free && (Playable.IsCastableThroughLink(s, card, casterId) || impulse?.AnyType == true)
+			!free
+			&& (
+				impulse?.AnyType == true
+				|| !s.IsIn(card.Id, casterId, ZoneType.Hand)
+					&& Playable.ZonePermission(s, card, casterId) is { Rule.AnyType: true }
+			)
 		)
 			printed = printed.OfAnyType();
 		var delta = addedGeneric + (impulse?.Tax ?? 0);

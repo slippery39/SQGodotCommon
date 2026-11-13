@@ -26,6 +26,9 @@ public static class Is
 	public static readonly Filter Opponents = new OfController(Whose.Opponent);
 	public static readonly Filter Player = new HasProperty(Property.Player);
 
+	/// <summary>Sen Triplets: "lands and spells from that player's hand" — any card at all.</summary>
+	public static readonly Filter AnyCard = !Player;
+
 	/// <summary>"This" — so "another" is !Is.Source.</summary>
 	public static readonly Filter Source = new HasProperty(Property.Source);
 
@@ -49,6 +52,9 @@ public static class Is
 
 	/// <summary>Riku of Many Paths: "Whenever you cast a modal spell".</summary>
 	public static readonly Filter Modal = new HasProperty(Property.Modal);
+
+	/// <summary>Null Summoner: "you may cast the exiled card" — one this same object of the source exiled (a linked ability, CR 607.2a).</summary>
+	public static readonly Filter ExiledBySource = new HasProperty(Property.ExiledBySource);
 	public static readonly Filter AttackingAPlayer = new HasProperty(Property.AttackingAPlayer);
 
 	/// <summary>"Attacks you or a planeswalker you control".</summary>

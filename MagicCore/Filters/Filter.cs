@@ -336,6 +336,7 @@ public enum Property
 	DealtCombatDamage, // Ruric Thar: "as long as they haven't dealt combat damage yet"
 	Tapped, // U.S.S. Excelsior: "target tapped creature"
 	Modal, // Riku of Many Paths: "a modal spell" — its text has modes ("choose one —")
+	ExiledBySource, // Null Summoner: "the exiled card" — exiled by THIS object of the source (ExiledBy, CR 607.2a)
 }
 
 /// <summary>Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.</summary>
@@ -383,6 +384,11 @@ public sealed record HasProperty(Property Property) : Filter
 			Property.Tapped => card.IsTapped,
 			Property.Modal => card.GetComponent<Effects.SpellEffectsComponent>()
 				is { Modes.IsEmpty: false },
+			Property.ExiledBySource => card.GetComponent<Effects.ExiledBy>() is { } link
+				&& link.SourceId == c.Source
+				&& s.HasObject(c.Source)
+				&& s.GetObject(c.Source) is Card source
+				&& source.Incarnation == link.SourceIncarnation,
 			_ => false,
 		};
 }

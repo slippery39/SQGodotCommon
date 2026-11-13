@@ -687,48 +687,6 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 	}
 }
 
-/// <summary>
-/// Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card. If you
-/// don't, [Otherwise]." Cast right then (CastNow), paying its cost. Asked only when it could be cast —
-/// a land, or one you can't pay for or target with, is "don't".
-/// ponytail: "If you don't" runs on a NO to the up-front question only; backing out of the cast itself
-/// afterwards (an empty answer to ChooseCastChoice, TBL-2.16) casts nothing and skips it - make the decline answer
-/// the question again if a table player ever says yes and then backs out for the damage.
-/// </summary>
-public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var top = s.CardsIn(Controller, ZoneType.Library).FirstOrDefault();
-		if (top is not null)
-			s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
-		var castable =
-			top is not null && CastNow.CanCast(s, Controller, s.GetCard(top.Id), free: false);
-		if (!castable)
-			return new(
-				s.SpawnAction(
-					new PipelineAction { Steps = Otherwise, PipelineContext = InputContext }
-				)
-			);
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps =
-					[
-						new YesNoChoice(Controller, $"Cast {top!.Name}?"),
-						new IfChosenAction([new CastNow(top.Id, Free: false)])
-						{
-							Otherwise = Otherwise,
-						},
-					],
-				}
-			)
-		);
-	}
-}
-
 /// <summary>Brazen Bluff: "That player may exile it." — a spell (a card on the stack), to its owner's exile.</summary>
 public record ExileSpell(Ref What) : Effect
 {
@@ -907,105 +865,6 @@ public record AssimilateChosen : Effect
 				.Where(id => s.HasObject(id) && !s.IsOnBattlefield(id))
 				.Aggregate(s, (st, id) => Assimilate.Into(st, Controller, id))
 		);
-}
-
-/// <summary>
-/// The Caretaker: "target opponent exiles cards from the top of their library until they exile a
-/// nonland card. You may cast that card without paying its mana cost." — cast right then (CastNow,
-/// free), asked only when it could be; the rest stay exiled. Discover N (U.S.S. Discovery, CR 701.57):
-/// with ManaValueAtMost, OrIntoHand and RestOnBottom.
-/// </summary>
-public record ExileUntilNonlandCastFree(Ref Of) : Effect
-{
-	/// <summary>Discover 5: "until you exile a nonland card with mana value 5 or less".</summary>
-	public int? ManaValueAtMost { get; init; }
-
-	/// <summary>Discover: "Cast it without paying its mana cost or put it into your hand."</summary>
-	public bool OrIntoHand { get; init; }
-
-	/// <summary>Discover: "Put the rest on the bottom in a random order."</summary>
-	public bool RestOnBottom { get; init; }
-
-	/// <summary>Q, Stacking the Deck: "shuffle your library, then exile cards …".</summary>
-	public bool ShuffleFirst { get; init; }
-
-	/// <summary>
-	/// Q, Stacking the Deck: "That nonland card gains '[ability]'" — in place of the cast: an UntilEndOfTurn
-	/// that never ends, so the card has it while it stays this exiled object.
-	/// </summary>
-	public ActivatedAbilityComponent? Gains { get; init; }
-
-	public override ActionResult Execute(GameState s)
-	{
-		if (
-			All(Of, s).FirstOrDefault(id => s.GetObject(id) is MagicPlayer)
-			is not (> 0 and var owner)
-		)
-			return new(s);
-		if (ShuffleFirst)
-			s = s.Shuffle(owner);
-		var library = s.CardsIn(owner, ZoneType.Library).ToList();
-		var hit = library.FirstOrDefault(c =>
-			!c.Is(CardType.Land)
-			&& (ManaValueAtMost is not { } most || c.ManaCost.ManaValue <= most)
-		);
-		var exiled = hit is null ? library : library.TakeWhile(c => c.Id != hit.Id).Append(hit);
-		foreach (var card in exiled.ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(owner, ZoneType.Exile));
-		if (RestOnBottom)
-		{
-			var rest = exiled.Where(c => c.Id != hit?.Id).Select(c => c.Id).ToArray();
-			(var rng, s) = s.TakeRng();
-			rng.Shuffle(rest);
-			foreach (var id in rest)
-				s = s.MoveCard(id, s.ZoneId(owner, ZoneType.Library)); // appended: the bottom
-		}
-		if (hit is null)
-			return new(s);
-		if (Gains is not null)
-			return new(
-				Update(
-					s,
-					(Card)
-						s.GetCard(hit.Id)
-							.WithComponent(
-								new UntilEndOfTurn
-								{
-									UntilTurnOf = UntilEndOfTurn.Never,
-									Gains = [Gains],
-								}
-							)
-				)
-			);
-		ImmutableList<GameAction> toHand = OrIntoHand
-			? [new MoveCardTo(hit.Id, ZoneType.Hand)]
-			: [];
-		if (!CastNow.CanCast(s, Controller, s.GetCard(hit.Id), free: true))
-			return new(
-				s.SpawnAction(new PipelineAction { Steps = toHand, PipelineContext = InputContext })
-			);
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps =
-					[
-						new YesNoChoice(
-							Controller,
-							OrIntoHand
-								? $"Cast {hit.Name} free? (No: into your hand)"
-								: $"Cast {hit.Name} free?"
-						),
-						new IfChosenAction([new CastNow(hit.Id, Free: true)])
-						{
-							Otherwise = toHand,
-						},
-					],
-				}
-			)
-		);
-	}
 }
 
 /// <summary>Discover: "… or put it into your hand" — the card, if it is still where it was put (its owner's exile), to its OWNER's zone (CR 400.3).</summary>
@@ -1227,43 +1086,6 @@ public record CastCopiesWithinBudget(int Budget, ImmutableList<int> Done) : Effe
 			s,
 			(st, c) => st.UpdateObject(c.Id, st.GetCard(c.Id).WithoutComponents<ExiledBy>())
 		);
-}
-
-/// <summary>
-/// Captain Benjamin Sisko: "Exile the top five cards of your library. You may cast any number of spells
-/// with mana value less than or equal to the number of Officers you control from among those cards
-/// without paying their mana costs." — exiled linked to this ability's source, the cap counted once as it
-/// resolves, then CastCopiesWithinBudget's choose-and-cast loop on the cards themselves. What isn't cast
-/// stays exiled.
-/// </summary>
-public record ExileTopAndCastFree(int N, Count ManaValueAtMost) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var sourceId = GetInput<int>(ContextKeys.Source);
-		var incarnation = s.HasObject(sourceId) ? s.GetCard(sourceId).Incarnation : -1;
-		var cap = ManaValueAtMost.Value(s, InputContext);
-		foreach (var card in s.CardsIn(Controller, ZoneType.Library).Take(N).ToList())
-		{
-			s = s.MoveCard(card.Id, s.ZoneId(Controller, ZoneType.Exile));
-			s = Update(
-				s,
-				(Card)s.GetCard(card.Id).WithComponent(new ExiledBy(sourceId, incarnation))
-			);
-		}
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext,
-					Steps =
-					[
-						new CastCopiesWithinBudget(cap, []) { Originals = true, EachAtMost = true },
-					],
-				}
-			)
-		);
-	}
 }
 
 /// <summary>The chosen card's copy (Sisko: the card itself), cast free — then the loop's next choice, with what is left.</summary>
@@ -1799,9 +1621,10 @@ public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 }
 
 /// <summary>
-/// "You may play that card" — the permission an effect gives a card it exiles (a PlayableFromExile, read by
-/// Rules/Playable.cs): who, and how long. Unset is you, until the end of your next turn (Blazing Crescendo).
-/// ExileTopPlayable.Play and SearchLibrary.Play (Thada Adel). MC-6.9 grows it into the one permission.
+/// MC-6.9: "You may play [cast] that card" — THE permission an effect gives the cards it exiles: who, how long, free or
+/// paid. Unset is you, until the end of your next turn (Blazing Crescendo) — a PlayableFromExile on the card, read by
+/// Rules/Playable.cs. <see cref="Now"/> is a cast during the resolution instead (CastNow): Chandra, The Caretaker,
+/// discover, Sisko. ExileTopPlayable.Play and SearchLibrary.Play (Thada Adel).
 /// </summary>
 public record PlayPermission
 {
@@ -1817,6 +1640,33 @@ public record PlayPermission
 	/// <summary>Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way."</summary>
 	public bool AnyType { get; init; }
 
+	/// <summary>
+	/// Chandra, Torch of Defiance: "You may cast that card." — now, as this resolves (a yes/no, then CastNow), asked only
+	/// when it could be cast; never a permission left on the card.
+	/// </summary>
+	public bool Now { get; init; }
+
+	/// <summary>The Caretaker, discover, Sisko: "without paying its mana cost".</summary>
+	public bool Free { get; init; }
+
+	/// <summary>
+	/// Sisko: "You may cast any number of spells … from among those cards" — chosen one at a time
+	/// (CastCopiesWithinBudget on the cards themselves, linked to the source while it runs).
+	/// </summary>
+	public bool AnyNumber { get; init; }
+
+	/// <summary>
+	/// Sisko: "with mana value less than or equal to the number of Officers you control" — a cap on each, counted once
+	/// as it resolves (CR 608.2h), so a cast's own cost can't move it.
+	/// </summary>
+	public Count? ManaValueAtMost { get; init; }
+
+	/// <summary>Chandra: "If you don't, [Otherwise]." — also when there was nothing to cast.</summary>
+	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
+	/// <summary>Discover: "Cast it without paying its mana cost or put it into your hand."</summary>
+	public bool OrIntoHand { get; init; }
+
 	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
 	public PlayableFromExile For(GameState s, int who) =>
 		new(
@@ -1830,20 +1680,26 @@ public record PlayPermission
 		};
 }
 
-/// <summary>Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn, you may play that card."</summary>
+/// <summary>
+/// MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top card of your library. Until
+/// the end of your next turn, you may play that card." What is exiled: the top N (or <see cref="Until"/> one matches),
+/// of whose library, face down, shuffled first, the rest to the bottom; what may be played, by whom and how long:
+/// <see cref="Play"/> — a permission left on the card, or a cast now (Chandra, The Caretaker, discover, Sisko).
+/// </summary>
 public record ExileTopPlayable : Effect
 {
-	/// <summary>Who may play them, and how long (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }.</summary>
+	/// <summary>Who may play them, how long, free or now (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }.</summary>
 	public PlayPermission Play { get; init; } = new();
 
 	/// <summary>Reckless Impulse: "Exile the top two cards of your library."; Ensign Pavel Chekov: "the top X cards".</summary>
 	public Count N { get; init; } = 1;
 
 	/// <summary>
-	/// Exploratory Mission: "exile cards from the top of your library until you exile a nonland card.
-	/// You may play that card" — the lands stay exiled, unplayable.
+	/// Exploratory Mission, The Caretaker: "exile cards from the top of your library until you exile a nonland card"
+	/// (!Is.Land); discover N: "… a nonland card with mana value N or less". Only that card ("that card") may be played
+	/// — the rest stay exiled, unplayable; none matching, the whole library is exiled.
 	/// </summary>
-	public bool UntilNonland { get; init; }
+	public Filters.Filter? Until { get; init; }
 
 	/// <summary>Vulcan Mind-Meld: "the top two cards of their library"; Chekov: "each opponent exiles the top X cards of their library" — whose library; unset is yours.</summary>
 	public Ref? Of { get; init; }
@@ -1857,20 +1713,45 @@ public record ExileTopPlayable : Effect
 	/// </summary>
 	public Filters.Filter? Choose { get; init; }
 
+	/// <summary>Q, Stacking the Deck: "shuffle your library, then exile cards …".</summary>
+	public bool ShuffleFirst { get; init; }
+
+	/// <summary>Discover: "Put the rest on the bottom in a random order."</summary>
+	public bool RestOnBottom { get; init; }
+
+	/// <summary>
+	/// Q, Stacking the Deck: "That nonland card gains '[ability]'" — in place of any permission: an UntilEndOfTurn that
+	/// never ends, so the card has it while it stays this exiled object.
+	/// </summary>
+	public ActivatedAbilityComponent? Gains { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var who = Play.By is { } by ? All(by, s).FirstOrDefault() : Controller;
 		if (who == 0)
 			return new(s);
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		var incarnation = s.HasObject(sourceId) ? s.GetCard(sourceId).Incarnation : -1;
+		var cap = Play.ManaValueAtMost?.Value(s, InputContext) ?? int.MaxValue;
 		var playable = Play.For(s, who);
 		var steps = ImmutableList<GameAction>.Empty;
-		foreach (var owner in Of is { } of ? All(of, s).ToList() : [Controller])
+		foreach (
+			var owner in Of is { } of
+				? All(of, s).Where(id => s.GetObject(id) is MagicPlayer).ToList()
+				: [Controller]
+		)
 		{
+			if (ShuffleFirst)
+				s = s.Shuffle(owner);
 			var library = s.CardsIn(owner, ZoneType.Library).ToList();
-			var count = UntilNonland
-				? library.TakeWhile(c => c.Is(CardType.Land)).Count() + 1
-				: N.Value(s, InputContext);
-			var exiled = library.Take(count).ToList();
+			var context = new Filters.FilterContext(Controller, sourceId);
+			var hit = Until is { } until
+				? library.FirstOrDefault(c => until.Matches(s, c, context))
+				: null;
+			var exiled =
+				Until is null ? library.Take(N.Value(s, InputContext)).ToList()
+				: hit is null ? library
+				: [.. library.TakeWhile(c => c.Id != hit.Id), hit];
 			foreach (var top in exiled)
 			{
 				s = s.MoveCard(top.Id, s.ZoneId(owner, ZoneType.Exile));
@@ -1885,7 +1766,18 @@ public record ExileTopPlayable : Effect
 								}
 							).WithComponent(new ExiledFaceDown())
 					);
-				if ((UntilNonland && top.Is(CardType.Land)) || Choose is not null)
+				if (Play.AnyNumber)
+					s = Update(
+						s,
+						(Card)s.GetCard(top.Id).WithComponent(new ExiledBy(sourceId, incarnation))
+					);
+				if (
+					(Until is not null && top.Id != hit?.Id)
+					|| Choose is not null
+					|| Play.Now
+					|| Play.AnyNumber // a cast now, too
+					|| Gains is not null
+				)
 					continue;
 				s = Update(
 					s,
@@ -1902,6 +1794,44 @@ public record ExileTopPlayable : Effect
 							)
 				);
 			}
+			if (RestOnBottom)
+			{
+				var rest = exiled.Where(c => c.Id != hit?.Id).Select(c => c.Id).ToArray();
+				(var rng, s) = s.TakeRng();
+				rng.Shuffle(rest);
+				foreach (var id in rest)
+					s = s.MoveCard(id, s.ZoneId(owner, ZoneType.Library)); // appended: the bottom
+			}
+			if (Gains is not null && hit is not null)
+				s = Update(
+					s,
+					(Card)
+						s.GetCard(hit.Id)
+							.WithComponent(
+								new UntilEndOfTurn
+								{
+									UntilTurnOf = UntilEndOfTurn.Never,
+									Gains = [Gains],
+								}
+							)
+				);
+			if (Play.AnyNumber)
+				s = s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext,
+						Steps =
+						[
+							new CastCopiesWithinBudget(cap, [])
+							{
+								Originals = true,
+								EachAtMost = true,
+							},
+						],
+					}
+				);
+			else if (Play.Now)
+				s = CastThatCard(s, Until is null ? exiled.FirstOrDefault() : hit);
 			var choice = new ChooseAmongChoice
 			{
 				PlayerId = owner,
@@ -1916,6 +1846,52 @@ public record ExileTopPlayable : Effect
 				steps = steps.AddRange([choice, new MakeChosenPlayableAction(playable)]);
 		}
 		return steps.IsEmpty ? new(s) : new(s.SpawnAction(new PipelineAction { Steps = steps }));
+	}
+
+	/// <summary>
+	/// "You may cast that card [without paying its mana cost]. If you don't, …" — a yes/no asked only when it could be
+	/// cast, then CastNow. Declined, uncastable or nothing exiled: discover's "or put it into your hand", Chandra's damage.
+	/// ponytail: "If you don't" runs on a NO to the up-front question only; backing out of the cast itself afterwards (an
+	/// empty answer to ChooseCastChoice, TBL-2.16) casts nothing and skips it - make the decline answer the question again
+	/// if a table player ever says yes and then backs out for the damage.
+	/// </summary>
+	GameState CastThatCard(GameState s, Card? that)
+	{
+		ImmutableList<GameAction> declined =
+		[
+			.. Play.OrIntoHand && that is not null
+				? [new MoveCardTo(that.Id, ZoneType.Hand)]
+				: Array.Empty<GameAction>(),
+			.. Play.Otherwise,
+		];
+		if (that is null)
+			return declined.IsEmpty
+				? s
+				: s.SpawnAction(
+					new PipelineAction { Steps = declined, PipelineContext = InputContext }
+				);
+		if (!CastNow.CanCast(s, Controller, s.GetCard(that.Id), free: Play.Free))
+			return s.SpawnAction(
+				new PipelineAction { Steps = declined, PipelineContext = InputContext }
+			);
+		return s.SpawnAction(
+			new PipelineAction
+			{
+				PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+				Steps =
+				[
+					new YesNoChoice(
+						Controller,
+						$"Cast {that.Name}{(Play.Free ? " free" : "")}?"
+							+ (Play.OrIntoHand ? " (No: into your hand)" : "")
+					),
+					new IfChosenAction([new CastNow(that.Id, Free: Play.Free)])
+					{
+						Otherwise = declined,
+					},
+				],
+			}
+		);
 	}
 }
 
