@@ -606,17 +606,7 @@ public sealed class MagicTableManager
 	{
 		while (!IsOver)
 		{
-			// MC-7 (Shayne, 2026-11-12): a blocked attacker's damage is divided by value, never asked — the split
-			// that leaves the attacker's board best (GreedyAi's one-ply pick, the AI's own). Revisit: ask (MC-7.3).
-			if (
-				State.GetPendingChoice() is AssignCombatDamageChoice split
-				&& split.PlayerId == HumanId
-			)
-				Play(
-					MoveTokens.Token(State, null, [.. new GreedyAi(HumanId).Answer(State, split)]),
-					"rule"
-				);
-			else if (State.LegalActions() is [PassPriorityAction pass])
+			if (State.LegalActions() is [PassPriorityAction pass])
 				Play(MoveTokens.Token(State, pass, null), "rule");
 			else if (HumanToAct && !Stops.StopsAt(State, HumanId))
 				Play(

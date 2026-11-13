@@ -348,8 +348,8 @@ public class CombatTests
 		Assert.That(Alive(first) || Alive(second), Is.False);
 	}
 
-	// MC-7 (Shayne, 2026-11-12): nobody is asked — the split is the one worth most to the attacker's board,
-	// GreedyAi's pick (the table and console answer it so for the human). Declared first, the vanilla 2/2 would
+	// MC-7 (Shayne, 2026-11-12): an AI splits by value — the split worth most to its board, GreedyAi's pick
+	// (the beam asks it); a human is asked. Declared first, the vanilla 2/2 would
 	// take lethal by the old order; the value pick kills the flier with lifelink instead.
 	[Test]
 	public void TheValuePick_KillsTheBlockerWorthMore_NotTheFirstDeclared()

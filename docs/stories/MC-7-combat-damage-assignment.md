@@ -14,8 +14,8 @@ Shayne, 2026-11-09: when the opponent double-blocks, we don't get to decide how 
 
 - [ ] With two or more blockers the attacker's controller divides the damage (CR 510.1c — as amended by Foundations, 2024: "divided as its controller chooses among them", NO order and no lethal-first; trample still needs lethal on every blocker before the player, CR 702.19c), on the table and for the AI
 - [ ] The AI chooses sensibly (kill the most valuable it can); a record replays
-- [x] **For now (Shayne, 2026-11-12): nobody is asked** — the damage is divided by how much it is worth to the
-      attacker's board (which creatures it kills); asking the player is revisited later (MC-7.3)
+- [x] **The AI divides by value** (Shayne, 2026-11-12) — by how much it is worth to its board (which creatures it
+      kills); **the human player is always asked**
 
 ## Decisions
 
@@ -46,13 +46,11 @@ Shayne, 2026-11-09: when the opponent double-blocks, we don't get to decide how 
   surveil order — on the table too). One difference from before: the excess onto the first blocker is ONE damage
   event now, not lethal and then the rest as two (simultaneous damage, CR 510.2 — more correct; a "whenever dealt
   damage" trigger on a double-blocked creature fires once).
-- 2026-11-12, Shayne (reviewing MC-7.1): **simplified for now, revisited later** — "the damage should be dealt based
-  on how much value it provides the player (i.e. which creatures the damage would kill that would increase its board
-  state the most)". So the engine keeps the rules-correct question (`AssignCombatDamageChoice`), and NOBODY is asked:
-  the table (`MagicTableManager.Settle`, a "rule" move) and the console answer it for the human with GreedyAi's one-ply
-  pick — each amount settled through the end of combat and the board evaluated (`Evaluator`) — the same pick the AI
-  makes. Revisiting is taking those two lines out and building MC-7.3. The look-ahead's rollouts still use the fixed
-  split (`DefaultSplit`) — DesignNotes.
+- 2026-11-12, Shayne (reviewing MC-7.1): **the human player is asked how to split; an AI player splits by value** —
+  "based on how much value it provides the player (i.e. which creatures the damage would kill that would increase its
+  board state the most)". The AI's pick is GreedyAi's one-ply answer (the beam asks it): each amount settled through the
+  end of combat and the board evaluated (`Evaluator`). (First read as "nobody is asked" — built and taken back the
+  same night.) The look-ahead's rollouts still use the fixed split (`DefaultSplit`) — DesignNotes.
 - 2026-11-12, Claude: **ponytail** — with trample the LAST blocker takes no more than lethal (the rest goes to the
   player); overkilling it instead is never wanted. Offered if a card ever makes it matter.
 - 2026-11-12, Claude: **the position suite is NOT regenerated here** — regenerating it in this lane moved every game
@@ -75,16 +73,18 @@ Shayne, 2026-11-09: when the opponent double-blocks, we don't get to decide how 
       blocker asks nothing, the quick answer is the old split). Every kept record replays (`GameRecord.Unasked`); the
       look-ahead's `Settle` answers it by the old split (it had judged it by the chooser's best — that moved an AI
       control test, ChangSac458). The table asks it in the generic panel (`Describe.Question` names both creatures).
-- [ ] MC-7.3 The table: pick how much each blocker gets — DEFERRED (Shayne, 2026-11-12: by value for now, revisit later)
+- [ ] MC-7.3 The table: pick how much each blocker gets — today the generic `ChoicePanel` lists "0 damage to X … N
+      damage to X", one question per blocker but the last; MC-7.1's default for the real one: Arena's, click a blocker
+      to move a point onto it
 - [x] MC-7.4 The AI's choice, a position test (the double block that killed the wrong creature) — the value pick kills
       the 2/2 flier with lifelink over the vanilla 2/2 declared first (`CombatTests.TheValuePick_…`, revert-checked:
-      the old fixed split fails it); the table and console answer by it for the human
+      the old fixed split fails it)
 
 ## Next
 
-Done for now (Shayne's simplification). Revisit later: MC-7.3, the player divides the damage on the table (the generic
-question is still there — take out the value answer in `MagicTableManager.Settle` and `MagicConsole`), and the rollouts
-judging a split rather than assuming the fixed one (DesignNotes).
+MC-7.3, the table: you are asked now through the generic choice panel (a list of amounts, per blocker but the last);
+make it a split on the blockers themselves (`.claude/rules/magic-table.md`; the default, Arena's: click a blocker to
+move a point onto it). Later: the rollouts judging a split rather than assuming the fixed one (DesignNotes).
 
 ## Log
 
@@ -92,3 +92,4 @@ judging a split rather than assuming the fixed one (DesignNotes).
 - 2026-11-12, Shayne: this sprint, in the cube lane (an MC- story; an engine fix both lanes need — merged back at once).
 - 2026-11-12 (night, cube lane): MC-7.1 costed (a choice per attack, the current CR 510.1c), MC-7.2 built — records and the suite replay, every test green.
 - 2026-11-12 (cube lane): Shayne simplified it — divided by value, nobody asked; built on the table and console, tested.
+- 2026-11-12 (cube lane): Shayne corrected it — the human is asked, the AI divides by value; the auto-answer for the human taken out.
