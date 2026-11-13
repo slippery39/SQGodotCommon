@@ -2109,7 +2109,7 @@ public static class TrkCards
 			],
 			["Warp Speed"] =
 			[
-				new LandsYouControlEnterUntapped(),
+				new PermanentsEnter(Is.Land & Is.Yours) { Untapped = true },
 				When(
 					TriggerEvent.SelfEnters,
 					[],
@@ -2280,11 +2280,11 @@ public static class TrkCards
 			[
 				new MayLookAtTopOfLibrary(),
 				new MayCastArtifactFromLibraryTop(),
-				new YourPermanentsEnterWithCounters(
-					Is.Subtype("Spacecraft"),
-					CounterKinds.Charge,
-					2
-				),
+				new PermanentsEnter(Is.Subtype("Spacecraft") & Is.Yours)
+				{
+					CounterKind = CounterKinds.Charge,
+					Counters = 2,
+				},
 			],
 			// ===== MC-5.3 batch 5a: the tier 1–2 rares and mythics — enters untapped, no maximum hand size, any token an Illusion =====
 			["Armus, Skin of Evil"] =
@@ -2979,7 +2979,11 @@ public static class TrkCards
 			],
 			["Deanna Troi, Psychic Counsel"] =
 			[
-				new YourPermanentsEnterWithCounters(Is.Creature, CounterKinds.PlusOne, 1), // its own entry is skipped: "other"
+				new PermanentsEnter(Is.Creature & Is.Yours) // its own entry is skipped: "other"
+				{
+					CounterKind = CounterKinds.PlusOne,
+					Counters = 1,
+				},
 			],
 			["Will Riker, First in the Field"] =
 			[
@@ -3374,7 +3378,7 @@ public static class TrkCards
 			],
 			["Kira Nerys, Firebrand"] =
 			[
-				new YourCreaturesEnterAttacking(),
+				new PermanentsEnter(Is.Creature & Is.Yours) { Attacking = true },
 				When(
 					TriggerEvent.AnotherCreatureYouControlEnters,
 					[],

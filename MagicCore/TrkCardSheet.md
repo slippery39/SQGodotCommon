@@ -4771,12 +4771,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4cTests, TrkBatch5aTests, TrkBatch6aTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `LandsYouControlEnterUntapped` — Warp Speed: "Lands you control enter untapped." — read by MagicState.EnterBattlefield…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
 
 ```csharp
 ["Warp Speed"] =
 [
-	new LandsYouControlEnterUntapped(),
+	new PermanentsEnter(Is.Land & Is.Yours) { Untapped = true },
 	When(
 		TriggerEvent.SelfEnters,
 		[],
@@ -4836,18 +4836,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4cTests
 
-**Engine pieces:** `MayCastArtifactFromLibraryTop` — Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact…; `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `YourPermanentsEnterWithCounters` — Zefram Cochrane, Warp Pioneer: "Spacecraft you control enter with two additional charge…
+**Engine pieces:** `MayCastArtifactFromLibraryTop` — Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact…; `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
 
 ```csharp
 ["Zefram Cochrane, Warp Pioneer"] =
 [
 	new MayLookAtTopOfLibrary(),
 	new MayCastArtifactFromLibraryTop(),
-	new YourPermanentsEnterWithCounters(
-		Is.Subtype("Spacecraft"),
-		CounterKinds.Charge,
-		2
-	),
+	new PermanentsEnter(Is.Subtype("Spacecraft") & Is.Yours)
+	{
+		CounterKind = CounterKinds.Charge,
+		Counters = 2,
+	},
 ],
 ```
 
@@ -5217,14 +5217,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Other creatures you control enter with an additional +1/+1 counter on them.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** TrkBatch4cTests
 
-**Engine pieces:** `YourPermanentsEnterWithCounters` — Zefram Cochrane, Warp Pioneer: "Spacecraft you control enter with two additional charge…
+**Engine pieces:** `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
 
 ```csharp
 ["Deanna Troi, Psychic Counsel"] =
 [
-	new YourPermanentsEnterWithCounters(Is.Creature, CounterKinds.PlusOne, 1), // its own entry is skipped: "other"
+	new PermanentsEnter(Is.Creature & Is.Yours) // its own entry is skipped: "other"
+	{
+		CounterKind = CounterKinds.PlusOne,
+		Counters = 1,
+	},
 ],
 ```
 
@@ -5801,12 +5805,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7bTests
 
-**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `YourCreaturesEnterAttacking` — Kira Nerys, Firebrand: "If a creature you control would enter while you control an…
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Kira Nerys, Firebrand"] =
 [
-	new YourCreaturesEnterAttacking(),
+	new PermanentsEnter(Is.Creature & Is.Yours) { Attacking = true },
 	When(
 		TriggerEvent.AnotherCreatureYouControlEnters,
 		[],

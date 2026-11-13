@@ -40,7 +40,7 @@ whose subsystem it lives in.
 - **"Can't attack alone"** (Pet Sehlat) is `Combat.CantAttackAlone`, a keyword-like grant judged on the whole
   declaration as it finishes (`FinishAttackersAction`): one such creature declared alone doesn't attack; two
   together each aren't alone. The table doesn't refuse the declaration yet (TBL-7).
-- **"Enters tapped and attacking"** (Kira Nerys, `YourCreaturesEnterAttacking`) is set in `EnterBattlefield` —
+- **"Enters tapped and attacking"** (Kira Nerys, `PermanentsEnter(Is.Creature & Is.Yours) { Attacking }`) is set in `EnterBattlefield` —
   `AttackingId` the opponent, never declared, so no "whenever … attacks" (CR 508.4); `Combat.Attackers` reads it live.
 - **Landwalk and fear are no combat rule** (MC-6.8): `Scripting.Landwalk("Island")` is the plain "can't be blocked"
   under an `If` (the opponent controls one); `Scripting.Fear` is a `CantBeBlockedBy`, granted until end of turn

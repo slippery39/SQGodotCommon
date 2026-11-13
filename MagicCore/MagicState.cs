@@ -323,32 +323,30 @@ public static class MagicState
 	}
 
 	/// <summary>
-	/// Root Maze: another permanent on the battlefield says this one enters tapped — judged under its
-	/// new controller. Never itself: its rule applies once it is there (CR 614.12).
+	/// MC-6.10: the other permanents' rules this one enters under (<see cref="PermanentsEnter"/>) — judged under
+	/// its new controller, each from its holder's side. Never its own: its rule applies once it is there (CR 614.12).
 	/// </summary>
-	static bool EntersTappedByAPermanent(GameState s, Card entering)
-	{
-		foreach (var p in new[] { s.Player1Id(), s.Player2Id() })
-		foreach (var permanent in s.CardsIn(p, ZoneType.Battlefield))
-		foreach (
-			var rule in permanent.Id == entering.Id
-				? []
-				: s.AbilitiesOf<PermanentsEnterTapped>(permanent)
-		)
-			if (rule.Which.Matches(s, entering, new(permanent.ControllerId, permanent.Id)))
-				return true;
-		return false;
-	}
+	static List<PermanentsEnter> EntryRules(GameState s, Card entering) =>
+		[
+			.. new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Where(p => p.Id != entering.Id)
+				.SelectMany(p =>
+					s.AbilitiesOf<PermanentsEnter>(p)
+						.Where(rule => rule.Which.Matches(s, entering, new(p.ControllerId, p.Id)))
+				),
+		];
 
-	/// <summary>Kira Nerys: another of your creatures is attacking, and a permanent of yours says it enters attacking.</summary>
-	static bool EntersAttacking(GameState s, int cardId, int controllerId)
-	{
-		var others = s.CardsIn(controllerId, ZoneType.Battlefield)
-			.Where(c => c.Id != cardId)
-			.ToList();
-		return others.Any(c => c.AttackingId != 0)
-			&& others.Any(s.HasAbility<YourCreaturesEnterAttacking>);
-	}
+	/// <summary>Kira Nerys: a rule says it enters attacking, and another of your creatures is attacking.</summary>
+	static bool EntersAttacking(
+		GameState s,
+		int cardId,
+		int controllerId,
+		List<PermanentsEnter> rules
+	) =>
+		rules.Any(r => r.Attacking)
+		&& s.CardsIn(controllerId, ZoneType.Battlefield)
+			.Any(c => c.Id != cardId && c.AttackingId != 0);
 
 	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
 	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
@@ -375,12 +373,9 @@ public static class MagicState
 		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types));
 		var card = s.GetCard(cardId);
 		var entersTapped = card.GetComponent<EntersTappedComponent>();
-		var landsUntapped =
-			card.Is(CardType.Land)
-			&& s.CardsIn(controllerId, ZoneType.Battlefield)
-				.Any(s.HasAbility<LandsYouControlEnterUntapped>);
-		var tappedByOthers =
-			tapped || EntersTappedByAPermanent(s, card with { ControllerId = controllerId });
+		var rules = EntryRules(s, card with { ControllerId = controllerId });
+		var landsUntapped = rules.Any(r => r.Untapped);
+		var tappedByOthers = tapped || rules.Any(r => r.Tapped);
 		var entryContext = ImmutableDictionary<string, object>
 			.Empty.Add(ContextKeys.Controller, controllerId)
 			.Add(ContextKeys.Source, card.Id);
@@ -406,7 +401,7 @@ public static class MagicState
 		);
 		// Kira Nerys: "If a creature you control would enter while you control an attacking creature, instead
 		// it enters tapped and attacking."
-		if (card.Is(CardType.Creature) && EntersAttacking(s, cardId, controllerId))
+		if (EntersAttacking(s, cardId, controllerId, rules))
 			s = s.UpdateObject(
 				cardId,
 				s.GetCard(cardId) with
@@ -437,14 +432,8 @@ public static class MagicState
 				}
 			);
 		// Zefram Cochrane: "Spacecraft you control enter with two additional charge counters on them."
-		foreach (var permanent in s.CardsIn(controllerId, ZoneType.Battlefield).ToList())
-		foreach (
-			var rule in permanent.Id == cardId
-				? []
-				: s.AbilitiesOf<YourPermanentsEnterWithCounters>(permanent)
-		)
-			if (rule.Which.Matches(s, s.GetCard(cardId), new(controllerId, permanent.Id)))
-				s = s.PutCounters(cardId, rule.Kind, rule.N, entering: true);
+		foreach (var rule in rules.Where(r => r is { CounterKind: not null, Counters: > 0 }))
+			s = s.PutCounters(cardId, rule.CounterKind!, rule.Counters, entering: true);
 		s = s.PutCounters(cardId, CounterKinds.Charge, sunburst, entering: true); // Geordi doubles these
 		// Entering with counters is putting them on (Yoshimaru, Brad Boimler: CR 122.6) — after control is set.
 		s = s.PutCounters(cardId, CounterKinds.Loyalty, card.PrintedLoyalty)

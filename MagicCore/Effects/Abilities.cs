@@ -1068,14 +1068,6 @@ public record MayPlayLandsFromLibraryTop : GameComponent;
 /// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — MagicState.CanSacrifice, asked by every sacrifice (costs, choices, Treasure's own mana).</summary>
 public record CantSacrificeTreasures : GameComponent;
 
-/// <summary>
-/// Kira Nerys, Firebrand: "If a creature you control would enter while you control an attacking creature,
-/// instead it enters tapped and attacking." — MagicState.EnterBattlefield. Never declared, so "whenever …
-/// attacks" doesn't trigger (CR 508.4). ponytail: it attacks the opponent, never a planeswalker — the
-/// rules let its controller choose; make it a choice if a planeswalker deck wants it.
-/// </summary>
-public record YourCreaturesEnterAttacking : GameComponent;
-
 /// <summary>Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops.</summary>
 public record AdditionalLandEachTurn : GameComponent;
 
@@ -1168,24 +1160,27 @@ public record TapsForTwoColorlessWhileExiled(int CardId, int Incarnation) : Game
 public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
 
 /// <summary>
-/// Root Maze: "Artifacts and lands enter tapped." — every player's permanents the filter matches,
-/// read by MagicState.EnterBattlefield while this is on the battlefield.
+/// MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters / tapped and attacking" —
+/// a permanent's rule for OTHER permanents entering, never itself (CR 614.12; Metallic Mimic's ruling), read by
+/// MagicState.EnterBattlefield. The filter is asked from the rule's holder (Is.Yours: its controller's).
+/// Root Maze: (Is.Artifact | Is.Land) { Tapped }. Warp Speed: "Lands you control enter untapped." (Is.Land &amp;
+/// Is.Yours) { Untapped } — over every "enters tapped": the land's own, Root Maze's, a token created tapped,
+/// "onto the battlefield tapped" (Shayne, 2026-11-01). Zefram Cochrane: "Spacecraft you control enter with two
+/// additional charge counters on them." { CounterKind, Counters }. Kira Nerys, Firebrand: "If a creature you
+/// control would enter while you control an attacking creature, instead it enters tapped and attacking."
+/// (Is.Creature &amp; Is.Yours) { Attacking } — never declared, so "whenever … attacks" doesn't trigger (CR 508.4).
+/// ponytail: Kira's attacks the opponent, never a planeswalker — the rules let its controller choose; make it a
+/// choice if a planeswalker deck wants it. A card's OWN "this enters tapped / with counters" is its own
+/// component (EntersTappedComponent, EntersWithCountersComponent): its replacement on itself.
 /// </summary>
-public record PermanentsEnterTapped(Filters.Filter Which) : GameComponent;
-
-/// <summary>
-/// Warp Speed: "Lands you control enter untapped." — read by MagicState.EnterBattlefield over every
-/// "enters tapped": the land's own, Root Maze's, a token created tapped, "onto the battlefield tapped"
-/// (Shayne, 2026-11-01).
-/// </summary>
-public record LandsYouControlEnterUntapped : GameComponent;
-
-/// <summary>
-/// Zefram Cochrane, Warp Pioneer: "Spacecraft you control enter with two additional charge counters on
-/// them." — your permanents the filter matches, read by MagicState.EnterBattlefield; never itself.
-/// </summary>
-public record YourPermanentsEnterWithCounters(Filters.Filter Which, string Kind, int N)
-	: GameComponent;
+public record PermanentsEnter(Filters.Filter Which) : GameComponent
+{
+	public bool Tapped { get; init; }
+	public bool Untapped { get; init; }
+	public string? CounterKind { get; init; }
+	public int Counters { get; init; }
+	public bool Attacking { get; init; }
+}
 
 /// <summary>
 /// Flesh Duplicate: "You may have this creature enter as a copy of any creature on the battlefield,

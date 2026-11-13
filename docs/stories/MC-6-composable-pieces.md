@@ -38,6 +38,17 @@ really are unique), but the families below are.
   same cost list. Phyrexian Tower's sacrifice is never auto-paid: it is always activated by hand, and the
   AI gets it as a move (one per creature).
 
+- 2026-11-12, Claude (cube lane, overnight; MC-6.10, for review): **a card's own "this enters tapped / with N counters"
+  stays its own component** — it is the card's replacement effect on itself (CR 614.12), with the shocklands' "unless
+  you pay 2 life" and X on it; the composed `PermanentsEnter` is a permanent's rule for OTHER permanents, and never
+  applies to its holder (Metallic Mimic's ruling) — one rule now where Warp Speed's check alone had included itself
+  (no card could tell: Warp Speed isn't a land). **Karn's "entering doesn't cause abilities to trigger" stays apart**:
+  it is not how a permanent enters but which entry EVENTS triggers see, judged on the event's types when triggers are
+  collected — the card may be gone by then, so a filter on it can't be asked. Its filter gains `Is.Yours` where the
+  old piece read only its controller's permanents (Deanna Troi, Zefram).
+- 2026-11-12, Claude: **MC-6.10 before 6.9** — LSVPower's survey (MC-4) needs both (57 cards enter-related, 53
+  play-from-another-zone), and 6.10 is the smaller, self-contained family; 6.9 is next.
+
 ## Tasks
 
 The audit (2026-11-06): each family, its members today, and the composed piece. **MC-5.6** marks the ones
@@ -108,10 +119,15 @@ the Stardates fix.
       `CastFromHandFree`, `CastFromHandFreeUpToCreatureCount`, `ExileTopPlayable` and its options, `ExileTopMayCast`,
       `ExileTopAndCastFree`, `ExileUntilNonlandCastFree` → one permission (which zone, whose, a filter, how
       long, free or paid), read by `Rules/Playable.cs`, and one "exile these, they may be played" effect.
-- [ ] MC-6.10 **Entering** — `EntersTappedComponent`, `PermanentsEnterTapped`, `LandsYouControlEnterUntapped`,
+- [x] MC-6.10 **Entering** — `EntersTappedComponent`, `PermanentsEnterTapped`, `LandsYouControlEnterUntapped`,
       `EntersWithCountersComponent`, `YourPermanentsEnterWithCounters`, `YourCreaturesEnterAttacking`,
       `EnteringArtifactsAndCreaturesDontTrigger` → "permanents matching a filter enter [tapped / untapped /
-      with counters / attacking]".
+      with counters / attacking]". Done 2026-11-12 (cube lane): `PermanentsEnter(filter) { Tapped, Untapped,
+      CounterKind, Counters, Attacking }` — Root Maze, Warp Speed, Zefram Cochrane, Deanna Troi, Kira Nerys moved; four
+      pieces deleted; one funnel in `EnterBattlefield` (`EntryRules`). No game moved (every golden file unchanged); a
+      test that the filter is the holder's and never applies to itself, revert-checked. Kept apart, with reasons in
+      Decisions: a card's OWN entry (`EntersTappedComponent`, `EntersWithCountersComponent`) and Karn's
+      `EnteringArtifactsAndCreaturesDontTrigger`.
 - [ ] MC-6.11 **Chosen as it enters** — `ChoosesColorAsItEnters`, `ChoosesNameAsItEnters`,
       `ChoosesNumberAsItEnters` (+ their `Chosen*` markers) → one component, by what is chosen.
 - [ ] MC-6.12 **Moving a card** — `ReturnFromGraveyard` (moves from any zone, despite its name),
@@ -146,12 +162,14 @@ the Stardates fix.
 
 ## Next
 
-MC-5.6 does MC-6.1–6.8 and part of 6.9 as it builds the Stardates (its story's Next has the prompt). Then this
-story, after MC-5.4 (the boosters): one family a step, its old cards moved onto the composed piece, each step
-checked by the golden replays (Commands.md, "Golden replays") and the full suite. At the end, count the
-catalog's one-card pieces again (entries whose use count reads `[1: …]`, per section) against the Log's.
+MC-6.9 next (playing from another zone; part done): one permission — which zone, whose, a filter, how long, free or
+paid — read by `Rules/Playable.cs`, and one "exile these, they may be played" effect; LSVPower's escape, hideaway,
+cascade, plot and adventures are its next users (`MagicCore/LsvSurvey.md`). Then 6.12, 6.15, 6.14 (the order LSVPower
+needs them, MC-4's Decisions). Each step: one family, its old cards moved, the golden replays UNCHANGED (or a ruling
+fixed and said), the full suite.
 
 ## Log
 
 - 2026-11-06: created from the MC-5.6 survey (Shayne). The audit counted the catalog's `[N: …]` use counts per
   section: effects 118 (34 used by one card), components 103 (54), conditions 18 (9), costs 13 (4).
+- 2026-11-12 (night, cube lane): MC-6.10 — entering composed (`PermanentsEnter`), four pieces gone, no game moved.

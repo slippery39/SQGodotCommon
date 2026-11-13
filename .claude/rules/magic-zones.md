@@ -60,8 +60,10 @@ whose subsystem it lives in.
 - **Randomness** (a discard at random, a random order) takes `s.TakeRng()`, so a seeded game replays.
   A search for several cards may take two of a name unless `SearchLibrary.DifferentNames` (Fblthp).
   A spell that exiles itself as it resolves (Sphinx's Approach) is left there by `FinishSpellAction`.
-- **"[Permanents] enter tapped"** from another permanent (Root Maze) is `PermanentsEnterTapped(filter)`
-  on it, read by `EnterBattlefield` beside the card's own `EntersTappedComponent` — everyone's, not just yours.
+- **How OTHER permanents enter is one piece, `PermanentsEnter(filter) { Tapped, Untapped, CounterKind, Counters,
+  Attacking }`** (MC-6.10) on the rule's holder, the filter asked from its side (`Is.Yours`: its controller's) and
+  never for itself (CR 614.12, Metallic Mimic's ruling) — Root Maze `{ Tapped }` (everyone's), read by `EnterBattlefield`
+  beside the card's own `EntersTappedComponent` / `EntersWithCountersComponent` (its replacement on itself, kept apart).
 - **Becoming tapped is `MagicState.Tap`** — the ONE way a permanent taps: attacking, a {T} cost, "tap N
   untapped" (Station's too), the Tap effect, tapping for mana and mana payment. It raises
   `BecameTappedEvent` only on untapped → tapped ("whenever Hemmer becomes tapped"); entering tapped is
@@ -80,10 +82,10 @@ whose subsystem it lives in.
 - **"Reveal the top X, put every [type] card onto the battlefield, the rest on the bottom in a random
   order"** (Branching Timeline) is `RevealUntilOntoBattlefield { Top }` — Identity Echo's effect, every match
   among the top X instead of "until".
-- **"Lands you control enter untapped"** (Warp Speed, `LandsYouControlEnterUntapped`) wins over every "enters
-  tapped" in `EnterBattlefield` — the land's own, Root Maze's, a token or a return made tapped (Shayne,
-  2026-11-01). **"[Permanents] you control enter with N additional [kind] counters"** (Zefram Cochrane) is
-  `YourPermanentsEnterWithCounters`, put on there through `PutCounters`.
+- **"Lands you control enter untapped"** (Warp Speed, `PermanentsEnter(Is.Land & Is.Yours) { Untapped }`) wins over
+  every "enters tapped" in `EnterBattlefield` — the land's own, Root Maze's, a token or a return made tapped (Shayne,
+  2026-11-01). **"[Permanents] you control enter with N additional [kind] counters"** (Zefram Cochrane) is its
+  `{ CounterKind, Counters }`, put on there through `PutCounters`.
 - **The shocklands' "you may pay 2 life. If you don't, it enters tapped"** is `EntersTappedComponent { UnlessYouPayLife }`:
   it enters tapped, and `EnterBattlefield` spawns a `May` ONLY when its own text is what taps it — not under Warp
   Speed (untapped anyway) or Root Maze / "onto the battlefield tapped" (tapped anyway) — and the controller has

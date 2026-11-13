@@ -360,7 +360,6 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`JaceLoyaltyAtInstantSpeed`** — Jace's Machinations: "you may activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant" —… [1: Jace's Machinations]
 - **`KickerComponent(ManaCost Mana)`** — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U} as you cast this spell.)" — CastSpellAction.Kicked;… [3: Eject the Warp Core, Highly Illogical, Mirror Universe Intrusion]
   - `Costs` (ImmutableList<AdditionalCost>): Eject the Warp Core: "Kicker—Sacrifice an artifact or creature." — paid only when kicked.
-- **`LandsYouControlEnterUntapped`** — Warp Speed: "Lands you control enter untapped." — read by MagicState.EnterBattlefield over every "enters tapped": the land's own, Root… [1: Warp Speed]
 - **`LifeTotalCantChange`** — Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life (Gain, Lose, CanPay). [1: Flare of Fortitude]
 - **`LoyaltyAbilityComponent(int Cost, ImmutableList<GameAction> Effects)`** — "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed, once per turn per permanent; the cost adds or… [1: Chandra, Chill of Compliance]
   - `MinusX` (bool): "−X:" — the activator chooses X (up to its loyalty); X reaches the effects (Count.X).
@@ -412,7 +411,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`OneAttackerPerPlaneswalkerYouControl`** — Tomik, Orzhov Lawmage: "Planeswalkers you control have 'No more than one creature can attack this planeswalker each combat.'" [1: Tomik, Orzhov Lawmage]
 - **`OpponentsCreaturesExiledInsteadOfDying`** — Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard. [1: Garruk, Veiled Butcher]
 - **`PermanentsCantPhaseIn`** — The City on the Edge of Forever's Human: "Permanents can't phase in." — read by Rules.Phasing.PhaseIn. [1: The City on the Edge of Forever]
-- **`PermanentsEnterTapped(Filters.Filter Which)`** — Root Maze: "Artifacts and lands enter tapped." — every player's permanents the filter matches, read by MagicState.EnterBattlefield while… [1: Root Maze]
+- **`PermanentsEnter(Filters.Filter Which)`** — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters / tapped and attacking" — a permanent's rule for OTHER… [5: Root Maze, Warp Speed, Zefram Cochrane, Warp Pioneer…]
 - **`PlayableFromExile(int PlayerId, int UntilTurn)`** — Impulse draw: this exiled card may be played by PlayerId through turn UntilTurn (Rules/Playable.cs).
   - `AnyType` (bool): Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way." — Costs.Of.
   - `Tax` (int): Zero, Incorporeal Sensate: "A spell cast this way costs {2} more to cast." — Costs.Of.
@@ -455,9 +454,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`Vanishing(int N)`** — "Vanishing N (A permanent with vanishing N enters with N time counters on it. At the beginning of your upkeep, remove a time counter from…
 - **`YouHaveHexproof`** — The Needs of the Many: "You gain hexproof until end of turn." — TargetSpec: no opponent's spell or ability targets you. [1: The Needs of the Many]
 - **`YourCreaturesAssignDamageByToughness`** — Ghalta: "Each creature you control with toughness greater than its power assigns combat damage equal to its toughness." [1: Ghalta the Immovable]
-- **`YourCreaturesEnterAttacking`** — Kira Nerys, Firebrand: "If a creature you control would enter while you control an attacking creature, instead it enters tapped and… [1: Kira Nerys, Firebrand]
 - **`YourInstantsAndSorceriesHaveSplitSecond`** — Samut: "Instant and sorcery spells you control have split second." [1: Samut, Tyrant of Naktamun]
-- **`YourPermanentsEnterWithCounters(Filters.Filter Which, string Kind, int N)`** — Zefram Cochrane, Warp Pioneer: "Spacecraft you control enter with two additional charge counters on them." — your permanents the filter… [2: Zefram Cochrane, Warp Pioneer, Deanna Troi, Psychic Counsel]
 - **`YourPlaneswalkersSurviveZeroLoyalty`** — Sanctum Lurker: "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty." [1: Sanctum Lurker]
 
 ## Choices — what a player is asked

@@ -6910,10 +6910,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraSpecialGuestTests, TrkBatch5aTests, TrkBatch6aTests
 
-**Engine pieces:** `PermanentsEnterTapped` — Root Maze: "Artifacts and lands enter tapped." — every player's permanents the filter…
+**Engine pieces:** `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
 
 ```csharp
-["Root Maze"] = [new PermanentsEnterTapped(Is.Artifact | Is.Land)],
+["Root Maze"] = [new PermanentsEnter(Is.Artifact | Is.Land) { Tapped = true }],
 ```
 
 ### Seasoned Cryomancer

@@ -3437,7 +3437,7 @@ public static class FraCards
 					Costs = [new TapSelfCost()],
 				},
 			],
-			["Root Maze"] = [new PermanentsEnterTapped(Is.Artifact | Is.Land)],
+			["Root Maze"] = [new PermanentsEnter(Is.Artifact | Is.Land) { Tapped = true }],
 			["Splinter Twin"] =
 			[
 				new AuraComponent(Creature),
