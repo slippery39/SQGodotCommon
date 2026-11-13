@@ -443,6 +443,24 @@ public static partial class Evaluator
 		/// Edgar with a 2/3, the block looked free, and the Rat's sacrifice killed the blocker; `+notheirsacrifices`).
 		/// </summary>
 		TheirSacrificeTricks = 1L << 32,
+
+		/// <summary>
+		/// A held card is short on COLOUR too (AI-9.9, Shayne's notes 2026-11-13: "Nobody is discarding Rockfall Vale in this
+		/// situation" — it was the only red source for four red cards): each coloured pip none of our sources (in play or
+		/// in hand) can make counts as a source short, with no free first one — a land draw fixes generic mana, only that
+		/// colour fixes a colour (<see cref="LandUnlock.ColorsShort"/>). Before it the Vale and a third Forest were priced
+		/// alike at the horizon, and the Rank Rat took the Vale (`+nocolorshort`).
+		/// </summary>
+		ColorShort = 1L << 33,
+
+		/// <summary>
+		/// The look-ahead's OWN blocks are judged against the attacker's trick after blocks too (AI-25.3) — the window AI-17.10
+		/// and AI-25 opened for the search's decisions, given to the blocks the rollout answers itself. Without it the rollout
+		/// blocked Edgar with Koth and AI 1's sacrifice pump killed Koth, so the line that KEPT Koth looked bad and the
+		/// Rank Rat discard took Koth over a Forest (Shayne, 2026-11-13: "Why would trading it in the future cause him to
+		/// discard it now?"; `+noblocktricks`).
+		/// </summary>
+		BlocksSeeTricks = 1L << 34,
 	}
 
 	/// <summary>
@@ -713,18 +731,24 @@ public static partial class Evaluator
 		// at the search's root if a reveal spell is ever misjudged.
 		// counted only when a held card could be short (lazily: Evaluate is the search's innermost loop)
 		int? mana = null;
-		bool Short(Card c) =>
-			own
-			&& !IsOff(Terms.ManaShort)
-			&& c.ManaCost.ManaValue - 1 > (mana ??= ManaWithin(s, player));
-		// a held price kept ManaShortShare per source short past the first - an option's too (AI-13.10's review: a 6-mana
-		// targeted sorcery on two lands was priced as castable)
+		List<List<ManaColor>>? sources = null;
+		// sources short: generic past the first (a land draw), and every coloured pip none of ours makes (AI-9.9)
+		int ShortBy(Card c) =>
+			!own
+				? 0
+				: Math.Max(
+					IsOff(Terms.ManaShort)
+						? 0
+						: c.ManaCost.ManaValue - 1 - (mana ??= ManaWithin(s, player)),
+					IsOff(Terms.ColorShort)
+						? 0
+						: LandUnlock.ColorsShort(c, sources ??= LandUnlock.Sources(s, player))
+				);
+		// a held price kept ManaShortShare per source short - an option's too (AI-13.10's review: a 6-mana targeted
+		// sorcery on two lands was priced as castable)
 		double ShortOf(Card c, double price) =>
-			Short(c)
-				? Math.Max(
-					FlatHandCard,
-					price * Math.Pow(ManaShortShare, c.ManaCost.ManaValue - 1 - mana!.Value)
-				)
+			ShortBy(c) is > 0 and var n
+				? Math.Max(FlatHandCard, price * Math.Pow(ManaShortShare, n))
 				: price;
 		var hand = s.CardsIn(player, ZoneType.Hand)
 			.Sum(c =>

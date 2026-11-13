@@ -1776,3 +1776,35 @@ counter on Edgar"), Edgar 3/4, the Propagator dead. Kept as `ShayneNotesSeed1` #
   10594 steps a position.
 - **Match:** `beam,beam+notheirsacrifices --until-clear`, 96 games: **50.0%** (48–48), no 5pp difference either way;
   cost per decision 4364.1 vs 4399.3 steps. Kept by AI-5's rule: it fixes a reported misplay and is no worse.
+
+## AI-9.9 — a held card short on colour (2026-11-13)
+
+Shayne's first notes session, seed 1 AI vs AI (`ShayneNotesSeed1` #97): the Rank Rat's discard took Rockfall Vale, AI 2's
+only red source with four red cards in hand — "Nobody is discarding Rockfall Vale in this situation."
+
+- **Cause:** not the land term (AI-9.1). Three turns ahead no land is left in hand; the red cards a Vale discard
+  stranded were priced as castable — `ManaWithin` counted mana value only (its `ponytail:` named the colour case).
+- **Fix:** `Evaluator.Terms.ColorShort` (`+nocolorshort`): a held card's price is kept `ManaShortShare` (0.6) per coloured
+  pip no source of ours (in play or in hand) makes, with no free first one (`LandUnlock.ColorsShort`).
+- **Position:** Vale 9.43 → 0.84; alone it discards Koth (5.23), not the Forest — that was AI-25.3's gap, below.
+- **Suite:** 0 of 288 moved, cost unchanged. The Borg landcycle test's control needed ColorShort off too.
+- **Match:** `beam,beam+nocolorshort --until-clear`, 96 games: **51.0% ± 1.0pp** (49–47), no 5pp difference; cost per
+  decision 4391.5 vs 4414.5 steps. Kept.
+- **Not fixed — #24**, turn 2, Forest played over the Vale: an exact tie (18.64), and with this hand only a drawn red
+  2-drop would separate them — an option on unknown draws, AI-20's.
+
+## AI-25.3 — the rollout's own blocks face the attacker's trick (2026-11-13)
+
+Found at AI-9.9's #97: with the Vale kept, the discard took Koth over a Forest (Shayne: "Why would trading it in the future
+cause him to discard it now?"). Not a trade: in the Forest line the play-out cast Koth, blocked Edgar with it, and AI 1's
+sacrifice pump killed Koth for a spent Rank Rat — the rollout judged its OWN blocks with `Lookahead.Settle`, which only
+passes in combat, so AI-25's trick window never reached them.
+
+- **Fix:** `Evaluator.Terms.BlocksSeeTricks` (`+noblocktricks`): `Rollout.BestAlone` answers the rest of the declaration
+  cheaply, then gives the attacker `TheirResponse` before settling (`FacingTheirTrick`) — OUR side's blocks only.
+- **Position:** #97 discards the Forest (Koth with the term off). Alone it also keeps the Vale.
+- **Both sides, tried first:** the rollout's opponent fearing our tricks moved a Rampart Hunter attack (seed 2 #85) against
+  the oracle at +6.4% cost a position. Narrowed to ours: suite 0 of 288 moved, 10660.5 vs 10633.1 steps (+0.3%).
+- **Match:** `beam,beam+noblocktricks --until-clear`, 192 games: **48.4% ± 0.9pp** (93–99) — NO difference of 5pp; the
+  point estimate leans negative (1.8 SE). Cost per decision 4626.4 vs 4570.6 (+1.2%). Kept by AI-5's rule (no difference,
+  a recorded blunder fixed with a test), as AI-5's 95–97 at 192 was. Watch it: a rerun on more seeds if a sealed run dips.

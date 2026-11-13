@@ -76,6 +76,14 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirCombatTricks,
 				},
+			// The rollout's own blocks never see the attacker's trick, before AI-25.3: beam+noblocktricks.
+			["noblocktricks"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.BlocksSeeTricks,
+				},
+			// A held card short only on colour priced as castable, before AI-9.9: beam+nocolorshort.
+			["nocolorshort"] = o => o with { Without = o.Without | Evaluator.Terms.ColorShort },
 			// The simulated attacker's trick after blocks never picks a card for its cost (Edgar's sacrifice), before AI-25: beam+notheirsacrifices.
 			["notheirsacrifices"] = o =>
 				o with

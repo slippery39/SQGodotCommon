@@ -105,6 +105,28 @@ public static class LandUnlock
 		return withSingles > withoutSingles || withPacked > withoutPacked;
 	}
 
+	/// <summary>What each of <paramref name="player"/>'s mana sources makes: those in play and the lands in hand (AI-9.9).</summary>
+	public static List<List<ManaColor>> Sources(GameState s, int player) =>
+		[
+			.. s.CardsIn(player, ZoneType.Battlefield)
+				.Concat(s.CardsIn(player, ZoneType.Hand).Where(c => c.Is(CardType.Land)))
+				.Select(c => ManaAbilities.ColorsOf(s, c).ToList())
+				.Where(colours => colours.Count > 0),
+		];
+
+	/// <summary>
+	/// The coloured pips of <paramref name="spell"/> its colour's sources can't cover — two {R} with one red source is 1
+	/// short, Koth's {R} with none is 1 (AI-9.9). Pips matched as <see cref="Castable"/> matches them, so a
+	/// dual source counts for each of its colours.
+	/// </summary>
+	public static int ColorsShort(Card spell, List<List<ManaColor>> sources) =>
+		spell
+			.ManaCost.Symbols.Where(m =>
+				m.Kind == SymbolKind.Colored && m.Color != ManaColor.Colorless
+			)
+			.GroupBy(m => m.Color)
+			.Sum(g => Math.Max(0, g.Count() - sources.Count(colours => colours.Contains(g.Key))));
+
 	/// <summary>Every way to play up to <paramref name="n"/> of the lands (as many as there are, if fewer).</summary>
 	static IEnumerable<List<Card>> Choices(List<Card> lands, int n)
 	{

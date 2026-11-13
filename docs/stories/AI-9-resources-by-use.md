@@ -202,6 +202,21 @@ Open questions:
       and tapped never mattered. Read each with `MagicConsole --record=… --explain=N`. Wanted: the only source of a
       colour the hand needs worth more than a fourth Forest; and a land that enters tapped played on the turn it costs
       nothing. Watch AI-13's potential term here — "a basic over a tapped land" was one of its wrong versions
+      **#97 BUILT 2026-11-13:** the land term was not the gap — at the horizon no land is left in hand; the red cards the
+      discard stranded were priced as castable. `Evaluator.Terms.ColorShort` (`+nocolorshort`): a held card's price is
+      kept `ManaShortShare` per coloured pip none of our sources (in play or in hand) makes, no free first one
+      (`LandUnlock.ColorsShort`; `ManaWithin`'s ponytail named it). Now: discard Koth 5.23, Forest 1.57, Vale 0.84
+      (was Vale 9.43, Forest 9.18) — test `TheOnlySourceOfAColour_IsNotDiscarded` (control: the term off). Koth over the
+      Forest is not this term: in the Forest line the play-out casts Koth, blocks Edgar with it, and AI 1 sacrifices
+      Rank Rat to pump Edgar — Koth dies for a spent Rat (no trade). The play-out's OWN blocks don't foresee the
+      attacker's after-block tricks that AI-25 taught the real decision: AI-25.3 (Shayne, 2026-11-13: discarding Koth
+      is "a judgement call", fine if it's the land, not if it's a misread). The Borg
+      landcycle test's control now turns ColorShort off too (the Borg is short on white). Suite: 0 of 288 moved, cost
+      unchanged. **#24 NOT fixed, and not this term's:** with this hand the order only matters if AI 2 draws a red
+      card castable on turn 2 (Koth is 3, Heartstring 4) — an option on unknown draws, AI-20's one-sampled-future
+      problem; the tie stands (18.64 each). **MATCH (2026-11-13):** `beam,beam+nocolorshort --until-clear`, 96 games,
+      51.0% ± 1.0pp (49–47), no difference; cost 4391.5 vs 4414.5 steps a decision. KEPT (findings "AI-9.9"). With
+      AI-25.3 also on, #97 discards the Forest (Shayne's answer). Task open for #24 only — moved to AI-20's evidence
 
 ## Next
 
@@ -228,3 +243,4 @@ found it hiding Way of the Wildspeaker); one switch and one match.
 - 2026-11-07: AI-9.7 and AI-9.8 added (Shayne).
 - 2026-11-07: the match rerun on the committed version (2c5232ac): no difference.
 - 2026-11-13: AI-9.9 added from Shayne's first notes session (TBL-10.3): the Vale discarded, the Forest played first.
+- 2026-11-13: AI-9.9's #97 built and kept (`ColorShort`, match no difference); #24 is AI-20's.

@@ -293,7 +293,7 @@ public static class Rollout
 			}
 			if (s.GetPendingChoice() is { } choice)
 			{
-				s = Choose(s, choice, who, settings);
+				s = Choose(s, choice, who, settings, ours: true);
 				continue;
 			}
 			var spent = plays >= settings.ActionsPerTurn;
@@ -435,7 +435,15 @@ public static class Rollout
 	}
 
 	/// <summary>A choice answered — a declaration's first attacker by a whole attack (<see cref="Attacks.AsOne"/>), the rest by <see cref="Answer"/>.</summary>
-	static GameState Choose(GameState s, ChoiceAction choice, int who, Settings settings) =>
+	/// <param name="ours">The rollout's own side answering — its blocks face the attacker's trick (AI-25.3); the
+	/// simulated opponent's don't fear ours.</param>
+	static GameState Choose(
+		GameState s,
+		ChoiceAction choice,
+		int who,
+		Settings settings,
+		bool ours = false
+	) =>
 		choice is DeclareAttackerChoice ask
 		&& settings.Attacks == Attacks.AsOne
 		&& WholeAttacks.IsFirst(s, ask)
@@ -445,7 +453,7 @@ public static class Rollout
 				WholeAttacks.Best(s, who, settings.Held, settings),
 				(at, ids) => Do(at, who, ids)
 			)
-			: Do(s, who, Answer(s, choice, who, settings));
+			: Do(s, who, Answer(s, choice, who, settings, ours));
 
 	static GameState Do(GameState s, int who, GameAction action)
 	{
@@ -707,14 +715,20 @@ public static class Rollout
 	/// optional target — its chooser's best under <see cref="Settings.Mays"/>, a pay-to-keep excepted (the
 	/// cheap answer pays); every other choice the cheap answer.
 	/// </summary>
-	static IEnumerable<int> Answer(GameState s, ChoiceAction choice, int who, Settings settings) =>
+	static IEnumerable<int> Answer(
+		GameState s,
+		ChoiceAction choice,
+		int who,
+		Settings settings,
+		bool ours = false
+	) =>
 		choice switch
 		{
 			DeclareAttackerChoice attacker when settings.Attacks == Attacks.AllInToo =>
 				AllInOrAlone(s, attacker, who, settings),
 			DeclareAttackerChoice or DeclareBlockerChoice =>
 			[
-				BestAlone(s, choice, who, settings).Id,
+				BestAlone(s, choice, who, settings, ours).Id,
 			],
 			// Each legal target (or none, when optional) settled, the best for its owner — GreedyAi's
 			// answer to one pick, with the search's held values.
@@ -730,17 +744,46 @@ public static class Rollout
 	/// potential margin of the best, the one leaving the damage marked best for it (<see cref="Evaluator.DamageShare"/>,
 	/// AI-19.22: the Cerritos 4/4 blocks the 1/1, not the Romulan 2/2 a −1/−1 then finishes).
 	/// </summary>
+	/// <summary>
+	/// A block of ours with the rest of the declaration answered cheaply, then the attacker's trick once blocks are
+	/// declared (<see cref="TheirResponse"/>'s own window) — so the rollout's defender sees Edgar's sacrifice pump as the
+	/// search's decisions do (AI-25.3). Anything else, and with the term off, as it was.
+	/// </summary>
+	static GameState FacingTheirTrick(GameState s, int who, Settings settings)
+	{
+		if (
+			Evaluator.IsOff(Evaluator.Terms.BlocksSeeTricks)
+			|| settings.Opponent != OpponentModel.Responds
+			|| s.GetGame().ActivePlayerId == who
+		)
+			return s;
+		for (var i = 0; i < 50 && s.GetPendingChoice() is DeclareBlockerChoice rest; i++)
+			s = s.Choose(Lookahead.QuickAnswer(s, rest));
+		var attacker = s.GetGame().PriorityPlayerId;
+		return
+			attacker != 0
+			&& attacker != who
+			&& s.GetPendingChoice() is null
+			&& TheirResponse(s, attacker, settings) is { } trick
+			? s.Act(trick)
+			: s;
+	}
+
 	static (int Id, double Score) BestAlone(
 		GameState s,
 		ChoiceAction choice,
 		int who,
-		Settings settings
+		Settings settings,
+		bool ours = false
 	)
 	{
 		var scored = choice
 			.Options.Select(o =>
 			{
-				var after = Lookahead.Settle(s.Choose([o.Id]));
+				var chosen = s.Choose([o.Id]);
+				var after = Lookahead.Settle(
+					ours ? FacingTheirTrick(chosen, who, settings) : chosen
+				);
 				return (
 					o.Id,
 					Score: Evaluator.Evaluate(after, who, settings.Held),

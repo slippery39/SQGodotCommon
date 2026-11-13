@@ -148,3 +148,7 @@ discussing the land odds' details and the opponent's draws with Shayne. Read the
   one sampled library the top card was a keeper, so the surveil changed nothing and lost 0.1 (walkers 2.20 vs 2.10, Pass
   −13.83 vs Jace −1 −13.93): the chance of a bad top card, or of digging to a needed colour, is never weighed. Also
   AI-9.1's "NOT done: the library-top price for surveil".
+- 2026-11-13: a second position from Shayne's notes (`Records/ShayneNotesSeed1.json` #24, from AI-9.9): turn 2, AI 2 plays
+  a Forest over Rockfall Vale ("it would actually be better to play the Rockfall Vale" — free tapped now, both colours
+  next turn). An exact tie, 18.64 each: with this hand only a red 2-drop DRAWN would separate the orders, and the one
+  sampled library held none — an option on unknown draws, this story's.

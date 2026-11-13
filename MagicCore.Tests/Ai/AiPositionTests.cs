@@ -68,6 +68,42 @@ public class AiPositionTests
 		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), "c42"), Is.False);
 	}
 
+	// Shayne, 2026-11-13 (AI-9.9, his first notes session): Rank Rat made AI 2 discard, and it discarded Rockfall Vale -
+	// "which makes no sense as he had a forest in hand, no red source in play and the rockwell vale as his only red
+	// source. Nobody is discarding Rockfall Vale in this situation." Three turns ahead the Vale and a Forest were priced
+	// alike: no land was left in hand, and the red cards it left uncastable were priced as castable.
+	// AI-25.3's block fix also keeps it here (the Forest goes): this tests ColorShort ALONE. The CONTROL: without both,
+	// the AI still discards the Vale (c73).
+	[Test]
+	public void TheOnlySourceOfAColour_IsNotDiscarded()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 97);
+		string Choice(Evaluator.Terms without) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s)
+			);
+
+		const Evaluator.Terms blocks = Evaluator.Terms.BlocksSeeTricks;
+		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.ColorShort | blocks), "c73"), "control");
+		Assert.That(MoveTokens.Same(Choice(blocks), "c73"), Is.False);
+	}
+
+	// Shayne, 2026-11-13 (AI-25.3): with the Vale kept (AI-9.9), the same discard took Koth, the Geomancer over a Forest
+	// - "Why would trading it in the future cause him to discard it now?" It wasn't a trade: the rollout's own block put
+	// Koth in front of Edgar, and AI 1's sacrifice pump killed it for a spent Rank Rat - so keeping Koth looked bad. The
+	// rollout's blocks now face the attacker's trick. The CONTROL: without BlocksSeeTricks it discards Koth.
+	[Test]
+	public void KeepingACreature_IsNotJudgedByTheRolloutBlockingIntoAPump()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 97);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.BlocksSeeTricks), Does.Contain("Koth"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Discard 1 Forest"));
+	}
+
 	// Shayne, 2026-11-08 (AI-19.21): General Chang ("{1}, Sacrifice a creature: a +1/+1 counter on each
 	// Klingon"). The AI sacrificed a 4/4 and a 2/1 to make his 1/2 a 3/4 at sorcery speed, nothing dying, and
 	// at #458 Chang himself. Not the evaluator: it charged the creatures (-15 at once). The simulated HUMAN
@@ -195,7 +231,12 @@ public class AiPositionTests
 				: s.GetPlayer(ai).LastTurn.LandsPlayed;
 		}
 
-		Assert.That(LandsPlayed(Evaluator.Terms.ManaShort), Is.EqualTo(0), "control");
+		// the control prices the Borg as castable: short on white too (AI-9.9), so both kinds of short are off
+		Assert.That(
+			LandsPlayed(Evaluator.Terms.ManaShort | Evaluator.Terms.ColorShort),
+			Is.EqualTo(0),
+			"control"
+		);
 		Assert.That(LandsPlayed(Evaluator.Terms.None), Is.EqualTo(1));
 	}
 
