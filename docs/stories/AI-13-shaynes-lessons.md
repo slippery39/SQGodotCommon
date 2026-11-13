@@ -342,8 +342,9 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       anything and has more potential value later on" — Pass −13.81, cast −13.81: the Pass line's rollout casts
       Yoshimaru at once in the same main phase, so its held price (AI-13.5's check, `YoshimaruWithNoFight`) never
       counts and acting wins the tie. **#213** Extended Absence on that 1/1 in AI 1's draw step — "a premium removal
-      spell ... on the 1/1 makes no sense" — Pass 80.47, cast 80.47, the same shape; the uncapped search picks Pass by
-      order, the table's 1 s search cast it. Wanted: a pass's line keeps the card held until a LATER turn's offer, so
+      spell ... on the 1/1 makes no sense" — Pass 80.47, cast 80.47, the same shape. A FRESH search passes (plans on or
+      off); in the game the AI cast it, carrying out the plan it committed to at an earlier decision. Not the table's
+      1 s cap (corrected 2026-11-13): the same game uncapped is identical, all 386 moves, reproduced in code. Wanted: a pass's line keeps the card held until a LATER turn's offer, so
       holding is priced; AI-13.5 (the offers version for enters-target creatures) is the nearest piece
 
 ## Next

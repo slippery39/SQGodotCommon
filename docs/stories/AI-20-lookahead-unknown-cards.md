@@ -143,3 +143,8 @@ discussing the land odds' details and the opponent's draws with Shayne. Read the
   the single guessed future.
 - 2026-11-12: sprint 5 — after AI-22; the research note first.
 - 2026-11-12: the research note — Cowling et al. on MTG (several guessed futures, one budget split), ISMCTS, Forge — in `docs/findings/ai-research.md`; its questions are AI-20.1's.
+- 2026-11-13: a position for it, from Shayne's notes (TBL-10.3; `Records/ShayneNotesSeed1.json` #247): AI 2 keeps its Jace token's
+  loyalty instead of surveilling for its missing red source ("he should be aggressively surveilling for it here"). In the
+  one sampled library the top card was a keeper, so the surveil changed nothing and lost 0.1 (walkers 2.20 vs 2.10, Pass
+  −13.83 vs Jace −1 −13.93): the chance of a bad top card, or of digging to a needed colour, is never weighed. Also
+  AI-9.1's "NOT done: the library-top price for surveil".
