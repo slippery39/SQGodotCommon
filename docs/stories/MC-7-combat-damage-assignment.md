@@ -51,6 +51,12 @@ Shayne, 2026-11-09: when the opponent double-blocks, we don't get to decide how 
   board state the most)". The AI's pick is GreedyAi's one-ply answer (the beam asks it): each amount settled through the
   end of combat and the board evaluated (`Evaluator`). (First read as "nobody is asked" — built and taken back the
   same night.) The look-ahead's rollouts still use the fixed split (`DefaultSplit`) — DesignNotes.
+- 2026-11-12, Shayne — **MC-7.3's design: a spin box on each blocker**, typed or stepped with up/down; the total can't
+  pass the damage the attacker deals, so once it is all allocated "up" no longer goes up. Claude's defaults beside it,
+  from the rules: **Confirm only once ALL of it is assigned** (CR 510.1: a creature assigns all its combat damage —
+  none can be left over); **with trample, a spin box for the defending player too**, which can take damage only
+  once every blocker's box holds lethal (CR 702.19c). The table answers the engine's per-blocker questions from the
+  boxes in one go (the last blocker's box is the rest).
 - 2026-11-12, Claude: **ponytail** — with trample the LAST blocker takes no more than lethal (the rest goes to the
   player); overkilling it instead is never wanted. Offered if a card ever makes it matter.
 - 2026-11-12, Claude: **the position suite is NOT regenerated here** — regenerating it in this lane moved every game
@@ -74,8 +80,8 @@ Shayne, 2026-11-09: when the opponent double-blocks, we don't get to decide how 
       look-ahead's `Settle` answers it by the old split (it had judged it by the chooser's best — that moved an AI
       control test, ChangSac458). The table asks it in the generic panel (`Describe.Question` names both creatures).
 - [ ] MC-7.3 The table: pick how much each blocker gets — today the generic `ChoicePanel` lists "0 damage to X … N
-      damage to X", one question per blocker but the last; MC-7.1's default for the real one: Arena's, click a blocker
-      to move a point onto it
+      damage to X", one question per blocker but the last. The real one is Shayne's design (Decisions): a spin box
+      per blocker, the total capped at the attacker's damage
 - [x] MC-7.4 The AI's choice, a position test (the double block that killed the wrong creature) — the value pick kills
       the 2/2 flier with lifelink over the vanilla 2/2 declared first (`CombatTests.TheValuePick_…`, revert-checked:
       the old fixed split fails it)
@@ -83,8 +89,7 @@ Shayne, 2026-11-09: when the opponent double-blocks, we don't get to decide how 
 ## Next
 
 MC-7.3, the table: you are asked now through the generic choice panel (a list of amounts, per blocker but the last);
-make it a split on the blockers themselves (`.claude/rules/magic-table.md`; the default, Arena's: click a blocker to
-move a point onto it). Later: the rollouts judging a split rather than assuming the fixed one (DesignNotes).
+make it a spin box on each blocker (Shayne's design and its two rules points in Decisions; `.claude/rules/magic-table.md`). Later: the rollouts judging a split rather than assuming the fixed one (DesignNotes).
 
 ## Log
 
