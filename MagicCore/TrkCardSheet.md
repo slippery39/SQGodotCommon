@@ -4733,7 +4733,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > At the beginning of your upkeep, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)  
 > Whenever a card leaves your graveyard, draw a card. This ability triggers only once each turn.
 
-**Status:** scripted · **tests naming it:** TrkBatch4bTests
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests, TrkBatch4bTests
 
 **Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 

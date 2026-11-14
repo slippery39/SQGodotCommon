@@ -559,4 +559,63 @@ public class LsvBatch2c2Tests : FraBoardTest
 		ToEndStep();
 		Assert.That(InGraveyard(breach), Nu.True, "sacrificed at the beginning of the end step");
 	}
+
+	// ===== MC-4.4c2c =====
+
+	static CardDefinition Free(string name, params GameAction[] effects) =>
+		TestGames.Inline(name, "{0}", "Instant", null, effects);
+
+	[Test]
+	public void Laelia_AttackExilesTheTopPlayableThisTurn_AndThatExileGivesHerACounter()
+	{
+		var laelia = Field(Lsv("Laelia, the Blade Reforged"), me);
+		var top = OnTop(Boon, me);
+		AttackWith(laelia);
+		Resolve();
+		Assert.That(InExile(top), Nu.True);
+		Assert.That(PlayableUntil(top), Nu.EqualTo(s.GetGame().TurnNumber), "this turn");
+		Assert.That(
+			s.GetCard(laelia).PlusOneCounters,
+			Nu.EqualTo(1),
+			"put into exile from my library"
+		);
+	}
+
+	[Test]
+	public void Laelia_OneOrMoreFromMyGraveyard_OneCounter_NoneForAnyOtherMove()
+	{
+		var laelia = Field(Lsv("Laelia, the Blade Reforged"), me);
+		for (var i = 0; i < 2; i++)
+			(s, _) = TestGames.Put(s, me, Boon, ZoneType.Graveyard);
+		Cast(Hand(Free("Purge", new MoveTo(Ref.CardsInYourGraveyard, ZoneType.Exile)), me), []);
+		Assert.That(
+			s.GetCard(laelia).PlusOneCounters,
+			Nu.EqualTo(1),
+			"two cards at once: one or more"
+		);
+
+		Cast(Hand(Free("Dig", new Mill(Ref.You, 2)), me), []);
+		Cast(Hand(Free("Forget", new MoveTo(Ref.CardsInYourHand, ZoneType.Exile)), me), []);
+		Cast(Hand(Free("Raise", new MoveTo(Ref.CardsInYourGraveyard, ZoneType.Hand)), me), []);
+		OnTop(Boon, them);
+		Cast(Hand(Free("Rob", new ExileTopPlayable { Of = Ref.EachOpponent }), me), []);
+		Assert.That(
+			s.GetCard(laelia).PlusOneCounters,
+			Nu.EqualTo(1),
+			"milled, exiled from my hand, returned from my graveyard, exiled from THEIR library: none"
+		);
+	}
+
+	[Test]
+	public void ACardExiledFromMyLibrary_DidntLeaveMyGraveyard()
+	{
+		Field(CardRegistry.Get("Vash, Freelance Archaeologist", "TRK"), me);
+		OnTop(Boon, me);
+		var hand = HandCount(me);
+		Cast(Hand(Free("Impulse", new ExileTopPlayable()), me), []);
+		Assert.That(HandCount(me), Nu.EqualTo(hand), "Vash: whenever a card leaves your GRAVEYARD");
+		(s, _) = TestGames.Put(s, me, Boon, ZoneType.Graveyard);
+		Cast(Hand(Free("Purge", new MoveTo(Ref.CardsInYourGraveyard, ZoneType.Exile)), me), []);
+		Assert.That(HandCount(me), Nu.EqualTo(hand + 1), "and one that does still draws");
+	}
 }

@@ -61,3 +61,4 @@ after the split is DEV-4.3.
 | 2026-11-13 | MC-4.4c1: red's tier 1, the tested pieces, 11 cards | 3368d9ff | 133 | 227k | 4.6M |
 | 2026-11-13 | MC-4.4c2a: LSVPower, red's options part a, 6 cards | 5b15092f | 106 | 241k | 4.0M |
 | 2026-11-14 | MC-4.4c2b: LSVPower, red's options part b, 7 cards | 743a66fb | 58 | 196k | 2.1M |
+| 2026-11-14 | MC-4.4c2c: Laelia, the zone-change event, 1 card | 743a66fb | 70 | 230k | 2.5M |

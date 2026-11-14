@@ -88,7 +88,7 @@ public enum EventKind
 	BecameTapped, // Hemmer: "whenever Hemmer becomes tapped"
 	FacedDilemma, // "whenever you face a dilemma" — modes chosen for a spell or ability
 	CountersPut, // a Saga's chapter: "as the number of lore counters becomes at least N" (Trigger.Chapter)
-	LeftGraveyard, // Vash: "whenever a card leaves your graveyard" — MagicState.MoveCard, every path
+	ChangedZone, // Vash: "whenever a card leaves your graveyard"; Laelia: "put into exile from your library and/or your graveyard" — MagicState.MoveCard, every path (Trigger.From, To)
 	Drew, // Data, New Life: "whenever you draw a card" — MagicState.Draw, one per card
 	AbilityActivated, // Kai Winn: "activates an ability of a source with the chosen name" — mana abilities too
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
@@ -258,9 +258,29 @@ public record Trigger(EventKind On)
 		get => from;
 		init =>
 			from =
-				value is null || On is EventKind.SpellCast or EventKind.LandPlayed
+				value is null
+				|| On is EventKind.SpellCast or EventKind.LandPlayed or EventKind.ChangedZone
 					? value
-					: throw new ArgumentException($"From fits SpellCast or LandPlayed, not {On}");
+					: throw new ArgumentException(
+						$"From fits SpellCast, LandPlayed or ChangedZone, not {On}"
+					);
+	}
+
+	readonly ZoneType? to;
+
+	/// <summary>
+	/// Laelia, the Blade Reforged: "Whenever one or more cards are put into exile from your library and/or your
+	/// graveyard" — the zone a card moved TO (ChangedZoneEvent.To); with no From, from either of the two zones the
+	/// event is raised for. Vash's "leaves your graveyard" is From = Graveyard, any To.
+	/// </summary>
+	public ZoneType? To
+	{
+		get => to;
+		init =>
+			to =
+				value is null || On is EventKind.ChangedZone
+					? value
+					: throw new ArgumentException($"To fits ChangedZone, not {On}");
 	}
 
 	readonly Filters.Filter? combatDamageBy;
@@ -351,7 +371,7 @@ public static class TriggerEvent
 
 	/// <summary>Vash, Hologram Stalker: "Whenever a card leaves your graveyard" — to any zone; a token isn't a card.</summary>
 	public static readonly Trigger CardLeavesYourGraveyard =
-		new(EventKind.LeftGraveyard) { By = Whose.You };
+		new(EventKind.ChangedZone) { By = Whose.You, From = ZoneType.Graveyard };
 
 	/// <summary>Blastoneuron: "Whenever one or more cards leave your graveyard" — once per batch (Trigger.OneOrMore).</summary>
 	public static readonly Trigger OneOrMoreCardsLeaveYourGraveyard = CardLeavesYourGraveyard with

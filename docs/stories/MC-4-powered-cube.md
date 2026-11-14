@@ -213,6 +213,12 @@ as his three priorities.
   lifting the mode cap past the number of modes, and a second "that player's graveyard" filter in `Combinations`
   (`AreLegal` already refuses). Ceilings (DesignNotes): the same artifact can't be Confluence'd twice; `OrColor` only
   on a cost that picks; a card with its own flashback never escapes; Welder sacrifices, then returns.
+- 2026-11-14, Claude — **4.4c2c: `LeftGraveyardEvent` became `ChangedZoneEvent(owner, card, From, To)`**, raised by
+  `MoveCard` for a card leaving a graveyard (as before) and one exiled from its library; `Trigger.From` takes it and
+  `Trigger.To` is new. Vash and Blastoneuron moved onto it (`From = Graveyard`); Laelia is `{ To = Exile, OneOrMore }`
+  with no From — the two zones the event is raised for. Not every zone change: `MoveCard` is the hottest path, so a
+  draw raises nothing (a ceiling in the event's summary; the "to exile" test on the library case is that saving and
+  no test can see it). No recorded game moved.
 
 ## Tasks
 
@@ -264,17 +270,21 @@ as his three priorities.
             breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged; golden-in moved 29 random and 451
             card-replay games, added 28; probe 150 games, none unfinished, every card cast — the Lumberjack's mana
             move isn't counted as an activation)
-      - [ ] MC-4.4c2c Laelia — the zone-change event
+      - [x] MC-4.4c2c Laelia — the zone-change event — done 2026-11-14: `ChangedZoneEvent` (Decisions); 3 tests, 6/6
+            behavioural breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged)
       - [ ] MC-4.4c2d "Name Sticker" Goblin — entering from a zone, a die roll
       - [ ] MC-4.4c2e Pyrokinesis — damage divided among any number of targets
 
 ## Next
 
-MC-4.4c2c — Laelia, the Blade Reforged: `LeftGraveyardEvent` generalised to a zone-change event with From/To
-(library→exile raised too, in `MagicState.MoveCard`), "one or more" as `Trigger.OneOrMore`; her attack trigger is
-`ExileTopPlayable { Play = ThisTurn }` (tested). Move the cards on `LeftGraveyardEvent` onto the generalised event.
-Then 2d ("Name Sticker" Goblin: `EnteredBattlefieldEvent.From`, a die roll), 2e (Pyrokinesis: the targets a choice
-after casting, as PerX's), each its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
+MC-4.4c2d — "Name Sticker" Goblin: "enters from anywhere other than a graveyard or exile" needs where it came from
+(`EnteredBattlefieldEvent` has no From — `EnterBattlefield` knows the zone it leaves; a `Trigger.From`-style option,
+or an `EventTest`), "if it's on the battlefield and you control 9 or fewer creatures named …" is the trigger's `If`,
+and the d20 is a new effect beside `FlipACoin` (s.TakeRng; rows 1–6 / 7–14 / 15–20 add {R}×4/5/6 — say why
+`FlipACoin` can't take sides before building it). Then 2e (Pyrokinesis: damage divided among any number of targets —
+one cast, the targets and the split a choice after casting, as PerX's `ChooseXTargetsChoice`; its "exile a red card
+rather than pay" is `MayCastFromHandFree(Is.Source) { Costs = [ExileFromHandCost(red)] }`, tested on Force of Will).
+Each its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
@@ -307,3 +317,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   "discard up to two").
 - 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2b — seven cards on seven options, no new piece; no recorded game moved
   by the engine; 144 of 528 play. For Shayne: nothing Open.
+- 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2c — Laelia; the leave-graveyard event generalised to a zone change with
+  From/To, Vash and Blastoneuron moved onto it; 145 of 528 play. For Shayne: nothing Open.

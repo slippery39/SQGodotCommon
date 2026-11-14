@@ -193,6 +193,10 @@ public static class MagicState
 		var milled =
 			s.IsIn(cardId, before.OwnerId, ZoneType.Library)
 			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard);
+		var exiledFromLibrary = // Laelia: "put into exile from your library"
+			!before.IsToken
+			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Exile)
+			&& s.IsIn(cardId, before.OwnerId, ZoneType.Library);
 		var knownTo = KnownAfterMoving(s, before, zoneId);
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
@@ -214,8 +218,15 @@ public static class MagicState
 				before.OwnerId,
 				t => t with { CardsFromLibraryToGraveyard = t.CardsFromLibraryToGraveyard + 1 }
 			);
-		if (leavesGraveyard)
-			s = s.Raise(new LeftGraveyardEvent(before.OwnerId, cardId));
+		if (leavesGraveyard || exiledFromLibrary)
+			s = s.Raise(
+				new ChangedZoneEvent(
+					before.OwnerId,
+					cardId,
+					leavesGraveyard ? ZoneType.Graveyard : ZoneType.Library,
+					((Zone)s.GetObject(zoneId)).ZoneType
+				)
+			);
 		if (!leavesBattlefield)
 			return s;
 

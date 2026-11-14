@@ -117,8 +117,13 @@ whose subsystem it lives in.
   `.SacrificeAtNextEndStep` — a `DelayedTrigger` added after it enters, like `ExileAtNextEndStep`.
 - **"Whenever …, this turn"** from a resolving ability (The Naked Time's chapter II) is `WheneverThisTurn`:
   the trigger on a command-zone object, removed with the turn's other "this turn" effects.
-- **"Whenever a card leaves your graveyard"** is `LeftGraveyardEvent`, raised by `MagicState.MoveCard` for every
-  path out — cast, exiled, returned, shuffled, paid as a cost; a token isn't a card. **"One or more"** is
+- **A card changing zones** is ONE event, `ChangedZoneEvent(owner, card, From, To)` (MC-4.4c2c), raised by
+  `MagicState.MoveCard` for the moves a card reads — out of a graveyard to anywhere, and library → exile; widen it
+  THERE for another move, never a second event — matched by `Trigger.From` / `Trigger.To`. **"Whenever a card leaves
+  your graveyard"** (Vash) is `{ By = You, From = Graveyard }`: every
+  path out — cast, exiled, returned, shuffled, paid as a cost; a token isn't a card. **"Whenever one or more cards are
+  put into exile from your library and/or your graveyard"** (Laelia) is `{ By = You, To = Exile, OneOrMore }` — no From:
+  the two zones the event is raised for. **"One or more"** is
   `Trigger.OneOrMore`: one trigger per priority pass, everything that left since a player last had priority
   (Shayne, 2026-11-01).
 - **"[Permanents] you control have '[triggered ability]'"** is `GrantsTriggeredAbility(scope, ability)`:

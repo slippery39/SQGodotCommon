@@ -176,10 +176,15 @@ public record DrewCardEvent(int PlayerId) : MagicEvent
 	public override int By(GameState s) => PlayerId;
 }
 
-/// <summary>A card left its owner's graveyard, to any zone — raised by MagicState.MoveCard, every path (Vash).</summary>
-public record LeftGraveyardEvent(int PlayerId, int CardId) : MagicEvent
+/// <summary>
+/// A card changed zones — raised by MagicState.MoveCard, every path, for the moves a card reads: out of its owner's
+/// graveyard to any zone (Vash: "whenever a card leaves your graveyard") and from their library into exile (Laelia,
+/// the Blade Reforged: "put into exile from your library and/or your graveyard"). A token isn't a card. ponytail:
+/// not every zone change — MoveCard is the hottest path; widen the two cases there when a card reads another move.
+/// </summary>
+public record ChangedZoneEvent(int PlayerId, int CardId, ZoneType From, ZoneType To) : MagicEvent
 {
-	public override EventKind Kind() => EventKind.LeftGraveyard;
+	public override EventKind Kind() => EventKind.ChangedZone;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
 		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
@@ -703,9 +708,12 @@ public static class Triggers
 			{
 				SpellCastEvent cast => cast.From,
 				LandPlayedEvent land => land.From,
+				ChangedZoneEvent moved => moved.From,
 				_ => (ZoneType?)null,
 			} != zone
 		)
+			return false;
+		if (on.To is { } to && (e is not ChangedZoneEvent arrived || arrived.To != to))
 			return false;
 		if (
 			on.CombatDamageBy is { } by

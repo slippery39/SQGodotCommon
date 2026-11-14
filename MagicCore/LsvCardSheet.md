@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 18/46 · uncommon 27/86 · rare 65/279 · mythic 26/108 · **144/528**
+**Playable:** common 18/46 · uncommon 27/86 · rare 66/279 · mythic 26/108 · **145/528**
 
 ### "Name Sticker" Goblin
 
@@ -3150,7 +3150,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever Laelia attacks, exile the top card of your library. You may play that card this turn.  
 > Whenever one or more cards are put into exile from your library and/or your graveyard, put a +1/+1 counter on Laelia.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Laelia, the Blade Reforged"] =
+[
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new ExileTopPlayable { Play = new() { ThisTurn = true } }
+	),
+	// "from your library and/or your graveyard": the two moves the event is raised for
+	When(
+		new Trigger(EventKind.ChangedZone)
+		{
+			By = Whose.You,
+			To = ZoneType.Exile,
+			OneOrMore = true,
+		},
+		[],
+		new PutCounters(Ref.Source, 1)
+	),
+],
+```
 
 ### Leatherhead, Swamp Stalker
 

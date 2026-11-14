@@ -838,6 +838,26 @@ public static class LsvCards
 				},
 				When(TriggerEvent.EachEndStep, [], new Sacrifice(Ref.Source)),
 			],
+			// ===== MC-4.4c2c: the zone-change event =====
+			["Laelia, the Blade Reforged"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new ExileTopPlayable { Play = new() { ThisTurn = true } }
+				),
+				// "from your library and/or your graveyard": the two moves the event is raised for
+				When(
+					new Trigger(EventKind.ChangedZone)
+					{
+						By = Whose.You,
+						To = ZoneType.Exile,
+						OneOrMore = true,
+					},
+					[],
+					new PutCounters(Ref.Source, 1)
+				),
+			],
 		};
 
 	/// <summary>Cori-Steel Cutter: "a 1/1 white Monk creature token with prowess".</summary>
