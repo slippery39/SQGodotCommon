@@ -69,17 +69,38 @@ public record DealDamage(Ref To, Count Amount) : Effect
 	/// </summary>
 	public ImmutableList<GameAction> IfExcess { get; init; } = [];
 
+	/// <summary>
+	/// Screaming Nemesis: "If a player is dealt damage this way, they can't gain life for the rest of the game." — run
+	/// after, with Ref.ThisWay what was actually dealt damage (none prevented, none whose target is gone).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var amount = Amount.Value(s, InputContext);
 		var source = Source(s);
 		var excess = 0;
+		var dealt = ImmutableArray.CreateBuilder<int>();
 		foreach (var id in All(To, s).ToList())
 		{
 			if (!IfExcess.IsEmpty)
 				excess += Damage.Excess(s, source, id, amount);
-			s = Damage.Deal(s, source, id, amount);
+			var after = Damage.Deal(s, source, id, amount);
+			if (!ReferenceEquals(after, s)) // Damage.Deal hands back the same state when it dealt none
+				dealt.Add(id);
+			s = after;
 		}
+		if (!Then.IsEmpty && dealt.Count > 0)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps = Then,
+					PipelineContext = InputContext.SetItem(
+						ContextKeys.ThisWay,
+						dealt.ToImmutable()
+					),
+				}
+			);
 		return excess == 0 || IfExcess.IsEmpty
 			? new(s)
 			: new(
@@ -756,7 +777,8 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 	/// Dr. Leonard "Bones" McCoy: "When it dies this turn, return that card to the battlefield … at the
 	/// beginning of the next end step" — the delayed trigger on that card where it now is (its
 	/// graveyard), as Flicker's is on its exiled card: gone if the card leaves (a new object, CR 400.7);
-	/// a token never gets one. Its "this" (Ref.Source) is that card.
+	/// a token never gets one. Its "this" (Ref.Source) is that card. Sneak Attack: "Sacrifice the creature at the
+	/// beginning of the next end step" — on a permanent on the battlefield the same way (a token too).
 	/// </summary>
 	public Ref? On { get; init; }
 
@@ -788,13 +810,16 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 		if (On is { } on)
 			return new(
 				All(on, s)
-					// in its owner's graveyard, where it died to — ponytail: by id, so a card that left
-					// and came back there inside the same response would still return; stamp the
-					// incarnation it died as if that ever matters
+					// on the battlefield (Sneak Attack), or in its owner's graveyard, where it died to —
+					// ponytail: by id, so a card that left and came back there inside the same response
+					// would still return; stamp the incarnation it died as if that ever matters
 					.Where(id =>
 						s.HasObject(id)
-						&& s.GetObject(id) is Card { IsToken: false } card
-						&& s.IsIn(id, card.OwnerId, ZoneType.Graveyard)
+						&& s.GetObject(id) is Card card
+						&& (
+							s.IsOnBattlefield(id)
+							|| (!card.IsToken && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
+						)
 					)
 					.Aggregate(
 						s,
@@ -893,9 +918,24 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 	/// <summary>Sen Triplets: "This turn, that player can't …" — whose command zone (Ref.Target(0)); unset is you.</summary>
 	public Ref? On { get; init; }
 
+	/// <summary>
+	/// Screaming Nemesis: "they can't gain life for the rest of the game" — the same object, never removed with the
+	/// turn (<see cref="Effects.RestOfTheGame"/>); a player who already has that one gets no second.
+	/// </summary>
+	public bool RestOfTheGame { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		var who = On is null ? Controller : All(On, s).FirstOrDefault();
+		var who = On is null
+			? Controller
+			: All(On, s).FirstOrDefault(id => s.HasObject(id) && s.GetObject(id) is MagicPlayer); // "if a PLAYER is dealt damage this way"
+		if (
+			RestOfTheGame
+			&& who != 0
+			&& s.CardsIn(who, ZoneType.Command)
+				.Any(c => c.HasComponent<RestOfTheGame>() && c.Components.Contains(What))
+		)
+			return new(s);
 		// Sen Triplets' "that player's hand": who it names, kept as it resolves — a target can't be read later.
 		var what = What switch
 		{
@@ -907,9 +947,21 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 		};
 		return who == 0
 			? new(s)
-			: new(GetEmblem.ToCommandZone(s, who, $"{Source(s).Name} (this turn)", [what]));
+			: new(
+				GetEmblem.ToCommandZone(
+					s,
+					who,
+					$"{Source(s).Name} ({(RestOfTheGame ? "rest of the game" : "this turn")})",
+					RestOfTheGame ? [what, new RestOfTheGame()] : [what]
+				)
+			);
 	}
 }
+
+/// <summary>
+/// Screaming Nemesis: "for the rest of the game" — marks a ThisTurn object the turn's end leaves (TurnStructure).
+/// </summary>
+public record RestOfTheGame : GameComponent;
 
 /// <summary>
 /// "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat, players can't
@@ -930,7 +982,11 @@ public record CantCastOrActivate : ThisTurnEffect
 public record ExtraRedFromMountains : ThisTurnEffect;
 
 /// <summary>Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life (Gain, Lose, CanPay).</summary>
-public record LifeTotalCantChange : ThisTurnEffect;
+public record LifeTotalCantChange : ThisTurnEffect
+{
+	/// <summary>Screaming Nemesis: "they can't gain life" — only gaining: life is still lost and paid (Life.Gain).</summary>
+	public bool GainOnly { get; init; }
+}
 
 /// <summary>Peace in Our Time: "they can't attack this turn" — on that player; Combat.CanAttack.</summary>
 public record CantAttackThisTurn : ThisTurnEffect;

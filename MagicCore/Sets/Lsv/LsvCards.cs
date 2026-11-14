@@ -703,6 +703,141 @@ public static class LsvCards
 					If = new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 7),
 				},
 			],
+			// ===== MC-4.4c2b: red's options, part b =====
+			["Sneak Attack"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{R}"),
+					[
+						new MoveChosen(ZoneType.Hand, Is.Creature, ZoneType.Battlefield)
+						{
+							May = true,
+							Then =
+							[
+								// "That creature gains haste." — no duration: while it stays that permanent
+								new ModifyUntilEndOfTurn(Ref.Chosen, 0, 0, "Haste")
+								{
+									ForGood = true,
+								},
+								new AtNextEndStep([new Sacrifice(Ref.Source)]) { On = Ref.Chosen },
+							],
+						},
+					]
+				),
+			],
+			["Orcish Lumberjack"] =
+			[
+				new ManaAbilityComponent(ManaColor.Red)
+				{
+					Amount = 3,
+					OrColor = ManaColor.Green,
+					Costs = [new TapSelfCost(), new SacrificeCost(Is.Subtype("Forest"))],
+				},
+			],
+			["Fiery Confluence"] =
+			[
+				ModalSpell(
+					"Fiery Confluence",
+					new()
+					{
+						AtLeast = 3,
+						AtMost = 3,
+						Repeats = true,
+					},
+					M([], new DealDamage(Ref.AllCreatures, 1)),
+					M([], new DealDamage(Ref.EachOpponent, 2)),
+					M([Target(Is.Artifact)], new Destroy(Ref.Target()))
+				),
+			],
+			["Screaming Nemesis"] =
+			[
+				When(
+					TriggerEvent.SelfDealtDamage,
+					[TargetSpec.AnyTarget(!Is.Source)],
+					new DealDamage(Ref.Target(), Count.X)
+					{
+						Then =
+						[
+							new ThisTurn(new LifeTotalCantChange { GainOnly = true })
+							{
+								On = Ref.ThisWay,
+								RestOfTheGame = true,
+							},
+						],
+					}
+				),
+			],
+			["Goblin Welder"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						// "If both targets are still legal as this ability resolves": one gone illegal reads as nothing
+						new If(
+							new Both(
+								new Matches(Ref.Target(0), Is.Artifact),
+								new Matches(Ref.Target(1), Is.Artifact)
+							),
+							[
+								new Sacrifice(Ref.Target(0)),
+								new MoveTo(Ref.Target(1), ZoneType.Battlefield)
+								{
+									From = [ZoneType.Graveyard],
+								},
+							]
+						),
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets =
+					[
+						Target(Is.Artifact),
+						TargetSpec.InAnyGraveyard(Is.Artifact) with
+						{
+							OfThePreviousTargetsController = true,
+						},
+					],
+				},
+			],
+			["Robber of the Rich"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new ExileTopPlayable
+					{
+						Of = Ref.EachOpponent,
+						Play = new()
+						{
+							Forever = true,
+							CastOnly = true,
+							AnyType = true,
+							If = new SubtypeEnteredThisTurn(["Rogue"]) { Attacked = true },
+						},
+					}
+				) with
+				{
+					// "if defending player has more cards in hand than you" — the one opponent
+					If = new AtLeast(
+						Count.NumberOf(Ref.All(ZoneType.Hand, of: Ref.EachOpponent)),
+						1
+					)
+					{
+						MoreThan = Count.NumberOf(Ref.CardsInYourHand),
+					},
+				},
+			],
+			["Underworld Breach"] =
+			[
+				// Escape: cast from your graveyard for its mana cost plus three other cards exiled from there
+				new MayPlayFromZone(ZoneType.Graveyard, !Is.Land)
+				{
+					AnyTime = true,
+					Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 3 }],
+				},
+				When(TriggerEvent.EachEndStep, [], new Sacrifice(Ref.Source)),
+			],
 		};
 
 	/// <summary>Cori-Steel Cutter: "a 1/1 white Monk creature token with prowess".</summary>

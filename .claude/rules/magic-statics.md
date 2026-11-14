@@ -39,6 +39,11 @@ whose subsystem it lives in.
   damage is still dealt (lifelink, "deals damage" triggers), no life moves. **Paying life** is ONE question,
   `Life.CanPay` (at least that much, CR 119.4; never while it can't change, 119.8) — Phyrexian mana, the
   shocklands and Hive Mind Coprocessor (`CanPayLife(n)`), Necrodominance's number.
+- **"They can't gain life for the rest of the game"** (Screaming Nemesis) is the same piece, `LifeTotalCantChange
+  { GainOnly }` — `Life.Gain` refuses, `Life.Lose` and `Life.CanPay` don't — in a `ThisTurn { On, RestOfTheGame }`: the
+  command-zone object carries `RestOfTheGame`, which the turn's end leaves; a player gets one, however often. **"If a
+  player is dealt damage this way"** is `DealDamage.Then` with `Ref.ThisWay` what was actually dealt damage (nothing
+  prevented) — `ThisTurn.On` takes only a player from it.
 - **"Loses all abilities"** is `s.HasLostAllAbilities` — until end of turn (`UntilEndOfTurn.LosesAllAbilities`)
   or under an Aura (`EnchantedLosesAllAbilities`, found once per state with the statics). It reaches
   every rule because every rule reads abilities through `s.AbilitiesOf<T>`, keywords through `s.Has`,

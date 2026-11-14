@@ -682,6 +682,14 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	public bool AnyOneColor { get; init; }
 
 	/// <summary>
+	/// Orcish Lumberjack: "Add three mana in any combination of {R} and/or {G}." — each unit Color or this one; how
+	/// many of this one is the activation's (TapForManaAction.OfTheOther, one move per split). Read for an ability
+	/// whose cost picks a card. ponytail: a plain {T} ability with it makes only Color — a yield unit of two colours
+	/// (ManaAbilities.YieldOf) when a card needs one.
+	/// </summary>
+	public ManaColor? OrColor { get; init; }
+
+	/// <summary>
 	/// Starfleet Academy: "{5}, {T}: Choose a color. Add …"; Talon Gates of Madara: "{1}, {T}: Add one
 	/// mana of any color" — a mana ability that costs mana (Shayne, 2026-11-04: a real one). Never a
 	/// plain tap: only ManaPayment.Find uses it, when nothing else pays.
@@ -882,6 +890,15 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 	/// a random card and never plays the sample's (Evaluator Terms.ImpulseValue). A known card — Emrakul, a chosen one — is not.
 	/// </summary>
 	public bool Blind { get; init; }
+
+	/// <summary>
+	/// Robber of the Rich: "During any turn you attacked with a Rogue, you may cast that card" — judged with the
+	/// player it names as "you" (the card's own controller is its owner, the opponent).
+	/// </summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Robber of the Rich: "you may CAST that card" — never a land played.</summary>
+	public bool CastOnly { get; init; }
 }
 
 /// <summary>
@@ -1071,6 +1088,14 @@ public record MayPlayFromZone(ZoneType From, Filters.Filter What) : ThisTurnEffe
 
 	/// <summary>Null Summoner: "mana of any type can be spent to cast that spell" — Costs.Of.</summary>
 	public bool AnyType { get; init; }
+
+	/// <summary>
+	/// Underworld Breach: "Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana
+	/// cost plus exile three other cards from your graveyard." — (Graveyard, !Is.Land) { AnyTime, Costs =
+	/// [ExileFromGraveyardCost(!Is.Source) { Count = 3 }] }: what a cast by this rule costs beside its mana
+	/// (CastSpellAction.CostsOf). Not flashback: an escaped spell isn't exiled as it leaves the stack.
+	/// </summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
 }
 
 /// <summary>

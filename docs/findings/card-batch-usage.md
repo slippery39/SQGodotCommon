@@ -60,3 +60,4 @@ after the split is DEV-4.3.
 | 2026-11-13 | MC-4.4b: the Spirit Guides and Delighted Halfling, mana from the hand and a yield per spell, 3 cards | 3368d9ff | 114 | 213k | 3.9M |
 | 2026-11-13 | MC-4.4c1: red's tier 1, the tested pieces, 11 cards | 3368d9ff | 133 | 227k | 4.6M |
 | 2026-11-13 | MC-4.4c2a: LSVPower, red's options part a, 6 cards | 5b15092f | 106 | 241k | 4.0M |
+| 2026-11-14 | MC-4.4c2b: LSVPower, red's options part b, 7 cards | 743a66fb | 58 | 196k | 2.1M |

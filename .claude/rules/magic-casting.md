@@ -127,6 +127,23 @@ whose subsystem it lives in.
   **How many modes** is one `ModeChoice` (`Choose`) on spells, triggered and activated abilities alike — `AtLeast` and
   `AtMost` as Counts (an int converts: exactly that many); "choose one or more" is `{ AtMost = N }`, "up to one" (Ertai)
   `{ AtLeast = 0 }`. `Modal.Choices`/`IsLegal` take the range.
+- **"Choose three. You may choose the same mode more than once"** (Fiery Confluence) is `ModeChoice { Repeats }`:
+  `Modal.Choices` offers each multiset once (10 of three modes), `IsLegal` accepts repeats, `Compose` runs a mode once
+  per time chosen — and marks a repeated mode's target word `NotThePrevious`, so two "destroy target artifact" are one
+  cast per pair of artifacts, never per order nor the same one twice (DesignNotes). Spells and activated abilities.
+- **"Target artifact a player controls and target artifact card in that player's graveyard"** (Goblin Welder) is the
+  second word `TargetSpec.InAnyGraveyard(…) { OfThePreviousTargetsController }` — its card's owner controls the target
+  before it (`TargetSpec.FitsPrevious`), asked by `AreLegal` and again on resolution, where a control change makes it
+  illegal. "If both targets are still legal" is `If(Both(Matches(Target(0), …), Matches(Target(1), …)))`: an illegal
+  target reads as nothing.
+- **Escape from a permanent's rule** (Underworld Breach: "each nonland card in your graveyard has escape … its mana
+  cost plus exile three other cards from your graveyard") is `MayPlayFromZone(Graveyard, !Is.Land) { AnyTime, Costs }`
+  — the permission's costs join `CastSpellAction.CostsOf` for the player it lets cast (never a cast during a
+  resolution); `ExileFromGraveyardCost(!Is.Source) { Count = 3 }` is picked after casting, as Drivnod's. Not flashback:
+  `ByPermission`, so the spell goes back to the graveyard and may escape again.
+- **"During any turn you [condition], you may cast that card"** (Robber of the Rich) is `PlayPermission { Forever, If,
+  CastOnly }` → `PlayableFromExile.If`, judged by `Playable.IsImpulsePlayableBy` with the player it names as "you"
+  (the exiled card's own controller is its owner, the opponent); `CastOnly` never lets a land be played.
 - **Beam me up** (TRK) is a `FlashbackComponent` whose cost beside the mana is `ReturnToHandCost(Is.Creature)` — return a
   creature you control (`CastSpellAction.ReturnId`, one cast per creature) — so it is cast and exiled as
   flashback is (`TrkCards.BeamMeUp`). Marooned's `EnchantedCantBeBeamedUp` takes its creature out of the

@@ -84,10 +84,19 @@ public record Both(Condition A, Condition B) : Condition
 /// </summary>
 public record SubtypeEnteredThisTurn(ImmutableArray<string> Subtypes) : Condition
 {
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		s.GetPlayer((int)context[ContextKeys.Controller])
-			.ThisTurn.SubtypesEntered.Intersect(Subtypes)
+	/// <summary>
+	/// Robber of the Rich: "During any turn you attacked with a Rogue" — one of these subtypes ATTACKED under your
+	/// control this turn instead (TurnTally.SubtypesAttacked), even if it has left since.
+	/// </summary>
+	public bool Attacked { get; init; }
+
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var tally = s.GetPlayer((int)context[ContextKeys.Controller]).ThisTurn;
+		return (Attacked ? tally.SubtypesAttacked : tally.SubtypesEntered)
+			.Intersect(Subtypes)
 			.Any();
+	}
 }
 
 public static class Conditions
@@ -212,6 +221,12 @@ public record TargetChosen(int Index) : Condition
 /// <summary>Eye of Jace: "if there are seven or more cards in your graveyard".</summary>
 public record AtLeast(Count Count, int N) : Condition
 {
+	/// <summary>
+	/// Robber of the Rich: "if defending player has more cards in hand than you" — at least N more than this count
+	/// (their hand, 1, MoreThan your hand).
+	/// </summary>
+	public Count? MoreThan { get; init; }
+
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Count.Value(s, context) >= N;
+		Count.Value(s, context) >= N + (MoreThan?.Value(s, context) ?? 0);
 }

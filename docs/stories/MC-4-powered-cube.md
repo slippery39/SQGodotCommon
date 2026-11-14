@@ -198,7 +198,21 @@ as his three priorities.
 - 2026-11-13, Claude — **Open (for Shayne): the AI never discards to Tersa's "discard up to two".** `GreedyAi` answers a
   hand choice with its minimum unless it is "up to one", so an "up to two" is answered with none: the AI's Tersa
   draws nothing. Default: left to the AI lane (a rule for "up to N" hand choices — discard the cards it values least
-  below what a draw is worth); Tersa still plays, only her looting is lost.
+  below what a draw is worth); Tersa still plays, only her looting is lost. **Shayne, 2026-11-14: backlog for now** —
+  AI-19.24.
+- 2026-11-14, Claude — **4.4c2b's options**, each on the piece the card reads as (MC-6's rule; no new piece):
+  `AtNextEndStep.On` a permanent on the battlefield, in `MoveChosen.Then` with `ForGood` haste (Sneak Attack);
+  `ManaAbilityComponent.OrColor` + `TapForManaAction.OfTheOther`, one move per Forest × split — 4 per Forest, 16 with
+  four (Orcish Lumberjack); `ModeChoice.Repeats` (Fiery Confluence: 10 mode sets; a repeated mode's target word is
+  `NotThePrevious`, so n artifacts make C(n,2)+C(n,3) casts for the destroy modes, not n² + n³ — 286 against 12, not
+  1,872); `DealDamage.Then` with `Ref.ThisWay`, `LifeTotalCantChange { GainOnly }` in a `ThisTurn { RestOfTheGame }`
+  (Screaming Nemesis); `TargetSpec.OfThePreviousTargetsController`, asked on choosing and on resolving (Goblin
+  Welder); `PlayPermission { If, CastOnly }`, `AtLeast.MoreThan`, `SubtypeEnteredThisTurn { Attacked }` on a new
+  `TurnTally.SubtypesAttacked` (Robber of the Rich); `MayPlayFromZone.Costs`, joined in `CastSpellAction.CostsOf`
+  (Underworld Breach's escape). Two lines the revert-check showed no test could see were taken out, not kept:
+  lifting the mode cap past the number of modes, and a second "that player's graveyard" filter in `Combinations`
+  (`AreLegal` already refuses). Ceilings (DesignNotes): the same artifact can't be Confluence'd twice; `OrColor` only
+  on a cost that picks; a card with its own flashback never escapes; Welder sacrifices, then returns.
 
 ## Tasks
 
@@ -245,22 +259,22 @@ as his three priorities.
             Magda, Tersa Lightshatter. Six options (Decisions); 7 tests, 9/9 breaks caught; `batch_checks.py` all 7 steps
             (golden-out unchanged; golden-in moved 29 random and 336 card-replay games, added 24; probe 150 games, none
             unfinished, every card used — Magda's search 3 times)
-      - [ ] MC-4.4c2b Options, 7 (Next)
+      - [x] MC-4.4c2b Options, 7 — done 2026-11-14: Sneak Attack, Orcish Lumberjack, Fiery Confluence, Screaming
+            Nemesis, Goblin Welder, Robber of the Rich, Underworld Breach. Seven options (Decisions); 10 tests, 24/24
+            breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged; golden-in moved 29 random and 451
+            card-replay games, added 28; probe 150 games, none unfinished, every card cast — the Lumberjack's mana
+            move isn't counted as an activation)
       - [ ] MC-4.4c2c Laelia — the zone-change event
       - [ ] MC-4.4c2d "Name Sticker" Goblin — entering from a zone, a die roll
       - [ ] MC-4.4c2e Pyrokinesis — damage divided among any number of targets
 
 ## Next
 
-MC-4.4c2b — seven options, each designed in Decisions (4.4c2's survey; the nearest code already read): Sneak Attack,
-Orcish Lumberjack, Fiery Confluence, Screaming Nemesis, Goblin Welder, Robber of the Rich, Underworld Breach. Notes
-from reading: `AtNextEndStep.On` keeps only graveyard cards today (widen to a permanent on the battlefield — a
-`DelayedTrigger` on a permanent is already read); `Modal.Choices`/`IsLegal` refuse repeats, `Compose` takes them;
-`TargetSpec.Combinations`/`AreLegal` are where Welder's "that player's graveyard" goes; `PlayableFromExile` has no `If`
-(judge it with the PERMISSION holder as controller — the card's own controller is the opponent); `CastSpellAction.CostsOf`
-adds no permission's costs (Breach's escape: add `Playable.ZonePermission(…).Rule.Costs` for a graveyard cast without
-its own flashback); `SubtypeEnteredThisTurn` reads `TurnTally.SubtypesEntered` (Robber: an attacked list beside it).
-Then 2c, 2d, 2e, each its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
+MC-4.4c2c — Laelia, the Blade Reforged: `LeftGraveyardEvent` generalised to a zone-change event with From/To
+(library→exile raised too, in `MagicState.MoveCard`), "one or more" as `Trigger.OneOrMore`; her attack trigger is
+`ExileTopPlayable { Play = ThisTurn }` (tested). Move the cards on `LeftGraveyardEvent` onto the generalised event.
+Then 2d ("Name Sticker" Goblin: `EnteredBattlefieldEvent.From`, a die roll), 2e (Pyrokinesis: the targets a choice
+after casting, as PerX's), each its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
@@ -291,3 +305,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-13 (cube lane, sprint 5 C5): MC-4.4c2a — red's 16 surveyed (13 options, 3 new rules; five parts), part a's
   six cards on six options; no recorded game moved by the engine; 137 of 528 play. For Shayne: one Open (the AI and
   "discard up to two").
+- 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2b — seven cards on seven options, no new piece; no recorded game moved
+  by the engine; 144 of 528 play. For Shayne: nothing Open.

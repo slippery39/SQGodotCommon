@@ -249,7 +249,7 @@ public static class MagicRules
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> unchosen = [([], [])];
 		// One cast per way to pay each cost that picks a card: "sacrifice … or pay {N}" (0 is paying),
 		// a behold (any one is the same play), Twinned Vision's flashback discard.
-		var costs = CastSpellAction.CostsOf(s, card, kicked, free);
+		var costs = CastSpellAction.CostsOf(s, card, kicked, free, player);
 		var sacrifices = CostList.Options(costs, CostSlot.Sacrifice, s, player, card.Id);
 		var beholds = CostList.Options(costs, CostSlot.Behold, s, player, card.Id);
 		var discards = CostList.Options(costs, CostSlot.Discard, s, player, card.Id);
@@ -321,12 +321,18 @@ public static class MagicRules
 				from id in CostList.Options(m.Costs, CostSlot.Sacrifice, s, player, card.Id)
 				where id != 0
 				from color in m.AnyOneColor ? ManaAbilities.AnyColor : [m.Color]
+				// Orcish Lumberjack: "any combination of {R} and/or {G}" — one move per split
+				from other in Enumerable.Range(
+					0,
+					m.OrColor is null ? 1 : m.Amount.Value(s, Conditions.Of(card)) + 1
+				)
 				select new TapForManaAction
 				{
 					PlayerId = player,
 					CardId = card.Id,
 					Color = color,
 					SacrificeId = id,
+					OfTheOther = other,
 				}
 			);
 

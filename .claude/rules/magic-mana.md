@@ -43,6 +43,10 @@ whose subsystem it lives in.
   abilities differ in restriction** (the Halfling's free {C} beside its legendary-only colours) is answered per payment:
   `YieldOf(…, paying)` leaves out the abilities whose mana can't pay for that spell; tapped by hand, a colour its
   restricted yield lacks comes from its unrestricted abilities (`TapForManaAction.YieldFor`).
+- **"Add three mana in any combination of {R} and/or {G}"** (Orcish Lumberjack: "{T}, Sacrifice a Forest") is
+  `ManaAbilityComponent { Amount = 3, OrColor }` on an ability whose cost picks a card: one move per Forest × split
+  (`TapForManaAction.OfTheOther`, how many units are the other colour — 4 splits of three), the mana floating. A plain
+  {T} ability doesn't read `OrColor` (DesignNotes).
 - **A mana ability of a card in the HAND** (the Spirit Guides: "Exile this card from your hand: Add {G}") is
   `ManaAbilityComponent.From = Hand` with `Costs = [ExileSelfCost]` — `ManaAbilities.AbilitiesOf(…, from)` keeps each
   zone's apart, so it is no mana on the battlefield. `ManaPayment.Find` spends it only when the battlefield can't pay,

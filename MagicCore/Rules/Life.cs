@@ -9,7 +9,7 @@ public static class Life
 {
 	public static GameState Gain(GameState s, int playerId, int amount)
 	{
-		if (amount <= 0 || CantChange(s, playerId))
+		if (amount <= 0 || s.ThisTurnEffects<LifeTotalCantChange>(playerId).Any()) // Screaming Nemesis' "can't gain life" too
 			return s;
 		var player = s.GetPlayer(playerId);
 		return s.WithPlayer(player with { Life = player.Life + amount })
@@ -32,7 +32,8 @@ public static class Life
 
 	/// <summary>Flare of Fortitude: "your life total can't change" — no gain, no loss, damage still dealt (CR 119.7).</summary>
 	public static bool CantChange(GameState s, int playerId) =>
-		s.ThisTurnEffects<LifeTotalCantChange>(playerId).Any();
+		s.ThisTurnEffects<LifeTotalCantChange>(playerId)
+			.Any(c => !c.GetComponent<LifeTotalCantChange>()!.GainOnly);
 
 	/// <summary>
 	/// THE "may this player pay that much life": only with at least that much (CR 119.4), and never while

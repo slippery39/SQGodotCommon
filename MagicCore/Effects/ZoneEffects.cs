@@ -1682,6 +1682,12 @@ public record PlayPermission
 	/// </summary>
 	public bool UntilYourNextEndStep { get; init; }
 
+	/// <summary>Robber of the Rich: "During any turn you attacked with a Rogue, you may cast that card" — while it holds.</summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Robber of the Rich: "you may CAST that card" — a land exiled this way is never played.</summary>
+	public bool CastOnly { get; init; }
+
 	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
 	public PlayableFromExile For(GameState s, int who) =>
 		new(
@@ -1696,6 +1702,8 @@ public record PlayPermission
 		)
 		{
 			AnyType = AnyType,
+			If = If,
+			CastOnly = CastOnly,
 		};
 }
 

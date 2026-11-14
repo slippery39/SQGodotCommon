@@ -127,11 +127,16 @@ public record CastSpellAction : GameAction
 		GameState s,
 		Card card,
 		bool kicked = false,
-		ImmutableList<AdditionalCost>? free = null
+		ImmutableList<AdditionalCost>? free = null,
+		int permissionOf = 0
 	) =>
 		[
 			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
 			.. Costs.Flashback(s, card)?.Costs ?? [],
+			// Underworld Breach's escape: what the rule letting this player cast it from where it is asks
+			.. permissionOf == 0
+				? []
+				: Playable.ZonePermission(s, card, permissionOf)?.Rule.Costs ?? [],
 			.. kicked ? card.GetComponent<KickerComponent>()?.Costs ?? [] : [],
 			.. free ?? [],
 		];
@@ -144,7 +149,8 @@ public record CastSpellAction : GameAction
 			Kicked,
 			WithoutPayingManaCost && !DuringResolution
 				? Playable.FreeCosts(s, card, PlayerId)
-				: null
+				: null,
+			DuringResolution ? 0 : PlayerId
 		);
 
 	int Chosen(CostSlot slot) =>
@@ -882,7 +888,14 @@ public static class StackResolution
 			};
 
 		var legal = chosen
-			.Select((id, i) => id != 0 && specs[i].IsLegal(s, controller, sourceId, id) ? id : 0)
+			.Select(
+				(id, i) =>
+					id != 0
+					&& specs[i].IsLegal(s, controller, sourceId, id)
+					&& TargetSpec.FitsPrevious(s, specs[i], chosen, i) // Goblin Welder: still that player's graveyard
+						? id
+						: 0
+			)
 			.ToImmutableArray();
 		var fizzles = chosen.Any(id => id != 0) && legal.All(id => id == 0);
 

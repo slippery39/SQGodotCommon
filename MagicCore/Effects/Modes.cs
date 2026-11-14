@@ -35,6 +35,13 @@ public record ModeChoice
 	/// </summary>
 	public bool NotChosenBefore { get; init; }
 
+	/// <summary>
+	/// Fiery Confluence: "Choose three. You may choose the same mode more than once." — a mode may repeat. Read for
+	/// spells and activated abilities (a trigger's ChooseModesChoice picks each once). ponytail: the most is still
+	/// capped at the number of modes (Range) — "choose four" of three would need that lifted.
+	/// </summary>
+	public bool Repeats { get; init; }
+
 	public static implicit operator ModeChoice(int n) => new() { AtLeast = n, AtMost = n };
 
 	/// <summary>
@@ -61,7 +68,7 @@ public record ModeChoice
 	)
 	{
 		var (least, most) = Range(s, source, modes.Count);
-		return Modal.IsLegal(modes, least, most, chosen);
+		return Modal.IsLegal(modes, least, most, chosen, Repeats);
 	}
 
 	public IEnumerable<ImmutableArray<int>> Choices(
@@ -71,7 +78,7 @@ public record ModeChoice
 	)
 	{
 		var (least, most) = Range(s, source, modes.Count);
-		return Modal.Choices(modes, least, most);
+		return Modal.Choices(modes, least, most, Repeats);
 	}
 }
 
@@ -98,30 +105,41 @@ public static class Modal
 			);
 		var specs = ImmutableList.CreateBuilder<TargetSpec>();
 		var steps = ImmutableList.CreateBuilder<GameAction>();
-		foreach (var mode in chosen.Order().Select(i => modes[i]))
+		var previous = -1;
+		foreach (var i in chosen.Order())
 		{
+			var mode = modes[i];
 			steps.Add(new ScopeTargetsAction(specs.Count, mode.Targets.Count));
 			steps.AddRange(mode.Effects);
-			specs.AddRange(mode.Targets);
+			// Fiery Confluence's "destroy target artifact" chosen twice: one cast per SET of artifacts, never per
+			// order. ponytail: so the same artifact can't be targeted twice (legal, never useful) — and a repeated
+			// mode with two target words would compare across them; give the repeat its own rule if a card has one.
+			specs.AddRange(
+				i == previous
+					? mode.Targets.Select(t => t with { NotThePrevious = true })
+					: mode.Targets
+			);
+			previous = i;
 		}
 		return (specs.ToImmutable(), steps.ToImmutable());
 	}
 
 	/// <summary>
-	/// A legal choice of modes: from <paramref name="least"/> to <paramref name="most"/> distinct, in
-	/// range — or none for a non-modal text.
+	/// A legal choice of modes: from <paramref name="least"/> to <paramref name="most"/> distinct (or
+	/// <paramref name="repeats"/>: any of them again, Fiery Confluence), in range — or none for a non-modal text.
 	/// </summary>
 	public static bool IsLegal(
 		ImmutableList<Mode> modes,
 		int least,
 		int most,
-		ImmutableArray<int> chosen
+		ImmutableArray<int> chosen,
+		bool repeats = false
 	) =>
 		modes.IsEmpty
 			? chosen.IsDefaultOrEmpty
 			: chosen.Length >= least
 				&& chosen.Length <= most
-				&& chosen.Distinct().Count() == chosen.Length
+				&& (repeats || chosen.Distinct().Count() == chosen.Length)
 				&& chosen.All(i => i >= 0 && i < modes.Count);
 
 	/// <summary>
@@ -131,7 +149,8 @@ public static class Modal
 	public static IEnumerable<ImmutableArray<int>> Choices(
 		ImmutableList<Mode> modes,
 		int least,
-		int most
+		int most,
+		bool repeats = false
 	)
 	{
 		if (modes.IsEmpty)
@@ -147,7 +166,9 @@ public static class Modal
 				]
 				: Enumerable
 					.Range(from, modes.Count - from)
-					.SelectMany(i => Pick(i + 1, left - 1).Select(rest => rest.Insert(0, i)));
+					.SelectMany(i =>
+						Pick(repeats ? i : i + 1, left - 1).Select(rest => rest.Insert(0, i))
+					);
 		// least past most is a mis-scripted card: no way to cast it, not a crash
 		return Enumerable.Range(least, Math.Max(0, most - least + 1)).SelectMany(n => Pick(0, n));
 	}

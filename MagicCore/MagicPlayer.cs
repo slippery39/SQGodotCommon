@@ -79,4 +79,7 @@ public record TurnTally
 
 	/// <summary>Sulu: "if an Equipment or Spacecraft entered the battlefield under your control this turn" — the subtypes of every permanent that entered under this player's control (MagicState.EnterBattlefield), kept though it left again.</summary>
 	public System.Collections.Immutable.ImmutableArray<string> SubtypesEntered { get; init; } = [];
+
+	/// <summary>Robber of the Rich: "any turn you attacked with a Rogue" — the subtypes of the creatures this player attacked with (FinishAttackersAction).</summary>
+	public System.Collections.Immutable.ImmutableArray<string> SubtypesAttacked { get; init; } = [];
 }

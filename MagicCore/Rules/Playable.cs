@@ -28,7 +28,12 @@ public static class Playable
 		s.IsIn(card.Id, card.OwnerId, ZoneType.Exile)
 		&& card.GetComponent<PlayableFromExile>() is { } playable
 		&& playable.PlayerId == playerId
-		&& s.GetGame().TurnNumber <= playable.UntilTurn;
+		&& s.GetGame().TurnNumber <= playable.UntilTurn
+		&& !(playable.CastOnly && card.Is(CardType.Land))
+		&& (
+			playable.If is null
+			|| playable.If.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
+		);
 
 	public static bool CanCastFromHere(GameState s, Card card, int playerId) =>
 		(

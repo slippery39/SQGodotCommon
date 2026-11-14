@@ -49,6 +49,12 @@ public record TargetSpec(From From, Filter? Filter = null)
 	public bool NotThePrevious { get; init; }
 
 	/// <summary>
+	/// Goblin Welder: "target artifact a player controls and target artifact card in THAT PLAYER's graveyard" — this
+	/// word's card is owned by the controller of the target before it. Asked on choosing (AreLegal) and resolving.
+	/// </summary>
+	public bool OfThePreviousTargetsController { get; init; }
+
+	/// <summary>
 	/// Dominion Infiltration: "Choose X target creatures your opponents control" — this word X times, X as
 	/// cast, each a different object: one cast per SET, never per order (StackResolution.TextOf).
 	/// </summary>
@@ -216,6 +222,24 @@ public record TargetSpec(From From, Filter? Filter = null)
 		return combos;
 	}
 
+	/// <summary>Goblin Welder's "in that player's graveyard": target i's owner controls the target before it.</summary>
+	public static bool FitsPrevious(
+		GameState s,
+		TargetSpec spec,
+		ImmutableArray<int> targets,
+		int i
+	) =>
+		!spec.OfThePreviousTargetsController
+		|| i == 0
+		|| targets[i] == 0
+		|| (
+			s.HasObject(targets[i])
+			&& s.HasObject(targets[i - 1])
+			&& s.GetObject(targets[i]) is Cards.Card card
+			&& s.GetObject(targets[i - 1]) is Cards.Card before
+			&& card.OwnerId == before.ControllerId
+		);
+
 	/// <summary>Chosen targets fit the specs: one per word, each legal, 0 only where optional — a
 	/// NotThePrevious word never repeats one before it (X targets are all different).</summary>
 	public static bool AreLegal(
@@ -233,6 +257,7 @@ public record TargetSpec(From From, Filter? Filter = null)
 						? spec.Optional
 						: spec.IsLegal(s, controllerId, sourceId, targets[i])
 							&& !(spec.NotThePrevious && targets[..i].Contains(targets[i]))
+							&& FitsPrevious(s, spec, targets, i)
 			)
 			.All(ok => ok);
 }

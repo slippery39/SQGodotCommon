@@ -137,6 +137,12 @@ public record TapForManaAction : GameAction
 	public int SacrificeId { get; init; }
 
 	/// <summary>
+	/// Orcish Lumberjack: "three mana in any combination of {R} and/or {G}" — how many of the units are the ability's
+	/// other colour (ManaAbilityComponent.OrColor); the rest are Color.
+	/// </summary>
+	public int OfTheOther { get; init; }
+
+	/// <summary>
 	/// What tapping it makes, for this colour: its yield, else what its unrestricted abilities make — Delighted
 	/// Halfling's {C}, beside its any colour for legendary spells.
 	/// </summary>
@@ -161,6 +167,13 @@ public record TapForManaAction : GameAction
 				s.IsIn(CardId, PlayerId, ZoneType.Battlefield)
 				&& Chosen(s) is { Cost: null } ability // ponytail: a mana cost beside a picked one isn't paid here — no card has both
 				&& (ability.AnyOneColor || ability.Color == Color)
+				&& OfTheOther >= 0
+				&& OfTheOther
+					<= (
+						ability.OrColor is null
+							? 0
+							: ability.Amount.Value(s, Conditions.Of(s.GetCard(CardId)))
+					)
 				&& ability.Costs.All(c => c.CanPay(s, PlayerId, CardId))
 				&& CostList
 					.Options(ability.Costs, CostSlot.Sacrifice, s, PlayerId, CardId)
@@ -224,15 +237,18 @@ public record TapForManaAction : GameAction
 			.Range(0, n)
 			.Aggregate(
 				player.ManaPool,
-				(p, _) =>
-					ability.Restriction == ManaRestriction.None
-						? p.Add(Color)
+				(p, i) =>
+				{
+					var color = i < n - OfTheOther ? Color : ability.OrColor ?? Color;
+					return ability.Restriction == ManaRestriction.None
+						? p.Add(color)
 						: p with
 						{
 							Restricted = p.Restricted.Add(
-								new RestrictedMana(Color, ability.Restriction)
+								new RestrictedMana(color, ability.Restriction)
 							),
-						}
+						};
+				}
 			);
 		return s.WithPlayer(player with { ManaPool = pool });
 	}

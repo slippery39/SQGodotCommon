@@ -146,7 +146,8 @@ public static class TurnStructure
 			// cleanup (CR 514.2), as the tally flags they replaced did; differs only if a cleanup
 			// gives priority. Move both into cleanup if a card ever cares.
 			foreach (var effect in s.ThisTurnEffects<Effects.ThisTurnEffect>(id).ToList())
-				s = s.RemoveObject(effect.Id);
+				if (!effect.HasComponent<Effects.RestOfTheGame>()) // Screaming Nemesis: "for the rest of the game"
+					s = s.RemoveObject(effect.Id);
 		}
 		s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0 });
 		return EndStep(s); // nobody gets priority during untap (CR 502.4)

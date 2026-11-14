@@ -218,6 +218,12 @@ public record FinishAttackersAction : GameAction
 			);
 			if (!s.Has(card, "Vigilance"))
 				s = s.Tap(id);
+			var subtypes = s.Subtypes(card);
+			if (subtypes.Except(s.GetPlayer(card.ControllerId).ThisTurn.SubtypesAttacked).Any())
+				s = s.Tally(
+					card.ControllerId,
+					t => t with { SubtypesAttacked = [.. t.SubtypesAttacked.Union(subtypes)] }
+				);
 			s = s.Raise(new AttackedEvent(id));
 		}
 		// "Whenever you attack": once for the whole declaration, however many attack.

@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 17/46 · uncommon 27/86 · rare 62/279 · mythic 23/108 · **137/528**
+**Playable:** common 18/46 · uncommon 27/86 · rare 65/279 · mythic 26/108 · **144/528**
 
 ### "Name Sticker" Goblin
 
@@ -413,7 +413,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}, Sacrifice a Forest: Add three mana in any combination of {R} and/or {G}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Orcish Lumberjack"] =
+[
+	new ManaAbilityComponent(ManaColor.Red)
+	{
+		Amount = 3,
+		OrColor = ManaColor.Green,
+		Costs = [new TapSelfCost(), new SacrificeCost(Is.Subtype("Forest"))],
+	},
+],
+```
 
 ### Ponder
 
@@ -1304,7 +1318,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Add {C}{C}.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2c2Tests
 
 ```csharp
 ["Sol Ring"] = [ColorlessMana(2)],
@@ -2567,7 +2581,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Fiery Confluence deals 2 damage to each opponent.  
 > • Destroy target artifact.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Fiery Confluence"] =
+[
+	ModalSpell(
+		"Fiery Confluence",
+		new()
+		{
+			AtLeast = 3,
+			AtMost = 3,
+			Repeats = true,
+		},
+		M([], new DealDamage(Ref.AllCreatures, 1)),
+		M([], new DealDamage(Ref.EachOpponent, 2)),
+		M([Target(Is.Artifact)], new Destroy(Ref.Target()))
+	),
+],
+```
 
 ### Fiery Islet
 
@@ -2773,7 +2807,45 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Choose target artifact a player controls and target artifact card in that player's graveyard. If both targets are still legal as this ability resolves, that player simultaneously sacrifices the artifact and returns the artifact card to the battlefield.
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2c2Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Both` — Sylvia Tilly: "you may pay {1} and exile a card from your graveyard" — asked only when…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Goblin Welder"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			// "If both targets are still legal as this ability resolves": one gone illegal reads as nothing
+			new If(
+				new Both(
+					new Matches(Ref.Target(0), Is.Artifact),
+					new Matches(Ref.Target(1), Is.Artifact)
+				),
+				[
+					new Sacrifice(Ref.Target(0)),
+					new MoveTo(Ref.Target(1), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+					},
+				]
+			),
+		]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets =
+		[
+			Target(Is.Artifact),
+			TargetSpec.InAnyGraveyard(Is.Artifact) with
+			{
+				OfThePreviousTargetsController = true,
+			},
+		],
+	},
+],
+```
 
 ### Godless Shrine
 
@@ -3186,7 +3258,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 		Power = 1,
 	},
 	When(
-		new Trigger(EventKind.BecameTapped) { Subject = Is.Yours & Is.Subtype("Dwarf") },
+		new Trigger(EventKind.BecameTapped)
+		{
+			Subject = Is.Yours & Is.Subtype("Dwarf"),
+		},
 		[],
 		CreateTreasure(1)
 	),
@@ -4453,7 +4528,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana cost plus exile three other cards from your graveyard. (You may cast cards from your graveyard for their escape cost.)  
 > At the beginning of the end step, sacrifice this enchantment.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileFromGraveyardCost` — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
+
+```csharp
+["Underworld Breach"] =
+[
+	// Escape: cast from your graveyard for its mana cost plus three other cards exiled from there
+	new MayPlayFromZone(ZoneType.Graveyard, !Is.Land)
+	{
+		AnyTime = true,
+		Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 3 }],
+	},
+	When(TriggerEvent.EachEndStep, [], new Sacrifice(Ref.Source)),
+],
+```
 
 ### Unexpectedly Absent
 
@@ -5740,7 +5830,40 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Reach, haste  
 > Whenever this creature attacks, if defending player has more cards in hand than you, exile the top card of their library. During any turn you attacked with a Rogue, you may cast that card and you may spend mana as though it were mana of any color to cast that spell.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SubtypeEnteredThisTurn` — The context a condition is judged in outside a resolving ability: a permanent and its…
+
+```csharp
+["Robber of the Rich"] =
+[
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new ExileTopPlayable
+		{
+			Of = Ref.EachOpponent,
+			Play = new()
+			{
+				Forever = true,
+				CastOnly = true,
+				AnyType = true,
+				If = new SubtypeEnteredThisTurn(["Rogue"]) { Attacked = true },
+			},
+		}
+	) with
+	{
+		// "if defending player has more cards in hand than you" — the one opponent
+		If = new AtLeast(
+			Count.NumberOf(Ref.All(ZoneType.Hand, of: Ref.EachOpponent)),
+			1
+		)
+		{
+			MoreThan = Count.NumberOf(Ref.CardsInYourHand),
+		},
+	},
+],
+```
 
 ### Screaming Nemesis
 
@@ -5749,7 +5872,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Haste  
 > Whenever this creature is dealt damage, it deals that much damage to any other target. If a player is dealt damage this way, they can't gain life for the rest of the game.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `LifeTotalCantChange` — Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RestOfTheGame` — Screaming Nemesis: "for the rest of the game" — marks a ThisTurn object the turn's end…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Screaming Nemesis"] =
+[
+	When(
+		TriggerEvent.SelfDealtDamage,
+		[TargetSpec.AnyTarget(!Is.Source)],
+		new DealDamage(Ref.Target(), Count.X)
+		{
+			Then =
+			[
+				new ThisTurn(new LifeTotalCantChange { GainOnly = true })
+				{
+					On = Ref.ThisWay,
+					RestOfTheGame = true,
+				},
+			],
+		}
+	),
+],
+```
 
 ### Seasoned Cryomancer
 
@@ -5888,7 +6034,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {R}: You may put a creature card from your hand onto the battlefield. That creature gains haste. Sacrifice the creature at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
+
+```csharp
+["Sneak Attack"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{R}"),
+		[
+			new MoveChosen(ZoneType.Hand, Is.Creature, ZoneType.Battlefield)
+			{
+				May = true,
+				Then =
+				[
+					// "That creature gains haste." — no duration: while it stays that permanent
+					new ModifyUntilEndOfTurn(Ref.Chosen, 0, 0, "Haste")
+					{
+						ForGood = true,
+					},
+					new AtNextEndStep([new Sacrifice(Ref.Source)]) { On = Ref.Chosen },
+				],
+			},
+		]
+	),
+],
+```
 
 ### Solitude
 

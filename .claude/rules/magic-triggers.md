@@ -33,7 +33,9 @@ whose subsystem it lives in.
   `ControlledSinceTurn`, which a control change would also move — it is gone once the permanent leaves.
   **"A [subtype] entered under your control this turn"**, even one that left again (Sulu), is
   `SubtypeEnteredThisTurn`, read from `TurnTally.SubtypesEntered` (written by `EnterBattlefield`). **"Attacked this turn"** is
-  `Card.AttackedOnTurn`, stamped as attackers are declared.
+  `Card.AttackedOnTurn`, stamped as attackers are declared. **"During any turn you attacked with a Rogue"** (Robber of
+  the Rich) is the same condition `{ Attacked }`, read from `TurnTally.SubtypesAttacked` (written as attackers are
+  declared) — true after the Rogue has left.
 - **"Doesn't untap during its controller's untap step"** is ONE piece, `DoesntUntap(filter)` (MC-6.15): the HOLDER's
   rule over what its filter matches, from its side — Traxos' own (`Is.Source`), Infinite Coursework's and Marooned's
   (`Is.AttachedToSource`) — read with `AbilitiesOf` on the holder, so Traxos losing all abilities untaps while the
@@ -76,7 +78,9 @@ whose subsystem it lives in.
   On a card it EXILED (`Flicker.AtNextEndStep`, Ghost of Illyria: "return that card at the beginning of the
   next end step") `Triggers.Collect` reads that one component there, never the exiled card's own abilities —
   and on a card that DIED (`AtNextEndStep.On`, Dr. McCoy: "return that card … at the beginning of the next
-  end step"), read in the graveyard the same way; leaving the graveyard strips it (a new object).
+  end step"), read in the graveyard the same way; leaving the graveyard strips it (a new object) — or on a
+  permanent on the battlefield (Sneak Attack: "Sacrifice the creature at the beginning of the next end step",
+  `On = Ref.Chosen` in `MoveChosen.Then`; its "gains haste" with no duration is `ModifyUntilEndOfTurn.ForGood`).
   With no card to hold it ("return a land you control", Erica Ortegas) it is `AtNextEndStep`: an object in
   your command zone, removed once it has resolved. Set up during the end step, either waits for the next turn's.
   **"At the beginning of your next main phase"** (Mana Drain) is `AtNextEndStep { NextMainPhase }`: your precombat main,

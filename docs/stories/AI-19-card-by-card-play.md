@@ -240,6 +240,10 @@ Open questions:
       30/30 left are inside won lines (a turn-end-board tie-break, an exact tie). Remain: Cold-Blooded Crew held (3), 30/30
       in three new positions; Mikaeus tapping in his own turn (5), 24/30 in a new one, not a tie; stations with an
       attacker, 20 → 20. S1 rose (105 → 132), spread thin, not traced to the potential score.
+- [ ] AI-19.24 Tersa Lightshatter (LSV cube, MC-4.4c2a): "discard up to two cards, then draw that many" — `GreedyAi`
+      answers a hand choice with its minimum unless it is "up to one", so "up to two" is answered with none and the AI's
+      Tersa never loots. Wanted: a rule for "up to N" hand choices — discard the cards it values least below what a
+      draw is worth (Shayne, 2026-11-14: backlog for now; added from the cube lane).
 
 ## Next
 
@@ -254,6 +258,7 @@ boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-14: AI-19.24 — Tersa's "discard up to two" added from the cube lane (MC-4.4c2a's Open).
 - 2026-11-11: AI-19.23 — the scan rerun after AI-13.11/13.12 on the same 300 seeds; the VALUE items re-decided under 30
   guesses (findings, "the scan again").
 - 2026-11-11: AI-19.23 — the misplay scan built (BlunderLint on TRK sealed, records kept and read, S1–S6) and run on 300
