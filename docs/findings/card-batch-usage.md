@@ -64,3 +64,4 @@ after the split is DEV-4.3.
 | 2026-11-14 | MC-4.4c2c: Laelia, the zone-change event, 1 card | 743a66fb | 70 | 230k | 2.5M |
 | 2026-11-14 | MC-4.4c2d: "Name Sticker" Goblin - NotFrom on the entry event, RollDie, 1 card | 909c1a69 | 45 | 170k | 1.5M |
 | 2026-11-14 | MC-4.4c2e: Pyrokinesis - TargetSpec.Divide, Pure Energy moved onto it, 1 card | 909c1a69 | 78 | 213k | 2.8M |
+| 2026-11-14 | MC-4.4d1: white's tier 1 surveyed (36, five parts) and its tested pieces scripted, 21 cards | c4f7ec87 | 59 | 214k | 2.0M |

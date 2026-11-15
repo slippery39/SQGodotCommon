@@ -250,6 +250,43 @@ as his three priorities.
   the targets with ONE creature, whichever plays out best (never its own); splitting is AI-19.25 (backlog), and a
   ceiling (DesignNotes): one divided word, no modes.
 
+- 2026-11-14, Claude (cube lane) — **4.4d: white's tier 1 (36) read card by card: 22 are tested pieces, 14 need an
+  option; none needs a sibling piece** (MC-6's rule, each read against the nearest piece's code). Parts:
+  **d1** the 22 (list in Tasks) — a card whose FIRES test shows a missing option moves to d2;
+  **d2a** zones and tokens, 6 — Oust and Unexpectedly Absent (`MoveTo.OnTop` is the top or the bottom: "beneath the
+  top X" is a depth on it), Phelia (`Flicker { AtNextEndStep }` returns by a delayed trigger and runs nothing after:
+  "if it entered under your control" is a `Then`, as `MoveChosen`'s), Elspeth, Storm Slayer (`NumericReplacement` has
+  damage, counters, draw and mill: "twice that many tokens" is a `ReplacedEvent` row applied in `CreateTokens`, the
+  one place a token is made), Containment Priest (`PermanentsEnter` changes HOW a permanent enters: "exile it instead"
+  unless cast is an outcome on it, decided before the entry), Enduring Innocence (`MoveTo` returns a card as it is
+  printed: "it's an enchantment, not a creature" is a type it loses for good, stamped as assimilate's);
+  **d2b** restrictions and timing, 5 — Archon of Emeria, Voice of Victory and Clarion Conqueror
+  (`CantCastOrActivate` is everyone, spells AND abilities, during combat or always: whose, which of the two, of which
+  sources and when become its options, and `Combat.LockedDown` is told what is being cast or activated; Voice's
+  mobilize is `CreateTokens { Tapped, SacrificeAtNextEndStep }` plus entering attacking, `PermanentsEnter`'s word on
+  a token), The Wandering Emperor (`JaceLoyaltyAtInstantSpeed` is a this-turn flag for Jace planeswalkers: a filter
+  on it, and a permanent may hold it — Jace's Machinations moves onto it), Anointed Peacekeeper
+  (`ChoosesNameAsItEnters` names a nonland card unseen: looking at the hand first and any name are options;
+  `CostChange` taxes spells: abilities of sources a filter names is an option, read by `Costs.OfAbility`);
+  **d3** leaving the battlefield, 2 — Skyclave Apparition and Serra Paragon: `ChangedZoneEvent` is raised for a
+  graveyard and library → exile; "when this leaves the battlefield" and "put into a graveyard from the battlefield"
+  (any permanent, not only a creature dying) widen it in `MoveCard`, the one place — never a second event. Skyclave's
+  token is `CreateTokens { ControlledBy }` with a counted power and toughness; the Paragon's "it gains …" an option on
+  `MayPlayFromZone`, carried as `Finality` is;
+  **d4** Balance — `EachSacrifices` is one each and `Discard` a fixed number: "all but as many as the player with the
+  fewest" is a count on each (each player's choice, after the cast — never an action per set).
+- 2026-11-14, Claude — **4.4d1's notes.** Jacked Rabbit moved to d2a: its FIRES test showed ravenous' "if X is 5 or
+  more" never triggers — a trigger's intervening "if" is judged as it triggers with `Triggers.ContextOf`, which has no
+  X, while its effects get the X it was cast for (`QueueTargets`: `Source.CastX` for "when this enters"); the fix is one
+  X for both, an engine change, so not this script-only part. Its script: `EntersWithCountersComponent(Count.X)`,
+  `When(SelfEnters, draw) with { If = AtLeast(Count.X, 5) }`, `When(SelfAttacks, CreateTokens(Rabbit,
+  Count.PowerOf(Ref.Source)))`. The other 21 are scripts only (and one name, `CounterKinds.Story`): Thalia is
+  `CostChange { By = Whose.Any }`; Elite Spellbinder is Zero's script; Reprieve is `MoveTo { From = [Stack] }` (not a
+  counter: it takes an uncounterable spell too); battle cry and For Mirrodin! are scripted triggers (`CreateTokens.Then`
+  with `AttachSourceTo(Ref.ThisWay)`); Glimmer Lens' "and at least one other creature attack" is `Trigger.While` two
+  attackers; Sage of the Skies is `CopySpell(Ref.Source)` on its own cast trigger (the copy resolves into a token);
+  Staff of the Storyteller reads "create" as a creature token entering (a ceiling, DesignNotes).
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -309,15 +346,30 @@ as his three priorities.
             Pure Energy moved onto it (Decisions); 9 tests, 22/22 breaks caught; `batch_checks.py` all 7 steps
             (golden-out unchanged; golden-in moved 29 random and 71 card-replay games, added 4; probe 150 games, none
             unfinished, cast 522 times)
-  - [ ] MC-4.4d The next colour's tier 1 (the batch plan's step 5; red is done) — read card by card and split as red
-        was: the tested pieces first, then the options and new pieces
+  - [ ] MC-4.4d White's tier 1 (`LsvSurvey.md` lists 36), read card by card and split (Decisions):
+    - [x] MC-4.4d1 The tested pieces, 21 — done 2026-11-14: Thraben Inspector, Cathar Commando, Luminarch Aspirant,
+          Agent Bishop, Spectacular Spider-Man, Stoneforge Mystic, Thalia (Guardian of Thraben), Elite Spellbinder,
+          Loran, Sanguine Evangelist, Auriok Salvagers, Reprieve, Exorcise, Portable Hole, Leyline Binding, Lingering
+          Souls, Touch the Spirit Realm, Glimmer Lens, Staff of the Storyteller, Sage of the Skies, Enlightened Tutor.
+          Scripts only, no engine change (one name, `CounterKinds.Story`); 28 tests; `batch_checks.py` all 7 steps
+          (golden-out unchanged; golden-in moved 29 random and 1123 card-replay games, added 84; probe 150 games, none
+          unfinished, every card cast — its report lists the first 12 names, the other 9 probed in a second run)
+    - [ ] MC-4.4d2a Options, zones and tokens, 7: Oust, Unexpectedly Absent, Phelia, Elspeth (Storm Slayer),
+          Containment Priest, Enduring Innocence, Jacked Rabbit (the entering X in a trigger's "if")
+    - [ ] MC-4.4d2b Options, restrictions and timing, 5: Archon of Emeria, Voice of Victory, Clarion Conqueror, The
+          Wandering Emperor, Anointed Peacekeeper
+    - [ ] MC-4.4d3 Leaving the battlefield, 2: Skyclave Apparition, Serra Paragon
+    - [ ] MC-4.4d4 Balance
 
 ## Next
 
-Red's tier 1 is done (4.4c). MC-4.4d, not started — the next colour's tier 1, in a NEW session: `python
-tools/survey.py lsv`, pick the colour (Shayne hasn't named one; default: white, the plan's order), read each card
-against the nearest piece's code and split it as red was — the tested pieces as one script-only commit, then the
-options, then a part per new rule. A FIRES test per scripted card. DEV-5 still open: the probe names no never-used
+Red's tier 1 is done (4.4c). MC-4.4d — white's tier 1 (Shayne, 2026-11-14) — is surveyed and split in five parts
+(Decisions, Tasks); **d1 is done: 168 of 528 play.** Next, each in a NEW session and in order: **d2a** (seven cards,
+six options — the 4.4d Decision names each piece and its option; start with Jacked Rabbit's fix, its script is in
+the 4.4d1 notes and its two tests are written there in words: X = 4 no card, X = 5 a card; a Rabbit per power), then
+d2b, d3, d4. The white tests are in `LsvBatch2dTests.cs` (its `UntapMyLands`: generic is paid with the Plains first).
+A FIRES test per scripted card. DEV-5 still open: `batch_checks.py`'s probe report lists only the first 12 cards
+named (probe the rest with `MAGIC_PROBE_CARDS`), the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
@@ -356,3 +408,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   From, `RollDie`; no recorded game moved by the engine; 146 of 528 play. For Shayne: nothing Open.
 - 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2e — Pyrokinesis; `TargetSpec.Divide`, Pure Energy moved onto it; red's
   tier 1 (4.4c) done; 147 of 528 play. For Shayne: nothing Open — which colour 4.4d takes is his (default: white).
+- 2026-11-14 (cube lane, sprint 5 C5): MC-4.4d1 — white's tier 1 surveyed (36: 21 tested pieces, 15 on options; five
+  parts) and its 21 script-only cards built; no engine change; 168 of 528 play. For Shayne: nothing Open.

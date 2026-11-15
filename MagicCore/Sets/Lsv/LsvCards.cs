@@ -903,7 +903,270 @@ public static class LsvCards
 					),
 				},
 			],
+			// ===== MC-4.4d1: white's tier 1, tested pieces =====
+			["Thraben Inspector"] = [When(TriggerEvent.SelfEnters, [], CreateClue(1))],
+			["Cathar Commando"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new Destroy(Ref.Target())])
+				{
+					Costs = [new SacrificeSelfCost()],
+					Targets = [Target(Is.Artifact | Is.Enchantment)],
+				},
+			],
+			["Luminarch Aspirant"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[Target(Is.Creature & Is.Yours)],
+					new PutCounters(Ref.Target(), 1)
+				),
+			],
+			["Agent Bishop, Man in Black"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[
+						Creature with
+						{
+							Optional = true,
+						},
+						Creature with
+						{
+							Optional = true,
+							NotThePrevious = true,
+						},
+					],
+					new PutCounters(Ref.EachTarget, 1)
+				),
+			],
+			["Spectacular Spider-Man"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Flying")]
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[
+						new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Hexproof"),
+						new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Indestructible"),
+					]
+				)
+				{
+					Costs = [new SacrificeSelfCost()],
+				},
+			],
+			["Stoneforge Mystic"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Artifact, ZoneType.Hand)
+					{
+						Subtype = "Equipment",
+						Reveal = true,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{W}"),
+					[
+						new MoveChosen(ZoneType.Hand, Is.Subtype("Equipment"), ZoneType.Battlefield)
+						{
+							May = true,
+						},
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Thalia, Guardian of Thraben"] = [new CostChange(1, !Is.Creature) { By = Whose.Any }],
+			["Elite Spellbinder"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+					{
+						Optional = true,
+						OwnerMayPlayTaxed = 2,
+					}
+				),
+			],
+			["Loran of the Third Path"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Artifact | Is.Enchantment) with { Optional = true }],
+					new Destroy(Ref.Target())
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new DrawCards(Ref.You, 1), new DrawCards(Ref.Target(), 1)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [TargetSpec.Player(Is.Opponents)],
+				},
+			],
+			["Sanguine Evangelist"] =
+			[
+				// Battle cry — "each other attacking creature gets +1/+0 until end of turn"
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new ModifyUntilEndOfTurn(
+						Ref.Permanents(Is.Creature & Is.Attacking & !Is.Source),
+						1,
+						0
+					)
+				),
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Bat, 1)),
+				When(TriggerEvent.SelfDies, [], new CreateTokens(Bat, 1)),
+			],
+			["Auriok Salvagers"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{W}"),
+					[new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }]
+				)
+				{
+					Targets = [TargetSpec.InYourGraveyard(Is.Artifact & Is.ManaValueAtMost(1))],
+				},
+			],
+			["Reprieve"] =
+			[
+				Spell(
+					[TargetSpec.Spell()],
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Stack] },
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Exorcise"] =
+			[
+				Spell(
+					[Target(Is.Artifact | Is.Enchantment | (Is.Creature & Is.PowerAtLeast(4)))],
+					new Exile(Ref.Target())
+				),
+			],
+			["Portable Hole"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Opponents & !Is.Land & Is.ManaValueAtMost(2))],
+					new ExileUntilSourceLeaves(Ref.Target())
+				),
+			],
+			["Leyline Binding"] =
+			[
+				// Domain — "costs {1} less to cast for each basic land type among lands you control"
+				new CostChange(Count.BasicLandTypesAmongLandsYouControl.Negated)
+				{
+					OnItself = true,
+				},
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Opponents & !Is.Land)],
+					new ExileUntilSourceLeaves(Ref.Target())
+				),
+			],
+			["Lingering Souls"] =
+			[
+				Spell([], new CreateTokens(Spirit, 2)),
+				new FlashbackComponent(ManaCost.Parse("{1}{B}")),
+			],
+			["Touch the Spirit Realm"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Artifact | Is.Creature) with { Optional = true }],
+					new ExileUntilSourceLeaves(Ref.Target())
+				),
+				// Channel — "{1}{W}, Discard this card:"
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{W}"),
+					[new Flicker(Ref.Target()) { AtNextEndStep = true }]
+				)
+				{
+					Costs = [new DiscardSelfCost()],
+					From = ZoneType.Hand,
+					Targets = [Target(Is.Artifact | Is.Creature)],
+				},
+			],
+
+			["Glimmer Lens"] =
+			[
+				// For Mirrodin! — "create a 2/2 red Rebel creature token, then attach this to it"
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new CreateTokens(Rebel, 1) { Then = [new AttachSourceTo(Ref.ThisWay)] }
+				),
+				When(
+					TriggerEvent.AttachedCreatureAttacks with
+					{
+						// "and at least one other creature attack"
+						While = new AtLeast(
+							Count.NumberOf(Ref.Permanents(Is.Creature & Is.Attacking)),
+							2
+						),
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+				Equip("{1}{W}"),
+			],
+			["Staff of the Storyteller"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Spirit, 1)),
+				// ponytail: "create" is read as a creature token ENTERING under your control — a copy of a
+				// creature spell resolving (Sage of the Skies) becomes a token without being created
+				// (CR 608.3f) and counts here too; give CreateTokens its own event if a card tells them apart.
+				When(
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Creature & Is.Token & Is.Yours,
+						OneOrMore = true,
+					},
+					[],
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Story }
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{W}"), [new DrawCards(Ref.You, 1)])
+				{
+					Costs =
+					[
+						new TapSelfCost(),
+						new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Story },
+					],
+				},
+			],
+			["Sage of the Skies"] =
+			[
+				When(TriggerEvent.SelfCast, [], new CopySpell(Ref.Source)) with
+				{
+					If = new AtLeast(Count.SpellsYouCastThisTurn, 2),
+				},
+			],
+			["Enlightened Tutor"] =
+			[
+				Spell(
+					[],
+					new SearchLibrary(CardType.Artifact | CardType.Enchantment, ZoneType.Library)
+					{
+						Reveal = true,
+					}
+				),
+			],
 		};
+
+	/// <summary>Sanguine Evangelist: "a 1/1 black Bat creature token with flying".</summary>
+	static CardData Bat => Token("Bat", "Creature — Bat", "1", "1", ["B"], ["Flying"]);
+
+	/// <summary>Lingering Souls, Staff of the Storyteller: "a 1/1 white Spirit creature token with flying".</summary>
+	static CardData Spirit => Token("Spirit", "Creature — Spirit", "1", "1", ["W"], ["Flying"]);
+
+	/// <summary>Glimmer Lens' For Mirrodin!: "a 2/2 red Rebel creature token".</summary>
+	static CardData Rebel => Token("Rebel", "Creature — Rebel", "2", "2", ["R"]);
 
 	/// <summary>Cori-Steel Cutter: "a 1/1 white Monk creature token with prowess".</summary>
 	static CardData Monk => Token("Monk", "Creature — Monk", "1", "1", ["W"]);

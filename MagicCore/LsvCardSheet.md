@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 19/46 · uncommon 27/86 · rare 67/279 · mythic 26/108 · **147/528**
+**Playable:** common 21/46 · uncommon 33/86 · rare 80/279 · mythic 26/108 · **168/528**
 
 ### "Name Sticker" Goblin
 
@@ -158,7 +158,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > {1}, Sacrifice this creature: Destroy target artifact or enchantment.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
+
+```csharp
+["Cathar Commando"] =
+[
+	new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new Destroy(Ref.Target())])
+	{
+		Costs = [new SacrificeSelfCost()],
+		Targets = [Target(Is.Artifact | Is.Enchantment)],
+	},
+],
+```
 
 ### Chain Lightning
 
@@ -581,7 +594,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+```csharp
+["Thraben Inspector"] = [When(TriggerEvent.SelfEnters, [], CreateClue(1))],
+```
 
 ### Treasure Cruise
 
@@ -686,7 +703,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {1}{W}: Return target artifact card with mana value 1 or less from your graveyard to your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Auriok Salvagers"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}{W}"),
+		[new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }]
+	)
+	{
+		Targets = [TargetSpec.InYourGraveyard(Is.Artifact & Is.ManaValueAtMost(1))],
+	},
+],
+```
 
 ### Basalt Monolith
 
@@ -927,7 +959,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile target artifact, enchantment, or creature with power 4 or greater.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Exorcise"] =
+[
+	Spell(
+		[Target(Is.Artifact | Is.Enchantment | (Is.Creature & Is.PowerAtLeast(4)))],
+		new Exile(Ref.Target())
+	),
+],
+```
 
 ### Expressive Iteration
 
@@ -1081,7 +1125,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Create two 1/1 white Spirit creature tokens with flying.  
 > Flashback {1}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `FlashbackComponent` — "Flashback [cost] (You may cast this card from your graveyard for its flashback cost.…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.
+
+```csharp
+["Lingering Souls"] =
+[
+	Spell([], new CreateTokens(Spirit, 2)),
+	new FlashbackComponent(ManaCost.Parse("{1}{B}")),
+],
+```
 
 ### Lotus Petal
 
@@ -1214,7 +1268,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this artifact enters, exile target nonland permanent an opponent controls with mana value 2 or less until this artifact leaves the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ExileUntilSourceLeaves` — "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Portable Hole"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Opponents & !Is.Land & Is.ManaValueAtMost(2))],
+		new ExileUntilSourceLeaves(Ref.Target())
+	),
+],
+```
 
 ### Prismatic Ending
 
@@ -1285,7 +1352,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Return target spell to its owner's hand.  
 > Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Reprieve"] =
+[
+	Spell(
+		[TargetSpec.Spell()],
+		new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Stack] },
+		new DrawCards(Ref.You, 1)
+	),
+],
+```
 
 ### Saheeli, Sublime Artificer
 
@@ -1585,7 +1665,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this enchantment enters, exile up to one target artifact or creature until this enchantment leaves the battlefield.  
 > Channel — {1}{W}, Discard this card: Exile target artifact or creature. Return it to the battlefield under its owner's control at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `Discard` — Each player named discards, choosing for themselves.; `DiscardSelfCost` — Cycling: "Discard this card:".; `ExileUntilSourceLeaves` — "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR…; `Flicker` — Flickering Hound: "exile [it], then return that card to the battlefield under its…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Touch the Spirit Realm"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Artifact | Is.Creature) with { Optional = true }],
+		new ExileUntilSourceLeaves(Ref.Target())
+	),
+	// Channel — "{1}{W}, Discard this card:"
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}{W}"),
+		[new Flicker(Ref.Target()) { AtNextEndStep = true }]
+	)
+	{
+		Costs = [new DiscardSelfCost()],
+		From = ZoneType.Hand,
+		Targets = [Target(Is.Artifact | Is.Creature)],
+	},
+],
+```
 
 ### Urza's Bauble
 
@@ -1679,7 +1782,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > At the beginning of combat on your turn, put a +1/+1 counter on each of up to two target creatures.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Agent Bishop, Man in Black"] =
+[
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn,
+		[
+			Creature with
+			{
+				Optional = true,
+			},
+			Creature with
+			{
+				Optional = true,
+				NotThePrevious = true,
+			},
+		],
+		new PutCounters(Ref.EachTarget, 1)
+	),
+],
+```
 
 ### Alpha Deathclaw
 
@@ -2436,7 +2562,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > When this creature enters, look at target opponent's hand. You may exile a nonland card from it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2} more to cast.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Elite Spellbinder"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Player(Is.Opponents)],
+		new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+		{
+			Optional = true,
+			OwnerMayPlayTaxed = 2,
+		}
+	),
+],
+```
 
 ### Emperor of Bones
 
@@ -2474,7 +2617,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Enlightened Tutor"] =
+[
+	Spell(
+		[],
+		new SearchLibrary(CardType.Artifact | CardType.Enchantment, ZoneType.Library)
+		{
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Entomb
 
@@ -2839,7 +2997,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever equipped creature and at least one other creature attack, draw a card.  
 > Equip {1}{W}
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `AttachSourceTo` — Equip: "Attach to target creature you control." This Equipment, to the target.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Glimmer Lens"] =
+[
+	// For Mirrodin! — "create a 2/2 red Rebel creature token, then attach this to it"
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new CreateTokens(Rebel, 1) { Then = [new AttachSourceTo(Ref.ThisWay)] }
+	),
+	When(
+		TriggerEvent.AttachedCreatureAttacks with
+		{
+			// "and at least one other creature attack"
+			While = new AtLeast(
+				Count.NumberOf(Ref.Permanents(Is.Creature & Is.Attacking)),
+				2
+			),
+		},
+		[],
+		new DrawCards(Ref.You, 1)
+	),
+	Equip("{1}{W}"),
+],
+```
 
 ### Goblin Welder
 
@@ -3234,7 +3419,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Domain — This spell costs {1} less to cast for each basic land type among lands you control.  
 > When this enchantment enters, exile target nonland permanent an opponent controls until this enchantment leaves the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileUntilSourceLeaves` — "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Leyline Binding"] =
+[
+	// Domain — "costs {1} less to cast for each basic land type among lands you control"
+	new CostChange(Count.BasicLandTypesAmongLandsYouControl.Negated)
+	{
+		OnItself = true,
+	},
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Opponents & !Is.Land)],
+		new ExileUntilSourceLeaves(Ref.Target())
+	),
+],
+```
 
 ### Lion Sash
 
@@ -3254,7 +3457,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Loran enters, destroy up to one target artifact or enchantment.  
 > {T}: You and target opponent each draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Loran of the Third Path"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Artifact | Is.Enchantment) with { Optional = true }],
+		new Destroy(Ref.Target())
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[new DrawCards(Ref.You, 1), new DrawCards(Ref.Target(), 1)]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [TargetSpec.Player(Is.Opponents)],
+	},
+],
+```
 
 ### Lotus Cobra
 
@@ -3270,7 +3494,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > At the beginning of combat on your turn, put a +1/+1 counter on target creature you control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Luminarch Aspirant"] =
+[
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn,
+		[Target(Is.Creature & Is.Yours)],
+		new PutCounters(Ref.Target(), 1)
+	),
+],
+```
 
 ### Lurrus of the Dream-Den
 
@@ -3850,7 +4087,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When you cast this spell, if you've cast another spell this turn, copy this spell. (The copy becomes a token.)  
 > Flying, lifelink
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sage of the Skies"] =
+[
+	When(TriggerEvent.SelfCast, [], new CopySpell(Ref.Source)) with
+	{
+		If = new AtLeast(Count.SpellsYouCastThisTurn, 2),
+	},
+],
+```
 
 ### Samut, Hazoret's Champion
 
@@ -3897,7 +4146,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)  
 > When this creature enters or dies, create a 1/1 black Bat creature token with flying.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sanguine Evangelist"] =
+[
+	// Battle cry — "each other attacking creature gets +1/+0 until end of turn"
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new ModifyUntilEndOfTurn(
+			Ref.Permanents(Is.Creature & Is.Attacking & !Is.Source),
+			1,
+			0
+		)
+	),
+	When(TriggerEvent.SelfEnters, [], new CreateTokens(Bat, 1)),
+	When(TriggerEvent.SelfDies, [], new CreateTokens(Bat, 1)),
+],
+```
 
 ### Savai Triome
 
@@ -4099,7 +4368,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {1}: Spectacular Spider-Man gains flying until end of turn.  
 > {1}, Sacrifice Spectacular Spider-Man: Creatures you control gain hexproof and indestructible until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
+
+```csharp
+["Spectacular Spider-Man"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Flying")]
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[
+			new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Hexproof"),
+			new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Indestructible"),
+		]
+	)
+	{
+		Costs = [new SacrificeSelfCost()],
+	},
+],
+```
 
 ### Sphinx of False Conclusions
 
@@ -4174,7 +4465,36 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you create one or more creature tokens, put a story counter on this artifact.  
 > {W}, {T}, Remove a story counter from this artifact: Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RemoveCountersCost` — "Remove N counters from among [Filter] you control" — Lieutenant Commander Data: "{1},…; `TapSelfCost` — "{T}:" — tap this permanent.; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Staff of the Storyteller"] =
+[
+	When(TriggerEvent.SelfEnters, [], new CreateTokens(Spirit, 1)),
+	// ponytail: "create" is read as a creature token ENTERING under your control — a copy of a
+	// creature spell resolving (Sage of the Skies) becomes a token without being created
+	// (CR 608.3f) and counts here too; give CreateTokens its own event if a card tells them apart.
+	When(
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Creature & Is.Token & Is.Yours,
+			OneOrMore = true,
+		},
+		[],
+		new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Story }
+	),
+	new ActivatedAbilityComponent(ManaCost.Parse("{W}"), [new DrawCards(Ref.You, 1)])
+	{
+		Costs =
+		[
+			new TapSelfCost(),
+			new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Story },
+		],
+	},
+],
+```
 
 ### Starting Town
 
@@ -4219,7 +4539,36 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you may search your library for an Equipment card, reveal it, put it into your hand, then shuffle.  
 > {1}{W}, {T}: You may put an Equipment card from your hand onto the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Stoneforge Mystic"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new SearchLibrary(CardType.Artifact, ZoneType.Hand)
+		{
+			Subtype = "Equipment",
+			Reveal = true,
+		}
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}{W}"),
+		[
+			new MoveChosen(ZoneType.Hand, Is.Subtype("Equipment"), ZoneType.Battlefield)
+			{
+				May = true,
+			},
+		]
+	)
+	{
+		Costs = [new TapSelfCost()],
+	},
+],
+```
 
 ### Strip Mine
 
@@ -4404,7 +4753,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > First strike  
 > Noncreature spells cost {1} more to cast.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…
+
+```csharp
+["Thalia, Guardian of Thraben"] = [new CostChange(1, !Is.Creature) { By = Whose.Any }],
+```
 
 ### Thassa's Oracle
 

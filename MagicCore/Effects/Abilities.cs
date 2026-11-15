@@ -49,6 +49,7 @@ public static class CounterKinds
 	public const string Quest = "quest";
 	public const string Promotion = "promotion";
 	public const string Peace = "peace"; // Peace in Our Time
+	public const string Story = "story"; // Staff of the Storyteller
 
 	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
 	public const string Indestructible = "indestructible";
