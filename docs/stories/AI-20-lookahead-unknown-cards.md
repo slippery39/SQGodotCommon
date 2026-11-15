@@ -168,6 +168,11 @@ built on top.
   think is best, im not fully following why all these are needed though". Claude's choice: point them at the old
   search (AI-20.7). His doubt stands - whether each patch is still needed at all is AI-20.5, and worth asking
   whether a lesson test needs a control once the play holds.
+- 2026-11-15, Shayne (the order, asked whether to deep-dive on option pricing now): "We will fix these immediate
+  issues first, then look into options pricing." Claude's case, which he agreed with ("makes perfect sense"): the
+  option price stands in for threats the look-ahead can't see - the imagined opponent never casts a card we haven't
+  seen (#213, his own diagnosis) - so prices tuned now are tuned against a look-ahead about to change. Order: the
+  small items, the opponent's unknown hand, the ten patches off, THEN option pricing on what is left.
 
 Open questions (for Shayne, before `ready`):
 - What counts as done: the flip rate down, the kept positions right, and a match not worse? (Proposed by Claude,
@@ -270,6 +275,10 @@ spell that does less (AI-20.8). 1595 tests pass; the suite's answers are accepte
    top card played both ways, or three ways ("a land of the missing colour", "another land", "not a land")?
 2. **His known-top-card case** (Decisions, 2026-11-15): no surveil bonus when the top card is already known and
    left there (`Evaluator.PendingSurveil` is flat). Needs a position first.
+2b. **The opponent's unknown hand** - the big one, and #213's root (`Records/ShayneNotesSeed1.json` #213: Extended
+   Absence spent on a 1/1 Yoshimaru, 8.0 against 7.7 for keeping it; "it won't get punished for it"). The imagined
+   opponent casts only cards we have seen (`KnownOnly`) and never draws a land. Interview first: what it casts
+   from its unseen hand, and how often. BEFORE any option-pricing work (Decisions, 2026-11-15).
 3. **The imagined opponent casts a spell for nothing** when no ability competes (his Boarding Action point:
    "spending 3 mana to discard a card for no reason" - the rollout's "no worse" rule, `Rollout.OurPlay`). "It
    doesn't need to be perfect": only with a position where it costs a decision.
@@ -287,8 +296,8 @@ To SEE a position on the table (he asked for the Patrol one):
 (`--resume-at` is the move number less one; build `SQGodotCommon.csproj` first - the table ran the old search until
 it was rebuilt; delete the `game_records` file the run writes, by name).
 
-After this story, as he ordered them: #24 and `LintTrkSeed1` #48 (land valuation - #48 answers "none" by 0.01 because
-the fetched land scores −0.20 in hand), then #213 (option pricing, AI-13).
+After these, as he ordered them: #24 and `LintTrkSeed1` #48 (land valuation - #48 answers "none" by 0.01 because
+the fetched land scores −0.20 in hand; independent of the above), then option pricing (AI-13) on what is left of #213.
 The code: `Hidden.Unknown` / `LandOdds` (`MagicCore/Ai/Hidden.cs`), `BeamSearchAi.RolloutScore`, `Rollout.Score`'s
 `landsDrawn`, `Rollout.OpponentStep` / `AbilityOver`. Read "AI-3's matrix" and the two AI-20 sections in
 `docs/findings/magic-ai.md`; the look-ahead's known limits are in `DesignNotes.md` ("MagicCore known ceilings").
@@ -341,3 +350,5 @@ Outside this story, found by the pre-commit review: on the table, Undo keeps the
   tests are green, 1595 pass. Not committed.
 - 2026-11-15: committed (`7b1f1f77`), then the match played again on Shayne's word, as committed: `beam` 54.0% ±
   1.5pp against `beam+shuffle` over 480 games (259-221), "better"; 2.20× the engine steps a decision.
+- 2026-11-15: the order set with Shayne: the immediate issues (the surveil, the opponent's unknown hand, the ten
+  patches) before option pricing.
