@@ -220,6 +220,20 @@ as his three priorities.
   draw raises nothing (a ceiling in the event's summary; the "to exile" test on the library case is that saving and
   no test can see it). No recorded game moved.
 
+- 2026-11-14, Claude — **4.4c2d: "Name Sticker" Goblin — one option, one new piece.** "Enters from" is an option:
+  `EnteredBattlefieldEvent.From` (the zone `EnterBattlefield` saw it leave — the stack for a resolving spell, null for
+  a token just made), read by `Trigger.From` and the new `Trigger.NotFrom` ("anywhere other than a graveyard or exile";
+  an `EventTest` case would have been an enum case per card phrase). The intervening "if" is tested pieces — but "if
+  it's on the battlefield" is `Matches(Ref.Permanents(Is.Source), …)`, not `Ref.Source`: a `Matches` reads a gone
+  source as it last was (the first script rolled for a Goblin killed in response; its test caught it). **The d20 is
+  `RollDie(sides, rows)`, new beside `FlipACoin`** — read first: `FlipACoin` is `IfWon`/`IfLost` on a fair `Next(2)`;
+  a die's result is a number read against a table of ranges of unequal width, so "sides" on it would leave won/lost
+  meaningless for a die and rows meaningless for a coin (two effects in one record), and the rules keep the two events
+  apart (CR 705 flip, 706 roll — "whenever you roll a die" never sees a flip). The die test's rows are out of order: in
+  order, a row's lower bound was a line no test could see. `tools/magic_docs.py` now finds a test naming a card
+  whose name has quotes. The probe: 2 of 150 random games ran past 300 permanents (its cap; none with Laelia named)
+  — random play spending the Goblin's 4–6 mana, not a loop of the Goblin's (it stops at ten).
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -272,19 +286,18 @@ as his three priorities.
             move isn't counted as an activation)
       - [x] MC-4.4c2c Laelia — the zone-change event — done 2026-11-14: `ChangedZoneEvent` (Decisions); 3 tests, 6/6
             behavioural breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged)
-      - [ ] MC-4.4c2d "Name Sticker" Goblin — entering from a zone, a die roll
+      - [x] MC-4.4c2d "Name Sticker" Goblin — entering from a zone, a die roll — done 2026-11-14: `Trigger.NotFrom`,
+            `RollDie` (Decisions); 8 tests, 14/14 breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged;
+            golden-in moved 29 random and 88 card-replay games, added 4; probe 150 games, 2 past 300 permanents)
       - [ ] MC-4.4c2e Pyrokinesis — damage divided among any number of targets
 
 ## Next
 
-MC-4.4c2d — "Name Sticker" Goblin: "enters from anywhere other than a graveyard or exile" needs where it came from
-(`EnteredBattlefieldEvent` has no From — `EnterBattlefield` knows the zone it leaves; a `Trigger.From`-style option,
-or an `EventTest`), "if it's on the battlefield and you control 9 or fewer creatures named …" is the trigger's `If`,
-and the d20 is a new effect beside `FlipACoin` (s.TakeRng; rows 1–6 / 7–14 / 15–20 add {R}×4/5/6 — say why
-`FlipACoin` can't take sides before building it). Then 2e (Pyrokinesis: damage divided among any number of targets —
+MC-4.4c2e — Pyrokinesis: damage divided among any number of targets —
 one cast, the targets and the split a choice after casting, as PerX's `ChooseXTargetsChoice`; its "exile a red card
-rather than pay" is `MayCastFromHandFree(Is.Source) { Costs = [ExileFromHandCost(red)] }`, tested on Force of Will).
-Each its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
+rather than pay" is `MayCastFromHandFree(Is.Source) { Costs = [ExileFromHandCost(red)] }`, tested on Force of Will;
+Pure Energy's split (`TargetChosen`) generalised onto the same piece, not a sibling.
+Its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
@@ -319,3 +332,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   by the engine; 144 of 528 play. For Shayne: nothing Open.
 - 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2c — Laelia; the leave-graveyard event generalised to a zone change with
   From/To, Vash and Blastoneuron moved onto it; 145 of 528 play. For Shayne: nothing Open.
+- 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2d — "Name Sticker" Goblin: `Trigger.NotFrom` on the entry event's new
+  From, `RollDie`; no recorded game moved by the engine; 146 of 528 play. For Shayne: nothing Open.

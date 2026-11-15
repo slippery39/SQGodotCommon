@@ -25,8 +25,13 @@ public abstract record MagicEvent : GameEvent
 }
 
 /// <param name="Types">What it was as it entered — Karn, Argent Defender asks, whatever it is by the next priority.</param>
+/// <param name="From">"Name Sticker" Goblin: "enters from anywhere other than a graveyard or exile" — the zone it left (Trigger.From, NotFrom); null for a token just made.</param>
 /// <summary>A permanent entered the battlefield — raised by MagicState.EnterBattlefield, the one way in.</summary>
-public record EnteredBattlefieldEvent(int CardId, CardType Types = CardType.None) : MagicEvent
+public record EnteredBattlefieldEvent(
+	int CardId,
+	CardType Types = CardType.None,
+	ZoneType? From = null
+) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.Entered;
 
@@ -702,17 +707,21 @@ public static class Triggers
 			&& (e is not SpellCastEvent numbered || numbered.SpellNumber != on.SpellNumber)
 		)
 			return false;
-		if (
-			on.From is { } zone
-			&& e switch
+		if (on.From is not null || !on.NotFrom.IsEmpty)
+		{
+			var from = e switch
 			{
 				SpellCastEvent cast => cast.From,
 				LandPlayedEvent land => land.From,
 				ChangedZoneEvent moved => moved.From,
+				EnteredBattlefieldEvent entered => entered.From,
 				_ => (ZoneType?)null,
-			} != zone
-		)
-			return false;
+			};
+			if (on.From is { } zone && from != zone)
+				return false;
+			if (from is { } left && on.NotFrom.Contains(left))
+				return false;
+		}
 		if (on.To is { } to && (e is not ChangedZoneEvent arrived || arrived.To != to))
 			return false;
 		if (

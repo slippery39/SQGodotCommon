@@ -226,7 +226,8 @@ def test_mentions(code):
     texts = {p.name: p.read_text(encoding="utf-8") for p in TESTS.rglob("*.cs") if "bin" not in p.parts and "obj" not in p.parts}
     for c in card_data(code):
         for fname, t in texts.items():
-            if f'"{c["name"]}"' in t:
+            # as C# writes it: "Name Sticker" Goblin's own quotes are escaped in a string
+            if '"' + c["name"].replace('"', '\\"') + '"' in t:
                 out[c["name"]].add(fname.removesuffix(".cs"))
     return out
 

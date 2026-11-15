@@ -382,13 +382,17 @@ public static class MagicState
 		int sunburst = 0
 	)
 	{
+		// "Name Sticker" Goblin: where it enters from — a token just made is in no zone
+		var from = s.GetParent(cardId) is { } parent
+			? (s.GetObject(parent) as Zone)?.ZoneType
+			: null;
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
 		// Mogis: its type change is there as it enters — no "whenever a creature enters" sees a creature.
 		s = Rules.Attachments.Retype(
 			s.UpdateObject(cardId, s.GetCard(cardId) with { ControllerId = controllerId }),
 			cardId
 		);
-		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types));
+		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types, from));
 		var card = s.GetCard(cardId);
 		var entersTapped = card.GetComponent<EntersTappedComponent>();
 		var rules = EntryRules(s, card with { ControllerId = controllerId });

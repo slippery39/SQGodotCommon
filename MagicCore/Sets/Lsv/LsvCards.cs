@@ -858,6 +858,42 @@ public static class LsvCards
 					new PutCounters(Ref.Source, 1)
 				),
 			],
+			// ===== MC-4.4c2d: entering from a zone, a die roll =====
+			["\"Name Sticker\" Goblin"] =
+			[
+				When(
+					TriggerEvent.SelfEnters with
+					{
+						NotFrom = [ZoneType.Graveyard, ZoneType.Exile],
+					},
+					[],
+					new RollDie(
+						20,
+						[
+							new(1, 6, [new AddMana(ManaColor.Red, 4)]),
+							new(7, 14, [new AddMana(ManaColor.Red, 5)]),
+							new(15, 20, [new AddMana(ManaColor.Red, 6)]),
+						]
+					)
+				) with
+				{
+					// "if it's on the battlefield and you control 9 or fewer creatures named …" — a
+					// permanent now: Ref.Source would read it as it last was once it is gone
+					If = new Both(
+						new Matches(Ref.Permanents(Is.Source), Is.AnyCard),
+						new Not(
+							new AtLeast(
+								Count.NumberOf(
+									Ref.Permanents(
+										Is.Creature & Is.Yours & Is.Named("\"Name Sticker\" Goblin")
+									)
+								),
+								10
+							)
+						)
+					),
+				},
+			],
 		};
 
 	/// <summary>Cori-Steel Cutter: "a 1/1 white Monk creature token with prowess".</summary>

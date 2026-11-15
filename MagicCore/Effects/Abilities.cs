@@ -252,18 +252,34 @@ public record Trigger(EventKind On)
 	/// <summary>
 	/// Prosper, Tome-Bound: "Whenever you play a card from exile" — a spell cast from, or a land played from,
 	/// this zone (SpellCastEvent.From, LandPlayedEvent.From). "Play" is both: two rows, as Isshin's are.
+	/// A permanent entering from it too (EnteredBattlefieldEvent.From).
 	/// </summary>
 	public ZoneType? From
 	{
 		get => from;
-		init =>
-			from =
-				value is null
-				|| On is EventKind.SpellCast or EventKind.LandPlayed or EventKind.ChangedZone
-					? value
-					: throw new ArgumentException(
-						$"From fits SpellCast, LandPlayed or ChangedZone, not {On}"
-					);
+		init => from = value is null || KnowsFrom ? value : throw FromDoesntFit("From");
+	}
+
+	bool KnowsFrom =>
+		On
+			is EventKind.SpellCast
+				or EventKind.LandPlayed
+				or EventKind.ChangedZone
+				or EventKind.Entered;
+
+	ArgumentException FromDoesntFit(string option) =>
+		new($"{option} fits SpellCast, LandPlayed, ChangedZone or Entered, not {On}");
+
+	readonly ImmutableList<ZoneType> notFrom = [];
+
+	/// <summary>
+	/// "Name Sticker" Goblin: "When this creature enters from anywhere other than a graveyard or exile" — the
+	/// zones the event's From must NOT be; a token just made came from no zone, so it triggers.
+	/// </summary>
+	public ImmutableList<ZoneType> NotFrom
+	{
+		get => notFrom;
+		init => notFrom = value.IsEmpty || KnowsFrom ? value : throw FromDoesntFit("NotFrom");
 	}
 
 	readonly ZoneType? to;

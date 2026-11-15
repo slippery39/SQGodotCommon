@@ -618,4 +618,124 @@ public class LsvBatch2c2Tests : FraBoardTest
 		Cast(Hand(Free("Purge", new MoveTo(Ref.CardsInYourGraveyard, ZoneType.Exile)), me), []);
 		Assert.That(HandCount(me), Nu.EqualTo(hand + 1), "and one that does still draws");
 	}
+
+	// ===== MC-4.4c2d =====
+
+	const string Goblin = "\"Name Sticker\" Goblin";
+
+	ManaPool Pool => s.GetPlayer(me).ManaPool;
+
+	[Test]
+	public void NameStickerGoblin_CastWithEightOthers_RollsForFourToSixRed()
+	{
+		for (var i = 0; i < 8; i++)
+			Field(Lsv(Goblin), me);
+		Cast(Hand(Lsv(Goblin), me), []);
+		Assert.That(
+			Pool.Red,
+			Nu.InRange(4, 6),
+			"9 or fewer, itself counted: 1-6 four, 7-14 five, 15-20 six"
+		);
+		Assert.That(Pool.Total, Nu.EqualTo(Pool.Red));
+	}
+
+	[Test]
+	public void NameStickerGoblin_TheTenth_RollsNothing()
+	{
+		for (var i = 0; i < 9; i++)
+			Field(Lsv(Goblin), me);
+		Cast(Hand(Lsv(Goblin), me), []);
+		Assert.That(Pool.Total, Nu.EqualTo(0), "ten creatures with that name");
+	}
+
+	[Test]
+	public void NameStickerGoblin_FromAGraveyardOrExile_Nothing_FromTheHandByAnEffect_Rolls()
+	{
+		(s, _) = TestGames.Put(s, me, Lsv(Goblin), ZoneType.Graveyard);
+		Cast(
+			Hand(Free("Raise", new MoveTo(Ref.CardsInYourGraveyard, ZoneType.Battlefield)), me),
+			[]
+		);
+		Assert.That(Pool.Total, Nu.EqualTo(0), "from a graveyard");
+		(s, _) = TestGames.Put(s, me, Lsv(Goblin), ZoneType.Exile);
+		Cast(
+			Hand(
+				Free(
+					"Recall",
+					new MoveTo(
+						Ref.All(ZoneType.Exile, MagicCore.Filters.Is.Creature, Ref.You),
+						ZoneType.Battlefield
+					)
+				),
+				me
+			),
+			[]
+		);
+		Assert.That(Pool.Total, Nu.EqualTo(0), "from exile");
+		foreach (var card in s.CardsIn(me, ZoneType.Hand).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(me, ZoneType.Graveyard));
+		Hand(Lsv(Goblin), me);
+		Cast(Hand(Free("Drop", new MoveTo(Ref.CardsInYourHand, ZoneType.Battlefield)), me), []);
+		Assert.That(
+			Pool.Red,
+			Nu.InRange(4, 6),
+			"put onto the battlefield from the hand: anywhere else"
+		);
+	}
+
+	[Test]
+	public void NameStickerGoblin_GoneBeforeItsTriggerResolves_Nothing()
+	{
+		var goblin = Hand(Lsv(Goblin), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = goblin });
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		Assert.That(
+			(Alive(goblin), s.StackIsEmpty()),
+			Nu.EqualTo((true, false)),
+			"its trigger waits"
+		);
+		Cast(Hand(Free("Wrath", new Destroy(Ref.CreaturesYouControl)), me), []);
+		Assert.That(Alive(goblin), Nu.False);
+		Assert.That(Pool.Total, Nu.EqualTo(0), "if it's on the battlefield");
+	}
+
+	[Test]
+	public void ATokenJustMade_EntersFromNoZone_SoTheGoblinsCopyRolls()
+	{
+		var goblin = Field(Lsv(Goblin), me);
+		Cast(Hand(Free("Twin", new CreateTokenCopy(Ref.CreaturesYouControl)), me), []);
+		Assert.That(Alive(goblin), Nu.True);
+		Assert.That(Pool.Red, Nu.InRange(4, 6));
+	}
+
+	[Test]
+	public void NotFrom_FitsOnlyAnEventThatKnowsWhereFrom()
+	{
+		Assert.That(
+			() => new Trigger(EventKind.Died) { NotFrom = [ZoneType.Exile] },
+			Throws.ArgumentException
+		);
+		Assert.That(() => new Trigger(EventKind.Entered) { From = ZoneType.Hand }, Throws.Nothing);
+	}
+
+	[Test]
+	public void RollDie_EveryRollLandsInExactlyOneRow_AndEachFaceComesUp()
+	{
+		var life = Life(me);
+		var die = new RollDie( // the rows out of order: a row is both its bounds
+			3,
+			[
+				new(2, 2, [new GainLife(Ref.You, 100)]),
+				new(1, 1, [new GainLife(Ref.You, 1)]),
+				new(3, 3, [new GainLife(Ref.You, 10000)]),
+			]
+		);
+		for (var i = 0; i < 60; i++)
+			Cast(Hand(Free("Roll", die), me), []);
+		var (threes, rest) = Math.DivRem(Life(me) - life, 10000);
+		var (twos, ones) = Math.DivRem(rest, 100);
+		Assert.That(ones + twos + threes, Nu.EqualTo(60), "one row a roll");
+		Assert.That(new[] { ones, twos, threes }, Has.All.GreaterThan(0), "each face comes up");
+	}
 }

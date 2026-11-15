@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 18/46 · uncommon 27/86 · rare 66/279 · mythic 26/108 · **145/528**
+**Playable:** common 19/46 · uncommon 27/86 · rare 66/279 · mythic 26/108 · **146/528**
 
 ### "Name Sticker" Goblin
 
@@ -16,7 +16,47 @@ How to write a script: `MagicCore/Cookbook.md`.
 > 7-14 | Add {R}{R}{R}{R}{R}.  
 > 15-20 | Add {R}{R}{R}{R}{R}{R}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Both` — Sylvia Tilly: "you may pay {1} and exile a card from your graveyard" — asked only when…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RollDie` — "Name Sticker" Goblin: "roll a 20-sided die. 1-6 | Add {R}{R}{R}{R}. 7-14 | … 15-20 | …"…
+
+```csharp
+["\"Name Sticker\" Goblin"] =
+[
+	When(
+		TriggerEvent.SelfEnters with
+		{
+			NotFrom = [ZoneType.Graveyard, ZoneType.Exile],
+		},
+		[],
+		new RollDie(
+			20,
+			[
+				new(1, 6, [new AddMana(ManaColor.Red, 4)]),
+				new(7, 14, [new AddMana(ManaColor.Red, 5)]),
+				new(15, 20, [new AddMana(ManaColor.Red, 6)]),
+			]
+		)
+	) with
+	{
+		// "if it's on the battlefield and you control 9 or fewer creatures named …" — a
+		// permanent now: Ref.Source would read it as it last was once it is gone
+		If = new Both(
+			new Matches(Ref.Permanents(Is.Source), Is.AnyCard),
+			new Not(
+				new AtLeast(
+					Count.NumberOf(
+						Ref.Permanents(
+							Is.Creature & Is.Yours & Is.Named("\"Name Sticker\" Goblin")
+						)
+					),
+					10
+				)
+			)
+		),
+	},
+],
+```
 
 ### Aether Spellbomb
 

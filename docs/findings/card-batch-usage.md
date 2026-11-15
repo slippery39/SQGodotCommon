@@ -62,3 +62,4 @@ after the split is DEV-4.3.
 | 2026-11-13 | MC-4.4c2a: LSVPower, red's options part a, 6 cards | 5b15092f | 106 | 241k | 4.0M |
 | 2026-11-14 | MC-4.4c2b: LSVPower, red's options part b, 7 cards | 743a66fb | 58 | 196k | 2.1M |
 | 2026-11-14 | MC-4.4c2c: Laelia, the zone-change event, 1 card | 743a66fb | 70 | 230k | 2.5M |
+| 2026-11-14 | MC-4.4c2d: "Name Sticker" Goblin - NotFrom on the entry event, RollDie, 1 card | 909c1a69 | 45 | 170k | 1.5M |

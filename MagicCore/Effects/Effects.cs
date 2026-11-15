@@ -1319,6 +1319,30 @@ public record FlipACoin(ImmutableList<GameAction> IfLost) : Effect
 	}
 }
 
+/// <summary>
+/// "Name Sticker" Goblin: "roll a 20-sided die. 1-6 | Add {R}{R}{R}{R}. 7-14 | … 15-20 | …" — one fair roll
+/// (CR 706) from the game's seeded random (s.TakeRng(), so a recorded game replays), then the steps of the row
+/// the result falls in, run as If's do. Not FlipACoin with sides: a flip is won or lost (CR 705), a roll is a
+/// number read against a table — and "whenever you roll a die" never sees a flip.
+/// </summary>
+public record RollDie(int Sides, ImmutableList<DieRow> Rows) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		(var rng, s) = s.TakeRng();
+		var rolled = rng.Next(Sides) + 1;
+		var steps = Rows.FirstOrDefault(r => r.From <= rolled && rolled <= r.To)?.Then ?? [];
+		return steps.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(new PipelineAction { Steps = steps, PipelineContext = InputContext })
+			);
+	}
+}
+
+/// <summary>"Name Sticker" Goblin: "7-14 | Add {R}{R}{R}{R}{R}." — a row of a die's table: the results From to To, and what happens.</summary>
+public record DieRow(int From, int To, ImmutableList<GameAction> Then);
+
 /// <summary>"If [condition], [effects]" — the effects run in order with this ability's context.</summary>
 public record If(Condition When, ImmutableList<GameAction> Then) : Effect
 {

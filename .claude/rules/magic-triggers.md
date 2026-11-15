@@ -164,6 +164,11 @@ whose subsystem it lives in.
   never "the turn before".
 - **"Your second spell each turn"** (Stella Lee) is `Trigger.SpellNumber = 2` against `SpellCastEvent.SpellNumber`,
   numbered as it is cast (any kind; `NoncreatureSpellNumber` beside it).
+- **"When this enters from anywhere other than a graveyard or exile"** ("Name Sticker" Goblin) is `Trigger.NotFrom`
+  against `EnteredBattlefieldEvent.From` — the zone `EnterBattlefield` saw it leave (a resolving spell: the stack;
+  null for a token just made, which no NotFrom refuses); `Trigger.From` reads it too. Its "if it's on the
+  battlefield" is `Matches(Ref.Permanents(Is.Source), …)` — a permanent NOW: `Ref.Source` in a `Matches` reads the
+  source as it last was once it is gone, so it would hold for a dead Goblin.
 - **"Whenever you play a card from [zone]"** (Prosper, Tome-Bound) is `Trigger.From` on two rows: a `SpellCast`
   (`SpellCastEvent.From`, the zone it was cast from) and a `LandPlayed` (`LandPlayedEvent`, raised by `PlayLandAction`
   alone — a land put onto the battlefield isn't played). A prepared copy isn't a card: `Subject = !Is.Copy`.
