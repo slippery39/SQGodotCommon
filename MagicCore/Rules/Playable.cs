@@ -35,7 +35,8 @@ public static class Playable
 			|| playable.If.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
 		);
 
-	public static bool CanCastFromHere(GameState s, Card card, int playerId) =>
+	/// <param name="x">The X it would be cast with: a permission's mana-value bound counts it (Serra Paragon).</param>
+	public static bool CanCastFromHere(GameState s, Card card, int playerId, int x = 0) =>
 		(
 			s.IsIn(card.Id, playerId, ZoneType.Hand)
 			|| (
@@ -45,7 +46,7 @@ public static class Playable
 					|| s.AbilitiesOf<MayCastThisFrom>(card).Any(m => m.From == ZoneType.Graveyard)
 				)
 			)
-			|| ZonePermission(s, card, playerId) is not null
+			|| ZonePermission(s, card, playerId, x) is not null
 			|| (
 				s.IsIn(card.Id, playerId, ZoneType.Exile)
 				&& !card.HasComponent<ExiledFaceDown>()
@@ -63,12 +64,17 @@ public static class Playable
 	/// not used this turn (<see cref="Card.PermissionUsedOn"/>). A card with its own way out of the graveyard
 	/// (flashback, beam me up, Storied Veteran) uses that. The filter and If are asked from the holder's side.
 	/// </summary>
+	/// <param name="x">Serra Paragon: "a permanent SPELL with mana value 3 or less" — the X it would be cast with
+	/// counts (CR 202.3e), so the rule's filter is asked of the card as that spell.</param>
 	public static (Card Holder, MayPlayFromZone Rule)? ZonePermission(
 		GameState s,
 		Card card,
-		int playerId
+		int playerId,
+		int x = 0
 	)
 	{
+		var spell =
+			x == 0 ? card : (Card)card.WithComponent(new Actions.OnStackComponent(x, [], []));
 		// Under the AI's every candidate: nothing to scan, or none that applies now, is the common answer.
 		var yourTurn = s.GetGame().ActivePlayerId == playerId;
 		var rules = ZoneRules(s, playerId).Where(r => yourTurn || r.Rule.AnyTime).ToList();
@@ -104,7 +110,7 @@ public static class Playable
 					: rule.Of is null ? owner == playerId
 					: rule.Of.Resolve(s, Conditions.Of(p)).Contains(owner)
 				)
-				&& rule.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id))
+				&& rule.What.Matches(s, spell, new Filters.FilterContext(playerId, p.Id))
 				&& (rule.If is null || rule.If.Holds(s, Conditions.Of(p)))
 			)
 			{

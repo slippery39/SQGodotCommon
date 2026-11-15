@@ -302,6 +302,31 @@ public class TrkBatch7aTests : FraBoardTest
 		);
 	}
 
+	[Test]
+	public void BorgCube_GoneWithItsAttackTriggerOnTheStack_StillAssimilatesWhatItExiled()
+	{
+		var cube = Field(Trk("Borg Cube"), me);
+		s = s.UpdateObject(cube, s.GetCard(cube) with { ChargeCounters = 12 }); // TEST SETUP: a creature
+		var link = new ExiledBy(cube, s.GetCard(cube).Incarnation);
+		int victim;
+		(s, victim) = TestGames.Put(s, them, Bear, ZoneType.Exile);
+		s = s.UpdateObject(victim, (Card)s.GetCard(victim).WithComponent(link)); // TEST SETUP: exiled with it
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is DeclareAttackerChoice);
+		while (s.GetPendingChoice() is DeclareAttackerChoice declare)
+			s = s.Choose(declare.CreatureId == cube ? [them] : [0]);
+		while (s.GetPendingChoice() is ChooseTargetChoice)
+			s = s.Choose([]);
+		Assert.That(s.StackIsEmpty(), Nu.False, "its attack trigger is on the stack");
+		// The Cube leaves in response: the ability is still that object's (CR 607.2a), MC-4.4d3.
+		s = s.MoveCard(cube, s.ZoneId(me, ZoneType.Graveyard));
+		Resolve();
+		Assert.That(
+			Alive(victim) && s.GetCard(victim).ControllerId == me,
+			Nu.True,
+			"assimilate a creature card exiled with it"
+		);
+	}
+
 	// ===== Control until end of turn =====
 
 	[Test]

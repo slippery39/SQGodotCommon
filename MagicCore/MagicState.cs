@@ -229,6 +229,22 @@ public static class MagicState
 			);
 		if (!leavesBattlefield)
 			return s;
+		// "Leaves the battlefield" (Skyclave Apparition), "put into a graveyard from the battlefield" (Serra
+		// Paragon): a permanent that reads its own leaving, a token too, to the zone it really went to —
+		// carried as it LAST was. Only such a one: an event staged for every Treasure sacrificed would cost
+		// every search node a Collect and another state-check round.
+		if (ReadsItsLeaving(before))
+			s = s.Raise(
+				new ChangedZoneEvent(
+					before.OwnerId,
+					cardId,
+					ZoneType.Battlefield,
+					((Zone)s.GetObject(zoneId)).ZoneType
+				)
+				{
+					LastKnown = before,
+				}
+			);
 
 		// "Dies" (CR 700.4): battlefield to graveyard. The event carries the card as it LAST was —
 		// its counters and controller — because the card in the graveyard is a new object.
@@ -262,6 +278,21 @@ public static class MagicState
 		foreach (var card in exiled)
 			s = s.EnterBattlefield(card.Id, card.OwnerId);
 		return s;
+	}
+
+	/// <summary>
+	/// Has it a "when this leaves the battlefield" of its own (TriggerEvent.SelfLeaves) — printed (Skyclave
+	/// Apparition) or gained (Serra Paragon's gift)? A plain loop: MoveCard asks it of every permanent leaving.
+	/// </summary>
+	static bool ReadsItsLeaving(Card card)
+	{
+		foreach (var c in card.Components)
+			if (
+				(c as TriggeredAbilityComponent ?? (c as UntilEndOfTurn)?.Trigger)?.On is
+				{ On: EventKind.ChangedZone, ReadFrom: ReadFrom.TheCardThatLeft }
+			)
+				return true;
+		return false;
 	}
 
 	/// <summary>
@@ -383,7 +414,8 @@ public static class MagicState
 		bool cast = false,
 		int sunburst = 0,
 		CardType loses = CardType.None,
-		bool attacking = false
+		bool attacking = false,
+		TriggeredAbilityComponent? gains = null
 	)
 	{
 		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
@@ -447,6 +479,15 @@ public static class MagicState
 				IsTapped = !landsUntapped && (tappedByOthers || tappedByItself),
 			}
 		);
+		// Serra Paragon: "If you do, it gains '[trigger]'" — for as long as it stays; a zone change ends it.
+		if (gains is not null)
+			s = s.UpdateObject(
+				cardId,
+				s.GetCard(cardId)
+					.WithComponent(
+						new UntilEndOfTurn { Trigger = gains, UntilTurnOf = UntilEndOfTurn.Never }
+					)
+			);
 		// Kira Nerys: "If a creature you control would enter while you control an attacking creature, instead
 		// it enters tapped and attacking."
 		// ponytail: "attacking" (a token made so) isn't asked whether there is a combat — mobilize only

@@ -300,6 +300,42 @@ public class TrkBatch7bTests : FraBoardTest
 	}
 
 	[Test]
+	public void AllGoodThings_GoneWithChapterIVOnTheStack_StillReadsWhatItExiled()
+	{
+		var saga = Field(Trk("All Good Things..."), me);
+		var was = s.GetCard(saga);
+		foreach (var _ in new[] { 1, 2 })
+		{
+			int card;
+			(s, card) = TestGames.Put(s, me, Bear, ZoneType.Exile);
+			s = s.UpdateObject(
+				card,
+				(Card)s.GetCard(card).WithComponent(new ExiledBy(saga, was.Incarnation)) // TEST SETUP: exiled with it
+			);
+		}
+		s = s.MoveCard(saga, s.ZoneId(me, ZoneType.Graveyard));
+		var itsAbility = System
+			.Collections.Immutable.ImmutableDictionary<string, object>.Empty.Add(
+				ContextKeys.Controller,
+				me
+			)
+			.Add(ContextKeys.Source, saga)
+			.Add(ContextKeys.SourceSnapshot, was);
+		Assert.That(
+			new ExiledWithSourceShareACardType().Holds(s, itsAbility),
+			"the ability is still that object's (CR 607.2a)"
+		);
+		Assert.That(
+			new ExiledWithSourceShareACardType().Holds(
+				s,
+				itsAbility.Remove(ContextKeys.SourceSnapshot)
+			),
+			Nu.False,
+			"the card in the graveyard is another object"
+		);
+	}
+
+	[Test]
 	public void AllGoodThings_ExiledCardsWithNoTypeInCommon_GainNothing()
 	{
 		var saga = Field(Trk("All Good Things..."), me);

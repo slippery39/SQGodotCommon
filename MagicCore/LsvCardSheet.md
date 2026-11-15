@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 21/46 · uncommon 34/86 · rare 89/279 · mythic 28/108 · **180/528**
+**Playable:** common 21/46 · uncommon 34/86 · rare 90/279 · mythic 29/108 · **182/528**
 
 ### "Name Sticker" Goblin
 
@@ -3499,12 +3499,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[],
 		new ExileTopPlayable { Play = new() { ThisTurn = true } }
 	),
-	// "from your library and/or your graveyard": the two moves the event is raised for
+	// "from your library and/or your graveyard": the event's moves but a permanent's off the battlefield
 	When(
 		new Trigger(EventKind.ChangedZone)
 		{
 			By = Whose.You,
 			To = ZoneType.Exile,
+			NotFrom = [ZoneType.Battlefield],
 			OneOrMore = true,
 		},
 		[],
@@ -4463,7 +4464,37 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less.  
 > When this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests, LsvBatch2dTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Skyclave Apparition"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[
+			Target(!Is.Land & !Is.Token & Is.Opponents & Is.ManaValueAtMost(4)) with
+			{
+				Optional = true,
+			},
+		],
+		new Exile(Ref.Target()) { Linked = true }
+	),
+	// "the exiled card": this object's, asked from the ability's source as it was — it has left
+	When(
+		TriggerEvent.SelfLeaves,
+		[],
+		new CreateTokens(Illusion, 1)
+		{
+			ControlledBy = Ref.OwnerOf(Ref.All(ZoneType.Exile, Is.ExiledBySource)),
+			Size = Count.GreatestManaValueOf(
+				Ref.All(ZoneType.Exile, Is.ExiledBySource)
+			),
+		}
+	),
+],
+```
 
 ### Smuggler's Copter
 
@@ -6618,7 +6649,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Once during each of your turns, you may play a land from your graveyard or cast a permanent spell with mana value 3 or less from your graveyard. If you do, it gains "When this permanent is put into a graveyard from the battlefield, exile it and you gain 2 life."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Serra Paragon"] =
+[
+	// "play a land … or cast a permanent spell with mana value 3 or less": a land's is 0
+	new MayPlayFromZone(
+		ZoneType.Graveyard,
+		Is.Type(PermanentTypes) & Is.ManaValueAtMost(3)
+	)
+	{
+		OncePerTurn = true,
+		Gains = When(
+			TriggerEvent.SelfLeaves with
+			{
+				To = ZoneType.Graveyard,
+			},
+			[],
+			new MoveTo(Ref.EventCard, ZoneType.Exile) { From = [ZoneType.Graveyard] },
+			new GainLife(Ref.You, 2)
+		),
+	},
+],
+```
 
 ### Sheoldred, the Apocalypse
 

@@ -31,6 +31,9 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>Overflow Submatrix: "that artifact creature enters with a finality counter on it".</summary>
 	public bool Finality { get; init; }
 
+	/// <summary>Serra Paragon: "If you do, it gains '[trigger]'" — the permission's gift (MayPlayFromZone.Gains), given as it enters.</summary>
+	public TriggeredAbilityComponent? Gains { get; init; }
+
 	/// <summary>Theorist's Proxy: this cast can't be countered — gone with the stack object, so a recast can be.</summary>
 	public bool CantBeCountered { get; init; }
 
@@ -261,7 +264,7 @@ public record CastSpellAction : GameAction
 			|| (
 				DuringResolution
 					? !Playable.CastRestrictionHolds(s, candidate, PlayerId)
-					: !Playable.CanCastFromHere(s, candidate, PlayerId)
+					: !Playable.CanCastFromHere(s, candidate, PlayerId, X)
 			)
 		)
 			return ValidationResult.Invalid("You may not cast that card from where it is");
@@ -417,6 +420,7 @@ public record CastSpellAction : GameAction
 						{
 							ByPermission = true,
 							Finality = permission.Value.Rule.Finality,
+							Gains = permission.Value.Rule.Gains,
 						}
 					)
 			);
@@ -894,6 +898,7 @@ public static class StackResolution
 										.Any(m => m is { From: ZoneType.Graveyard, Finality: true })
 									|| cast?.Finality == true
 								), // "it enters with a finality counter on it"
+							Gains = cast?.Gains,
 							Sunburst = permanent.HasComponent<Sunburst>()
 								? cast?.ColorsSpent ?? 0
 								: 0,
@@ -1168,6 +1173,9 @@ public record EnterFromStackAction(int CardId, int ControllerId, int X, int Atta
 	/// <summary>Sunburst: "This artifact enters with a charge counter on it for each color of mana spent to cast it."</summary>
 	public int Sunburst { get; init; }
 
+	/// <summary>Serra Paragon: the triggered ability it gains as it enters (OnStackComponent.Gains).</summary>
+	public TriggeredAbilityComponent? Gains { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.EnterBattlefield(
@@ -1177,7 +1185,8 @@ public record EnterFromStackAction(int CardId, int ControllerId, int X, int Atta
 				finality: Finality,
 				attachTo: AttachTo,
 				cast: Cast,
-				sunburst: Sunburst
+				sunburst: Sunburst,
+				gains: Gains
 			)
 		);
 }

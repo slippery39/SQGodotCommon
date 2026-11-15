@@ -98,10 +98,8 @@ public record PlayLandAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		// The Holodeck: "once during each of your turns" — a land played from the graveyard uses it.
-		if (
-			Rules.Playable.ZonePermission(s, s.GetCard(CardId), PlayerId) is
-			{ Rule.OncePerTurn: true, Holder: var holder }
-		)
+		var permission = Rules.Playable.ZonePermission(s, s.GetCard(CardId), PlayerId);
+		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
 				holder.Id,
 				holder with
@@ -110,7 +108,7 @@ public record PlayLandAction : GameAction
 				}
 			);
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
-		s = s.EnterBattlefield(CardId, PlayerId);
+		s = s.EnterBattlefield(CardId, PlayerId, gains: permission?.Rule.Gains); // Serra Paragon's gift
 		s = s.Tally(PlayerId, t => t with { LandsPlayed = t.LandsPlayed + 1 });
 		s = s.Raise(new LandPlayedEvent(PlayerId, CardId, from));
 		return new ActionResult(Priority.Retain(s, PlayerId));

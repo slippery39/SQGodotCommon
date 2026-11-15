@@ -120,7 +120,7 @@ public class FilterMigrationTests
 		RefKind.EachPlayer,
 		RefKind.Target,
 		RefKind.ControllerOfTarget,
-		RefKind.OwnerOfTarget,
+		RefKind.OwnerOf,
 		RefKind.Source,
 		RefKind.SourceHost, // keeps the Aura's last-known information
 		RefKind.EventCard,
@@ -627,6 +627,7 @@ public class FilterMigrationTests
 	static readonly Trigger[] ReadFromTheCard =
 	[
 		TriggerEvent.SelfDies, // the dying card as it last was
+		TriggerEvent.SelfLeaves, // the card that left the battlefield, as it last was
 		TriggerEvent.AttachedCreatureDies, // looks back through DiedEvent.Attached
 		TriggerEvent.SelfCast, // the spell on the stack
 		TriggerEvent.Reflexive, // put on the stack by WhenYouDo

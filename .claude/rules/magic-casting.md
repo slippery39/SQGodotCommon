@@ -203,7 +203,13 @@ whose subsystem it lives in.
   use stamps its permanent (`Card.PermissionUsedOn`). A graveyard cast this way is not
   flashback: the stack records `OnStackComponent.ByPermission`, so `MoveCard` doesn't exile it and it resolves
   onto the battlefield (`Finality`: with a finality counter). A card with its own way out of the graveyard uses
-  that. `Candidates` looks in the sideboard only while such a permanent says "outside the game".
+  that. `Candidates` looks in the sideboard only while such a permanent says "outside the game". **"If you do, it
+  gains '[triggered ability]'"** (Serra Paragon, MC-4.4d3) is its `Gains`, carried as `Finality` is — a spell's on
+  `OnStackComponent.Gains`, a land's by `PlayLandAction` — into `EnterBattlefield(gains:)`: an `UntilEndOfTurn
+  { Trigger }` that no turn ends, so the permanent has it until it leaves. "A land … or a permanent spell with mana
+  value 3 or less" is one filter (`Is.Type(PermanentTypes) & Is.ManaValueAtMost(3)`: a land's is 0), asked of the
+  card as the SPELL it would be — `Playable.ZonePermission(…, x)`, from the cast's validation: X counts on the
+  stack (CR 202.3e), so an X spell is offered only with an X that keeps it within the bound.
 - **"The first spell you've cast this game"** is stamped as it is cast (`OnStackComponent.FirstSpellThisGame`,
   from `MagicPlayer.SpellsCastThisGame`), read by `FirstSpellYouCastThisGame` — a copy wasn't cast.
 - **"You may cast this card from your graveyard / from exile"** is the card's own `MayCastThisFrom(From) { Finality }`

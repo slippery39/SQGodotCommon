@@ -424,6 +424,12 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>Tenured Tethermage: "create two tapped Heartwood tokens".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>
+	/// Skyclave Apparition: "an X/X blue Illusion creature token, where X is the mana value of the exiled card" —
+	/// the tokens' power and toughness, counted once as it resolves.
+	/// </summary>
+	public Count? Size { get; init; }
+
 	/// <summary>L'Rell, Fierce Visionary: "Sacrifice it at the beginning of the next end step." — set once it has entered.</summary>
 	public bool SacrificeAtNextEndStep { get; init; }
 
@@ -455,11 +461,10 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 			s.GetPlayer(controller),
 			Count.Value(s, InputContext)
 		);
-		var template = Instead(
-			s,
-			controller,
-			CardFactory.Create(new(Token, Abilities), controller)
-		);
+		var printed = CardFactory.Create(new(Token, Abilities), controller);
+		if (Size?.Value(s, InputContext) is { } size)
+			printed = printed with { BasePower = size, BaseToughness = size };
+		var template = Instead(s, controller, printed);
 		for (var i = 0; i < count; i++)
 		{
 			var token = template with { IsToken = true };
@@ -957,22 +962,11 @@ public record AssimilateExiledWithSource(ImmutableList<GameAction> IfYouCant) : 
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var source = Ref.Source.Resolve(s, InputContext).Any() ? Source(s) : null;
 		ImmutableList<int> linked =
-			source is null || !s.IsOnBattlefield(source.Id)
-				? []
-				:
-				[
-					.. new[] { s.Player1Id(), s.Player2Id() }
-						.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
-						.Where(c =>
-							c.Is(CardType.Creature)
-							&& c.GetComponent<ExiledBy>() is { } by
-							&& by.SourceId == source.Id
-							&& by.SourceIncarnation == source.Incarnation
-						)
-						.Select(c => c.Id),
-				];
+		[
+			.. Ref.All(ZoneType.Exile, Filters.Is.Creature & Filters.Is.ExiledBySource)
+				.Resolve(s, InputContext),
+		];
 		if (linked.IsEmpty)
 			return new(
 				s.SpawnAction(

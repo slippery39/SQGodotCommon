@@ -55,7 +55,8 @@ public static class ContextKeys
 		new(
 			(int)context[Controller],
 			context.TryGetValue(Source, out var source) ? (int)source : 0,
-			context.TryGetValue(EventCard, out var e) ? (int)e : 0
+			context.TryGetValue(EventCard, out var e) ? (int)e : 0,
+			context.GetValueOrDefault(SourceSnapshot) is Card was ? was.Incarnation : null
 		);
 }
 
@@ -66,7 +67,7 @@ public enum RefKind
 	EachPlayer,
 	Target,
 	ControllerOfTarget,
-	OwnerOfTarget, // Clash of Elements: "its owner" — wherever the card now is
+	OwnerOf, // Clash of Elements: "its owner" — of the cards a Ref names (Of), wherever they now are
 	Source,
 	SourceHost, // an Aura's "enchanted creature" — what the source is attached to
 	EventCard,
@@ -95,7 +96,7 @@ public record Ref(RefKind Kind, int Index = 0)
 
 	/// <summary>
 	/// For All: whose zone — Twisted Fates: "each creature target player controls" is Of =
-	/// Target(i); "your graveyard" is Of = You. None is every player's, yours first.
+	/// Target(i); "your graveyard" is Of = You. None is every player's, yours first. For OwnerOf: the cards.
 	/// </summary>
 	public Ref? Of { get; init; }
 
@@ -186,7 +187,13 @@ public record Ref(RefKind Kind, int Index = 0)
 
 	public static Ref ControllerOfTarget(int index = 0) => new(RefKind.ControllerOfTarget, index);
 
-	public static Ref OwnerOfTarget(int index = 0) => new(RefKind.OwnerOfTarget, index);
+	public static Ref OwnerOfTarget(int index = 0) => OwnerOf(Target(index));
+
+	/// <summary>
+	/// Skyclave Apparition: "the exiled card's owner creates …" — the owners of the cards a Ref names, each once:
+	/// OwnerOf(All(Exile, Is.ExiledBySource)). Clash of Elements' "its owner" is OwnerOf(Target()).
+	/// </summary>
+	public static Ref OwnerOf(Ref cards) => new(RefKind.OwnerOf) { Of = cards };
 
 	/// <summary>Twisted Fates: "each creature target player controls".</summary>
 	public static Ref PermanentsOfTargetPlayer(CardType type, int index) =>
@@ -235,10 +242,12 @@ public record Ref(RefKind Kind, int Index = 0)
 			&& Rules.Attachments.IsOn(aura, s.GetCard(aura.AttachedToId))
 				? [aura.AttachedToId]
 				: [],
-			RefKind.OwnerOfTarget => s.HasObject(TargetAt(Index))
-			&& s.GetObject(TargetAt(Index)) is Card owned
-				? [owned.OwnerId]
-				: [],
+			RefKind.OwnerOf => Of!
+				.Resolve(s, context)
+				.Select(s.GetObject)
+				.OfType<Card>()
+				.Select(c => c.OwnerId)
+				.Distinct(),
 			RefKind.Source => SameObject(s, context) ? [(int)context[ContextKeys.Source]] : [],
 			RefKind.EventCard => [eventCard],
 			RefKind.EventObject => context.GetValueOrDefault(ContextKeys.EventObject) switch

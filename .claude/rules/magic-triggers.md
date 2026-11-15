@@ -128,14 +128,24 @@ whose subsystem it lives in.
 - **"Whenever …, this turn"** from a resolving ability (The Naked Time's chapter II) is `WheneverThisTurn`:
   the trigger on a command-zone object, removed with the turn's other "this turn" effects.
 - **A card changing zones** is ONE event, `ChangedZoneEvent(owner, card, From, To)` (MC-4.4c2c), raised by
-  `MagicState.MoveCard` for the moves a card reads — out of a graveyard to anywhere, and library → exile; widen it
+  `MagicState.MoveCard` for the moves a card reads — out of a graveyard to anywhere, library → exile, and off the
+  battlefield to anywhere for a permanent that reads its OWN leaving (MC-4.4d3: `MagicState.ReadsItsLeaving`; a
+  token too, `LastKnown` the permanent as it last was — never for every permanent: `MoveCard` is the hottest path,
+  and a staged event costs each search node a `Collect` and a state-check round); widen it
   THERE for another move, never a second event — matched by `Trigger.From` / `Trigger.To`. **"Whenever a card leaves
   your graveyard"** (Vash) is `{ By = You, From = Graveyard }`: every
   path out — cast, exiled, returned, shuffled, paid as a cost; a token isn't a card. **"Whenever one or more cards are
-  put into exile from your library and/or your graveyard"** (Laelia) is `{ By = You, To = Exile, OneOrMore }` — no From:
-  the two zones the event is raised for. **"One or more"** is
+  put into exile from your library and/or your graveyard"** (Laelia) is `{ By = You, To = Exile, NotFrom = [Battlefield],
+  OneOrMore }` — no From: the event's moves but a permanent's off the battlefield. **"One or more"** is
   `Trigger.OneOrMore`: one trigger per priority pass, everything that left since a player last had priority
   (Shayne, 2026-11-01).
+- **"When this leaves the battlefield"** (Skyclave Apparition) is `TriggerEvent.SelfLeaves` (MC-4.4d3): the zone-change
+  event read from the card that LEFT, as it last existed (`ReadFrom.TheCardThatLeft`, CR 603.10a — the one look-back
+  "when this dies" uses too, `Triggers.Collect`'s `LookingBack`, so a doubler repeats both) — to any zone. A death
+  raises both events and each trigger reads its own: `SelfDies` only `DiedEvent`, `SelfLeaves` only the zone change.
+  **"When this permanent is put into a graveyard from the battlefield"** (Serra Paragon's gift) is `SelfLeaves with
+  { To = Graveyard }` — any permanent, a land too, never `SelfDies` (a creature or planeswalker); its "exile it" is
+  `MoveTo(Ref.EventCard, Exile) { From = [Graveyard] }`, the card only while it is still in that graveyard.
 - **"[Permanents] you control have '[triggered ability]'"** is `GrantsTriggeredAbility(scope, ability)`:
   `Triggers.Collect` gives it to each permanent the scope matches, and "this creature" is that one.
 - **"Whenever you draw a card"** is `DrewCardEvent`, raised by `MagicState.Draw` once per card (Data, New Life).

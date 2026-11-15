@@ -174,18 +174,9 @@ public record ExiledWithSourceShareACardType : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
 	{
-		var sourceId = (int)context[ContextKeys.Source];
-		if (!s.IsOnBattlefield(sourceId))
-			return false;
-		var source = s.GetCard(sourceId);
-		var types = new[] { s.Player1Id(), s.Player2Id() }
-			.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
-			.Where(c =>
-				c.GetComponent<ExiledBy>() is { } by
-				&& by.SourceId == source.Id
-				&& by.SourceIncarnation == source.Incarnation
-			)
-			.Select(c => c.Types)
+		var types = Ref.All(ZoneType.Exile, Filters.Is.ExiledBySource)
+			.Resolve(s, context)
+			.Select(id => s.GetCard(id).Types)
 			.ToList();
 		return types.Count > 0 && types.Aggregate((a, b) => a & b) != CardType.None;
 	}

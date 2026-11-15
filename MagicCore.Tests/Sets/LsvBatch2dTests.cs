@@ -1187,4 +1187,313 @@ public class LsvBatch2dTests : FraBoardTest
 			"{1}, and {2} more"
 		);
 	}
+
+	// ===== MC-4.4d3: leaving the battlefield =====
+
+	static CardDefinition Costing(string cost) =>
+		TestGames.CreatureCosting(cost, "Costing " + cost, "2/2");
+
+	static CardDefinition Forest => TestGames.Card("Forest");
+
+	/// <summary>"{1} instant": target permanent destroyed (Graveyard), or put into its owner's hand or exile.</summary>
+	static CardDefinition Remove(ZoneType to) =>
+		to == ZoneType.Graveyard
+			? TestCards.Kill(MagicCore.Targeting.TargetSpec.Permanent())
+			: TestCards.Targeted(
+				"Remove",
+				MagicCore.Targeting.TargetSpec.Permanent(),
+				new MoveTo(Ref.Target(), to)
+			);
+
+	/// <summary>I cast Skyclave Apparition, its entering trigger exiling this — or nothing.</summary>
+	int Apparition(params int[] exiling)
+	{
+		var apparition = Hand(Lsv("Skyclave Apparition"), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = apparition });
+		Resolve(Picking(exiling));
+		UntapMyLands();
+		return apparition;
+	}
+
+	int Illusions(int player) => Tokens(player, "Illusion");
+
+	[Test]
+	public void SkyclaveApparition_Enters_ExilesANonlandNontokenPermanentIDontControl_OfManaValueFourOrLess()
+	{
+		var four = Field(Costing("{4}"), them);
+		Field(Costing("{5}"), them);
+		Field(Costing("{2}"), me);
+		Cast(
+			Hand(
+				TestGames.Inline(
+					"Conscript",
+					"{1}",
+					"Instant",
+					null,
+					new CreateTokens(SoldierToken, 1) { ControlledBy = Ref.EachOpponent }
+				),
+				me
+			),
+			[]
+		);
+		Assert.That(Tokens(them, "Soldier"), Nu.EqualTo(1), "a token of theirs, mana value 0");
+		UntapMyLands();
+		var offered = new List<int>();
+		var apparition = Hand(Lsv("Skyclave Apparition"), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = apparition });
+		Resolve(c =>
+		{
+			if (c is ChooseTargetChoice)
+				offered.AddRange(c.Options.Select(o => o.Id).Where(id => id != 0));
+			return Picking(four)(c);
+		});
+		Assert.That(
+			offered,
+			Nu.EquivalentTo(new[] { four }),
+			"not their 5-drop, their land, their token, nor my own"
+		);
+		Assert.That(InExile(four));
+	}
+
+	[TestCase(ZoneType.Graveyard)]
+	[TestCase(ZoneType.Hand)]
+	[TestCase(ZoneType.Exile)]
+	public void SkyclaveApparition_LeavesTheBattlefield_TheExiledCardsOwnerCreatesAnIllusionOfItsManaValue(
+		ZoneType to
+	)
+	{
+		var three = Field(Costing("{3}"), them);
+		var apparition = Apparition(three);
+		Assert.That(InExile(three));
+		Cast(Hand(Remove(to), me), [], apparition);
+		Assert.That(Alive(apparition), Nu.False);
+		var illusion = s.CardsIn(them, ZoneType.Battlefield).Single(c => c.IsToken);
+		Assert.That(illusion.Name, Nu.EqualTo("Illusion"));
+		Assert.That(illusion.Colors, Nu.EquivalentTo(new[] { ManaColor.Blue }));
+		Assert.That(
+			(s.Power(illusion), s.Toughness(illusion)),
+			Nu.EqualTo((3, 3)),
+			"X/X, X the exiled card's mana value"
+		);
+		Assert.That(Illusions(me), Nu.EqualTo(0), "the exiled card's owner creates it");
+		Assert.That(InExile(three), "the card stays exiled");
+	}
+
+	[Test]
+	public void SkyclaveApparition_ThatExiledNothing_LeavesNoToken()
+	{
+		var three = Field(Costing("{3}"), them);
+		var first = Apparition();
+		Assert.That(Alive(three), "up to one: none");
+		Cast(Hand(Remove(ZoneType.Graveyard), me), [], first);
+		Assert.That(Illusions(them) + Illusions(me), Nu.EqualTo(0), "no exiled card, no owner");
+		UntapMyLands();
+		var second = Apparition(three);
+		Cast(Hand(Remove(ZoneType.Graveyard), me), [], second);
+		Assert.That(Illusions(them), Nu.EqualTo(1), "and one that did exile a card makes one");
+	}
+
+	[Test]
+	public void SkyclaveApparition_TheTokenIsTheExiledCardsOwners_NotItsControllers()
+	{
+		var stolen = Field(Costing("{2}"), me);
+		s = s.GainControl(stolen, them);
+		var apparition = Apparition(stolen);
+		Assert.That(s.IsIn(stolen, me, ZoneType.Exile), "my card, which they controlled");
+		Cast(Hand(Remove(ZoneType.Graveyard), me), [], apparition);
+		Assert.That(Illusions(me), Nu.EqualTo(1), "its owner creates the token");
+		Assert.That(Illusions(them), Nu.EqualTo(0));
+		Assert.That(
+			s.Power(s.CardsIn(me, ZoneType.Battlefield).Single(c => c.IsToken)),
+			Nu.EqualTo(2)
+		);
+	}
+
+	[Test]
+	public void SkyclaveApparition_Returned_IsANewObject_ThatExiledNoCard()
+	{
+		var three = Field(Costing("{3}"), them);
+		var apparition = Apparition(three);
+		Cast(Hand(Remove(ZoneType.Graveyard), me), [], apparition);
+		Assert.That(Illusions(them), Nu.EqualTo(1));
+		UntapMyLands();
+		Cast(Hand(Raise, me), [], apparition);
+		Assert.That(Alive(apparition), "back, exiling nothing");
+		UntapMyLands();
+		Cast(Hand(Remove(ZoneType.Graveyard), me), [], apparition);
+		Assert.That(Alive(apparition), Nu.False);
+		Assert.That(
+			Illusions(them),
+			Nu.EqualTo(1),
+			"it left again, and triggered: the card in exile was another object's"
+		);
+	}
+
+	[Test]
+	public void OnlyAPermanentThatReadsItsOwnLeaving_StagesAZoneChange()
+	{
+		var bear = Field(Bear, me);
+		var apparition = Field(Lsv("Skyclave Apparition"), me);
+		s = s.MoveCard(bear, s.ZoneId(me, ZoneType.Hand));
+		Assert.That(
+			s.PendingGameEvents.OfType<MagicCore.Turns.ChangedZoneEvent>(),
+			Nu.Empty,
+			"MoveCard is the hottest path: nothing staged for a permanent with no leaving ability"
+		);
+		s = s.MoveCard(apparition, s.ZoneId(me, ZoneType.Hand));
+		Assert.That(
+			s.PendingGameEvents.OfType<MagicCore.Turns.ChangedZoneEvent>().Count(),
+			Nu.EqualTo(1)
+		);
+	}
+
+	[Test]
+	public void ACardLinkedToNoObject_IsExiledByNoSource()
+	{
+		var relic = Field(Relic, me);
+		var linked = Put(Boon, me, ZoneType.Exile);
+		var orphan = Put(Boon, me, ZoneType.Exile);
+		s = s.UpdateObject(
+			linked,
+			(Card)s.GetCard(linked).WithComponent(new ExiledBy(relic, s.GetCard(relic).Incarnation))
+		);
+		// a link made by a source already gone names no object of it (incarnation -1)
+		s = s.UpdateObject(orphan, (Card)s.GetCard(orphan).WithComponent(new ExiledBy(987654, -1)));
+		bool ExiledBy(int card, int source) =>
+			MagicCore.Filters.Is.ExiledBySource.Matches(
+				s,
+				s.GetCard(card),
+				new MagicCore.Filters.FilterContext(me, source)
+			);
+		Assert.That(ExiledBy(linked, relic), "a static asks the source as it is now");
+		Assert.That(ExiledBy(orphan, 987654), Nu.False, "no object, no link");
+	}
+
+	[Test]
+	public void TheOwnerOfSeveralCards_IsNamedOnce()
+	{
+		Put(Boon, me, ZoneType.Graveyard);
+		Put(Boon, me, ZoneType.Graveyard);
+		var life = Life(me);
+		Cast(
+			Hand(
+				TestGames.Inline(
+					"Tithe",
+					"{1}",
+					"Instant",
+					null,
+					new GainLife(Ref.OwnerOf(Ref.CardsInYourGraveyard), 1)
+				),
+				me
+			),
+			[]
+		);
+		Assert.That(Life(me), Nu.EqualTo(life + 1), "two cards of mine: I am their owner once");
+	}
+
+	[Test]
+	public void SerraParagon_AnXSpell_OnlyWithAnXThatKeepsItsManaValueThreeOrLess()
+	{
+		var mold = TestGames.Inline("Mold", "{X}{1}", "Artifact");
+		var held = Hand(mold, me);
+		Assert.That(Casts(held).Max(c => c.X), Nu.GreaterThan(2), "from my hand, any X");
+		Field(Lsv("Serra Paragon"), me);
+		var buried = Put(mold, me, ZoneType.Graveyard);
+		Assert.That(
+			Casts(buried).Select(c => c.X).Distinct(),
+			Nu.EquivalentTo(new[] { 0, 1, 2 }),
+			"a permanent spell with mana value 3 or less: {1} and X"
+		);
+	}
+
+	[Test]
+	public void SerraParagon_OnceEachOfMyTurns_ALandOrAPermanentSpellOfManaValueThreeOrLess_FromMyGraveyard()
+	{
+		Field(Lsv("Serra Paragon"), me);
+		var forest = Put(Forest, me, ZoneType.Graveyard);
+		var three = Put(Costing("{3}"), me, ZoneType.Graveyard);
+		var four = Put(Costing("{4}"), me, ZoneType.Graveyard);
+		var boon = Put(Boon, me, ZoneType.Graveyard);
+		bool MayPlay(int land) =>
+			new PlayLandAction { PlayerId = me, CardId = land }
+				.ValidateAdd(s)
+				.IsValid;
+		Assert.That(Casts(three), Nu.Not.Empty, "a permanent spell with mana value 3 or less");
+		Assert.That(MayPlay(forest), "a land");
+		Assert.That(Casts(four), Nu.Empty, "mana value 4");
+		Assert.That(Casts(boon), Nu.Empty, "an instant is no permanent spell");
+		Cast(three, []);
+		Assert.That(Alive(three), "it resolves onto the battlefield");
+		Assert.That(MayPlay(forest), Nu.False, "once during each of your turns");
+	}
+
+	[Test]
+	public void SerraParagon_ThePermanentCastThisWay_PutIntoAGraveyard_IsExiledAndIGainTwo_UntilItLeaves()
+	{
+		var paragon = Field(Lsv("Serra Paragon"), me);
+		var bear = Put(Bear, me, ZoneType.Graveyard);
+		var life = Life(me);
+		Cast(bear, []);
+		Assert.That(Alive(bear));
+		UntapMyLands();
+		Cast(Hand(Remove(ZoneType.Hand), me), [], bear);
+		Assert.That(s.IsIn(bear, me, ZoneType.Hand));
+		Assert.That(Life(me), Nu.EqualTo(life), "returned to my hand: put into no graveyard");
+		UntapMyLands();
+		Cast(bear, []);
+		UntapMyLands();
+		Cast(Hand(TestCards.Kill(), me), [], bear);
+		Assert.That(s.IsIn(bear, me, ZoneType.Graveyard), "cast from my hand, it gained nothing");
+		Assert.That(Life(me), Nu.EqualTo(life));
+		// TEST SETUP: the Paragon's once-a-turn permission is unused again
+		s = s.UpdateObject(paragon, s.GetCard(paragon) with { PermissionUsedOn = 0 });
+		UntapMyLands();
+		Cast(bear, []);
+		UntapMyLands();
+		Cast(Hand(TestCards.Kill(), me), [], bear);
+		Assert.That(InExile(bear), "exile it");
+		Assert.That(Life(me), Nu.EqualTo(life + 2), "and you gain 2 life");
+	}
+
+	[Test]
+	public void SerraParagon_ALandPlayedThisWay_GainsItToo_ThoughNoCreatureDies()
+	{
+		Field(Lsv("Serra Paragon"), me);
+		var forest = Put(Forest, me, ZoneType.Graveyard);
+		var life = Life(me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = forest });
+		Assert.That(Alive(forest));
+		var turn = s.GetGame().TurnNumber;
+		s = TestGames.PassUntil(s, x => x.GetGame().TurnNumber > turn);
+		s = TestGames.PassUntil(s, x => x.GetGame().PriorityPlayerId == me);
+		Cast(Hand(Remove(ZoneType.Graveyard), me), [], forest);
+		Assert.That(InExile(forest), "put into a graveyard from the battlefield: exile it");
+		Assert.That(Life(me), Nu.EqualTo(life + 2), "a turn later: it has it until it leaves");
+	}
+
+	[Test]
+	public void SerraParagon_ReturnedBeforeItsTriggerResolves_IsAnotherObject_AndIsNotExiled()
+	{
+		Field(Lsv("Serra Paragon"), me);
+		var bear = Put(Bear, me, ZoneType.Graveyard);
+		var life = Life(me);
+		Cast(bear, []);
+		UntapMyLands();
+		var kill = Hand(TestCards.Kill(), me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = kill,
+				Targets = [bear],
+			}
+		);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		Assert.That(s.IsIn(bear, me, ZoneType.Graveyard), "dead, its trigger on the stack");
+		Assert.That(s.StackIsEmpty(), Nu.False);
+		Cast(Hand(Raise, me), [], bear);
+		Assert.That(Alive(bear), "exile it: only from the graveyard it was put into");
+		Assert.That(Life(me), Nu.EqualTo(life + 2), "and you gain 2 life");
+	}
 }

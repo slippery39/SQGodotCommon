@@ -352,6 +352,59 @@ as his three priorities.
   helper would touch two old effects (MC-6's kind of work). `By` on a "this turn" lock isn't read — it is put with
   the player it binds (`ThisTurn.On`), said on the option. **AI-only, backlog:** the AI names the Peacekeeper's
   card by Kai Winn's rule (AI-19.27).
+- 2026-11-15, Claude — **4.4d3's notes: two cards on the widened event; the plan held, and grew in four places.**
+  **The event** — `MoveCard` raises `ChangedZoneEvent` for a permanent leaving the battlefield (any kind, a token
+  too — after the review, only one that reads its own leaving: below), to
+  the zone it really went to (after the exile-instead replacements). Grown: it carries the permanent AS IT LAST WAS
+  (`LastKnown`), because "when this leaves" looks back (CR 603.10a) — and the reader is the one "when this dies"
+  already had: `ReadFrom.TheDyingCard` became `TheCardThatLeft`, and `Triggers.Collect`'s look-back is one local
+  (`LookingBack`) for a death and a leaving, so a doubler repeats both. A death raises both events; `SelfDies` reads
+  only `DiedEvent`, `TriggerEvent.SelfLeaves` only the zone change (a revert-check: without that a dying Apparition
+  made two tokens, and a Sanguine Evangelist a Bat for any leaving). `Trigger.From`/`NotFrom`/`To` are one test
+  (`ZonesFit`) for both readers. **Laelia moved with it:** her "no From" meant "the two zones the event is raised
+  for", so she says `NotFrom = [Battlefield]`.
+  **Skyclave Apparition** — `Exile { Linked }` (The Measure of a Man's), then `When(SelfLeaves, CreateTokens(Illusion,
+  1) { ControlledBy, Size })`. Grown: (1) `CreateTokens.Size`, one `Count` for power and toughness; (2) "the exiled
+  card's OWNER" — `Ref.OwnerOfTarget(i)` generalised to `Ref.OwnerOf(ref)` (`RefKind.OwnerOf`; the old helper is
+  `OwnerOf(Target(i))`, its cards unchanged); (3) "the exiled card" asked by an ability whose source has LEFT:
+  `Is.ExiledBySource` compared the link with the source as it is now, so nothing once it was gone — a resolving
+  ability now asks as the object it came from (`FilterContext.SourceIncarnation`, from the context's source
+  snapshot); a static or a cost has none and asks the live source as before. **An old card plays differently, and
+  rightly:** The Measure of a Man's chapter III returns its card though the Saga left in response (CR 607.2a; a test).
+  **Serra Paragon** — `MayPlayFromZone(Graveyard, a permanent card of mana value 3 or less) { OncePerTurn, Gains }`:
+  `Gains` is carried as `Finality` is (`OnStackComponent.Gains` → `EnterFromStackAction` → `EnterBattlefield(gains:)`),
+  and a LAND played this way gets it in `PlayLandAction` — Finality never needed that path. It is an `UntilEndOfTurn
+  { Trigger }` no turn ends: there until the permanent leaves. The gift is `SelfLeaves with { To = Graveyard }` —
+  any permanent, so a land too, which no `DiedEvent` sees.
+  **Nothing offers an action per combination:** an event, a filter, a ref and two options; the Paragon's casts are
+  the graveyard's cards that fit, once a turn (The Holodeck's).
+  **Lines that went (no test could see them):** `SelfLeaves`' `From = Battlefield` — the card that left is its own
+  From; `OwnerOf`'s `Distinct()` — every reader takes the first.
+  **Left as ceilings (DesignNotes):** the look-back asks "had it lost all abilities" of the state now (an Aura the
+  state check already took is missed; `DiedEvent.Attached` answers it for deaths only); several cards exiled by one
+  Apparition (its trigger doubled) make one token of the greatest mana value for the first owner.
+  **`/pre-commit`'s review, fixed:** (1) the event is raised only for a permanent that READS its own leaving
+  (`MagicState.ReadsItsLeaving`: a printed or gained `SelfLeaves`) — raised for every permanent, each Treasure
+  sacrificed or permanent bounced staged an event, and so a `Collect` and a state-check round in every search
+  node; "whenever ANOTHER permanent leaves" drops the guard when a card reads it (a test that a plain permanent
+  stages nothing). (2) Two more readers of "exiled with this" had their own copy of the old test and now
+  disagreed with the filter — `ExiledWithSourceShareACardType` (All Good Things...) and
+  `AssimilateExiledWithSource` (Borg Cube) ask `Is.ExiledBySource` too, so each still finds its cards when its
+  source left with the ability on the stack (a test each). (3) The Paragon's "mana value 3 or less" was asked of
+  the card in the graveyard, where X is 0: Engineered Explosives could be cast for X = 5 — the cast's validation
+  passes its X and `Playable.ZonePermission` asks the filter of the card as that spell (a test: {X}{1} is offered
+  for X 0 to 2). (4) `FilterContext.SourceIncarnation` is nullable, not -1: -1 is also what
+  `ExileChosenLinkedAction` stamps for "no object", and the two would have matched (a test). (5) `Ref.OwnerOf`
+  names each owner once (a test: two cards of mine gain me 1). (6) Stale comments (`EventKind.ChangedZone`,
+  `Triggers.Collect`'s summary).
+  **Not taken, and why:** the gift's "exile it" finds the card by id in the graveyard, so one returned and put
+  there again before the trigger resolves is exiled though it is another object — every "when this dies, return
+  it" reads `Ref.EventCard { From = [Graveyard] }` the same way (MC-6's kind of work: one fix for all of them).
+  A permanent moved from one battlefield to the other counts as leaving: `MoveCard` already treats it so (a new
+  object, its exile-until links returned), and no script does it. The event's `By` stays the OWNER (Vash's and
+  Laelia's "your"); a "permanent you control leaves" would want the controller — with the widening above.
+  `MagicCore/CLAUDE.md`'s "MoveCard owns leaving it" bullet is not touched (206 lines against 200): the rule is in
+  `magic-triggers.md`.
 
 ## Tasks
 
@@ -430,23 +483,35 @@ as his three priorities.
           Machinations moved onto theirs); 13 tests, 66/66 breaks caught; `batch_checks.py` all 7 steps, twice (after
           the review's fixes too: golden-out unchanged; golden-in moved 29 random and 308 card-replay games, added 20;
           probe 150 games, none unfinished, every card cast)
-    - [ ] MC-4.4d3 Leaving the battlefield, 2: Skyclave Apparition, Serra Paragon
+    - [x] MC-4.4d3 Leaving the battlefield, 2 — done 2026-11-15: Skyclave Apparition, Serra Paragon. The zone-change
+          event widened to a permanent's own leaving, read from the card that left (Decisions; Laelia moved with
+          it; The Measure of a Man, All Good Things... and Borg Cube onto the one "exiled with this" filter);
+          16 tests (18 cases), 44/44 breaks caught; `batch_checks.py` all 7 steps, twice (after the review's
+          fixes too: golden-out unchanged; golden-in
+          moved 29 random and 126 card-replay games, added 8; probe 150 games, both cards cast, 1 past 300
+          permanents — seed 94, 271 Troubling Tribbles, not this batch)
     - [ ] MC-4.4d4 Balance
 
 ## Next
 
 Red's tier 1 is done (4.4c). MC-4.4d — white's tier 1 (Shayne, 2026-11-14) — is surveyed and split in five parts
-(Decisions, Tasks); **d1, d2a and d2b are done: 180 of 528 play.** Next, each in a NEW session and in order: **d3**
-(two cards — Skyclave Apparition, Serra Paragon: the 4.4d Decision names each piece and its option — "leaves the
-battlefield" and "put into a graveyard from the battlefield" widen `ChangedZoneEvent` in `MoveCard`, never a second
-event), then **d4** (Balance: each player's choice after the cast, never an action per set).
-Read the nearest piece's CODE first — three of d2a's six plans changed on reading, two of d2b's grew (their notes).
-Useful to d3 and d4: `EnterBattlefield` may refuse an entry (Containment Priest), so check `IsOnBattlefield` after
+(Decisions, Tasks); **d1, d2a, d2b and d3 are done: 182 of 528 play.** Next, in a NEW session: **d4** — Balance, the
+last of white's tier 1 (the 4.4d Decision: `EachSacrifices` is one each and `Discard` a fixed number; "all but as
+many as the player with the fewest" is a count on each — each player's choice after the cast, never an action per
+set: count the choices on a 12-creature board first).
+Read the nearest piece's CODE first — three of d2a's six plans changed on reading, two of d2b's grew, d3's grew in
+four places (their notes).
+Useful to d4: `EnterBattlefield` may refuse an entry (Containment Priest), so check `IsOnBattlefield` after
 it; `MoveTo.Then` / `Ref.ThisWay` and `DelayedTrigger.MadeBy` (`Ref.EventObject`) exist; from d2b, a rule every
 cast or activation asks about permanents notes itself on the statics board (`Characteristics.RuleWork`) rather than
-scanning the battlefield each time. The white tests are in `LsvBatch2dTests.cs` (its `UntapMyLands`, `Elspeth()`,
+scanning the battlefield each time; from d3, a permanent that reads its OWN leaving raises `ChangedZoneEvent` with
+the card as it last was (`TriggerEvent.SelfLeaves`; any permanent, a land too — but never for another permanent's
+leaving: `MagicState.ReadsItsLeaving`, DesignNotes), `Ref.OwnerOf(ref)` names a card's owner, and a zone
+permission's filter is asked with the X of the cast (`Playable.ZonePermission(…, x)`). The white tests are in
+`LsvBatch2dTests.cs` (its `UntapMyLands`, `Elspeth()`,
 `Emperor()`, `Loyalty(walker, ability)`, `LoyaltyOffered(walker)`, `WithTap(card)`: "{T}: You gain 1 life", `Raise`:
-a card from any graveyard onto the battlefield). A FIRES test per scripted card. For Shayne: nothing Open (d2a's is
+a card from any graveyard onto the battlefield, `Remove(zone)`: target permanent destroyed, bounced or exiled,
+`Costing(cost)`: a 2/2 of that cost). A FIRES test per scripted card. For Shayne: nothing Open (d2a's is
 answered: AI-19.26); one AI note on the backlog (AI-19.27, the AI's name for Anointed Peacekeeper). DEV-5 still open: `batch_checks.py`'s probe report lists only the
 first 12 cards named (probe the rest with `MAGIC_PROBE_CARDS`), the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
@@ -497,3 +562,9 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   abilities and a name chosen after a look at the hand); Yuriko and Jace's Machinations moved onto the generalised
   pieces; no recorded game moved by the engine; 180 of 528 play. d2a's Open answered (Shayne: the AI's X spells
   another time — AI-19.26). For Shayne: nothing Open; AI-19.27 on the backlog.
+- 2026-11-15 (cube lane, sprint 5 C5): MC-4.4d3 — Skyclave Apparition and Serra Paragon on the zone-change event,
+  widened to a permanent's own leaving of the battlefield and read from the card that left (one look-back with
+  "when this dies"); a token's counted size, a card's owner as a ref, the linked exile asked from a source that has
+  left (The Measure of a Man's chapter III, All Good Things...' IV and Borg Cube's attack now find their cards
+  though the source left in response), a gained trigger on the graveyard permission, its mana-value bound counting
+  X; Laelia moved with the event; no recorded game moved by the engine; 182 of 528 play. For Shayne: nothing Open.

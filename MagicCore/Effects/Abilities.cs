@@ -89,7 +89,7 @@ public enum EventKind
 	BecameTapped, // Hemmer: "whenever Hemmer becomes tapped"
 	FacedDilemma, // "whenever you face a dilemma" — modes chosen for a spell or ability
 	CountersPut, // a Saga's chapter: "as the number of lore counters becomes at least N" (Trigger.Chapter)
-	ChangedZone, // Vash: "whenever a card leaves your graveyard"; Laelia: "put into exile from your library and/or your graveyard" — MagicState.MoveCard, every path (Trigger.From, To)
+	ChangedZone, // Vash: "whenever a card leaves your graveyard"; Laelia: "put into exile from your library and/or your graveyard"; Skyclave Apparition: "when this leaves the battlefield" — MagicState.MoveCard, every path (Trigger.From, To)
 	Drew, // Data, New Life: "whenever you draw a card" — MagicState.Draw, one per card
 	AbilityActivated, // Kai Winn: "activates an ability of a source with the chosen name" — mana abilities too
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
@@ -103,7 +103,7 @@ public enum EventKind
 public enum ReadFrom
 {
 	Battlefield,
-	TheDyingCard, // "when this dies" — the dying card as it last existed; Subject asked of it
+	TheCardThatLeft, // "when this dies", "when this leaves the battlefield" — the card that left, as it last existed; Subject asked of it
 	ItsAttachment, // "when enchanted creature dies" — read from the Aura as it was; Subject not asked (it has left)
 	TheSpellCast, // Emrakul: "when you cast this spell" — the spell on the stack; Subject asked of it
 }
@@ -287,8 +287,8 @@ public record Trigger(EventKind On)
 
 	/// <summary>
 	/// Laelia, the Blade Reforged: "Whenever one or more cards are put into exile from your library and/or your
-	/// graveyard" — the zone a card moved TO (ChangedZoneEvent.To); with no From, from either of the two zones the
-	/// event is raised for. Vash's "leaves your graveyard" is From = Graveyard, any To.
+	/// graveyard" — the zone a card moved TO (ChangedZoneEvent.To); with no From, from any zone the event is raised
+	/// for (hers: NotFrom = [Battlefield]). Vash's "leaves your graveyard" is From = Graveyard, any To.
 	/// </summary>
 	public ZoneType? To
 	{
@@ -405,7 +405,19 @@ public static class TriggerEvent
 
 	/// <summary>Read from the dying card as it last existed (CR 603.10a).</summary>
 	public static readonly Trigger SelfDies =
-		new(EventKind.Died) { Subject = Filters.Is.Source, ReadFrom = ReadFrom.TheDyingCard };
+		new(EventKind.Died) { Subject = Filters.Is.Source, ReadFrom = ReadFrom.TheCardThatLeft };
+
+	/// <summary>
+	/// Skyclave Apparition: "When this creature leaves the battlefield" — to any zone, read from the card as it last
+	/// existed (CR 603.10a). Serra Paragon's "When this permanent is put into a graveyard from the battlefield" is
+	/// this with { To = Graveyard }.
+	/// </summary>
+	public static readonly Trigger SelfLeaves =
+		new(EventKind.ChangedZone)
+		{
+			Subject = Filters.Is.Source,
+			ReadFrom = ReadFrom.TheCardThatLeft, // the battlefield: no From to say
+		};
 
 	/// <summary>"When enchanted creature dies" — looks back: the Aura is already gone (CR 603.10a).</summary>
 	public static readonly Trigger AttachedCreatureDies =
@@ -1143,6 +1155,13 @@ public record MayPlayFromZone(ZoneType From, Filters.Filter What) : ThisTurnEffe
 
 	/// <summary>Null Summoner: "mana of any type can be spent to cast that spell" — Costs.Of.</summary>
 	public bool AnyType { get; init; }
+
+	/// <summary>
+	/// Serra Paragon: "If you do, it gains 'When this permanent is put into a graveyard from the battlefield, exile
+	/// it and you gain 2 life.'" — a triggered ability the permanent has from entering until it leaves, carried as
+	/// Finality is (a spell: OnStackComponent.Gains; a land: PlayLandAction) into EnterBattlefield.
+	/// </summary>
+	public TriggeredAbilityComponent? Gains { get; init; }
 
 	/// <summary>
 	/// Underworld Breach: "Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana

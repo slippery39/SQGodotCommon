@@ -184,11 +184,17 @@ public record DrewCardEvent(int PlayerId) : MagicEvent
 /// <summary>
 /// A card changed zones — raised by MagicState.MoveCard, every path, for the moves a card reads: out of its owner's
 /// graveyard to any zone (Vash: "whenever a card leaves your graveyard") and from their library into exile (Laelia,
-/// the Blade Reforged: "put into exile from your library and/or your graveyard"). A token isn't a card. ponytail:
-/// not every zone change — MoveCard is the hottest path; widen the two cases there when a card reads another move.
+/// the Blade Reforged: "put into exile from your library and/or your graveyard") — a token isn't a card — and off
+/// the battlefield to any zone, a token too, for a permanent that reads its OWN leaving (Skyclave Apparition: "When
+/// this creature leaves the battlefield"; Serra Paragon: "put into a graveyard from the battlefield"). ponytail: not
+/// every zone change — MoveCard is the hottest path; widen the cases there when a card reads another move
+/// ("whenever ANOTHER permanent leaves the battlefield": raise it for every permanent, MagicState.ReadsItsLeaving).
 /// </summary>
 public record ChangedZoneEvent(int PlayerId, int CardId, ZoneType From, ZoneType To) : MagicEvent
 {
+	/// <summary>Off the battlefield: the permanent as it last was — its own leaving abilities look back (CR 603.10a).</summary>
+	public Card? LastKnown { get; init; }
+
 	public override EventKind Kind() => EventKind.ChangedZone;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
@@ -328,10 +334,10 @@ public static class Triggers
 	/// Every ability that triggered on the staged events, the active player's first (CR 101.4 APNAP:
 	/// they go on the stack first, so the other player's resolve first).
 	///
-	/// A dying card's OWN "when this dies" ability is read from the card as it last existed (CR
-	/// 603.10a). ponytail: other leaves-the-battlefield abilities are read from permanents still on
-	/// the battlefield, so Edgar dying alongside another creature misses that one's death. Look back
-	/// for every leaves trigger if a card ever needs it.
+	/// A dying card's OWN "when this dies" ability, and a permanent's own "when this leaves the battlefield",
+	/// are read from the card as it last existed (CR 603.10a). ponytail: other leaves-the-battlefield
+	/// abilities are read from permanents still on the battlefield, so Edgar dying alongside another
+	/// creature misses that one's death. Look back for every leaves trigger if a card ever needs it.
 	/// </summary>
 	public static List<Pending> Collect(GameState s)
 	{
@@ -390,6 +396,21 @@ public static class Triggers
 			.Where(p => p.HasComponent<TriggersAdditionalTime>() && s.IsOnBattlefield(p.Id))
 			.ToList();
 		var events = WithoutSilencedEntries(s, permanents);
+		// A card that left the battlefield: its own abilities, as it last existed (CR 603.10a) — and a doubler's
+		// "additional time" for them (Lwaxana's linked creature).
+		IEnumerable<Pending> LookingBack(
+			Card was,
+			GameEvent left,
+			IEnumerable<TriggeredAbilityComponent> abilities
+		) =>
+			abilities
+				.Where(a => !a.FromGraveyard && Concerns(s, a.On, was, was))
+				.SelectMany(a =>
+					Enumerable.Repeat(
+						new Pending(was, a, was.Id, was),
+						1 + AdditionalTimes(s, doublers, was, a, left, lookBack: true)
+					)
+				);
 		var fromTheBattlefield = permanents
 			.SelectMany(source =>
 				AbilitiesOf(s, source)
@@ -435,40 +456,25 @@ public static class Triggers
 		var fromTheDead = s
 			.PendingGameEvents.OfType<DiedEvent>()
 			.SelectMany(died =>
-				// As it last existed (CR 603.10a): under Infinite Coursework it had no abilities — the
-				// Aura is gone from the battlefield by now, so ask what was attached as it died.
-				(
-					died.Attached.Any(a => a.HasComponent<EnchantedLosesAllAbilities>())
-						? []
-						: AbilitiesOf(s, died.LastKnown)
-				)
-					// "When this dies", and its own "whenever [this or another] creature … dies" seeing
-					// its own death — leaves-the-battlefield abilities look back (CR 603.10a; Excalbian
-					// Gamemaster). Another's death is matched on the battlefield.
-					// ponytail: so a creature dying ALONGSIDE others misses their deaths (a wrath: Gamemaster
-					// triggers once, not three times). Match its Died abilities against every DiedEvent in
-					// the batch if a card needs it (DesignNotes).
-					.Where(a =>
+				LookingBack(
+						died.LastKnown,
+						died,
+						// As it last existed (CR 603.10a): under Infinite Coursework it had no abilities — the
+						// Aura is gone from the battlefield by now, so ask what was attached as it died.
 						(
-							a.On.ReadFrom == ReadFrom.TheDyingCard
-							|| a.On.On == EventKind.Died && a.On.ReadFrom == ReadFrom.Battlefield
+							died.Attached.Any(a => a.HasComponent<EnchantedLosesAllAbilities>())
+								? []
+								: AbilitiesOf(s, died.LastKnown)
 						)
-						&& !a.FromGraveyard
-						&& Concerns(s, a.On, died.LastKnown, died.LastKnown)
-					)
-					// Lwaxana's linked creature dying: its "when this dies" looks back (CR 603.10a), doubled too.
-					.SelectMany(a =>
-						Enumerable.Repeat(
-							new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown),
-							1
-								+ AdditionalTimes(
-									s,
-									doublers,
-									died.LastKnown,
-									a,
-									died,
-									lookBack: true
-								)
+						// "When this dies", and its own "whenever [this or another] creature … dies" seeing
+						// its own death — leaves-the-battlefield abilities look back (CR 603.10a; Excalbian
+						// Gamemaster). Another's death is matched on the battlefield.
+						// ponytail: so a creature dying ALONGSIDE others misses their deaths (a wrath: Gamemaster
+						// triggers once, not three times). Match its Died abilities against every DiedEvent in
+						// the batch if a card needs it (DesignNotes).
+						.Where(a =>
+							a.On.On == EventKind.Died
+							&& a.On.ReadFrom is ReadFrom.TheCardThatLeft or ReadFrom.Battlefield
 						)
 					)
 					// The Aura is in the graveyard by the time triggers are collected — the state-based
@@ -485,6 +491,26 @@ public static class Triggers
 								))
 						)
 					)
+			);
+		// "When this leaves the battlefield" (Skyclave Apparition), "when this permanent is put into a graveyard
+		// from the battlefield" (Serra Paragon's gift): the card's own, whatever zone it went to — a death too.
+		// ponytail: "had it lost all abilities" is asked of the state NOW (AbilitiesOf) — an Aura's
+		// EnchantedLosesAllAbilities that the state check has taken by then is missed, as DiedEvent.Attached
+		// isn't here. Carry what was attached on this event if a pool has both (DesignNotes).
+		var fromThoseThatLeft = s
+			.PendingGameEvents.OfType<ChangedZoneEvent>()
+			.Where(left => left.LastKnown is not null)
+			.SelectMany(left =>
+				LookingBack(
+					left.LastKnown!,
+					left,
+					AbilitiesOf(s, left.LastKnown!)
+						.Where(a =>
+							a.On.On == EventKind.ChangedZone
+							&& a.On.ReadFrom == ReadFrom.TheCardThatLeft
+							&& ZonesFit(a.On, left)
+						)
+				)
 			);
 		// "When you cast this spell" (Emrakul): the spell's own, read from it on the stack.
 		var fromTheSpell = s
@@ -518,6 +544,7 @@ public static class Triggers
 			);
 		return fromTheBattlefield
 			.Concat(fromTheDead)
+			.Concat(fromThoseThatLeft)
 			.Concat(fromACast)
 			.Concat(fromTheSpell)
 			.Where(p => InterveningIfHolds(s, p))
@@ -721,22 +748,7 @@ public static class Triggers
 			&& (e is not SpellCastEvent numbered || numbered.SpellNumber != on.SpellNumber)
 		)
 			return false;
-		if (on.From is not null || !on.NotFrom.IsEmpty)
-		{
-			var from = e switch
-			{
-				SpellCastEvent cast => cast.From,
-				LandPlayedEvent land => land.From,
-				ChangedZoneEvent moved => moved.From,
-				EnteredBattlefieldEvent entered => entered.From,
-				_ => (ZoneType?)null,
-			};
-			if (on.From is { } zone && from != zone)
-				return false;
-			if (from is { } left && on.NotFrom.Contains(left))
-				return false;
-		}
-		if (on.To is { } to && (e is not ChangedZoneEvent arrived || arrived.To != to))
+		if (!ZonesFit(on, e))
 			return false;
 		if (
 			on.CombatDamageBy is { } by
@@ -776,6 +788,30 @@ public static class Triggers
 			EventTest.Noncombat => e is PlayerDealtDamageEvent { Combat: false },
 			_ => true,
 		};
+	}
+
+	/// <summary>
+	/// Trigger.From, NotFrom and To against the zones an event names — the one test, for a trigger matched on the
+	/// battlefield and for one read from the card that left.
+	/// </summary>
+	static bool ZonesFit(Trigger on, GameEvent e)
+	{
+		if (on.From is not null || !on.NotFrom.IsEmpty)
+		{
+			var from = e switch
+			{
+				SpellCastEvent cast => cast.From,
+				LandPlayedEvent land => land.From,
+				ChangedZoneEvent moved => moved.From,
+				EnteredBattlefieldEvent entered => entered.From,
+				_ => (ZoneType?)null,
+			};
+			if (on.From is { } zone && from != zone)
+				return false;
+			if (from is { } left && on.NotFrom.Contains(left))
+				return false;
+		}
+		return on.To is not { } to || e is ChangedZoneEvent arrived && arrived.To == to;
 	}
 
 	/// <summary>What a spell targeted as it was cast — every mode's targets (CR 115.1).</summary>

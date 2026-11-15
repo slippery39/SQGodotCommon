@@ -32,7 +32,14 @@ public static class FilterChoices
 }
 
 /// <summary>Who is asking: "you", "this", "the event's card". 0 where there is none.</summary>
-public readonly record struct FilterContext(int Controller, int Source = 0, int EventCard = 0);
+/// <param name="SourceIncarnation">The ability's source AS IT WAS (ContextKeys.SourceSnapshot), for "the exiled card"
+/// asked once the source has left; none where nothing resolves (a static, a cost): the source as it is now.</param>
+public readonly record struct FilterContext(
+	int Controller,
+	int Source = 0,
+	int EventCard = 0,
+	int? SourceIncarnation = null
+);
 
 /// <summary>
 /// "Creature you control", "other nontoken creature", "card with mana value 3 or less" — asked about
@@ -386,11 +393,16 @@ public sealed record HasProperty(Property Property) : Filter
 			Property.Tapped => card.IsTapped,
 			Property.Modal => card.GetComponent<Effects.SpellEffectsComponent>()
 				is { Modes.IsEmpty: false },
+			// Skyclave Apparition's "the exiled card", asked as it leaves: the object the ability came from.
 			Property.ExiledBySource => card.GetComponent<Effects.ExiledBy>() is { } link
 				&& link.SourceId == c.Source
-				&& s.HasObject(c.Source)
-				&& s.GetObject(c.Source) is Card source
-				&& source.Incarnation == link.SourceIncarnation,
+				&& (
+					c.SourceIncarnation is { } was
+						? link.SourceIncarnation == was
+						: s.HasObject(c.Source)
+							&& s.GetObject(c.Source) is Card source
+							&& source.Incarnation == link.SourceIncarnation
+				),
 			_ => false,
 		};
 }

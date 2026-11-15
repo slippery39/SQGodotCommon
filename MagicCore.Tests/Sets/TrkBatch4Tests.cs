@@ -223,6 +223,22 @@ public class TrkBatch4Tests : FraBoardTest
 	}
 
 	[Test]
+	public void MeasureOfAMan_GoneWithChapterIIIOnTheStack_StillReturnsWhatItExiled()
+	{
+		var bear = Field(Bear, them);
+		var saga = Hand(Trk("The Measure of a Man"), me);
+		CastAndResolve(saga, Targeting(bear));
+		ToMyNextMain();
+		Resolve();
+		ToMyNextMain();
+		Assert.That(s.StackIsEmpty(), Nu.False, "chapter III is on the stack");
+		// The Saga leaves in response: the ability is still that object's (CR 607.2a), MC-4.4d3.
+		s = s.MoveCard(saga, s.ZoneId(me, ZoneType.Graveyard));
+		Resolve();
+		Assert.That(s.IsIn(bear, them, ZoneType.Battlefield), Nu.True, "the exiled card returns");
+	}
+
+	[Test]
 	public void Saga_ThatLostAllAbilities_IsNotSacrificed()
 	{
 		var saga = Field(Trk("Those Old Scientists"), me);

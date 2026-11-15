@@ -24,7 +24,10 @@ whose subsystem it lives in.
   follows (`TurnStructure.FinishCleanup`, CR 514.3a) — never carried into the next turn.
 - **Every token is made by `CreateTokens`** — so a replacement on tokens (Draconic Visitor's "artifact
   tokens are Dragons instead"; Holo-Engineer's ANY token an Illusion, `ArtifactTokensBecome.AnyToken`) is
-  applied in that one place (`CreateTokens.Instead`, copies too), under whoever `ControlledBy` names.
+  applied in that one place (`CreateTokens.Instead`, copies too), under whoever `ControlledBy` names. **"The exiled
+  card's owner creates an X/X … token, where X is [its] mana value"** (Skyclave Apparition, MC-4.4d3) is `ControlledBy
+  = Ref.OwnerOf(ref)` — the owner of the cards a Ref names; `Ref.OwnerOfTarget(i)` is `OwnerOf(Target(i))` — and
+  `CreateTokens.Size`, one `Count` for power and toughness, counted as it resolves.
 - **A card put onto the battlefield from anywhere enters through `MagicState.EnterBattlefield`** —
   a search, a return, a token: never a bare `MoveCard` to the battlefield, which skips its entry
   (controller, tapped, its "enters" event). `MoveChosenToAction` routes a battlefield search there.
@@ -84,8 +87,12 @@ whose subsystem it lives in.
   on the bottom in a random order") is `LookAndTake` — `Must`, `RestToGraveyard`, `Reveal` (known to
   everyone). The rest go down as Identity Echo's: a random order, not known.
 - **A linked "the exiled card"** (The Measure of a Man) is `Exile { Linked }` (stamps `ExiledBy` with this
-  object of the source) and `MoveTo(Ref.All(Exile, Is.ExiledBySource), Battlefield)` — the filter asked from the source,
-  so nothing once it has left (CR 607.2a).
+  object of the source) and `MoveTo(Ref.All(Exile, Is.ExiledBySource), Battlefield)` — the filter asked from the source:
+  a new object of it finds nothing (CR 607.2a). A resolving ability asks as the object it CAME from
+  (`FilterContext.SourceIncarnation`, from the context's source snapshot, MC-4.4d3): Skyclave Apparition's "when this
+  leaves" still finds its card, and chapter III returns it though the Saga left in response; a static or a cost has
+  no snapshot and asks the source as it is now (Null Summoner). Every reader of "exiled with this" asks that one
+  filter — `ExiledWithSourceShareACardType` (All Good Things...) and `AssimilateExiledWithSource` (Borg Cube) too.
 - **Gaining control is `MagicState.GainControl`** — the same object (counters, damage, attachments,
   until-end-of-turn effects stay), moved to its new controller's battlefield zone, summoning sick for them,
   out of combat; no zone change, no event. **"Until end of turn"** (Worf, Intelligence Contractor; The Wrath of

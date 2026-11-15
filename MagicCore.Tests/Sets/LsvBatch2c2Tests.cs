@@ -599,10 +599,24 @@ public class LsvBatch2c2Tests : FraBoardTest
 		Cast(Hand(Free("Raise", new MoveTo(Ref.CardsInYourGraveyard, ZoneType.Hand)), me), []);
 		OnTop(Boon, them);
 		Cast(Hand(Free("Rob", new ExileTopPlayable { Of = Ref.EachOpponent }), me), []);
+		// a permanent that reads its own leaving: the one move off the battlefield the event is raised for
+		var apparition = Field(Lsv("Skyclave Apparition"), me);
+		Cast(
+			Hand(
+				Free(
+					"Banish",
+					new Exile(Ref.Permanents(MagicCore.Filters.Is.Named("Skyclave Apparition")))
+				),
+				me
+			),
+			[]
+		);
+		Assert.That(s.IsIn(apparition, me, ZoneType.Exile));
 		Assert.That(
 			s.GetCard(laelia).PlusOneCounters,
 			Nu.EqualTo(1),
-			"milled, exiled from my hand, returned from my graveyard, exiled from THEIR library: none"
+			"milled, exiled from my hand, returned from my graveyard, exiled from THEIR library, "
+				+ "exiled from the battlefield: none"
 		);
 	}
 

@@ -846,12 +846,13 @@ public static class LsvCards
 					[],
 					new ExileTopPlayable { Play = new() { ThisTurn = true } }
 				),
-				// "from your library and/or your graveyard": the two moves the event is raised for
+				// "from your library and/or your graveyard": the event's moves but a permanent's off the battlefield
 				When(
 					new Trigger(EventKind.ChangedZone)
 					{
 						By = Whose.You,
 						To = ZoneType.Exile,
+						NotFrom = [ZoneType.Battlefield],
 						OneOrMore = true,
 					},
 					[],
@@ -1319,7 +1320,56 @@ public static class LsvCards
 				new CostChange(2, Is.NamedChosenName) { By = Whose.Opponent },
 				new CostChange(2, Is.NamedChosenName) { Abilities = true },
 			],
+			// ===== MC-4.4d3: white's options, leaving the battlefield =====
+			["Skyclave Apparition"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						Target(!Is.Land & !Is.Token & Is.Opponents & Is.ManaValueAtMost(4)) with
+						{
+							Optional = true,
+						},
+					],
+					new Exile(Ref.Target()) { Linked = true }
+				),
+				// "the exiled card": this object's, asked from the ability's source as it was — it has left
+				When(
+					TriggerEvent.SelfLeaves,
+					[],
+					new CreateTokens(Illusion, 1)
+					{
+						ControlledBy = Ref.OwnerOf(Ref.All(ZoneType.Exile, Is.ExiledBySource)),
+						Size = Count.GreatestManaValueOf(
+							Ref.All(ZoneType.Exile, Is.ExiledBySource)
+						),
+					}
+				),
+			],
+			["Serra Paragon"] =
+			[
+				// "play a land … or cast a permanent spell with mana value 3 or less": a land's is 0
+				new MayPlayFromZone(
+					ZoneType.Graveyard,
+					Is.Type(PermanentTypes) & Is.ManaValueAtMost(3)
+				)
+				{
+					OncePerTurn = true,
+					Gains = When(
+						TriggerEvent.SelfLeaves with
+						{
+							To = ZoneType.Graveyard,
+						},
+						[],
+						new MoveTo(Ref.EventCard, ZoneType.Exile) { From = [ZoneType.Graveyard] },
+						new GainLife(Ref.You, 2)
+					),
+				},
+			],
 		};
+
+	/// <summary>Skyclave Apparition: "an X/X blue Illusion creature token" — its X is CreateTokens.Size.</summary>
+	static CardData Illusion => Token("Illusion", "Creature — Illusion", "0", "0", ["U"]);
 
 	/// <summary>Voice of Victory's mobilize: "1/1 red Warrior creature tokens".</summary>
 	static CardData Warrior => Token("Warrior", "Creature — Warrior", "1", "1", ["R"]);
