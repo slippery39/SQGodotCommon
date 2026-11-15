@@ -1878,7 +1878,10 @@ On the 288 suite positions, against today's search (`beam`, identical to the las
   never a land, so the surveil line lost its "lands" half (Dominion Assault Force: surveil then keep 15.53, exile
   21.09 - the first level read 21.96 and 21.09). Fixed: 34 decisions change where 38 did, 19 882.5 engine steps a
   position, agrees with the oracle 76.0%, score given up 0.81; 0 of 288 flip (3 seeds, 3.4 min). The match above
-  played WITH the bug and has not been played again.
+  played WITH the bug. **Played again as committed** (2026-11-15, `--match=beam,beam+shuffle --until-clear`, with
+  AI-20.6 and AI-20.8 on both sides): 480 games, **54.0% ± 1.5pp** (259-221), stopped as "better", 99.2 min on a
+  busy machine; by deck RG 115-45, WB 95-65, Jace 49-111; 9973.8 engine steps a decision against 4533.1 (2.20×),
+  23.5 rollouts against 10.3; lands 7.4 each, spells 9.6 against 9.5, 19.0 turns. The same result as before the fix.
 - **Shayne's lesson tests under it** (AI-20.7): 1583 pass, 12 fail. `PatrolRacesIntoDrain` #287 attacks again -
   232.81 against −2.19: the attack wins where the next draw is a land (50%, +9034.71) and loses where it is not
   (−8569.09), and a win a turn sooner outweighs the loss. Nine controls no longer reproduce their misplay with the

@@ -253,35 +253,47 @@ Open questions (for Shayne, before `ready`):
 
 ## Next
 
-AI-20.3 is built as a trial, `beam+landornot`, uncommitted (2026-11-14). It gives one answer whatever the seed (0 of
-288 positions flip), the landcycle game now cycles and plays the land in its turn 8, and it won its match against
-the search before it (54.2% ± 1.5pp over 576 games, "better"), at 2.17× the cost a decision. **It is the default
-since 2026-11-14 (Shayne)**: `beam` is this search, `beam+shuffle` the one before. **Twelve lesson tests are red
-(AI-20.7) - green since 2026-11-15, 1595 pass - and nothing is committed. Next, each for Shayne:**
-0. **The Patrol position** (AI-20.7): answered (Decisions, 2026-11-15) - dead on board, hold back - and fixed
-   (AI-20.8: the look-ahead's opponent uses the drain before a spell that does less; its match 50.0% over 96
-   games, no difference). Open on it: the spell cast for nothing when no ability competes (his Boarding Action
-   point). The ten controls (the Patrol's `RootOptionTurns` joined them) run against `beam+shuffle` until
-   AI-20.5 tries each patch off. Open: whether the match is played again - the surveil fix (AI-20.6) came after
-   it (~80 min, any time).
-0b. His known-top-card case (Decisions, 2026-11-15): no surveil bonus when the top card is already known - on his
-   go-ahead, with a position. He asked to SEE the Patrol position: on the table,
-   `./Run-Godot.ps1 MagicTable/MagicTableScene.tscn -GameArgs '--resume=<repo>\MagicCore.Tests\Records\PatrolRacesIntoDrain.json','--resume-at=286','--show-hand','--inspector'`
-   (build `SQGodotCommon.csproj` first - the table ran the old search until it was rebuilt).
-1. **The cost**, later ("we will have to see if there are any optimization techniques"): the second rollout is
-   wasted where no unseen card is drawn inside the horizon. The table's AI is capped at 1 s a decision, so there the
-   doubled cost is a shallower search, not a slower one - not yet looked at on the table. From the pre-commit
-   review: each lands rollout rebuilds the whole arrangement (`Hidden.Unknown`: both libraries out and back in) -
-   reordering only the top places would do.
-2. The 38 suite decisions it changed (22 are the Jace token used or not against another first move) - which of them
-   he wants to look at, with `--suite=beam+shuffle --shown=40` (the changes read the other way round) and `--explain`.
-3. The two open questions above (done means; the surveil's split, #247 still passes).
-4. AI-20.5: the patches it makes redundant, tried off one at a time.
+**Where it stands (2026-11-15, committed as `7b1f1f77` and the commit after it):** the land / not-a-land look-ahead
+is the default (`beam`; the one shuffled guess before it is `beam+shuffle`). No position flips with the seed (0 of
+288), and it beats the search before it 54.0% ± 1.5pp over 480 games (played again after the surveil fix; 54.2%
+before), at 2.20× the engine steps a decision. The look-ahead's opponent uses an ability on its board before a
+spell that does less (AI-20.8). 1595 tests pass; the suite's answers are accepted.
+
+**Open, each on Shayne's word - interview first, one topic at a time, nothing built before his go-ahead:**
+1. **The Jace token and the surveil.** The Jace deck wins least for the new search (49-111 in the match, 66-126
+   the time before) - NOT shown to be the look-ahead's doing: it is the weakest deck with the same search on
+   both sides too (11-21 in AI-20.8's match, 32 games). What is known: most of the suite decisions it changed are
+   the Jace token used or not against another first move (22 of the 38 before the surveil fix; 34 change now) -
+   look with `--suite=beam+shuffle --shown=40` (the changes read the other way round) and `--explain`. And the
+   open question on the surveil: `Records/ShayneNotesSeed1.json` #247 still passes
+   (−17.99 against −18.09) where he wants the token to surveil for its missing red source - a look at an unseen
+   top card played both ways, or three ways ("a land of the missing colour", "another land", "not a land")?
+2. **His known-top-card case** (Decisions, 2026-11-15): no surveil bonus when the top card is already known and
+   left there (`Evaluator.PendingSurveil` is flat). Needs a position first.
+3. **The imagined opponent casts a spell for nothing** when no ability competes (his Boarding Action point:
+   "spending 3 mana to discard a card for no reason" - the rollout's "no worse" rule, `Rollout.OurPlay`). "It
+   doesn't need to be perfect": only with a position where it costs a decision.
+4. **AI-20.5: the ten patches**, each tried off under the default (suite, then a match if the suite moves): the
+   controls in `AiPositionTests` / `BasicsTests` marked `OneGuess` name them. Shayne: "im not fully following why
+   all these are needed" - a patch the default no longer needs goes, with its control.
+5. **The cost**, later ("we will have to see if there are any optimization techniques"): the second rollout is
+   wasted where no unseen card is drawn inside the horizon; each lands rollout rebuilds the whole arrangement
+   (`Hidden.Unknown`: both libraries out and back in) where reordering the top places would do. The table's AI is
+   capped at 1 s a decision, so there the doubled cost is a shallower search - not yet looked at on the table.
+6. **What counts as done** (the open question above), then `ready` for review.
+
+To SEE a position on the table (he asked for the Patrol one):
+`./Run-Godot.ps1 MagicTable/MagicTableScene.tscn -GameArgs '--resume=<repo>\MagicCore.Tests\Records\PatrolRacesIntoDrain.json','--resume-at=286','--show-hand','--inspector'`
+(`--resume-at` is the move number less one; build `SQGodotCommon.csproj` first - the table ran the old search until
+it was rebuilt; delete the `game_records` file the run writes, by name).
 
 After this story, as he ordered them: #24 and `LintTrkSeed1` #48 (land valuation - #48 answers "none" by 0.01 because
 the fetched land scores −0.20 in hand), then #213 (option pricing, AI-13).
 The code: `Hidden.Unknown` / `LandOdds` (`MagicCore/Ai/Hidden.cs`), `BeamSearchAi.RolloutScore`, `Rollout.Score`'s
-`landsDrawn`. Read "AI-3's matrix" and the two AI-20 sections in `docs/findings/magic-ai.md`.
+`landsDrawn`, `Rollout.OpponentStep` / `AbilityOver`. Read "AI-3's matrix" and the two AI-20 sections in
+`docs/findings/magic-ai.md`; the look-ahead's known limits are in `DesignNotes.md` ("MagicCore known ceilings").
+Outside this story, found by the pre-commit review: on the table, Undo keeps the AI searches of the undone moves
+(`MagicTableManager`), so a note written just after an undo can quote a search from the abandoned line (TBL-10).
 
 ## Log
 
@@ -327,3 +339,5 @@ The code: `Hidden.Unknown` / `LandOdds` (`MagicCore/Ai/Hidden.cs`), `BeamSearchA
   stopped as "no difference"; 9676.1 engine steps a decision against 9676.0.
 - 2026-11-15: the ten controls pointed at the search before AI-20.4 (Shayne: "do what you think is best"); the
   tests are green, 1595 pass. Not committed.
+- 2026-11-15: committed (`7b1f1f77`), then the match played again on Shayne's word, as committed: `beam` 54.0% ±
+  1.5pp against `beam+shuffle` over 480 games (259-221), "better"; 2.20× the engine steps a decision.
