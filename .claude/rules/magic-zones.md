@@ -134,13 +134,16 @@ whose subsystem it lives in.
   `MayDiscard { Exile, Must, Linked }`, and "all cards exiled with this share a card type" is
   `ExiledWithSourceShareACardType`.
 - **"As this enters, choose a nonland card name"** (Kai Winn) is `ChoosesNameAsItEnters` → `ChosenName`, the options
-  every nonland name printed in the game's sets (`CardRegistry.NonlandNames` — never the decks: that would show a
+  every nonland name printed in the game's sets (`CardRegistry.CardNames` — never the decks: that would show a
   hidden list; Shayne, 2026-11-06), a `ChooseKeywordChoice { NamesACard }` the AI answers by rule (`GreedyAi.LikeliestName`), never
   searched — in LIMITED (Shayne, 2026-11-06), step by step: a card with an activated ability on their battlefield;
   else one known in their hand; else the highest-rated common in a colour their lands show (`CardRatings.TryOf`). "With the chosen name" is `Is.NamedChosenName`. **"Activates an ability"** is `AbilityActivatedEvent`
   (the source as it was), raised by EVERY activation: `ActivateAbilityAction`, a loyalty ability, and a MANA ability
   — `TapForManaAction` and the payment (`ManaPayment.RaiseActivated`) alike (Shayne: "If you name Llanowar Elves and
   they tap it for mana it would trigger her").
+  **"Look at an opponent's hand, then choose any card name"** (Anointed Peacekeeper) is the same piece
+  `{ LooksAtHand, AnyName }` (MC-4.4d2b): the hand is made known before the name is asked, and the lands' names are
+  offered too (`CardRegistry.CardNames(s, lands: true)`).
 - **Phasing** (The City on the Edge of Forever, CR 702.26) is `Rules.Phasing`: a phased-out permanent is MOVED, with
   `MoveObject`, to its controller's `PhasedOut` zone — no zone change: the same object, its counters, tapped state
   and links, nothing triggers, "until it leaves" never fires — and what is attached goes with it. It phases in as

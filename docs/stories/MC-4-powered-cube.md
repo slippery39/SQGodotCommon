@@ -315,6 +315,43 @@ as his three priorities.
   **Open (for Shayne):** Unexpectedly Absent is one cast per X × target — 84 with 8 lands and 12 nonland permanents,
   the way Mind Twist and Khaaaaaaaaaaaannn! are built; linear, and the probe cast it 213 times with no hang. Default
   (taken): left so; X becomes a choice after the cast if the AI's branching on it shows in a profile.
+  **Answered (Shayne, 2026-11-15):** "we need to fix the way the AI handles X spells for sure, but another time" —
+  Unexpectedly Absent stays one cast per X × target; how the AI handles X spells is AI-19.26 (backlog, a note only).
+- 2026-11-15, Claude — **4.4d2b's notes: five cards on four pieces' options; the plans held, two grew on reading.**
+  **The lock** (`CantCastOrActivate`: Archon of Emeria, Voice of Victory, Clarion Conqueror) has five options —
+  `By` (whose, from its holder), `If` (when, as its holder's), `Spells` / `Abilities` (which of the two),
+  `SpellsEachTurn` (Archon: it binds a player who has cast that many — the asking PLAYER's count, which a
+  holder-side `If` can't say) and `Of` (Clarion: the sources — a permanent, never a card in a hand or graveyard).
+  `Combat.LockedDown` is told the card cast or the ability's source. Grown: Yuriko's `DuringCombat` flag became the
+  condition `DuringCombat` in `If` and she moved onto it (one "when", not a flag beside a condition), and a
+  permanent's lock is looked for always (the "only during combat" ceiling is gone). Grown: the Conqueror stops a
+  Mox and an Elf but not a land, so a payment can't ask "is this player's mana locked" once — `ManaPayment.Find`
+  takes the locks once (`Combat.Locks`) and asks `Combat.Stops` of each source.
+  **Voice's mobilize** is `CreateTokens { Tapped, Attacking, SacrificeAtNextEndStep }`: `Attacking` is
+  `EnterBattlefield(attacking:)`, Kira's stamp; tapped stays its own word.
+  **The Wandering Emperor:** `JaceLoyaltyAtInstantSpeed` → `LoyaltyAtInstantSpeed(filter)`, asked of the
+  planeswalker — the player's in a `ThisTurn` (Jace's Machinations moved: `Is.Subtype("Jace")`, and has a test that
+  no other planeswalker gets it) or the planeswalker's own (`Is.EnteredThisTurn`). Only her own is read from the
+  battlefield: no card gives it to another.
+  **Anointed Peacekeeper:** `ChoosesNameAsItEnters { LooksAtHand, AnyName }` (`CardRegistry.NonlandNames` →
+  `CardNames(s, lands)`); the ability tax is `CostChange { Abilities }`, read by `Costs.OfAbility` for everyone's
+  abilities — `By` isn't read there (a revert-check showed no test could see it: the card's tax is everyone's).
+  **Nothing offers an action per combination:** the name is a choice (Kai Winn's), a lock only removes actions.
+  **Left as ceilings (DesignNotes):** a LOYALTY ability of the named card isn't taxed (the loyalty action pays no
+  mana); mobilize's tokens attack the player, never a planeswalker; the X bound and the AI's mana count don't ask
+  the mana lock (Sen's was so already).
+  **`/pre-commit`'s review, fixed:** a mana ability that COSTS mana (`WithCostlyMana`: Starfleet Academy under Sen
+  Triplets, an artifact's under the Conqueror) was still used to pay under a mana lock — it asks the locks too (a
+  test); the lock and the ability tax were looked for on both battlefields at every cast, activation and payment —
+  the statics board notes once per state whether either is in play at all (`Characteristics.RuleWork`, a gained
+  one too: a test), so with none nothing is scanned; `Combat.Stops` → `Stopped` (it shared the name of the
+  priority-stops class) and a shadowed `spell`; `ponytail:` marks on the two ceilings that had none.
+  **Not taken, and why:** `AnyName` stays a yes/no, not a filter — the menu is read from the sets' PRINTINGS
+  (`CardData`, cached by set), which a `Filter` over cards in the game can't be asked of; a type mask when a third
+  naming card differs. The hand look in `EnterBattlefield` is a third two-line copy of `LookAtHand`'s loop: one
+  helper would touch two old effects (MC-6's kind of work). `By` on a "this turn" lock isn't read — it is put with
+  the player it binds (`ThisTurn.On`), said on the option. **AI-only, backlog:** the AI names the Peacekeeper's
+  card by Kai Winn's rule (AI-19.27).
 
 ## Tasks
 
@@ -388,23 +425,29 @@ as his three priorities.
           20 tests, 32/32 breaks caught; `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random
           and 415 card-replay games, added 28; probe 150 games, every card cast, 1 past 300 permanents — seed 119, 280
           Troubling Tribbles, not this batch)
-    - [ ] MC-4.4d2b Options, restrictions and timing, 5: Archon of Emeria, Voice of Victory, Clarion Conqueror, The
-          Wandering Emperor, Anointed Peacekeeper
+    - [x] MC-4.4d2b Options, restrictions and timing, 5 — done 2026-11-15: Archon of Emeria, Voice of Victory, Clarion
+          Conqueror, The Wandering Emperor, Anointed Peacekeeper. Options on four pieces (Decisions; Yuriko and Jace's
+          Machinations moved onto theirs); 13 tests, 66/66 breaks caught; `batch_checks.py` all 7 steps, twice (after
+          the review's fixes too: golden-out unchanged; golden-in moved 29 random and 308 card-replay games, added 20;
+          probe 150 games, none unfinished, every card cast)
     - [ ] MC-4.4d3 Leaving the battlefield, 2: Skyclave Apparition, Serra Paragon
     - [ ] MC-4.4d4 Balance
 
 ## Next
 
 Red's tier 1 is done (4.4c). MC-4.4d — white's tier 1 (Shayne, 2026-11-14) — is surveyed and split in five parts
-(Decisions, Tasks); **d1 and d2a are done: 175 of 528 play.** Next, each in a NEW session and in order: **d2b** (five
-cards — Archon of Emeria, Voice of Victory, Clarion Conqueror, The Wandering Emperor, Anointed Peacekeeper: the 4.4d
-Decision names each piece and its option; Jace's Machinations moves with `JaceLoyaltyAtInstantSpeed`), then d3, d4.
-Read the nearest piece's CODE first — three of d2a's six plans changed on reading (4.4d2a's notes). Useful to d2b and
-d3 from d2a: `Loyalty(…)` is in `Scripting` now; `EnterBattlefield` may refuse an entry (Containment Priest), so
-check `IsOnBattlefield` after it; `MoveTo.Then` / `Ref.ThisWay` and `DelayedTrigger.MadeBy` (`Ref.EventObject`)
-exist. The white tests are in `LsvBatch2dTests.cs` (its `UntapMyLands`, `Elspeth()`, `Loyalty(walker, ability)`,
-`Raise`: a card from any graveyard onto the battlefield). A FIRES test per scripted card. For Shayne: one Open
-(Unexpectedly Absent's casts per X, default taken). DEV-5 still open: `batch_checks.py`'s probe report lists only the
+(Decisions, Tasks); **d1, d2a and d2b are done: 180 of 528 play.** Next, each in a NEW session and in order: **d3**
+(two cards — Skyclave Apparition, Serra Paragon: the 4.4d Decision names each piece and its option — "leaves the
+battlefield" and "put into a graveyard from the battlefield" widen `ChangedZoneEvent` in `MoveCard`, never a second
+event), then **d4** (Balance: each player's choice after the cast, never an action per set).
+Read the nearest piece's CODE first — three of d2a's six plans changed on reading, two of d2b's grew (their notes).
+Useful to d3 and d4: `EnterBattlefield` may refuse an entry (Containment Priest), so check `IsOnBattlefield` after
+it; `MoveTo.Then` / `Ref.ThisWay` and `DelayedTrigger.MadeBy` (`Ref.EventObject`) exist; from d2b, a rule every
+cast or activation asks about permanents notes itself on the statics board (`Characteristics.RuleWork`) rather than
+scanning the battlefield each time. The white tests are in `LsvBatch2dTests.cs` (its `UntapMyLands`, `Elspeth()`,
+`Emperor()`, `Loyalty(walker, ability)`, `LoyaltyOffered(walker)`, `WithTap(card)`: "{T}: You gain 1 life", `Raise`:
+a card from any graveyard onto the battlefield). A FIRES test per scripted card. For Shayne: nothing Open (d2a's is
+answered: AI-19.26); one AI note on the backlog (AI-19.27, the AI's name for Anointed Peacekeeper). DEV-5 still open: `batch_checks.py`'s probe report lists only the
 first 12 cards named (probe the rest with `MAGIC_PROBE_CARDS`), the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
@@ -449,3 +492,8 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-15 (cube lane, sprint 5 C5): MC-4.4d2a — seven white cards on six options (a library depth, a delayed
   trigger's maker, tokens doubled, an entry refused, a type lost on entering, one X for a trigger); no recorded game
   moved by the engine; 175 of 528 play. For Shayne: one Open (Unexpectedly Absent: a cast per X, default taken).
+- 2026-11-15 (cube lane, sprint 5 C5): MC-4.4d2b — five white cards on four pieces' options (the lock: whose, when,
+  which, how many spells, of which sources; a token made attacking; loyalty at instant speed by a filter; a tax on
+  abilities and a name chosen after a look at the hand); Yuriko and Jace's Machinations moved onto the generalised
+  pieces; no recorded game moved by the engine; 180 of 528 play. d2a's Open answered (Shayne: the AI's X spells
+  another time — AI-19.26). For Shayne: nothing Open; AI-19.27 on the backlog.

@@ -42,6 +42,9 @@ whose subsystem it lives in.
   together each aren't alone. The table doesn't refuse the declaration yet (TBL-7).
 - **"Enters tapped and attacking"** (Kira Nerys, `PermanentsEnter(Is.Creature & Is.Yours) { Attacking }`) is set in `EnterBattlefield` —
   `AttackingId` the opponent, never declared, so no "whenever … attacks" (CR 508.4); `Combat.Attackers` reads it live.
+  **A token created attacking** (mobilize, Voice of Victory: "create two tapped and attacking 1/1 red Warrior creature
+  tokens. Sacrifice them at the beginning of the next end step") is `CreateTokens { Tapped, Attacking,
+  SacrificeAtNextEndStep }` (MC-4.4d2b) — `EnterBattlefield(attacking:)`, the same stamp; tapped is its own word there.
 - **Exalted** (CR 702.83, Noble Hierarch) is a scripted trigger, `Scripting.Exalted`, not an engine keyword: a creature
   you control attacking alone (`EventTest.Alone` — a player or a planeswalker), each instance on its own.
 - **Landwalk and fear are no combat rule** (MC-6.8): `Scripting.Landwalk("Island")` is the plain "can't be blocked"

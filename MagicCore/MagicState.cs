@@ -370,6 +370,7 @@ public static class MagicState
 	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
 	/// <param name="sunburst">Sunburst: "a charge counter on it for each color of mana spent to cast it".</param>
 	/// <param name="loses">MoveTo.Loses — Enduring Innocence returns "an enchantment. (It's not a creature.)".</param>
+	/// <param name="attacking">CreateTokens.Attacking — mobilize's tokens are created "attacking" (tapped is its own word).</param>
 	public static GameState EnterBattlefield(
 		this GameState s,
 		int cardId,
@@ -381,7 +382,8 @@ public static class MagicState
 		int attachTo = 0,
 		bool cast = false,
 		int sunburst = 0,
-		CardType loses = CardType.None
+		CardType loses = CardType.None,
+		bool attacking = false
 	)
 	{
 		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
@@ -447,12 +449,15 @@ public static class MagicState
 		);
 		// Kira Nerys: "If a creature you control would enter while you control an attacking creature, instead
 		// it enters tapped and attacking."
-		if (EntersAttacking(s, cardId, controllerId, rules))
+		// ponytail: "attacking" (a token made so) isn't asked whether there is a combat — mobilize only
+		// resolves in one; check the step if a card makes an attacking token outside combat (DesignNotes).
+		var byRule = EntersAttacking(s, cardId, controllerId, rules);
+		if (byRule || attacking)
 			s = s.UpdateObject(
 				cardId,
 				s.GetCard(cardId) with
 				{
-					IsTapped = true,
+					IsTapped = byRule || s.GetCard(cardId).IsTapped,
 					AttackingId = s.OpponentOf(controllerId),
 				}
 			);
@@ -535,9 +540,13 @@ public static class MagicState
 					],
 				}
 			);
-		if (card.HasComponent<ChoosesNameAsItEnters>())
+		if (card.GetComponent<ChoosesNameAsItEnters>() is { } naming)
 		{
-			var names = Sets.CardRegistry.NonlandNames(s);
+			// Anointed Peacekeeper: "look at an opponent's hand, then choose any card name"
+			if (naming.LooksAtHand)
+				foreach (var seen in s.CardsIn(s.OpponentOf(controllerId), ZoneType.Hand).ToList())
+					s = s.MakeKnown(seen.Id, Knowers.Opponent);
+			var names = Sets.CardRegistry.CardNames(s, naming.AnyName);
 			s = s.SpawnAction(
 				new PipelineAction
 				{
@@ -546,7 +555,8 @@ public static class MagicState
 						new Actions.ChooseKeywordChoice(controllerId, names)
 						{
 							NamesACard = true,
-							Prompt = $"{card.Name}: choose a nonland card name",
+							Prompt =
+								$"{card.Name}: choose a {(naming.AnyName ? "" : "nonland ")}card name",
 						},
 						new Actions.SetChosenNameAction(cardId, names),
 					],

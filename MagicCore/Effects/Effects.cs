@@ -970,15 +970,40 @@ public record RestOfTheGame : GameComponent;
 /// "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat, players can't
 /// cast spells or activate abilities that aren't mana abilities." (a permanent's: every player); Sen
 /// Triplets: "This turn, that player can't cast spells or activate abilities" (in that player's command
-/// zone, mana abilities too). Combat.LockedDown.
+/// zone, mana abilities too). Whose, which of the two, of which sources and when are its options (MC-4.4d2b:
+/// Voice of Victory, Archon of Emeria, Clarion Conqueror). Combat.LockedDown.
 /// </summary>
 public record CantCastOrActivate : ThisTurnEffect
 {
-	/// <summary>Yuriko: "During combat".</summary>
-	public bool DuringCombat { get; init; }
+	/// <summary>Yuriko: "During combat" (DuringCombat); Voice of Victory: "during your turn" — judged as its holder's.</summary>
+	public Condition? If { get; init; }
 
 	/// <summary>Sen Triplets: "activate abilities" — mana abilities too (Kai Winn's ruling); TapForManaAction and ManaPayment ask.</summary>
 	public bool ManaAbilitiesToo { get; init; }
+
+	/// <summary>
+	/// Voice of Victory: "Your opponents can't cast spells" — whose, from its holder's controller: a PERMANENT's.
+	/// A "this turn" lock is put with the player it binds (ThisTurn.On, Sen Triplets) and needs none.
+	/// </summary>
+	public Whose By { get; init; } = Whose.Any;
+
+	/// <summary>Clarion Conqueror: "Activated abilities … can't be activated" — false: spells are still cast.</summary>
+	public bool Spells { get; init; } = true;
+
+	/// <summary>Voice of Victory, Archon of Emeria: "can't cast spells" — false: abilities are still activated.</summary>
+	public bool Abilities { get; init; } = true;
+
+	/// <summary>
+	/// Archon of Emeria: "Each player can't cast more than one spell each turn." — it binds only a player who
+	/// has cast that many this turn (TurnTally.SpellsCast); 0: from the first.
+	/// </summary>
+	public int SpellsEachTurn { get; init; }
+
+	/// <summary>
+	/// Clarion Conqueror: "Activated abilities of artifacts, creatures, and planeswalkers" — the spell cast, or
+	/// the PERMANENT whose ability it is (never a card in a hand or graveyard), asked from its holder.
+	/// </summary>
+	public Filters.Filter? Of { get; init; }
 }
 
 /// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>
@@ -1014,8 +1039,14 @@ public record ThisTurnReplacement(NumericReplacement Replacement) : ThisTurnEffe
 /// </summary>
 public record CopyNextInstantOrSorcery : ThisTurnEffect;
 
-/// <summary>Jace's Machinations: "you may activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant" — LoyaltyActions.</summary>
-public record JaceLoyaltyAtInstantSpeed : ThisTurnEffect;
+/// <summary>
+/// "You may activate [their] loyalty abilities any time you could cast an instant" — Jace's Machinations: "you may
+/// activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant" this turn
+/// (Is.Subtype("Jace"), in a ThisTurn); The Wandering Emperor: "As long as The Wandering Emperor entered this
+/// turn, you may activate her loyalty abilities any time you could cast an instant." (Is.EnteredThisTurn, on
+/// her — a planeswalker's own is about itself). The filter is asked of the planeswalker; LoyaltyActions.
+/// </summary>
+public record LoyaltyAtInstantSpeed(Filters.Filter Of) : ThisTurnEffect;
 
 /// <summary>Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by that cast.</summary>
 public record NextSpellCantBeCountered : ThisTurnEffect;

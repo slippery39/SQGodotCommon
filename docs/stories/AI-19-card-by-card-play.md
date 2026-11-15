@@ -248,6 +248,18 @@ Open questions:
       creatures" — `GreedyAi` answers its targets with ONE creature, whichever plays out best, so it never kills two
       2/2s; and `BeamSearchAi.Damage` reads `Count.Share` as 0. Wanted: the pairs (and their splits) evaluated too
       (backlog; added from the cube lane).
+- [ ] AI-19.26 X spells (LSV cube, MC-4.4d2a's Open; Shayne, 2026-11-15: "we need to fix the way the AI handles X
+      spells for sure, but another time"): a spell with X and a target is one cast per X × target — Unexpectedly
+      Absent (84 with 8 lands and 12 nonland permanents), Mind Twist, Khaaaaaaaaaaaannn! — and the AI weighs every
+      one. Wanted: how the AI handles X spells (the few X that matter, or X as a choice after the cast). A note only:
+      nothing built (backlog; added from the cube lane).
+- [ ] AI-19.27 Anointed Peacekeeper (LSV cube, MC-4.4d2b): its name is asked as Kai Winn's (`ChooseKeywordChoice
+      { NamesACard }`), so `GreedyAi.LikeliestName` answers by HER rule — first a card on the opponent's battlefield
+      with an activated, mana or loyalty ability. The Peacekeeper taxes neither mana nor (a ceiling) loyalty
+      abilities, and in a singleton cube a card in play is no spell left to tax: with a Mox or an Elf across the
+      table the AI names it and the tax does nothing, though it has just looked at the hand. Wanted: the naming
+      rule by what the namer does — for a tax, the best card known in their hand first (backlog; added from the
+      cube lane, found by `/pre-commit`'s review).
 
 ## Next
 
@@ -262,6 +274,8 @@ boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-15: AI-19.27 — the AI's name for Anointed Peacekeeper added from the cube lane (MC-4.4d2b's review).
+- 2026-11-15: AI-19.26 — how the AI handles X spells added from the cube lane (MC-4.4d2a's Open, answered by Shayne).
 - 2026-11-14: AI-19.25 — Pyrokinesis' one-target answer added from the cube lane (MC-4.4c2e).
 - 2026-11-14: AI-19.24 — Tersa's "discard up to two" added from the cube lane (MC-4.4c2a's Open).
 - 2026-11-11: AI-19.23 — the scan rerun after AI-13.11/13.12 on the same 300 seeds; the VALUE items re-decided under 30

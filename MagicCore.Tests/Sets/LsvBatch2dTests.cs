@@ -806,4 +806,385 @@ public class LsvBatch2dTests : FraBoardTest
 		var token = s.CardsIn(me, ZoneType.Battlefield).First(c => c.IsToken && c.Name == "Rabbit");
 		Assert.That((s.Power(token), s.Toughness(token)), Nu.EqualTo((1, 1)));
 	}
+
+	// ===== MC-4.4d2b: restrictions and timing =====
+
+	/// <summary>The same card with "{T}: You gain 1 life."</summary>
+	static CardDefinition WithTap(CardDefinition card) =>
+		card with
+		{
+			Components =
+			[
+				.. card.Components,
+				new ActivatedAbilityComponent(ManaCost.None, [new GainLife(Ref.You, 1)])
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+		};
+
+	bool LoyaltyOffered(int walker) =>
+		s.LegalActions().OfType<ActivateLoyaltyAction>().Any(a => a.CardId == walker);
+
+	[Test]
+	public void ArchonOfEmeria_EachPlayerCastsOneSpellEachTurn_AbilitiesStillActivate()
+	{
+		Field(Lsv("Archon of Emeria"), me);
+		var relic = Field(WithTap(Relic), me);
+		var first = Hand(Boon, me);
+		var second = Hand(Boon, me);
+		Assert.That(Casts(second).Any(), "TEST SETUP: castable before any spell this turn");
+		Cast(first, []);
+		Assert.That(Casts(second).Any(), Nu.False, "more than one spell this turn");
+		Assert.That(Activations(relic).Any(), "an ability isn't a spell");
+
+		var theirs = Hand(Boon, them);
+		var theirSecond = Hand(Boon, them);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		Assert.That(Casts(theirs).Any(), "each player: their first this turn");
+		s = s.Act(new CastSpellAction { PlayerId = them, CardId = theirs });
+		Assert.That(Casts(theirSecond).Any(), Nu.False, "their second");
+	}
+
+	[Test]
+	public void ArchonOfEmeria_TheirNonbasicLandsEnterTapped()
+	{
+		Field(Lsv("Archon of Emeria"), me);
+		var theirs = Put(Lsv("Strip Mine"), them, ZoneType.Hand);
+		s = s.EnterBattlefield(theirs, them);
+		var basic = Put(TestGames.Card("Plains"), them, ZoneType.Hand);
+		s = s.EnterBattlefield(basic, them);
+		var mine = Hand(Lsv("Strip Mine"), me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = mine });
+		Assert.That(s.GetCard(theirs).IsTapped, "a nonbasic land an opponent controls");
+		Assert.That(s.GetCard(basic).IsTapped, Nu.False, "a basic land");
+		Assert.That(s.GetCard(mine).IsTapped, Nu.False, "my own");
+	}
+
+	[Test]
+	public void VoiceOfVictory_Mobilize_TwoTappedAttackingWarriors_SacrificedAtTheEndStep()
+	{
+		var voice = Field(Lsv("Voice of Victory"), me);
+		var life = Life(them);
+		AttackWith(voice);
+		Resolve();
+		var warriors = s.CardsIn(me, ZoneType.Battlefield)
+			.Where(c => c.IsToken && c.Name == "Warrior")
+			.ToList();
+		Assert.That(warriors, Has.Count.EqualTo(2));
+		Assert.That(warriors.All(w => w.IsTapped), "tapped");
+		Assert.That(warriors.All(w => w.AttackingId == them), "and attacking");
+		Assert.That(warriors.Select(w => (s.Power(w), s.Toughness(w))), Nu.All.EqualTo((1, 1)));
+		s = TestGames.PassUntil(s, x => x.GetGame().Step == Step.PostCombatMain);
+		Assert.That(Life(them), Nu.EqualTo(life - 3), "the Voice's 1 and each Warrior's 1");
+		Assert.That(Tokens(me, "Warrior"), Nu.EqualTo(2), "still there after combat");
+		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == them);
+		Assert.That(Tokens(me, "Warrior"), Nu.EqualTo(0), "sacrificed at the next end step");
+	}
+
+	[Test]
+	public void VoiceOfVictory_OpponentsCantCastSpells_DuringMyTurn()
+	{
+		Field(Lsv("Voice of Victory"), me);
+		var relic = Field(WithTap(Relic), them);
+		var mine = Hand(Boon, me);
+		var theirs = Hand(Boon, them);
+		Assert.That(Casts(mine).Any(), "my own spells");
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		Assert.That(s.GetGame().PriorityPlayerId, Nu.EqualTo(them), "TEST SETUP: they may act");
+		Assert.That(Casts(theirs).Any(), Nu.False, "an opponent's spell during my turn");
+		Assert.That(Activations(relic).Any(), "an ability isn't a spell");
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().ActivePlayerId == them && x.GetGame().PriorityPlayerId == them
+		);
+		Assert.That(Casts(theirs).Any(), "during their own turn");
+	}
+
+	[Test]
+	public void ClarionConqueror_NoAbilitiesOfArtifactsCreaturesOrPlaneswalkers_ManaAbilitiesToo()
+	{
+		var elspeth = Elspeth();
+		var relic = Field(WithTap(Relic), me);
+		var monk = Field(WithTap(Bear), me);
+		var shrine = Field(WithTap(Shrine), me);
+		var mox = Field(Lsv("Mox Pearl"), me);
+		var cycler = Hand(Bear with { Components = [Scripting.Cycling("{1}")] }, me);
+		var spell = Hand(Bear, me);
+		bool Taps() =>
+			new TapForManaAction
+			{
+				PlayerId = me,
+				CardId = mox,
+				Color = ManaColor.White,
+			}
+				.ValidateAdd(s)
+				.IsValid;
+		Assert.That(
+			(Activations(relic).Any(), Activations(monk).Any(), LoyaltyOffered(elspeth), Taps()),
+			Nu.EqualTo((true, true, true, true)),
+			"TEST SETUP: each can be activated"
+		);
+
+		Field(Lsv("Clarion Conqueror"), them);
+		Assert.That(Activations(relic).Any(), Nu.False, "an artifact's");
+		Assert.That(Activations(monk).Any(), Nu.False, "a creature's");
+		Assert.That(LoyaltyOffered(elspeth), Nu.False, "a planeswalker's");
+		Assert.That(Taps(), Nu.False, "a mana ability is an activated ability");
+		Assert.That(Activations(shrine).Any(), "an enchantment's");
+		Assert.That(Activations(cycler).Any(), "a creature CARD in my hand is no creature");
+		Assert.That(Casts(spell).Any(), "spells are still cast, with the lands' mana");
+	}
+
+	[Test]
+	public void ClarionConqueror_ACreaturesManaPaysForNothing_ACardInHandStillDoes()
+	{
+		Field(Lsv("Llanowar Elves"), me);
+		foreach (
+			var land in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)).ToList()
+		)
+			s = s.Tap(land.Id); // TEST SETUP: only the Elves can pay
+		var green = ManaCost.Parse("{G}");
+		Assert.That(ManaPayment.Find(s, me, green, 0), Nu.Not.Null, "TEST SETUP: the Elves pay");
+		Field(Lsv("Clarion Conqueror"), them);
+		Assert.That(ManaPayment.Find(s, me, green, 0), Nu.Null, "the Elves can't be tapped for it");
+		Hand(Lsv("Elvish Spirit Guide"), me);
+		Assert.That(ManaPayment.Find(s, me, green, 0), Nu.Not.Null, "the Guide in my hand can");
+	}
+
+	[Test]
+	public void ClarionConqueror_AnArtifactsManaAbilityThatCostsMana_PaysForNothingEither()
+	{
+		// "{T}: Add {C}." and "{1}, {T}: Add one mana of any color."
+		Field(
+			Relic with
+			{
+				Components =
+				[
+					new ManaAbilityComponent(ManaColor.Colorless),
+					ManaAbilityComponent.OfAnyOneColor(1) with
+					{
+						Cost = ManaCost.Parse("{1}"),
+					},
+				],
+			},
+			me
+		);
+		foreach (
+			var land in s.CardsIn(me, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Land) && c.Name != "Forest")
+				.ToList()
+		)
+			s = s.Tap(land.Id); // TEST SETUP: Forests and the Relic — blue only through its {1} ability
+		var blue = ManaCost.Parse("{U}");
+		Assert.That(
+			ManaPayment.Find(s, me, blue, 0),
+			Nu.Not.Null,
+			"TEST SETUP: a Forest pays its {1}"
+		);
+		Field(Lsv("Clarion Conqueror"), them);
+		Assert.That(ManaPayment.Find(s, me, blue, 0), Nu.Null, "that ability can't be activated");
+	}
+
+	[Test]
+	public void ALockOrAnAbilityTaxAPermanentGains_IsFoundToo()
+	{
+		// No card gains either yet — but the "is one in play" flags must not miss the day one does.
+		var bear = Field(Bear, me);
+		var relic = Field(WithTap(Relic), me);
+		Hand(Boon, me);
+		int RelicCosts() =>
+			MagicCore
+				.Rules.Costs.OfAbility(
+					s,
+					s.ActivatedAbilitiesOf(s.GetCard(relic)).Single(),
+					[],
+					me,
+					relic
+				)
+				.ManaValue;
+		Assert.That(
+			(MagicCore.Turns.Combat.LockedDown(s, me), RelicCosts()),
+			Nu.EqualTo((false, 0)),
+			"TEST SETUP: neither yet"
+		);
+		var hush = TestCards.Targeted(
+			"Hush",
+			MagicCore.Targeting.TargetSpec.Creature,
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+			{
+				Gains = [new CantCastOrActivate(), new CostChange(2) { Abilities = true }],
+			}
+		);
+		Cast(Hand(hush, me), [], bear);
+		Assert.That(MagicCore.Turns.Combat.LockedDown(s, me), "the lock it gained");
+		Assert.That(RelicCosts(), Nu.EqualTo(2), "the tax it gained");
+	}
+
+	int Emperor()
+	{
+		var emperor = Hand(Lsv("The Wandering Emperor"), me);
+		Cast(emperor, []);
+		UntapMyLands();
+		return emperor;
+	}
+
+	[Test]
+	public void TheWanderingEmperor_FlashedIn_ActivatesAtInstantSpeed_OnlyTheTurnSheEntered()
+	{
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.BeginCombat && x.GetGame().PriorityPlayerId == me
+		);
+		var emperor = Emperor();
+		Assert.That(Alive(emperor), "flash: cast at the beginning of combat");
+		Loyalty(emperor, 1);
+		var samurai = s.CardsIn(me, ZoneType.Battlefield)
+			.Single(c => c.IsToken && c.Name == "Samurai");
+		Assert.That(
+			(s.Power(samurai), s.Toughness(samurai), s.Has(samurai, "Vigilance")),
+			Nu.EqualTo((2, 2, true))
+		);
+		Assert.That(s.GetCard(emperor).Loyalty, Nu.EqualTo(3 - 1));
+
+		var entered = s.GetGame().TurnNumber;
+		s = TestGames.PassUntil(
+			s,
+			x =>
+				x.GetGame().TurnNumber > entered
+				&& x.GetGame().ActivePlayerId == me
+				&& x.GetGame().Step == Step.BeginCombat
+				&& x.GetGame().PriorityPlayerId == me
+		);
+		Assert.That(LoyaltyOffered(emperor), Nu.False, "she entered an earlier turn");
+	}
+
+	[Test]
+	public void TheWanderingEmperor_PlusOne_ACounterAndFirstStrikeUntilEndOfTurn()
+	{
+		var emperor = Emperor();
+		var bear = Field(Bear, me);
+		Assert.That(
+			s.LegalActions()
+				.OfType<ActivateLoyaltyAction>()
+				.Any(a => a.CardId == emperor && a.AbilityIndex == 0 && a.Targets is [0]),
+			"UP TO one target creature"
+		);
+		Loyalty(emperor, 0, bear);
+		Assert.That(s.GetCard(bear).PlusOneCounters, Nu.EqualTo(1));
+		Assert.That(s.Has(s.GetCard(bear), "First strike"));
+		Assert.That(s.GetCard(emperor).Loyalty, Nu.EqualTo(3 + 1));
+		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == them);
+		Assert.That(s.Has(s.GetCard(bear), "First strike"), Nu.False, "until end of turn");
+		Assert.That(s.GetCard(bear).PlusOneCounters, Nu.EqualTo(1), "the counter stays");
+	}
+
+	[Test]
+	public void TheWanderingEmperor_MinusTwo_ExilesATappedCreature_AndTwoLife()
+	{
+		var emperor = Emperor();
+		var tapped = Field(Bear, them);
+		var untapped = Field(Bear, them);
+		s = s.Tap(tapped); // TEST SETUP
+		var life = Life(me);
+		var offered = s.LegalActions()
+			.OfType<ActivateLoyaltyAction>()
+			.Where(a => a.CardId == emperor && a.AbilityIndex == 2)
+			.SelectMany(a => a.Targets)
+			.ToList();
+		Assert.That(offered, Nu.EqualTo(new[] { tapped }), "target TAPPED creature");
+		Loyalty(emperor, 2, tapped);
+		Assert.That(
+			(InExile(tapped), Alive(untapped), Life(me)),
+			Nu.EqualTo((true, true, life + 2))
+		);
+	}
+
+	[Test]
+	public void JacesMachinations_OnlyJacePlaneswalkers_AtInstantSpeed()
+	{
+		var elspeth = Elspeth();
+		Cast(Hand("Jace's Machinations", me), []);
+		UntapMyLands();
+		var jace = Jace(me)!;
+		var boon = Hand(Boon, me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = boon }); // the stack isn't empty now
+		Assert.That(LoyaltyOffered(jace.Id), "a Jace planeswalker");
+		Assert.That(LoyaltyOffered(elspeth), Nu.False, "no other planeswalker");
+	}
+
+	[Test]
+	public void AnointedPeacekeeper_LooksAtTheirHand_NamesAnyCard_ItsSpellsAndAbilitiesCostTwoMore()
+	{
+		var commando = Lsv("Cathar Commando");
+		var theirSpell = Hand(commando, them);
+		var theirBear = Hand(Bear, them);
+		var theirs = Field(commando, them);
+		var theirShrine = Field(WithTap(Shrine), them);
+		var mine = Field(commando, me);
+		var mySpell = Hand(commando, me);
+		var relic = Field(Relic, me);
+		Assert.That(
+			s.GetCard(theirSpell).KnownTo & Knowers.Opponent,
+			Nu.EqualTo(Knowers.None),
+			"TEST SETUP: unseen"
+		);
+
+		var keeper = Hand(Lsv("Anointed Peacekeeper"), me);
+		var landOffered = false;
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = keeper });
+		Resolve(c =>
+		{
+			switch (c)
+			{
+				case ChooseKeywordChoice k:
+					landOffered = k.Keywords.Contains("Strip Mine");
+					return [k.Keywords.IndexOf("Cathar Commando") + 1];
+				default:
+					return c.Options.Take(c.MinChoices).Select(o => o.Id);
+			}
+		});
+		Assert.That(landOffered, "any card name: a land's too");
+		Assert.That(
+			CardRegistry.CardNames(s),
+			Has.No.Member("Strip Mine"),
+			"Kai Winn's stay nonland"
+		);
+		Assert.That(
+			s.GetCard(theirSpell).KnownTo & Knowers.Opponent,
+			Nu.EqualTo(Knowers.Opponent),
+			"look at an opponent's hand"
+		);
+		Assert.That(
+			EffectiveManaValue(them, theirSpell),
+			Nu.EqualTo(2 + 2),
+			"their spell so named"
+		);
+		Assert.That(EffectiveManaValue(them, theirBear), Nu.EqualTo(1), "another name");
+		Assert.That(EffectiveManaValue(me, mySpell), Nu.EqualTo(2), "my own spell so named");
+
+		int AbilityCost(int player, int card) =>
+			MagicCore
+				.Rules.Costs.OfAbility(
+					s,
+					s.ActivatedAbilitiesOf(s.GetCard(card)).Single(),
+					[],
+					player,
+					card
+				)
+				.ManaValue;
+		Assert.That(AbilityCost(them, theirs), Nu.EqualTo(1 + 2), "abilities of sources so named");
+		Assert.That(AbilityCost(me, mine), Nu.EqualTo(1 + 2), "mine too: any such source");
+		Assert.That(AbilityCost(them, theirShrine), Nu.EqualTo(0), "another name");
+
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(Activations(theirs).Single(a => a.Targets.Contains(relic)));
+		Resolve();
+		Assert.That(Alive(relic), Nu.False, "it was activated");
+		Assert.That(
+			s.CardsIn(them, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && c.IsTapped),
+			Nu.EqualTo(3),
+			"{1}, and {2} more"
+		);
+	}
 }

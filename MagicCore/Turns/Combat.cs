@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Targeting;
 
 namespace MagicCore.Turns;
 
@@ -42,31 +43,22 @@ public static class Combat
 		&& !s.ThisTurnEffects<Effects.CantAttackThisTurn>(c.ControllerId).Any(); // Peace in Our Time
 
 	/// <summary>
-	/// No spells or abilities for this player now (<see cref="Effects.CantCastOrActivate"/>): Yuriko during
-	/// combat, Sen Triplets' lock this turn, or a spell with split second on the stack (CR 702.61 — Samut
-	/// gives it to its controller's instants and sorceries). Casting and activating ask here; triggers never
-	/// do. <paramref name="manaAbility"/>: asked for a mana ability — only a lock with ManaAbilitiesToo stops
-	/// one (Sen: TapForManaAction, ManaPayment).
+	/// No spell or ability for this player now (<see cref="Effects.CantCastOrActivate"/>): Yuriko during
+	/// combat, Sen Triplets' lock this turn, Voice of Victory, Archon of Emeria, Clarion Conqueror — or a spell
+	/// with split second on the stack (CR 702.61 — Samut gives it to its controller's instants and sorceries).
+	/// Casting and activating ask here; triggers never do. <paramref name="what"/>: the card being cast
+	/// (<paramref name="spell"/>) or the source of the ability. <paramref name="manaAbility"/>: asked for a mana
+	/// ability — only a lock with ManaAbilitiesToo stops one (Sen, the Conqueror: TapForManaAction, ManaPayment).
 	/// </summary>
-	public static bool LockedDown(GameState s, int playerId, bool manaAbility = false)
+	public static bool LockedDown(
+		GameState s,
+		int playerId,
+		Card? what = null,
+		bool spell = false,
+		bool manaAbility = false
+	)
 	{
-		// Cheap questions first: this runs for every cast and activation the AI considers.
-		var inCombat = s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat;
-		bool Stops(Effects.CantCastOrActivate l) =>
-			(inCombat || !l.DuringCombat) && (l.ManaAbilitiesToo || !manaAbility);
-		if (
-			s.ThisTurnEffects<Effects.CantCastOrActivate>(playerId)
-				.Any(c => Stops(c.GetComponent<Effects.CantCastOrActivate>()!))
-		)
-			return true;
-		// ponytail: a permanent's lock is looked for only during combat — Yuriko's is the only one; look
-		// always once a card's isn't DuringCombat (DesignNotes).
-		if (
-			inCombat
-			&& new[] { s.Player1Id(), s.Player2Id() }
-				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-				.Any(p => s.AbilitiesOf<Effects.CantCastOrActivate>(p).Any(Stops))
-		)
+		if (Stopped(Locks(s, playerId), s, what, spell, manaAbility))
 			return true;
 		if (manaAbility)
 			return false; // split second leaves mana abilities alone
@@ -75,10 +67,69 @@ public static class Combat
 			.OfType<Card>()
 			.Where(c => c.Is(CardType.Instant | CardType.Sorcery))
 			.ToList();
-		return spells.Any(spell =>
-			s.CardsIn(spell.ControllerId, ZoneType.Battlefield)
+		return spells.Any(onStack =>
+			s.CardsIn(onStack.ControllerId, ZoneType.Battlefield)
 				.Any(s.HasAbility<Effects.YourInstantsAndSorceriesHaveSplitSecond>)
 		);
+	}
+
+	static readonly List<(Effects.CantCastOrActivate, Card)> NoLocks = [];
+
+	/// <summary>
+	/// The "can't cast or activate" rules that bind this player now, each with its holder: every permanent's and
+	/// the player's own "this turn" ones, by whose it is (By), when (If) and how many spells in (SpellsEachTurn).
+	/// What each stops is <see cref="Stopped"/> — a payment asks once and then of each source.
+	/// </summary>
+	public static IReadOnlyList<(Effects.CantCastOrActivate Rule, Card Holder)> Locks(
+		GameState s,
+		int playerId
+	)
+	{
+		// This runs for every cast and activation the AI considers: with no lock in play (the board's flag,
+		// found once per state) nothing is scanned or made.
+		if (!Characteristics.RuleWork(s).Locks)
+			return NoLocks;
+		List<(Effects.CantCastOrActivate, Card)>? locks = null;
+		foreach (
+			var holder in s.CardsIn(playerId, ZoneType.Command)
+				.Concat(s.CardsIn(s.Player1Id(), ZoneType.Battlefield))
+				.Concat(s.CardsIn(s.Player2Id(), ZoneType.Battlefield))
+		)
+		foreach (var rule in s.AbilitiesOf<Effects.CantCastOrActivate>(holder))
+			if (
+				rule.By.Includes(playerId, holder.ControllerId)
+				&& s.GetPlayer(playerId).ThisTurn.SpellsCast >= rule.SpellsEachTurn
+				&& rule.If?.Holds(s, Effects.Conditions.Of(holder)) != false
+			)
+				(locks ??= []).Add((rule, holder));
+		return locks ?? NoLocks;
+	}
+
+	/// <summary>
+	/// Whether one of these locks stops this spell (the card cast) or this ability (its source; none: a
+	/// player's mana from anywhere, which only a lock on every source stops).
+	/// </summary>
+	public static bool Stopped(
+		IReadOnlyList<(Effects.CantCastOrActivate Rule, Card Holder)> locks,
+		GameState s,
+		Card? what,
+		bool spell = false,
+		bool manaAbility = false
+	)
+	{
+		foreach (var (rule, holder) in locks)
+			if (
+				(spell ? rule.Spells : rule.Abilities)
+				&& (rule.ManaAbilitiesToo || !manaAbility)
+				&& (
+					rule.Of is null
+					|| what is not null
+						&& (spell || s.IsOnBattlefield(what.Id))
+						&& rule.Of.Matches(s, what, new(holder.ControllerId, holder.Id))
+				)
+			)
+				return true;
+		return false;
 	}
 
 	/// <summary>

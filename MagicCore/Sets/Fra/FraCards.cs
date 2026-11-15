@@ -2463,7 +2463,7 @@ public static class FraCards
 			// ===== Uncommons: combat and the rest =====
 			["Yuriko, Blade of the Mighty"] =
 			[
-				new CantCastOrActivate { DuringCombat = true },
+				new CantCastOrActivate { If = new DuringCombat() },
 				When(
 					TriggerEvent.CreatureYouControlAttacksPlayerAlone,
 					[],
@@ -2819,7 +2819,11 @@ public static class FraCards
 			["Samut, Tyrant of Naktamun"] = [new YourInstantsAndSorceriesHaveSplitSecond()],
 			["Jace's Machinations"] =
 			[
-				Spell([], new ThisTurn(new JaceLoyaltyAtInstantSpeed()), new EmpowerJace(8)),
+				Spell(
+					[],
+					new ThisTurn(new LoyaltyAtInstantSpeed(Is.Subtype("Jace"))),
+					new EmpowerJace(8)
+				),
 			],
 			["Theorist's Sanctum"] =
 			[

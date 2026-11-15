@@ -49,6 +49,13 @@ public record DuringYourTurn : Condition
 		s.GetGame().ActivePlayerId == (int)context[ContextKeys.Controller];
 }
 
+/// <summary>Yuriko, Blade of the Mighty: "During combat" — from the beginning of combat to its end.</summary>
+public record DuringCombat : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat;
+}
+
 /// <summary>H.M.S. Bounty: "[if you] haven't begun an extra turn this game" — MagicPlayer.BegunExtraTurn.</summary>
 public record HaventBegunAnExtraTurn : Condition
 {

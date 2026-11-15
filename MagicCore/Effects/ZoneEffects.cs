@@ -427,6 +427,12 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>L'Rell, Fierce Visionary: "Sacrifice it at the beginning of the next end step." — set once it has entered.</summary>
 	public bool SacrificeAtNextEndStep { get; init; }
 
+	/// <summary>
+	/// Voice of Victory's mobilize: "create two tapped and attacking 1/1 red Warrior creature tokens" — attacking
+	/// as they enter (EnterBattlefield), never declared, so no "whenever … attacks" (CR 508.4); the opponent, as Kira's.
+	/// </summary>
+	public bool Attacking { get; init; }
+
 	/// <summary>Gwyndala, the Progeny: "create … Neuroflux Heirloom … Attach it to Gwyndala." — once it has entered, if that is still there.</summary>
 	public Ref? AttachTo { get; init; }
 
@@ -459,7 +465,13 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 			var token = template with { IsToken = true };
 			(s, token) = s.AddObject(token);
 			made.Add(token.Id);
-			s = s.EnterBattlefield(token.Id, controller, extraCounters: counters, tapped: Tapped);
+			s = s.EnterBattlefield(
+				token.Id,
+				controller,
+				extraCounters: counters,
+				tapped: Tapped,
+				attacking: Attacking
+			);
 			if (GainsUntilEndOfTurn is { } keyword)
 				s = Update(
 					s,

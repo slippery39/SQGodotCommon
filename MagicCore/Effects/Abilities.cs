@@ -805,10 +805,17 @@ public record EntersTappedComponent(Condition? Unless = null) : GameComponent
 /// "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost (negative: less).
 /// Thalia: new CostChange(1, !Is.Creature) { By = Whose.Opponent } — on a permanent, for the spells
 /// its controller's opponents cast; Ghalta: new CostChange(Count.GreatestPowerOf(Ref.CreaturesYouControl)
-/// .Negated) { OnItself = true }. Read by Costs.Of only.
+/// .Negated) { OnItself = true }. Read by Costs.Of — and, with Abilities, by Costs.OfAbility only.
 /// </summary>
 public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComponent
 {
+	/// <summary>
+	/// Anointed Peacekeeper: "Activated abilities of sources with the chosen name cost {2} more to activate
+	/// unless they're mana abilities." — the filter is asked of the ability's SOURCE, whoever activates it (By
+	/// isn't read), and no spell is changed.
+	/// </summary>
+	public bool Abilities { get; init; }
+
 	/// <summary>Whose spells it changes, from the permanent's controller: "you cast", "your opponents cast".</summary>
 	public Whose By { get; init; } = Whose.You;
 
@@ -964,9 +971,17 @@ public record ChosenNumber(int N) : GameComponent;
 /// <summary>
 /// Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by
 /// MagicState.EnterBattlefield — the names every nonland card printed in the game's sets has
-/// (CardRegistry.NonlandNames, Shayne 2026-11-06); the AI names the opponent's commonest known (GreedyAi).
+/// (CardRegistry.CardNames, Shayne 2026-11-06); the AI names the opponent's commonest known (GreedyAi).
+/// Anointed Peacekeeper: "As this creature enters, look at an opponent's hand, then choose any card name."
 /// </summary>
-public record ChoosesNameAsItEnters : GameComponent;
+public record ChoosesNameAsItEnters : GameComponent
+{
+	/// <summary>Anointed Peacekeeper: "look at an opponent's hand, then" — known to you before the name is asked.</summary>
+	public bool LooksAtHand { get; init; }
+
+	/// <summary>Anointed Peacekeeper: "any card name" — the lands' too.</summary>
+	public bool AnyName { get; init; }
+}
 
 /// <summary>The card name chosen as it entered (Kai Winn) — gone when it leaves.</summary>
 public record ChosenName(string Name) : GameComponent;

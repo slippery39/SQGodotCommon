@@ -266,8 +266,8 @@ public record CastSpellAction : GameAction
 		)
 			return ValidationResult.Invalid("You may not cast that card from where it is");
 		var card = s.GetCard(CardId);
-		if (Turns.Combat.LockedDown(s, PlayerId))
-			return ValidationResult.Invalid("No spells now: combat lockdown or split second");
+		if (Turns.Combat.LockedDown(s, PlayerId, card, spell: true))
+			return ValidationResult.Invalid("No spells now: a lock or split second");
 		if (Kicked && !card.HasComponent<KickerComponent>())
 			return ValidationResult.Invalid("It has no kicker");
 		var costs = Paid(s, card);
@@ -615,8 +615,8 @@ public record ActivateAbilityAction : GameAction
 		)
 			return ValidationResult.Invalid("No such ability where you can activate it");
 		var card = s.GetCard(CardId);
-		if (Turns.Combat.LockedDown(s, PlayerId))
-			return ValidationResult.Invalid("No abilities now: combat lockdown or split second");
+		if (Turns.Combat.LockedDown(s, PlayerId, card))
+			return ValidationResult.Invalid("No abilities now: a lock or split second");
 		// Judged as the activating player's: a card off the battlefield may still carry an old
 		// controller (CR 108.4a — in a graveyard it is its owner's).
 		if (

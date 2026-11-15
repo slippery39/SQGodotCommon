@@ -39,10 +39,21 @@ whose subsystem it lives in.
   (`CopyNextInstantOrSorcery`, a `ThisTurnEffect`), taken by that cast and carried on its `SpellCastEvent`.
   Replace a component with `WithComponentReplaced` — `WithComponent` ADDS, and `GetComponent` reads the first.
 - **"Can't cast spells or activate abilities"** is one piece, `CantCastOrActivate` — on a permanent for every
-  player (Yuriko: `DuringCombat`), or a "this turn" effect in one player's command zone (Sen Triplets:
-  `new ThisTurn(…) { On = Ref.Target(0) }`). It and **split second** (Samut) are `Combat.LockedDown(s, player)`,
-  asked by casting and activating alike, never by triggers; a mana ability only by a lock with
-  `ManaAbilitiesToo` (Sen) — `TapForManaAction` and `ManaPayment.Find`, so nothing taps to pay for them.
+  player (Yuriko: `If = new DuringCombat()`), or a "this turn" effect in one player's command zone (Sen Triplets:
+  `new ThisTurn(…) { On = Ref.Target(0) }`). Its options (MC-4.4d2b) say whose (`By`, from its holder: Voice of
+  Victory's "your opponents"), when (`If`, judged as its holder's: "during your turn"), which of the two (`Spells`,
+  `Abilities`), after how many spells (`SpellsEachTurn = 1`, Archon of Emeria's "can't cast more than one spell
+  each turn" — the asking PLAYER's count this turn) and of which sources (`Of`, Clarion Conqueror's "of artifacts,
+  creatures, and planeswalkers": the spell, or the PERMANENT whose ability it is — never a card in a hand or
+  graveyard). It and **split second** (Samut) are `Combat.LockedDown(s, player, what, spell)`, asked by casting and
+  activating alike with the card cast or the ability's source, never by triggers; a mana ability only by a lock
+  with `ManaAbilitiesToo` (Sen; the Conqueror: no Mox, no Elf, a land still taps) — `TapForManaAction`, and
+  `ManaPayment.Find`, which takes the player's locks once (`Combat.Locks`) and asks `Combat.Stops` of each source,
+  so nothing locked taps to pay.
+- **"You may activate [its] loyalty abilities any time you could cast an instant"** is `LoyaltyAtInstantSpeed(filter)`,
+  the filter asked of the planeswalker (MC-4.4d2b): the player's in a `ThisTurn` (Jace's Machinations:
+  `Is.Subtype("Jace")`), or the planeswalker's own (The Wandering Emperor: `Is.EnteredThisTurn` — "as long as [she]
+  entered this turn"). `ActivateLoyaltyAction` reads both; still once a turn for each planeswalker.
 - **"You may play cards from that player's hand this turn"** (Sen Triplets) is the play-from-a-zone rule
   (`MayPlayFromZone(Hand, Is.AnyCard) { Of }`) in a `ThisTurn` — your command zone, read by `Playable.ZonePermission`
   beside your permanents' rules (cast, land, `Candidates`): the whole zone while it lasts, a card drawn later too. A

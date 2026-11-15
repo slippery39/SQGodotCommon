@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 21/46 · uncommon 34/86 · rare 85/279 · mythic 27/108 · **175/528**
+**Playable:** common 21/46 · uncommon 34/86 · rare 89/279 · mythic 28/108 · **180/528**
 
 ### "Name Sticker" Goblin
 
@@ -346,7 +346,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Add {G}.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2dTests
 
 **Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…
 
@@ -929,7 +929,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile this card from your hand: Add {G}.
 
-**Status:** scripted · **tests naming it:** LsvBatch2bTests
+**Status:** scripted · **tests naming it:** LsvBatch2bTests, LsvBatch2dTests
 
 ```csharp
 ["Elvish Spirit Guide"] = [SpiritGuide(ManaColor.Green)],
@@ -1852,7 +1852,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Spells your opponents cast with the chosen name cost {2} more to cast.  
 > Activated abilities of sources with the chosen name cost {2} more to activate unless they're mana abilities.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `ChoosesNameAsItEnters` — Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…
+
+```csharp
+["Anointed Peacekeeper"] =
+[
+	// ponytail: a loyalty ability of the named card isn't taxed — it has no mana payment (DesignNotes).
+	new ChoosesNameAsItEnters { LooksAtHand = true, AnyName = true },
+	new CostChange(2, Is.NamedChosenName) { By = Whose.Opponent },
+	new CostChange(2, Is.NamedChosenName) { Abilities = true },
+],
+```
 
 ### Archon of Emeria
 
@@ -1862,7 +1874,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Each player can't cast more than one spell each turn.  
 > Nonbasic lands your opponents control enter tapped.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CantCastOrActivate` — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat,…; `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
+
+```csharp
+["Archon of Emeria"] =
+[
+	new CantCastOrActivate { Abilities = false, SpellsEachTurn = 1 },
+	new PermanentsEnter(Is.Land & !Is.Supertype(Supertype.Basic) & Is.Opponents)
+	{
+		Tapped = true,
+	},
+],
+```
 
 ### Arena of Glory
 
@@ -2258,7 +2283,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Activated abilities of artifacts, creatures, and planeswalkers can't be activated.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CantCastOrActivate` — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat,…
+
+```csharp
+["Clarion Conqueror"] =
+[
+	// Mana abilities are activated abilities: no Mox, no Llanowar Elves — a land still taps.
+	new CantCastOrActivate
+	{
+		Spells = false,
+		ManaAbilitiesToo = true,
+		Of = Is.Artifact | Is.Creature | Is.Planeswalker,
+	},
+],
+```
 
 ### Cloak and Dagger, Entwined
 
@@ -4673,7 +4713,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {C}.  
 > {T}, Sacrifice this land: Destroy target land.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2dTests
 
 ```csharp
 ["Strip Mine"] = [ColorlessMana(), SacrificeToDestroy(Is.Land)],
@@ -5163,7 +5203,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Mobilize 2 (Whenever this creature attacks, create two tapped and attacking 1/1 red Warrior creature tokens. Sacrifice them at the beginning of the next end step.)  
 > Your opponents can't cast spells during your turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CantCastOrActivate` — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat,…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.
+
+```csharp
+["Voice of Victory"] =
+[
+	// Mobilize 2: the tokens enter tapped and attacking, and are sacrificed at the next end step.
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new CreateTokens(Warrior, 2)
+		{
+			Tapped = true,
+			Attacking = true,
+			SacrificeAtNextEndStep = true,
+		}
+	),
+	new CantCastOrActivate
+	{
+		By = Whose.Opponent,
+		Abilities = false,
+		If = new DuringYourTurn(),
+	},
+],
+```
 
 ### Volcanic Island
 
@@ -6815,7 +6880,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > −1: Create a 2/2 white Samurai creature token with vigilance.  
 > −2: Exile target tapped creature. You gain 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoyaltyAtInstantSpeed` — "You may activate [their] loyalty abilities any time you could cast an instant" — Jace's…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["The Wandering Emperor"] =
+[
+	new LoyaltyAtInstantSpeed(Is.EnteredThisTurn),
+	Loyalty(
+		1,
+		[Creature with { Optional = true }],
+		new PutCounters(Ref.Target(), 1),
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "First strike")
+	),
+	Loyalty(-1, [], new CreateTokens(Samurai, 1)),
+	Loyalty(
+		-2,
+		[Target(Is.Creature & Is.Tapped)],
+		new Exile(Ref.Target()),
+		new GainLife(Ref.You, 2)
+	),
+],
+```
 
 ### Through the Breach
 
@@ -7049,7 +7136,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Add {W}.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2dTests
 
 **Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…
 

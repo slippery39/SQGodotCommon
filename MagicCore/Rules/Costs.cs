@@ -61,12 +61,27 @@ public static class Costs
 		int sourceId
 	)
 	{
-		if (ability.CostChange is not { } change)
-			return ability.Cost;
-		var context = Conditions
-			.Of(s.GetCard(sourceId) with { ControllerId = controllerId })
-			.Add(ContextKeys.Targets, targets);
-		var delta = change.If?.Holds(s, context) == false ? 0 : change.Amount.Value(s, context);
+		var source = s.GetCard(sourceId);
+		var delta = 0;
+		if (ability.CostChange is { } change)
+		{
+			var context = Conditions
+				.Of(source with { ControllerId = controllerId })
+				.Add(ContextKeys.Targets, targets);
+			delta = change.If?.Holds(s, context) == false ? 0 : change.Amount.Value(s, context);
+		}
+		// Anointed Peacekeeper: a permanent's tax on the abilities of the sources its filter names — looked
+		// for only while one is in play (the board's flag, found once per state).
+		if (Characteristics.RuleWork(s).AbilityTaxes)
+			foreach (var player in new[] { s.Player1Id(), s.Player2Id() })
+			foreach (var permanent in s.CardsIn(player, ZoneType.Battlefield))
+			foreach (var tax in s.AbilitiesOf<CostChange>(permanent))
+				if (
+					tax.Abilities
+					&& Conditions.Of(permanent) is var asItsHolder
+					&& Applies(s, tax, source, asItsHolder)
+				)
+					delta += tax.Amount.Value(s, asItsHolder);
 		return delta == 0 ? ability.Cost : ability.Cost.WithGeneric(delta);
 	}
 
@@ -113,6 +128,7 @@ public static class Costs
 			var context = Conditions.Of(permanent);
 			if (
 				!change.OnItself
+				&& !change.Abilities
 				&& change.By.Includes(casterId, permanent.ControllerId)
 				&& Applies(s, change, card, context)
 			)

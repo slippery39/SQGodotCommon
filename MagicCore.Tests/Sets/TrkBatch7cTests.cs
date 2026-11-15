@@ -328,7 +328,7 @@ public class TrkBatch7cTests : FraBoardTest
 	{
 		// Shayne, 2026-11-06 (limited): step by step.
 		Hand(Trk("Kai Winn, Faithless Leader"), me); // TRK in the game: its names are offered
-		var names = CardRegistry.NonlandNames(s);
+		var names = CardRegistry.CardNames(s);
 		var choice = new ChooseKeywordChoice(me, names) { NamesACard = true };
 		string Named() => names[new MagicCore.Ai.GreedyAi(me).Answer(s, choice).Single() - 1];
 

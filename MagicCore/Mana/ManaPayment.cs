@@ -199,14 +199,15 @@ public static class ManaPayment
 			);
 		var player = s.GetPlayer(playerId);
 		var tappable = new List<Tappable>();
-		var manaLocked = Turns.Combat.LockedDown(s, playerId, manaAbility: true); // Sen Triplets: floating mana and convoke only
+		// Sen Triplets: floating mana and convoke only; Clarion Conqueror: no artifact's or creature's mana
+		var locks = Turns.Combat.Locks(s, playerId);
 		foreach (var c in s.CardsIn(playerId, ZoneType.Battlefield))
 		{
 			// Its own {T} cost, or a permanent another cost sacrifices or taps: not mana for this too.
 			if (c.Id == excludeId || alsoExclude?.Contains(c.Id) == true)
 				continue;
 			var yield =
-				!manaLocked && ManaAbilities.CanTap(s, c)
+				!Turns.Combat.Stopped(locks, s, c, manaAbility: true) && ManaAbilities.CanTap(s, c)
 					? ManaAbilities.YieldOf(s, c, (forSpell, forAbilityOf))
 					: null;
 			if (yield is { Units.IsEmpty: true })
@@ -242,7 +243,7 @@ public static class ManaPayment
 		}
 		return Solve(s, player, tappable, Needs(cost, x), forSpell, forAbilityOf)
 			?? (
-				manaLocked
+				Turns.Combat.Stopped(locks, s, null, manaAbility: true)
 					? null
 					: FromHand(s, player, cost, x, tappable, forSpell, forAbilityOf, alsoExclude)
 			)
@@ -255,7 +256,8 @@ public static class ManaPayment
 				excludeId,
 				alsoExclude,
 				forSpell,
-				forAbilityOf
+				forAbilityOf,
+				locks
 			);
 	}
 
@@ -320,7 +322,8 @@ public static class ManaPayment
 		int excludeId,
 		IReadOnlyCollection<int>? alsoExclude,
 		Card? forSpell,
-		Card? forAbilityOf
+		Card? forAbilityOf,
+		IReadOnlyList<(CantCastOrActivate Rule, Card Holder)> locks
 	)
 	{
 		foreach (var c in s.CardsIn(player.Id, ZoneType.Battlefield))
@@ -329,6 +332,7 @@ public static class ManaPayment
 				c.Id == excludeId
 				|| alsoExclude?.Contains(c.Id) == true
 				|| !ManaAbilities.CanPayTapCost(s, c)
+				|| Turns.Combat.Stopped(locks, s, c, manaAbility: true) // Sen Triplets, Clarion Conqueror
 			)
 				continue;
 			foreach (

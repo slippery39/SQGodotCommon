@@ -451,6 +451,9 @@ public static class MagicRules
 			);
 
 	/// <summary>An upper bound on the mana this player could pay — every untapped creature too, for convoke.</summary>
+	///
+	/// ponytail: a lock on mana abilities (Sen Triplets, Clarion Conqueror) isn't asked — an X its sources would
+	/// have paid is tried and refused by the cast. Ask Combat.Stopped here if it shows (DesignNotes).
 	static int AvailableMana(GameState s, int player, bool convoke, Card spell) =>
 		s.GetPlayer(player).ManaPool.Total
 		+ s.GetPlayer(player)

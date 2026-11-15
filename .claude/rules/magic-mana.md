@@ -65,7 +65,11 @@ whose subsystem it lives in.
   `By` names (Thalia's tax on opponents, Geist's reduction on yours), or `OnItself` ("this spell costs
   … less"); an activated ability's (Warrior's Blades) is `ActivatedAbilityComponent.CostChange`, read
   by `Costs.OfAbility` with the targets known — and a spell's own (Guidance Failure: "if it targets an
-  attacking creature") sees its targets too, `Costs.Of(…, targets)` from the cast.
+  attacking creature") sees its targets too, `Costs.Of(…, targets)` from the cast. **A permanent's tax on
+  abilities** (Anointed Peacekeeper: "Activated abilities of sources with the chosen name cost {2} more to activate
+  unless they're mana abilities") is `CostChange(2, filter) { Abilities = true }` (MC-4.4d2b): the filter asked of
+  the ability's SOURCE, whoever activates it, read by `Costs.OfAbility` and never by `Costs.Of`. A mana ability is
+  no `ActivatedAbilityComponent`, so it is never taxed; a loyalty ability pays no mana (a ceiling, DesignNotes).
 - **Costs beyond mana are one list of `AdditionalCost`** (Effects/AdditionalCosts.cs) — activated
   abilities, a spell's `AdditionalCostsComponent`, flashback, ward. A cost that picks a card names it
   in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`/`TapId`/`SecondTapId`/`ReturnId` (`CostSlot`), a set in `TapIds` — and the table's

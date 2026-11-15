@@ -1255,7 +1255,78 @@ public static class LsvCards
 					new CreateTokens(Rabbit, Count.PowerOf(Ref.Source))
 				),
 			],
+
+			// ===== MC-4.4d2b: white's options, restrictions and timing =====
+			["Archon of Emeria"] =
+			[
+				new CantCastOrActivate { Abilities = false, SpellsEachTurn = 1 },
+				new PermanentsEnter(Is.Land & !Is.Supertype(Supertype.Basic) & Is.Opponents)
+				{
+					Tapped = true,
+				},
+			],
+			["Voice of Victory"] =
+			[
+				// Mobilize 2: the tokens enter tapped and attacking, and are sacrificed at the next end step.
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new CreateTokens(Warrior, 2)
+					{
+						Tapped = true,
+						Attacking = true,
+						SacrificeAtNextEndStep = true,
+					}
+				),
+				new CantCastOrActivate
+				{
+					By = Whose.Opponent,
+					Abilities = false,
+					If = new DuringYourTurn(),
+				},
+			],
+			["Clarion Conqueror"] =
+			[
+				// Mana abilities are activated abilities: no Mox, no Llanowar Elves — a land still taps.
+				new CantCastOrActivate
+				{
+					Spells = false,
+					ManaAbilitiesToo = true,
+					Of = Is.Artifact | Is.Creature | Is.Planeswalker,
+				},
+			],
+			["The Wandering Emperor"] =
+			[
+				new LoyaltyAtInstantSpeed(Is.EnteredThisTurn),
+				Loyalty(
+					1,
+					[Creature with { Optional = true }],
+					new PutCounters(Ref.Target(), 1),
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "First strike")
+				),
+				Loyalty(-1, [], new CreateTokens(Samurai, 1)),
+				Loyalty(
+					-2,
+					[Target(Is.Creature & Is.Tapped)],
+					new Exile(Ref.Target()),
+					new GainLife(Ref.You, 2)
+				),
+			],
+			["Anointed Peacekeeper"] =
+			[
+				// ponytail: a loyalty ability of the named card isn't taxed — it has no mana payment (DesignNotes).
+				new ChoosesNameAsItEnters { LooksAtHand = true, AnyName = true },
+				new CostChange(2, Is.NamedChosenName) { By = Whose.Opponent },
+				new CostChange(2, Is.NamedChosenName) { Abilities = true },
+			],
 		};
+
+	/// <summary>Voice of Victory's mobilize: "1/1 red Warrior creature tokens".</summary>
+	static CardData Warrior => Token("Warrior", "Creature — Warrior", "1", "1", ["R"]);
+
+	/// <summary>The Wandering Emperor: "a 2/2 white Samurai creature token with vigilance".</summary>
+	static CardData Samurai =>
+		Token("Samurai", "Creature — Samurai", "2", "2", ["W"], ["Vigilance"]);
 
 	/// <summary>Elspeth, Storm Slayer: "a 1/1 white Soldier creature token".</summary>
 	static CardData Soldier => Token("Soldier", "Creature — Soldier", "1", "1", ["W"]);
