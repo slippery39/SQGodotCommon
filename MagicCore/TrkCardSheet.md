@@ -1400,20 +1400,15 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Distribute two +1/+1 counters among one or two target creatures.  
 > Beam me up {2}{W} (You may cast this card from your graveyard for {2}{W} if you also return a creature you control to its owner's hand. Then exile this spell.)
 
-**Status:** scripted · **tests naming it:** TrkBatch3Tests
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests, TrkBatch3Tests
 
-**Engine pieces:** `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetChosen` — Pure Energy: "Distribute two +1/+1 counters among one or two target creatures" — whether…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Pure Energy"] =
 [
-	Spell(
-		[Creature, Creature with { Optional = true, NotThePrevious = true }],
-		new PutCounters(Ref.Target(0), 1),
-		new PutCounters(Ref.Target(1), 1),
-		// One target chosen: both counters on it. Two: one each, decided as it was cast.
-		new If(new Not(new TargetChosen(1)), [new PutCounters(Ref.Target(0), 1)])
-	),
+	// One target chosen: both counters on it. Two: one each, decided as it was cast.
+	Spell([Creature with { Divide = 2 }], new PutCounters(Ref.EachTarget, Count.Share)),
 	BeamMeUp("{2}{W}"),
 ],
 ```

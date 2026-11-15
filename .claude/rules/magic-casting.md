@@ -154,9 +154,14 @@ whose subsystem it lives in.
   one" with none chosen faces none (Ertai; with none choosable the trigger is removed). All three
   go through `FacedDilemmaEvent.Face`, which also counts it for the turn (`TurnTally.DilemmasFaced`,
   `Count.DilemmasFacedThisTurnBy`: Sisko's Officers, The Caretaker's "if you faced a dilemma this turn").
-- **A distribution decided as it is cast** (Pure Energy, CR 601.2d) reads `TargetChosen(i)` — the targets
-  as CHOSEN (`ContextKeys.ChosenTargets`); `Ref.Target` reads 0 for one gone illegal, which would hand
-  its share to the others.
+- **"N divided as you choose among any number of targets"** (Pyrokinesis' 4 damage; Pure Energy's two counters among
+  one or two, CR 601.2d) is ONE piece, `TargetSpec.Divide = N` (MC-4.4c2e): `TextOf` makes it N words, all but the
+  first optional and different, and each target's share is `Count.Share` with `Ref.It` — `DealDamage(Ref.EachTarget,
+  Count.Share)`, `PutCounters(…)`. The shares are announced as it is cast (`CastSpellAction.Shares` →
+  `OnStackComponent.Shares`, empty in the action when the number of targets leaves one way) and read by the target's
+  place among the targets as CHOSEN, so one gone illegal takes its share with it. Past two it is ONE cast
+  (`ChoosesTargets`): `ChooseXTargetsChoice` (one to N), then — two or three targets — a `ChooseKeywordChoice` of the
+  ways (`Division.Splits`); never a cast per set and split (1,365 against 12 creatures). Pure Energy's two stay casts.
 - **Kicker** is `KickerComponent(mana) { Costs }` and `CastSpellAction.Kicked` (one cast unkicked, one
   kicked; `|k` in `MoveKey` only when kicked): the mana joins the total in `Costs.Of(…, added:)`, the costs
   join `CastSpellAction.CostsOf(…, kicked)` — a kicker sacrifice is the ordinary `SacrificeId`. The stack

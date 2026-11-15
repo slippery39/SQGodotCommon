@@ -23,8 +23,11 @@ public static class ContextKeys
 	/// <summary>Every chosen target, all modes together; Targets is narrowed to one mode's slice.</summary>
 	public const string AllTargets = "AllTargets";
 
-	/// <summary>The targets as they were chosen, legal now or not — Pure Energy's split was announced then (TargetChosen).</summary>
+	/// <summary>The targets as they were chosen, legal now or not — Pure Energy's split was announced then (Count.Share).</summary>
 	public const string ChosenTargets = "ChosenTargets";
+
+	/// <summary>Pyrokinesis: what each chosen target takes of what was divided, in the chosen targets' order (OnStackComponent.Shares).</summary>
+	public const string Shares = "Shares";
 
 	/// <summary>The spell card or the permanent whose ability this is.</summary>
 	public const string Source = "Source";
@@ -354,6 +357,7 @@ public enum CountOf
 	PowerOf, // "equal to its power"
 	LoyaltyOf, // "equal to its loyalty"
 	X, // the X paid
+	Share, // Pyrokinesis: what this target takes of what was divided
 	CountersOn, // "+1/+1 counters on [Ref]"
 	LifeYouGainedThisTurn,
 	CardsYouDrewThisTurn,
@@ -436,6 +440,14 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count LoyaltyOf(Ref r) => new(0, r, CountOf.LoyaltyOf);
 
 	public static readonly Count X = new(0, null, CountOf.X);
+
+	/// <summary>
+	/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — what the object being
+	/// acted on (Ref.It) takes: its share as the spell was cast (TargetSpec.Divide, CR 601.2d). Read by its
+	/// place among the targets as CHOSEN, so a target gone illegal takes its share with it — never handed to
+	/// the others (Pure Energy's second creature killed in response).
+	/// </summary>
+	public static readonly Count Share = new(0, null, CountOf.Share);
 
 	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
 
@@ -535,6 +547,15 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return Fixed;
 		if (Kind == CountOf.X)
 			return context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0;
+		if (Kind == CountOf.Share)
+			return
+				context.GetValueOrDefault(ContextKeys.Shares) is ImmutableArray<int> shares
+				&& context.GetValueOrDefault(ContextKeys.ChosenTargets)
+					is ImmutableArray<int> chosen
+				&& context.GetValueOrDefault(ContextKeys.It) is int it
+				&& chosen.Where(id => id != 0).ToList().IndexOf(it) is >= 0 and var place // a word left empty has no share
+				? shares[place]
+				: 0;
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
 		if (Kind == CountOf.PermanentsChosen)

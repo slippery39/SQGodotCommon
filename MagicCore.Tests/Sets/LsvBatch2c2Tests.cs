@@ -738,4 +738,196 @@ public class LsvBatch2c2Tests : FraBoardTest
 		Assert.That(ones + twos + threes, Nu.EqualTo(60), "one row a roll");
 		Assert.That(new[] { ones, twos, threes }, Has.All.GreaterThan(0), "each face comes up");
 	}
+
+	// ===== MC-4.4c2e =====
+
+	void EmptyMyHand()
+	{
+		foreach (var card in s.CardsIn(me, ZoneType.Hand).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(me, ZoneType.Graveyard));
+	}
+
+	/// <summary>A 1/5 of theirs: it shows 4 damage and lives.</summary>
+	int Ox(string name) => Field(TestGames.Creature(name, "1/5"), them);
+
+	int Marked(int card) => s.GetCard(card).Damage;
+
+	/// <summary>Casts Pyrokinesis for its mana, answering its choices — and stops with it on the stack.</summary>
+	void CastPyrokinesis(int[] targets, string? split = null)
+	{
+		var pyro = Hand(Lsv("Pyrokinesis"), me);
+		s = s.Act(Casts(pyro).Single(c => !c.WithoutPayingManaCost));
+		while (s.GetPendingChoice() is { } choice)
+			s = s.Choose(
+				choice switch
+				{
+					ChooseXTargetsChoice => targets,
+					ChooseKeywordChoice ways when split is not null =>
+					[
+						ways.Keywords.IndexOf(split) + 1,
+					],
+					_ => throw new AssertionException($"not asked: {choice.Prompt}"),
+				}
+			);
+	}
+
+	[Test]
+	public void Pyrokinesis_OneCastAgainstTwelveCreatures_TheTargetsAndTheSplitChosenAsItIsCast()
+	{
+		EmptyMyHand();
+		var a = Ox("A");
+		var b = Ox("B");
+		var rest = Enumerable.Range(0, 10).Select(_ => Ox("Ox")).ToList();
+		var pyro = Hand(Lsv("Pyrokinesis"), me);
+		Assert.That(Casts(pyro).ToList(), Has.Count.EqualTo(1), "never a cast per set and split");
+		s = s.Act(Casts(pyro).Single());
+		var targets = (ChooseXTargetsChoice)s.GetPendingChoice()!;
+		Assert.That(targets.Options, Has.Count.EqualTo(12));
+		Assert.That((targets.MinChoices, targets.MaxChoices), Nu.EqualTo((1, 4)), "any number");
+		s = s.Choose([b, a]);
+		var ways = (ChooseKeywordChoice)s.GetPendingChoice()!;
+		Assert.That(
+			ways.Keywords,
+			Nu.EqualTo(new[] { "3 to A, 1 to B", "2 to A, 2 to B", "1 to A, 3 to B" })
+		);
+		s = s.Choose([3]);
+		Resolve();
+		Assert.That((Marked(a), Marked(b)), Nu.EqualTo((1, 3)), "divided as I chose");
+		Assert.That(rest.Select(Marked), Has.All.EqualTo(0));
+	}
+
+	[Test]
+	public void Pyrokinesis_OneTargetTakesAllFour_FourTakeOneEach_NoSplitToChoose()
+	{
+		var oxen = Enumerable.Range(0, 4).Select(i => Ox($"Ox {i}")).ToList();
+		var alone = Ox("Alone");
+		CastPyrokinesis([alone]);
+		Resolve();
+		Assert.That(Marked(alone), Nu.EqualTo(4));
+		CastPyrokinesis([.. oxen]);
+		Resolve();
+		Assert.That(oxen.Select(Marked), Nu.EqualTo(new[] { 1, 1, 1, 1 }));
+	}
+
+	[Test]
+	public void Pyrokinesis_ATargetGoneBeforeItResolves_TakesItsShareWithIt()
+	{
+		var a = Ox("A");
+		var b = Ox("B");
+		CastPyrokinesis([a, b], "2 to A, 2 to B");
+		Cast(
+			Hand(Free("Kill B", new Destroy(Ref.Permanents(MagicCore.Filters.Is.Named("B")))), me),
+			[]
+		);
+		Assert.That(Alive(b), Nu.False);
+		Assert.That(Marked(a), Nu.EqualTo(2), "the division was announced as it was cast");
+	}
+
+	[Test]
+	public void Pyrokinesis_ExileARedCardFromMyHand_RatherThanPay()
+	{
+		EmptyMyHand();
+		var ox = Ox("Ox");
+		var bolt = Hand(Lsv("Lightning Bolt"), me);
+		Hand(Boon, me);
+		var pyro = Hand(Lsv("Pyrokinesis"), me);
+		var free = Casts(pyro).Where(c => c.WithoutPayingManaCost).ToList();
+		Assert.That(
+			free.Select(c => c.ExileId),
+			Nu.EqualTo(new[] { bolt }),
+			"a RED card, not itself"
+		);
+		s = s.Act(free[0]);
+		Resolve(On<ChooseXTargetsChoice>(ox));
+		Assert.That(InExile(bolt), Nu.True);
+		Assert.That(Marked(ox), Nu.EqualTo(4));
+		Assert.That(s.CardsIn(me, ZoneType.Battlefield).Count(c => c.IsTapped), Nu.EqualTo(0));
+	}
+
+	[Test]
+	public void ADivision_IsOneOfTheWaysItsTargetsAllow()
+	{
+		var a = Ox("A");
+		var b = Ox("B");
+		var pyro = Hand(Lsv("Pyrokinesis"), me);
+		bool Legal(int[] targets, params int[] shares) =>
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = pyro,
+				Targets = [.. targets],
+				Shares = [.. shares],
+			}
+				.ValidateAdd(s)
+				.IsValid;
+		Assert.That(Legal([a, b, 0, 0], 3, 1), Nu.True);
+		Assert.That(Legal([a, a, 0, 0], 3, 1), Nu.False, "different creatures");
+		Assert.That(Legal([a, b, 0, 0], 3, 2), Nu.False, "five");
+		Assert.That(Legal([a, b, 0, 0], 4, 0), Nu.False, "each target at least one");
+		Assert.That(Legal([a, b, 0, 0]), Nu.False, "two targets: the split must be said");
+		Assert.That(Legal([a, 0, 0, 0]), Nu.True, "one target: only one way");
+		Assert.That(
+			Division.Splits(4, 3).Select(w => string.Join("", w)),
+			Nu.EqualTo(new[] { "211", "121", "112" })
+		);
+		Assert.That(Division.Fits(0, [a], [1]), Nu.False, "a spell that divides nothing");
+	}
+
+	[Test]
+	public void DamageToSeveral_IsCountedBeforeAnyIsDealt()
+	{
+		Cast(Hand(Free("Ping", new DealDamage(Ref.You, 1)), me), []);
+		var mine = new DealDamage(Ref.EachPlayer, Count.LifeLostThisTurnOf(Ref.You));
+		var theirs = new DealDamage(Ref.EachPlayer, Count.LifeLostThisTurnOf(Ref.EachOpponent));
+		var (my, their) = (Life(me), Life(them));
+		Cast(Hand(Free("Echo", mine), me), []);
+		Assert.That((Life(me), Life(them)), Nu.EqualTo((my - 1, their - 1)), "the 1 I had lost");
+		Cast(Hand(Free("Echo", theirs), me), []);
+		Assert.That((Life(me), Life(them)), Nu.EqualTo((my - 2, their - 2)), "the 1 they had lost");
+	}
+
+	[Test]
+	public void ADividedSpell_WithAWordLeftEmptyBetweenItsTargets_GivesEachItsShare()
+	{
+		var a = Ox("A");
+		var b = Ox("B");
+		var pyro = Hand(Lsv("Pyrokinesis"), me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = pyro,
+				Targets = [a, 0, b, 0],
+				Shares = [3, 1],
+			}
+		);
+		Resolve();
+		Assert.That((Marked(a), Marked(b)), Nu.EqualTo((3, 1)));
+	}
+
+	[Test]
+	public void PureEnergy_DividingTwo_StaysACastPerCreatureAndPerPair()
+	{
+		Field(TestGames.Creature("A", "1/1"), me);
+		Field(TestGames.Creature("B", "1/1"), me);
+		var energy = Hand(CardRegistry.Get("Pure Energy", "TRK"), me);
+		var casts = Casts(energy).ToList();
+		Assert.That(casts, Has.Count.EqualTo(3), "A, B, A and B");
+		Assert.That(casts.Select(c => c.ChoosesTargets), Has.All.False);
+	}
+
+	[Test]
+	public void TheAi_PutsPyrokinesisWhereItPlaysOutBest_NeverOnItsOwnCreature()
+	{
+		Field(TestGames.Creature("Mine", "4/4"), me);
+		var theirs = Field(TestGames.Creature("Theirs", "4/4"), them);
+		var pyro = Hand(Lsv("Pyrokinesis"), me);
+		s = s.Act(Casts(pyro).Single(c => !c.WithoutPayingManaCost));
+		var choice = s.GetPendingChoice()!;
+		Assert.That(choice.Options, Has.Count.EqualTo(2));
+		Assert.That(
+			new global::MagicCore.Ai.GreedyAi(me).Answer(s, choice),
+			Nu.EqualTo(new[] { theirs })
+		);
+	}
 }

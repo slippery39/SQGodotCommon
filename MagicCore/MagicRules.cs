@@ -244,9 +244,15 @@ public static class MagicRules
 		// Dominion Infiltration's "X target creatures": one cast per X, the targets a choice as it is cast
 		// (CastSpellAction.ChoosesTargets) — never a cast per set, 2^n against n creatures.
 		var perX = text?.Targets.Any(t => t.PerX) == true;
-		var once = perX ? null : ChoicesFor(0);
-		var atZero = once ?? ChoicesFor(0);
+		// Pyrokinesis' 4 damage divided among any number of targets: the same, at any X — its sets and splits
+		// are 1,365 casts against 12 creatures. Pure Energy's two stay casts: one per creature and per pair.
+		var divided = text?.Targets.Any(t => t.Divide > 2) == true;
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> unchosen = [([], [])];
+		var once =
+			divided ? unchosen
+			: perX ? null
+			: ChoicesFor(0);
+		var atZero = once ?? ChoicesFor(0);
 		// One cast per way to pay each cost that picks a card: "sacrifice … or pay {N}" (0 is paying),
 		// a behold (any one is the same play), Twinned Vision's flashback discard.
 		var costs = CastSpellAction.CostsOf(s, card, kicked, free, player);
@@ -294,7 +300,7 @@ public static class MagicRules
 												ExileId = exiled,
 												Replicate = replicates,
 												Kicked = kicked,
-												ChoosesTargets = perX && payment.x > 0,
+												ChoosesTargets = divided || (perX && payment.x > 0),
 											}
 										)
 									)

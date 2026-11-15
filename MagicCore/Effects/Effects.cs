@@ -77,12 +77,15 @@ public record DealDamage(Ref To, Count Amount) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var amount = Amount.Value(s, InputContext);
 		var source = Source(s);
 		var excess = 0;
 		var dealt = ImmutableArray.CreateBuilder<int>();
+		var before = s;
 		foreach (var id in All(To, s).ToList())
 		{
+			// counted per object, Ref.It that one (Pyrokinesis: each target its share, Count.Share) — and
+			// before any of it is dealt: the damage is simultaneous
+			var amount = Amount.Value(before, InputContext.SetItem(ContextKeys.It, id));
 			if (!IfExcess.IsEmpty)
 				excess += Damage.Excess(s, source, id, amount);
 			var after = Damage.Deal(s, source, id, amount);

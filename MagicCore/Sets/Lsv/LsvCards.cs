@@ -858,6 +858,15 @@ public static class LsvCards
 					new PutCounters(Ref.Source, 1)
 				),
 			],
+			// ===== MC-4.4c2e: damage divided among any number of targets =====
+			["Pyrokinesis"] =
+			[
+				new MayCastFromHandFree(Is.Source)
+				{
+					Costs = [new ExileFromHandCost(Is.Color(ManaColor.Red))],
+				},
+				Spell([Creature with { Divide = 4 }], new DealDamage(Ref.EachTarget, Count.Share)),
+			],
 			// ===== MC-4.4c2d: entering from a zone, a die roll =====
 			["\"Name Sticker\" Goblin"] =
 			[

@@ -61,6 +61,16 @@ public record TargetSpec(From From, Filter? Filter = null)
 	public bool PerX { get; init; }
 
 	/// <summary>
+	/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — N of something divided
+	/// among one to N targets of this word, each taking at least one (CR 601.2d); Pure Energy's "distribute two +1/+1
+	/// counters among one or two target creatures" is 2. StackResolution.TextOf makes it N words, all but the first
+	/// optional and each a different object; what each target takes is Count.Share. Past two, the targets and the
+	/// split are chosen as it is cast (CastSpellAction.ChoosesTargets), never a cast per set and split — four
+	/// among 12 creatures would be 1,365 casts.
+	/// </summary>
+	public int Divide { get; init; }
+
+	/// <summary>
 	/// Fatehold Charm: "target spell or creature" — also legal where this one says, in its own zone.
 	/// Only the outer spec's Optional and NotThePrevious are read; set them there.
 	/// </summary>

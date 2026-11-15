@@ -233,6 +233,22 @@ as his three priorities.
   order, a row's lower bound was a line no test could see. `tools/magic_docs.py` now finds a test naming a card
   whose name has quotes. The probe: 2 of 150 random games ran past 300 permanents (its cap; none with Laelia named)
   — random play spending the Goblin's 4–6 mana, not a loop of the Goblin's (it stops at ten).
+- 2026-11-14, Claude — **4.4c2e: "N divided among any number of targets" is one piece, `TargetSpec.Divide`** —
+  Pyrokinesis (4) and Pure Energy (2, moved onto it; `TargetChosen` is gone). Counted first: a cast per set of
+  targets and split is 12 + 66×3 + 220×3 + 495 = 1,365 against 12 creatures (more with each red card to exile), so
+  past two it is ONE cast (`ChoosesTargets`, as PerX): `ChooseXTargetsChoice` generalised from "exactly X" to the
+  words' range (one to four), then — only with two or three targets — the ways to split, a `ChooseKeywordChoice`
+  (no new choice type). The division rides the cast (`CastSpellAction.Shares` → `OnStackComponent.Shares`), each
+  target's share is `Count.Share` with `Ref.It`, and `DealDamage` now counts its amount per object as `PutCounters`
+  did. Pure Energy's two stay casts (one per creature and per pair — its moves, records and the AI's play are
+  unchanged; no recorded game moved), its script one `PutCounters(Ref.EachTarget, Count.Share)`. "Exile a red card
+  rather than pay" is Force of Will's piece, script only. Two lines the revert-check showed no test could see were
+  taken out, not kept: padding the chosen targets to the word count, and a bounds guard in `Count.Share`.
+  Pre-commit review, both fixed with a test that fails without the fix: `DealDamage` counted its amount again after
+  each target was dealt its damage (now all before any — simultaneous), and a share was read by its place among ALL
+  the words, so a hand-built cast with a word left empty between two targets misread it. The AI answers
+  the targets with ONE creature, whichever plays out best (never its own); splitting is AI-19.25 (backlog), and a
+  ceiling (DesignNotes): one divided word, no modes.
 
 ## Tasks
 
@@ -268,13 +284,13 @@ as his three priorities.
         (golden-out unchanged: no recorded game moved by the engine; golden-in moved 29 random and 192 card-replay games,
         added 12; probe 150 games, none unfinished — the Guides' mana from the hand is a payment, which the probe's counts
         don't see, as a land's)
-  - [ ] MC-4.4c Red's tier 1 (`LsvSurvey.md` listed 28; Simian Spirit Guide went with 4.4b), read card by card and
+  - [x] MC-4.4c Red's tier 1 (`LsvSurvey.md` listed 28; Simian Spirit Guide went with 4.4b), read card by card and
         split in two (Decisions):
     - [x] MC-4.4c1 The tested pieces, 11 — done 2026-11-13: Flame Slash, Sear, Flametongue Kavu, Wheel of Fortune,
           Faithless Looting, Mine Collapse, Suplex, Legion Extruder, Seasoned Pyromancer, Pyrogoyf, Generous Plunderer.
           Scripts only, no engine change; 14 tests; `batch_checks.py` all 7 steps (golden-out unchanged; golden-in moved
           29 random and 649 card-replay games, added 44; probe 150 games, none unfinished, every card used)
-    - [ ] MC-4.4c2 The options and new pieces, 16 — surveyed and split in five parts (Decisions):
+    - [x] MC-4.4c2 The options and new pieces, 16 — surveyed and split in five parts (Decisions) — done 2026-11-14:
       - [x] MC-4.4c2a Options, 6 — done 2026-11-13: Broadside Bombardiers, Cori-Steel Cutter, Bonehoard Dracosaur, Inti,
             Magda, Tersa Lightshatter. Six options (Decisions); 7 tests, 9/9 breaks caught; `batch_checks.py` all 7 steps
             (golden-out unchanged; golden-in moved 29 random and 336 card-replay games, added 24; probe 150 games, none
@@ -289,15 +305,19 @@ as his three priorities.
       - [x] MC-4.4c2d "Name Sticker" Goblin — entering from a zone, a die roll — done 2026-11-14: `Trigger.NotFrom`,
             `RollDie` (Decisions); 8 tests, 14/14 breaks caught; `batch_checks.py` all 7 steps (golden-out unchanged;
             golden-in moved 29 random and 88 card-replay games, added 4; probe 150 games, 2 past 300 permanents)
-      - [ ] MC-4.4c2e Pyrokinesis — damage divided among any number of targets
+      - [x] MC-4.4c2e Pyrokinesis — damage divided among any number of targets — done 2026-11-14: `TargetSpec.Divide`,
+            Pure Energy moved onto it (Decisions); 9 tests, 22/22 breaks caught; `batch_checks.py` all 7 steps
+            (golden-out unchanged; golden-in moved 29 random and 71 card-replay games, added 4; probe 150 games, none
+            unfinished, cast 522 times)
+  - [ ] MC-4.4d The next colour's tier 1 (the batch plan's step 5; red is done) — read card by card and split as red
+        was: the tested pieces first, then the options and new pieces
 
 ## Next
 
-MC-4.4c2e — Pyrokinesis: damage divided among any number of targets —
-one cast, the targets and the split a choice after casting, as PerX's `ChooseXTargetsChoice`; its "exile a red card
-rather than pay" is `MayCastFromHandFree(Is.Source) { Costs = [ExileFromHandCost(red)] }`, tested on Force of Will;
-Pure Energy's split (`TargetChosen`) generalised onto the same piece, not a sibling.
-Its own commit; a FIRES test per scripted card. DEV-5 still open: the probe names no never-used
+Red's tier 1 is done (4.4c). MC-4.4d, not started — the next colour's tier 1, in a NEW session: `python
+tools/survey.py lsv`, pick the colour (Shayne hasn't named one; default: white, the plan's order), read each card
+against the nearest piece's code and split it as red was — the tested pieces as one script-only commit, then the
+options, then a part per new rule. A FIRES test per scripted card. DEV-5 still open: the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
@@ -334,3 +354,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   From/To, Vash and Blastoneuron moved onto it; 145 of 528 play. For Shayne: nothing Open.
 - 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2d — "Name Sticker" Goblin: `Trigger.NotFrom` on the entry event's new
   From, `RollDie`; no recorded game moved by the engine; 146 of 528 play. For Shayne: nothing Open.
+- 2026-11-14 (cube lane, sprint 5 C5): MC-4.4c2e — Pyrokinesis; `TargetSpec.Divide`, Pure Energy moved onto it; red's
+  tier 1 (4.4c) done; 147 of 528 play. For Shayne: nothing Open — which colour 4.4d takes is his (default: white).

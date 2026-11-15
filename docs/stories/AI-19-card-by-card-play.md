@@ -244,6 +244,10 @@ Open questions:
       answers a hand choice with its minimum unless it is "up to one", so "up to two" is answered with none and the AI's
       Tersa never loots. Wanted: a rule for "up to N" hand choices — discard the cards it values least below what a
       draw is worth (Shayne, 2026-11-14: backlog for now; added from the cube lane).
+- [ ] AI-19.25 Pyrokinesis (LSV cube, MC-4.4c2e): "4 damage divided as you choose among any number of target
+      creatures" — `GreedyAi` answers its targets with ONE creature, whichever plays out best, so it never kills two
+      2/2s; and `BeamSearchAi.Damage` reads `Count.Share` as 0. Wanted: the pairs (and their splits) evaluated too
+      (backlog; added from the cube lane).
 
 ## Next
 
@@ -258,6 +262,7 @@ boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-14: AI-19.25 — Pyrokinesis' one-target answer added from the cube lane (MC-4.4c2e).
 - 2026-11-14: AI-19.24 — Tersa's "discard up to two" added from the cube lane (MC-4.4c2a's Open).
 - 2026-11-11: AI-19.23 — the scan rerun after AI-13.11/13.12 on the same 300 seeds; the VALUE items re-decided under 30
   guesses (findings, "the scan again").

@@ -19,6 +19,12 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>"If this spell was cast from a graveyard" — and flashback exiles it as it leaves the stack.</summary>
 	public ZoneType CastFrom { get; init; } = ZoneType.Hand;
 
+	/// <summary>
+	/// Pyrokinesis: "4 damage divided as you choose" — how many each target chosen takes, in the targets' order,
+	/// announced as it was cast (CR 601.2d); a copy keeps the division (CR 707.10). Read by Count.Share.
+	/// </summary>
+	public ImmutableArray<int> Shares { get; init; } = [];
+
 	/// <summary>Overflow Submatrix, The Holodeck: cast from a graveyard by a permanent's permission — not flashback, so not exiled leaving the stack; it resolves onto the battlefield.</summary>
 	public bool ByPermission { get; init; }
 
@@ -117,6 +123,12 @@ public record CastSpellAction : GameAction
 	/// per set: 2^n casts hung the fuzz probe (Shayne, 2026-11-05). One cast per X; Targets empty until chosen.
 	/// </summary>
 	public bool ChoosesTargets { get; init; }
+
+	/// <summary>
+	/// Pyrokinesis: how its 4 damage is divided among the targets chosen (TargetSpec.Divide), one number per
+	/// target in their order — empty when the number of targets leaves one way (one target, or one each).
+	/// </summary>
+	public ImmutableArray<int> Shares { get; init; } = [];
 
 	/// <summary>
 	/// What casting it costs beyond mana: its additional costs, then its flashback's when cast that way, then
@@ -287,6 +299,8 @@ public record CastSpellAction : GameAction
 				: !TargetSpec.AreLegal(s, specs, Targets, PlayerId, CardId)
 		)
 			return ValidationResult.Invalid("Illegal targets");
+		if (!ChoosesTargets && !Division.Fits(Division.Of(card), Targets, Shares))
+			return ValidationResult.Invalid("Illegal division");
 		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (!CostList.Fits(costs, CostSlot.Behold, BeholdId, s, PlayerId, CardId))
@@ -308,18 +322,29 @@ public record CastSpellAction : GameAction
 	public override ActionResult Execute(GameState s) =>
 		new(ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId));
 
-	/// <summary>Dominion Infiltration: the X targets chosen, then this cast with them.</summary>
-	GameState ChooseTargets(GameState s, bool retain) =>
-		s.SpawnAction(
+	/// <summary>Dominion Infiltration: the X targets chosen, then this cast with them — Pyrokinesis: one to four.</summary>
+	GameState ChooseTargets(GameState s, bool retain)
+	{
+		var specs = StackResolution.TextOf(s.GetCard(CardId), Modes, Kicked, X).Specs;
+		return s.SpawnAction(
 			new PipelineAction
 			{
 				Steps =
 				[
-					new ChooseXTargetsChoice(PlayerId, CardId, X, Modes, Kicked),
+					new ChooseXTargetsChoice(
+						PlayerId,
+						CardId,
+						X,
+						Modes,
+						Kicked,
+						specs.Count(t => !t.Optional),
+						specs.Count
+					),
 					new CastWithChosenTargetsAction(this with { ChoosesTargets = false }, retain),
 				],
 			}
 		);
+	}
 
 	/// <summary>Pays and puts it on the stack — the priority action keeps priority after; a resolution goes on.</summary>
 	public GameState Cast(GameState s)
@@ -353,6 +378,19 @@ public record CastSpellAction : GameAction
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
+		if (Division.Of(card) is > 0 and var divided) // Pyrokinesis, Pure Energy: the division is announced now
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							Shares = Shares.IsEmpty
+								? Division.Splits(divided, Targets.Count(id => id != 0)).Single()
+								: Shares,
+						}
+					)
+			);
 		if (alternative || uncounterable)
 			s = s.UpdateObject(
 				CardId,
@@ -732,7 +770,18 @@ public static class StackResolution
 						? Enumerable
 							.Range(0, x)
 							.Select(i => t with { PerX = false, NotThePrevious = i > 0 })
-						: [t]
+					: t.Divide > 0
+						? Enumerable
+							.Range(0, t.Divide)
+							.Select(i =>
+								t with
+								{
+									Divide = 0,
+									Optional = i > 0,
+									NotThePrevious = i > 0,
+								}
+							)
+					: [t]
 				),
 			],
 			steps
@@ -908,6 +957,8 @@ public static class StackResolution
 			.Add(ContextKeys.AllTargets, legal)
 			.Add(ContextKeys.ChosenTargets, chosen.ToImmutableArray())
 			.Add(ContextKeys.EventCard, eventCard);
+		if (top is Card divided && divided.GetComponent<OnStackComponent>() is { } division)
+			context = context.Add(ContextKeys.Shares, division.Shares);
 		if (top is StackAbility { EventSnapshot: { } snapshotOfEvent })
 			context = context.Add(ContextKeys.EventSnapshot, snapshotOfEvent);
 		if (top is StackAbility { EventObject: { } eventObject })
@@ -936,9 +987,49 @@ public record FinishSpellAction : GameAction
 }
 
 /// <summary>
+/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — the ways to divide a
+/// total among the targets chosen, each taking at least one (CR 601.2d), in the targets' order. ponytail: a
+/// text with one divided word, outside any mode, as Pyrokinesis' and Pure Energy's.
+/// </summary>
+public static class Division
+{
+	/// <summary>The total a card's text divides (TargetSpec.Divide); 0 when it divides nothing.</summary>
+	public static int Of(Card card) =>
+		card.GetComponent<SpellEffectsComponent>()?.Targets.Sum(t => t.Divide) ?? 0;
+
+	/// <summary>Every way to divide the total among k targets, the first target's biggest share first.</summary>
+	public static ImmutableList<ImmutableArray<int>> Splits(int total, int k) =>
+		k <= 0 || total < k ? []
+		: k == 1
+			?
+			[
+				[total],
+			]
+		:
+		[
+			.. Enumerable
+				.Range(1, total - k + 1)
+				.Reverse()
+				.SelectMany(first =>
+					Splits(total - first, k - 1).Select(rest => rest.Insert(0, first))
+				),
+		];
+
+	/// <summary>A cast's shares fit its targets: none without a division or when only one way is left, else one of the ways.</summary>
+	public static bool Fits(int total, ImmutableArray<int> targets, ImmutableArray<int> shares)
+	{
+		var splits = Splits(total, targets.Count(id => id != 0));
+		return shares.IsEmpty
+			? total == 0 || splits.Count == 1
+			: splits.Any(split => split.SequenceEqual(shares));
+	}
+}
+
+/// <summary>
 /// Dominion Infiltration: "Choose X target creatures your opponents control" — exactly X different ones,
-/// the candidates of its X target words (all the same word). ponytail: a text whose only target words are
-/// the X ones, outside any mode, as Dominion Infiltration's; another word or a mode waits for a card that has one.
+/// the candidates of its X target words (all the same word); Pyrokinesis' "any number of target creatures":
+/// one to four of them. ponytail: a text whose only target words are those, outside any mode, as Dominion
+/// Infiltration's; another word or a mode waits for a card that has one.
 /// </summary>
 public record ChooseXTargetsChoice : ChoiceAction
 {
@@ -955,7 +1046,9 @@ public record ChooseXTargetsChoice : ChoiceAction
 		int cardId,
 		int x,
 		ImmutableArray<int> modes,
-		bool kicked
+		bool kicked,
+		int min,
+		int max
 	)
 	{
 		PlayerId = playerId;
@@ -963,10 +1056,13 @@ public record ChooseXTargetsChoice : ChoiceAction
 		X = x;
 		Modes = modes;
 		Kicked = kicked;
-		MinChoices = x;
-		MaxChoices = x;
+		MinChoices = min;
+		MaxChoices = max;
 		OutputKey = Chosen;
-		Prompt = $"Choose {x} target{(x == 1 ? "" : "s")}";
+		Prompt =
+			min == max
+				? $"Choose {min} target{(min == 1 ? "" : "s")}"
+				: $"Choose {min} to {max} targets";
 	}
 
 	public static bool CanChoose(
@@ -974,7 +1070,9 @@ public record ChooseXTargetsChoice : ChoiceAction
 		int playerId,
 		int cardId,
 		IReadOnlyList<TargetSpec> specs
-	) => specs.Count > 0 && specs[0].Candidates(s, playerId, cardId).Count() >= specs.Count;
+	) =>
+		specs.Count > 0
+		&& specs[0].Candidates(s, playerId, cardId).Count() >= specs.Count(t => !t.Optional);
 
 	public override ImmutableList<ChoiceOption> GetOptions(
 		GameState s,
@@ -1002,12 +1100,60 @@ public record ChooseXTargetsChoice : ChoiceAction
 		};
 }
 
-/// <summary>After ChooseXTargetsChoice: the cast with those targets, in increasing order (one set, one cast).</summary>
+/// <summary>
+/// After ChooseXTargetsChoice: the cast with those targets, in increasing order (one set, one cast). Pyrokinesis: two or three targets can share its 4 damage several ways, so that is asked
+/// next (a ChooseKeywordChoice of the ways), before the cast.
+/// </summary>
 public record CastWithChosenTargetsAction(CastSpellAction Cast, bool Retain) : GameAction
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var cast = Cast with { Targets = ChooseXTargetsChoice.Read(InputContext) };
+		var card = s.GetCard(Cast.CardId);
+		var chosen = ChooseXTargetsChoice.Read(InputContext);
+		var cast = Cast with { Targets = chosen };
+		var splits = Division.Splits(Division.Of(card), chosen.Length);
+		if (splits.Count > 1)
+			return new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						Steps =
+						[
+							new ChooseKeywordChoice(
+								cast.PlayerId,
+								[
+									.. splits.Select(split =>
+										string.Join(
+											", ",
+											split.Select(
+												(n, i) => $"{n} to {s.GetObject(chosen[i]).Name}"
+											)
+										)
+									),
+								]
+							)
+							{
+								Prompt = "Divide among the targets",
+							},
+							new CastWithChosenDivisionAction(cast, splits, Retain),
+						],
+					}
+				)
+			);
+		return Retain ? cast.Execute(s) : new(cast.Cast(s));
+	}
+}
+
+/// <summary>Pyrokinesis: after the division was chosen among the ways offered, the cast with it.</summary>
+public record CastWithChosenDivisionAction(
+	CastSpellAction Cast,
+	ImmutableList<ImmutableArray<int>> Splits,
+	bool Retain
+) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var cast = Cast with { Shares = Splits[(int)InputContext[ChooseKeywordChoice.Chosen] - 1] };
 		return Retain ? cast.Execute(s) : new(cast.Cast(s));
 	}
 }

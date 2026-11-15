@@ -162,6 +162,12 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		}
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
+		if (choice is ChooseXTargetsChoice && choice.MinChoices != choice.MaxChoices)
+			// Pyrokinesis: ponytail: one target takes all 4 — whichever plays out best; splitting it among
+			// several (two 2/2s) is never tried: evaluate the pairs and their splits if it misplays (AI-19).
+			return choice
+				.Options.Select(o => (IEnumerable<int>)[o.Id])
+				.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 		if (choice is ChooseXTargetsChoice)
 			// Dominion Infiltration copies them: the biggest. ponytail: power, then mana value, stands in for worth.
 			return choice

@@ -1237,13 +1237,8 @@ public static class TrkCards
 			],
 			["Pure Energy"] =
 			[
-				Spell(
-					[Creature, Creature with { Optional = true, NotThePrevious = true }],
-					new PutCounters(Ref.Target(0), 1),
-					new PutCounters(Ref.Target(1), 1),
-					// One target chosen: both counters on it. Two: one each, decided as it was cast.
-					new If(new Not(new TargetChosen(1)), [new PutCounters(Ref.Target(0), 1)])
-				),
+				// One target chosen: both counters on it. Two: one each, decided as it was cast.
+				Spell([Creature with { Divide = 2 }], new PutCounters(Ref.EachTarget, Count.Share)),
 				BeamMeUp("{2}{W}"),
 			],
 			["Adversary by Algorithm"] =

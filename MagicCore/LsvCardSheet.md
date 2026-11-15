@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 19/46 · uncommon 27/86 · rare 66/279 · mythic 26/108 · **146/528**
+**Playable:** common 19/46 · uncommon 27/86 · rare 67/279 · mythic 26/108 · **147/528**
 
 ### "Name Sticker" Goblin
 
@@ -1049,7 +1049,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Lightning Bolt deals 3 damage to any target.
 
-**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2bTests
+**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2bTests, LsvBatch2c2Tests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -3718,7 +3718,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may exile a red card from your hand rather than pay this spell's mana cost.  
 > Pyrokinesis deals 4 damage divided as you choose among any number of target creatures.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ExileFromHandCost` — Q, Stacking the Deck's gift: "Exile a card from your hand:" — one legal action per card…; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Pyrokinesis"] =
+[
+	new MayCastFromHandFree(Is.Source)
+	{
+		Costs = [new ExileFromHandCost(Is.Color(ManaColor.Red))],
+	},
+	Spell([Creature with { Divide = 4 }], new DealDamage(Ref.EachTarget, Count.Share)),
+],
+```
 
 ### Raffine's Tower
 
