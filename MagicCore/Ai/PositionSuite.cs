@@ -358,6 +358,101 @@ public static class PositionSuite
 		);
 	}
 
+	/// <summary>
+	/// The flip rate (AI-20.2): <paramref name="ai"/> decides every position again under <paramref name="guesses"/>
+	/// guesses of the cards it can't see (the hidden cards' sample is seeded by the state's RngSeed, as
+	/// <c>--record=FILE --guesses=N --at=N</c> does for one position), and each position's answers are counted. A
+	/// position with more than one answer FLIPS: the decision was made by the guess, not by the position.
+	/// </summary>
+	public static FlipCheck Flips(Suite suite, string ai, int guesses)
+	{
+		var clock = Stopwatch.StartNew();
+		var states = States(suite);
+		var answers = new IReadOnlyList<(string What, int Count)>[states.Count];
+		var (progress, flipped) = (new RunProgress($"flip rate ({ai})", states.Count), 0);
+		Parallel.For(
+			0,
+			states.Count,
+			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+			i =>
+			{
+				var s = states[i].State;
+				var tokens = new List<(string Token, int Count)>();
+				for (var k = 1; k <= guesses; k++)
+				{
+					var token = Token(
+						s,
+						AiMatch
+							.Create(ai, s.DecidingPlayerId(), k, searchThreads: 1)
+							.Decide(s with { RngSeed = k * 7919 })
+					);
+					var at = tokens.FindIndex(t => Same(t.Token, token));
+					if (at < 0)
+						tokens.Add((token, 1));
+					else
+						tokens[at] = (tokens[at].Token, tokens[at].Count + 1);
+				}
+				answers[i] =
+				[
+					.. tokens
+						.OrderByDescending(t => t.Count)
+						.Select(t => (Describe(s, t.Token), t.Count)),
+				];
+				if (tokens.Count > 1)
+					Interlocked.Increment(ref flipped);
+				progress.Tick(() => $"{flipped} flipped");
+			}
+		);
+		return new FlipCheck(
+			suite,
+			ai,
+			guesses,
+			[.. states.Select((x, i) => (x.Position, answers[i]))],
+			clock.Elapsed
+		);
+	}
+
+	/// <summary>What <see cref="Flips"/> found: every position's answers, the commonest first.</summary>
+	public sealed record FlipCheck(
+		Suite Suite,
+		string Ai,
+		int Guesses,
+		IReadOnlyList<(
+			Position Position,
+			IReadOnlyList<(string What, int Count)> Answers
+		)> Positions,
+		TimeSpan Elapsed
+	)
+	{
+		public int Flipped => Positions.Count(p => p.Answers.Count > 1);
+
+		/// <summary>The guesses that did not give their position's commonest answer, of all guesses.</summary>
+		public double Minority =>
+			Positions.Sum(p => Guesses - p.Answers[0].Count) / (double)(Positions.Count * Guesses);
+
+		/// <summary>The rates, then the <paramref name="shown"/> most divided positions with each answer's count.</summary>
+		public string Report(int shown)
+		{
+			var text = new System.Text.StringBuilder(
+				$"{Ai}, {Guesses} guesses a position: {Flipped} of {Positions.Count} positions flipped ({100.0 * Flipped / Positions.Count:0.0}%), "
+					+ $"{100 * Minority:0.0}% of guesses against their position's commonest answer; {Elapsed.TotalMinutes:0.0} min\n"
+			);
+			foreach (
+				var (p, answers) in Positions
+					.Where(p => p.Answers.Count > 1)
+					.OrderBy(p => p.Answers[0].Count)
+					.Take(shown)
+			)
+			{
+				var game = Suite.Games[p.GameIndex];
+				text.Append(
+					$"- {game.Deck1} vs {game.Deck2}, seed {game.Seed}, move {p.Move}: {string.Join("; ", answers.Select(a => $"{a.Count} {a.What}"))}\n"
+				);
+			}
+			return text.ToString();
+		}
+	}
+
 	/// <summary>The oracle's readings, one per position and in its order — anything else is stale.</summary>
 	static IReadOnlyList<OracleReading> Aligned(
 		IReadOnlyList<OracleReading> oracle,

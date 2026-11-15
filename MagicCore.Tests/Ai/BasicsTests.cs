@@ -548,7 +548,7 @@ public class BasicsTests
 			var casts = 0;
 			Parallel.For(
 				1,
-				31,
+				AiPositionTests.SeedsFor(settings.Library) + 1,
 				k =>
 				{
 					if (
@@ -562,10 +562,12 @@ public class BasicsTests
 			return casts;
 		}
 
-		// the potential score (AI-13.11: the mana kept up) holds it too - the control switches both off
+		// the potential score (AI-13.11: the mana kept up) holds it too - the control switches both off, in the search
+		// before AI-20.4 (the default look-ahead holds it without them: AiPositionTests.OneGuess)
 		var noRule = new BeamSearchAi.Settings(
 			Without: Evaluator.Terms.SaveBurn | Evaluator.Terms.Potential,
-			Threads: 1
+			Threads: 1,
+			Library: AiPositionTests.OneGuess
 		);
 		Assert.That(
 			Casts(theirLife == 20 ? noRule.WithoutHeld() : noRule),

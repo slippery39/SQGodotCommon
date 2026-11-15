@@ -102,7 +102,9 @@ dotnet run -c Release --project MagicConsole -- --lint [--games=N] [--seed=N] [-
 dotnet run -c Release --project MagicConsole -- --decisions [--games=N] [--seed=N]   # AI games as a replay to read (AI-14): ai_reports/decisions-<time>.md, and each game as a record beside it (-gameN.json) — --record=… numbers its moves, --keep=… --at=N makes a flagged one a test
 dotnet run -c Release --project MagicConsole -- --record=FILE --card=NAME   # each turn NAME sat in its holder's hand: lands, castable or not, what was done instead (MC-5.4)
 dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N   # what the search imagined before move N (AI-17): each first move, best first, with the line its score came from - our decisions, the simulated opponent, the rollout to its horizon
-dotnet run -c Release --project MagicConsole -- --record=FILE --guesses=30 --at=N   # noise or value (AI-19.23): move N decided again under 30 guesses of the hidden cards, each answer counted - a split is AI-20's one guessed future, a steady wrong answer a pricing problem (~15 s a position)
+dotnet run -c Release --project MagicConsole -- --record=FILE --guesses=30 --at=N --ai=beam+shuffle   # noise or value (AI-19.23): move N decided again under 30 guesses of the hidden cards, each answer counted - a split is AI-20's one guessed future, a steady wrong answer a pricing problem (~15 s a position). Without --ai=beam+shuffle it is the default search, which guesses nothing (AI-20.4): 30 identical answers
+dotnet run -c Release --project MagicConsole -- --suite=beam --guesses=10 [--shown=N]   # the flip rate (AI-20.2): every suite position decided again under 10 guesses of the hidden cards - how many positions gave more than one answer, the most divided listed (~10 min for 288 positions; any time, unattended)
+dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N --ai=beam+shuffle [--guess=K]   # the same under another search (--ai= works with --guesses too). The default (AI-20.4) shows each line's rollout both ways, our unseen draws lands or not, with each way's share; beam+shuffle is the search before it, one shuffled guess a decision, and --guess=K is that search under --guesses' Kth seed
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json and TRK.values.json (~5 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
@@ -142,7 +144,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #   the "cost per decision" line (engine steps, rollouts) is deterministic: identical on every run
 #   and machine for an uncapped AI (every --match AI)
 #   beam is the search as it plays: held cards at 0.5 of their measured value (AI-1), the libraries
-#   honest — what it can't know is shuffled (AI-3.9). beam-plain: before held values; beam-held=0.25:
+#   honest — unseen draws are played as lands and as not lands, nothing guessed (AI-20.4). beam-plain: before held values; beam-held=0.25:
 #   at that fraction. Models combine as beam+<model>[+<model>…] (story AI-3; findings say what each did):
 #     realorder      the libraries as they really are — sees its own draws; 5pp+ stronger, cheats
 #     casts          the simulated opponent casts from its WHOLE hand (the default plays only the cards we know: AI-10.4)
@@ -178,6 +180,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     blindhand      every card in the opponent's hand priced as unknown, even one it knows (before AI-9.5)
 #     nomanashort    a held card priced as castable however many lands short (before AI-17.21)
 #     notheirabilities  the simulated opponent never uses its permanents' abilities in its own turn (before AI-17.22)
+#     spellfirst     the simulated opponent casts a spell before any ability on its board (before AI-20.8)
 #     thisturngrants the next attack's clock reads this turn's grants (can't block, flying) as lasting (before AI-17.9)
 #     faceburn       burn at their face whenever it scores, not saved for a kill within two turns (before the burn rule)
 #     instantoptions only instants and flash held as options, not targeted sorcery-speed cards (before AI-13.10)
@@ -186,7 +189,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     shortlist2 / shortlist1  AI-22 experiments (OFF by default): 2 or 1 attack plans re-judged against the rollout's real blocks, not 3
 #     freepasses2 / freepasses1  AI-22 experiments (OFF by default): at most 2 or 1 free passes in a row, not 4
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
-#     shuffle        the default library, kept as a name; beam-casts = beam+casts
+#     shuffle        what it can't know shuffled into ONE guess a decision (the default from AI-3.9 to AI-20.4); landornot: the default, kept as a name; beam-casts = beam+casts
 
 # INTERIM ratings for a set 17lands hasn't seen (MC-5.4: TRK) -> MagicCore/Sets/TRK.ratings.json (~10 s); rebuild to embed.
 # CardRatings.Of reads <SET>.ratings.json before <SET>.17lands.json — delete it when the set gets real ratings.

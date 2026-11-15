@@ -59,10 +59,13 @@ public static class AiMatch
 			["responds"] = Opponent(Rollout.OpponentModel.Responds),
 			// The board-only opponent, never casting even what we know — before AI-10.4: beam+boardonly.
 			["boardonly"] = Opponent(Rollout.OpponentModel.BoardOnly),
-			// The library: honest by default since AI-3.9 (shuffle, kept as a name); the real order — the
-			// search sees its own future draws, 5pp or more stronger — is beam+realorder.
+			// The library: honest since AI-3.9. One shuffled guess a decision, the default until AI-20.4, is
+			// beam+shuffle; the real order — the search sees its own future draws — is beam+realorder.
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
 			["realorder"] = o => o with { Library = Hidden.Library.RealOrder },
+			// The default since AI-20.4 (the name is kept): nothing shuffled, every look-ahead played both ways -
+			// our unseen draws are lands, or not - by the land odds of our deck list.
+			["landornot"] = o => o with { Library = Hidden.Library.LandOrNot },
 			// The evaluator without its threat term (AI-5.2) — the search before it: beam+nothreat.
 			["nothreat"] = o => o with { Without = o.Without | Evaluator.Terms.Threat },
 			// Without the six keywords AI-5.3 added to a creature's value: beam+nokeywords.
@@ -120,6 +123,8 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirAbilities,
 				},
+			// The simulated opponent casts a spell before any ability on its board, before AI-20.8: beam+spellfirst.
+			["spellfirst"] = o => o with { Without = o.Without | Evaluator.Terms.AbilityOverSpell },
 			// Only instants and flash held as options, before AI-13.10: beam+instantoptions.
 			["instantoptions"] = o =>
 				o with
@@ -260,7 +265,7 @@ public static class AiMatch
 			|| models.Contains("responds")
 		)
 		&& models.Count(m => m is "casts" or "responds" or "boardonly") <= 1 // one opponent model
-		&& !(models.Contains("shuffle") && models.Contains("realorder")) // one library mode
+		&& models.Count(m => m is "shuffle" or "realorder" or "landornot") <= 1 // one library mode
 		// GreedyAi makes all our rollout decisions: allin and firsttarget would reach only the opponent's.
 		&& !(
 			models.Contains("greedyrollout")

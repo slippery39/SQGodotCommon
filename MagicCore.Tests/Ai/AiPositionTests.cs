@@ -20,6 +20,21 @@ public class AiPositionTests
 	int me;
 	int them;
 
+	/// <summary>
+	/// The search before AI-20.4: what it can't see shuffled into ONE guess (`beam+shuffle`). Ten controls run under
+	/// it (AI-20.7): with their patch off, the default look-ahead - unseen draws played as lands and as not lands -
+	/// no longer makes the misplay in that position, so the control shows what the patch fixed in the search it was
+	/// written for. Whether the default still needs each patch is AI-20.5's, measured one at a time.
+	/// </summary>
+	internal const Hidden.Library OneGuess = Hidden.Library.ShuffleUnknown;
+
+	/// <summary>A control (a term switched off) under <see cref="OneGuess"/>; the play itself under the default.</summary>
+	static Hidden.Library LibraryFor(Evaluator.Terms without) =>
+		without == Evaluator.Terms.None ? new BeamSearchAi.Settings().Library : OneGuess;
+
+	/// <summary>How many seeds to count over: 30 guesses for a <see cref="OneGuess"/> search, one for the default - it guesses nothing, so every seed is the same search.</summary>
+	internal static int SeedsFor(Hidden.Library library) => library == OneGuess ? 30 : 1;
+
 	[SetUp]
 	public void OurFirstMain_EmptyHands()
 	{
@@ -73,7 +88,8 @@ public class AiPositionTests
 	// source. Nobody is discarding Rockfall Vale in this situation." Three turns ahead the Vale and a Forest were priced
 	// alike: no land was left in hand, and the red cards it left uncastable were priced as castable.
 	// AI-25.3's block fix also keeps it here (the Forest goes): this tests ColorShort ALONE. The CONTROL: without both,
-	// the AI still discards the Vale (c73).
+	// the AI still discards the Vale (c73). Both under the search before AI-20.4 (OneGuess): in the default, ColorShort
+	// alone no longer keeps the Vale - a land may be the next draw - and the block fix does (the Forest goes: the test below).
 	[Test]
 	public void TheOnlySourceOfAColour_IsNotDiscarded()
 	{
@@ -81,7 +97,10 @@ public class AiPositionTests
 		string Choice(Evaluator.Terms without) =>
 			MoveTokens.Token(
 				s,
-				new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s)
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					new(Without: without, Library: OneGuess)
+				).Decide(s)
 			);
 
 		const Evaluator.Terms blocks = Evaluator.Terms.BlocksSeeTricks;
@@ -98,7 +117,12 @@ public class AiPositionTests
 	{
 		var s = KeptRecords.Before("ShayneNotesSeed1", 97);
 		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+			new BeamSearchAi(
+				s.DecidingPlayerId(),
+				new(Without: without, Library: LibraryFor(without))
+			)
+				.Decide(s)
+				.What;
 
 		Assert.That(Chose(Evaluator.Terms.BlocksSeeTricks), Does.Contain("Koth"), "control");
 		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Discard 1 Forest"));
@@ -151,6 +175,7 @@ public class AiPositionTests
 					{
 						FreePasses = without == Evaluator.Terms.None,
 						WaitOnTies = without == Evaluator.Terms.None,
+						Library = LibraryFor(without),
 					}
 				).Decide(s)
 			);
@@ -239,7 +264,10 @@ public class AiPositionTests
 		var ai = start.DecidingPlayerId();
 		int LandsPlayed(Evaluator.Terms without)
 		{
-			var (s, search) = (start, new BeamSearchAi(ai, new(Without: without)));
+			var (s, search) = (
+				start,
+				new BeamSearchAi(ai, new(Without: without, Library: LibraryFor(without)))
+			);
 			for (var i = 0; i < 200 && s.GetGame().TurnNumber == 5; i++)
 				s = s.DecidingPlayerId() == ai ? search.Decide(s).State : TestGames.PassOrChoose(s);
 			return s.GetGame().TurnNumber == 5
@@ -265,15 +293,31 @@ public class AiPositionTests
 	public void AtFourLife_AgainstAVisibleDrain_ThePatrolStaysHomeToBlock()
 	{
 		var s = KeptRecords.Before("PatrolRacesIntoDrain", 287);
-		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		string Chose(Evaluator.Terms without, bool oneGuess = false) =>
+			new BeamSearchAi(
+				s.DecidingPlayerId(),
+				new(Without: without, Library: oneGuess ? OneGuess : LibraryFor(default))
+			)
+				.Decide(s)
+				.What;
 
 		Assert.That(Chose(Evaluator.Terms.TheirAbilities), Does.EndWith("Attack You"), "control");
 		// AI-13.9: once TRK's instants had offers, options read per line made the imagined Shayne hold his 2/1 back
+		// the search as it was: with the drain used before a spell (AI-20.8) his 2/1 kills whatever he holds back
 		Assert.That(
-			Chose(Evaluator.Terms.RootOptionTurns),
+			Chose(
+				Evaluator.Terms.RootOptionTurns | Evaluator.Terms.AbilityOverSpell,
+				oneGuess: true
+			),
 			Does.EndWith("Attack You"),
 			"control: options per line"
+		);
+		// AI-20.8 (Shayne, 2026-11-15: "the AI was Dead on board from its attack"): once unseen draws were played as lands
+		// too, the imagined Shayne recasting Boarding Action before the drain gave the AI a turn to win in first
+		Assert.That(
+			Chose(Evaluator.Terms.AbilityOverSpell),
+			Does.EndWith("Attack You"),
+			"control: a spell before the drain"
 		);
 		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
 	}
@@ -389,12 +433,12 @@ public class AiPositionTests
 			var attacked = 0;
 			Parallel.For(
 				1,
-				31,
+				SeedsFor(LibraryFor(without)) + 1,
 				k =>
 				{
 					var ai = new BeamSearchAi(
 						s.DecidingPlayerId(),
-						new(Without: without, Threads: 1)
+						new(Without: without, Threads: 1, Library: LibraryFor(without))
 					);
 					if (ai.Decide(s with { RngSeed = k * 7919 }).What.EndsWith("Attack You"))
 						Interlocked.Increment(ref attacked);
@@ -408,7 +452,7 @@ public class AiPositionTests
 			Is.GreaterThanOrEqualTo(6),
 			"control: a kind sample attacks"
 		);
-		Assert.That(Attacks(Evaluator.Terms.None), Is.LessThanOrEqualTo(3));
+		Assert.That(Attacks(Evaluator.Terms.None), Is.EqualTo(0));
 	}
 
 	// AI-17.20's spells half, on the same surveil (checked 2026-11-09, AI-13.10, Shayne: "run 173 with the rule on and
@@ -425,11 +469,14 @@ public class AiPositionTests
 			var bins = 0;
 			Parallel.For(
 				1,
-				31,
+				SeedsFor(LibraryFor(without)) + 1,
 				k =>
 				{
 					if (
-						new BeamSearchAi(s.DecidingPlayerId(), new(Without: without, Threads: 1))
+						new BeamSearchAi(
+							s.DecidingPlayerId(),
+							new(Without: without, Threads: 1, Library: LibraryFor(without))
+						)
 							.Decide(s with { RngSeed = k * 7919 })
 							.What.Contains("Energize")
 					)
@@ -592,7 +639,10 @@ public class AiPositionTests
 		string Choice(Evaluator.Terms without) =>
 			MoveTokens.Token(
 				s,
-				new BeamSearchAi(s.DecidingPlayerId(), new() { Without = without }).Decide(s)
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					new() { Without = without, Library = LibraryFor(without) }
+				).Decide(s)
 			);
 		// Blocking either Beast: every option of the Duelist's block but "don't".
 		var trades = s.GetPendingChoice()!
@@ -686,6 +736,7 @@ public class AiPositionTests
 									: Rollout.Attacks.EachAlone,
 						},
 						Without: without,
+						Library: LibraryFor(without),
 						// the control is the search as it was: whole attacks (AI-17.3) avoid it too
 						WholeAttacks: without == Evaluator.Terms.None
 					)
@@ -1180,7 +1231,7 @@ public class AiPositionTests
 		) =>
 			new BeamSearchAi(
 				s547.DecidingPlayerId(),
-				new(RolloutSettings: rollout, Without: without)
+				new(RolloutSettings: rollout, Without: without, Library: LibraryFor(without))
 			).Decide(s547);
 		// the control is the look-ahead as it was: Settle's choices (AI-17.6) hold too
 		var boardOnly = BeamSearchAi.DefaultRollout with

@@ -1825,3 +1825,84 @@ more potential value later on". Pass and the cast tied (−13.81, later −27.86
   (49–47), no 5pp difference; cost 4485.7 vs 4532.1 steps a decision. Kept.
 - **#213 (Extended Absence on the 1/1) is AI-20's:** exiling it, the drain and the clock (8.0) beat keeping the removal
   (7.7) because the look-ahead's opponent never casts its unknown hand — no future target ever comes.
+
+## The flip rate: how often the guess decides (2026-11-14, AI-20.2)
+
+`--suite=beam --guesses=10`: the default search decides each of the 288 suite positions again under 10 guesses of the
+cards it can't see (`Hidden.Sample`, seeded by the state's RngSeed), and each position's answers are counted.
+
+| | |
+|---|---|
+| Positions with more than one answer | **69 of 288 (24.0%)** |
+| Guesses against their position's commonest answer | 6.9% |
+| Time | 9.2 min, 16 threads |
+
+- **What flips most:** the Jace token's −3 (draw a card) and −1 (surveil 1) against a land or a spell first - 22 of the
+  40 most divided positions name one - then a cast against a pass (Vraska's Final Mercy, Chandra's Emberling, Academic
+  Ascent), and an attack against none (Samut, the Cadet token).
+- **The count is of FIRST MOVES, so it is rough both ways.** Two orders of the same turn count as a flip (Play Island
+  / Jace −3). And one first move hides two plans: `RogueLandcycleSkipped` #153-#159 answer Pass in 119 of 120
+  guesses, but under most guesses that Pass is "wait, attack, then landcycle and play the land this turn" (a tie the
+  wait wins, AI-13.12) and under the others "keep the 6/5, a land is coming" (`--explain=159 --guess=K`). The game
+  got a different guess at every stop, waited through its second main phase, and cycled in the opponent's upkeep.
+- The kept positions, 10 guesses each: #247 (the token's surveil) Pass 8, surveil 2; #24 (Forest or Rockfall Vale)
+  Forest 9, Vale 1; `LintTrkSeed1` #48 (the landcycle's search) none 5, Plains 4, Island 1.
+- After AI-20.3 the rate must be 0 - nothing is guessed - which either way of counting shows.
+
+## The land / not-a-land look-ahead: first numbers (2026-11-14, AI-20.3)
+
+**The default since AI-20.4 (Shayne, after the match below): `beam` is now this search and the `beam` column
+below is `beam+shuffle`.** The numbers were measured under the names of the day. `beam+landornot` (then a trial): nothing is shuffled, an unseen card on top of a library is an unknown
+card, and every line is rolled out twice - our unseen draws are lands, or not - averaged by the deck list's land odds.
+On the 288 suite positions, against today's search (`beam`, identical to the last commit's):
+
+| | `beam` | `beam+landornot` |
+|---|---|---|
+| Positions whose answer moves with the seed | 69 of 288 (24.0%, 10 seeds) | **0 of 288** (3 seeds) |
+| Decisions changed from the committed answers | 1 | 38 (13.2%) |
+| Engine steps a position | 10 660 | 19 885 (+87%) |
+| Rollouts a position | 21.2 | 40.9 |
+| Agrees with the oracle | 79.9% | 76.7% |
+| Score given up against the oracle | 0.42 | 0.76 |
+| Misses a win the oracle found | 2 | 5 |
+
+- **The oracle does not judge this change.** It searches on the REAL library order (`PositionSuite.OracleSettings`),
+  so it knows the draws an honest search can't; "whether another model is better is the match's question".
+- **The match** (`--match=beam+landornot,beam --until-clear`, 80.7 min): stopped after 576 games (6 pairings × 48
+  seeds × both seats) with **beam+landornot better: 54.2% ± 1.5pp** (312–264, no draws; every game finished). The
+  running score was above 50% from the first batch on (53.4% at 296 games). By its deck: Red-Green 134-58, White-Black
+  112-80, White-Blue Jace 66-126 (also the losing deck in the progress match above, 23-73). Per game the two play alike: lands played 7.3
+  against 7.4, spells cast 9.5 against 9.4, 18.9 turns. **Cost per decision: 9781 engine steps against 4498 (2.17×)**,
+  23.0 rollouts against 10.2.
+- **After the match, as the default** (AI-20.6): a surveil keeping an unknown card made it a known card that is
+  never a land, so the surveil line lost its "lands" half (Dominion Assault Force: surveil then keep 15.53, exile
+  21.09 - the first level read 21.96 and 21.09). Fixed: 34 decisions change where 38 did, 19 882.5 engine steps a
+  position, agrees with the oracle 76.0%, score given up 0.81; 0 of 288 flip (3 seeds, 3.4 min). The match above
+  played WITH the bug and has not been played again.
+- **Shayne's lesson tests under it** (AI-20.7): 1583 pass, 12 fail. `PatrolRacesIntoDrain` #287 attacks again -
+  232.81 against −2.19: the attack wins where the next draw is a land (50%, +9034.71) and loses where it is not
+  (−8569.09), and a win a turn sooner outweighs the loss. Nine controls no longer reproduce their misplay with the
+  patch off; four of those counted over 30 shuffles (Ajani's Anguish 0 of 30 cast where 10 or more did; the Tasha
+  attack 0 where 6 or more; Energize binned 0 where 7 or more).
+- **The look-ahead's opponent, an ability before a spell that does less** (AI-20.8, 2026-11-15):
+  `PatrolRacesIntoDrain` #287 - No attack −2.19, Attack −9499.14 (lost in both halves: turn 13, the Mountain from
+  exile, the drain 4 → 2, the 2/1 for 2). With it off (`beam+spellfirst`) Attack 232.81; `beam+notheirabilities`
+  Attack 4564.61; `beam+liveoptionturns` now No attack −4.84 against −9502.10 (that control no longer shows its
+  misplay). Suite: 0 of 288 changed, 19 883.7 engine steps a position (19 882.5 before), 40.9 rollouts, oracle 76.0%.
+  **The match** (`--match=beam,beam+spellfirst --until-clear`): 96 games, 50.0% (48-48), stopped as no difference
+  of 5pp either way, 49.2 min on a busy machine; 9676.1 engine steps a decision against 9676.0, 21.7 rollouts each;
+  by deck RG 19-13, WB 18-14, Jace 11-21; lands 7.6 and spells 9.9 a game each, 20.4 turns. Every mirror pair
+  split, so the ± reads 0.0pp: in these three decks the term almost never fires.
+- **The 38 changed decisions:** 22 are the Jace token's −1, −2 or −3 against another first move (used where it
+  passed, or a land or a spell played first where it drew); 10 a cast against a pass or another cast; 3 blocks; 2
+  abilities no longer activated; 1 is today's own (Compel Brutality's mode, changed in `beam` too).
+- **The landcycle game** (`RogueLandcycleSkipped` #157, 3 Swamps, a 6-mana 6/5 with "Basic landcycling {2}"): Pass and
+  cycling now both score 8.72, and both best lines cycle this turn (unseen draws not lands, 54%: 10.06; lands, 46%:
+  7.18). The wait wins the tie (AI-13.12) and its plan cycles: played forward, turn 8 ends with the land played, under
+  two seeds; today's search at the record's seed ends it on 3 lands (the test's control). #153, #155 and #159 answer
+  Pass under 4 of 4 seeds.
+- **The other kept positions, 4 seeds each, now one answer:** `LintTrkSeed1` #48 (the landcycle's search) "none" 4 -
+  no longer luck but a price: none −8.97, Plains −8.98. The fetched land scores −0.20 in hand (16.23 → 16.03 where the
+  draws are not lands); why is not traced - a land-valuation question, with #24. #247 (the token's surveil) Pass 4;
+  #24 (Forest or Rockfall Vale) Forest 4 - both are other problems (the surveil's split; land valuation).
+

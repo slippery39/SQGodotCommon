@@ -399,3 +399,6 @@ AI-13.5 and AI-13.6's positions hold by the fixed held price (pinned); the burn 
   over 600 games, worse rejected; every agreed bounce position right, Ferocity to AI-9.4.
 - 2026-11-13: AI-13.13 added from Shayne's first notes session (TBL-10.3): a pass whose rollout casts the card anyway.
 - 2026-11-13: AI-13.13 done — `HandSize` kept (match 51.0%); #213 to AI-20.
+- 2026-11-14: #213 comes BACK from AI-20 (Shayne, AI-20.1): spending the exile instant on a 1/1 is "really another
+  options pricing problem that we have never fully solved yet" - the value gained by playing it now (almost nothing: the
+  1/1 "cant block any of my creatures effectively") against the value of saving it for a better target. Not a task yet.

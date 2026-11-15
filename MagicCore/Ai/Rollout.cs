@@ -241,13 +241,16 @@ public static class Rollout
 	/// search's own turn the rollout played through (before the next turn's untap) - in the OPPONENT'S turn the last before
 	/// its end step, from where whatever we spend is free (our untap is next; Shayne's lesson 6: use it at their end step)
 	/// - or null if <paramref name="s"/> is already past it: what a line keeps up (the potential score, AI-13.11).
+	/// <paramref name="landsDrawn"/> (<see cref="Hidden.Library.LandOrNot"/>, AI-20.3): which way this rollout's unseen
+	/// draws go - after anything random in it (a landcycler's shuffle) the libraries are arranged that way again.
 	/// </summary>
 	public static double Score(
 		GameState s,
 		int me,
 		int horizon,
 		Settings settings,
-		out GameState? rootTurnEnd
+		out GameState? rootTurnEnd,
+		bool? landsDrawn = null
 	)
 	{
 		var rootTurn = horizon - 1 - settings.LookaheadTurns;
@@ -273,6 +276,8 @@ public static class Rollout
 					break;
 				stopAt++;
 			}
+			if (landsDrawn is { } lands && s.RngSeed != Hidden.Arranged)
+				s = Hidden.Unknown(s, me, lands);
 			if (s.GetGame().TurnNumber != turn)
 				(turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 			if (turnEnd is null && turn > rootTurn)
@@ -352,7 +357,7 @@ public static class Rollout
 	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
 		s.GetPendingChoice() is { } choice ? Choose(s, choice, who, settings)
 		: settings.Opponent != OpponentModel.BoardOnly && TheirPlay(s, who, settings) is { } play
-			? Do(s, who, play)
+			? Do(s, who, AbilityOver(s, who, play, settings) ?? play)
 		: settings.TheirWalkers && TheirLoyalty(s, who, settings) is { } loyalty
 			? Do(s, who, loyalty)
 		: settings.Opponent != OpponentModel.BoardOnly
@@ -369,7 +374,12 @@ public static class Rollout
 	/// 2 life" (AI-17.22, Shayne's playtest: the AI on 4 raced a 2/1 the drain made lethal). Bounded by its mana, as the
 	/// combat tricks are (`+notheirabilities`).
 	/// </summary>
-	static GameAction? TheirAbility(GameState s, int who, Settings settings)
+	static GameAction? TheirAbility(
+		GameState s,
+		int who,
+		Settings settings,
+		GameAction? over = null
+	)
 	{
 		if (
 			Evaluator.IsOff(Evaluator.Terms.TheirAbilities)
@@ -391,9 +401,26 @@ public static class Rollout
 		if (abilities.Count == 0)
 			return null;
 		var passing = Evaluator.Evaluate(Lookahead.Settle(Pass(s, who)), who, settings.Held);
+		if (over is not null)
+			passing = Math.Max(
+				passing,
+				Evaluator.Evaluate(Lookahead.Settle(s.Act(over)), who, settings.Held)
+			);
 		var (best, score) = BestSettled(s, who, abilities, settings);
 		return score > passing ? best : null;
 	}
+
+	/// <summary>
+	/// The ability on its board that does more with the mana than the spell it was about to cast (AI-20.8, Shayne's
+	/// table game 2026-11-15: "it does need to account for on board decisions"). A spell that left it no worse always
+	/// went first, so the imagined Shayne recast Boarding Action (his 2/1 returned for a 2/1) and had no
+	/// mana for Artificial Anomaly's "each opponent loses 2 life" - the AI on 4 never saw the 2/1 plus the drain kill
+	/// it next turn (`+spellfirst`). A land is still played first: it costs no mana.
+	/// </summary>
+	static GameAction? AbilityOver(GameState s, int who, GameAction play, Settings settings) =>
+		play is CastSpellAction && !Evaluator.IsOff(Evaluator.Terms.AbilityOverSpell)
+			? TheirAbility(s, who, settings, play)
+			: null;
 
 	[ThreadStatic]
 	static Action<GameState, int, AiDecision>? trace;

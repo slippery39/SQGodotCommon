@@ -468,6 +468,14 @@ public static partial class Evaluator
 		/// hand size on turn 12 instead of casting it then — it never saw the cleanup coming; `+nohandsize`).
 		/// </summary>
 		HandSize = 1L << 35,
+
+		/// <summary>
+		/// The look-ahead's: the simulated opponent uses a mana-costed ability on its board BEFORE a spell that does less
+		/// with the mana (<see cref="Rollout"/>'s AbilityOver, AI-20.8, Shayne 2026-11-15: "it does need to account for on
+		/// board decisions") - a spell that left it no worse always went first, so it recast Boarding Action for nothing
+		/// and Artificial Anomaly's drain, lethal with its 2/1, waited two turns (`+spellfirst`).
+		/// </summary>
+		AbilityOverSpell = 1L << 36,
 	}
 
 	/// <summary>
@@ -1031,7 +1039,11 @@ public sealed class HeldValues
 			.DefaultIfEmpty(Evaluator.FlatHandCard)
 			.Average();
 		Unknown = LandShare * Evaluator.LandInHand + (1 - LandShare) * spell;
+		Spell = spell;
 	}
+
+	/// <summary>A card of ours we can't see that isn't a land (<see cref="Hidden.UnknownCard"/>, AI-20.3): the average held price of a measured card.</summary>
+	public double Spell { get; }
 
 	public IReadOnlyDictionary<string, CardValues.Entry> Values { get; }
 
@@ -1049,7 +1061,8 @@ public sealed class HeldValues
 			);
 
 	/// <summary>Our own card, by name; an unmeasured one (a land, a card the fixture can't cast) is flat.</summary>
-	public double Of(string name) => Price(Values.GetValueOrDefault(name), Fraction);
+	public double Of(string name) =>
+		name == Hidden.UnknownCard ? Spell : Price(Values.GetValueOrDefault(name), Fraction);
 
 	/// <summary>A card we can't see, land or spell.</summary>
 	public double Unknown { get; }

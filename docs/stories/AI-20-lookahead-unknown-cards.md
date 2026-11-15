@@ -1,7 +1,7 @@
 ---
 id: AI-20
 title: The look-ahead stops betting on one guessed future — unknown cards handled honestly
-status: backlog
+status: in-progress
 area: AI
 created: 2026-11-10
 ---
@@ -88,7 +88,7 @@ built on top.
 - [ ] One measure of the problem before any change: on a fixed set of positions (the suite's 288 plus the kept
       records above), how often the decision changes between guesses (the "flip rate", over N guesses each).
       Every approach is judged against it.
-- [ ] The chosen approach is a switch (a `beam+…` name), so it can be matched against today's search.
+- [x] The chosen approach is a switch (a `beam+…` name), so it can be matched against today's search: `beam+landornot`.
 - [ ] The kept positions above decide right with it, each with its control.
 - [ ] Patches made redundant are tried off one at a time and dropped only when measured redundant.
 
@@ -111,31 +111,177 @@ built on top.
 - 2026-11-12, Shayne: **AI-22 (speed) goes first**, limited to what AI-20 won't rewrite; AI-20 then picks the
   search's shape (several guesses multiply its cost). Research first (sprint 5): Forge's AI and the published work on
   hidden information in card-game search (determinization ensembles, information-set MCTS) — a findings note.
+- 2026-11-14, Shayne (AI-20.1): **the AI counts its own deck list** - the lands left over the cards left is known
+  information, so its land odds are exact ("That would be fine yeah").
+- 2026-11-14, Shayne (AI-20.1): **no fixed "in time" window for a card short on lands** - whether to hold the 6/5
+  landcycler on 4 lands or cycle it on 3 is "really a context dependant situation, it depends on what the opponent is
+  doing, it depends on what other cards are in your hand. There is no one size fits all here." (Claude's reading: this
+  argues against a price formula with a turn window, and for the look-ahead playing the land / no-land futures out on
+  the real position.)
+- 2026-11-14, Shayne (AI-20.1): **the AI's own unknown draws are played both ways - a land, or not a land - and
+  averaged by the odds**, each on the real board and hand; a non-land draw is an unknown card it can't cast. "Thats
+  actually how I would be thinking during a regular game, like what happens if i draw a land vs not. So we can try that
+  here." To try, not final: #157 and its control judge it. His note on cost: decide once and commit, acting as late as
+  the board score allows, rather than deciding again at every priority stop (today: `CommitPlans` within a turn,
+  `WaitOnTies` for instant-speed moves; a plan does not carry into the opponent's turn).
+- 2026-11-14, Shayne (AI-20.1): **the opponent's unknown hand is NOT changed in this story** - "Let's hold off on the
+  stand in opponent. This is really another options pricing problem that we have never fully solved yet." Claude had
+  proposed the look-ahead's opponent casting stand-in "typical creatures" from its unseen hand (against several guessed
+  hands averaged, or a price). His reading of #213: "I am thinking about the value gained by playing it now vs the
+  value gained by saving it for later. In this case the value gained by killing the 1/1 is almost nothing. The 1/1 cant
+  block any of my creatures effectively anyways and I would be better off spending my mana adding to my board or
+  saving it for a better target." So #213 goes back to AI-13 (option pricing) and is not one of this story's
+  positions; the look-ahead's opponent stays as it is (casts only cards we know).
+- 2026-11-14, Shayne (AI-20.1): **three separate problems, this story is only the first.** (1) The look-ahead making
+  up its own draws - #157 (the landcycle) and #247 (the surveil): this story, worked first. (2) #24, a Forest played
+  over Rockfall Vale "even though it is strictly better to do so" - a land valuation problem of its own, not unknown
+  cards (Claude had filed it as a gap needing draw odds; wrong). (3) #213 - "just a bad evaluation, because it does
+  not account for the potential value of the card (options pricing)", AI-13. (2) and (3) come after this story.
+- 2026-11-14, Shayne (AI-20.4, after the match: 54.2% ± 1.5pp over 576 games at 2.17× the cost a decision): **the
+  land / not-a-land look-ahead is the default.** "I mean its clearly better so yes it should be the default. We will
+  have to see if there are any optimization techniques we can use later on. But its clear to me that this is the way
+  to go." The cost is for later, not a condition.
+- 2026-11-15, Shayne (on AI-20.6): **a surveil over a top card we already know and left there is worth nothing** -
+  "when I surveil and know the card on top (and leave it there) i'm not really incenticized to surveil again, as I
+  won't get any value out of it. In this case, exiling a card is 100% the right play for at least the potential value
+  of denying your opponent the potential use out of a card in their graveyard (from like gravedigger effects or
+  something)." (Claude: AI-20.6 was about an UNSEEN top card, where he said surveil is right, 2026-11-08. His case is
+  not built: `Evaluator.PendingSurveil` pays a third of a card for every surveil trigger, known top card or not -
+  no position kept for it yet.)
+- 2026-11-15, Shayne (AI-20.7, after playing the Patrol position on the table): **there is no decision there - the
+  attack is dead on board.** "I attacked with the 2/1 and activated the land … there was also a beam me up in the
+  graveyard which the player would win if he had any additional creature that cost 2 or less … an exiled land from a
+  card played from the previous turn that could be played, so essentially, the AI was Dead on board from its attack.
+  So there isn't really a decision here. The AI should have held its 2/2 back. He is likely losing this game anyways,
+  but if he attacks he is dead on board. If he doesn't there is a very small chance that maybe he can still pull it
+  out." So Claude's question (how to weigh a 50% win against a 50% loss) was the wrong one: it took the imagined
+  lines at their word. The imagined Shayne spends his turn-13 mana recasting Boarding Action from his graveyard
+  and drains only on turn 15 (`Rollout.OpponentStep` asks `TheirPlay` before `TheirAbility`), so it never sees
+  2 from the 2/1 plus 2 from the land = the AI's 4 life that turn. The test stays as it is.
+- 2026-11-15, Shayne (on the imagined recast of Boarding Action): "I already had a 2/1 in play, im not going to
+  beam me up my 2/1 token to just get another 2/1 token. Thats basically me spending 3 mana to discard a card for no
+  reason. So the imagined opponent is off for sure. And again, it does'nt need to be perfect but it does need to
+  account for on board decisions." Claude took this as the go-ahead for AI-20.8 (asked "shall I build that?" the
+  message before). What AI-20.8 does NOT fix: with no ability on its board to use instead, the imagined opponent
+  still casts a spell that leaves it no better (the rollout's "no worse" rule) - his recast for nothing.
+- 2026-11-15, Shayne (on the ten controls, asked "point them at the old search, or drop them?"): "Do what you
+  think is best, im not fully following why all these are needed though". Claude's choice: point them at the old
+  search (AI-20.7). His doubt stands - whether each patch is still needed at all is AI-20.5, and worth asking
+  whether a lesson test needs a control once the play holds.
 
 Open questions (for Shayne, before `ready`):
-- Land odds, in detail (Shayne: discuss at the start): how the % chance of hitting lands by a given turn reaches
-  the AI's decisions - which prices read it (`ManaShort`, `LandUnlock`, casting a card it would draw into).
-- Does the opponent draw unknown cards too, priced the same way, or nothing?
-- What counts as done: the flip rate down, the kept positions right, and a match not worse?
+- What counts as done: the flip rate down, the kept positions right, and a match not worse? (Proposed by Claude,
+  not yet answered.)
+- A look at an unseen top card (surveil, #247): played both ways too, and three-way ("a land of the missing colour",
+  "another land", "not a land") when a colour is missing? (Proposed, not yet answered.)
 
 ## Tasks
 
 - [ ] AI-20.1 Shayne picks the approach and answers the open questions - the principle decided (known used, unknown
       unknown) and land odds in principle; the land-odds details and the opponent's draws open, to discuss at the start
-- [ ] AI-20.2 The flip rate: a console mode or a suite option that decides each position under N guesses and
-      counts the changes, run on today's search (the baseline). Uses `RunProgress`
-- [ ] AI-20.3 Build the chosen approach behind a switch
-- [ ] AI-20.4 Measure: flip rate, suite, the kept positions (AI-17.24's needs its test: `RogueLandcycleSkipped`
-      #157, kept but uncommitted on 2026-11-10), then a match
-- [ ] AI-20.5 Retire the patches it makes redundant, each measured
+- [x] AI-20.2 The flip rate: `--suite=A --guesses=N` (`PositionSuite.Flips`, with `RunProgress`) decides each suite
+      position under N guesses and counts the positions with more than one answer. **The baseline: 69 of 288 (24.0%)
+      flip under 10 guesses**, 9.2 min - mostly the Jace token's draw or surveil against a land or spell first. It
+      counts first moves, so it is rough (`docs/findings/magic-ai.md`, "The flip rate"). `--explain=N --guess=K` shows
+      what one guess imagined
+- [x] AI-20.3 The land / not-a-land look-ahead behind a switch, `beam+landornot` (`Hidden.Library.LandOrNot`), a
+      trial and not the default. Nothing is shuffled: an unseen card on top of a library is an "Unknown card" (no
+      type, never cast or played, held at the average spell's price), and every line of the search is rolled out
+      twice from the same position - our unseen draws are lands, or they are not - the two averaged by the land
+      odds of our deck list (`Hidden.LandOdds`). Claude's choices in building it, each for Shayne to overrule:
+      - **One tree, both rollouts at every line** - not two searches averaged per first move. Two searches would let
+        the plan differ by the draw ("pass now; keep the 6/5 if a land comes, cycle late if not"), which is seeing
+        the future again; with one tree our decisions this turn are made before the draw is known.
+      - A card drawn inside the searched turn (the token's "draw a card") is an unknown card in the tree; the "lands"
+        rollout makes it a land, which its cheap policy then plays.
+      - **A committed plan is dropped when a card the plan hadn't seen is in our hand** - it was made for a land
+        and for none, and now we know which.
+      - The land drawn is the commonest land left; all of one rollout's unseen draws go the same way; the
+        opponent's unseen top cards are unknown cards too (they were shuffled before; its unknown hand is never
+        played either way). Known limits, in `DesignNotes.md` ("MagicCore known ceilings").
+      - `--explain` shows both rollouts with their shares; `--ai=beam+landornot` works with `--explain` and
+        `--guesses` on a record.
+- [x] AI-20.4 Measured (2026-11-14, `docs/findings/magic-ai.md`, "The land / not-a-land look-ahead"): the flip
+      rate is **0 of 288**; the suite changes 38 decisions of 288, at +87% engine steps a position; the landcycle
+      game has its test (`HiddenTests.TheLandcycler_OnThreeLands_IsCycledAndTheLandPlayed_ThatTurn`: turn 8 ends
+      with the land played, under two seeds; the control, today's search, ends it on 3 lands). **The match against
+      today's search: 54.2% ± 1.5pp over 576 games, stopped as "better"**, at 2.17× the engine steps a decision.
+      **The default since (Shayne, Decisions):** `beam` is this search, the one shuffled guess is `beam+shuffle`
+      (`beam+landornot` still names the default); the suite's answers accepted (34 changed, after AI-20.6)
+- [ ] AI-20.5 Retire the patches it makes redundant, each measured. The candidates are AI-20.7's ten controls
+- [x] AI-20.6 A bug the Dominion Assault Force tests found once it was the default (AFTER the match, so the match
+      played with it): a surveil that looked at an unknown card and kept it marked the card known, so its place was
+      no longer arranged and the "lands" half drew it as a card that is never a land - the surveil line lost that
+      whole half (Surveil then keep 15.53 against exile 21.09). An unknown card looked at is still unknown
+      (`Hidden.Places`; `HiddenTests.AnUnknownCardLookedAt_IsStillALandTheOtherWay`). Both Dominion positions surveil
+      again; the suite changes 34 decisions where it changed 38; the flip rate is still 0 of 288 (3 seeds)
+- [x] AI-20.8 The look-ahead's opponent uses an ability on its board before a spell that does less with the
+      mana (`Rollout.AbilityOver`, `Terms.AbilityOverSpell`, `+spellfirst` is the look-ahead before it). It cast any
+      spell that left it no worse BEFORE looking at an ability, so Boarding Action's recast took the drain's mana.
+      Now the better of the two by its settled result goes first; a land is still played first. Built and checked:
+      the Patrol stays home (control: `+spellfirst` attacks, 232.81); the suite changes 0 of 288 decisions (19 883.7
+      steps a position, 19 882.5 before). **The match (on Shayne's word, 2026-11-15): 50.0% over 96 games,
+      48-48, no difference of 5pp either way** - and 9676.1 engine steps a decision against 9676.0, so in these
+      three decks it almost never comes up. Claude's read: keep it (it stops the Patrol misplay at no cost);
+      Shayne's call. Not committed.
+- [x] AI-20.7 **Twelve lesson tests were red under the new default** (1583 passed). Green now (1595 pass, 0
+      fail; Shayne, 2026-11-15: "do what you think is best"): the Patrol fixed (AI-20.8); the ten controls run
+      under the search before AI-20.4 (`AiPositionTests.OneGuess` = `beam+shuffle`), where their misplay still
+      shows - each PLAY is still tested under the default; `TheOnlySourceOfAColour` runs whole under the old
+      search (ColorShort alone no longer keeps the Vale in the default; the block fix does, tested by
+      `KeepingACreature…`: the Forest goes). What was red:
+      - **One play is back:** `AtFourLife_AgainstAVisibleDrain_ThePatrolStaysHomeToBlock` (`PatrolRacesIntoDrain`
+        #287, AI at 4 life, Shayne at 7 with a 2/1 and the land that drains 2). It attacks again: 232.81 against
+        −2.19 for staying home. The attack WINS in the half where its next draw is a land (50%: +9035) and LOSES
+        in the half where it is not (−8569); a win counts a little more than a loss (it comes a turn sooner), so a
+        coin flip for the game reads as +233. **Shayne, 2026-11-15 (Decisions): no coin flip - the attack is dead
+        on board next turn** (his 2/1 for 2, then the land's drain for 2). The look-ahead's opponent misses that
+        kill: it casts a spell first and has no mana left for the drain. The old search passed this test for the
+        wrong reason (its one guess drew no land, so the AI lost on turn 15 anyway). **Fixed by AI-20.8: it stays
+        home** (−2.19 against −9499.14 for the attack, lost both ways). The test is still red, at an older
+        control: with `RootOptionTurns` off the AI no longer attacks either (the drain first makes the 2/1's attack
+        lethal whatever the imagined Shayne holds back for) - one more for the controls below, ten now.
+      - **One term alone no longer holds:** `TheOnlySourceOfAColour_IsNotDiscarded` - with `BlocksSeeTricks` off,
+        Rockfall Vale is discarded again (the same fact fails `KeepingACreature…`'s control, which expected Koth).
+        With every term on the Forest goes, as he wants.
+      - **Nine controls no longer show the misplay without their patch** (so in that position the look-ahead no
+        longer needs it - AI-20.5's list): Ajani's Anguish held at 20 and at 5 (`SaveBurn` + `Potential`), the
+        landcycler on two lands (`ManaShort` + `ColorShort`), `ChangSac305` (`TrueDefender` + `DamagePotential`),
+        the surveil keeping Energize (`SurveilSpells`), the won line not burning our own face
+        (`ProgressBy.TheirLife`), the Duelist's trade (`Trample`), the Tasha attack (`ImpulseValue`), Unsummon held at
+        #547 (board-only + `SettleChoices`). Four of them counted "over 30 shuffles" - there is no shuffle now.
 
 ## Next
 
-Start at AI-20.1: the approach is decided in principle (known information only, with land odds - Decisions); begin by
-discussing the land odds' details and the opponent's draws with Shayne. Read the table of symptoms above and "AI-3's matrix" in
-`docs/findings/magic-ai.md`. The guess is made in `MagicCore/Ai/Hidden.cs` (`Sample`) and used by
-`BeamSearchAi.Decide`; the look-ahead is `Rollout` (horizon: two turns past this one). The record
-`MagicCore.Tests/Records/RogueLandcycleSkipped.json` exists, uncommitted, with no test yet.
+AI-20.3 is built as a trial, `beam+landornot`, uncommitted (2026-11-14). It gives one answer whatever the seed (0 of
+288 positions flip), the landcycle game now cycles and plays the land in its turn 8, and it won its match against
+the search before it (54.2% ± 1.5pp over 576 games, "better"), at 2.17× the cost a decision. **It is the default
+since 2026-11-14 (Shayne)**: `beam` is this search, `beam+shuffle` the one before. **Twelve lesson tests are red
+(AI-20.7) - green since 2026-11-15, 1595 pass - and nothing is committed. Next, each for Shayne:**
+0. **The Patrol position** (AI-20.7): answered (Decisions, 2026-11-15) - dead on board, hold back - and fixed
+   (AI-20.8: the look-ahead's opponent uses the drain before a spell that does less; its match 50.0% over 96
+   games, no difference). Open on it: the spell cast for nothing when no ability competes (his Boarding Action
+   point). The ten controls (the Patrol's `RootOptionTurns` joined them) run against `beam+shuffle` until
+   AI-20.5 tries each patch off. Open: whether the match is played again - the surveil fix (AI-20.6) came after
+   it (~80 min, any time).
+0b. His known-top-card case (Decisions, 2026-11-15): no surveil bonus when the top card is already known - on his
+   go-ahead, with a position. He asked to SEE the Patrol position: on the table,
+   `./Run-Godot.ps1 MagicTable/MagicTableScene.tscn -GameArgs '--resume=<repo>\MagicCore.Tests\Records\PatrolRacesIntoDrain.json','--resume-at=286','--show-hand','--inspector'`
+   (build `SQGodotCommon.csproj` first - the table ran the old search until it was rebuilt).
+1. **The cost**, later ("we will have to see if there are any optimization techniques"): the second rollout is
+   wasted where no unseen card is drawn inside the horizon. The table's AI is capped at 1 s a decision, so there the
+   doubled cost is a shallower search, not a slower one - not yet looked at on the table. From the pre-commit
+   review: each lands rollout rebuilds the whole arrangement (`Hidden.Unknown`: both libraries out and back in) -
+   reordering only the top places would do.
+2. The 38 suite decisions it changed (22 are the Jace token used or not against another first move) - which of them
+   he wants to look at, with `--suite=beam+shuffle --shown=40` (the changes read the other way round) and `--explain`.
+3. The two open questions above (done means; the surveil's split, #247 still passes).
+4. AI-20.5: the patches it makes redundant, tried off one at a time.
+
+After this story, as he ordered them: #24 and `LintTrkSeed1` #48 (land valuation - #48 answers "none" by 0.01 because
+the fetched land scores −0.20 in hand), then #213 (option pricing, AI-13).
+The code: `Hidden.Unknown` / `LandOdds` (`MagicCore/Ai/Hidden.cs`), `BeamSearchAi.RolloutScore`, `Rollout.Score`'s
+`landsDrawn`. Read "AI-3's matrix" and the two AI-20 sections in `docs/findings/magic-ai.md`.
 
 ## Log
 
@@ -159,3 +305,25 @@ discussing the land odds' details and the opponent's draws with Shayne. Read the
   so no threat ever comes. Shayne: "the AI can see the perfect future. It knows that the opponent is [not] going to do
   anything so it ends up using its premium cards on scrappy targets because it won't get punished for it … an extension
   of the look ahead issue." The open question "does the opponent draw/hold unknown cards, priced how" is this one.
+- 2026-11-14: AI-20.1's interview (Decisions), AI-20.2's baseline (24.0%), and on Shayne's go-ahead AI-20.3: the land /
+  not-a-land look-ahead as `beam+landornot`. #157 now: both first moves score 8.72 and both best lines cycle this
+  turn (not lands 54%: 10.06; lands 46%: 7.18); the wait wins the tie and the plan cycles - played forward, turn 8 ends
+  with the land played. Today's search is unchanged by the code (the suite's steps and rollouts are identical to the
+  last commit's). Not committed.
+- 2026-11-14: AI-20.4's match, on Shayne's go-ahead: `beam+landornot` 54.2% ± 1.5pp against `beam` over 576 games
+  (312–264), stopped as "better"; 9781 engine steps a decision against 4498. Still a trial, not the default.
+- 2026-11-14: on Shayne's word the land / not-a-land look-ahead is the default (`BeamSearchAi.Settings.Library`);
+  `beam+shuffle` is the search before. The suite reads the same under the swapped names (38 changed, 19 885 steps;
+  `beam+shuffle` 1 changed, 10 660 steps) and its answers are accepted. Not committed.
+- 2026-11-14: as the default it met Shayne's lesson tests: a bug fixed (AI-20.6, the surveil's kept unknown card),
+  and twelve tests red (AI-20.7): the Patrol attacks at 4 life on a 50% draw, one term alone no longer keeps the
+  Vale, nine controls no longer show their misplay. Suite answers accepted (34 changed); flip rate 0 of 288.
+- 2026-11-15: Shayne played the Patrol position on the table: the attack is dead on board (the 2/1 and the drain,
+  turn 13). The imagined opponent recasts Boarding Action instead and drains two turns late - the fault to fix.
+- 2026-11-15: AI-20.8 on Shayne's word ("it does need to account for on board decisions"): the look-ahead's opponent
+  uses an ability on its board before a spell that does less. The Patrol stays home; suite 0 of 288 changed; the
+  same twelve tests red (the Patrol now at its `RootOptionTurns` control). No match yet; not committed.
+- 2026-11-15: AI-20.8's match, on Shayne's word: `beam` 50.0% against `beam+spellfirst` over 96 games (48-48),
+  stopped as "no difference"; 9676.1 engine steps a decision against 9676.0.
+- 2026-11-15: the ten controls pointed at the search before AI-20.4 (Shayne: "do what you think is best"); the
+  tests are green, 1595 pass. Not committed.

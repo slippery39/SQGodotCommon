@@ -51,8 +51,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// </param>
 	/// <param name="Library">
 	/// What the search may know of the libraries — <see cref="Hidden.Library"/>. Honest by default
-	/// (Shayne, AI-3.9): only what a player could know, at a measured 5pp or more against the real order
-	/// (AI-6.5), which stays available for simulations that want the stronger search.
+	/// (Shayne, AI-3.9): only what a player could know. Since AI-20.4 nothing is guessed either: unseen draws
+	/// are played as lands and as not lands (LandOrNot, 54.2% against one shuffled guess, which is
+	/// beam+shuffle). The real order (beam+realorder) stays for simulations that want the stronger search.
 	/// </param>
 	/// <param name="Hand">What it may know of the opponent's hand — <see cref="Hidden.Hand"/> (story AI-3.4).</param>
 	/// <param name="Without">Evaluator terms switched off (AI-5) — to measure the search without each.</param>
@@ -93,7 +94,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		double DivergenceThreshold = 5.0,
 		Rollout.Settings? RolloutSettings = null,
 		TimeSpan? TimeLimit = null,
-		Hidden.Library Library = Hidden.Library.ShuffleUnknown,
+		Hidden.Library Library = Hidden.Library.LandOrNot,
 		int? Threads = null,
 		Hidden.Hand Hand = Hidden.Hand.Real,
 		Evaluator.Terms Without = Evaluator.Terms.None,
@@ -189,7 +190,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	ImmutableList<Decision> plan = [];
 	ImmutableList<double> planExpected = [];
 	int planTurn;
+
+	// The cards of our library the plan's search hadn't seen (LandOrNot): one of them in our hand is news it was made without.
+	HashSet<int> planUnseen = [];
 	int rollouts;
+	int secondRollouts; // a line's second rollout under LandOrNot: a cost, not a line of the budget
 
 	long totalRollouts;
 
@@ -283,16 +288,18 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					at = Rollout.Traced(Told, () => Advance(at, rootTurn).State);
 				if (line.Path[i] is Declare whole)
 				{
-					end = at = WholeAttacks.Declare(
-						at,
-						PlayerId,
-						whole.Plan,
-						(x, ids) =>
-						{
-							var d = AiDecision.Answering(x, ids);
-							replay.Move(x, PlayerId, d, [], out _);
-							return d.State;
-						}
+					end = at = Arranged(
+						WholeAttacks.Declare(
+							at,
+							PlayerId,
+							whole.Plan,
+							(x, ids) =>
+							{
+								var d = AiDecision.Answering(x, ids);
+								replay.Move(x, PlayerId, d, [], out _);
+								return d.State;
+							}
+						)
 					);
 					continue;
 				}
@@ -303,20 +310,45 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					_ => throw new InvalidOperationException(line.Path[i].GetType().Name),
 				};
 				replay.Move(at, PlayerId, mine, [], out _);
-				end = at = mine.State;
+				end = at = Arranged(mine.State);
 			}
-			md.Append("- *(the rollout from here)*\n");
-			var score = Rollout.Traced(
-				Told,
-				() => Rollout.Score(at, PlayerId, horizon, RolloutSettings)
-			);
-			replay.End(end);
-			var result = end.IsOver() ? (end.WinnerId() == PlayerId ? " — won" : " — lost") : "";
-			md.Append($"\n**Rollout {score:0.00}**{result}\n");
-			// where the line ended, term by term (AI-17.10): "scores 26.9" is not a diagnosis
-			md.Append(
-				$"\nEnds at: {string.Join(", ", Evaluator.Explain(end, PlayerId, RolloutSettings.Held).Where(t => Math.Abs(t.Value) >= 0.005).Select(t => $"{t.Term} {t.Value:+0.00;-0.00}"))}\n"
-			);
+			// LandOrNot: the rollout both ways, each with its share of the line's score (not lands first: it goes on
+			// from the tree's own position)
+			List<(bool? Lands, string Note)> ways = [];
+			if (options.Library != Hidden.Library.LandOrNot)
+				ways.Add((null, ""));
+			else
+			{
+				var odds = Hidden.LandOdds(at, PlayerId);
+				if (odds < 1)
+					ways.Add((false, $", our unseen draws not lands: {1 - odds:P0}"));
+				if (odds > 0)
+					ways.Add((true, $", our unseen draws lands: {odds:P0}"));
+			}
+			foreach (var (lands, note) in ways)
+			{
+				var from = lands == true ? Hidden.Unknown(at, PlayerId, lands: true) : at;
+				var rolled = lands == true ? new DecisionReport.Replay(md, names, from) : replay;
+				var last = lands == true ? from : end;
+				md.Append($"- *(the rollout from here{note})*\n");
+				var score = Rollout.Traced(
+					(before, who, d) =>
+					{
+						rolled.Move(before, who, d, [], out _);
+						last = d.State;
+					},
+					() => Rollout.Score(from, PlayerId, horizon, RolloutSettings, out _, lands)
+				);
+				rolled.End(last);
+				var result = last.IsOver()
+					? (last.WinnerId() == PlayerId ? " — won" : " — lost")
+					: "";
+				md.Append($"\n**Rollout {score:0.00}**{result}\n");
+				// where the line ended, term by term (AI-17.10): "scores 26.9" is not a diagnosis
+				md.Append(
+					$"\nEnds at: {string.Join(", ", Evaluator.Explain(last, PlayerId, RolloutSettings.Held).Where(t => Math.Abs(t.Value) >= 0.005).Select(t => $"{t.Term} {t.Value:+0.00;-0.00}"))}\n"
+				);
+			}
 		}
 		return md.ToString();
 	}
@@ -337,7 +369,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	public AiDecision Decide(GameState s)
 	{
-		rollouts = 0; // a plan replay or a pass doesn't search, and so doesn't reset it
+		(rollouts, secondRollouts) = (0, 0); // a plan replay or a pass doesn't search, and so doesn't reset them
 		firstMoves.Clear();
 		firstMoveOrder.Clear();
 		bestLines.Clear();
@@ -346,7 +378,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			options.Without,
 			() => Evaluator.WithRootImpulse(s, () => DecideHere(s))
 		);
-		totalRollouts += rollouts;
+		totalRollouts += rollouts + secondRollouts;
 		return decided;
 	}
 
@@ -384,6 +416,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
+		planUnseen =
+			options.Library == Hidden.Library.LandOrNot
+				? [.. Hidden.Unseen(s, PlayerId).Select(c => c.Id)]
+				: [];
 		s = searchRoot = sampled = Hidden.Sample(s, PlayerId, options.Library, options.Hand);
 		(plan, planExpected, rollouts) = ([], [], 0);
 		var clock = Stopwatch.StartNew();
@@ -471,8 +507,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					Evaluator.PendingSurveil(state, PlayerId, RolloutSettings.Held)
 						- Evaluator.PendingSurveil(at, PlayerId, RolloutSettings.Held)
 				);
-			var score =
-				Rollout.Score(state, PlayerId, horizon, RolloutSettings, out var turnEnd) + bonus;
+			var score = RolloutScore(state, horizon, out var turnEnd) + bonus;
 			Interlocked.Increment(ref rollouts);
 			// read as the search's turn ends (Rollout.Score's rootTurnEnd); a move that ended it, as the turn stood before
 			nodes[i] = new Node(
@@ -509,6 +544,50 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		}
 		return [.. nodes];
 	}
+
+	/// <summary>
+	/// A line's rollout score. Under <see cref="Hidden.Library.LandOrNot"/> (AI-20.3, Shayne: "what happens if i draw a
+	/// land vs not") the line is rolled out twice from the same position - the unseen cards we draw are lands, or
+	/// unknown cards we can't cast (<see cref="Hidden.Unknown"/>) - and the two averaged by our deck list's land odds
+	/// (<see cref="Hidden.LandOdds"/>). One tree for both: our decisions this turn are made before the draw is known.
+	/// ponytail: twice the rollouts a line (the budget still counts lines); skip the second where no unseen card is
+	/// drawn within the horizon if the cost shows (AI-20.4).
+	/// </summary>
+	double RolloutScore(GameState state, int horizon, out GameState? turnEnd)
+	{
+		if (options.Library != Hidden.Library.LandOrNot)
+			return Rollout.Score(state, PlayerId, horizon, RolloutSettings, out turnEnd);
+		var odds = Hidden.LandOdds(state, PlayerId);
+		var (land, none) = (0.0, 0.0);
+		turnEnd = null;
+		if (odds > 0)
+			land = Rollout.Score(
+				Hidden.Unknown(state, PlayerId, lands: true),
+				PlayerId,
+				horizon,
+				RolloutSettings,
+				out turnEnd,
+				landsDrawn: true
+			);
+		if (odds < 1) // its turn end is the one the potential reads: what the line keeps up without a lucky draw
+			none = Rollout.Score(
+				state,
+				PlayerId,
+				horizon,
+				RolloutSettings,
+				out turnEnd,
+				landsDrawn: false
+			);
+		if (odds is > 0 and < 1)
+			Interlocked.Increment(ref secondRollouts);
+		return odds * land + (1 - odds) * none;
+	}
+
+	/// <summary>A position of the tree as <see cref="Hidden.Library.LandOrNot"/> knows it: arranged again once anything random (a shuffle) has moved a library.</summary>
+	GameState Arranged(GameState s) =>
+		options.Library == Hidden.Library.LandOrNot && s.RngSeed != Hidden.Arranged
+			? Hidden.Unknown(s, PlayerId, lands: false)
+			: s;
 
 	/// <summary>
 	/// A pass in our own turn with nothing on the stack - only moving on to the next step (AI-13.12, the AI-17.4 review's
@@ -574,7 +653,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	{
 		for (var i = 0; i < 1_000; i++)
 		{
-			s = s.AutoPass();
+			s = Arranged(s.AutoPass());
 			if (s.IsOver() || s.GetGame().TurnNumber != rootTurn)
 				return (s, true);
 			var who = s.DecidingPlayerId();
@@ -841,13 +920,15 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		}}|{choice.Prompt}|{string.Join(",", choice.Options.Select(o => o.Id))}";
 
 	GameState Apply(GameState s, Decision d) =>
-		d switch
-		{
-			Move m => s.Act(m.Action),
-			Pick p => s.Choose(p.Ids),
-			Declare a => WholeAttacks.Declare(s, PlayerId, a.Plan),
-			_ => throw new InvalidOperationException(d.GetType().Name),
-		};
+		Arranged(
+			d switch
+			{
+				Move m => s.Act(m.Action),
+				Pick p => s.Choose(p.Ids),
+				Declare a => WholeAttacks.Declare(s, PlayerId, a.Plan),
+				_ => throw new InvalidOperationException(d.GetType().Name),
+			}
+		);
 
 	/// <summary>
 	/// At most <paramref name="cap"/> candidates, ranked by the cheap score (the move settled, then
@@ -1009,6 +1090,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		var found =
 			s.GetGame().TurnNumber == planTurn
 			&& (top == 0 || top == PlayerId)
+			// a card drawn that the plan hadn't seen (LandOrNot): it was made for a land and for none - now we know
+			&& !(
+				planUnseen.Count > 0
+				&& s.CardsIn(PlayerId, ZoneType.Hand).Any(c => planUnseen.Contains(c.Id))
+			)
 			&& Math.Abs(Evaluator.Evaluate(s, PlayerId, RolloutSettings.Held) - expected)
 				<= options.DivergenceThreshold
 				? Refind(s, next)

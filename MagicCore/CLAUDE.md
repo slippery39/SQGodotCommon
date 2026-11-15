@@ -79,7 +79,7 @@ MagicCore/
 ├── Ai/IAi.cs            what every AI is: Decide(state) for its player, returning the move too (AiDecision); RandomAi.cs is the floor
 ├── Ai/AiMatch.cs        THE strength harness: AI vs AI, every deck pairing, seats swapped (MagicConsole --match)
 ├── Ai/EarlyStop.cs      when a match has said enough: 5pp better / worse / neither, judged on mirror pairs (--until-clear)
-├── Ai/PositionSuite.cs  THE quick check: recorded self-play positions, an AI decides again, what changed (--suite=A)
+├── Ai/PositionSuite.cs  THE quick check: recorded self-play positions, an AI decides again, what changed (--suite=A); Flips: the flip rate (--guesses=N, AI-20.2)
 ├── Ai/MoveTokens.cs     a move as a token (a3 · c12,15 · t41:2 tap · s5:Hand:Name sandbox) + Offers/Ending fingerprints — the suite's and the records'
 ├── Ai/GameRecord.cs     a played game, EVERY transition kept (you/ai/stop/rule/sandbox), replayed by token alone; stale says so; Transcript, Before(#N) (TBL-5) — kept as AI test cases in MagicCore.Tests/Records (KeptRecords)
 ├── Ai/RecordComparison.cs  a record's choices beside the AI's: the default search's pick and the oracle's rank of yours at each `you` decision (--compare, TBL-5.6)
@@ -92,7 +92,7 @@ MagicCore/
 ├── Ai/LandUnlock.cs     AI-9.1: does a land unlock a card in hand, or more casts next turn? Prices own lands in the evaluator (Terms.LandUnlock)
 ├── Ai/RunProgress.cs    the progress line EVERY batch run prints (done/total, minutes, running result) - a project rule
 ├── Ai/Hidden.cs         what the search may know of the libraries and the opponent's hand: the real
-│                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3)
+│                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3); LandOrNot (the default, AI-20.4): no guess — unseen draws are unknown cards, or lands (Hidden.Unknown); one shuffled guess is beam+shuffle
 ├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end; CastGains.cs: a held option's offers in self-play (instants; targeted sorcery-speed cards, AI-13.10), its option value (--cast-gains, AI-13.4)
 ├── Limited/Boosters.cs  a set's packs as Arena opens them (FRA: MTGJSON's collation; TRK: provisional; 4-colour commons) + a seeded sealed pool (LIM-1) — Draft.cs: Quick Draft, 8 seats, bots by rating + colour lean (LIM-2)
 ├── Limited/SealedBuilder.cs  pool → 40 in two colours, by any ratings table: the suggested deck AND the AI's own (LIM-1);
@@ -129,7 +129,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   use `MoveObject`, to reorder within one zone (`MoveCard` would reset `KnownTo`) — and
   `Hidden.Sample`'s hand modes, in a hypothetical position where a real zone change's events must
   not fire: swapping opponent cards between hand and library (AI-3.4), or replacing one in place
-  with a guessed card that keeps its id (`UpdateObject`, AI-3.5).
+  with a guessed card that keeps its id (`UpdateObject`, AI-3.5) — as `Hidden.Unknown`'s unknown cards do (AI-20.3).
 - **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has` (Rules/
   Characteristics.cs — the card's own numbers plus every static ability on the battlefield; rules
   never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board),

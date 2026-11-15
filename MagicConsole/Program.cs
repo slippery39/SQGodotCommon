@@ -281,6 +281,13 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 		);
 		return;
 	}
+	if (Arg("guesses") is { } suiteGuesses) // the flip rate (AI-20.2): every position decided again under N guesses
+	{
+		Console.WriteLine(
+			PositionSuite.Flips(tracked, name, suiteGuesses).Report(Arg("shown") ?? 10)
+		);
+		return;
+	}
 	var check = PositionSuite.Run(tracked, name);
 	Console.WriteLine(check.Report(Arg("shown") ?? 10)); // --shown=N: list N changed decisions
 	if (flags.Contains("--accept"))
@@ -316,6 +323,13 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 	try
 	{
 		var record = GameRecord.FromJson(File.ReadAllText(recordArg["--record=".Length..]));
+		// --ai=beam+landornot: the search that decides again under --guesses and --explain (the default search otherwise)
+		var recordAi = args.FirstOrDefault(a => a.StartsWith("--ai="))?["--ai=".Length..] ?? "beam";
+		if (!AiMatch.IsKnown(recordAi) || !recordAi.StartsWith("beam"))
+		{
+			Console.WriteLine($"--ai=A with a beam search, one of: {AiMatch.Usage}");
+			return;
+		}
 		if (args.FirstOrDefault(a => a.StartsWith("--keep="))?["--keep=".Length..] is { } keep)
 			Console.WriteLine(Keep(record, keep, Arg("at")));
 		else if (
@@ -326,8 +340,9 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 			Console.WriteLine(RecordComparison.Compare(record).Text());
 		else if (Arg("guesses") is { } guesses && Arg("at") is { } guessAt)
 		{
-			// noise or value (AI-19.23, AI-20.2's flip rate for one position): the default search decides move N again
-			// under N different guesses of what it can't see (the hidden cards' sample is the state's RngSeed)
+			// noise or value (AI-19.23, AI-20.2's flip rate for one position): the search decides move N again under N
+			// different guesses of what it can't see (the hidden cards' sample is the state's RngSeed) - for
+			// --ai=beam+shuffle; the default guesses nothing (AI-20.4), so every answer is the same
 			var at = record.Before(guessAt);
 			var picks = new string[guesses];
 			var guessing = new RunProgress("guesses", guesses);
@@ -336,10 +351,8 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 				guesses + 1,
 				k =>
 				{
-					picks[k - 1] = new BeamSearchAi(
-						at.DecidingPlayerId(),
-						new BeamSearchAi.Settings(Threads: 1)
-					)
+					picks[k - 1] = AiMatch
+						.Create(recordAi, at.DecidingPlayerId(), k, searchThreads: 1)
 						.Decide(at with { RngSeed = k * 7919 })
 						.What;
 					guessing.Tick(
@@ -362,9 +375,12 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 		}
 		else if (Arg("explain") is { } explainAt)
 		{
-			// what the default search imagined before move N (AI-17): each first move's best line
+			// what the default search imagined before move N (AI-17): each first move's best line; --guess=K: under
+			// --guesses' Kth guess of the hidden cards (AI-20)
 			var at = record.Before(explainAt);
-			var ai = new BeamSearchAi(at.DecidingPlayerId());
+			if (Arg("guess") is { } guess)
+				at = at with { RngSeed = guess * 7919 };
+			var ai = (BeamSearchAi)AiMatch.Create(recordAi, at.DecidingPlayerId(), 1);
 			var decided = ai.Decide(at);
 			Console.WriteLine($"# Before #{explainAt}: the search plays {decided.What}");
 			Console.WriteLine(ai.Explain());
