@@ -286,6 +286,35 @@ as his three priorities.
   with `AttachSourceTo(Ref.ThisWay)`); Glimmer Lens' "and at least one other creature attack" is `Trigger.While` two
   attackers; Sage of the Skies is `CopySpell(Ref.Source)` on its own cast trigger (the copy resolves into a token);
   Staff of the Storyteller reads "create" as a creature token entering (a ceiling, DesignNotes).
+- 2026-11-15, Claude — **4.4d2a's notes: seven cards on six options; three plans changed as the code was read.**
+  As planned: Jacked Rabbit (`Triggers.XOf` — one X for a trigger's "if" and its effects), Oust and Unexpectedly
+  Absent (`MoveTo { Beneath = N }`, a `Count`: the card on top, then the N above it put back over it), Containment
+  Priest (`PermanentsEnter { ExiledUnlessCast }`, decided at the top of `EnterBattlefield` — so a caller may find the
+  card NOT on the battlefield after it; `MoveTo` checks).
+  **Phelia — `Then` alone did not fit.** The delayed return sits on the exiled card, so its "this" is that card and
+  nothing in it could name Phelia; hosted on Phelia it would be lost when she leaves, and the card must still return.
+  So two options: `Flicker.Then` → the delayed `MoveTo.Then` (`Ref.ThisWay`, as `Destroy.Then`), and
+  `DelayedTrigger.MadeBy` — the object whose ability set it up (CR 603.7f), the trigger's `Ref.EventObject`, nothing
+  once she has left. `Flicker.Then` without `AtNextEndStep` throws (no card has it).
+  **Elspeth — two places, not one:** a token copy is made in `CreateTokenCopy`, not through `CreateTokens`, so the
+  `ReplacedEvent.Tokens` row is applied in both.
+  **Enduring Innocence — the stamp is IN the entry, not after it:** `MoveTo { Loses = Creature }` passes
+  `EnterBattlefield(loses:)`, so the Priest's check and "whenever a creature enters" see no creature (the first build
+  stamped after entering, and the Priest exiled it). Its "if it was a creature" is not scripted: only a creature or
+  planeswalker dies here (`DiedEvent`), so returned as an enchantment it never triggers again — no test could see the
+  line. `Loyalty(…)` moved from FraCards to `Scripting` (a second set scripts planeswalkers).
+  The probe now names an overrun game's seed and what filled the battlefield (`CardProbeTests`).
+  **`/pre-commit`'s review, fixed:** `MadeBy` is the trigger's source AS IT WAS (`SourceSnapshot`), not whatever has
+  its id — a Phelia blinked in response is a new object and gets no counter (a test); the "until it leaves" type
+  stamp is one `Card.WithTypesUntilItLeaves`, Assimilate moved onto it. **Left as ceilings (DesignNotes):** the Priest
+  judges a card's types before it moves (Mogis); `RevealUntilOntoBattlefield` and `MoveChosenToAction` don't look
+  whether the entry was refused, and Empower Jace's token isn't made by `CreateTokens` (Elspeth wouldn't double it) —
+  none reachable in one pool today. Not taken: a shared helper for the five `Then`/`Ref.ThisWay` spawns (MC-6's
+  kind of work, it would touch four old effects), and `EnterBattlefield` scanning the entry rules twice for an entry
+  that wasn't cast (no bench for a card batch).
+  **Open (for Shayne):** Unexpectedly Absent is one cast per X × target — 84 with 8 lands and 12 nonland permanents,
+  the way Mind Twist and Khaaaaaaaaaaaannn! are built; linear, and the probe cast it 213 times with no hang. Default
+  (taken): left so; X becomes a choice after the cast if the AI's branching on it shows in a profile.
 
 ## Tasks
 
@@ -354,8 +383,11 @@ as his three priorities.
           Scripts only, no engine change (one name, `CounterKinds.Story`); 28 tests; `batch_checks.py` all 7 steps
           (golden-out unchanged; golden-in moved 29 random and 1123 card-replay games, added 84; probe 150 games, none
           unfinished, every card cast — its report lists the first 12 names, the other 9 probed in a second run)
-    - [ ] MC-4.4d2a Options, zones and tokens, 7: Oust, Unexpectedly Absent, Phelia, Elspeth (Storm Slayer),
-          Containment Priest, Enduring Innocence, Jacked Rabbit (the entering X in a trigger's "if")
+    - [x] MC-4.4d2a Options, zones and tokens, 7 — done 2026-11-15: Oust, Unexpectedly Absent, Phelia, Elspeth (Storm
+          Slayer), Containment Priest, Enduring Innocence, Jacked Rabbit. Six options (Decisions: three plans changed);
+          20 tests, 32/32 breaks caught; `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random
+          and 415 card-replay games, added 28; probe 150 games, every card cast, 1 past 300 permanents — seed 119, 280
+          Troubling Tribbles, not this batch)
     - [ ] MC-4.4d2b Options, restrictions and timing, 5: Archon of Emeria, Voice of Victory, Clarion Conqueror, The
           Wandering Emperor, Anointed Peacekeeper
     - [ ] MC-4.4d3 Leaving the battlefield, 2: Skyclave Apparition, Serra Paragon
@@ -364,12 +396,16 @@ as his three priorities.
 ## Next
 
 Red's tier 1 is done (4.4c). MC-4.4d — white's tier 1 (Shayne, 2026-11-14) — is surveyed and split in five parts
-(Decisions, Tasks); **d1 is done: 168 of 528 play.** Next, each in a NEW session and in order: **d2a** (seven cards,
-six options — the 4.4d Decision names each piece and its option; start with Jacked Rabbit's fix, its script is in
-the 4.4d1 notes and its two tests are written there in words: X = 4 no card, X = 5 a card; a Rabbit per power), then
-d2b, d3, d4. The white tests are in `LsvBatch2dTests.cs` (its `UntapMyLands`: generic is paid with the Plains first).
-A FIRES test per scripted card. DEV-5 still open: `batch_checks.py`'s probe report lists only the first 12 cards
-named (probe the rest with `MAGIC_PROBE_CARDS`), the probe names no never-used
+(Decisions, Tasks); **d1 and d2a are done: 175 of 528 play.** Next, each in a NEW session and in order: **d2b** (five
+cards — Archon of Emeria, Voice of Victory, Clarion Conqueror, The Wandering Emperor, Anointed Peacekeeper: the 4.4d
+Decision names each piece and its option; Jace's Machinations moves with `JaceLoyaltyAtInstantSpeed`), then d3, d4.
+Read the nearest piece's CODE first — three of d2a's six plans changed on reading (4.4d2a's notes). Useful to d2b and
+d3 from d2a: `Loyalty(…)` is in `Scripting` now; `EnterBattlefield` may refuse an entry (Containment Priest), so
+check `IsOnBattlefield` after it; `MoveTo.Then` / `Ref.ThisWay` and `DelayedTrigger.MadeBy` (`Ref.EventObject`)
+exist. The white tests are in `LsvBatch2dTests.cs` (its `UntapMyLands`, `Elspeth()`, `Loyalty(walker, ability)`,
+`Raise`: a card from any graveyard onto the battlefield). A FIRES test per scripted card. For Shayne: one Open
+(Unexpectedly Absent's casts per X, default taken). DEV-5 still open: `batch_checks.py`'s probe report lists only the
+first 12 cards named (probe the rest with `MAGIC_PROBE_CARDS`), the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
 
@@ -410,3 +446,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   tier 1 (4.4c) done; 147 of 528 play. For Shayne: nothing Open — which colour 4.4d takes is his (default: white).
 - 2026-11-14 (cube lane, sprint 5 C5): MC-4.4d1 — white's tier 1 surveyed (36: 21 tested pieces, 15 on options; five
   parts) and its 21 script-only cards built; no engine change; 168 of 528 play. For Shayne: nothing Open.
+- 2026-11-15 (cube lane, sprint 5 C5): MC-4.4d2a — seven white cards on six options (a library depth, a delayed
+  trigger's maker, tokens doubled, an entry refused, a type lost on entering, one X for a trigger); no recorded game
+  moved by the engine; 175 of 528 play. For Shayne: one Open (Unexpectedly Absent: a cast per X, default taken).

@@ -1007,6 +1007,7 @@ public enum ReplacedEvent
 	Counters, // MagicState.PutCounters — every kind, entering with them included
 	Draw, // MagicState.Draw
 	Mill, // Mill.Top
+	Tokens, // CreateTokens and CreateTokenCopy — the player they are created under
 }
 
 /// <summary>
@@ -1018,7 +1019,9 @@ public enum ReplacedEvent
 /// Yoshimaru: "+1/+1 counters would be put on a creature you control … plus one"; Geordi: "twice that many
 /// charge counters on an artifact you control"; Dr. M'Benga: every kind on a creature you control, twice;
 /// Mr. Spock: "If you would draw a card, draw two cards instead" (Draw, Affected = Is.Yours, Times = 2);
-/// Bruvac: "If an opponent would mill one or more cards, they mill twice that many".
+/// Bruvac: "If an opponent would mill one or more cards, they mill twice that many"; Elspeth, Storm Slayer: "If
+/// one or more tokens would be created under your control, twice that many of those tokens are created instead"
+/// (Tokens, Affected = Is.Yours, Times = 2).
 /// </summary>
 public record NumericReplacement(ReplacedEvent Event) : GameComponent
 {
@@ -1208,6 +1211,13 @@ public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent
 {
 	/// <summary>Who controls it (CR 603.7d: whoever created it) — Ghost of Illyria's controller, not the exiled card's owner. 0: its host's.</summary>
 	public int ControllerId { get; init; }
+
+	/// <summary>
+	/// The object whose ability set it up, as it was then (CR 603.7f: the delayed trigger's source) — Phelia,
+	/// Exuberant Shepherd: "… return that card … put a +1/+1 counter on Phelia". Its "this" (Ref.Source) is the
+	/// card it is on; this is its Ref.EventObject — nothing once that object has left (CR 400.7).
+	/// </summary>
+	public Cards.Card? MadeBy { get; init; }
 }
 
 /// <summary>
@@ -1278,6 +1288,12 @@ public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
 /// </summary>
 public record PermanentsEnter(Filters.Filter Which) : GameComponent
 {
+	/// <summary>
+	/// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead." — decided
+	/// before the entry: it goes to its owner's exile and never enters (no event, nothing of the entry).
+	/// </summary>
+	public bool ExiledUnlessCast { get; init; }
+
 	public bool Tapped { get; init; }
 	public bool Untapped { get; init; }
 	public string? CounterKind { get; init; }

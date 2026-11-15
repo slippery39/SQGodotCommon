@@ -476,4 +476,334 @@ public class LsvBatch2dTests : FraBoardTest
 		);
 		Assert.That(s.CardsIn(me, ZoneType.Library).First().Id, Nu.EqualTo(shrine));
 	}
+
+	// ===== MC-4.4d2a: white's options, zones and tokens =====
+
+	[TestCase(4, 0)]
+	[TestCase(5, 1)]
+	public void JackedRabbit_Ravenous_XCounters_AndACardOnlyWhenXIsFiveOrMore(int x, int drawn)
+	{
+		var rabbit = Hand(Lsv("Jacked Rabbit"), me);
+		var before = HandCount(me) - 1; // the Rabbit leaves the hand
+		s = s.Act(Casts(rabbit).Single(c => c.X == x));
+		Resolve();
+		Assert.That(s.GetCard(rabbit).PlusOneCounters, Nu.EqualTo(x));
+		Assert.That(HandCount(me), Nu.EqualTo(before + drawn));
+	}
+
+	[Test]
+	public void Oust_SecondFromTheTopOfItsOwnersLibrary_ItsControllerGainsThree()
+	{
+		var bear = Field(Bear, them);
+		var library = s.CardsIn(them, ZoneType.Library).Select(c => c.Id).ToList();
+		var life = Life(them);
+		Cast(Hand(Lsv("Oust"), me), [], bear);
+		Assert.That(
+			s.CardsIn(them, ZoneType.Library).Select(c => c.Id),
+			Nu.EqualTo(library.Take(1).Append(bear).Concat(library.Skip(1)))
+		);
+		Assert.That(Life(them), Nu.EqualTo(life + 3));
+	}
+
+	[TestCase(0)]
+	[TestCase(2)]
+	public void UnexpectedlyAbsent_JustBeneathTheTopXCardsOfItsOwnersLibrary(int x)
+	{
+		var relic = Field(Relic, them);
+		var library = s.CardsIn(them, ZoneType.Library).Select(c => c.Id).ToList();
+		var absent = Hand(Lsv("Unexpectedly Absent"), me);
+		s = s.Act(Casts(absent).Single(c => c.X == x && c.Targets.Contains(relic)));
+		Resolve();
+		Assert.That(
+			s.CardsIn(them, ZoneType.Library).Select(c => c.Id),
+			Nu.EqualTo(library.Take(x).Append(relic).Concat(library.Skip(x)))
+		);
+	}
+
+	[Test]
+	public void UnexpectedlyAbsent_ALibraryWithFewerThanXCards_TheBottom_AndNeverALand()
+	{
+		var relic = Field(Relic, them);
+		foreach (var card in s.CardsIn(them, ZoneType.Library).Skip(2).ToList()) // TEST SETUP: two cards left
+			s = s.MoveCard(card.Id, s.ZoneId(them, ZoneType.Exile));
+		var absent = Hand(Lsv("Unexpectedly Absent"), me);
+		var land = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
+		Assert.That(Casts(absent).Any(c => c.Targets.Contains(land)), Nu.False, "nonland");
+		s = s.Act(Casts(absent).Single(c => c.X == 5 && c.Targets.Contains(relic)));
+		Resolve();
+		Assert.That(s.CardsIn(them, ZoneType.Library).Last().Id, Nu.EqualTo(relic));
+		Assert.That(s.CardsIn(them, ZoneType.Library).Count(), Nu.EqualTo(3));
+	}
+
+	[TestCase(true)]
+	[TestCase(false)]
+	public void Phelia_Attacking_ExilesAnotherNonlandPermanentUntilTheNextEndStep_ACounterIfItEnteredUnderMyControl(
+		bool mine
+	)
+	{
+		var phelia = Field(Lsv("Phelia, Exuberant Shepherd"), me);
+		var relic = Field(Relic, mine ? me : them);
+		AttackWith(phelia);
+		var offered = s.GetPendingChoice()!.Options.Select(o => o.Id).ToList();
+		Assert.That(offered, Nu.SupersetOf(new[] { relic }));
+		Assert.That(offered, Nu.Not.Contains(phelia), "up to one OTHER target");
+		Assert.That(
+			offered.Where(id => id != 0).Select(s.GetCard).Any(c => c.Is(CardType.Land)),
+			Nu.False,
+			"nonland"
+		);
+		Resolve(On<ChooseTargetChoice>(relic));
+		Assert.That(InExile(relic));
+		var turn = s.GetGame().TurnNumber;
+		s = TestGames.PassUntil(s, x => x.IsOnBattlefield(relic));
+		Assert.That(
+			s.GetGame().TurnNumber,
+			Nu.EqualTo(turn),
+			"at the beginning of the next end step"
+		);
+		Assert.That(
+			s.GetCard(relic).ControllerId,
+			Nu.EqualTo(mine ? me : them),
+			"its owner's control"
+		);
+		Assert.That(s.GetCard(phelia).PlusOneCounters, Nu.EqualTo(mine ? 1 : 0));
+	}
+
+	[Test]
+	public void Phelia_BlinkedInResponse_IsANewObject_AndGetsNoCounter()
+	{
+		var phelia = Field(Lsv("Phelia, Exuberant Shepherd"), me);
+		var relic = Field(Relic, me);
+		AttackWith(phelia);
+		s = s.Choose([relic]); // her trigger goes on the stack
+		var blink = Hand(
+			TestCards.Targeted(
+				"Blink",
+				MagicCore.Targeting.TargetSpec.Creature,
+				new Flicker(Ref.Target())
+			),
+			me
+		);
+		Cast(blink, [], phelia);
+		Assert.That(InExile(relic), "the trigger still resolved");
+		s = TestGames.PassUntil(s, x => x.IsOnBattlefield(relic));
+		Assert.That(Alive(phelia));
+		Assert.That(
+			s.GetCard(phelia).PlusOneCounters,
+			Nu.EqualTo(0),
+			"not the Phelia that attacked"
+		);
+	}
+
+	[Test]
+	public void Phelia_GoneBeforeTheEndStep_TheCardStillReturns()
+	{
+		var phelia = Field(Lsv("Phelia, Exuberant Shepherd"), me);
+		var relic = Field(Relic, me);
+		AttackWith(phelia);
+		Resolve(On<ChooseTargetChoice>(relic));
+		Cast(Hand(TestCards.Kill(), me), [], phelia);
+		Assert.That(Alive(phelia), Nu.False);
+		s = TestGames.PassUntil(s, x => x.IsOnBattlefield(relic));
+		Assert.That(Alive(relic));
+	}
+
+	int Elspeth()
+	{
+		var elspeth = Hand(Lsv("Elspeth, Storm Slayer"), me);
+		Cast(elspeth, []);
+		UntapMyLands();
+		return elspeth;
+	}
+
+	void Loyalty(int walker, int ability, params int[] targets)
+	{
+		s = s.Act(
+			new ActivateLoyaltyAction
+			{
+				PlayerId = me,
+				CardId = walker,
+				AbilityIndex = ability,
+				Targets = [.. targets],
+			}
+		);
+		Resolve();
+	}
+
+	static CardData SoldierToken =>
+		global::MagicCore.Sets.Tokens.Token("Soldier", "Creature — Soldier", "1", "1", ["W"]);
+
+	[Test]
+	public void Elspeth_PlusOne_ASoldier_AndTwiceThatManyTokensUnderMyControl()
+	{
+		var elspeth = Elspeth();
+		Loyalty(elspeth, 0);
+		Assert.That(Tokens(me, "Soldier"), Nu.EqualTo(2), "one Soldier, twice that many");
+		Assert.That(s.GetCard(elspeth).Loyalty, Nu.EqualTo(6));
+		var soldier = s.CardsIn(me, ZoneType.Battlefield).First(c => c.Name == "Soldier");
+		Assert.That((s.Power(soldier), s.Toughness(soldier)), Nu.EqualTo((1, 1)));
+	}
+
+	[Test]
+	public void Elspeth_DoublesATokenCopyOfMine_AndNoTokenOfTheirs()
+	{
+		Elspeth();
+		var bear = Field(Bear, me);
+		var twin = TestCards.Targeted(
+			"Twin",
+			MagicCore.Targeting.TargetSpec.Creature,
+			new CreateTokenCopy(Ref.Target())
+		);
+		Cast(Hand(twin, me), [], bear);
+		Assert.That(Tokens(me, "Bear"), Nu.EqualTo(2), "a copy, twice");
+		TheirSpellOnTheStack(
+			TestGames.Inline("Recruit", "{1}", "Instant", null, new CreateTokens(SoldierToken, 1))
+		);
+		Resolve();
+		Assert.That(Tokens(them, "Soldier"), Nu.EqualTo(1), "under YOUR control");
+	}
+
+	[Test]
+	public void Elspeth_Zero_ACounterOnEachCreatureOfMine_FlyingUntilMyNextTurn()
+	{
+		var elspeth = Elspeth();
+		var bear = Field(Bear, me);
+		var theirs = Field(Bear, them);
+		Loyalty(elspeth, 1);
+		Assert.That(s.GetCard(bear).PlusOneCounters, Nu.EqualTo(1));
+		Assert.That(s.Has(s.GetCard(bear), "Flying"));
+		Assert.That(s.GetCard(theirs).PlusOneCounters, Nu.EqualTo(0));
+		Assert.That(s.Has(s.GetCard(theirs), "Flying"), Nu.False);
+		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == them);
+		Assert.That(s.Has(s.GetCard(bear), "Flying"), "until my next turn");
+		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == me);
+		Assert.That(s.Has(s.GetCard(bear), "Flying"), Nu.False);
+		Assert.That(s.GetCard(bear).PlusOneCounters, Nu.EqualTo(1));
+	}
+
+	[Test]
+	public void Elspeth_MinusThree_DestroysTheirCreatureWithManaValueThreeOrGreater()
+	{
+		var elspeth = Elspeth();
+		Field(Bear, them); // mana value 1
+		var big = Field(TestGames.CreatureCosting("{3}", "Ogre", "3/3"), them);
+		Field(TestGames.CreatureCosting("{3}", "Ogre", "3/3"), me);
+		Assert.That(
+			s.LegalActions()
+				.OfType<ActivateLoyaltyAction>()
+				.Where(a => a.CardId == elspeth && a.AbilityIndex == 2)
+				.Select(a => a.Targets[0]),
+			Nu.EquivalentTo(new[] { big })
+		);
+		Loyalty(elspeth, 2, big);
+		Assert.That(Alive(big), Nu.False);
+		Assert.That(s.GetCard(elspeth).Loyalty, Nu.EqualTo(2));
+	}
+
+	static CardDefinition Raise =>
+		TestCards.Targeted(
+			"Raise",
+			MagicCore.Targeting.TargetSpec.InAnyGraveyard(),
+			new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+		);
+
+	[Test]
+	public void ContainmentPriest_ANontokenCreatureThatWasntCast_IsExiledInstead()
+	{
+		Field(Lsv("Containment Priest"), me);
+		var mine = Put(Lsv("Thraben Inspector"), me, ZoneType.Graveyard);
+		var theirs = Put(Bear, them, ZoneType.Graveyard);
+		var relic = Put(Relic, me, ZoneType.Graveyard);
+		Cast(Hand(Raise, me), [], mine);
+		Assert.That(InExile(mine), "exiled instead");
+		Assert.That(Tokens(me, "Clue"), Nu.EqualTo(0), "it never entered");
+		UntapMyLands();
+		Cast(Hand(Raise, me), [], theirs);
+		Assert.That(InExile(theirs), "anyone's — to its owner's exile");
+		UntapMyLands();
+		Cast(Hand(Raise, me), [], relic);
+		Assert.That(Alive(relic), "a noncreature enters");
+		UntapMyLands();
+		var cast = Hand(Lsv("Thraben Inspector"), me);
+		Cast(cast, []);
+		Assert.That(Alive(cast), "a creature that was cast enters");
+		Assert.That(Tokens(me, "Clue"), Nu.EqualTo(1));
+		UntapMyLands();
+		Cast(Hand(Lsv("Lingering Souls"), me), []);
+		Assert.That(Tokens(me, "Spirit"), Nu.EqualTo(2), "a token enters");
+	}
+
+	[Test]
+	public void EnduringInnocence_DrawsOnceATurn_ForAnotherCreatureOfMineWithPowerTwoOrLess()
+	{
+		Field(Lsv("Enduring Innocence"), me);
+		var hand = HandCount(me);
+		Cast(Hand(TestGames.Creature("Ogre", "3/3"), me), []);
+		Assert.That(HandCount(me), Nu.EqualTo(hand), "power 2 or less");
+		Cast(Hand(Bear, me), []);
+		Assert.That(HandCount(me), Nu.EqualTo(hand + 1));
+		Cast(Hand(Bear, me), []);
+		Assert.That(HandCount(me), Nu.EqualTo(hand + 1), "only once each turn");
+	}
+
+	[Test]
+	public void EnduringInnocence_Dies_ReturnsAsAnEnchantmentThatIsNoCreature()
+	{
+		var innocence = Field(Lsv("Enduring Innocence"), me);
+		Field(Lsv("Enduring Innocence"), me);
+		var hand = HandCount(me);
+		Cast(Hand(TestCards.Kill(), me), [], innocence);
+		Assert.That(Alive(innocence), "returned to the battlefield");
+		var returned = s.GetCard(innocence);
+		Assert.That(returned.Is(CardType.Enchantment), "it's an enchantment");
+		Assert.That(returned.Is(CardType.Creature), Nu.False, "it's not a creature");
+		Assert.That(returned.ControllerId, Nu.EqualTo(me));
+		Assert.That(HandCount(me), Nu.EqualTo(hand), "no creature entered for the other one");
+		Cast(Hand(Bear, me), []);
+		Assert.That(
+			HandCount(me),
+			Nu.EqualTo(hand + 2),
+			"a creature entering draws for both of them"
+		);
+		s = s.MoveCard(innocence, s.ZoneId(me, ZoneType.Hand)); // TEST SETUP: it leaves
+		Assert.That(s.GetCard(innocence).Is(CardType.Creature), "a new object, as printed");
+	}
+
+	[Test]
+	public void EnduringInnocence_DyingUnderContainmentPriest_StillReturns_ItEntersAsNoCreature()
+	{
+		Field(Lsv("Containment Priest"), them);
+		var innocence = Field(Lsv("Enduring Innocence"), me);
+		var bear = Put(Bear, me, ZoneType.Graveyard);
+		Cast(Hand(TestCards.Kill(), me), [], innocence);
+		Assert.That(Alive(innocence), "no creature would enter");
+		UntapMyLands();
+		Cast(Hand(Raise, me), [], bear);
+		Assert.That(InExile(bear), "as a creature that wasn't cast is");
+	}
+
+	[Test]
+	public void Phelia_UnderContainmentPriest_ACreatureCardStaysExiled_AndNoCounter()
+	{
+		Field(Lsv("Containment Priest"), them);
+		var phelia = Field(Lsv("Phelia, Exuberant Shepherd"), me);
+		var bear = Field(Bear, me);
+		AttackWith(phelia);
+		Resolve(On<ChooseTargetChoice>(bear));
+		s = TestGames.PassUntil(s, x => x.GetGame().ActivePlayerId == them);
+		Assert.That(InExile(bear), "it would enter and wasn't cast");
+		Assert.That(s.GetCard(phelia).PlusOneCounters, Nu.EqualTo(0), "it never entered");
+	}
+
+	[Test]
+	public void JackedRabbit_Attacking_ARabbitPerPower()
+	{
+		var rabbit = Field(Lsv("Jacked Rabbit"), me);
+		s = s.UpdateObject(rabbit, s.GetCard(rabbit) with { PlusOneCounters = 2 }); // TEST SETUP: a 3/4
+		AttackWith(rabbit);
+		Resolve();
+		Assert.That(Tokens(me, "Rabbit"), Nu.EqualTo(3));
+		var token = s.CardsIn(me, ZoneType.Battlefield).First(c => c.IsToken && c.Name == "Rabbit");
+		Assert.That((s.Power(token), s.Toughness(token)), Nu.EqualTo((1, 1)));
+	}
 }

@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 21/46 · uncommon 33/86 · rare 80/279 · mythic 26/108 · **168/528**
+**Playable:** common 21/46 · uncommon 34/86 · rare 85/279 · mythic 27/108 · **175/528**
 
 ### "Name Sticker" Goblin
 
@@ -1215,7 +1215,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Put target creature into its owner's library second from the top. Its controller gains 3 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Oust"] =
+[
+	// The life first: once the creature has left, "its controller" would read its owner.
+	Spell(
+		[Creature],
+		new GainLife(Ref.ControllerOfTarget(0), 3),
+		new MoveTo(Ref.Target(), ZoneType.Library) { Beneath = 1 }
+	),
+],
+```
 
 ### Outland Liberator // Frenzied Trapbreaker
 
@@ -2324,7 +2338,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > If a nontoken creature would enter and it wasn't cast, exile it instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
+
+```csharp
+["Containment Priest"] =
+[
+	new PermanentsEnter(Is.Creature & !Is.Token) { ExiledUnlessCast = true },
+],
+```
 
 ### Copperline Gorge
 
@@ -2609,7 +2632,38 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever one or more other creatures you control with power 2 or less enter, draw a card. This ability triggers only once each turn.  
 > When Enduring Innocence dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Enduring Innocence"] =
+[
+	When(
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Creature & Is.Yours & !Is.Source & Is.PowerAtMost(2),
+			OneOrMore = true,
+		},
+		[],
+		new DrawCards(Ref.You, 1)
+	) with
+	{
+		OncePerTurn = true,
+	},
+	// "If it was a creature": only a creature dies — returned, it is none, and this never triggers again.
+	When(
+		TriggerEvent.SelfDies,
+		[],
+		new MoveTo(Ref.EventCard, ZoneType.Battlefield)
+		{
+			From = [ZoneType.Graveyard],
+			Loses = CardType.Creature,
+		}
+	),
+],
+// Ravenous: enters with X counters; "if X is 5 or more, draw a card when it enters".
+```
 
 ### Enlightened Tutor
 
@@ -3303,7 +3357,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ravenous (This creature enters with X +1/+1 counters on it. If X is 5 or more, draw a card when it enters.)  
 > Whenever this creature attacks, create a number of 1/1 white Rabbit creature tokens equal to this creature's power.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EntersWithCountersComponent` — "This creature enters with N (or X) +1/+1 counters on it." Applied by…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Jacked Rabbit"] =
+[
+	new EntersWithCountersComponent(Count.X),
+	When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)) with
+	{
+		If = new AtLeast(Count.X, 5),
+	},
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new CreateTokens(Rabbit, Count.PowerOf(Ref.Source))
+	),
+],
+```
 
 ### Jetmir's Garden
 
@@ -3855,7 +3927,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > Whenever Phelia attacks, exile up to one other target nonland permanent. At the beginning of the next end step, return that card to the battlefield under its owner's control. If it entered under your control, put a +1/+1 counter on Phelia.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `Flicker` — Flickering Hound: "exile [it], then return that card to the battlefield under its…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Phelia, Exuberant Shepherd"] =
+[
+	When(
+		TriggerEvent.SelfAttacks,
+		[Target(!Is.Land & !Is.Source) with { Optional = true }],
+		new Flicker(Ref.Target())
+		{
+			AtNextEndStep = true,
+			// In the delayed return "you" is still Phelia's controller, and Phelia is its EventObject.
+			Then =
+			[
+				new If(
+					new Matches(Ref.ThisWay, Is.Yours),
+					[new PutCounters(Ref.EventObject, 1)]
+				),
+			],
+		}
+	),
+],
+```
 
 ### Phyrexian Metamorph
 
@@ -4983,7 +5079,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Put target nonland permanent into its owner's library just beneath the top X cards of that library.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Unexpectedly Absent"] =
+[
+	Spell(
+		[Target(!Is.Land)],
+		new MoveTo(Ref.Target(), ZoneType.Library) { Beneath = Count.X }
+	),
+],
+```
 
 ### Upheaval
 
@@ -5628,7 +5736,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > 0: Put a +1/+1 counter on each creature you control. Those creatures gain flying until your next turn.  
 > −3: Destroy target creature an opponent controls with mana value 3 or greater.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2dTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Elspeth, Storm Slayer"] =
+[
+	new NumericReplacement(ReplacedEvent.Tokens) { Affected = Is.Yours, Times = 2 },
+	Loyalty(1, [], new CreateTokens(Soldier, 1)),
+	Loyalty(
+		0,
+		[],
+		new PutCounters(Ref.CreaturesYouControl, 1),
+		new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Flying")
+		{
+			UntilYourNextTurn = true,
+		}
+	),
+	Loyalty(
+		-3,
+		[Target(Is.Creature & Is.Opponents & Is.ManaValueAtLeast(3))],
+		new Destroy(Ref.Target())
+	),
+],
+```
 
 ### Emeritus of Abundance // Regrowth
 

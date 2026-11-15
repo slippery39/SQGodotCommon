@@ -61,6 +61,17 @@ whose subsystem it lives in.
   d20: `RollDie(sides, rows)` — a number read against a table of `DieRow`s, never a flip with sides, CR 705/706) takes `s.TakeRng()`, so a seeded game replays.
   A search for several cards may take two of a name unless `SearchLibrary.DifferentNames` (Fblthp).
   A spell that exiles itself as it resolves (Sphinx's Approach) is left there by `FinishSpellAction`.
+- **"If a nontoken creature would enter and it wasn't cast, exile it instead"** (Containment Priest) is
+  `PermanentsEnter(Is.Creature & !Is.Token) { ExiledUnlessCast }`, decided at the top of `EnterBattlefield` — before
+  the move, so it goes to its owner's exile and nothing of the entry happens (no event, no counters, no stamp). Every
+  caller of `EnterBattlefield` may find the card NOT on the battlefield after it: check before acting on "it entered"
+  (`MoveTo` and `Assimilate` do; the rest are a ceiling, DesignNotes).
+- **"Second from the top" / "just beneath the top X cards"** (Oust, Unexpectedly Absent) is `MoveTo { Beneath = N }`
+  (a `Count`; 0 is the top, a shorter library the bottom): the card goes on top, then the N cards that were above are
+  put back over it with `MoveObjectToFront` — a reorder, so each stays as known as it was. **"It's an enchantment.
+  (It's not a creature.)"** on a return (Enduring Innocence) is `MoveTo { Loses = Creature }`: stamped once it has
+  entered, as assimilate's artifact type (an `Animated` with no source), undone as it leaves. **"If it entered under
+  your control"** after a move is `MoveTo.Then` with `Ref.ThisWay` the cards that moved.
 - **How OTHER permanents enter is one piece, `PermanentsEnter(filter) { Tapped, Untapped, CounterKind, Counters,
   Attacking }`** (MC-6.10) on the rule's holder, the filter asked from its side (`Is.Yours`: its controller's) and
   never for itself (CR 614.12, Metallic Mimic's ruling) — Root Maze `{ Tapped }` (everyone's), read by `EnterBattlefield`

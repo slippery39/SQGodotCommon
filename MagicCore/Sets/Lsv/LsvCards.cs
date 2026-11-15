@@ -1157,7 +1157,111 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4d2a: white's options, zones and tokens =====
+			["Oust"] =
+			[
+				// The life first: once the creature has left, "its controller" would read its owner.
+				Spell(
+					[Creature],
+					new GainLife(Ref.ControllerOfTarget(0), 3),
+					new MoveTo(Ref.Target(), ZoneType.Library) { Beneath = 1 }
+				),
+			],
+			["Unexpectedly Absent"] =
+			[
+				Spell(
+					[Target(!Is.Land)],
+					new MoveTo(Ref.Target(), ZoneType.Library) { Beneath = Count.X }
+				),
+			],
+			["Phelia, Exuberant Shepherd"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[Target(!Is.Land & !Is.Source) with { Optional = true }],
+					new Flicker(Ref.Target())
+					{
+						AtNextEndStep = true,
+						// In the delayed return "you" is still Phelia's controller, and Phelia is its EventObject.
+						Then =
+						[
+							new If(
+								new Matches(Ref.ThisWay, Is.Yours),
+								[new PutCounters(Ref.EventObject, 1)]
+							),
+						],
+					}
+				),
+			],
+			["Elspeth, Storm Slayer"] =
+			[
+				new NumericReplacement(ReplacedEvent.Tokens) { Affected = Is.Yours, Times = 2 },
+				Loyalty(1, [], new CreateTokens(Soldier, 1)),
+				Loyalty(
+					0,
+					[],
+					new PutCounters(Ref.CreaturesYouControl, 1),
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Flying")
+					{
+						UntilYourNextTurn = true,
+					}
+				),
+				Loyalty(
+					-3,
+					[Target(Is.Creature & Is.Opponents & Is.ManaValueAtLeast(3))],
+					new Destroy(Ref.Target())
+				),
+			],
+			["Containment Priest"] =
+			[
+				new PermanentsEnter(Is.Creature & !Is.Token) { ExiledUnlessCast = true },
+			],
+			["Enduring Innocence"] =
+			[
+				When(
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Creature & Is.Yours & !Is.Source & Is.PowerAtMost(2),
+						OneOrMore = true,
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				) with
+				{
+					OncePerTurn = true,
+				},
+				// "If it was a creature": only a creature dies — returned, it is none, and this never triggers again.
+				When(
+					TriggerEvent.SelfDies,
+					[],
+					new MoveTo(Ref.EventCard, ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						Loses = CardType.Creature,
+					}
+				),
+			],
+			// Ravenous: enters with X counters; "if X is 5 or more, draw a card when it enters".
+			["Jacked Rabbit"] =
+			[
+				new EntersWithCountersComponent(Count.X),
+				When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)) with
+				{
+					If = new AtLeast(Count.X, 5),
+				},
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new CreateTokens(Rabbit, Count.PowerOf(Ref.Source))
+				),
+			],
 		};
+
+	/// <summary>Elspeth, Storm Slayer: "a 1/1 white Soldier creature token".</summary>
+	static CardData Soldier => Token("Soldier", "Creature — Soldier", "1", "1", ["W"]);
+
+	/// <summary>Jacked Rabbit: "1/1 white Rabbit creature tokens".</summary>
+	static CardData Rabbit => Token("Rabbit", "Creature — Rabbit", "1", "1", ["W"]);
 
 	/// <summary>Sanguine Evangelist: "a 1/1 black Bat creature token with flying".</summary>
 	static CardData Bat => Token("Bat", "Creature — Bat", "1", "1", ["B"], ["Flying"]);

@@ -221,13 +221,6 @@ public static class FraCards
 			null
 		);
 
-	/// <summary>"[cost]: effects" — a loyalty ability, own or granted.</summary>
-	static LoyaltyAbilityComponent Loyalty(
-		int cost,
-		TargetSpec[] targets,
-		params GameAction[] effects
-	) => new(cost, [.. effects]) { Targets = [.. targets] };
-
 	/// <summary>"Planeswalkers you control have '[cost]: effects'."</summary>
 	static GrantsLoyaltyAbility Grant(
 		int cost,

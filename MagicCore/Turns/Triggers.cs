@@ -414,7 +414,11 @@ public static class Triggers
 								found.a,
 								EventCard(e),
 								Snapshot(s, e),
-								EventObject(s, e),
+								// Phelia: a delayed trigger's "Phelia" is the object that set it up
+								found
+									.source.GetComponents<DelayedTrigger>()
+									.FirstOrDefault(d => d.Ability == found.a)
+									?.MadeBy ?? EventObject(s, e),
 								found.a.X != 0
 									? found.a.X
 									: e switch
@@ -608,11 +612,21 @@ public static class Triggers
 			.Empty.Add(ContextKeys.Controller, t.Source.ControllerId)
 			.Add(ContextKeys.Source, t.Source.Id)
 			.Add(ContextKeys.SourceSnapshot, t.Source) // a dying card as it was: "if it isn't a token"
-			.Add(ContextKeys.EventCard, t.EventCardId);
+			.Add(ContextKeys.EventCard, t.EventCardId)
+			.Add(ContextKeys.X, XOf(t));
 		return t.EventSnapshot is { } snapshot
 			? context.Add(ContextKeys.EventSnapshot, snapshot)
 			: context;
 	}
+
+	/// <summary>
+	/// The X a trigger's intervening "if" and its effects both read: for "when this enters", the X it was cast
+	/// for (Jacked Rabbit's ravenous: "If X is 5 or more, draw a card when it enters"); else the event's number.
+	/// </summary>
+	static int XOf(Pending t) =>
+		t.Ability.On.On == EventKind.Entered && t.Ability.On.Subject == Is.Source
+			? t.Source.CastX
+			: t.X;
 
 	/// <summary>The event's card as it is now — so "that creature's controller" survives it leaving (CR 608.2h).</summary>
 	static Card? Snapshot(GameState s, GameEvent e) =>
@@ -926,12 +940,7 @@ public static class Triggers
 						EventCardId = t.EventCardId,
 						EventSnapshot = t.EventSnapshot,
 						EventObject = t.EventObject,
-						// "When this enters": the X it was cast for.
-						X =
-							t.Ability.On.On == EventKind.Entered
-							&& t.Ability.On.Subject == Is.Source
-								? t.Source.CastX
-								: t.X,
+						X = XOf(t),
 					},
 				],
 			}

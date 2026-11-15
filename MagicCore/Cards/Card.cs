@@ -390,6 +390,17 @@ public record Card : GameObject
 			);
 	}
 
+	/// <summary>
+	/// Its types changed by an effect with no duration, so until it leaves — Assimilate: "It's a Borg artifact
+	/// creature"; Enduring Innocence returned: "It's an enchantment. (It's not a creature.)" What it was is kept on
+	/// an Animated with no source: the state check leaves it, WithoutAnimation puts it back (leaving, a copy).
+	/// </summary>
+	public Card WithTypesUntilItLeaves(CardType types) =>
+		(Card)
+			(this with { Types = types }).WithComponent(
+				new Animated(0, 0, Types, null, BasePower, BaseToughness)
+			);
+
 	/// <summary>Back to what it was before a type change — its source left or stopped, or it leaves (CR 400.7).</summary>
 	public Card WithoutAnimation() =>
 		GetComponent<Animated>() is { } a

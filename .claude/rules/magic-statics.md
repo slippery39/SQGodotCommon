@@ -24,7 +24,9 @@ here. The rules that hold on every task are in `MagicCore/CLAUDE.md`. One file p
 whose subsystem it lives in.
 
 - **Numeric replacements** ("… that much plus one / twice that many instead") are ONE piece,
-  `NumericReplacement(ReplacedEvent)` — which event (damage, counters, draw, mill), filters for the source and
+  `NumericReplacement(ReplacedEvent)` — which event (damage, counters, draw, mill, tokens: Elspeth, Storm Slayer's
+  "twice that many of those tokens", applied in `CreateTokens` and `CreateTokenCopy` to the player they are created
+  under), filters for the source and
   for what it happens to (asked from its holder's side: `Is.Opponents` is a player or their permanent), a
   counter kind, combat or not, `Times` and `Plus` — on a permanent of either player, or a this-turn object
   (`ThisTurnReplacement`, Brad Boimler). `Rules.Replacements.Apply` applies all of them inside the one place

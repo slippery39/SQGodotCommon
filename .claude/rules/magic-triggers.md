@@ -65,6 +65,16 @@ whose subsystem it lives in.
   can't change before resolution, so it may be an `EventTest` on the `Trigger` instead (Way of the Mind Sculptor's
   "removed two or more"). `If` runs its steps as a child pipeline — so a surveil inside it finishes
   before the next step — and its steps' outputs do not reach the steps after it.
+- **A trigger's X is ONE number, `Triggers.XOf`** — for "when this enters" (a Subject of exactly `Is.Source`: a
+  narrowed one, `Is.Source & !Is.Tapped`, reads 0 until a card needs it) the X it was cast for, else the event's —
+  read by its intervening "if" as it triggers (`ContextOf`) AND by its effects (`QueueTargets`): ravenous' "if X is 5
+  or more, draw a card when it enters" (Jacked Rabbit) is `When(SelfEnters, draw) with { If = AtLeast(Count.X, 5) }`.
+- **A delayed trigger's "this" is the card it is on; the object that set it up is its `Ref.EventObject`**
+  (`DelayedTrigger.MadeBy`, CR 603.7f — nothing once that object has left; set by `Flicker.Then` alone so far: give
+  `AtNextEndStep` the same line when a card of its reads its maker). Phelia's "return that card … If it entered
+  under your control, put a +1/+1 counter on Phelia" is `Flicker { AtNextEndStep, Then }`: the delayed return's
+  `MoveTo.Then`, with `Ref.ThisWay` the card as it entered, "you" Phelia's controller and `Ref.EventObject` Phelia.
+  The card returns whether or not she is still there.
 - **Prowess is a scripted trigger** (`FraCards.Prowess`), not an engine keyword — each instance
   triggers on its own (Ruric Thar has two).
 - **"Entering doesn't cause abilities to trigger"** (Karn, Argent Defender) drops those entering

@@ -19,6 +19,13 @@ public static class Scripting
 
 	public static readonly TargetSpec Creature = TargetSpec.Creature;
 
+	/// <summary>"[cost]: effects" — a loyalty ability, own or granted.</summary>
+	public static LoyaltyAbilityComponent Loyalty(
+		int cost,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) => new(cost, [.. effects]) { Targets = [.. targets] };
+
 	/// <summary>Threshold — "as long as there are seven or more cards in your graveyard".</summary>
 	public static readonly AtLeast Threshold = new(Count.NumberOf(Ref.CardsInYourGraveyard), 7);
 

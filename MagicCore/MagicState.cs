@@ -369,6 +369,7 @@ public static class MagicState
 	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
 	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
 	/// <param name="sunburst">Sunburst: "a charge counter on it for each color of mana spent to cast it".</param>
+	/// <param name="loses">MoveTo.Loses — Enduring Innocence returns "an enchantment. (It's not a creature.)".</param>
 	public static GameState EnterBattlefield(
 		this GameState s,
 		int cardId,
@@ -379,14 +380,37 @@ public static class MagicState
 		bool finality = false,
 		int attachTo = 0,
 		bool cast = false,
-		int sunburst = 0
+		int sunburst = 0,
+		CardType loses = CardType.None
 	)
 	{
+		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
+		// ponytail: judged by its types before it moves, less what this entry takes (loses) — a permanent's
+		// type change stamped as it enters (Mogis, no creature at low devotion) isn't seen yet. Judge it
+		// after Retype if a cube ever has both.
+		if (
+			!cast
+			&& s.GetCard(cardId) is var entering
+			&& EntryRules(
+					s,
+					entering with
+					{
+						ControllerId = controllerId,
+						Types = entering.Types & ~loses,
+					}
+				)
+				.Any(r => r.ExiledUnlessCast)
+		)
+			return s.MoveCard(cardId, s.ZoneId(entering.OwnerId, ZoneType.Exile));
 		// "Name Sticker" Goblin: where it enters from — a token just made is in no zone
 		var from = s.GetParent(cardId) is { } parent
 			? (s.GetObject(parent) as Zone)?.ZoneType
 			: null;
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
+		// Enduring Innocence: "It's an enchantment. (It's not a creature.)" — the types this entry takes, there
+		// as it enters and until it leaves.
+		if (loses != CardType.None && s.GetCard(cardId) is var printed)
+			s = s.UpdateObject(cardId, printed.WithTypesUntilItLeaves(printed.Types & ~loses));
 		// Mogis: its type change is there as it enters — no "whenever a creature enters" sees a creature.
 		s = Rules.Attachments.Retype(
 			s.UpdateObject(cardId, s.GetCard(cardId) with { ControllerId = controllerId }),

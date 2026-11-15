@@ -108,24 +108,44 @@ public record Flicker(Ref What) : Effect
 	/// </summary>
 	public bool AtNextEndStep { get; init; }
 
-	static readonly TriggeredAbilityComponent ReturnItAtTheEndStep =
-		new(
-			TriggerEvent.EachEndStep,
-			[new MoveTo(Ref.Source, ZoneType.Battlefield) { From = [ZoneType.Exile] }]
-		);
+	/// <summary>
+	/// Phelia, Exuberant Shepherd: "… return that card to the battlefield under its owner's control. If it entered
+	/// under your control, put a +1/+1 counter on Phelia." — run by the delayed return (AtNextEndStep), after it:
+	/// Ref.ThisWay is the card as it entered, Ref.EventObject the object this ability came from.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
 
 	public override ActionResult Execute(GameState s)
 	{
+		if (!Then.IsEmpty && !AtNextEndStep)
+			throw new NotSupportedException("Flicker.Then is the delayed return's (AtNextEndStep)");
+		var returnIt = !AtNextEndStep
+			? null
+			: new DelayedTrigger(
+				new TriggeredAbilityComponent(
+					TriggerEvent.EachEndStep,
+					[
+						new MoveTo(Ref.Source, ZoneType.Battlefield)
+						{
+							From = [ZoneType.Exile],
+							Then = Then,
+						},
+					]
+				)
+			)
+			{
+				ControllerId = Controller, // CR 603.7d: yours
+				// the object this ability came from, not whatever has its id now (CR 400.7)
+				MadeBy = Then.IsEmpty
+					? null
+					: GetInput<Card?>(ContextKeys.SourceSnapshot) ?? Source(s),
+			};
 		foreach (var card in Permanents(What, s).ToList())
 		{
 			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Exile));
 			if (!card.IsToken && s.IsIn(card.Id, card.OwnerId, ZoneType.Exile))
-				s = AtNextEndStep
-					? MoveTo.Delay(
-						s,
-						card.Id,
-						new DelayedTrigger(ReturnItAtTheEndStep) { ControllerId = Controller } // CR 603.7d: yours
-					)
+				s = returnIt is not null
+					? MoveTo.Delay(s, card.Id, returnIt)
 					: s.EnterBattlefield(card.Id, card.OwnerId);
 		}
 		return new(s);
@@ -418,12 +438,17 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var count = Count.Value(s, InputContext);
 		var made = ImmutableArray.CreateBuilder<int>();
 		var counters = Counters.Value(s, InputContext);
 		var controller = ControlledBy is null ? Controller : All(ControlledBy, s).FirstOrDefault();
 		if (controller == 0)
 			return new(s);
+		var count = Replacements.Apply( // Elspeth, Storm Slayer: "twice that many of those tokens"
+			s,
+			ReplacedEvent.Tokens,
+			s.GetPlayer(controller),
+			Count.Value(s, InputContext)
+		);
 		var template = Instead(
 			s,
 			controller,
@@ -524,7 +549,8 @@ public record CreateTokenCopy(Ref What) : Effect
 			&& GetInput<Card?>(ContextKeys.SourceSnapshot) is { } lastKnown
 		)
 			originals.Add(lastKnown);
-		foreach (var original in originals)
+		var each = Replacements.Apply(s, ReplacedEvent.Tokens, s.GetPlayer(Controller), 1); // Elspeth: twice that many
+		foreach (var original in originals.SelectMany(o => Enumerable.Repeat(o, each)))
 		{
 			var copy = new Card
 			{
@@ -594,8 +620,27 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 	/// <summary>Clash of Elements: "on top of its owner's library" — unset is the bottom.</summary>
 	public bool OnTop { get; init; }
 
+	/// <summary>
+	/// How far below the top — Oust: "into its owner's library second from the top" (1), Unexpectedly Absent: "just
+	/// beneath the top X cards of that library" (Count.X; 0 is the top). A library with fewer cards: the bottom.
+	/// </summary>
+	public Count? Beneath { get; init; }
+
 	/// <summary>Fblthp, Those Old Scientists: "shuffles it into their library" — its owner shuffles, once per card.</summary>
 	public bool Shuffle { get; init; }
+
+	/// <summary>
+	/// Enduring Innocence: "return it to the battlefield under its owner's control. It's an enchantment. (It's not a
+	/// creature.)" — the types it isn't, for as long as it stays: EnterBattlefield stamps it as it enters, so no
+	/// "whenever a creature enters" and no Containment Priest sees a creature.
+	/// </summary>
+	public CardType Loses { get; init; }
+
+	/// <summary>
+	/// Phelia, Exuberant Shepherd: "If it entered under your control, …" — run after, with Ref.ThisWay the cards
+	/// that moved (as Destroy.Then).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
 
 	/// <summary>"Exile it at the beginning of the next end step" — CreateTokenCopy's too.</summary>
 	internal static readonly DelayedTrigger ExileItAtTheEndStep =
@@ -622,6 +667,7 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
+		var moved = ImmutableArray.CreateBuilder<int>();
 		foreach (var id in All(What, s).ToList())
 		{
 			if (
@@ -637,17 +683,43 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 					UnderYourControl ? Controller : card.OwnerId,
 					extraCounters: Counters,
 					tapped: Tapped,
-					finality: Finality
+					finality: Finality,
+					loses: Loses
 				);
+				if (!s.IsOnBattlefield(id))
+					continue; // Containment Priest exiled it instead
+				moved.Add(id);
 				if (ExileAtNextEndStep)
 					s = Delay(s, id, ExileItAtTheEndStep);
 				continue;
 			}
-			s = s.MoveCard(id, s.ZoneId(card.OwnerId, To), toTop: OnTop);
+			moved.Add(id);
+			var zone = s.ZoneId(card.OwnerId, To);
+			var above = s.GetChildrenIds(zone)
+				.Where(other => other != id)
+				.Take(Beneath?.Value(s, InputContext) ?? 0)
+				.Reverse()
+				.ToList();
+			s = s.MoveCard(id, zone, toTop: OnTop || Beneath is not null);
+			foreach (var top in above) // back on top, in their order — a reorder: each as known as it was
+				s = s.MoveObjectToFront(top, zone);
 			if (Shuffle && To == ZoneType.Library)
 				s = s.Shuffle(card.OwnerId);
 		}
-		return new(s);
+		return Then.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							moved.ToImmutable()
+						),
+						Steps = Then,
+					}
+				)
+			);
 	}
 }
 
@@ -853,10 +925,7 @@ public record Assimilate(Ref What) : Effect
 		return s.UpdateObject(
 			cardId,
 			(Card)
-				(card with { Types = card.Types | CardType.Artifact })
-					.WithComponent(
-						new Animated(0, 0, card.Types, null, card.BasePower, card.BaseToughness)
-					)
+				card.WithTypesUntilItLeaves(card.Types | CardType.Artifact)
 					.WithComponent(
 						new Cards.UntilEndOfTurn
 						{

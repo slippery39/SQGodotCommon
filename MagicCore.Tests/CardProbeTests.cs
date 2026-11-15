@@ -72,6 +72,7 @@ public class CardProbeTests
 		var onStack = batch.ToDictionary(n => n, _ => new HashSet<int>());
 		var unfinished = 0;
 		var overrun = 0;
+		var overruns = new List<string>(); // which game, and what filled the battlefield — open it before blaming random play
 		for (var seed = 1; seed <= games; seed++)
 		{
 			var rng = new Random(seed);
@@ -122,7 +123,22 @@ public class CardProbeTests
 						seen.Add(ability.Id);
 			}
 			unfinished += s.IsOver() ? 0 : 1;
-			overrun += Overrun(s) ? 1 : 0;
+			if (!Overrun(s))
+				continue;
+			overrun++;
+			var first = s.GetGame().StartingPlayerId;
+			overruns.Add(
+				$"seed {seed}, turn {s.GetGame().TurnNumber}: "
+					+ string.Join(
+						", ",
+						s.CardsIn(first, ZoneType.Battlefield)
+							.Concat(s.CardsIn(s.OpponentOf(first), ZoneType.Battlefield))
+							.GroupBy(c => c.Name)
+							.OrderByDescending(n => n.Count())
+							.Take(6)
+							.Select(n => $"{n.Count()} {n.Key}")
+					)
+			);
 		}
 		var lines = batch.Select(n =>
 			$"{n}: cast {casts[n]}, activated {activations[n]}, abilities on the stack {onStack[n].Count}"
@@ -130,7 +146,7 @@ public class CardProbeTests
 		);
 		TestContext.Progress.WriteLine(
 			$"{games} games, {unfinished} unfinished ({overrun} past 300 permanents)\n"
-				+ string.Join("\n", lines)
+				+ string.Join("\n", lines.Concat(overruns))
 		);
 		Assert.That(
 			unfinished,
