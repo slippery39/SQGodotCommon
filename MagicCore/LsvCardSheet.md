@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 21/46 · uncommon 34/86 · rare 90/279 · mythic 30/108 · **183/528**
+**Playable:** common 24/46 · uncommon 36/86 · rare 93/279 · mythic 33/108 · **195/528**
 
 ### "Name Sticker" Goblin
 
@@ -243,7 +243,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this artifact enters or leaves the battlefield, draw a card.  
 > {1}{U}, Sacrifice this artifact: Put a stun counter on up to one target tapped creature. (If a permanent with a stun counter would become untapped, remove one from it instead.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
+
+```csharp
+["Cryogen Relic"] =
+[
+	When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+	When(TriggerEvent.SelfLeaves, [], new DrawCards(Ref.You, 1)),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}{U}"),
+		[new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun }]
+	)
+	{
+		Costs = [new SacrificeSelfCost()],
+		Targets = [Target(Is.Creature & Is.Tapped) with { Optional = true }],
+	},
+],
+```
 
 ### Duress
 
@@ -516,7 +534,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this artifact enters or leaves the battlefield, you may tap or untap target creature.  
 > {3}{U}, Sacrifice this artifact: Draw two cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
+
+```csharp
+["Sewer-veillance Cam"] =
+[
+	// "enters or leaves": two triggers. "You may tap or untap": tapping a tapped creature (or
+	// untapping an untapped one) does nothing, so the one real choice is whether to turn it.
+	When(TriggerEvent.SelfEnters, [Creature], MayTapOrUntapTheTarget),
+	When(TriggerEvent.SelfLeaves, [Creature], MayTapOrUntapTheTarget),
+	new ActivatedAbilityComponent(ManaCost.Parse("{3}{U}"), [new DrawCards(Ref.You, 2)])
+	{
+		Costs = [new SacrificeSelfCost()],
+	},
+],
+```
 
 ### Simian Spirit Guide
 
@@ -615,7 +649,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, you may search your library for an artifact card with mana value 1 or less, reveal that card, put it into your hand, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Trinket Mage"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new SearchLibrary(CardType.Artifact, ZoneType.Hand)
+		{
+			Filter = Is.ManaValueAtMost(1),
+			FilterText = "mana value 1 or less",
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Troll of Khazad-dûm
 
@@ -775,7 +827,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Return target nonland permanent to its owner's hand. If you controlled that permanent, draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Boomerang Basics"] =
+[
+	// "If you controlled that permanent": asked before it leaves, the card drawn after
+	Spell(
+		[Target(!Is.Land)],
+		new If(
+			new Matches(Ref.Target(0), Is.Yours),
+			[new MoveTo(Ref.Target(), ZoneType.Hand), new DrawCards(Ref.You, 1)]
+		)
+		{
+			Otherwise = [new MoveTo(Ref.Target(), ZoneType.Hand)],
+		}
+	),
+],
+```
 
 ### Brain Freeze
 
@@ -1670,7 +1741,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As an additional cost to cast this spell, sacrifice an artifact.  
 > Search your library for an artifact card, put that card onto the battlefield, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Tinker"] =
+[
+	new AdditionalCostsComponent([new SacrificeCost(Is.Artifact)]),
+	Spell([], new SearchLibrary(CardType.Artifact, ZoneType.Battlefield)),
+],
+```
 
 ### Touch the Spirit Realm
 
@@ -2593,7 +2674,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Avoidance — Whenever you cast a noncreature spell, exile up to one target nonland permanent you control, then return that card to the battlefield under its owner's control.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Flicker` — Flickering Hound: "exile [it], then return that card to the battlefield under its…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Displacer Kitten"] =
+[
+	When(
+		TriggerEvent.YouCastNoncreatureSpell,
+		[Target(!Is.Land & Is.Yours) with { Optional = true }],
+		new Flicker(Ref.Target())
+	),
+],
+```
 
 ### Does Machines
 
@@ -3840,7 +3934,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Mystical Tutor"] =
+[
+	Spell(
+		[],
+		new SearchLibrary(CardType.Instant | CardType.Sorcery, ZoneType.Library)
+		{
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Nadu, Winged Wisdom
 
@@ -5170,7 +5279,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Return all permanents to their owners' hands.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Upheaval"] = [Spell([], new MoveTo(Ref.Permanents(Is.AnyCard), ZoneType.Hand))],
+```
 
 ### Ursine Monstrosity
 
@@ -5843,7 +5958,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Each player shuffles their hand and graveyard into their library, then draws seven cards.  
 > Flashback {2}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `FlashbackComponent` — "Flashback [cost] (You may cast this card from your graveyard for its flashback cost.…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.
+
+```csharp
+["Echo of Eons"] = [Timetwister, new FlashbackComponent(ManaCost.Parse("{2}{U}"))],
+```
 
 ### Elspeth, Storm Slayer
 
@@ -6733,7 +6854,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > When this creature enters, target instant or sorcery card in your graveyard gains flashback until end of turn. The flashback cost is equal to its mana cost. (You may cast that card from your graveyard for its flashback cost. Then exile it.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `GainFlashbackThisTurn` — Stingcaster Mage: "[it] gains flashback until end of turn" — read by Costs.Flashback.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Snapcaster Mage"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InYourGraveyard(Is.Type(CardType.Instant | CardType.Sorcery))],
+		new GainFlashbackThisTurn(Ref.Target())
+	),
+],
+```
 
 ### Sneak Attack
 
@@ -6786,7 +6920,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, you may search your library for an instant or sorcery card with mana value 2 or less, reveal it, put it into your hand, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Spellseeker"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new SearchLibrary(CardType.Instant | CardType.Sorcery, ZoneType.Hand)
+		{
+			Filter = Is.ManaValueAtMost(2),
+			FilterText = "mana value 2 or less",
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Stingcaster Mage
 
@@ -7270,4 +7422,8 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Each player shuffles their hand and graveyard into their library, then draws seven cards. (Then put Timetwister into its owner's graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+```csharp
+["Timetwister"] = [Timetwister],
+```

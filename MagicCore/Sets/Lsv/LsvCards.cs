@@ -1384,7 +1384,139 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4e1: blue's tier 1, tested pieces =====
+			["Mystical Tutor"] =
+			[
+				Spell(
+					[],
+					new SearchLibrary(CardType.Instant | CardType.Sorcery, ZoneType.Library)
+					{
+						Reveal = true,
+					}
+				),
+			],
+			["Spellseeker"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Instant | CardType.Sorcery, ZoneType.Hand)
+					{
+						Filter = Is.ManaValueAtMost(2),
+						FilterText = "mana value 2 or less",
+						Reveal = true,
+					}
+				),
+			],
+			["Trinket Mage"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Artifact, ZoneType.Hand)
+					{
+						Filter = Is.ManaValueAtMost(1),
+						FilterText = "mana value 1 or less",
+						Reveal = true,
+					}
+				),
+			],
+			["Tinker"] =
+			[
+				new AdditionalCostsComponent([new SacrificeCost(Is.Artifact)]),
+				Spell([], new SearchLibrary(CardType.Artifact, ZoneType.Battlefield)),
+			],
+			["Snapcaster Mage"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InYourGraveyard(Is.Type(CardType.Instant | CardType.Sorcery))],
+					new GainFlashbackThisTurn(Ref.Target())
+				),
+			],
+			["Displacer Kitten"] =
+			[
+				When(
+					TriggerEvent.YouCastNoncreatureSpell,
+					[Target(!Is.Land & Is.Yours) with { Optional = true }],
+					new Flicker(Ref.Target())
+				),
+			],
+			["Boomerang Basics"] =
+			[
+				// "If you controlled that permanent": asked before it leaves, the card drawn after
+				Spell(
+					[Target(!Is.Land)],
+					new If(
+						new Matches(Ref.Target(0), Is.Yours),
+						[new MoveTo(Ref.Target(), ZoneType.Hand), new DrawCards(Ref.You, 1)]
+					)
+					{
+						Otherwise = [new MoveTo(Ref.Target(), ZoneType.Hand)],
+					}
+				),
+			],
+			["Upheaval"] = [Spell([], new MoveTo(Ref.Permanents(Is.AnyCard), ZoneType.Hand))],
+			["Timetwister"] = [Timetwister],
+			["Echo of Eons"] = [Timetwister, new FlashbackComponent(ManaCost.Parse("{2}{U}"))],
+			["Cryogen Relic"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+				When(TriggerEvent.SelfLeaves, [], new DrawCards(Ref.You, 1)),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{U}"),
+					[new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Stun }]
+				)
+				{
+					Costs = [new SacrificeSelfCost()],
+					Targets = [Target(Is.Creature & Is.Tapped) with { Optional = true }],
+				},
+			],
+			["Sewer-veillance Cam"] =
+			[
+				// "enters or leaves": two triggers. "You may tap or untap": tapping a tapped creature (or
+				// untapping an untapped one) does nothing, so the one real choice is whether to turn it.
+				When(TriggerEvent.SelfEnters, [Creature], MayTapOrUntapTheTarget),
+				When(TriggerEvent.SelfLeaves, [Creature], MayTapOrUntapTheTarget),
+				new ActivatedAbilityComponent(ManaCost.Parse("{3}{U}"), [new DrawCards(Ref.You, 2)])
+				{
+					Costs = [new SacrificeSelfCost()],
+				},
+			],
 		};
+
+	/// <summary>
+	/// Timetwister, Echo of Eons: "Each player shuffles their hand and graveyard into their library, then draws
+	/// seven cards." — the spell itself is still on the stack, so it isn't shuffled in.
+	/// ponytail: a player with no hand and no graveyard doesn't shuffle (MoveTo shuffles for each card moved) —
+	/// a shuffle effect of its own when Ponder's "you may shuffle" brings one (MC-4.4e2a).
+	/// </summary>
+	static SpellEffectsComponent Timetwister =>
+		Spell(
+			[],
+			new MoveTo(Ref.All(ZoneType.Hand, null, Ref.EachPlayer), ZoneType.Library)
+			{
+				Shuffle = true,
+			},
+			new MoveTo(Ref.All(ZoneType.Graveyard, null, Ref.EachPlayer), ZoneType.Library)
+			{
+				Shuffle = true,
+			},
+			new DrawCards(Ref.EachPlayer, 7)
+		);
+
+	/// <summary>Sewer-veillance Cam: "you may tap or untap target creature".</summary>
+	static May MayTapOrUntapTheTarget =>
+		new(
+			"Tap or untap the creature?",
+			new Always(),
+			[
+				new If(new Matches(Ref.Target(0), Is.Tapped), [new Untap(Ref.Target())])
+				{
+					Otherwise = [new Tap(Ref.Target())],
+				},
+			]
+		);
 
 	/// <summary>Skyclave Apparition: "an X/X blue Illusion creature token" — its X is CreateTokens.Size.</summary>
 	static CardData Illusion => Token("Illusion", "Creature — Illusion", "0", "0", ["U"]);

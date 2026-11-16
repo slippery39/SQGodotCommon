@@ -15,8 +15,6 @@ namespace MagicCore.Tests.Sets;
 /// </summary>
 public class LsvBatch1Tests : FraBoardTest
 {
-	static CardDefinition Lsv(string name) => CardRegistry.Get(name, "LSV");
-
 	int Pool(ManaColor color) => s.GetPlayer(me).ManaPool[color];
 
 	void TapForMana(int card, ManaColor color) =>

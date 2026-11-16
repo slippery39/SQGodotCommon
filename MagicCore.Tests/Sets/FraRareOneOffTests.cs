@@ -55,13 +55,6 @@ public class FraRareOneOffTests : FraBoardTest
 			s = s.UpdateObject(c.Id, c with { IsTapped = true }); // TEST SETUP
 	}
 
-	int Put(CardDefinition card, int player, ZoneType zone)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, zone);
-		return id;
-	}
-
 	/// <summary>They cast it at this target in my main phase; I hold priority with it on the stack.</summary>
 	void TheyCastAt(int spell, int target)
 	{

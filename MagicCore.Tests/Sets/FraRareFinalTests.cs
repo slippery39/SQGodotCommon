@@ -28,13 +28,6 @@ public class FraRareFinalTests : FraBoardTest
 	static CardDefinition Kill =>
 		Targeted("Kill", "{1}", "Instant", TargetSpec.Permanent(), new Destroy(Ref.Target()));
 
-	int Put(CardDefinition card, int player, ZoneType zone)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, zone);
-		return id;
-	}
-
 	int UntappedLands() =>
 		s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
 

@@ -13,8 +13,6 @@ namespace MagicCore.Tests.Sets;
 /// </summary>
 public class LsvBatch2cTests : FraBoardTest
 {
-	static CardDefinition Lsv(string name) => CardRegistry.Get(name, "LSV");
-
 	static CardDefinition Boon =>
 		TestGames.Inline("Boon", "{1}", "Instant", null, new GainLife(Ref.You, 1));
 

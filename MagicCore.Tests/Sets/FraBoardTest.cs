@@ -46,6 +46,17 @@ public abstract class FraBoardTest
 		return id;
 	}
 
+	/// <summary>TEST SETUP: a fresh card straight into any zone of that player's (a library: its bottom).</summary>
+	protected int Put(CardDefinition card, int player, ZoneType zone)
+	{
+		int id;
+		(s, id) = TestGames.Put(s, player, card, zone);
+		return id;
+	}
+
+	/// <summary>The LSVPower cube's printing of a card.</summary>
+	protected static CardDefinition Lsv(string name) => CardRegistry.Get(name, "LSV");
+
 	/// <summary>Casts the spell with these modes and targets, then resolves the whole stack.</summary>
 	protected void Cast(int card, int[] modes, params int[] targets)
 	{
@@ -89,6 +100,36 @@ public abstract class FraBoardTest
 			else
 				return;
 		}
+	}
+
+	/// <summary>I cast it and the stack resolves, each choice answered as told; the choices asked, in order.</summary>
+	protected List<ChoiceAction> CastAsking(int card, Func<ChoiceAction, IEnumerable<int>> answer)
+	{
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = card });
+		return ResolveAsking(answer);
+	}
+
+	/// <summary>The stack resolves (after an activation, say), each choice answered as told; the choices asked, in order.</summary>
+	protected List<ChoiceAction> ResolveAsking(Func<ChoiceAction, IEnumerable<int>> answer)
+	{
+		var asked = new List<ChoiceAction>();
+		Resolve(c =>
+		{
+			asked.Add(c);
+			return answer(c);
+		});
+		return asked;
+	}
+
+	/// <summary>The ids the choices of type T offered, of those asked (CastAsking, ResolveAsking).</summary>
+	protected static IEnumerable<int> Offered<T>(List<ChoiceAction> asked)
+		where T : ChoiceAction => asked.OfType<T>().SelectMany(c => c.Options).Select(o => o.Id);
+
+	/// <summary>TEST SETUP: the permanent is tapped, as though it had attacked.</summary>
+	protected void TapIt(int permanent)
+	{
+		var card = s.GetCard(permanent);
+		s = s.UpdateObject(permanent, card with { IsTapped = true });
 	}
 
 	/// <summary>They cast it (it needs flash or to be an instant); I then hold priority with it on the stack.</summary>

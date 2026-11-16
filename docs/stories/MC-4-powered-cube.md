@@ -436,6 +436,86 @@ as his three priorities.
   Laelia's "your"); a "permanent you control leaves" would want the controller — with the widening above.
   `MagicCore/CLAUDE.md`'s "MoveCard owns leaving it" bullet is not touched (206 lines against 200): the rule is in
   `magic-triggers.md`.
+- 2026-11-15, Claude (cube lane) — **4.4e: blue's tier 1 (35) read card by card: 12 are tested pieces, 23 need an
+  option; none needs a sibling piece** (MC-6's rule, each read against the nearest piece's code). Parts:
+  **e1** the 12 (list in Tasks) — a card whose FIRES test shows a missing option moves to an option part;
+  **e2a** the library's top, 4 — Ponder, Stock Up, Consult the Star Charts, Thassa's Oracle: `LookAndTake` takes
+  ONE card (`MinChoices` 0 or 1, no most) to the hand or the battlefield and the rest go down at random — how many
+  (Stock Up's two, Consult's two when kicked: a `Count`), where the taken go (the Oracle's "up to one of them on
+  top") and "put them back in any order" (Ponder: Surveil's `OrderLibraryTopChoice`; its "you may shuffle" a `May`
+  over the shuffle, which is an action and no effect yet) are options on it; the Oracle's "if X is greater than or
+  equal to the number of cards in your library" is `AtLeast(Count, int)` with a counted bound (`Count.DevotionTo`
+  exists);
+  **e2b** draws, 4 — Faerie Mastermind, Hullbreacher, Narset (Parter of Veils), Jace (Wielder of Mysteries):
+  `DrewCardEvent` carries only the player, so "their second card each turn" is a number on it, stamped as the card
+  is drawn (as `SpellCastEvent.SpellNumber` — a tally read at the next priority would miss two cards drawn at
+  once); `NumericReplacement(Draw)` is times and plus: Hullbreacher's "instead you create a Treasure", Narset's
+  "can't draw more than one" and Jace's "you win the game instead" are an outcome on the draw's replacement, in
+  `MagicState.Draw`, the one place (Narset's −2 and Jace's two loyalty abilities are tested pieces);
+  **e2c** mana and costs, 5 — Gitaxian Probe and Phyrexian Metamorph (a SPELL's `{U/P}`: only an activation
+  chooses life today, `ManaPayment` throws; the Metamorph's "except it's an artifact in addition" is an option on
+  `MayEnterAsCopy`, beside `NotLegendary`), Urza (Lord High Artificer) ("Tap an untapped artifact you control: Add
+  {U}" — every mana ability taps its own permanent, and a cost that picks is a move per candidate: the artifact
+  tapped is the payment's, as convoke's creature; his {5} is `ExileTopPlayable { ShuffleFirst }`, tested), Forensic
+  Gadgeteer (`CostChange { Abilities }` reduces as it taxes, the filter asked as its holder — but "can't reduce the
+  mana in that cost to less than one mana" is a floor it lacks), Thieving Skydiver (`KickerComponent`'s mana is
+  fixed: "Kicker {X}" pays the cast's X; "attach it to this creature" is `AttachSourceTo` the other way round);
+  **e2d** casting off the hand, 4 — Bilbo (`CostChange` asks the spell, never where it is cast from; "you may cast
+  an artifact, instant, or sorcery spell from your graveyard" as it resolves is `CastFromHandFree`'s choice over
+  another zone, paid, with flashback's exile), Malcolm ("you may cast the discarded card without paying" — `CastNow`
+  takes an id, not `Ref.Chosen`), Flash and Transmute Artifact ("sacrifice it unless you pay its mana cost reduced
+  by {2}", "you may pay {X}, where X is the difference": `PayMana`'s cost is fixed);
+  **e2e** "for as long as this remains on the battlefield", 2 — The Wondrous Wasp, Tishana's Tidebinder: "loses all
+  abilities" is until end of turn, for good, or under an Aura — a duration tied to the source (this object of it),
+  as Lwaxana's `UntilUntapped`; the Tidebinder's "that permanent" is the countered ability's source
+  (`TargetSpec.Ability` and countering one are tested);
+  **e2f** choices after the cast, 4 — Frantic Search and Time Spiral (`Untap` untaps all a `Ref` names: "untap up
+  to three lands" is one choice on it; Time Spiral's "Exile Time Spiral" is `ExileSourceAndCopiesFromGraveyard(0)`),
+  Mystic Confluence (below), Occult Epiphany (`Count.CardTypesInAllGraveyards` is Tarmogoyf's own kind: "card types
+  among [a Ref]", here `Ref.Chosen`, and Tarmogoyf moves onto it).
+  **Legal actions, counted on a 12-creature board before planning:** every e1 card is one cast or activation per
+  single target or sacrifice (Boomerang Basics 24 with 12 nonland permanents a side, Tinker one per artifact,
+  Cryogen Relic one per tapped creature) or a trigger's target choice — none per set. **Mystic Confluence is not
+  e1:** `ModeChoice.Repeats` (Fiery Confluence's) is one cast per multiset of modes × SET of targets, so "return
+  target creature" three times is C(12,3) = 220 casts, twice 66 (× the spells to counter), 378 with one spell on
+  the stack — its repeated modes' targets become a choice after the cast (`ChoosesTargets`, as `PerX` and `Divide`),
+  and Fiery Confluence moves with it (220 against 12 artifacts today).
+- 2026-11-15, Claude — **4.4e1's notes: 12 cards, scripts only — no engine change, no card moved to an option
+  part.** Mystical Tutor is Enlightened Tutor's search; Spellseeker and Trinket Mage `SearchLibrary { Filter =
+  Is.ManaValueAtMost(n), Reveal }` on entering (the search's "may" is its choice of none); Tinker
+  `AdditionalCostsComponent([SacrificeCost(Is.Artifact)])` — one cast per artifact, none without one; Snapcaster Mage
+  is Stingcaster Mage's script; Displacer Kitten `Flicker` on `YouCastNoncreatureSpell` with an optional target;
+  Boomerang Basics asks "if you controlled that permanent" BEFORE the return and draws after it (`If { Otherwise }`,
+  the return in both branches); Upheaval `MoveTo(Ref.Permanents(Is.AnyCard), Hand)`; Cryogen Relic and Sewer-veillance
+  Cam read "enters or leaves" as two triggers (`SelfEnters`, d3's `SelfLeaves` — sacrificed for its own cost, each
+  still triggers).
+  **Timetwister and Echo of Eons** share one helper (`LsvCards.Timetwister`): two `MoveTo(Ref.All(zone, null,
+  Ref.EachPlayer), Library) { Shuffle }` and `DrawCards(Ref.EachPlayer, 7)` — the spell is on the stack, so it isn't
+  shuffled in, and flashback exiles the Echo. **A ceiling (DesignNotes, `ponytail:`):** `MoveTo` shuffles for each
+  card moved, so a player with no hand and no graveyard doesn't shuffle; one shuffle effect by `Ref` comes with
+  Ponder's "you may shuffle" (e2a), and the helper takes it then.
+  **Sewer-veillance Cam's "you may tap or untap target creature"** is one yes/no: tapping a tapped creature and
+  untapping an untapped one do nothing, so the only real choice is whether to turn it (`May` → `If(Matches(target,
+  Is.Tapped), untap) { Otherwise = tap }`) — the printed choices, no option needed.
+  **Test helpers:** `Lsv(name)` and `Put(card, player, zone)` moved up into `FraBoardTest` (their nine identical
+  copies in the LSV and FRA test files are gone), and `CastAsking` with them (2d's; `ResolveAsking` beside it for an
+  activation), `Offered<T>(asked)` and `TapIt(permanent)`.
+  **`/pre-commit`'s review: no bug in the scripts; the tests had holes, fixed** — each new assertion shown to bite
+  by a revert-check (9/9 caught): the three searches assert "reveal it" (the opponent knows the card), Timetwister
+  and Echo of Eons that the library was SHUFFLED (the seven drawn aren't the seven that were on top — one test with
+  only a graveyard to shuffle in, one with only a hand, so each `Shuffle` line is seen), Displacer Kitten that its
+  target is "up to one", and the scripted costs are counted in lands tapped (Echo's flashback {2}{U}, Cryogen Relic's
+  {1}{U}, the Cam's {3}{U}, Snapcaster's "its mana cost").
+  **Left as ceilings (DesignNotes):** "you MAY search … then shuffle" (Spellseeker, Trinket Mage, as Stoneforge
+  Mystic) always shuffles — a `May` around the search would ask a yes/no on every entry; the search's own "none
+  chosen: no shuffle" goes with e2a, where known tops begin to matter. The search prompt reads badly with a
+  mana-value `FilterText` and a two-type search (the table's wording).
+  **Not taken, and why:** `MoveTo` shuffling each owner once after its loop (a smaller fix than a shuffle effect) —
+  an engine change that moves the random stream of every recorded game with a shuffled return, in a scripts-only
+  part, and it still wouldn't shuffle for a player with nothing to move: e2a's shuffle effect does both.
+  `Ref.All(zone, null, Ref.EachPlayer)` restates `Ref.All`'s default (every player, yours first): kept, because it
+  reads as the card does ("each player") and a change of the order players are visited would move the recorded
+  games for nothing.
 
 ## Tasks
 
@@ -527,14 +607,43 @@ as his three priorities.
           twice (after the review's fixes too: golden-out unchanged;
           golden-in moved 29 random and 56 card-replay games, added 4; probe 150 games, cast 565 times, 1 past 300
           permanents — seed 94, 273 Troubling Tribbles, not this batch)
+  - [ ] MC-4.4e Blue's tier 1 (Shayne, 2026-11-15) — 35 mono-blue cards in `LsvSurvey.md`'s tier 1, read card by
+        card and split as white was (Decisions, "4.4e"), in seven parts:
+    - [x] MC-4.4e1 The tested pieces, 12 — done 2026-11-15: Mystical Tutor, Spellseeker, Trinket Mage, Tinker,
+          Snapcaster Mage, Displacer Kitten, Boomerang Basics, Upheaval, Timetwister, Echo of Eons, Cryogen Relic,
+          Sewer-veillance Cam. Scripts only, no engine change; 12 tests, the review's assertions 9/9 breaks caught;
+          `batch_checks.py` all 7 steps (golden-out unchanged; golden-in moved 29 random and 681 card-replay games,
+          added 48; probe 150 games, none unfinished, every card cast)
+    - [ ] MC-4.4e2a Options, the library's top, 4: Ponder, Stock Up, Consult the Star Charts, Thassa's Oracle
+    - [ ] MC-4.4e2b Options, draws, 4: Faerie Mastermind, Hullbreacher, Narset (Parter of Veils), Jace (Wielder of
+          Mysteries)
+    - [ ] MC-4.4e2c Options, mana and costs, 5: Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer),
+          Forensic Gadgeteer, Thieving Skydiver
+    - [ ] MC-4.4e2d Options, casting off the hand, 4: Bilbo (Thief in the Night), Malcolm (Alluring Scoundrel),
+          Flash, Transmute Artifact
+    - [ ] MC-4.4e2e Options, "for as long as this remains on the battlefield", 2: The Wondrous Wasp, Tishana's
+          Tidebinder
+    - [ ] MC-4.4e2f Options, choices after the cast, 4: Frantic Search, Time Spiral, Mystic Confluence (Fiery
+          Confluence moves with it), Occult Epiphany
 
 ## Next
 
-Red's tier 1 (4.4c) and white's (4.4d, all five parts) are done: **183 of 528 play.** Next, in a NEW session:
-**the next colour's tier 1 — which colour is Shayne's call** (blue, black, green, multicolour and colourless are
-left; `LsvSurvey.md` lists each one's tier-1 cards). Whichever it is, the way white went: read its tier-1 cards
-one by one against the nearest piece's code, split them (the tested pieces first, then the options by subsystem),
-write the split in Decisions and Tasks, then build a part a session.
+Red's tier 1 (4.4c), white's (4.4d) and blue's tested pieces (4.4e1) are done: **195 of 528 play.** Blue's tier 1
+is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2a — the library's top, 4
+cards:** Ponder, Stock Up, Consult the Star Charts, Thassa's Oracle — options on `LookAndTake` (how many are taken,
+a `Count`; the taken to the top; "put them back in any order", Surveil's `OrderLibraryTopChoice`), a shuffle effect
+by `Ref` for Ponder's "you may shuffle" (**`LsvCards.Timetwister` takes it too**: today a player with no hand and no
+graveyard doesn't shuffle — DesignNotes), and `AtLeast` with a counted bound for the Oracle's "if X is greater than
+or equal to the number of cards in your library" — and, since known tops begin to matter there, a "may" search
+that takes nothing shouldn't shuffle (Spellseeker, Trinket Mage, Stoneforge Mystic: DesignNotes). Then e2b (draws), e2c (mana and costs), e2d (casting off the
+hand), e2e ("for as long as this remains"), e2f (choices after the cast — Mystic Confluence is 378 casts on a
+12-creature board as `Repeats` is built, so its targets become a choice after the cast and Fiery Confluence moves
+with it), a part a session. Blue's tier 2 (6) and tier 3 (11) are not this task.
+The blue tests are in `LsvBatch2eTests.cs` (`Targeting(target, yes)`: a trigger's target and its "you may",
+`UntappedLands()`: what a cost tapped is the difference, `Revealed(card)`, `TopSeven(player)` / `HandOf(player)`:
+was the library shuffled, `HandsAndGraveyards(…)`); `Lsv(name)`, `Put(card, player, zone)`, `CastAsking(card,
+answer)`, `ResolveAsking(answer)`, `Offered<T>(asked)` (the ids a choice of that type offered) and
+`TapIt(permanent)` are `FraBoardTest`'s now — a helper a later file needs MOVES up there too.
 Read the nearest piece's CODE first — three of d2a's six plans changed on reading, two of d2b's grew, d3's grew in
 four places, d4's in two (their notes).
 From d4: a number on an each-player effect is counted for each player with `Ref.It` that player
@@ -615,3 +724,7 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   board; no recorded game moved by the engine; 183 of
   528 play. White's tier 1 (4.4d) done. For Shayne: nothing Open — which colour comes next is his; AI-19.28 on the
   backlog.
+- 2026-11-15: Shayne — blue next: MC-4.4e, blue's tier 1 (35 cards in the survey's tier 1).
+- 2026-11-15: MC-4.4e split in seven parts (12 tested pieces, 23 on options — Decisions) and MC-4.4e1 done: 12
+  cards, scripts only; no recorded game moved by the engine; 195 of 528 play. For Shayne: nothing Open. Next:
+  MC-4.4e2a, the library's top.

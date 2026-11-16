@@ -13,8 +13,6 @@ namespace MagicCore.Tests.Sets;
 /// </summary>
 public class LsvBatch2dTests : FraBoardTest
 {
-	static CardDefinition Lsv(string name) => CardRegistry.Get(name, "LSV");
-
 	static CardDefinition Boon =>
 		TestGames.Inline("Boon", "{1}", "Instant", null, new GainLife(Ref.You, 1));
 
@@ -30,13 +28,6 @@ public class LsvBatch2dTests : FraBoardTest
 		s.CardsIn(player, ZoneType.Battlefield).Count(c => c.IsToken && c.Name == name);
 
 	bool InExile(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Exile);
-
-	int Put(CardDefinition card, int player, ZoneType zone)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, zone);
-		return id;
-	}
 
 	void AttackWith(params int[] attackers)
 	{
@@ -1501,19 +1492,6 @@ public class LsvBatch2dTests : FraBoardTest
 
 	int Lands(int player) =>
 		s.CardsIn(player, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
-
-	/// <summary>I cast it and the stack resolves, each choice answered as told (else its minimum); the choices asked, in order.</summary>
-	List<ChoiceAction> CastAsking(int card, Func<ChoiceAction, IEnumerable<int>> answer)
-	{
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = card });
-		var asked = new List<ChoiceAction>();
-		Resolve(c =>
-		{
-			asked.Add(c);
-			return answer(c);
-		});
-		return asked;
-	}
 
 	[Test]
 	public void Balance_EachPlayerKeepsAsManyLandsAsTheFewest_AndSacrificesTheRest_OfTheirChoice()
