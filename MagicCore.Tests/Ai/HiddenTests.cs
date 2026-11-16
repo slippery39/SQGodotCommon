@@ -321,6 +321,28 @@ public class HiddenTests
 		Assert.That(Hidden.LandOdds(looked, me), Is.EqualTo(Hidden.LandOdds(none, me)));
 	}
 
+	// AI-20.9 (Shayne, 2026-11-15: "I am looking for a specific card and thats it"): a look at an unseen card is binned
+	// unless it is the draw we look for, so the draw misses only if the card looked at and the one under it both miss.
+	[Test]
+	public void ALookAtAnUnseenCard_MovesTheOddsTowardsTheDrawWeLookFor()
+	{
+		var none = Hidden.Sample(s, me, Hidden.Library.LandOrNot);
+		var unseen = Hidden.Unseen(none, me).ToList();
+		double all = unseen.Count;
+		double lands = unseen.Count(c => c.Is(CardType.Land));
+		Assume.That(lands, Is.GreaterThan(1).And.LessThan(all - 1));
+
+		Assert.That(
+			Hidden.LandOdds(none, me, looks: 1),
+			Is.EqualTo(1 - (all - lands) / all * ((all - lands - 1) / (all - 1))).Within(1e-9)
+		);
+		Assert.That(
+			Hidden.LandOdds(none, me, looks: 1, forLand: false),
+			Is.EqualTo(lands / all * ((lands - 1) / (all - 1))).Within(1e-9)
+		);
+		Assert.That(Hidden.LandOdds(none, me, looks: 0), Is.EqualTo(lands / all));
+	}
+
 	// AI-17.24 (Shayne, 2026-11-10; Records/RogueLandcycleSkipped #157): on 3 Swamps, holding a 6-mana 6/5 with "Basic
 	// landcycling {2}", the AI passed its whole turn 8 - the one library it guessed drew a land in time - and cycled
 	// in Shayne's upkeep, its land drop lost. Played both ways it cycles and plays the land in that turn, whatever

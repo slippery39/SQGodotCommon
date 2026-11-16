@@ -234,7 +234,7 @@ public static class Rollout
 	/// win or loss decayed by the turns since the search's root, which the horizon fixes).
 	/// </summary>
 	public static double Score(GameState s, int me, int horizon, Settings settings) =>
-		Score(s, me, horizon, settings, out _);
+		Score(s, me, horizon, settings, out _, out _);
 
 	/// <summary>
 	/// <see cref="Score(GameState, int, int, Settings)"/>, and <paramref name="rootTurnEnd"/>: the last position of the
@@ -243,6 +243,9 @@ public static class Rollout
 	/// - or null if <paramref name="s"/> is already past it: what a line keeps up (the potential score, AI-13.11).
 	/// <paramref name="landsDrawn"/> (<see cref="Hidden.Library.LandOrNot"/>, AI-20.3): which way this rollout's unseen
 	/// draws go - after anything random in it (a landcycler's shuffle) the libraries are arranged that way again.
+	/// <paramref name="unseen"/> (AI-20.9): the unknown cards our looks showed (<see cref="Hidden.Looked"/>) before
+	/// any card left our library - a later look is for a draw past this look-ahead's first - and the cards that left
+	/// it by the end (its draws, mostly): a look moves the next of them only.
 	/// </summary>
 	public static double Score(
 		GameState s,
@@ -250,11 +253,13 @@ public static class Rollout
 		int horizon,
 		Settings settings,
 		out GameState? rootTurnEnd,
+		out (int Looked, int Drawn) unseen,
 		bool? landsDrawn = null
 	)
 	{
 		var rootTurn = horizon - 1 - settings.LookaheadTurns;
 		rootTurnEnd = null;
+		var (looked, library) = (0, s.CardsIn(me, ZoneType.Library).Count());
 		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
 		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 		var them = s.OpponentOf(me);
@@ -291,6 +296,11 @@ public static class Rollout
 				s = OpponentStep(s, who, settings);
 				continue;
 			}
+			if (
+				Hidden.Looked(s, me) is > 0 and var shown
+				&& s.CardsIn(me, ZoneType.Library).Count() == library
+			)
+				looked += shown;
 			if (greedy is not null)
 			{
 				s = greedy.Play(s);
@@ -316,6 +326,7 @@ public static class Rollout
 
 		if (s.GetGame().TurnNumber == rootTurn && !FreeToSpend(s, me))
 			rootTurnEnd = s; // the game ended, or the rollout stopped, inside the turn
+		unseen = (looked, Math.Max(0, library - s.CardsIn(me, ZoneType.Library).Count()));
 		var score = Evaluator.Evaluate(s, me, settings.Held);
 		if (!s.IsOver())
 			return score;

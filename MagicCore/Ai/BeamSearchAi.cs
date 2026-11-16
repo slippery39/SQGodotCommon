@@ -184,7 +184,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		double Score,
 		double Bonus = 0,
 		double Potential = 0,
-		int FreePasses = 0
+		int FreePasses = 0,
+		int Looks = 0, // the unknown cards this line's looks have shown (Hidden.Looked, AI-20.9)
+		double Odds = 0 // the share its "lands" rollout was weighed by (LandOrNot), for Explain
 	);
 
 	ImmutableList<Decision> plan = [];
@@ -319,11 +321,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				ways.Add((null, ""));
 			else
 			{
-				var odds = Hidden.LandOdds(at, PlayerId);
+				// the shares as the search weighed them: a look at an unseen card moves them (AI-20.9)
+				var (odds, plain) = (line.Odds, Hidden.LandOdds(at, PlayerId));
+				var looked = odds == plain ? "" : $" ({plain:P0} before this line's look)";
 				if (odds < 1)
 					ways.Add((false, $", our unseen draws not lands: {1 - odds:P0}"));
 				if (odds > 0)
-					ways.Add((true, $", our unseen draws lands: {odds:P0}"));
+					ways.Add((true, $", our unseen draws lands: {odds:P0}{looked}"));
 			}
 			foreach (var (lands, note) in ways)
 			{
@@ -337,7 +341,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 						rolled.Move(before, who, d, [], out _);
 						last = d.State;
 					},
-					() => Rollout.Score(from, PlayerId, horizon, RolloutSettings, out _, lands)
+					() =>
+						Rollout.Score(from, PlayerId, horizon, RolloutSettings, out _, out _, lands)
 				);
 				rolled.End(last);
 				var result = last.IsOver()
@@ -496,6 +501,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		var expected = parent.Expected.Add(Evaluator.Evaluate(at, PlayerId, RolloutSettings.Held));
 		var nodes = new Node[children.Count];
 		var atRoot = parent.Path.IsEmpty;
+		var looks = parent.Looks + Hidden.Looked(at, PlayerId); // every child answers the look waiting here
 		void RollOut(int i)
 		{
 			var state = Apply(at, children[i]);
@@ -507,7 +513,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					Evaluator.PendingSurveil(state, PlayerId, RolloutSettings.Held)
 						- Evaluator.PendingSurveil(at, PlayerId, RolloutSettings.Held)
 				);
-			var score = RolloutScore(state, horizon, out var turnEnd) + bonus;
+			var score = RolloutScore(state, horizon, looks, out var turnEnd, out var odds) + bonus;
 			Interlocked.Increment(ref rollouts);
 			// read as the search's turn ends (Rollout.Score's rootTurnEnd); a move that ended it, as the turn stood before
 			nodes[i] = new Node(
@@ -517,7 +523,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				score,
 				bonus,
 				Potential(searchRoot!, turnEnd ?? at, PlayerId),
-				IsFreePass(at, children[i]) ? parent.FreePasses + 1 : 0
+				IsFreePass(at, children[i]) ? parent.FreePasses + 1 : 0,
+				looks,
+				odds
 			);
 		}
 		// One thread is a plain loop: Parallel.For would still hand its work to a pool thread and wait.
@@ -550,15 +558,26 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// land vs not") the line is rolled out twice from the same position - the unseen cards we draw are lands, or
 	/// unknown cards we can't cast (<see cref="Hidden.Unknown"/>) - and the two averaged by our deck list's land odds
 	/// (<see cref="Hidden.LandOdds"/>). One tree for both: our decisions this turn are made before the draw is known.
+	/// A look at an unseen card - <paramref name="looks"/> in the tree, and those the rollout makes in this turn - moves
+	/// <paramref name="odds"/> towards the better of the two (<see cref="Evaluator.Terms.Looks"/>, AI-20.9): it is binned
+	/// unless it is the draw this line wants.
 	/// ponytail: twice the rollouts a line (the budget still counts lines); skip the second where no unseen card is
 	/// drawn within the horizon if the cost shows (AI-20.4).
 	/// </summary>
-	double RolloutScore(GameState state, int horizon, out GameState? turnEnd)
+	double RolloutScore(
+		GameState state,
+		int horizon,
+		int looks,
+		out GameState? turnEnd,
+		out double odds
+	)
 	{
+		odds = 0;
 		if (options.Library != Hidden.Library.LandOrNot)
-			return Rollout.Score(state, PlayerId, horizon, RolloutSettings, out turnEnd);
-		var odds = Hidden.LandOdds(state, PlayerId);
+			return Rollout.Score(state, PlayerId, horizon, RolloutSettings, out turnEnd, out _);
+		odds = Hidden.LandOdds(state, PlayerId);
 		var (land, none) = (0.0, 0.0);
+		(int Looked, int Drawn) unseen = default;
 		turnEnd = null;
 		if (odds > 0)
 			land = Rollout.Score(
@@ -567,6 +586,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				horizon,
 				RolloutSettings,
 				out turnEnd,
+				out _,
 				landsDrawn: true
 			);
 		if (odds < 1) // its turn end is the one the potential reads: what the line keeps up without a lucky draw
@@ -576,10 +596,22 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				horizon,
 				RolloutSettings,
 				out turnEnd,
+				out unseen,
 				landsDrawn: false
 			);
 		if (odds is > 0 and < 1)
+		{
 			Interlocked.Increment(ref secondRollouts);
+			looks += unseen.Looked;
+			// a look moves the NEXT draw only, and a rollout's draws all go one way: its share of them (a Jace
+			// token at 6 surveiled rather than drew - two draws ahead, the look counted for both).
+			// ponytail: every card leaving our library counts as a draw (a mill, a search), and a shuffle after
+			// the look doesn't undo it; count draws after the look alone if a mill or landcycle deck misjudges one.
+			if (looks > 0 && !Evaluator.IsOff(Evaluator.Terms.Looks))
+				odds +=
+					(Hidden.LandOdds(state, PlayerId, looks, forLand: land >= none) - odds)
+					/ Math.Max(1, unseen.Drawn);
+		}
 		return odds * land + (1 - odds) * none;
 	}
 
@@ -1091,9 +1123,14 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			s.GetGame().TurnNumber == planTurn
 			&& (top == 0 || top == PlayerId)
 			// a card drawn that the plan hadn't seen (LandOrNot): it was made for a land and for none - now we know
+			// - or a look is showing one (a surveil): the plan answered it over a card it had made up
 			&& !(
 				planUnseen.Count > 0
-				&& s.CardsIn(PlayerId, ZoneType.Hand).Any(c => planUnseen.Contains(c.Id))
+				&& (
+					s.CardsIn(PlayerId, ZoneType.Hand).Any(c => planUnseen.Contains(c.Id))
+					|| s.GetPendingChoice() is ChooseFromLibraryTopChoice look
+						&& look.Options.Any(o => planUnseen.Contains(o.Id))
+				)
 			)
 			&& Math.Abs(Evaluator.Evaluate(s, PlayerId, RolloutSettings.Held) - expected)
 				<= options.DivergenceThreshold

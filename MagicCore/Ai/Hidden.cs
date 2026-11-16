@@ -106,13 +106,36 @@ public static class Hidden
 	/// The chance an unseen draw of <paramref name="me"/>'s is a land: the lands among the cards of my library whose
 	/// place I don't know, over those cards - exact, since I know my deck list (Shayne, AI-20.1) - an unknown card
 	/// already drawn in the look-ahead counted back in.
+	/// After <paramref name="looks"/> looks at an unseen card on top (the Jace token's "[−1]: Surveil 1", AI-20.9): each
+	/// card looked at is binned unless it is the draw we look for - a land (<paramref name="forLand"/>), or not a
+	/// land - so the draw misses only if every card looked at and the one under them all miss. Decided before the
+	/// look (Shayne, 2026-11-15: "I am looking for a specific card and thats it"): 13 lands in 27 are 48% a draw,
+	/// 74% after one look for a land.
+	/// These are the odds of the NEXT draw; the search spreads them over a look-ahead's draws (BeamSearchAi.RolloutScore).
+	/// ponytail: "a land" is any land, never the colour we miss - split the lands by what they unlock (AI-20.10).
 	/// </summary>
-	public static double LandOdds(GameState s, int me)
+	public static double LandOdds(GameState s, int me, int looks = 0, bool forLand = true)
 	{
 		var unseen = Unseen(s, me).ToList();
 		var all = unseen.Count + s.CardsIn(me, ZoneType.Hand).Count(IsUnknown);
-		return all == 0 ? 0 : unseen.Count(c => c.Is(CardType.Land)) / (double)all;
+		var lands = unseen.Count(c => c.Is(CardType.Land));
+		if (all == 0 || looks == 0)
+			return all == 0 ? 0 : lands / (double)all;
+		var miss = 1.0; // every card looked at, then the draw, is not what we look for
+		for (var i = 0; i <= looks; i++)
+			miss *= Math.Max(0.0, (forLand ? all - lands : lands) - i) / Math.Max(1, all - i);
+		return forLand ? 1 - miss : miss;
 	}
+
+	/// <summary>
+	/// The unknown cards a look of <paramref name="me"/>'s is showing: a surveil's choice waiting over cards the
+	/// look-ahead made up (<see cref="UnknownCard"/>). Nothing can be decided by them - they count as looks
+	/// (<see cref="LandOdds"/>). A real card looked at (the real game's surveil; a land where the draws are lands) is none.
+	/// </summary>
+	public static int Looked(GameState s, int me) =>
+		s.GetPendingChoice() is Actions.ChooseFromLibraryTopChoice top && top.PlayerId == me
+			? top.Options.Count(o => IsUnknown(s.GetCard(o.Id)))
+			: 0;
 
 	/// <summary>The cards of <paramref name="me"/>'s library whose place I don't know.</summary>
 	public static IEnumerable<Card> Unseen(GameState s, int me)

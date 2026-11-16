@@ -125,6 +125,8 @@ public static class AiMatch
 				},
 			// The simulated opponent casts a spell before any ability on its board, before AI-20.8: beam+spellfirst.
 			["spellfirst"] = o => o with { Without = o.Without | Evaluator.Terms.AbilityOverSpell },
+			// A look at an unseen card (a surveil) shifts no odds: it shows the card the look-ahead made up, before AI-20.9: beam+nolooks.
+			["nolooks"] = o => o with { Without = o.Without | Evaluator.Terms.Looks },
 			// Only instants and flash held as options, before AI-13.10: beam+instantoptions.
 			["instantoptions"] = o =>
 				o with

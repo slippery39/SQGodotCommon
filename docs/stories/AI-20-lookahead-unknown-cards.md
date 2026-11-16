@@ -173,6 +173,24 @@ built on top.
   option price stands in for threats the look-ahead can't see - the imagined opponent never casts a card we haven't
   seen (#213, his own diagnosis) - so prices tuned now are tuned against a look-ahead about to change. Order: the
   small items, the opponent's unknown hand, the ten patches off, THEN option pricing on what is left.
+- 2026-11-15, Shayne (on #247, asked what he does with each card the surveil could show - a red source, a Forest,
+  a green spell castable off three Forests, an uncastable spell): **"red land or bust."** "It doesn't matter what
+  is actually on top or not, I am looking for a specific card and thats it." "If I am in that situation I need to
+  make sure my next draw is a red source or else I am going to lose." The principle behind it: the look-ahead is
+  "seeing the result of what is basically a random event, and then making decisions based on that. In reality we
+  don't get to look ahead past the result of a random event. We have to make the choice now." And on today's
+  score: "if it surveils, its not binning it anyways so it looks better not to surveil (because then your jace has
+  2 loyalty instead of 1), but thats not how we play games in real life." (Claude's reading, not his words: a
+  look at an unseen card is decided BEFORE the look, by what it does to the odds of the draw we want - here 9 red
+  sources of 27 unseen, 33% a draw, 56% if everything else is binned - never by a card the look-ahead made up;
+  the Forest and the castable green spell are binned too.)
+- 2026-11-15, Shayne (after AI-20.9's numbers; the known top card again): "if we know the top card then surveil 1
+  is only valuable if we want to put the top card in the graveyard. Otherwise it has no value at all (and
+  negative value if we are using a resource to do it (like jace counters)." And on AI-20.9: "We can commit now,
+  accept the suites nine new answers and sure you can run the match". (Claude: AI-20.9 gives a known top card no
+  look - `Hidden.Looked` counts made-up cards only - so the token's −1 over one costs its loyalty and gains only
+  what binning that card gains. NOT covered: a TRIGGERED surveil still gets the flat `SurveilPrice` whatever is
+  on top, and a walker's lifetime price counts each future −1 at a third of a card; no position kept for it.)
 
 Open questions (for Shayne, before `ready`):
 - What counts as done: the flip rate down, the kept positions right, and a match not worse? (Proposed by Claude,
@@ -229,6 +247,37 @@ Open questions (for Shayne, before `ready`):
       48-48, no difference of 5pp either way** - and 9676.1 engine steps a decision against 9676.0, so in these
       three decks it almost never comes up. Claude's read: keep it (it stops the Patrol misplay at no cost);
       Shayne's call. Not committed.
+- [ ] AI-20.9 **A look at an unseen card moves the odds, not the cards** (Shayne's go-ahead, 2026-11-15: "Sure lets
+      try it out"; `Evaluator.Terms.Looks`, `+nolooks` is the look-ahead before it). A surveil over an unknown card
+      can't be decided by the card - the look-ahead made it up - so it counts as a LOOK (`Hidden.Looked`: in the
+      tree on `Node.Looks`, in a rollout only before a card has left our library), and the line's two rollouts are
+      weighed by the odds after it (`Hidden.LandOdds(…, looks, forLand)`): every card looked at is binned unless it
+      is the draw the line wants, so the draw misses only if they all miss. Claude's choices in building it, each
+      for Shayne to overrule:
+      - **Which draw the line wants is the better-scoring of its two rollouts** - a land when the lands way scores
+        higher, not a land when flooded. No rule and no extra branch: the two numbers are already there.
+      - The real look, once the real card is seen, is answered as before (`LandUnlock.Surveil`; a spell by its price).
+      - **A look moves the NEXT draw only**: the move in the odds is divided by the cards that leave our library
+        in the not-lands rollout. Found on the suite, not planned: without it a Jace token at loyalty 6 took −1
+        (surveil) over −3 (draw a card), 9.55 against 9.02 - two draws ahead, both going one way, and the look
+        was counted for both.
+      - **A committed plan is dropped when a look shows a card the plan hadn't seen** (`FromPlan`): its answer was
+        made over a made-up card, which carries a real card's id - one time in the unseen count the ids matched
+        and the planned "keep" would have been played blind (the pre-commit review; there since AI-20.3).
+      - Known limits in `DesignNotes.md` ("MagicCore known ceilings", 9). Left open by the pre-commit review, on
+        purpose: the real look still answers by the old rules; a triggered surveil is priced twice (the flat
+        `SurveilPrice` AND the look - AI-20.5); a shuffle after a look doesn't undo it.
+      Built and checked: #247 surveils, −15.19 (`AiPositionTests.ShortOfALand_TheJaceTokenSurveilsForIt`, the
+      control passes); the odds (`HiddenTests.ALookAtAnUnseenCard_MovesTheOddsTowardsTheDrawWeLookFor`); 1597 tests
+      pass. **The suite: 9 of 288 decisions change** (6 are the token's −1 used; an attack with Koth; two casts),
+      19 805.8 engine steps a position (19 883.7), agrees with the oracle 77.1% (76.0%), score given up 0.76 (0.81)
+      - `docs/findings/magic-ai.md`, "A look at an unseen card". **Two Dominion Assault Force controls went red**:
+      with `SurveilPrice` off the AI surveils anyway - the look alone finds it - so the control now turns both
+      off, and the flat surveil price joins AI-20.5's list. Committed on Shayne's word (2026-11-15), the
+      suite's nine answers accepted. NOT done: the match against `beam+nolooks` - played after the commit
+- [ ] AI-20.10 **"The land I need", not any land** (proposed, after 20.9's numbers): the lands way draws only lands
+      that unlock a card in hand (`LandUnlock.Unlocks` - #247's 9 red sources of 27, not all 13 lands); a land that
+      unlocks nothing is a blank draw, his "bust". Where every land left is alike, nothing changes
 - [x] AI-20.7 **Twelve lesson tests were red under the new default** (1583 passed). Green now (1595 pass, 0
       fail; Shayne, 2026-11-15: "do what you think is best"): the Patrol fixed (AI-20.8); the ten controls run
       under the search before AI-20.4 (`AiPositionTests.OneGuess` = `beam+shuffle`), where their misplay still
@@ -263,6 +312,13 @@ is the default (`beam`; the one shuffled guess before it is `beam+shuffle`). No 
 288), and it beats the search before it 54.0% ± 1.5pp over 480 games (played again after the surveil fix; 54.2%
 before), at 2.20× the engine steps a decision. The look-ahead's opponent uses an ability on its board before a
 spell that does less (AI-20.8). 1595 tests pass; the suite's answers are accepted.
+
+**AI-20.9 is committed (2026-11-15)**: a look at an unseen card moves the odds of the next draw - #247 surveils,
+9 suite decisions changed and accepted, 1597 tests pass. Still owed: its match (`--match=beam,beam+nolooks
+--until-clear`, Shayne said yes; 50-100 min) - the result goes in Tasks, the Log and the findings. After it,
+**AI-20.10** ("the land I need", proposed in Tasks), on Shayne's go-ahead once he has seen 20.9's numbers; and
+two checks: what the REAL look does with a castable green spell on top at #247 (he bins it: "red land or
+bust"), and the suite change not yet read (`White-Blue Jace vs White-Black seed 1, move 90`: Jace −2 → a cast).
 
 **Open, each on Shayne's word - interview first, one topic at a time, nothing built before his go-ahead:**
 1. **The Jace token and the surveil.** The Jace deck wins least for the new search (49-111 in the match, 66-126
@@ -350,5 +406,22 @@ Outside this story, found by the pre-commit review: on the table, Undo keeps the
   tests are green, 1595 pass. Not committed.
 - 2026-11-15: committed (`7b1f1f77`), then the match played again on Shayne's word, as committed: `beam` 54.0% ±
   1.5pp against `beam+shuffle` over 480 games (259-221), "better"; 2.20× the engine steps a decision.
+- 2026-11-15: #247 read with `--explain=247` for Shayne. AI 2: three Forests, six red cards in hand, none castable,
+  27 unseen cards (7 Mountains, 2 Konstrari Annex, 4 Forests, 14 spells). Pass −17.99 = 52% × −23.40 (draws not
+  lands: nothing cast to turn 16) + 48% × −12.18 (a Mountain, Heartstring Puller cast on turn 14); Jace −1 −18.09 =
+  the same two lines, each 0.10 lower (the token at loyalty 1: 2.10 against 2.20). The surveil bins nothing in
+  either half - each half's cards were fixed before the look - and the lands half draws a Mountain for all 13
+  lands, where 9 are red sources. His answer is in Decisions ("red land or bust").
+- 2026-11-15: AI-20.9 built on his go-ahead: a look at an unseen card moves the odds. #247 now plays Jace −1,
+  −15.19 (26% × −23.50 + 74% × −12.28; 48% lands before the look) where Pass was −17.99 - and Pass's own best line
+  is now the same surveil after combat, −15.19 too. Not committed.
+- 2026-11-15: the suite under it changed 10 decisions, and one was wrong: a Jace token at loyalty 6 surveiled
+  rather than drew (the look counted for both draws of the look-ahead). The look now moves the next draw only;
+  9 decisions change, the oracle's agreement 77.1% (76.0% committed) and score given up 0.76 (0.81). Two Dominion
+  Assault Force controls no longer exiled with `SurveilPrice` off - the look alone surveils; they turn both off.
+  1597 tests pass. Not committed; no match yet.
+- 2026-11-15: the pre-commit review: a plan no longer replays its answer to a look over a card it hadn't seen; a
+  rollout's look counts only before a card leaves our library; Explain reads the line's own odds. The suite and
+  #247 unchanged by them. On Shayne's word: the nine suite answers accepted, committed, the match to follow.
 - 2026-11-15: the order set with Shayne: the immediate issues (the surveil, the opponent's unknown hand, the ten
   patches) before option pricing.

@@ -476,6 +476,16 @@ public static partial class Evaluator
 		/// and Artificial Anomaly's drain, lethal with its 2/1, waited two turns (`+spellfirst`).
 		/// </summary>
 		AbilityOverSpell = 1L << 36,
+
+		/// <summary>
+		/// The look-ahead's: a look at an unseen card of ours (the Jace token's "[−1]: Surveil 1") is decided BEFORE the
+		/// look, by what it does to the odds of the draw the line wants - each card looked at is binned unless it is
+		/// that draw (<see cref="Hidden.LandOdds"/>; AI-20, Shayne 2026-11-15, three Forests and six red cards in hand:
+		/// "It doesn't matter what is actually on top or not, I am looking for a specific card and thats it"). Without
+		/// it the look showed a card the look-ahead had already made up - a land where the draws are lands, no land
+		/// where they are not - so it never binned, and the surveil only cost the loyalty (`+nolooks`).
+		/// </summary>
+		Looks = 1L << 37,
 	}
 
 	/// <summary>

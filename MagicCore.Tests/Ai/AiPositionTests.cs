@@ -144,6 +144,23 @@ public class AiPositionTests
 		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Pass"));
 	}
 
+	// Shayne, 2026-11-13 (his notes; AI-20.9): AI 2 on three Forests, six red cards in hand, a Jace token at loyalty 2
+	// ("[−1]: Surveil 1") - "he really needs that red source … so he should be aggresively surveiling for it here."
+	// 2026-11-15: "It doesn't matter what is actually on top or not, I am looking for a specific card and thats it."
+	// The look showed a card the look-ahead had made up - a land where its draws are lands, none where they are not -
+	// so it never binned and the surveil only cost a loyalty. Now a look moves the odds of the draw the line wants.
+	// The CONTROL: without Looks it passes.
+	[Test]
+	public void ShortOfALand_TheJaceTokenSurveilsForIt()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 247);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.Looks), Is.EqualTo("Pass"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Does.StartWith("Jace"));
+	}
+
 	// Shayne, 2026-11-08 (AI-19.21): General Chang ("{1}, Sacrifice a creature: a +1/+1 counter on each
 	// Klingon"). The AI sacrificed a 4/4 and a 2/1 to make his 1/2 a 3/4 at sorcery speed, nothing dying, and
 	// at #458 Chang himself. Not the evaluator: it charged the creatures (-15 at once). The simulated HUMAN
@@ -195,7 +212,9 @@ public class AiPositionTests
 	// surveil 1"). The AI exiled its OWN Infinite Diversity and Shayne's Tal Shiar Operative: "surveiling here is
 	// 100% the correct play". Not a judgement - a TIE: the rollout's one sampled top card is kept, so surveil gained
 	// nothing, exiling a card with no graveyard value cost nothing, and the first listed mode won. A surveil on the
-	// stack now counts a third of a card (Terms.SurveilPrice). The CONTROL: without it the AI still exiles.
+	// stack now counts a third of a card (Terms.SurveilPrice). Since AI-20.9 the look moves the land odds too
+	// (Terms.Looks), and that alone finds the surveil - the flat price is one of AI-20.5's patches to try off.
+	// The CONTROL: without both the AI still exiles.
 	[TestCase("DominionExilesOwnCard", 127)]
 	[TestCase("DominionExilesTheirCard", 294)]
 	public void DominionAssaultForce_Surveils_RatherThanExilingACardWorthNothing(
@@ -207,7 +226,12 @@ public class AiPositionTests
 		string Chose(Evaluator.Terms without) =>
 			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
 
-		Assert.That(Chose(Evaluator.Terms.SurveilPrice), Does.Contain("Exile"), "control");
+		Assert.That(
+			Chose(Evaluator.Terms.SurveilPrice | Evaluator.Terms.Looks),
+			Does.Contain("Exile"),
+			"control"
+		);
+		Assert.That(Chose(Evaluator.Terms.SurveilPrice), Does.Contain("Surveil"), "the look alone");
 		Assert.That(Chose(Evaluator.Terms.None), Does.Contain("Surveil"));
 	}
 

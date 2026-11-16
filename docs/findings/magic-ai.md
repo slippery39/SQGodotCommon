@@ -1909,3 +1909,29 @@ On the 288 suite positions, against today's search (`beam`, identical to the las
   draws are not lands); why is not traced - a land-valuation question, with #24. #247 (the token's surveil) Pass 4;
   #24 (Forest or Rockfall Vale) Forest 4 - both are other problems (the surveil's split; land valuation).
 
+## A look at an unseen card (2026-11-15, AI-20.9)
+
+A surveil over a card the look-ahead made up moves the land odds of the NEXT draw instead of showing that card
+(`Evaluator.Terms.Looks`; `beam+nolooks` is the look-ahead before it). Not committed when measured; no match yet.
+
+- **`ShayneNotesSeed1` #247** (three Forests, six red cards in hand, a Jace token at loyalty 2, 27 unseen cards: 13
+  lands, 9 of them red sources). Before: Pass −17.99 = 52% × −23.40 (draws not lands) + 48% × −12.18 (lands: a
+  Mountain, Heartstring Puller on turn 14); Jace −1 −18.09, the same two lines 0.10 lower (loyalty 1). After:
+  Jace −1 **−15.19** = 26% × −23.50 + 74% × −12.28; Pass's best line is the same surveil after combat, −15.19.
+- **The suite, first cut** (the look moving every draw of the look-ahead): 10 of 288 changed, 19 802.0 engine steps
+  a position, oracle 76.4%, score given up 0.93. One was wrong - `White-Blue Jace vs Red-Green seed 2, move 60`, a
+  token at loyalty 6: Jace −1 9.55 (84% × 10.63 + 16% × 3.75; 41% lands before the look) over Jace −3 9.02 (59% ×
+  12.81 + 41% × 3.51).
+- **The suite, as built** (the move divided by the cards leaving our library in the not-lands rollout): **9 of 288
+  changed (3.1%)**, 19 805.8 engine steps a position (19 883.7 committed), 40.6 rollouts, **oracle 77.1%** (76.0%
+  committed), **score given up 0.76** (0.81), misses a win 4. The nine: the token's −1 where it passed (3), before
+  a land (2) or before a cast (1); Koth attacks where he stayed home (47.07 against 45.19 - the attack line
+  surveils for a land after it); Fatehold Charm on a Cadet token where it passed (−108.45 against −108.84); Jace −2
+  → Protege's Awakening (not read).
+- **What the looks look for** (the first cut's 8 token surveils, read with Explain): 6 look for NOT a land (lands
+  37-50% → 13-24%) - an unknown card held is priced at the average spell, a land past the ones needed at nothing -
+  and 2 for a land. In two of the eight the two ways are a won and a lost game (9046 / −8553) and the look moves
+  24-27 points of share between them - the look-ahead taken at its word, as `PatrolRacesIntoDrain` was.
+- **Dominion Assault Force** (`DominionExilesOwnCard` #127, `DominionExilesTheirCard` #294): with `SurveilPrice`
+  off it surveils all the same - the flat third of a card is no longer what finds it.
+
