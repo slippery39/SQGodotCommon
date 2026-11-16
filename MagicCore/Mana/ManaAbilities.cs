@@ -162,6 +162,47 @@ public static class ManaAbilities
 		return found;
 	}
 
+	/// <summary>
+	/// Urza, Lord High Artificer: "Tap an untapped artifact you control: Add {U}." — this player's mana abilities whose
+	/// one cost taps ANOTHER permanent (TapUntappedCost) and whose mana may pay for this. The payment taps what their
+	/// filter matches, as convoke's creature (ManaPayment.Find) — never a move: a {T} it isn't, so summoning sickness
+	/// doesn't matter. ponytail: one mana each (Amount isn't read), and the colour it makes is paid as the tapped
+	/// permanent's own (PayAsUsed: a Talisman's damage, its activation event — convoke's too); tapping by hand can't
+	/// use it (TapOptions). Read Amount and pay as the holder when a card needs it.
+	/// </summary>
+	public static List<(
+		Card Holder,
+		ManaAbilityComponent Ability,
+		TapUntappedCost Cost
+	)> TappingAnother(GameState s, int playerId, (Card? Spell, Card? AbilitySource) paying)
+	{
+		List<(Card, ManaAbilityComponent, TapUntappedCost)> found = [];
+		foreach (var holder in s.CardsIn(playerId, ZoneType.Battlefield))
+		foreach (var m in AbilitiesOf(s, holder))
+			if (
+				m is { Cost: null, Costs: [TapUntappedCost { Count: 1 } cost] }
+				&& Pays(s, m, paying)
+			)
+				found.Add((holder, m, cost));
+		return found;
+	}
+
+	/// <summary>What tapping it for another permanent's ability pays (TappingAnother), or null.</summary>
+	public static ImmutableArray<ManaColor>? TappedFor(
+		GameState s,
+		Card card,
+		List<(Card Holder, ManaAbilityComponent Ability, TapUntappedCost Cost)> rules
+	)
+	{
+		if (card.IsTapped || rules.Count == 0)
+			return null;
+		ImmutableArray<ManaColor>? colors = null;
+		foreach (var (holder, m, cost) in rules)
+			if (cost.Filter.Matches(s, card, new(holder.ControllerId, holder.Id)))
+				colors = [.. (colors ?? []).Union(m.AnyOneColor ? AnyColor : [m.Color])];
+		return colors;
+	}
+
 	/// <summary>Plains, Island, Swamp, Mountain, Forest — domain counts these.</summary>
 	public static bool IsBasicLandType(string subtype) => BasicLandColor(subtype) is not null;
 

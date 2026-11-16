@@ -283,7 +283,7 @@ public enum Stat
 /// P/T, through s.Power / s.Toughness — a noncreature has 0, so add Is.Creature where the text says it.
 /// A bound may be counted (an int converts): Omnipresence's "less than or equal to the number of
 /// creatures you control", Sisay's "less than Sisay's power" — counted as it is asked, with the filter's
-/// controller and source (X reads 0 here).
+/// controller and source (X is the source's: Thieving Skydiver).
 /// </summary>
 public sealed record StatBetween(Stat Stat, Effects.Count Min, Effects.Count Max) : Filter
 {
@@ -320,7 +320,24 @@ public sealed record StatBetween(Stat Stat, Effects.Count Min, Effects.Count Max
 						c.Controller
 					)
 					.Add(Effects.ContextKeys.Source, c.Source)
+					// Thieving Skydiver: "target artifact with mana value X or less" — the source's X, on the stack
+					// or as it was cast (CR 107.3m)
+					.Add(
+						Effects.ContextKeys.X,
+						bound.Kind == Effects.CountOf.X ? XOf(s, c.Source) : 0
+					)
 		);
+
+	/// <summary>
+	/// The source's X: on the stack its OnStackComponent.X, on the battlefield the X it was cast for (CR 107.3m).
+	/// ponytail: a SPELL's own target filter is judged in the hand as it is cast, where X reads 0, and an "{X}, {T}:"
+	/// ability's filter reads the permanent's cast X, not the X paid — thread the action's X through FilterContext
+	/// when such a card is scripted (DesignNotes).
+	/// </summary>
+	static int XOf(GameState s, int sourceId) =>
+		sourceId != 0 && s.HasObject(sourceId) && s.GetObject(sourceId) is Cards.Card source
+			? source.GetComponent<Actions.OnStackComponent>()?.X ?? source.CastX
+			: 0;
 }
 
 /// <summary>The yes/no properties HasProperty reads — one per property, never per combination.</summary>

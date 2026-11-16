@@ -225,7 +225,11 @@ public static class MagicRules
 		bool onlyFree
 	)
 	{
-		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
+		// Thieving Skydiver: "Kicker {X}" — the kicked cast chooses X ("X can't be 0" is ValidateAdd's), free or not.
+		var kickerX = CastSpellAction.XInKicker(card, kicked);
+		var maxX = CastSpellAction.ChoosesX(card, kicked)
+			? AvailableMana(s, player, s.Has(card, "Convoke"), card)
+			: 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> ChoicesFor(int x) =>
 			(text?.Choose ?? 1)
@@ -264,7 +268,11 @@ public static class MagicRules
 		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
 		IEnumerable<(int x, bool free)> payments = onlyFree
 			? [(x: 0, free: true)]
-			: Enumerable.Range(0, maxX + 1).Select(x => (x, free: free is not null && x == 0));
+			: Enumerable
+				.Range(0, maxX + 1)
+				.Select(x => (x, free: free is not null && (x == 0 || kickerX)));
+		// Gitaxian Probe: "{U/P}" — one cast per number of Phyrexian symbols paid with 2 life (ValidateAdd's life check)
+		var lives = Enumerable.Range(0, card.ManaCost.PhyrexianCount + 1);
 		// Replicate: one cast per number of payments, bounded loosely like X — ValidateAdd's payment decides.
 		var maxReplicate = card.GetComponent<ReplicateComponent>() is { } replicate
 			? Math.Max(
@@ -284,24 +292,29 @@ public static class MagicRules
 							beholds.SelectMany(beheld =>
 								returns.SelectMany(returned =>
 									exiles.SelectMany(exiled =>
-										(once ?? (payment.x > 0 ? unchosen : atZero)).Select(
-											c => new CastSpellAction
-											{
-												PlayerId = player,
-												CardId = card.Id,
-												X = payment.x,
-												WithoutPayingManaCost = payment.free,
-												Targets = c.targets,
-												Modes = c.modes,
-												SacrificeId = sacrifice,
-												DiscardId = discard,
-												BeholdId = beheld,
-												ReturnId = returned,
-												ExileId = exiled,
-												Replicate = replicates,
-												Kicked = kicked,
-												ChoosesTargets = divided || (perX && payment.x > 0),
-											}
+										(once ?? (payment.x > 0 ? unchosen : atZero)).SelectMany(
+											c =>
+												(
+													payment.free ? Enumerable.Repeat(0, 1) : lives
+												).Select(life => new CastSpellAction
+												{
+													LifeForPhyrexian = life,
+													PlayerId = player,
+													CardId = card.Id,
+													X = payment.x,
+													WithoutPayingManaCost = payment.free,
+													Targets = c.targets,
+													Modes = c.modes,
+													SacrificeId = sacrifice,
+													DiscardId = discard,
+													BeholdId = beheld,
+													ReturnId = returned,
+													ExileId = exiled,
+													Replicate = replicates,
+													Kicked = kicked,
+													ChoosesTargets =
+														divided || (perX && payment.x > 0),
+												})
 										)
 									)
 								)
@@ -454,33 +467,41 @@ public static class MagicRules
 	///
 	/// ponytail: a lock on mana abilities (Sen Triplets, Clarion Conqueror) isn't asked — an X its sources would
 	/// have paid is tried and refused by the cast. Ask Combat.Stopped here if it shows (DesignNotes).
-	static int AvailableMana(GameState s, int player, bool convoke, Card spell) =>
-		s.GetPlayer(player).ManaPool.Total
-		+ s.GetPlayer(player)
-			.ManaPool.Restricted.Count(r => ManaAbilities.Allows(r.Restriction, s, spell))
-		+ s.CardsIn(player, ZoneType.Battlefield)
-			.Sum(c =>
-				// Delighted Halfling: its {C} for a nonlegendary spell, its colours for a legendary one
-				(ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c, (spell, null)) : null)
-					is { } yield
-				&& yield.CanPayFor(s, spell)
-					? yield.Units.Length
-				: convoke && c.Is(CardType.Creature) && !c.IsTapped ? 1
-				: 0
-			)
-		// Starfleet Academy's "{5}, {T}: add N" — its N on top, still an upper bound (ManaPayment.WithCostlyMana)
-		+ s.CardsIn(player, ZoneType.Battlefield)
-			.Where(c => ManaAbilities.CanPayTapCost(s, c))
-			.Sum(c =>
-				ManaAbilities
-					.AbilitiesOf(s, c)
-					.Where(m => m.Cost is not null && !m.ChoosesCost)
-					.Sum(m => Math.Max(0, m.Amount.Value(s, Conditions.Of(c))))
-			)
-		// Spirit Guides: mana from the hand
-		+ ManaAbilities
-			.FromHand(s, player, spell, null)
-			.Sum(h => Math.Max(0, h.Ability.Amount.Value(s, Conditions.Of(h.Card))));
+	static int AvailableMana(GameState s, int player, bool convoke, Card spell)
+	{
+		var tappingAnother = ManaAbilities.TappingAnother(s, player, (spell, null)); // Urza's: an untapped artifact is one more
+		return s.GetPlayer(player).ManaPool.Total
+			+ s.GetPlayer(player)
+				.ManaPool.Restricted.Count(r => ManaAbilities.Allows(r.Restriction, s, spell))
+			+ s.CardsIn(player, ZoneType.Battlefield)
+				.Sum(c =>
+					// Delighted Halfling: its {C} for a nonlegendary spell, its colours for a legendary one
+					(
+						ManaAbilities.CanTap(s, c)
+							? ManaAbilities.YieldOf(s, c, (spell, null))
+							: null
+					)
+						is { } yield
+					&& yield.CanPayFor(s, spell)
+						? yield.Units.Length
+					: convoke && c.Is(CardType.Creature) && !c.IsTapped ? 1
+					: ManaAbilities.TappedFor(s, c, tappingAnother) is not null ? 1
+					: 0
+				)
+			// Starfleet Academy's "{5}, {T}: add N" — its N on top, still an upper bound (ManaPayment.WithCostlyMana)
+			+ s.CardsIn(player, ZoneType.Battlefield)
+				.Where(c => ManaAbilities.CanPayTapCost(s, c))
+				.Sum(c =>
+					ManaAbilities
+						.AbilitiesOf(s, c)
+						.Where(m => m.Cost is not null && !m.ChoosesCost)
+						.Sum(m => Math.Max(0, m.Amount.Value(s, Conditions.Of(c))))
+				)
+			// Spirit Guides: mana from the hand
+			+ ManaAbilities
+				.FromHand(s, player, spell, null)
+				.Sum(h => Math.Max(0, h.Ability.Amount.Value(s, Conditions.Of(h.Card))));
+	}
 
 	/// <summary>
 	/// Passes for whoever must act while passing is their ONLY legal action — Arena's auto-pass,
@@ -656,7 +677,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}", // a beamed-up creature, kicked, an exiled card, only when chosen: older keys stay byte-identical
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>

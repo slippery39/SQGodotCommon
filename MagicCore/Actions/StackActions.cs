@@ -114,6 +114,12 @@ public record CastSpellAction : GameAction
 	public bool Kicked { get; init; }
 
 	/// <summary>
+	/// Gitaxian Probe: "{U/P}" — how many of the Phyrexian symbols are paid with 2 life each (CR 107.4f), one legal
+	/// cast per number, as an activation's (ActivateAbilityAction.LifeForPhyrexian); the rest are paid with their colour.
+	/// </summary>
+	public int LifeForPhyrexian { get; init; }
+
+	/// <summary>
 	/// Cast by an effect as it resolves (CastNow — Chandra, Uldaros): no priority, no timing, and the
 	/// effect is the permission to cast it from where it is (and, free, to skip its mana cost). Every
 	/// other rule — targets, modes, X, additional costs, "can't cast unless", payment — still applies.
@@ -203,7 +209,18 @@ public record CastSpellAction : GameAction
 	/// the kicker's, the replicate cost's each time (Lose Focus' {U}), and what is paid instead of the mana
 	/// cost (Baleful Mastery's {1}{B}).
 	/// </summary>
-	ManaCost CostToPay(GameState s, Card card)
+	ManaCost CostToPay(GameState s, Card card) =>
+		CostBeforeLife(s, card).PayingLifeFor(LifeForPhyrexian);
+
+	/// <summary>Thieving Skydiver: "Kicker {X}" — X is chosen only by a cast whose cost or kicker has one.</summary>
+	public static bool ChoosesX(Card card, bool kicked) =>
+		card.ManaCost.HasX || XInKicker(card, kicked);
+
+	/// <summary>The X is the kicker's — an additional cost, so a cast without paying the mana cost still chooses it.</summary>
+	public static bool XInKicker(Card card, bool kicked) =>
+		kicked && card.GetComponent<KickerComponent>()?.Mana.HasX == true;
+
+	ManaCost CostBeforeLife(GameState s, Card card)
 	{
 		var added = Kicked ? card.GetComponent<KickerComponent>()?.Mana : null;
 		if (
@@ -282,8 +299,24 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Lands are played, not cast");
 		if (!DuringResolution && !CanCastNow(s, card))
 			return ValidationResult.Invalid("Sorcery speed: your main phase with an empty stack");
-		if (X < 0 || (X > 0 && (!card.ManaCost.HasX || WithoutPayingManaCost)))
+		if (
+			X < 0
+			|| (
+				X > 0
+				&& (!ChoosesX(card, Kicked) || WithoutPayingManaCost && !XInKicker(card, Kicked))
+			)
+			|| (Kicked && X < (card.GetComponent<KickerComponent>()?.MinX ?? 0)) // "X can't be 0"
+		)
 			return ValidationResult.Invalid("Invalid X");
+		if (
+			LifeForPhyrexian != 0
+			&& (
+				LifeForPhyrexian < 0
+				|| LifeForPhyrexian > CostBeforeLife(s, card).PhyrexianCount
+				|| !MagicCore.Rules.Life.CanPay(s, PlayerId, 2 * LifeForPhyrexian) // CR 119.4
+			)
+		)
+			return ValidationResult.Invalid("Can't pay that much life for its Phyrexian mana");
 		if (Replicate < 0 || (Replicate > 0 && !card.HasComponent<ReplicateComponent>()))
 			return ValidationResult.Invalid("It has no replicate cost");
 		if (
@@ -360,7 +393,8 @@ public record CastSpellAction : GameAction
 			WithoutPayingManaCost
 			&& !DuringResolution
 			&& Playable.FreeCast(s, card, PlayerId) is { } freeCast
-			&& freeCast.What.Equals(Filters.Is.Source);
+			&& freeCast.What.Equals(Filters.Is.Source)
+			&& card.Components.Contains(freeCast); // the card's own — never Urza's free mark (Baleful Mastery)
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
 		var permission = from is ZoneType.Library or ZoneType.Graveyard or ZoneType.Sideboard
@@ -378,6 +412,7 @@ public record CastSpellAction : GameAction
 		var payment = FindPayment(s, card, costs, mostColors: sunburst)!;
 		var uncounterable = ManaPayment.MakesUncounterable(s, PlayerId, payment);
 		s = ManaPayment.Pay(s, PlayerId, payment);
+		s = MagicCore.Rules.Life.Lose(s, PlayerId, 2 * LifeForPhyrexian);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
@@ -899,6 +934,7 @@ public static class StackResolution
 									|| cast?.Finality == true
 								), // "it enters with a finality counter on it"
 							Gains = cast?.Gains,
+							Kicked = cast?.Kicked == true,
 							Sunburst = permanent.HasComponent<Sunburst>()
 								? cast?.ColorsSpent ?? 0
 								: 0,
@@ -1176,6 +1212,9 @@ public record EnterFromStackAction(int CardId, int ControllerId, int X, int Atta
 	/// <summary>Serra Paragon: the triggered ability it gains as it enters (OnStackComponent.Gains).</summary>
 	public TriggeredAbilityComponent? Gains { get; init; }
 
+	/// <summary>Thieving Skydiver: "if it was kicked" — carried onto the permanent (Card.CastKicked).</summary>
+	public bool Kicked { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.EnterBattlefield(
@@ -1186,7 +1225,8 @@ public record EnterFromStackAction(int CardId, int ControllerId, int X, int Atta
 				attachTo: AttachTo,
 				cast: Cast,
 				sunburst: Sunburst,
-				gains: Gains
+				gains: Gains,
+				kicked: Kicked
 			)
 		);
 }

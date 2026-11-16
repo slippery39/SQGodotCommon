@@ -598,7 +598,7 @@ public static class LsvCards
 							new May(
 								"Attach Cori-Steel Cutter to the Monk?",
 								new Always(),
-								[new AttachSourceTo(Ref.ThisWay)]
+								[new Attach(Ref.Source, Ref.ThisWay)]
 							),
 						],
 					}
@@ -1103,7 +1103,7 @@ public static class LsvCards
 				When(
 					TriggerEvent.SelfEnters,
 					[],
-					new CreateTokens(Rebel, 1) { Then = [new AttachSourceTo(Ref.ThisWay)] }
+					new CreateTokens(Rebel, 1) { Then = [new Attach(Ref.Source, Ref.ThisWay)] }
 				),
 				When(
 					TriggerEvent.AttachedCreatureAttacks with
@@ -1582,6 +1582,81 @@ public static class LsvCards
 					new If(new YourLibraryIsEmpty(), [new WinTheGame()])
 				),
 			],
+			// ===== MC-4.4e2c: blue's options, mana and costs =====
+			["Gitaxian Probe"] =
+			[
+				Spell(
+					[TargetSpec.Player()],
+					new LookAtHand(Ref.Target()),
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Phyrexian Metamorph"] =
+			[
+				new MayEnterAsCopy
+				{
+					Of = Is.Artifact | Is.Creature,
+					AlsoType = CardType.Artifact,
+					Optional = true,
+				},
+			],
+			["Urza, Lord High Artificer"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new CreateTokens(Construct, 1)
+					{
+						Abilities =
+						[
+							new StaticEffectComponent(Is.Source)
+							{
+								Power = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+								Toughness = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+							},
+						],
+					}
+				),
+				new ManaAbilityComponent(ManaColor.Blue)
+				{
+					Costs = [new TapUntappedCost(1, Is.Artifact & Is.Yours)],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}"),
+					[
+						new ExileTopPlayable
+						{
+							ShuffleFirst = true,
+							Play = new() { ThisTurn = true, Free = true },
+						},
+					]
+				),
+			],
+			["Forensic Gadgeteer"] =
+			[
+				When(
+					new Trigger(EventKind.SpellCast) { By = Whose.You, Subject = Is.Artifact },
+					[],
+					CreateClue(1)
+				),
+				new CostChange(-1, Is.Artifact & Is.Yours) { Abilities = true, Floor = 1 },
+			],
+			["Thieving Skydiver"] =
+			[
+				new KickerComponent(ManaCost.Parse("{X}")) { MinX = 1 },
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Artifact & Is.ManaValueAtMost(Count.X))],
+					new GainControl(Ref.Target(), Ref.You),
+					new If(
+						new Matches(Ref.Target(0), Is.Subtype("Equipment")),
+						[new Attach(Ref.Target(), Ref.Source)]
+					)
+				) with
+				{
+					If = new WasKicked(),
+				},
+			],
 		};
 
 	/// <summary>
@@ -1644,6 +1719,9 @@ public static class LsvCards
 
 	/// <summary>Seasoned Pyromancer: "a 1/1 red Elemental creature token".</summary>
 	static CardData Elemental => Token("Elemental", "Creature — Elemental", "1", "1", ["R"]);
+
+	/// <summary>Urza, Lord High Artificer: "a 0/0 colorless Construct artifact creature token".</summary>
+	static CardData Construct => Token("Construct", "Artifact Creature — Construct", "0", "0");
 
 	/// <summary>Legion Extruder: "a 3/3 colorless Golem artifact creature token".</summary>
 	static CardData Golem => Token("Golem", "Artifact Creature — Golem", "3", "3");

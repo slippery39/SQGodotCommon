@@ -63,6 +63,8 @@ public static class Costs
 	{
 		var source = s.GetCard(sourceId);
 		var delta = 0;
+		var floored = 0; // Forensic Gadgeteer: reductions with a floor, applied last
+		var floor = 0;
 		if (ability.CostChange is { } change)
 		{
 			var context = Conditions
@@ -80,9 +82,19 @@ public static class Costs
 					tax.Abilities
 					&& Conditions.Of(permanent) is var asItsHolder
 					&& Applies(s, tax, source, asItsHolder)
+					&& tax.Amount.Value(s, asItsHolder) is var amount
 				)
-					delta += tax.Amount.Value(s, asItsHolder);
-		return delta == 0 ? ability.Cost : ability.Cost.WithGeneric(delta);
+				{
+					if (tax.Floor > 0 && amount < 0)
+						(floored, floor) = (floored + amount, Math.Max(floor, tax.Floor));
+					else
+						delta += amount;
+				}
+		var cost = delta == 0 ? ability.Cost : ability.Cost.WithGeneric(delta);
+		// "can't reduce the mana in that cost to less than one mana" — nor raise a cost already below it
+		return floored == 0
+			? cost
+			: cost.WithGeneric(Math.Max(floored, Math.Min(0, floor - cost.ManaValue)));
 	}
 
 	/// <param name="addedGeneric">

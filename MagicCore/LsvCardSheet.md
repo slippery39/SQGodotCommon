@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 25/46 · uncommon 38/86 · rare 98/279 · mythic 33/108 · **203/528**
+**Playable:** common 26/46 · uncommon 38/86 · rare 101/279 · mythic 34/108 · **208/528**
 
 ### "Name Sticker" Goblin
 
@@ -356,7 +356,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Look at target player's hand.  
 > Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `LookAtHand` — V'Ger, the Intruder: "Look at target opponent's hand" — every card in it becomes known…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Gitaxian Probe"] =
+[
+	Spell(
+		[TargetSpec.Player()],
+		new LookAtHand(Ref.Target()),
+		new DrawCards(Ref.You, 1)
+	),
+],
+```
 
 ### Llanowar Elves
 
@@ -1229,7 +1242,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}, Sacrifice this artifact: Add one mana of any color.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests
 
 ```csharp
 ["Lotus Petal"] = [SacrificeForMana(1)],
@@ -2045,7 +2058,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If the {1}{B} cost was paid, an opponent draws a card.  
 > Exile target creature or planeswalker.
 
-**Status:** scripted · **tests naming it:** LsvBatch2Tests
+**Status:** scripted · **tests naming it:** LsvBatch2Tests, LsvBatch2eTests
 
 **Engine pieces:** `AlternativeCostWasPaid` — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -2545,7 +2558,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2c2Tests
 
-**Engine pieces:** `Always` — A "you may" that can always be done.; `AttachSourceTo` — Equip: "Attach to target creature you control." This Equipment, to the target.; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `Always` — A "you may" that can always be done.; `Attach` — Equip: "Attach to target creature you control." — this Equipment (What = Ref.Source) to…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Cori-Steel Cutter"] =
@@ -2568,7 +2581,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 				new May(
 					"Attach Cori-Steel Cutter to the Monk?",
 					new Always(),
-					[new AttachSourceTo(Ref.ThisWay)]
+					[new Attach(Ref.Source, Ref.ThisWay)]
 				),
 			],
 		}
@@ -3153,7 +3166,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you cast an artifact spell, investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")  
 > Activated abilities of artifacts you control cost {1} less to activate. This effect can't reduce the mana in that cost to less than one mana.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Forensic Gadgeteer"] =
+[
+	When(
+		new Trigger(EventKind.SpellCast) { By = Whose.You, Subject = Is.Artifact },
+		[],
+		CreateClue(1)
+	),
+	new CostChange(-1, Is.Artifact & Is.Yours) { Abilities = true, Floor = 1 },
+],
+```
 
 ### Formidable Speaker
 
@@ -3260,7 +3287,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2dTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `AttachSourceTo` — Equip: "Attach to target creature you control." This Equipment, to the target.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Attach` — Equip: "Attach to target creature you control." — this Equipment (What = Ref.Source) to…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Glimmer Lens"] =
@@ -3269,7 +3296,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.SelfEnters,
 		[],
-		new CreateTokens(Rebel, 1) { Then = [new AttachSourceTo(Ref.ThisWay)] }
+		new CreateTokens(Rebel, 1) { Then = [new Attach(Ref.Source, Ref.ThisWay)] }
 	),
 	When(
 		TriggerEvent.AttachedCreatureAttacks with
@@ -4223,7 +4250,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({U/P} can be paid with either {U} or 2 life.)  
 > You may have this creature enter as a copy of any artifact or creature on the battlefield, except it's an artifact in addition to its other types.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `MayEnterAsCopy` — Flesh Duplicate: "You may have this creature enter as a copy of any creature on the…
+
+```csharp
+["Phyrexian Metamorph"] =
+[
+	new MayEnterAsCopy
+	{
+		Of = Is.Artifact | Is.Creature,
+		AlsoType = CardType.Artifact,
+		Optional = true,
+	},
+],
+```
 
 ### Pillage the Bog
 
@@ -5208,7 +5249,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > When this creature enters, if it was kicked, gain control of target artifact with mana value X or less. If that artifact is an Equipment, attach it to this creature.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Attach` — Equip: "Attach to target creature you control." — this Equipment (What = Ref.Source) to…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `KickerComponent` — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U}…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
+
+```csharp
+["Thieving Skydiver"] =
+[
+	new KickerComponent(ManaCost.Parse("{X}")) { MinX = 1 },
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Artifact & Is.ManaValueAtMost(Count.X))],
+		new GainControl(Ref.Target(), Ref.You),
+		new If(
+			new Matches(Ref.Target(0), Is.Subtype("Equipment")),
+			[new Attach(Ref.Target(), Ref.Source)]
+		)
+	) with
+	{
+		If = new WasKicked(),
+	},
+],
+```
 
 ### Thoughtseize
 
@@ -7367,7 +7429,44 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Tap an untapped artifact you control: Add {U}.  
 > {5}: Shuffle your library, then exile the top card. Until end of turn, you may play that card without paying its mana cost.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `TapUntappedCost` — Tenured Tethermage: "Tap two untapped artifacts you control:" — tapping for a cost isn't…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Urza, Lord High Artificer"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new CreateTokens(Construct, 1)
+		{
+			Abilities =
+			[
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+					Toughness = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+				},
+			],
+		}
+	),
+	new ManaAbilityComponent(ManaColor.Blue)
+	{
+		Costs = [new TapUntappedCost(1, Is.Artifact & Is.Yours)],
+	},
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{5}"),
+		[
+			new ExileTopPlayable
+			{
+				ShuffleFirst = true,
+				Play = new() { ThisTurn = true, Free = true },
+			},
+		]
+	),
+],
+```
 
 ### Vampiric Tutor
 

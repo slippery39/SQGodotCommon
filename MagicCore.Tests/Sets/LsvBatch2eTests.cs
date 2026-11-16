@@ -858,4 +858,282 @@ public class LsvBatch2eTests : FraBoardTest
 		Assert.That(HandCount(me) - mine, Nu.EqualTo(7), "each of the seven had a card to draw");
 		Assert.That(s.IsOver() && s.WinnerId() == me, Nu.EqualTo(wins));
 	}
+
+	// ===== MC-4.4e2c: blue's options, mana and costs =====
+
+	/// <summary>TEST SETUP: every land of mine tapped — what pays is the rest of the board.</summary>
+	void TapMyLands()
+	{
+		foreach (
+			var land in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)).ToList()
+		)
+			TapIt(land.Id);
+	}
+
+	bool KnownToMe(int theirCard) =>
+		(s.GetCard(theirCard).KnownTo & Knowers.Opponent) == Knowers.Opponent;
+
+	[Test]
+	public void GitaxianProbe_UPaidWithTwoLife_LookAtTargetPlayersHand_DrawACard()
+	{
+		var probe = Hand(Lsv("Gitaxian Probe"), me);
+		var secret = Hand(Bear, them);
+		Assert.That(
+			Casts(probe).Select(c => (c.Targets[0], c.LifeForPhyrexian)),
+			Nu.EquivalentTo(new[] { (me, 0), (me, 1), (them, 0), (them, 1) }),
+			"one cast per target and number of {U/P} paid with life"
+		);
+		Assert.That(
+			s.DistinctMoves(s.LegalActions())
+				.OfType<CastSpellAction>()
+				.Count(c => c.CardId == probe),
+			Nu.EqualTo(4),
+			"the AI tells them apart (MoveKey)"
+		);
+		var (lands, life, hand) = (UntappedLands(), Life(me), HandCount(me));
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = probe,
+				Targets = [them],
+				LifeForPhyrexian = 1,
+			}
+		);
+		Resolve();
+		Assert.That(Life(me), Nu.EqualTo(life - 2), "{U/P} paid with 2 life");
+		Assert.That(UntappedLands(), Nu.EqualTo(lands), "no mana");
+		Assert.That(HandCount(me), Nu.EqualTo(hand), "the Probe left, a card was drawn");
+		Assert.That(KnownToMe(secret), "look at target player's hand");
+	}
+
+	[Test]
+	public void GitaxianProbe_UPaidWithBlue_AndNoLifeOptionWithoutTwoLife()
+	{
+		var probe = Hand(Lsv("Gitaxian Probe"), me);
+		var (lands, life) = (UntappedLands(), Life(me));
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = probe,
+				Targets = [them],
+			}
+		);
+		Resolve();
+		Assert.That((Life(me), UntappedLands()), Nu.EqualTo((life, lands - 1)));
+		var again = Hand(Lsv("Gitaxian Probe"), me);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 1 });
+		Assert.That(Casts(again).Select(c => c.LifeForPhyrexian), Nu.All.EqualTo(0));
+	}
+
+	[Test]
+	public void PhyrexianMetamorph_EntersAsACopy_AnArtifactInAddition()
+	{
+		var bear = Field(Bear, them);
+		var trinket = Field(TestCards.Trinket, them);
+		var metamorph = Hand(Lsv("Phyrexian Metamorph"), me);
+		Assert.That(
+			Casts(metamorph).Select(c => c.LifeForPhyrexian),
+			Nu.EquivalentTo(new[] { 0, 1 })
+		);
+		var life = Life(me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = metamorph,
+				LifeForPhyrexian = 1,
+			}
+		);
+		var asked = ResolveAsking(On<ChooseCreatureToCopyChoice>(bear));
+		Assert.That(
+			Offered<ChooseCreatureToCopyChoice>(asked),
+			Nu.SupersetOf(new[] { bear, trinket }),
+			"any artifact or creature"
+		);
+		var copy = s.GetCard(metamorph);
+		Assert.That(copy.Name, Nu.EqualTo("Bear"));
+		Assert.That(
+			copy.Is(CardType.Artifact) && copy.Is(CardType.Creature),
+			"an artifact in addition"
+		);
+		Assert.That(Life(me), Nu.EqualTo(life - 2));
+	}
+
+	[Test]
+	public void Urza_EntersWithAConstruct_PlusOnePerArtifactYouControl()
+	{
+		Field(TestCards.Trinket, me);
+		Field(TestCards.Trinket, them);
+		Cast(Hand(Lsv("Urza, Lord High Artificer"), me), []);
+		var construct = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Construct");
+		Assert.That(construct.Is(CardType.Artifact) && construct.Is(CardType.Creature));
+		Assert.That(
+			(s.Power(construct), s.Toughness(construct)),
+			Nu.EqualTo((2, 2)),
+			"the Trinket and itself"
+		);
+	}
+
+	[TestCase(2, true)]
+	[TestCase(1, false)]
+	public void Urza_TapAnUntappedArtifactYouControl_AddU(int artifacts, bool castable)
+	{
+		var urza = Field(Lsv("Urza, Lord High Artificer"), me);
+		var tapped = Enumerable
+			.Range(0, artifacts)
+			.Select(_ => Field(TestCards.Trinket, me))
+			.ToList();
+		TapMyLands();
+		var spell = Hand(TestGames.Inline("Twin Sorcery", "{U}{U}", "Sorcery"), me);
+		Assert.That(s.LegalActions().OfType<TapForManaAction>(), Nu.Empty, "no move per artifact");
+		Assert.That(Casts(spell).Any(), Nu.EqualTo(castable));
+		if (!castable)
+			return;
+		Cast(spell, []);
+		Assert.That(tapped.All(id => s.GetCard(id).IsTapped), "each artifact tapped for a {U}");
+		Assert.That(s.GetCard(urza).IsTapped, Nu.False, "Urza himself isn't tapped");
+	}
+
+	[Test]
+	public void Urza_Five_ShuffleExileTheTop_PlayItFreeThisTurn()
+	{
+		var urza = Field(Lsv("Urza, Lord High Artificer"), me);
+		var big = OnTop(TestGames.Inline("Big Sorcery", "{7}", "Sorcery"), me);
+		LibraryOf(1);
+		s = s.Act(Activations(urza).Single());
+		Resolve();
+		Assert.That(s.IsIn(big, me, ZoneType.Exile));
+		var casts = Casts(big).ToList();
+		Assert.That(casts, Nu.Not.Empty);
+		Assert.That(casts.All(c => c.WithoutPayingManaCost), "without paying its mana cost");
+		var lands = UntappedLands();
+		s = s.Act(casts[0]);
+		Resolve();
+		Assert.That(s.IsIn(big, me, ZoneType.Graveyard));
+		Assert.That(UntappedLands(), Nu.EqualTo(lands));
+	}
+
+	[Test]
+	public void Urza_ALotusPetalBesideHimIsStillSacrificedForAnyColour()
+	{
+		Field(Lsv("Urza, Lord High Artificer"), me);
+		Field(Lsv("Lotus Petal"), me);
+		TapMyLands();
+		Assert.That(
+			Casts(Hand(TestGames.Inline("Red Sorcery", "{R}", "Sorcery"), me)),
+			Nu.Not.Empty
+		);
+	}
+
+	/// <summary>Urza's {5} activated with only this card in my library — it is exiled, free this turn.</summary>
+	int UrzaExiles(CardDefinition card)
+	{
+		var urza = Field(Lsv("Urza, Lord High Artificer"), me);
+		LibraryOf(0);
+		var id = Put(card, me, ZoneType.Library);
+		s = s.Act(Activations(urza).Single());
+		Resolve();
+		return id;
+	}
+
+	[Test]
+	public void Urza_AFreeCastFromHisExileIsNoAlternativeCostOfTheCards()
+	{
+		var bear = Field(Bear, them);
+		var mastery = UrzaExiles(Lsv("Baleful Mastery"));
+		var hand = HandCount(them);
+		s = s.Act(Casts(mastery).Single(c => c.Targets.Contains(bear)));
+		Resolve();
+		Assert.That(Alive(bear), Nu.False);
+		Assert.That(HandCount(them), Nu.EqualTo(hand), "the {1}{B} wasn't paid: no card for them");
+	}
+
+	[Test]
+	public void ThievingSkydiver_CastFreeFromUrzasExile_CanStillBeKickedForX()
+	{
+		var diver = UrzaExiles(Lsv("Thieving Skydiver"));
+		Assert.That(
+			Casts(diver).Any(c => c is { Kicked: true, WithoutPayingManaCost: true, X: 1 }),
+			"kicker {X} is an additional cost"
+		);
+	}
+
+	[TestCase(1)]
+	[TestCase(2)] // two reductions, but never below one mana
+	public void ForensicGadgeteer_AnArtifactSpellInvestigates_ItsAbilitiesCostOneLess(
+		int gadgeteers
+	)
+	{
+		for (var i = 0; i < gadgeteers; i++)
+			Field(Lsv("Forensic Gadgeteer"), me);
+		Cast(Hand(TestCards.Trinket, me), []);
+		var clues = s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Name == "Clue").ToList();
+		Assert.That(clues, Has.Count.EqualTo(gadgeteers), "investigate");
+		var (lands, hand) = (UntappedLands(), HandCount(me));
+		s = s.Act(Activations(clues[0].Id).Single());
+		Resolve();
+		Assert.That(UntappedLands(), Nu.EqualTo(lands - 1), "the Clue's {2} is {1}");
+		Assert.That(HandCount(me), Nu.EqualTo(hand + 1));
+	}
+
+	[Test]
+	public void ThievingSkydiver_KickerX_XCantBeZero()
+	{
+		var diver = Hand(Lsv("Thieving Skydiver"), me);
+		var casts = Casts(diver).ToList();
+		Assert.That(casts.Where(c => !c.Kicked).Select(c => c.X), Nu.EquivalentTo(new[] { 0 }));
+		Assert.That(casts.Where(c => c.Kicked).Select(c => c.X), Has.Member(1).And.No.Member(0));
+		Assert.That(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = diver,
+				Kicked = true,
+			}
+				.ValidateAdd(s)
+				.IsValid,
+			Nu.False,
+			"X can't be 0"
+		);
+	}
+
+	[TestCase(true)]
+	[TestCase(false)]
+	public void ThievingSkydiver_Kicked_GainControlOfAnArtifactOfManaValueXOrLess_AnEquipmentAttached(
+		bool equipment
+	)
+	{
+		var cheap = Field(
+			TestGames.Inline("Blade", "{2}", equipment ? "Artifact — Equipment" : "Artifact"),
+			them
+		);
+		var dear = Field(TestGames.Inline("Relic", "{3}", "Artifact"), them);
+		var diver = Hand(Lsv("Thieving Skydiver"), me);
+		var lands = UntappedLands();
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = diver,
+				Kicked = true,
+				X = 2,
+			}
+		);
+		var asked = ResolveAsking(On<ChooseTargetChoice>(cheap));
+		Assert.That(UntappedLands(), Nu.EqualTo(lands - 4), "{1}{U} and an X of 2");
+		Assert.That(Offered<ChooseTargetChoice>(asked), Has.Member(cheap).And.No.Member(dear));
+		Assert.That(s.IsIn(cheap, me, ZoneType.Battlefield), "gain control of it");
+		Assert.That(s.GetCard(cheap).AttachedToId, Nu.EqualTo(equipment ? diver : 0));
+	}
+
+	[Test]
+	public void ThievingSkydiver_NotKicked_TakesNothing()
+	{
+		var relic = Field(TestGames.Inline("Zero Relic", "{0}", "Artifact"), them); // mana value 0: X is 0 unkicked
+		var asked = CastAsking(Hand(Lsv("Thieving Skydiver"), me), On<ChooseTargetChoice>(relic));
+		Assert.That(asked.OfType<ChooseTargetChoice>(), Nu.Empty);
+		Assert.That(s.IsIn(relic, them, ZoneType.Battlefield));
+	}
 }

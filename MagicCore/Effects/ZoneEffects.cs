@@ -1773,6 +1773,7 @@ public record PlayPermission
 			AnyType = AnyType,
 			If = If,
 			CastOnly = CastOnly,
+			Free = Free,
 		};
 }
 
@@ -2338,14 +2339,19 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 	}
 }
 
-/// <summary>Equip: "Attach to target creature you control." This Equipment, to the target.</summary>
-public record AttachSourceTo(Ref Host) : Effect
+/// <summary>
+/// Equip: "Attach to target creature you control." — this Equipment (What = Ref.Source) to the target; Thieving
+/// Skydiver: "If that artifact is an Equipment, attach it to this creature." — the target to this (To = Ref.Source).
+/// </summary>
+public record Attach(Ref What, Ref To) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var self = Ref.Source.Resolve(s, InputContext).FirstOrDefault();
-		var host = Permanents(Host, s).FirstOrDefault();
-		return new(self == 0 || host is null ? s : Attachments.Attach(s, self, host.Id));
+		var attachment = Permanents(What, s).FirstOrDefault();
+		var host = Permanents(To, s).FirstOrDefault();
+		return new(
+			attachment is null || host is null ? s : Attachments.Attach(s, attachment.Id, host.Id)
+		);
 	}
 }
 

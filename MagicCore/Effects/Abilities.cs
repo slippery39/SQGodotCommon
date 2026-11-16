@@ -40,6 +40,12 @@ public record KickerComponent(ManaCost Mana) : GameComponent
 {
 	/// <summary>Eject the Warp Core: "Kicker—Sacrifice an artifact or creature." — paid only when kicked.</summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
+
+	/// <summary>
+	/// Thieving Skydiver: "Kicker {X}. X can't be 0." — the least X a kicked cast may choose. A kicker with {X} lets the
+	/// kicked cast choose X (CastSpellAction.X), paid as any X and read as it enters (Card.CastX).
+	/// </summary>
+	public int MinX { get; init; }
 }
 
 /// <summary>The named counter kinds (Card.Counters) scripts and rules share.</summary>
@@ -837,6 +843,12 @@ public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComp
 
 	/// <summary>"This spell costs …": read from the card being cast (any zone), not from the battlefield.</summary>
 	public bool OnItself { get; init; }
+
+	/// <summary>
+	/// Forensic Gadgeteer: "This effect can't reduce the mana in that cost to less than one mana." — a reduction never
+	/// takes the cost below Floor mana (nor below what it was): applied after every other change (Costs.OfAbility).
+	/// </summary>
+	public int Floor { get; init; }
 }
 
 /// <summary>
@@ -956,6 +968,12 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 
 	/// <summary>Robber of the Rich: "you may CAST that card" — never a land played.</summary>
 	public bool CastOnly { get; init; }
+
+	/// <summary>
+	/// Urza, Lord High Artificer: "Until end of turn, you may play that card without paying its mana cost." — answered
+	/// by Playable.FreeCast, so the free cast replaces the paid one.
+	/// </summary>
+	public bool Free { get; init; }
 }
 
 /// <summary>
@@ -1384,6 +1402,9 @@ public record MayEnterAsCopy : GameComponent
 
 	/// <summary>Dominion Saboteur: "except it isn't legendary".</summary>
 	public bool NotLegendary { get; init; }
+
+	/// <summary>Phyrexian Metamorph: "except it's an artifact in addition to its other types" — the type added to the copy's.</summary>
+	public Cards.CardType AlsoType { get; init; }
 
 	/// <summary>Dominion Saboteur: "it enters with additional counters on it equal to the same number and kinds of counters the copied permanent has on it".</summary>
 	public bool WithCounters { get; init; }

@@ -160,7 +160,7 @@ public static class Scripting
 
 	/// <summary>"Equip {N} ({N}: Attach to target creature you control. Equip only as a sorcery.)"</summary>
 	public static ActivatedAbilityComponent Equip(string cost) =>
-		new(ManaCost.Parse(cost), [new AttachSourceTo(Ref.Target())])
+		new(ManaCost.Parse(cost), [new Attach(Ref.Source, Ref.Target())])
 		{
 			SorcerySpeed = true,
 			Targets = [Target(Is.Creature & Is.Yours)],

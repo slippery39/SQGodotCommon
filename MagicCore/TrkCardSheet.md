@@ -8509,14 +8509,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Stella Lee, Wild Card"] =
 [
-	When(
-		TriggerEvent.YouCastSpell with
-		{
-			Nth = 2,
-		},
-		[],
-		new ExileTopPlayable()
-	),
+	When(TriggerEvent.YouCastSpell with { Nth = 2 }, [], new ExileTopPlayable()),
 	new ActivatedAbilityComponent(ManaCost.None, [new CopySpell(Ref.Target())])
 	{
 		Costs = [new TapSelfCost()],

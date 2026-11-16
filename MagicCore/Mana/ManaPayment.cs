@@ -201,6 +201,10 @@ public static class ManaPayment
 		var tappable = new List<Tappable>();
 		// Sen Triplets: floating mana and convoke only; Clarion Conqueror: no artifact's or creature's mana
 		var locks = Turns.Combat.Locks(s, playerId);
+		// Urza: "Tap an untapped artifact you control: Add {U}" — what tapping each one for him pays (a lock on him stops it)
+		var tappingAnother = ManaAbilities.TappingAnother(s, playerId, (forSpell, forAbilityOf));
+		// his ability doesn't tap him, so another cost tapping or sacrificing him leaves it (CR 601.2g: activated first)
+		tappingAnother.RemoveAll(r => Turns.Combat.Stopped(locks, s, r.Holder, manaAbility: true));
 		foreach (var c in s.CardsIn(playerId, ZoneType.Battlefield))
 		{
 			// Its own {T} cost, or a permanent another cost sacrifices or taps: not mana for this too.
@@ -222,6 +226,10 @@ public static class ManaPayment
 			if (yield is { Sacrificed: true } && convokes is not null)
 				yield = null; // ponytail: convoking only taps it, so a Sculpture Treasure convokes
 			// rather than being sacrificed for a colour; offer both if that ever matters
+			// Urza's artifacts join them: tapped for another's cost, each pays that ability's colour — after the line
+			// above, so a Lotus or a Treasure keeps its own sacrifice (ponytail: and is sacrificed for his {U} too, DesignNotes).
+			if (ManaAbilities.TappedFor(s, c, tappingAnother) is { } forAnother)
+				convokes = [.. (convokes ?? []).Union(forAnother)];
 			if (yield is not null && convokes is { } own && yield.Units.Length == 1)
 				tappable.Add(
 					(

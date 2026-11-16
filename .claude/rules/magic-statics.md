@@ -52,7 +52,9 @@ whose subsystem it lives in.
   mana through `ManaAbilities.ColorsOf` (a basic land's intrinsic ability included). What the AURA
   says ("doesn't untap", `DoesntUntap(Is.AttachedToSource)`) is the Aura's, so it still applies — unless the AURA
   loses its abilities (read with `AbilitiesOf` on the holder, MC-6.15). No timestamps: everything goes.
-- **Auras and Equipment are one mechanism** (`Card.AttachedToId`, Rules/Attachments.cs). An Aura targets
+- **Auras and Equipment are one mechanism** (`Card.AttachedToId`, Rules/Attachments.cs). "Attach" is ONE effect,
+  `Attach(What, To)` — equip's `(Ref.Source, Ref.Target())`, Thieving Skydiver's "attach it to this creature"
+  `(Ref.Target(), Ref.Source)`. An Aura targets
   as it is cast (`AuraComponent`) and attaches on resolving; what either grants is a live static
   (scope `Is.AttachedToSource`), never stamped. "When enchanted creature dies" looks back through
   `DiedEvent.Attached` — the state check takes the Aura in the same pass.
@@ -118,7 +120,8 @@ whose subsystem it lives in.
   the loss adds to it.
 - **"Enter as a copy of any artifact or creature, except it isn't legendary, with its counters"** (Dominion
   Saboteur) is `MayEnterAsCopy { Of, NotLegendary, WithCounters, Optional }` — the counters through
-  `PutCounters` (`Card.AllCounters`); `Optional` is a real "may" (Flesh Duplicate's stays forced).
+  `PutCounters` (`Card.AllCounters`); `Optional` is a real "may" (Flesh Duplicate's stays forced). "Except it's an
+  artifact in addition to its other types" (Phyrexian Metamorph) is `AlsoType`, a type added to the copy's.
 - **"With mana value equal to [a number]"** counted as it resolves is `Ref.ManaValueIs` (a `Count`) on a
   `Ref.All` — Explosives' own charge counters, read from the sacrificed source as it last was.
 - **Changeling** ("every creature type") is `s.HasSubtype(card, type)`, asked one type at a time — every
@@ -149,8 +152,9 @@ whose subsystem it lives in.
   `ThisTurnReplacement`.
 - **A counted bound in a filter** ("mana value less than Sisay's power", Omnipresence's "≤ the number of creatures
   you control") is `StatBetween` with `Count` bounds (`Is.ManaValueAtMost(Count …)`), counted as the filter is asked
-  with its controller and source — so a choice's filter passes the ability's source (`SourceOf.Context`). X reads 0
-  there. "Cast from your hand without paying" is `MayCastFromHandFree(filter)`. "Total power and toughness 5 or less"
+  with its controller and source — so a choice's filter passes the ability's source (`SourceOf.Context`). X is the
+  SOURCE's X there (Thieving Skydiver's "target artifact with mana value X or less", MC-4.4e2c): its stack X, else
+  the X it was cast for (`CastX`, CR 107.3m). "Cast from your hand without paying" is `MayCastFromHandFree(filter)`. "Total power and toughness 5 or less"
   (Cut Down) is the same filter over `Stat.PowerPlusToughness` (`Is.TotalPowerAndToughnessAtMost`).
 - **A player's hexproof and prevented damage** (The Needs of the Many) are `ThisTurnEffect`s on that player:
   `YouHaveHexproof` asked in `TargetSpec.IsLegal` (an opponent's spell or ability only), `PreventAllDamageToYou` in

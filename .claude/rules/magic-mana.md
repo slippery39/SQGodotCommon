@@ -61,6 +61,12 @@ whose subsystem it lives in.
   checked against the life alone.
 - **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
   lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
+  **"Tap an untapped artifact you control: Add {U}"** (Urza, Lord High Artificer, MC-4.4e2c) is a
+  `ManaAbilityComponent { Costs = [TapUntappedCost(1, filter)] }` — a cost that taps ANOTHER permanent:
+  `ManaAbilities.TappingAnother` lists them, and in `Find` each untapped permanent their filter matches pays that
+  colour, tapped, in the SAME unit as convoke's creature (`TappedFor`; the X bound counts it). Never a move: its
+  `ChoosesCost` keeps it out of `YieldOf` (the holder isn't tapped) and out of `ManaMoves` (no sacrifice).
+  One mana each, paid as the tapped permanent's own (DesignNotes).
 - **Cost changes all live in `Costs.Of`**: each is a `CostChange` — on a permanent, for the spells
   `By` names (Thalia's tax on opponents, Geist's reduction on yours), or `OnItself` ("this spell costs
   … less"); an activated ability's (Warrior's Blades) is `ActivatedAbilityComponent.CostChange`, read
@@ -70,6 +76,9 @@ whose subsystem it lives in.
   unless they're mana abilities") is `CostChange(2, filter) { Abilities = true }` (MC-4.4d2b): the filter asked of
   the ability's SOURCE, whoever activates it, read by `Costs.OfAbility` and never by `Costs.Of`. A mana ability is
   no `ActivatedAbilityComponent`, so it is never taxed; a loyalty ability pays no mana (a ceiling, DesignNotes).
+  **"This effect can't reduce the mana in that cost to less than one mana"** (Forensic Gadgeteer's `CostChange(-1,
+  …) { Abilities, Floor = 1 }`) is `Floor`: the floored reductions apply after every other change, never below
+  min(Floor, the mana value they started from) — two Gadgeteers make a Clue's {2} {1}; a {0} stays {0}.
 - **Costs beyond mana are one list of `AdditionalCost`** (Effects/AdditionalCosts.cs) — activated
   abilities, a spell's `AdditionalCostsComponent`, flashback, ward. A cost that picks a card names it
   in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`/`TapId`/`SecondTapId`/`ReturnId` (`CostSlot`), a set in `TapIds` — and the table's
@@ -96,10 +105,11 @@ whose subsystem it lives in.
 - **"Remove N counters from among creatures you control"** (Lieutenant Commander Data, `RemoveCountersCost`)
   is picked AFTER activating, one counter at a time (`ChoosePermanentChoice`, then `RemoveACounterFromChosenAction`:
   a harmful kind first) — one action per set would be 364 on 12 creatures. Activation asks every cost's `CanPay`.
-- **Phyrexian mana** (`{B/P}`, `SymbolKind.Phyrexian`; Drivnod) is chosen with the activation:
-  `ActivateAbilityAction.LifeForPhyrexian`, one legal action per number of symbols paid with 2 life each (CR 107.4f;
-  `|pN` in `MoveKey`), only with the life to pay (CR 119.4). `ManaCost.PayingLifeFor` turns the rest into their
-  colour, so the solver never sees one — a spell with `{B/P}` throws there until a card needs it.
+- **Phyrexian mana** (`{B/P}`, `SymbolKind.Phyrexian`; Drivnod) is chosen with the activation or the cast:
+  `ActivateAbilityAction.LifeForPhyrexian` and `CastSpellAction.LifeForPhyrexian` (Gitaxian Probe, Phyrexian
+  Metamorph, MC-4.4e2c), one legal action per number of symbols paid with 2 life each (CR 107.4f; `|pN` in
+  `MoveKey`), only with the life to pay (CR 119.4) — a free cast has none to pay. `ManaCost.PayingLifeFor` turns the
+  rest into their colour, so the solver never sees one; the life is lost after the mana is paid.
 - **"Exile N cards from your graveyard"** as a cost (Drivnod: three creature cards) is `ExileFromGraveyardCost { Count }`:
   one is a legal action per card (`ExileId`, Gallia); more are picked AFTER activating, one at a time
   (`ChooseAmongChoice`, then `MoveChosenToAction`), as `RemoveCountersCost`'s counters — never one action per set.

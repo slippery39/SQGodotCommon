@@ -64,6 +64,9 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 	/// <summary>Dominion Saboteur: "with additional counters … the same number and kinds" as the copied permanent.</summary>
 	public bool WithCounters { get; init; }
 
+	/// <summary>Phyrexian Metamorph: "except it's an artifact in addition to its other types".</summary>
+	public CardType AlsoType { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (
@@ -77,6 +80,7 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 		var copy = (Card)card.WithCopiableValuesOf(model).WithComponent(new EnteredAsCopy(card));
 		if (NotLegendary)
 			copy = copy with { Supertypes = copy.Supertypes & ~Supertype.Legendary };
+		copy = copy with { Types = copy.Types | AlsoType };
 		if (VanishingIfNone > 0 && !s.HasAbility<Vanishing>(model))
 			foreach (var component in Vanishing.Of(VanishingIfNone))
 				copy = (Card)copy.WithComponent(component);

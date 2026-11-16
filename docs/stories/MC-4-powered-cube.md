@@ -629,6 +629,71 @@ as his three priorities.
   reads it as a one-card flag against MC-6's rule. The other way is a draw-step count in `TurnTally` and a step
   condition in `If` (`DuringYourTurn` and `DuringCombat` generalised, their cards moved): three pieces, and it
   closes the first-turn ceiling. Default taken: the flag.
+- 2026-11-16, Claude — **4.4e2c's plan (mana and costs, 5 cards), from the pieces' CODE — the survey's five
+  readings hold; two grew (Urza's {5} isn't tested, the Skydiver needs more than a kicker).** Legal actions on a
+  12-creature, 12-artifact board: Gitaxian Probe one cast per target player × life paid (4); the Metamorph one cast
+  per life paid (2), the copy a choice as it enters (24 permanents); Urza one cast, his mana NO legal action, his
+  {5} one activation; the Gadgeteer one cast; the Skydiver one cast unkicked and one per X kicked (X from 1 to the
+  mana there is), the artifact a choice of its trigger. Nothing per set.
+  **A spell's `{U/P}` is the activation's option on the cast:** `CastSpellAction.LifeForPhyrexian` — one cast per
+  number paid with 2 life (`MagicRules.CastCandidates`), `CostToPay` turns the rest into their colour
+  (`ManaCost.PayingLifeFor`, the activation's), validated with `Life.CanPay`, the life lost after the mana; `|pN`
+  in `MoveKey` only when paid, so old keys stay byte-identical. No FRA or TRK spell has a Phyrexian symbol: no
+  record moves.
+  **"Except it's an artifact in addition to its other types"** is `MayEnterAsCopy.AlsoType` (a `CardType` added to
+  the copy's), beside `NotLegendary` — a value, not a flag: Phyrexian Metamorph `{ Of = Is.Artifact | Is.Creature,
+  AlsoType = Artifact, Optional }`.
+  **Urza's "Tap an untapped artifact you control: Add {U}"** is a `ManaAbilityComponent { Costs =
+  [TapUntappedCost(1, Is.Artifact & Is.Yours)] }`: `ManaPayment.Find` reads the player's mana abilities whose ONE
+  cost taps another permanent, and each untapped permanent their filter matches pays their colour, tapped — the
+  same unit convoke's creature makes (convoke and Urza are one list of what tapping it for ANOTHER's cost pays; a
+  permanent making one mana of its own unions both, as convoke does). Its `ChoosesCost` keeps it out of `YieldOf`
+  (Urza isn't tapped) and `ManaMoves` (a tap slot is no sacrifice: no move). The X bound counts it. **Not a sibling
+  of convoke:** convoke is the spell's keyword, Urza's an ability of a permanent — they meet in the one place both
+  are units. **Ceilings (DesignNotes):** a Talisman tapped for Urza's {U} is paid as its own {U} (`PayAsUsed`: its
+  damage, its activation event — convoke's too); tapping by hand can't use it (`TapOptions`).
+  **Urza's {5} is `ExileTopPlayable { ShuffleFirst, Play = { ThisTurn, Free } }` — but `Free` on a mark isn't
+  read:** only `Now` casts free today. `PlayPermission.For` carries `Free` onto `PlayableFromExile.Free`, and
+  `Playable.FreeCast` answers it first (nothing to pay beyond taxes, so it replaces the paid cast, as Omnipresence's
+  does). His Construct is `CreateTokens` with a counted static (`StaticEffectComponent(Is.Source) { Power,
+  Toughness }`, Pyrogoyf's shape).
+  **Forensic Gadgeteer's floor** is `CostChange.Floor` (an int: "can't reduce the mana in that cost to less than
+  N"), read by `Costs.OfAbility`: the floored reductions apply after every other change and never below
+  min(Floor, the mana value they started from) — two Gadgeteers on a Clue's {2} make {1}, a {0} stays {0}. Its
+  "whenever you cast an artifact spell, investigate" is `Trigger(SpellCast) { By, Subject }` and `CreateClue`.
+  **Ceiling:** "activated abilities of artifacts" includes mana abilities with a mana cost; none is reduced (a
+  mana ability is no `ActivatedAbilityComponent`, as the Peacekeeper's tax).
+  **Thieving Skydiver** is three options and one rename:
+  `KickerComponent("{X}") { MinX = 1 }` — a kicker with X lets the KICKED cast choose X (`HasX` of the cost or the
+  kicker; "X can't be 0" is `MinX`); the X is paid as any X (`addedGeneric`), and enters as `Card.CastX`.
+  "If it was kicked" on a PERMANENT: `WasKicked` reads only the spell's `OnStackComponent`, gone as it enters —
+  `EnterFromStackAction.Kicked` stamps `Card.CastKicked` beside `CastX` (the same carry of the cast onto the
+  permanent, reset by `Fresh`), and `WasKicked` reads either, the source's snapshot too (a Skydiver bounced in
+  response was still kicked). "Target artifact with mana value X or less": a filter's counted bound reads X as 0
+  (`StatBetween.Bound`); it now reads the SOURCE's X — its `OnStackComponent.X` on the stack, else `CastX`
+  (CR 107.3m) — no filter uses `Count.X` yet. "Attach it to this creature": `AttachSourceTo(Host)` becomes
+  `Attach(What, To)` and its three users move (equip, Cori-Steel Cutter, Glimmer Lens) — under `If(Matches(target,
+  Equipment))`.
+- 2026-11-16, Claude — **4.4e2c's notes.** Built as planned but one line: the cast generator's "X from `MinX`"
+  is gone — `ValidateAdd` already refuses a kicked X below it (legality lives there only), and the revert-check
+  showed the generator's copy changed nothing. 10 tests (13 cases) in `LsvBatch2eTests.cs` — the Probe's two
+  casts also checked as four DISTINCT moves (`MoveKey`'s `|pN`). **33 breaks, 31 caught at first:** the other
+  was a vacuous test — an unkicked Skydiver's X is 0, so the mana-value-1 artifact it "didn't take" was never a
+  legal target; it takes a mana-value-0 one now, and both its breaks are caught. **Test helpers:** `TapMyLands()`
+  (what pays is the rest of the board), `KnownToMe(theirCard)`. **Left as ceilings (DesignNotes):** Urza's
+  {U} is one mana per artifact, paid as the artifact's own (a Talisman's damage, its activation event — convoke's
+  too), and never by hand; the Gadgeteer reduces no mana ability's mana cost.
+  **`/pre-commit`'s review: ten findings; three bugs fixed, each with a test (13 tests, 16 cases; 36 breaks
+  caught):** with Urza out every artifact's Lotus or Treasure sacrifice was thrown away (convoke's "only tapped"
+  line saw his {U}) — his colour now joins after it; a free cast from Urza's mark counted as the card's OWN
+  alternative cost (Baleful Mastery's opponent drew) — only the card's own `MayCastFromHandFree` is; a free
+  Skydiver couldn't be kicked — kicker {X} is an additional cost (`CastSpellAction.XInKicker`). Also taken: Urza's
+  rule no longer drops when another cost taps or sacrifices him (CR 601.2g); the life check only when life is paid;
+  "does it choose X" is one `CastSpellAction.ChoosesX` for the generator and the validator; `AvailableMana` one
+  method. **Documented, not changed (DesignNotes):** a SPELL's own X-bounded target filter reads 0 in the hand and
+  Phyrexian life is offered for the printed cost's symbols only — no card has either; a free cast whose rule has
+  costs chooses no kicker X. **Not taken:** a board flag to skip Urza's scan on every payment (no bench for a card
+  batch, as e2b's). Test helper `UrzaExiles(card)`: his {5} with only that card in the library.
 
 ## Tasks
 
@@ -743,8 +808,15 @@ as his three priorities.
           breaks caught; `batch_checks.py` all 7 steps, twice (after the review's fix too: golden-out unchanged;
           golden-in moved 29 random and 257 card-replay games, added 16, the AI replay unmoved; probe 150 games,
           none unfinished, each card cast 174–453 times). Open: `ExceptTheTurnsDraw` (Decisions, e2b's notes)
-    - [ ] MC-4.4e2c Options, mana and costs, 5: Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer),
-          Forensic Gadgeteer, Thieving Skydiver
+    - [x] MC-4.4e2c Options, mana and costs, 5 — done 2026-11-16: Gitaxian Probe, Phyrexian Metamorph, Urza (Lord
+          High Artificer), Forensic Gadgeteer, Thieving Skydiver. A spell's `{U/P}` (`CastSpellAction.
+          LifeForPhyrexian`), `MayEnterAsCopy.AlsoType`, a mana ability tapping ANOTHER permanent (`ManaAbilities.
+          TappingAnother`, paid as convoke's unit), `PlayableFromExile.Free`, `CostChange.Floor`, `KickerComponent
+          { MinX }` with an `{X}` kicker, `Card.CastKicked`, a filter's X the source's, `AttachSourceTo` →
+          `Attach(What, To)` (equip, Cori-Steel Cutter, Glimmer Lens moved); 13 tests (16 cases), 36 breaks caught
+          (the review's three fixes included); `batch_checks.py` all 7 steps, twice (golden-out unchanged; golden-in
+          moved 29 random and 319 card-replay games, added 20, the AI replay unmoved; probe 150 games, none
+          unfinished both times, each card cast 212–448 times in the first)
     - [ ] MC-4.4e2d Options, casting off the hand, 4: Bilbo (Thief in the Night), Malcolm (Alluring Scoundrel),
           Flash, Transmute Artifact
     - [ ] MC-4.4e2e Options, "for as long as this remains on the battlefield", 2: The Wondrous Wasp, Tishana's
@@ -754,12 +826,18 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1), the library's top (4.4e2a) and draws (4.4e2b)
-are done: **203 of 528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW
-session: **MC-4.4e2c — mana and costs, 5 cards:** Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer),
-Forensic Gadgeteer, Thieving Skydiver — the survey's reading of each is in Decisions ("4.4e", e2c); read it against
-the CODE first: e2b's two findings held but each was smaller than it read (`Nth` is `SpellNumber` renamed, not a
-second number; the three "instead" are two options, `Instead` and `If`).
+Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1), the library's top (4.4e2a), draws (4.4e2b) and
+mana and costs (4.4e2c) are done: **208 of 528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e";
+Tasks). Next, in a NEW session: **MC-4.4e2d — casting off the hand, 4 cards:** Bilbo (Thief in the Night), Malcolm
+(Alluring Scoundrel), Flash, Transmute Artifact — the survey's reading of each is in Decisions ("4.4e", e2d); read it
+against the CODE first: of e2c's five readings all held, but two grew (Urza's {5} "free" was no tested option — only
+`Now` cast free; the Skydiver needed a kicked permanent, a filter's X and an X kicker, not one option).
+From e2c: a spell's Phyrexian mana is `CastSpellAction.LifeForPhyrexian` (as an activation's); a cost that taps
+ANOTHER permanent for mana (Urza) is a unit of `ManaPayment.Find`, as convoke's creature (`ManaAbilities.
+TappingAnother`); `PlayPermission { Free }` works on a mark now (`PlayableFromExile.Free`); a permanent remembers it
+was kicked (`Card.CastKicked`, beside `CastX`) and a filter's counted bound reads the source's X; "attach" is ONE
+effect, `Attach(What, To)`. e2c's test helpers (`LsvBatch2eTests.cs`): `TapMyLands()`, `KnownToMe(theirCard)`,
+`UrzaExiles(card)`.
 **Open (for Shayne), from e2b:** Hullbreacher's "except the first one they draw in each of their draw steps" is a
 bool on the replacement, `ExceptTheTurnsDraw`, and a `turnDraw` argument to `Draw` — the review reads it as a
 one-card flag against MC-6's rule; the other way is a draw-step count in `TurnTally` and a step condition (three
@@ -879,3 +957,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   Mysteries) — 203 of 528 play. `Trigger.Nth`, `NumericReplacement(Draw) { Instead, If, ExceptTheTurnsDraw }`;
   `ExceptTheTurnsDraw` is an Open (a flag, against a draw-step count and a step condition). Next: MC-4.4e2c, mana
   and costs.
+- 2026-11-16: MC-4.4e2c done: Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer), Forensic
+  Gadgeteer, Thieving Skydiver — 208 of 528 play. A spell's Phyrexian mana, a mana cost tapping another permanent,
+  free play from an exile mark, a cost floor, an X kicker, `Attach(What, To)`. Next: MC-4.4e2d, casting off the hand.

@@ -434,7 +434,8 @@ public static class MagicState
 		int sunburst = 0,
 		CardType loses = CardType.None,
 		bool attacking = false,
-		TriggeredAbilityComponent? gains = null
+		TriggeredAbilityComponent? gains = null,
+		bool kicked = false
 	)
 	{
 		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
@@ -493,6 +494,7 @@ public static class MagicState
 				ControlledSinceTurn = s.GetGame().TurnNumber,
 				EnteredOnTurn = s.GetGame().TurnNumber,
 				CastX = x,
+				CastKicked = kicked,
 				WasCast = cast,
 				HasFinalityCounter = finality,
 				IsTapped = !landsUntapped && (tappedByOthers || tappedByItself),
@@ -644,6 +646,7 @@ public static class MagicState
 						{
 							NotLegendary = asCopy.NotLegendary,
 							WithCounters = asCopy.WithCounters,
+							AlsoType = asCopy.AlsoType,
 						},
 					],
 				}

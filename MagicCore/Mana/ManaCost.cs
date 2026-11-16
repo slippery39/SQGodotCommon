@@ -10,7 +10,7 @@ public enum SymbolKind
 	Hybrid, // {W/U} — Color or Color2
 	TwoBrid, // {2/W} — Color, or two of anything
 	X,
-	Phyrexian, // {B/P} — Color, or 2 life: chosen with the activation (ActivateAbilityAction.LifeForPhyrexian), so the solver never sees one
+	Phyrexian, // {B/P} — Color, or 2 life: chosen with the activation or the cast (ActivateAbilityAction / CastSpellAction.LifeForPhyrexian), so the solver never sees one
 }
 
 public record ManaSymbol(

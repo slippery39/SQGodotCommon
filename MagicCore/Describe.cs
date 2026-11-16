@@ -44,7 +44,8 @@ public static class Describe
 				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : "")
 				+ (c.BeholdId != 0 ? $", beholding {Name(s, c.BeholdId)}" : "")
 				+ (c.ReturnId != 0 ? $", returning {Name(s, c.ReturnId)}" : "")
-				+ (c.ExileId != 0 ? $", exiling {Name(s, c.ExileId)}" : ""),
+				+ (c.ExileId != 0 ? $", exiling {Name(s, c.ExileId)}" : "")
+				+ (c.LifeForPhyrexian > 0 ? $", paying {2 * c.LifeForPhyrexian} life" : ""),
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{WhichAbility(s, a)}"
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")

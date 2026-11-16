@@ -178,6 +178,10 @@ whose subsystem it lives in.
   join `CastSpellAction.CostsOf(…, kicked)` — a kicker sacrifice is the ordinary `SacrificeId`. The stack
   keeps it (`OnStackComponent.Kicked`, copies too); "if kicked" is `WasKicked`; a target word that reads
   differently kicked is `TargetSpec.IfKicked`, swapped in by `StackResolution.TextOf(…, kicked)`.
+  **"Kicker {X}. X can't be 0"** (Thieving Skydiver, MC-4.4e2c) is `KickerComponent("{X}") { MinX = 1 }`: the KICKED
+  cast chooses X (one per X from `MinX`; unkicked, X is 0), paid as any X and carried onto the permanent as
+  `Card.CastX`. A permanent's "if it was kicked" reads `Card.CastKicked`, stamped by `EnterFromStackAction.Kicked`
+  as `CastX` is — `WasKicked` reads the stack's, the permanent's, or the source as it last was.
 - **"Activate only once each turn"** is `ActivatedAbilityComponent.OncePerTurn`, stamped on the card as it
   is activated (`Card.ActivatedOncePerTurnOn`) — a new object may activate again.
 - **"If this is the second time this ability has resolved this turn"** is `IfNthResolutionThisTurn(n, …)`:
@@ -189,7 +193,8 @@ whose subsystem it lives in.
   `!Is.Land`; discover: and mana value N or less), whose library (`Of`), `ShuffleFirst` (Q), face down, the rest to the
   bottom (`RestOnBottom`), or only a chosen card (`Choose`, Chekov's land). **What may be played is ONE `PlayPermission`**:
   who and how long (`By`, `ThisTurn`, "for as long as it remains exiled" `Forever`, Inti's "until your next end step"
-  `UntilYourNextEndStep`) — a mark on the card — or **`Now`**,
+  `UntilYourNextEndStep`) — a mark on the card, `Free` on it too (Urza's "until end of turn, you may play that card
+  without paying its mana cost": `PlayableFromExile.Free`, answered first by `Playable.FreeCast`) — or **`Now`**,
   a cast as it resolves and never a mark (Chandra; `Free`: The Caretaker, discover's `OrIntoHand`; Sisko's `AnyNumber`
   under `ManaValueAtMost`, counted once, CR 608.2h), with "if you don't" (`Otherwise`). Q's card `Gains` an ability
   instead. Cast or played, the card is public again (`ExiledFaceDown` is status). Tersa Lightshatter's "exile a card at

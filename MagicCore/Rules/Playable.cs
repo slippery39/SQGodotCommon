@@ -152,34 +152,13 @@ public static class Playable
 	/// combine (CR 118.9a). Its If holds (Snuff Out: "if you control a Swamp"; Force of Negation: "if it's not
 	/// your turn"), judged as its caster's. The one asking least: no costs and no mana first.
 	/// </summary>
-	public static MayCastFromHandFree? FreeCast(GameState s, Card card, int playerId) =>
-		(
-			s.IsIn(card.Id, playerId, ZoneType.Hand)
-				? s.CardsIn(playerId, ZoneType.Battlefield)
-					.SelectMany(p =>
-						s.AbilitiesOf<MayCastFromHandFree>(p)
-							.Where(m =>
-								m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id))
-								&& (m.If?.Holds(s, Conditions.Of(p)) ?? true)
-							)
-					)
-				: []
-		)
-			.Concat(
-				Costs.Flashback(s, card) is null
-					? card
-						.Components.OfType<MayCastFromHandFree>()
-						.Where(m =>
-							m.What.Equals(Filters.Is.Source)
-							&& (
-								m.If?.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
-								?? true
-							)
-						)
-					: []
-			)
-			.OrderBy(m => m.Costs.Count + (m.Mana is null ? 0 : 1))
-			.FirstOrDefault();
+	public static MayCastFromHandFree? FreeCast(GameState s, Card card, int playerId) => (
+			// Urza, Lord High Artificer: "you may play that card without paying its mana cost" — the mark's
+			IsImpulsePlayableBy(s, card, playerId)
+			&& card.GetComponent<PlayableFromExile>() is { Free: true }
+				? [new MayCastFromHandFree(Filters.Is.Source)]
+				: Enumerable.Empty<MayCastFromHandFree>()
+		).Concat(s.IsIn(card.Id, playerId, ZoneType.Hand) ? s.CardsIn(playerId, ZoneType.Battlefield).SelectMany(p => s.AbilitiesOf<MayCastFromHandFree>(p).Where(m => m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id)) && (m.If?.Holds(s, Conditions.Of(p)) ?? true))) : []).Concat(Costs.Flashback(s, card) is null ? card.Components.OfType<MayCastFromHandFree>().Where(m => m.What.Equals(Filters.Is.Source) && (m.If?.Holds(s, Conditions.Of(card with { ControllerId = playerId })) ?? true)) : []).OrderBy(m => m.Costs.Count + (m.Mana is null ? 0 : 1)).FirstOrDefault();
 
 	/// <summary>What the free cast costs beyond mana (<see cref="FreeCast"/>), or null when nothing allows one.</summary>
 	public static System.Collections.Immutable.ImmutableList<AdditionalCost>? FreeCosts(

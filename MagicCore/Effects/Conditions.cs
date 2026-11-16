@@ -134,9 +134,15 @@ public record CastFrom(ZoneType Zone) : Condition
 /// <summary>Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.</summary>
 public record WasKicked : Condition
 {
+	/// <summary>The spell on the stack, or the permanent it became (Thieving Skydiver: "if it was kicked") — as it
+	/// last was too, so one bounced in response was still kicked.</summary>
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		s.GetObject((int)context[ContextKeys.Source]) is Card spell
-		&& spell.GetComponent<Actions.OnStackComponent>()?.Kicked == true;
+		s.GetObject((int)context[ContextKeys.Source]) is Card card && Kicked(card)
+		|| context.GetValueOrDefault(ContextKeys.SourceSnapshot) is Card snapshot
+			&& Kicked(snapshot);
+
+	static bool Kicked(Card card) =>
+		card.GetComponent<Actions.OnStackComponent>()?.Kicked == true || card.CastKicked;
 }
 
 /// <summary>Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost).</summary>

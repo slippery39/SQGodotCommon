@@ -146,6 +146,9 @@ public record Card : GameObject
 	/// <summary>The X paid to cast this permanent — its "when this enters" abilities use it (CR 107.3m).</summary>
 	public int CastX { get; init; }
 
+	/// <summary>Thieving Skydiver: "if it was kicked" — the spell it was (OnStackComponent.Kicked), carried as CastX is.</summary>
+	public bool CastKicked { get; init; }
+
 	/// <summary>Null Summoner: "if you cast it" — it entered by resolving as a spell.</summary>
 	public bool WasCast { get; init; }
 
@@ -289,6 +292,7 @@ public record Card : GameObject
 			MinusOneCounters = 0,
 			Loyalty = 0,
 			CastX = 0,
+			CastKicked = false,
 			WasCast = false,
 			ChargeCounters = 0,
 			TimeCounters = 0,
