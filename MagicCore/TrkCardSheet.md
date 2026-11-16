@@ -1250,7 +1250,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Pattern Buffer Preservation"] =
 [
-	Spell([], new LookAndTake(2) { Must = true, RestToGraveyard = true }),
+	Spell([], new LookAndTake(2) { Must = true, Rest = TheRest.Graveyard }),
 	BeamMeUp("{1}{B}"),
 ],
 ```
@@ -5789,8 +5789,8 @@ How to write a script: `MagicCore/Cookbook.md`.
 		{
 			Reveal = true,
 			Must = true,
-			RestToGraveyard = true,
-			OntoBattlefield = true,
+			Rest = TheRest.Graveyard,
+			To = ZoneType.Battlefield,
 			Tapped = true,
 		}
 	),
@@ -7965,7 +7965,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			new LookAndTake(6, Is.Creature & Is.ManaValueAtMost(Count.LandsYouControl))
 			{
 				Reveal = true,
-				OntoBattlefield = true,
+				To = ZoneType.Battlefield,
 			},
 		]
 	)

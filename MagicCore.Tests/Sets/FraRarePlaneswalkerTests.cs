@@ -75,14 +75,6 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 			s = s.MoveObject(c.Id, s.ZoneId(player, ZoneType.Exile)); // TEST SETUP
 	}
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP
-		return id;
-	}
-
 	void ToMyNextTurn()
 	{
 		var turn = s.GetGame().TurnNumber;

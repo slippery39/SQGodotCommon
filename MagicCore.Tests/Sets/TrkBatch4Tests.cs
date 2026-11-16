@@ -29,14 +29,6 @@ public class TrkBatch4Tests : FraBoardTest
 		return id;
 	}
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	void CastAndResolve(int card, Func<ChoiceAction, IEnumerable<int>>? answer = null)
 	{
 		s = s.Act(Casts(card).First(c => !c.Kicked));

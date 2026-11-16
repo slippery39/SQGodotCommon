@@ -18,14 +18,6 @@ public class TrkBatch7cTests : FraBoardTest
 {
 	static CardDefinition Trk(string name) => CardRegistry.Get(name, "TRK");
 
-	int OnTop(CardDefinition card, int player)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(player, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	int InGraveyard(CardDefinition card, int player)
 	{
 		int id;

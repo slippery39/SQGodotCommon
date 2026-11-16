@@ -54,6 +54,16 @@ public abstract class FraBoardTest
 		return id;
 	}
 
+	/// <summary>TEST SETUP: a fresh card on TOP of that player's library (index 0), known to nobody.</summary>
+	protected int OnTop(CardDefinition card, int player)
+	{
+		var id = Put(card, player, ZoneType.Library);
+		s = s.MoveObjectToFront(id, s.ZoneId(player, ZoneType.Library));
+		return id;
+	}
+
+	protected int OnTop(CardDefinition card) => OnTop(card, me);
+
 	/// <summary>The LSVPower cube's printing of a card.</summary>
 	protected static CardDefinition Lsv(string name) => CardRegistry.Get(name, "LSV");
 

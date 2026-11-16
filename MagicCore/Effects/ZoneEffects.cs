@@ -254,16 +254,11 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 				s = s.MoveCard(id, s.ZoneId(Controller, ZoneType.Exile));
 			return new(s);
 		}
-		(var rng, s) = s.TakeRng();
-		rng.Shuffle(rest);
-		var libraryId = s.ZoneId(Controller, ZoneType.Library);
-		// Out and back in: MoveObject appends, and the end is the bottom. Not marked known (story AI-3):
-		// their ORDER is random, and a miss sends the whole library down — known, its real order would
-		// survive "shuffle what isn't known". ponytail: so they are shuffled with the rest, losing "they
-		// are at the bottom"; keep them at the bottom, shuffled among themselves, if that ever matters.
-		foreach (var id in rest)
-			s = s.MoveObject(id, 0).MoveObject(id, libraryId);
-		return new(s);
+		// Not known (story AI-3): their ORDER is random, and a miss sends the whole library down — known,
+		// its real order would survive "shuffle what isn't known". ponytail: so they are shuffled with the
+		// rest, losing "they are at the bottom"; keep them at the bottom, shuffled among themselves, if that
+		// ever matters.
+		return new(s.ToBottomAtRandom(Controller, rest));
 	}
 }
 
@@ -1475,6 +1470,15 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>Captain Jean-Luc Picard: "put it onto the battlefield with seven charge counters on it".</summary>
 	public int ChargeCounters { get; init; }
 
+	/// <summary>
+	/// Spellseeker: "you MAY search your library for … then shuffle" — a search that takes no card was declined, so
+	/// nothing is shuffled and a top card its owner knows stays known. Unset (Mystical Tutor, landcycling), the
+	/// library is shuffled whatever was found (CR 701.19).
+	/// ponytail: a player can't search, take nothing and shuffle anyway on purpose (to be rid of a known top) —
+	/// ask "shuffle?" after a "may" search that took nothing if that is ever missed (DesignNotes).
+	/// </summary>
+	public bool May { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var searcher = Who is null ? Controller : All(Who, s).FirstOrDefault();
@@ -1482,8 +1486,12 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 		return searcher == 0 || owner == 0 ? new(s) : new(Search(s, searcher, owner));
 	}
 
-	GameState Search(GameState s, int searcher, int owner) =>
-		s.SpawnAction(
+	GameState Search(GameState s, int searcher, int owner)
+	{
+		GameAction shuffle = new ShuffleLibrary(Ref.Id(owner));
+		if (May)
+			shuffle = new IfChosenAction([shuffle]) { Key = ChooseCardsFromHandChoice.Chosen };
+		return s.SpawnAction(
 			new PipelineAction
 			{
 				PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
@@ -1506,7 +1514,7 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 					.. To == ZoneType.Library
 						? (GameAction[])
 							[
-								new ShuffleLibraryAction(owner),
+								shuffle,
 								new MoveChosenToAction(owner, ZoneType.Library) { OnTop = true },
 							]
 						:
@@ -1526,11 +1534,27 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 									)
 									: null,
 							},
-							new ShuffleLibraryAction(owner),
+							shuffle,
 						],
 					.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],
 				],
 			}
+		);
+	}
+}
+
+/// <summary>
+/// Ponder: "You may shuffle." Timetwister: "Each player shuffles their hand and graveyard into their library" —
+/// after the cards are moved. Each player named shuffles their library, once, with or without anything put into
+/// it; every position anyone knew is forgotten (MagicState.Shuffle). A search's "then shuffle" is this too.
+/// </summary>
+public record ShuffleLibrary(Ref Who) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			All(Who, s)
+				.Where(id => s.GetObject(id) is MagicPlayer)
+				.Aggregate(s, (st, player) => st.Shuffle(player))
 		);
 }
 
@@ -2154,9 +2178,11 @@ public record MillAndMayTake(int N, CardType Types) : Effect
 /// <summary>
 /// Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal an artifact
 /// card from among them and put it into your hand. Put the rest on the bottom of your library in a
-/// random order." Hoshi Sato's "put one of them into your hand" is Must; Pattern Buffer Preservation's
-/// "… and the other into your graveyard" is RestToGraveyard. A revealed card is known to everyone; the
-/// rest go down as Identity Echo's do — a random order is not known (magic-mechanics.md).
+/// random order." How many are taken is Take (Stock Up: "Put two of them into your hand"; Ponder: none), where
+/// they go is To (Hit It!: "onto the battlefield tapped"; Thassa's Oracle: "up to one of them on top of your
+/// library"), where the others go is Rest (TheRest). Hoshi Sato's "put one of them into your hand" is Must. A
+/// revealed card is known to everyone; the rest go down as Identity Echo's do — a random order is not known
+/// (magic-zones.md).
 /// ponytail: Spock's "in any order" is a random order too (Shayne, 2026-10-31; DesignNotes).
 /// </summary>
 public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
@@ -2164,14 +2190,28 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	/// <summary>"You may reveal [it] and put it into your hand" — known to everyone there.</summary>
 	public bool Reveal { get; init; }
 
-	/// <summary>Hoshi Sato: "Put one of them into your hand" — not "you may".</summary>
+	/// <summary>Hoshi Sato: "Put one of them into your hand" — not "you may": exactly Take, not up to it.</summary>
 	public bool Must { get; init; }
 
-	/// <summary>Pattern Buffer Preservation: "the other into your graveyard", not the bottom.</summary>
-	public bool RestToGraveyard { get; init; }
+	/// <summary>
+	/// Stock Up: "Put two of them into your hand" — how many are taken (never more than there are to take).
+	/// Ponder takes none: no pick is asked.
+	/// </summary>
+	public Count Take { get; init; } = 1;
 
-	/// <summary>Hit It!: "Put a land card from among them onto the battlefield tapped"; Loot, Exuberant Explorer: "put it onto the battlefield" — not into your hand.</summary>
-	public bool OntoBattlefield { get; init; }
+	/// <summary>
+	/// Where the taken go — your hand unless said. Hit It!: "Put a land card from among them onto the battlefield
+	/// tapped"; Loot, Exuberant Explorer: "put it onto the battlefield" (Battlefield). Thassa's Oracle: "Put up
+	/// to one of them on top of your library" (Library): it stays above the rest, and you know it is there.
+	/// </summary>
+	public ZoneType To { get; init; } = ZoneType.Hand;
+
+	/// <summary>
+	/// Where the cards not taken go — Rutherford's "the rest on the bottom of your library in a random order"
+	/// unless said; Pattern Buffer Preservation: "the other into your graveyard" (Graveyard); Ponder: "then put
+	/// them back in any order" (TopInAnyOrder).
+	/// </summary>
+	public TheRest Rest { get; init; }
 
 	/// <summary>Hit It!: "… tapped".</summary>
 	public bool Tapped { get; init; }
@@ -2182,76 +2222,119 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			.Take(N.Value(s, InputContext))
 			.Select(c => c.Id)
 			.ToImmutableList();
+		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
 		var choice = new ChooseAmongChoice
 		{
 			PlayerId = Controller,
 			Ids = top,
 			Zone = ZoneType.Library,
 			Filter = Filter,
-			Prompt =
-				(Must ? "Put one " : "You may put one ")
-				+ (OntoBattlefield ? "onto the battlefield" : "into your hand"),
-			MinChoices = Must ? 1 : 0,
 		};
-		var put = new PutLookedAtAction(Controller, top, Reveal, RestToGraveyard)
+		var take = Math.Min(Take.Value(s, InputContext), choice.GetOptions(s, context).Count);
+		var where = To switch
 		{
-			OntoBattlefield = OntoBattlefield,
-			Tapped = Tapped,
+			ZoneType.Battlefield => "onto the battlefield",
+			ZoneType.Library => "on top of your library",
+			ZoneType.Hand => "into your hand",
+			_ => $"into your {To.ToString().ToLowerInvariant()}",
 		};
-		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
+		var many =
+			take == 1 ? "one"
+			: Must ? $"{take}"
+			: $"up to {take}";
+		choice = choice with
+		{
+			Prompt = $"{(Must ? "Put" : "You may put")} {many} {where}",
+			MinChoices = Must ? take : 0,
+			MaxChoices = take,
+		};
+		var put = new PutLookedAtAction(Controller, top)
+		{
+			Reveal = Reveal,
+			To = To,
+			Tapped = Tapped,
+			Rest = Rest,
+		};
 		return new(
 			s.SpawnAction(
 				new PipelineAction
 				{
 					PipelineContext = context,
 					// Nothing to take: no prompt with no options, but the rest still go.
-					Steps = choice.GetOptions(s, context).IsEmpty ? [put] : [choice, put],
+					Steps = take <= 0 ? [put] : [choice, put],
 				}
 			)
 		);
 	}
 }
 
-/// <summary>After LookAndTake's choice: the chosen card into the hand, the rest to the bottom in a random order (or the graveyard).</summary>
-public record PutLookedAtAction(
-	int PlayerId,
-	ImmutableList<int> Looked,
-	bool Reveal,
-	bool RestToGraveyard
-) : GameAction
+/// <summary>
+/// Where the cards a LookAndTake doesn't take go — Rutherford: "Put the rest on the bottom of your library in a
+/// random order"; Pattern Buffer Preservation: "the other into your graveyard"; Ponder: "put them back in any order".
+/// </summary>
+public enum TheRest
 {
-	public bool OntoBattlefield { get; init; }
+	/// <summary>Rutherford: "Put the rest on the bottom of your library in a random order" — known to nobody.</summary>
+	BottomAtRandom,
+
+	/// <summary>Pattern Buffer Preservation: "the other into your graveyard".</summary>
+	Graveyard,
+
+	/// <summary>
+	/// Ponder: "Look at the top three cards of your library, then put them back in any order" — they stay on top,
+	/// their owner knowing each and ordering two or more (a surveil's choice, OrderLibraryTopChoice).
+	/// </summary>
+	TopInAnyOrder,
+}
+
+/// <summary>After LookAndTake's choice: the chosen cards where To says, the rest where Rest says.</summary>
+public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameAction
+{
+	public bool Reveal { get; init; }
+
+	public ZoneType To { get; init; } = ZoneType.Hand;
 
 	public bool Tapped { get; init; }
+
+	public TheRest Rest { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
 		var taken = ChooseCardsFromHandChoice.Read(InputContext).ToHashSet();
 		foreach (var id in taken)
 		{
-			s = OntoBattlefield
-				? s.EnterBattlefield(id, PlayerId, tapped: Tapped)
-				: s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Hand));
+			s = To switch
+			{
+				ZoneType.Battlefield => s.EnterBattlefield(id, PlayerId, tapped: Tapped),
+				// On top: it is among the top cards already and the rest leave from around it — no move, and
+				// its owner has looked at it. ponytail: several taken keep their old order, and with
+				// TopInAnyOrder the rest are ordered above them; no card says either yet.
+				ZoneType.Library => s.MakeKnown(id, Knowers.Owner),
+				_ => s.MoveCard(id, s.ZoneId(PlayerId, To)), // the hand; any other zone of yours as it is named
+			};
 			if (Reveal)
 				s = s.MakeKnown(id, Knowers.Everyone);
 		}
 		var rest = Looked
 			.Where(id => !taken.Contains(id) && s.IsIn(id, PlayerId, ZoneType.Library))
 			.ToArray();
-		if (RestToGraveyard)
+		if (Rest == TheRest.Graveyard)
 			return new(
 				rest.Aggregate(
 					s,
 					(st, id) => st.MoveCard(id, st.ZoneId(PlayerId, ZoneType.Graveyard))
 				)
 			);
-		(var rng, s) = s.TakeRng();
-		rng.Shuffle(rest);
-		var libraryId = s.ZoneId(PlayerId, ZoneType.Library);
-		// Out and back in, as RevealUntilOntoBattlefield does: MoveObject appends, and the end is the bottom.
-		foreach (var id in rest)
-			s = s.MoveObject(id, 0).MoveObject(id, libraryId);
-		return new(s);
+		if (Rest == TheRest.TopInAnyOrder)
+			// They stay where they are, each looked at (as a surveil's kept cards: magic-zones.md), then ordered.
+			return new(
+				OrderKeptOnTopAction.Ask(
+					rest.Aggregate(s, (st, id) => st.MakeKnown(id, Knowers.Owner)),
+					PlayerId,
+					[.. rest]
+				)
+			);
+		return new(s.ToBottomAtRandom(PlayerId, rest));
 	}
 }
 

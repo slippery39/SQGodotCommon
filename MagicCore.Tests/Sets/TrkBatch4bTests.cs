@@ -491,13 +491,6 @@ public class TrkBatch4bTests : FraBoardTest
 
 	// ===== Tier 2: exile until a nonland; tier 3: cast from your graveyard =====
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
 
 	[Test]
 	public void ExploratoryMission_ExilesUntilANonland_OnlyThatPlayable_RRAtFiveQuests()

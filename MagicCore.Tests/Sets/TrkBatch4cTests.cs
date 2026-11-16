@@ -47,14 +47,6 @@ public class TrkBatch4cTests : FraBoardTest
 		Resolve(answer);
 	}
 
-	/// <summary>Puts a card on top of a player's library.</summary>
-	int OnTop(CardDefinition card, int player)
-	{
-		var id = Hand(card, player);
-		s = s.MoveCard(id, s.ZoneId(player, ZoneType.Library), toTop: true);
-		return id;
-	}
-
 	bool InExile(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Exile);
 
 	bool CanPlay(int card, int player) =>

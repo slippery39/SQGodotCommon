@@ -1232,7 +1232,7 @@ public static class TrkCards
 			["Open Communications"] = [Spell([], new DrawCards(Ref.You, 1)), BeamMeUp("{2}{U}")],
 			["Pattern Buffer Preservation"] =
 			[
-				Spell([], new LookAndTake(2) { Must = true, RestToGraveyard = true }),
+				Spell([], new LookAndTake(2) { Must = true, Rest = TheRest.Graveyard }),
 				BeamMeUp("{1}{B}"),
 			],
 			["Pure Energy"] =
@@ -2505,8 +2505,8 @@ public static class TrkCards
 					{
 						Reveal = true,
 						Must = true,
-						RestToGraveyard = true,
-						OntoBattlefield = true,
+						Rest = TheRest.Graveyard,
+						To = ZoneType.Battlefield,
 						Tapped = true,
 					}
 				),
@@ -3922,7 +3922,7 @@ public static class TrkCards
 						new LookAndTake(6, Is.Creature & Is.ManaValueAtMost(Count.LandsYouControl))
 						{
 							Reveal = true,
-							OntoBattlefield = true,
+							To = ZoneType.Battlefield,
 						},
 					]
 				)

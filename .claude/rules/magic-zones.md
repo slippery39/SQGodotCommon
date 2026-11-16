@@ -84,8 +84,23 @@ whose subsystem it lives in.
   `BecameTappedEvent` only on untapped → tapped ("whenever Hemmer becomes tapped"); entering tapped is
   not becoming tapped. A new tap path must call it, or Hemmer silently misses it.
 - **Look and take** ("look at the top N, you may reveal a [filter] card and put it into your hand, the rest
-  on the bottom in a random order") is `LookAndTake` — `Must`, `RestToGraveyard`, `Reveal` (known to
-  everyone). The rest go down as Identity Echo's: a random order, not known.
+  on the bottom in a random order") is ONE piece, `LookAndTake { Take, To, Rest, Must, Reveal }` (MC-4.4e2a) —
+  never a flag per destination. **How many** are taken is `Take` (a `Count`, 1 unless said: Stock Up's two; with
+  `Must` exactly that many, else up to; Ponder's 0 asks nothing). **Where they go** is `To`: the hand, the
+  battlefield (Hit It!), or the library — its TOP (Thassa's Oracle's "up to one of them on top": the card stays
+  where it is, above the rest, and its owner knows it). **Where the rest go** is `Rest`: the bottom in a random
+  order (not known, as Identity Echo's), `Graveyard`, or `TopInAnyOrder` — Ponder's "put them back in any order":
+  each made known to its owner, then a surveil's order choice (`OrderKeptOnTopAction.Ask`, the one place it is
+  asked). `Reveal`: the taken are known to everyone. "Two instead if this spell was kicked" (Consult the Star
+  Charts) is `If(WasKicked) { Otherwise }` over two looks, never a conditional number.
+- **A shuffle is `ShuffleLibrary(who)`** (MC-4.4e2a), each player named shuffling once: Ponder's "you may shuffle"
+  (under a `May`), every search's "then shuffle", and Timetwister's "each player shuffles their hand and graveyard
+  into their library" — two `MoveTo`, then ONE shuffle for `Ref.EachPlayer`, so a player with nothing to shuffle in
+  shuffles too. `MoveTo { Shuffle }` is one card shuffled in (Fblthp); several are moved, then shuffled once.
+  **"You MAY search … then shuffle"** is `SearchLibrary { May }`: no card taken is the search declined — nothing is
+  shuffled, so a top card its owner knows stays known. A search with no "may" (Mystical Tutor, landcycling) shuffles
+  with nothing found (CR 701.19). Script `May` whenever the text says "may search" — LSV's five are; FRA's two and
+  TRK's five still shuffle when declined, because kept AI records replay them (DesignNotes; MC-4's Open).
 - **A linked "the exiled card"** (The Measure of a Man) is `Exile { Linked }` (stamps `ExiledBy` with this
   object of the source) and `MoveTo(Ref.All(Exile, Is.ExiledBySource), Battlefield)` — the filter asked from the source:
   a new object of it finds nothing (CR 607.2a). A resolving ability asks as the object it CAME from

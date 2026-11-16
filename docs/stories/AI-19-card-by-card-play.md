@@ -268,6 +268,15 @@ Open questions:
       whatever its `N` (read only for a loyalty ability; none has an N). Wanted: the least-valued N for a sacrifice
       of several, and whether the AI casts Balance well at all — it is priced by rollout alone (backlog; added from
       the cube lane).
+- [ ] AI-19.29 The library's top (LSV cube, MC-4.4e2a): a look that takes TWO (Stock Up; Consult the Star Charts
+      kicked) is a `ChooseAmongChoice` of exactly two, and `GreedyAi.Answer` gives that the two of greatest mana
+      value — Extrapolate the Impossible's rule, written for a reveal an OPPONENT picks from, not for cards you
+      keep (a land it needs is never taken). The beam branches on the pairs only up to 32 (`BeamSearchAi.MaxPicks`:
+      Stock Up's 10; a kicked Consult up to 8 lands), so past that, and in every rollout, it is the greedy answer.
+      Ponder's order is the surveil rule (`LandUnlock.Order`); its "you may shuffle" and a declined "may" search
+      (which no longer shuffles, `SearchLibrary { May }`) are answers the search judges with what `Hidden.Sample`
+      knows of the top. Wanted: the two worth most by held values, and a read of whether the AI casts Ponder and
+      Thassa's Oracle well (backlog; added from the cube lane).
 
 ## Next
 
@@ -282,6 +291,8 @@ boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-15: AI-19.29 — the AI's pick of two from a look (Stock Up, Consult the Star Charts) added from the cube
+  lane (MC-4.4e2a).
 - 2026-11-15: AI-19.28 — the AI's "sacrifice N" answer (Balance) added from the cube lane (MC-4.4d4).
 - 2026-11-15: AI-19.27 — the AI's name for Anointed Peacekeeper added from the cube lane (MC-4.4d2b's review).
 - 2026-11-15: AI-19.26 — how the AI handles X spells added from the cube lane (MC-4.4d2a's Open, answered by Shayne).

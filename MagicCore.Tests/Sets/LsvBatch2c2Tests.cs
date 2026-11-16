@@ -55,13 +55,6 @@ public class LsvBatch2c2Tests : FraBoardTest
 	}
 
 	/// <summary>Puts a fresh card on top of a library.</summary>
-	int OnTop(CardDefinition card, int player)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(player, ZoneType.Library));
-		return id;
-	}
 
 	// ===== MC-4.4c2a =====
 

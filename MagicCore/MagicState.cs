@@ -113,6 +113,25 @@ public static class MagicState
 	}
 
 	/// <summary>
+	/// "… the rest on the bottom of your library in a random order" (Identity Echo, Rutherford, Stock Up): these
+	/// cards of that player's library go to its bottom in a random order — which nobody knows, so whatever was
+	/// known of them (a surveil's kept card, Ponder's look) is forgotten, as a shuffle forgets (story AI-3).
+	/// </summary>
+	public static GameState ToBottomAtRandom(this GameState s, int playerId, int[] ids)
+	{
+		(var rng, s) = s.TakeRng();
+		rng.Shuffle(ids);
+		var libraryId = s.ZoneId(playerId, ZoneType.Library);
+		foreach (var id in ids)
+		{
+			s = s.MoveObject(id, 0).MoveObject(id, libraryId); // out and back in: MoveObject appends, the bottom
+			if (s.GetCard(id) is { KnownTo: not Knowers.None } card)
+				s = s.UpdateObject(id, card with { KnownTo = Knowers.None });
+		}
+		return s;
+	}
+
+	/// <summary>
 	/// <paramref name="who"/> now know this card where it is — a surveil's look, a "reveal" (story AI-3).
 	/// Meaningful only in a library or a hand; the next zone change sets it afresh.
 	/// </summary>

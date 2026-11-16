@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 24/46 · uncommon 36/86 · rare 93/279 · mythic 33/108 · **195/528**
+**Playable:** common 25/46 · uncommon 37/86 · rare 95/279 · mythic 33/108 · **199/528**
 
 ### "Name Sticker" Goblin
 
@@ -507,7 +507,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Look at the top three cards of your library, then put them back in any order. You may shuffle.  
 > Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ShuffleLibrary` — Ponder: "You may shuffle." Timetwister: "Each player shuffles their hand and graveyard…
+
+```csharp
+["Ponder"] =
+[
+	Spell(
+		[],
+		new LookAndTake(3) { Take = 0, Rest = TheRest.TopInAnyOrder },
+		new May("Shuffle your library?", new Always(), [new ShuffleLibrary(Ref.You)]),
+		new DrawCards(Ref.You, 1)
+	),
+],
+```
 
 ### Preordain
 
@@ -651,7 +665,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2eTests
 
-**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
 
 ```csharp
 ["Trinket Mage"] =
@@ -664,6 +678,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			Filter = Is.ManaValueAtMost(1),
 			FilterText = "mana value 1 or less",
 			Reveal = true,
+			May = true,
 		}
 	),
 ],
@@ -1330,7 +1345,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests
 
 **Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1577,7 +1592,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Look at the top five cards of your library. Put two of them into your hand and the rest on the bottom of your library in any order.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…
+
+```csharp
+["Stock Up"] = [Spell([], new LookAndTake(5) { Must = true, Take = 2 })],
+```
 
 ### Swords to Plowshares
 
@@ -2450,7 +2471,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Kicker {1}{U} (You may pay an additional {1}{U} as you cast this spell.)  
 > Look at the top X cards of your library, where X is the number of lands you control. Put one of those cards into your hand. If this spell was kicked, put two of those cards into your hand instead. Put the rest on the bottom of your library in a random order.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `KickerComponent` — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U}…; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
+
+```csharp
+["Consult the Star Charts"] =
+[
+	new KickerComponent(ManaCost.Parse("{1}{U}")),
+	Spell(
+		[],
+		new If(
+			new WasKicked(),
+			[new LookAndTake(Count.LandsYouControl) { Must = true, Take = 2 }]
+		)
+		{
+			Otherwise = [new LookAndTake(Count.LandsYouControl) { Must = true }],
+		}
+	),
+],
+```
 
 ### Containment Priest
 
@@ -2836,7 +2876,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy target creature or planeswalker. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests
 
 **Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -4815,7 +4855,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you may search your library for an Equipment card, reveal it, put it into your hand, then shuffle.  
 > {1}{W}, {T}: You may put an Equipment card from your hand onto the battlefield.
 
-**Status:** scripted · **tests naming it:** LsvBatch2dTests
+**Status:** scripted · **tests naming it:** LsvBatch2dTests, LsvBatch2eTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TapSelfCost` — "{T}:" — tap this permanent.
 
@@ -4829,6 +4869,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		{
 			Subtype = "Equipment",
 			Reveal = true,
+			May = true,
 		}
 	),
 	new ActivatedAbilityComponent(
@@ -5043,7 +5084,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, look at the top X cards of your library, where X is your devotion to blue. Put up to one of them on top of your library and the rest on the bottom of your library in a random order. If X is greater than or equal to the number of cards in your library, you win the game. (Each {U} in the mana costs of permanents you control counts toward your devotion to blue.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `WinTheGame` — "You win the game" (CR 104.2a): every opponent loses, now — and the game ends, so no…
+
+```csharp
+["Thassa's Oracle"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new LookAndTake(Count.DevotionTo(ManaColor.Blue)) { To = ZoneType.Library },
+		// "If X is greater than or equal to the number of cards in your library": at least 0 more.
+		new If(
+			new AtLeast(Count.DevotionTo(ManaColor.Blue), 0)
+			{
+				MoreThan = Count.NumberOf(Ref.All(ZoneType.Library, null, Ref.You)),
+			},
+			[new WinTheGame()]
+		)
+	),
+],
+```
 
 ### The Fantasticar
 
@@ -6922,7 +6984,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2eTests
 
-**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
 
 ```csharp
 ["Spellseeker"] =
@@ -6935,6 +6997,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			Filter = Is.ManaValueAtMost(2),
 			FilterText = "mana value 2 or less",
 			Reveal = true,
+			May = true,
 		}
 	),
 ],

@@ -516,6 +516,67 @@ as his three priorities.
   `Ref.All(zone, null, Ref.EachPlayer)` restates `Ref.All`'s default (every player, yours first): kept, because it
   reads as the card does ("each player") and a change of the order players are visited would move the recorded
   games for nothing.
+- 2026-11-15, Claude — **4.4e2a's plan (the library's top, 4 cards), from the pieces' CODE — two of e1's five
+  findings changed on reading.** Legal actions on a 12-creature board: Ponder, Stock Up and Thassa's Oracle are one
+  cast each, Consult the Star Charts two (kicked and not); everything picked is a choice after the cast.
+  **`LookAndTake` takes its three flags' cards with it** — it had two flags for where things go, each one card
+  phrase (`OntoBattlefield`, `RestToGraveyard`), and the part needs a third destination for each, so both become
+  an option with a value: **`To`** (a zone: the hand; the battlefield — Hit It!, Loot move onto it; the library,
+  its TOP — Thassa's Oracle's "up to one of them on top", the card simply stays above the rest and its owner knows
+  it), **`Rest`** (`BottomAtRandom`; `Graveyard` — Pattern Buffer Preservation, Hit It! move; `TopInAnyOrder` —
+  Ponder: Surveil's `OrderLibraryTopChoice` and `PutOnTopInOrderAction`, asked through one helper both use, the
+  cards made known to their owner as a surveil's are) and **`Take`** (a `Count`, 1 unless said: Stock Up's two;
+  Ponder's none — no pick is asked; with `Must` exactly that many, else up to). No new choice type: the pick is
+  `ChooseAmongChoice`, the order `OrderLibraryTopChoice` (the AI's rule, `LandUnlock.Order`).
+  **Consult the Star Charts needs no conditional `Count`:** `If(WasKicked, [take two]) { Otherwise = [take one] }`
+  over the same look (`Count.LandsYouControl`) — "instead" is the printed shape.
+  **The shuffle is ONE piece, an effect by `Ref`: `ShuffleLibrary(who)`** — `ShuffleLibraryAction(playerId)` goes,
+  and the search's "then shuffle" uses the effect (`Ref.Id(owner)`), so there is one shuffle step, not an action
+  beside an effect. Ponder's "you may shuffle" is `May` over it. **`LsvCards.Timetwister` takes it** (Timetwister,
+  Echo of Eons): the two `MoveTo` lose `{ Shuffle }`, then `ShuffleLibrary(Ref.EachPlayer)` — each player shuffles
+  once, a player with no hand and no graveyard too; its DesignNotes ceiling and `ponytail:` go. **A golden-out
+  move there is intended**: one shuffle a player instead of one a card moved is a different random stream in every
+  recorded game that casts either.
+  **"You MAY search … then shuffle" is `SearchLibrary { May }`**: no card taken, no shuffle (the player declined
+  the search — a known top stays known). **Twelve scripted cards say "may search", not only the three the survey
+  named** — LSV: Stoneforge Mystic, Spellseeker, Trinket Mage, Path to Exile and Erode (`ItsControllerMayFetch`);
+  TRK: 70,000 Light-Years from Home, Andromedan Automatons, H.M.S. Bounty, Warp Core, Arcum Dagsson; FRA: Hexhaven
+  Invigorator, Simulacrum Shaper. **LSV's five move onto it; FRA's two and TRK's five do not, yet** (below: Open).
+  A search that isn't "may" (Mystical Tutor, landcycling) still shuffles with nothing found (CR 701.19).
+  **Golden-out moves for these too** (a random game where a "may" search took nothing no longer shuffles):
+  intended.
+  **Open (for Shayne): the seven FRA and TRK "may search" cards.** Built with `May = true` on all twelve first:
+  the engine was right and every card's test passed, but the full suite then failed three AI tests on kept TRK
+  game records (`EveryKeptRecord_StillReplays`: BorgCubeNotCast91; `ASpacecraftPastItsThreshold_IsNotChargedFurther`;
+  `TheCerritos_BlocksTheBorg_NotTheRomulanAMinusOneFinishes` — a declined search in the record no longer shuffles,
+  so the random stream moves and the record is stale; confirmed by taking the seven back off: all three pass).
+  Those records are the AI lane's test cases and can only be re-kept from new games. **Default taken: the seven
+  stay bare `SearchLibrary`** (they shuffle when declined, as before — DesignNotes names them), and the AI lane
+  adds `May = true` to them when it can re-keep or drop those records. The other way round — move them now and
+  re-keep three records in this lane — is his call, not a cube part's.
+  **Thassa's Oracle needs no engine change for its win:** `AtLeast` already has a counted bound, `MoreThan`
+  (Robber of the Rich's) — `AtLeast(Count.DevotionTo(Blue), 0) { MoreThan = the cards in your library }` is "X is
+  greater than or equal to the number of cards in your library"; e1's survey read the positional signature only.
+  Devotion is counted as the trigger resolves, twice (the look, the win), with nothing between that changes it.
+  **Not built:** several cards taken to the top keep their old order (no card says "put two on top in any order"
+  of a look yet).
+- 2026-11-15, Claude — **4.4e2a's notes.** Built as planned but for the Open above. **Test helpers:**
+  `OnTop(card[, player])` moved up into `FraBoardTest` (fifteen private copies gone; three of them went through
+  `MoveCard`, which marked the card known to its owner — the one helper leaves it unknown, and no test read that).
+  **`/pre-commit`'s review: no bug in the four scripts, the Timetwister change or the search; three engine points
+  fixed, each with a test that fails without it.** (1) A card its owner KNEW (Ponder's look, a surveil's kept card)
+  stayed "known" when a later look sent it to the bottom in a random order — the reorder never forgot it, and
+  Ponder's and the Oracle's new marks make that common: `MagicState.ToBottomAtRandom` is now the one way a
+  library's own cards go to its bottom at random (`LookAndTake` and `RevealUntilOntoBattlefield`), and it forgets
+  as a shuffle does; the random stream is unchanged. (2) `LookAndTake.To` naming any zone but the hand, the
+  battlefield or the library fell silently to the hand: it is the zone it names. (3) `Rest` and `TheRest` name
+  their cards; the "may" search's ceiling is a `ponytail:` in the code.
+  **Not taken, and why:** `PutLookedAtAction` carrying the `LookAndTake` record instead of repeating its four
+  options (a cleanup of a shape it already had — three options before); `MoveTo { Shuffle }` replaced by a move
+  and one `ShuffleLibrary` (four FRA and TRK single-card users: the TRK pair would go from two shuffles to one and
+  stale kept records — it goes with the Open); the AI's answers (its pick of two, Ponder's order by the surveil
+  rule): AI-19.29. **Left as ceilings (DesignNotes):** a "may" search can't be made and failed on purpose to
+  shuffle; `ExileTopPlayable { RestOnBottom }` still marks its rest known to their owner.
 
 ## Tasks
 
@@ -614,7 +675,15 @@ as his three priorities.
           Sewer-veillance Cam. Scripts only, no engine change; 12 tests, the review's assertions 9/9 breaks caught;
           `batch_checks.py` all 7 steps (golden-out unchanged; golden-in moved 29 random and 681 card-replay games,
           added 48; probe 150 games, none unfinished, every card cast)
-    - [ ] MC-4.4e2a Options, the library's top, 4: Ponder, Stock Up, Consult the Star Charts, Thassa's Oracle
+    - [x] MC-4.4e2a Options, the library's top, 4 — done 2026-11-15: Ponder, Stock Up, Consult the Star Charts,
+          Thassa's Oracle. `LookAndTake { Take, To, Rest }` (Hit It!, Loot and Pattern Buffer Preservation moved
+          onto it), `ShuffleLibrary(who)` (`ShuffleLibraryAction` gone; Timetwister and Echo of Eons take it),
+          `SearchLibrary { May }` (LSV's five "may search" cards; FRA's two and TRK's five are an Open — Decisions);
+          `MagicState.ToBottomAtRandom` from the review; 14 tests (17 cases), 50/50 breaks caught; `batch_checks.py`
+          all 8 steps, three times (the Open, then the review's fixes; golden-out moved 5 random games,
+          each read: four by a "may" search that took nothing, one by Timetwister's one shuffle; golden-in moved 29
+          random and 351 card-replay games, added 16, the AI replay unmoved; probe 150 games, none unfinished, each
+          card cast 396–543 times)
     - [ ] MC-4.4e2b Options, draws, 4: Faerie Mastermind, Hullbreacher, Narset (Parter of Veils), Jace (Wielder of
           Mysteries)
     - [ ] MC-4.4e2c Options, mana and costs, 5: Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer),
@@ -628,20 +697,31 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d) and blue's tested pieces (4.4e1) are done: **195 of 528 play.** Blue's tier 1
-is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2a — the library's top, 4
-cards:** Ponder, Stock Up, Consult the Star Charts, Thassa's Oracle — options on `LookAndTake` (how many are taken,
-a `Count`; the taken to the top; "put them back in any order", Surveil's `OrderLibraryTopChoice`), a shuffle effect
-by `Ref` for Ponder's "you may shuffle" (**`LsvCards.Timetwister` takes it too**: today a player with no hand and no
-graveyard doesn't shuffle — DesignNotes), and `AtLeast` with a counted bound for the Oracle's "if X is greater than
-or equal to the number of cards in your library" — and, since known tops begin to matter there, a "may" search
-that takes nothing shouldn't shuffle (Spellseeker, Trinket Mage, Stoneforge Mystic: DesignNotes). Then e2b (draws), e2c (mana and costs), e2d (casting off the
+Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1) and the library's top (4.4e2a) are done: **199 of
+528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2b —
+draws, 4 cards:** Faerie Mastermind, Hullbreacher, Narset (Parter of Veils), Jace (Wielder of Mysteries) —
+`DrewCardEvent` carries only the player, so "their second card each turn" is a number on it, stamped as the card is
+drawn (as `SpellCastEvent.SpellNumber`); Hullbreacher's "instead you create a Treasure", Narset's "can't draw more
+than one" and Jace's "you win the game instead" are an outcome on the draw's replacement, in `MagicState.Draw`, the
+one place (`NumericReplacement(Draw)` is times and plus today). Read those against the CODE first: of e2a's five
+survey findings two changed on reading (`AtLeast` already had a counted bound, `MoreThan`; the shuffle became ONE
+piece, not an effect beside the action). Then e2c (mana and costs), e2d (casting off the
 hand), e2e ("for as long as this remains"), e2f (choices after the cast — Mystic Confluence is 378 casts on a
 12-creature board as `Repeats` is built, so its targets become a choice after the cast and Fiery Confluence moves
 with it), a part a session. Blue's tier 2 (6) and tier 3 (11) are not this task.
+**Open (for Shayne), from e2a:** the seven FRA and TRK cards that say "may search" still shuffle when the search
+is declined — `May = true` on them makes three AI tests on kept TRK records stale (Decisions, e2a's plan). Default
+taken: left as they were, for the AI lane to move with those records re-kept.
+From e2a: `LookAndTake { Take, To, Rest }` is the look ("put N of them" / "on top" / "back in any order" are
+options, never a flag); a shuffle is `ShuffleLibrary(who)`; a "may search" is scripted `SearchLibrary { May }`
+(Golos and Boseiju, not yet scripted, say it too); a declined "may" search or a moved shuffle changes the random
+stream, so **an engine change that adds or drops a shuffle on FRA or TRK cards stales the AI lane's kept records**
+(`MagicCore.Tests/Records`) — the full suite shows it, golden-out doesn't.
 The blue tests are in `LsvBatch2eTests.cs` (`Targeting(target, yes)`: a trigger's target and its "you may",
 `UntappedLands()`: what a cost tapped is the difference, `Revealed(card)`, `TopSeven(player)` / `HandOf(player)`:
-was the library shuffled, `HandsAndGraveyards(…)`); `Lsv(name)`, `Put(card, player, zone)`, `CastAsking(card,
+was the library shuffled, `HandsAndGraveyards(…)`, and from e2a `Library(player)`: top first — unchanged after an
+effect, it was NOT shuffled, `OwnerKnows(card)`, `LibraryOf(n)`: my library cut to its top n); `Lsv(name)`,
+`Put(card, player, zone)`, `OnTop(card[, player])` (fifteen private copies gone), `CastAsking(card,
 answer)`, `ResolveAsking(answer)`, `Offered<T>(asked)` (the ids a choice of that type offered) and
 `TapIt(permanent)` are `FraBoardTest`'s now — a helper a later file needs MOVES up there too.
 Read the nearest piece's CODE first — three of d2a's six plans changed on reading, two of d2b's grew, d3's grew in
@@ -728,3 +808,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-15: MC-4.4e split in seven parts (12 tested pieces, 23 on options — Decisions) and MC-4.4e1 done: 12
   cards, scripts only; no recorded game moved by the engine; 195 of 528 play. For Shayne: nothing Open. Next:
   MC-4.4e2a, the library's top.
+- 2026-11-15: MC-4.4e2a done: Ponder, Stock Up, Consult the Star Charts, Thassa's Oracle — 199 of 528 play.
+  `LookAndTake { Take, To, Rest }`, `ShuffleLibrary`, `SearchLibrary { May }` on LSV's five; the seven FRA and TRK
+  "may search" cards are an Open (three kept AI records go stale with them). Next: MC-4.4e2b, draws.

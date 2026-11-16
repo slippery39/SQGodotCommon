@@ -86,6 +86,7 @@ public static class LsvCards
 			Supertype = Supertype.Basic,
 			Tapped = true,
 			Who = Ref.ControllerOfTarget(0),
+			May = true,
 		};
 
 	/// <summary>Pyroblast: "… if it's blue" — any spell or permanent is a legal target; only a blue one is hit.</summary>
@@ -966,6 +967,7 @@ public static class LsvCards
 					{
 						Subtype = "Equipment",
 						Reveal = true,
+						May = true,
 					}
 				),
 				new ActivatedAbilityComponent(
@@ -1405,6 +1407,7 @@ public static class LsvCards
 						Filter = Is.ManaValueAtMost(2),
 						FilterText = "mana value 2 or less",
 						Reveal = true,
+						May = true,
 					}
 				),
 			],
@@ -1418,6 +1421,7 @@ public static class LsvCards
 						Filter = Is.ManaValueAtMost(1),
 						FilterText = "mana value 1 or less",
 						Reveal = true,
+						May = true,
 					}
 				),
 			],
@@ -1483,25 +1487,60 @@ public static class LsvCards
 					Costs = [new SacrificeSelfCost()],
 				},
 			],
+			// ===== MC-4.4e2a: blue's options, the library's top =====
+			["Ponder"] =
+			[
+				Spell(
+					[],
+					new LookAndTake(3) { Take = 0, Rest = TheRest.TopInAnyOrder },
+					new May("Shuffle your library?", new Always(), [new ShuffleLibrary(Ref.You)]),
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Stock Up"] = [Spell([], new LookAndTake(5) { Must = true, Take = 2 })],
+			["Consult the Star Charts"] =
+			[
+				new KickerComponent(ManaCost.Parse("{1}{U}")),
+				Spell(
+					[],
+					new If(
+						new WasKicked(),
+						[new LookAndTake(Count.LandsYouControl) { Must = true, Take = 2 }]
+					)
+					{
+						Otherwise = [new LookAndTake(Count.LandsYouControl) { Must = true }],
+					}
+				),
+			],
+			["Thassa's Oracle"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new LookAndTake(Count.DevotionTo(ManaColor.Blue)) { To = ZoneType.Library },
+					// "If X is greater than or equal to the number of cards in your library": at least 0 more.
+					new If(
+						new AtLeast(Count.DevotionTo(ManaColor.Blue), 0)
+						{
+							MoreThan = Count.NumberOf(Ref.All(ZoneType.Library, null, Ref.You)),
+						},
+						[new WinTheGame()]
+					)
+				),
+			],
 		};
 
 	/// <summary>
 	/// Timetwister, Echo of Eons: "Each player shuffles their hand and graveyard into their library, then draws
-	/// seven cards." — the spell itself is still on the stack, so it isn't shuffled in.
-	/// ponytail: a player with no hand and no graveyard doesn't shuffle (MoveTo shuffles for each card moved) —
-	/// a shuffle effect of its own when Ponder's "you may shuffle" brings one (MC-4.4e2a).
+	/// seven cards." — the spell itself is still on the stack, so it isn't shuffled in. Each player shuffles once,
+	/// with or without a hand or a graveyard to shuffle in.
 	/// </summary>
 	static SpellEffectsComponent Timetwister =>
 		Spell(
 			[],
-			new MoveTo(Ref.All(ZoneType.Hand, null, Ref.EachPlayer), ZoneType.Library)
-			{
-				Shuffle = true,
-			},
-			new MoveTo(Ref.All(ZoneType.Graveyard, null, Ref.EachPlayer), ZoneType.Library)
-			{
-				Shuffle = true,
-			},
+			new MoveTo(Ref.All(ZoneType.Hand, null, Ref.EachPlayer), ZoneType.Library),
+			new MoveTo(Ref.All(ZoneType.Graveyard, null, Ref.EachPlayer), ZoneType.Library),
+			new ShuffleLibrary(Ref.EachPlayer),
 			new DrawCards(Ref.EachPlayer, 7)
 		);
 

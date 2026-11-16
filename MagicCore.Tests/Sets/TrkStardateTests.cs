@@ -203,13 +203,6 @@ public class TrkStardateTests : FraBoardTest
 
 	// ===== MC-6.4: counted bounds =====
 
-	int OnTop(CardDefinition card, int player)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(player, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
 
 	static CardDefinition Legend(string cost, string name) =>
 		TestCards.Typed(TestGames.CreatureCosting(cost, name, "1/1"), "Legendary Creature — Human");

@@ -159,11 +159,6 @@ public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 	}
 }
 
-public record ShuffleLibraryAction(int PlayerId) : GameAction
-{
-	public override ActionResult Execute(GameState s) => new(s.Shuffle(PlayerId));
-}
-
 /// <summary>Something Worth Saving: "You may put a [Types] card from among them into your hand."</summary>
 public record ChooseAmongChoice : ChoiceAction
 {

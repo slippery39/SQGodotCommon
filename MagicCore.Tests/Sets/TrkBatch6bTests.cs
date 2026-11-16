@@ -21,14 +21,6 @@ public class TrkBatch6bTests : FraBoardTest
 
 	static CardDefinition Forest => CardRegistry.Get("Forest");
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	bool InExile(int card) => s.IsIn(card, me, ZoneType.Exile);
 
 	void Activate(ActivateAbilityAction action, Func<ChoiceAction, IEnumerable<int>>? answer = null)
