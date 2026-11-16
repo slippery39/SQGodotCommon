@@ -182,6 +182,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     notheirabilities  the simulated opponent never uses its permanents' abilities in its own turn (before AI-17.22)
 #     spellfirst     the simulated opponent casts a spell before any ability on its board (before AI-20.8)
 #     nolooks        a look at an unseen card (a surveil) moves no odds: it shows the card the look-ahead made up (before AI-20.9)
+#     surveilspells  a surveil's real spells decided by price, not by the search: above the average unknown card kept, below binned (the default before AI-20.11)
 #     thisturngrants the next attack's clock reads this turn's grants (can't block, flying) as lasting (before AI-17.9)
 #     faceburn       burn at their face whenever it scores, not saved for a kill within two turns (before the burn rule)
 #     instantoptions only instants and flash held as options, not targeted sorcery-speed cards (before AI-13.10)

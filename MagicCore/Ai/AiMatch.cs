@@ -107,12 +107,8 @@ public static class AiMatch
 			["nolandunlock"] = o => o with { Without = o.Without | Evaluator.Terms.LandUnlock },
 			// A surveil decided by the rollout alone, lands never binned, before AI-17.20: beam+nosurveillands.
 			["nosurveillands"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilLands },
-			// A surveil keeps every spell and branches it by rollout, before the spells rule: beam+nosurveilspells.
-			["nosurveilspells"] = o =>
-				o with
-				{
-					Without = o.Without | Evaluator.Terms.SurveilSpells,
-				},
+			// A surveil's real spells decided by price, not by the search - the default until AI-20.11: beam+surveilspells.
+			["surveilspells"] = o => o with { SpellsRule = true },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.

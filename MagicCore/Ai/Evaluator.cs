@@ -351,13 +351,6 @@ public static partial class Evaluator
 		SurveilLands = 2097152,
 
 		/// <summary>
-		/// A surveil bins a spell priced below the expected replacement and keeps one at or above it (AI-17.20, the
-		/// spells half): the next draw is a known card or an unknown one, <see cref="HeldValues.Unknown"/> on average
-		/// (`+nosurveilspells`). Needs the held table; every card on top is then decided, none branched.
-		/// </summary>
-		SurveilSpells = 4194304,
-
-		/// <summary>
 		/// "Exile the top card, you may play it" is worth a RANDOM card, not the one the search sampled (AI-17.16, Shayne
 		/// 2026-11-09: "it shouldn't matter what the exact top card is"): inside the search a card exiled this way after the
 		/// root can't be played - the sample's luck - and is credited <see cref="ImpulseShare"/> of an unknown card, each

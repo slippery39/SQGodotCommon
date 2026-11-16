@@ -198,6 +198,10 @@ built on top.
   a castable removal spell included. On trying the spells rule off as the default (`SurveilSpells`, AI-20.5's
   first patch - suite, tests, a match): "guess we can do step 1." (Claude: with the rule off the search still
   keeps Compel Brutality - his answer is not met yet; it goes with AI-20.10, by what the AI values, not a rule.)
+- 2026-11-16, Shayne (after AI-20.11's match, 50.0%; asked whether the spells rule goes): "Keep it please, again
+  im looking for reasonable plays. And this is reasonable." Asked which he meant, he chose **the rule off by
+  default, kept as a switch** (not deleted), and to commit after the pre-commit review. So a flat match does not
+  decide it: #247's look binning what he bins is the reasonable play. `Settings.SpellsRule`, `beam+surveilspells`.
 
 Open questions (for Shayne, before `ready`):
 - What counts as done: the flip rate down, the kept positions right, and a match not worse? (Proposed by Claude,
@@ -290,6 +294,33 @@ Open questions (for Shayne, before `ready`):
 - [ ] AI-20.10 **"The land I need", not any land** (proposed, after 20.9's numbers): the lands way draws only lands
       that unlock a card in hand (`LandUnlock.Unlocks` - #247's 9 red sources of 27, not all 13 lands); a land that
       unlocks nothing is a blank draw, his "bust". Where every land left is alike, nothing changes
+- [x] AI-20.11 **The spells rule is off by default, kept as a switch** ("a spell priced above the unknown card
+      stays on top" - AI-20.5's first patch; Shayne's go-ahead, 2026-11-15, and his word on the result,
+      2026-11-16). Measured with the switch as it was (`Terms.SurveilSpells`, `beam+nosurveilspells`); it is now
+      `Settings.SpellsRule` (off) and `beam+surveilspells` turns the rule back on.
+      - **A flaw found first, fixed:** with the rule off a surveil over a MADE-UP card was branched,
+        and binning it made #247's 13 lands of 27 into 13 of 26 - enough alone to pay the loyalty (the token's −1
+        without `Looks`), and the look counted twice with it (76% for 74%). A made-up card under a surveil is now
+        kept, never branched (`BeamSearchAi.Decisions`) - not in `beam+nosurveillands`, whose old path is left as
+        it was; the default is untouched (suite 0 of 288 changed, 19 805.8 steps). The cause is wider and left
+        (the pre-commit review; `DesignNotes.md` (9)): `Hidden.LandOdds` forgets any made-up card that left our
+        library or hand - explore's bin, a discard, a mill - as though it were not a land. Tested: `ShortOfALand_TheJaceTokenSurveilsForIt` passes without `Looks` with the spells
+        ruled or branched. A first match was stopped at 25 minutes for it.
+      - **The suite can't judge the rule:** `--suite=beam+nosurveilspells` changes 0 of 288 at the same cost - no
+        suite position looks at a real spell where the two differ. What shows it: #247's real look (the findings).
+      - **The tests with the rule off by default** (a temporary flip): 1592 pass; red are the rule's own two
+        (`ASurveil_KeepsAGoodSpellOnTop`'s control - the play itself holds, Energize is kept without the rule;
+        `Surveil_BinsTheCheapSpell_KeepsTheDear` - on two Forests and no land left to draw the dear card is
+        binned too) and three controls the flaw above explains.
+      - **The match** (`--match=beam+nosurveilspells,beam --until-clear`, after the fix): **50.0% ± 1.3pp over 192
+        games (96-96), stopped as "no difference of 5pp either way"**, at 9831.1 engine steps a decision against
+        9690.5 (+1.5%). The rule earns nothing measurable in play; without it #247's look bins 17 of 18 for 12.
+      - **As built (2026-11-16):** the default search decides a look's real spells itself; the rule is
+        `Settings.SpellsRule`. Its two tests stay, turned round: `ASurveil_KeepsAGoodSpellOnTop` - the one-guess
+        search bins Energize (control), the old rule keeps it, the default keeps it without the rule;
+        `Surveil_BinsTheCheapSpell_KeepsTheDear` runs with the rule on (that the switch still fires). The suite:
+        0 of 288 changed for `beam` and for `beam+surveilspells`; the golden replays unchanged; 1597 tests pass.
+        Compel Brutality at #247 is still kept (Shayne bins it) - AI-20.10.
 - [x] AI-20.7 **Twelve lesson tests were red under the new default** (1583 passed). Green now (1595 pass, 0
       fail; Shayne, 2026-11-15: "do what you think is best"): the Patrol fixed (AI-20.8); the ten controls run
       under the search before AI-20.4 (`AiPositionTests.OneGuess` = `beam+shuffle`), where their misplay still
@@ -327,15 +358,19 @@ spell that does less (AI-20.8). 1595 tests pass; the suite's answers are accepte
 
 **AI-20.9 is committed (2026-11-15)**: a look at an unseen card moves the odds of the next draw - #247 surveils,
 9 suite decisions changed and accepted, 1597 tests pass. **Its match is played: 49.3% ± 1.5pp over 288 games
-against `beam+nolooks`, no difference of 5pp either way**, a little cheaper a decision - the match result is in
-the story and the findings but NOT committed (ask Shayne). Whether 20.9 stays is his call (Claude: keep).
-**The check is done (Log, findings): the real look keeps 12 of #247's 14 spells, 9 of them uncastable** - the
-`SurveilSpells` rule - so the token pays a loyalty for 33% → 41%. **Shayne's go-ahead (Decisions, 2026-11-15):
-(a) try `SurveilSpells` off as the default** - AI-20.5's first patch: the suite (`--suite=beam+nosurveilspells`),
-the tests, a match (`--match=beam+nosurveilspells,beam --until-clear`, ~100 min, any time); if it holds, the
-rule goes with its control. He bins Compel Brutality ({1}{G}, castable) at #247, which the search without the
-rule still keeps - for (b) **AI-20.10** ("the land I need", proposed in Tasks; his go-ahead still to ask). Also
-not yet read: the suite change `White-Blue Jace vs White-Black seed 1, move 90` (Jace −2 → a cast).
+against `beam+nolooks`, no difference of 5pp either way**, a little cheaper a decision (committed, `edc2ff5a`).
+Whether 20.9 stays is his call (Claude: keep). The real look keeps 12 of #247's 14 spells, 9 of them
+uncastable - the `SurveilSpells` rule - so the token pays a loyalty for 33% → 41% (Log, findings).
+
+**AI-20.11 is done (2026-11-16): the spells rule is off by default, kept as a switch** (`Settings.SpellsRule`,
+`beam+surveilspells`; Shayne: "this is reasonable") - the search decides a look's real spells, and a made-up card
+under a look is kept, never branched. Its match: 50.0% ± 1.3pp over 192 games, no difference of 5pp either way,
++1.5% engine steps a decision. Suite unchanged, 1597 tests pass. One of AI-20.5's patches is settled; the flat
+`SurveilPrice` and the other nine are still to try.
+
+Next: **AI-20.10** ("the land I need", proposed in Tasks; his go-ahead still to ask) - it must also bin
+Compel Brutality ({1}{G}, castable) at #247, which he bins and the search without the rule keeps. Also not yet
+read: the suite change `White-Blue Jace vs White-Black seed 1, move 90` (Jace −2 → a cast).
 
 **Open, each on Shayne's word - interview first, one topic at a time, nothing built before his go-ahead:**
 1. **The Jace token and the surveil.** The Jace deck wins least for the new search (49-111 in the match, 66-126
@@ -423,6 +458,8 @@ Outside this story, found by the pre-commit review: on the table, Undo keeps the
   tests are green, 1595 pass. Not committed.
 - 2026-11-15: committed (`7b1f1f77`), then the match played again on Shayne's word, as committed: `beam` 54.0% ±
   1.5pp against `beam+shuffle` over 480 games (259-221), "better"; 2.20× the engine steps a decision.
+- 2026-11-15: the order set with Shayne: the immediate issues (the surveil, the opponent's unknown hand, the ten
+  patches) before option pricing.
 - 2026-11-15: #247 read with `--explain=247` for Shayne. AI 2: three Forests, six red cards in hand, none castable,
   27 unseen cards (7 Mountains, 2 Konstrari Annex, 4 Forests, 14 spells). Pass −17.99 = 52% × −23.40 (draws not
   lands: nothing cast to turn 16) + 48% × −12.18 (a Mountain, Heartstring Puller cast on turn 14); Jace −1 −18.09 =
@@ -451,5 +488,15 @@ Outside this story, found by the pre-commit review: on the table, Undo keeps the
   keep"); with it off the search bins 17 of the 18 cards that aren't a red source (55%; it keeps Compel Brutality,
   {1}{G}), and that rule's own lesson (`SurveilNone` #173, Energize kept) holds without it under the default.
   Numbers in the findings. Nothing built.
-- 2026-11-15: the order set with Shayne: the immediate issues (the surveil, the opponent's unknown hand, the ten
-  patches) before option pricing.
+- 2026-11-15: AI-20.11 on his go-ahead ("guess we can do step 1"; he bins Compel Brutality too). The suite with
+  the rule off: 0 of 288 changed. The tests with it off found the search binning a made-up card (13 of 27 lands
+  → 13 of 26): fixed - a made-up card is kept, never branched; default unchanged (suite 0 changed, same cost).
+  The first match stopped at 25 minutes for it and started again.
+- 2026-11-15: AI-20.11's match: `beam+nosurveilspells` 50.0% ± 1.3pp against `beam` over 192 games (96-96;
+  56.7 min), no 5pp difference either way; 9831.1 engine steps a decision against 9690.5. By deck Red-Green
+  40-24, White-Black 40-24, White-Blue Jace 16-48 (its usual share).
+- 2026-11-16: on Shayne's word ("Keep it please … this is reasonable"; the rule off, a switch kept): the spells
+  rule is `Settings.SpellsRule`, off by default; `Terms.SurveilSpells` and `beam+nosurveilspells` are gone,
+  `beam+surveilspells` is the search before. Suite 0 of 288 changed either way, 1597 tests pass. The pre-commit
+  review: the made-up-card fix does not reach `beam+nosurveillands`, and its cause is wider (`Hidden.LandOdds`
+  forgets a made-up card that left our library or hand) - both left, in `DesignNotes.md` (9).

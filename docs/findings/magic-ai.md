@@ -1952,4 +1952,22 @@ A surveil over a card the look-ahead made up moves the land odds of the NEXT dra
   `Terms.SurveilSpells` off (the spells branched, not ruled): 17 of 18 binned, **55.1%**; the one kept is Compel
   Brutality ({1}{G}, castable). And that rule's own lesson (`SurveilNone` #173: Energize stays on top) holds
   without it under the default - Mountain binned, Energize kept, either way.
+- **The spells rule off, on the suite (AI-20.11):** `--suite=beam+nosurveilspells` changes **0 of 288**. Before
+  the fix below it cost 20 311.5 engine steps a position (41.6 rollouts) against 19 805.8 (40.6); after it, the
+  same 19 805.8 - every extra step was the branch over a made-up card. No suite position looks at a real spell
+  where the rule and the search differ, so the suite cannot judge the rule.
+- **A made-up card binned (found by the tests with the rule off, fixed):** with the spells branched, the search
+  binned the unknown card a look showed - #247's 13 lands of 27 unseen became 13 of 26 (48.1% → 50.0%, 0.21 of
+  score against the loyalty's 0.10), so the token's −1 was played even without `Looks`; with `Looks` on the same
+  bin was counted again (76% for 74%). A made-up card is now always kept; the default search never branched one
+  (suite 0 changed, same cost).
+- **The spells rule off, the match (AI-20.11, after that fix):** `--match=beam+nosurveilspells,beam --until-clear`
+  stopped after 192 games (6 pairings × 16 seeds × both seats, 3403.8 s; 216 had finished, 109-107).
+  beam+nosurveilspells **50.0% ± 1.3pp** (96-96, no draws); **no 5pp difference either way** (log-likelihood:
+  better −7.60, worse −7.60). Cost per decision 9831.1 engine steps and 22.3 rollouts against 9690.5 and 22.0
+  (+1.5%). Lands played 7.5 each, spells cast 9.9 against 9.8, 19.9 turns. By deck: Red-Green 40-24, White-Black
+  40-24, White-Blue Jace 16-48.
+- **Since 2026-11-16 the rule is off by default** (Shayne: "this is reasonable"), so the names above read the
+  other way round: `beam` is what was `beam+nosurveilspells`, and `beam+surveilspells` (`Settings.SpellsRule`)
+  is the search with the rule. The suite changes 0 of 288 for either, 19 805.8 engine steps a position each.
 

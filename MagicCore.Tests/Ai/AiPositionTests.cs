@@ -154,10 +154,20 @@ public class AiPositionTests
 	public void ShortOfALand_TheJaceTokenSurveilsForIt()
 	{
 		var s = KeptRecords.Before("ShayneNotesSeed1", 247);
-		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		string Chose(Evaluator.Terms without, bool spellsRule = false) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without, SpellsRule: spellsRule))
+				.Decide(s)
+				.What;
 
+		// the control also holds that a made-up card is never binned (AI-20.11): with a surveil's spells branched,
+		// binning it made 13 lands of 27 into 13 of 26, which alone paid for the loyalty - and counted the look
+		// twice once Looks was on
 		Assert.That(Chose(Evaluator.Terms.Looks), Is.EqualTo("Pass"), "control");
+		Assert.That(
+			Chose(Evaluator.Terms.Looks, spellsRule: true),
+			Is.EqualTo("Pass"),
+			"control, the old rule"
+		);
 		Assert.That(Chose(Evaluator.Terms.None), Does.StartWith("Jace"));
 	}
 
@@ -481,25 +491,26 @@ public class AiPositionTests
 
 	// AI-17.20's spells half, on the same surveil (checked 2026-11-09, AI-13.10, Shayne: "run 173 with the rule on and
 	// off"): Energize, priced above the unknown card, stays on top. Counted over 30 shuffles, the sample decides each.
-	// The CONTROL: without Terms.SurveilSpells the branching bins it too in about half (14 of 30 when checked).
+	// The CONTROL: the one-guess search (before AI-20.4) branching it bins it in about half (14 of 30 when checked) -
+	// what the spells rule (Settings.SpellsRule) was for. The default search keeps it without the rule (AI-20.11).
 	[Test]
 	public void ASurveil_KeepsAGoodSpellOnTop()
 	{
 		var s = KeptRecords.Before("SurveilNone", 173);
 		var held = BeamSearchAi.DefaultRollout.Held!;
 		Assert.That(held.Of("Energize"), Is.GreaterThan(held.Unknown));
-		int BinsEnergize(Evaluator.Terms without)
+		int BinsEnergize(Hidden.Library library, bool spellsRule = false)
 		{
 			var bins = 0;
 			Parallel.For(
 				1,
-				SeedsFor(LibraryFor(without)) + 1,
+				SeedsFor(library) + 1,
 				k =>
 				{
 					if (
 						new BeamSearchAi(
 							s.DecidingPlayerId(),
-							new(Without: without, Threads: 1, Library: LibraryFor(without))
+							new(Threads: 1, Library: library, SpellsRule: spellsRule)
 						)
 							.Decide(s with { RngSeed = k * 7919 })
 							.What.Contains("Energize")
@@ -510,12 +521,9 @@ public class AiPositionTests
 			return bins;
 		}
 
-		Assert.That(
-			BinsEnergize(Evaluator.Terms.SurveilSpells),
-			Is.GreaterThanOrEqualTo(7),
-			"control"
-		);
-		Assert.That(BinsEnergize(Evaluator.Terms.None), Is.EqualTo(0));
+		Assert.That(BinsEnergize(OneGuess), Is.GreaterThanOrEqualTo(7), "control");
+		Assert.That(BinsEnergize(OneGuess, spellsRule: true), Is.EqualTo(0), "the old rule");
+		Assert.That(BinsEnergize(new BeamSearchAi.Settings().Library), Is.EqualTo(0));
 	}
 
 	// Shayne, 2026-11-09 (AI-17.20): turn 8, Emergency Holographic Crew's surveil 2 over a Mountain and an Energize, with

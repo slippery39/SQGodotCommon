@@ -77,6 +77,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// excess lands that are not needed"). The tree only: the rollout's own answers stay cheap. Off is
 	/// beam+onepick.
 	/// </param>
+	/// <param name="SpellsRule">
+	/// A surveil's real spells are decided by price, not by the search (AI-17.20, the spells half): one priced
+	/// below <see cref="HeldValues.Unknown"/> is binned, one at or above it kept. Needs the held table. The default
+	/// until AI-20.11, off since: at Shayne's #247 (six red cards on three Forests) it kept 12 of the library's 14
+	/// spells on top, 9 of them uncastable, and its match against the search alone was even. On is beam+surveilspells.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -103,7 +109,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool BranchPicks = true,
 		bool FreePasses = true,
 		int FreePassCap = 4,
-		bool WaitOnTies = true
+		bool WaitOnTies = true,
+		bool SpellsRule = false
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -747,14 +754,22 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		)
 		{
 			var (decided, bin) = LandUnlock.Surveil(s, top);
-			// the spells too, when we have prices: below the unknown-card average they are binned, else kept
-			if (!Evaluator.IsOff(Evaluator.Terms.SurveilSpells) && RolloutSettings.Held is { } held)
-				foreach (var o in choice.Options.Where(o => !decided.Contains(o.Id)))
+			// the spells too under the old rule (Settings.SpellsRule): below the unknown-card average binned, else kept
+			var held = options.SpellsRule ? RolloutSettings.Held : null;
+			foreach (var o in choice.Options.Where(o => !decided.Contains(o.Id)))
+			{
+				var card = s.GetCard(o.Id);
+				// a card the look-ahead made up is kept, never branched: its look is in the odds (Hidden.Looked,
+				// AI-20.9) - binning it too would shorten the library and count the look twice
+				if (Hidden.IsUnknown(card))
+					decided.Add(o.Id);
+				else if (held is not null)
 				{
 					decided.Add(o.Id); // decided, not branched
-					if (held.Of(s.GetCard(o.Id).Name) < held.Unknown)
+					if (held.Of(card.Name) < held.Unknown)
 						bin.Add(o.Id);
 				}
+			}
 			return
 			[
 				.. (
