@@ -397,6 +397,7 @@ public enum CountOf
 	DilemmasFacedThisTurnBy, // Sisko: "each dilemma you've faced this turn" — the players [Ref] names
 	ModesChosen, // Riku of Many Paths: "the number of times you chose a mode for that spell" — the spell on the stack [Ref]
 	DevotionTo, // Mogis: "your devotion to black and red" — Count.Colors
+	BeyondTheFewest, // Balance: "equal to the number … controlled by the player who controls the fewest, then sacrifices the rest" — the rest, for the player Ref.It
 }
 
 /// <summary>
@@ -459,6 +460,15 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count Share = new(0, null, CountOf.Share);
 
 	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
+
+	/// <summary>
+	/// Balance: "Each player chooses a number of lands they control equal to the number of lands controlled by the
+	/// player who controls the fewest, then sacrifices the rest" — the rest: how many more of [r] the player being
+	/// acted on (Ref.It) has than the player with the fewest: BeyondTheFewest(Battlefield, Is.Land), each player's
+	/// own counted. It is 0 where no player is being acted on.
+	/// </summary>
+	public static Count BeyondTheFewest(ZoneType zone, Filter? filter = null) =>
+		new(0, Ref.All(zone, filter, Ref.It), CountOf.BeyondTheFewest);
 
 	/// <summary>Riku of Many Paths: "the number of times you chose a mode for that spell" — Count.ModesChosen(Ref.EventCard).</summary>
 	public static Count ModesChosen(Ref r) => new(0, r, CountOf.ModesChosen);
@@ -565,6 +575,14 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				&& chosen.Where(id => id != 0).ToList().IndexOf(it) is >= 0 and var place // a word left empty has no share
 				? shares[place]
 				: 0;
+		if (Kind == CountOf.BeyondTheFewest)
+		{
+			// Two players: what one has beyond the other, or nothing — a Ref.It that is no player has none.
+			int Has(int player) => Of!.Resolve(s, context.SetItem(ContextKeys.It, player)).Count();
+			return context.GetValueOrDefault(ContextKeys.It) is int it
+				? Math.Max(0, Has(it) - Has(s.OpponentOf(it)))
+				: 0;
+		}
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
 		if (Kind == CountOf.PermanentsChosen)

@@ -438,7 +438,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraModalTests
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
 ```csharp
 ["Divining Duelist"] =
@@ -1143,7 +1143,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests, GameRecordTests, LandUnlockTests
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Rank Rat"] = [When(TriggerEvent.SelfEnters, [], new Discard(Ref.EachOpponent, 1))],
@@ -1876,7 +1876,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FilterMigrationTests, FraUncommonCreatureTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
 ```csharp
 ["Arni, Humble Scribe"] =
@@ -2760,7 +2760,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraUncommonDiscardTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Jiang Yanggu, Alone"] =
@@ -3857,7 +3857,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** BasicsTests, FraEngineTests, FraUncommonDiscardTests
 
-**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Discard` — Each player named discards, choosing for themselves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Tinybones, Pocket Nuisance"] =
@@ -4368,7 +4368,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraStaticTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Winter, Tormented Loner"] =
@@ -5885,7 +5885,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareCopyTests
 
-**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Sphinx of False Conclusions"] =
@@ -6035,7 +6035,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraPrepareTests
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DiscardHand` — Ajani Unrelenting: "Discard your hand" — the whole hand, so there is nothing to choose.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachPlayerMay` — Arc of Fortune: "Each player may [Then]." Each player answers for themselves, active…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DiscardHand` — Ajani Unrelenting: "Discard your hand" — the whole hand, so there is nothing to choose.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachPlayerMay` — Arc of Fortune: "Each player may [Then]." Each player answers for themselves, active…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Variable Chaser // Arc of Fortune"] =
@@ -6748,7 +6748,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRarePlaneswalkerTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `OpponentsCreaturesExiledInsteadOfDying` — Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `OpponentsCreaturesExiledInsteadOfDying` — Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Garruk, Veiled Butcher"] =
@@ -6987,7 +6987,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareOneOffTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileSelfCost` — "Exile this card from your graveyard:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileSelfCost` — "Exile this card from your graveyard:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
 
 ```csharp
 ["Seasoned Cryomancer"] =
@@ -7151,7 +7151,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileSelfCost` — "Exile this card from your graveyard:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileSelfCost` — "Exile this card from your graveyard:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
 
 ```csharp
 ["The Echoverse Fulcrum"] =

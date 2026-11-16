@@ -292,10 +292,13 @@ public static partial class Evaluator
 			case DrawCards d:
 				return Ids(d.Who).Sum(p => (p == me ? 1 : -1) * N(d.Amount) * card);
 			case Discard d:
+				// ponytail: the number is read once, with no player acted on — one counted for each player
+				// (Balance's Count.BeyondTheFewest) prices as 0. Nothing priced here has one; count it for each
+				// player (ContextKeys.It) when a planeswalker's or an emblem's does.
 				return Ids(d.Who)
 						.Sum(p =>
 							(p == me ? -1 : 1)
-							* Math.Min(d.Count, s.CardsIn(p, ZoneType.Hand).Count())
+							* Math.Min(N(d.Count), s.CardsIn(p, ZoneType.Hand).Count())
 							* card
 						) + Sum(d.Then);
 			case DiscardHand d:
@@ -365,6 +368,9 @@ public static partial class Evaluator
 			case ExileTopPlayable { Play.Now: true } e:
 				return Math.Max(ExileCastShare * card, Sum(e.Play.Otherwise));
 			case EachSacrifices e:
+				// ponytail: one sacrifice each, whatever its N — nothing priced here (a planeswalker's abilities,
+				// its and an emblem's triggers) has an N; Balance is a spell. Each player's N least-valued when
+				// one does (AI-19.28).
 				return Ids(e.Who)
 					.Select(s.GetObject)
 					.OfType<MagicPlayer>()

@@ -128,7 +128,7 @@ whose subsystem it lives in.
   me up's cost, a token too) — read by `Count.PermanentsReturnedToHandThisTurn`.
 - **"You can't sacrifice Treasure tokens"** (Quark, `CantSacrificeTreasures`) is `MagicState.CanSacrifice`, asked by
   every sacrifice: `MagicState.Sacrifice` itself (it does nothing), `SacrificeCost`'s candidates, a
-  `ChoosePermanentChoice { Sacrifice }` (MaySacrifice, EachSacrifices, SacrificePermanents) and
+  `ChoosePermanentChoice { Sacrifice }` (MaySacrifice, EachSacrifices) and
   `ManaAbilities.CanTap` (a Treasure's only mana is sacrificing it).
 - **Explore** (CR 701.44, Captain Janeway) is `Explore(ref)`: the top card revealed (`MakeKnown`), a land to the
   hand, else a +1/+1 counter through `PutCounters` and a yes/no to bin the card (`MoveTo(Ref.Id(card)) { From = [Library] }`).
@@ -174,3 +174,12 @@ whose subsystem it lives in.
   `CreateTokens`: the tokens made — Cori-Steel Cutter's "You may attach this Equipment to it"; `ExileTopPlayable`:
   the cards exiled). **"Discard up to two cards, then draw that many"** (Tersa) is `Discard { UpTo, Then }` with
   `Count.NumberOf(Ref.Chosen)`, the cards the discard chose.
+- **"Each player chooses a number of [lands] equal to the number controlled by the player who controls the fewest,
+  then sacrifices the rest. Players discard cards … the same way"** (Balance, MC-4.4d4) is a COUNT on the two
+  each-player effects, never a piece of its own: `EachSacrifices { N }` (1 unless said) and `Discard(who, count)`
+  count for each player, `Ref.It` that player, and `Count.BeyondTheFewest(zone, filter)` is "the rest" — how many
+  more of them that player has than the player with the fewest (0 where no player is being acted on). "Sacrifice
+  three permanents" (Emrakul's ward) is the same effect, `(Ref.You, Is.AnyCard) { N = 3 }`, never a piece beside
+  it. A player is asked ONCE, for exactly that many to give up (the same sets as choosing which to keep), and only
+  when it is more than none: Balance is one cast whatever the board. Its three effects run in printed order, each
+  counted as its turn comes — a land creature sacrificed as a land is no creature when the creatures are counted.

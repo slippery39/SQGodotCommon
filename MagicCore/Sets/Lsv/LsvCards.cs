@@ -1366,6 +1366,24 @@ public static class LsvCards
 					),
 				},
 			],
+			// ===== MC-4.4d4: white's options, the rest beyond the fewest =====
+			["Balance"] =
+			[
+				// "the same way": lands, then cards in hand, then creatures — each counted as its turn comes,
+				// so a land creature sacrificed as a land is no creature by then
+				Spell(
+					[],
+					new EachSacrifices(Ref.EachPlayer, Is.Land)
+					{
+						N = Count.BeyondTheFewest(ZoneType.Battlefield, Is.Land),
+					},
+					new Discard(Ref.EachPlayer, Count.BeyondTheFewest(ZoneType.Hand)),
+					new EachSacrifices(Ref.EachPlayer, Is.Creature)
+					{
+						N = Count.BeyondTheFewest(ZoneType.Battlefield, Is.Creature),
+					}
+				),
+			],
 		};
 
 	/// <summary>Skyclave Apparition: "an X/X blue Illusion creature token" — its X is CreateTokens.Size.</summary>

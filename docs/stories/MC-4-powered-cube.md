@@ -383,6 +383,37 @@ as his three priorities.
   **Left as ceilings (DesignNotes):** the look-back asks "had it lost all abilities" of the state now (an Aura the
   state check already took is missed; `DiedEvent.Attached` answers it for deaths only); several cards exiled by one
   Apparition (its trigger doubled) make one token of the greatest mana value for the first owner.
+- 2026-11-15, Claude — **4.4d4's notes: Balance on one count; the plan held, and grew in two places.**
+  **The count** — `Count.BeyondTheFewest(ref)`: how many more of [ref] the player being acted on (`Ref.It`) has than
+  the player with the fewest — "the rest". Grown: a `Count` is one `Of` with a sign and three ints (`Per`, `Times`,
+  `Plus`), never one count less another, so "the rest" is a kind of its own; it takes a zone and a filter
+  (`BeyondTheFewest(Battlefield, Is.Land)`, `(Hand)`), so it counts any zone, and it is 0 where no player is being
+  acted on (the AI pricing an effect).
+  **The two effects** — `EachSacrifices { N }` (a `Count`, 1 unless said; as many of it as the player can
+  sacrifice) and `Discard(who, count)`. Grown: `Discard`'s `int` became a `Count` (an int converts, so its 25
+  cards' scripts are unchanged). Both count for each player with `Ref.It` that player, as `PutCounters` counts for
+  each object, and ask ONE choice of exactly that many — only of a player who has more than none.
+  **Balance** is `Spell([], EachSacrifices(lands), Discard, EachSacrifices(creatures))`, in printed order; an
+  effect's choices finish before the next is counted (a test: a land creature sacrificed as a land is no creature
+  by then, so the opponent's one creature goes too). The player picks what to GIVE UP, not what to keep — the same
+  sets.
+  **Legal actions, counted before building:** on a 12-creature board Balance is ONE cast (no target, no X). As it
+  resolves at most three choices are asked — lands, hand, creatures, and with two players only the one who has more
+  — each ONE answer of exactly N, never an action or a choice per set (12 creatures against 1: one choice of 11, a
+  test). The beam branches a choice of several picks up to 32 of them (`BeamSearchAi.MaxPicks`; permanents are each
+  their own identity, so it stops enumerating at the 33rd) and past that takes `GreedyAi`'s one answer.
+  **Left as a ceiling (DesignNotes):** `Evaluator.Effect` prices `EachSacrifices` as one sacrifice whatever its N
+  and reads `Discard`'s count with no player acted on (nothing it prices has either). **AI-only, backlog
+  (AI-19.28):** the greedy answer to "sacrifice N" is the first N offered, not the N worth least.
+  **`/pre-commit`'s review, fixed:** (1) the count was NEGATIVE where `Ref.It` is no player (a counter or damage
+  for each permanent: 0 less the fewest) — it is what one player has beyond the other, never below 0 (a test), and
+  two counts, not three; (2) written with a ref that didn't say `Ref.It` it was silently 0 and the card inert — so
+  it takes the zone and filter and writes the ref itself; (3) **Emrakul's ward moved onto the option:**
+  `SacrificePermanents(N)` was `EachSacrifices(Ref.You, Is.AnyCard) { N }` beside it, and is gone (a revert-check
+  on her ward test); (4) the choice is built once, with no dead `required`. **Not taken:** `SacrificeCost`'s own
+  "sacrifice five Treasures" pick (Magda) is a cost's payment, with no effect context to run the effect in; the
+  evaluator's per-player count for `Discard` (no card it prices has one, so no test could see the line — a
+  `ponytail:` instead).
   **`/pre-commit`'s review, fixed:** (1) the event is raised only for a permanent that READS its own leaving
   (`MagicState.ReadsItsLeaving`: a printed or gained `SelfLeaves`) — raised for every permanent, each Treasure
   sacrificed or permanent bounced staged an event, and so a `Collect` and a state-check round in every search
@@ -465,7 +496,8 @@ as his three priorities.
             Pure Energy moved onto it (Decisions); 9 tests, 22/22 breaks caught; `batch_checks.py` all 7 steps
             (golden-out unchanged; golden-in moved 29 random and 71 card-replay games, added 4; probe 150 games, none
             unfinished, cast 522 times)
-  - [ ] MC-4.4d White's tier 1 (`LsvSurvey.md` lists 36), read card by card and split (Decisions):
+  - [x] MC-4.4d White's tier 1 (`LsvSurvey.md` lists 36), read card by card and split (Decisions) — done
+        2026-11-15, 36 cards in five parts:
     - [x] MC-4.4d1 The tested pieces, 21 — done 2026-11-14: Thraben Inspector, Cathar Commando, Luminarch Aspirant,
           Agent Bishop, Spectacular Spider-Man, Stoneforge Mystic, Thalia (Guardian of Thraben), Elite Spellbinder,
           Loran, Sanguine Evangelist, Auriok Salvagers, Reprieve, Exorcise, Portable Hole, Leyline Binding, Lingering
@@ -490,18 +522,26 @@ as his three priorities.
           fixes too: golden-out unchanged; golden-in
           moved 29 random and 126 card-replay games, added 8; probe 150 games, both cards cast, 1 past 300
           permanents — seed 94, 271 Troubling Tribbles, not this batch)
-    - [ ] MC-4.4d4 Balance
+    - [x] MC-4.4d4 Balance — done 2026-11-15: `Count.BeyondTheFewest`, `EachSacrifices { N }`, `Discard`'s number a
+          `Count`, Emrakul's ward moved onto it (Decisions); 6 tests, 16/16 breaks caught; `batch_checks.py` all 8 steps,
+          twice (after the review's fixes too: golden-out unchanged;
+          golden-in moved 29 random and 56 card-replay games, added 4; probe 150 games, cast 565 times, 1 past 300
+          permanents — seed 94, 273 Troubling Tribbles, not this batch)
 
 ## Next
 
-Red's tier 1 is done (4.4c). MC-4.4d — white's tier 1 (Shayne, 2026-11-14) — is surveyed and split in five parts
-(Decisions, Tasks); **d1, d2a, d2b and d3 are done: 182 of 528 play.** Next, in a NEW session: **d4** — Balance, the
-last of white's tier 1 (the 4.4d Decision: `EachSacrifices` is one each and `Discard` a fixed number; "all but as
-many as the player with the fewest" is a count on each — each player's choice after the cast, never an action per
-set: count the choices on a 12-creature board first).
+Red's tier 1 (4.4c) and white's (4.4d, all five parts) are done: **183 of 528 play.** Next, in a NEW session:
+**the next colour's tier 1 — which colour is Shayne's call** (blue, black, green, multicolour and colourless are
+left; `LsvSurvey.md` lists each one's tier-1 cards). Whichever it is, the way white went: read its tier-1 cards
+one by one against the nearest piece's code, split them (the tested pieces first, then the options by subsystem),
+write the split in Decisions and Tasks, then build a part a session.
 Read the nearest piece's CODE first — three of d2a's six plans changed on reading, two of d2b's grew, d3's grew in
-four places (their notes).
-Useful to d4: `EnterBattlefield` may refuse an entry (Containment Priest), so check `IsOnBattlefield` after
+four places, d4's in two (their notes).
+From d4: a number on an each-player effect is counted for each player with `Ref.It` that player
+(`EachSacrifices { N }`, `Discard(who, count)`), and "the rest beyond the player with the fewest" is
+`Count.BeyondTheFewest(zone, filter)`; a `Count` is never one count less another. Emrakul's ward moved onto
+`EachSacrifices { N }` (`SacrificePermanents` is gone).
+Useful to the next part: `EnterBattlefield` may refuse an entry (Containment Priest), so check `IsOnBattlefield` after
 it; `MoveTo.Then` / `Ref.ThisWay` and `DelayedTrigger.MadeBy` (`Ref.EventObject`) exist; from d2b, a rule every
 cast or activation asks about permanents notes itself on the statics board (`Characteristics.RuleWork`) rather than
 scanning the battlefield each time; from d3, a permanent that reads its OWN leaving raises `ChangedZoneEvent` with
@@ -512,7 +552,8 @@ permission's filter is asked with the X of the cast (`Playable.ZonePermission(�
 `Emperor()`, `Loyalty(walker, ability)`, `LoyaltyOffered(walker)`, `WithTap(card)`: "{T}: You gain 1 life", `Raise`:
 a card from any graveyard onto the battlefield, `Remove(zone)`: target permanent destroyed, bounced or exiled,
 `Costing(cost)`: a 2/2 of that cost). A FIRES test per scripted card. For Shayne: nothing Open (d2a's is
-answered: AI-19.26); one AI note on the backlog (AI-19.27, the AI's name for Anointed Peacekeeper). DEV-5 still open: `batch_checks.py`'s probe report lists only the
+answered: AI-19.26); two AI notes on the backlog (AI-19.27, the AI's name for Anointed Peacekeeper; AI-19.28, its
+"sacrifice N" answer). DEV-5 still open: `batch_checks.py`'s probe report lists only the
 first 12 cards named (probe the rest with `MAGIC_PROBE_CARDS`), the probe names no never-used
 card, and a re-run after a fix needs the golden files restored from HEAD by hand
 (`git checkout HEAD -- MagicCore.Tests/Golden*.txt`).
@@ -568,3 +609,9 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   left (The Measure of a Man's chapter III, All Good Things...' IV and Borg Cube's attack now find their cards
   though the source left in response), a gained trigger on the graveyard permission, its mana-value bound counting
   X; Laelia moved with the event; no recorded game moved by the engine; 182 of 528 play. For Shayne: nothing Open.
+- 2026-11-15 (cube lane, sprint 5 C5): MC-4.4d4 — Balance: "the rest beyond the player with the fewest" as one
+  count (`Count.BeyondTheFewest`), counted for each player by `EachSacrifices { N }` and `Discard` (its number now
+  a `Count`); Emrakul's ward moved onto `EachSacrifices { N }`; one cast and at most three choices whatever the
+  board; no recorded game moved by the engine; 183 of
+  528 play. White's tier 1 (4.4d) done. For Shayne: nothing Open — which colour comes next is his; AI-19.28 on the
+  backlog.

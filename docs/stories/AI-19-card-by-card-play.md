@@ -260,6 +260,14 @@ Open questions:
       table the AI names it and the tax does nothing, though it has just looked at the hand. Wanted: the naming
       rule by what the namer does — for a tax, the best card known in their hand first (backlog; added from the
       cube lane, found by `/pre-commit`'s review).
+- [ ] AI-19.28 Balance (LSV cube, MC-4.4d4): "sacrifices the rest" is one choice of exactly N permanents, and
+      `GreedyAi.Answer` gives a choice of several picks its first N options — the first N lands or creatures on the
+      battlefield, not the N it values least (a hand choice has `WorstCards`; Emrakul's "sacrifice three permanents"
+      was answered so already). The beam branches on the picks only up to 32 of them (`BeamSearchAi.MaxPicks`), so
+      on a real board it is the greedy answer. And `Evaluator.Effect` prices `EachSacrifices` as ONE sacrifice
+      whatever its `N` (read only for a loyalty ability; none has an N). Wanted: the least-valued N for a sacrifice
+      of several, and whether the AI casts Balance well at all — it is priced by rollout alone (backlog; added from
+      the cube lane).
 
 ## Next
 
@@ -274,6 +282,7 @@ boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-15: AI-19.28 — the AI's "sacrifice N" answer (Balance) added from the cube lane (MC-4.4d4).
 - 2026-11-15: AI-19.27 — the AI's name for Anointed Peacekeeper added from the cube lane (MC-4.4d2b's review).
 - 2026-11-15: AI-19.26 — how the AI handles X spells added from the cube lane (MC-4.4d2a's Open, answered by Shayne).
 - 2026-11-14: AI-19.25 — Pyrokinesis' one-target answer added from the cube lane (MC-4.4c2e).

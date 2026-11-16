@@ -1496,4 +1496,173 @@ public class LsvBatch2dTests : FraBoardTest
 		Assert.That(Alive(bear), "exile it: only from the graveyard it was put into");
 		Assert.That(Life(me), Nu.EqualTo(life + 2), "and you gain 2 life");
 	}
+
+	// ===== MC-4.4d4: Balance =====
+
+	int Lands(int player) =>
+		s.CardsIn(player, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
+
+	/// <summary>I cast it and the stack resolves, each choice answered as told (else its minimum); the choices asked, in order.</summary>
+	List<ChoiceAction> CastAsking(int card, Func<ChoiceAction, IEnumerable<int>> answer)
+	{
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = card });
+		var asked = new List<ChoiceAction>();
+		Resolve(c =>
+		{
+			asked.Add(c);
+			return answer(c);
+		});
+		return asked;
+	}
+
+	[Test]
+	public void Balance_EachPlayerKeepsAsManyLandsAsTheFewest_AndSacrificesTheRest_OfTheirChoice()
+	{
+		s = TestGames.EmptyHands(s);
+		var first = Field(Forest, me);
+		var second = Field(Forest, me);
+		var theirs = Lands(them);
+		Assert.That(Lands(me), Nu.EqualTo(theirs + 2));
+		var asked = CastAsking(Hand(Lsv("Balance"), me), Picking(first, second));
+		Assert.That(
+			asked.Count,
+			Nu.EqualTo(1),
+			"hands and creatures are even: only my lands are asked"
+		);
+		var choice = (ChoosePermanentChoice)asked[0];
+		Assert.That(choice.PlayerId, Nu.EqualTo(me));
+		Assert.That(
+			(choice.MinChoices, choice.MaxChoices),
+			Nu.EqualTo((2, 2)),
+			"the rest, in one choice"
+		);
+		Assert.That(choice.Prompt, Nu.EqualTo("Sacrifice 2 (Balance)"), "and it says how many");
+		Assert.That(Lands(me), Nu.EqualTo(theirs), "as many as the player who controls the fewest");
+		Assert.That(Lands(them), Nu.EqualTo(theirs), "who sacrifices nothing");
+		Assert.That(
+			s.IsIn(first, me, ZoneType.Graveyard) && s.IsIn(second, me, ZoneType.Graveyard)
+		);
+	}
+
+	[Test]
+	public void Balance_PlayersDiscardDownToTheSmallestHand_ChoosingTheirOwn()
+	{
+		s = TestGames.EmptyHands(s);
+		var mine = Hand(Bear, me);
+		var kept = Hand(Bear, them);
+		var boon = Hand(Boon, them);
+		var relic = Hand(Relic, them);
+		var asked = CastAsking(Hand(Lsv("Balance"), me), Picking(boon, relic));
+		Assert.That(
+			asked.Count,
+			Nu.EqualTo(1),
+			"lands and creatures are even: only their hand is asked"
+		);
+		var choice = (ChooseCardsFromHandChoice)asked[0];
+		Assert.That(choice.PlayerId, Nu.EqualTo(them));
+		Assert.That((choice.MinChoices, choice.MaxChoices), Nu.EqualTo((2, 2)));
+		Assert.That(
+			s.CardsIn(them, ZoneType.Hand).Select(c => c.Id),
+			Nu.EqualTo(new[] { kept }),
+			"three cards against my one: Balance, on the stack, is no card in my hand"
+		);
+		Assert.That(
+			s.IsIn(boon, them, ZoneType.Graveyard) && s.IsIn(relic, them, ZoneType.Graveyard)
+		);
+		Assert.That(s.IsIn(mine, me, ZoneType.Hand), "the smallest hand discards nothing");
+	}
+
+	[Test]
+	public void Balance_OnATwelveCreatureBoard_IsOneCast_AndOneChoiceOfTheRest()
+	{
+		s = TestGames.EmptyHands(s);
+		var mine = Field(Bear, me);
+		var theirs = new List<int>();
+		for (var i = 0; i < 12; i++)
+			theirs.Add(Field(Bear, them));
+		var balance = Hand(Lsv("Balance"), me);
+		Assert.That(
+			s.LegalActions().OfType<CastSpellAction>().Count(a => a.CardId == balance),
+			Nu.EqualTo(1),
+			"one cast, whatever the board: who keeps what is chosen as it resolves"
+		);
+		var asked = CastAsking(balance, Picking([.. theirs.Skip(1)]));
+		Assert.That(asked.Count, Nu.EqualTo(1), "never a choice per creature");
+		var choice = (ChoosePermanentChoice)asked[0];
+		Assert.That(choice.PlayerId, Nu.EqualTo(them));
+		Assert.That((choice.MinChoices, choice.MaxChoices), Nu.EqualTo((11, 11)));
+		Assert.That(Alive(mine) && Alive(theirs[0]), "one creature each");
+		Assert.That(
+			theirs.Skip(1).All(c => s.IsIn(c, them, ZoneType.Graveyard)),
+			"the rest sacrificed"
+		);
+	}
+
+	[Test]
+	public void Balance_CountsTheCreatures_AfterTheLandsAreSacrificed()
+	{
+		s = TestGames.EmptyHands(s);
+		var dryad = TestGames.Creature("Dryad", "1/1");
+		var arbor = Field(
+			dryad with
+			{
+				Data = dryad.Data with { TypeLine = "Land Creature — Forest Dryad" },
+			},
+			me
+		);
+		var bear = Field(Bear, them);
+		Assert.That(s.GetCard(arbor).Is(CardType.Land) && s.GetCard(arbor).Is(CardType.Creature));
+		CastAsking(Hand(Lsv("Balance"), me), Picking(arbor));
+		Assert.That(
+			s.IsIn(arbor, me, ZoneType.Graveyard),
+			"one land more than they: the land creature"
+		);
+		Assert.That(
+			s.IsIn(bear, them, ZoneType.Graveyard),
+			"a creature each as it was cast — but none of mine once the lands are gone, so theirs goes too"
+		);
+	}
+
+	[Test]
+	public void EachSacrifices_AsksOnlyAPlayerWithSomethingToSacrifice()
+	{
+		var bear = Field(Bear, them);
+		var edict = TestGames.Inline(
+			"Edict",
+			"{1}",
+			"Sorcery",
+			null,
+			new EachSacrifices(Ref.EachPlayer, MagicCore.Filters.Is.Creature)
+		);
+		var asked = CastAsking(
+			Hand(edict, me),
+			c => c.Options.Take(c.MinChoices).Select(o => o.Id)
+		);
+		Assert.That(asked.Count, Nu.EqualTo(1), "I control no creature: only they are asked");
+		Assert.That(((ChoosePermanentChoice)asked[0]).PlayerId, Nu.EqualTo(them));
+		Assert.That(s.IsIn(bear, them, ZoneType.Graveyard), "a creature of their choice");
+	}
+
+	[Test]
+	public void BeyondTheFewest_CountsForThePlayerActedOn_AndIsNothingWithNone()
+	{
+		var forest = Field(Forest, me);
+		var rest = Count.BeyondTheFewest(ZoneType.Battlefield, MagicCore.Filters.Is.Land);
+		var asking = System.Collections.Immutable.ImmutableDictionary<string, object>.Empty.Add(
+			ContextKeys.Controller,
+			me
+		);
+		Assert.That(rest.Value(s, asking.Add(ContextKeys.It, me)), Nu.EqualTo(1));
+		Assert.That(rest.Value(s, asking.Add(ContextKeys.It, them)), Nu.EqualTo(0), "the fewest");
+		Assert.That(
+			rest.Value(s, asking.Add(ContextKeys.It, forest)),
+			Nu.EqualTo(0),
+			"an effect acting on each PERMANENT (a counter each): no player, and never a negative number"
+		);
+		Assert.That(
+			rest.Value(s, asking),
+			Nu.EqualTo(0),
+			"the AI prices an effect with no player acted on"
+		);
+	}
 }

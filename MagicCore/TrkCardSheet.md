@@ -336,7 +336,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Cloistered Telepath"] =
@@ -540,7 +540,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Dathon and Picard at El-Adrel"] =
@@ -866,7 +866,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Fugitive Listener"] =
@@ -2196,7 +2196,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4Tests
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Anthropological Mission"] =
@@ -2434,7 +2434,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Cloak and Phaser"] =
@@ -2646,7 +2646,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["D'Ghor Bloodletter"] =
@@ -3094,7 +3094,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Hemmer, Fixing What Is Broken"] =
@@ -3275,7 +3275,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…
 
 ```csharp
 ["In the Pale Moonlight"] =
@@ -3300,7 +3300,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4cTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
 
 ```csharp
 ["Isolinear Processor"] =
@@ -4120,7 +4120,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** BuildReportTests
 
-**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Targ Wrangler"] =
@@ -4260,7 +4260,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Test of Identity"] =
@@ -4424,7 +4424,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4Tests
 
-**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `WheneverThisTurn` — The Naked Time, chapter II: "Whenever a creature you control enters this turn, …" — the…
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `WheneverThisTurn` — The Naked Time, chapter II: "Whenever a creature you control enters this turn, …" — the…
 
 ```csharp
 ["The Naked Time"] =
@@ -4524,7 +4524,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4Tests
 
-**Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Those Old Scientists"] =
@@ -4988,7 +4988,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves.; `DiscardSelfCost` — Cycling: "Discard this card:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DiscardSelfCost` — Cycling: "Discard this card:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Armus, Skin of Evil"] =
@@ -6823,7 +6823,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7aTests
 
-**Engine pieces:** `AtBeginningOfNextCombat` — The Wrath of Khan, chapter I: "At the beginning of the next combat this turn, gain…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.; `UntilEndOfTurn` — "Gets +P/+T and gains Keyword until end of turn" on a permanent. Removed in cleanup (CR…
+**Engine pieces:** `AtBeginningOfNextCombat` — The Wrath of Khan, chapter I: "At the beginning of the next combat this turn, gain…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.; `UntilEndOfTurn` — "Gets +P/+T and gains Keyword until end of turn" on a permanent. Removed in cleanup (CR…
 
 ```csharp
 ["The Wrath of Khan"] =
@@ -6979,7 +6979,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Wesley Crusher, Starfleet Cadet"] =
@@ -8350,7 +8350,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch5bTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Seven of Nine, Unassimilated"] =

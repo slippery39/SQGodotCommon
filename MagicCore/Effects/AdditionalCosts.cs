@@ -257,7 +257,7 @@ public sealed record SacrificeCost(Filter? Filter = null) : AdditionalCost
 		Count == 1 ? "Sacrifice a permanent" : $"Sacrifice {Count} permanents";
 
 	public override GameAction? PaidByChoosing() =>
-		Filter is null ? new SacrificePermanents(Count) : null;
+		Filter is null ? new EachSacrifices(Ref.You, Is.AnyCard) { N = Count } : null;
 
 	public override bool CanPayByChoosing(GameState s, int payerId) =>
 		Filter is null

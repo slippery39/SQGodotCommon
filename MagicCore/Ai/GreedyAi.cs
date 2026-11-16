@@ -206,6 +206,8 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		if (choice is ChooseFromLibraryChoice { MaxChoices: > 1 })
 			return choice.Options.Take(choice.MaxChoices).Select(o => o.Id); // "up to N lands": more is better
 		if (choice.MaxChoices != 1)
+			// ponytail: the first ones offered — a sacrifice of several (Balance's "the rest", Emrakul's ward)
+			// gives up whatever is listed first, not what is worth least. WorstCards' like for permanents: AI-19.28.
 			return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 
 		var options = choice.Options.Select(o => (IEnumerable<int>)[o.Id]).ToList();

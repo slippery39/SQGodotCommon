@@ -1342,36 +1342,6 @@ public record CastCopyOf(int CardId, int Left) : Effect
 	}
 }
 
-/// <summary>Emrakul: "Sacrifice three permanents" — the payer chooses which (never what can't be sacrificed).</summary>
-public record SacrificePermanents(int N) : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps =
-					[
-						new ChoosePermanentChoice(
-							Controller,
-							GetInput<int>(ContextKeys.Source),
-							null,
-							required: true
-						)
-						{
-							MinChoices = N,
-							MaxChoices = N,
-							Prompt = $"Sacrifice {N} permanents",
-							Sacrifice = true,
-						},
-						new SacrificeChosenAction(),
-					],
-				}
-			)
-		);
-}
-
 /// <summary>
 /// Emrakul, the Exigent Doom: "Target land gains '{T}: Add {C}{C}' until this card is cast from
 /// exile. You may cast this card for as long as it remains exiled." — after the cost exiled it.
@@ -2314,8 +2284,11 @@ public record DiscardHand(Ref Who) : Effect
 	}
 }
 
-/// <summary>Each player named discards, choosing for themselves.</summary>
-public record Discard(Ref Who, int Count) : Effect
+/// <summary>
+/// Each player named discards, choosing for themselves — the number counted for each player, Ref.It that player
+/// (Balance: "Players discard cards … the same way", Count.BeyondTheFewest of the cards in Ref.It's hand).
+/// </summary>
+public record Discard(Ref Who, Count Count) : Effect
 {
 	/// <summary>Seasoned Cryomancer: "When you discard one or more nonland cards this way" — run after, reading the discarded.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
@@ -2327,7 +2300,10 @@ public record Discard(Ref Who, int Count) : Effect
 	{
 		foreach (var player in All(Who, s))
 		{
-			var n = Math.Min(Count, s.CardsIn(player, ZoneType.Hand).Count());
+			var n = Math.Min(
+				Count.Value(s, InputContext.SetItem(ContextKeys.It, player)),
+				s.CardsIn(player, ZoneType.Hand).Count()
+			);
 			if (n == 0 && !Then.IsEmpty) // Garruk: an empty hand "didn't discard two nonland cards"
 				s = s.SpawnAction(
 					new PipelineAction
@@ -2446,11 +2422,21 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 	}
 }
 
-/// <summary>Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.</summary>
+/// <summary>
+/// Winter: "each opponent sacrifices a creature of their choice" — each chooses their own (never what can't be
+/// sacrificed). Emrakul's ward, "sacrifice three permanents", is (Ref.You, Is.AnyCard) { N = 3 }.
+/// </summary>
 public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 {
 	/// <summary>Garruk, Veiled Butcher: "If you sacrificed a creature this way, [IfYouDid]."</summary>
 	public ImmutableList<GameAction> IfYouDid { get; init; } = [];
+
+	/// <summary>
+	/// Balance: "chooses a number of lands … equal to [the fewest], then sacrifices the rest" — how many each
+	/// sacrifices, counted for each player (Ref.It that player: Count.BeyondTheFewest); as many of it as they can.
+	/// One choice of that many, never a choice each.
+	/// </summary>
+	public Count N { get; init; } = 1;
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -2459,21 +2445,31 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 			var choice = new ChoosePermanentChoice(
 				player,
 				GetInput<int>(ContextKeys.Source),
-				Filter,
-				required: true
+				Filter
 			)
 			{
-				Prompt = $"Sacrifice ({Source(s).Name})",
 				Sacrifice = true,
 			};
-			if (!choice.GetOptions(s, InputContext).IsEmpty)
+			var n = Math.Min(
+				N.Value(s, InputContext.SetItem(ContextKeys.It, player)),
+				choice.GetOptions(s, InputContext).Count
+			);
+			if (n > 0)
 				s = s.SpawnAction(
 					new PipelineAction
 					{
 						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
 						Steps =
 						[
-							choice,
+							choice with
+							{
+								MinChoices = n,
+								MaxChoices = n,
+								Prompt =
+									n == 1
+										? $"Sacrifice ({Source(s).Name})"
+										: $"Sacrifice {n} ({Source(s).Name})",
+							},
 							new SacrificeChosenAction(),
 							.. player == Controller && !IfYouDid.IsEmpty
 								? [new IfChosenAction(IfYouDid)]

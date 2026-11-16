@@ -68,3 +68,4 @@ after the split is DEV-4.3.
 | 2026-11-15 | MC-4.4d2a: white's options, zones and tokens - MoveTo.Beneath/Loses/Then, DelayedTrigger.MadeBy, tokens doubled, an entry refused, one X for a trigger, 7 cards | 70b49af9 | 92 | 239k | 4.3M |
 | 2026-11-15 | MC-4.4d2b: LSVPower white's options, restrictions and timing, 5 cards | 472a6aaa | 64 | 271k | 3.8M |
 | 2026-11-15 | MC-4.4d3: LSVPower, white's options - leaving the battlefield, 2 cards | 771fbcee | 99 | 314k | 5.4M |
+| 2026-11-15 | MC-4.4d4: LSVPower, Balance - the rest beyond the fewest as one count, Emrakul's ward moved onto EachSacrifices.N, 1 card | db1e96c0 | 60 | 227k | 2.8M |
