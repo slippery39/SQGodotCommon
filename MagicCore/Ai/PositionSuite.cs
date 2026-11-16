@@ -323,6 +323,91 @@ public static class PositionSuite
 		return new OracleReading(position, best, scores);
 	}
 
+	/// <summary>
+	/// A position for a reader (<c>--suite=A --boards</c>, AI-26.9): whose turn and step, each side's life, lands and
+	/// other permanents, the mover's hand, and the printed text of every card named — so a play can be judged by what
+	/// the cards do, never by a name.
+	/// </summary>
+	public static string Board(GameState s)
+	{
+		var (me, game) = (s.DecidingPlayerId(), s.GetGame());
+		var them = s.OpponentOf(me);
+		string Side(int p)
+		{
+			var field = s.CardsIn(p, ZoneType.Battlefield).ToList();
+			var lands = field.Where(c => c.Is(Cards.CardType.Land)).ToList();
+			var others = field.Where(c => !c.Is(Cards.CardType.Land)).ToList();
+			return $"{s.GetPlayer(p).Life} life; {lands.Count} lands ({lands.Count(c => !c.IsTapped)} untapped); "
+				+ (
+					others.Count == 0
+						? "no other permanents"
+						: string.Join(", ", others.Select(c => MagicCore.Describe.Card(s, c)))
+				);
+		}
+		var hand = s.CardsIn(me, ZoneType.Hand).ToList();
+		var stack = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
+			.Select(s.GetObject)
+			.Select(o => o is Cards.Card c ? c.Name : "an ability")
+			.ToList();
+		var lines = new List<string>
+		{
+			$"      Turn {game.TurnNumber}, {game.Step}, {(game.ActivePlayerId == me ? "the mover's own turn" : "the opponent's turn")}"
+				+ (stack.Count > 0 ? $"; on the stack: {string.Join(", ", stack)}" : ""),
+			$"      Mover: {Side(me)}",
+			$"      Mover's hand: {(hand.Count == 0 ? "empty" : string.Join(", ", hand.Select(c => c.Name)))}",
+			$"      Opponent: {Side(them)}; {s.CardsIn(them, ZoneType.Hand).Count()} card(s) in hand",
+		};
+		foreach (
+			var name in hand.Concat(s.CardsIn(me, ZoneType.Battlefield))
+				.Concat(s.CardsIn(them, ZoneType.Battlefield))
+				.Where(c => !c.Is(Cards.CardType.Land))
+				.Select(c => c.Name)
+				.Distinct()
+		)
+			try
+			{
+				var d = Sets.CardRegistry.Get(name).Data;
+				var text =
+					d.OracleText
+					?? string.Join(" // ", (d.CardFaces ?? []).Select(f => f.OracleText));
+				lines.Add(
+					$"        {name} {d.ManaCost} — {d.TypeLine}{(d.Power is null ? "" : $" {d.Power}/{d.Toughness}")}: {text.Replace("\n", " / ")}"
+				);
+			}
+			catch (KeyNotFoundException) { } // a token: its line on the board says what it is
+		return string.Join("\n", lines);
+	}
+
+	/// <summary>
+	/// The turn played out from a position (<c>--suite=A --boards</c>, AI-26.9): <paramref name="ai"/> in the mover's
+	/// seat, the default search in the other, to the end of that turn — every decision the mover made but a bare
+	/// pass. A first move that only reorders the turn (a land before the spell) shows as the same line.
+	/// </summary>
+	public static List<string> TurnPlayed(GameState s, string ai)
+	{
+		var mover = s.DecidingPlayerId();
+		var other = s.OpponentOf(mover);
+		var ais = new Dictionary<int, IAi>
+		{
+			[mover] = AiMatch.Create(ai, mover, 1, searchThreads: 1),
+			[other] = AiMatch.Create("beam", other, 1, searchThreads: 1),
+		};
+		var turn = s.GetGame().TurnNumber;
+		var played = new List<string>();
+		for (var i = 0; i < 300; i++)
+		{
+			s = s.AutoPass();
+			if (s.IsOver() || s.GetGame().TurnNumber != turn)
+				break;
+			var who = s.DecidingPlayerId();
+			var decision = ais[who].Decide(s);
+			if (who == mover && decision.What != "Pass")
+				played.Add(decision.What);
+			s = decision.State;
+		}
+		return played;
+	}
+
 	/// <summary>What <paramref name="ai"/> decides at every position, against the stored answers.</summary>
 	public static Check Run(Suite suite, string ai)
 	{

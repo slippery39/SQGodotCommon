@@ -202,6 +202,10 @@ built on top.
   im looking for reasonable plays. And this is reasonable." Asked which he meant, he chose **the rule off by
   default, kept as a switch** (not deleted), and to commit after the pre-commit review. So a flat match does not
   decide it: #247's look binning what he bins is the reasonable play. `Settings.SpellsRule`, `beam+surveilspells`.
+- 2026-11-16, Shayne (offered AI-20.10 or the wider land-odds fix next): "Thats ok. I think we should move on for
+  now. Note that fix for later. I would actually like to play some more games and try to find some more big
+  issues rather than hyper fixate on a bunch of smaller ones for now". So AI-20 pauses: AI-20.10 and AI-20.12
+  wait, and the next work comes from his games.
 
 Open questions (for Shayne, before `ready`):
 - What counts as done: the flip rate down, the kept positions right, and a match not worse? (Proposed by Claude,
@@ -294,6 +298,13 @@ Open questions (for Shayne, before `ready`):
 - [ ] AI-20.10 **"The land I need", not any land** (proposed, after 20.9's numbers): the lands way draws only lands
       that unlock a card in hand (`LandUnlock.Unlocks` - #247's 9 red sources of 27, not all 13 lands); a land that
       unlocks nothing is a blank draw, his "bust". Where every land left is alike, nothing changes
+- [ ] AI-20.12 **The land odds forget a made-up card that left** (later - Shayne, 2026-11-16: "Note that fix for
+      later"; found by AI-20.11's pre-commit review). `Hidden.LandOdds` divides by the unseen library plus the
+      made-up cards in hand, so a tree decision that puts a made-up card anywhere else - explore's bin, a discard,
+      a mill - shortens the count with the lands unchanged, as though that card were known not to be a land
+      (#247's numbers: 13 of 27 → 13 of 26, 0.21 of score for nothing). The fix: count made-up cards wherever
+      they went; the surveil special case (AI-20.11) and `beam+nosurveillands` are then covered too. It changes
+      the default search, so: the suite, then a match if the suite moves. `DesignNotes.md` (9), (7).
 - [x] AI-20.11 **The spells rule is off by default, kept as a switch** ("a spell priced above the unknown card
       stays on top" - AI-20.5's first patch; Shayne's go-ahead, 2026-11-15, and his word on the result,
       2026-11-16). Measured with the switch as it was (`Terms.SurveilSpells`, `beam+nosurveilspells`); it is now
@@ -368,9 +379,14 @@ under a look is kept, never branched. Its match: 50.0% ± 1.3pp over 192 games, 
 +1.5% engine steps a decision. Suite unchanged, 1597 tests pass. One of AI-20.5's patches is settled; the flat
 `SurveilPrice` and the other nine are still to try.
 
-Next: **AI-20.10** ("the land I need", proposed in Tasks; his go-ahead still to ask) - it must also bin
-Compel Brutality ({1}{G}, castable) at #247, which he bins and the search without the rule keeps. Also not yet
-read: the suite change `White-Blue Jace vs White-Black seed 1, move 90` (Jace −2 → a cast).
+**Paused here on Shayne's word (2026-11-16, Decisions): he plays more games to find BIG issues before any more
+of these small ones.** Next is whatever his games show - his notes are `game_records/*.notes.md` ("analyze my
+notes": read them, reopen each position). Kept for later, nothing started, each needing his go-ahead:
+- **AI-20.12** - the land odds forget a made-up card that left our library or hand (Tasks).
+- **AI-20.10** - "the land I need" (Tasks); it must also bin Compel Brutality ({1}{G}, castable) at #247, which he
+  bins and the search keeps.
+- Not yet read: the suite change `White-Blue Jace vs White-Black seed 1, move 90` (Jace −2 → a cast).
+- The list below - the opponent's unknown hand (2b) is the big one of them.
 
 **Open, each on Shayne's word - interview first, one topic at a time, nothing built before his go-ahead:**
 1. **The Jace token and the surveil.** The Jace deck wins least for the new search (49-111 in the match, 66-126
@@ -500,3 +516,5 @@ Outside this story, found by the pre-commit review: on the table, Undo keeps the
   `beam+surveilspells` is the search before. Suite 0 of 288 changed either way, 1597 tests pass. The pre-commit
   review: the made-up-card fix does not reach `beam+nosurveillands`, and its cause is wider (`Hidden.LandOdds`
   forgets a made-up card that left our library or hand) - both left, in `DesignNotes.md` (9).
+- 2026-11-16: committed (`d294fb76`). Shayne: move on, the land-odds fix noted for later (AI-20.12), more games
+  first to find big issues.

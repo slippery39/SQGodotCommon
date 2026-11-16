@@ -170,7 +170,7 @@ public static class CardValues
 	}
 
 	/// <summary>A basic per coloured pip (a hybrid's first colour), then generic plus XBudget round the five basics.</summary>
-	static IEnumerable<string> LandsFor(ManaCost cost)
+	internal static IEnumerable<string> LandsFor(ManaCost cost)
 	{
 		var colours = cost
 			.Symbols.Where(x =>
@@ -206,7 +206,7 @@ public static class CardValues
 	}
 
 	/// <summary>The fixed position: our first main, both ladders, empty hands, libraries of basics.</summary>
-	static (GameState State, int Me) Fixture(int seed)
+	internal static (GameState State, int Me) Fixture(int seed)
 	{
 		var library = Basics.SelectMany(b => Enumerable.Repeat(CardRegistry.Get(b), 8)).ToList();
 		var s = MagicRules.NewGame(library, library, seed);

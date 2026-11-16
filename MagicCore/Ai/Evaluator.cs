@@ -552,6 +552,24 @@ public static partial class Evaluator
 	static readonly AsyncLocal<Terms> off = new();
 
 	/// <summary>
+	/// <paramref name="work"/> with EXACTLY <paramref name="terms"/> off, whatever the caller has off — for a
+	/// measurement kept for every search (<see cref="OptionPrice.Gain"/>), which must not depend on who asked first.
+	/// </summary>
+	internal static T WithOnlyOff<T>(Terms terms, Func<T> work)
+	{
+		var outer = off.Value;
+		off.Value = terms;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			off.Value = outer;
+		}
+	}
+
+	/// <summary>
 	/// Threat (story AI-5.2): how soon <paramref name="attacker"/>'s board kills <paramref name="defender"/>
 	/// — <see cref="PressureWeight"/> × 20 ÷ the turns it needs: life over the power that gets past the
 	/// defender's blockers in the next attack. Symmetric: the term that makes the AI respect a clock on
@@ -727,9 +745,12 @@ public static partial class Evaluator
 	static SideTerms Side(GameState s, int player, HeldValues? held, bool own, string[] keywords)
 	{
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
+		var heldOff = own ? null : HeldOff(s, player);
 		var creatures = board
 			.Where(c => c.Is(CardType.Creature))
-			.Sum(c => CreatureValue(s, c, keywords));
+			.Sum(c =>
+				CreatureValue(s, c, keywords) * (heldOff?.Contains(c.Id) == true ? HeldOffShare : 1)
+			);
 		// Every term is MONOTONIC — more of a good thing always scores more, tapering instead of
 		// capping. A cap makes "more" tie with "less", and a tie silently picks the passive move:
 		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
@@ -768,6 +789,14 @@ public static partial class Evaluator
 			ShortBy(c) is > 0 and var n
 				? Math.Max(FlatHandCard, price * Math.Pow(ManaShortShare, n))
 				: price;
+		// AI-26.4 (off by default): our answers are priced TOGETHER by what they are likely to meet (OptionPrice) -
+		// each stands at the flat price here, and the rest of their worth is added to the hand below
+		var answers = own && OptionPrice.Active(player) ? new List<Card>() : null;
+		double Answer(Card c)
+		{
+			answers!.Add(c);
+			return FlatHandCard;
+		}
 		var prices = s.CardsIn(player, ZoneType.Hand)
 			.Select(c =>
 				held is not null
@@ -780,6 +809,7 @@ public static partial class Evaluator
 							? LandSurplus
 							: LandInHand
 					)
+				: answers is not null && ShortBy(c) <= 0 && OptionPrice.IsAnswer(s, c) ? Answer(c)
 				: held is null ? FlatHandCard
 				: own
 				&& !IsOff(Terms.HoldOption)
@@ -817,6 +847,11 @@ public static partial class Evaluator
 				? prices.Count - TurnStructure.MaxHandSizeOf(s, player) // the statics walked only here
 				: 0;
 		var hand = over > 0 ? prices.OrderBy(p => p).Skip(over).Sum() : prices.Sum();
+		if (answers is { Count: > 0 })
+			hand += Math.Max(
+				0,
+				OptionPrice.Value(s, player, answers) - FlatHandCard * answers.Count
+			);
 		if (held is not null)
 			hand += ImpulseCredit(s, player, held);
 		var graveyard = IsOff(Terms.GraveyardAccess)
@@ -836,6 +871,111 @@ public static partial class Evaluator
 						: 0
 				);
 		return new(creatures, walkers, lands, others, hand, lifeValue, graveyard);
+	}
+
+	static readonly AsyncLocal<int> byUseFor = new();
+
+	/// <summary>
+	/// <paramref name="work"/> with the creatures facing <paramref name="player"/> priced by what they can still do
+	/// against that player's board (<see cref="HeldOff"/>, AI-26.12) — 0: as always. A trial, off by default
+	/// (<c>BeamSearchAi.Settings.ByUse</c>, <c>beam+byuse</c>).
+	/// </summary>
+	public static T WithByUse<T>(int player, Func<T> work)
+	{
+		var outer = byUseFor.Value;
+		byUseFor.Value = player;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			byUseFor.Value = outer;
+		}
+	}
+
+	/// <summary>
+	/// What a creature held off (<see cref="HeldOff"/>) keeps of its value — chosen, not measured: a vanilla 1/1,
+	/// 4.5 or 0.53 of a card on its own (Shayne's range for one is 0.33 to 0.5), is 1.8 or 0.21 of a card once a
+	/// blocker of ours handles it.
+	/// </summary>
+	public const double HeldOffShare = 0.4;
+
+	/// <summary>
+	/// <paramref name="player"/>'s creatures that the other side HOLDS OFF (AI-26.12; Shayne, 2026-11-16: "if I have
+	/// like a 3 mana 2/2 or 4 mana 3/3 in my hand that would be able to potentially block those 1/1's … then I have an
+	/// answer to those 1/1's its just it will take a bit of time"): one of ours beats it outright in a block — kills
+	/// it and survives it — each of ours holding off one of theirs, their biggest first, our smallest that does. Only
+	/// a creature of ours that is untapped for their next attack counts: one we attack with holds nothing off. A
+	/// creature in our hand we can cast within a land counts as ours. Null: the trial is off, or it isn't that
+	/// player's search.
+	/// ponytail: one blocker each, by power and toughness alone (first strike, menace and tricks not read; a flier
+	/// needs a flier or reach); a creature in hand is read by its printed stats. Their deathtouch and indestructible
+	/// creatures are never held off.
+	/// </summary>
+	internal static HashSet<int>? HeldOff(GameState s, int player)
+	{
+		var us = s.OpponentOf(player);
+		if (byUseFor.Value != us)
+			return null;
+		// by what LASTS past this turn, as CreatureValue and Through read a creature: a pump until end of turn on ours
+		// holds nothing off next turn, and one on theirs does not free it
+		(Card Card, int Power, int Toughness) Lasting(Card c)
+		{
+			var next = NextTurn(c);
+			var (power, toughness) = Pumps(next);
+			return (next, s.Power(next) - power, s.Toughness(next) - toughness);
+		}
+		var theirs = s.CardsIn(player, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Creature) && Alive(s, c) && !s.IsIndestructible(c))
+			.Select(Lasting)
+			.Where(x => !s.Has(x.Card, "Deathtouch"))
+			.OrderByDescending(x => x.Power + x.Toughness)
+			.ToList();
+		if (theirs.Count == 0)
+			return null;
+		var mana = ManaWithin(s, us) + 1;
+		// Only a creature that will be UNTAPPED for their next attack holds anything off - as Through counts blockers:
+		// one that attacked this turn is tapped in theirs (Shayne, 2026-11-16: "if we are just pure racing, we might
+		// kill the 3/2 and attack. If we want to be more defensive, we kill the 1/3 and keep our guys back to block").
+		// It untaps first only when their own combat this turn is already over.
+		var game = s.GetGame();
+		var untapsFirst = game.ActivePlayerId == player && game.Step >= Step.EndCombat;
+		var ours = s.CardsIn(us, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))
+			.Select(c => Lasting(c.IsTapped ? c with { IsTapped = false } : c))
+			.Select(x => (x.Card, x.Power, x.Toughness, Down: true))
+			.Concat(
+				s.CardsIn(us, ZoneType.Hand)
+					.Where(c => c.Is(CardType.Creature) && c.ManaCost.ManaValue <= mana)
+					.Select(c =>
+						(Card: c, Power: c.OwnPower, Toughness: c.OwnToughness, Down: false)
+					)
+			)
+			.OrderBy(x => x.Power + x.Toughness)
+			.ToList();
+		var held = new HashSet<int>();
+		var used = new bool[ours.Count];
+		foreach (var t in theirs)
+			for (var i = 0; i < ours.Count; i++)
+				if (
+					!used[i]
+					&& ours[i].Power >= t.Toughness
+					&& ours[i].Toughness > t.Power
+					&& (
+						ours[i].Down
+							? Combat.CanBlock(s, ours[i].Card, t.Card)
+							: !s.Has(t.Card, "Flying")
+								|| ours[i].Card.Keywords.Contains("Flying")
+								|| ours[i].Card.Keywords.Contains("Reach")
+					)
+				)
+				{
+					used[i] = true;
+					held.Add(t.Card.Id);
+					break;
+				}
+		return held;
 	}
 
 	/// <summary>Lands in play: 1.5 each to 7, 0.4 beyond — the ONE land price (a walker's mana reads it too).</summary>

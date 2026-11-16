@@ -83,6 +83,14 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// until AI-20.11, off since: at Shayne's #247 (six red cards on three Forests) it kept 12 of the library's 14
 	/// spells on top, 9 of them uncastable, and its match against the search alone was even. On is beam+surveilspells.
 	/// </param>
+	/// <param name="OptionPrice">
+	/// Our held answers priced by what they are likely to meet (<see cref="Ai.OptionPrice"/>, AI-26.4) in place of
+	/// their held prices. OFF: a trial, beam+optionprice.
+	/// </param>
+	/// <param name="ByUse">
+	/// Their creatures that ours hold off count for less (<see cref="Evaluator.HeldOff"/>, AI-26.12). OFF: a trial,
+	/// beam+byuse.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -110,7 +118,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool FreePasses = true,
 		int FreePassCap = 4,
 		bool WaitOnTies = true,
-		bool SpellsRule = false
+		bool SpellsRule = false,
+		bool OptionPrice = false,
+		bool ByUse = false
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -213,6 +223,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	// …and the line that reading came from, in the world the search sampled (Explain, AI-17).
 	readonly Dictionary<Decision, Node> bestLines = new(ReferenceEqualityComparer.Instance);
 	GameState? sampled;
+	GameState? decidedAt; // the real position the last search decided in: what OptionPrice is read from (AI-26.4)
 	GameState? searchRoot; // the position this search decides in: what a line's potential counts as kept (AI-13.11)
 	readonly List<Decision> firstMoveOrder = [];
 
@@ -266,7 +277,18 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			? "\n(no search: one option, a plan replayed, or a forced pass)\n"
 			: Evaluator.Without(
 				options.Without,
-				() => Evaluator.WithRootImpulse(sampled, () => ExplainLines(sampled))
+				() =>
+					Evaluator.WithByUse(
+						options.ByUse ? PlayerId : 0,
+						() =>
+							Ai.OptionPrice.WithRoot(
+								options.OptionPrice,
+								decidedAt ?? sampled, // as Decide read it: the real position, not the sampled one
+								PlayerId,
+								() =>
+									Evaluator.WithRootImpulse(sampled, () => ExplainLines(sampled))
+							)
+					)
 			);
 
 	string ExplainLines(GameState s)
@@ -386,9 +408,20 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		firstMoveOrder.Clear();
 		bestLines.Clear();
 		sampled = null;
+		decidedAt = s;
 		var decided = Evaluator.Without(
 			options.Without,
-			() => Evaluator.WithRootImpulse(s, () => DecideHere(s))
+			() =>
+				Evaluator.WithByUse(
+					options.ByUse ? PlayerId : 0,
+					() =>
+						Ai.OptionPrice.WithRoot(
+							options.OptionPrice,
+							s,
+							PlayerId,
+							() => Evaluator.WithRootImpulse(s, () => DecideHere(s))
+						)
+				)
 		);
 		totalRollouts += rollouts + secondRollouts;
 		return decided;

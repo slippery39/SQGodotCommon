@@ -105,6 +105,7 @@ dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N   # wh
 dotnet run -c Release --project MagicConsole -- --record=FILE --guesses=30 --at=N --ai=beam+shuffle   # noise or value (AI-19.23): move N decided again under 30 guesses of the hidden cards, each answer counted - a split is AI-20's one guessed future, a steady wrong answer a pricing problem (~15 s a position). Without --ai=beam+shuffle it is the default search, which guesses nothing (AI-20.4): 30 identical answers
 dotnet run -c Release --project MagicConsole -- --suite=beam --guesses=10 [--shown=N]   # the flip rate (AI-20.2): every suite position decided again under 10 guesses of the hidden cards - how many positions gave more than one answer, the most divided listed (~10 min for 288 positions; any time, unattended)
 dotnet run -c Release --project MagicConsole -- --record=FILE --explain=N --ai=beam+shuffle [--guess=K]   # the same under another search (--ai= works with --guesses too). The default (AI-20.4) shows each line's rollout both ways, our unseen draws lands or not, with each way's share; beam+shuffle is the search before it, one shuffled guess a decision, and --guess=K is that search under --guesses' Kth seed
+dotnet run -c Release --project MagicConsole -- --record=FILE --options=N [--turns=N]   # the option report before move N (AI-26.2; --turns: price N turns ahead instead of the clocks' 1 to 8): each targeted card in the deciding player's hand - what it gains now, against the creatures the opponent is likely to play (sample sealed decks in the colours shown), its held price among our answers, and the mana charge. A report only; the same price in the search is --ai=beam+optionprice (AI-26.4, off by default: --suite=beam+optionprice, --explain=N --ai=beam+optionprice); +byuse adds AI-26.12's trial, their creatures that ours hold off counting for less (beam+optionprice+byuse, or beam+byuse alone). Hand-built positions: dotnet test MagicCore.Tests --filter "TestCategory=OptionReport" --logger "console;verbosity=detailed"
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json and TRK.values.json (~5 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
@@ -120,7 +121,7 @@ From the solution root, Release. Both are deterministic: the same command gives 
 
 ```
 # 1. The quick check (~20 s), while working: what the AI decides at 288 recorded positions
-dotnet run -c Release --project MagicConsole -- --suite=beam   # --shown=N lists N changed decisions (10 by default)
+dotnet run -c Release --project MagicConsole -- --suite=beam   # --shown=N lists N changed decisions (10 by default); --boards prints each one's position too - turn and step, both boards, the mover's hand, every card's printed text, and the whole turn played out under the default search and under A (AI-26.9; ~15 min for 15 changes)
 #   "changed": decisions that differ from the committed answers (0 = a pure optimisation, AI-7)
 #   "cost per position": engine steps and rollouts — the deterministic cost, not the clock
 #   "agrees with the oracle" / "score given up": against a search looking four turns ahead, read once.

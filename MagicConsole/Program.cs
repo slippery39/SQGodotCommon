@@ -290,6 +290,41 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 	}
 	var check = PositionSuite.Run(tracked, name);
 	Console.WriteLine(check.Report(Arg("shown") ?? 10)); // --shown=N: list N changed decisions
+	if (flags.Contains("--boards")) // each changed decision's position, for a reader (AI-26.9)
+	{
+		var states = PositionSuite.States(tracked);
+		var changes = check.Changed.Take(Arg("shown") ?? 10).ToList();
+		var texts = new string[changes.Count];
+		var boards = new RunProgress("boards", changes.Count);
+		var differ = 0;
+		// each position's turn played out twice, a position a core: slot i is position i, so the order is the report's
+		Parallel.For(
+			0,
+			changes.Count,
+			i =>
+			{
+				var (p, was, now) = changes[i];
+				var g = tracked.Games[p.GameIndex];
+				var at = states
+					.First(x => x.Position.GameIndex == p.GameIndex && x.Position.Move == p.Move)
+					.State;
+				// the whole turn under each search: a first move that only reorders the turn reads the same
+				var turns = new[] { "beam", name }
+					.Select(ai => string.Join("; ", PositionSuite.TurnPlayed(at, ai)))
+					.ToList();
+				if (turns[0] != turns[1])
+					Interlocked.Increment(ref differ);
+				texts[i] =
+					$"\n=== {g.Deck1} vs {g.Deck2} seed {g.Seed}, move {p.Move}: was \"{was}\", now \"{now}\"\n"
+					+ $"{PositionSuite.Board(at)}\n"
+					+ $"      The turn, beam: {turns[0]}\n"
+					+ $"      The turn, {name}: {turns[1]}";
+				boards.Tick(() => $"{differ} turn(s) played differently");
+			}
+		);
+		foreach (var text in texts)
+			Console.WriteLine(text);
+	}
 	if (flags.Contains("--accept"))
 	{
 		File.WriteAllText(path, PositionSuite.ToText(check.Accepted));
@@ -318,6 +353,8 @@ if (args.FirstOrDefault(a => a.StartsWith("--builds-records=")) is { } buildsRec
 // MagicCore.Tests/Records/NAME.json (run from the solution root), and a test to start from printed.
 // --record=FILE --compare: your choices beside the AI's (TBL-5.6) — at each of your decisions, the
 // default search's pick and where the oracle ranks yours; one line where either differs, then a summary.
+// --record=FILE --options=N: the option report before move N (AI-26.2) — what each targeted card in the deciding
+// player's hand gains now, against the creatures the opponent is likely to play; nothing in the AI reads it yet.
 if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 {
 	try
@@ -372,6 +409,14 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 			);
 			foreach (var g in picks.GroupBy(p => p).OrderByDescending(g => g.Count()))
 				Console.WriteLine($"  {g.Count(), 3}  {g.Key}");
+		}
+		else if (Arg("options") is { } optionsAt)
+		{
+			// AI-26.2: each targeted card in the deciding player's hand before move N - now, later, held, mana
+			var at = record.Before(optionsAt);
+			Console.WriteLine($"# Before #{optionsAt}");
+			// --turns=N: price N turns ahead instead of the clocks' 1 to 4
+			Console.WriteLine(OptionReport.Of(at, at.DecidingPlayerId(), Arg("turns")));
 		}
 		else if (Arg("explain") is { } explainAt)
 		{
