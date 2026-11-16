@@ -42,7 +42,7 @@ KEYWORDS = {
     "Domain": (H, "Count.BasicLandTypesAmongLandsYouControl"), "Landfall": (H, "Trigger on a land entering"),
     "Metalcraft": (H, "If + Count"), "Ferocious": (H, "If + Count"), "Adapt": (H, "PutCounters under If"),
     "Annihilator": (H, "an attack trigger + sacrifice"), "Boast": (H, "Card.AttackedOnTurn + OncePerTurn"),
-    "Flurry": (H, "Trigger.SpellNumber"), "Imprint": (H, "Exile { Linked }"), "Ravenous": (H, "X counters + If"),
+    "Flurry": (H, "Trigger.Nth"), "Imprint": (H, "Exile { Linked }"), "Ravenous": (H, "X counters + If"),
     "Living weapon": (H, "CreateTokens.AttachTo"), "Mobilize": (H, "tokens entering attacking + sacrifice at end"),
     "Channel": (H, "ActivatedAbilityComponent.From hand"), "Exalted": (H, "'attacks alone' trigger"),
     "Delirium": (O, "Count — card TYPES in your graveyard (Tarmogoyf counts all graveyards)"),

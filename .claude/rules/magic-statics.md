@@ -133,6 +133,20 @@ whose subsystem it lives in.
 - **"If you would draw a card, draw two instead"** (Mr. Spock, `NumericReplacement(Draw) { Times = 2 }`) is applied
   in `MagicState.Draw`, which every draw goes through — twice per copy (two Spocks: four). Bruvac's "they mill
   twice that many" is the same in `Mill.Top`, every mill.
+- **"If [a player] would draw a card, [something else] instead"** and **"can't draw"** are two options on that same
+  `NumericReplacement(Draw)` (MC-4.4e2b), never a piece beside it: `Instead` — effects run in place of ONE card's
+  draw, as the rule's controller (Hullbreacher `[CreateTreasure]`, Jace, Wielder of Mysteries `[WinTheGame]`; Narset,
+  Parter of Veils' "can't draw more than one card each turn" is EMPTY, nothing instead) — and `If`, a condition
+  judged from its holder's side with `Ref.It` the player drawing (Jace `YourLibraryIsEmpty`; Narset `AtLeast(
+  Count.CardsYouDrewThisTurn with { Of = Ref.It }, 1)` — each "you … this turn" count reads another player's tally
+  with `Of`). `MagicState.Draw` applies the numbers first, then asks `Replacements.InsteadOfDraw` for each card,
+  BEFORE it looks at the library — so Jace wins and a draw Narset stops from an empty library loses nothing; a
+  "can't" is found before any replacement (Narset beside Hullbreacher: no Treasure). A replaced card isn't drawn:
+  no tally, no `DrewCardEvent`. The effects are spawned, so they run before the resolving ability's next step.
+  Hullbreacher's "except the first one they draw in each of their draw steps" is `ExceptTheTurnsDraw`: the draw
+  step calls `Draw(…, turnDraw: true)`, and only its FIRST card is the turn's draw — a second that Spock makes of
+  it is any other draw (a ceiling, DesignNotes). An `Instead` is read on a permanent only, never in a
+  `ThisTurnReplacement`.
 - **A counted bound in a filter** ("mana value less than Sisay's power", Omnipresence's "≤ the number of creatures
   you control") is `StatBetween` with `Count` bounds (`Is.ManaValueAtMost(Count …)`), counted as the filter is asked
   with its controller and source — so a choice's filter passes the ability's source (`SourceOf.Context`). X reads 0

@@ -4034,14 +4034,7 @@ public static class TrkCards
 			],
 			["Stella Lee, Wild Card"] =
 			[
-				When(
-					TriggerEvent.YouCastSpell with
-					{
-						SpellNumber = 2,
-					},
-					[],
-					new ExileTopPlayable()
-				),
+				When(TriggerEvent.YouCastSpell with { Nth = 2 }, [], new ExileTopPlayable()),
 				new ActivatedAbilityComponent(ManaCost.None, [new CopySpell(Ref.Target())])
 				{
 					Costs = [new TapSelfCost()],

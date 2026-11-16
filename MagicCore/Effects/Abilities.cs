@@ -193,20 +193,21 @@ public record Trigger(EventKind On)
 					: throw new ArgumentException($"A Chapter only fits CountersPut, not {On}");
 	}
 
-	readonly int spellNumber;
+	readonly int nth;
 
 	/// <summary>
-	/// Stella Lee, Wild Card: "Whenever you cast your second spell each turn" — the SpellCast event of the
-	/// caster's Nth spell this turn, numbered as it is cast (SpellCastEvent.SpellNumber).
+	/// Stella Lee, Wild Card: "Whenever you cast your second spell each turn"; Faerie Mastermind: "Whenever an
+	/// opponent draws their second card each turn" — the event of that player's Nth spell (SpellCast) or Nth
+	/// card drawn (Drew) this turn, numbered as it happens (SpellCastEvent.SpellNumber, DrewCardEvent.Number).
 	/// </summary>
-	public int SpellNumber
+	public int Nth
 	{
-		get => spellNumber;
+		get => nth;
 		init =>
-			spellNumber =
-				value == 0 || On == EventKind.SpellCast
+			nth =
+				value == 0 || On is EventKind.SpellCast or EventKind.Drew
 					? value
-					: throw new ArgumentException($"A SpellNumber only fits SpellCast, not {On}");
+					: throw new ArgumentException($"An Nth only fits SpellCast or Drew, not {On}");
 	}
 
 	readonly string? ability;
@@ -1069,6 +1070,39 @@ public record NumericReplacement(ReplacedEvent Event) : GameComponent
 
 	/// <summary>"That much plus N".</summary>
 	public int Plus { get; init; }
+
+	/// <summary>
+	/// Jace, Wielder of Mysteries: "while your library has no cards in it"; Narset, Parter of Veils: "can't draw
+	/// more than one card each turn" (they have drawn one) — judged from its holder's side as the event would
+	/// happen, Ref.It what it happens to (the player drawing). None: always.
+	/// </summary>
+	public Condition? If { get; init; }
+
+	readonly ImmutableList<GameAction>? instead;
+
+	/// <summary>
+	/// Draw only — what happens in place of ONE card's draw (MagicState.Draw), run as the rule's controller; the
+	/// numbers don't apply. Hullbreacher: "instead you create a Treasure token"; Jace: "you win the game instead";
+	/// Narset: "can't draw" is empty — nothing instead, and it is asked before any other. On a PERMANENT only:
+	/// one in a ThisTurnReplacement is not read (Replacements.InsteadOfDraw) — widen it there when a card
+	/// says "this turn, if [a player] would draw".
+	/// </summary>
+	public ImmutableList<GameAction>? Instead
+	{
+		get => instead;
+		init =>
+			instead =
+				value is null || Event == ReplacedEvent.Draw
+					? value
+					: throw new ArgumentException($"An Instead only fits Draw, not {Event}");
+	}
+
+	/// <summary>
+	/// Hullbreacher: "except the first one they draw in each of their draw steps" — the draw step's own draw is
+	/// left alone. ponytail: when the turn's draw didn't happen (the starting player's first turn), another
+	/// card drawn in that draw step isn't excepted; count the draw step's draws in the tally if it matters.
+	/// </summary>
+	public bool ExceptTheTurnsDraw { get; init; }
 }
 
 /// <summary>Loot, the Anomaly: "If his power is negative, he assigns combat damage as though it were positive."</summary>

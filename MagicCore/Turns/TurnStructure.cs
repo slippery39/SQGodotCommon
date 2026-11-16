@@ -261,7 +261,7 @@ public static class TurnStructure
 			case Step.Draw:
 				// The starting player skips their first draw (CR 103.8a).
 				if (game.TurnNumber > 1)
-					s = s.Draw(active);
+					s = s.Draw(active, turnDraw: true);
 				return GivePriority(s, active);
 
 			case Step.DeclareAttackers:

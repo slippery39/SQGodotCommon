@@ -511,6 +511,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static readonly Count LifeYouGainedThisTurn =
 		new(0, null, CountOf.LifeYouGainedThisTurn);
+
+	/// <summary>
+	/// "Cards you've drawn this turn" — and, as each of the "you … this turn" counts, another player's with Of:
+	/// Narset, Parter of Veils' "[an opponent] can't draw more than one card each turn" is
+	/// CardsYouDrewThisTurn with { Of = Ref.It }, the player drawing.
+	/// </summary>
 	public static readonly Count CardsYouDrewThisTurn = new(0, null, CountOf.CardsYouDrewThisTurn);
 	public static readonly Count CardsYouDiscardedThisTurn =
 		new(0, null, CountOf.CardsYouDiscardedThisTurn);
@@ -636,7 +642,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				or CountOf.NoncreatureSpellsYouCastThisTurn
 		)
 		{
-			var tally = s.GetPlayer((int)context[ContextKeys.Controller]).ThisTurn;
+			// Whose turn tally: Of (Narset: Ref.It, the player drawing); unset is you.
+			var whose = Of is null
+				? (int)context[ContextKeys.Controller]
+				: Of.Resolve(s, context).FirstOrDefault();
+			if (!s.HasObject(whose) || s.GetObject(whose) is not MagicPlayer whoseTally)
+				return 0;
+			var tally = whoseTally.ThisTurn;
 			return Kind switch
 			{
 				CountOf.LifeYouGainedThisTurn => tally.LifeGained,

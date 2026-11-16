@@ -1026,7 +1026,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, LsvBatch1Tests, LsvBatch2Tests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2eTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Make It So
 
@@ -8090,7 +8090,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > If you would draw a card, draw two cards instead.
 
-**Status:** scripted · **tests naming it:** TrkBatch6bTests
+**Status:** scripted · **tests naming it:** LsvBatch2eTests, TrkBatch6bTests
 
 **Engine pieces:** `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…
 
@@ -8512,7 +8512,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.YouCastSpell with
 		{
-			SpellNumber = 2,
+			Nth = 2,
 		},
 		[],
 		new ExileTopPlayable()

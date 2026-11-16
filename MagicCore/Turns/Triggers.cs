@@ -174,7 +174,8 @@ public record LandPlayedEvent(int PlayerId, int CardId, ZoneType From) : MagicEv
 }
 
 /// <summary>Data, New Life: "Whenever you draw a card" — a player drew one card; raised by MagicState.Draw, once per card.</summary>
-public record DrewCardEvent(int PlayerId) : MagicEvent
+/// <param name="Number">Faerie Mastermind: "their second card each turn" — which card of that player's turn this is, numbered as it is drawn.</param>
+public record DrewCardEvent(int PlayerId, int Number = 0) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.Drew;
 
@@ -744,8 +745,14 @@ public static class Triggers
 		)
 			return false;
 		if (
-			on.SpellNumber > 0
-			&& (e is not SpellCastEvent numbered || numbered.SpellNumber != on.SpellNumber)
+			on.Nth > 0
+			&& on.Nth
+				!= e switch
+				{
+					SpellCastEvent cast => cast.SpellNumber,
+					DrewCardEvent drew => drew.Number,
+					_ => 0,
+				}
 		)
 			return false;
 		if (!ZonesFit(on, e))

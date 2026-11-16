@@ -587,7 +587,7 @@ public static class LsvCards
 				When(
 					TriggerEvent.YouCastSpell with
 					{
-						SpellNumber = 2,
+						Nth = 2,
 					},
 					[],
 					new CreateTokens(Monk, 1)
@@ -1526,6 +1526,60 @@ public static class LsvCards
 						},
 						[new WinTheGame()]
 					)
+				),
+			],
+			// ===== MC-4.4e2b: blue's options, draws =====
+			["Faerie Mastermind"] =
+			[
+				When(
+					new Trigger(EventKind.Drew) { By = Whose.Opponent, Nth = 2 },
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{U}"),
+					[new DrawCards(Ref.EachPlayer, 1)]
+				),
+			],
+			["Hullbreacher"] =
+			[
+				new NumericReplacement(ReplacedEvent.Draw)
+				{
+					Affected = Is.Opponents,
+					ExceptTheTurnsDraw = true,
+					Instead = [CreateTreasure(1)],
+				},
+			],
+			["Narset, Parter of Veils"] =
+			[
+				// "Can't draw more than one": once they have drawn one, nothing instead.
+				new NumericReplacement(ReplacedEvent.Draw)
+				{
+					Affected = Is.Opponents,
+					If = new AtLeast(Count.CardsYouDrewThisTurn with { Of = Ref.It }, 1),
+					Instead = [],
+				},
+				Loyalty(-2, [], new LookAndTake(4, !Is.Creature & !Is.Land) { Reveal = true }),
+			],
+			["Jace, Wielder of Mysteries"] =
+			[
+				new NumericReplacement(ReplacedEvent.Draw)
+				{
+					Affected = Is.Yours,
+					If = new YourLibraryIsEmpty(),
+					Instead = [new WinTheGame()],
+				},
+				Loyalty(
+					1,
+					[TargetSpec.Player()],
+					new Mill(Ref.Target(), 2),
+					new DrawCards(Ref.You, 1)
+				),
+				Loyalty(
+					-8,
+					[],
+					new DrawCards(Ref.You, 7),
+					new If(new YourLibraryIsEmpty(), [new WinTheGame()])
 				),
 			],
 		};

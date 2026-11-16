@@ -811,14 +811,40 @@ public static class MagicState
 	/// Draws from the top; a draw from an empty library flags the loss for the state-based check. Every
 	/// draw comes here, so Mr. Spock's "If you would draw a card, draw two cards instead" applies in this
 	/// one place (a NumericReplacement) — twice per copy: two draw four (each new draw is replaced again).
+	/// Then each card on its own: what happens INSTEAD of drawing it (NumericReplacement.Instead — Hullbreacher's
+	/// Treasure, Jace, Wielder of Mysteries' win, Narset's "can't") is asked before the library is looked at, so
+	/// a draw that doesn't happen never loses the game. Its effects are spawned as the rule's controller: they
+	/// run before the resolving ability's next step.
 	/// </summary>
-	public static GameState Draw(this GameState s, int playerId, int count = 1)
+	/// <param name="turnDraw">The draw step's own draw.</param>
+	public static GameState Draw(
+		this GameState s,
+		int playerId,
+		int count = 1,
+		bool turnDraw = false
+	)
 	{
 		count = Rules.Replacements.Apply(s, ReplacedEvent.Draw, s.GetPlayer(playerId), count);
 		var libraryId = s.ZoneId(playerId, ZoneType.Library);
 		var handId = s.ZoneId(playerId, ZoneType.Hand);
 		for (var i = 0; i < count; i++)
 		{
+			if (
+				// The turn's draw is ONE card: a second one Spock makes of it is any other draw.
+				Rules.Replacements.InsteadOfDraw(s, s.GetPlayer(playerId), turnDraw && i == 0) is
+				{ } instead
+			)
+			{
+				if (!instead.Rule.Instead!.IsEmpty)
+					s = s.SpawnAction(
+						new PipelineAction
+						{
+							Steps = instead.Rule.Instead,
+							PipelineContext = Conditions.Of(instead.Holder),
+						}
+					);
+				continue;
+			}
 			var top = s.GetChildrenIds(libraryId).FirstOrDefault();
 			if (top == 0)
 				return s.WithPlayer(
@@ -827,9 +853,11 @@ public static class MagicState
 						AttemptedDrawFromEmptyLibrary = true,
 					}
 				);
+			// Numbered as it is drawn: two cards drawn at once are the first and the second (Faerie Mastermind).
+			var number = s.GetPlayer(playerId).ThisTurn.CardsDrawn + 1;
 			s = s.MoveCard(top, handId)
-				.Tally(playerId, t => t with { CardsDrawn = t.CardsDrawn + 1 })
-				.Raise(new DrewCardEvent(playerId));
+				.Tally(playerId, t => t with { CardsDrawn = number })
+				.Raise(new DrewCardEvent(playerId, number));
 		}
 		return s;
 	}

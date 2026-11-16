@@ -53,11 +53,11 @@ public static class Replacements
 
 		void Add(NumericReplacement r, Card holder)
 		{
-			if (r.Event != evt)
+			if (r.Event != evt || r.Instead is not null)
 				return;
 			var asking = new Filters.FilterContext(holder.ControllerId, holder.Id);
 			if (
-				r.Affected?.Matches(s, affected, asking) == false
+				!Affects(s, r, holder, affected)
 				|| r.Source is { } from && (source is null || !from.Matches(s, source, asking))
 				|| r.CounterKind is { } k && k != kind
 				|| r.Combat is { } c && c != combat
@@ -66,5 +66,46 @@ public static class Replacements
 			plus += r.Plus;
 			times *= r.Times;
 		}
+	}
+
+	/// <summary>Is this what the rule is about, and does its "if" hold — both asked from its holder's side.</summary>
+	static bool Affects(GameState s, NumericReplacement r, Card holder, GameObject affected) =>
+		r.Affected?.Matches(s, affected, new Filters.FilterContext(holder.ControllerId, holder.Id))
+			!= false
+		&& (
+			r.If is not { } when
+			|| when.Holds(s, Conditions.Of(holder).Add(ContextKeys.It, affected.Id))
+		);
+
+	/// <summary>
+	/// What happens in place of ONE card's draw (NumericReplacement.Instead), and whose rule it is — null: the
+	/// card is drawn. A "can't draw" (nothing instead: Narset) before any other, so Hullbreacher beside her makes
+	/// no Treasure. ponytail: else the first found, player one's permanents first — of two that would apply the
+	/// drawing player chooses (CR 616.1); ask them if such a pair ever meets.
+	/// </summary>
+	/// <param name="turnDraw">The draw step's own draw (Hullbreacher's "except the first one … in their draw steps").</param>
+	public static (NumericReplacement Rule, Card Holder)? InsteadOfDraw(
+		GameState s,
+		MagicPlayer drawing,
+		bool turnDraw
+	)
+	{
+		(NumericReplacement, Card)? found = null;
+		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
+		foreach (var holder in s.CardsIn(player, ZoneType.Battlefield))
+		foreach (var r in s.AbilitiesOf<NumericReplacement>(holder))
+		{
+			if (
+				r.Event != ReplacedEvent.Draw
+				|| r.Instead is null
+				|| turnDraw && r.ExceptTheTurnsDraw
+				|| !Affects(s, r, holder, drawing)
+			)
+				continue;
+			if (r.Instead.IsEmpty)
+				return (r, holder);
+			found ??= (r, holder);
+		}
+		return found;
 	}
 }

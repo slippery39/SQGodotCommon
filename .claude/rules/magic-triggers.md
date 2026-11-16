@@ -182,8 +182,11 @@ whose subsystem it lives in.
   ("haven't begun an extra turn this game", `HaventBegunAnExtraTurn`). `TurnNumber` counts it like any turn, so
   every "this turn" stamp holds. Turns no longer alternate: **summoning sickness reads `MagicPlayer.TurnBeganOn`**,
   never "the turn before".
-- **"Your second spell each turn"** (Stella Lee) is `Trigger.SpellNumber = 2` against `SpellCastEvent.SpellNumber`,
-  numbered as it is cast (any kind; `NoncreatureSpellNumber` beside it).
+- **"Your second spell each turn"** (Stella Lee) is `Trigger.Nth = 2` against `SpellCastEvent.SpellNumber`,
+  numbered as it is cast (any kind; `NoncreatureSpellNumber` beside it). **"Whenever an opponent draws their second
+  card each turn"** (Faerie Mastermind, MC-4.4e2b) is the same option on a `Drew` trigger, against
+  `DrewCardEvent.Number` — the drawer's count this turn, stamped by `MagicState.Draw` as each card is drawn, so two
+  drawn in one resolution are the first and the second. `Nth` fits those two kinds only; never a second number.
 - **"When this enters from anywhere other than a graveyard or exile"** ("Name Sticker" Goblin) is `Trigger.NotFrom`
   against `EnteredBattlefieldEvent.From` — the zone `EnterBattlefield` saw it leave (a resolving spell: the stack;
   null for a token just made, which no NotFrom refuses); `Trigger.From` reads it too. Its "if it's on the

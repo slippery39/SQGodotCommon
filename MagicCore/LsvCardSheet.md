@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 25/46 · uncommon 37/86 · rare 95/279 · mythic 33/108 · **199/528**
+**Playable:** common 25/46 · uncommon 38/86 · rare 98/279 · mythic 33/108 · **203/528**
 
 ### "Name Sticker" Goblin
 
@@ -1276,7 +1276,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Each opponent can't draw more than one card each turn.  
 > −2: Look at the top four cards of your library. You may reveal a noncreature, nonland card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Narset, Parter of Veils"] =
+[
+	// "Can't draw more than one": once they have drawn one, nothing instead.
+	new NumericReplacement(ReplacedEvent.Draw)
+	{
+		Affected = Is.Opponents,
+		If = new AtLeast(Count.CardsYouDrewThisTurn with { Of = Ref.It }, 1),
+		Instead = [],
+	},
+	Loyalty(-2, [], new LookAndTake(4, !Is.Creature & !Is.Land) { Reveal = true }),
+],
+```
 
 ### Necromancy
 
@@ -2541,7 +2557,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.YouCastSpell with
 		{
-			SpellNumber = 2,
+			Nth = 2,
 		},
 		[],
 		new CreateTokens(Monk, 1)
@@ -2968,7 +2984,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever an opponent draws their second card each turn, you draw a card.  
 > {3}{U}: Each player draws a card.
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Faerie Mastermind"] =
+[
+	When(
+		new Trigger(EventKind.Drew) { By = Whose.Opponent, Nth = 2 },
+		[],
+		new DrawCards(Ref.You, 1)
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{3}{U}"),
+		[new DrawCards(Ref.EachPlayer, 1)]
+	),
+],
+```
 
 ### Fallen Shinobi
 
@@ -3418,7 +3451,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > If an opponent would draw a card except the first one they draw in each of their draw steps, instead you create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…
+
+```csharp
+["Hullbreacher"] =
+[
+	new NumericReplacement(ReplacedEvent.Draw)
+	{
+		Affected = Is.Opponents,
+		ExceptTheTurnsDraw = true,
+		Instead = [CreateTreasure(1)],
+	},
+],
+```
 
 ### Icetill Explorer
 
@@ -3522,7 +3569,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 > +1: Target player mills two cards. Draw a card.  
 > −8: Draw seven cards. Then if your library has no cards in it, you win the game.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WinTheGame` — "You win the game" (CR 104.2a): every opponent loses, now — and the game ends, so no…; `YourLibraryIsEmpty` — Fblthp: "If your library has no cards in it".
+
+```csharp
+["Jace, Wielder of Mysteries"] =
+[
+	new NumericReplacement(ReplacedEvent.Draw)
+	{
+		Affected = Is.Yours,
+		If = new YourLibraryIsEmpty(),
+		Instead = [new WinTheGame()],
+	},
+	Loyalty(
+		1,
+		[TargetSpec.Player()],
+		new Mill(Ref.Target(), 2),
+		new DrawCards(Ref.You, 1)
+	),
+	Loyalty(
+		-8,
+		[],
+		new DrawCards(Ref.You, 7),
+		new If(new YourLibraryIsEmpty(), [new WinTheGame()])
+	),
+],
+```
 
 ### Jacked Rabbit
 
@@ -7375,7 +7448,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player draws three cards.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests
 
 **Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 

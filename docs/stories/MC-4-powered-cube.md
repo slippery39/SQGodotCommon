@@ -577,6 +577,58 @@ as his three priorities.
   stale kept records — it goes with the Open); the AI's answers (its pick of two, Ponder's order by the surveil
   rule): AI-19.29. **Left as ceilings (DesignNotes):** a "may" search can't be made and failed on purpose to
   shuffle; `ExileTopPlayable { RestOnBottom }` still marks its rest known to their owner.
+- 2026-11-16, Claude — **4.4e2b's plan (draws, 4 cards), from the pieces' CODE — the survey's two findings hold,
+  each smaller than it read.** Legal actions on a 12-creature board: each card is one cast; Faerie Mastermind one
+  activation; Narset's −2 one; Jace's +1 two (a target player), his −8 one. Nothing per set.
+  **"Their second card each turn" is `Trigger.Nth`, not a second number beside `SpellNumber`:** `Trigger.SpellNumber`
+  (it refuses every kind but `SpellCast`) is renamed `Nth` and fits `SpellCast` and `Drew` — Stella Lee and
+  Cori-Steel Cutter move with it. `DrewCardEvent(PlayerId, Number)`: the drawer's count this turn
+  (`TurnTally.CardsDrawn`) stamped as each card is drawn, so two drawn in one resolution are the first and the
+  second. Faerie Mastermind is `new Trigger(Drew) { By = Opponent, Nth = 2 }`; its {3}{U} is `DrawCards(
+  Ref.EachPlayer, 1)`, Timetwister's.
+  **The three "instead" are TWO options on `NumericReplacement(Draw)`, read in `MagicState.Draw`:** `Instead`
+  (effects run in place of ONE card's draw, as the rule's controller — Hullbreacher `[CreateTreasure]`, Jace
+  `[WinTheGame]`, Narset `[]`: "can't" is nothing instead) and `If` (a `Condition` judged from its holder's side,
+  `Ref.It` the drawing player — Jace `YourLibraryIsEmpty`, Narset "has drawn one this turn"). `Draw` applies the
+  numbers first (Spock's two), then asks for each card: an empty `Instead` first ("can't" beats a replacement —
+  Narset beside Hullbreacher makes no Treasure), else the first found; asked BEFORE the empty-library flag, so
+  Jace wins and a Narset-stopped draw from no library loses nothing. `Replacements.Apply` reads `If` too. The
+  effects are spawned (a pipeline, the holder's context) as the shockland's `May` is from `EnterBattlefield`:
+  they run before the resolving ability's next step.
+  **Narset's count needs no new kind:** the seven "you … this turn" counts read the controller's tally;
+  `Of` (unset: you) names whose — `Count.CardsYouDrewThisTurn with { Of = Ref.It }`.
+  **Hullbreacher's "except the first one they draw in each of their draw steps" is `ExceptTheTurnsDraw`**, an
+  option on the same replacement: the draw step's own draw passes `turnDraw` to `Draw`. Read against the
+  alternative — a step condition and a per-step tally, three pieces for one phrase: `DuringYourTurn` and
+  `DuringCombat` would have to become one condition with a step and a "whose", and their cards move. **A ceiling
+  (DesignNotes, `ponytail:`):** when the turn's draw didn't happen (the starting player's first turn), another
+  card drawn in that draw step isn't excepted.
+  **Tested pieces:** Narset's −2 is `LookAndTake(4, !Creature & !Land) { Reveal }`; Jace's +1 `Mill(Target, 2)`
+  and `DrawCards`, his −8 `DrawCards(7)` then Fblthp's `If(YourLibraryIsEmpty, [WinTheGame])`.
+  **Not built:** which replacement applies when two would (CR 616.1, the drawing player's choice) — the first
+  found, player one's permanents first.
+- 2026-11-16, Claude — **4.4e2b's notes.** Built as planned, but the spawned effects get the holder's context
+  alone (no `Ref.It`: no `Instead` reads the drawing player yet). A replaced card isn't drawn — no tally, no
+  `DrewCardEvent` — so Hullbreacher beside Narset on an opponent's main-phase draw is three Treasures (they never
+  drew a first card); Narset stops them only after a card they did draw (their draw step's). 14 tests (15
+  cases) in `LsvBatch2eTests.cs`, 33/33 breaks caught. **Test helpers there:** `DrawsThree(caster, target)`
+  (Ancestral Recall), `ToTheirDrawStep()`, `Treasures(player)`, `JaceWielder(loyalty)` and `Activate(walker,
+  ability, targets)` — NOT moved up to `FraBoardTest`: `FraTriggerTests` and `FraCardTests` each have a private
+  `Loyalty(walker, cost)` of another meaning, and 2d's `Loyalty(walker, index)` stays where it is for the same
+  reason. **Left as ceilings (DesignNotes):** the turn's draw is the excepted one; two replacements of one draw;
+  `NumericReplacement.If` on the numeric events is read and untested (no card).
+  **`/pre-commit`'s review: ten findings, no bug in the four scripts; one engine fix, with its test (33/33 breaks
+  caught):** the turn's draw is ONE card — a second that Spock makes of it is any other draw to Hullbreacher
+  (`turnDraw && i == 0`). `tools/survey.py` still named `Trigger.SpellNumber` (Flurry): fixed. **Documented, not
+  changed:** the replacing effects are spawned, so they run after the action that drew (DesignNotes); an
+  `Instead` in a `ThisTurnReplacement` isn't read (its summary says so). **Not taken, and why:** a scan of both
+  battlefields per card drawn (no bench for a card batch — the rule stays whatever it costs; collect the rules
+  once per `Draw` if a profile shows it); null against empty `Instead` (no MagicCore state is round-tripped
+  through JSON — records replay by token); `Of` on a turn count reading one player, not a sum (it names whose).
+  **Open (for Shayne): `ExceptTheTurnsDraw` is a bool on the piece and a `turnDraw` argument** — the review
+  reads it as a one-card flag against MC-6's rule. The other way is a draw-step count in `TurnTally` and a step
+  condition in `If` (`DuringYourTurn` and `DuringCombat` generalised, their cards moved): three pieces, and it
+  closes the first-turn ceiling. Default taken: the flag.
 
 ## Tasks
 
@@ -684,8 +736,13 @@ as his three priorities.
           each read: four by a "may" search that took nothing, one by Timetwister's one shuffle; golden-in moved 29
           random and 351 card-replay games, added 16, the AI replay unmoved; probe 150 games, none unfinished, each
           card cast 396–543 times)
-    - [ ] MC-4.4e2b Options, draws, 4: Faerie Mastermind, Hullbreacher, Narset (Parter of Veils), Jace (Wielder of
-          Mysteries)
+    - [x] MC-4.4e2b Options, draws, 4 — done 2026-11-16: Faerie Mastermind, Hullbreacher, Narset (Parter of
+          Veils), Jace (Wielder of Mysteries). `Trigger.Nth` (`SpellNumber` renamed: Stella Lee and Cori-Steel
+          Cutter moved; `DrewCardEvent.Number`), `NumericReplacement(Draw) { Instead, If, ExceptTheTurnsDraw }`
+          read per card in `MagicState.Draw`, the "you … this turn" counts' `Of`; 14 tests (15 cases), 33/33
+          breaks caught; `batch_checks.py` all 7 steps, twice (after the review's fix too: golden-out unchanged;
+          golden-in moved 29 random and 257 card-replay games, added 16, the AI replay unmoved; probe 150 games,
+          none unfinished, each card cast 174–453 times). Open: `ExceptTheTurnsDraw` (Decisions, e2b's notes)
     - [ ] MC-4.4e2c Options, mana and costs, 5: Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer),
           Forensic Gadgeteer, Thieving Skydiver
     - [ ] MC-4.4e2d Options, casting off the hand, 4: Bilbo (Thief in the Night), Malcolm (Alluring Scoundrel),
@@ -697,15 +754,22 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1) and the library's top (4.4e2a) are done: **199 of
-528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2b —
-draws, 4 cards:** Faerie Mastermind, Hullbreacher, Narset (Parter of Veils), Jace (Wielder of Mysteries) —
-`DrewCardEvent` carries only the player, so "their second card each turn" is a number on it, stamped as the card is
-drawn (as `SpellCastEvent.SpellNumber`); Hullbreacher's "instead you create a Treasure", Narset's "can't draw more
-than one" and Jace's "you win the game instead" are an outcome on the draw's replacement, in `MagicState.Draw`, the
-one place (`NumericReplacement(Draw)` is times and plus today). Read those against the CODE first: of e2a's five
-survey findings two changed on reading (`AtLeast` already had a counted bound, `MoreThan`; the shuffle became ONE
-piece, not an effect beside the action). Then e2c (mana and costs), e2d (casting off the
+Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1), the library's top (4.4e2a) and draws (4.4e2b)
+are done: **203 of 528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW
+session: **MC-4.4e2c — mana and costs, 5 cards:** Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer),
+Forensic Gadgeteer, Thieving Skydiver — the survey's reading of each is in Decisions ("4.4e", e2c); read it against
+the CODE first: e2b's two findings held but each was smaller than it read (`Nth` is `SpellNumber` renamed, not a
+second number; the three "instead" are two options, `Instead` and `If`).
+**Open (for Shayne), from e2b:** Hullbreacher's "except the first one they draw in each of their draw steps" is a
+bool on the replacement, `ExceptTheTurnsDraw`, and a `turnDraw` argument to `Draw` — the review reads it as a
+one-card flag against MC-6's rule; the other way is a draw-step count in `TurnTally` and a step condition (three
+pieces, `DuringYourTurn` and `DuringCombat` generalised). Default taken: the flag (Decisions, e2b's notes).
+From e2b: a draw is replaced or stopped by `NumericReplacement(Draw) { Instead, If }`, asked per card in
+`MagicState.Draw` before the library is looked at; a replaced card isn't drawn (no tally, no event); "their Nth
+[spell / card] each turn" is `Trigger.Nth`; another player's "this turn" count is the count `with { Of = … }`. Its
+test helpers in `LsvBatch2eTests.cs`: `DrawsThree(caster, target)`, `ToTheirDrawStep()`, `Treasures(player)`,
+`JaceWielder(loyalty)`, `Activate(walker, ability, targets)`.
+Then e2d (casting off the
 hand), e2e ("for as long as this remains"), e2f (choices after the cast — Mystic Confluence is 378 casts on a
 12-creature board as `Repeats` is built, so its targets become a choice after the cast and Fiery Confluence moves
 with it), a part a session. Blue's tier 2 (6) and tier 3 (11) are not this task.
@@ -811,3 +875,7 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-15: MC-4.4e2a done: Ponder, Stock Up, Consult the Star Charts, Thassa's Oracle — 199 of 528 play.
   `LookAndTake { Take, To, Rest }`, `ShuffleLibrary`, `SearchLibrary { May }` on LSV's five; the seven FRA and TRK
   "may search" cards are an Open (three kept AI records go stale with them). Next: MC-4.4e2b, draws.
+- 2026-11-16: MC-4.4e2b done: Faerie Mastermind, Hullbreacher, Narset (Parter of Veils), Jace (Wielder of
+  Mysteries) — 203 of 528 play. `Trigger.Nth`, `NumericReplacement(Draw) { Instead, If, ExceptTheTurnsDraw }`;
+  `ExceptTheTurnsDraw` is an Open (a flag, against a draw-step count and a step condition). Next: MC-4.4e2c, mana
+  and costs.

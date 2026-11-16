@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Turns;
 using Nu = NUnit.Framework.Is;
 
 namespace MagicCore.Tests.Sets;
@@ -602,5 +603,259 @@ public class LsvBatch2eTests : FraBoardTest
 		Cast(Hand(name, me), [], bear);
 		Assert.That(Alive(bear), Nu.False, "the spell resolved");
 		Assert.That(Library(them), Nu.EqualTo(before));
+	}
+
+	// ===== MC-4.4e2b: draws =====
+
+	int Treasures(int player) =>
+		s.CardsIn(player, ZoneType.Battlefield).Count(c => c.Name == "Treasure");
+
+	/// <summary>Ancestral Recall, cast by its owner: "Target player draws three cards."</summary>
+	void DrawsThree(int caster, int target) =>
+		Cast(Hand(Lsv("Ancestral Recall"), caster), [], target);
+
+	/// <summary>They hold priority in their draw step: the turn's card is drawn.</summary>
+	void ToTheirDrawStep() =>
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.Draw && x.GetGame().ActivePlayerId == them
+		);
+
+	/// <summary>I activate the planeswalker's loyalty ability (by its place among them) and it resolves.</summary>
+	void Activate(int walker, int ability, params int[] targets)
+	{
+		s = s.Act(
+			new ActivateLoyaltyAction
+			{
+				PlayerId = me,
+				CardId = walker,
+				AbilityIndex = ability,
+				Targets = [.. targets],
+			}
+		);
+		Resolve();
+	}
+
+	[Test]
+	public void FaerieMastermind_AnOpponentsSecondCardEachTurn_YouDrawACard()
+	{
+		Cast(Hand(Lsv("Faerie Mastermind"), me), []);
+		var (mine, theirs) = (HandCount(me), HandCount(them));
+		DrawsThree(me, them);
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(3));
+		Assert.That(
+			HandCount(me) - mine,
+			Nu.EqualTo(1),
+			"their second card — once, not their first nor their third"
+		);
+	}
+
+	[Test]
+	public void FaerieMastermind_YourOwnSecondCardIsNoTrigger()
+	{
+		Cast(Hand(Lsv("Faerie Mastermind"), me), []);
+		var mine = HandCount(me);
+		DrawsThree(me, me);
+		Assert.That(HandCount(me) - mine, Nu.EqualTo(3), "an opponent draws");
+	}
+
+	[Test]
+	public void FaerieMastermind_EachPlayerDrawsACard_AndTheirSecondIsYourCard()
+	{
+		var mastermind = Hand(Lsv("Faerie Mastermind"), me);
+		Cast(mastermind, []);
+		var lands = UntappedLands();
+		var (mine, theirs) = (HandCount(me), HandCount(them));
+		s = s.Act(Activations(mastermind).Single());
+		Resolve();
+		Assert.That(lands - UntappedLands(), Nu.EqualTo(4), "{3}{U}");
+		Assert.That(
+			(HandCount(me) - mine, HandCount(them) - theirs),
+			Nu.EqualTo((1, 1)),
+			"each player draws a card — their first this turn: no trigger"
+		);
+		s = s.Act(Activations(mastermind).Single());
+		Resolve();
+		Assert.That(
+			(HandCount(me) - mine, HandCount(them) - theirs),
+			Nu.EqualTo((3, 2)),
+			"their second card this turn, drawn by a later ability, is counted from the turn's first"
+		);
+	}
+
+	[Test]
+	public void Hullbreacher_AnOpponentsDrawIsATreasureForYou()
+	{
+		Cast(Hand(Lsv("Hullbreacher"), me), []);
+		var (mine, theirs, library) = (HandCount(me), HandCount(them), Library(them));
+		DrawsThree(me, them);
+		Assert.That(HandCount(them), Nu.EqualTo(theirs), "instead: no card drawn");
+		Assert.That(Library(them), Nu.EqualTo(library));
+		Assert.That((Treasures(me), Treasures(them)), Nu.EqualTo((3, 0)), "you create a Treasure");
+		DrawsThree(me, me);
+		Assert.That(HandCount(me) - mine, Nu.EqualTo(3), "an opponent would draw — not you");
+		Assert.That(Treasures(me), Nu.EqualTo(3));
+	}
+
+	[Test]
+	public void Hullbreacher_ExceptTheFirstCardTheyDrawInTheirDrawStep()
+	{
+		Cast(Hand(Lsv("Hullbreacher"), me), []);
+		var theirs = HandCount(them);
+		ToTheirDrawStep();
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(1), "the first one of their draw step");
+		Assert.That(Treasures(me), Nu.EqualTo(0));
+		DrawsThree(them, them);
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(1), "any other card in that draw step");
+		Assert.That(Treasures(me), Nu.EqualTo(3));
+	}
+
+	[Test]
+	public void Narset_AnOpponentCantDrawMoreThanOneCardEachTurn()
+	{
+		Cast(Hand(Lsv("Narset, Parter of Veils"), me), []);
+		foreach (var id in Library(them).Skip(2)) // TEST SETUP: two cards left in their library
+			s = s.MoveCard(id, s.ZoneId(them, ZoneType.Exile));
+		var (mine, theirs) = (HandCount(me), HandCount(them));
+		DrawsThree(me, them);
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(1), "one card each turn");
+		Assert.That(Library(them), Has.Count.EqualTo(1));
+		DrawsThree(me, me);
+		Assert.That(HandCount(me) - mine, Nu.EqualTo(3), "each opponent — not you");
+		ToTheirDrawStep();
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(2), "a new turn: one card again");
+		DrawsThree(them, them);
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(2));
+		s = TestGames.PassUntil(s, x => x.GetGame().Step == Step.PreCombatMain || x.IsOver());
+		Assert.That(
+			s.IsOver(),
+			Nu.False,
+			"a draw that can't happen is no draw from an empty library"
+		);
+	}
+
+	[Test]
+	public void Narset_MinusTwo_ANoncreatureNonlandCardOfTheTopFour()
+	{
+		var narset = Hand(Lsv("Narset, Parter of Veils"), me);
+		Cast(narset, []);
+		var below = OnTop(TestCards.Fodder); // fifth from the top: not looked at
+		var land = OnTop(TestGames.Card("Island"));
+		var instant = OnTop(TestCards.Kill());
+		var creature = OnTop(Bear);
+		var sorcery = OnTop(TestCards.Fodder);
+		s = s.Act(
+			new ActivateLoyaltyAction
+			{
+				PlayerId = me,
+				CardId = narset,
+				AbilityIndex = 0,
+			}
+		);
+		var asked = ResolveAsking(On<ChooseAmongChoice>(instant));
+		Assert.That(
+			Offered<ChooseAmongChoice>(asked),
+			Nu.EquivalentTo(new[] { instant, sorcery }),
+			"a noncreature, nonland card from among the top four"
+		);
+		Assert.That(s.GetCard(narset).Loyalty, Nu.EqualTo(3), "loyalty 5, −2");
+		Assert.That(HandOf(me), Does.Contain(instant));
+		Assert.That(Revealed(instant), "you may reveal …");
+		Assert.That(Library(me)[0], Nu.EqualTo(below), "the rest on the bottom");
+		Assert.That(Library(me).TakeLast(3), Nu.EquivalentTo(new[] { land, creature, sorcery }));
+	}
+
+	[Test]
+	public void NarsetBesideHullbreacher_ADrawThatCantHappenMakesNoTreasure()
+	{
+		Cast(Hand(Lsv("Hullbreacher"), me), []);
+		Cast(Hand(Lsv("Narset, Parter of Veils"), me), []);
+		var theirs = HandCount(them);
+		ToTheirDrawStep();
+		DrawsThree(them, them);
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(1), "the turn's card, and no more");
+		Assert.That(Treasures(me), Nu.EqualTo(0), "they can't draw: nothing is replaced");
+	}
+
+	[Test]
+	public void Hullbreacher_TheirDrawStepsCardDoubled_OnlyTheFirstIsExcepted()
+	{
+		Cast(Hand(Lsv("Hullbreacher"), me), []);
+		Field(global::MagicCore.Sets.CardRegistry.Get("Mr. Spock, Science Officer"), them); // "draw two cards instead"
+		var theirs = HandCount(them);
+		ToTheirDrawStep();
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(1), "the first one they draw");
+		Assert.That(Treasures(me), Nu.EqualTo(1), "the second is any other draw");
+	}
+
+	/// <summary>Jace, Wielder of Mysteries, cast — with this much loyalty (TEST SETUP beyond his printed 4).</summary>
+	int JaceWielder(int loyalty = 4)
+	{
+		var jace = Hand(Lsv("Jace, Wielder of Mysteries"), me);
+		Cast(jace, []);
+		Assert.That(s.GetCard(jace).Loyalty, Nu.EqualTo(4));
+		s = s.UpdateObject(jace, s.GetCard(jace) with { Loyalty = loyalty });
+		return jace;
+	}
+
+	[Test]
+	public void Jace_PlusOne_TargetPlayerMillsTwo_YouDrawACard()
+	{
+		var jace = JaceWielder();
+		Assert.That(
+			s.LegalActions()
+				.OfType<ActivateLoyaltyAction>()
+				.Where(a => a.CardId == jace)
+				.Select(a => (a.AbilityIndex, a.Targets.Single())),
+			Nu.EquivalentTo(new[] { (0, me), (0, them) }),
+			"target player: either — and no −8 at loyalty 4"
+		);
+		var (mine, theirs) = (HandCount(me), Library(them).Count);
+		Activate(jace, 0, them);
+		Assert.That(theirs - Library(them).Count, Nu.EqualTo(2), "target player mills two cards");
+		Assert.That(s.CardsIn(them, ZoneType.Graveyard).Count(), Nu.EqualTo(2));
+		Assert.That(HandCount(me) - mine, Nu.EqualTo(1), "draw a card");
+		Assert.That(s.GetCard(jace).Loyalty, Nu.EqualTo(5));
+	}
+
+	[Test]
+	public void Jace_ADrawFromYourEmptyLibrary_YouWinTheGameInstead()
+	{
+		var jace = JaceWielder();
+		LibraryOf(0);
+		Activate(jace, 0, them);
+		Assert.That(s.IsOver() && s.WinnerId() == me);
+	}
+
+	[Test]
+	public void Jace_YourDrawStepWithNoLibrary_YouWinTheGameInstead()
+	{
+		JaceWielder();
+		LibraryOf(0);
+		s = TestGames.PassUntil(s, x => x.IsOver());
+		Assert.That(s.IsOver() && s.WinnerId() == me, "the turn's draw is a draw too");
+	}
+
+	[Test]
+	public void Jace_AnOpponentsDrawWhileYourLibraryIsEmpty_IsADraw()
+	{
+		JaceWielder();
+		LibraryOf(0);
+		var theirs = HandCount(them);
+		DrawsThree(me, them);
+		Assert.That(HandCount(them) - theirs, Nu.EqualTo(3), "if YOU would draw a card");
+		Assert.That(s.IsOver(), Nu.False);
+	}
+
+	[TestCase(7, true)]
+	[TestCase(8, false)]
+	public void Jace_MinusEight_DrawSeven_ThenYouWinIfYourLibraryIsEmpty(int cards, bool wins)
+	{
+		var jace = JaceWielder(8);
+		LibraryOf(cards);
+		var mine = HandCount(me);
+		Activate(jace, 1);
+		Assert.That(HandCount(me) - mine, Nu.EqualTo(7), "each of the seven had a card to draw");
+		Assert.That(s.IsOver() && s.WinnerId() == me, Nu.EqualTo(wins));
 	}
 }

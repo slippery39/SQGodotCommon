@@ -849,7 +849,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, LsvBatch1Tests, LsvBatch2Tests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2eTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Keeper of the Quiet Hour
 
