@@ -191,6 +191,13 @@ built on top.
   look - `Hidden.Looked` counts made-up cards only - so the token's −1 over one costs its loyalty and gains only
   what binning that card gains. NOT covered: a TRIGGERED surveil still gets the flat `SurveilPrice` whatever is
   on top, and a walker's lifetime price counts each future −1 at a third of a card; no position kept for it.)
+- 2026-11-15, Shayne (after the match, 49.3%, and the check of the real look at #247; asked whether he keeps
+  Compel Brutality - {1}{G} instant, "target creature you control deals damage equal to its power to target
+  creature or planeswalker an opponent controls", the one castable spell the search keeps on top there): "I don't
+  think we can afford to keep the compel brutality. So no." So at #247 the look bins EVERYTHING but a red source,
+  a castable removal spell included. On trying the spells rule off as the default (`SurveilSpells`, AI-20.5's
+  first patch - suite, tests, a match): "guess we can do step 1." (Claude: with the rule off the search still
+  keeps Compel Brutality - his answer is not met yet; it goes with AI-20.10, by what the AI values, not a rule.)
 
 Open questions (for Shayne, before `ready`):
 - What counts as done: the flip rate down, the kept positions right, and a match not worse? (Proposed by Claude,
@@ -247,7 +254,7 @@ Open questions (for Shayne, before `ready`):
       48-48, no difference of 5pp either way** - and 9676.1 engine steps a decision against 9676.0, so in these
       three decks it almost never comes up. Claude's read: keep it (it stops the Patrol misplay at no cost);
       Shayne's call. Not committed.
-- [ ] AI-20.9 **A look at an unseen card moves the odds, not the cards** (Shayne's go-ahead, 2026-11-15: "Sure lets
+- [x] AI-20.9 **A look at an unseen card moves the odds, not the cards** (Shayne's go-ahead, 2026-11-15: "Sure lets
       try it out"; `Evaluator.Terms.Looks`, `+nolooks` is the look-ahead before it). A surveil over an unknown card
       can't be decided by the card - the look-ahead made it up - so it counts as a LOOK (`Hidden.Looked`: in the
       tree on `Node.Looks`, in a rollout only before a card has left our library), and the line's two rollouts are
@@ -274,7 +281,12 @@ Open questions (for Shayne, before `ready`):
       - `docs/findings/magic-ai.md`, "A look at an unseen card". **Two Dominion Assault Force controls went red**:
       with `SurveilPrice` off the AI surveils anyway - the look alone finds it - so the control now turns both
       off, and the flat surveil price joins AI-20.5's list. Committed on Shayne's word (2026-11-15), the
-      suite's nine answers accepted. NOT done: the match against `beam+nolooks` - played after the commit
+      suite's nine answers accepted. **The match** (`--match=beam,beam+nolooks --until-clear`, after the commit):
+      **49.3% ± 1.5pp over 288 games, stopped as "no difference of 5pp either way"** (142-146), at 9386.7 engine
+      steps a decision against 10 033.8 - no gain shown and none lost, a little cheaper. Both sides are the fair
+      look-ahead (Shayne asked: neither sees a card it shouldn't). Claude's read: keep it - it plays #247 as he
+      does at no cost; the two suspects for "no gain" are the real look's old answer and "any land" (AI-20.10).
+      Shayne's call.
 - [ ] AI-20.10 **"The land I need", not any land** (proposed, after 20.9's numbers): the lands way draws only lands
       that unlock a card in hand (`LandUnlock.Unlocks` - #247's 9 red sources of 27, not all 13 lands); a land that
       unlocks nothing is a blank draw, his "bust". Where every land left is alike, nothing changes
@@ -314,11 +326,16 @@ before), at 2.20× the engine steps a decision. The look-ahead's opponent uses a
 spell that does less (AI-20.8). 1595 tests pass; the suite's answers are accepted.
 
 **AI-20.9 is committed (2026-11-15)**: a look at an unseen card moves the odds of the next draw - #247 surveils,
-9 suite decisions changed and accepted, 1597 tests pass. Still owed: its match (`--match=beam,beam+nolooks
---until-clear`, Shayne said yes; 50-100 min) - the result goes in Tasks, the Log and the findings. After it,
-**AI-20.10** ("the land I need", proposed in Tasks), on Shayne's go-ahead once he has seen 20.9's numbers; and
-two checks: what the REAL look does with a castable green spell on top at #247 (he bins it: "red land or
-bust"), and the suite change not yet read (`White-Blue Jace vs White-Black seed 1, move 90`: Jace −2 → a cast).
+9 suite decisions changed and accepted, 1597 tests pass. **Its match is played: 49.3% ± 1.5pp over 288 games
+against `beam+nolooks`, no difference of 5pp either way**, a little cheaper a decision - the match result is in
+the story and the findings but NOT committed (ask Shayne). Whether 20.9 stays is his call (Claude: keep).
+**The check is done (Log, findings): the real look keeps 12 of #247's 14 spells, 9 of them uncastable** - the
+`SurveilSpells` rule - so the token pays a loyalty for 33% → 41%. **Shayne's go-ahead (Decisions, 2026-11-15):
+(a) try `SurveilSpells` off as the default** - AI-20.5's first patch: the suite (`--suite=beam+nosurveilspells`),
+the tests, a match (`--match=beam+nosurveilspells,beam --until-clear`, ~100 min, any time); if it holds, the
+rule goes with its control. He bins Compel Brutality ({1}{G}, castable) at #247, which the search without the
+rule still keeps - for (b) **AI-20.10** ("the land I need", proposed in Tasks; his go-ahead still to ask). Also
+not yet read: the suite change `White-Blue Jace vs White-Black seed 1, move 90` (Jace −2 → a cast).
 
 **Open, each on Shayne's word - interview first, one topic at a time, nothing built before his go-ahead:**
 1. **The Jace token and the surveil.** The Jace deck wins least for the new search (49-111 in the match, 66-126
@@ -423,5 +440,16 @@ Outside this story, found by the pre-commit review: on the table, Undo keeps the
 - 2026-11-15: the pre-commit review: a plan no longer replays its answer to a look over a card it hadn't seen; a
   rollout's look counts only before a card leaves our library; Explain reads the line's own odds. The suite and
   #247 unchanged by them. On Shayne's word: the nine suite answers accepted, committed, the match to follow.
+- 2026-11-15: AI-20.9's match: `beam` 49.3% ± 1.5pp against `beam+nolooks` over 288 games (142-146; 101.7 min),
+  stopped as no 5pp difference either way; 9386.7 engine steps a decision against 10 033.8. By deck Red-Green
+  59-37, White-Black 57-39, White-Blue Jace 26-70 - the Jace deck's usual share (23-73 in the progress match), so
+  not evidence about the token. Shayne asked whether a fair AI should lose to a cheating one: neither side sees
+  a card it shouldn't - `beam+nolooks` is the same land / not-a-land look-ahead.
+- 2026-11-15: the check owed - what the REAL look answers at #247, each of the 27 unseen cards in turn on top: it
+  keeps 12 of the 14 spells (9 of them red cards it can't cast), so the −1 buys 33% → 41% for a red source where
+  the plan credited 48% → 74%. The rule that keeps them is `Terms.SurveilSpells` ("priced above the unknown card:
+  keep"); with it off the search bins 17 of the 18 cards that aren't a red source (55%; it keeps Compel Brutality,
+  {1}{G}), and that rule's own lesson (`SurveilNone` #173, Energize kept) holds without it under the default.
+  Numbers in the findings. Nothing built.
 - 2026-11-15: the order set with Shayne: the immediate issues (the surveil, the opponent's unknown hand, the ten
   patches) before option pricing.

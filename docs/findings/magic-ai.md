@@ -1912,7 +1912,16 @@ On the 288 suite positions, against today's search (`beam`, identical to the las
 ## A look at an unseen card (2026-11-15, AI-20.9)
 
 A surveil over a card the look-ahead made up moves the land odds of the NEXT draw instead of showing that card
-(`Evaluator.Terms.Looks`; `beam+nolooks` is the look-ahead before it). Not committed when measured; no match yet.
+(`Evaluator.Terms.Looks`; `beam+nolooks` is the look-ahead before it). The positions and the suite were measured before the commit
+(`3ddc4602`), the match after it.
+
+- **The match:** `--match=beam,beam+nolooks --until-clear` stopped after 288 games (6 pairings × 24 seeds × both
+  seats, 6103.6 s; 396 games had finished, 197-199). beam **49.3% ± 1.5pp** (142-146, no draws); **no 5pp
+  difference either way** (log-likelihood: better −7.32, worse −4.14; decided at ±2.94). Cost per decision: 9386.7
+  engine steps and 22.0 rollouts against 10 033.8 and 22.8 - the look is no dearer. Lands played 7.4 against 7.6 a
+  game, spells cast 9.5 each, 19.4 turns. By deck (beam's record with it): Red-Green 59-37, White-Black 57-39,
+  White-Blue Jace 26-70 - that deck's usual share with either search (23-73 in the progress match above), so the
+  split says nothing about the token. Both sides are the fair look-ahead: neither sees a card it shouldn't.
 
 - **`ShayneNotesSeed1` #247** (three Forests, six red cards in hand, a Jace token at loyalty 2, 27 unseen cards: 13
   lands, 9 of them red sources). Before: Pass −17.99 = 52% × −23.40 (draws not lands) + 48% × −12.18 (lands: a
@@ -1934,4 +1943,13 @@ A surveil over a card the look-ahead made up moves the land odds of the NEXT dra
   24-27 points of share between them - the look-ahead taken at its word, as `PatrolRacesIntoDrain` was.
 - **Dominion Assault Force** (`DominionExilesOwnCard` #127, `DominionExilesTheirCard` #294): with `SurveilPrice`
   off it surveils all the same - the flat third of a card is no longer what finds it.
+- **What the REAL look answers at #247** (after the match; the −1 played with each of the 27 unseen cards in turn
+  really on top - 9 red sources: 7 Mountain, 2 Konstrari Annex; 4 Forest; 14 spells, 10 of them red and
+  uncastable). As committed: the red sources kept, the Forests binned (`LandUnlock.Surveil`), and of the 14 spells
+  only 2 binned (Konstrari Charm, Way of the Pyromancer - priced under the unknown card) - **12 kept, 9 of them red
+  cards it can't cast**. So the next draw is a red source 33.3% without the look, **41.0% with it as played**
+  (9/27 + 6/27 × 9/26), 56.4% binning all 18 - where the plan credited 48% → 74% (any land). With
+  `Terms.SurveilSpells` off (the spells branched, not ruled): 17 of 18 binned, **55.1%**; the one kept is Compel
+  Brutality ({1}{G}, castable). And that rule's own lesson (`SurveilNone` #173: Energize stays on top) holds
+  without it under the default - Mountain binned, Energize kept, either way.
 
