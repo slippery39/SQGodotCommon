@@ -1048,8 +1048,13 @@ as his three priorities.
 ## Next
 
 Red's tier 1 (4.4c), white's (4.4d) and blue's — all seven parts, the last "choices after the cast" (4.4e2f) — are
-done, and blue's tier 2 (4.4f): **224 of 528 play.** Next, in a NEW session: **blue's tier 3 (11)** — Shayne's
-pick of order; start with the survey's line for each (`LsvSurvey.md`, "Tier 3") read against the CODE.
+done, and blue's tier 2 (4.4f): **224 of 528 play.** Next, in a NEW session: **MC-4.4g — blue's tier 3 (11)**:
+Dig Through Time and Treasure Cruise (delve: "a cost paid by exiling graveyard cards" — Drivnod's
+`ExileFromGraveyardCost { Count }` is nearest), True-Name Nemesis (protection, CR 702.16 — six more cube cards need
+it), Three Steps Ahead (spree: a cost per mode), Brain Freeze (storm), Brazen Borrower (adventures), Abhorrent Oculus
+(face-down), Quantum Riddler (warp), We Say Thee Nay! (teamwork), Feywild Caretaker (dungeons), Does Machines (Classes).
+Ten mechanics, each new: survey all eleven against the CODE, write the parts in Decisions (shared pieces first, the
+mechanics other colours reuse before one-card ones), give Shayne the order, then build the first part only.
 From 4.4f: a permanent's memory of its spell is ONE field, `Card.CastAs` (X, kicked, alternative cost, squad's count;
 `Card.AsCast` reads the stack's or the permanent's) — never a new `Cast…` field. Evoke is `Scripting.Evoke(colour)`
 (Solitude, Endurance, Fury, Grief take it as they come); squad `Scripting.Squad(cost)`; improvise and convoke one answer,
