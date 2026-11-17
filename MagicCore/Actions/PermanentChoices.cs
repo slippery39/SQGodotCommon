@@ -270,16 +270,23 @@ public record IfChosenAction(ImmutableList<GameAction> Then) : GameAction
 	/// <summary>Run instead on a "no" — Clash of Elements' "if they didn't, … the bottom".</summary>
 	public ImmutableList<GameAction> Otherwise { get; init; } = [];
 
+	/// <summary>MaySacrifice: what was chosen is Ref.ThisWay for Then — "the sacrificed artifact" (Transmute Artifact).</summary>
+	public bool ThisWay { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		var chosen = InputContext.GetValueOrDefault(Key) switch
+		ImmutableArray<int> picked = InputContext.GetValueOrDefault(Key) switch
 		{
-			int => true,
-			ImmutableList<int> ids => !ids.IsEmpty,
-			_ => false,
+			int id => [id],
+			ImmutableList<int> ids => [.. ids],
+			_ => [],
 		};
-		foreach (var effect in chosen ? Then : Otherwise)
-			s = (effect with { InputContext = InputContext }).Execute(s).GameState;
+		var context =
+			ThisWay && !picked.IsEmpty
+				? InputContext.SetItem(ContextKeys.ThisWay, picked)
+				: InputContext;
+		foreach (var effect in !picked.IsEmpty ? Then : Otherwise)
+			s = (effect with { InputContext = context }).Execute(s).GameState;
 		return new ActionResult(s);
 	}
 }

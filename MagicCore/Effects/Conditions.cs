@@ -204,8 +204,12 @@ public record CanPayLife(int N) : Condition
 /// <summary>Proft: "you may pay {2}" — asked only when it can be paid.</summary>
 public record CanPay(ManaCost Cost) : Condition
 {
+	/// <summary>Flash, Transmute Artifact: the cost that PayMana owes now, in place of Cost (PayMana.Owed).</summary>
+	public Effects.PayMana? Pay { get; init; }
+
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		ManaPayment.Find(s, (int)context[ContextKeys.Controller], Cost, 0) is not null;
+		ManaPayment.Find(s, (int)context[ContextKeys.Controller], Pay?.Owed(s, context) ?? Cost, 0)
+			is not null;
 }
 
 /// <summary>Eye of Jace: "if there are seven or more cards in your graveyard".</summary>

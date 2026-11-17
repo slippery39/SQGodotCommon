@@ -104,6 +104,8 @@ public static class Costs
 	/// <param name="free">"Without paying its mana cost" (Omnipresence) — taxes and additional costs still apply.</param>
 	/// <param name="targets">The spell's chosen targets — Guidance Failure: "costs {1} less to cast if it targets an attacking creature".</param>
 	/// <param name="added">An additional mana cost beyond generic — a kicker's {1}{U}; paid even when cast free.</param>
+	/// <param name="flashback">False for a cast an effect makes as it resolves (Bilbo): from the graveyard by its
+	/// permission, never flashback — the mana cost is paid, not the flashback cost.</param>
 	public static ManaCost Of(
 		GameState s,
 		int casterId,
@@ -111,10 +113,14 @@ public static class Costs
 		int addedGeneric = 0,
 		bool free = false,
 		System.Collections.Immutable.ImmutableArray<int> targets = default,
-		ManaCost? added = null
+		ManaCost? added = null,
+		bool flashback = true
 	)
 	{
-		var printed = free ? ManaCost.None : Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
+		var printed =
+			free ? ManaCost.None
+			: flashback ? Flashback(s, card)?.Cost ?? card.ManaCost // flashback is an alternative cost: taxes still apply
+			: card.ManaCost;
 		if (added is not null)
 			printed = printed.Plus(added);
 		// Cast from exile by impulse: Vulcan Mind-Meld's "mana of any type", Zero's "costs {2} more".
@@ -163,5 +169,10 @@ public static class Costs
 		System.Collections.Immutable.ImmutableDictionary<string, object> context
 	) =>
 		(change.Spells?.Matches(s, spell, ContextKeys.Asking(context)) ?? true)
-		&& (change.If?.Holds(s, context) ?? true);
+		&& (change.If?.Holds(s, context) ?? true)
+		&& (
+			change.NotFrom.IsEmpty
+			|| s.GetParent(spell.Id) is not { } zone
+			|| !change.NotFrom.Contains(((Zone)s.GetObject(zone)).ZoneType)
+		);
 }

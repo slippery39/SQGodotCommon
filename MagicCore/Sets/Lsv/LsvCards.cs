@@ -1657,7 +1657,119 @@ public static class LsvCards
 					If = new WasKicked(),
 				},
 			],
+			// ===== MC-4.4e2d: blue's options, casting off the hand =====
+			["Bilbo, Thief in the Night"] =
+			[
+				new CostChange(-1) { NotFrom = [ZoneType.Hand] },
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new CastOneOf(
+						Ref.All(ZoneType.Graveyard, Is.Artifact | Is.Instant | Is.Sorcery, Ref.You)
+					)
+					{
+						Free = false,
+						Exiled = Is.Instant | Is.Sorcery,
+					}
+				),
+			],
+			["Malcolm, Alluring Scoundrel"] =
+			[
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Chorus },
+					new DrawCards(Ref.You, 1),
+					new Discard(Ref.You, 1)
+					{
+						Then =
+						[
+							new If(
+								new AtLeast(
+									Count.CountersOfKind(Ref.Source, CounterKinds.Chorus),
+									4
+								),
+								[new CastOneOf(Ref.Chosen)]
+							),
+						],
+					}
+				),
+			],
+			["Flash"] =
+			[
+				Spell(
+					[],
+					new MoveChosen(ZoneType.Hand, Is.Creature, ZoneType.Battlefield)
+					{
+						May = true,
+						Then =
+						[
+							MayPay(
+								"Pay its mana cost reduced by {2}?",
+								new PayMana(ManaCost.None, [])
+								{
+									ManaCostOf = Ref.Chosen,
+									ReducedBy = 2,
+								},
+								new Sacrifice(Ref.Chosen)
+							),
+						],
+					}
+				),
+			],
+			["Transmute Artifact"] = [TransmuteArtifact],
 		};
+
+	/// <summary>
+	/// Transmute Artifact: "Sacrifice an artifact. If you do, search your library for an artifact card. If that card's
+	/// mana value is less than or equal to the sacrificed artifact's mana value, put it onto the battlefield. If it's
+	/// greater, you may pay {X}, where X is the difference. If you do, put it onto the battlefield. If you don't, put
+	/// it into its owner's graveyard. Then shuffle." — the sacrificed is Ref.ThisWay, the found card Ref.Chosen.
+	/// </summary>
+	static SpellEffectsComponent TransmuteArtifact
+	{
+		get
+		{
+			var found = Count.GreatestManaValueOf(Ref.Chosen);
+			var sacrificed = Count.GreatestManaValueOf(Ref.ThisWay);
+			GameAction Put(ZoneType to) => new MoveTo(Ref.Chosen, to) { From = [ZoneType.Library] };
+			return Spell(
+				[],
+				new MaySacrifice(
+					Is.Artifact,
+					[
+						new SearchLibrary(CardType.Artifact, ZoneType.Battlefield)
+						{
+							Then =
+							[
+								new If(
+									new AtLeast(sacrificed, 0) { MoreThan = found },
+									[Put(ZoneType.Battlefield)]
+								)
+								{
+									Otherwise =
+									[
+										MayPay(
+											"Pay the difference?",
+											new PayMana(ManaCost.None, [Put(ZoneType.Battlefield)])
+											{
+												Generic = found,
+												ReducedBy = sacrificed,
+											},
+											Put(ZoneType.Graveyard)
+										),
+									],
+								},
+							],
+						},
+					]
+				)
+				{
+					Must = true,
+				}
+			);
+		}
+	}
 
 	/// <summary>
 	/// Timetwister, Echo of Eons: "Each player shuffles their hand and graveyard into their library, then draws

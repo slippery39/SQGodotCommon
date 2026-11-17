@@ -331,12 +331,44 @@ public record AddLoyalty(Ref What, Count Amount) : Effect
 	}
 }
 
-/// <summary>Proft: "you may pay {2}" — the first step of a May's Then; its Can is <see cref="CanPay"/>.</summary>
+/// <summary>
+/// Proft: "you may pay {2}" — the first step of a May's Then; its Can is <see cref="CanPay"/> (Scripting.MayPay
+/// for "if you don't" too). The cost is Cost, or the mana cost of ManaCostOf, plus Generic, reduced by ReducedBy.
+/// </summary>
 public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
 {
+	/// <summary>Flash: "its mana cost" — the printed mana cost of the card this names (X is 0), in place of Cost.</summary>
+	public Ref? ManaCostOf { get; init; }
+
+	/// <summary>Transmute Artifact: "{X}, where X is the difference" — generic mana added, counted as it is paid.</summary>
+	public Count? Generic { get; init; }
+
+	/// <summary>
+	/// Flash: "reduced by {2}"; Transmute: X is the found card's mana value reduced by the sacrificed one's — generic
+	/// taken off, never the coloured pips (CR 601.2f), never below none.
+	/// </summary>
+	public Count? ReducedBy { get; init; }
+
+	/// <summary>What paying it costs now.</summary>
+	public ManaCost Owed(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var cost =
+			ManaCostOf is null ? Cost
+			: ManaCostOf.Resolve(s, context).FirstOrDefault() is var id
+			&& id != 0
+			&& s.HasObject(id)
+			&& s.GetObject(id) is Card card
+				? card.ManaCost
+			: ManaCost.None;
+		cost = cost.WithGeneric(Math.Max(0, Generic?.Value(s, context) ?? 0));
+		// ponytail: a printed {U/P} (Flash putting in Phyrexian Metamorph) is paid with its colour, never 2 life —
+		// offer the life as a yes/no when a card makes it matter (DesignNotes).
+		return cost.WithGeneric(-Math.Max(0, ReducedBy?.Value(s, context) ?? 0)).PayingLifeFor(0);
+	}
+
 	/// <summary>Pays, then runs Then — or, unable to pay, does nothing at all ("if you do").</summary>
 	public override ActionResult Execute(GameState s) =>
-		ManaPayment.Find(s, Controller, Cost, 0) is not { } payment
+		ManaPayment.Find(s, Controller, Owed(s, InputContext), 0) is not { } payment
 			? new(s)
 			: new(
 				ManaPayment

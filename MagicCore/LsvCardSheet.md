@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 26/46 · uncommon 38/86 · rare 101/279 · mythic 34/108 · **208/528**
+**Playable:** common 26/46 · uncommon 38/86 · rare 104/279 · mythic 35/108 · **212/528**
 
 ### "Name Sticker" Goblin
 
@@ -181,7 +181,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2Tests
 
-**Engine pieces:** `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Chain Lightning"] =
@@ -3110,7 +3110,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may put a creature card from your hand onto the battlefield. If you do, sacrifice it unless you pay its mana cost reduced by {2}.
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** FraCommonTests, FraRareOneOffTests, FraUncommonTests, LsvBatch1Tests, StackTests, TrkBatch4cTests
+**Status:** scripted · **tests naming it:** FraCommonTests, FraRareOneOffTests, FraUncommonTests, LsvBatch1Tests, LsvBatch2eTests, StackTests, TrkBatch4cTests
+
+**Engine pieces:** `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
+
+```csharp
+["Flash"] =
+[
+	Spell(
+		[],
+		new MoveChosen(ZoneType.Hand, Is.Creature, ZoneType.Battlefield)
+		{
+			May = true,
+			Then =
+			[
+				MayPay(
+					"Pay its mana cost reduced by {2}?",
+					new PayMana(ManaCost.None, [])
+					{
+						ManaCostOf = Ref.Chosen,
+						ReducedBy = 2,
+					},
+					new Sacrifice(Ref.Chosen)
+				),
+			],
+		}
+	),
+],
+```
 
 ### Flooded Strand
 
@@ -3937,7 +3964,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Whenever Malcolm deals combat damage to a player, put a chorus counter on it. Draw a card, then discard a card. If there are four or more chorus counters on Malcolm, you may cast the discarded card without paying its mana cost.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `CastOneOf` — "You may cast one of [these cards]" as it resolves — one chosen among those that can be…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Malcolm, Alluring Scoundrel"] =
+[
+	When(
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		[],
+		new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Chorus },
+		new DrawCards(Ref.You, 1),
+		new Discard(Ref.You, 1)
+		{
+			Then =
+			[
+				new If(
+					new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Chorus), 4),
+					[new CastOneOf(Ref.Chosen)]
+				),
+			],
+		}
+	),
+],
+```
 
 ### Mana Confluence
 
@@ -5350,7 +5401,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Sacrifice an artifact. If you do, search your library for an artifact card. If that card's mana value is less than or equal to the sacrificed artifact's mana value, put it onto the battlefield. If it's greater, you may pay {X}, where X is the difference. If you do, put it onto the battlefield. If you don't, put it into its owner's graveyard. Then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+```csharp
+["Transmute Artifact"] = [TransmuteArtifact],
+```
 
 ### Traumatic Critique
 
@@ -5923,7 +5978,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Spells you cast from anywhere other than your hand cost {1} less to cast.  
 > Whenever Bilbo attacks, you may cast an artifact, instant, or sorcery spell from your graveyard. If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `CastOneOf` — "You may cast one of [these cards]" as it resolves — one chosen among those that can be…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Bilbo, Thief in the Night"] =
+[
+	new CostChange(-1) { NotFrom = [ZoneType.Hand] },
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new CastOneOf(
+			Ref.All(ZoneType.Graveyard, Is.Artifact | Is.Instant | Is.Sorcery, Ref.You)
+		)
+		{
+			Free = false,
+			Exiled = Is.Instant | Is.Sorcery,
+		}
+	),
+],
+```
 
 ### Black Widow, Super Spy
 
@@ -6643,7 +6718,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch1Tests
 
-**Engine pieces:** `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+**Engine pieces:** `CanPay` — Proft: "you may pay {2}" — asked only when it can be paid.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
 ```csharp
 ["Mana Vault"] =

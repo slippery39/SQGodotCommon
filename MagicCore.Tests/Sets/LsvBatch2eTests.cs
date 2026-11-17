@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Turns;
 using Nu = NUnit.Framework.Is;
 
@@ -1135,5 +1136,220 @@ public class LsvBatch2eTests : FraBoardTest
 		var asked = CastAsking(Hand(Lsv("Thieving Skydiver"), me), On<ChooseTargetChoice>(relic));
 		Assert.That(asked.OfType<ChooseTargetChoice>(), Nu.Empty);
 		Assert.That(s.IsIn(relic, them, ZoneType.Battlefield));
+	}
+
+	// ===== MC-4.4e2d: casting off the hand =====
+
+	bool InExile(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Exile);
+
+	bool InGraveyard(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Graveyard);
+
+	/// <summary>These attack; every choice to the end of combat answered as told (blocks: none).</summary>
+	void AttackWith(Func<ChoiceAction, IEnumerable<int>> answer, params int[] attackers)
+	{
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is DeclareAttackerChoice);
+		while (s.GetPendingChoice() is DeclareAttackerChoice d)
+			s = s.Choose([attackers.Contains(d.CreatureId) ? them : 0]);
+		for (var i = 0; i < 200 && s.GetGame().Step != Step.PostCombatMain; i++)
+			s = s.GetPendingChoice() is { } choice
+				? s.Choose(answer(choice))
+				: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
+	}
+
+	[Test]
+	public void Bilbo_Attacks_CastAnArtifactFromYourGraveyard_ItEnters_ForOneLess()
+	{
+		var bilbo = Field(Lsv("Bilbo, Thief in the Night"), me);
+		var trinket = Put(TestGames.Inline("Trinket", "{2}", "Artifact"), me, ZoneType.Graveyard);
+		var lands = UntappedLands();
+		AttackWith(On<ChooseAmongChoice>(trinket), bilbo);
+		Assert.That(
+			Alive(trinket),
+			"an artifact cast from the graveyard resolves onto the battlefield"
+		);
+		Assert.That(
+			UntappedLands(),
+			Nu.EqualTo(lands - 1),
+			"{2}, one less: not cast from the hand"
+		);
+	}
+
+	[Test]
+	public void Bilbo_ASorceryCastThisWayIsExiled_AndOneFromTheHandCostsInFull()
+	{
+		var bilbo = Field(Lsv("Bilbo, Thief in the Night"), me);
+		var lands = UntappedLands();
+		Cast(Hand(TestCards.Fodder, me), []);
+		Assert.That(UntappedLands(), Nu.EqualTo(lands - 1), "{1} from the hand: no less");
+		var sorcery = Put(TestCards.Fodder, me, ZoneType.Graveyard);
+		lands = UntappedLands();
+		AttackWith(On<ChooseAmongChoice>(sorcery), bilbo);
+		Assert.That(UntappedLands(), Nu.EqualTo(lands), "{1}, one less");
+		Assert.That(InExile(sorcery), "exile it instead of the graveyard");
+	}
+
+	[Test]
+	public void Bilbo_AttacksWithNothingCastable_AsksNothing()
+	{
+		var bilbo = Field(Lsv("Bilbo, Thief in the Night"), me);
+		Put(Bear, me, ZoneType.Graveyard); // a creature card: not an artifact, instant or sorcery
+		var asked = new List<ChoiceAction>();
+		AttackWith(
+			c =>
+			{
+				asked.Add(c);
+				return c.Options.Take(c.MinChoices).Select(o => o.Id);
+			},
+			bilbo
+		);
+		Assert.That(asked.OfType<ChooseAmongChoice>(), Nu.Empty);
+	}
+
+	[TestCase(3, true)]
+	[TestCase(2, false)]
+	public void Malcolm_CombatDamage_AChorusCounter_Loot_AtFourCastTheDiscardedCardFree(
+		int counters,
+		bool casts
+	)
+	{
+		var malcolm = Field(Lsv("Malcolm, Alluring Scoundrel"), me);
+		s = s.PutCounters(malcolm, CounterKinds.Chorus, counters); // TEST SETUP
+		var elk = Hand(TestGames.CreatureCosting("{3}{G}", "Elk", "3/3"), me);
+		var lands = UntappedLands();
+		var life = Life(them);
+		AttackWith(
+			c =>
+				c switch
+				{
+					ChooseCardsFromHandChoice => [elk],
+					ChooseAmongChoice => [elk],
+					_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+				},
+			malcolm
+		);
+		Assert.That(Life(them), Nu.EqualTo(life - 2));
+		Assert.That(s.GetCard(malcolm).CountersOf(CounterKinds.Chorus), Nu.EqualTo(counters + 1));
+		Assert.That(Alive(elk), Nu.EqualTo(casts), "cast from the graveyard, it enters");
+		Assert.That(InGraveyard(elk), Nu.EqualTo(!casts));
+		Assert.That(UntappedLands(), Nu.EqualTo(lands), "without paying its mana cost");
+	}
+
+	[TestCase(true)]
+	[TestCase(false)]
+	public void Flash_PutACreatureFromYourHand_SacrificeItUnlessYouPayItsCostLessTwo(bool pay)
+	{
+		var elk = Hand(TestGames.CreatureCosting("{3}{G}", "Elk", "3/3"), me);
+		var lands = UntappedLands();
+		var asked = CastAsking(
+			Hand(Lsv("Flash"), me),
+			c =>
+				c switch
+				{
+					ChooseCardsFromHandChoice => [elk],
+					YesNoChoice when pay => [1],
+					_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+				}
+		);
+		Assert.That(asked.OfType<YesNoChoice>().Count(), Nu.EqualTo(1));
+		Assert.That(Alive(elk), Nu.EqualTo(pay));
+		Assert.That(InGraveyard(elk), Nu.EqualTo(!pay), "sacrificed");
+		Assert.That(UntappedLands(), Nu.EqualTo(lands - 2 - (pay ? 2 : 0)), "{1}{U}, then {1}{G}");
+	}
+
+	[Test]
+	public void Flash_APhyrexianSymbolInItsCost_IsPaidWithItsColour()
+	{
+		var metamorph = Hand(Lsv("Phyrexian Metamorph"), me); // {3}{U/P}: reduced by {2}, {1}{U/P}
+		var lands = UntappedLands();
+		CastAsking(
+			Hand(Lsv("Flash"), me),
+			c =>
+				c switch
+				{
+					ChooseCardsFromHandChoice => [metamorph],
+					YesNoChoice => [1],
+					_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+				}
+		);
+		Assert.That(UntappedLands(), Nu.EqualTo(lands - 2 - 2), "{1}{U}, then {1}{U}");
+	}
+
+	[Test]
+	public void Bilbo_AFlashbackCardCastThisWay_PaysItsManaCost_NotItsFlashbackCost()
+	{
+		var bilbo = Field(Lsv("Bilbo, Thief in the Night"), me);
+		var echo = Put(
+			new CardDefinition(
+				TestGames.Inline("Echo", "{3}", "Sorcery").Data,
+				[new FlashbackComponent(ManaCost.Parse("{1}"))]
+			),
+			me,
+			ZoneType.Graveyard
+		);
+		var lands = UntappedLands();
+		AttackWith(On<ChooseAmongChoice>(echo), bilbo);
+		Assert.That(
+			UntappedLands(),
+			Nu.EqualTo(lands - 2),
+			"{3}, one less — never flashback's {1}"
+		);
+		Assert.That(InExile(echo));
+	}
+
+	[Test]
+	public void Flash_ACostThatCantBePaid_IsSacrificedUnasked()
+	{
+		// {G}{G}{G}{G}{G}: no generic to reduce, and four Forests can't pay it.
+		var hydra = Hand(TestGames.CreatureCosting("{G}{G}{G}{G}{G}", "Hydra", "5/5"), me);
+		var asked = CastAsking(Hand(Lsv("Flash"), me), On<ChooseCardsFromHandChoice>(hydra));
+		Assert.That(asked.OfType<YesNoChoice>(), Nu.Empty);
+		Assert.That(InGraveyard(hydra), "sacrifice it unless you pay");
+	}
+
+	[TestCase("{2}", false, true, 0)] // less than or equal: onto the battlefield, nothing to pay
+	[TestCase("{3}", false, true, 0)]
+	[TestCase("{5}", true, true, 2)] // greater: pay the difference
+	[TestCase("{5}", false, false, 0)] // or into its owner's graveyard
+	public void TransmuteArtifact_SacrificeAnArtifact_SearchForOne_PayTheDifference(
+		string cost,
+		bool pay,
+		bool enters,
+		int difference
+	)
+	{
+		var relic = Field(TestGames.Inline("Relic", "{3}", "Artifact"), me);
+		var found = Put(TestGames.Inline("Found", cost, "Artifact"), me, ZoneType.Library);
+		var lands = UntappedLands();
+		var asked = CastAsking(
+			Hand(Lsv("Transmute Artifact"), me),
+			c =>
+				c switch
+				{
+					ChoosePermanentChoice => [relic],
+					ChooseFromLibraryChoice => [found],
+					YesNoChoice when pay => [1],
+					_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+				}
+		);
+		Assert.That(InGraveyard(relic), "sacrificed");
+		Assert.That(
+			asked.OfType<YesNoChoice>().Count(),
+			Nu.EqualTo(difference > 0 || !enters ? 1 : 0)
+		);
+		Assert.That(Alive(found), Nu.EqualTo(enters));
+		Assert.That(InGraveyard(found), Nu.EqualTo(!enters));
+		Assert.That(UntappedLands(), Nu.EqualTo(lands - 2 - difference), "{U}{U}, then {X}");
+	}
+
+	[Test]
+	public void TransmuteArtifact_NoArtifactToSacrifice_NoSearch()
+	{
+		var found = Put(TestGames.Inline("Found", "{0}", "Artifact"), me, ZoneType.Library);
+		var asked = CastAsking(
+			Hand(Lsv("Transmute Artifact"), me),
+			On<ChooseFromLibraryChoice>(found)
+		);
+		Assert.That(asked.OfType<ChooseFromLibraryChoice>(), Nu.Empty);
+		Assert.That(s.IsIn(found, me, ZoneType.Library));
 	}
 }

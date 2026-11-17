@@ -694,6 +694,58 @@ as his three priorities.
   Phyrexian life is offered for the printed cost's symbols only — no card has either; a free cast whose rule has
   costs chooses no kicker X. **Not taken:** a board flag to skip Urza's scan on every payment (no bench for a card
   batch, as e2b's). Test helper `UrzaExiles(card)`: his {5} with only that card in the library.
+- 2026-11-16, Claude — **4.4e2d's plan (casting off the hand, 4 cards), from the pieces' CODE — the survey's four
+  readings hold; three grew.** Legal actions on a 12-creature, 12-artifact board with a full hand: Bilbo, Malcolm
+  and Flash one cast each, Transmute Artifact one cast — its sacrifice is in the EFFECT, not a cost, so the artifact,
+  the library card, Flash's creature and Bilbo's graveyard card are each a choice made as it resolves (then, for
+  Bilbo, the chosen spell's own casts: its targets, as any spell's). Nothing per card, nothing per set.
+  **Bilbo's "Spells you cast from anywhere other than your hand cost {1} less"** is `CostChange { NotFrom = [Hand] }`
+  — Trigger's option of the same name; not a filter: `Filter.cs` says "no zone in a filter — whoever supplies the
+  candidates owns the zone", and `Costs.Of` is asked while the card is still where it is cast from.
+  **"Whenever Bilbo attacks, you may cast an artifact, instant, or sorcery spell from your graveyard"** grew: a
+  graveyard cast as an effect resolves is FLASHBACK today — `CastNow` skips the zone check, but `MoveCard` exiles any
+  spell `CastFrom: Graveyard` without `ByPermission`, and `StackResolution` sends such a PERMANENT spell to the
+  graveyard instead of the battlefield. A cast during a resolution is by that effect's permission (CR 608.2g), so it
+  is `ByPermission` (Malcolm's card goes back to the graveyard, Bilbo's artifact enters) — unless the effect says
+  "exile it instead": `CastSpellAction.ExiledLeavingTheStack`, flashback's exile. Nothing in FRA or TRK casts from a
+  graveyard as it resolves (Tersa and Q exile first), so no record moves. A cast during a resolution no longer uses up
+  a once-each-turn zone permission either (`Cast` asked `ZonePermission` for it). **Brazen Bluff's
+  `CastFromHandFree(filter)` becomes `CastOneOf(Ref) { Free, Exiled }`** (and `CastChosenFree` → `CastChosen`): the
+  cards are a `Ref` — Bluff's `Ref.All(Hand, !Is.Creature, Ref.You)`, Bilbo's graveyard, Malcolm's `Ref.Chosen` —
+  paid unless `Free`, and `Exiled` the filter of the spells exiled leaving the stack (Bilbo: instants and sorceries).
+  **Malcolm** — survey's reading held: `CastNow` takes an id, so "the discarded card" is `CastOneOf(Ref.Chosen)` in
+  `Discard.Then`, under `If(AtLeast(Count.CountersOfKind(Ref.Source, "chorus"), 4))`; chorus is a named counter.
+  **Flash's "sacrifice it unless you pay its mana cost reduced by {2}"** and **Transmute's "you may pay {X}, where X
+  is the difference"**: `PayMana`'s cost is fixed. Its options: `ManaCostOf` (a Ref: the card's printed cost — Flash),
+  `Generic` (a Count added: Transmute's X), `ReducedBy` (a Count of generic taken off — Flash's 2, Transmute's
+  sacrificed mana value: "the difference" is the found card's MV reduced by the sacrificed one's, never one Count
+  less another); `CanPay { Pay }` asks the same owed cost. "Unless you pay" must run its "otherwise" when it CAN'T be
+  paid too, which `May` never does (not asked) — `Scripting.MayPay(prompt, pay, otherwise)` is `If(CanPay) [May]
+  { Otherwise }`, both "no" and "can't" running it.
+  **Transmute grew twice:** "the sacrificed artifact" — `MaySacrifice.Then` has no name for it (its pick is the
+  permanent choice's key, which any `May` inside clears), so the Then reads it as `Ref.ThisWay`, as every "[done]
+  this way" does (Destroy, CreateTokens); and the found card's zone depends on a payment, so `SearchLibrary.Then`
+  decides it: run with the card in `Ref.Chosen`, still in the library, IN PLACE of putting it `To`, then the shuffle.
+  Tiers: Malcolm 2 (`CastOneOf`'s Ref), Bilbo 2 (`NotFrom`, `ByPermission`/`Exiled`), Flash 2 (`PayMana`'s cost,
+  `MayPay`), Transmute 2 (the same, `ThisWay`, `SearchLibrary.Then`). No new piece.
+- 2026-11-16, Claude — **4.4e2d's notes.** Built as planned. 8 tests (11 cases) in `LsvBatch2eTests.cs`, all through
+  real casting and real combat; **17 breaks, all caught** — one at the second try: the first break of Bilbo's
+  `NotFrom` made the reduction apply from the hand too, which is the sorcery test's case (it caught it), so the
+  artifact test's check broke it the other way (never applied). Brazen Bluff's test (`TrkBatch7aTests`) catches a
+  `CastOneOf` that reads the wrong cards. **Ceilings (DesignNotes):** Bilbo's exile is flashback's (a bounced
+  instant is exiled too); Transmute reads the sacrificed artifact's mana value in the graveyard (a token: 0).
+  **Not taken:** moving `AttackWith`/`InExile` up to `FraBoardTest` — eleven test files have their own, five of them
+  different (to the postcombat main; `InExile` of `me`), so a base one would hide or change them; this file's
+  `AttackWith(answer, attackers)` plays through combat answering each choice.
+  **`/pre-commit`'s review: ten findings; two bugs fixed, each with a test (10 tests, 13 cases; 19 breaks caught):**
+  Flash putting in Phyrexian Metamorph threw in the solver (a printed `{U/P}` reached it) — `PayMana.Owed` pays it
+  with its colour (a ceiling: never 2 life, DesignNotes); Bilbo casting a FLASHBACK card from the graveyard paid its
+  flashback cost — a cast during a resolution is never flashback, so `Costs.Of` and `CastSpellAction.CostsOf` take
+  `flashback: false` for it. Also taken: `SearchLibrary.Then` runs only when a card was found; MaySacrifice's two
+  summaries made one; `CastChosen`'s summaries name Bilbo and Malcolm. **Not taken:** a sacrificed token's mana
+  value (already a ceiling), a `CastOneOf` over cards in several zones (no card), `CastOneOf` building every cast
+  of every card to ask "can it be cast" (no bench for a card batch; the probe cast Bilbo 326 times unhindered),
+  `CanPay`'s unused `Cost` beside `Pay`, a `ManaCostOf` that names nothing paying {0} (Flash's card always exists).
 
 ## Tasks
 
@@ -817,8 +869,15 @@ as his three priorities.
           (the review's three fixes included); `batch_checks.py` all 7 steps, twice (golden-out unchanged; golden-in
           moved 29 random and 319 card-replay games, added 20, the AI replay unmoved; probe 150 games, none
           unfinished both times, each card cast 212–448 times in the first)
-    - [ ] MC-4.4e2d Options, casting off the hand, 4: Bilbo (Thief in the Night), Malcolm (Alluring Scoundrel),
-          Flash, Transmute Artifact
+    - [x] MC-4.4e2d Options, casting off the hand, 4 — done 2026-11-16: Bilbo (Thief in the Night), Malcolm
+          (Alluring Scoundrel), Flash, Transmute Artifact. `CostChange.NotFrom`, `CastFromHandFree` →
+          `CastOneOf(Ref) { Free, Exiled }` (Brazen Bluff moved), a graveyard cast during a resolution by the
+          effect's permission (`CastSpellAction.ExiledLeavingTheStack` for Bilbo), `PayMana { ManaCostOf, Generic,
+          ReducedBy }` + `CanPay { Pay }` + `Scripting.MayPay`, `MaySacrifice.Then`'s `Ref.ThisWay`,
+          `SearchLibrary.Then`; 10 tests (13 cases), 19 breaks caught (the review's two fixes included); `batch_checks.py` all 8 steps (golden-out
+          unchanged; golden-in moved 29 random and 253 card-replay games, added 16, the AI replay unmoved; probe 150
+          games, none unfinished, each card cast 292–430 times; full suite 1,904 passed — re-run after the review's fixes: golden-out
+          unchanged again, 19 of 19 breaks caught)
     - [ ] MC-4.4e2e Options, "for as long as this remains on the battlefield", 2: The Wondrous Wasp, Tishana's
           Tidebinder
     - [ ] MC-4.4e2f Options, choices after the cast, 4: Frantic Search, Time Spiral, Mystic Confluence (Fiery
@@ -826,12 +885,19 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1), the library's top (4.4e2a), draws (4.4e2b) and
-mana and costs (4.4e2c) are done: **208 of 528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e";
-Tasks). Next, in a NEW session: **MC-4.4e2d — casting off the hand, 4 cards:** Bilbo (Thief in the Night), Malcolm
-(Alluring Scoundrel), Flash, Transmute Artifact — the survey's reading of each is in Decisions ("4.4e", e2d); read it
-against the CODE first: of e2c's five readings all held, but two grew (Urza's {5} "free" was no tested option — only
-`Now` cast free; the Skydiver needed a kicked permanent, a filter's X and an X kicker, not one option).
+Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1), the library's top (4.4e2a), draws (4.4e2b),
+mana and costs (4.4e2c) and casting off the hand (4.4e2d) are done: **212 of 528 play.** Blue's tier 1 is split in
+seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2e — "for as long as this remains on the
+battlefield", 2 cards:** The Wondrous Wasp, Tishana's Tidebinder — the survey's reading is in Decisions ("4.4e",
+e2e); read it against the CODE first: of e2d's four readings three grew (a graveyard cast as an effect resolves was
+flashback; Transmute's sacrificed card had no name inside a `May`, and its found card no zone until paid).
+From e2d: "you may cast one of [cards]" is `CastOneOf(Ref) { Free, Exiled }` (Brazen Bluff's piece, generalised); a
+cast from a graveyard during a resolution is `ByPermission` (not flashback) unless `ExiledLeavingTheStack`; a cost
+reduction by where the spell is cast from is `CostChange.NotFrom`; a mana payment whose cost is counted is `PayMana
+{ ManaCostOf, Generic, ReducedBy }`, and "unless you pay" / "if you don't" is `Scripting.MayPay` (May never runs its
+Otherwise when it can't be paid); `MaySacrifice.Then` reads the sacrificed as `Ref.ThisWay`; `SearchLibrary.Then`
+decides the found card's zone. e2d's test helpers (`LsvBatch2eTests.cs`): `AttackWith(answer, attackers)` (through
+combat to the postcombat main), `InExile(card)`, `InGraveyard(card)`.
 From e2c: a spell's Phyrexian mana is `CastSpellAction.LifeForPhyrexian` (as an activation's); a cost that taps
 ANOTHER permanent for mana (Urza) is a unit of `ManaPayment.Find`, as convoke's creature (`ManaAbilities.
 TappingAnother`); `PlayPermission { Free }` works on a mark now (`PlayableFromExile.Free`); a permanent remembers it
@@ -847,8 +913,7 @@ From e2b: a draw is replaced or stopped by `NumericReplacement(Draw) { Instead, 
 [spell / card] each turn" is `Trigger.Nth`; another player's "this turn" count is the count `with { Of = … }`. Its
 test helpers in `LsvBatch2eTests.cs`: `DrawsThree(caster, target)`, `ToTheirDrawStep()`, `Treasures(player)`,
 `JaceWielder(loyalty)`, `Activate(walker, ability, targets)`.
-Then e2d (casting off the
-hand), e2e ("for as long as this remains"), e2f (choices after the cast — Mystic Confluence is 378 casts on a
+Then e2e ("for as long as this remains"), e2f (choices after the cast — Mystic Confluence is 378 casts on a
 12-creature board as `Repeats` is built, so its targets become a choice after the cast and Fiery Confluence moves
 with it), a part a session. Blue's tier 2 (6) and tier 3 (11) are not this task.
 **Open (for Shayne), from e2a:** the seven FRA and TRK cards that say "may search" still shuffle when the search
@@ -960,3 +1025,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-16: MC-4.4e2c done: Gitaxian Probe, Phyrexian Metamorph, Urza (Lord High Artificer), Forensic
   Gadgeteer, Thieving Skydiver — 208 of 528 play. A spell's Phyrexian mana, a mana cost tapping another permanent,
   free play from an exile mark, a cost floor, an X kicker, `Attach(What, To)`. Next: MC-4.4e2d, casting off the hand.
+- 2026-11-16: MC-4.4e2d done: Bilbo (Thief in the Night), Malcolm (Alluring Scoundrel), Flash, Transmute Artifact —
+  212 of 528 play. `CastOneOf`, a graveyard cast as an effect resolves by its permission, `CostChange.NotFrom`,
+  `PayMana`'s counted cost and `MayPay`, `SearchLibrary.Then`. Next: MC-4.4e2e.

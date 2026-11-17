@@ -127,6 +127,14 @@ public record CastSpellAction : GameAction
 	public bool DuringResolution { get; init; }
 
 	/// <summary>
+	/// Bilbo, Thief in the Night: "If an instant or sorcery spell cast this way would be put into your graveyard, exile
+	/// it instead" — a cast during a resolution from a graveyard keeps flashback's exile (MoveCard) rather than being
+	/// by the effect's permission (OnStackComponent.ByPermission). ponytail: flashback's exile takes it from the stack
+	/// to anywhere — a Bilbo instant bounced to the hand is exiled too (DesignNotes).
+	/// </summary>
+	public bool ExiledLeavingTheStack { get; init; }
+
+	/// <summary>
 	/// Dominion Infiltration: "Choose X target creatures your opponents control" — the X targets are a
 	/// choice made as it is cast (ChooseXTargetsChoice), before it is paid (CR 601.2c), not one legal cast
 	/// per set: 2^n casts hung the fuzz probe (Shayne, 2026-11-05). One cast per X; Targets empty until chosen.
@@ -149,11 +157,12 @@ public record CastSpellAction : GameAction
 		Card card,
 		bool kicked = false,
 		ImmutableList<AdditionalCost>? free = null,
-		int permissionOf = 0
+		int permissionOf = 0,
+		bool flashback = true
 	) =>
 		[
 			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
-			.. Costs.Flashback(s, card)?.Costs ?? [],
+			.. flashback ? Costs.Flashback(s, card)?.Costs ?? [] : [],
 			// Underworld Breach's escape: what the rule letting this player cast it from where it is asks
 			.. permissionOf == 0
 				? []
@@ -171,7 +180,8 @@ public record CastSpellAction : GameAction
 			WithoutPayingManaCost && !DuringResolution
 				? Playable.FreeCosts(s, card, PlayerId)
 				: null,
-			DuringResolution ? 0 : PlayerId
+			DuringResolution ? 0 : PlayerId,
+			flashback: !DuringResolution
 		);
 
 	int Chosen(CostSlot slot) =>
@@ -239,7 +249,8 @@ public record CastSpellAction : GameAction
 			X + CostList.ManaOwed(Paid(s, card)),
 			free: WithoutPayingManaCost,
 			targets: Targets,
-			added: added
+			added: added,
+			flashback: !DuringResolution
 		);
 	}
 
@@ -397,9 +408,15 @@ public record CastSpellAction : GameAction
 			&& card.Components.Contains(freeCast); // the card's own — never Urza's free mark (Baleful Mastery)
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
-		var permission = from is ZoneType.Library or ZoneType.Graveyard or ZoneType.Sideboard
-			? Playable.ZonePermission(s, card, PlayerId)
-			: null;
+		// A cast during a resolution is by that effect's permission, never a permanent's.
+		var permission =
+			!DuringResolution
+			&& from is ZoneType.Library or ZoneType.Graveyard or ZoneType.Sideboard
+				? Playable.ZonePermission(s, card, PlayerId)
+				: null;
+		// Malcolm, Bilbo: cast from a graveyard as an effect resolves (CR 608.2g) — not flashback, so it isn't exiled
+		// leaving the stack and a permanent spell resolves onto the battlefield, unless the effect exiles it.
+		var byEffect = DuringResolution && from == ZoneType.Graveyard && !ExiledLeavingTheStack;
 		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
 				holder.Id,
@@ -446,7 +463,7 @@ public record CastSpellAction : GameAction
 						}
 					)
 			);
-		if (permission is not null && from != ZoneType.Library)
+		if (permission is not null && from != ZoneType.Library || byEffect)
 			s = s.UpdateObject(
 				CardId,
 				s.GetCard(CardId)
@@ -454,8 +471,8 @@ public record CastSpellAction : GameAction
 						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
 						{
 							ByPermission = true,
-							Finality = permission.Value.Rule.Finality,
-							Gains = permission.Value.Rule.Gains,
+							Finality = permission?.Rule.Finality ?? false,
+							Gains = permission?.Rule.Gains,
 						}
 					)
 			);

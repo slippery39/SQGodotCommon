@@ -3368,7 +3368,7 @@ public static class TrkCards
 					)
 					{
 						Who = Ref.ControllerOfTarget(0),
-						Otherwise = [new CastFromHandFree(!Is.Creature)],
+						Otherwise = [new CastOneOf(Ref.All(ZoneType.Hand, !Is.Creature, Ref.You))],
 					}
 				),
 			],

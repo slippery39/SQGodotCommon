@@ -853,21 +853,33 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 }
 
 /// <summary>
-/// Brazen Bluff: "you may cast a noncreature spell from your hand without paying its mana cost" — one
-/// chosen among those that can be cast free now (CastNow).
+/// "You may cast one of [these cards]" as it resolves — one chosen among those that can be cast now (CastNow), or
+/// none. Brazen Bluff: "you may cast a noncreature spell from your hand without paying its mana cost"
+/// (Ref.All(Hand, !Is.Creature, Ref.You)); Bilbo, Thief in the Night: "you may cast an artifact, instant, or sorcery
+/// spell from your graveyard" (paid); Malcolm, Alluring Scoundrel: "you may cast the discarded card without paying
+/// its mana cost" (Ref.Chosen, in Discard.Then).
 /// </summary>
-public record CastFromHandFree(Filters.Filter What) : Effect
+public record CastOneOf(Ref Among) : Effect
 {
+	/// <summary>"Without paying its mana cost" — X is 0. Unset, the spell is paid for (Bilbo).</summary>
+	public bool Free { get; init; } = true;
+
+	/// <summary>
+	/// Bilbo: "If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead" — the
+	/// spells this filter matches are exiled leaving the stack, as flashback's (CastSpellAction.ExiledLeavingTheStack).
+	/// </summary>
+	public Filters.Filter? Exiled { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		ImmutableList<int> castable =
 		[
-			.. s.CardsIn(Controller, ZoneType.Hand)
-				.Where(c =>
-					What.Matches(s, c, new(Controller, 0))
-					&& CastNow.CanCast(s, Controller, c, free: true)
-				)
-				.Select(c => c.Id),
+			.. All(Among, s)
+				.Where(id =>
+					s.HasObject(id)
+					&& s.GetObject(id) is Card c
+					&& CastNow.CanCast(s, Controller, c, free: Free)
+				),
 		];
 		return castable.IsEmpty
 			? new(s)
@@ -882,10 +894,12 @@ public record CastFromHandFree(Filters.Filter What) : Effect
 							{
 								PlayerId = Controller,
 								Ids = castable,
-								Zone = ZoneType.Hand,
-								Prompt = "You may cast one free",
+								Zone = (
+									(Zone)s.GetObject(s.GetParent(castable[0])!.Value)
+								).ZoneType,
+								Prompt = Free ? "You may cast one free" : "You may cast one",
 							},
-							new CastChosenFree(),
+							new CastChosen { Free = Free, Exiled = Exiled },
 						],
 					}
 				)
@@ -893,9 +907,18 @@ public record CastFromHandFree(Filters.Filter What) : Effect
 	}
 }
 
-/// <summary>After the choice: the chosen card cast free (CastNow), if one was chosen.</summary>
-public record CastChosenFree : Effect
+/// <summary>
+/// After CastOneOf's choice: the chosen card cast (CastNow), if one was chosen — Bilbo, Thief in the Night: "you may
+/// cast an artifact, instant, or sorcery spell from your graveyard", paid.
+/// </summary>
+public record CastChosen : Effect
 {
+	/// <summary>Malcolm, Alluring Scoundrel: "without paying its mana cost".</summary>
+	public bool Free { get; init; }
+
+	/// <summary>Bilbo: "If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead".</summary>
+	public Filters.Filter? Exiled { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		ChooseCardsFromHandChoice.Read(InputContext).FirstOrDefault() is > 0 and var id
 			? new(
@@ -903,7 +926,18 @@ public record CastChosenFree : Effect
 					new PipelineAction
 					{
 						PipelineContext = InputContext,
-						Steps = [new CastNow(id, Free: true)],
+						Steps =
+						[
+							new CastNow(id, Free)
+							{
+								ExiledLeavingTheStack =
+									Exiled?.Matches(
+										s,
+										s.GetCard(id),
+										new(Controller, GetInput<int>(ContextKeys.Source))
+									) ?? false,
+							},
+						],
 					}
 				)
 			)
@@ -1013,12 +1047,16 @@ public record AssimilateChosen : Effect
 /// </summary>
 public record CastNow(int CardId, bool Free) : Effect
 {
+	/// <summary>Bilbo's instants and sorceries: exiled leaving the stack (CastSpellAction.ExiledLeavingTheStack).</summary>
+	public bool ExiledLeavingTheStack { get; init; }
+
 	/// <summary>Every legal way to cast it now — free means X is 0 and no mana cost.</summary>
 	public static ImmutableList<CastSpellAction> Options(
 		GameState s,
 		int playerId,
 		int cardId,
-		bool free
+		bool free,
+		bool exiled = false
 	) =>
 		!s.HasObject(cardId) || s.GetObject(cardId) is not Card card || card.Is(CardType.Land)
 			? []
@@ -1034,6 +1072,7 @@ public record CastNow(int CardId, bool Free) : Effect
 								{
 									DuringResolution = true,
 									WithoutPayingManaCost = free,
+									ExiledLeavingTheStack = exiled,
 								}
 							)
 					)
@@ -1046,7 +1085,7 @@ public record CastNow(int CardId, bool Free) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var options = Options(s, Controller, CardId, Free);
+		var options = Options(s, Controller, CardId, Free, ExiledLeavingTheStack);
 		return options.Count switch
 		{
 			0 => new(s),
@@ -1479,6 +1518,14 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// </summary>
 	public bool May { get; init; }
 
+	/// <summary>
+	/// Transmute Artifact: "search your library for an artifact card. If that card's mana value is less than or equal
+	/// to the sacrificed artifact's mana value, put it onto the battlefield. If it's greater, you may pay {X} … If you
+	/// don't, put it into its owner's graveyard. Then shuffle." — where the found card goes, decided by these steps:
+	/// run with it in Ref.Chosen, still in the library, IN PLACE of putting it To; then the shuffle.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var searcher = Who is null ? Controller : All(Who, s).FirstOrDefault();
@@ -1511,31 +1558,34 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{(FilterText is null ? "" : FilterText + " ")}{(Subtype is null ? "" : Subtype + " ")}{(Type == CardType.None ? "" : Type.ToString().ToLowerInvariant() + " ")}card{(UpTo == 1 ? "" : "s")}{(DifferentNames ? " with different names" : "")}",
 					},
 					// Loyal Tutor: "then shuffle and put that card on top" — the shuffle comes first.
-					.. To == ZoneType.Library
+					.. !Then.IsEmpty
+						?
+						[
+							new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
+							shuffle,
+						]
+					: To == ZoneType.Library
 						? (GameAction[])
 							[
 								shuffle,
 								new MoveChosenToAction(owner, ZoneType.Library) { OnTop = true },
 							]
-						:
-						[
-							// Onto the battlefield under the searcher's control; anywhere else, the owner's zone.
-							new MoveChosenToAction(
-								To == ZoneType.Battlefield ? searcher : owner,
-								To
-							)
-							{
-								Tapped = Tapped,
-								ChargeCounters = ChargeCounters,
-								Playable = Play is { } play
-									? play.For(
-										s,
-										play.By is { } by ? All(by, s).FirstOrDefault() : Controller
-									)
-									: null,
-							},
-							shuffle,
-						],
+					:
+					[
+						// Onto the battlefield under the searcher's control; anywhere else, the owner's zone.
+						new MoveChosenToAction(To == ZoneType.Battlefield ? searcher : owner, To)
+						{
+							Tapped = Tapped,
+							ChargeCounters = ChargeCounters,
+							Playable = Play is { } play
+								? play.For(
+									s,
+									play.By is { } by ? All(by, s).FirstOrDefault() : Controller
+								)
+								: null,
+						},
+						shuffle,
+					],
 					.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],
 				],
 			}
@@ -2457,8 +2507,9 @@ public record PhaseOut(Ref What) : Effect
 }
 
 /// <summary>
-/// "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the Then
-/// effects run only if something was sacrificed, with this ability's context.
+/// "You may sacrifice a [Filter]. If you do, [Then]" — the controller picks one or none; Then runs only if something
+/// was sacrificed, reading it as Ref.ThisWay (Transmute
+/// Artifact: "the sacrificed artifact's mana value"), as every "[done] this way".
 /// </summary>
 public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then) : Effect
 {
@@ -2503,7 +2554,7 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 							MaxChoices = AnyNumber ? Math.Max(1, candidates) : 1,
 						},
 						new SacrificeChosenAction(),
-						new IfChosenAction(Then),
+						new IfChosenAction(Then) { ThisWay = true },
 					],
 				}
 			)

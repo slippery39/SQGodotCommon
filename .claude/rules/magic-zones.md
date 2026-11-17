@@ -184,6 +184,11 @@ whose subsystem it lives in.
   hand `ChooseCardsFromHandChoice`, so a record's answers still fit), then `MoveTo(Ref.Chosen)`; "if you can't" is
   `Otherwise`, "if you do" `Then` (Temporal Conqueror, Sylvia Tilly, Erica Ortegas). "Put two cards from your hand on
   top of your library in any order" (Brainstorm) is two of them `{ OnTop }`, the second on top.
+- **"Sacrifice an artifact. If you do, …the sacrificed artifact's mana value"** (Transmute Artifact) is `MaySacrifice
+  { Must }` whose `Then` reads the sacrificed as `Ref.ThisWay` (MC-4.4e2d). **A search whose card's zone is decided
+  after it is found** ("if that card's mana value is … put it onto the battlefield … If you don't, put it into its
+  owner's graveyard. Then shuffle") is `SearchLibrary.Then`: run with the card in `Ref.Chosen`, still in the library,
+  IN PLACE of putting it `To`; the shuffle after.
 - **"[Effect]. … for each [one] [done] this way"** (Decree of Pain) is the effect's `Then` with `Ref.ThisWay` — the
   ids it actually did it to (`Destroy`: the ones that left; an indestructible one or McCoy's save didn't;
   `CreateTokens`: the tokens made — Cori-Steel Cutter's "You may attach this Equipment to it"; `ExileTopPlayable`:

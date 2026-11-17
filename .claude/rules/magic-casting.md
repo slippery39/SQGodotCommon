@@ -244,7 +244,16 @@ whose subsystem it lives in.
   creature returned, as every beam-me-up card (Shayne, 2026-11-06).
 - **"That player may exile it. If they don't, you may cast a noncreature spell from your hand free"** (Brazen
   Bluff) is `May { Who, Otherwise }` with `MoveTo(…, Exile) { From = [Stack] }` (a card on the stack, to its owner's exile) and
-  `CastFromHandFree` (a choice among the castable, then `CastNow`).
+  `CastOneOf(Ref.All(Hand, !Is.Creature, Ref.You))` (a choice among the castable, then `CastNow`).
+- **"You may cast one of [these cards]" as it resolves is ONE piece, `CastOneOf(Ref) { Free, Exiled }`** (MC-4.4e2d):
+  the cards a `Ref` names — Bluff's hand, Bilbo's "an artifact, instant, or sorcery spell from your graveyard"
+  (`Free = false`: paid), Malcolm's "the discarded card" (`Ref.Chosen` in `Discard.Then`) — chosen (or none), then
+  `CastNow`. **A cast from a graveyard as an effect resolves is by that effect's permission (CR 608.2g), never
+  flashback:** `OnStackComponent.ByPermission`, so it goes back to the graveyard and a permanent spell enters —
+  unless the effect exiles it: Bilbo's "if an instant or sorcery spell cast this way would be put into your
+  graveyard, exile it instead" is `Exiled = Is.Instant | Is.Sorcery` → `CastSpellAction.ExiledLeavingTheStack`,
+  flashback's exile. Such a cast pays the mana cost, never a flashback cost (`Costs.Of(…, flashback: false)`), and never
+  uses up a permanent's once-each-turn zone permission.
 - **"Choose one that hasn't been chosen"** (Kobayashi Maru Scenario) is `ModeChoice.NotChosenBefore`:
   the modes chosen are stamped on that object (`Card.ModesChosen`, a bit per mode, in `QueueModalTriggerAction`) and
   left out by `Triggers.ChoosableModes`; none left and it is removed (CR 700.2a); a new object starts afresh.

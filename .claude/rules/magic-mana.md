@@ -67,6 +67,14 @@ whose subsystem it lives in.
   colour, tapped, in the SAME unit as convoke's creature (`TappedFor`; the X bound counts it). Never a move: its
   `ChoosesCost` keeps it out of `YieldOf` (the holder isn't tapped) and out of `ManaMoves` (no sacrifice).
   One mana each, paid as the tapped permanent's own (DesignNotes).
+- **"Spells you cast from anywhere other than your hand cost {1} less"** (Bilbo, Thief in the Night, MC-4.4e2d) is
+  `CostChange(-1) { NotFrom = [Hand] }` — where the card is as it is cast (`Costs.Of` runs before it moves to the
+  stack); never a filter, which holds no zone. **"Pay its mana cost reduced by {2}"** (Flash) and **"{X}, where X is
+  the difference"** (Transmute Artifact) are `PayMana { ManaCostOf, Generic, ReducedBy }`, owed as it is paid
+  (`PayMana.Owed`; `CanPay { Pay }` asks the same; a printed `{U/P}` is paid with its colour); "X less Y" is a
+  `ReducedBy`, never one `Count` less another.
+  **"Unless you pay" / "If you don't"** must run when it CAN'T be paid too, which `May` never does:
+  `Scripting.MayPay(prompt, pay, otherwise)`.
 - **Cost changes all live in `Costs.Of`**: each is a `CostChange` — on a permanent, for the spells
   `By` names (Thalia's tax on opponents, Geist's reduction on yours), or `OnItself` ("this spell costs
   … less"); an activated ability's (Warrior's Blades) is `ActivatedAbilityComponent.CostChange`, read

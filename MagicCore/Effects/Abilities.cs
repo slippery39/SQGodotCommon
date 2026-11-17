@@ -56,6 +56,7 @@ public static class CounterKinds
 	public const string Promotion = "promotion";
 	public const string Peace = "peace"; // Peace in Our Time
 	public const string Story = "story"; // Staff of the Storyteller
+	public const string Chorus = "chorus"; // Malcolm, Alluring Scoundrel
 
 	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
 	public const string Indestructible = "indestructible";
@@ -843,6 +844,12 @@ public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComp
 
 	/// <summary>"This spell costs …": read from the card being cast (any zone), not from the battlefield.</summary>
 	public bool OnItself { get; init; }
+
+	/// <summary>
+	/// Bilbo, Thief in the Night: "Spells you cast from anywhere other than your hand" — [Hand]: not for a spell cast
+	/// from these zones. Asked of where the card is as it is cast (Costs.Of runs before it moves to the stack).
+	/// </summary>
+	public ImmutableList<ZoneType> NotFrom { get; init; } = [];
 
 	/// <summary>
 	/// Forensic Gadgeteer: "This effect can't reduce the mana in that cost to less than one mana." — a reduction never

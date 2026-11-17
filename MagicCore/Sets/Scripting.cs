@@ -59,6 +59,19 @@ public static class Scripting
 		params GameAction[] effects
 	) => new(on, [.. effects]) { Targets = [.. targets] };
 
+	/// <summary>
+	/// "You may pay [cost]. If you do, [pay.Then]. If you don't, [otherwise]" — Flash: "sacrifice it unless you pay
+	/// its mana cost reduced by {2}"; Transmute Artifact. Asked only when it can be paid; unable, it is otherwise too.
+	/// </summary>
+	public static If MayPay(string prompt, PayMana pay, params GameAction[] otherwise) =>
+		new(
+			new CanPay(ManaCost.None) { Pay = pay },
+			[new May(prompt, new Always(), [pay]) { Otherwise = [.. otherwise] }]
+		)
+		{
+			Otherwise = [.. otherwise],
+		};
+
 	/// <summary>A Saga's chapter: "II — You gain 3 life." (Amok Time) — triggers as its lore counters reach N.</summary>
 	public static TriggeredAbilityComponent Chapter(
 		int n,
