@@ -1362,7 +1362,9 @@ public class LsvBatch2eTests : FraBoardTest
 		s = s.MoveCard(permanent, s.ZoneId(s.GetCard(permanent).OwnerId, ZoneType.Graveyard));
 
 	GameObject? Top() =>
-		s.StackIsEmpty() ? null : s.GetObject(s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First());
+		s.StackIsEmpty()
+			? null
+			: s.GetObject(s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First());
 
 	[Test]
 	public void WondrousWasp_TapsUpToOneCreature_ItLosesAllAbilities_WhileTheWaspRemains()
@@ -1370,7 +1372,11 @@ public class LsvBatch2eTests : FraBoardTest
 		var bird = Field(Bird, them);
 		var wasp = Hand(Lsv("The Wondrous Wasp"), me);
 		var asked = CastAsking(wasp, On<ChooseTargetChoice>(bird));
-		Assert.That(asked.OfType<ChooseTargetChoice>().Single().MinChoices, Nu.EqualTo(0), "up to one");
+		Assert.That(
+			asked.OfType<ChooseTargetChoice>().Single().MinChoices,
+			Nu.EqualTo(0),
+			"up to one"
+		);
 		Assert.That(s.GetCard(bird).IsTapped, "tap up to one target creature");
 		Assert.That(s.Has(s.GetCard(bird), "Flying"), Nu.False, "it loses all abilities");
 		ToTheirDrawStep();
@@ -1396,10 +1402,15 @@ public class LsvBatch2eTests : FraBoardTest
 		var wasp = Hand(Lsv("The Wondrous Wasp"), me);
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = wasp });
 		for (var i = 0; i < 20 && !(Top() is StackAbility); i++)
-			s =
-				s.GetPendingChoice() is { } choice
-					? s.Choose(choice is ChooseTargetChoice ? [bird] : [])
-					: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
+			s = s.GetPendingChoice() is { } choice
+				? s.Choose(
+					choice switch
+					{
+						ChooseTargetChoice => [bird],
+						_ => [],
+					}
+				)
+				: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
 		Assert.That(Top(), Nu.InstanceOf<StackAbility>(), "its trigger on the stack");
 		Kill(wasp);
 		s = s.MoveCard(wasp, s.ZoneId(me, ZoneType.Hand));
@@ -1424,10 +1435,17 @@ public class LsvBatch2eTests : FraBoardTest
 		var binder = Hand(Lsv("Tishana's Tidebinder"), me);
 		CastAsking(binder, On<ChooseTargetChoice>(ability));
 		Assert.That(Life(them), Nu.EqualTo(life), "the ability was countered");
-		Assert.That(s.Has(s.GetCard(bird), "Flying"), Nu.False, "that permanent loses all abilities");
+		Assert.That(
+			s.Has(s.GetCard(bird), "Flying"),
+			Nu.False,
+			"that permanent loses all abilities"
+		);
 		Assert.That(s.HasLostAllAbilities(s.GetCard(bird)));
 		Kill(binder);
-		Assert.That(s.Has(s.GetCard(bird), "Flying"), "the Tidebinder gone, the abilities are back");
+		Assert.That(
+			s.Has(s.GetCard(bird), "Flying"),
+			"the Tidebinder gone, the abilities are back"
+		);
 	}
 
 	[Test]
