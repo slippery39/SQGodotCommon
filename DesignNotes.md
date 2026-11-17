@@ -1232,6 +1232,7 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the option price samples a set's decks on first use (~10 s) and measures each new answer against every likely creature once (a hitch at the table's 1 s cap) - warm both at start-up if it becomes the default
 - the option report prices only cards castable at that moment, attributes no gain to an enters trigger's target, and prices each likely creature alone on today's board, so at low life every one reads as if it attacked now (`Records/GalliaWontAttack` #547 is unreadable)
 - held-off creatures (`Evaluator.HeldOff`, AI-26.12, a trial, off by default): one blocker of ours each, by lasting power and toughness alone - first strike, menace and tricks are not read, a flier needs a flier or reach, a creature in our hand is read by its printed stats; THEIR creatures only (ours held off by theirs keep their full price, or the AI would stop casting small creatures into a bigger board); the share kept (0.4) is chosen, not measured
+- tap abilities kept for their end step (`Rollout.Settings.LastChance`, AI-26.5, a trial, off by default): in our own turn the look-ahead uses a "{T}:" ability only when it takes something of theirs off the battlefield - a tap that only pays THEN (their blocker tapped before our attack, a creature pumped for the attack) is left to the search's own tree; let the rollout use one before its attack if a position shows the look-ahead missing it
 
 ## MagicCore search: speedups not taken (AI-7, 2026-10-19)
 

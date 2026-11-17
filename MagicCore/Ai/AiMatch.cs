@@ -170,6 +170,8 @@ public static class AiMatch
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.
 			["nocounter"] = WithRollout(r => r with { CounterAttack = false }),
+			// AI-26.5, a trial: our tap abilities wait in the look-ahead for the opponent's end step (Rollout.Settings.LastChance).
+			["lastchance"] = WithRollout(r => r with { LastChance = true }),
 			// A fresh search at every decision, no plan committed and replayed (review item 9, AI-17.6): beam+noplans.
 			["noplans"] = o => o with { CommitPlans = false },
 			// The cheap look-ahead's chooser's best one level deep, targets and "you may" only, as before: beam+shallowsettle.

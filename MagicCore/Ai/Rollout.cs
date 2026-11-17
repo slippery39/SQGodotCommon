@@ -84,6 +84,18 @@ public static class Rollout
 	/// know — no stronger over 96 games (49.0% ± 1.0pp), +1% cost, and it stops an Aura run into a known
 	/// removal spell. Off (the whole hand) is beam+casts or beam+responds; board-only, beam+boardonly.
 	/// </param>
+	/// <param name="LastChance">
+	/// Our tap abilities wait for their last chance (AI-26.5, Shayne: "the time limit is before the end of the opponents
+	/// turn"): in our own turn our rollout uses a "{T}:" ability only to take something of theirs off the battlefield (a
+	/// kill now - the 3/3 our 2/2 left damaged is whole again by their end step), and uses each at the opponent's end step
+	/// if that leaves us better, the best first (<see cref="AtTheirEndStep"/>) - so a line that waits is seen to get the
+	/// same point, and the potential tie-break keeps the creature up. The search's own decisions still use one whenever it
+	/// scores better: their attacker tapped in their upkeep, a combat finished. ponytail: a tap in our own turn that only
+	/// pays THEN and kills nothing (a blocker tapped before our attack) is left to the search's tree; let the rollout use
+	/// one before its attack if a position shows the look-ahead missing it. Nothing is held in a turn of ours the rollout
+	/// plays no end step of theirs after; the Greedy policy (<see cref="OurPolicy.Greedy"/>) ignores it. OFF: a trial,
+	/// beam+lastchance.
+	/// </param>
 	/// <param name="TheirWalkers">
 	/// The simulated opponent uses its best planeswalker ability every turn it can, whatever its model
 	/// (<see cref="TheirLoyalty"/>, story AI-8.1). False: only a casting opponent does, and only when
@@ -105,7 +117,8 @@ public static class Rollout
 		bool LostLines = true,
 		bool Mays = true,
 		bool CounterAttack = true,
-		int AttackShortlist = WholeAttacks.Shortlist
+		int AttackShortlist = WholeAttacks.Shortlist,
+		bool LastChance = false
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -311,9 +324,25 @@ public static class Rollout
 				s = Choose(s, choice, who, settings, ours: true);
 				continue;
 			}
+			if (settings.LastChance && AtTheirEndStep(s, me, settings) is { } tap)
+			{
+				s = Do(s, who, tap);
+				continue;
+			}
 			var spent = plays >= settings.ActionsPerTurn;
 			var play = !(landDone && spent)
-				? OurPlay(s, me, spent ? null : AnyPlay, ref landDone, settings)
+				? OurPlay(
+					s,
+					me,
+					spent ? null
+						// held only while their next turn is still to be played (the counter-attack plays the horizon's)
+						: settings.LastChance
+						&& (turn + 1 < stopAt || turn + 1 == horizon && settings.CounterAttack)
+							? a => AnyPlay(a) && !Waits(s, me, a)
+						: AnyPlay,
+					ref landDone,
+					settings
+				)
 				: null;
 			if (play is not null)
 			{
@@ -337,6 +366,44 @@ public static class Rollout
 		return settings.LostLines && turnEnd is not null
 			? score + TurnEndBoard(turnEnd, me, settings) // lost after our turn: the board we kept
 			: score;
+	}
+
+	/// <summary>
+	/// An ability of a permanent of ours with "{T}" in its cost that can be used at instant speed - what
+	/// <see cref="Settings.LastChance"/> keeps for the opponent's end step.
+	/// </summary>
+	static bool WaitsForTheirEndStep(GameState s, GameAction a) =>
+		a is ActivateAbilityAction act
+		&& s.ActivatedAbilitiesOf(s.GetCard(act.CardId)).ElementAtOrDefault(act.AbilityIndex)
+			is { From: ZoneType.Battlefield, TapsItself: true, SorcerySpeed: false };
+
+	/// <summary>A tap ability <see cref="Settings.LastChance"/> keeps for their end step: one that takes nothing of theirs off the battlefield now.</summary>
+	static bool Waits(GameState s, int me, GameAction a)
+	{
+		if (!WaitsForTheirEndStep(s, a))
+			return false;
+		var after = Lookahead.Settle(s.Act(a));
+		return s.CardsIn(s.OpponentOf(me), ZoneType.Battlefield)
+			.All(c => after.HasObject(c.Id) && after.IsOnBattlefield(c.Id));
+	}
+
+	/// <summary>
+	/// <see cref="Settings.LastChance"/>: at the opponent's end step, the stack empty, our tap ability whose settled result
+	/// leaves us best - if better than passing. Each taps its own permanent, so the step ends.
+	/// </summary>
+	static GameAction? AtTheirEndStep(GameState s, int me, Settings settings)
+	{
+		if (
+			s.GetGame() is not { Step: Step.End } game
+			|| game.ActivePlayerId == me
+			|| !s.StackIsEmpty()
+		)
+			return null;
+		var taps = s.AiMoves([.. s.SearchMoves().Where(a => WaitsForTheirEndStep(s, a))]);
+		if (taps.Count == 0)
+			return null;
+		var (best, score) = BestSettled(s, me, taps, settings);
+		return score > Evaluator.Evaluate(s, me, settings.Held) ? best : null;
 	}
 
 	/// <summary>The opponent's end step or cleanup: what we spend from here is back at our untap.</summary>

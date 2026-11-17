@@ -115,6 +115,12 @@ Drafted from Shayne's words — for him to confirm; each needs a position he agr
   things unblockable is what allows the opponent to attack through. It depends on what our goals are, if we are just
   pure racing, we might kill the 3/2 and attack. If we want to be more defensive, we kill the 1/3 and keep our guys
   back to block. So it depends on what our current role is. We should never destroy the 2/1 though."
+- 2026-11-16, Shayne (given AI-26.5's two changed positions — the Pinger, "{T}: This creature deals 1 damage to any
+  target", alone against their vanilla 2/3, from our main and from our upkeep: kept up through their turn, their face
+  pinged at their end step): **"Yeah those plays are correct".** Now asserted (`AbilityTimingTests`). One match on it.
+- 2026-11-16, Shayne (asked whether retiring `WaitOnTies` — 17 suite changes, instants and mana-costed abilities, none
+  a tap ability — is AI-26.5's or its own task): "Dont worry about turning the wait on ties off, we will come back to
+  it later". It stays on; the trial was committed on his word.
 - 2026-11-16, Claude (bookkeeping): its own story rather than more of AI-13 — AI-13 is the rules route, this computes
   the price. #213 and AI-13.5 / 13.6 / 13.8 / 13.9 and lesson 6 are this story's once it is agreed.
 
@@ -292,52 +298,57 @@ Open questions (for Shayne, before `ready`):
       Why (read, not yet measured): the search looks at our decisions this turn; their turn is the rollout's cheap
       policy, which never uses the ability at their end step — so "ping now" is a point and "wait" is nothing, and
       `WaitOnTies` only defers within our own turn (it moved the ping from upkeep to the draw step).
-      **Proposed (not built, for Shayne):** the look-ahead uses a free tap ability at its last chance — their end
-      step, before our untap — so waiting is seen to give the same; a line that waits then ties with using it now,
-      and the potential tie-break (an untapped creature kept) holds it; a better use before then (a kill, a combat
-      finished) still wins on the score. Behind its own switch, measured as the others
+      **Built 2026-11-16 on his go-ahead, OFF by default** (`Rollout.Settings.LastChance`, `beam+lastchance`): in
+      our own turn the look-ahead uses a "{T}:" ability only to take something of theirs off the battlefield, and
+      otherwise keeps it for the opponent's end step, used there if that leaves us better. A line that waits then
+      ties with using it now, and the potential tie-break keeps the creature up. Claude's choice: the kill-now
+      exception. A first version without it lost the pinger-and-2/2 position: the look-ahead no longer saw the ping
+      finish their blocked 3/3 after combat, so it pinged the 3/3 first, the 3/3 didn't block, and its attack back
+      made it 17–18 where today's is 20–20. Measured (findings, "AI-26.5"):
+      - *The pinger with nothing to kill:* **up through their turn, their face pinged at their end step** — from our
+        main and from our upkeep (today: our beginning of combat / our draw step). Life the same, 18–19.
+      - *The pinger and the 2/2, the tapper:* unchanged.
+      - *Suite: 0 of 288 changed*, +0.3% engine steps. FRA has 13 creatures with a non-mana tap ability.
+      - *It does not replace `WaitOnTies`:* `+actnow` changes the same 17 of 288 with or without it. Every one is an
+        instant or a mana-costed ability made earlier in the same turn (Extended Absence on a Jace token ×4, Living
+        Library's "{6}, Sacrifice" ×4 …), none a tap ability.
+      Tests 1599 pass with it off. **His word on the two changed positions: "Yeah those plays are correct"** — the
+      trial's play there is now asserted. **The match** (`--match=beam+lastchance,beam --until-clear`): **51.0% ±
+      1.0pp over 96 games (49-47), stopped as "no difference of 5pp either way"**, 9379.0 engine steps a decision
+      against 9359.3 (+0.2%), 30 min. As expected: the decks seldom hold a tap ability. It stays OFF; the default is
+      his call, by the plays
 
 ## Next
 
-**Handoff (2026-11-16, end of the Fable session; Shayne continues on Opus in a new session).**
+**State (2026-11-16, Opus session).** The AI-26.5 measurement is committed (`6363cdc3`). The trial is built and
+uncommitted: `Rollout.Settings.LastChance`, `beam+lastchance`, OFF by default. The rollout keeps our "{T}:" abilities
+for the opponent's end step unless one kills something now. `AbilityTimingTests` now runs each position under `beam`,
+`beam+lastchance` and `beam+lastchance+actnow`. Tests 1599 pass with it off; the findings are under "AI-26.5".
 
-**State.** Committed `1ca72bec`: the option report, two trials in the search — `beam+optionprice` (our answers in
-hand priced together by what they are likely to meet, AI-26.4) and `beam+byuse` (their creatures that one of ours,
-untapped for their next attack, beats outright keep 0.4 of their value, AI-26.12/26.14) — both **OFF by default**.
-Match, both on: 49.2% ± 1.7pp over 384 games, no 5pp difference either way, +7.7% cost (AI-26.15). Shayne read the
-suite's changed positions: "more reasonable than before"; none called wrong after the fixes; his bar — "Either play
-is justifiable, which means the AI is playing good enough".
+**Shayne called the two changed plays correct** (Decisions). The match: 51.0% ± 1.0pp over 96 games, no difference of
+5pp either way, +0.2% cost (findings, "AI-26.5"). Committed on his word, after `/pre-commit`. His call: whether
+`beam+lastchance` becomes the default.
 
-**Uncommitted in the working tree (leave for him to say):** `MagicCore.Tests/Ai/AbilityTimingTests.cs` (new — the
-AI-26.5 measurement), this story's AI-26.5 notes, and `FraCardSheet.md` / `TrkCardSheet.md` regenerated because the
-new test file names cards (`python tools/magic_docs.py --check` must stay clean). Commit only on his word, after
-`/pre-commit`.
+**Open:** `WaitOnTies` stays — Shayne: "we will come back to it later". Retiring it needs the same "last chance" for
+instants and mana-costed abilities (17 suite positions; findings). Also still his: whether either AI-26 trial becomes the default; the 0.4 held-off share; three unread suite
+positions (findings, "AI-26.14": s1 #70, s1 #111, s1 #121); AI-26.10 / AI-27.
 
-**Next task: AI-26.5, activated abilities** (his order was: match, commit, abilities — the first two are done).
-Measured, not yet built: a tapper is used well (in their upkeep); a pinger with nothing to kill pings their face in
-OUR turn (begin combat, or the draw step from upkeep) — the misplay he described. Read: `AbilityTimingTests`
-(`--filter "TestCategory=AbilityTiming" --logger "console;verbosity=detailed"`). **Proposed, waiting on his
-go-ahead:** the look-ahead uses a free tap ability at its last chance (their end step, before our untap), so waiting
-scores the same as using it now and the potential tie-break keeps the creature untapped; behind its own switch. He
-called `WaitOnTies` (AI-13.12) "a stopgap which solves the symptom but not the problem" — this is meant to replace
-it. Where to look: `Rollout.OpponentStep` / `Rollout.OurPlay` (the rollout's policies), `BeamSearchAi.Waits`,
-`BeamSearchAi.Potential`; AI-13's lesson 6 (his words on tap abilities).
-
-**Still his to decide:** whether either trial becomes the default; the 0.4 held-off share (the three-Bolts-and-a-3/3
-case holds by only 0.25); three changed suite positions he has not read (findings, "AI-26.14": s1 #70, s1 #111,
-s1 #121); AI-26.10 / AI-27 (scores in cards — what still Bolts a vanilla 1/1 when there is no blocker anywhere).
-
-**Tools built this session:** `--record=FILE --options=N [--turns=N]` (the option report); `--suite=A --boards`
-(each changed position's board, card texts, and its whole turn under both searches, ~1 min for 12); the hand-built
-positions in `OptionReportTests` (`--filter "TestCategory=OptionReport"`).
-
-**Traps met:** the 200-deck sample (~10 s) and each new answer's gains are measured on first use — a hitch at the
-table if a trial becomes the default; `OptionPrice.Measured` clears the root and runs with exactly its own terms off,
-or the price reads itself and depends on who asked first; a creature we attack with must never count as a wall
-(AI-26.14); the suite's oracle is the default evaluator read deeper, so it leans against any new term; describe a
-position to him by each card's text and the board, never a nickname.
+**Traps:** the earlier ones still hold (the 200-deck sample's hitch, `OptionPrice.Measured` with its own terms off,
+an attacker never a wall, positions described by card text). New: holding a tap ability for their end step loses
+anything whose value ends with OUR turn — marked damage, an attack. The kill-now exception covers the first; a
+blocker tapped before our attack is left to the search's tree (`ponytail:` on `LastChance`).
 
 ## Log
+
+- 2026-11-16: the measurement committed (`6363cdc3`, after `/pre-commit`: five test-file findings fixed — the loop's
+  silent stop, the upkeep variant's players, a pass matched by its text). AI-26.5's trial built (`beam+lastchance`,
+  off): the pinger with nothing to kill keeps itself up and pings at their end step; suite 0 of 288 changed; it
+  does not replace `WaitOnTies` (17 changes from that alone, none a tap ability). Not committed.
+- 2026-11-16: Shayne: the two changed plays "are correct" — asserted. The match: 51.0% ± 1.0pp over 96 games (49-47),
+  no difference of 5pp either way.
+- 2026-11-16: `/pre-commit` on the trial: fixed — a tap held in a turn the rollout plays no end step of theirs after
+  (never used), a kill judged by a count of their permanents (now: any of them gone), the approval asserted in a test
+  that always runs (`…PingsAtTheirEndStep_UnderTheTrial`). Suite unchanged (0 of 288, same cost); tests 1601 pass.
 
 - 2026-11-16: created — Shayne's session on option pricing; his answers recorded, the design proposed, nothing built.
 - 2026-11-16: AI-26.2 on his go-ahead — the report, run on #213, #547, the Bolt on a 1/1 (one and three) and the

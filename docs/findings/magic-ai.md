@@ -2148,3 +2148,32 @@ default search and under the trials (the default search in the other seat). By g
 So of the seven "removal held", five are held through the turn, one is the same spell on another target (#49), and
 in two the mana goes to a 4-drop (#24, #18). For Shayne's word: #18 (two creatures killed and 5 damage given up),
 #21 (their flier left alive) and #73 (their 8-loyalty Jace token left alive).
+
+## AI-26.5: tap abilities kept for their end step (2026-11-16)
+
+`beam+lastchance` (`Rollout.Settings.LastChance`, OFF by default): in our own turn the look-ahead uses a "{T}:" ability
+only to take something of theirs off the battlefield; otherwise it keeps it for the opponent's end step and uses it
+there if that leaves us better. Read with `AbilityTimingTests` (hand-built, explicit; our seat under each search, theirs
+under the default).
+
+| Position | `beam` | `beam+lastchance` |
+|---|---|---|
+| Pinger 1/1 alone against their vanilla 2/3, from our first main | pings their face at our beginning of combat; tapped through their turn; 18–19 | keeps it up through their turn, pings their face at their end step; 18–19 |
+| the same, from our upkeep | pings their face in our draw step; 18–19 | as from our main: their end step; 18–19 |
+| Pinger 1/1 and a vanilla 2/2 against their vanilla 3/3 | the 2/2 attacks, the 3/3 blocks, the ping finishes it after damage; 20–20 | the same |
+| Tapper 1/1 and a vanilla 2/2 against their 3/3 and 2/2, from main or upkeep | taps the 3/3 in their upkeep, their 2/2 stays home; 20–20 | the same |
+
+- **A first version kept every tap for their end step** and lost the 3/3: the look-ahead no longer saw "the 3/3 blocks,
+  the ping finishes it in our second main" (its damage is gone by their end step), so the search pinged the 3/3 before
+  combat, it didn't block, and its attack back made it 17–18. Hence the exception for a kill now.
+- **Position suite: 0 of 288 changed**, 19 860.4 engine steps a position against 19 805.8 (+0.3%). FRA has 13 creatures
+  with a tap ability that isn't mana, so the suite seldom reaches one: it shows the trial is safe, not that it matters.
+- **It does not replace `WaitOnTies` (AI-13.12).** `beam+actnow` changes 17 of 288 with or without the trial, the same
+  17 (oracle agreement 77.1% → 79.5%, score given up 0.76 → 0.83). None is a tap ability: Extended Absence ×4 on a Jace
+  token, Living Library's "{6}, Sacrifice" ×4, Prophesied End ×2, Break Under Pressure ×2, Fulminous Forte, Academic
+  Ascent, Konstrari Charm, Skilled Battlecarver's pump, Yoshimaru's "{6}: counter" — each made earlier in the same turn
+  without the tie-break. Retiring it needs the same idea for instants and mana-costed abilities, a different "later".
+- **Shayne on the two changed positions: "Yeah those plays are correct".** The match,
+  `--match=beam+lastchance,beam --until-clear`: **51.0% ± 1.0pp over 96 games (49-47)**, no difference of 5pp either
+  way; 9379.0 engine steps a decision against 9359.3 (+0.2%); 30 min. By deck: Red-Green 22-10, White-Black 16-16,
+  White-Blue Jace 11-21.
