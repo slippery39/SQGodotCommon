@@ -2253,3 +2253,20 @@ The table's 1 s cap overran at his three slowest: #347 1 109 ms, #412 1 722 ms, 
 
 The AI's card prices, for AI-27 (Shayne: 5 life paid at 20 is about a card): an unseen card 2.65, an unseen spell 4.38,
 a land in hand 0.30, the flat 1.20, held at 0.5 of measured value. Life: 1.0 a point below 20, 0.5 above.
+
+## AI-27: a card at ~5 points — two trials (2026-11-17)
+
+Shayne's rule: 5 life paid at 20 is about a card. Today an unseen card is 2.65 (held at 0.5), life 1.0 a point below 20.
+
+- **Every card at full value** (`beam-held=1.0`, unseen ~5.2): #364 investigates (7.65 / 5.70); suite 32 of 288
+  changed; **match 47.5% ± 1.4pp over 600 (285-315)**, undecided at the cap (about −2.5pp); spells cast 9.8 against
+  9.7, lands 7.5 / 7.4 — not hoarding.
+- **Unseen cards only at full value** (`beam+unseenfull`, a trial switch since removed — it priced a seen card at 0.5 and
+  an unseen one at 1.0, so seen-against-unseen choices were skewed; read these as partly its artifacts): #364 investigates by 0.07; suite 23 of 288
+  changed, oracle 73.6% (76.0%), 20 016.7 steps. Draw over board 2 (s4 #34: Jace −3 instead of Way of the Healer; s3
+  #43: Jace −3 instead of +2), board over draw 3 (s2 #56 Eardrum Rattler for Jace −1; s3 #28 Thalia for Jace −3; s3
+  #100 Repurposed Enforcer for Tam's Resistance), Jace −3 kept 3 (s2 #43, #53, #74), removal held 4 (s1 #11 Vraska's
+  Final Mercy, s2 #38 Prophesied End, s3 #44 Academic Ascent, s4 #53 Fatehold Charm), plays where it passed 5, other 6.
+
+Shayne on the last two groups: drawing later is never better than drawing now, and a bounce gives no card — so these
+are evaluator inconsistencies, not judgement. The story became the pricing pass (AI-27, Why).

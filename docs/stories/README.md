@@ -36,36 +36,36 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
    Faster decisions closed 2026-11-13 (a sealed run ~11% faster, no move changed); the levers left are AI-24, for later.
 3. **The cube lane** (`D:\GameDev\SQGodotCommon-cube`) is on C1–C5; this lane runs nothing heavy until it ends.
 
-1. **AI-26** — option pricing: the option price, the held-off share (targets only) and tap abilities at their last chance are the DEFAULT (2026-11-17); Shayne is testing them at the table — his notes are next (the story's Next is the handoff)
-2. **TBL-2** — Shayne's table notes of 2026-11-17: blocks shown as chosen, a choice panel you can move or hide, the table live while the AI thinks (TBL-2.20–2.22)
-3. **AI-28** — the AI plays in those notes: L'Rell's copy before combat, the Captain's +1/+0 on an attacker, a Clue priced by use, Tricorder's think time
-4. **AI-21** — combat on big boards (Tribbles) — the rollout's attack plans are 50% of a sealed decision (AI-22's profile), the biggest speed lever left
-5. **AI-20** — the look-ahead stops betting on one guessed future: the land / not-a-land look-ahead is the default; paused 2026-11-16 while Shayne plays games to find big issues (its Next lists what waits)
-6. **AI-19** — the scan's value leftovers: Cold-Blooded Crew, Mikaeus, won-line ties
-7. **AI-23** — stationing priced: the positions first, Shayne confirms
-8. **TBL-4** — the MTGA reference page (TBL-4.4), then animations at MTGO's level (TBL-4.5)
-9. **TBL-10** — the game reviewer: step, rewind, notes, the AI's next decision while paused
-10. **DEV-6** — the cube lane's first session (DEV-6.5), tonight
-11. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
-12. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
-13. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
-14. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
-15. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
-16. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
-17. **AI-13** — Shayne's lessons as general rules for the search, each measured
-18. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
-19. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
-20. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
-21. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
-22. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-23. **MC-5** — Star Trek: every task done; its requirements to tick and close
-24. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
-25. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-26. **DATA-1** — bring in 17lands data
-27. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
-28. **AI-4** — strategic plans above single actions
-29. **AI-12** — a card's threat over time
-30. **AI-27** — evaluator scores in cards: 1 = a card, creature bodies on that scale (Shayne's question, 2026-11-16; to shape)
+1. **AI-27** — the evaluator pricing pass (Shayne, 2026-11-17): one theory, scored in cards, instead of piecemeal fixes — inventory first, then his principles as tests
+2. **AI-26** — option pricing: the option price, the held-off share (targets only) and tap abilities at their last chance are the DEFAULT (2026-11-17); Shayne is testing them at the table — his notes are next (the story's Next is the handoff)
+3. **TBL-2** — Shayne's table notes of 2026-11-17: blocks shown as chosen, a choice panel you can move or hide, the table live while the AI thinks (TBL-2.20–2.22)
+4. **AI-28** — the AI plays in those notes: L'Rell's copy before combat, the Captain's +1/+0 on an attacker, a Clue priced by use, Tricorder's think time
+5. **AI-21** — combat on big boards (Tribbles) — the rollout's attack plans are 50% of a sealed decision (AI-22's profile), the biggest speed lever left
+6. **AI-20** — the look-ahead stops betting on one guessed future: the land / not-a-land look-ahead is the default; paused 2026-11-16 while Shayne plays games to find big issues (its Next lists what waits)
+7. **AI-19** — the scan's value leftovers: Cold-Blooded Crew, Mikaeus, won-line ties
+8. **AI-23** — stationing priced: the positions first, Shayne confirms
+9. **TBL-4** — the MTGA reference page (TBL-4.4), then animations at MTGO's level (TBL-4.5)
+10. **TBL-10** — the game reviewer: step, rewind, notes, the AI's next decision while paused
+11. **DEV-6** — the cube lane's first session (DEV-6.5), tonight
+12. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
+13. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
+14. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
+15. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
+16. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
+17. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
+18. **AI-13** — Shayne's lessons as general rules for the search, each measured
+19. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
+20. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
+21. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
+22. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
+23. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+24. **MC-5** — Star Trek: every task done; its requirements to tick and close
+25. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
+26. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+27. **DATA-1** — bring in 17lands data
+28. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
+29. **AI-4** — strategic plans above single actions
+30. **AI-12** — a card's threat over time
 31. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
 
 ## How it works
@@ -142,7 +142,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-23](AI-23-station-priced.md) | Stationing priced — what the counters buy against the attack or block given up | backlog |
 | [AI-24](AI-24-speed-levers-left.md) | The speed levers left over from AI-22 — tried, costed or proposed, each to decide later | backlog |
 | [AI-26](AI-26-option-pricing-by-target.md) | Option pricing by the target — a held card is worth what it will hit later, less the mana it costs then | backlog |
-| [AI-27](AI-27-scores-in-cards.md) | Evaluator scores in cards — 1 point is a card, creature bodies priced on that scale | backlog |
+| [AI-27](AI-27-scores-in-cards.md) | An evaluator pricing pass — one consistent theory, scored in cards, instead of piecemeal fixes | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | backlog |
