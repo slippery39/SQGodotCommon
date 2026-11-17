@@ -416,7 +416,8 @@ public static class MagicState
 		&& s.CardsIn(controllerId, ZoneType.Battlefield)
 			.Any(c => c.Id != cardId && c.AttackingId != 0);
 
-	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
+	/// <param name="spell">The spell it resolved from (Card.CastAs): its X — "enters with X counters" and its "when this
+	/// enters" read it (CR 107.3m) — kicked, alternative cost, squad's payments.</param>
 	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
 	/// <param name="sunburst">Sunburst: "a charge counter on it for each color of mana spent to cast it".</param>
 	/// <param name="loses">MoveTo.Loses — Enduring Innocence returns "an enchantment. (It's not a creature.)".</param>
@@ -425,7 +426,7 @@ public static class MagicState
 		this GameState s,
 		int cardId,
 		int controllerId,
-		int x = 0,
+		Actions.OnStackComponent? spell = null,
 		int extraCounters = 0,
 		bool tapped = false,
 		bool finality = false,
@@ -434,8 +435,7 @@ public static class MagicState
 		int sunburst = 0,
 		CardType loses = CardType.None,
 		bool attacking = false,
-		TriggeredAbilityComponent? gains = null,
-		bool kicked = false
+		TriggeredAbilityComponent? gains = null
 	)
 	{
 		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
@@ -493,8 +493,7 @@ public static class MagicState
 				ControllerId = controllerId,
 				ControlledSinceTurn = s.GetGame().TurnNumber,
 				EnteredOnTurn = s.GetGame().TurnNumber,
-				CastX = x,
-				CastKicked = kicked,
+				CastAs = spell,
 				WasCast = cast,
 				HasFinalityCounter = finality,
 				IsTapped = !landsUntapped && (tappedByOthers || tappedByItself),
@@ -560,7 +559,7 @@ public static class MagicState
 							s,
 							ImmutableDictionary<string, object>
 								.Empty.Add(ContextKeys.Controller, controllerId)
-								.Add(ContextKeys.X, x)
+								.Add(ContextKeys.X, spell?.X ?? 0)
 						) ?? 0
 				),
 			entering: true

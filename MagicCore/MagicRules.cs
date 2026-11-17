@@ -227,9 +227,7 @@ public static class MagicRules
 	{
 		// Thieving Skydiver: "Kicker {X}" — the kicked cast chooses X ("X can't be 0" is ValidateAdd's), free or not.
 		var kickerX = CastSpellAction.XInKicker(card, kicked);
-		var maxX = CastSpellAction.ChoosesX(card, kicked)
-			? AvailableMana(s, player, s.Has(card, "Convoke"), card)
-			: 0;
+		var maxX = CastSpellAction.ChoosesX(card, kicked) ? AvailableMana(s, player, card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		IEnumerable<ImmutableArray<int>> ModeChoices() =>
 			(text?.Choose ?? 1).Choices(s, card, text?.Modes ?? []);
@@ -284,7 +282,7 @@ public static class MagicRules
 		var maxReplicate = card.GetComponent<ReplicateComponent>() is { } replicate
 			? Math.Max(
 				0,
-				(AvailableMana(s, player, s.Has(card, "Convoke"), card) - card.ManaCost.ManaValue)
+				(AvailableMana(s, player, card) - card.ManaCost.ManaValue)
 					/ Math.Max(1, replicate.Cost.ManaValue)
 			)
 			: 0;
@@ -472,12 +470,14 @@ public static class MagicRules
 					}
 			);
 
-	/// <summary>An upper bound on the mana this player could pay — every untapped creature too, for convoke.</summary>
+	/// <summary>An upper bound on the mana this player could pay — every untapped creature or artifact too, for convoke
+	/// or improvise (ManaPayment.Helps).</summary>
 	///
 	/// ponytail: a lock on mana abilities (Sen Triplets, Clarion Conqueror) isn't asked — an X its sources would
 	/// have paid is tried and refused by the cast. Ask Combat.Stopped here if it shows (DesignNotes).
-	static int AvailableMana(GameState s, int player, bool convoke, Card spell)
+	static int AvailableMana(GameState s, int player, Card spell)
 	{
+		var helpers = ManaPayment.Helpers(s, spell);
 		var tappingAnother = ManaAbilities.TappingAnother(s, player, (spell, null)); // Urza's: an untapped artifact is one more
 		return s.GetPlayer(player).ManaPool.Total
 			+ s.GetPlayer(player)
@@ -493,7 +493,7 @@ public static class MagicRules
 						is { } yield
 					&& yield.CanPayFor(s, spell)
 						? yield.Units.Length
-					: convoke && c.Is(CardType.Creature) && !c.IsTapped ? 1
+					: ManaPayment.Helps(helpers, c) is not null ? 1
 					: ManaAbilities.TappedFor(s, c, tappingAnother) is not null ? 1
 					: 0
 				)

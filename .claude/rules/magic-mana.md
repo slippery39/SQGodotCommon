@@ -59,8 +59,10 @@ whose subsystem it lives in.
   makes no mana (`Usable`: Confluence at 0 life). ponytail: the solver doesn't weigh the pain — it tries a source's
   colours in its abilities' order ({C} first, so generic is paid painlessly), and two life-paying sources are each
   checked against the life alone.
-- **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
-  lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
+- **Convoke and improvise** are ONE answer, `ManaPayment.Helps(Helpers(s, spell), permanent)` (MC-4.4f), read by
+  `Find` (from its `forSpell`) and by the X bound (`AvailableMana`): for a Convoke spell your untapped creatures, each
+  paying its own colour or {1} (as Colorless); for an Improvise one (Kappa Cannoneer) your untapped artifacts, {1}
+  only — joining the sources after lands; summoning sickness doesn't matter. Never a move.
   **"Tap an untapped artifact you control: Add {U}"** (Urza, Lord High Artificer, MC-4.4e2c) is a
   `ManaAbilityComponent { Costs = [TapUntappedCost(1, filter)] }` — a cost that taps ANOTHER permanent:
   `ManaAbilities.TappingAnother` lists them, and in `Find` each untapped permanent their filter matches pays that

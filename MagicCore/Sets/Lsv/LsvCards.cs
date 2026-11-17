@@ -1808,6 +1808,85 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4f: blue's tier 2 =====
+			["Emry, Lurker of the Loch"] =
+			[
+				// Affinity for artifacts: "This spell costs {1} less to cast for each artifact you control."
+				new CostChange(Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)).Negated)
+				{
+					OnItself = true,
+				},
+				When(TriggerEvent.SelfEnters, [], new Mill(Ref.You, 4)),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new MakePlayable(Ref.Target(), new() { ThisTurn = true, CastOnly = true })]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [TargetSpec.InYourGraveyard(Is.Artifact)],
+				},
+			],
+			["Sicarian Infiltrator"] =
+			[
+				.. Squad("{2}"),
+				When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+			],
+			["Subtlety"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Spell(Is.Creature | Is.Planeswalker) with { Optional = true }],
+					new May(
+						"Put it on top of your library? (No: the bottom.)",
+						new Matches(Ref.Target(0), Is.AnyCard),
+						[
+							new MoveTo(Ref.Target(), ZoneType.Library)
+							{
+								From = [ZoneType.Stack],
+								OnTop = true,
+							},
+						]
+					)
+					{
+						Who = Ref.OwnerOfTarget(),
+						Otherwise =
+						[
+							new MoveTo(Ref.Target(), ZoneType.Library) { From = [ZoneType.Stack] },
+						],
+					}
+				),
+				.. Evoke(ManaColor.Blue),
+			],
+			["Kappa Cannoneer"] =
+			[
+				Ward("{4}"),
+				When(
+					new Trigger(EventKind.Entered) { Subject = Is.Source | Is.Artifact & Is.Yours },
+					[],
+					new PutCounters(Ref.Source, 1),
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0, Combat.CantBeBlocked)
+				),
+			],
+			["Preordain"] =
+			[
+				Spell(
+					[],
+					new Surveil(2) { To = ZoneType.Library }, // scry 2
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Lórien Revealed"] =
+			[
+				Spell([], new DrawCards(Ref.You, 3)),
+				Cycling(
+					"{1}",
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Subtype = "Island",
+						Reveal = true,
+					}
+				),
+			],
 		};
 
 	/// <summary>

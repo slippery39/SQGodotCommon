@@ -143,11 +143,18 @@ public record Card : GameObject
 	/// <summary>Loyalty counters on a planeswalker. Damage removes them (CR 120.3c); at 0 it dies (CR 704.5i).</summary>
 	public int Loyalty { get; init; }
 
-	/// <summary>The X paid to cast this permanent — its "when this enters" abilities use it (CR 107.3m).</summary>
-	public int CastX { get; init; }
+	/// <summary>
+	/// The spell this permanent resolved from — what was decided as it was cast, carried onto it (EnterBattlefield):
+	/// its X (CR 107.3m), Thieving Skydiver's "if it was kicked", evoke's alternative cost (Subtlety), squad's payments
+	/// (Sicarian Infiltrator). Null when it wasn't cast; gone as it leaves.
+	/// </summary>
+	public Actions.OnStackComponent? CastAs { get; init; }
 
-	/// <summary>Thieving Skydiver: "if it was kicked" — the spell it was (OnStackComponent.Kicked), carried as CastX is.</summary>
-	public bool CastKicked { get; init; }
+	/// <summary>The X paid to cast this permanent — its "when this enters" abilities use it (CR 107.3m).</summary>
+	public int CastX => CastAs?.X ?? 0;
+
+	/// <summary>What was decided as it was cast — THE read: on the stack its OnStackComponent, a permanent the spell it was (CastAs).</summary>
+	public Actions.OnStackComponent? AsCast => GetComponent<Actions.OnStackComponent>() ?? CastAs;
 
 	/// <summary>Null Summoner: "if you cast it" — it entered by resolving as a spell.</summary>
 	public bool WasCast { get; init; }
@@ -291,8 +298,7 @@ public record Card : GameObject
 			PlusOneCounters = 0,
 			MinusOneCounters = 0,
 			Loyalty = 0,
-			CastX = 0,
-			CastKicked = false,
+			CastAs = null,
 			WasCast = false,
 			ChargeCounters = 0,
 			TimeCounters = 0,

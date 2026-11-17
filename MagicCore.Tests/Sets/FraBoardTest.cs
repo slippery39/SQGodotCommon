@@ -177,6 +177,28 @@ public abstract class FraBoardTest
 				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
 			};
 
+	/// <summary>Answers a target choice with this target and a "you may" as told; any other with its minimum.</summary>
+	protected static Func<ChoiceAction, IEnumerable<int>> Targeting(int target, bool yes) =>
+		c =>
+			c switch
+			{
+				ChooseTargetChoice => [target],
+				YesNoChoice when yes => [1],
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			};
+
+	/// <summary>These attack; every choice to the end of combat answered as told (blocks: none).</summary>
+	protected void AttackWith(Func<ChoiceAction, IEnumerable<int>> answer, params int[] attackers)
+	{
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is DeclareAttackerChoice);
+		while (s.GetPendingChoice() is DeclareAttackerChoice d)
+			s = s.Choose([attackers.Contains(d.CreatureId) ? them : 0]);
+		for (var i = 0; i < 200 && s.GetGame().Step != Step.PostCombatMain; i++)
+			s = s.GetPendingChoice() is { } choice
+				? s.Choose(answer(choice))
+				: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
+	}
+
 	protected int Life(int p) => s.GetPlayer(p).Life;
 
 	protected int HandCount(int p) => s.CardsIn(p, ZoneType.Hand).Count();
@@ -188,6 +210,28 @@ public abstract class FraBoardTest
 
 	protected IEnumerable<CastSpellAction> Casts(int card) =>
 		s.LegalActions().OfType<CastSpellAction>().Where(a => a.CardId == card);
+
+	/// <summary>My untapped lands — what a cast or activation tapped is the difference.</summary>
+	protected int UntappedLands() =>
+		s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
+
+	/// <summary>A library, top first — unchanged after an effect, it was not shuffled.</summary>
+	protected List<int> Library(int player) =>
+		[.. s.CardsIn(player, ZoneType.Library).Select(c => c.Id)];
+
+	/// <summary>TEST SETUP: every land of mine tapped — what pays is the rest of the board.</summary>
+	protected void TapMyLands()
+	{
+		foreach (
+			var land in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)).ToList()
+		)
+			TapIt(land.Id);
+	}
+
+	protected bool InExile(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Exile);
+
+	protected bool InGraveyard(int card) =>
+		s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Graveyard);
 
 	protected Card? Jace(int p) =>
 		s.CardsIn(p, ZoneType.Battlefield).FirstOrDefault(EmpowerJace.IsJaceToken);

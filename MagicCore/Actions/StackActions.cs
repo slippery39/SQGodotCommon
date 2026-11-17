@@ -40,6 +40,13 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>Kicker: "if this spell was kicked" — a copy of it is kicked too (CR 707.10).</summary>
 	public bool Kicked { get; init; }
 
+	/// <summary>
+	/// Replicate and squad: how many times its replicate cost was paid (CastSpellAction.Replicate) — squad's "create
+	/// that many tokens" reads it on the permanent (Card.CastAs, Count.TimesReplicated). A copy has it too (CR 707.10:
+	/// additional costs paid are copied), as it is kicked.
+	/// </summary>
+	public int Replicate { get; init; }
+
 	/// <summary>First Contact: it is the first spell its caster cast this game — a copy wasn't cast (CopySpell clears it).</summary>
 	public bool FirstSpellThisGame { get; init; }
 
@@ -177,7 +184,7 @@ public record CastSpellAction : GameAction
 			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
 			.. flashback ? Costs.Flashback(s, card)?.Costs ?? [] : [],
 			// Underworld Breach's escape: what the rule letting this player cast it from where it is asks
-			.. permissionOf == 0
+			.. permissionOf == 0 || Playable.MarkedInGraveyard(s, card, permissionOf)
 				? []
 				: Playable.ZonePermission(s, card, permissionOf)?.Rule.Costs ?? [],
 			.. kicked ? card.GetComponent<KickerComponent>()?.Costs ?? [] : [],
@@ -289,7 +296,6 @@ public record CastSpellAction : GameAction
 			PlayerId,
 			CostToPay(s, card),
 			0,
-			convoke: s.Has(card, "Convoke"),
 			forSpell: card,
 			alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))],
 			mostColors: mostColors
@@ -448,14 +454,18 @@ public record CastSpellAction : GameAction
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
 		// A cast during a resolution is by that effect's permission, never a permanent's.
+		// Emry: "You may cast that card this turn" — a mark in the graveyard, not flashback, and no permanent's rule
+		var marked = !DuringResolution && Playable.MarkedInGraveyard(s, card, PlayerId);
 		var permission =
 			!DuringResolution
+			&& !marked
 			&& from is ZoneType.Library or ZoneType.Graveyard or ZoneType.Sideboard
 				? Playable.ZonePermission(s, card, PlayerId)
 				: null;
 		// Malcolm, Bilbo: cast from a graveyard as an effect resolves (CR 608.2g) — not flashback, so it isn't exiled
 		// leaving the stack and a permanent spell resolves onto the battlefield, unless the effect exiles it.
-		var byEffect = DuringResolution && from == ZoneType.Graveyard && !ExiledLeavingTheStack;
+		var byEffect =
+			DuringResolution && from == ZoneType.Graveyard && !ExiledLeavingTheStack || marked;
 		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
 				holder.Id,
@@ -527,6 +537,19 @@ public record CastSpellAction : GameAction
 					)
 			);
 		if (Replicate == 0)
+			return s;
+		s = s.UpdateObject(
+			CardId,
+			s.GetCard(CardId)
+				.WithComponentReplaced(
+					s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+					{
+						Replicate = Replicate,
+					}
+				)
+		);
+		// Squad (CR 702.157): the copies are made as it enters, by its own trigger (Scripting.Squad) — none now.
+		if (card.GetComponent<ReplicateComponent>() is { AsItEnters: true })
 			return s;
 		// Replicate (CR 702.56a): "when you cast this spell, copy it for each time you paid its
 		// replicate cost" — a triggered ability above it; CopySpell lets each copy choose new targets.
@@ -976,9 +999,8 @@ public static class StackResolution
 						new EnterFromStackAction(
 							permanent.Id,
 							permanent.ControllerId,
-							cast?.X ?? 0,
-							auraHost,
-							cast is not null
+							cast,
+							auraHost
 						)
 						{
 							Finality =
@@ -990,7 +1012,6 @@ public static class StackResolution
 									|| cast?.Finality == true
 								), // "it enters with a finality counter on it"
 							Gains = cast?.Gains,
-							Kicked = cast?.Kicked == true,
 							Sunburst = permanent.HasComponent<Sunburst>()
 								? cast?.ColorsSpent ?? 0
 								: 0,
@@ -1279,9 +1300,16 @@ public record CastWithChosenDivisionAction(
 	}
 }
 
-/// <summary>A resolving permanent spell enters the battlefield (CR 608.3) — then ActivePlayerGetsPriorityAction.</summary>
-public record EnterFromStackAction(int CardId, int ControllerId, int X, int AttachTo, bool Cast)
-	: GameAction
+/// <summary>
+/// A resolving permanent spell enters the battlefield (CR 608.3) — then ActivePlayerGetsPriorityAction. Spell: what it
+/// was on the stack (null: a copy-less resolution that wasn't cast), carried onto it as Card.CastAs.
+/// </summary>
+public record EnterFromStackAction(
+	int CardId,
+	int ControllerId,
+	OnStackComponent? Spell,
+	int AttachTo
+) : GameAction
 {
 	/// <summary>Storied Veteran: "If you do, it enters with a finality counter on it."</summary>
 	public bool Finality { get; init; }
@@ -1292,21 +1320,17 @@ public record EnterFromStackAction(int CardId, int ControllerId, int X, int Atta
 	/// <summary>Serra Paragon: the triggered ability it gains as it enters (OnStackComponent.Gains).</summary>
 	public TriggeredAbilityComponent? Gains { get; init; }
 
-	/// <summary>Thieving Skydiver: "if it was kicked" — carried onto the permanent (Card.CastKicked).</summary>
-	public bool Kicked { get; init; }
-
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.EnterBattlefield(
 				CardId,
 				ControllerId,
-				X,
+				Spell,
 				finality: Finality,
 				attachTo: AttachTo,
-				cast: Cast,
+				cast: Spell is not null,
 				sunburst: Sunburst,
-				gains: Gains,
-				kicked: Kicked
+				gains: Gains
 			)
 		);
 }

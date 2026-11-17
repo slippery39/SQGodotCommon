@@ -21,7 +21,15 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 /// may choose new targets for the copies.)" — CastSpellAction.Replicate: Consign to Memory's {1}, Lose
 /// Focus' {U} — the cost added once per payment, beside the spell's own.
 /// </summary>
-public record ReplicateComponent(ManaCost Cost) : GameComponent;
+public record ReplicateComponent(ManaCost Cost) : GameComponent
+{
+	/// <summary>
+	/// Squad (Sicarian Infiltrator): "As an additional cost to cast this spell, you may pay {2} any number of times.
+	/// When this creature enters, create that many tokens that are copies of it." — paid as replicate is, but nothing
+	/// is copied as it is cast: Scripting.Squad's trigger reads the payments (Count.TimesReplicated).
+	/// </summary>
+	public bool AsItEnters { get; init; }
+}
 
 /// <summary>
 /// A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore counter.

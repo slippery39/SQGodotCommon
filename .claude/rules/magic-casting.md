@@ -138,6 +138,10 @@ whose subsystem it lives in.
   trigger goes on the stack. Countering one removes it (`StackResolution.Counter`).
 - **Replicate** is `CastSpellAction.Replicate` (enumerated like X, in `MoveKey`): the cost grows by that many
   `ReplicateComponent` costs (a mana cost: Lose Focus' {U} adds a blue pip each time), and a triggered ability above the spell copies it that many times.
+  **Squad** (Sicarian Infiltrator, MC-4.4f) is the same cast with `ReplicateComponent { AsItEnters }`: nothing is
+  copied as it is cast; the count rides the spell (`OnStackComponent.Replicate` → `Card.CastAs`), and
+  `Scripting.Squad(cost)`'s "when this enters, if its squad cost was paid" makes `CreateTokenCopy(Ref.Source) { N =
+  Count.TimesReplicated(Ref.Source) }`. A token copy wasn't cast, so its squad makes none.
   **How many modes** is one `ModeChoice` (`Choose`) on spells, triggered and activated abilities alike — `AtLeast` and
   `AtMost` as Counts (an int converts: exactly that many); "choose one or more" is `{ AtMost = N }`, "up to one" (Ertai)
   `{ AtLeast = 0 }`. `Modal.Choices`/`IsLegal` take the range.
@@ -186,8 +190,23 @@ whose subsystem it lives in.
   differently kicked is `TargetSpec.IfKicked`, swapped in by `StackResolution.TextOf(…, kicked)`.
   **"Kicker {X}. X can't be 0"** (Thieving Skydiver, MC-4.4e2c) is `KickerComponent("{X}") { MinX = 1 }`: the KICKED
   cast chooses X (one per X from `MinX`; unkicked, X is 0), paid as any X and carried onto the permanent as
-  `Card.CastX`. A permanent's "if it was kicked" reads `Card.CastKicked`, stamped by `EnterFromStackAction.Kicked`
-  as `CastX` is — `WasKicked` reads the stack's, the permanent's, or the source as it last was.
+  `Card.CastX`. A permanent's "if it was kicked" reads its spell, `WasKicked` the stack's, the permanent's, or the
+  source as it last was. **What a permanent remembers of the spell it was is ONE field, `Card.CastAs`** (MC-4.4f) —
+  the `OnStackComponent` it resolved from, carried by `EnterFromStackAction.Spell` into `EnterBattlefield(spell:)`:
+  its X (`CastX` reads it), kicked, the alternative cost (evoke), squad's payments. `Card.AsCast` is the one read, the
+  stack's or the permanent's; never a new `Cast…` field beside it.
+- **Evoke** (Subtlety; Solitude, Endurance, Fury, Grief) is `Scripting.Evoke(colour)`: Force of Will's alternative
+  cost on the card, `MayCastFromHandFree(Is.Source) { Costs = [ExileFromHandCost(colour)] }` (one cast per card
+  exiled), and "when it enters, if its evoke cost was paid, sacrifice it" — an intervening if on
+  `AlternativeCostWasPaid`, read on the permanent (`Card.CastAs`), so a flickered one stays.
+  **"Its owner puts it on their choice of the top or bottom of their library"** is Clash of Elements' `May { Who =
+  Ref.OwnerOfTarget(), Otherwise }` over two `MoveTo(…, Library) { From = [Stack] }`.
+- **"Choose target [card] in your graveyard. You may cast that card this turn"** (Emry, Lurker of the Loch) is
+  `MakePlayable(Ref, PlayPermission)`: the permission's mark (`PlayableFromExile`) on a card left where it is — a
+  graveyard or exile, REPLACING one left from an earlier turn; `Playable.IsImpulsePlayableBy` reads it in both. A cast
+  from a graveyard by it (`Playable.MarkedInGraveyard`) is `ByPermission`, never flashback (a card with flashback casts
+  by that) — not exiled, a permanent spell enters — and no permanent's zone permission: Underworld Breach's cost
+  isn't added, a once-each-turn rule isn't used up. A resolution's cast keeps its own exile (Bilbo).
 - **"Activate only once each turn"** is `ActivatedAbilityComponent.OncePerTurn`, stamped on the card as it
   is activated (`Card.ActivatedOncePerTurnOn`) — a new object may activate again.
 - **"If this is the second time this ability has resolved this turn"** is `IfNthResolutionThisTurn(n, …)`:

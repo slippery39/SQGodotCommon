@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 27/46 · uncommon 38/86 · rare 109/279 · mythic 35/108 · **218/528**
+**Playable:** common 29/46 · uncommon 39/86 · rare 111/279 · mythic 36/108 · **224/528**
 
 ### "Name Sticker" Goblin
 
@@ -421,7 +421,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Draw three cards.  
 > Islandcycling {1} ({1}, Discard this card: Search your library for an Island card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2fTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Lórien Revealed"] =
+[
+	Spell([], new DrawCards(Ref.You, 3)),
+	Cycling(
+		"{1}",
+		new SearchLibrary(CardType.Land, ZoneType.Hand) { Subtype = "Island", Reveal = true }
+	),
+],
+```
 
 ### Malevolent Rumble
 
@@ -556,7 +569,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Scry 2, then draw a card. (To scry 2, look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2fTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
+
+```csharp
+["Preordain"] =
+[
+	Spell(
+		[],
+		new Surveil(2) { To = ZoneType.Library }, // scry 2
+		new DrawCards(Ref.You, 1)
+	),
+],
+```
 
 ### Pyrite Spellbomb
 
@@ -937,7 +963,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Counter target spell.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2Tests, LsvBatch2fTests
 
 **Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -1552,7 +1578,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Squad {2} (As an additional cost to cast this spell, you may pay {2} any number of times. When this creature enters, create that many tokens that are copies of it.)  
 > Benediction of the Omnissiah — When this creature enters, draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2fTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sicarian Infiltrator"] =
+[
+	.. Squad("{2}"),
+	When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+],
+```
 
 ### Sink into Stupor // Soporific Springs
 
@@ -2839,7 +2875,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Emry enters, mill four cards.  
 > {T}: Choose target artifact card in your graveyard. You may cast that card this turn. (You still pay its costs. Timing rules still apply.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2fTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `MakePlayable` — Emry, Lurker of the Loch: "Choose target artifact card in your graveyard. You may cast…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Emry, Lurker of the Loch"] =
+[
+	// Affinity for artifacts: "This spell costs {1} less to cast for each artifact you control."
+	new CostChange(Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)).Negated)
+	{
+		OnItself = true,
+	},
+	When(TriggerEvent.SelfEnters, [], new Mill(Ref.You, 4)),
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			new MakePlayable(
+				Ref.Target(),
+				new() { ThisTurn = true, CastOnly = true }
+			),
+		]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [TargetSpec.InYourGraveyard(Is.Artifact)],
+	},
+],
+```
 
 ### Enduring Innocence
 
@@ -3124,7 +3187,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may put a creature card from your hand onto the battlefield. If you do, sacrifice it unless you pay its mana cost reduced by {2}.
 
-**Status:** scripted · **tests naming it:** FraCommonTests, FraRareOneOffTests, FraUncommonTests, LsvBatch1Tests, LsvBatch2eTests, StackTests, TrkBatch4cTests
+**Status:** scripted · **tests naming it:** FraCommonTests, FraRareOneOffTests, FraUncommonTests, LsvBatch1Tests, LsvBatch2eTests, LsvBatch2fTests, StackTests, TrkBatch4cTests
 
 **Engine pieces:** `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
 
@@ -3710,7 +3773,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ward {4}  
 > Whenever this creature or another artifact you control enters, put a +1/+1 counter on this creature. It can't be blocked this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2fTests
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Kappa Cannoneer"] =
+[
+	Ward("{4}"),
+	When(
+		new Trigger(EventKind.Entered) { Subject = Is.Source | Is.Artifact & Is.Yours },
+		[],
+		new PutCounters(Ref.Source, 1),
+		new ModifyUntilEndOfTurn(Ref.Source, 0, 0, Combat.CantBeBlocked)
+	),
+],
+```
 
 ### Keen-Eyed Curator
 
@@ -5550,7 +5628,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W} or {U}.)
 
-**Status:** reminder text only — needs no script · **tests naming it:** LsvBatch1Tests
+**Status:** reminder text only — needs no script · **tests naming it:** LsvBatch1Tests, LsvBatch2fTests
 
 ### Ulvenwald Oddity // Ulvenwald Behemoth
 
@@ -5609,7 +5687,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana cost plus exile three other cards from your graveyard. (You may cast cards from your graveyard for their escape cost.)  
 > At the beginning of the end step, sacrifice this enchantment.
 
-**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests, LsvBatch2fTests
 
 **Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileFromGraveyardCost` — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
 
@@ -6099,7 +6177,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Spells you cast from anywhere other than your hand cost {1} less to cast.  
 > Whenever Bilbo attacks, you may cast an artifact, instant, or sorcery spell from your graveyard. If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead.
 
-**Status:** scripted · **tests naming it:** LsvBatch2eTests
+**Status:** scripted · **tests naming it:** LsvBatch2eTests, LsvBatch2fTests
 
 **Engine pieces:** `CastOneOf` — "You may cast one of [these cards]" as it resolves — one chosen among those that can be…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -7365,7 +7443,38 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, choose up to one target creature spell or planeswalker spell. Its owner puts it on their choice of the top or bottom of their library.  
 > Evoke—Exile a blue card from your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2fTests
+
+**Engine pieces:** `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Subtlety"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Spell(Is.Creature | Is.Planeswalker) with { Optional = true }],
+		new May(
+			"Put it on top of your library? (No: the bottom.)",
+			new Matches(Ref.Target(0), Is.AnyCard),
+			[
+				new MoveTo(Ref.Target(), ZoneType.Library)
+				{
+					From = [ZoneType.Stack],
+					OnTop = true,
+				},
+			]
+		)
+		{
+			Who = Ref.OwnerOfTarget(),
+			Otherwise =
+			[
+				new MoveTo(Ref.Target(), ZoneType.Library) { From = [ZoneType.Stack] },
+			],
+		}
+	),
+	.. Evoke(ManaColor.Blue),
+],
+```
 
 ### Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar
 

@@ -62,6 +62,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 25. **AI-4** — strategic plans above single actions
 26. **AI-12** — a card's threat over time
 27. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
+28. **MC-8** — every modal spell one cast per choice of modes, its targets chosen after; Mystic Confluence's triple counter (cube lane)
 
 ## How it works
 
@@ -140,6 +141,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-24](AI-24-speed-levers-left.md) | The speed levers left over from AI-22 — tried, costed or proposed, each to decide later | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
+| [MC-8](MC-8-modal-targets-after-cast.md) | Every modal spell is one cast per choice of modes, its targets chosen after | backlog |
 | [TBL-10](TBL-10-game-reviewer.md) | A game reviewer — step, rewind and play a game on the table, with notes and the AI's next decision | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
@@ -169,5 +171,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-25 · DATA-3 · DEV-8 · LIM-6 · MC-8 · TBL-11
+Next free id per area: AI-25 · DATA-3 · DEV-8 · LIM-6 · MC-9 · TBL-11
 <!-- stories:end -->

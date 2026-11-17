@@ -22,10 +22,14 @@ public static class Playable
 
 	/// <summary>
 	/// Impulse draw: "Exile the top card of your library. Until the end of your next turn, you may play
-	/// that card." Adapted from MtgCore's ExiledPlayableComponent, whose window is "this turn".
+	/// that card." Adapted from MtgCore's ExiledPlayableComponent, whose window is "this turn". The mark in a
+	/// graveyard too (Emry, Lurker of the Loch: "You may cast that card this turn" — MakePlayable).
 	/// </summary>
 	public static bool IsImpulsePlayableBy(GameState s, Card card, int playerId) =>
-		s.IsIn(card.Id, card.OwnerId, ZoneType.Exile)
+		(
+			s.IsIn(card.Id, card.OwnerId, ZoneType.Exile)
+			|| s.IsIn(card.Id, card.OwnerId, ZoneType.Graveyard)
+		)
 		&& card.GetComponent<PlayableFromExile>() is { } playable
 		&& playable.PlayerId == playerId
 		&& s.GetGame().TurnNumber <= playable.UntilTurn
@@ -34,6 +38,16 @@ public static class Playable
 			playable.If is null
 			|| playable.If.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
 		);
+
+	/// <summary>
+	/// Emry, Lurker of the Loch: a card in its owner's graveyard this player may cast by its mark (MakePlayable) — not
+	/// flashback (a card with flashback casts by that), and no permanent's zone permission: the mark asks nothing more,
+	/// so Underworld Breach's escape cost isn't added nor a once-each-turn rule used up (CastSpellAction).
+	/// </summary>
+	public static bool MarkedInGraveyard(GameState s, Card card, int playerId) =>
+		s.IsIn(card.Id, card.OwnerId, ZoneType.Graveyard)
+		&& Costs.Flashback(s, card) is null
+		&& IsImpulsePlayableBy(s, card, playerId);
 
 	/// <param name="x">The X it would be cast with: a permission's mana-value bound counts it (Serra Paragon).</param>
 	public static bool CanCastFromHere(GameState s, Card card, int playerId, int x = 0) =>

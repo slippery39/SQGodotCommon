@@ -89,23 +89,12 @@ public static class ManaPayment
 		ManaCost cost,
 		int x,
 		int excludeId = 0,
-		bool convoke = false,
 		Card? forSpell = null,
 		IReadOnlyCollection<int>? alsoExclude = null,
 		Card? forAbilityOf = null
 	)
 	{
-		var plain = Find(
-			s,
-			playerId,
-			cost,
-			x,
-			excludeId,
-			convoke,
-			forSpell,
-			alsoExclude,
-			forAbilityOf
-		);
+		var plain = Find(s, playerId, cost, x, excludeId, forSpell, alsoExclude, forAbilityOf);
 		if (plain is null)
 			return null;
 		var generic = cost.WithGeneric(x)
@@ -133,7 +122,6 @@ public static class ManaPayment
 							),
 						0,
 						excludeId,
-						convoke,
 						forSpell,
 						alsoExclude,
 						forAbilityOf
@@ -169,8 +157,37 @@ public static class ManaPayment
 			.Select(rest => (ManaColor[])[colors[0], .. rest])
 			.Concat(Subsets(colors[1..], k));
 
+	/// <summary>
+	/// Convoke (CR 702.51) and improvise (CR 702.126): whether this spell's creatures and its artifacts may tap to help
+	/// pay — read once per payment, then asked of each permanent by <see cref="Helps"/>.
+	/// </summary>
+	public static (bool Creatures, bool Artifacts) Helpers(GameState s, Card? spell) =>
+		spell is null ? default : (s.Has(spell, "Convoke"), s.Has(spell, "Improvise"));
+
+	/// <summary>
+	/// What tapping this permanent pays toward a spell its <see cref="Helpers"/> let it help, or null: a creature, for
+	/// convoke, {1} or one mana of its colour (Colorless is how it pays generic only); an artifact, for improvise
+	/// (Kappa Cannoneer: "Each artifact you tap after you're done activating mana abilities pays for {1}"), {1} only.
+	/// Not a {T} cost, so summoning sickness doesn't matter.
+	/// </summary>
+	public static ImmutableArray<ManaColor>? Helps(
+		(bool Creatures, bool Artifacts) helpers,
+		Card permanent
+	)
+	{
+		if (permanent.IsTapped)
+			return null;
+		ImmutableArray<ManaColor>? pays = null;
+		if (helpers.Creatures && permanent.Is(CardType.Creature))
+			pays = [.. permanent.Colors, ManaColor.Colorless];
+		if (helpers.Artifacts && permanent.Is(CardType.Artifact))
+			pays ??= [ManaColor.Colorless]; // a convoking creature already pays {1}
+		return pays;
+	}
+
 	/// <param name="alsoExclude">Permanents the rest of the cost uses — sacrificed, tapped.</param>
-	/// <param name="forSpell">The spell being cast (in its zone, before it moves) — restricted mana asks what it is; null for an ability.</param>
+	/// <param name="forSpell">The spell being cast (in its zone, before it moves) — restricted mana asks what it is, and
+	/// its convoke or improvise lets permanents help (Helps); null for an ability.</param>
 	/// <param name="forAbilityOf">The source of the activated ability being paid for — Isolinear Processor's mana asks.</param>
 	public static IReadOnlyList<Payment>? Find(
 		GameState s,
@@ -178,7 +195,6 @@ public static class ManaPayment
 		ManaCost cost,
 		int x,
 		int excludeId = 0,
-		bool convoke = false,
 		Card? forSpell = null,
 		IReadOnlyCollection<int>? alsoExclude = null,
 		Card? forAbilityOf = null,
@@ -192,12 +208,12 @@ public static class ManaPayment
 				cost,
 				x,
 				excludeId,
-				convoke,
 				forSpell,
 				alsoExclude,
 				forAbilityOf
 			);
 		var player = s.GetPlayer(playerId);
+		var helpers = Helpers(s, forSpell);
 		var tappable = new List<Tappable>();
 		// Sen Triplets: floating mana and convoke only; Clarion Conqueror: no artifact's or creature's mana
 		var locks = Turns.Combat.Locks(s, playerId);
@@ -216,13 +232,9 @@ public static class ManaPayment
 					: null;
 			if (yield is { Units.IsEmpty: true })
 				yield = null; // its mana can't pay (YieldOf left out what can't) — but it may still convoke
-			// Convoke (CR 702.51): an untapped creature you control may pay {1} or one mana of its
-			// colour — Colorless is how it pays generic only. Summoning sickness doesn't matter:
-			// tapping for convoke isn't a {T} cost. A one-mana creature may pay either way.
-			ImmutableArray<ManaColor>? convokes =
-				convoke && c.Is(CardType.Creature) && !c.IsTapped
-					? [.. c.Colors, ManaColor.Colorless]
-					: null;
+			// Convoke and improvise (Helps): an untapped creature or artifact you control may pay {1} (and a
+			// creature one mana of its colour). A one-mana creature may pay either way.
+			var convokes = Helps(helpers, c);
 			if (yield is { Sacrificed: true } && convokes is not null)
 				yield = null; // ponytail: convoking only taps it, so a Sculpture Treasure convokes
 			// rather than being sacrificed for a colour; offer both if that ever matters

@@ -156,6 +156,40 @@ public static class Scripting
 	public static CantBeBlockedBy Fear =>
 		new(Is.Creature & !Is.Artifact & !Is.Color(ManaColor.Black));
 
+	/// <summary>
+	/// Evoke (CR 702.74) — Subtlety: "Evoke—Exile a blue card from your hand." (Solitude, Endurance, Fury, Grief: their
+	/// colours.) An alternative cost on the card (MayCastFromHandFree(Is.Source), Force of Will's), and "when this
+	/// creature enters, if its evoke cost was paid, its controller sacrifices it" — read on the permanent
+	/// (AlternativeCostWasPaid, Card.CastAs), so a new object of it stays.
+	/// </summary>
+	public static GameComponent[] Evoke(ManaColor color) =>
+		[
+			new MayCastFromHandFree(Is.Source) { Costs = [new ExileFromHandCost(Is.Color(color))] },
+			When(TriggerEvent.SelfEnters, [], new Sacrifice(Ref.Source)) with
+			{
+				If = new AlternativeCostWasPaid(),
+			},
+		];
+
+	/// <summary>
+	/// Squad (CR 702.157) — Sicarian Infiltrator: "Squad {2} (As an additional cost to cast this spell, you may pay {2}
+	/// any number of times. When this creature enters, create that many tokens that are copies of it.)" — paid as
+	/// replicate is (CastSpellAction.Replicate, one cast per number of payments), copied as it enters: "if its squad cost
+	/// was paid" (CR 702.157a). A token copy wasn't cast, so its own squad makes none.
+	/// </summary>
+	public static GameComponent[] Squad(string cost) =>
+		[
+			new ReplicateComponent(ManaCost.Parse(cost)) { AsItEnters = true },
+			When(
+				TriggerEvent.SelfEnters,
+				[],
+				new CreateTokenCopy(Ref.Source) { N = Count.TimesReplicated(Ref.Source) }
+			) with
+			{
+				If = new AtLeast(Count.TimesReplicated(Ref.Source), 1),
+			},
+		];
+
 	/// <summary>Basic landcycling's search: "a basic land card, reveal it, put it into your hand".</summary>
 	public static SearchLibrary BasicLand =>
 		new(CardType.Land, ZoneType.Hand) { Supertype = Supertype.Basic, Reveal = true };

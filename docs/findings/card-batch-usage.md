@@ -76,3 +76,4 @@ after the split is DEV-4.3.
 | 2026-11-16 | MC-4.4e2d: casting off the hand, 4 cards | 8bdc7f1e | 144 | 237k | 4.9M |
 | 2026-11-17 | MC-4.4e2e: blue's options, for as long as this remains, 2 cards | c090bbd1 | 89 | 188k | 2.8M |
 | 2026-11-17 | MC-4.4e2f: LSVPower, blue's options - choices after the cast, 4 cards | bf9c2a7a | 107 | 242k | 4.2M |
+| 2026-11-17 | MC-4.4f: blue's tier 2 - squad, evoke, improvise, scry, a graveyard cast, 6 cards | 28f01c34 | 147 | 282k | 6.3M |

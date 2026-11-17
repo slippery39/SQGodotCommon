@@ -141,16 +141,19 @@ public record WasKicked : Condition
 		|| context.GetValueOrDefault(ContextKeys.SourceSnapshot) is Card snapshot
 			&& Kicked(snapshot);
 
-	static bool Kicked(Card card) =>
-		card.GetComponent<Actions.OnStackComponent>()?.Kicked == true || card.CastKicked;
+	static bool Kicked(Card card) => card.AsCast?.Kicked == true;
 }
 
-/// <summary>Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost).</summary>
+/// <summary>
+/// Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost).
+/// Evoke (Subtlety): "When this creature enters, if its evoke cost was paid, its controller sacrifices it" — the
+/// permanent it became (Card.CastAs); a new object of it wasn't evoked.
+/// </summary>
 public record AlternativeCostWasPaid : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
 		s.GetObject((int)context[ContextKeys.Source]) is Card spell
-		&& spell.GetComponent<Actions.OnStackComponent>()?.AlternativeCost == true;
+		&& spell.AsCast?.AlternativeCost == true;
 }
 
 /// <summary>First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast.</summary>

@@ -273,7 +273,10 @@ public class FraUncommonCreatureTests : FraBoardTest
 		var hush = Hand(
 			new CardDefinition(
 				TestGames.Inline("Hush", "{1}", "Enchantment — Aura").Data,
-				[new AuraComponent(Targeting.TargetSpec.Creature), new EnchantedLosesAllAbilities()]
+				[
+					new AuraComponent(global::MagicCore.Targeting.TargetSpec.Creature),
+					new EnchantedLosesAllAbilities(),
+				]
 			),
 			me
 		);

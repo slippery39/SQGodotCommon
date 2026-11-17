@@ -86,6 +86,9 @@ whose subsystem it lives in.
   untapped" (Station's too), the Tap effect, tapping for mana and mana payment. It raises
   `BecameTappedEvent` only on untapped → tapped ("whenever Hemmer becomes tapped"); entering tapped is
   not becoming tapped. A new tap path must call it, or Hemmer silently misses it.
+- **Scry** (Preordain, MC-4.4f) is `Surveil(n) { To = Library }`: the chosen go to the BOTTOM, the rest are
+  ordered on top as a surveil's — and it is no surveil: no `SurveilledEvent`, no tally ("whenever you scry" would need
+  an event of its own). The bottom ones go in the order chosen (a ceiling, DesignNotes).
 - **Look and take** ("look at the top N, you may reveal a [filter] card and put it into your hand, the rest
   on the bottom in a random order") is ONE piece, `LookAndTake { Take, To, Rest, Must, Reveal }` (MC-4.4e2a) —
   never a flag per destination. **How many** are taken is `Take` (a `Count`, 1 unless said: Stock Up's two; with

@@ -396,6 +396,7 @@ public enum CountOf
 	LifeLostThisTurnOf, // Gul Dukat: "the life that player lost this turn" — the players [Ref] names
 	DilemmasFacedThisTurnBy, // Sisko: "each dilemma you've faced this turn" — the players [Ref] names
 	ModesChosen, // Riku of Many Paths: "the number of times you chose a mode for that spell" — the spell on the stack [Ref]
+	TimesReplicated, // Sicarian Infiltrator's squad: "create that many tokens" — the times [Ref]'s replicate cost was paid, on the stack or the permanent it became
 	DevotionTo, // Mogis: "your devotion to black and red" — Count.Colors
 	BeyondTheFewest, // Balance: "equal to the number … controlled by the player who controls the fewest, then sacrifices the rest" — the rest, for the player Ref.It
 }
@@ -472,6 +473,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	/// <summary>Riku of Many Paths: "the number of times you chose a mode for that spell" — Count.ModesChosen(Ref.EventCard).</summary>
 	public static Count ModesChosen(Ref r) => new(0, r, CountOf.ModesChosen);
+
+	/// <summary>Squad (Sicarian Infiltrator): "create that many tokens" — the times [r]'s squad (replicate) cost was paid, read from its spell (Card.AsCast).</summary>
+	public static Count TimesReplicated(Ref r) => new(0, r, CountOf.TimesReplicated);
 
 	/// <summary>Jadzia Dax, Living Legacy: "an amount of {G} equal to the number of counters on her" — every kind.</summary>
 	public static Count AllCountersOn(Ref r) => new(0, r, CountOf.AllCountersOn);
@@ -697,6 +701,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
 			CountOf.ModesChosen => Cards()
 				.Sum(c => c.GetComponent<Actions.OnStackComponent>()?.Modes.Length ?? 0),
+			CountOf.TimesReplicated => Cards().Sum(c => c.AsCast?.Replicate ?? 0),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.DevotionTo => Cards()
 				.SelectMany(c => c.ManaCost.Symbols)

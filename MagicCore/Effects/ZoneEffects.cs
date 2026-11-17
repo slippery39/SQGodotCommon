@@ -346,10 +346,19 @@ public record Surveil(int N) : Effect
 	/// <summary>Riders on the cards put into the graveyard "this way" — they read the surveil's choice.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
 
+	/// <summary>
+	/// Where the chosen go. Library is a scry (CR 701.22, Preordain: "look at the top two cards of your library, then put
+	/// any number of them on the bottom and the rest on top in any order") — the bottom, and no surveil: no
+	/// SurveilledEvent, no tally. ponytail: the bottom ones go in the order chosen, never asked (CR 701.22a: any order);
+	/// ask it as the top's order is if a card ever reads the bottom.
+	/// </summary>
+	public ZoneType To { get; init; } = ZoneType.Graveyard;
+
 	public override ActionResult Execute(GameState s)
 	{
-		s = s.Tally(Controller, t => t with { Surveils = t.Surveils + 1 }) // "if you've surveilled"
-			.Raise(new SurveilledEvent(Controller));
+		if (To == ZoneType.Graveyard)
+			s = s.Tally(Controller, t => t with { Surveils = t.Surveils + 1 }) // "if you've surveilled"
+				.Raise(new SurveilledEvent(Controller));
 		var n = Math.Min(N, s.CardsIn(Controller, ZoneType.Library).Count());
 		if (n == 0)
 			return new(s);
@@ -365,7 +374,9 @@ public record Surveil(int N) : Effect
 				MinChoices = 0,
 				MaxChoices = n,
 			},
-			new MoveChosenToGraveyardAction { PlayerId = Controller },
+			To == ZoneType.Graveyard
+				? new MoveChosenToGraveyardAction { PlayerId = Controller }
+				: new MoveChosenToAction(Controller, To),
 			new OrderKeptOnTopAction { PlayerId = Controller, Looked = n },
 			.. Then,
 		];
@@ -547,8 +558,14 @@ public record CreateTokenCopy(Ref What) : Effect
 	/// <summary>Replicator: "Create a tapped token that's a copy of target token you control."</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>Squad (Sicarian Infiltrator): "create that many tokens that are copies of it" — how many of each; unset is one.</summary>
+	public Count? N { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var n = N?.Value(s, InputContext) ?? 1;
+		if (n <= 0)
+			return new(s);
 		var originals = OfAnExiledCard
 			? All(What, s)
 				.Where(id => s.GetObject(id) is Card c && s.IsIn(id, c.OwnerId, ZoneType.Exile))
@@ -561,7 +578,7 @@ public record CreateTokenCopy(Ref What) : Effect
 			&& GetInput<Card?>(ContextKeys.SourceSnapshot) is { } lastKnown
 		)
 			originals.Add(lastKnown);
-		var each = Replacements.Apply(s, ReplacedEvent.Tokens, s.GetPlayer(Controller), 1); // Elspeth: twice that many
+		var each = Replacements.Apply(s, ReplacedEvent.Tokens, s.GetPlayer(Controller), n); // Elspeth: twice that many
 		foreach (var original in originals.SelectMany(o => Enumerable.Repeat(o, each)))
 		{
 			var copy = new Card
@@ -2072,6 +2089,32 @@ public record ExileTopPlayable : Effect
 				],
 			}
 		);
+	}
+}
+
+/// <summary>
+/// Emry, Lurker of the Loch: "Choose target artifact card in your graveyard. You may cast that card this turn." — the
+/// permission (PlayPermission's mark, PlayableFromExile) on cards that stay where they are: a graveyard or exile. Every
+/// other PlayPermission rides an effect that exiles first (ExileTopPlayable, SearchLibrary); the nearest,
+/// MakeChosenPlayableAction, is ExileTopPlayable's own step, a mark built there (Blind, Tax) on the cards it just exiled.
+/// Cast from a graveyard by it is not flashback (Playable.MarkedInGraveyard) — it isn't exiled, and a permanent spell
+/// enters. A card marked again REPLACES its mark: one left from an earlier turn would hide the new one.
+/// </summary>
+public record MakePlayable(Ref What, PlayPermission Play) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var who = Play.By is null ? Controller : All(Play.By, s).FirstOrDefault(Controller);
+		foreach (var id in All(What, s).ToList())
+			if (
+				s.GetObject(id) is Card card
+				&& (
+					s.IsIn(id, card.OwnerId, ZoneType.Graveyard)
+					|| s.IsIn(id, card.OwnerId, ZoneType.Exile)
+				)
+			)
+				s = Update(s, (Card)card.WithComponentReplaced(Play.For(s, who)));
+		return new(s);
 	}
 }
 

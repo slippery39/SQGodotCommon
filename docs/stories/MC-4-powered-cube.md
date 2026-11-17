@@ -830,9 +830,66 @@ as his three priorities.
   trigger's; the search branches each word); `Words(modes)` composed per candidate cast (ten per Confluence); "untap
   up to 0" asking an empty choice (no card counts it); the renamed `CountOf` (records replay by move, never by
   component).
+  **Shayne, 2026-11-17, on the two:** "untap up to N" as many as it can is fine ("we usually want as many lands
+  untapped as possible"); the repeated mode's one-target limit, and every modal spell's enumeration of its targets,
+  go to the backlog as one fix — MC-8.
   **DEV-5:** `batch_checks.py`'s probe150 ran `--no-build` straight after the revert step and found the LAST revert
   still in the DLL (Mystic Confluence casting with no targets chosen) — a crash that wasn't there; built, 150 games
   passed. The probe steps need a build after `revert`.
+- 2026-11-17, Claude — **4.4f's plan (blue's tier 2, 6 cards), read against the code.** One part: the six share no
+  piece, and each new option is small. What grew on reading:
+  **Squad** (Sicarian Infiltrator) is `ReplicateComponent { AsItEnters }`: the cast is replicate's (one per number of
+  payments, bounded by mana — `CastSpellAction.Replicate`), but no copy goes on the stack; the count rides the spell
+  (`OnStackComponent.Replicate`) onto the permanent, and `Scripting.Squad(cost)`'s "when this enters" trigger makes
+  `CreateTokenCopy(Ref.Source) { N = Count.TimesReplicated(Ref.Source) }` — a token copy wasn't cast, so its own
+  squad makes none. `CreateTokenCopy` had no count: `N` is its option.
+  **What a permanent remembers of its spell grew a third and fourth fact** (squad's count, evoke's alternative cost,
+  beside `CastX` and `CastKicked`): rather than two more sibling fields, `Card.CastKicked` becomes `Card.CastAs` — the
+  `OnStackComponent` it resolved from — and `CastX` reads it. `WasKicked`, `AlternativeCostWasPaid` and the new count
+  read the stack's or the permanent's. Thieving Skydiver moves; its tests must pass.
+  **Evoke** (Subtlety; Solitude, Endurance, Fury, Grief later) is `Scripting.Evoke(filter)`: Force of Will's
+  `MayCastFromHandFree(Is.Source) { Costs = [ExileFromHandCost(colour)] }` — already stamped `AlternativeCost` — and
+  "when it enters, if its evoke cost was paid, sacrifice it", an intervening if on `AlternativeCostWasPaid`, now read
+  on the permanent. "Its owner puts it on their choice of the top or bottom" is `May { Who = Ref.OwnerOfTarget(0),
+  Otherwise }` over two `MoveTo(…, Library) { From = [Stack] }` — tier 1 pieces.
+  **Improvise** (Kappa Cannoneer) is convoke's unit in `ManaPayment.Find`: one answer, `ManaPayment.Helps(s, spell,
+  permanent)` — a creature for a Convoke spell (its colour or {1}), an artifact for an Improvise one ({1} only) —
+  read by the payment and the X/replicate bound (`AvailableMana`) alike; never a second flag beside `convoke`.
+  **Scry** (Preordain) is `Surveil { To = Library }`: the chosen go to the BOTTOM (`MoveChosenToAction`), the rest
+  are ordered on top as a surveil's; a scry is no surveil, so no `SurveilledEvent` and no tally. LookAndTake doesn't
+  fit: its taken cards are a fixed `Take`, its `To = Library` is the top, and "any number to the bottom" is a choice of
+  how many. ponytail: the bottom cards go in the order chosen, not reordered (CR 701.22a says any order).
+  **Emry's "you may cast that card this turn"** has no piece that leaves a card where it is: every `PlayPermission`
+  rides an effect that exiles first (`ExileTopPlayable.Play`, `SearchLibrary.Play`). New: `MakePlayable(What, Play)`,
+  the same mark (`PlayableFromExile`) on a card in its owner's graveyard; `Playable.IsImpulsePlayableBy` reads the
+  mark in exile OR a graveyard, and a cast from a graveyard by it is `ByPermission` (not flashback: it isn't exiled,
+  and an artifact creature enters). Affinity is `CostChange(Count.NumberOf(artifacts you control).Negated) {
+  OnItself }` (Myrel's domain pattern) — tier 1.
+  **Lórien Revealed** is `Cycling("{1}", new SearchLibrary(Land, Hand) { Subtype = "Island", Reveal })` — "an Island
+  card", not basic: tier 1. **Kappa's** ward is `Ward("{4}")`, its trigger a Subject `Is.Source | Is.Artifact &
+  Is.Yours` — tier 1 beside improvise.
+  **Legal actions, 12 creatures and 12 artifacts, a full hand:** squad is one cast per number of {2}s the mana can
+  pay (linear in mana, as replicate); improvise is the payment's, never a move; Emry's {T} one activation per artifact
+  card in the graveyard; evoke one cast per other blue card in hand (Force of Will's); Subtlety's trigger one target
+  per creature or planeswalker spell. A test counts them (`LegalActions_StayLinear`).
+  Tiers: Emry 2 (`MakePlayable`, the mark from a graveyard), Sicarian Infiltrator 2 (`AsItEnters`, `CastAs`,
+  `TimesReplicated`, `CreateTokenCopy.N`), Subtlety 2 (`Evoke`, `AlternativeCostWasPaid` on the permanent), Kappa
+  Cannoneer 2 (`Helps`), Preordain 2 (`Surveil.To`), Lórien Revealed 1. No new piece but `MakePlayable`.
+- 2026-11-17, Claude — **4.4f's notes.** Built as planned. 12 tests in `LsvBatch2fTests.cs` (16 after the review), all through real casting;
+  on 12 creatures, 12 artifacts and a full hand, 39 legal actions (squad 9 casts, evoke 6). 19 breaks, all caught at
+  the first try. The engine change moved no recorded game (golden-out, and the AI lane's kept records in the full suite
+  with the six cards out). `FraUncommonCreatureTests` names `global::MagicCore.Targeting` now — the moved-up
+  `Targeting` helper shadows the namespace.
+  **`/pre-commit`'s review: ten findings; five taken, each with a test that fails without it (3 more breaks, all
+  caught):** Emry's mark REPLACES one left from an earlier turn (`WithComponent` added a second, and `GetComponent`
+  read the stale one); a cast by the mark is no permanent's zone permission (`Playable.MarkedInGraveyard`: Underworld
+  Breach's escape cost was added to it); a resolution's cast keeps its own exile (Bilbo's, with a marked card);
+  `OnStackComponent.Replicate`'s doc (a copy keeps it, CR 707.10); `Card.AsCast` is the one read (was
+  `WasKicked.SpellOf`); `Helps` allocates nothing for an artifact. **Not taken:** squad's count once the creature has
+  left — false, `Ref.Source` falls back to its snapshot (a test now says so); `MakeChosenPlayableAction` as a sibling
+  (named in `MakePlayable`'s summary: ExileTopPlayable's own step, a mark built there with `Blind` and `Tax`); one more
+  keyword check per payment for improvise; the AI's `Evaluator.ImpulseCards` scanning exile only, so it prices no
+  graveyard mark (AI lane: Emry's activation is worth nothing to the evaluator until it is cast).
 
 ## Tasks
 
@@ -979,16 +1036,28 @@ as his three priorities.
           (golden-out moved only Fiery's 4 card replays, re-kept; golden-in moved 29 random and 250 card-replay games,
           added 16, the AI replay unmoved; probe 150 games, none unfinished, each card cast 261–996 times; full suite
           1,913 passed, again after the review's fixes)
+  - [x] MC-4.4f Blue's tier 2 (Shayne, 2026-11-17) — 6 in `LsvSurvey.md`'s tier 2: Emry (Lurker of the Loch),
+        Sicarian Infiltrator, Subtlety, Kappa Cannoneer, Preordain, Lórien Revealed — done 2026-11-17, one part:
+        `Card.CastAs` (the spell a permanent was; `CastKicked` gone, Thieving Skydiver moved), squad
+        (`ReplicateComponent.AsItEnters`, `Count.TimesReplicated`, `CreateTokenCopy.N`), `Scripting.Evoke`, improvise
+        (`ManaPayment.Helps`, convoke's flag gone), scry (`Surveil.To`), `MakePlayable`; 16 tests, 22 breaks caught
+        (the review's three fixes included); `batch_checks.py` all 8 steps, run again after the review's fixes
+        (golden-out unchanged; golden-in moved 29 random and 370 card-replay games, added 24, the AI replay unmoved;
+        probe 150 games, none unfinished, each card cast or activated 301–526 times; full suite 1,929 passed)
 
 ## Next
 
 Red's tier 1 (4.4c), white's (4.4d) and blue's — all seven parts, the last "choices after the cast" (4.4e2f) — are
-done: **218 of 528 play.** Next, in a NEW session: **Shayne picks** — blue's tier 2 (6) and tier 3 (11), or the next
-colour's tier 1 (`LsvSurvey.md`); either starts with the survey read card by card against the CODE, as blue's was
-(every e2 part's reading grew on reading).
-**Open (for Shayne), from e2f:** Mystic Confluence can't counter ONE spell two or three times (a repeated mode's word is
-`NotThePrevious`); lifting it is one line in `Modal.Compose`, and Fiery Confluence's test, which reads "three
-artifacts" for its triple destroy, changes with it (DesignNotes). Default taken: kept.
+done, and blue's tier 2 (4.4f): **224 of 528 play.** Next, in a NEW session: **blue's tier 3 (11)** — Shayne's
+pick of order; start with the survey's line for each (`LsvSurvey.md`, "Tier 3") read against the CODE.
+From 4.4f: a permanent's memory of its spell is ONE field, `Card.CastAs` (X, kicked, alternative cost, squad's count;
+`Card.AsCast` reads the stack's or the permanent's) — never a new `Cast…` field. Evoke is `Scripting.Evoke(colour)`
+(Solitude, Endurance, Fury, Grief take it as they come); squad `Scripting.Squad(cost)`; improvise and convoke one answer,
+`ManaPayment.Helps`; scry `Surveil { To = Library }`; "you may cast that card this turn" on a card left in a graveyard
+`MakePlayable(Ref, PlayPermission)`. Moved up to `FraBoardTest`: `UntappedLands`, `Library`, `TapMyLands`, `InExile`,
+`InGraveyard`, `Targeting(target, yes)`; 4.4f's tests are in `LsvBatch2fTests.cs`.
+From e2f, backlogged (Shayne, 2026-11-17): Mystic Confluence can't counter ONE spell two or three times, and the other
+modal spells (Sublime Epiphany) still offer a cast per combination of targets — one fix, **MC-8**.
 From e2f: "untap up to N lands" is `Untap(Ref.Permanents(Is.Land)) { UpTo }` (your tapped ones, as many as it can);
 "card types among [cards]" is `Count.CardTypesAmong(Ref)`; a `Repeats` modal spell is one cast per choice of modes,
 its words chosen one at a time as it is cast (`CastSpellAction.EachWord` → `ChooseTargetChoice` each,
@@ -1138,3 +1207,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-17: MC-4.4e2f done: Frantic Search, Time Spiral, Mystic Confluence, Occult Epiphany — 218 of 528 play;
   blue's tier 1 done. `Untap { UpTo }`, `Count.CardTypesAmong`, and a `Repeats` spell's targets chosen after the cast
   (Fiery Confluence moved; 4 of its card replays re-kept). Next: Shayne's pick of blue's tiers 2–3 or the next colour.
+- 2026-11-17: MC-4.4f done: Emry, Sicarian Infiltrator, Subtlety, Kappa Cannoneer, Preordain, Lórien Revealed — 224 of
+  528 play; blue's tier 2 done. `Card.CastAs`, squad, evoke, improvise, scry, `MakePlayable`. Next: blue's tier 3.

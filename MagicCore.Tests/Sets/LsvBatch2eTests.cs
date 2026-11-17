@@ -15,10 +15,6 @@ public class LsvBatch2eTests : FraBoardTest
 {
 	static CardDefinition Bear => TestGames.Creature("Bear", "2/2");
 
-	/// <summary>My untapped lands — what a cast or activation tapped is the difference.</summary>
-	int UntappedLands() =>
-		s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
-
 	/// <summary>"Reveal it": its owner's opponent knows the card, wherever it went.</summary>
 	bool Revealed(int card) => (s.GetCard(card).KnownTo & Knowers.Opponent) == Knowers.Opponent;
 
@@ -26,16 +22,6 @@ public class LsvBatch2eTests : FraBoardTest
 		[.. s.CardsIn(player, ZoneType.Library).Take(7).Select(c => c.Id)];
 
 	IEnumerable<int> HandOf(int player) => s.CardsIn(player, ZoneType.Hand).Select(c => c.Id);
-
-	/// <summary>Answers a target choice with this target and a "you may" as told; any other with its minimum.</summary>
-	static Func<ChoiceAction, IEnumerable<int>> Targeting(int target, bool yes) =>
-		c =>
-			c switch
-			{
-				ChooseTargetChoice => [target],
-				YesNoChoice when yes => [1],
-				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
-			};
 
 	[Test]
 	public void MysticalTutor_AnInstantOrSorceryOnTopOfTheLibrary()
@@ -276,8 +262,6 @@ public class LsvBatch2eTests : FraBoardTest
 
 	// ===== MC-4.4e2a: blue's options, the library's top =====
 
-	/// <summary>A library, top first — unchanged after an effect, it was not shuffled.</summary>
-	List<int> Library(int player) => [.. s.CardsIn(player, ZoneType.Library).Select(c => c.Id)];
 
 	/// <summary>Its owner looked at it and knows where in the library it is.</summary>
 	bool OwnerKnows(int card) => (s.GetCard(card).KnownTo & Knowers.Owner) == Knowers.Owner;
@@ -862,14 +846,6 @@ public class LsvBatch2eTests : FraBoardTest
 
 	// ===== MC-4.4e2c: blue's options, mana and costs =====
 
-	/// <summary>TEST SETUP: every land of mine tapped — what pays is the rest of the board.</summary>
-	void TapMyLands()
-	{
-		foreach (
-			var land in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)).ToList()
-		)
-			TapIt(land.Id);
-	}
 
 	bool KnownToMe(int theirCard) =>
 		(s.GetCard(theirCard).KnownTo & Knowers.Opponent) == Knowers.Opponent;
@@ -1140,21 +1116,6 @@ public class LsvBatch2eTests : FraBoardTest
 
 	// ===== MC-4.4e2d: casting off the hand =====
 
-	bool InExile(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Exile);
-
-	bool InGraveyard(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Graveyard);
-
-	/// <summary>These attack; every choice to the end of combat answered as told (blocks: none).</summary>
-	void AttackWith(Func<ChoiceAction, IEnumerable<int>> answer, params int[] attackers)
-	{
-		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is DeclareAttackerChoice);
-		while (s.GetPendingChoice() is DeclareAttackerChoice d)
-			s = s.Choose([attackers.Contains(d.CreatureId) ? them : 0]);
-		for (var i = 0; i < 200 && s.GetGame().Step != Step.PostCombatMain; i++)
-			s = s.GetPendingChoice() is { } choice
-				? s.Choose(answer(choice))
-				: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
-	}
 
 	[Test]
 	public void Bilbo_Attacks_CastAnArtifactFromYourGraveyard_ItEnters_ForOneLess()
