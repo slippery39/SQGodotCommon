@@ -12,7 +12,7 @@ that shaped it, and what was built, are story TBL-1 (`docs/stories/`); playtesti
 ```
 MagicTable/
 ├── MagicTableManager.cs  THE bridge to MagicCore (plain C#, no Godot types): game, seed, replay,
-│                         stops, one AI move per StepAi (the search capped at ~1 s — FullSearch / --full-ai /
+│                         stops, the AI deciding in the background (BeginAi/FinishAi, TBL-2.22 — StepAi blocks, for tests and autoplay; the search capped at ~1 s — FullSearch / --full-ai /
 │                         Tools uncaps it, switchable mid-game — or GreedyAi),
 │                         undo, log, the game record (every move via Play, from its token, written
 │                         to game_records/ — story TBL-5); Resume: a record's moves made again, an
@@ -59,7 +59,7 @@ MagicTable/
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
 ├── Targeting.cs          click a spell, then its picks — X on a spinner first (Xs), targets, then what a cost takes (plain C#)
 ├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
-├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
+├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no; Hide puts it away to see the board (TBL-2.21)
 ├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; the other hand as backs, a known card face up (TBL-6),
 │                         all of it face up with Tools · Show their hand / --show-hand; a click target
 ├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live

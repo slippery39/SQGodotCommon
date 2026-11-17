@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using ImmutableGameObjects;
 using MagicCore;
 using MagicCore.Actions;
@@ -292,9 +293,59 @@ public sealed class MagicTableManager
 	/// only while that search is the AI's latest decision: the next one clears what it imagined.
 	/// </summary>
 	public string ExplainLastSearch() =>
-		_lastSearcher is var (ai, at) && at == _decisions
-			? ai.Explain()
-			: "(The AI has decided again since, so its lines are gone — pause it from Tools to hold a decision.)";
+		Thinking && !AiDecided
+			? "(The AI is deciding — its last search's lines are being replaced; look again once it moves.)"
+		: _lastSearcher is var (ai, at) && at == _decisions ? ai.Explain()
+		: "(The AI has decided again since, so its lines are gone — pause it from Tools to hold a decision.)";
+
+	// The AI's decision being made in the background (TBL-2.22, Shayne: "the AI thiking blocks the UI for everything"):
+	// the position it was asked in, and the answer to come. One at a time — an AI is never asked twice at once.
+	private (GameState At, IAi Ai, Task<AiDecision> Decision)? _thinking;
+
+	/// <summary>An AI decision is being made in the background (<see cref="BeginAi"/>).</summary>
+	public bool Thinking => _thinking is not null;
+
+	/// <summary>The background decision is made: <see cref="FinishAi"/> plays it.</summary>
+	public bool AiDecided => _thinking is { Decision.IsCompleted: true };
+
+	/// <summary>
+	/// The AI starts deciding in the background, on the position as it stands — the table stays live meanwhile. Nothing
+	/// if one is already deciding, or it is no AI's turn.
+	/// </summary>
+	public void BeginAi()
+	{
+		if (_thinking is not null || !AiToAct)
+			return;
+		var (at, ai) = (State, _ais[State.DecidingPlayerId()]);
+		_thinking = (at, ai, Task.Run(() => ai.Decide(at)));
+	}
+
+	/// <summary>
+	/// The background decision played, once made — its log line if it shows, null for a pass. Dropped if the game
+	/// moved on meanwhile (an undo, the sandbox) or that AI was replaced (full search switched): the AI is rebuilt, as
+	/// Undo rebuilds it — the plan it committed to was for a move never played — and asked again on the next
+	/// <see cref="BeginAi"/>.
+	/// </summary>
+	public string? FinishAi()
+	{
+		if (_thinking is not { Decision.IsCompleted: true } done)
+			return null;
+		_thinking = null;
+		var decision = done.Decision.GetAwaiter().GetResult(); // a search's exception, unwrapped, even if dropped
+		var who = done.At.DecidingPlayerId();
+		if (
+			!ReferenceEquals(done.At, State)
+			|| !ReferenceEquals(_ais.GetValueOrDefault(who), done.Ai)
+		)
+		{
+			if (ReferenceEquals(_ais.GetValueOrDefault(who), done.Ai))
+				_ais[who] = NewAi(who);
+			return null;
+		}
+		var shown = Apply(decision);
+		Save();
+		return shown;
+	}
 
 	public bool HumanToAct => !IsOver && !_ais.ContainsKey(State.DecidingPlayerId());
 	public bool AiToAct => !IsOver && _ais.ContainsKey(State.DecidingPlayerId());
@@ -305,32 +356,36 @@ public sealed class MagicTableManager
 	/// </summary>
 	public string? StepAi()
 	{
+		if (_thinking is not null) // the AI is already deciding in the background
+			return null;
 		string? shown = null;
 		while (AiToAct && shown is null)
-		{
-			var who = State.DecidingPlayerId();
-			var turn = State.GetGame().TurnNumber;
-			var decision = _ais[who].Decide(State);
-			var what = Declared(State, decision) ?? decision.What;
-			_decisions++;
-			if (_ais[who] is BeamSearchAi search && search.Ranked(State) is { Count: > 1 } ranked)
-			{
-				LastSearch = new(turn, State.GetPlayer(who).Name, what, ranked)
-				{
-					AtMove = Record.Moves.Count,
-				};
-				_searches.Add(LastSearch);
-				if (_searches.Count > 64)
-					_searches.RemoveAt(0);
-				_lastSearcher = (search, _decisions);
-			}
-			Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);
-			Settle();
-			if (what != "Pass")
-				shown = Write(turn, who, what);
-		}
+			shown = Apply(_ais[State.DecidingPlayerId()].Decide(State));
 		Save();
 		return shown;
+	}
+
+	/// <summary>The AI's decision played, with its search kept for the inspector; its log line if it shows.</summary>
+	private string? Apply(AiDecision decision)
+	{
+		var who = State.DecidingPlayerId();
+		var turn = State.GetGame().TurnNumber;
+		var what = Declared(State, decision) ?? decision.What;
+		_decisions++;
+		if (_ais[who] is BeamSearchAi search && search.Ranked(State) is { Count: > 1 } ranked)
+		{
+			LastSearch = new(turn, State.GetPlayer(who).Name, what, ranked)
+			{
+				AtMove = Record.Moves.Count,
+			};
+			_searches.Add(LastSearch);
+			if (_searches.Count > 64)
+				_searches.RemoveAt(0);
+			_lastSearcher = (search, _decisions);
+		}
+		Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);
+		Settle();
+		return what != "Pass" ? Write(turn, who, what) : null;
 	}
 
 	/// <summary>Your move. Ignored unless it is yours to make (a click landing while the AI decides).</summary>

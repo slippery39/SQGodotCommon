@@ -7,6 +7,7 @@ using MagicCore;
 using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Limited;
 using MagicCore.Rules;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
@@ -21,7 +22,7 @@ namespace MagicTable;
 /// then click its targets; a choice about objects on the table is answered by clicking them
 /// (<see cref="BoardChoice"/>), anything else in the <see cref="ChoicePanel"/>. Space passes, Esc
 /// leaves; the AI moves on a timer.
-/// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names),
+/// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names or Arena export files, with <c>--set=TRK</c> for TRK lists),
 /// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>, <c>--resume=FILE</c> with <c>--resume-at=N</c>,
 /// <c>--show-hand</c> (their hand face up), <c>--full-ai</c> (the search uncapped), <c>--beat=S</c> (the animation beat in seconds, 0 for none — MagicTableScene.Motion.cs).
 /// </summary>
@@ -200,12 +201,14 @@ public partial class MagicTableScene : Control
 		_handSpace.ItemRectChanged += PlaceHand;
 		_phases.StopsChanged += stops => Do(() => _m.Stops = stops);
 		_phases.RowsChanged += Refresh;
+		_choice.HiddenChanged += Refresh;
 
-		// The AI moves on the timer; Pause stops it, Step makes one move, the speed sets the beat.
+		// The AI moves on the timer; Pause stops it, Step makes one move, the speed sets the beat. It decides in the
+		// background (TBL-2.22) - _Process plays the move once made - so the table stays live while it thinks.
 		_timer.Timeout += () =>
 		{
-			if (!_paused && _m.AiToAct && _onScreen is null) // the AI waits for the table to catch up
-				Do(() => _m.StepAi());
+			if (!_paused && _onScreen is null) // the AI waits for the table to catch up
+				_m.BeginAi();
 		};
 		AddChild(_timer);
 		// --beat=S: an animation beat of S seconds (0: none) — Tools sets it while playing (TBL-4.5)
@@ -301,21 +304,43 @@ public partial class MagicTableScene : Control
 	private static MagicTableManager NewGame(int seed, Stops stops)
 	{
 		var setup = TableSetup.Current;
-		var decks = Arg("decks")?.Split(',');
+		var decks = Arg("decks")?.Split(',').Select(DeckArg).ToList();
+		if (decks is { Count: not 2 })
+			throw new ArgumentException(
+				"--decks takes two decks: yours,theirs (FraDecks names or Arena export files)"
+			);
 		return new MagicTableManager(
-			decks is null ? setup?.Mine ?? FraDecks.All["White-Black"] : FraDecks.All[decks[0]],
-			decks is null ? setup?.Theirs ?? FraDecks.All["Red-Green"] : FraDecks.All[decks[1]],
+			decks?[0].Main ?? setup?.Mine ?? FraDecks.All["White-Black"],
+			decks?[1].Main ?? setup?.Theirs ?? FraDecks.All["Red-Green"],
 			seed,
 			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai") || setup?.AiVsAi == true,
 			UseSearch,
-			decks is null ? setup?.MySideboard : null,
-			decks is null ? setup?.TheirSideboard : null
+			decks is null ? setup?.MySideboard : decks[0].Sideboard,
+			decks is null ? setup?.TheirSideboard : decks[1].Sideboard
 		)
 		{
 			RecordTo = RecordsDir,
 			Stops = stops,
 		};
 	}
+
+	/// <summary>
+	/// One deck of <c>--decks=A,B</c>: a FraDecks name, or an Arena export file (relative to the solution root, e.g.
+	/// <c>sim_results/builds/RB.txt</c>) read as a sealed run reads it — the main deck, the rest of its pool outside the
+	/// game — in the set of <c>--set=</c> (FRA by default).
+	/// </summary>
+	private static SealedBuildMatch.Build DeckArg(string name) =>
+		FraDecks.All.TryGetValue(name, out var deck)
+			? new(name, deck, [])
+			: SealedBuildMatch.FromExport(
+				Path.GetFileNameWithoutExtension(name),
+				File.ReadAllText(
+					Path.IsPathRooted(name)
+						? name
+						: Path.GetFullPath(ProjectSettings.GlobalizePath("res://../" + name))
+				),
+				DeckSelectScene.LimitedSet
+			);
 
 	private static bool UseSearch =>
 		!OS.GetCmdlineUserArgs().Contains("--greedy") && TableSetup.Current?.Search != false;
@@ -346,6 +371,16 @@ public partial class MagicTableScene : Control
 	/// </summary>
 	public override void _Process(double delta)
 	{
+		// The AI's background decision, once made (TBL-2.22): a pass shows nothing, so the next decision starts at once
+		// and the table redraws when a move shows or the turn comes back to you - as the timer's old loop did.
+		if (!_paused && _onScreen is null && _m.AiDecided)
+		{
+			_m.Animate = _beat > 0;
+			if (_m.FinishAi() is null && _m.AiToAct)
+				_m.BeginAi();
+			else
+				Do(() => { });
+		}
 		var dragged =
 			Common.Cards.CardUIManager.DraggingCard is { Id: { } id } && int.TryParse(id, out var n)
 				? n
@@ -859,10 +894,10 @@ public partial class MagicTableScene : Control
 	)
 	{
 		CardViews.Clear(_combatRow);
-		_combatPanel.Visible = _columns.Count > 0;
+		_combatPanel.Visible = _shownColumns.Count > 0;
 		// its two rows' height: a ScrollContainer reports none of its content's, and the band collapsed to a line
 		((Control)_combatRow.GetParent()).CustomMinimumSize = new Vector2(0, 2 * _rowHeight + 4);
-		foreach (var (attacker, blockers) in _columns)
+		foreach (var (attacker, blockers) in _shownColumns)
 		{
 			var column = new VBoxContainer();
 			column.AddThemeConstantOverride("separation", 4);
@@ -883,9 +918,35 @@ public partial class MagicTableScene : Control
 		}
 	}
 
-	/// <summary>Who is in the combat row: every attacker and blocker of the declaration (<see cref="_columns"/>).</summary>
+	/// <summary>Who is in the combat row: every attacker and blocker of the declaration (<see cref="_shownColumns"/>).</summary>
 	private HashSet<int> Combatants() =>
-		[.. _columns.SelectMany(g => g.Blockers.Prepend(g.Attacker))];
+		[.. _shownColumns.SelectMany(g => g.Blockers.Prepend(g.Attacker))];
+
+	/// <summary>
+	/// The columns as shown, made once a redraw (<see cref="RememberColumns"/>): the declaration's (<see cref="_columns"/>),
+	/// with the blocks you have clicked but not yet submitted in them too (TBL-2.20, Shayne: "The creatures should move
+	/// into the combat area showing that they are going to block after I have chosen them") — shown only, never
+	/// remembered, so one you take back goes home.
+	/// </summary>
+	private List<(int Attacker, List<int> Blockers)> _shownColumns = [];
+
+	private List<(int Attacker, List<int> Blockers)> ShownColumns() =>
+		_combat is { Attacking: false } blocking && blocking.Declared.Count > 0
+			?
+			[
+				.. _columns.Select(g =>
+					(
+						g.Attacker,
+						g.Blockers.Union(
+								blocking
+									.Declared.Where(d => d.Value == g.Attacker)
+									.Select(d => d.Key)
+							)
+							.ToList()
+					)
+				),
+			]
+			: _columns;
 
 	/// <summary>A permanent as a view, with what is attached to it under it.</summary>
 	private Control PermanentView(
@@ -950,6 +1011,7 @@ public partial class MagicTableScene : Control
 			else
 				_columns[i] = (id, _columns[i].Blockers.Union(blockers).ToList());
 		}
+		_shownColumns = ShownColumns();
 	}
 
 	private List<(int Attacker, List<int> Blockers)> _columns = [];
@@ -1018,6 +1080,12 @@ public partial class MagicTableScene : Control
 					_m.FullSearch = full;
 				}
 			);
+			return;
+		}
+		if (_choice.Hidden) // put away to see the board (TBL-2.21): the choice still waits
+		{
+			_status.Text = "A choice is waiting";
+			AddButton("Show the choice", _choice.Unhide);
 			return;
 		}
 		if (_targeting is (var candidates, var index))
@@ -1285,8 +1353,10 @@ public partial class MagicTableScene : Control
 				case Tool.Inspector:
 					OpenInspector();
 					break;
-				case Tool.Step:
-					if (_m.AiToAct)
+				case Tool.Step: // paused: a decision made in the background is played first
+					if (_m.AiDecided)
+						Do(() => _m.FinishAi());
+					else if (_m.AiToAct && !_m.Thinking)
 						Do(() => _m.StepAi());
 					break;
 				case >= Tool.Beat:
@@ -1489,13 +1559,13 @@ public partial class MagicTableScene : Control
 		var w = screen.X - LeftWidth - RightWidth - 2 * Gap - 8; // less the half's own margins
 		// Two rows a half, and while there is combat the combat row's two more (TBL-4.6): every row the same
 		// height, less each panel's margins (12) and the gaps between them.
-		var combat = _columns.Count > 0;
+		var combat = _shownColumns.Count > 0;
 		var (rows, panels) = combat ? (6, 3) : (4, 2);
 		var room = screen.Y - _phases.GetCombinedMinimumSize().Y - (CardViews.HandSize.Y + 12) - 12;
 		var rowHeight = (room - 12 - 12 * panels - (combat ? 8 : 0)) / rows; // the band's border and its gap
 		// The combat row's columns side by side, each as wide as its wider side — counted here, or it wraps (TBL-2.19).
 		var combatants = Combatants();
-		var columns = _columns.Sum(g => Math.Max(1, g.Blockers.Count));
+		var columns = _shownColumns.Sum(g => Math.Max(1, g.Blockers.Count));
 		var fullest = new[] { _m.HumanId, _m.OpponentId }
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield).GroupBy(c => c.Is(CardType.Land)))
 			.Select(g =>

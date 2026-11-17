@@ -49,6 +49,55 @@ public class MagicTableManagerTests
 		}
 	}
 
+	/// <summary>Plays the AI as the table does since TBL-2.22: decided in the background, played once made.</summary>
+	static void ThinkAndPlay(MagicTableManager m)
+	{
+		m.BeginAi();
+		while (m.Thinking && !m.AiDecided)
+			System.Threading.Thread.Sleep(1);
+		m.FinishAi();
+	}
+
+	// TBL-2.22 (Shayne: "the AI thiking blocks the UI for everything"): the same game, move for move, as the old
+	// blocking loop plays it.
+	[Test]
+	public void AiVsAi_DecidedInTheBackground_PlaysTheSameGame()
+	{
+		var (blocking, background) = (New(aiVsAi: true), New(aiVsAi: true));
+		for (var i = 0; i < 5000 && !blocking.IsOver; i++)
+			blocking.StepAi();
+		for (var i = 0; i < 20000 && !background.IsOver; i++)
+			ThinkAndPlay(background);
+
+		Assert.That(background.IsOver);
+		Assert.That(
+			background.Record.Moves.Select(x => x.Token),
+			Is.EqualTo(blocking.Record.Moves.Select(x => x.Token))
+		);
+	}
+
+	// A decision made for a position the game has left (an undo, the sandbox) is dropped, not played.
+	[Test]
+	public void ABackgroundDecision_ForAPositionLeft_IsDropped()
+	{
+		var m = New(aiVsAi: true, search: true); // the table's search: a plan committed, and dropped with the decision
+		for (var i = 0; i < 2000 && !m.IsOver && !(m.AiToAct && m.CanSandbox); i++)
+			ThinkAndPlay(m);
+		Assume.That(
+			m.AiToAct && m.CanSandbox,
+			"a position the AI decides in, with the sandbox open"
+		);
+		m.BeginAi();
+		m.Sandbox(m.HumanId, CardRegistry.Get("Last Gasp"), ZoneType.Hand);
+		var moved = m.State;
+		while (!m.AiDecided)
+			System.Threading.Thread.Sleep(1);
+
+		Assert.That(m.FinishAi(), Is.Null);
+		Assert.That(m.State, Is.SameAs(moved));
+		Assert.That(m.Thinking, Is.False);
+	}
+
 	[Test]
 	public void AiVsAi_PlaysAGameToTheEnd()
 	{

@@ -22,6 +22,23 @@ public partial class ChoicePanel : PanelContainer
 		Visible = false;
 	}
 
+	/// <summary>
+	/// Put away to see the board (TBL-2.21, Shayne: "the selection window for first contact does not allow me to move it
+	/// or hide it so I can see the board") — the choice still waits; the table offers "Show the choice" meanwhile. A new
+	/// question shows again.
+	/// </summary>
+	public bool Hidden { get; private set; }
+
+	/// <summary>Raised when <see cref="Hidden"/> is set by the panel's own Hide button.</summary>
+	public event Action? HiddenChanged;
+
+	/// <summary>Back from <see cref="Hidden"/>.</summary>
+	public void Unhide()
+	{
+		Hidden = false;
+		Visible = true;
+	}
+
 	public void Show(
 		GameState s,
 		ChoiceAction choice,
@@ -31,6 +48,7 @@ public partial class ChoicePanel : PanelContainer
 	{
 		CardViews.Clear(this);
 		Visible = true;
+		Hidden = false;
 
 		var column = new VBoxContainer();
 		column.AddThemeConstantOverride("separation", 6);
@@ -41,10 +59,23 @@ public partial class ChoicePanel : PanelContainer
 			Text = $"{Describe.Question(s, choice)}  ({range})",
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
 			CustomMinimumSize = new Vector2(1, 0),
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 		};
 		question.AddThemeFontSizeOverride("font_size", 27);
 		question.AddThemeColorOverride("font_color", new Color("f4e29b"));
-		column.AddChild(question);
+		var hide = new Button { Text = "Hide", FocusMode = FocusModeEnum.None };
+		MtgUiStyles.StyleChoice(hide, selected: false);
+		hide.AddThemeFontSizeOverride("font_size", 22);
+		hide.Pressed += () =>
+		{
+			Hidden = true;
+			Visible = false;
+			HiddenChanged?.Invoke();
+		};
+		var header = new HBoxContainer();
+		header.AddChild(question);
+		header.AddChild(hide);
+		column.AddChild(header);
 		if (choice is OrderLibraryTopChoice)
 		{
 			ShowOrder(s, choice, preview, answer, column);
@@ -268,6 +299,7 @@ public partial class ChoicePanel : PanelContainer
 	public void Close()
 	{
 		Visible = false;
+		Hidden = false;
 		CardViews.Clear(this);
 	}
 }

@@ -146,6 +146,32 @@ is a bug report, never about the look.
       `canvas_items` keeps the 1920x1080 design and letterboxes (his maximised window is ~1920x1001). Captured
       both positions after; real input through the new scroll rows: a hand click, a hand drag, a board land tapped
 
+- [x] TBL-2.20 Blocks shown as they are chosen (Shayne, 2026-11-17, his notes at #225): "when I block with my creatures,
+      there is no indication of which creatures I have currently chose to block with while I am still choosing them. The
+      creatures should move into the combat area showing that they are going to block after I have chosen them, even if I
+      have not moved past the declare blockers step yet." **Done 2026-11-17:** the band's columns are the declaration's
+      plus the blocks clicked and not yet submitted (`MagicTableScene.Columns`) — shown, never remembered, so one taken
+      back goes home; counted in the band's sizing. Captured at his #225: the Illusion clicked onto the Targ Wrangler
+      moved into the band before "Block (1)".
+- [x] TBL-2.21 The choice panel can be moved or hidden (his notes at #493, First Contact's "you may put a permanent card
+      from among them into your hand"): "the selection window for first contact does not allow me to move it or hide it so
+      I can see the board." **Done 2026-11-17 — hidden, not moved:** a Hide button on the panel's question line puts it
+      away (`ChoicePanel.Hidden`); the choice still waits, and the action column shows "A choice is waiting" with **Show
+      the choice**; a new question shows again. Moving it was not done: the panel sits in a centring overlay, and hidden
+      shows the whole board. Captured at his #493 (First Contact): Hide → the board whole; Show the choice → back.
+- [x] TBL-2.22 The table stays live while the AI thinks (his notes at #551): "the AI thiking blocks the UI for everything
+      (i.e. I can't write notes if the AI is still processing)" — the search runs on the UI thread (DesignNotes). With it,
+      Tricorder's slow turns (AI-28.4) were a frozen window. **Done 2026-11-17:** the AI decides on a worker
+      (`MagicTableManager.BeginAi`, a `Task` on the position as it stands) and the move is played on the main thread
+      once made (`FinishAi`, polled in `_Process`); a decision for a position the game has left (an undo, the sandbox)
+      is dropped; one at a time, so an AI is never asked twice at once; the inspector's lines wait while it decides.
+      A pass shows nothing, so the next decision starts at once and the table redraws when a move shows — the old
+      loop's pacing. Tests: the background game equals the blocking one move for move, and a stale decision is
+      dropped (197 pass); a headless AI-vs-AI table game ran 254 s, 355 moves, no exception. `/pre-commit`'s fixes: a
+      decision made while paused is played by Tools > Step, and F6 shows it; a dropped decision rebuilds that AI (its
+      committed plan was for a move never played), as does one whose AI was replaced (full search switched); a search's
+      exception arrives unwrapped; the drop test runs the table's search.
+
 ## Next
 
 **Reports so far live in their own stories:** AI plays in AI-8, the table's clarity in TBL-4, game
@@ -154,8 +180,8 @@ involved; keep the position as an AI test case (`--record=FILE --keep=NAME --at=
 game on the table (Resume a game, TBL-5.7) to check a fix.
 
 Run the table with `Run-Godot.ps1` (`Commands.md`: flags `--seed --decks --autoplay --ai-vs-ai
---greedy --put`). **The AI is the search since AI-2.8** (~1 s a move; the window stalls while it
-thinks — DesignNotes); `--greedy` plays GreedyAi instead, and makes `--autoplay` fast. For each report: reproduce it from its record, read `.claude/rules/magic-table.md`
+--greedy --put`). **The AI is the search since AI-2.8** (~1 s a move; it decides in the background
+since TBL-2.22, the table live meanwhile); `--greedy` plays GreedyAi instead, and makes `--autoplay` fast. For each report: reproduce it from its record, read `.claude/rules/magic-table.md`
 for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause before the fix.
 
 ## Log
