@@ -685,6 +685,22 @@ public class AiPositionTests
 			Is.True
 		);
 
+	// Shayne, 2026-11-17 (AI-28.1, his table notes, #225): the AI copied L'Rell, Fierce Visionary off Q in its declare
+	// blockers step - "It would have been better to cast the L'Rell before combat, so that they would get the 2/1 token".
+	// Legal (CR 608.2g), badly timed: L'Rell's "at the beginning of combat on your turn, create a 2/1 red Klingon Warrior
+	// creature token with haste. Sacrifice it at the beginning of the next end step" makes nothing this turn. The cause
+	// was the token's price: kept as a 2/1, losing it in combat cost a 2/1, so the line that made one scored 11.8 BELOW
+	// passing at #211, the main phase. A creature gone at the next end step now counts nothing past this turn (AI-28.2:
+	// "This is free because the 2/1 gets sacrificed at end of turn anyways"). Kept table game, move #211 (turn 10).
+	[Test]
+	public void LRellsCopy_IsCastBeforeCombat_ForItsKlingon()
+	{
+		var s = KeptRecords.Before("LRellCopyBeforeCombat", 211);
+		var chose = new BeamSearchAi(s.DecidingPlayerId()).Decide(s).What;
+
+		Assert.That(chose, Does.StartWith("Activate L'Rell, Fierce Visionary"));
+	}
+
 	// The search as it plays — held cards priced by their measured value (AI-1, the default since
 	// AI-1.9) — keeps Prophesied End: worth more in hand than the Rat is dead.
 	[Test]

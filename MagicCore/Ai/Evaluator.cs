@@ -1132,6 +1132,12 @@ public static partial class Evaluator
 		// end-of-turn pumps and grants no.
 		if (s.Toughness(c) <= 0 || (s.Toughness(c) - c.Damage <= 0 && !s.IsIndestructible(c)))
 			return 0; // the state-based check's own question: lethal damage doesn't kill indestructible
+		// gone at the next end step (L'Rell's Klingon): nothing lasts past this turn, so nothing to keep - it attacks
+		// for free and chumps first (AI-28.2, Shayne: "This is free because the 2/1 gets sacrificed at end of turn anyways").
+		// ponytail: one made DURING an end step waits for the next turn's and lives through a whole turn - priced 0 all the
+		// same; read when it was set up if a token made in an end step is ever misjudged
+		if (ReturnFromExileUnderYourControl.LeavesAtTheEndStep(c))
+			return 0;
 		var pumps = c.GetComponents<UntilEndOfTurn>().Where(u => u.UntilTurnOf == 0).ToList(); // "until your next turn" lasts
 		var power = s.Power(c) - pumps.Sum(u => u.Power);
 		var toughness = Math.Max(1, s.Toughness(c) - pumps.Sum(u => u.Toughness) - c.Damage);

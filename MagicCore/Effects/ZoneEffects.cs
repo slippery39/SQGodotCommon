@@ -577,6 +577,14 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 	internal static readonly DelayedTrigger SacrificeItAtTheEndStep =
 		new(new TriggeredAbilityComponent(TriggerEvent.EachEndStep, [new Sacrifice(Ref.Source)]));
 
+	/// <summary>It is sacrificed or exiled at the beginning of the next end step (L'Rell's Klingon, a token copy): it lasts this turn only.</summary>
+	internal static bool LeavesAtTheEndStep(Card c) =>
+		c.GetComponents<DelayedTrigger>()
+			.Any(d =>
+				ReferenceEquals(d, SacrificeItAtTheEndStep)
+				|| ReferenceEquals(d, ExileItAtTheEndStep)
+			);
+
 	/// <summary>A delayed trigger on a permanent that has just entered — after it, as entering strips one given before.</summary>
 	internal static GameState Delay(GameState s, int id, DelayedTrigger trigger) =>
 		Update(s, (Card)s.GetCard(id).WithComponent(trigger));

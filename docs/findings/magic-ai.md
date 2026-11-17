@@ -2230,3 +2230,26 @@ The held-off share on targets only (option A, `Evaluator.Side` no longer reads i
 reordered), **20 134.6 engine steps a position against 19 805.8 (+1.7%)**, oracle agreement 76.0% (77.1%). Accepted.
 After the review's fixes (the Guidance exclusion reverted — option A fixes that position alone; the gains' key without
 status components): 0 of 288 changed against the accepted answers, 20 132.2 steps.
+
+## AI-28.4: Tricorder and the AI's think time (2026-11-17)
+
+Shayne's table game (`game_records/2026-11-17_105828_seed1084418130.json`, Soup-Red-AGT against RB-Investigator): "it
+seems like tricorder caused a balooning effect in the AI speed". Every AI decision of the game re-asked, the search
+uncapped, a quiet machine:
+
+| AI turn | decisions | engine steps | s | slowest | Tricorder equipped |
+|---|---|---|---|---|---|
+| 8 | 7 | 148 286 | 6.7 | 1.5 s | no |
+| 10 | 20 | 1 516 632 | 62.2 | 7.9 s | no |
+| 12 | 27 | 1 116 595 | 53.1 | 5.9 s | yes |
+| 14 | 24 | 2 870 044 | 112.2 | 10.8 s | yes |
+| 16 | 20 | 2 279 053 | 88.1 | 9.3 s | yes |
+| 18 | 15 | 1 197 878 | 61.5 | 9.6 s | no |
+| 20 | 15 | 2 534 557 | 114.6 | 31.5 s (equipping it) | yes |
+
+**Tricorder is not the cause:** the 72 decisions with it equipped, asked again with it unattached (the only change),
+took 7 153 689 steps against 6 161 874 with it on (0.86). The growth is the board's (tokens: L'Rell's Klingons, Q).
+The table's 1 s cap overran at his three slowest: #347 1 109 ms, #412 1 722 ms, #529 2 431 ms.
+
+The AI's card prices, for AI-27 (Shayne: 5 life paid at 20 is about a card): an unseen card 2.65, an unseen spell 4.38,
+a land in hand 0.30, the flat 1.20, held at 0.5 of measured value. Life: 1.0 a point below 20, 0.5 above.

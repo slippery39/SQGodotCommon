@@ -40,6 +40,17 @@ Not agreed — to shape with Shayne.
 - 2026-11-16, Shayne (AI-26): a vanilla 1/1, token or card, is 0.33 to 0.5 of a card; "for all other creatures it
   depends on the abilities it has."
 
+- 2026-11-17, Shayne (asked, from AI-28.3's Clue, what a card is worth against life): "At 20 life, I would say 5 life is worth it to pay to draw a card as a baseline, but depending on the
+  matchup it could be higher or lower. Obviously at lower life totals, this does not sustain. But also there is a
+  difference between paying life to draw a card, and spending a card to gain life. In general spending a card to gain
+  life is priced much higher, usually needing a lot of life (8+) before its actually worth an entire card and even then
+  its situational. Obviously this also changes based on current life (more life is generally worth more the lower life
+  total you are)".
+  Claude, measured against today's evaluator: its life curve already has his shape — below 20 a point costs 1.0, above
+  20 it gains 0.5, so 5 life paid at 20 is 5.0 and 8–10 life gained is 4.0–5.0 — IF a card is ~5. But an unseen card
+  is 2.65 to it (an unseen spell 4.38; held cards at half their measured value, lands mixed in): it values 5 life at
+  ~2 cards. So by his rule the gap is on the CARD side, not life's.
+
 Open questions:
 - Show in cards only (divide by 8.5 when printing — no play changes), or rescale the evaluator itself (every
   constant, threshold, table and test number moves; no decision changes if done exactly)? Claude's lean: show first.
