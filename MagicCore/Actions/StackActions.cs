@@ -73,6 +73,12 @@ public record StackAbility : GameObject
 
 	/// <summary>A triggered ability, not an activated one — Consign to Memory counters only these.</summary>
 	public bool Triggered { get; init; }
+
+	/// <summary>
+	/// A delayed trigger (CR 603.7): its source is the source of the ability that made it, never the card it sits on —
+	/// Tishana's Tidebinder countering Sneak Attack's "sacrifice the creature" strips no creature (Counter.Then).
+	/// </summary>
+	public bool Delayed { get; init; }
 }
 
 /// <summary>

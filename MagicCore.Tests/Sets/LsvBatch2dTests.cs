@@ -800,20 +800,6 @@ public class LsvBatch2dTests : FraBoardTest
 
 	// ===== MC-4.4d2b: restrictions and timing =====
 
-	/// <summary>The same card with "{T}: You gain 1 life."</summary>
-	static CardDefinition WithTap(CardDefinition card) =>
-		card with
-		{
-			Components =
-			[
-				.. card.Components,
-				new ActivatedAbilityComponent(ManaCost.None, [new GainLife(Ref.You, 1)])
-				{
-					Costs = [new TapSelfCost()],
-				},
-			],
-		};
-
 	bool LoyaltyOffered(int walker) =>
 		s.LegalActions().OfType<ActivateLoyaltyAction>().Any(a => a.CardId == walker);
 

@@ -1157,7 +1157,16 @@ public record YourInstantsAndSorceriesHaveSplitSecond : GameComponent;
 public record OneAttackerPerPlaneswalkerYouControl : GameComponent;
 
 /// <summary>Infinite Coursework: "Enchanted creature loses all abilities" — Characteristics.HasLostAllAbilities.</summary>
-public record EnchantedLosesAllAbilities : GameComponent;
+public record EnchantedLosesAllAbilities : GameComponent
+{
+	/// <summary>
+	/// The Wondrous Wasp: "It loses all abilities for as long as The Wondrous Wasp remains on the battlefield" —
+	/// this object (id, incarnation: CR 400.7) in place of what the holder is attached to. Stamped on the source
+	/// by ModifyUntilEndOfTurn.WhileSourceRemains, as Lwaxana's link is: an effect's result, so it holds while the
+	/// source has lost its own abilities, and goes as the source leaves (Card.IsStatus).
+	/// </summary>
+	public Filters.TheObject? Object { get; init; }
+}
 
 /// <summary>De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)" — Characteristics.Subtypes.</summary>
 public record EnchantedIsCreatureType(string Subtype) : GameComponent;

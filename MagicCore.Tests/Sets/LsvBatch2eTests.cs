@@ -1352,4 +1352,120 @@ public class LsvBatch2eTests : FraBoardTest
 		Assert.That(asked.OfType<ChooseFromLibraryChoice>(), Nu.Empty);
 		Assert.That(s.IsIn(found, me, ZoneType.Library));
 	}
+
+	// ===== MC-4.4e2e: "for as long as this remains on the battlefield" =====
+
+	static CardDefinition Bird => TestGames.Creature("Bird", "2/2", "Flying", "Haste"); // haste: they may tap it at once
+
+	/// <summary>TEST SETUP: the permanent dies (a plain move, nothing else happens).</summary>
+	void Kill(int permanent) =>
+		s = s.MoveCard(permanent, s.ZoneId(s.GetCard(permanent).OwnerId, ZoneType.Graveyard));
+
+	GameObject? Top() =>
+		s.StackIsEmpty() ? null : s.GetObject(s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First());
+
+	[Test]
+	public void WondrousWasp_TapsUpToOneCreature_ItLosesAllAbilities_WhileTheWaspRemains()
+	{
+		var bird = Field(Bird, them);
+		var wasp = Hand(Lsv("The Wondrous Wasp"), me);
+		var asked = CastAsking(wasp, On<ChooseTargetChoice>(bird));
+		Assert.That(asked.OfType<ChooseTargetChoice>().Single().MinChoices, Nu.EqualTo(0), "up to one");
+		Assert.That(s.GetCard(bird).IsTapped, "tap up to one target creature");
+		Assert.That(s.Has(s.GetCard(bird), "Flying"), Nu.False, "it loses all abilities");
+		ToTheirDrawStep();
+		Assert.That(
+			s.Has(s.GetCard(bird), "Flying"),
+			Nu.False,
+			"not until end of turn: as long as the Wasp remains"
+		);
+		Kill(wasp);
+		Assert.That(s.Has(s.GetCard(bird), "Flying"), "the Wasp gone, the abilities are back");
+		s = s.MoveCard(wasp, s.ZoneId(me, ZoneType.Hand));
+		s = s.EnterBattlefield(wasp, me);
+		Assert.That(
+			s.Has(s.GetCard(bird), "Flying"),
+			"a new Wasp is a new object (CR 400.7): the old effect doesn't come back with it"
+		);
+	}
+
+	[Test]
+	public void WondrousWasp_GoneAndBackBeforeItsTriggerResolves_TheTapHappens_NothingIsLost()
+	{
+		var bird = Field(Bird, them);
+		var wasp = Hand(Lsv("The Wondrous Wasp"), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = wasp });
+		for (var i = 0; i < 20 && !(Top() is StackAbility); i++)
+			s =
+				s.GetPendingChoice() is { } choice
+					? s.Choose(choice is ChooseTargetChoice ? [bird] : [])
+					: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
+		Assert.That(Top(), Nu.InstanceOf<StackAbility>(), "its trigger on the stack");
+		Kill(wasp);
+		s = s.MoveCard(wasp, s.ZoneId(me, ZoneType.Hand));
+		s = s.EnterBattlefield(wasp, me); // back again: a new object, which the effect never names
+		Resolve();
+		Assert.That(s.GetCard(bird).IsTapped, "the tap still happens");
+		Assert.That(
+			s.Has(s.GetCard(bird), "Flying"),
+			"the duration ended before it began (CR 611.2b)"
+		);
+	}
+
+	[Test]
+	public void TishanasTidebinder_CountersAnAbility_ItsCreatureLosesAllAbilities_WhileTheTidebinderRemains()
+	{
+		var bird = Field(WithTap(Bird), them);
+		var life = Life(them);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(new ActivateAbilityAction { PlayerId = them, CardId = bird });
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		var ability = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First();
+		var binder = Hand(Lsv("Tishana's Tidebinder"), me);
+		CastAsking(binder, On<ChooseTargetChoice>(ability));
+		Assert.That(Life(them), Nu.EqualTo(life), "the ability was countered");
+		Assert.That(s.Has(s.GetCard(bird), "Flying"), Nu.False, "that permanent loses all abilities");
+		Assert.That(s.HasLostAllAbilities(s.GetCard(bird)));
+		Kill(binder);
+		Assert.That(s.Has(s.GetCard(bird), "Flying"), "the Tidebinder gone, the abilities are back");
+	}
+
+	[Test]
+	public void TishanasTidebinder_AnAbilityWhoseSourceLeft_IsCounteredAndNothingElse()
+	{
+		var bird = Field(WithTap(Bird), them);
+		var life = Life(them);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(new ActivateAbilityAction { PlayerId = them, CardId = bird });
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		var ability = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First();
+		s = s.MoveCard(bird, s.ZoneId(them, ZoneType.Hand));
+		s = s.EnterBattlefield(bird, them);
+		CastAsking(Hand(Lsv("Tishana's Tidebinder"), me), On<ChooseTargetChoice>(ability));
+		Assert.That(Life(them), Nu.EqualTo(life), "countered");
+		Assert.That(
+			s.Has(s.GetCard(bird), "Flying"),
+			"the Bird back on the battlefield is a new object, not that permanent"
+		);
+	}
+
+	[Test]
+	public void TishanasTidebinder_CountersADelayedTrigger_TheCardItSitsOnKeepsItsAbilities()
+	{
+		var sneak = Field(Lsv("Sneak Attack"), me);
+		var bird = Hand(Bird, me);
+		s = s.Act(Activations(sneak).Single());
+		Resolve(On<ChooseCardsFromHandChoice>(bird));
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.End && !x.StackIsEmpty() && x.GetPendingChoice() is null
+		);
+		var sacrifice = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First();
+		CastAsking(Hand(Lsv("Tishana's Tidebinder"), me), On<ChooseTargetChoice>(sacrifice));
+		Assert.That(Alive(bird), "the sacrifice was countered");
+		Assert.That(
+			s.Has(s.GetCard(bird), "Flying"),
+			"a delayed trigger's source is Sneak Attack's, an enchantment — not the Bird it sits on (CR 603.7d)"
+		);
+	}
 }

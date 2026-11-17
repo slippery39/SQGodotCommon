@@ -746,6 +746,38 @@ as his three priorities.
   value (already a ceiling), a `CastOneOf` over cards in several zones (no card), `CastOneOf` building every cast
   of every card to ask "can it be cast" (no bench for a card batch; the probe cast Bilbo 326 times unhindered),
   `CanPay`'s unused `Cost` beside `Pay`, a `ManaCostOf` that names nothing paying {0} (Flash's card always exists).
+- 2026-11-17, Claude — **4.4e2e's plan, read against the code.** Both readings grew.
+  **"Loses all abilities for as long as [this] remains on the battlefield"** is not a duration on the stripped card:
+  `UntilEndOfTurn` is read card by card (`Characteristics.Lost` has no state), so a link to the source there would
+  need every reader to ask the battlefield. The nearest piece by MECHANISM is Infinite Coursework's
+  `EnchantedLosesAllAbilities` — a holder that strips another object, collected live into the statics board's
+  `Stripped`, over the moment the holder leaves. Its option: **`Object`**, the object it strips (id and
+  incarnation) in place of what it is attached to — stamped on the SOURCE by the resolving effect, as Lwaxana's link
+  is (status: gone as the source leaves, never copied), and read whether or not the source has lost its own
+  abilities (an effect's result, not the source's ability; CR 611.2). The effect is `ModifyUntilEndOfTurn {
+  LosesAllAbilities, WhileSourceRemains }` — a third duration beside `UntilYourNextTurn` and `ForGood`; with the
+  source gone before it resolves it does nothing (CR 611.2b), the tap still happens.
+  **The Tidebinder's "that permanent"** has no name: `Counter` returns nothing. Its option: **`Counter.Then`** with
+  `Ref.ThisWay` what was countered — a spell's card, an ability's SOURCE while it is still that object on the
+  battlefield (`StackAbility.Source`'s incarnation) — as every "[done] this way" (Destroy, MaySacrifice);
+  "of an artifact, creature, or planeswalker" is a `Matches` on it.
+  Legal actions: each is one cast (flash) and one target choice as its trigger goes on the stack — a choice among
+  the creatures, or the abilities on the stack; nothing grows with the board. Tiers: Wasp 2 (`WhileSourceRemains`,
+  `Object`), Tidebinder 2 (`Counter.Then`, the same strip). No new piece.
+- 2026-11-17, Claude — **4.4e2e's notes.** Built as planned. 5 tests in `LsvBatch2eTests.cs`, all through real
+  casting; **10 breaks, all caught** — one at the second try: without the "source gone" guard the stamp lands on the
+  Wasp's card in the graveyard, which nothing reads, so the test now has the Wasp leave AND come back before its trigger
+  resolves (a new object the effect must not name). `WithTap` moved up to `FraBoardTest`.
+  **`/pre-commit`'s review: nine findings; four taken.** A real bug, fixed with a test: Tidebinder countering a
+  DELAYED trigger stripped the card it sits on — Sneak Attack's "sacrifice the creature" countered by its own
+  controller lost the sneaked creature its abilities. A delayed trigger's source is the source of the ability that
+  made it (CR 603.7d), so it goes on the stack marked `StackAbility.Delayed` (`Pending.Delayed`, set by `PutOnStack`
+  from the fired `DelayedTrigger`) and `Counter.Then` names no permanent for it. Also taken: `Object` is a
+  `Filters.TheObject`, as Lwaxana's link (a record, not a tuple); `WhileSourceRemains` without `LosesAllAbilities`
+  throws; `Then` doesn't run when nothing was countered. **Not taken:** phasing and a wrath with the Wasp (ceilings,
+  DesignNotes), one helper for "stamp on this object of the source" shared with Lwaxana (two copies of two lines), dead
+  links piling on a source that stays (one per resolution), `ThisWay` mixing a spell's card and an ability's source (no
+  card reads both).
 
 ## Tasks
 
@@ -878,19 +910,29 @@ as his three priorities.
           unchanged; golden-in moved 29 random and 253 card-replay games, added 16, the AI replay unmoved; probe 150
           games, none unfinished, each card cast 292–430 times; full suite 1,904 passed — re-run after the review's fixes: golden-out
           unchanged again, 19 of 19 breaks caught)
-    - [ ] MC-4.4e2e Options, "for as long as this remains on the battlefield", 2: The Wondrous Wasp, Tishana's
-          Tidebinder
+    - [x] MC-4.4e2e Options, "for as long as this remains on the battlefield", 2: The Wondrous Wasp, Tishana's
+          Tidebinder — done 2026-11-17: `ModifyUntilEndOfTurn.WhileSourceRemains` stamping
+          `EnchantedLosesAllAbilities { Object }` on the source, `Counter.Then`, `StackAbility.Delayed`; 5 tests, 10
+          breaks caught; `batch_checks.py` all 8 steps, run again after the review's fix (golden-out unchanged;
+          golden-in moved 29 random and 139 card-replay games, added 8, the AI replay unmoved; probe 150 games, each
+          card cast 488–500 times, 1 past 300 permanents; full suite 1,909 passed)
     - [ ] MC-4.4e2f Options, choices after the cast, 4: Frantic Search, Time Spiral, Mystic Confluence (Fiery
           Confluence moves with it), Occult Epiphany
 
 ## Next
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1), the library's top (4.4e2a), draws (4.4e2b),
-mana and costs (4.4e2c) and casting off the hand (4.4e2d) are done: **212 of 528 play.** Blue's tier 1 is split in
-seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2e — "for as long as this remains on the
-battlefield", 2 cards:** The Wondrous Wasp, Tishana's Tidebinder — the survey's reading is in Decisions ("4.4e",
-e2e); read it against the CODE first: of e2d's four readings three grew (a graveyard cast as an effect resolves was
-flashback; Transmute's sacrificed card had no name inside a `May`, and its found card no zone until paid).
+mana and costs (4.4e2c), casting off the hand (4.4e2d) and "for as long as this remains" (4.4e2e) are done: **214 of
+528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2f —
+choices after the cast, 4 cards:** Frantic Search, Time Spiral, Mystic Confluence (Fiery Confluence moves with it),
+Occult Epiphany — the survey's reading is in Decisions ("4.4e", e2f, and its legal-action count: Mystic Confluence is
+378 casts on a 12-creature board as `Repeats` is built); read it against the CODE first: both of e2e's readings grew
+(the strip couldn't live on the stripped card; `Counter` named nothing it countered).
+From e2e: "loses all abilities for as long as [this] remains on the battlefield" is `ModifyUntilEndOfTurn {
+LosesAllAbilities, WhileSourceRemains }`, which stamps Infinite Coursework's `EnchantedLosesAllAbilities { Object }`
+on the SOURCE (status: it ends as the source leaves); "if [something] is countered this way" is `Counter.Then` with
+`Ref.ThisWay` (an ability's source while still that object). `WithTap(card)` ("{T}: You gain 1 life") is
+`FraBoardTest`'s now; e2e's helpers in `LsvBatch2eTests.cs`: `Bird` (flying, haste), `Kill(permanent)`, `Top()`.
 From e2d: "you may cast one of [cards]" is `CastOneOf(Ref) { Free, Exiled }` (Brazen Bluff's piece, generalised); a
 cast from a graveyard during a resolution is `ByPermission` (not flashback) unless `ExiledLeavingTheStack`; a cost
 reduction by where the spell is cast from is `CostChange.NotFrom`; a mana payment whose cost is counted is `PayMana
@@ -913,9 +955,7 @@ From e2b: a draw is replaced or stopped by `NumericReplacement(Draw) { Instead, 
 [spell / card] each turn" is `Trigger.Nth`; another player's "this turn" count is the count `with { Of = … }`. Its
 test helpers in `LsvBatch2eTests.cs`: `DrawsThree(caster, target)`, `ToTheirDrawStep()`, `Treasures(player)`,
 `JaceWielder(loyalty)`, `Activate(walker, ability, targets)`.
-Then e2e ("for as long as this remains"), e2f (choices after the cast — Mystic Confluence is 378 casts on a
-12-creature board as `Repeats` is built, so its targets become a choice after the cast and Fiery Confluence moves
-with it), a part a session. Blue's tier 2 (6) and tier 3 (11) are not this task.
+Then blue's tier 1 is done. Blue's tier 2 (6) and tier 3 (11) are not this task.
 **Open (for Shayne), from e2a:** the seven FRA and TRK cards that say "may search" still shuffle when the search
 is declined — `May = true` on them makes three AI tests on kept TRK records stale (Decisions, e2a's plan). Default
 taken: left as they were, for the AI lane to move with those records re-kept.
@@ -1028,3 +1068,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-16: MC-4.4e2d done: Bilbo (Thief in the Night), Malcolm (Alluring Scoundrel), Flash, Transmute Artifact —
   212 of 528 play. `CastOneOf`, a graveyard cast as an effect resolves by its permission, `CostChange.NotFrom`,
   `PayMana`'s counted cost and `MayPay`, `SearchLibrary.Then`. Next: MC-4.4e2e.
+- 2026-11-17: MC-4.4e2e done: The Wondrous Wasp, Tishana's Tidebinder — 214 of 528 play. "Loses all abilities for as
+  long as this remains" (`WhileSourceRemains`, Infinite Coursework's piece with `Object`), `Counter.Then`, and a
+  delayed trigger known as one on the stack. Next: MC-4.4e2f, choices after the cast.

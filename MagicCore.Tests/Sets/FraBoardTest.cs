@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
@@ -134,6 +135,20 @@ public abstract class FraBoardTest
 	/// <summary>The ids the choices of type T offered, of those asked (CastAsking, ResolveAsking).</summary>
 	protected static IEnumerable<int> Offered<T>(List<ChoiceAction> asked)
 		where T : ChoiceAction => asked.OfType<T>().SelectMany(c => c.Options).Select(o => o.Id);
+
+	/// <summary>The same card with "{T}: You gain 1 life."</summary>
+	protected static CardDefinition WithTap(CardDefinition card) =>
+		card with
+		{
+			Components =
+			[
+				.. card.Components,
+				new ActivatedAbilityComponent(ManaCost.None, [new GainLife(Ref.You, 1)])
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+		};
 
 	/// <summary>TEST SETUP: the permanent is tapped, as though it had attacked.</summary>
 	protected void TapIt(int permanent)

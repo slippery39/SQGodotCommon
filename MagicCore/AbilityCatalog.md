@@ -44,8 +44,9 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Free` (bool): "Without paying its mana cost" — X is 0. Unset, the spell is paid for (Bilbo).
   - `Exiled` (Filters.Filter?): Bilbo: "If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead" —…
 - **`CopySpell(Ref What)`** — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on the stack above it, controlled by you; it is not… [5: Codie, Ravenous Codex, Chain Lightning, Sage of the Skies…]
-- **`Counter(Ref What)`** — Precise Redaction: "Counter target spell" — through StackResolution.Counter. [15: Precise Redaction, Countersculpt, Consign to Memory…]
+- **`Counter(Ref What)`** — Precise Redaction: "Counter target spell" — through StackResolution.Counter. [16: Precise Redaction, Countersculpt, Consign to Memory…]
   - `To` (ZoneType): Remand: "If that spell is countered this way, put it into its owner's hand instead of into that player's…
+  - `Then` (ImmutableList<GameAction>): Tishana's Tidebinder: "If an ability of an artifact, creature, or planeswalker is countered this way, that…
 - **`CounterUnlessPays(Ref What, ManaCost Cost)`** — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer CHOOSES (CR 118.12): asked only when they can pay.… [6: Icy Reception, Theorix Charm, Gideon the Oathless…]
   - `Costs` (ImmutableList<AdditionalCost>): Ward with a cost beyond mana, paid by choosing as it resolves — Gideon the Oathless: [DiscardCost()];…
 - **`CreateTokenCopy(Ref What)`** — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new token under your control — never its counters,… [11: Sphinx of False Conclusions, Face Yourself, Sublime Epiphany…]
@@ -121,7 +122,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords)`** — Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn." [1: Hungering Puppetbeast]
 - **`GetEmblem(ImmutableArray<GameComponent> Abilities)`** — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good. [3: Ajani Resolute, Chandra, Chill of Compliance, Chandra, Torch of Defiance]
 - **`GrantChosenKeywordAction(Ref What, ImmutableArray<string> Keywords)`** — After the choice: the chosen keyword, until end of turn.
-- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [104: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
+- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [105: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
   - `Otherwise` (ImmutableList<GameAction>): Desperate Futurescribe: "… instead" — what happens when the condition does not hold.
 - **`IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then)`** — Captain Michael Burnham: "If this is the second time this ability has resolved this turn, put a +1/+1 counter on Captain Burnham." —… [2: Captain Michael Burnham, Jake Sisko, War Correspondent]
 - **`LandTapsForTwoUntilThisIsCast(Ref Land)`** — Emrakul, the Exigent Doom: "Target land gains '{T}: Add {C}{C}' until this card is cast from exile. You may cast this card for as long as… [1: Emrakul, the Exigent Doom]
@@ -149,7 +150,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`Mill(Ref Who, int N)`** — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard. [6: Liliana the Repentant, Primal Witchstalker, Theorix Charm…]
   - `IfMilled` (ImmutableList<GameAction>): Primal Witchstalker: "mill four cards. When you do, …" — run only if a card was milled.
 - **`MillAndMayTake(int N, CardType Types)`** — Something Worth Saving: "Mill N. You may put a [Types] card from among them into your hand." Mill, CHOOSE, move — MtgCore's dig once… [3: Something Worth Saving, Temporal Anomaly, First Contact]
-- **`ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, string? Keyword = null)`** — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves. [109: Last Gasp, Rampart Hunter, Artifist Acumen…]
+- **`ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, string? Keyword = null)`** — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves. [111: Last Gasp, Rampart Hunter, Artifist Acumen…]
   - `Trigger` (TriggeredAbilityComponent?): Lyra: "until end of turn, whenever …" — a triggered ability it has until cleanup.
   - `ExileIfItWouldDie` (bool): Essence Burn: "if that permanent would die this turn, exile it instead".
   - `LosesAllAbilities` (bool): Flourishing Grapple: "loses all abilities until end of turn".
@@ -158,6 +159,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Gains` (ImmutableList<GameComponent>): Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard'" — static or activated abilities it…
   - `AlsoCreatureType` (string?): Worf, Intelligence Contractor: "they become Warriors in addition to their other types".
   - `ForGood` (bool): Seven of Nine, Unassimilated: "Seven of Nine's base power and toughness become 7/9." — no duration: until it…
+  - `WhileSourceRemains` (bool): The Wondrous Wasp: "It loses all abilities for as long as The Wondrous Wasp remains on the battlefield";…
 - **`MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To)`** — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your hand. If you can't, create a Treasure token"… [6: Sneak Attack, Stoneforge Mystic, Flash…]
   - `May` (bool): Erica Ortegas: "you MAY put" — none is an answer, and it is asked even with nothing to pick.
   - `Then` (ImmutableList<GameAction>): Erica Ortegas: "If you do, …" — after a pick.
@@ -222,7 +224,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Then` (ImmutableList<GameAction>): Riders on the cards put into the graveyard "this way" — they read the surveil's choice.
 - **`TakeExtraTurn`** — H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on MagicGame.ExtraTurns, begun by TurnStructure.FinishCleanup.… [3: Time Walk, Time Warp, H.M.S. Bounty, Unlikely Timeship]
   - `Who` (Ref): Time Warp: "Target player takes an extra turn after this one."
-- **`Tap(Ref What)`** — "Tap [What]" — permanents only. [15: Divining Duelist, Cryotheory Adept, Hapatra, the Desert Frost…]
+- **`Tap(Ref What)`** — "Tap [What]" — permanents only. [16: Divining Duelist, Cryotheory Adept, Hapatra, the Desert Frost…]
 - **`ThisTurn(ThisTurnEffect What)`** — Puts a ThisTurnEffect in your command zone for the rest of the turn. [19: Pyre Rhymer // Molten Tide, Way of the Cryomancer, Jace's Machinations…]
   - `On` (Ref?): Sen Triplets: "This turn, that player can't …" — whose command zone (Ref.Target(0)); unset is you.
   - `RestOfTheGame` (bool): Screaming Nemesis: "they can't gain life for the rest of the game" — the same object, never removed with the…
@@ -257,7 +259,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`FirstSpellYouCastThisGame`** — First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast. [1: First Contact]
 - **`GraveyardHasCopiesOfSource(int N)`** — "[N] cards named [this card] in your graveyard" — not this one. [1: Sphinx's Approach]
 - **`HaventBegunAnExtraTurn`** — H.M.S. Bounty: "[if you] haven't begun an extra turn this game" — MagicPlayer.BegunExtraTurn. [1: H.M.S. Bounty, Unlikely Timeship]
-- **`Matches(Ref What, Filters.Filter Filter)`** — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it wasn't attacking" is Matches(Ref.Target(0),… [24: Prophesied End, Koth, the Geomancer, Budding Insurgent…]
+- **`Matches(Ref What, Filters.Filter Filter)`** — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it wasn't attacking" is Matches(Ref.Target(0),… [25: Prophesied End, Koth, the Geomancer, Budding Insurgent…]
   - `AsItLastWas` (bool): Gowron: "If you sacrificed a Klingon this way" — the event card as it was before the cost moved it (its…
 - **`Not(Condition Inner)`** — The opposite of a condition — "isn't", "wasn't", "unless". [15: Edgar, Moonlit Sovereign, Twinned Vision, Ruric Thar, Magecrusher…]
 - **`SourceWasCast`** — Null Summoner: "if you cast it" — it entered by resolving as a spell. Read from the source as it was when it triggered, so it leaving in… [3: Null Summoner, Uldaros Theorix, Crystalline Entity]
@@ -375,6 +377,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`EnchantedCantBeBeamedUp`** — Marooned: "Enchanted permanent … can't be beamed up." — read by ReturnToHandCost: never returned to pay one. [1: Marooned]
 - **`EnchantedIsCreatureType(string Subtype)`** — De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)" — Characteristics.Subtypes. [1: De-evolve]
 - **`EnchantedLosesAllAbilities`** — Infinite Coursework: "Enchanted creature loses all abilities" — Characteristics.HasLostAllAbilities. [1: Infinite Coursework]
+  - `Object` (Filters.TheObject?): The Wondrous Wasp: "It loses all abilities for as long as The Wondrous Wasp remains on the battlefield" —…
 - **`EnteredAsCopy(Card Original)`** — Flesh Duplicate: it entered as a copy — what it was, restored as it leaves the battlefield (Card.WithoutCopyEffect), never in cleanup.
 - **`EnteringArtifactsAndCreaturesDontTrigger`** — Karn, Argent Defender: "Artifacts and creatures entering the battlefield don't cause abilities to trigger." Read by Triggers.Collect. [1: Karn, Argent Defender]
 - **`EntersPreparedComponent`** — "This creature enters prepared." Applied by MagicState.EnterBattlefield.

@@ -152,8 +152,43 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Seven of Nine, Unassimilated: "Seven of Nine's base power and toughness become 7/9." — no duration: until it leaves the battlefield.</summary>
 	public bool ForGood { get; init; }
 
+	/// <summary>
+	/// The Wondrous Wasp: "It loses all abilities for as long as The Wondrous Wasp remains on the battlefield";
+	/// Tishana's Tidebinder: "… for as long as this creature remains on the battlefield". LosesAllAbilities only:
+	/// each permanent's EnchantedLosesAllAbilities { Object } stamped on THIS object of the source. With the source
+	/// gone as it resolves, nothing (CR 611.2b).
+	/// </summary>
+	public bool WhileSourceRemains { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		if (WhileSourceRemains)
+		{
+			if (!LosesAllAbilities)
+				throw new InvalidOperationException(
+					"WhileSourceRemains lasts for LosesAllAbilities only (MC-4.4e2e)"
+				);
+			if (!Ref.Source.Resolve(s, InputContext).Any() || !s.IsOnBattlefield(Source(s).Id))
+				return new(s);
+			return new(
+				Permanents(What, s)
+					.Aggregate(
+						s,
+						(st, c) =>
+							Update(
+								st,
+								(Card)
+									st.GetCard(Source(s).Id)
+										.WithComponent(
+											new EnchantedLosesAllAbilities
+											{
+												Object = new Filters.TheObject(c.Id, c.Incarnation),
+											}
+										)
+							)
+					)
+			);
+		}
 		var effect = new UntilEndOfTurn(
 			Power.Value(s, InputContext),
 			Toughness.Value(s, InputContext),
@@ -1256,8 +1291,49 @@ public record Counter(Ref What) : Effect
 	/// </summary>
 	public ZoneType To { get; init; } = ZoneType.Graveyard;
 
-	public override ActionResult Execute(GameState s) =>
-		new(All(What, s).ToList().Aggregate(s, (st, id) => StackResolution.Counter(st, id, To)));
+	/// <summary>
+	/// Tishana's Tidebinder: "If an ability of an artifact, creature, or planeswalker is countered this way, that
+	/// permanent …" — run with Ref.ThisWay what was countered: a spell's card, an ability's SOURCE while it is still
+	/// that object on the battlefield (StackAbility.Source's incarnation).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var done = ImmutableArray.CreateBuilder<int>();
+		foreach (var id in All(What, s).ToList())
+		{
+			var countered = s.HasObject(id) ? s.GetObject(id) : null;
+			var after = StackResolution.Counter(s, id, To);
+			if (!ReferenceEquals(after, s))
+				switch (countered)
+				{
+					case Card spell:
+						done.Add(spell.Id);
+						break;
+					case StackAbility { Delayed: false, Source: var source }
+						when after.IsOnBattlefield(source.Id)
+							&& after.GetCard(source.Id).Incarnation == source.Incarnation:
+						done.Add(source.Id);
+						break;
+				}
+			s = after;
+		}
+		return Then.IsEmpty || done.Count == 0
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							done.ToImmutable()
+						),
+						Steps = Then,
+					}
+				)
+			);
+	}
 }
 
 /// <summary>After the payer's answer: pay the cost, or the spell or ability is countered.</summary>

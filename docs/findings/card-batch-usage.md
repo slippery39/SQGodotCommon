@@ -74,3 +74,4 @@ after the split is DEV-4.3.
 | 2026-11-16 | MC-4.4e2b: LSVPower blue's options - draws, 4 cards | 24bec349 | 51 | 232k | 2.8M |
 | 2026-11-16 | MC-4.4e2c: LSVPower blue's options - mana and costs, 5 cards | fe033ae1 | 134 | 240k | 5.1M |
 | 2026-11-16 | MC-4.4e2d: casting off the hand, 4 cards | 8bdc7f1e | 144 | 237k | 4.9M |
+| 2026-11-17 | MC-4.4e2e: blue's options, for as long as this remains, 2 cards | c090bbd1 | 89 | 188k | 2.8M |

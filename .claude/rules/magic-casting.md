@@ -77,7 +77,10 @@ whose subsystem it lives in.
   of letting it die (`MoveCard`); `MagicState.Untap` is the ONE untap, so a stun counter eats it.
 - **Countering is `StackResolution.Counter`** — a spell to its graveyard through MoveCard (flashback and
   prepared copies still hold), an ability removed, "can't be countered" untouched — or "instead" to its owner's hand
-  (Remand) or library top (Memory Lapse): `Counter { To }`, only when it was countered. "Unless its
+  (Remand) or library top (Memory Lapse): `Counter { To }`, only when it was countered. "If an ability of a
+  [permanent] is countered this way, that permanent …" (Tishana's Tidebinder) is `Counter.Then` with `Ref.ThisWay`
+  what was countered — a spell's card, an ability's SOURCE while it is still that object on the battlefield; a delayed
+  trigger's (`StackAbility.Delayed`, set by `PutOnStack`) is never the card it sits on (CR 603.7d), so none. "Unless its
   controller pays" asks that player (`CounterUnlessPays`). **Ward** is a trigger whose "it" is the
   targeting spell or ability, carried as the event card of `BecameTargetEvent`.
 - **A target is a zone and a filter** (`TargetSpec(From, Filter)`): the zone says where candidates

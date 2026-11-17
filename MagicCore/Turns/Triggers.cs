@@ -329,7 +329,11 @@ public static class Triggers
 		Card? EventSnapshot = null,
 		GameObject? EventObject = null,
 		int X = 0
-	);
+	)
+	{
+		/// <summary>A delayed trigger (CR 603.7) — set by PutOnStack, carried to StackAbility.Delayed.</summary>
+		public bool Delayed { get; init; }
+	}
 
 	/// <summary>
 	/// Every ability that triggered on the staged events, the active player's first (CR 101.4 APNAP:
@@ -462,6 +466,9 @@ public static class Triggers
 						died,
 						// As it last existed (CR 603.10a): under Infinite Coursework it had no abilities — the
 						// Aura is gone from the battlefield by now, so ask what was attached as it died.
+						// ponytail: The Wondrous Wasp's strip is stamped on the Wasp, so a creature dying WITH
+						// the Wasp (a wrath) reads as having its abilities. Carry the stripping objects on
+						// DiedEvent beside Attached if a cube game shows it (DesignNotes).
 						(
 							died.Attached.Any(a => a.HasComponent<EnchantedLosesAllAbilities>())
 								? []
@@ -857,8 +864,9 @@ public static class Triggers
 	public static GameState PutOnStack(GameState s, List<Pending> triggers, int priorityPlayerId)
 	{
 		var firedOnce = new HashSet<(int Id, int Incarnation)>();
-		foreach (var t in triggers)
+		foreach (var pending in triggers)
 		{
+			var t = pending with { Delayed = FiredDelayedTrigger(s, pending) is not null };
 			s = WithoutFiredDelayedTrigger(s, t);
 			if (t.Ability.OncePerTurn)
 			{
@@ -912,14 +920,9 @@ public static class Triggers
 	/// </summary>
 	static GameState WithoutFiredDelayedTrigger(GameState s, Pending t)
 	{
-		if (
-			!s.HasObject(t.Source.Id)
-			|| s.GetObject(t.Source.Id) is not Card host
-			|| host.Incarnation != t.Source.Incarnation
-			|| host.GetComponents<DelayedTrigger>().FirstOrDefault(d => d.Ability == t.Ability)
-				is not { } fired
-		)
+		if (FiredDelayedTrigger(s, t) is not { } fired)
 			return s;
+		var host = s.GetCard(t.Source.Id);
 		var rest = host.GetComponents<DelayedTrigger>().Where(d => d != fired).ToList();
 		var without = rest.Aggregate(
 			host.WithoutComponents<DelayedTrigger>(),
@@ -929,6 +932,14 @@ public static class Triggers
 			? s.RemoveObject(host.Id)
 			: s.UpdateObject(host.Id, without);
 	}
+
+	/// <summary>The delayed trigger this pending trigger is, still on its host (that object of it); null for any other.</summary>
+	static DelayedTrigger? FiredDelayedTrigger(GameState s, Pending t) =>
+		s.HasObject(t.Source.Id)
+		&& s.GetObject(t.Source.Id) is Card host
+		&& host.Incarnation == t.Source.Incarnation
+			? host.GetComponents<DelayedTrigger>().FirstOrDefault(d => d.Ability == t.Ability)
+			: null;
 
 	/// <summary>Modes whose required targets all have a legal choice (CR 700.2a).</summary>
 	public static ImmutableList<int> ChoosableModes(GameState s, Pending t) =>
@@ -984,6 +995,7 @@ public static class Triggers
 						EventSnapshot = t.EventSnapshot,
 						EventObject = t.EventObject,
 						X = XOf(t),
+						Delayed = t.Delayed,
 					},
 				],
 			}
@@ -1004,6 +1016,9 @@ public record PutTriggerOnStackAction : GameAction
 	public Card? EventSnapshot { get; init; }
 	public GameObject? EventObject { get; init; }
 	public int X { get; init; }
+
+	/// <summary>A delayed trigger (CR 603.7) — StackAbility.Delayed.</summary>
+	public bool Delayed { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -1027,6 +1042,7 @@ public record PutTriggerOnStackAction : GameAction
 					EventObject = EventObject,
 					X = X,
 					Triggered = true,
+					Delayed = Delayed,
 				}
 			)
 		);

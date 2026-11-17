@@ -1718,6 +1718,46 @@ public static class LsvCards
 				),
 			],
 			["Transmute Artifact"] = [TransmuteArtifact],
+			// ===== MC-4.4e2e: blue's options, "for as long as this remains on the battlefield" =====
+			["The Wondrous Wasp"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Creature with { Optional = true }],
+					new Tap(Ref.Target()),
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+					{
+						LosesAllAbilities = true,
+						WhileSourceRemains = true,
+					}
+				),
+			],
+			["Tishana's Tidebinder"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Ability() with { Optional = true }],
+					new Counter(Ref.Target())
+					{
+						Then =
+						[
+							new If(
+								new Matches(
+									Ref.ThisWay,
+									Is.Artifact | Is.Creature | Is.Planeswalker
+								),
+								[
+									new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
+									{
+										LosesAllAbilities = true,
+										WhileSourceRemains = true,
+									},
+								]
+							),
+						],
+					}
+				),
+			],
 		};
 
 	/// <summary>

@@ -305,8 +305,12 @@ public static class Characteristics
 					|| gained?.Any(g => g is CostChange { Abilities: true }) == true;
 				if (component is StaticEffectComponent effect)
 					statics.Add((c, effect));
-				else if (component is EnchantedLosesAllAbilities)
-					(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
+				else if (component is EnchantedLosesAllAbilities strips)
+					(stripped ??= []).Add(
+						strips.Object is { } o
+							? (o.Id, o.Incarnation)
+							: (c.AttachedToId, c.AttachedToIncarnation)
+					);
 				else if (component is GrantsActivatedAbility grant && c.AttachedToId != 0)
 					(grants ??= []).Add((c, grant));
 				else if (component is EnchantedIsCreatureType type && c.AttachedToId != 0)

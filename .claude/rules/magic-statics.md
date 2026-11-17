@@ -47,7 +47,12 @@ whose subsystem it lives in.
   player is dealt damage this way"** is `DealDamage.Then` with `Ref.ThisWay` what was actually dealt damage (nothing
   prevented) — `ThisTurn.On` takes only a player from it.
 - **"Loses all abilities"** is `s.HasLostAllAbilities` — until end of turn (`UntilEndOfTurn.LosesAllAbilities`)
-  or under an Aura (`EnchantedLosesAllAbilities`, found once per state with the statics). It reaches
+  or under an Aura (`EnchantedLosesAllAbilities`, found once per state with the statics). **"For as long as [this]
+  remains on the battlefield"** (The Wondrous Wasp, Tishana's Tidebinder; MC-4.4e2e) is that Aura's piece with
+  `Object`, the object stripped, stamped on the SOURCE by `ModifyUntilEndOfTurn { LosesAllAbilities,
+  WhileSourceRemains }` — status, so it ends the moment the source leaves and a new object of it has none; it holds
+  while the source has lost its own abilities (an effect's result, CR 611.2), and the source gone before it resolves
+  makes nothing (CR 611.2b). It reaches
   every rule because every rule reads abilities through `s.AbilitiesOf<T>`, keywords through `s.Has`,
   mana through `ManaAbilities.ColorsOf` (a basic land's intrinsic ability included). What the AURA
   says ("doesn't untap", `DoesntUntap(Is.AttachedToSource)`) is the Aura's, so it still applies — unless the AURA

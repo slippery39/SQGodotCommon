@@ -343,6 +343,7 @@ public record Card : GameObject
 				or Effects.DelayedTrigger
 				or Animated
 				or Effects.TriggersAdditionalTime { UntilUntapped: true }
+				or Effects.EnchantedLosesAllAbilities { Object: not null }
 				or Effects.TapsForTwoColorlessWhileExiled;
 
 	/// <summary>

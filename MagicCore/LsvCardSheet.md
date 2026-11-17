@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 26/46 · uncommon 38/86 · rare 104/279 · mythic 35/108 · **212/528**
+**Playable:** common 26/46 · uncommon 38/86 · rare 106/279 · mythic 35/108 · **214/528**
 
 ### "Name Sticker" Goblin
 
@@ -3981,7 +3981,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 			Then =
 			[
 				new If(
-					new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Chorus), 4),
+					new AtLeast(
+						Count.CountersOfKind(Ref.Source, CounterKinds.Chorus),
+						4
+					),
 					[new CastOneOf(Ref.Chosen)]
 				),
 			],
@@ -5290,7 +5293,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Wasp's Sting — When The Wondrous Wasp enters, tap up to one target creature. It loses all abilities for as long as The Wondrous Wasp remains on the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+
+```csharp
+["The Wondrous Wasp"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Creature with { Optional = true }],
+		new Tap(Ref.Target()),
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+		{
+			LosesAllAbilities = true,
+			WhileSourceRemains = true,
+		}
+	),
+],
+```
 
 ### Thieving Skydiver
 
@@ -5384,7 +5405,35 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > When this creature enters, counter up to one target activated or triggered ability. If an ability of an artifact, creature, or planeswalker is countered this way, that permanent loses all abilities for as long as this creature remains on the battlefield. (Mana abilities can't be targeted.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Tishana's Tidebinder"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Ability() with { Optional = true }],
+		new Counter(Ref.Target())
+		{
+			Then =
+			[
+				new If(
+					new Matches(Ref.ThisWay, Is.Artifact | Is.Creature | Is.Planeswalker),
+					[
+						new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
+						{
+							LosesAllAbilities = true,
+							WhileSourceRemains = true,
+						},
+					]
+				),
+			],
+		}
+	),
+],
+```
 
 ### Toxic Deluge
 
@@ -7147,7 +7196,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {R}: You may put a creature card from your hand onto the battlefield. That creature gains haste. Sacrifice the creature at the beginning of the next end step.
 
-**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests, LsvBatch2eTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
 
