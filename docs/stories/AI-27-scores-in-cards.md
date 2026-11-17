@@ -35,7 +35,40 @@ His theory, in his words (2026-11-17):
 - **Life against a card:** 5 life paid at 20 is about a card; a card spent to gain life needs 8+; life is worth more
   the lower it is (Decisions, 2026-11-17).
 
-Claude's reading of the theory (for him to correct): a position is scored as cards up, both players counted alike —
+**Value and tempo, two concepts (Shayne, 2026-11-17, end of session):** "basically the whole evaluator rates simply on
+perceived value, and this might be where we run into problems, because alot of games in magic are not just about
+value, but tempo as well. So value is basically card advantage which is what we were kind of describing above (i.e.
+how many cards am I ahead of my opponent). Card advatnage can be in raw cards (divination drawing 2 cards is card
+advantage), or it can be on board card advantage (a card that makes 2 2/2's can be a form of card advantage,
+flametounge kavu is a form of card advantage as well). Tempo is not about card advantage but about how much mana you
+are deploying vs how much mana you are 'negating' your opponent. For example divination is a tempo negative card, you
+have to spend 3 mana to draw 2 cards, but you don't negate any tempo from your opponent, nor do you add any tempo
+yourself. Lightning Bolt is a tempo neutral card if you kill a 1 mana card. But it is a tempo positive card if you kill
+a 4 mana card (up 3 mana on tempo), as you could negate your opponents 4 drop, and drop a 3 mana card yourself. And this
+'rule' plays for most removal spells. If you are trading up on mana by using a removal spell it can be a game winning
+play sometimes. (i.e. opponent plays a 6 drop, you path it and play a 5 drop, you are now ahead on tempo). Bounce
+Spells are card disadvantage usually, but they give you tempo. If you bounce an opponents 6 drop twice so that they
+can't blkock and the game is over before it actually has impact, then the card disadvantage does not matter. As you
+can see tempo is basically about forcing your opponent to either spend more mana than you for the same value. Tempo
+positive plays can be value negative plays, but you can have both tempo positive and value positive. Repulse on a 5
+drop awith an armadillo cloak for example is both a tempo positive and a value positive play. Generally the player who
+is going for positive tempo but value negative is trying to win quickly or get the opponent into a certain state
+quickly before the card disadvantage matters. So all this goes to say, i'm wondering if properly modeling this was the
+missing piece to our eveluator instead of trying to shoehorn 2 completely different concepts into one, have them be
+seperate concepts altogether, then figure out how to combine them and choose within themselves."
+
+Claude's answer (for him to correct): yes — today one number per thing carries both (a creature's body price is its
+card AND the mana in it; a bounced creature "itself less its recast" is tempo inside a card price; the option price's
+mana charge; the held fraction 0.5 is in effect a tempo fudge so casting beats holding), so moving it to fix one breaks
+the other. Two ledgers read cleanly: Divination +1 card / −3 tempo; Bolt on a 4-drop 0 cards / +3; Unsummon −1 card /
++ their recast. **Combined by how long the game will last** — tempo matters in a short race, cards in a long game ("who's
+the beatdown"; his "it depends on what our current role is", AI-26, seed 2 move 47): the exchange rate from the clocks
+the evaluator already computes. Care: the look-ahead already sees some tempo implicitly (a board developed sooner hits
+sooner) — not counted twice. No MTG simulator found that keeps the two apart: Forge, by its forum record, is per-card
+rules and a creature score from stats and keywords (`evaluateCreature`), without real look-ahead; card-game research
+uses feature-based evaluations, one Legends of Code and Magic design "tempo-based" — so this would be our own design.
+
+Claude's reading of the theory in cards (for him to correct): a position is scored as cards up, both players counted alike —
 cards in hand, cards' worth on the board (what each is DOING, against an average card), library depth, life converted
 at his rate, mana spent as tempo. A drawn card is an average card at the moment it is drawn; seeing it is a land is no
 loss, because the library left is better for it (the evaluator sees "a land in hand" and never "and my next draws got
@@ -128,7 +161,9 @@ consistent scale. Start with:
 3. **His principles as tests** before any rescale — each true whatever the card price: drawing now ≥ holding the
    loyalty; a bounce costs the recast and gives no card; a draw-2 that hits lands is still +2; casting a 3/2 that
    trades never scores below holding it.
-4. **Then a proposal to him:** the one theory, in cards, and how each term maps onto it — discussed before code.
+4. **Then a proposal to him:** a VALUE ledger (cards) and a TEMPO ledger (mana deployed against mana negated), how they
+   combine (the clocks: the game's expected length), and how every existing term maps onto them — each inventory entry
+   labelled value, tempo, or both mixed. Discussed before any code.
 The five draw-or-board positions (findings, "AI-27") wait for his read.
 
 
