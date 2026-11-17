@@ -36,7 +36,7 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
    Faster decisions closed 2026-11-13 (a sealed run ~11% faster, no move changed); the levers left are AI-24, for later.
 3. **The cube lane** (`D:\GameDev\SQGodotCommon-cube`) is on C1–C5; this lane runs nothing heavy until it ends.
 
-1. **AI-26** — option pricing by the target: a held card priced by what it will hit later, less its mana (Shayne, 2026-11-16: this session's focus; interview begun, nothing built)
+1. **AI-26** — option pricing: two trials committed OFF (match even); NEXT is AI-26.5, activated abilities — a pinger pings in its own turn; the end-step proposal waits on Shayne (the story's Next is the handoff)
 2. **AI-21** — combat on big boards (Tribbles) — the rollout's attack plans are 50% of a sealed decision (AI-22's profile), the biggest speed lever left
 3. **AI-20** — the look-ahead stops betting on one guessed future: the land / not-a-land look-ahead is the default; paused 2026-11-16 while Shayne plays games to find big issues (its Next lists what waits)
 4. **AI-19** — the scan's value leftovers: Cold-Blooded Crew, Mikaeus, won-line ties

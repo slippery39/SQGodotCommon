@@ -279,42 +279,63 @@ Open questions (for Shayne, before `ready`):
       either becomes the default is his call, by the plays.
 - [ ] AI-26.10 What still Bolts the 1/1 is on the board side, AI-27's: the 1/1 at 4.5 (his 3.4) and a point of life
       at 20 priced 1.0, so a 1/1's two attacks are a quarter of a card. Decide there, then this position is the test
-- [ ] AI-26.5 Activated abilities with the end-of-their-turn deadline (lesson 6; AI-17.25's position)
+- [ ] AI-26.5 Activated abilities with the end-of-their-turn deadline (lesson 6; AI-17.25's position). **Begun
+      2026-11-16 with a measurement** (`AbilityTimingTests`, explicit, `--filter "TestCategory=AbilityTiming"`):
+      hand-built positions, our turn and theirs played out by the default search in both seats, 20 life each.
+      - *A tapper ("{T}: tap target creature", a 1/1) and our 2/2 against their 3/3 and 2/2:* fine. Nothing in our
+        turn; in THEIR upkeep it taps the 3/3, and their 2/2 stays home. The same from our upkeep.
+      - *A pinger ("{T}: 1 damage to any target", a 1/1) and our 2/2 against their 3/3:* fine. Our 2/2 attacks,
+        their 3/3 blocks, the ping finishes it.
+      - *The pinger alone against their 2/3, nothing it can kill:* **the misplay he described.** It pings their
+        face in OUR turn — at our beginning of combat, and from our upkeep at our DRAW step — so it is tapped
+        through their turn, where their end step would have given the same point with every option kept.
+      Why (read, not yet measured): the search looks at our decisions this turn; their turn is the rollout's cheap
+      policy, which never uses the ability at their end step — so "ping now" is a point and "wait" is nothing, and
+      `WaitOnTies` only defers within our own turn (it moved the ping from upkeep to the draw step).
+      **Proposed (not built, for Shayne):** the look-ahead uses a free tap ability at its last chance — their end
+      step, before our untap — so waiting is seen to give the same; a line that waits then ties with using it now,
+      and the potential tie-break (an untapped creature kept) holds it; a better use before then (a kill, a combat
+      finished) still wins on the score. Behind its own switch, measured as the others
 
 ## Next
 
-**Latest (2026-11-16, night): committed, both trials OFF.** The pre-commit review's findings are fixed (AI-26.13),
-his "never the 2/1" is fixed (AI-26.14), and the match is played: 49.2% ± 1.7pp over 384 games, no difference of
-5pp either way, +7.7% engine steps a decision (AI-26.15). **Next: AI-26.5, activated abilities** (his order: match,
-commit, abilities) — begun the same night, its first step a measurement of what today's search does with a tapper
-and a pinger. Still his to say: whether either trial becomes the default, the 0.4 share, and the three changed
-positions he has not read (findings, "AI-26.14": s1 #70, s1 #111, s1 #121).
+**Handoff (2026-11-16, end of the Fable session; Shayne continues on Opus in a new session).**
 
-**Before that, the same evening:** both trials are built and OFF (`beam+optionprice`, `beam+byuse`), not committed.
-Shayne's blocker position plays as he described under both; the suite's 15 changes read "more reasonable than before
-on first glance", and after the three questioned ones were answered none is called wrong (the Jace-token one: "a
-toss up … Either play is justifiable, which means the AI is playing good enough"). Waiting on his word for: a match
-(`--match=beam+optionprice+byuse,beam --until-clear` — long, unattended is fine; asked twice, not answered), the 0.4
-share, and whether to commit (`/pre-commit` first). After that: AI-26.5 (abilities), AI-27 (the scale).
+**State.** Committed `1ca72bec`: the option report, two trials in the search — `beam+optionprice` (our answers in
+hand priced together by what they are likely to meet, AI-26.4) and `beam+byuse` (their creatures that one of ours,
+untapped for their next attack, beats outright keep 0.4 of their value, AI-26.12/26.14) — both **OFF by default**.
+Match, both on: 49.2% ± 1.7pp over 384 games, no 5pp difference either way, +7.7% cost (AI-26.15). Shayne read the
+suite's changed positions: "more reasonable than before"; none called wrong after the fixes; his bar — "Either play
+is justifiable, which means the AI is playing good enough".
 
-**Where it stood earlier the same day:** the report is built and run on four positions (findings, "AI-26.2"); the AI is
-unchanged; not committed. With Shayne's rule for a vanilla 1/1 and 8 turns priced (AI-26.6) it holds #213 (by 2.3),
-the lone Bolt (by 4.8) and the third Bolt (by 1.5), and fires the tempo swing's Kills (by 1.0). **The price is also
-in the search, off by default (AI-26.4, `beam+optionprice`)**: it changes 11 of 288 suite decisions and prices a Bolt
-in hand at 5.22 for 1.20, but the three-Bolt position still Bolts the 1/1 — what is left is the board's own scale.
+**Uncommitted in the working tree (leave for him to say):** `MagicCore.Tests/Ai/AbilityTimingTests.cs` (new — the
+AI-26.5 measurement), this story's AI-26.5 notes, and `FraCardSheet.md` / `TrkCardSheet.md` regenerated because the
+new test file names cards (`python tools/magic_docs.py --check` must stay clean). Commit only on his word, after
+`/pre-commit`.
 
-Read AI-13's Decisions (2026-10-28) and AI-13.4 / 13.10 / 13.11 / 13.12, AI-20's Decisions on #213,
-and `MagicCore/Ai/CastGains.cs` with `Evaluator.Side`'s `HoldOption` lines. The traps already met: a price for
-sorcery-speed cards with no tempo cost makes a clunky hand (AI-13.10's first try); a thin table entry is a freak price
-(Academic Ascent at 54.53); the suite's oracle is the same evaluator read deeper, so it favours whatever term is on.
-Next task (2026-11-16, after AI-26.12): **read the suite's changes with Shayne** — 15 under both trials
-(`--suite=beam+optionprice+byuse --shown=30`, ~6 min), each by the card's text and the board — and his word on the
-0.4 share (the 3/3 case holds by only 0.16). Then a match, on his word (long). The same list, one trial: AI-26.9 — the suite's 11 changes read with Shayne (`dotnet run -c Release --project MagicConsole --
---suite=beam+optionprice --shown=12`, 4.5 min; `--explain` and `--options` on a record take `--ai=beam+optionprice`).
-Then AI-26.10 / AI-27 for the three-Bolt position, and only then a match (ask first: it is long). Traps: the first
-use of a set samples 200 sealed decks (~10 s) and each new answer is measured against every likely creature once —
-a hitch on the table if this ever becomes the default; `OptionPrice.Measured` clears the root while it measures, or
-the price reads itself.
+**Next task: AI-26.5, activated abilities** (his order was: match, commit, abilities — the first two are done).
+Measured, not yet built: a tapper is used well (in their upkeep); a pinger with nothing to kill pings their face in
+OUR turn (begin combat, or the draw step from upkeep) — the misplay he described. Read: `AbilityTimingTests`
+(`--filter "TestCategory=AbilityTiming" --logger "console;verbosity=detailed"`). **Proposed, waiting on his
+go-ahead:** the look-ahead uses a free tap ability at its last chance (their end step, before our untap), so waiting
+scores the same as using it now and the potential tie-break keeps the creature untapped; behind its own switch. He
+called `WaitOnTies` (AI-13.12) "a stopgap which solves the symptom but not the problem" — this is meant to replace
+it. Where to look: `Rollout.OpponentStep` / `Rollout.OurPlay` (the rollout's policies), `BeamSearchAi.Waits`,
+`BeamSearchAi.Potential`; AI-13's lesson 6 (his words on tap abilities).
+
+**Still his to decide:** whether either trial becomes the default; the 0.4 held-off share (the three-Bolts-and-a-3/3
+case holds by only 0.25); three changed suite positions he has not read (findings, "AI-26.14": s1 #70, s1 #111,
+s1 #121); AI-26.10 / AI-27 (scores in cards — what still Bolts a vanilla 1/1 when there is no blocker anywhere).
+
+**Tools built this session:** `--record=FILE --options=N [--turns=N]` (the option report); `--suite=A --boards`
+(each changed position's board, card texts, and its whole turn under both searches, ~1 min for 12); the hand-built
+positions in `OptionReportTests` (`--filter "TestCategory=OptionReport"`).
+
+**Traps met:** the 200-deck sample (~10 s) and each new answer's gains are measured on first use — a hitch at the
+table if a trial becomes the default; `OptionPrice.Measured` clears the root and runs with exactly its own terms off,
+or the price reads itself and depends on who asked first; a creature we attack with must never count as a wall
+(AI-26.14); the suite's oracle is the default evaluator read deeper, so it leans against any new term; describe a
+position to him by each card's text and the board, never a nickname.
 
 ## Log
 
@@ -333,6 +354,8 @@ the price reads itself.
   changes 11 of 288, the three-Bolt position still Bolts (findings, "AI-26.4"). Not committed.
 - 2026-11-16: his blocker-in-hand position built and run (AI-26.11): the castable 2/2 is cast first by both searches
   (the switch puts "Bolt first" 2.1 behind); with the 3/3 a land short both Bolt at once.
+- 2026-11-16: AI-26.5 begun — a tapper and a pinger measured under the default search (Tasks); the pinger with
+  nothing to kill pings their face in our own turn. Not committed (the test file only).
 - 2026-11-16: the match, on the fixed code: 49.2% ± 1.7pp over 384 games (189-195), no difference of 5pp either
   way; 11 312.3 engine steps a decision against 10 500.1. Committed on his word, both trials off.
 - 2026-11-16: seed 2 move 47 called wrong by Shayne ("never destroy the 2/1"); the cause was our attacker counted
