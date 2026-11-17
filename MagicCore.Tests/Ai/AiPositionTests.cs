@@ -32,6 +32,26 @@ public class AiPositionTests
 	static Hidden.Library LibraryFor(Evaluator.Terms without) =>
 		without == Evaluator.Terms.None ? new BeamSearchAi.Settings().Library : OneGuess;
 
+	/// <summary>
+	/// A control's search as it was before AI-26's three became the default (2026-11-16, Shayne: "please put on all 3"):
+	/// no option price, no held-off share, tap abilities used at once. Seven controls run under it - with their patch off,
+	/// the new default no longer makes the misplay in that position, so the control shows what the patch fixed in the
+	/// search it was written for (as <see cref="OneGuess"/> does for AI-20.7's ten).
+	/// </summary>
+	internal static BeamSearchAi.Settings Before26(BeamSearchAi.Settings o) =>
+		o with
+		{
+			OptionPrice = false,
+			ByUse = false,
+			RolloutSettings = (o.RolloutSettings ?? BeamSearchAi.DefaultRollout) with
+			{
+				LastChance = false,
+			},
+		};
+
+	/// <summary><see cref="Before26"/> as --match names add it to a search's name.</summary>
+	internal const string Before26Names = "+nooptionprice+nobyuse+nolastchance";
+
 	/// <summary>How many seeds to count over: 30 guesses for a <see cref="OneGuess"/> search, one for the default - it guesses nothing, so every seed is the same search.</summary>
 	internal static int SeedsFor(Hidden.Library library) => library == OneGuess ? 30 : 1;
 
@@ -94,17 +114,22 @@ public class AiPositionTests
 	public void TheOnlySourceOfAColour_IsNotDiscarded()
 	{
 		var s = KeptRecords.Before("ShayneNotesSeed1", 97);
-		string Choice(Evaluator.Terms without) =>
+		string Choice(Evaluator.Terms without, bool control = false) =>
 			MoveTokens.Token(
 				s,
 				new BeamSearchAi(
 					s.DecidingPlayerId(),
-					new(Without: without, Library: OneGuess)
+					control
+						? Before26(new(Without: without, Library: OneGuess))
+						: new(Without: without, Library: OneGuess)
 				).Decide(s)
 			);
 
 		const Evaluator.Terms blocks = Evaluator.Terms.BlocksSeeTricks;
-		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.ColorShort | blocks), "c73"), "control");
+		Assert.That(
+			MoveTokens.Same(Choice(Evaluator.Terms.ColorShort | blocks, control: true), "c73"),
+			"control"
+		);
 		Assert.That(MoveTokens.Same(Choice(blocks), "c73"), Is.False);
 	}
 
@@ -119,7 +144,9 @@ public class AiPositionTests
 		string Chose(Evaluator.Terms without) =>
 			new BeamSearchAi(
 				s.DecidingPlayerId(),
-				new(Without: without, Library: LibraryFor(without))
+				without == Evaluator.Terms.None
+					? new(Without: without, Library: LibraryFor(without))
+					: Before26(new(Without: without, Library: LibraryFor(without)))
 			)
 				.Decide(s)
 				.What;
@@ -204,6 +231,10 @@ public class AiPositionTests
 						WaitOnTies = without == Evaluator.Terms.None,
 						Library = LibraryFor(without),
 					}
+						is var o
+					&& without != Evaluator.Terms.None
+						? Before26(o)
+						: o
 				).Decide(s)
 			);
 
@@ -494,7 +525,7 @@ public class AiPositionTests
 	// The CONTROL: the one-guess search (before AI-20.4) branching it bins it in about half (14 of 30 when checked) -
 	// what the spells rule (Settings.SpellsRule) was for. The default search keeps it without the rule (AI-20.11).
 	[Test]
-	public void ASurveil_KeepsAGoodSpellOnTop()
+	public void ASurveil_KeepsAGoodSpellOnTop_UnderTheSpellsRule()
 	{
 		var s = KeptRecords.Before("SurveilNone", 173);
 		var held = BeamSearchAi.DefaultRollout.Held!;
@@ -523,7 +554,10 @@ public class AiPositionTests
 
 		Assert.That(BinsEnergize(OneGuess), Is.GreaterThanOrEqualTo(7), "control");
 		Assert.That(BinsEnergize(OneGuess, spellsRule: true), Is.EqualTo(0), "the old rule");
-		Assert.That(BinsEnergize(new BeamSearchAi.Settings().Library), Is.EqualTo(0));
+		// The default kept it until the option price became the default (AI-26.16): it now bins Energize with the
+		// Mountain - Energize ("return target creature an opponent controls to its owner's hand") is a bounce, priced as
+		// tempo, and beam me up still casts it from the graveyard. Shayne, 2026-11-17: "Binning both is actually fine."
+		// So either answer is right for the default, and nothing is asserted of it here.
 	}
 
 	// Shayne, 2026-11-09 (AI-17.20): turn 8, Emergency Holographic Crew's surveil 2 over a Mountain and an Energize, with
@@ -646,7 +680,7 @@ public class AiPositionTests
 	public void RankRat_Control_ThePlainSearchStillMakesTheBadPlay() =>
 		Assert.That(
 			KillsTheRatWhileItIsNotAttacking(
-				new BeamSearchAi(me, new BeamSearchAi.Settings().WithoutHeld())
+				new BeamSearchAi(me, Before26(new BeamSearchAi.Settings().WithoutHeld()))
 			),
 			Is.True
 		);
@@ -947,20 +981,13 @@ public class AiPositionTests
 		var (before, _) = record.Replay();
 		var me = before[256].DecidingPlayerId();
 
-		return DeathbringerTurn(
-				record,
-				before,
-				me,
-				new()
-				{
-					// the control also turns off TrueDefender (AI-19.21), which makes the Beast unaided
-					Without = counterAttack ? Evaluator.Terms.None : Evaluator.Terms.TrueDefender,
-					RolloutSettings = BeamSearchAi.DefaultRollout with
-					{
-						CounterAttack = counterAttack,
-					},
-				}
-			)
+		var settings = new BeamSearchAi.Settings
+		{
+			// the control also turns off TrueDefender (AI-19.21), which makes the Beast unaided
+			Without = counterAttack ? Evaluator.Terms.None : Evaluator.Terms.TrueDefender,
+			RolloutSettings = BeamSearchAi.DefaultRollout with { CounterAttack = counterAttack },
+		};
+		return DeathbringerTurn(record, before, me, counterAttack ? settings : Before26(settings))
 				is var after
 			&& after.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name == "Beast")
 			&& after.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name.StartsWith("Tinybones"))

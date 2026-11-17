@@ -745,12 +745,11 @@ public static partial class Evaluator
 	static SideTerms Side(GameState s, int player, HeldValues? held, bool own, string[] keywords)
 	{
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
-		var heldOff = own ? null : HeldOff(s, player);
+		// their creatures at full value: the held-off share prices them as TARGETS only (OptionPrice, AI-26.16) - on the
+		// board it counted a wall twice (the clock term already does) and jumped when the wall died (Shayne: option A)
 		var creatures = board
 			.Where(c => c.Is(CardType.Creature))
-			.Sum(c =>
-				CreatureValue(s, c, keywords) * (heldOff?.Contains(c.Id) == true ? HeldOffShare : 1)
-			);
+			.Sum(c => CreatureValue(s, c, keywords));
 		// Every term is MONOTONIC — more of a good thing always scores more, tapering instead of
 		// capping. A cap makes "more" tie with "less", and a tie silently picks the passive move:
 		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
@@ -789,7 +788,7 @@ public static partial class Evaluator
 			ShortBy(c) is > 0 and var n
 				? Math.Max(FlatHandCard, price * Math.Pow(ManaShortShare, n))
 				: price;
-		// AI-26.4 (off by default): our answers are priced TOGETHER by what they are likely to meet (OptionPrice) -
+		// AI-26.4 (the default since 2026-11-16): our answers are priced TOGETHER by what they are likely to meet (OptionPrice) -
 		// each stands at the flat price here, and the rest of their worth is added to the hand below
 		var answers = own && OptionPrice.Active(player) ? new List<Card>() : null;
 		double Answer(Card c)
@@ -876,9 +875,12 @@ public static partial class Evaluator
 	static readonly AsyncLocal<int> byUseFor = new();
 
 	/// <summary>
-	/// <paramref name="work"/> with the creatures facing <paramref name="player"/> priced by what they can still do
-	/// against that player's board (<see cref="HeldOff"/>, AI-26.12) — 0: as always. A trial, off by default
-	/// (<c>BeamSearchAi.Settings.ByUse</c>, <c>beam+byuse</c>).
+	/// <paramref name="work"/> with the creatures facing <paramref name="player"/> priced, as targets of that player's
+	/// answers (<see cref="OptionPrice"/>), by what they can still do against that player's board (<see cref="HeldOff"/>,
+	/// AI-26.12) — 0: as always. The default since 2026-11-16 (<c>BeamSearchAi.Settings.ByUse</c>; off: <c>beam+nobyuse</c>).
+	/// Not on the board score since 2026-11-17 (AI-26.16, Shayne's option A): there a wall was counted twice - the clock
+	/// term already prices what it stops - and their creature jumped back to full value the moment the wall died, so the
+	/// AI refused to trade its wall (Jace −1 for −3, s1 #69) and flashed Divining Duelist in its own combat (s3 #15).
 	/// </summary>
 	public static T WithByUse<T>(int player, Func<T> work)
 	{
@@ -895,9 +897,9 @@ public static partial class Evaluator
 	}
 
 	/// <summary>
-	/// What a creature held off (<see cref="HeldOff"/>) keeps of its value — chosen, not measured: a vanilla 1/1,
-	/// 4.5 or 0.53 of a card on its own (Shayne's range for one is 0.33 to 0.5), is 1.8 or 0.21 of a card once a
-	/// blocker of ours handles it.
+	/// What a creature held off (<see cref="HeldOff"/>) keeps of its value AS A TARGET of our answers — chosen, not
+	/// measured: a vanilla 1/1, 4.5 or 0.53 of a card on its own (Shayne's range for one is 0.33 to 0.5), is 1.8 or 0.21
+	/// of a card once a blocker of ours handles it.
 	/// </summary>
 	public const double HeldOffShare = 0.4;
 
@@ -907,8 +909,8 @@ public static partial class Evaluator
 	/// answer to those 1/1's its just it will take a bit of time"): one of ours beats it outright in a block — kills
 	/// it and survives it — each of ours holding off one of theirs, their biggest first, our smallest that does. Only
 	/// a creature of ours that is untapped for their next attack counts: one we attack with holds nothing off. A
-	/// creature in our hand we can cast within a land counts as ours. Null: the trial is off, or it isn't that
-	/// player's search.
+	/// creature in our hand we can cast within a land counts as ours. Null: <c>ByUse</c> is off, or it isn't that
+	/// player's search. Read by the option price alone (AI-26.16).
 	/// ponytail: one blocker each, by power and toughness alone (first strike, menace and tricks not read; a flier
 	/// needs a flier or reach); a creature in hand is read by its printed stats. Their deathtouch and indestructible
 	/// creatures are never held off.

@@ -9,7 +9,7 @@ namespace MagicCore.Ai;
 
 /// <summary>
 /// A held ANSWER priced by what it is likely to meet (story AI-26.4) — the search's side of
-/// <see cref="OptionReport"/>, OFF by default (<c>BeamSearchAi.Settings.OptionPrice</c>, <c>beam+optionprice</c>).
+/// <see cref="OptionReport"/>, the default since 2026-11-16 (<c>BeamSearchAi.Settings.OptionPrice</c>; off: <c>beam+nooptionprice</c>).
 /// Shayne: "the price the AI puts on it by using it early. Cards which don't get much better when we wait, are priced
 /// cheaply … Cards which do get better are priced more expensive." An answer is a card whose target is chosen as it is
 /// cast and that gains from some creature of theirs (Lightning Bolt, Extended Absence, a Pacifism Aura).
@@ -23,9 +23,9 @@ namespace MagicCore.Ai;
 ///   (<see cref="Gain"/>) — the card really cast at the creature, so what it can hit and kill is the engine's answer.
 /// - Read at the search's root (the futures, the turns ahead), then one sum per distinct hand-and-board.
 /// ponytail: a gain is the creature on a neutral board — today's clocks, counters and Auras on it are not counted;
-/// an enters trigger's target is not an answer; the first use of a set samples its decks (~10 s) and the first sight
-/// of an answer measures it against every likely creature (a hitch on the table — warm both at start-up if this
-/// becomes the default); no time discount on a later target; the assignment is greedy.
+/// an enters trigger's target is not an answer; the first use of a set samples its decks (~10 s, built in the
+/// background as a game opens: <see cref="Warm"/>) and the first sight of an answer measures it against every likely
+/// creature (still a short hitch, not warmed); no time discount on a later target; the assignment is greedy.
 /// </summary>
 public static class OptionPrice
 {
@@ -77,18 +77,27 @@ public static class OptionPrice
 		int Unseen
 	);
 
+	/// <summary>The set the likely creatures come from: the commonest among the game's cards that has a value table.</summary>
+	static string SetOf(GameState s, int me) =>
+		AllCards(s, s.OpponentOf(me))
+			.Concat(AllCards(s, me))
+			.Select(c => c.Set)
+			.Where(x => x is not null && CardValues.TableSets.Contains(x))
+			.GroupBy(x => x)
+			.OrderByDescending(g => g.Count())
+			.FirstOrDefault()
+			?.Key ?? "FRA";
+
+	/// <summary>
+	/// Builds this game's deck sample in the background (~10 s, once per set per process), so the table's first
+	/// decision doesn't wait for it - a decision that gets there first waits only for the rest.
+	/// </summary>
+	public static void Warm(GameState s, int me) => _ = Task.Run(() => DecksOf(SetOf(s, me)));
+
 	internal static Likely TheirLikely(GameState s, int me)
 	{
 		var them = s.OpponentOf(me);
-		var set =
-			AllCards(s, them)
-				.Concat(AllCards(s, me))
-				.Select(c => c.Set)
-				.Where(x => x is not null && CardValues.TableSets.Contains(x))
-				.GroupBy(x => x)
-				.OrderByDescending(g => g.Count())
-				.FirstOrDefault()
-				?.Key ?? "FRA";
+		var set = SetOf(s, me);
 		// a land shows the colours it makes - unless it makes more than two (any colour), which shows none of theirs
 		IEnumerable<ManaColor> Shows(Card c) =>
 			!c.Is(CardType.Land) ? c.Colors
@@ -232,23 +241,47 @@ public static class OptionPrice
 
 	// ===== what an answer gains from a creature: measured once, kept =====
 
-	static readonly ConcurrentDictionary<(string Answer, string Creature), Lazy<double>> gains =
-		new();
+	static readonly ConcurrentDictionary<(Key Answer, Key Creature), Lazy<double>> gains = new();
 
-	static readonly ConcurrentDictionary<string, Lazy<double>> floors = new();
+	static readonly ConcurrentDictionary<Key, Lazy<double>> floors = new();
+
+	/// <summary>A card as a kept gain knows it: its name and what it IS, never its status (a pump, an exile link).</summary>
+	readonly record struct Key(
+		string Name,
+		int Power,
+		int Toughness,
+		int ManaValue,
+		int Keywords,
+		int Abilities
+	);
+
+	/// <summary>
+	/// What a kept gain is keyed by: the name and what the card IS - two cards of one name differ only in tests (an FRA
+	/// card made vanilla for a filler deck, two inline "Beast"s), where the first measured was read by every later test.
+	/// </summary>
+	static Key Identity(Card c) =>
+		new(
+			c.Name,
+			c.BasePower,
+			c.BaseToughness,
+			c.ManaCost.ManaValue,
+			c.Keywords.Count(),
+			c.Components.Count(x => !Card.IsStatus(x))
+		);
 
 	static readonly Lazy<(GameState State, int Me)> fixture = new(() => CardValues.Fixture(7));
 
 	/// <summary>
 	/// What casting <paramref name="answer"/> at <paramref name="creature"/> gains — the evaluation after, settled,
-	/// less before, the card's own flat price added back — in the card-value fixture (our lands for it, both creature
-	/// ladders), the creature put on their side. 0 when it can't be cast at it or gains nothing. Without the threat
-	/// term: the fixture's ladders have no clock worth reading. By name: measured once.
+	/// less the board before the answer was in hand, both with the default search's held values — in the card-value
+	/// fixture (our lands for it, both creature ladders), the creature put on their side. 0 when it can't be cast at it
+	/// or gains nothing. Without the threat term: the fixture's ladders have no clock worth reading. Measured once per
+	/// <see cref="Identity"/>. ponytail: a search with other held values (beam-held=X) reads gains in the default's.
 	/// </summary>
 	public static double Gain(Card answer, Card creature) =>
 		gains
 			.GetOrAdd(
-				(answer.Name, creature.Name),
+				(Identity(answer), Identity(creature)),
 				_ =>
 					new(
 						() =>
@@ -265,7 +298,7 @@ public static class OptionPrice
 	public static double Floor(Card answer) =>
 		floors
 			.GetOrAdd(
-				answer.Name,
+				Identity(answer),
 				_ =>
 					new(
 						() =>
@@ -330,6 +363,12 @@ public static class OptionPrice
 						);
 						target = put.Id;
 					}
+					// priced with the default search's held values, against the board BEFORE the answer was in hand: without
+					// them a creature bounced to their hand was a flat card, so a bounce gained the whole creature -
+					// Unsummon on Verdant Kraken 15.8, more than a kill (2026-11-16; with them it is "what it is on
+					// the board, less the mana to cast it again", as in the search)
+					var prices = BeamSearchAi.DefaultRollout.Held;
+					var before = Evaluator.Evaluate(s, me, prices);
 					(s, var held) = s.AddObject(
 						answer.Fresh() with
 						{
@@ -338,14 +377,11 @@ public static class OptionPrice
 						},
 						s.ZoneId(me, ZoneType.Hand)
 					);
-					var before = Evaluator.Evaluate(s, me);
 					return s.DistinctMoves(s.LegalActions())
 						.OfType<CastSpellAction>()
 						.Where(c => c.CardId == held.Id && counts(s, c, target))
 						.Select(c =>
-							Evaluator.Evaluate(Lookahead.Settle(s.Act(c)), me)
-							- before
-							+ Evaluator.FlatHandCard
+							Evaluator.Evaluate(Lookahead.Settle(s.Act(c)), me, prices) - before
 						)
 						.Append(0)
 						.Max();

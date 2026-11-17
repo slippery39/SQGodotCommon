@@ -109,10 +109,14 @@ public static class AiMatch
 			["nosurveillands"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilLands },
 			// A surveil's real spells decided by price, not by the search - the default until AI-20.11: beam+surveilspells.
 			["surveilspells"] = o => o with { SpellsRule = true },
-			// AI-26.4, a trial: our held answers priced by what they are likely to meet (OptionPrice).
+			// AI-26.4: our held answers priced by what they are likely to meet (OptionPrice) - the default since 2026-11-16;
+			// beam+nooptionprice as before.
 			["optionprice"] = o => o with { OptionPrice = true },
-			// AI-26.12, a trial: their creatures that ours hold off count for less (Evaluator.HeldOff).
+			["nooptionprice"] = o => o with { OptionPrice = false },
+			// AI-26.12: their creatures that ours hold off count for less as TARGETS (Evaluator.HeldOff) - the default since
+			// 2026-11-16; beam+nobyuse as before. Read by the option price alone: with nooptionprice it changes nothing.
 			["byuse"] = o => o with { ByUse = true },
+			["nobyuse"] = o => o with { ByUse = false },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.
@@ -170,8 +174,10 @@ public static class AiMatch
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.
 			["nocounter"] = WithRollout(r => r with { CounterAttack = false }),
-			// AI-26.5, a trial: our tap abilities wait in the look-ahead for the opponent's end step (Rollout.Settings.LastChance).
+			// AI-26.5: our tap abilities wait in the look-ahead for the opponent's end step (Rollout.Settings.LastChance) - the
+			// default since 2026-11-16; beam+lastchance is the default's own name, beam+nolastchance as before.
 			["lastchance"] = WithRollout(r => r with { LastChance = true }),
+			["nolastchance"] = WithRollout(r => r with { LastChance = false }),
 			// A fresh search at every decision, no plan committed and replayed (review item 9, AI-17.6): beam+noplans.
 			["noplans"] = o => o with { CommitPlans = false },
 			// The cheap look-ahead's chooser's best one level deep, targets and "you may" only, as before: beam+shallowsettle.

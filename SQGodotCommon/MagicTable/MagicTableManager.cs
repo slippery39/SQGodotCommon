@@ -122,6 +122,8 @@ public sealed class MagicTableManager
 		_ais[OpponentId] = NewAi(OpponentId);
 		if (aiVsAi)
 			_ais[HumanId] = NewAi(HumanId);
+		if (Search)
+			OptionPrice.Warm(State, OpponentId); // its 200-deck sample, ~10 s, off the first decision (AI-26)
 		_start = State;
 		Settle();
 	}

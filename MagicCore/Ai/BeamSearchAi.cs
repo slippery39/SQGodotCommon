@@ -85,11 +85,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// </param>
 	/// <param name="OptionPrice">
 	/// Our held answers priced by what they are likely to meet (<see cref="Ai.OptionPrice"/>, AI-26.4) in place of
-	/// their held prices. OFF: a trial, beam+optionprice.
+	/// their held prices. The default since 2026-11-16 (Shayne: "please put on all 3 and let's try it out"); off is
+	/// beam+nooptionprice.
 	/// </param>
 	/// <param name="ByUse">
-	/// Their creatures that ours hold off count for less (<see cref="Evaluator.HeldOff"/>, AI-26.12). OFF: a trial,
-	/// beam+byuse.
+	/// Their creatures that ours hold off count for less as targets of our answers (<see cref="Evaluator.HeldOff"/>,
+	/// AI-26.12; the option price only since 2026-11-17, AI-26.16 — so without <see cref="OptionPrice"/> it changes
+	/// nothing). The default since 2026-11-16 (Shayne); off is beam+nobyuse.
 	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
@@ -119,8 +121,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		int FreePassCap = 4,
 		bool WaitOnTies = true,
 		bool SpellsRule = false,
-		bool OptionPrice = false,
-		bool ByUse = false
+		bool OptionPrice = true,
+		bool ByUse = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>

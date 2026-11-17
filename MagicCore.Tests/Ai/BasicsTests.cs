@@ -296,7 +296,7 @@ public class BasicsTests
 	// The rule is a switch since AI-20.11 (Settings.SpellsRule, off by default): this is the check that it still fires.
 	// No control here: without it the branching bins the cheap card too (AI-13.10 - the old control kept it only for
 	// a stale 54.53 option price). The rule's control is keeping a GOOD card, on a real position:
-	// AiPositionTests.ASurveil_KeepsAGoodSpellOnTop.
+	// AiPositionTests.ASurveil_KeepsAGoodSpellOnTop_UnderTheSpellsRule.
 	[Test]
 	public void Surveil_BinsTheCheapSpell_KeepsTheDear()
 	{

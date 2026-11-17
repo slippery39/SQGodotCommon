@@ -121,6 +121,20 @@ Drafted from Shayne's words — for him to confirm; each needs a position he agr
 - 2026-11-16, Shayne (asked whether retiring `WaitOnTies` — 17 suite changes, instants and mana-costed abilities, none
   a tap ability — is AI-26.5's or its own task): "Dont worry about turning the wait on ties off, we will come back to
   it later". It stays on; the trial was committed on his word.
+- 2026-11-16, Shayne (told the three were built OFF, never made the default — "I thought we were adding them all?"):
+  **"Ok please put on all 3 and let's try it out."** Turning them on undid two plays he had agreed; asked whether to
+  fix them, keep them, or leave two off: "Im interested in trying 1 first" — find why, fix, all three on (AI-26.16).
+- 2026-11-17, Shayne, on the six positions the new default changed that he had not read (each given by its board and
+  card texts): the surveil at #173 binning Energize with the Mountain — "Binning both is actually fine."; s1 #52, Koth
+  blocking a Cadet — "Seems ok with me, fine trades."; s1 #111, the Soulbreaker kept home at 3 life — "Agreed".
+  **Two wrong:** s1 #69, Jace −1 (surveil) for −3 (draw) — "Unless they know the top card is a plains and they dont
+  need it, its better to draw." (the top WAS a Plains, unknown to the AI); s3 #15, Divining Duelist (flash) cast in
+  the AI's own combat — "Makes no sense to play it during its own combat step, it should play it during the
+  opponents turn in case it can get a free block on the 1/1, or to gain an advantage because your opponent doesn't
+  know you have it". Both traced to `byuse` (each switch off in turn).
+- 2026-11-17, Shayne (given three ways out — the held-off share on the option price only, fixing #69 and #15 but
+  Bolting the 1/1 again with the 3/3 a land short; as it was; `byuse` off): **"A sounds good to me".** The held-off
+  share prices their creatures as TARGETS only, never on the board score.
 - 2026-11-16, Claude (bookkeeping): its own story rather than more of AI-13 — AI-13 is the rules route, this computes
   the price. #213 and AI-13.5 / 13.6 / 13.8 / 13.9 and lesson 6 are this story's once it is agreed.
 
@@ -283,6 +297,37 @@ Open questions (for Shayne, before `ready`):
       80-48, White-Black 75-53, White-Blue Jace 34-94 (its usual share). So the trials neither gain nor lose
       strength that this match can show; what they change is the plays (findings, "AI-26.15"). Both stay OFF: whether
       either becomes the default is his call, by the plays.
+- [ ] AI-26.16 **All three the default** (Shayne, 2026-11-16; off: `beam+nooptionprice`, `+nobyuse`, `+nolastchance`).
+      Turned on, two of his agreed plays broke and were traced and fixed (findings, "AI-26.16"):
+      - *Guidance Failure's game (#187), the Jockey stayed home* — `byuse`: their Fugitive Listener 3/1 counted as held
+        off (a 4/4 in our hand beats it), so trading our 3/3 with it was a loss. First fixed by never holding off a
+        creature that kills one of ours by blocking; replaced by his option A below (the share off the board score),
+        which fixes it alone — the first fix was reverted in review (a single 1/1 of ours voided the share for every
+        2-power creature of theirs).
+      - *Unsummon held on the Aura'd attacker* — `optionprice`: every gain was measured WITHOUT the held values, so a
+        creature bounced to their hand was a flat card and a bounce gained the whole creature (Unsummon on Verdant Kraken
+        15.8, more than a kill). **Fix: gains measured with the search's own held values** — a bounce is tempo (Kraken
+        3.5). Every answer's gain moves a little (Prophesied End on a non-attacker gives them a card, now priced as the
+        search prices it).
+      - *Kept gains depended on which test ran first* (keyed by name; the filler deck's FRA cards are vanilla). Now
+        keyed by name and what the card is, its status left out (`OptionPrice.Identity`).
+      - The 200-deck sample (~10 s) is built in the background as a table or console game opens (`OptionPrice.Warm`).
+      - Seven controls no longer showed their misplay under the new default; they run under the search they were
+        written for (`AiPositionTests.Before26`), as AI-20.7's ten do under `OneGuess`.
+      - *His six unread positions (2026-11-17):* four fine (the surveil binning Energize too — the test takes his
+        answer — Koth's trade, the Soulbreaker home at 3 life, a turn reordered); **two wrong, both `byuse`** (Jace −1
+        for −3 at s1 #69; Divining Duelist flashed in our own combat at s3 #15). The cause: on the board the held-off
+        share counted a wall twice (the clock term already prices it) and their creature jumped back to full value
+        when the wall died. **His option A: the share prices their creatures as targets only** (`Evaluator.Side` no
+        longer reads it). #69 draws, #15 holds the Duelist; the cost — three Bolts and a {3}{R} 3/3 a land short Bolts
+        the 1/1 at once again (it held by 0.16), which is AI-26.10's board price of a 1/1.
+      **Measured:** 1601 tests pass. Suite: **6 of 288 changed**, all read by him before (s2 #10, s4 #24, s4 #49, s4 #2
+      twice, s3 #71 reordered), 20 134.6 engine steps a position against 19 805.8 (+1.7%); accepted as the committed
+      answers (`--suite=beam --accept`). `/pre-commit`: ten findings, fixed — the broad Guidance exclusion reverted,
+      the gains' key a struct without status components, the console's warm-up skipped under `--greedy`, `byuse`
+      documented as read by the option price alone, the surveil test renamed for what it checks
+      (`…_UnderTheSpellsRule`), the colour control chosen explicitly, stale summaries. Suite after: 0 of 288 changed
+      against the accepted answers. Not committed
 - [ ] AI-26.10 What still Bolts the 1/1 is on the board side, AI-27's: the 1/1 at 4.5 (his 3.4) and a point of life
       at 20 priced 1.0, so a 1/1's two attacks are a quarter of a card. Decide there, then this position is the test
 - [ ] AI-26.5 Activated abilities with the end-of-their-turn deadline (lesson 6; AI-17.25's position). **Begun
@@ -320,25 +365,35 @@ Open questions (for Shayne, before `ready`):
 
 ## Next
 
-**State (2026-11-16, Opus session).** The AI-26.5 measurement is committed (`6363cdc3`). The trial is built and
-uncommitted: `Rollout.Settings.LastChance`, `beam+lastchance`, OFF by default. The rollout keeps our "{T}:" abilities
-for the opponent's end step unless one kills something now. `AbilityTimingTests` now runs each position under `beam`,
-`beam+lastchance` and `beam+lastchance+actnow`. Tests 1599 pass with it off; the findings are under "AI-26.5".
+**State (2026-11-17, Opus session).** AI-26.5 committed (`2f1f7dca`). Then, on Shayne's word, **all three the default**
+(AI-26.16) — in the working tree, NOT committed: two broken plays traced and fixed, the gains' cache keyed by identity,
+the sample warmed at game start, seven controls on `Before26`, and his option A (the held-off share on targets only).
+1601 tests pass; suite 6 of 288 changed (all read by him), accepted.
 
-**Shayne called the two changed plays correct** (Decisions). The match: 51.0% ± 1.0pp over 96 games, no difference of
-5pp either way, +0.2% cost (findings, "AI-26.5"). Committed on his word, after `/pre-commit`. His call: whether
-`beam+lastchance` becomes the default.
+**Next:** committed on his word (2026-11-17); no match — Shayne: "no need to run the match i'm going to do some manual
+testing instead". His table games are the test now: read his notes (`game_records/*.notes.md`) for what the new
+default does wrong, by the plays.
 
-**Open:** `WaitOnTies` stays — Shayne: "we will come back to it later". Retiring it needs the same "last chance" for
-instants and mana-costed abilities (17 suite positions; findings). Also still his: whether either AI-26 trial becomes the default; the 0.4 held-off share; three unread suite
-positions (findings, "AI-26.14": s1 #70, s1 #111, s1 #121); AI-26.10 / AI-27.
+**Open:** `WaitOnTies` stays (Shayne: "we will come back to it later"); three Bolts and a 3/3 a land short Bolts the 1/1
+again (AI-26.10 / AI-27, the 1/1's board price); whether s3 #15 now flashes the Duelist in THEIR turn is not read (the
+suite plays the mover's own turn only); the 0.4 held-off share.
 
-**Traps:** the earlier ones still hold (the 200-deck sample's hitch, `OptionPrice.Measured` with its own terms off,
-an attacker never a wall, positions described by card text). New: holding a tap ability for their end step loses
-anything whose value ends with OUR turn — marked damage, an attack. The kill-now exception covers the first; a
-blocker tapped before our attack is left to the search's tree (`ponytail:` on `LastChance`).
+**Traps:** a position test's CONTROL that fails after a default change is not a misplay — run it under the search it
+was written for (`Before26`, `OneGuess`); the option price's kept gains are shared by every test in a run (keyed by
+`Identity`); gains are measured with the held values — without them a bounce was a kill; a share on the BOARD score
+double-counts what the clock term prices and jumps when a wall dies — keep such shares on targets; describe a position
+to him by each card's text and the board.
 
 ## Log
+
+- 2026-11-17: committed on Shayne's word, no match ("i'm going to do some manual testing instead").
+- 2026-11-17: Shayne read the six unread changes: four fine, two wrong (both `byuse`). His option A: the held-off share
+  on targets only. 1601 tests pass; suite 6 of 288 changed, accepted. Not committed.
+
+- 2026-11-16: all three made the default on Shayne's word (AI-26.16). Two agreed plays broke (Guidance Failure's attack:
+  `byuse`; Unsummon on the Aura'd attacker: `optionprice`), both traced and fixed; the gains' cache keyed by identity
+  (a test-order dependence), the deck sample warmed at start, seven controls on `Before26`. 1600 of 1601 pass; suite
+  14 of 288 changed. Not committed.
 
 - 2026-11-16: the measurement committed (`6363cdc3`, after `/pre-commit`: five test-file findings fixed — the loop's
   silent stop, the upkeep variant's players, a pass matched by its text). AI-26.5's trial built (`beam+lastchance`,

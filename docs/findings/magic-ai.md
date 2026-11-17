@@ -2177,3 +2177,56 @@ under the default).
   `--match=beam+lastchance,beam --until-clear`: **51.0% ± 1.0pp over 96 games (49-47)**, no difference of 5pp either
   way; 9379.0 engine steps a decision against 9359.3 (+0.2%); 30 min. By deck: Red-Green 22-10, White-Black 16-16,
   White-Blue Jace 11-21.
+
+## AI-26.16: all three the default (2026-11-16)
+
+Shayne: "please put on all 3 and let's try it out". As first turned on: suite 14 of 288 changed (+4.0% engine steps), 12
+tests failing — ten controls, two real changes of his agreed plays. Traced with a throwaway probe (each switch off in turn):
+
+| Position | Old default | All three | Which | Why |
+|---|---|---|---|---|
+| Guidance Failure's game, #187 (`GuidanceNoAttack`) | the Spanner Jockey 3/3 attacks | stays home | `byuse` | their Fugitive Listener 3/1 "held off" by our Dominion Assault Force 4/4 in hand, so the Jockey trading with it lost 0.6 of the Listener |
+| Unsummon against a 2/2 with Ferocity of the Hunt, attacking | bounces it (the Aura dies) | holds | `optionprice` | Unsummon held priced 10.3 (flat 1.2); casting gained ~9.3 |
+
+The second: `OptionPrice.Gain` measured with no held values, so a creature bounced to their hand was a flat card (1.2)
+and a bounce gained the whole creature. Unsummon's gains before → after the fix: Verdant Kraken 15.8 → 3.5, Archive
+Arbiter 11.6 → 3.0, Proft 14.1 → 1.5, a vanilla 2/2 5.8 → 0.5. Prophesied End on Fugitive Listener 7.2 → 4.85 (the card
+it gives a non-attacker is priced as the search prices their unseen cards).
+
+Also found: kept gains were keyed by name, and the filler deck's FRA cards are vanilla with real names — so which test
+ran first set every later test's gains (RankRat failed in the full run, passed alone; its control the reverse).
+
+After the fixes (a creature that kills one of ours blocking it is never held off — reverted under option A, below;
+gains with held values; gains keyed by `Identity`): **1600 of 1601 pass**, seven controls moved to `Before26`. Shayne's AI-26 positions unchanged — three
+Bolts and a 2/2 in hand: casts the 2/2; a 3/3 a land short: passes; three Bolts alone: Bolts; the tempo swing: both
+Kills; "never the 2/1": the 3/2. **Suite: 14 of 288 changed, 19 961.4 engine steps a position against 19 805.8
+(+0.8%)**; oracle agreement 74.3% (committed 77.1% — the oracle is the old evaluator read deeper). Nine of the 14 he
+read before (AI-26.9/26.14); new or unread: s1 #52 (Koth blocks a Cadet), s1 #69 (Jace −1 for −3), s1 #111 (the
+Soulbreaker stays home at 3 life), s3 #15 (Divining Duelist flashed in our own combat, looting), s3 #71 (a land before
+Prophesied End on Koth — the same turn reordered).
+
+Open: `ASurveil_KeepsAGoodSpellOnTop` (#173) — `optionprice` now bins Energize ("{1}{U} Sorcery: Return target creature
+an opponent controls to its owner's hand"; beam me up {3}{U}) with the Mountain: −6.05 against −6.93 for the Mountain alone.
+
+**Then (2026-11-17), Shayne's answers and option A.** Of the six changed positions he had not read: fine — the surveil
+binning Energize with the Mountain ("Binning both is actually fine"), Koth trading with a Cadet, the Soulbreaker home at 3
+life, a turn reordered; **wrong — s1 #69 (Jace −1 for −3: "its better to draw"; the top was a Plains the AI did not know)
+and s3 #15 (Divining Duelist flashed in our own combat: "it should play it during the opponents turn")**. Each switch off
+in turn: both `byuse` (#69 −3.98 against −10.72; #15 18.69 against 16.87). The explain at #69: blocking their Rampart
+Hunter (deathtouch) with Thalia traded the wall that held off Edgar, so Edgar jumped from 0.4 back to full value — the
+block refused, the Jace-at-1 line punished. On the board the share counts a wall twice (the clock term prices it too).
+
+The held-off share on targets only (option A, `Evaluator.Side` no longer reads it):
+
+| Position | share on the board | targets only |
+|---|---|---|
+| s1 #69 | Jace −1 | Jace −3 |
+| s3 #15 | Divining Duelist now | Pass (Mindseeker Oculus in main) |
+| three Bolts, a {2}{R} 2/2 in hand | casts the 2/2 | casts the 2/2 |
+| three Bolts, a {3}{R} 3/3 a land short | Pass (by 0.16) | **Bolts the 1/1** |
+| Guidance Failure, Unsummon on the Aura, the tempo swing, "never the 2/1" | as he said | as he said |
+
+**1601 tests pass. Suite: 6 of 288 changed** (s2 #10, s4 #24, s4 #49, s4 #2 twice — read in AI-26.9 — and s3 #71
+reordered), **20 134.6 engine steps a position against 19 805.8 (+1.7%)**, oracle agreement 76.0% (77.1%). Accepted.
+After the review's fixes (the Guidance exclusion reverted — option A fixes that position alone; the gains' key without
+status components): 0 of 288 changed against the accepted answers, 20 132.2 steps.

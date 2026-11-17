@@ -93,8 +93,8 @@ public static class Rollout
 	/// scores better: their attacker tapped in their upkeep, a combat finished. ponytail: a tap in our own turn that only
 	/// pays THEN and kills nothing (a blocker tapped before our attack) is left to the search's tree; let the rollout use
 	/// one before its attack if a position shows the look-ahead missing it. Nothing is held in a turn of ours the rollout
-	/// plays no end step of theirs after; the Greedy policy (<see cref="OurPolicy.Greedy"/>) ignores it. OFF: a trial,
-	/// beam+lastchance.
+	/// plays no end step of theirs after; the Greedy policy (<see cref="OurPolicy.Greedy"/>) ignores it. The default since
+	/// 2026-11-16 (Shayne: "please put on all 3 and let's try it out"); off is beam+nolastchance.
 	/// </param>
 	/// <param name="TheirWalkers">
 	/// The simulated opponent uses its best planeswalker ability every turn it can, whatever its model
@@ -118,7 +118,7 @@ public static class Rollout
 		bool Mays = true,
 		bool CounterAttack = true,
 		int AttackShortlist = WholeAttacks.Shortlist,
-		bool LastChance = false
+		bool LastChance = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>

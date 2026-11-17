@@ -367,7 +367,8 @@ public class HiddenTests
 			);
 
 		Assert.That(
-			Lands(TurnPlayed("beam+shuffle", at.RngSeed)),
+			// as written, before AI-26's three became the default (AiPositionTests.Before26)
+			Lands(TurnPlayed("beam+shuffle" + AiPositionTests.Before26Names, at.RngSeed)),
 			Is.EqualTo(Lands(at)),
 			"the control"
 		);

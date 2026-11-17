@@ -954,6 +954,8 @@ IAi NewAi(int player) =>
 		? new GreedyAi(player)
 		: new BeamSearchAi(player, BeamSearchAi.Settings.Interactive);
 var ais = new Dictionary<int, IAi> { [opponent] = NewAi(opponent) };
+if (!flags.Contains("--greedy"))
+	OptionPrice.Warm(s, opponent); // its 200-deck sample, ~10 s, off the first decision (AI-26)
 if (watch)
 	ais[human] = NewAi(human);
 
