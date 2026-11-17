@@ -1016,7 +1016,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, ManaTests, RandomGameTests, TrkBatch6aTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, ManaTests, RandomGameTests, TrkBatch6aTests
 
 ### Murmuring Volume
 
@@ -7128,7 +7128,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Tarmogoyf"] =
@@ -7136,8 +7136,8 @@ How to write a script: `MagicCore/Cookbook.md`.
 	// "*/1+*": the printed 1 is its base toughness; the static adds the count to both.
 	new StaticEffectComponent(Is.Source)
 	{
-		Power = Count.CardTypesInAllGraveyards,
-		Toughness = Count.CardTypesInAllGraveyards,
+		Power = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
+		Toughness = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
 	},
 ],
 ```

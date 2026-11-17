@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 26/46 · uncommon 38/86 · rare 106/279 · mythic 35/108 · **214/528**
+**Playable:** common 27/46 · uncommon 38/86 · rare 109/279 · mythic 35/108 · **218/528**
 
 ### "Name Sticker" Goblin
 
@@ -328,7 +328,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Draw two cards, then discard two cards. Untap up to three lands.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Frantic Search"] =
+[
+	Spell(
+		[],
+		new DrawCards(Ref.You, 2),
+		new Discard(Ref.You, 2),
+		new Untap(Ref.Permanents(Is.Land)) { UpTo = 3 }
+	),
+],
+```
 
 ### Galvanic Discharge
 
@@ -4120,7 +4134,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Return target creature to its owner's hand.  
 > • Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Mystic Confluence"] =
+[
+	ModalSpell(
+		"Mystic Confluence",
+		new()
+		{
+			AtLeast = 3,
+			AtMost = 3,
+			Repeats = true,
+		},
+		M(
+			[TargetSpec.Spell()],
+			new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{3}"))
+		),
+		M([Creature], new MoveTo(Ref.Target(), ZoneType.Hand)),
+		M([], new DrawCards(Ref.You, 1))
+	),
+],
+```
 
 ### Mystical Tutor
 
@@ -4186,7 +4223,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Draw X cards, then discard X cards. Create a 1/1 white Spirit creature token with flying for each card type among cards discarded this way.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Occult Epiphany"] =
+[
+	Spell(
+		[],
+		new DrawCards(Ref.You, Count.X),
+		new Discard(Ref.You, Count.X)
+		{
+			Then = [new CreateTokens(Spirit, Count.CardTypesAmong(Ref.Chosen))],
+		}
+	),
+],
+```
 
 ### Okoye, Mighty and Adored
 
@@ -4387,8 +4440,8 @@ How to write a script: `MagicCore/Cookbook.md`.
 [
 	new StaticEffectComponent(Is.Source)
 	{
-		Power = Count.CardTypesInAllGraveyards,
-		Toughness = Count.CardTypesInAllGraveyards,
+		Power = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
+		Toughness = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
 	},
 	// "this creature or another Lhurgoyf creature you control" — "that creature deals"
 	When(
@@ -5379,7 +5432,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile Time Spiral. Each player shuffles their hand and graveyard into their library, then draws seven cards. You untap up to six lands.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2eTests
+
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Time Spiral"] =
+[
+	Spell(
+		[],
+		[
+			new ExileSourceAndCopiesFromGraveyard(0), // "Exile Time Spiral."
+			.. TimetwisterSteps,
+			new Untap(Ref.Permanents(Is.Land)) { UpTo = 6 },
+		]
+	),
+],
+```
 
 ### Time Warp
 
@@ -5420,7 +5489,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 			Then =
 			[
 				new If(
-					new Matches(Ref.ThisWay, Is.Artifact | Is.Creature | Is.Planeswalker),
+					new Matches(
+						Ref.ThisWay,
+						Is.Artifact | Is.Creature | Is.Planeswalker
+					),
 					[
 						new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
 						{

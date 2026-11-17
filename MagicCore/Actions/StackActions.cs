@@ -144,8 +144,15 @@ public record CastSpellAction : GameAction
 	/// Dominion Infiltration: "Choose X target creatures your opponents control" — the X targets are a
 	/// choice made as it is cast (ChooseXTargetsChoice), before it is paid (CR 601.2c), not one legal cast
 	/// per set: 2^n casts hung the fuzz probe (Shayne, 2026-11-05). One cast per X; Targets empty until chosen.
+	/// Mystic Confluence, Fiery Confluence: "Choose three. You may choose the same mode more than once." — one cast
+	/// per choice of modes, each target word then chosen in turn (ChooseTargetChoice, as a copy's are), never a
+	/// cast per set: "return target creature" three times is 220 casts against 12 creatures (<see cref="EachWord"/>).
 	/// </summary>
 	public bool ChoosesTargets { get; init; }
+
+	/// <summary>Mystic Confluence: a text whose modes may repeat chooses its targets word by word as it is cast.</summary>
+	public static bool EachWord(Card card) =>
+		card.GetComponent<SpellEffectsComponent>()?.Choose.Repeats == true;
 
 	/// <summary>
 	/// Pyrokinesis: how its 4 damage is divided among the targets chosen (TargetSpec.Divide), one number per
@@ -375,10 +382,36 @@ public record CastSpellAction : GameAction
 	public override ActionResult Execute(GameState s) =>
 		new(ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId));
 
-	/// <summary>Dominion Infiltration: the X targets chosen, then this cast with them — Pyrokinesis: one to four.</summary>
+	/// <summary>
+	/// Dominion Infiltration: the X targets chosen, then this cast with them — Pyrokinesis: one to four; Mystic
+	/// Confluence: each word in turn.
+	/// </summary>
 	GameState ChooseTargets(GameState s, bool retain)
 	{
-		var specs = StackResolution.TextOf(s.GetCard(CardId), Modes, Kicked, X).Specs;
+		var card = s.GetCard(CardId);
+		var specs = StackResolution.TextOf(card, Modes, Kicked, X).Specs;
+		if (EachWord(card))
+			return s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						.. specs.Select(
+							(spec, i) => new ChooseTargetChoice(PlayerId, CardId, spec, i)
+						),
+						new CastWithChosenTargetsAction(
+							this with
+							{
+								ChoosesTargets = false,
+							},
+							retain
+						)
+						{
+							Words = specs.Count,
+						},
+					],
+				}
+			);
 		return s.SpawnAction(
 			new PipelineAction
 			{
@@ -1129,14 +1162,31 @@ public record ChooseXTargetsChoice : ChoiceAction
 				: $"Choose {min} to {max} targets";
 	}
 
+	/// <summary>
+	/// Each word and the NotThePrevious repeats after it have as many candidates as they need — Dominion
+	/// Infiltration's X words are one run, each of Mystic Confluence's chosen modes its own. ponytail: runs don't
+	/// share candidates, as no card's modes overlap (a spell and a creature; artifacts alone); two overlapping modes
+	/// would need their words checked together, and could leave a later word nothing after earlier picks.
+	/// </summary>
 	public static bool CanChoose(
 		GameState s,
 		int playerId,
 		int cardId,
 		IReadOnlyList<TargetSpec> specs
-	) =>
-		specs.Count > 0
-		&& specs[0].Candidates(s, playerId, cardId).Count() >= specs.Count(t => !t.Optional);
+	)
+	{
+		for (var i = 0; i < specs.Count; )
+		{
+			var run = 1;
+			while (i + run < specs.Count && specs[i + run].NotThePrevious)
+				run++;
+			var need = specs.Skip(i).Take(run).Count(t => !t.Optional);
+			if (specs[i].Candidates(s, playerId, cardId).Take(need).Count() < need)
+				return false;
+			i += run;
+		}
+		return specs.Count > 0;
+	}
 
 	public override ImmutableList<ChoiceOption> GetOptions(
 		GameState s,
@@ -1166,14 +1216,21 @@ public record ChooseXTargetsChoice : ChoiceAction
 
 /// <summary>
 /// After ChooseXTargetsChoice: the cast with those targets, in increasing order (one set, one cast). Pyrokinesis: two or three targets can share its 4 damage several ways, so that is asked
-/// next (a ChooseKeywordChoice of the ways), before the cast.
+/// next (a ChooseKeywordChoice of the ways), before the cast. Mystic Confluence: after a ChooseTargetChoice per word,
+/// those, in the words' order.
 /// </summary>
 public record CastWithChosenTargetsAction(CastSpellAction Cast, bool Retain) : GameAction
 {
+	/// <summary>Mystic Confluence: how many words were chosen one at a time (ChooseTargetChoice); 0 is one ChooseXTargetsChoice.</summary>
+	public int Words { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var card = s.GetCard(Cast.CardId);
-		var chosen = ChooseXTargetsChoice.Read(InputContext);
+		var chosen =
+			Words > 0
+				? ChooseTargetChoice.Read(InputContext, Words)
+				: ChooseXTargetsChoice.Read(InputContext);
 		var cast = Cast with { Targets = chosen };
 		var splits = Division.Splits(Division.Of(card), chosen.Length);
 		if (splits.Count > 1)

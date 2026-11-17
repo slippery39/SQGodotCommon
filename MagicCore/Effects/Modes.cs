@@ -111,9 +111,10 @@ public static class Modal
 			var mode = modes[i];
 			steps.Add(new ScopeTargetsAction(specs.Count, mode.Targets.Count));
 			steps.AddRange(mode.Effects);
-			// Fiery Confluence's "destroy target artifact" chosen twice: one cast per SET of artifacts, never per
-			// order. ponytail: so the same artifact can't be targeted twice (legal, never useful) — and a repeated
-			// mode with two target words would compare across them; give the repeat its own rule if a card has one.
+			// Fiery Confluence's "destroy target artifact" chosen twice: never the same artifact twice — the targets
+			// are chosen word by word as it is cast (CastSpellAction.EachWord), a repeat never one picked before.
+			// ponytail: legal (CR 115.3) and never useful there, but Mystic Confluence can't counter ONE spell twice
+			// ("unless its controller pays {3}", twice — the tax grows); lifting it is this line (DesignNotes).
 			specs.AddRange(
 				i == previous
 					? mode.Targets.Select(t => t with { NotThePrevious = true })

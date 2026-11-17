@@ -373,7 +373,7 @@ public enum CountOf
 	CardsYouDiscardedThisTurn,
 	LoyaltyAbilitiesYouActivatedThisTurn,
 	BasicLandTypesAmongLandsYouControl, // domain
-	CardTypesInAllGraveyards, // Tarmogoyf
+	CardTypesAmong, // Tarmogoyf: "card types among cards in all graveyards"
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
 	NoncreatureSpellsYouCastThisTurn, // Discovery of the Doomsayer's "if you've cast a noncreature spell this turn"
@@ -523,9 +523,11 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count LoyaltyAbilitiesYouActivatedThisTurn =
 		new(0, null, CountOf.LoyaltyAbilitiesYouActivatedThisTurn);
 
-	/// <summary>Tarmogoyf: "the number of card types among cards in all graveyards".</summary>
-	public static readonly Count CardTypesInAllGraveyards =
-		new(0, null, CountOf.CardTypesInAllGraveyards);
+	/// <summary>
+	/// "The number of card types among [Ref]" — Tarmogoyf's "cards in all graveyards" (Ref.All(Graveyard)), Occult
+	/// Epiphany's "cards discarded this way" (Ref.Chosen in Discard.Then).
+	/// </summary>
+	public static Count CardTypesAmong(Ref r) => new(0, r, CountOf.CardTypesAmong);
 
 	/// <summary>Domain: "the number of basic land types among lands you control".</summary>
 	public static readonly Count BasicLandTypesAmongLandsYouControl =
@@ -609,13 +611,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Select(s.GetObject)
 				.OfType<MagicPlayer>()
 				.Sum(p => p.ThisTurn.PermanentsReturnedToHand);
-		if (Kind == CountOf.CardTypesInAllGraveyards) // one pass: it sits under Tarmogoyf's P/T
-			return System.Numerics.BitOperations.PopCount(
-				(uint)
-					new[] { s.Player1Id(), s.Player2Id() }
-						.SelectMany(p => s.CardsIn(p, ZoneType.Graveyard))
-						.Aggregate(CardType.None, (types, c) => types | c.Types)
-			);
+
 		if (Kind == CountOf.BasicLandTypesAmongLandsYouControl)
 			return Ref
 				.LandsYouControl.Resolve(s, context)
@@ -676,6 +672,14 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Max(),
 			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),
 			CountOf.DistinctPowersOf => Cards().Select(c => s.Power(c)).Distinct().Count(),
+			// the ids, not Cards()' two lists as they were: it sits under Tarmogoyf's P/T
+			CountOf.CardTypesAmong => System.Numerics.BitOperations.PopCount(
+				(uint)
+					ids.Aggregate(
+						CardType.None,
+						(types, id) => s.GetObject(id) is Card c ? types | c.Types : types
+					)
+			),
 			CountOf.ColorsAmong => Cards()
 				.SelectMany(c => c.Colors)
 				.Where(c => c != ManaColor.Colorless)

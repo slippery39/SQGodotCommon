@@ -231,9 +231,10 @@ public static class MagicRules
 			? AvailableMana(s, player, s.Has(card, "Convoke"), card)
 			: 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
+		IEnumerable<ImmutableArray<int>> ModeChoices() =>
+			(text?.Choose ?? 1).Choices(s, card, text?.Modes ?? []);
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> ChoicesFor(int x) =>
-			(text?.Choose ?? 1)
-				.Choices(s, card, text?.Modes ?? [])
+			ModeChoices()
 				.SelectMany(modes =>
 					TargetSpec
 						.Combinations(
@@ -252,9 +253,15 @@ public static class MagicRules
 		// are 1,365 casts against 12 creatures. Pure Energy's two stay casts: one per creature and per pair.
 		var divided = text?.Targets.Any(t => t.Divide > 2) == true;
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> unchosen = [([], [])];
+		// Mystic Confluence: "you may choose the same mode more than once" — one cast per choice of modes, the
+		// targets chosen word by word as it is cast; "return target creature" three times is 220 casts otherwise.
+		var eachWord = CastSpellAction.EachWord(card);
+		bool Words(ImmutableArray<int> modes) =>
+			StackResolution.TextOf(card, modes, kicked).Specs.Count > 0;
 		var once =
 			divided ? unchosen
 			: perX ? null
+			: eachWord ? [.. ModeChoices().Select(modes => (modes, ImmutableArray<int>.Empty))]
 			: ChoicesFor(0);
 		var atZero = once ?? ChoicesFor(0);
 		// One cast per way to pay each cost that picks a card: "sacrifice … or pay {N}" (0 is paying),
@@ -313,7 +320,9 @@ public static class MagicRules
 													Replicate = replicates,
 													Kicked = kicked,
 													ChoosesTargets =
-														divided || (perX && payment.x > 0),
+														divided
+														|| (perX && payment.x > 0)
+														|| (eachWord && Words(c.modes)),
 												})
 										)
 									)

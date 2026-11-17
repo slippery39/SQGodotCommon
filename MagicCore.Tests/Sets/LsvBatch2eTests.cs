@@ -1486,4 +1486,121 @@ public class LsvBatch2eTests : FraBoardTest
 			"a delayed trigger's source is Sneak Attack's, an enchantment — not the Bird it sits on (CR 603.7d)"
 		);
 	}
+
+	// ===== MC-4.4e2f: choices after the cast =====
+
+	IEnumerable<int> MyTappedLands() =>
+		s.CardsIn(me, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Land) && c.IsTapped)
+			.Select(c => c.Id);
+
+	[Test]
+	public void FranticSearch_DrawTwoDiscardTwo_UntapUpToThreeLands_AChoiceAmongMyTappedOnes()
+	{
+		var mine = s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)).ToList();
+		TapIt(mine[0].Id);
+		TapIt(mine[1].Id);
+		var theirs = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
+		TapIt(theirs);
+		var lands = UntappedLands();
+		var search = Hand(Lsv("Frantic Search"), me);
+		var hand = HandCount(me);
+		var asked = CastAsking(search, c => c.Options.Take(c.MinChoices).Select(o => o.Id));
+		Assert.That(HandCount(me), Nu.EqualTo(hand - 1), "draw two, then discard two");
+		var untap = asked.OfType<ChooseAmongChoice>().Single();
+		Assert.That(
+			(untap.MinChoices, untap.Options.Count),
+			Nu.EqualTo((3, 5)),
+			"three of my five tapped lands: two tapped before, three for {2}{U}"
+		);
+		Assert.That(Offered<ChooseAmongChoice>(asked), Has.No.Member(theirs), "never theirs");
+		Assert.That(UntappedLands(), Nu.EqualTo(lands - 3 + 3), "untap up to three lands");
+		Assert.That(MyTappedLands().Count(), Nu.EqualTo(2));
+		Assert.That(s.GetCard(theirs).IsTapped, Nu.True);
+	}
+
+	[Test]
+	public void TimeSpiral_ExilesItself_EachPlayerShufflesInAndDrawsSeven_YouUntapUpToSix()
+	{
+		var theirs = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
+		TapIt(theirs);
+		var lands = UntappedLands();
+		var spiral = Hand(Lsv("Time Spiral"), me);
+		var theirDead = Put(Bear, them, ZoneType.Graveyard);
+		Hand(Bear, them);
+		var asked = CastAsking(spiral, c => c.Options.Take(c.MinChoices).Select(o => o.Id));
+		Assert.That(InExile(spiral), "Exile Time Spiral");
+		Assert.That((HandCount(me), HandCount(them)), Nu.EqualTo((7, 7)), "then draws seven");
+		Assert.That(InGraveyard(theirDead), Nu.False, "a graveyard shuffled in");
+		Assert.That(
+			asked.OfType<ChooseAmongChoice>(),
+			Nu.Empty,
+			"six tapped, all mine: none to choose"
+		);
+		Assert.That(UntappedLands(), Nu.EqualTo(lands), "you untap up to six lands");
+		Assert.That(s.GetCard(theirs).IsTapped, Nu.True, "never theirs");
+	}
+
+	[Test]
+	public void MysticConfluence_ChooseThreeTheSameModeAgain_TargetsChosenAfterTheCast()
+	{
+		var bears = Enumerable
+			.Range(0, 12)
+			.Select(i => Field(Bear, i % 2 == 0 ? them : me))
+			.ToList();
+		var flashy = TheirSpellOnTheStack(TestGames.Creature("Flashy", "2/2", "Flash"));
+		var confluence = Hand(Lsv("Mystic Confluence"), me);
+		var casts = Casts(confluence).ToList();
+		Assert.That(
+			casts.Count,
+			Nu.LessThanOrEqualTo(10),
+			"one cast per choice of modes — 378 as one per set of targets, against 12 creatures"
+		);
+		var cast = casts.Single(c => c.Modes.SequenceEqual([0, 1, 1]));
+		Assert.That((cast.ChoosesTargets, cast.Targets.IsEmpty), Nu.EqualTo((true, true)));
+
+		s = s.Act(cast);
+		int[] targets = [flashy, bears[0], bears[2]];
+		var asked = ResolveAsking(c =>
+			c switch
+			{
+				ChooseTargetChoice t => [targets[t.Index]],
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			}
+		);
+		var words = asked.OfType<ChooseTargetChoice>().ToList();
+		Assert.That(words.Select(w => w.Index), Nu.EqualTo(new[] { 0, 1, 2 }), "three words");
+		Assert.That(
+			words[2].Options.Select(o => o.Id),
+			Has.No.Member(bears[0]).And.Member(bears[2]),
+			"the repeated word: not the one chosen before"
+		);
+		Assert.That(InGraveyard(flashy), "counter target spell unless its controller pays {3}");
+		Assert.That(
+			HandOf(them),
+			Nu.SupersetOf(new[] { bears[0], bears[2] }),
+			"return target creature to its owner's hand, twice"
+		);
+	}
+
+	[Test]
+	public void OccultEpiphany_DrawXDiscardX_ASpiritForEachCardTypeAmongTheDiscarded()
+	{
+		var bear = Hand(Bear, me);
+		var other = Hand(Bear, me);
+		var mountain = Hand(TestGames.Card("Mountain"), me);
+		var epiphany = Hand(Lsv("Occult Epiphany"), me);
+		var hand = HandCount(me);
+		s = s.Act(Casts(epiphany).Single(c => c.X == 3));
+		Resolve(On<ChooseCardsFromHandChoice>(bear, other, mountain));
+		Assert.That(HandCount(me), Nu.EqualTo(hand - 1), "draw three, then discard three");
+		Assert.That(InGraveyard(mountain) && InGraveyard(bear) && InGraveyard(other));
+		var spirits = s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Name == "Spirit").ToList();
+		Assert.That(
+			spirits,
+			Has.Count.EqualTo(2),
+			"two card types among three cards: creature, land"
+		);
+		Assert.That(s.Has(spirits[0], "Flying"));
+	}
 }

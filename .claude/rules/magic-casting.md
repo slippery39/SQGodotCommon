@@ -141,10 +141,13 @@ whose subsystem it lives in.
   **How many modes** is one `ModeChoice` (`Choose`) on spells, triggered and activated abilities alike — `AtLeast` and
   `AtMost` as Counts (an int converts: exactly that many); "choose one or more" is `{ AtMost = N }`, "up to one" (Ertai)
   `{ AtLeast = 0 }`. `Modal.Choices`/`IsLegal` take the range.
-- **"Choose three. You may choose the same mode more than once"** (Fiery Confluence) is `ModeChoice { Repeats }`:
-  `Modal.Choices` offers each multiset once (10 of three modes), `IsLegal` accepts repeats, `Compose` runs a mode once
-  per time chosen — and marks a repeated mode's target word `NotThePrevious`, so two "destroy target artifact" are one
-  cast per pair of artifacts, never per order nor the same one twice (DesignNotes). Spells and activated abilities.
+- **"Choose three. You may choose the same mode more than once"** (Fiery Confluence, Mystic Confluence) is
+  `ModeChoice { Repeats }`: `Modal.Choices` offers each multiset once (10 of three modes), `IsLegal` accepts repeats,
+  `Compose` runs a mode once per time chosen — and marks a repeated mode's target word `NotThePrevious`, never the
+  same target twice (Mystic can't counter one spell twice: DesignNotes). **A spell's is ONE cast per choice of modes,
+  its target words chosen one at a time as it is cast** (MC-4.4e2f): `CastSpellAction.ChoosesTargets` with `EachWord`
+  (the text's `Repeats`) — a `ChooseTargetChoice` per word, as a copy's are retargeted, never a cast per set: "return
+  target creature" three times was 220 casts against 12 creatures, Mystic Confluence 576 with three spells on the stack.
 - **"Target artifact a player controls and target artifact card in that player's graveyard"** (Goblin Welder) is the
   second word `TargetSpec.InAnyGraveyard(…) { OfThePreviousTargetsController }` — its card's owner controls the target
   before it (`TargetSpec.FitsPrevious`), asked by `AreLegal` and again on resolution, where a control change makes it

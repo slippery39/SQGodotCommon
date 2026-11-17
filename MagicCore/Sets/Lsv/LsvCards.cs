@@ -507,8 +507,8 @@ public static class LsvCards
 			[
 				new StaticEffectComponent(Is.Source)
 				{
-					Power = Count.CardTypesInAllGraveyards,
-					Toughness = Count.CardTypesInAllGraveyards,
+					Power = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
+					Toughness = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
 				},
 				// "this creature or another Lhurgoyf creature you control" — "that creature deals"
 				When(
@@ -1758,6 +1758,56 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4e2f: blue's options, choices after the cast =====
+			["Frantic Search"] =
+			[
+				Spell(
+					[],
+					new DrawCards(Ref.You, 2),
+					new Discard(Ref.You, 2),
+					new Untap(Ref.Permanents(Is.Land)) { UpTo = 3 }
+				),
+			],
+			["Time Spiral"] =
+			[
+				Spell(
+					[],
+					[
+						new ExileSourceAndCopiesFromGraveyard(0), // "Exile Time Spiral."
+						.. TimetwisterSteps,
+						new Untap(Ref.Permanents(Is.Land)) { UpTo = 6 },
+					]
+				),
+			],
+			["Mystic Confluence"] =
+			[
+				ModalSpell(
+					"Mystic Confluence",
+					new()
+					{
+						AtLeast = 3,
+						AtMost = 3,
+						Repeats = true,
+					},
+					M(
+						[TargetSpec.Spell()],
+						new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{3}"))
+					),
+					M([Creature], new MoveTo(Ref.Target(), ZoneType.Hand)),
+					M([], new DrawCards(Ref.You, 1))
+				),
+			],
+			["Occult Epiphany"] =
+			[
+				Spell(
+					[],
+					new DrawCards(Ref.You, Count.X),
+					new Discard(Ref.You, Count.X)
+					{
+						Then = [new CreateTokens(Spirit, Count.CardTypesAmong(Ref.Chosen))],
+					}
+				),
+			],
 		};
 
 	/// <summary>
@@ -1816,14 +1866,16 @@ public static class LsvCards
 	/// seven cards." — the spell itself is still on the stack, so it isn't shuffled in. Each player shuffles once,
 	/// with or without a hand or a graveyard to shuffle in.
 	/// </summary>
-	static SpellEffectsComponent Timetwister =>
-		Spell(
-			[],
+	static SpellEffectsComponent Timetwister => Spell([], [.. TimetwisterSteps]);
+
+	/// <summary>The same, as steps: Time Spiral's text has it between "Exile Time Spiral" and "You untap up to six lands".</summary>
+	static GameAction[] TimetwisterSteps =>
+		[
 			new MoveTo(Ref.All(ZoneType.Hand, null, Ref.EachPlayer), ZoneType.Library),
 			new MoveTo(Ref.All(ZoneType.Graveyard, null, Ref.EachPlayer), ZoneType.Library),
 			new ShuffleLibrary(Ref.EachPlayer),
-			new DrawCards(Ref.EachPlayer, 7)
-		);
+			new DrawCards(Ref.EachPlayer, 7),
+		];
 
 	/// <summary>Sewer-veillance Cam: "you may tap or untap target creature".</summary>
 	static May MayTapOrUntapTheTarget =>

@@ -2666,8 +2666,8 @@ public static class FraCards
 				// "*/1+*": the printed 1 is its base toughness; the static adds the count to both.
 				new StaticEffectComponent(Is.Source)
 				{
-					Power = Count.CardTypesInAllGraveyards,
-					Toughness = Count.CardTypesInAllGraveyards,
+					Power = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
+					Toughness = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
 				},
 			],
 			["Dark Matter Manipulator"] =

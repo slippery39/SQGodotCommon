@@ -79,6 +79,9 @@ whose subsystem it lives in.
   Attacking }`** (MC-6.10) on the rule's holder, the filter asked from its side (`Is.Yours`: its controller's) and
   never for itself (CR 614.12, Metallic Mimic's ruling) — Root Maze `{ Tapped }` (everyone's), read by `EnterBattlefield`
   beside the card's own `EntersTappedComponent` / `EntersWithCountersComponent` (its replacement on itself, kept apart).
+- **"Untap up to three lands"** (Frantic Search; Time Spiral's six, MC-4.4e2f) is `Untap(Ref.Permanents(Is.Land))
+  { UpTo }`: a `ChooseAmongChoice` among the TAPPED ones of those you control, for as many as it can untap — unasked
+  when that is all of them (a ceiling, DesignNotes); then `Untap(Ref.Chosen)` through `MagicState.Untap`.
 - **Becoming tapped is `MagicState.Tap`** — the ONE way a permanent taps: attacking, a {T} cost, "tap N
   untapped" (Station's too), the Tap effect, tapping for mana and mana payment. It raises
   `BecameTappedEvent` only on untapped → tapped ("whenever Hemmer becomes tapped"); entering tapped is

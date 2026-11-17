@@ -778,6 +778,61 @@ as his three priorities.
   DesignNotes), one helper for "stamp on this object of the source" shared with Lwaxana (two copies of two lines), dead
   links piling on a source that stays (one per resolution), `ThisWay` mixing a spell's card and an ability's source (no
   card reads both).
+- 2026-11-17, Claude — **4.4e2f's plan, read against the code.** Two of the four readings grew.
+  **Mystic Confluence's targets after the cast** are not `ChooseXTargetsChoice` (Dominion Infiltration's): that picks a
+  SET from ONE word's candidates, and "counter target spell" beside "return target creature" twice is three words of
+  two kinds. The nearest piece by mechanism is a copy's retargeting (`CopySpell`): one `ChooseTargetChoice` per word,
+  in order, `NotThePrevious` read against every earlier pick — the trigger's own choice, which the search already
+  branches one pick at a time and the look-ahead judges (`Lookahead.Chosen`). Its option: `CastSpellAction.
+  ChoosesTargets` on a text whose `ModeChoice.Repeats` and whose chosen modes have a target word — one cast per
+  multiset of modes (10 of three modes), the words chosen as it is cast (`ChooseTargets`), then cast with them
+  (`CastWithChosenTargetsAction` reads either choice). Fiery Confluence moves with it, unscripted: its own text.
+  **Legal actions, 12 creatures and 12 artifacts, three spells on the stack:** Mystic Confluence 576 casts as
+  `Repeats` is built ([1,1,1] 220, [0,1,1] 3 × 66 = 198, [1,1,2] 66, …), Fiery Confluence 392 ([2,2,2] 220, [0,2,2]
+  and [1,2,2] 66 each, …); after, at most 10 each, every pick at most 12 options. Frantic Search and Time Spiral one
+  cast each (no target), Occult Epiphany one per X — linear in the mana.
+  **"Untap up to three lands"** is `Untap { UpTo }` (a `Count`): a choice among what the `Ref` names, then those
+  untapped. ponytail: the choice offers only the TAPPED ones you control and asks for as many as it can untap
+  (min of N and them; unasked when that is all of them) — an untapped land does nothing untapped, an opponent's is
+  never yours to want, and "up to" answered with fewer is never better, while the AI answers a choice of several
+  with its minimum (`GreedyAi`, `Lookahead.QuickAnswer`): asked as "up to", it would never untap one.
+  **Occult Epiphany's count** is `Count.CardTypesAmong(Ref)` (as `ColorsAmong`, `SubtypesAmong`): "card types among
+  cards discarded this way" is `Ref.Chosen` in `Discard.Then` (Tersa's), Tarmogoyf's and Pyrogoyf's "among cards in
+  all graveyards" `Ref.All(Graveyard)` — `CardTypesInAllGraveyards` goes.
+  **Time Spiral** is `ExileSourceAndCopiesFromGraveyard(0)`, Timetwister's three steps (the helper becomes a list
+  both scripts spread) and `Untap { UpTo = 6 }`.
+  **Kept as it is (Open, for Shayne):** a repeated mode's word is still `NotThePrevious`, so Mystic Confluence can't
+  counter ONE spell twice or three times ("unless its controller pays {3}", then {3} again — a real play: the tax
+  grows). Lifting it is a line in `Modal.Compose`, now that targets are chosen after the cast rather than enumerated,
+  but Fiery Confluence's test asserts "three artifacts" for its triple destroy (legal by CR 115.3 — the same artifact
+  twice, never useful), and the brief keeps that test passing.
+  Tiers: Frantic Search 2 (`Untap { UpTo }`), Time Spiral 2 (the same), Occult Epiphany 2 (`CardTypesAmong`),
+  Mystic Confluence 2 (`ChoosesTargets` for repeated modes). No new piece.
+- 2026-11-17, Claude — **4.4e2f's notes.** Built as planned. 4 tests in `LsvBatch2eTests.cs`, all through real casting
+  (Mystic Confluence through the legal cast itself: at most 10 casts with 12 creatures and a spell on the stack, then a
+  `ChooseTargetChoice` per word, the repeated word never offering the creature chosen before); Fiery Confluence's,
+  Tarmogoyf's and Pyrogoyf's tests pass unchanged. **9 breaks, all caught — two at the second try:** a revert of
+  `CardTypesAmong` to the number of cards still read 2 (the break was wrong-shaped: a popcount of 3), and dropping
+  "you control" from `Untap.UpTo` was missed by Frantic Search's test — `ChooseAmongChoice` on the battlefield already
+  offers only the chooser's, so the filter decides only when nothing is asked; Time Spiral's test now has an
+  opponent's land tapped as all six of its own are untapped unasked. `LsvCards.Timetwister` became
+  `TimetwisterSteps`, spread by both scripts.
+  **Fiery Confluence moved 4 kept card-replay games** (`GoldenCardReplay.txt`: Constable Odo 02, Fiery Confluence 02,
+  Greenhouse Propagator 03, Shatterwing Pegasus 01) — each first differs at a Fiery cast, now one of at most 10 with
+  its target chosen after; no random replay, AI replay or AI-lane record (`MagicCore.Tests/Records`) moved. Re-kept
+  with the batch's cards OUT (Shayne, 2026-11-17), so golden-out still means "the engine moved nothing else".
+  **`/pre-commit`'s review: nine findings; four taken.** `ChooseXTargetsChoice.CanChoose` checks each run of a word and
+  its `NotThePrevious` repeats (one per chosen mode) — it replaces a `TargetSpec.Combinations(…).Any()` that built all
+  220 sets on every validation; one list of mode choices in `LegalActions`; `CastWithChosenTargetsAction.Words`
+  carried from `ChooseTargets` rather than worked out again; `CardTypesAmong` counts the ids (no lists under
+  Tarmogoyf's P/T). **Not taken:** a later word left with nothing when two repeated modes' filters overlap (no card's
+  do: a ceiling, DesignNotes); the look-ahead answering the later words with the first legal target (as every
+  trigger's; the search branches each word); `Words(modes)` composed per candidate cast (ten per Confluence); "untap
+  up to 0" asking an empty choice (no card counts it); the renamed `CountOf` (records replay by move, never by
+  component).
+  **DEV-5:** `batch_checks.py`'s probe150 ran `--no-build` straight after the revert step and found the LAST revert
+  still in the DLL (Mystic Confluence casting with no targets chosen) — a crash that wasn't there; built, 150 games
+  passed. The probe steps need a build after `revert`.
 
 ## Tasks
 
@@ -869,7 +924,7 @@ as his three priorities.
           twice (after the review's fixes too: golden-out unchanged;
           golden-in moved 29 random and 56 card-replay games, added 4; probe 150 games, cast 565 times, 1 past 300
           permanents — seed 94, 273 Troubling Tribbles, not this batch)
-  - [ ] MC-4.4e Blue's tier 1 (Shayne, 2026-11-15) — 35 mono-blue cards in `LsvSurvey.md`'s tier 1, read card by
+  - [x] MC-4.4e Blue's tier 1 (Shayne, 2026-11-15) — 35 mono-blue cards in `LsvSurvey.md`'s tier 1, read card by
         card and split as white was (Decisions, "4.4e"), in seven parts:
     - [x] MC-4.4e1 The tested pieces, 12 — done 2026-11-15: Mystical Tutor, Spellseeker, Trinket Mage, Tinker,
           Snapcaster Mage, Displacer Kitten, Boomerang Basics, Upheaval, Timetwister, Echo of Eons, Cryogen Relic,
@@ -916,18 +971,28 @@ as his three priorities.
           breaks caught; `batch_checks.py` all 8 steps, run again after the review's fix (golden-out unchanged;
           golden-in moved 29 random and 139 card-replay games, added 8, the AI replay unmoved; probe 150 games, each
           card cast 488–500 times, 1 past 300 permanents; full suite 1,909 passed)
-    - [ ] MC-4.4e2f Options, choices after the cast, 4: Frantic Search, Time Spiral, Mystic Confluence (Fiery
-          Confluence moves with it), Occult Epiphany
+    - [x] MC-4.4e2f Options, choices after the cast, 4: Frantic Search, Time Spiral, Mystic Confluence (Fiery
+          Confluence moves with it), Occult Epiphany — done 2026-11-17: `Untap { UpTo }`, `Count.CardTypesAmong(Ref)`
+          (Tarmogoyf, Pyrogoyf moved), a `Repeats` text's targets chosen word by word as it is cast
+          (`CastSpellAction.EachWord`, Fiery Confluence moved: at most 10 casts, was 392 against 12 artifacts); 4
+          tests, 9 breaks caught (twice: before and after the review's fixes); `batch_checks.py` all 8 steps
+          (golden-out moved only Fiery's 4 card replays, re-kept; golden-in moved 29 random and 250 card-replay games,
+          added 16, the AI replay unmoved; probe 150 games, none unfinished, each card cast 261–996 times; full suite
+          1,913 passed, again after the review's fixes)
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tested pieces (4.4e1), the library's top (4.4e2a), draws (4.4e2b),
-mana and costs (4.4e2c), casting off the hand (4.4e2d) and "for as long as this remains" (4.4e2e) are done: **214 of
-528 play.** Blue's tier 1 is split in seven parts (Decisions, "4.4e"; Tasks). Next, in a NEW session: **MC-4.4e2f —
-choices after the cast, 4 cards:** Frantic Search, Time Spiral, Mystic Confluence (Fiery Confluence moves with it),
-Occult Epiphany — the survey's reading is in Decisions ("4.4e", e2f, and its legal-action count: Mystic Confluence is
-378 casts on a 12-creature board as `Repeats` is built); read it against the CODE first: both of e2e's readings grew
-(the strip couldn't live on the stripped card; `Counter` named nothing it countered).
+Red's tier 1 (4.4c), white's (4.4d) and blue's — all seven parts, the last "choices after the cast" (4.4e2f) — are
+done: **218 of 528 play.** Next, in a NEW session: **Shayne picks** — blue's tier 2 (6) and tier 3 (11), or the next
+colour's tier 1 (`LsvSurvey.md`); either starts with the survey read card by card against the CODE, as blue's was
+(every e2 part's reading grew on reading).
+**Open (for Shayne), from e2f:** Mystic Confluence can't counter ONE spell two or three times (a repeated mode's word is
+`NotThePrevious`); lifting it is one line in `Modal.Compose`, and Fiery Confluence's test, which reads "three
+artifacts" for its triple destroy, changes with it (DesignNotes). Default taken: kept.
+From e2f: "untap up to N lands" is `Untap(Ref.Permanents(Is.Land)) { UpTo }` (your tapped ones, as many as it can);
+"card types among [cards]" is `Count.CardTypesAmong(Ref)`; a `Repeats` modal spell is one cast per choice of modes,
+its words chosen one at a time as it is cast (`CastSpellAction.EachWord` → `ChooseTargetChoice` each,
+`CastWithChosenTargetsAction.Words`). e2f's helper in `LsvBatch2eTests.cs`: `MyTappedLands()`.
 From e2e: "loses all abilities for as long as [this] remains on the battlefield" is `ModifyUntilEndOfTurn {
 LosesAllAbilities, WhileSourceRemains }`, which stamps Infinite Coursework's `EnchantedLosesAllAbilities { Object }`
 on the SOURCE (status: it ends as the source leaves); "if [something] is countered this way" is `Counter.Then` with
@@ -955,7 +1020,6 @@ From e2b: a draw is replaced or stopped by `NumericReplacement(Draw) { Instead, 
 [spell / card] each turn" is `Trigger.Nth`; another player's "this turn" count is the count `with { Of = … }`. Its
 test helpers in `LsvBatch2eTests.cs`: `DrawsThree(caster, target)`, `ToTheirDrawStep()`, `Treasures(player)`,
 `JaceWielder(loyalty)`, `Activate(walker, ability, targets)`.
-Then blue's tier 1 is done. Blue's tier 2 (6) and tier 3 (11) are not this task.
 **Open (for Shayne), from e2a:** the seven FRA and TRK cards that say "may search" still shuffle when the search
 is declined — `May = true` on them makes three AI tests on kept TRK records stale (Decisions, e2a's plan). Default
 taken: left as they were, for the AI lane to move with those records re-kept.
@@ -1071,3 +1135,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-17: MC-4.4e2e done: The Wondrous Wasp, Tishana's Tidebinder — 214 of 528 play. "Loses all abilities for as
   long as this remains" (`WhileSourceRemains`, Infinite Coursework's piece with `Object`), `Counter.Then`, and a
   delayed trigger known as one on the stack. Next: MC-4.4e2f, choices after the cast.
+- 2026-11-17: MC-4.4e2f done: Frantic Search, Time Spiral, Mystic Confluence, Occult Epiphany — 218 of 528 play;
+  blue's tier 1 done. `Untap { UpTo }`, `Count.CardTypesAmong`, and a `Repeats` spell's targets chosen after the cast
+  (Fiery Confluence moved; 4 of its card replays re-kept). Next: Shayne's pick of blue's tiers 2–3 or the next colour.

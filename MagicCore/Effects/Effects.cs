@@ -718,8 +718,49 @@ public record Fight(Ref A, Ref B) : Effect
 /// <summary>"Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.</summary>
 public record Untap(Ref What) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(Permanents(What, s).Aggregate(s, (st, c) => st.Untap(c.Id)));
+	/// <summary>
+	/// Frantic Search: "Untap up to three lands" (Time Spiral's six) — a choice among what What names, then those
+	/// untapped. ponytail: only the TAPPED ones you control are offered, and as many as can be untapped are asked
+	/// for (unasked when that is all of them): an untapped land does nothing untapped, an opponent's is never yours
+	/// to want, and the AI answers a choice of several with its minimum — asked as "up to", it would never untap one.
+	/// </summary>
+	public Count? UpTo { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		if (UpTo is null)
+			return new(Permanents(What, s).Aggregate(s, (st, c) => st.Untap(c.Id)));
+		ImmutableList<int> mine =
+		[
+			.. Permanents(What, s)
+				.Where(c => c.IsTapped && c.ControllerId == Controller)
+				.Select(c => c.Id),
+		];
+		var n = Math.Min(UpTo.Value(s, InputContext), mine.Count);
+		if (n == mine.Count)
+			return new(mine.Aggregate(s, (st, id) => st.Untap(id)));
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps =
+					[
+						new ChooseAmongChoice
+						{
+							PlayerId = Controller,
+							Ids = mine,
+							Zone = ZoneType.Battlefield,
+							MinChoices = n,
+							MaxChoices = n,
+							Prompt = $"Untap {n}",
+						},
+						new Untap(Ref.Chosen),
+					],
+				}
+			)
+		);
+	}
 }
 
 /// <summary>"You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.</summary>
