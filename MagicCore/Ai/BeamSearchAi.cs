@@ -93,6 +93,14 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// AI-26.12; the option price only since 2026-11-17, AI-26.16 — so without <see cref="OptionPrice"/> it changes
 	/// nothing). The default since 2026-11-16 (Shayne); off is beam+nobyuse.
 	/// </param>
+	/// <param name="DrawnCard">
+	/// A card the look-ahead draws counts as a drawn card, whatever it guessed the card to be (<see cref="Evaluator.WithRootImpulse"/>,
+	/// AI-27.7, Shayne: "The result of the drawn card should not impact the action of drawing a card") - and each look at
+	/// an unseen card (a surveil) credited a share of a drawn card, whatever it shows (<see cref="Evaluator.SurveilShare"/>),
+	/// in place of the pending-surveil bonus - and no walker floor of 2 for a walker its lifetime prices. All of it
+	/// under <see cref="Hidden.Library.LandOrNot"/> only: another library mode ignores the switch. Off by default; on is
+	/// beam+drawncard.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -122,7 +130,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool WaitOnTies = true,
 		bool SpellsRule = false,
 		bool OptionPrice = true,
-		bool ByUse = true
+		bool ByUse = true,
+		bool DrawnCard = false
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -288,7 +297,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 								decidedAt ?? sampled, // as Decide read it: the real position, not the sampled one
 								PlayerId,
 								() =>
-									Evaluator.WithRootImpulse(sampled, () => ExplainLines(sampled))
+									Evaluator.WithRootImpulse(
+										decidedAt ?? sampled, // as Decide read it
+										() => ExplainLines(sampled),
+										DrawnCard
+									)
 							)
 					)
 			);
@@ -421,7 +434,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 							options.OptionPrice,
 							s,
 							PlayerId,
-							() => Evaluator.WithRootImpulse(s, () => DecideHere(s))
+							() => Evaluator.WithRootImpulse(s, () => DecideHere(s), DrawnCard)
 						)
 				)
 		);
@@ -547,14 +560,16 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		void RollOut(int i)
 		{
 			var state = Apply(at, children[i]);
-			// a surveil newly waiting on the stack, which the rollout's one sampled card cannot price (AI-17.11)
-			var bonus =
-				parent.Bonus
-				+ Math.Max(
-					0,
-					Evaluator.PendingSurveil(state, PlayerId, RolloutSettings.Held)
-						- Evaluator.PendingSurveil(at, PlayerId, RolloutSettings.Held)
-				);
+			// a surveil newly waiting on the stack, which the rollout's one sampled card cannot price (AI-17.11) - under
+			// DrawnCard its look is credited as it resolves instead (RolloutScore), so not twice
+			var bonus = DrawnCard
+				? parent.Bonus
+				: parent.Bonus
+					+ Math.Max(
+						0,
+						Evaluator.PendingSurveil(state, PlayerId, RolloutSettings.Held)
+							- Evaluator.PendingSurveil(at, PlayerId, RolloutSettings.Held)
+					);
 			var score = RolloutScore(state, horizon, looks, out var turnEnd, out var odds) + bonus;
 			Interlocked.Increment(ref rollouts);
 			// read as the search's turn ends (Rollout.Score's rootTurnEnd); a move that ended it, as the turn stood before
@@ -641,6 +656,14 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				out unseen,
 				landsDrawn: false
 			);
+		// DrawnCard (AI-27.7): a drawn card is worth the same whatever it is, so a look can no longer gain by bettering the
+		// next draw - each look at an unseen card is credited a share of a drawn card, whatever it shows (Shayne, AI-9.3:
+		// "a useless card binned is effectively drawn you a card"; seed 4 #75, a Jace token at 1 kept rather than surveil)
+		var credit = DrawnCard
+			? (looks + unseen.Looked)
+				* Evaluator.SurveilShare
+				* (RolloutSettings.Held?.Unknown ?? Evaluator.FlatHandCard)
+			: 0;
 		if (odds is > 0 and < 1)
 		{
 			Interlocked.Increment(ref secondRollouts);
@@ -654,7 +677,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					(Hidden.LandOdds(state, PlayerId, looks, forLand: land >= none) - odds)
 					/ Math.Max(1, unseen.Drawn);
 		}
-		return odds * land + (1 - odds) * none;
+		return odds * land + (1 - odds) * none + credit;
 	}
 
 	/// <summary>A position of the tree as <see cref="Hidden.Library.LandOrNot"/> knows it: arranged again once anything random (a shuffle) has moved a library.</summary>
@@ -662,6 +685,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		options.Library == Hidden.Library.LandOrNot && s.RngSeed != Hidden.Arranged
 			? Hidden.Unknown(s, PlayerId, lands: false)
 			: s;
+
+	/// <summary><see cref="Settings.DrawnCard"/>, where it applies: under <see cref="Hidden.Library.LandOrNot"/> alone.</summary>
+	bool DrawnCard => options.DrawnCard && options.Library == Hidden.Library.LandOrNot;
 
 	/// <summary>
 	/// A pass in our own turn with nothing on the stack - only moving on to the next step (AI-13.12, the AI-17.4 review's

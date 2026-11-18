@@ -146,6 +146,82 @@ Not agreed — to shape with Shayne.
   is 2.65 to it (an unseen spell 4.38; held cards at half their measured value, lands mixed in): it values 5 life at
   ~2 cards. So by his rule the gap is on the CARD side, not life's.
 
+- 2026-11-17, Shayne, on the proposal's five questions (`docs/findings/evaluator-pricing.md`): value is "context
+  dependant … kind of what we are already doing with the lookahead": "Drawing 2 cards when you are dead next turn is
+  obviously not a good play. But divinaton is always worth 2 cards for its cost."
+  1. "A raw drawn card is always worth 1 card. Once a card is known to be seen (i.e. through surveil or unsummon, its
+     value is determined by its actual game value), but at the same time, even if you draw a card, the value of
+     drawing a card should not just be based on the card you draw, but by the fact that you are technically still
+     'digging' through your deck even if you have not found a good card yet … This is something that I feel we don't
+     have currently and is causing some misevluation from the AI on wehn to draw a card (expecially with jace tokens)."
+  2. "A Draw 2 is +2 without any context, but with the context of a look ahead, it might not be the best play. This is
+     what we have to try to figure out, is how do we balance this."
+  3. "A token's tempo is what it adds to the board, it should work exactly the same as any other creature or permanent
+     you might play from your hand."
+  4. Lands in play as tempo or cards: "I don't want to say for sure, I think we should discuss this further."
+  5. "lands are a tricky case as usually you want enough lands to do exactly what you need to do, but they don't have
+     much additional value after that … on a turn when you might want to double spell you might want a land just for
+     that turn, but afterwards no. So lets discuss this." (The exchange rate: not committed.)
+
+- 2026-11-17, Shayne, on tempo by what a permanent adds to the board (a vanilla body's mana): "A 2/2 historically has
+  been worth about 1 card and usually costs 2 mana. That might change from format to format depending on the speed and
+  power level of the format … So yes deploying 2 cards that are 2/2's is more or less worth 4 mana. But sure we can use
+  the 2/2 for 2 3/3 for 3 starting point, this might have to be adjusted on a format to format basis though."
+- 2026-11-17, Shayne, lands: "it is actually highly variable what a land is worth from deck to deck and even from game
+  to game. Some games you draw a couple 5 drops and having 5 lands is super important. Some games you really want to
+  be able to play 2 3 drops on turn 6, so even if you don't have 6 drops in hand you might still want 6 lands in play.
+  Some games drawing 6 lands is kind of not ideal, especially if you are a low curve aggro deck whose curve stops at 4
+  … So its not something we can just price in isolation and expect it to work amazingly."
+
+- 2026-11-17, Shayne: not yet (no building). "in FRA a 2/2 for 2 was not usually worth it. There were 2/2's for 2 with
+  additional abilities that were just not good enough due to how slow the format was. In these cases I am hoping that
+  we could just modify the baseline setting to make a 2/2 for 2 not worth a full card, something like 0.8 or 0.7 of a
+  card or something like that." So the per-format baseline is a body's worth in CARDS (FRA: a 2/2 0.7–0.8).
+
+- 2026-11-18, Shayne, on step 2's library term: "A drawn card should be woth a drawn card and nothing more or less …
+  The result of the drawn card should not impact the action of drawing a card if that makes sense." So the act of
+  drawing is priced as one drawn card, whatever the look-ahead makes it - not by a library term that nets out to it.
+
+- 2026-11-18, Shayne, on a drawn land the look-ahead plays: "You should never get an immediate loss for deploying a
+  resource in hand, no matter what it is." On keeping the draw's credit wherever the card goes: "This might be the fix,
+  but the issue is that there are scenarios wher eyou draw a bunch of cards but don't draw anything useful. Our
+  eveluator should be able to value those scenarios accordingly (i.e. a bunch of lands in hand worth nothing could
+  still mean you are behind your opponent even if you have theoretically more cards than them in total). So this is a
+  tricky thing and something we hsould try to flehs out." Claude's proposal to flesh out (Next): a card the look-ahead
+  DRAWS is a guess, priced as a drawn card; a card already in hand at the search's root is seen, priced by what it does.
+
+- 2026-11-18, Shayne, on options against deploying: "spells like lighting bolt are evaluated differently than resources
+  like creatures or mana. In general you aren't holding back your curve to get more value out of it later, you will play
+  your 1 drop creature on turn 1, your 2 drop creature on turn 2 and your 3 drop creature on turn 3. Lightning Bolt is an
+  answer card, so it gets evaluated based on how much value it 'stops' your opponent from getting … It killing a 1/1 is
+  worth much less than it killing a 3/3 … So no we don't want to deploy every card asap, only the cards that make sense
+  to do so. Options pricing does not only apply to spells, but we need to start somewhere and spells are the easiest
+  divide. We could have options pricing on creatures as well, specifically ones with etb's … yoshimaru, where you
+  probably don't want to play it on turn 2 as a 2 mana 1/1 with no value. Its better to wait and try to get a fight out
+  of it". So "never a loss for deploying" holds for a card with no option; a card with one carries an explicit price.
+
+- 2026-11-18, Shayne: "I would like to normalize a card to 1 if possible. It would just make things simpler to
+  evaluate. I.e. a player that is +2 over his opponent means he is up 2 cards." Claude's proposal (for his answer): the
+  anchor is the average measured card (8.5 points, where bodies already sit on his scale), shown in cards at once.
+
+- 2026-11-18, Shayne, on `beam+drawncard` dropping the Jace token's −3 to deploy Thalia, the Survivor or Protege's
+  Awakening: "this is not technically bad … If they still drew a card afterwards is still fine, not 100% ideal, but
+  still fine."
+
+- 2026-11-18, Shayne, reading `beam+drawncard`'s changes: seed 4 #75 (a Jace token at 1, an empty hand, 6 life) "Yes
+  this is a clear surveil to try and draw some gas. No use keeping the token around." Seed 2 #38 (Prophesied End held,
+  Thalia cast): "Yes this is pretty clear. The 3/4 thalia blocks their koth, and prophesized end is better used on an
+  attacker anyways. So holding it makes sense." Seed 2 #23 (a Jace token at 1 kept): "why wasn't the konstari annex
+  played sooner? It seems like a jace token is already out so it would have come into play untapped? If that was
+  solved than surveiling looking to bin extra lands is the clear play. Now though you need the jace for the annex to
+  come into play untapped next turn so you can surveil here." Traced: on turn 6, holding Rockfall Vale ("enters tapped
+  unless you control two or more other lands") and Konstrari Annex ("enters tapped unless you control a planeswalker"),
+  with the token in play, it played the Vale - whose condition holds from then on anyway (AI-9.10).
+
+- 2026-11-18, Shayne, on the three `beam+drawncard` positions: he agrees seed 2 #16 (Divining Duelist's loot over
+  Mindseeker Oculus and the −3) and seed 1 #79 (the token at 9 surveils where it drew) are misplays; seed 4 #43 (Konstrari
+  Charm binned) "is not entirely clear". The match was run (`--match=beam+drawncard,beam --until-clear`).
+
 Open questions:
 - Show in cards only (divide by 8.5 when printing — no play changes), or rescale the evaluator itself (every
   constant, threshold, table and test number moves; no decision changes if done exactly)? Claude's lean: show first.
@@ -154,38 +230,93 @@ Open questions:
 
 ## Tasks
 
-- [ ] AI-27.1 The interview: the open questions above
+- [ ] AI-27.1 The interview: the open questions above, and the proposal's five (findings, `evaluator-pricing.md`)
 - [ ] AI-27.2 Scores shown in cards where a person reads them
 - [ ] AI-27.3 The body on his scale behind a switch: positions, suite, match
+- [x] AI-27.4 The inventory: every price, its formula, unit, story and ledger; every seen-against-unseen comparison
+- [x] AI-27.5 His principles as tests (`PricingPrincipleTests`): 8 pass, 4 fail (`[Explicit]`, the target)
+- [ ] AI-27.6 The three-ledger design, agreed with Shayne — then its five steps, each behind a switch
+- [ ] AI-27.7 A drawn card worth a drawn card, whatever it turns out to be (Shayne, Decisions 2026-11-18),
+      behind a switch. Done: the test, and the switch `beam+drawncard` (off by default; Log 2026-11-18)
 
 ## Next
 
-**Handoff (2026-11-17, end of session).** The story is now the pricing pass (Why). Nothing of it is built, and the
-default evaluator is unchanged (held cards at 0.5; `beam-held=1.0` was a match name only). The trial switch
-`beam+unseenfull` was **removed before commit**: `/pre-commit` found it priced cards on TWO scales — a card we can't see
-at 1.0, a card we know at 0.5 — so every seen-against-unseen comparison was skewed: a surveil binning good known spells
-for a blind draw, a reveal or bounce lowering their hand, the option price measured on the other scale. So the trial's
-odd plays (Jace −3 kept, removal held) may be ITS artifacts as much as the old evaluator's — one more case for one
-consistent scale. Start with:
-1. **An inventory:** every place the evaluator prices a card, a body, life, mana, loyalty, a token, a draw — its formula,
-   its unit, the story that set it. The six above are the start. Read-only.
-2. **Where a seen card meets an unseen one** — the surveil's keep-or-bin (`BeamSearchAi`, `held.Of(name) < held.Unknown`),
-   a known card in their hand (`Evaluator`, the known-hand branch), our known top card against a blind draw, the option
-   price's own held values (`OptionPrice.Measured`) — each must use the same scale, or a rescale breaks it.
-3. **His principles as tests** before any rescale — each true whatever the card price: drawing now ≥ holding the
-   loyalty; a bounce costs the recast and gives no card; a draw-2 that hits lands is still +2; casting a 3/2 that
-   trades never scores below holding it.
-4. **Then a proposal to him:** three ledgers — VALUE (cards: immediate and over time), TEMPO (mana deployed against
-   mana negated) and OPTIONS (what holding is worth: the better use later, less waiting's cost) — how they combine (the
-   clocks: the game's expected length), and how every existing term maps onto them, each inventory entry labelled
-   value (immediate / over time), tempo, option, or mixed. Discussed before any code.
-The five draw-or-board positions (findings, "AI-27") wait for his read.
+**Now (2026-11-18): AI-27.7 is built behind `beam+drawncard`, off by default, and matched: 51.0% ± 1.5pp over 384,
+no difference, +2.7% cost (Log).** Shayne decides whether it becomes the default. Next: plan step 1, one card scale -
+seed 2 #16 and seed 1 #79 (misplays he agrees with) and seed 4 #43 (unclear) are its positions. Seed 2 #23's land order
+is AI-9.10.
 
-
-Nothing started. AI-26.8 (where the vanilla 1/1 rule lives once the search prices options) is this story's first
-piece: in the search the rule can only be the evaluator's price of a 1/1.
+**Handoff (2026-11-17, second session).** Read `docs/findings/evaluator-pricing.md`: the inventory (§1), the
+principle tests and what they found (§2), the three-ledger proposal (§3) and five questions for Shayne. Nothing in
+the AI changed. **Waiting on Shayne:** his read of the proposal and the five questions — no code before that.
+What the tests found, in one line each:
+- Seen and unseen cards are on different scales: our seen card averages 1.52 against an unseen draw's 2.54 (an
+  unseen draw is never short on mana or colour, a seen one is), theirs 3.76 known against 2.65 unseen.
+- A draw-2 that hits two lands late scores 0.10 against two unseen cards' 5.09 — the library's draws still to come
+  are not priced (the missing half).
+- 5 life at 20 is 1.96 cards by the evaluator's own unseen card — the card side is low, as found before.
+- Drawing now, a bounce as the recast, a 3/2 cast or traded rather than held: these pass today.
+Then, once agreed, §3's order: one card scale first (the seen/unseen tests turn green, nothing else moves). The five
+draw-or-board positions (findings, "AI-27") still wait for his read. AI-26.8 is still this story's first piece.
+(The first session's trial switch `beam+unseenfull` was removed before commit: it priced cards on two scales, so its
+odd plays may be its own artifacts.)
 
 ## Log
+
+- 2026-11-18: /pre-commit on AI-27.7: the switch now applies under `LandOrNot` alone (another library mode ignores it -
+  it had dropped the surveil bonus there with no look credit), and `Explain` reads the root `Decide` read. Five
+  ceilings left for the switch, in DesignNotes ("MagicCore known ceilings"): a searched or landcycled land counts as a
+  drawn guess; a guessed spell cast loses its credit; the opponent's own view prices its guesses alike; the rollout's
+  later looks earn no credit; the walker floor's removal is not monotonic at a lifetime of 0, and the option price's
+  fixture keeps the floor. The default search is unchanged.
+
+- 2026-11-18: MATCH `--match=beam+drawncard,beam --until-clear`: 384 games (6 pairings x 32 seeds x both seats), 84 min,
+  **beam+drawncard 51.0% ± 1.5pp (196-188)** - early stop: no 5pp difference either way. Cost 10 128 against 9 865
+  engine steps a decision (+2.7%); 63 against 62 decisions a game; lands 7.3 and spells 9.6 each, alike. By its deck:
+  Red-Green 89-39, White-Black 76-52, White-Blue Jace 31-97.
+
+- 2026-11-18: `beam+drawncard` gained two parts, both under the switch only: each look at an unseen card credited
+  `SurveilShare` of a drawn card (0.87) in place of the pending-surveil bonus - alone it fixed nothing at seed 4 #75 and
+  turned seed 2 #60 (a Jace token at 6, Island in hand) from Island-then-−3 into −1 (traced: a three-way near tie,
+  Island 9.34 / −3 9.02 / −1 8.69 off, 8.67 / 8.09 / 8.67 on - every drawn card now 2.65 where the spell version had
+  4.38); and no walker floor of 2 for a walker its lifetime prices (a Jace token at 1 was 2.10, its one Surveil 1 to
+  come ~0.6). With both, suite: 20 changed; oracle 76.7% (default 76.0%); score given up 0.56 (0.71); wins missed 2 (3);
+  engine steps 19 944 (20 132). Seeds 4 #75, 2 #23, 2 #60 back to the committed answers. New: a token at 1 surveils
+  BEFORE deploying the same cards (seed 2 #38 W-B, #52; seed 3 #64; seed 4 #43), or after combat (seed 3 #25); seed 1
+  #79 Tam's Resistance's counter now on our Mindseeker Oculus, not their Rampart Hunter, but the token at 9 then
+  surveils where it drew; seed 2 #16 (turn 5) Divining Duelist cast to loot an Island where it cast Mindseeker Oculus
+  and drew with the new token; seed 4 #43 binned Konstrari Charm (a real spell, priced at half its measured value,
+  below a drawn card's 2.65 - the two scales, X2).
+
+- 2026-11-18: the 15 `beam+drawncard` changes read with their boards (`--boards`, 0.7 min): SEVEN are the same turn in
+  another order - three now draw with the Jace token's −3 before deploying (seed 2 #28, #66, #71: better, the card
+  seen first), two after (seed 3 #28 Thalia, #67 Protege's Awakening: both still draw - Shayne's "fine"), two timing
+  only (seed 3 #113; seed 4 #53, Fatehold Charm still bounces the Cadet token that turn). FIVE are a Jace token at 1-2
+  spending its last loyalty on Surveil 1 or not: one now surveils (seed 1 #24), four now keep it (seed 2 #23, seed 3
+  #16 and #43 - each with Way of the Mentor or Mindseeker Oculus in hand to empower it - and seed 4 #75, an empty hand
+  at 6 life). TWO turn-1 Plains → Swamp (seed 4 #2, both seats: two Swamps, a Plains, black and white spells - either
+  is fine). ONE removal held: seed 2 #38, Prophesied End ("Destroy target creature. If it wasn't attacking, its
+  controller draws a card") no longer cast on a tapped Koth in our draw step - the −3 drew
+  Thalia, which it cast instead. Note: the look-ahead cannot value drawing BEFORE deploying (a guessed spell can't be
+  cast), so draw-first against draw-last is a near tie it can't see.
+
+- 2026-11-18: AI-27.7 built behind `beam+drawncard` (off by default): a card of ours the look-ahead draws - one in
+  our library at the root, its place unknown - is priced in hand as a drawn card (`HeldValues.Unknown`, 2.65),
+  whatever the look-ahead made it; a land of them played keeps its credit over a land in hand. Cards in hand at the
+  root are priced as before. Tests: the Jace token at 6 on three Forests, land version - the drawn land 0.05 → 2.65,
+  the −3 6.85 against banking 7.64 → 9.45; playing the drawn land still gains; a seen hand of useless lands
+  unchanged. Full suite 1612 passed. Position suite (288): 15 decisions change; oracle agreement 76.0% both; score
+  given up 0.63 a position against the default's 0.71; wins missed 4 against 3; engine steps 20 272 against 20 132.
+  Changed: Jace −3 now taken at four positions (over Pass, Fatehold Annex, Mindseeker Oculus, Ajani's Anguish X=1);
+  −1 dropped at five (for Pass or a land); −3 dropped twice for a creature or Aura (Thalia, the Survivor; Protege's
+  Awakening); a turn-1 Plains now a Swamp twice; two removal spells now held (Prophesied End on Koth, the Geomancer;
+  Fatehold Charm's bounce on a Cadet).
+
+- 2026-11-17: Shayne answered the five questions (Decisions): a raw draw is 1 card plus the digging; a seen card its game
+  value; the context is the look-ahead's; a token's tempo as any permanent's; lands to discuss.
+
+- 2026-11-17 (second session): the inventory and the principle tests (AI-27.4, 27.5), and the three-ledger
+  proposal for discussion — all in `docs/findings/evaluator-pricing.md`. Read-only for the AI; one test file added.
 
 - 2026-11-17: Shayne: "Yeah lets try raising the value of a card towards 5 points, this might just be a raw value
   thing." Tried with the existing held fraction (`beam-held=X`; an unseen card is LandShare × 0.3 + the rest × the

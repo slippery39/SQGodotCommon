@@ -217,6 +217,10 @@ Open questions:
       problem; the tie stands (18.64 each). **MATCH (2026-11-13):** `beam,beam+nocolorshort --until-clear`, 96 games,
       51.0% ± 1.0pp (49–47), no difference; cost 4391.5 vs 4414.5 steps a decision. KEPT (findings "AI-9.9"). With
       AI-25.3 also on, #97 discards the Forest (Shayne's answer). Task open for #24 only — moved to AI-20's evidence
+- [ ] AI-9.10 A land whose untapped condition holds only now is played first (Shayne, AI-27, 2026-11-18): FRA seed 2
+      game White-Blue Jace vs Red-Green, turn 6 - Rockfall Vale ("enters tapped unless you control two or more other
+      lands") played over Konstrari Annex ("enters tapped unless you control a planeswalker") with a Jace token at 1 in
+      play. Price a land in hand by whether it will enter untapped when it is next played, not a rule
 
 ## Next
 

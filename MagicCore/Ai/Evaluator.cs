@@ -28,13 +28,29 @@ public static partial class Evaluator
 
 	static readonly AsyncLocal<Dictionary<int, int>?> rootOptionTurns = new();
 
+	static readonly AsyncLocal<HashSet<int>?> rootUnseen = new();
+
 	/// <summary>
 	/// <paramref name="work"/> with the cards exiled "you may play" at <paramref name="root"/> remembered as real, and each
-	/// player's <see cref="OptionTurns"/> read there (<see cref="Terms.RootOptionTurns"/>).
+	/// player's <see cref="OptionTurns"/> read there (<see cref="Terms.RootOptionTurns"/>). <paramref name="drawnCards"/>:
+	/// the library cards whose place nobody knew at the root remembered too, so a card the look-ahead draws counts as a
+	/// drawn card (<see cref="DrawnCredit"/>).
 	/// </summary>
-	public static T WithRootImpulse<T>(GameState root, Func<T> work)
+	public static T WithRootImpulse<T>(GameState root, Func<T> work, bool drawnCards = false)
 	{
-		var (outer, outerTurns) = (rootImpulse.Value, rootOptionTurns.Value);
+		var (outer, outerTurns, outerUnseen) = (
+			rootImpulse.Value,
+			rootOptionTurns.Value,
+			rootUnseen.Value
+		);
+		rootUnseen.Value = drawnCards
+			?
+			[
+				.. new[] { root.Player1Id(), root.Player2Id() }
+					.SelectMany(p => Hidden.Unseen(root, p))
+					.Select(c => c.Id),
+			]
+			: null;
 		rootImpulse.Value = [.. ImpulseCards(root, -1).Select(c => c.Id)];
 		rootOptionTurns.Value =
 			IsOff(Terms.RootOptionTurns) || IsOff(Terms.HoldOption)
@@ -49,9 +65,48 @@ public static partial class Evaluator
 		}
 		finally
 		{
-			(rootImpulse.Value, rootOptionTurns.Value) = (outer, outerTurns);
+			(rootImpulse.Value, rootOptionTurns.Value, rootUnseen.Value) = (
+				outer,
+				outerTurns,
+				outerUnseen
+			);
 		}
 	}
+
+	/// <summary><paramref name="work"/> with no drawn cards remembered — a measurement on another board (<see cref="OptionPrice.Gain"/>), whose ids mean other cards.</summary>
+	internal static T WithoutDrawnCards<T>(Func<T> work)
+	{
+		var outer = rootUnseen.Value;
+		rootUnseen.Value = null;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			rootUnseen.Value = outer;
+		}
+	}
+
+	/// <summary>
+	/// A card the look-ahead drew is a GUESS (AI-27.7, Shayne 2026-11-18: "A drawn card should be woth a drawn card and
+	/// nothing more or less … The result of the drawn card should not impact the action of drawing a card"): one that was
+	/// in our library at the root, its place unknown. In hand it is priced as a drawn card - <see cref="HeldValues.Unknown"/>,
+	/// the price a card nobody has seen has - whether the look-ahead made it a land or an unknown spell; a land of them
+	/// played keeps what it had over a land in hand, so deploying it scores as deploying any land ("You should never get
+	/// an immediate loss for deploying a resource in hand"). A card in hand at the root is seen, and priced by what it is.
+	/// Off unless the search asks (<c>BeamSearchAi.Settings.DrawnCard</c>, beam+drawncard).
+	/// ponytail: only a land is credited on the battlefield - a guessed spell cast (the real 6th draw, beam+shuffle) is
+	/// priced by what it became; carry the credit there too if a position shows one held for it.
+	/// </summary>
+	static bool IsDrawnGuess(Card c) => rootUnseen.Value?.Contains(c.Id) == true;
+
+	/// <summary>What our guessed lands in play carry over a land in hand (<see cref="IsDrawnGuess"/>).</summary>
+	static double DrawnCredit(GameState s, int player, HeldValues held) =>
+		rootUnseen.Value is null
+			? 0
+			: s.CardsIn(player, ZoneType.Battlefield)
+				.Count(c => c.Is(CardType.Land) && IsDrawnGuess(c)) * (held.Unknown - LandInHand);
 
 	/// <summary>Cards in exile with a live play permission for <paramref name="player"/> (-1: anyone's).</summary>
 	static IEnumerable<Card> ImpulseCards(GameState s, int player) =>
@@ -802,6 +857,7 @@ public static partial class Evaluator
 				&& !own
 				&& !(c.KnownTo.HasFlag(Knowers.Opponent) && !IsOff(Terms.KnownHand))
 					? held.Unknown
+				: held is not null && own && IsDrawnGuess(c) ? held.Unknown
 				: c.Is(CardType.Land)
 					? (
 						own && !IsOff(Terms.LandUnlock) && !LandUnlock.Unlocks(s, player, c)
@@ -852,7 +908,7 @@ public static partial class Evaluator
 				OptionPrice.Value(s, player, answers) - FlatHandCard * answers.Count
 			);
 		if (held is not null)
-			hand += ImpulseCredit(s, player, held);
+			hand += ImpulseCredit(s, player, held) + (own ? DrawnCredit(s, player, held) : 0);
 		var graveyard = IsOff(Terms.GraveyardAccess)
 			? 0
 			: s.CardsIn(player, ZoneType.Graveyard)

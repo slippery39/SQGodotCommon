@@ -334,7 +334,7 @@ public static class OptionPrice
 							Evaluator.Terms.HoldOption
 								| Evaluator.Terms.Threat
 								| Evaluator.Terms.LandUnlock,
-							() => Evaluator.WithByUse(0, Measure)
+							() => Evaluator.WithByUse(0, () => Evaluator.WithoutDrawnCards(Measure))
 						)
 				)
 				.Result;
