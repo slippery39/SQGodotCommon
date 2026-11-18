@@ -1949,6 +1949,8 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4g7: storm (Scripting.Storm, CopySpell { N }, Count.SpellsCastBefore) =====
+			["Brain Freeze"] = [Spell([TargetSpec.Player()], new Mill(Ref.Target(), 3)), Storm],
 		};
 
 	/// <summary>

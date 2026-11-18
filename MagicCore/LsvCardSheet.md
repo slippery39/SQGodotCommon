@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 31/46 · uncommon 40/86 · rare 112/279 · mythic 39/108 · **231/528**
+**Playable:** common 31/46 · uncommon 41/86 · rare 112/279 · mythic 39/108 · **232/528**
 
 ### "Name Sticker" Goblin
 
@@ -952,7 +952,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Target player mills three cards.  
 > Storm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g7Tests
+
+**Engine pieces:** `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Brain Freeze"] =
+[
+	Spell([TargetSpec.Player()], new Mill(Ref.Target(), 3)),
+	Storm,
+],
+```
 
 ### Cabal Ritual
 

@@ -108,7 +108,8 @@ whose subsystem it lives in.
   that player's untap step ends it (`TurnStructure.EndUntilYourNextTurn`). One on a permanent rides the
   permanent (Garruk's −4/−1); "until your next turn, whenever …" is an effect card in the command
   zone (`UntilYourNextTurnWhenever`), so it outlives the planeswalker, and is removed when it ends.
-- **"When you cast this spell"** (`TriggerEvent.SelfCast`, Emrakul) is read from the spell on the stack.
+- **"When you cast this spell"** (`TriggerEvent.SelfCast`, Emrakul) is read from the spell on the stack, and keeps it as
+  it was cast (`EventSnapshot`): storm's copies of a spell countered in response still read it (MC-4.4g7).
 - **Necrodominance's rules each live in their one place:** a skipped draw step never begins (`EnterStep`),
   hand size is `TurnStructure.MaxHandSizeOf`, and "exile instead of your graveyard" is decided in `MoveCard`
   with the other exile-instead cases — so nothing of yours dies.

@@ -422,8 +422,12 @@ public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
 /// </summary>
 public record CopySpell(Ref What) : Effect
 {
+	/// <summary>Storm (Brain Freeze): "copy it for each spell cast before it this turn" — how many copies; unset is one.</summary>
+	public Count? N { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var n = N?.Value(s, InputContext) ?? 1;
 		var stack = s.GetWellKnownId(MagicKeys.Stack);
 		// Countered or gone in response, it is still copied — as it last was on the stack.
 		var originals = All(What, s)
@@ -432,7 +436,11 @@ public record CopySpell(Ref What) : Effect
 			.ToList();
 		if (originals.Count == 0 && GetInput<Card?>(ContextKeys.EventSnapshot) is { } lastKnown)
 			originals.Add(lastKnown);
-		foreach (var original in originals.Where(c => c.HasComponent<OnStackComponent>()))
+		foreach (
+			var original in originals
+				.Where(c => c.HasComponent<OnStackComponent>())
+				.SelectMany(c => Enumerable.Repeat(c, Math.Max(0, n)))
+		)
 		{
 			Card copy;
 			(s, copy) = s.AddObject(

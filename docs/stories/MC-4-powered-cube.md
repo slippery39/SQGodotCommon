@@ -1080,6 +1080,25 @@ as his three priorities.
   guard). **Open (for Shayne):** the beam searches teamwork's picks — one branch per creature at each pick, every order
   of a set. Delve's picks are a rule (Shayne, 2026-11-17); teamwork's could be too (the least valuable creatures
   first). Default taken: left searched — the probe ran at its usual speed (150 games in 1.0 min).
+- 2026-11-18, Claude — **4.4g7's notes (storm).** Built as planned, read against `CopySpell` and replicate's
+  trigger: storm is a `SelfCast` trigger (`Scripting.Storm`), its copies one `CopySpell` with a count — `CopySpell { N
+  }`, as `CreateTokenCopy { N }` (squad) — not replicate's pushed trigger, which is `CastSpellAction`'s alone and so
+  misses a cast during a resolution. The count is new: "each spell cast before it this turn" is every player's, fixed
+  as it is cast (CR 702.40a — a spell cast in response to the trigger isn't before it), so it rides the spell
+  (`OnStackComponent.SpellsCastBefore`, from both players' `TurnTally.SpellsCast`) and `Count.SpellsCastBefore(ref)`
+  reads it through `Card.AsCast`. **Found on testing:** a `SelfCast` trigger's pending ability had no snapshot of the
+  spell, so a spell countered in response was copied zero times (TRK's SelfCast copier the same) — `Triggers.Collect`
+  now gives it the spell as it was cast, the one `CopySpell` and `CountedAsTheyWere` already fall back to.
+  **Legal actions:** one cast per target player (2); the copies' targets are chosen one copy at a time (`CopySpell`'s
+  `ChooseTargetChoice`s), never a cast per set.
+  **`/pre-commit`'s review: six findings; one taken** — replicate's trigger is ONE `CopySpell { N = Replicate }` now,
+  not N effects (the replicate tests and the random and AI golden replays unmoved). **Noted:** the snapshot also makes
+  TRK's Combadge (`SelfCast` → `CopySpell(Ref.EventCard)`) copied when countered in response — rules-correct (CR
+  707.10c); golden-out and the kept records didn't move. **Not taken:** `CopySpell` copies whatever holds the id on the
+  stack, so a spell bounced (Remand) and RECAST before the first storm trigger resolves is copied as the new cast with
+  the old count — true of every `EventCard` copier before this, and invisible on Brain Freeze (the copies retarget, the
+  count is the same); a copy keeps `SpellsCastBefore` (nothing reads a copy's); the two-player sum (the engine is two
+  players throughout, as `TurnStructure`'s reset).
 
 ## Tasks
 
@@ -1282,7 +1301,10 @@ as his three priorities.
           TotalPower`, `TapChosenForPowerAction`, `KickerComponent.Word`; 4 tests, 8 breaks caught; `batch_checks.py`
           all 8 steps (golden-out unchanged; golden-in moved 29 random and 63 card-replay games, added 4, the AI replay
           unmoved; probe 150 games, 1 unfinished past 300 permanents, the Nay cast 447 times; full suite 1,966 passed)
-    - [ ] MC-4.4g7 Storm: Brain Freeze
+    - [x] MC-4.4g7 Storm: Brain Freeze — done 2026-11-18: `Scripting.Storm`, `CopySpell { N }`, `Count.SpellsCastBefore`
+          (`OnStackComponent.SpellsCastBefore`), a `SelfCast` trigger's snapshot; 2 tests, 4 breaks caught;
+          `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random and 48 card-replay games, added
+          4, the AI replay unmoved; probe 150 games, none unfinished, Brain Freeze cast 506 times; full suite 1,968 passed)
     - [ ] MC-4.4g8 Spree: Three Steps Ahead
     - [ ] MC-4.4g9 Warp: Quantum Riddler
     - [ ] MC-4.4g10 Classes: Does Machines
@@ -1291,8 +1313,13 @@ as his three priorities.
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
-(4.4g4), Adventures (4.4g5) and teamwork (4.4g6) — are done: **231 of 528 play.** Next, in a NEW session: **MC-4.4g7 —
-Storm** (Brain Freeze): the plan is in Decisions (4.4g's plan, part 7). Then g8–g10 in the plan's order, one a session.
+(4.4g4), Adventures (4.4g5), teamwork (4.4g6) and storm (4.4g7) — are done: **232 of 528 play.** Next, in a NEW
+session: **MC-4.4g8 — Spree** (Three Steps Ahead): the plan is in Decisions (4.4g's plan, part 8 — its targets word by
+word or a cast per pair is MC-8's mechanism: ask Shayne then). Then g9–g10 in the plan's order, one a session.
+From 4.4g7: storm is `Scripting.Storm` — `SelfCast`, `CopySpell(Ref.EventCard) { N = Count.SpellsCastBefore(…) }`; the
+count is every player's spells, stamped as it is cast (`OnStackComponent.SpellsCastBefore`); a `SelfCast` trigger now
+carries the spell as it was cast (`EventSnapshot`), so a countered spell is still copied. `CopySpell { N }` is "copy it
+N times". g7's tests are in `LsvBatch2g7Tests.cs` (`CastFreezeAt(target)`, `Nope`: counter target spell).
 From 4.4g6: teamwork is kicker (`LsvCards.Teamwork(n)`, "cast using teamwork" `WasKicked`); "tap any number of
 creatures with total power N or more" is `TapUntappedCost { TotalPower }`, picked after the action
 (`TapChosenForPowerAction`) and kept out of the mana payment (`Uses` → `Reserved`) — crew's cost when Esika's Chariot
@@ -1503,3 +1530,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   `CanBlockOnly`. Next: MC-4.4g6, teamwork.
 - 2026-11-18: MC-4.4g6 done: We Say Thee Nay! — 231 of 528 play. Teamwork is kicker with a new tap cost, "total power N
   or more" (`TapUntappedCost.TotalPower`), its creatures picked after the cast. Next: MC-4.4g7, storm.
+- 2026-11-18: MC-4.4g7 done: Brain Freeze — 232 of 528 play. Storm is a cast trigger copying the spell once per spell
+  cast before it this turn (every player's, counted as it is cast). Next: MC-4.4g8, spree.

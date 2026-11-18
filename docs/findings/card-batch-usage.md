@@ -83,3 +83,4 @@ after the split is DEV-4.3.
 | 2026-11-18 | MC-4.4g4: face-down permanents, manifest dread, 1 card | e89ba4c1 | 74 | 206k | 2.8M |
 | 2026-11-18 | MC-4.4g5: Adventures (Brazen Borrower // Petty Theft), 1 card | fdc9b8fb | 79 | 213k | 3.1M |
 | 2026-11-18 | MC-4.4g6: teamwork (We Say Thee Nay!), 1 card | e2798839 | 58 | 182k | 2.1M |
+| 2026-11-18 | MC-4.4g7: storm (Brain Freeze), 1 card | d8cb5e5f | 73 | 171k | 2.1M |

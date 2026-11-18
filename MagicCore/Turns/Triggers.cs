@@ -520,7 +520,8 @@ public static class Triggers
 						)
 				)
 			);
-		// "When you cast this spell" (Emrakul): the spell's own, read from it on the stack.
+		// "When you cast this spell" (Emrakul): the spell's own, read from it on the stack — and as it was cast once
+		// it is gone (storm's copies of a countered spell, Brain Freeze).
 		var fromTheSpell = s
 			.PendingGameEvents.OfType<SpellCastEvent>()
 			.Where(cast => s.HasObject(cast.CardId))
@@ -530,7 +531,12 @@ public static class Triggers
 						a.On.ReadFrom == ReadFrom.TheSpellCast
 						&& Concerns(s, a.On, s.GetCard(cast.CardId), s.GetCard(cast.CardId))
 					)
-					.Select(a => new Pending(s.GetCard(cast.CardId), a, cast.CardId))
+					.Select(a => new Pending(
+						s.GetCard(cast.CardId),
+						a,
+						cast.CardId,
+						s.GetCard(cast.CardId)
+					))
 			);
 		// Delayed triggers set off by a cast (Way of the Cryomancer): "copy that spell" — one per copy.
 		var fromACast = s

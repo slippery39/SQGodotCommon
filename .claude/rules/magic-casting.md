@@ -150,6 +150,11 @@ whose subsystem it lives in.
   copied as it is cast; the count rides the spell (`OnStackComponent.Replicate` → `Card.CastAs`), and
   `Scripting.Squad(cost)`'s "when this enters, if its squad cost was paid" makes `CreateTokenCopy(Ref.Source) { N =
   Count.TimesReplicated(Ref.Source) }`. A token copy wasn't cast, so its squad makes none.
+  **Storm** (CR 702.40, Brain Freeze, MC-4.4g7) is `Scripting.Storm`: a "when you cast this spell" trigger
+  (`TriggerEvent.SelfCast`) of `CopySpell(Ref.EventCard) { N = Count.SpellsCastBefore(Ref.EventCard) }`. The count is
+  EVERY player's spells this turn, stamped as it is cast (`OnStackComponent.SpellsCastBefore`, from both tallies), so a
+  spell cast in response isn't one; countered first, it is still copied — a `SelfCast` trigger keeps the spell as it was
+  cast (its `EventSnapshot`), and the count and `CopySpell` read that once it is gone. Never a replicate cast: nothing is paid.
   **Delve** (CR 702.66, MC-4.4g2: Treasure Cruise, Dig Through Time — read from the printed keyword, `s.Has(card,
   "Delve")`) is `CastSpellAction.Delve = N`: one cast per number, at most the generic in the TOTAL cost (taxes in) and
   the other cards in your graveyard; the total less N generic; the N cards picked AFTER the cast, one at a time

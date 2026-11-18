@@ -47,6 +47,12 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// </summary>
 	public int Replicate { get; init; }
 
+	/// <summary>
+	/// Storm (Brain Freeze): "copy it for each spell cast before it this turn" — every player's spells, counted as it is
+	/// cast (CR 702.40a), so a spell cast in response to the storm trigger isn't one (Count.SpellsCastBefore).
+	/// </summary>
+	public int SpellsCastBefore { get; init; }
+
 	/// <summary>First Contact: it is the first spell its caster cast this game — a copy wasn't cast (CopySpell clears it).</summary>
 	public bool FirstSpellThisGame { get; init; }
 
@@ -626,10 +632,7 @@ public record CastSpellAction : GameAction
 				SourceId = CardId,
 				Source = spell,
 				ControllerId = PlayerId,
-				Effects =
-				[
-					.. Enumerable.Repeat<GameAction>(new CopySpell(Ref.EventCard), Replicate),
-				],
+				Effects = [new CopySpell(Ref.EventCard) { N = Replicate }],
 				EventCardId = CardId,
 				EventSnapshot = spell,
 				Triggered = true,
@@ -671,6 +674,9 @@ public record CastSpellAction : GameAction
 					CantBeCountered = proxies.Count > 0,
 					Kicked = kicked,
 					FirstSpellThisGame = s.GetPlayer(playerId).SpellsCastThisGame == 0,
+					SpellsCastBefore =
+						s.GetPlayer(s.Player1Id()).ThisTurn.SpellsCast
+						+ s.GetPlayer(s.Player2Id()).ThisTurn.SpellsCast,
 				}
 			)
 		);

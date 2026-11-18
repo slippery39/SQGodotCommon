@@ -397,6 +397,7 @@ public enum CountOf
 	DilemmasFacedThisTurnBy, // Sisko: "each dilemma you've faced this turn" — the players [Ref] names
 	ModesChosen, // Riku of Many Paths: "the number of times you chose a mode for that spell" — the spell on the stack [Ref]
 	TimesReplicated, // Sicarian Infiltrator's squad: "create that many tokens" — the times [Ref]'s replicate cost was paid, on the stack or the permanent it became
+	SpellsCastBefore, // Storm (Brain Freeze): "for each spell cast before it this turn" — every player's, counted as [Ref] was cast
 	DevotionTo, // Mogis: "your devotion to black and red" — Count.Colors
 	BeyondTheFewest, // Balance: "equal to the number … controlled by the player who controls the fewest, then sacrifices the rest" — the rest, for the player Ref.It
 }
@@ -476,6 +477,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	/// <summary>Squad (Sicarian Infiltrator): "create that many tokens" — the times [r]'s squad (replicate) cost was paid, read from its spell (Card.AsCast).</summary>
 	public static Count TimesReplicated(Ref r) => new(0, r, CountOf.TimesReplicated);
+
+	/// <summary>Storm (Brain Freeze): "for each spell cast before it this turn" — every player's, counted as [r] was cast (OnStackComponent.SpellsCastBefore).</summary>
+	public static Count SpellsCastBefore(Ref r) => new(0, r, CountOf.SpellsCastBefore);
 
 	/// <summary>Jadzia Dax, Living Legacy: "an amount of {G} equal to the number of counters on her" — every kind.</summary>
 	public static Count AllCountersOn(Ref r) => new(0, r, CountOf.AllCountersOn);
@@ -702,6 +706,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.ModesChosen => Cards()
 				.Sum(c => c.GetComponent<Actions.OnStackComponent>()?.Modes.Length ?? 0),
 			CountOf.TimesReplicated => Cards().Sum(c => c.AsCast?.Replicate ?? 0),
+			CountOf.SpellsCastBefore => Cards().Sum(c => c.AsCast?.SpellsCastBefore ?? 0),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.DevotionTo => Cards()
 				.SelectMany(c => c.ManaCost.Symbols)

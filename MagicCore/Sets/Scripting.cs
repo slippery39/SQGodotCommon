@@ -190,6 +190,19 @@ public static class Scripting
 			},
 		];
 
+	/// <summary>
+	/// Storm (CR 702.40) — Brain Freeze: "When you cast this spell, copy it for each spell cast before it this turn. You
+	/// may choose new targets for the copies." — every player's spells, counted as it was cast
+	/// (Count.SpellsCastBefore); a copy isn't cast, so it has no storm of its own. Countered in response, it is still
+	/// copied (CopySpell reads it as it last was).
+	/// </summary>
+	public static TriggeredAbilityComponent Storm =>
+		When(
+			TriggerEvent.SelfCast,
+			[],
+			new CopySpell(Ref.EventCard) { N = Count.SpellsCastBefore(Ref.EventCard) }
+		);
+
 	/// <summary>Basic landcycling's search: "a basic land card, reveal it, put it into your hand".</summary>
 	public static SearchLibrary BasicLand =>
 		new(CardType.Land, ZoneType.Hand) { Supertype = Supertype.Basic, Reveal = true };
