@@ -68,6 +68,20 @@ sooner) — not counted twice. No MTG simulator found that keeps the two apart: 
 rules and a creature score from stats and keywords (`evaluateCreature`), without real look-ahead; card-game research
 uses feature-based evaluations, one Legends of Code and Magic design "tempo-based" — so this would be our own design.
 
+**The trifecta (Shayne, 2026-11-17):** "Can we also add notes for options pricing, I think this is the trifecta (at
+least for now), Value Pricing (subsets, immediate value vs value over time cards), Tempo Pricing, and Options Pricing
+(holding cards for better value pretty much)". So the design has THREE concepts, each its own ledger:
+- **Value** — card advantage, with two subsets: *immediate* value (a removal spell's kill, Divination's two cards, a
+  creature's body now) and *value over time* (a planeswalker's loyalty, an engine, a recurring ability, a Clue's card
+  for later — AI-9.3's lifetime price is one of these today).
+- **Tempo** — mana deployed against mana negated (above).
+- **Options** — what holding a card is worth: the better use it may find later, less what waiting costs (AI-26: the
+  option price for answers, a held card priced by the targets it is likely to meet; AI-26.5: a tap ability kept for its
+  last chance; AI-13.12's `WaitOnTies`, the stopgap still on). Holding has a tempo cost (mana unspent this turn) and an
+  option gain — the two ledgers meet here.
+Today all three live in one number per thing; the inventory (Next) labels each existing term value (immediate or over
+time), tempo, option, or mixed.
+
 Claude's reading of the theory in cards (for him to correct): a position is scored as cards up, both players counted alike —
 cards in hand, cards' worth on the board (what each is DOING, against an average card), library depth, life converted
 at his rate, mana spent as tempo. A drawn card is an average card at the moment it is drawn; seeing it is a land is no
@@ -161,9 +175,10 @@ consistent scale. Start with:
 3. **His principles as tests** before any rescale — each true whatever the card price: drawing now ≥ holding the
    loyalty; a bounce costs the recast and gives no card; a draw-2 that hits lands is still +2; casting a 3/2 that
    trades never scores below holding it.
-4. **Then a proposal to him:** a VALUE ledger (cards) and a TEMPO ledger (mana deployed against mana negated), how they
-   combine (the clocks: the game's expected length), and how every existing term maps onto them — each inventory entry
-   labelled value, tempo, or both mixed. Discussed before any code.
+4. **Then a proposal to him:** three ledgers — VALUE (cards: immediate and over time), TEMPO (mana deployed against
+   mana negated) and OPTIONS (what holding is worth: the better use later, less waiting's cost) — how they combine (the
+   clocks: the game's expected length), and how every existing term maps onto them, each inventory entry labelled
+   value (immediate / over time), tempo, option, or mixed. Discussed before any code.
 The five draw-or-board positions (findings, "AI-27") wait for his read.
 
 
