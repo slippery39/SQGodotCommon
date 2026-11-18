@@ -111,3 +111,18 @@ become a CHOICE made after the action, not more actions.
 - **Every batch, just before its commit:** `python tools/usage_report.py --log "<task>: <what>, <N> cards"`
   — one row in `docs/findings/card-batch-usage.md`, committed with the batch; it is how we know the
   fresh-session workflow holds its savings. Then start the NEXT batch in a NEW session.
+- **Once committed, with every open question answered, end with the next session's prompt** (Shayne, 2026-11-18) —
+  unasked, if the story's Next names another batch — in a code block ready to paste, in the shape his own prompts take:
+
+  ```
+  /card-batch <task id> - <mechanic>: <card(s)>
+
+  Lane: <lane> (<branch>). Sprint <n>, item <id>; story <path>. Its Next section is the handoff, so read it first;
+  <where the plan is: "4.4g's plan", part N>.
+
+  <anything to ask him before building, from the plan — or leave the line out>
+
+  At the end, give me <what he asked for at the end of this batch, e.g. the cube's total cards implemented, by rarity>.
+  ```
+
+  Take every field from the story's Next and the plan, never from memory. If no batch is left, say so instead.
