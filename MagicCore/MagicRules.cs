@@ -288,6 +288,10 @@ public static class MagicRules
 			: 0;
 		// Bone Shards: "sacrifice a creature or discard a card" — a cast picks one half, never both or neither.
 		var either = costs.Any(c => c.Or is not null);
+		// Treasure Cruise: delve's cards — the others in the graveyard (null: no delve)
+		int? delve = s.Has(card, "Delve")
+			? s.CardsIn(player, ZoneType.Graveyard).Count(c => c.Id != card.Id)
+			: null;
 		return Enumerable
 			.Range(0, maxReplicate + 1)
 			.SelectMany(replicates =>
@@ -330,7 +334,15 @@ public static class MagicRules
 					)
 				)
 			)
-			.Where(cast => !either || cast.PicksOnlyWhatIsPaid(costs));
+			.Where(cast => !either || cast.PicksOnlyWhatIsPaid(costs))
+			// Delve: one cast per number exiled, the cards picked after — each cast's own bound, ValidateAdd's
+			.SelectMany(cast =>
+				delve is { } graveyard
+					? Enumerable
+						.Range(0, Math.Min(graveyard, cast.GenericBeforeDelve(s, card)) + 1)
+						.Select(n => cast with { Delve = n })
+					: new[] { cast }
+			);
 	}
 
 	/// <summary>
@@ -686,7 +698,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, only when chosen: older keys stay byte-identical
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>

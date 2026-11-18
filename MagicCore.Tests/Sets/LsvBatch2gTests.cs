@@ -128,4 +128,234 @@ public class LsvBatch2gTests : FraBoardTest
 			"CR 701.3b: it stays where it was"
 		);
 	}
+
+	// ===== g1b: a copy makes its own "as this enters" choices (CR 707.5) =====
+
+	[Test]
+	public void PhyrexianMetamorph_AsACopyOfTrueNameNemesis_ChoosesAPlayer_AndHasProtection()
+	{
+		var original = Nemesis(opponent: true);
+		var metamorph = Hand(Lsv("Phyrexian Metamorph"), me);
+
+		var asked = CastAsking(
+			metamorph,
+			c =>
+				c switch
+				{
+					ChooseCreatureToCopyChoice => [original],
+					ChooseKeywordChoice => [1], // "An opponent"
+					_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+				}
+		);
+
+		Assert.That(s.GetCard(metamorph).Name, Nu.EqualTo("True-Name Nemesis"));
+		Assert.That(
+			asked.OfType<ChooseKeywordChoice>().Count(),
+			Nu.EqualTo(1),
+			"the copy chooses a player"
+		);
+		Assert.That(s.GetCard(metamorph).GetComponent<ChosenPlayer>()?.PlayerId, Nu.EqualTo(them));
+		var kill = Hand(TestCards.Kill(), them);
+		Assert.That(
+			TargetSpec.Creature.IsLegal(s, them, kill, metamorph),
+			Nu.False,
+			"protection from them"
+		);
+	}
+
+	[Test]
+	public void FleshDuplicate_AsACopyOfKaiWinn_ChoosesAName()
+	{
+		var kai = Field(CardRegistry.Get("Kai Winn, Faithless Leader"), them);
+		var duplicate = Hand(CardRegistry.Get("Flesh Duplicate"), me);
+
+		var asked = CastAsking(
+			duplicate,
+			c =>
+				c switch
+				{
+					ChooseCreatureToCopyChoice => [kai],
+					_ => c.Options.Take(Math.Max(1, c.MinChoices)).Select(o => o.Id),
+				}
+		);
+
+		Assert.That(s.GetCard(duplicate).Name, Nu.EqualTo("Kai Winn, Faithless Leader"));
+		Assert.That(
+			asked.OfType<ChooseKeywordChoice>().Count(c => c.NamesACard),
+			Nu.EqualTo(1),
+			"a name"
+		);
+		Assert.That(s.GetCard(duplicate).GetComponent<ChosenName>(), Nu.Not.Null);
+	}
+
+	// ===== g2: delve (CR 702.66) =====
+
+	/// <summary>TEST SETUP: n bears in my graveyard.</summary>
+	List<int> Graveyard(int n) =>
+		[.. Enumerable.Range(0, n).Select(_ => Put(Bear, me, ZoneType.Graveyard))];
+
+	/// <summary>The delve picks asked after a cast (ExileFromGraveyardCost.PickAfter).</summary>
+	static int DelvePicks(List<ChoiceAction> asked) =>
+		asked.OfType<ChooseAmongChoice>().Count(c => c.Prompt == "Exile from your graveyard");
+
+	[Test]
+	public void TreasureCruise_DelvePaysForGeneric_TheCardsPickedAfterTheCast()
+	{
+		var binned = Graveyard(5);
+		var cruise = Hand(Lsv("Treasure Cruise"), me);
+		Assert.That(
+			Casts(cruise).Select(c => c.Delve),
+			Nu.EquivalentTo(Enumerable.Range(0, 6)),
+			"one cast per number exiled, up to the graveyard's five"
+		);
+		Assert.That(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = cruise,
+				Delve = 6,
+			}
+				.ValidateAdd(s)
+				.IsValid,
+			Nu.False,
+			"only five to exile"
+		);
+		var lands = UntappedLands();
+		var hand = HandCount(me);
+
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = cruise,
+				Delve = 5,
+			}
+		);
+		Assert.That(lands - UntappedLands(), Nu.EqualTo(3), "{7}{U} less five: {2}{U}");
+		var asked = ResolveAsking(c => c.Options.Take(c.MinChoices).Select(o => o.Id));
+
+		Assert.That(DelvePicks(asked), Nu.EqualTo(5), "five cards picked, one at a time");
+		Assert.That(binned.All(InExile), "the five exiled");
+		Assert.That(HandCount(me), Nu.EqualTo(hand - 1 + 3), "Draw three cards");
+	}
+
+	[Test]
+	public void TreasureCruise_DelvesNoMoreThanTheGenericInItsCost()
+	{
+		Graveyard(10);
+		var cruise = Hand(Lsv("Treasure Cruise"), me);
+
+		Assert.That(Casts(cruise).Max(c => c.Delve), Nu.EqualTo(7), "{7}: seven, not ten");
+		Assert.That(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = cruise,
+				Delve = 8,
+			}
+				.ValidateAdd(s)
+				.IsValid,
+			Nu.False,
+			"never the {U}"
+		);
+	}
+
+	[Test]
+	public void DigThroughTime_TakesTwoOfSeven_TheRestOnTheBottom_KnownToMe()
+	{
+		Graveyard(6);
+		var seven = Enumerable.Range(0, 7).Select(_ => OnTop(Bear)).Reverse().ToList(); // top first
+		var dig = Hand(Lsv("Dig Through Time"), me);
+		var lands = UntappedLands();
+		var hand = HandCount(me);
+
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = dig,
+				Delve = 6,
+			}
+		);
+		Assert.That(lands - UntappedLands(), Nu.EqualTo(2), "{6}{U}{U} less six: {U}{U}");
+		var asked = ResolveAsking(c => c.Options.Take(c.MinChoices).Select(o => o.Id));
+
+		Assert.That(DelvePicks(asked), Nu.EqualTo(6));
+		Assert.That(HandCount(me), Nu.EqualTo(hand - 1 + 2), "Put two of them into your hand");
+		var library = Library(me);
+		var rest = seven.Where(id => s.IsIn(id, me, ZoneType.Library)).ToList();
+		Assert.That(rest, Has.Count.EqualTo(5));
+		Assert.That(library.TakeLast(5), Nu.EquivalentTo(rest), "the rest on the bottom");
+		Assert.That(
+			rest.Select(id => s.GetCard(id).KnownTo),
+			Nu.All.EqualTo(Knowers.Owner),
+			"in any order: I know where they went"
+		);
+	}
+
+	/// <summary>The AI's delve picks are a rule, never searched (Shayne, 2026-11-17): the first card left in the graveyard.</summary>
+	[Test]
+	public void Delve_TheAiExilesTheFirstCardsInTheGraveyard()
+	{
+		var binned = Graveyard(4);
+		var cruise = Hand(Lsv("Treasure Cruise"), me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = cruise,
+				Delve = 2,
+			}
+		);
+		var ai = new global::MagicCore.Ai.GreedyAi(me);
+
+		foreach (var expected in binned.Take(2))
+		{
+			var choice = s.GetPendingChoice()!;
+			Assert.That(choice, Nu.InstanceOf<ChooseAmongChoice>().With.Property("Delve").True);
+			var pick = ai.Answer(s, choice).ToList();
+			Assert.That(pick, Nu.EqualTo(new[] { expected }));
+			s = s.Choose(pick);
+		}
+		Assert.That(binned.Skip(2).All(InGraveyard), "the rest stay");
+	}
+
+	/// <summary>
+	/// The review: delve's bound is each cast's own total — an {X} counts (CR 702.66a), so the generator can't read the
+	/// printed cost alone (it once offered no delve here: {X}{U} prints no generic).
+	/// </summary>
+	[Test]
+	public void Delve_IsBoundedByTheCastsTotal_XIncluded()
+	{
+		Graveyard(5);
+		var spell = Hand(
+			TestGames.Inline("X Delver", "{X}{U}", "Sorcery", ["Delve"], new DrawCards(Ref.You, 1)),
+			me
+		);
+
+		Assert.That(
+			Casts(spell).Where(c => c.X == 3).Select(c => c.Delve),
+			Nu.EquivalentTo(Enumerable.Range(0, 4)),
+			"X = 3: delve 0 to 3"
+		);
+	}
+
+	/// <summary>A big board: delve is one cast per number, never one per set of cards (C(20,7) = 77,520).</summary>
+	[Test]
+	public void Delve_OnABigBoard_IsOneCastPerNumber()
+	{
+		foreach (var _ in Enumerable.Range(0, 12))
+		{
+			Field(Bear, me);
+			Field(TestCards.Trinket, me);
+		}
+		foreach (var _ in Enumerable.Range(0, 5))
+			Hand(Bear, me);
+		Graveyard(20);
+		var cruise = Hand(Lsv("Treasure Cruise"), me);
+		var dig = Hand(Lsv("Dig Through Time"), me);
+
+		Assert.That(Casts(cruise).Count(), Nu.EqualTo(8), "delve 0 to 7");
+		Assert.That(Casts(dig).Count(), Nu.EqualTo(7), "delve 0 to 6");
+	}
 }

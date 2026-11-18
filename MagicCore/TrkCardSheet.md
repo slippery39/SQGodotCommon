@@ -5823,7 +5823,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As Kai Winn enters, choose a nonland card name.  
 > Whenever an opponent casts a spell with the chosen name or activates an ability of a source with the chosen name, that player loses 3 life.
 
-**Status:** scripted · **tests naming it:** LsvBatch2bTests, TrkBatch7cTests
+**Status:** scripted · **tests naming it:** LsvBatch2bTests, LsvBatch2gTests, TrkBatch7cTests
 
 **Engine pieces:** `ChoosesNameAsItEnters` — Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 

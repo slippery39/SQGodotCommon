@@ -965,6 +965,37 @@ as his three priorities.
   of Refuge already have (the as-it-enters choices run before `MayEnterAsCopy`; one fix for all four); `Damage.Excess`
   counts excess against a protected creature (no card reads excess from a damage that can reach one yet). AI lane:
   `Lookahead`'s block and attack predictions and `BlunderLint`'s block check don't ask protection.
+- 2026-11-17, Claude — **4.4g1b's and 4.4g2's notes (a copy's choices; delve).** g1b: the four "as this enters"
+  choices are ONE method now, `MagicState.ChooseAsItEnters`, reading the permanent as it is; `EnterBattlefield` asks it
+  for a card that doesn't enter as a copy, and `BecomeCopyOfChosenAction` after the copy (declined: itself). No new
+  action — an extra action per entry would run the post-processor on every permanent. g2, **what changed on reading:**
+  (1) `ExileFromGraveyardCost { Count = 1 }` is a pick IN the action (Gallia's `ExileId` slot), so delve of one would
+  have been a cast per graveyard card — its Count > 1 path is now `PickAfter`, which delve calls for any N; (2) a cast's
+  costs are paid BEFORE `PutOnStack`, but `PickAfter` is spawned, so the cards are picked with the spell on the stack
+  (CR 702.66: it can't exile itself — `!Is.Source` all the same, for a Breach escape); (3) delve pays from the TOTAL
+  cost (taxes in, CR 702.66a), so `CostBeforeLife` less N generic and the bound read from the total; (4) delve is the
+  printed keyword (`s.Has(card, "Delve")`, convoke's way), no component; (5) `LookAndTake.Rest` had no bottom-in-any-
+  order: `TheRest.BottomInAnyOrder` (known to the owner, the looked order — scry's ceiling, DesignNotes), through a
+  shared `MagicState.ToBottom` (`ToBottomAtRandom` shuffles, then calls it). Legal casts on 12 creatures, 12 artifacts,
+  a full hand and 20 in the graveyard: Cruise 8 (delve 0–7), Dig 7 (0–6) — a cast per set would be C(20, 7) = 77,520.
+  The enumeration's graveyard bound is only an efficiency bound: `ValidateAdd` is the rule (a revert-check found the
+  first test couldn't see it; one asks `ValidateAdd` directly now).
+  **Shayne (2026-11-17), on the 8 and 7 casts and their picks:** "a procedural take on exiling cards is going to be
+  much better than doing an AI search on exiling cards" — for now the AI exiles the first cards in the graveyard
+  (`ChooseAmongChoice.Delve`, a rule in `GreedyAi.Answer`, never branched by the beam); a cheap price per card that
+  sees Barrowgoyf, Nethergoyf, Animate Dead and Regrowth is MC-4.4g2b, after the cube's cards are in. The casts per
+  number stay (as an X spell's).
+  **`/pre-commit`'s review: eight findings; four taken.** The look-ahead's `Settle` searched a forced pick of 8 or
+  fewer, delve's too — now excluded beside the combat choices (a cost fix: graveyard cards tie in the evaluator, so no
+  test can tell the answers apart). The generator's delve bound read the PRINTED generic, so an {X} delve spell
+  offered no delve — now each cast's own `GenericBeforeDelve` (X, kicker, taxes; a free cast's 0), `s.Has` once per
+  card (a test fails without it: `{X}{U}` at X = 3 delves 0–3). `ManaCost.Generic`, the one sum. **Not taken (for
+  Shayne):** delve's exiles happen after `PutOnStack` raises the cast event (CR 601.2h pays costs before the spell is
+  cast) — the same as escape's and Drivnod's picks; nothing judges the graveyard as a spell is cast yet. A delve pick
+  offered NO card (a Breach escape and delve together, past validation's count) would be answered empty — validation
+  subtracts the escape's count, so it can't happen with a filter-free escape. `TheRest.BottomInAnyOrder` read as a new
+  enum case: kept — `Rest` IS the option ("where the rest go"), its values the destinations the texts print, as
+  `TopInAnyOrder` beside the random bottom.
 
 ## Tasks
 
@@ -1126,7 +1157,18 @@ as his three priorities.
           tests, 9 breaks caught (the review's two fixes included); `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random and
           72 card-replay games, added 4, the AI replay unmoved; probe 150 games, 1 unfinished past 300 permanents,
           Nemesis cast 358 times; full suite 1,934 passed — run again after the review's fixes)
-    - [ ] MC-4.4g2 Delve: Dig Through Time, Treasure Cruise
+    - [x] MC-4.4g1b Bug (Shayne, 2026-11-17): a clone entering as a copy of an as-it-enters chooser (True-Name
+          Nemesis, Kai Winn, Nyota Uhura, Room of Refuge) makes that choice — done 2026-11-17:
+          `MagicState.ChooseAsItEnters`, asked after the copy; 2 tests (Metamorph → Nemesis, Flesh Duplicate → Kai Winn)
+    - [x] MC-4.4g2 Delve: Dig Through Time, Treasure Cruise — done 2026-11-17: `CastSpellAction.Delve`, the cards
+          picked after (`ExileFromGraveyardCost.PickAfter`), `TheRest.BottomInAnyOrder`; 6 tests (the review's one
+          included), with g1b's 10 breaks caught; `batch_checks.py` all steps (golden-out: the random games unmoved, one card replay moved by g1b as
+          intended — Compel Brutality 03's Flesh Duplicate copying Kai Winn now names a card; golden-in moved 29 random
+          and 135 card-replay games, added 8, the AI replay unmoved; probe 150 games, 1 unfinished past 300
+          permanents, Dig cast 495 times, Cruise 508; full suite 1,942 passed — all run again after the review's fixes). The AI's picks are a rule (Shayne, 2026-11-17): the first cards in the graveyard
+    - [ ] MC-4.4g2b (LATER — after the cube's cards are in; Shayne, 2026-11-17) The AI's delve picks by a cheap
+          procedural price per card, never a search: goyfs' card types, reanimation and Regrowth targets, flashback and
+          escape cards (DesignNotes, MagicCore known ceilings)
     - [ ] MC-4.4g3 Dungeons and the initiative: Feywild Caretaker
     - [ ] MC-4.4g4 Face-down, manifest dread: Abhorrent Oculus
     - [ ] MC-4.4g5 Adventures: Brazen Borrower // Petty Theft
@@ -1138,17 +1180,22 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first part — protection,
-True-Name Nemesis (4.4g1) — are done: **225 of 528 play.** Next, in a NEW session: **MC-4.4g2 — delve** (Dig Through
-Time, Treasure Cruise): the plan is in Decisions (4.4g's plan, part 2) — `CastSpellAction.Delve = N`, one cast per
-N, the cards picked after the cast as Drivnod's; read `LookAndTake.Rest` for Dig's "bottom in any order". Then g3–g10
-in the plan's order, one a session.
+Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first two parts —
+protection (4.4g1, with g1b's copy fix) and delve (4.4g2) — are done: **227 of 528 play.** Next, in a NEW session:
+**MC-4.4g3 — dungeons and the initiative** (Feywild Caretaker): the plan is in Decisions (4.4g's plan, part 3) — read
+Sagas (`SagaComponent`, chapter triggers) for whether a room is a chapter with a branch choice before building. Then
+g4–g10 in the plan's order, one a session.
+From 4.4g2: delve is `CastSpellAction.Delve = N` (the printed keyword, one cast per N ≤ the total's generic), the N
+cards picked after the cast by `ExileFromGraveyardCost.PickAfter` — the one "pick N from your graveyard after" path
+(Oculus' six in g4 is that cost with `Count = 6`); "the rest on the bottom in any order" is `TheRest.BottomInAnyOrder`
+(`MagicState.ToBottom`); the AI's picks are the first cards in the graveyard, a rule — its procedural price is
+MC-4.4g2b, LATER, once the cube's cards are in (Shayne). From g1b: "as this enters, choose …" is ONE method, `MagicState.ChooseAsItEnters` — a new
+chooser goes there, and a clone asks it after its copy. g2's helpers in `LsvBatch2gTests.cs`: `Graveyard(n)` (n bears
+in mine), `DelvePicks(asked)`.
 From 4.4g1: protection is ONE question, `Protection.Stops(s, holder, source)` — a `Protection(From)` filter asked of
 the SOURCE from the holder's side, read through `AbilitiesOf` (a grant until end of turn counts); "choose a player as
 it enters" is `ChoosesPlayerAsItEnters` → `ChosenPlayer`; `Damage.Prevented` takes the source. 4.4g's tests are in
 `LsvBatch2gTests.cs` (`Pyroclasm`: 2 damage to each creature, targeting nothing; `AttachedTo`: set up attached).
-**Open (for Shayne), from g1:** a clone entering as a copy of True-Name Nemesis (or Kai Winn, Nyota, Room of Refuge)
-makes no as-it-enters choice — those run before `MayEnterAsCopy`; one fix for all four, not yet taken.
 From 4.4f: a permanent's memory of its spell is ONE field, `Card.CastAs` (X, kicked, alternative cost, squad's count;
 `Card.AsCast` reads the stack's or the permanent's) — never a new `Cast…` field. Evoke is `Scripting.Evoke(colour)`
 (Solitude, Endurance, Fury, Grief take it as they come); squad `Scripting.Squad(cost)`; improvise and convoke one answer,
@@ -1310,3 +1357,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   528 play; blue's tier 2 done. `Card.CastAs`, squad, evoke, improvise, scry, `MakePlayable`. Next: blue's tier 3.
 - 2026-11-17: MC-4.4g planned (ten parts, Decisions) and g1 done: True-Name Nemesis — 225 of 528 play. Protection
   (`Protection(From)`, `Protection.Stops` in targeting, damage, blocking, attachments). Next: MC-4.4g2, delve.
+- 2026-11-17: MC-4.4g1b and g2 done: a clone makes its copy's "as this enters" choices (`MagicState.ChooseAsItEnters`);
+  delve — Dig Through Time, Treasure Cruise — 227 of 528 play. The AI's delve picks are a rule (the first cards); a
+  procedural price is MC-4.4g2b, later. Next: MC-4.4g3, dungeons and the initiative.

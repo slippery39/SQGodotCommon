@@ -178,6 +178,11 @@ public record ChooseAmongChoice : ChoiceAction
 	/// <summary>There's Coffee in that Nebula: "a Plains card or nonland permanent card with mana value 3 or less" — what Types can't say.</summary>
 	public Filters.Filter? Filter { get; init; }
 
+	/// <summary>
+	/// Delve's card to exile (Treasure Cruise): the AI answers by rule, never searching it — GreedyAi.Answer.
+	/// </summary>
+	public bool Delve { get; init; }
+
 	public ChooseAmongChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;

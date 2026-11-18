@@ -121,12 +121,26 @@ public static class MagicState
 	{
 		(var rng, s) = s.TakeRng();
 		rng.Shuffle(ids);
+		return s.ToBottom(playerId, ids, Knowers.None);
+	}
+
+	/// <summary>
+	/// Library cards to its bottom in this order, known to <paramref name="knownTo"/> there — Rutherford's random
+	/// order (nobody), Dig Through Time's "in any order" (their owner).
+	/// </summary>
+	public static GameState ToBottom(
+		this GameState s,
+		int playerId,
+		IEnumerable<int> ids,
+		Knowers knownTo
+	)
+	{
 		var libraryId = s.ZoneId(playerId, ZoneType.Library);
 		foreach (var id in ids)
 		{
 			s = s.MoveObject(id, 0).MoveObject(id, libraryId); // out and back in: MoveObject appends, the bottom
-			if (s.GetCard(id) is { KnownTo: not Knowers.None } card)
-				s = s.UpdateObject(id, card with { KnownTo = Knowers.None });
+			if (s.GetCard(id) is { } card && card.KnownTo != knownTo)
+				s = s.UpdateObject(id, card with { KnownTo = knownTo });
 		}
 		return s;
 	}
@@ -575,6 +589,49 @@ public static class MagicState
 					: Rules.Attachments.ChooseHostAsItEnters(s, cardId);
 		if (card.PrintedLoyalty > 0)
 			s = s.Raise(new LoyaltyCountersPutEvent(controllerId)); // entering with them is "putting" (CR 122.6)
+		var asCopy =
+			card.GetComponent<MayEnterAsCopy>() is { } copying
+			// nothing to copy: no prompt with no options (an empty forced pick can't be answered)
+			&& new Actions.ChooseCreatureToCopyChoice(controllerId, cardId) { Of = copying.Of }
+				.GetOptions(s, ImmutableDictionary<string, object>.Empty)
+				.Count > 0
+				? copying
+				: null;
+		if (asCopy is null)
+			s = s.ChooseAsItEnters(cardId);
+		else
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new Actions.ChooseCreatureToCopyChoice(controllerId, cardId)
+						{
+							Of = asCopy.Of,
+							MinChoices = asCopy.Optional ? 0 : 1,
+						},
+						new Actions.BecomeCopyOfChosenAction(cardId, asCopy.VanishingIfNone)
+						{
+							NotLegendary = asCopy.NotLegendary,
+							WithCounters = asCopy.WithCounters,
+							AlsoType = asCopy.AlsoType,
+						},
+					],
+				}
+			);
+		return card.HasComponent<EntersPreparedComponent>() ? Rules.Prepare.Become(s, cardId) : s;
+	}
+
+	/// <summary>
+	/// The "as this enters, choose …" choices (Room of Refuge's colour, Nyota Uhura's number, True-Name Nemesis'
+	/// player, Kai Winn's name), read from the permanent AS IT ENTERED — so a clone entering as a copy of one
+	/// (Phyrexian Metamorph: "enter as a copy of any artifact or creature") makes the choice too, after its copy
+	/// choice (CR 707.5; BecomeCopyOfChosenAction asks here).
+	/// </summary>
+	public static GameState ChooseAsItEnters(this GameState s, int cardId)
+	{
+		var card = s.GetCard(cardId);
+		var controllerId = card.ControllerId;
 		if (card.HasComponent<ChoosesColorAsItEnters>())
 			s = s.SpawnAction(
 				new PipelineAction
@@ -641,33 +698,7 @@ public static class MagicState
 				}
 			);
 		}
-		if (
-			card.GetComponent<MayEnterAsCopy>() is { } asCopy
-			// nothing to copy: no prompt with no options (an empty forced pick can't be answered)
-			&& new Actions.ChooseCreatureToCopyChoice(controllerId, cardId) { Of = asCopy.Of }
-				.GetOptions(s, ImmutableDictionary<string, object>.Empty)
-				.Count > 0
-		)
-			s = s.SpawnAction(
-				new PipelineAction
-				{
-					Steps =
-					[
-						new Actions.ChooseCreatureToCopyChoice(controllerId, cardId)
-						{
-							Of = asCopy.Of,
-							MinChoices = asCopy.Optional ? 0 : 1,
-						},
-						new Actions.BecomeCopyOfChosenAction(cardId, asCopy.VanishingIfNone)
-						{
-							NotLegendary = asCopy.NotLegendary,
-							WithCounters = asCopy.WithCounters,
-							AlsoType = asCopy.AlsoType,
-						},
-					],
-				}
-			);
-		return card.HasComponent<EntersPreparedComponent>() ? Rules.Prepare.Become(s, cardId) : s;
+		return s;
 	}
 
 	/// <summary>

@@ -53,6 +53,7 @@ public static class Lookahead
 				or DeclareBlockerChoice
 				or AssignCombatDamageChoice
 				or PayToKeepChoice
+				or ChooseAmongChoice { Delve: true } // a rule, never searched (Shayne, MC-4.4g2): QuickAnswer's first
 			)
 		&& choice.MaxChoices == 1
 		&& (

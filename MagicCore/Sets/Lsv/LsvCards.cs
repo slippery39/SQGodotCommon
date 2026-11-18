@@ -1893,6 +1893,20 @@ public static class LsvCards
 				new ChoosesPlayerAsItEnters(),
 				new Protection(Is.ControlledByChosenPlayer),
 			],
+			// ===== MC-4.4g2: delve (CastSpellAction.Delve, read from the printed keyword) =====
+			["Dig Through Time"] =
+			[
+				Spell(
+					[],
+					new LookAndTake(7)
+					{
+						Take = 2,
+						Must = true,
+						Rest = TheRest.BottomInAnyOrder,
+					}
+				),
+			],
+			["Treasure Cruise"] = [Spell([], new DrawCards(Ref.You, 3))],
 		};
 
 	/// <summary>

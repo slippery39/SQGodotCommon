@@ -142,6 +142,13 @@ whose subsystem it lives in.
   copied as it is cast; the count rides the spell (`OnStackComponent.Replicate` → `Card.CastAs`), and
   `Scripting.Squad(cost)`'s "when this enters, if its squad cost was paid" makes `CreateTokenCopy(Ref.Source) { N =
   Count.TimesReplicated(Ref.Source) }`. A token copy wasn't cast, so its squad makes none.
+  **Delve** (CR 702.66, MC-4.4g2: Treasure Cruise, Dig Through Time — read from the printed keyword, `s.Has(card,
+  "Delve")`) is `CastSpellAction.Delve = N`: one cast per number, at most the generic in the TOTAL cost (taxes in) and
+  the other cards in your graveyard; the total less N generic; the N cards picked AFTER the cast, one at a time
+  (`ExileFromGraveyardCost.PickAfter`, Drivnod's path — N = 1 too, never the cost's one-pick slot). Never a cast per
+  set of cards: C(20, 7) is 77,520 casts. **The AI's picks are a rule, never searched** (Shayne, 2026-11-17):
+  `ChooseAmongChoice.Delve`, answered by `GreedyAi` with the first card left in the graveyard and never branched by the
+  beam — a cheap procedural pick is MC-4.4g2b (DesignNotes).
   **How many modes** is one `ModeChoice` (`Choose`) on spells, triggered and activated abilities alike — `AtLeast` and
   `AtMost` as Counts (an int converts: exactly that many); "choose one or more" is `{ AtMost = N }`, "up to one" (Ertai)
   `{ AtLeast = 0 }`. `Modal.Choices`/`IsLegal` take the range.

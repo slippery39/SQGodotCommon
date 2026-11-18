@@ -108,9 +108,11 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 	public ManaCost Plus(ManaCost other) =>
 		new ManaCost(
 			Symbols.AddRange(other.Symbols.Where(sym => sym.Kind != SymbolKind.Generic))
-		).WithGeneric(
-			other.Symbols.Where(sym => sym.Kind == SymbolKind.Generic).Sum(sym => sym.Amount)
-		);
+		).WithGeneric(other.Generic);
+
+	/// <summary>The generic mana in it — {6}{U}{U}'s six (delve's bound, Dig Through Time).</summary>
+	public int Generic =>
+		Symbols.Where(sym => sym.Kind == SymbolKind.Generic).Sum(sym => sym.Amount);
 
 	/// <summary>
 	/// "Mana of any type can be spent": each coloured, hybrid or {2/W} symbol becomes {1} — one mana of

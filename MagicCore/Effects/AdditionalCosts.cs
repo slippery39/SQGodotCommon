@@ -442,10 +442,20 @@ public sealed record ExileFromGraveyardCost(Filter Filter) : AdditionalCost
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
 		[];
 
-	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen)
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		Count == 1
+			? chosen == 0
+				? s
+				: s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile))
+			: PickAfter(s, playerId, sourceId);
+
+	/// <summary>
+	/// The Count cards picked after the action, one at a time — Drivnod's three, and delve's N
+	/// (CastSpellAction.Delve: one too, since how many is the cast's and which is a choice).
+	/// </summary>
+	/// <param name="delve">Delve's picks: the AI answers them by rule (ChooseAmongChoice.Delve).</param>
+	public GameState PickAfter(GameState s, int playerId, int sourceId, bool delve = false)
 	{
-		if (Count == 1)
-			return chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile));
 		var candidates = Candidates(s, playerId, sourceId).ToImmutableList();
 		return s.SpawnAction(
 			new PipelineAction
@@ -463,6 +473,7 @@ public sealed record ExileFromGraveyardCost(Filter Filter) : AdditionalCost
 										Ids = candidates, // one picked already has left: no longer offered
 										MinChoices = 1,
 										Prompt = "Exile from your graveyard",
+										Delve = delve,
 									},
 									new MoveChosenToAction(playerId, ZoneType.Exile),
 								]

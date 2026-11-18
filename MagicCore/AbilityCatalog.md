@@ -82,7 +82,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `UpTo` (bool): Tersa Lightshatter: "discard up to two cards, then draw that many cards" — none is an answer.
 - **`DiscardAtRandom(Ref Who, Count N)`** — Curse-Marred Demon: "discard a card at random" — MtgCore's DiscardRandomCardAction, through the one discard. [2: Curse-Marred Demon, Mind Twist]
 - **`DiscardHand(Ref Who)`** — Ajani Unrelenting: "Discard your hand" — the whole hand, so there is nothing to choose. [3: Ajani Unrelenting, Variable Chaser // Arc of Fortune, Wheel of Fortune]
-- **`DrawCards(Ref Who, Count Amount)`** — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss. [132: Prophesied End, Cast Away Doubt, Artifist Acumen…]
+- **`DrawCards(Ref Who, Count Amount)`** — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss. [133: Prophesied End, Cast Away Doubt, Artifist Acumen…]
 - **`EachPlayerMay(string Prompt, ImmutableList<GameAction> Then)`** — Arc of Fortune: "Each player may [Then]." Each player answers for themselves, active player first, and Then runs as that player's ("you"… [1: Variable Chaser // Arc of Fortune]
 - **`EachSacrifices(Ref Who, Filters.Filter Filter)`** — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own (never what can't be sacrificed). Emrakul's ward,… [9: Winter, Tormented Loner, Garruk, Veiled Butcher, Balance…]
   - `IfYouDid` (ImmutableList<GameAction>): Garruk, Veiled Butcher: "If you sacrificed a creature this way, [IfYouDid]."
@@ -127,7 +127,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Otherwise` (ImmutableList<GameAction>): Desperate Futurescribe: "… instead" — what happens when the condition does not hold.
 - **`IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then)`** — Captain Michael Burnham: "If this is the second time this ability has resolved this turn, put a +1/+1 counter on Captain Burnham." —… [2: Captain Michael Burnham, Jake Sisko, War Correspondent]
 - **`LandTapsForTwoUntilThisIsCast(Ref Land)`** — Emrakul, the Exigent Doom: "Target land gains '{T}: Add {C}{C}' until this card is cast from exile. You may cast this card for as long as… [1: Emrakul, the Exigent Doom]
-- **`LookAndTake(Count N, Filters.Filter? Filter = null)`** — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal an artifact card from among them and put it into… [12: Ponder, Stock Up, Consult the Star Charts…]
+- **`LookAndTake(Count N, Filters.Filter? Filter = null)`** — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal an artifact card from among them and put it into… [13: Ponder, Stock Up, Consult the Star Charts…]
   - `Reveal` (bool): "You may reveal [it] and put it into your hand" — known to everyone there.
   - `Must` (bool): Hoshi Sato: "Put one of them into your hand" — not "you may": exactly Take, not up to it.
   - `Take` (Count): Stock Up: "Put two of them into your hand" — how many are taken (never more than there are to take). Ponder…
@@ -536,6 +536,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `DeciderId` (int): Extrapolate the Impossible: "An opponent chooses one of them." Who chooses; 0 is the cards' owner.
   - `DifferentNames` (bool): Extrapolate the Impossible: "two cards … with different names" — one option per name.
   - `Filter` (Filters.Filter?): There's Coffee in that Nebula: "a Plains card or nonland permanent card with mana value 3 or less" — what…
+  - `Delve` (bool): Delve's card to exile (Treasure Cruise): the AI answers by rule, never searching it — GreedyAi.Answer.
 - **`ChooseCardsFromHandChoice`** — Pick N cards from your own hand — mulligan bottoms, discard to hand size.
   - `PlayerId` (int): Whose hand.
   - `DeciderId` (int): Who chooses, if not the hand's owner — Solve for Disappointment: "You choose … from it."
@@ -647,7 +648,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 
 - **Stat**: `Power`; `Toughness`; `ManaValue` (on the stack X counts (CR 202.3e)); `PowerPlusToughness` (Cut Down: "total power and toughness")
 
-- **TheRest**: `BottomAtRandom`; `Graveyard`; `TopInAnyOrder`
+- **TheRest**: `BottomAtRandom`; `Graveyard`; `TopInAnyOrder`; `BottomInAnyOrder`
 
 - **Whose**: `Any`; `You`; `Opponent`
 
@@ -759,7 +760,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 ## Shared tokens (`MagicCore/Sets/Tokens.cs`)
 
 - `Token` — A token's printed data: a name, a type line and what the text gives it.
-- `Treasure` — "A Treasure token. (It's an artifact with '{T}, Sacrifice this token: Add one mana of any color.')" [4: Vraska, the Cutting Glare, Generous Plunderer, Magda, Brazen Outlaw…]
+- `Treasure` — "A Treasure token. (It's an artifact with '{T}, Sacrifice this token: Add one mana of any color.')" [5: Vraska, the Cutting Glare, Generous Plunderer, Magda, Brazen Outlaw…]
 - `SacrificeForMana` — "{T}, Sacrifice this token: Add [N] mana of any (one) color." — Treasure's and Lotus's. [5: Vraska, Soul of Stone, Vraska, the Cutting Glare, Kwia Vigorbloom…]
 - `CreateTreasure` — "Create a Treasure token." [10: Generous Plunderer, Bonehoard Dracosaur, Magda, Brazen Outlaw…]
 - `Clue` — "A Clue token. (It's an artifact with '{2}, Sacrifice this token: Draw a card.')"

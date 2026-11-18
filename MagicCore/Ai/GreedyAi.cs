@@ -178,6 +178,10 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 				.Select(c => c.Id);
 		if (choice is OrderLibraryTopChoice order)
 			return LandUnlock.Order(s, order.PlayerId, [.. choice.Options.Select(o => o.Id)], held);
+		if (choice is ChooseAmongChoice { Delve: true })
+			// ponytail: the first card left in the graveyard, whatever it is — blind to Barrowgoyf's card types, an
+			// Animate Dead or Regrowth target, threshold. Upgrade: a cheap procedural price per card (DesignNotes).
+			return choice.Options.Take(1).Select(o => o.Id);
 		if (choice is ChooseKeywordChoice { NamesACard: true } naming)
 			return [naming.Keywords.IndexOf(LikeliestName(s, naming.Keywords)) + 1];
 		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max })

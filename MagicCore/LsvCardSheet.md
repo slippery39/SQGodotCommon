@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 29/46 · uncommon 39/86 · rare 111/279 · mythic 37/108 · **225/528**
+**Playable:** common 30/46 · uncommon 39/86 · rare 112/279 · mythic 37/108 · **227/528**
 
 ### "Name Sticker" Goblin
 
@@ -712,7 +712,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Delve (Each card you exile from your graveyard while casting this spell pays for {1}.)  
 > Draw three cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2gTests
+
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Treasure Cruise"] = [Spell([], new DrawCards(Ref.You, 3))],
+```
 
 ### Trinket Mage
 
@@ -2789,7 +2795,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Delve (Each card you exile from your graveyard while casting this spell pays for {1}.)  
 > Look at the top seven cards of your library. Put two of them into your hand and the rest on the bottom of your library in any order.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2gTests
+
+**Engine pieces:** `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…
+
+```csharp
+["Dig Through Time"] =
+[
+	Spell(
+		[],
+		new LookAndTake(7)
+		{
+			Take = 2,
+			Must = true,
+			Rest = TheRest.BottomInAnyOrder,
+		}
+	),
+],
+```
 
 ### Displacer Kitten
 
@@ -4434,7 +4457,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({U/P} can be paid with either {U} or 2 life.)  
 > You may have this creature enter as a copy of any artifact or creature on the battlefield, except it's an artifact in addition to its other types.
 
-**Status:** scripted · **tests naming it:** LsvBatch2eTests
+**Status:** scripted · **tests naming it:** LsvBatch2eTests, LsvBatch2gTests
 
 **Engine pieces:** `MayEnterAsCopy` — Flesh Duplicate: "You may have this creature enter as a copy of any creature on the…
 

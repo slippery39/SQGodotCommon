@@ -127,6 +127,17 @@ public record CastSpellAction : GameAction
 	public bool Kicked { get; init; }
 
 	/// <summary>
+	/// Delve (CR 702.66; Treasure Cruise, Dig Through Time): "Each card you exile from your graveyard while casting
+	/// this spell pays for {1}." — how many: one cast per number, at most the generic in its total cost; the cards
+	/// themselves are picked after the cast, one at a time (ExileFromGraveyardCost.PickAfter, Drivnod's), never a
+	/// cast per set of cards.
+	/// </summary>
+	public int Delve { get; init; }
+
+	/// <summary>Delve's cards: any in your graveyard but this one (a spell being cast from there).</summary>
+	ExileFromGraveyardCost Delving => new(!Filters.Is.Source) { Count = Delve };
+
+	/// <summary>
 	/// Gitaxian Probe: "{U/P}" — how many of the Phyrexian symbols are paid with 2 life each (CR 107.4f), one legal
 	/// cast per number, as an activation's (ActivateAbilityAction.LifeForPhyrexian); the rest are paid with their colour.
 	/// </summary>
@@ -262,7 +273,7 @@ public record CastSpellAction : GameAction
 		if (card.GetComponent<ReplicateComponent>() is { } replicate)
 			for (var i = 0; i < Replicate; i++)
 				added = added?.Plus(replicate.Cost) ?? replicate.Cost;
-		return Costs.Of(
+		var total = Costs.Of(
 			s,
 			PlayerId,
 			card,
@@ -272,7 +283,12 @@ public record CastSpellAction : GameAction
 			added: added,
 			flashback: !DuringResolution
 		);
+		return Delve == 0 ? total : total.WithGeneric(-Delve); // delve pays from the TOTAL (CR 702.66a)
 	}
+
+	/// <summary>Delve's bound: the generic mana in this cast's total cost (X, kicker, taxes), before delve pays any.</summary>
+	public int GenericBeforeDelve(GameState s, Card card) =>
+		(this with { Delve = 0 }).CostBeforeLife(s, card).Generic;
 
 	/// <summary>
 	/// What paying for this cast taps and spends, or null if it can't be paid — THE call: validation, the cast
@@ -349,6 +365,19 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Can't pay that much life for its Phyrexian mana");
 		if (Replicate < 0 || (Replicate > 0 && !card.HasComponent<ReplicateComponent>()))
 			return ValidationResult.Invalid("It has no replicate cost");
+		if (
+			Delve != 0
+			&& (
+				Delve < 0
+				|| !s.Has(card, "Delve")
+				|| Delve > GenericBeforeDelve(s, card)
+				// Underworld Breach's escape exiles from the same graveyard
+				|| Delve
+					> Delving.Candidates(s, PlayerId, CardId).Count()
+						- costs.OfType<ExileFromGraveyardCost>().Sum(c => c.Count)
+			)
+		)
+			return ValidationResult.Invalid("Can't delve that many");
 		if (
 			WithoutPayingManaCost
 			&& !DuringResolution
@@ -481,6 +510,8 @@ public record CastSpellAction : GameAction
 		s = MagicCore.Rules.Life.Lose(s, PlayerId, 2 * LifeForPhyrexian);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
+		if (Delve > 0)
+			s = Delving.PickAfter(s, PlayerId, CardId, delve: true);
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
 		if (Division.Of(card) is > 0 and var divided) // Pyrokinesis, Pure Energy: the division is announced now
 			s = s.UpdateObject(

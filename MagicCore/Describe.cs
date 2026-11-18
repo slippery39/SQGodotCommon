@@ -37,6 +37,7 @@ public static class Describe
 						: ""
 				)
 				+ (c.Replicate > 0 ? $" (replicate ×{c.Replicate})" : "")
+				+ (c.Delve > 0 ? $" (delve {c.Delve})" : "")
 				+ (c.Kicked ? " (kicked)" : "")
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)

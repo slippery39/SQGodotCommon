@@ -127,6 +127,9 @@ whose subsystem it lives in.
   Saboteur) is `MayEnterAsCopy { Of, NotLegendary, WithCounters, Optional }` — the counters through
   `PutCounters` (`Card.AllCounters`); `Optional` is a real "may" (Flesh Duplicate's stays forced). "Except it's an
   artifact in addition to its other types" (Phyrexian Metamorph) is `AlsoType`, a type added to the copy's.
+  **A copy makes its own "as this enters" choices** (CR 707.5, MC-4.4g1b): colour, number, player and name are ONE
+  method, `MagicState.ChooseAsItEnters`, reading the permanent as it is — `EnterBattlefield` asks it, or, for a card
+  entering as a copy, `BecomeCopyOfChosenAction` after the copy (a Metamorph copying True-Name Nemesis chooses a player).
 - **"With mana value equal to [a number]"** counted as it resolves is `Ref.ManaValueIs` (a `Count`) on a
   `Ref.All` — Explosives' own charge counters, read from the sacrificed source as it last was.
 - **Changeling** ("every creature type") is `s.HasSubtype(card, type)`, asked one type at a time — every

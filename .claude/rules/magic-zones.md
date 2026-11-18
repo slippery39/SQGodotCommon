@@ -97,7 +97,8 @@ whose subsystem it lives in.
   where it is, above the rest, and its owner knows it). **Where the rest go** is `Rest`: the bottom in a random
   order (not known, as Identity Echo's), `Graveyard`, or `TopInAnyOrder` — Ponder's "put them back in any order":
   each made known to its owner, then a surveil's order choice (`OrderKeptOnTopAction.Ask`, the one place it is
-  asked). `Reveal`: the taken are known to everyone. "Two instead if this spell was kicked" (Consult the Star
+  asked), or `BottomInAnyOrder` — Dig Through Time's "the rest on the bottom of your library in any order": known to their
+  owner, in the order looked at (a ceiling, DesignNotes; `MagicState.ToBottom`). `Reveal`: the taken are known to everyone. "Two instead if this spell was kicked" (Consult the Star
   Charts) is `If(WasKicked) { Otherwise }` over two looks, never a conditional number.
 - **A shuffle is `ShuffleLibrary(who)`** (MC-4.4e2a), each player named shuffling once: Ponder's "you may shuffle"
   (under a `May`), every search's "then shuffle", and Timetwister's "each player shuffles their hand and graveyard

@@ -69,12 +69,13 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 
 	public override ActionResult Execute(GameState s)
 	{
+		if (!s.IsOnBattlefield(CardId))
+			return new(s);
 		if (
-			!s.IsOnBattlefield(CardId)
-			|| ChoosePermanentChoice.Read(InputContext).FirstOrDefault() is not (> 0 and var id)
+			ChoosePermanentChoice.Read(InputContext).FirstOrDefault() is not (> 0 and var id)
 			|| !s.IsOnBattlefield(id)
 		)
-			return new(s);
+			return new(s.ChooseAsItEnters(CardId)); // itself after all
 		var card = s.GetCard(CardId);
 		var model = s.GetCard(id);
 		var copy = (Card)card.WithCopiableValuesOf(model).WithComponent(new EnteredAsCopy(card));
@@ -90,7 +91,7 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 		if (WithCounters)
 			foreach (var (kind, n) in model.AllCounters())
 				s = s.PutCounters(CardId, kind, n, entering: true);
-		return new(s);
+		return new(s.ChooseAsItEnters(CardId)); // the copy's "as this enters" choices (CR 707.5)
 	}
 }
 

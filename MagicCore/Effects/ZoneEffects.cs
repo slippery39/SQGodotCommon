@@ -2379,6 +2379,13 @@ public enum TheRest
 	/// their owner knowing each and ordering two or more (a surveil's choice, OrderLibraryTopChoice).
 	/// </summary>
 	TopInAnyOrder,
+
+	/// <summary>
+	/// Dig Through Time: "the rest on the bottom of your library in any order" — known to their owner. ponytail: in
+	/// the order they were looked at, never chosen (scry's bottom is the same, DesignNotes); a choice when a card
+	/// reads the bottom.
+	/// </summary>
+	BottomInAnyOrder,
 }
 
 /// <summary>After LookAndTake's choice: the chosen cards where To says, the rest where Rest says.</summary>
@@ -2419,6 +2426,8 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 					(st, id) => st.MoveCard(id, st.ZoneId(PlayerId, ZoneType.Graveyard))
 				)
 			);
+		if (Rest == TheRest.BottomInAnyOrder)
+			return new(s.ToBottom(PlayerId, rest, Knowers.Owner));
 		if (Rest == TheRest.TopInAnyOrder)
 			// They stay where they are, each looked at (as a surveil's kept cards: magic-zones.md), then ordered.
 			return new(

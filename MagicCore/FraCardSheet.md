@@ -6669,7 +6669,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > You may have this creature enter as a copy of any creature on the battlefield, except it has vanishing 3 if that creature doesn't have vanishing. (A permanent with vanishing 3 enters with three time counters on it. At the beginning of your upkeep, remove a time counter from it. When the last is removed, sacrifice it.)
 
-**Status:** scripted · **tests naming it:** FraSpecialGuestTests
+**Status:** scripted · **tests naming it:** FraSpecialGuestTests, LsvBatch2gTests
 
 **Engine pieces:** `MayEnterAsCopy` — Flesh Duplicate: "You may have this creature enter as a copy of any creature on the…
 
