@@ -419,6 +419,14 @@ public static class StateBasedActions
 					s = s.Sacrifice(card.Id);
 				field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 			}
+			// CR 704.5t: a dungeon on its last room is removed once that room's ability has left the stack —
+			// the Saga's rule (ponytail: nothing reads "completed a dungeon" yet).
+			if (
+				Effects.Undercity.Of(s, id) is { } dungeon
+				&& Effects.Undercity.IsOnLastRoom(dungeon)
+				&& !ChapterToResolve(s, dungeon, pending)
+			)
+				s = s.RemoveObject(dungeon.Id);
 
 			var beforeAttachments = s;
 			s = Rules.Attachments.Check(s, id); // CR 704.5m/n

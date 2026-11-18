@@ -354,7 +354,11 @@ public sealed class MagicTableManager
 				&& o.Id != CombatOption.None
 				&& o.Id == chosen.GetValueOrDefault(creature)
 			);
-			answers.Add(MoveTokens.Token(next, null, [pick?.Id ?? CombatOption.None]));
+			var none =
+				choice is DeclareAttackerChoice
+					? DeclareAttackerChoice.NoAttack(choice)
+					: CombatOption.None;
+			answers.Add(MoveTokens.Token(next, null, [pick?.Id ?? none])); // goaded and unclicked: it attacks
 			next = MoveTokens.Apply(next, answers[^1]);
 		}
 

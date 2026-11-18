@@ -996,6 +996,29 @@ as his three priorities.
   subtracts the escape's count, so it can't happen with a filter-free escape. `TheRest.BottomInAnyOrder` read as a new
   enum case: kept — `Rest` IS the option ("where the rest go"), its values the destinations the texts print, as
   `TopInAnyOrder` beside the random bottom.
+- 2026-11-18, Claude — **4.4g3's notes (dungeons and the initiative).** **A room is no Saga chapter**: a chapter fires
+  as a lore COUNT crosses N, and Undercity branches (Forge and Lost Well share a depth), so no count says which room
+  you are in. **What changed on reading:** a room's ability is `WhenYouDo`'s shape — a triggered ability an effect
+  puts on the stack itself (`Triggers.QueueTargets`), no event, no `Trigger` option — and the Saga's "sacrificed once
+  no chapter is waiting" (`ChapterToResolve`) is the dungeon's completion rule as it stands. Built: `Effects/Dungeons.cs`
+  — `DungeonComponent(Room)` on an object in the command zone (the emblem path), `Undercity.Rooms` (static data, nine
+  rooms and their exits), `Venture` (two exits: ONE `ChooseKeywordChoice`), completion in the state-based check; the
+  initiative an object in its holder's command zone (`InitiativeComponent`, nearest piece the emblem — forever, never
+  changing hands) with its upkeep and combat-damage triggers, `TakeTheInitiative`, `YouHaveTheInitiative`. Undercity's
+  rooms needed goad (Arena: `Combat.Goaded`, no "Don't attack" offered) and `LookAndTake.Then` (Throne). Only
+  Undercity (Shayne's brief). **Legal actions:** none added — venture is an effect, a branch one choice of two. **The
+  AI:** the room pick is a two-option forced pick the look-ahead already settles (no rule needed); the evaluator prices
+  no initiative (DesignNotes, an AI-lane note). Ceilings (DesignNotes): the take's venture folded into the take, goad's
+  two-player reading, the active player takes the initiative, Throne's counters after it enters, nothing reads
+  "completed a dungeon". 10 tests in `LsvBatch2g3Tests.cs`, 17 breaks caught.
+  **`/pre-commit`'s review: eight findings; three taken, each with a test that fails without it.** The look-ahead's
+  quick answer (and the card-value sandbox through it) answered every attacker "don't" — a goaded creature crashed it:
+  ONE answer now, `DeclareAttackerChoice.NoAttack`, for the look-ahead, `WholeAttacks` and the table. Goad was read
+  through `s.Has`, so "loses all abilities" ended it — it is an effect: `Combat.IsGoaded` reads its stamp. Venturing on
+  the last room did nothing — it completes that dungeon and begins a new one. A `ponytail:` on the active player.
+  **Not taken:** `LookAndTake.Then` on a card Containment Priest exiled — `PutCounters` and the hexproof grant act on
+  permanents only; the inspector's "No attack" for a plan whose goaded creature attacks anyway (a label); a last room
+  with a target pending as the state check runs — no check runs while a choice is pending.
 
 ## Tasks
 
@@ -1169,7 +1192,11 @@ as his three priorities.
     - [ ] MC-4.4g2b (LATER — after the cube's cards are in; Shayne, 2026-11-17) The AI's delve picks by a cheap
           procedural price per card, never a search: goyfs' card types, reanimation and Regrowth targets, flashback and
           escape cards (DesignNotes, MagicCore known ceilings)
-    - [ ] MC-4.4g3 Dungeons and the initiative: Feywild Caretaker
+    - [x] MC-4.4g3 Dungeons and the initiative: Feywild Caretaker — done 2026-11-18: Undercity, `Venture`, the
+          initiative, goad, `LookAndTake.Then`; 10 tests, 17 breaks caught (the review's three fixes included);
+          `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random and 64 card-replay games,
+          added 4, the AI replay unmoved; probe 150 games, none unfinished, the Caretaker cast 380 times; full suite
+          1,952 passed) — all run again after the review's fixes
     - [ ] MC-4.4g4 Face-down, manifest dread: Abhorrent Oculus
     - [ ] MC-4.4g5 Adventures: Brazen Borrower // Petty Theft
     - [ ] MC-4.4g6 Teamwork: We Say Thee Nay!
@@ -1180,11 +1207,18 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first two parts —
-protection (4.4g1, with g1b's copy fix) and delve (4.4g2) — are done: **227 of 528 play.** Next, in a NEW session:
-**MC-4.4g3 — dungeons and the initiative** (Feywild Caretaker): the plan is in Decisions (4.4g's plan, part 3) — read
-Sagas (`SagaComponent`, chapter triggers) for whether a room is a chapter with a branch choice before building. Then
-g4–g10 in the plan's order, one a session.
+Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first three parts —
+protection (4.4g1, with g1b's copy fix), delve (4.4g2) and dungeons and the initiative (4.4g3) — are done: **228 of
+528 play.** Next, in a NEW session: **MC-4.4g4 — face-down, manifest dread** (Abhorrent Oculus): the plan is in
+Decisions (4.4g's plan, part 4). Then g5–g10 in the plan's order, one a session.
+From 4.4g3: a dungeon is `DungeonComponent(Room)` on a command-zone object, `Undercity.Rooms` its data; `Venture` is
+"venture into Undercity" (a branch ONE `ChooseKeywordChoice`; on the last room, a new dungeon), a room's ability put
+on the stack as `WhenYouDo`'s; the initiative is `TakeTheInitiative(who)` / `YouHaveTheInitiative` /
+`InitiativeComponent.HolderOf`. Another dungeon (Lost Mine, Tomb of Annihilation) waits for a card that ventures into
+it (White Plume Adventurer, Seasoned Dungeoneer, Caves of Chaos and Undermountain Adventurer all take the initiative —
+Undercity only; ask Shayne before another). Goad is `Undercity.Goad(ref)`, read by `Combat.IsGoaded`; an attack answer
+is `DeclareAttackerChoice.NoAttack` everywhere. `FraBoardTest` has `VentureSpell` (an instant), `Ventures(answer)` and
+`Room(player)` now.
 From 4.4g2: delve is `CastSpellAction.Delve = N` (the printed keyword, one cast per N ≤ the total's generic), the N
 cards picked after the cast by `ExileFromGraveyardCost.PickAfter` — the one "pick N from your graveyard after" path
 (Oculus' six in g4 is that cost with `Count = 6`); "the rest on the bottom in any order" is `TheRest.BottomInAnyOrder`
@@ -1360,3 +1394,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-17: MC-4.4g1b and g2 done: a clone makes its copy's "as this enters" choices (`MagicState.ChooseAsItEnters`);
   delve — Dig Through Time, Treasure Cruise — 227 of 528 play. The AI's delve picks are a rule (the first cards); a
   procedural price is MC-4.4g2b, later. Next: MC-4.4g3, dungeons and the initiative.
+- 2026-11-18: MC-4.4g3 done: Feywild Caretaker — 228 of 528 play. Undercity and venture (a room no chapter: it
+  branches), the initiative, goad, `LookAndTake.Then`. Next: MC-4.4g4, face-down.

@@ -2310,6 +2310,14 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	/// <summary>Hit It!: "… tapped".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>
+	/// Undercity's Throne of the Dead Three: "Put a creature card from among them onto the battlefield with three
+	/// +1/+1 counters on it. It gains hexproof until your next turn." — run after, with Ref.ThisWay the cards taken.
+	/// ponytail: the counters are put on once it has entered, not as it enters — the same unless a card counts them
+	/// entering.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var top = s.CardsIn(Controller, ZoneType.Library)
@@ -2348,6 +2356,7 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			To = To,
 			Tapped = Tapped,
 			Rest = Rest,
+			Then = Then,
 		};
 		return new(
 			s.SpawnAction(
@@ -2399,7 +2408,29 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 
 	public TheRest Rest { get; init; }
 
+	/// <summary>LookAndTake.Then: run after the rest are put away, with Ref.ThisWay the cards taken.</summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
+	{
+		var result = Put(s);
+		return Then.IsEmpty
+			? result
+			: new(
+				result.GameState.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							ChooseCardsFromHandChoice.Read(InputContext).ToImmutableArray()
+						),
+						Steps = Then,
+					}
+				)
+			);
+	}
+
+	ActionResult Put(GameState s)
 	{
 		var taken = ChooseCardsFromHandChoice.Read(InputContext).ToHashSet();
 		foreach (var id in taken)

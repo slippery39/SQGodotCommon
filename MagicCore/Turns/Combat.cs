@@ -154,6 +154,19 @@ public static class Combat
 	/// </summary>
 	public const string CantAttackAlone = "Can't attack alone";
 
+	/// <summary>
+	/// Goad (CR 701.15, Undercity's Arena: "Goad target creature"): "attacks each combat if able" — a keyword-like
+	/// grant until the goader's next turn; DeclareAttackerChoice offers it no "Don't attack".
+	/// </summary>
+	public const string Goaded = "Goaded";
+
+	/// <summary>
+	/// Goaded — read from the effect's stamp, never <c>s.Has</c>: goad is an effect on the creature, not an ability it
+	/// has, so losing all abilities doesn't end it.
+	/// </summary>
+	public static bool IsGoaded(Card c) =>
+		c.Components.Any(x => x is UntilEndOfTurn { Keyword: Goaded });
+
 	public static bool CanBlock(GameState s, Card blocker, Card attacker) =>
 		blocker.Is(CardType.Creature)
 		&& !blocker.IsTapped

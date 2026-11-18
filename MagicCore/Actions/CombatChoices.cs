@@ -35,7 +35,10 @@ public record DeclareAttackerChoice : ChoiceAction
 			.Any(s.HasAbility<Effects.OneAttackerPerPlaneswalkerYouControl>);
 		return
 		[
-			new ChoiceOption { Id = CombatOption.None, DisplayText = "Don't attack" },
+			// CR 508.1d: a goaded creature that can attack must (Combat.Goaded)
+			.. Combat.IsGoaded(s.GetCard(CreatureId))
+				? (ChoiceOption[])[]
+				: [new ChoiceOption { Id = CombatOption.None, DisplayText = "Don't attack" }],
 			new ChoiceOption { Id = opponent.Id, DisplayText = $"Attack {opponent.Name}" },
 			// CR 506.3: a planeswalker the defending player controls can be attacked — once only, under
 			// Tomik, by a creature declared before this one.
@@ -56,6 +59,13 @@ public record DeclareAttackerChoice : ChoiceAction
 		GameState s,
 		ImmutableDictionary<string, object> context
 	) => PlayerId;
+
+	/// <summary>
+	/// THE "don't attack" answer every answerer gives — "Don't attack", or for a goaded creature (Combat.Goaded),
+	/// which isn't offered it, the first target offered.
+	/// </summary>
+	public static int NoAttack(ChoiceAction ask) =>
+		ask.Options.Any(o => o.Id == CombatOption.None) ? CombatOption.None : ask.Options[0].Id;
 }
 
 /// <summary>Block one attacker with this creature, or not. One per creature that can block something.</summary>

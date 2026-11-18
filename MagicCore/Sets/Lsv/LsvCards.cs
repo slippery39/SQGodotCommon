@@ -1907,7 +1907,20 @@ public static class LsvCards
 				),
 			],
 			["Treasure Cruise"] = [Spell([], new DrawCards(Ref.You, 3))],
+			// ===== MC-4.4g3: dungeons and the initiative (Undercity, Effects/Dungeons.cs) =====
+			["Feywild Caretaker"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+				When(TriggerEvent.YourEndStep, [], new CreateTokens(FaerieDragon, 1)) with
+				{
+					If = new YouHaveTheInitiative(),
+				},
+			],
 		};
+
+	/// <summary>Feywild Caretaker: "a 1/1 blue Faerie Dragon creature token with flying".</summary>
+	static CardData FaerieDragon =>
+		Token("Faerie Dragon", "Creature — Faerie Dragon", "1", "1", ["U"], ["Flying"]);
 
 	/// <summary>
 	/// Transmute Artifact: "Sacrifice an artifact. If you do, search your library for an artifact card. If that card's

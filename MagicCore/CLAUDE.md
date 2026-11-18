@@ -42,7 +42,7 @@ MagicCore/
 ├── Effects/AdditionalCosts.cs  costs beyond mana (tap, sacrifice, discard, exile, behold): one list for
 │                        abilities, spells, flashback and ward; CostList (candidates, legality, or-pay)
 ├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, Matches(Ref, Filter)
-├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
+├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction; Dungeons.cs: Undercity, venture, the initiative (MC-4.4g3)
 ├── Targeting/TargetSpec.cs  a target word = a zone (From) + a Filter + the targeting rules; one legality
 │                        test for choosing AND resolving; Combinations
 ├── Filters/            "which objects": Filter (& | !), leaves, and `Is` — the vocabulary scripts read.

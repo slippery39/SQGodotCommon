@@ -90,7 +90,7 @@ public static class WholeAttacks
 			[
 				.. ask.Options.Select(o => o.Id).Where(id => id != CombatOption.None),
 			];
-			at = at.Choose([CombatOption.None]);
+			at = at.Choose([DeclareAttackerChoice.NoAttack(ask)]);
 		}
 		var chosen = ImmutableDictionary<int, int>.Empty;
 		if (options.Values.All(o => o.Count <= 1)) // the player alone (no walker): nothing to weigh
@@ -154,7 +154,7 @@ public static class WholeAttacks
 		var offered = ask.Options.Select(o => o.Id).ToList();
 		var target = plan.Targets.GetValueOrDefault(ask.CreatureId, CombatOption.None);
 		return offered.Contains(target) ? target
-			: target == CombatOption.None ? CombatOption.None
+			: target == CombatOption.None ? DeclareAttackerChoice.NoAttack(ask)
 			: offered.Contains(s.OpponentOf(who)) ? s.OpponentOf(who)
 			: CombatOption.None;
 	}

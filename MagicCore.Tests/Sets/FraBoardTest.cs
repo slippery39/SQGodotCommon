@@ -199,6 +199,26 @@ public abstract class FraBoardTest
 				: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
 	}
 
+	/// <summary>"{0} instant: venture into Undercity" — the room under test, one venture at a time.</summary>
+	protected static CardDefinition VentureSpell =>
+		new(
+			TestGames.Inline("Venture", "{0}", "Instant").Data,
+			[new SpellEffectsComponent([new Venture()])]
+		);
+
+	/// <summary>I venture once and it all resolves, each choice answered as told; the choices asked.</summary>
+	protected List<ChoiceAction> Ventures(Func<ChoiceAction, IEnumerable<int>>? answer = null)
+	{
+		var spell = Hand(VentureSpell, me);
+		return CastAsking(spell, answer ?? (c => c.Options.Take(c.MinChoices).Select(o => o.Id)));
+	}
+
+	/// <summary>The room a player's venture marker is on (Undercity), or null with no dungeon.</summary>
+	protected string? Room(int player) =>
+		Undercity.Of(s, player)?.GetComponent<DungeonComponent>() is { } d
+			? Undercity.Rooms[d.Room].Name
+			: null;
+
 	protected int Life(int p) => s.GetPlayer(p).Life;
 
 	protected int HandCount(int p) => s.CardsIn(p, ZoneType.Hand).Count();

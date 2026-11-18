@@ -71,7 +71,7 @@ Ancestral Recall 03 : steps=303 turn=17 end=20[4,23,2,9,0] 20[4,12,13,9,0] final
 Ancestral Recall 04 : steps=318 turn=17 end=22[6,16,9,7,0] 20[1,23,4,10,0] final=6bbe1916 | 11440eb5 a31b3c02 ee7d3afa
 Ancient Tomb 01 : steps=330 turn=17 end=9[4,24,1,9,1] 9[4,23,1,10,0] final=a2bb2dbf | 677ab568 191673df aa4245c1
 Ancient Tomb 02 : steps=302 turn=17 end=16[4,22,4,8,0] 18[4,23,3,8,0] final=162007c1 | a1827777 82054d3d ec48b454
-Ancient Tomb 03 : steps=276 turn=17 end=17[6,23,1,8,0] 20[7,24,0,7,0] final=6d4869fa | e32f14e1 21f880b5
+Ancient Tomb 03 : steps=337 turn=17 end=13[6,23,1,8,0] 8[4,21,2,13,0] final=b8f0c764 | e32f14e1 dce61ea7 b8856135
 Ancient Tomb 04 : steps=330 turn=17 end=13[5,22,3,8,0] 1[5,24,1,8,0] final=69e742a8 | 819c6bbf 68b5c5b1 60b934e6
 Andoria 01 : steps=355 turn=17 end=16[7,24,0,7,0] 19[7,19,0,11,1] final=d92fc6a5 | b2471055 62093942 2c294ebd
 Andoria 02 : steps=340 turn=17 end=21[2,21,3,12,0] 9[5,23,1,9,0] final=0e66f6c0 | 5baf78e9 09e6631b 284f9c54
@@ -97,7 +97,7 @@ Apex Witchstalker 01 : steps=340 turn=17 end=9[6,16,7,8,1] 20[5,11,11,11,0] fina
 Apex Witchstalker 02 : steps=343 turn=17 end=20[3,22,4,9,0] 20[5,21,5,7,0] final=924c3b3a | 51ed0e88 6866687d 92d9ae23
 Apex Witchstalker 03 : steps=300 turn=17 end=20[5,21,2,9,1] 20[3,24,2,9,0] final=3a095a8c | 861f846a 81928e35 3a095a8c
 Apex Witchstalker 04 : steps=310 turn=17 end=18[7,22,2,7,0] 22[3,16,10,9,0] final=c54b4f21 | 8d4223d3 74befebc 0eaaf76a
-Arcane Amphisbaena 01 : steps=349 turn=17 end=20[3,24,2,10,0] 14[5,22,2,8,1] final=8d48d1bb | e10a597c 6d5457db f41d0b95
+Arcane Amphisbaena 01 : steps=358 turn=17 end=22[3,24,2,9,0] 17[5,22,1,9,1] final=01af9e5f | 71c6b4bf ed6f3057 836798ac
 Arcane Amphisbaena 02 : steps=426 turn=17 end=14[2,21,6,10,0] 10[4,19,6,9,0] final=2de4f5b3 | f40fdab8 bbd0813b 22bc2b30 664f69a3
 Arcane Amphisbaena 03 : steps=344 turn=17 end=20[3,20,3,12,0] 5[5,24,1,8,0] final=43166e6b | 7238f68c b031fbec e91d0be2
 Arcane Amphisbaena 04 : steps=314 turn=17 end=15[6,23,1,8,0] 22[2,22,3,10,1] final=bcff4d57 | 59c53acd ea01cd7e 7693416e
@@ -114,7 +114,7 @@ Arcum Dagsson 02 : steps=326 turn=17 end=13[5,24,2,7,0] 23[4,22,4,9,0] final=3dd
 Arcum Dagsson 03 : steps=320 turn=17 end=20[3,23,4,9,0] 8[1,24,4,9,0] final=8b1174f6 | 56499a9b 122edad5 85aa7988
 Arcum Dagsson 04 : steps=355 turn=17 end=20[6,23,2,7,0] 16[1,19,7,11,0] final=ad6c2560 | f9d95076 a385b9b9 d6637c11
 Arid Mesa 01 : steps=345 turn=17 end=16[7,13,9,9,1] 16[6,13,9,10,0] final=57f8b05d | 12f5ed5a 3632fbd1 b64dacc1
-Arid Mesa 02 : steps=314 turn=17 end=14[4,23,1,10,0] 19[5,21,3,9,0] final=a8f16c82 | bfec046f 2e1fb2fa bf97a378
+Arid Mesa 02 : steps=317 turn=17 end=12[6,21,1,10,0] 15[7,20,2,9,0] final=d4b1e3ee | f7395eb7 facd9b50 809148d1
 Arid Mesa 03 : steps=342 turn=17 end=15[6,22,1,9,0] 18[2,24,4,8,0] final=cef0b155 | 8f9766b1 1a1d08fa f4683045
 Arid Mesa 04 : steps=329 turn=17 end=17[6,17,5,11,0] 19[4,24,1,9,0] final=0c069038 | ab7b5b99 2d9a44f5 4ea694ae
 Armus, Skin of Evil 01 : steps=294 turn=17 end=40[7,18,5,8,1] 20[6,21,2,8,0] final=659dc429 | 32df2c0c 00d6a7fe
@@ -198,7 +198,7 @@ Battle-Scarred Survivalist 02 : steps=345 turn=17 end=23[2,24,2,10,0] 14[4,19,4,
 Battle-Scarred Survivalist 03 : steps=346 turn=17 end=19[5,23,0,10,0] 13[4,24,1,9,0] final=ae5361fb | d8b89028 d15d44cf 5b10728a
 Battle-Scarred Survivalist 04 : steps=317 turn=17 end=15[5,23,3,7,0] 20[3,24,3,8,0] final=45f59b9e | c85032be f78a950c 78a55a2c
 Beckett Mariner, Impetuous Ensign 01 : steps=324 turn=17 end=6[7,23,1,7,0] 19[3,23,0,12,0] final=7fe82a5a | f075ecaf 7911853d 97fbfd81
-Beckett Mariner, Impetuous Ensign 02 : steps=411 turn=17 end=12[4,23,2,10,0] 20[1,23,2,12,0] final=ff4e5df7 | 7c063f85 97240379 19e7e7d7 da932402
+Beckett Mariner, Impetuous Ensign 02 : steps=411 turn=17 end=12[2,24,2,13,0] 22[1,23,2,12,0] final=f2304618 | 7c063f85 97240379 475a1925 3c5d7121
 Beckett Mariner, Impetuous Ensign 03 : steps=379 turn=17 end=12[4,23,1,10,0] 12[1,24,2,11,0] final=de597a43 | a686c241 b5f8f344 0fc780b1
 Beckett Mariner, Impetuous Ensign 04 : steps=365 turn=17 end=15[4,23,2,11,0] 19[3,24,1,10,0] final=f6e0129b | 0882060e 06d4a296 71f321eb
 Bestial Incursion 01 : steps=339 turn=17 end=15[3,22,3,9,2] 19[3,22,2,11,1] final=bdb1add4 | e1b547d6 a3c0ed2c 2554a9ef
@@ -268,7 +268,7 @@ Bonehoard Dracosaur 04 : steps=329 turn=17 end=12[6,21,4,7,0] 20[5,16,3,14,5] fi
 Boomerang Basics 01 : steps=305 turn=17 end=20[5,22,3,8,0] 20[5,23,1,9,0] final=c1a36986 | 0f12d242 2652332c cba08b18
 Boomerang Basics 02 : steps=310 turn=17 end=20[4,20,5,8,1] 20[6,18,5,9,0] final=df84f488 | e51005bc eba276fd ff92715b
 Boomerang Basics 03 : steps=298 turn=17 end=20[6,22,1,9,0] 20[6,22,3,7,0] final=6ce14ec6 | 56499a9b 55cf770c
-Boomerang Basics 04 : steps=342 turn=17 end=18[2,22,7,6,1] 20[2,22,5,8,1] final=ef79ba1f | 8623fb22 f6cffd93 8bb027a7
+Boomerang Basics 04 : steps=340 turn=17 end=18[2,22,6,7,1] 20[2,22,5,8,1] final=32c26296 | 8623fb22 f6cffd93 8bb027a7
 Borg Cube 01 : steps=315 turn=17 end=21[4,24,0,10,0] 17[4,23,0,11,0] final=544f7f04 | affbc5dd eb14138c f49d64a6
 Borg Cube 02 : steps=308 turn=17 end=19[0,24,2,12,0] 20[4,23,1,10,0] final=81ae2c7b | 033a0ba0 a2c80658 6acba881
 Borg Cube 03 : steps=346 turn=17 end=4[5,23,1,9,0] 17[2,22,5,9,0] final=6046404c | eaed1a18 22eb2b2d 7c7f0eda
@@ -299,7 +299,7 @@ Breeding Pool 03 : steps=309 turn=17 end=14[6,23,1,8,0] 20[5,21,3,9,0] final=3b1
 Breeding Pool 04 : steps=315 turn=17 end=18[6,15,8,9,0] 20[7,15,6,10,0] final=5aff5e32 | 9dce4953 c95388d6 68724ab3
 Bristly Bill, Spine Sower 01 : steps=344 turn=17 end=15[5,24,3,6,0] 18[4,21,4,10,0] final=cda4eadc | 2dd73c1a adcd9311 b89c8258
 Bristly Bill, Spine Sower 02 : steps=351 turn=15 end=20[2,24,1,11,0] -40L[3,24,4,7,0] final=ea6c06e4 | 80b03909 c0ff0252 eb0f8998
-Bristly Bill, Spine Sower 03 : steps=338 turn=17 end=11[4,23,2,8,1] 8[5,15,2,10,6] final=c9316e18 | ca1c3d8e b84a7314 17ec4c67
+Bristly Bill, Spine Sower 03 : steps=334 turn=17 end=11[4,23,1,9,1] 17[2,24,3,9,0] final=c6f21466 | ca1c3d8e b84a7314 7954dd34
 Bristly Bill, Spine Sower 04 : steps=392 turn=17 end=12[3,20,4,11,0] 16[2,17,11,8,0] final=67589ed0 | a500c6d0 cfb7282f 1c846e97
 Broadside Bombardiers 01 : steps=348 turn=17 end=15[2,14,9,14,1] 13[7,12,10,10,0] final=efea0b07 | c501437c 3ea235ce fb6cf95b
 Broadside Bombardiers 02 : steps=352 turn=17 end=5[3,21,6,8,0] 15[5,23,1,9,0] final=c02047a5 | f01b1644 ca25253b 988d56cb
@@ -328,7 +328,7 @@ Campus Crier 04 : steps=363 turn=17 end=15[3,20,6,9,1] 20[3,19,4,11,1] final=f31
 Cantankerous Captain 01 : steps=359 turn=17 end=20[3,23,0,10,2] 17[3,23,2,11,0] final=d4d7a619 | 07515551 187bd074 7ff71a65
 Cantankerous Captain 02 : steps=374 turn=17 end=20[1,23,2,11,1] 12[3,22,4,9,0] final=e54d6f7f | 26f373be aeb77a93 b93cfe94
 Cantankerous Captain 03 : steps=383 turn=17 end=13[4,23,1,11,0] 17[2,25,1,10,0] final=d8e580c0 | ed49b823 14a01fb4 8f3bb74e
-Cantankerous Captain 04 : steps=339 turn=17 end=15[4,23,3,8,0] 17[0,24,3,11,0] final=f728f7ca | f9d95076 986601ec 4046755e
+Cantankerous Captain 04 : steps=342 turn=17 end=22[4,23,2,9,0] 12[2,24,3,9,0] final=408bc5d1 | f9d95076 986601ec 072d08b4
 Captain Benjamin Sisko 01 : steps=330 turn=17 end=20[5,22,1,13,0] 20[4,23,1,10,0] final=6fea6eeb | 0f12d242 c2b26949 1cb85feb
 Captain Benjamin Sisko 02 : steps=375 turn=17 end=19[1,22,3,10,0] 19[6,17,3,9,5] final=4dc59159 | 34afcd81 ff79c9be d66737bb
 Captain Benjamin Sisko 03 : steps=334 turn=17 end=20[5,23,2,9,0] 17[1,23,3,10,0] final=b8fabb11 | 56499a9b a8c16f43 ebbe1fd3
@@ -357,7 +357,7 @@ Captain Pike, Fullness of Time 01 : steps=306 turn=17 end=20[3,22,1,10,2] 19[6,2
 Captain Pike, Fullness of Time 02 : steps=344 turn=17 end=11[2,23,2,10,1] 16[4,21,5,7,1] final=beae496d | bc065ccd 342b31f0 0f66deb5
 Captain Pike, Fullness of Time 03 : steps=336 turn=17 end=19[7,23,0,8,0] 20[3,21,1,10,3] final=1b8bfc6d | 56499a9b f7a1c66e 392fcc09
 Captain Pike, Fullness of Time 04 : steps=305 turn=17 end=20[6,22,1,8,1] 20[5,20,3,10,0] final=77457bee | c74117e8 a8a96ffc 5a19ac9c
-Captain Sisay 01 : steps=289 turn=17 end=20[7,24,0,7,0] 20[7,20,3,8,0] final=2e55bfa5 | 0f12d242 ef77bdf8
+Captain Sisay 01 : steps=355 turn=17 end=15[7,23,2,6,0] 20[5,18,7,10,0] final=1cfdade5 | fdd7e653 ebe053e9 c8998640
 Captain Sisay 02 : steps=413 turn=17 end=16[1,21,5,11,0] 19[3,22,5,8,0] final=c1fdfdf4 | 5d166fb5 10932424 fc9851cc 03edc73b
 Captain Sisay 03 : steps=315 turn=17 end=20[5,20,1,12,0] 20[5,24,0,9,0] final=07d656fc | 56499a9b f2f57be5 412e5f4e
 Captain Sisay 04 : steps=345 turn=17 end=15[4,21,3,10,0] 18[3,24,4,7,0] final=07d04b66 | c74117e8 c9f0e07b 1bdc70a9
@@ -424,7 +424,7 @@ Clash of Elements 04 : steps=309 turn=17 end=18[3,24,2,9,0] 20[1,25,2,8,2] final
 Class-F Shuttlecraft 01 : steps=398 turn=17 end=19[3,24,2,8,1] 14[3,20,1,14,3] final=e1f57fb1 | 9633bb3d b6f469d7 e7dc0daf
 Class-F Shuttlecraft 02 : steps=396 turn=17 end=11[2,23,0,12,1] 18[2,22,1,14,1] final=7413658d | f01b1644 37e3c01c 345fe2a5
 Class-F Shuttlecraft 03 : steps=373 turn=17 end=9[5,22,1,10,0] 20[1,20,2,15,0] final=472c39d5 | ff7fcf4b bbe0ed56 b448081d
-Class-F Shuttlecraft 04 : steps=306 turn=17 end=20[4,22,3,9,0] 18[4,24,1,8,1] final=7f762868 | 8a4bc8c0 722488db f70681fc
+Class-F Shuttlecraft 04 : steps=393 turn=17 end=13[5,22,4,7,0] 20[2,23,0,18,0] final=c27609e6 | 6e7cad3a 2127a929 6dbbf0f4
 Cleveland Booker, Empath 01 : steps=368 turn=17 end=13[4,22,2,12,0] 6[3,22,1,13,0] final=d0abf943 | 0f12d242 47d8f5f0 b8a50b7a
 Cleveland Booker, Empath 02 : steps=343 turn=17 end=16[5,24,1,8,0] 21[2,23,1,16,0] final=82f5625b | f01b1644 d6b44f4d 851362ef
 Cleveland Booker, Empath 03 : steps=337 turn=17 end=18[4,23,2,9,0] 20[4,24,1,10,0] final=28fa8e98 | ab53c956 3e3fef04 0a3d679d
@@ -589,7 +589,7 @@ Daniels, Temporal Agent 01 : steps=332 turn=17 end=22[4,24,0,10,0] 19[2,21,2,13,
 Daniels, Temporal Agent 02 : steps=362 turn=17 end=13[3,23,1,11,0] 11[4,23,0,11,0] final=3c81a18a | abb5cee8 dad04e0e 5bbe2b2c
 Daniels, Temporal Agent 03 : steps=378 turn=17 end=20[5,18,6,9,0] 20[7,17,4,12,0] final=011a2ed6 | b6b71a5f bd874470 a1c49c9d
 Daniels, Temporal Agent 04 : steps=339 turn=17 end=14[4,23,4,7,0] 21[1,24,2,9,2] final=a1efffdc | f9d95076 57183f0b 19f52388
-Danitha, Spear of Agony 01 : steps=355 turn=17 end=12[3,24,1,10,0] 15[4,18,4,15,1] final=6b11ddee | 02138258 835d76d6 4491c78e
+Danitha, Spear of Agony 01 : steps=312 turn=17 end=18[6,24,1,7,0] 18[4,18,6,10,0] final=a253fd6f | 02138258 a7246554 649bab90
 Danitha, Spear of Agony 02 : steps=312 turn=17 end=18[5,24,1,8,0] 20[4,23,1,10,0] final=84a5e8e4 | f01b1644 5ede7ed3 c936cc4d
 Danitha, Spear of Agony 03 : steps=324 turn=17 end=19[4,22,1,9,2] 20[0,23,4,11,0] final=33271449 | 3b0af042 6b817052 93050840
 Danitha, Spear of Agony 04 : steps=318 turn=17 end=14[5,23,1,9,0] 18[3,24,0,11,0] final=cfc89180 | f9d95076 3e077f83 83c829a1
@@ -619,7 +619,7 @@ Dathon and Picard at El-Adrel 03 : steps=325 turn=17 end=14[5,22,2,9,0] 20[4,23,
 Dathon and Picard at El-Adrel 04 : steps=300 turn=17 end=20[4,22,5,7,0] 20[3,24,2,8,1] final=3ba0d892 | 68908cc6 0928a230 3ba0d892
 Dathon, His Heart Open 01 : steps=336 turn=17 end=20[2,24,2,11,0] 13[5,23,0,9,1] final=5e9fc6b1 | cc34d87d 4b6b8c00 3f92effd
 Dathon, His Heart Open 02 : steps=342 turn=17 end=20[2,23,3,9,1] 17[4,18,7,8,1] final=5b0e40db | 0e008944 09a1503c e6a9d3ee
-Dathon, His Heart Open 03 : steps=295 turn=17 end=20[5,23,2,8,0] 20[7,23,1,7,0] final=b5a54e72 | 56499a9b 73c0d3c4
+Dathon, His Heart Open 03 : steps=302 turn=17 end=20[5,23,1,9,0] 20[6,22,1,10,0] final=a447edf2 | 56499a9b 16e8deda 9a3d8480
 Dathon, His Heart Open 04 : steps=306 turn=17 end=20[5,23,3,7,0] 20[2,24,4,8,0] final=aeb2d248 | c74117e8 eb3e9367 f85785ea
 David and Carol Marcus, Creators 01 : steps=327 turn=17 end=20[2,24,3,10,0] 19[4,22,2,13,0] final=e7a297e9 | 69ff9965 9f905c64 cb6ae298
 David and Carol Marcus, Creators 02 : steps=378 turn=17 end=16[1,23,4,12,0] 12[1,23,3,9,3] final=d758dbb1 | 8ee8d19d 1583cd48 1f7ef93f
@@ -933,6 +933,10 @@ Ferocity of the Hunt 01 : steps=317 turn=17 end=20[2,25,0,11,0] 3[7,22,2,7,0] fi
 Ferocity of the Hunt 02 : steps=372 turn=17 end=12[1,24,4,9,0] 15[3,23,1,11,0] final=fe83cf1b | 4063dee3 db2b82fb 2dcfef4a
 Ferocity of the Hunt 03 : steps=312 turn=17 end=16[4,23,1,10,0] 9[2,23,2,11,0] final=202f2ffc | 56499a9b 95ce1b15 75ac5ba5
 Ferocity of the Hunt 04 : steps=322 turn=17 end=17[0,22,4,11,4] 12[5,23,1,9,0] final=ed962962 | c74117e8 f45984c1 2c143c92
+Feywild Caretaker 01 : steps=401 turn=17 end=20[4,23,1,11,0] 4[4,22,1,12,1] final=7ddf19d7 | 83367532 36edee42 64ebe69f 6b33b5b4
+Feywild Caretaker 02 : steps=605 turn=17 end=16[6,21,1,10,0] 20[3,22,3,10,0] final=688efdb7 | f01b1644 ea36ea93 1951b4e0 31cedcf7 dd5e4dc3 af19f862
+Feywild Caretaker 03 : steps=387 turn=17 end=15[5,22,1,16,0] 10[4,21,5,8,0] final=01c1beaf | 56499a9b 57293ebf 9918c010
+Feywild Caretaker 04 : steps=394 turn=17 end=11[3,22,6,8,0] 20[5,21,1,17,0] final=958961a3 | c74117e8 a6ab78ce 6af3ace0
 Fiery Confluence 01 : steps=333 turn=17 end=13[3,24,1,9,1] 11[3,23,3,8,1] final=0f39b768 | 0e57640b 69c8c3d3 4753e792
 Fiery Confluence 02 : steps=342 turn=17 end=13[1,24,3,10,0] 20[5,21,2,10,0] final=0fcdfc1c | 65e4f488 1a786b8a 963a5053
 Fiery Confluence 03 : steps=301 turn=17 end=14[5,23,2,8,0] 16[3,23,3,9,0] final=5e1be37c | 56499a9b 6839cc93 8a79d342
@@ -958,7 +962,7 @@ Flare of Fortitude 02 : steps=299 turn=17 end=20[3,24,3,8,0] 15[5,23,1,9,0] fina
 Flare of Fortitude 03 : steps=333 turn=17 end=17[5,19,5,10,0] 17[5,22,3,8,0] final=00521efc | 739bab34 b6132f1c 1d9e9b0d
 Flare of Fortitude 04 : steps=340 turn=17 end=8[7,14,3,8,6] 20[0,20,2,6,10] final=140ff565 | f9d95076 04e76e72 4d2ef9bc
 Flash 01 : steps=324 turn=17 end=19[3,22,4,10,0] 20[1,22,4,10,1] final=f4d2de33 | 13f7e91c 86278f6f 0685afe4
-Flash 02 : steps=308 turn=17 end=20[2,19,8,9,0] 20[3,23,5,7,0] final=4c09cff6 | f01b1644 6caeb85b fe4569e0
+Flash 02 : steps=309 turn=17 end=20[4,19,6,9,0] 12[4,23,3,8,0] final=93a07cf7 | dedaf1d5 70ed45ce c70c68ad
 Flash 03 : steps=310 turn=17 end=20[4,23,2,9,0] 20[6,20,4,8,0] final=7c418c73 | 2ea90b5e 82d81b67 2274cdbe
 Flash 04 : steps=308 turn=17 end=20[3,22,4,9,0] 20[1,23,4,9,1] final=a7c1ab9c | 7b6c8fc5 523d7dde f908b976
 Flesh Duplicate 01 : steps=338 turn=17 end=14[3,24,0,11,0] 1[4,23,0,11,0] final=5f0e122a | 0f12d242 0523e53b 7f2a15ab
@@ -1044,7 +1048,7 @@ Garruk, Veiled Butcher 04 : steps=321 turn=17 end=7[5,23,2,8,0] 18[2,24,1,11,0] 
 Gaseous Anomaly 01 : steps=325 turn=17 end=16[7,21,3,8,0] 20[4,23,3,8,0] final=3c2c33b3 | 2007d02e e9951275 d4d96ba0
 Gaseous Anomaly 02 : steps=381 turn=17 end=20[3,23,1,11,0] 10[6,19,5,9,0] final=4fbcdc46 | 7039302b fefc46af 4c55bdbf
 Gaseous Anomaly 03 : steps=284 turn=17 end=20[7,23,0,8,0] 20[7,20,4,9,0] final=c640eb02 | 87b0410c 17adb642
-Gaseous Anomaly 04 : steps=342 turn=17 end=16[4,23,2,9,0] 18[5,20,2,11,1] final=c3cc248f | ce1bf189 11edad8d 854a913c
+Gaseous Anomaly 04 : steps=359 turn=17 end=15[5,22,2,11,0] 15[3,22,4,10,0] final=d13a98cc | 3d9e1e4c be2c3a09 bfcc73eb
 Geist of Saint Thalia 01 : steps=320 turn=17 end=18[4,23,1,10,0] 21[4,23,2,9,1] final=99d62809 | 9d66ed8f 085a472e 4d400370
 Geist of Saint Thalia 02 : steps=393 turn=17 end=6[2,24,0,13,0] 18[3,22,2,11,0] final=3f2cab6b | 9c71d87a 5c7b50ff b73631b2
 Geist of Saint Thalia 03 : steps=342 turn=17 end=19[4,23,2,9,0] 18[3,24,2,9,0] final=3805cbf9 | bd40bae1 8e363567 c970bf81
@@ -1127,7 +1131,7 @@ Grand Nagus Zek 03 : steps=337 turn=17 end=20[4,17,7,13,0] 12[4,22,5,7,0] final=
 Grand Nagus Zek 04 : steps=322 turn=17 end=15[3,23,3,9,0] 18[1,24,3,11,0] final=3aaa51d4 | d70e838d d6faaef2 de809d8b
 Gray and Adira, Forever Joined 01 : steps=331 turn=17 end=10[3,23,3,9,0] 20[4,23,0,11,0] final=2fecadf0 | ae03f9e1 7e96b4ff e6c2818c
 Gray and Adira, Forever Joined 02 : steps=327 turn=17 end=19[2,19,6,10,1] 20[4,21,3,10,0] final=2e0efe25 | 7232f1cf b76001bc bbdebaeb
-Gray and Adira, Forever Joined 03 : steps=344 turn=17 end=14[4,23,3,8,0] 20[5,16,8,9,0] final=6ca31ef0 | 56499a9b 872a499e 475f1389
+Gray and Adira, Forever Joined 03 : steps=366 turn=17 end=16[4,23,2,10,0] 18[5,19,5,9,0] final=76fda47a | 56499a9b 6f95152d 0efacf18
 Gray and Adira, Forever Joined 04 : steps=336 turn=17 end=16[4,23,3,8,0] 16[3,24,1,10,0] final=21a111fa | ce3ee828 ecee57ab 1c364749
 Greenhouse Propagator 01 : steps=318 turn=17 end=21[4,24,3,7,0] 20[4,23,2,9,0] final=aadb0667 | f8d9f600 cd2e895f 004d842a
 Greenhouse Propagator 02 : steps=371 turn=17 end=20[4,23,1,10,0] 8[3,22,4,8,1] final=0bec748b | 8f9d6998 21bb2128 613ec938
@@ -1238,13 +1242,13 @@ Hologram Stalker 02 : steps=352 turn=17 end=20[1,23,4,18,0] 19[3,23,2,10,0] fina
 Hologram Stalker 03 : steps=309 turn=17 end=17[6,23,1,8,0] 20[3,24,1,10,0] final=1f46d097 | 56499a9b 04d95a8c fed0d1ad
 Hologram Stalker 04 : steps=308 turn=17 end=17[6,23,2,7,0] 20[3,24,2,10,0] final=03707819 | c74117e8 85b36f52 ba8be2b0
 Horta 01 : steps=313 turn=17 end=20[5,24,1,8,0] 20[4,21,5,9,0] final=6f91ad6e | 59f4a049 ff126255 31d72dd0
-Horta 02 : steps=347 turn=17 end=15[3,24,2,9,0] 16[1,16,9,12,0] final=1cefd5aa | 9dc5c205 222416b5 0bd28ef5
+Horta 02 : steps=446 turn=17 end=8[3,20,3,12,0] 11[2,18,7,11,0] final=1cca5b67 | 780de600 077f25c5 33400a22 67383b11
 Horta 03 : steps=323 turn=17 end=13[5,21,3,9,0] 18[3,24,2,9,0] final=a3e1be98 | b8d7199a dfb6b714 70d16994
 Horta 04 : steps=307 turn=17 end=20[6,22,3,7,0] 19[5,20,3,9,1] final=7f81eb23 | ec22856d 02e2de48 994a5608
 Hoshi Sato, Exolinguist 01 : steps=687 turn=17 end=20[5,23,0,10,0] 20[5,22,1,9,1] final=c2a0a593 | 5fd3aae7 4e447346 db5bc609 8cc0bf35 4171dadf ae4dc7a2
-Hoshi Sato, Exolinguist 02 : steps=405 turn=17 end=18[2,22,1,12,1] 13[3,21,2,13,0] final=8998b50e | cf9ca797 49eaaa18 3685ada9 8295f4b3
+Hoshi Sato, Exolinguist 02 : steps=391 turn=17 end=11[7,20,2,8,1] 9[5,21,0,12,0] final=d083c1da | 2f5c6bbb 8a6e8933 914dd6e2
 Hoshi Sato, Exolinguist 03 : steps=344 turn=17 end=20[5,21,2,10,0] 20[4,21,2,9,2] final=2384dddc | 56499a9b b0320131 f704a81a
-Hoshi Sato, Exolinguist 04 : steps=345 turn=17 end=2[6,19,6,7,0] 28[3,23,0,12,0] final=d6cecba3 | e4c4cb5d 852a9280 dd24c065
+Hoshi Sato, Exolinguist 04 : steps=370 turn=17 end=4[6,18,7,7,0] 20[6,22,1,12,0] final=3ebe8545 | 6abdcca7 fa3e7a07 50983fe1
 Hull Breach 01 : steps=357 turn=17 end=19[3,22,2,11,0] 4[5,21,3,8,1] final=bc4733a5 | 3b00d08b 39aa4757 ca9eb64d
 Hull Breach 02 : steps=308 turn=17 end=20[5,23,3,8,0] 20[3,22,3,9,1] final=519a03ff | f01b1644 5281c23e 6b5a90d0
 Hull Breach 03 : steps=303 turn=17 end=18[7,23,0,8,0] 19[6,24,0,8,0] final=213da044 | 56499a9b 4330242a a3950098
@@ -1266,7 +1270,7 @@ Hunter's Axe 02 : steps=359 turn=17 end=20[2,24,3,9,0] 7[1,22,3,11,1] final=34d3
 Hunter's Axe 03 : steps=314 turn=17 end=20[4,23,1,11,0] 20[2,25,2,9,0] final=f8bd3487 | d697ecb1 19a9551e 956c906e
 Hunter's Axe 04 : steps=303 turn=17 end=20[3,22,4,9,0] 20[3,24,1,10,0] final=e1b954ac | f9d95076 e18050e3 3f90f1d2
 I'm a Doctor, Not a . . . 01 : steps=337 turn=17 end=22[2,21,5,10,0] 9[4,21,3,10,0] final=4732a9fa | 142e7a54 fc5337ca c4ff99b7
-I'm a Doctor, Not a . . . 02 : steps=367 turn=17 end=18[2,25,3,8,0] 8[7,22,1,8,0] final=0a6d4fb8 | 674daad5 a8773052 77849488
+I'm a Doctor, Not a . . . 02 : steps=363 turn=17 end=14[3,24,3,8,0] 21[4,19,5,10,0] final=b54100db | 674daad5 3b14fdff 01f3be2b
 I'm a Doctor, Not a . . . 03 : steps=292 turn=17 end=20[4,23,3,8,0] 20[4,24,0,10,0] final=e0a19c07 | 56499a9b 16e8deda
 I'm a Doctor, Not a . . . 04 : steps=315 turn=17 end=20[4,23,3,11,0] 20[4,20,5,9,0] final=1ce1cd94 | c74117e8 5abc26f2 cb24753d
 Icy Reception 01 : steps=306 turn=17 end=20[3,24,2,9,0] 16[4,23,2,9,0] final=425726a3 | 0f12d242 65469e48 7c8923fc
@@ -1287,10 +1291,10 @@ Impossible Choice 03 : steps=332 turn=17 end=16[2,20,2,14,1] 16[2,21,6,10,0] fin
 Impossible Choice 04 : steps=358 turn=17 end=11[5,23,2,8,0] 21[5,21,2,15,1] final=27c1cc33 | 16c17793 11f4430a 81a065f3
 In the Pale Moonlight 01 : steps=350 turn=17 end=20[3,22,4,11,0] 16[5,20,5,8,0] final=41a85367 | ae203fa1 0b83c9cf 2c1a45d9
 In the Pale Moonlight 02 : steps=328 turn=17 end=20[3,19,7,9,1] 18[5,22,1,10,0] final=38aaf893 | 8ffe721f 9c3029de 79f3253d
-In the Pale Moonlight 03 : steps=336 turn=17 end=18[6,19,2,9,2] 20[4,23,3,8,0] final=205ec59e | 92d5748b d65d1cda 3bd16581
+In the Pale Moonlight 03 : steps=356 turn=17 end=13[7,22,1,8,0] 15[5,21,3,12,0] final=15044ffa | 56499a9b 8563e396 e112858c
 In the Pale Moonlight 04 : steps=333 turn=17 end=17[4,23,2,8,1] 20[0,18,1,11,9] final=5ec599c0 | a8727db1 756eeb88 a2f7e82c
 Infinite Coursework 01 : steps=302 turn=17 end=18[5,24,0,9,0] 20[5,23,1,9,0] final=b79f691e | 91f4145e 7dbc83d7 ad3974bd
-Infinite Coursework 02 : steps=391 turn=17 end=18[2,24,2,11,0] 11[3,23,3,11,0] final=6dee4a51 | 1177ecdf 783a2f78 9daa2a03
+Infinite Coursework 02 : steps=414 turn=17 end=7[1,24,2,11,0] 20[6,18,2,14,1] final=740fec18 | 107d30e2 7b3af98f ed328f0b 3ac7c139
 Infinite Coursework 03 : steps=313 turn=17 end=20[4,23,0,11,0] 21[2,22,2,12,0] final=fb82deea | aab75dcd d931c52b 1527de2d
 Infinite Coursework 04 : steps=319 turn=17 end=18[2,24,2,10,0] 17[4,23,2,9,0] final=82ef4466 | 52b4fa3f bcd2db80 4a300486
 Infinite Diversity 01 : steps=364 turn=17 end=10[5,22,2,10,0] 17[5,20,0,13,2] final=f17bb4d7 | ca1956b3 347a8c48 c584e36a
@@ -1338,7 +1342,7 @@ Jace, Wielder of Mysteries 02 : steps=407 turn=17 end=18[0,18,9,8,3] 15[4,22,1,1
 Jace, Wielder of Mysteries 03 : steps=300 turn=17 end=16[7,23,0,8,0] 20[2,24,2,10,0] final=9a20f1de | 56499a9b 1b0f6e3a 9a20f1de
 Jace, Wielder of Mysteries 04 : steps=321 turn=17 end=20[5,24,3,8,0] 20[3,24,1,10,0] final=0849af16 | 1eda4b2b 6a60f4c8 cbdd0462
 Jacked Rabbit 01 : steps=333 turn=17 end=19[5,24,1,9,0] 16[4,22,0,13,0] final=10fa2ffd | 627c0885 f99cc9a1 64c78365
-Jacked Rabbit 02 : steps=336 turn=17 end=20[1,23,3,10,1] 20[3,22,2,9,0] final=5db364c9 | 1dc49142 07659d6f ba0798af
+Jacked Rabbit 02 : steps=342 turn=17 end=20[4,23,2,9,1] 20[5,20,4,9,0] final=de7f1b1d | bb1f2588 88166d3b ec2a4994
 Jacked Rabbit 03 : steps=350 turn=17 end=20[4,21,2,14,2] 9[3,22,3,9,1] final=514d4997 | 56499a9b 1aeab62a 7ecc1d79
 Jacked Rabbit 04 : steps=326 turn=17 end=20[3,23,2,13,0] 15[4,22,4,8,0] final=08825550 | 20d48eef 94a88b46 8e2b2f55
 Jadzia Dax, Living Legacy 01 : steps=365 turn=17 end=11[5,24,1,8,0] 6[4,20,4,12,1] final=fcc27e17 | ce2bd463 98e014dd 343dab05
@@ -1589,7 +1593,7 @@ Make It So 01 : steps=339 turn=17 end=24[3,24,2,9,0] 8[7,19,3,9,0] final=4c8a245
 Make It So 02 : steps=353 turn=17 end=16[7,16,4,10,1] 20[3,21,4,9,1] final=1c4462e9 | 29b3e77b 132840f4 64b4c21b
 Make It So 03 : steps=348 turn=17 end=13[5,17,7,9,0] 18[3,20,5,11,0] final=113d6588 | 92f9a5aa 37bf366c 54a89bd1
 Make It So 04 : steps=311 turn=17 end=20[4,19,6,9,1] 20[1,24,2,10,1] final=1310e9a1 | c74117e8 0fd15ea2 56d569d2
-Malcolm, Alluring Scoundrel 01 : steps=337 turn=17 end=18[5,16,8,9,0] 16[5,20,5,10,0] final=ec382bb6 | 60e3574d db1f779a 3c494009
+Malcolm, Alluring Scoundrel 01 : steps=372 turn=17 end=13[2,16,8,12,0] 16[6,20,1,13,0] final=54233b6e | 60e3574d 27ce760c 94e2d01f
 Malcolm, Alluring Scoundrel 02 : steps=387 turn=17 end=16[2,24,3,8,1] 16[5,22,2,9,0] final=245182d8 | 8f9d6998 f64e612c a8e9728c
 Malcolm, Alluring Scoundrel 03 : steps=350 turn=17 end=16[2,17,11,8,0] 15[3,22,4,9,0] final=6706a552 | 15d9ed42 708a6844 6758d7b3
 Malcolm, Alluring Scoundrel 04 : steps=386 turn=17 end=7[6,20,3,9,1] 19[3,23,1,11,0] final=20416f14 | a9589e19 dcef613c 97cf03ba
@@ -1616,7 +1620,7 @@ Mana Leak 04 : steps=312 turn=17 end=21[2,21,6,10,0] 19[5,24,0,9,1] final=592251
 Mana Tithe 01 : steps=297 turn=17 end=16[6,24,0,8,0] 21[3,23,3,8,1] final=e1c6a5cb | 0f12d242 6324d9a2
 Mana Tithe 02 : steps=335 turn=15 end=20[3,24,2,10,0] -2L[4,24,1,9,0] final=f3d94d7e | e4134c00 4f888dd2 d8aa90d6
 Mana Tithe 03 : steps=312 turn=17 end=20[4,23,3,8,0] 20[3,23,3,9,0] final=823ed784 | 56499a9b f4d0a239 d694b7b4
-Mana Tithe 04 : steps=383 turn=17 end=13[4,21,2,11,0] 18[0,18,8,12,0] final=5f43857c | eeb68cd9 f9c3e768 1f5f2409
+Mana Tithe 04 : steps=380 turn=17 end=11[2,23,3,12,0] 20[2,22,4,10,0] final=9907652e | eeb68cd9 20028694 97297f93
 Mana Vault 01 : steps=388 turn=17 end=18[3,24,1,10,0] 14[3,23,1,11,0] final=4c3e43c8 | 828e2305 6e3cd8df 385caf41
 Mana Vault 02 : steps=357 turn=17 end=18[2,23,4,9,0] 18[2,23,2,11,0] final=9a2fe823 | 4c2451d5 cfd26dc2 d14ab6c9
 Mana Vault 03 : steps=412 turn=17 end=9[5,22,1,10,0] 10[1,24,0,14,0] final=604c92d1 | 64ed3af0 5ffb3f2a 64a638b0 728f5c92
@@ -1736,7 +1740,7 @@ Mox Sapphire 04 : steps=360 turn=17 end=25[3,23,0,13,0] 11[5,23,2,8,0] final=95e
 Mr. Spock, Science Officer 01 : steps=323 turn=17 end=22[5,19,4,11,0] 20[5,23,2,7,1] final=9492bb33 | 0f12d242 f24487d8 1fe10748
 Mr. Spock, Science Officer 02 : steps=379 turn=17 end=18[0,24,4,10,1] 14[3,23,3,9,0] final=e357bb4b | f3a470dc 9ec3d42c ea3fd1b8
 Mr. Spock, Science Officer 03 : steps=340 turn=17 end=16[5,22,2,9,0] 15[6,18,2,12,0] final=ac27cf91 | 7756cf3d ba692f45 26690225
-Mr. Spock, Science Officer 04 : steps=394 turn=17 end=5[6,19,1,12,0] 16[2,10,0,12,14] final=738ec26c | 6abdcca7 1456a703 d604e07a
+Mr. Spock, Science Officer 04 : steps=382 turn=17 end=8[7,19,1,11,0] 7[3,10,1,10,14] final=e97b84b9 | 6abdcca7 1456a703 99b485af
 Multiply by Zero 01 : steps=323 turn=17 end=19[3,23,2,9,1] 20[3,23,2,10,0] final=b4931a53 | 507ba24a 85d40848 4e9d10dc
 Multiply by Zero 02 : steps=320 turn=17 end=14[4,24,3,6,1] 20[5,20,4,9,1] final=df1494db | bd8aedee a433624a fcaa09af
 Multiply by Zero 03 : steps=315 turn=17 end=20[4,24,3,7,0] 20[1,20,8,10,0] final=0b083a3c | 56499a9b f1412ab2 0e0d4ed8
@@ -1772,7 +1776,7 @@ Neelix, Moral Support 04 : steps=345 turn=17 end=28[5,24,1,8,0] 23[0,24,4,10,0] 
 Ni'Var Science Academy 01 : steps=337 turn=17 end=12[4,24,1,9,0] 18[7,19,2,10,0] final=5dafbf46 | 25a53c40 6b31fff2 6d531bc6
 Ni'Var Science Academy 02 : steps=359 turn=17 end=13[4,24,2,8,0] 13[4,21,3,10,1] final=ca7a1a0e | 1bffab2c 682c1b85 9aa2c23e
 Ni'Var Science Academy 03 : steps=323 turn=17 end=18[6,23,0,9,0] 26[1,20,6,12,0] final=bb25fa56 | 45a5060f 43f50080 96e9a6bc
-Ni'Var Science Academy 04 : steps=329 turn=17 end=20[5,23,2,11,0] 17[5,21,3,9,0] final=cc78a799 | 819c6bbf 664b1ec0 36a93cfd
+Ni'Var Science Academy 04 : steps=363 turn=17 end=6[6,23,2,7,0] 17[4,23,2,13,0] final=169f8619 | ee2d976b f61da43f fd0f9770
 No Admittance 01 : steps=318 turn=17 end=17[5,24,2,7,0] 20[6,15,3,9,5] final=fc54f49c | 5cb23a37 c7d7df44 4ce295c4
 No Admittance 02 : steps=380 turn=17 end=15[6,21,1,10,0] 14[7,21,0,9,1] final=6c112219 | 8cff684d e9947d45 f81547a4
 No Admittance 03 : steps=311 turn=17 end=14[4,24,2,8,0] 14[3,20,6,9,0] final=1e7d3fe7 | 17f79336 8aa1433b 2c762861
@@ -1816,7 +1820,7 @@ Open Communications 04 : steps=296 turn=17 end=20[6,19,6,10,0] 19[5,23,1,9,0] fi
 Orcish Lumberjack 01 : steps=309 turn=17 end=20[7,24,0,7,0] 16[5,23,2,8,0] final=4e19ec78 | 0f12d242 9664ba33 d06b4f7c
 Orcish Lumberjack 02 : steps=353 turn=17 end=18[1,24,5,8,1] 20[2,24,3,9,1] final=894d83cf | 149a9c3a 19eeb3cf 9d69e1ad
 Orcish Lumberjack 03 : steps=324 turn=17 end=9[7,23,0,8,0] 20[2,22,0,12,2] final=c4cad22d | 138e57bc 428d4ad6 cbad8d18
-Orcish Lumberjack 04 : steps=337 turn=17 end=18[4,22,3,10,0] 20[4,20,4,9,1] final=2bc8fb6e | 25231bc0 e15d81c9 18229f7e
+Orcish Lumberjack 04 : steps=388 turn=17 end=10[3,23,3,9,0] 20[3,20,5,12,0] final=fdf29719 | a9bc3baa 5d0a38e8 8fd087b7
 Organic Avulsion Unit 01 : steps=379 turn=17 end=17[6,24,0,8,0] 14[5,23,0,10,0] final=f7d99f83 | cce775fe 713664ad 87e6b62a
 Organic Avulsion Unit 02 : steps=358 turn=17 end=17[4,22,2,13,0] 16[5,23,1,9,0] final=a89a2738 | 26f373be 9d5ff970 affa1311
 Organic Avulsion Unit 03 : steps=378 turn=17 end=18[7,23,0,8,0] 14[5,21,0,11,2] final=b0ea06fd | fa169875 ac685b1b f7deef1b
@@ -1946,7 +1950,7 @@ Precise Redaction 02 : steps=319 turn=17 end=14[4,24,2,8,0] 20[3,23,4,10,1] fina
 Precise Redaction 03 : steps=552 turn=17 end=20[6,23,0,9,0] 20[2,24,3,9,0] final=498040fd | 56499a9b 19cec415 e867afe6 c5084c33 338d8ef7
 Precise Redaction 04 : steps=306 turn=17 end=20[7,19,2,8,2] 14[3,23,4,8,0] final=9dd8d0db | c6bd2b46 37ef4406 536e5a04
 Predictive Preparations 01 : steps=343 turn=17 end=18[4,21,5,8,0] 11[4,23,1,9,1] final=5c58c69b | d525f98e b9f4564a 7398f792
-Predictive Preparations 02 : steps=316 turn=17 end=18[2,23,6,8,0] 20[3,23,3,9,0] final=e578d861 | 890fc934 6b92a85c 8dad012a
+Predictive Preparations 02 : steps=302 turn=17 end=18[3,24,4,8,0] 20[5,22,2,9,0] final=04e3870c | 890fc934 6b92a85c 77d1d8f3
 Predictive Preparations 03 : steps=300 turn=17 end=20[4,23,1,9,1] 20[5,23,1,9,1] final=397ebb14 | 56499a9b 16e8deda 397ebb14
 Predictive Preparations 04 : steps=309 turn=17 end=20[4,23,3,7,1] 20[1,24,5,10,0] final=29d944e9 | f9d95076 36f1de68 b1988fba
 Preordain 01 : steps=310 turn=17 end=15[3,22,4,9,0] 20[5,22,1,10,0] final=f8f4c8e3 | 9df1d805 cf990517 e694a027
@@ -1977,7 +1981,7 @@ Proft, Sinister Mastermind 01 : steps=300 turn=17 end=20[5,24,3,6,0] 20[3,23,4,8
 Proft, Sinister Mastermind 02 : steps=379 turn=17 end=17[0,24,4,10,0] 18[2,18,3,18,0] final=56d30d69 | 6b5af0e6 45ec6288 d56cb07c
 Proft, Sinister Mastermind 03 : steps=276 turn=17 end=20[7,23,0,8,0] 20[6,24,0,8,0] final=c4d5f162 | a41bf493 4b0f59bc
 Proft, Sinister Mastermind 04 : steps=368 turn=17 end=7[4,23,3,7,1] 20[1,10,16,11,0] final=a39f7ab5 | 3c2761e4 e3f85e15 61cd1c56
-Prophesied End 01 : steps=341 turn=17 end=15[3,23,3,9,0] 20[4,19,6,10,0] final=ec1ff383 | f69d93d4 43e7b358 faa81ce7
+Prophesied End 01 : steps=320 turn=17 end=20[4,23,2,9,0] 17[4,23,1,10,0] final=eb093484 | f06a0f59 d4199653 3bfa7f9e
 Prophesied End 02 : steps=329 turn=17 end=20[5,22,2,10,0] 20[2,21,5,9,0] final=ce586fac | f01b1644 60275534 8409aa22
 Prophesied End 03 : steps=299 turn=17 end=20[4,23,3,8,0] 20[4,23,1,9,1] final=95d24354 | 56499a9b 16e8deda
 Prophesied End 04 : steps=301 turn=17 end=20[5,22,2,9,0] 20[5,22,2,9,0] final=fbf3c868 | c74117e8 5abc26f2 88c8aeeb
@@ -2008,7 +2012,7 @@ Pyre Rhymer // Molten Tide 04 : steps=321 turn=17 end=16[4,21,5,9,0] 20[3,21,3,9
 Pyroblast 01 : steps=325 turn=17 end=20[5,17,7,9,0] 19[7,16,6,9,0] final=6bbafdd8 | 865b1264 65155f37 02931152
 Pyroblast 02 : steps=325 turn=17 end=20[4,21,5,8,0] 20[7,23,2,6,0] final=5177fbda | ff8ddf5a 4620870e 42101fd8
 Pyroblast 03 : steps=305 turn=17 end=20[4,23,2,9,0] 17[3,22,5,8,0] final=0e8c0f9e | 21646e26 d524cbf3 ed5aff12
-Pyroblast 04 : steps=335 turn=17 end=20[4,21,4,9,0] 20[5,22,2,9,1] final=4255c303 | 458d1e47 f63c9970 5e19e5af
+Pyroblast 04 : steps=361 turn=17 end=20[6,20,3,11,0] 14[4,23,3,9,0] final=78c37b45 | 458d1e47 e1ef6739 1c2e392a
 Pyrogoyf 01 : steps=363 turn=17 end=15[3,23,1,11,0] 15[3,23,3,8,1] final=10c121f2 | 0343c2a3 a099844a 7b82fde3
 Pyrogoyf 02 : steps=336 turn=17 end=19[4,22,5,7,0] 14[6,21,3,8,0] final=354f88dc | b7ef3215 69f61da9 d14de699
 Pyrogoyf 03 : steps=324 turn=17 end=20[6,23,1,8,0] 20[2,23,4,9,0] final=d07c86a5 | 56499a9b 1abac790 49e13554
@@ -2028,7 +2032,7 @@ Q, Stacking the Deck 04 : steps=353 turn=17 end=20[0,21,1,10,6] 20[0,17,2,7,12] 
 Qo'noS 01 : steps=314 turn=17 end=18[6,24,0,8,0] 21[6,21,0,11,0] final=f6042d42 | 3f1afc7b 9d2f233d 3daeb62c
 Qo'noS 02 : steps=297 turn=17 end=21[2,24,4,8,0] 21[6,23,2,7,0] final=6eb152d4 | 4ed03452 ce982cdf
 Qo'noS 03 : steps=380 turn=17 end=9[5,22,1,11,0] 16[5,20,1,12,0] final=537222a9 | 33a6d47f 5ba98a2f 98d95ed2
-Qo'noS 04 : steps=305 turn=17 end=18[7,23,1,7,0] 19[6,23,1,8,0] final=05123a12 | 667f5f5c cd415c64 2a50042a
+Qo'noS 04 : steps=293 turn=17 end=20[7,23,1,7,0] 21[4,24,0,10,0] final=b675a646 | 819c6bbf 59f0e651
 Quark's Bar 01 : steps=305 turn=17 end=19[3,21,5,8,1] 20[5,23,1,10,0] final=35c1ecdd | e93f6ad7 e7319ca0 52af65f3
 Quark's Bar 02 : steps=372 turn=17 end=16[6,19,0,16,0] 14[4,22,1,10,1] final=e1b4ffea | d32271c7 44e00265 5a14fc8e
 Quark's Bar 03 : steps=286 turn=17 end=18[6,23,0,9,0] 18[5,24,1,8,0] final=16a4946b | 28da1efe 0688859e
@@ -2062,9 +2066,9 @@ Red Alert! 02 : steps=345 turn=17 end=16[1,19,10,8,0] 20[2,23,4,9,0] final=69303
 Red Alert! 03 : steps=307 turn=17 end=18[4,23,2,9,0] 20[2,24,4,8,0] final=7dd305e2 | efaeb185 d09a5e22 d7df7d06
 Red Alert! 04 : steps=312 turn=17 end=20[5,22,4,7,0] 20[3,23,3,10,0] final=df204c80 | 663becce 245a2795 bdf9bf25
 Refute Destiny 01 : steps=314 turn=17 end=20[6,21,1,11,2] 4[5,23,1,8,1] final=0807cb6a | 68914bcc f936cd03 145605fe
-Refute Destiny 02 : steps=323 turn=17 end=20[3,22,6,7,0] 13[0,22,6,9,1] final=7c3646f2 | f01b1644 d9b4606a f3085e4d
+Refute Destiny 02 : steps=377 turn=17 end=19[5,17,7,10,0] 10[4,21,3,9,1] final=98be5e42 | f01b1644 5793007c d0806042
 Refute Destiny 03 : steps=300 turn=17 end=10[7,23,0,8,0] 20[5,24,0,9,0] final=32c6c0fd | 0b1b8ecd ba095ff5 32c6c0fd
-Refute Destiny 04 : steps=312 turn=17 end=20[4,22,4,8,0] 17[3,20,7,8,0] final=44c545da | c74117e8 f3207b1c 9b8cd5e1
+Refute Destiny 04 : steps=309 turn=17 end=20[4,22,3,9,0] 20[3,20,7,8,0] final=eb4d96d0 | c74117e8 f3207b1c 5b1433f8
 Relentless Drednok 01 : steps=383 turn=17 end=5[5,22,0,8,3] 20[3,21,3,13,1] final=e527ad1b | f6fe8281 898a8ee7 0c13594b
 Relentless Drednok 02 : steps=335 turn=17 end=18[6,24,2,6,0] 17[3,22,2,10,1] final=399bbdb4 | f01b1644 ea1fc5f6 81101280
 Relentless Drednok 03 : steps=350 turn=17 end=23[6,22,0,9,1] 16[4,21,1,10,3] final=659fd1a1 | 8488d02c 1a317b6b 6f3e8a62
@@ -2202,7 +2206,7 @@ Samut, Hazoret's Champion 02 : steps=356 turn=17 end=20[4,22,3,9,0] 18[7,19,4,8,
 Samut, Hazoret's Champion 03 : steps=355 turn=17 end=9[5,23,2,7,1] 20[3,24,3,8,0] final=ad5a1b38 | e940b4de 286e4a09 737b38fe
 Samut, Hazoret's Champion 04 : steps=352 turn=17 end=7[4,23,1,10,0] 20[1,24,4,9,0] final=4e7e26eb | bafaafc0 da5a1ec2 485a5b32
 Samut, Tyrant of Naktamun 01 : steps=342 turn=17 end=21[5,16,7,9,1] 17[4,22,3,9,0] final=155d203f | 9e216edd 47cb3dc7 c0fbddb5
-Samut, Tyrant of Naktamun 02 : steps=394 turn=17 end=20[2,24,0,12,1] 11[2,22,0,14,2] final=7c21a9de | e763f2f6 0a89e867 801f5812
+Samut, Tyrant of Naktamun 02 : steps=409 turn=17 end=18[5,21,2,11,0] 14[4,20,3,11,1] final=3d474119 | e763f2f6 ed3f395b ebfe8e88 94e185cf
 Samut, Tyrant of Naktamun 03 : steps=330 turn=17 end=18[4,23,2,9,0] 18[2,24,3,9,0] final=0048913a | bd2e8968 c6ec1bf3 1e49021f
 Samut, Tyrant of Naktamun 04 : steps=302 turn=17 end=20[6,23,2,7,0] 20[3,23,4,8,0] final=cb544fd7 | 882af855 ec637eff cf7154e6
 Sanctum Lurker 01 : steps=349 turn=17 end=18[4,24,2,8,0] 13[4,22,2,10,0] final=be6bfbc3 | eb2bf0f9 d7261ff6 c7b4c6b9
@@ -2210,7 +2214,7 @@ Sanctum Lurker 02 : steps=290 turn=13 end=16[3,23,1,13,0] -3L[6,23,2,8,0] final=
 Sanctum Lurker 03 : steps=356 turn=17 end=21[5,22,3,9,0] 19[2,22,5,10,0] final=edb2fcde | c60f495c e1a9abd3 5cafeacf
 Sanctum Lurker 04 : steps=317 turn=17 end=18[5,22,2,9,0] 20[3,23,3,10,0] final=96a172d7 | f9d95076 c1da89cf 9d2402be
 Sanguine Evangelist 01 : steps=324 turn=17 end=10[6,22,1,8,1] 20[4,23,0,12,0] final=cbcc9ea5 | 0f12d242 be3bb9a9 4b13e2f0
-Sanguine Evangelist 02 : steps=399 turn=17 end=18[2,23,3,10,1] 14[3,21,1,12,1] final=19a4d7d9 | c7751259 45866400 08668363
+Sanguine Evangelist 02 : steps=415 turn=17 end=7[2,24,3,9,0] 9[3,21,1,12,1] final=1e641eb2 | d2ff5f4e 8ba12704 415f77e8 3173a58d
 Sanguine Evangelist 03 : steps=339 turn=17 end=19[4,23,2,12,0] 8[6,24,2,6,0] final=a79d61f6 | 8004b0d1 787a6bf4 096f4bc7
 Sanguine Evangelist 04 : steps=348 turn=17 end=20[3,23,2,10,0] 9[3,23,3,9,0] final=18eff750 | 2cb2ff9d c229a23e d76871c4
 Sarcophagus, Ship of the Dead 01 : steps=309 turn=17 end=20[4,20,4,10,0] 19[7,23,0,8,0] final=adaa3f40 | 0f12d242 9b6eea93 0a4daef6
@@ -2269,7 +2273,7 @@ Semester Foreseer // Peer Review 01 : steps=342 turn=17 end=20[4,24,1,9,0] 11[3,
 Semester Foreseer // Peer Review 02 : steps=363 turn=17 end=20[1,24,2,10,1] 14[6,19,2,10,1] final=fa72da9c | 74f2a8a0 f5182fa2 1ff32125
 Semester Foreseer // Peer Review 03 : steps=366 turn=17 end=18[5,21,3,11,0] 11[4,20,5,10,0] final=96f5b6bc | 56499a9b c18f4542 0b999fcb
 Semester Foreseer // Peer Review 04 : steps=387 turn=17 end=22[5,17,6,9,1] 13[4,13,10,11,1] final=5f33fc1c | d8ec812d 4b525410 e5773d8d
-Sen Triplets 01 : steps=292 turn=17 end=20[7,24,1,6,0] 20[7,21,2,7,1] final=912e0dcd | 3ec19173 f07171bc
+Sen Triplets 01 : steps=298 turn=17 end=20[5,24,2,7,0] 20[6,22,2,9,0] final=335200af | 3ec19173 794101e7
 Sen Triplets 02 : steps=339 turn=17 end=16[1,24,2,14,0] 18[3,22,3,12,0] final=f3677265 | 3bd6d373 d928fd68 5f9762b0
 Sen Triplets 03 : steps=310 turn=17 end=20[5,23,1,12,0] 11[4,23,1,7,1] final=864bf8e3 | 56499a9b c73aff69 d630ca7d
 Sen Triplets 04 : steps=322 turn=17 end=18[4,23,3,8,1] 17[2,21,5,11,2] final=12266148 | c74117e8 a773efa5 f55e9c00
@@ -2290,7 +2294,7 @@ Seven of Nine, Unassimilated 02 : steps=376 turn=17 end=15[4,19,2,13,1] 22[2,23,
 Seven of Nine, Unassimilated 03 : steps=351 turn=17 end=18[4,21,4,9,0] 20[1,19,10,10,0] final=9cb7ee54 | 0734f18f 94a8419b 5f178698
 Seven of Nine, Unassimilated 04 : steps=361 turn=17 end=16[3,19,6,10,0] 15[2,23,2,11,0] final=d9beaccc | f662c9d5 4a1a05df 565a421a
 Sewer-veillance Cam 01 : steps=297 turn=17 end=20[7,18,6,7,0] 20[6,23,0,9,0] final=ccd7924f | 3d3ea116 1b929b03
-Sewer-veillance Cam 02 : steps=388 turn=17 end=19[4,23,3,8,0] 13[4,21,1,13,0] final=3600069a | c7779261 02f754a0 da2a18bf
+Sewer-veillance Cam 02 : steps=379 turn=17 end=19[4,23,3,8,0] 13[5,21,1,11,0] final=797e2b18 | c7779261 02f754a0 da2a18bf
 Sewer-veillance Cam 03 : steps=320 turn=17 end=20[5,16,7,10,0] 20[6,19,4,9,0] final=ed90cd46 | 029d8051 38e51d3f 30d1d394
 Sewer-veillance Cam 04 : steps=335 turn=17 end=18[5,21,3,9,0] 18[6,22,1,9,0] final=3dcc4529 | c74117e8 1e2ea614 3c941199
 Shatterwing Pegasus 01 : steps=327 turn=17 end=16[3,24,2,10,0] 18[4,23,1,10,0] final=f56761d9 | b8c0f9b3 1efe4089 68dcb0c9
@@ -2336,8 +2340,8 @@ Silicate Surveyor 04 : steps=352 turn=17 end=13[3,22,2,11,1] 23[1,23,2,11,1] fin
 Simian Spirit Guide 01 : steps=357 turn=17 end=8[7,20,2,9,0] 20[3,22,2,11,0] final=44eb1115 | 443abde3 f9ac877b 96c91e91
 Simian Spirit Guide 02 : steps=323 turn=17 end=16[1,23,6,7,1] 17[3,23,2,9,1] final=524da175 | c89b066d 50b97ddc 7f8debea
 Simian Spirit Guide 03 : steps=346 turn=17 end=11[5,23,0,9,1] 5[1,24,1,12,0] final=d917a78c | 1035d6dc e185b14a 04e2f363
-Simian Spirit Guide 04 : steps=351 turn=17 end=9[4,21,4,9,0] 15[4,22,2,9,1] final=1fdf7065 | f9d95076 4e3398f1 23603934
-Simulacrum Shaper 01 : steps=336 turn=17 end=20[6,20,4,9,1] 18[6,17,0,9,4] final=0b21ab67 | bc0ca1a3 d20095ca e5e85873
+Simian Spirit Guide 04 : steps=336 turn=17 end=9[4,23,3,8,0] 20[3,22,3,9,1] final=5d8bdcc0 | f9d95076 4e3398f1 9643ab1b
+Simulacrum Shaper 01 : steps=324 turn=17 end=19[6,19,2,8,3] 20[4,24,1,9,0] final=32ad3664 | 302af230 7f59aba9 7989f9a2
 Simulacrum Shaper 02 : steps=350 turn=17 end=8[4,22,2,10,0] 20[3,22,1,14,1] final=5c959ffa | 257bf5c4 6ec62563 269534a8
 Simulacrum Shaper 03 : steps=294 turn=17 end=20[6,20,1,8,3] 17[5,22,3,8,0] final=ede51abc | a4ddda49 88410fb2
 Simulacrum Shaper 04 : steps=331 turn=17 end=20[5,20,4,9,0] 19[5,22,1,10,0] final=8ee859b8 | e3492e68 301136a0 0a7f275e
@@ -2446,7 +2450,7 @@ Steam Vents 02 : steps=359 turn=17 end=10[7,19,0,11,1] 16[5,22,1,10,0] final=fc8
 Steam Vents 03 : steps=293 turn=15 end=-1L[6,24,0,8,0] 20[2,24,1,10,1] final=6481df65 | bf26ded7 e64285ee
 Steam Vents 04 : steps=350 turn=17 end=10[5,23,0,10,0] 7[5,21,2,10,0] final=ffa3c560 | 211dda84 48671dac b2e78801
 Stella Lee, Wild Card 01 : steps=302 turn=17 end=14[6,22,1,9,0] 18[5,21,3,10,1] final=4d403c7a | 0200464e 13b710c9 b058bec4
-Stella Lee, Wild Card 02 : steps=328 turn=17 end=20[7,23,0,8,0] 20[4,19,5,9,1] final=274fe39f | 67dad8ec 80fc898b 87833b02
+Stella Lee, Wild Card 02 : steps=331 turn=17 end=20[7,23,0,9,0] 20[5,20,3,10,1] final=1d53dbbe | 67dad8ec 42ca64d8 0e1eb963
 Stella Lee, Wild Card 03 : steps=336 turn=17 end=16[5,21,2,10,1] 17[2,22,2,11,1] final=df6244b6 | b2a04663 4026b8e0 e20c7c5d
 Stella Lee, Wild Card 04 : steps=304 turn=17 end=18[4,23,2,9,1] 17[6,21,2,9,0] final=a7485215 | c74117e8 aa329bc9 1da384e9
 Stern Scolding 01 : steps=330 turn=17 end=20[3,21,3,10,1] 10[4,23,3,8,0] final=b3d8ed6d | 8b11dc56 a78dec70 ce95bedd
@@ -2507,14 +2511,14 @@ Sublime Epiphany 03 : steps=290 turn=17 end=20[5,23,1,9,0] 20[5,22,3,8,0] final=
 Sublime Epiphany 04 : steps=312 turn=17 end=12[4,23,3,8,0] 20[4,21,5,8,0] final=ce4a48d3 | f9d95076 5b64a30b 9f4fcd2f
 Subspace Anomaly 01 : steps=307 turn=17 end=21[4,24,2,11,0] 21[6,23,0,8,1] final=4cd5741c | 3cf87d70 21db4d87 e80b9e61
 Subspace Anomaly 02 : steps=290 turn=17 end=20[6,24,1,10,0] 20[6,23,2,7,0] final=639c0724 | 4f73c008 88d3281a
-Subspace Anomaly 03 : steps=330 turn=17 end=16[6,23,1,8,0] 23[3,22,3,11,0] final=ad3694c6 | 4064f296 89c6d431 690ebbe3
+Subspace Anomaly 03 : steps=339 turn=17 end=16[6,23,1,8,0] 23[3,23,3,14,0] final=3533d239 | 4064f296 89c6d431 0121cc7f
 Subspace Anomaly 04 : steps=298 turn=17 end=20[6,22,2,7,1] 20[3,24,4,7,0] final=4103691c | be8283c2 df760a5e
 Subtlety 01 : steps=320 turn=17 end=14[3,24,3,9,0] 20[4,23,1,10,0] final=1082bd95 | 0f12d242 7c35f7b0 b84b0d09
 Subtlety 02 : steps=343 turn=17 end=19[1,24,3,9,2] 15[2,21,5,9,1] final=015947d5 | 173a0e2f 6d0eded8 c7403ee5
 Subtlety 03 : steps=324 turn=17 end=14[5,18,6,9,1] 20[1,24,2,10,1] final=b6149512 | 8d707f6c 0cba8381 9e76a69d
 Subtlety 04 : steps=321 turn=17 end=20[3,21,3,10,1] 18[3,24,1,9,1] final=95417a7c | dc5cbcb5 5fb8164f c27deeab
 Sulu, Space Swashbuckler 01 : steps=340 turn=17 end=17[5,20,3,11,0] 18[6,20,0,12,0] final=bab5fa3e | 0f12d242 d6cb536e b8e6a54b
-Sulu, Space Swashbuckler 02 : steps=370 turn=17 end=6[3,24,3,8,0] 17[1,20,4,11,2] final=c1b9f328 | f01b1644 0fde5bff 609d5eab
+Sulu, Space Swashbuckler 02 : steps=369 turn=17 end=12[4,23,2,9,0] 21[1,21,3,14,0] final=13cc6f28 | f01b1644 f43982f3 f2bd87d1
 Sulu, Space Swashbuckler 03 : steps=314 turn=17 end=16[5,23,1,9,0] 20[3,24,1,10,0] final=f2868b22 | 56499a9b 98be3287 7f3ac98b
 Sulu, Space Swashbuckler 04 : steps=314 turn=17 end=22[4,23,2,10,0] 14[6,24,0,8,0] final=af50a37f | a8727db1 506d84f5 1c4073ba
 Suplex 01 : steps=304 turn=17 end=15[3,24,3,8,0] 20[3,23,3,9,0] final=cd30fd4d | 7e7ca3dc 8c6dc2e3 7e3de389
@@ -2544,7 +2548,7 @@ Suurok-Class Science Vessel 04 : steps=372 turn=17 end=9[4,22,2,9,1] 20[2,23,2,1
 Suus Mahna Practitioner 01 : steps=349 turn=17 end=14[4,24,0,10,0] 17[3,23,0,12,0] final=0154868b | 99f109bf f6568cde 55183c65
 Suus Mahna Practitioner 02 : steps=334 turn=17 end=18[3,24,3,8,0] 21[4,19,6,9,0] final=551c178c | e89da152 802c3d90 f0a9233c
 Suus Mahna Practitioner 03 : steps=340 turn=17 end=20[4,23,0,10,1] 20[3,22,2,12,0] final=7b91a14d | 767ea29f 69139841 ca013710
-Suus Mahna Practitioner 04 : steps=308 turn=17 end=11[5,23,2,8,0] 22[6,22,0,10,0] final=aa561811 | c74117e8 c308a796 796ccadf
+Suus Mahna Practitioner 04 : steps=320 turn=17 end=20[6,23,2,7,0] 20[2,24,0,12,0] final=30e30047 | c74117e8 4d1d05c0 84262c71
 Swords to Plowshares 01 : steps=295 turn=17 end=23[4,24,1,8,1] 23[5,22,2,8,1] final=f26bde99 | 0f12d242 22d1befc
 Swords to Plowshares 02 : steps=328 turn=17 end=25[0,24,5,8,1] 17[2,21,3,10,2] final=939f1dda | ea575ecc ae787d71 43ac5248
 Swords to Plowshares 03 : steps=312 turn=17 end=14[5,23,1,8,1] 18[4,22,1,11,0] final=735ea0b9 | 56499a9b 4b561120 dca2e442
@@ -2566,7 +2570,7 @@ Tal Shiar Analyst 02 : steps=355 turn=17 end=17[2,24,2,11,0] 12[3,23,1,10,1] fin
 Tal Shiar Analyst 03 : steps=351 turn=17 end=13[3,22,2,11,0] 13[3,24,2,8,1] final=2a0b148a | d29c1ab6 d7d48a47 09f00402
 Tal Shiar Analyst 04 : steps=334 turn=17 end=11[5,22,2,9,0] 15[3,24,1,10,0] final=81d7e31c | 8b726585 9b8e22b9 0b581d1f
 Tal Shiar Operative 01 : steps=345 turn=17 end=18[4,20,3,11,0] 14[4,22,3,9,0] final=0c0ab1cc | cb3404f6 61c7fa64 37c3fb30
-Tal Shiar Operative 02 : steps=354 turn=17 end=20[1,24,0,13,0] 15[3,20,2,15,0] final=18a5876c | f24eaa1d 297c43dc a26e9b24
+Tal Shiar Operative 02 : steps=341 turn=17 end=16[1,24,0,13,0] 21[7,20,1,10,0] final=580f5012 | a80d68bc 16128964 97d06b9f
 Tal Shiar Operative 03 : steps=348 turn=17 end=14[4,23,2,9,0] 16[4,22,3,10,0] final=77a7b4d3 | 9f8627cb 08a2d742 9cffdb4c
 Tal Shiar Operative 04 : steps=358 turn=17 end=8[3,21,7,7,0] 19[2,24,1,11,2] final=ee00ebae | 4eadd747 b62e4be0 78491cbf
 Talisman of Conviction 01 : steps=312 turn=17 end=19[4,22,0,13,1] 13[5,23,2,8,0] final=736cd84a | ca1ca42f 30cc09d7 15b8429e
@@ -2665,7 +2669,7 @@ Test of Courage 01 : steps=300 turn=17 end=20[4,24,1,8,1] 17[5,23,1,9,0] final=f
 Test of Courage 02 : steps=326 turn=17 end=21[3,23,3,8,1] 18[4,21,4,9,1] final=ea8fe311 | f8fe3d64 ce892ee1 b020ccbd
 Test of Courage 03 : steps=289 turn=17 end=21[5,23,1,8,1] 20[5,24,0,8,1] final=8656a7d5 | 56499a9b 9118d5df
 Test of Courage 04 : steps=294 turn=17 end=20[5,23,1,8,1] 21[5,24,2,7,0] final=94fd0826 | f819cfca 128622a3
-Test of Identity 01 : steps=304 turn=17 end=18[5,20,4,9,0] 20[7,21,1,8,1] final=c8a3bb04 | 0f12d242 5132cf6c 31d6b945
+Test of Identity 01 : steps=292 turn=17 end=20[7,22,1,8,0] 20[7,18,5,8,0] final=3dd94ec0 | 60607639 22294907
 Test of Identity 02 : steps=321 turn=17 end=20[3,21,5,9,0] 17[4,21,4,8,1] final=4162a05b | d6e0aa0c d3022839 7a814b28
 Test of Identity 03 : steps=348 turn=17 end=19[6,15,7,9,0] 22[2,20,6,10,1] final=21a0349d | 3d7bfde1 1eca1c52 46910598
 Test of Identity 04 : steps=342 turn=17 end=6[5,21,5,7,0] 20[4,20,5,9,1] final=f214e0f0 | 32eeaf1a 1a8604db 1c347de5
@@ -2677,7 +2681,7 @@ Test of Priorities 01 : steps=338 turn=17 end=18[4,21,3,9,2] 20[7,17,5,10,1] fin
 Test of Priorities 02 : steps=337 turn=17 end=19[4,23,3,8,0] 20[4,23,3,8,0] final=8c540a09 | b3efc996 a4a0eab9 e44113c5
 Test of Priorities 03 : steps=312 turn=17 end=20[5,21,4,8,0] 20[2,19,8,8,1] final=4b791983 | eb9a6ba8 ad787336 2cbad4f3
 Test of Priorities 04 : steps=323 turn=17 end=14[4,21,4,9,0] 16[7,20,3,8,0] final=939edbb4 | c74117e8 4ac42199 82e97491
-Tether Technician 01 : steps=330 turn=17 end=12[5,17,4,8,4] 20[3,22,2,11,0] final=6cd46605 | a2b9b8d6 80b5f5e6 11bbf4df
+Tether Technician 01 : steps=379 turn=17 end=11[6,21,4,7,0] 20[2,22,1,18,0] final=7c218372 | 2f084453 1c0bfc24 fcacb3ee
 Tether Technician 02 : steps=405 turn=17 end=18[5,17,6,14,0] 10[6,17,5,10,0] final=0e1fa8b3 | ea37994b fcdc97f8 3bcb025a ee07e8b7
 Tether Technician 03 : steps=333 turn=17 end=18[4,23,2,9,0] 20[1,23,4,10,0] final=832dd484 | 56499a9b ea3de357 6622816e
 Tether Technician 04 : steps=345 turn=17 end=9[3,23,4,8,0] 20[1,23,2,13,0] final=c81702c8 | 4e343890 0fd79495 dfb21f1c
@@ -2685,7 +2689,7 @@ Tethermage's Advantage 01 : steps=309 turn=17 end=19[7,22,1,7,1] 21[4,17,8,9,0] 
 Tethermage's Advantage 02 : steps=358 turn=17 end=20[1,24,2,11,0] 7[2,22,4,10,0] final=93b8217a | 48543384 0f0f1a23 fa300c57
 Tethermage's Advantage 03 : steps=292 turn=17 end=20[4,23,2,9,0] 17[5,24,0,9,0] final=54db0b96 | 56499a9b bf1cc1ca
 Tethermage's Advantage 04 : steps=336 turn=17 end=13[4,22,3,11,0] 23[2,24,3,9,1] final=2f41663a | f9d95076 680cca6f 19b2655e
-Tetsuko Umezawa, Fugitive 01 : steps=346 turn=17 end=13[3,24,1,10,0] 16[3,23,1,11,0] final=01b910c0 | c84bdd8c 08e3900c eb9781d5
+Tetsuko Umezawa, Fugitive 01 : steps=351 turn=17 end=18[3,23,3,9,0] 26[2,21,5,10,0] final=27571a0a | c7467b1e 06350b82 f919c8c5
 Tetsuko Umezawa, Fugitive 02 : steps=352 turn=17 end=18[2,24,3,9,0] 13[2,23,3,10,0] final=6e07a47b | eedf8d6b 366b24db 62e86e40
 Tetsuko Umezawa, Fugitive 03 : steps=342 turn=17 end=19[4,23,3,8,0] 17[1,20,7,9,1] final=1a89b5ab | 4b3699a5 271f34ce c98bd6f7
 Tetsuko Umezawa, Fugitive 04 : steps=319 turn=17 end=15[4,23,2,9,0] 16[4,24,1,9,0] final=6e833ee2 | f9d95076 88ec1419 60edaa88
@@ -2697,7 +2701,7 @@ Teyo, Diamondblade Mage 01 : steps=359 turn=17 end=17[4,20,4,9,1] 14[4,23,3,8,0]
 Teyo, Diamondblade Mage 02 : steps=372 turn=17 end=16[3,21,6,8,0] 16[3,22,3,10,0] final=a5fda00a | 6afe1b0d 77a4fca0 8c702990
 Teyo, Diamondblade Mage 03 : steps=311 turn=17 end=20[4,23,3,8,0] 17[4,24,3,7,0] final=f4035ae8 | 00e475e4 cec17534 d2addb23
 Teyo, Diamondblade Mage 04 : steps=301 turn=17 end=20[4,23,3,8,0] 20[5,24,2,7,0] final=b58dde46 | c74117e8 3fb05f63 77ddcaee
-Teyo, Lightshield Expert 01 : steps=315 turn=17 end=15[7,24,2,5,0] 20[4,23,2,9,0] final=95888cd4 | 011b32d4 2762b01e 351efd52
+Teyo, Lightshield Expert 01 : steps=367 turn=17 end=19[4,23,2,9,0] 19[4,23,0,11,0] final=dfe6903b | 462790ee 8e728a9d d43626b1
 Teyo, Lightshield Expert 02 : steps=402 turn=17 end=6[5,20,7,6,0] 14[3,22,2,11,0] final=69a677fd | d70a8396 8b6fc257 2ed03fa1 4aa17ab8
 Teyo, Lightshield Expert 03 : steps=293 turn=17 end=20[5,23,1,9,0] 20[5,24,1,8,0] final=939fc7ed | 56499a9b 4e087d94
 Teyo, Lightshield Expert 04 : steps=315 turn=17 end=17[6,23,1,8,0] 18[5,22,2,11,0] final=e038144a | aeeefcaa ef55be6f b69f3b8a
@@ -2730,7 +2734,7 @@ The Destruction of Praxis 02 : steps=336 turn=17 end=20[2,23,4,9,0] 14[1,23,5,8,
 The Destruction of Praxis 03 : steps=297 turn=17 end=20[7,22,1,8,0] 19[3,24,3,8,0] final=4698d40a | 56499a9b 8cdfa831
 The Destruction of Praxis 04 : steps=359 turn=17 end=6[6,23,1,8,0] 20[4,25,0,9,0] final=5d2317ea | 4476b2e5 ce0d0489 a4c83bb6
 The Doctor, EMH 01 : steps=332 turn=17 end=20[5,24,2,7,0] 19[3,23,3,9,0] final=2a9e39c7 | 0f12d242 fe55e3c5 b585afbf
-The Doctor, EMH 02 : steps=324 turn=17 end=20[5,22,4,7,0] 15[2,21,5,10,0] final=5a5dda45 | 47457044 23a7a2b3 e2e54fe0
+The Doctor, EMH 02 : steps=335 turn=17 end=15[5,23,3,7,0] 23[4,22,3,9,0] final=26c87e9b | 67dad8ec f6ff1ba3 e1f3a688
 The Doctor, EMH 03 : steps=307 turn=17 end=20[5,23,1,9,0] 15[5,23,3,7,0] final=bd8ea7d0 | 56499a9b 53425e4d d18ca081
 The Doctor, EMH 04 : steps=319 turn=17 end=20[5,23,1,9,0] 20[5,24,0,9,0] final=852f478f | c74117e8 5a8c9b9c b2336f28
 The Duras Sisters 01 : steps=360 turn=17 end=14[6,21,3,10,0] 14[7,19,3,9,0] final=6fb168c9 | dced95f0 ded8b6fe 14ab7f32
@@ -2764,7 +2768,7 @@ The Needs of the Many 04 : steps=315 turn=17 end=20[7,18,5,7,1] 16[2,23,4,10,0] 
 The Theorist, Jace Beleren 01 : steps=296 turn=17 end=18[6,23,2,7,0] 18[6,23,2,7,0] final=1847ff2b | 94b82d9d 7536a929
 The Theorist, Jace Beleren 02 : steps=346 turn=17 end=13[4,23,2,9,0] 20[7,17,3,12,1] final=69a1577a | 3c25de33 8651a275 80442b56
 The Theorist, Jace Beleren 03 : steps=320 turn=17 end=19[7,23,0,8,0] 14[5,21,2,10,0] final=691f0e92 | 56499a9b f40744a8 adb8d1e7
-The Theorist, Jace Beleren 04 : steps=338 turn=17 end=18[0,13,5,8,12] 16[7,21,3,7,0] final=fc7ce345 | c74117e8 20236d40 2c1b2a42
+The Theorist, Jace Beleren 04 : steps=358 turn=17 end=14[4,22,3,10,0] 20[3,23,1,13,0] final=0e726581 | f9d95076 cb632502 8d2af2f1
 The Traveler 01 : steps=311 turn=17 end=19[6,25,2,5,0] 19[6,19,0,11,3] final=cd84c84b | 8603a3e4 0ed66743 d0330a09
 The Traveler 02 : steps=304 turn=17 end=20[5,24,1,8,0] 20[6,23,0,9,0] final=67b6191f | f01b1644 6ac812de b0ba0688
 The Traveler 03 : steps=349 turn=17 end=20[3,23,2,10,0] 16[1,18,9,10,0] final=aa686ea8 | 782a2cb1 cd5d6e1c 71698f3e
@@ -2796,7 +2800,7 @@ Theorist's Proxy 04 : steps=352 turn=17 end=14[4,23,2,7,2] 20[2,23,4,9,0] final=
 Theorist's Sanctum 01 : steps=352 turn=17 end=20[7,21,2,8,0] 20[6,21,0,11,0] final=4d05c234 | eb6a4537 0ab1fbed 50a53406
 Theorist's Sanctum 02 : steps=381 turn=17 end=18[4,23,2,11,0] 11[5,22,1,10,1] final=23024f18 | e8bc53ae 4a0f95a9 cac38ff7
 Theorist's Sanctum 03 : steps=331 turn=17 end=15[7,21,1,9,1] 20[3,20,4,11,1] final=d2982c58 | d7043ebb e49425c7 1f8750b1
-Theorist's Sanctum 04 : steps=339 turn=17 end=15[7,21,4,6,0] 18[5,21,2,11,0] final=c89f7081 | 22a6c197 bd598641 97cde2de
+Theorist's Sanctum 04 : steps=347 turn=17 end=14[6,18,3,10,1] 20[6,21,4,8,0] final=8a773812 | be8283c2 a2a6d975 be71cec9
 Theorix Annex 01 : steps=371 turn=17 end=25[4,23,1,10,0] 20[6,22,0,10,0] final=77aff5ea | 0feb9823 bc97ba63 3fcb7392
 Theorix Annex 02 : steps=337 turn=17 end=18[3,24,3,8,0] 13[5,16,7,9,1] final=7b633166 | bbdf0c6f 0c653595 4d1e9a6e
 Theorix Annex 03 : steps=311 turn=17 end=8[7,22,0,8,1] 23[3,24,0,11,0] final=4cb743f7 | 96d5e589 812ca452 681853e7
@@ -2810,7 +2814,7 @@ Theorix Metamage // Omit Variables 02 : steps=344 turn=17 end=9[5,20,3,10,0] 20[
 Theorix Metamage // Omit Variables 03 : steps=355 turn=17 end=20[4,16,8,11,0] 15[3,21,4,10,0] final=72c7cacc | f27c0492 b0a0a4a3 a96a40cf
 Theorix Metamage // Omit Variables 04 : steps=351 turn=17 end=20[4,20,5,9,0] 17[7,19,7,5,0] final=39e7d9ca | f9d95076 12f36ec3 99b95356
 There's Coffee in that Nebula 01 : steps=334 turn=17 end=20[4,23,2,9,1] 16[6,22,0,9,1] final=16785606 | 0f12d242 2ce6a638 b1e62f74
-There's Coffee in that Nebula 02 : steps=349 turn=17 end=22[4,23,2,9,0] 20[3,18,7,9,1] final=60408e04 | 26f373be bae543fa 00dd64e6
+There's Coffee in that Nebula 02 : steps=345 turn=17 end=20[4,22,0,11,1] 15[3,22,1,11,1] final=f346b7ce | 26f373be df520d88 135ab82b
 There's Coffee in that Nebula 03 : steps=329 turn=17 end=20[6,16,5,9,2] 16[1,24,4,9,0] final=b5de14db | 56499a9b ac8be4cc 7b1457eb
 There's Coffee in that Nebula 04 : steps=391 turn=17 end=22[4,22,1,10,1] 14[4,21,4,9,0] final=55eb3819 | 55c39ba4 90ab1fa5 6339526c
 Thieving Skydiver 01 : steps=328 turn=17 end=16[4,24,1,9,0] 17[4,23,1,10,0] final=939b256d | 8a50d663 aedcc96a 6cc0bf38
@@ -2830,7 +2834,7 @@ Time Spiral 02 : steps=339 turn=17 end=19[7,23,0,7,1] 16[6,22,1,8,1] final=81401
 Time Spiral 03 : steps=329 turn=17 end=3[7,23,0,8,0] 20[6,21,0,11,1] final=5236521c | 56499a9b 34371798 b8307024
 Time Spiral 04 : steps=408 turn=17 end=18[4,22,2,10,0] 16[6,19,3,9,1] final=80c156c4 | 65646c9e dbc81e96 7e37e9f9 26ca54e4
 Time Walk 01 : steps=295 turn=17 end=20[3,22,3,10,0] 20[7,24,0,7,0] final=ca2b89ea | d9ae457a daa5eed4
-Time Walk 02 : steps=372 turn=17 end=22[4,18,3,12,1] 16[5,22,4,7,1] final=4049bb0c | 637b712d 0621c604 c7b523c6
+Time Walk 02 : steps=324 turn=17 end=18[4,20,3,8,3] 22[4,21,4,8,1] final=16842158 | 2dc556f5 f15fcb4a 6370712c
 Time Walk 03 : steps=304 turn=17 end=20[4,23,3,8,0] 18[1,24,3,10,0] final=abe7b07e | 5dcc1b7c f0561037 bb5027c7
 Time Walk 04 : steps=297 turn=17 end=20[4,23,3,8,0] 20[4,24,1,9,0] final=57fb98eb | 47c413b1 008e3c39
 Time Warp 01 : steps=355 turn=17 end=22[1,23,4,10,0] 16[5,23,1,9,0] final=6200193b | 19c28aab 85474da1 d0ac8ba4
@@ -2861,14 +2865,14 @@ Tolarian Academy 01 : steps=357 turn=17 end=16[3,24,2,9,0] 18[6,20,3,8,1] final=
 Tolarian Academy 02 : steps=359 turn=17 end=3[3,24,3,8,0] 22[4,23,0,11,0] final=11ea9a30 | 650d01e3 d1db9c4a efcf96f3
 Tolarian Academy 03 : steps=310 turn=17 end=20[6,23,0,9,0] 19[4,22,4,8,0] final=da9c8af0 | 1efc91df 0c9f32cb 309edb10
 Tolarian Academy 04 : steps=354 turn=17 end=17[6,20,5,9,0] 20[3,19,5,10,1] final=7d39bb90 | be8283c2 f81edf55 02af2e5c
-Tomik, Izzet Sparkmage 01 : steps=331 turn=17 end=19[5,18,5,8,2] 18[5,21,3,9,0] final=46c72fd7 | 52c73e57 4525381c 8f4c9f7d
+Tomik, Izzet Sparkmage 01 : steps=309 turn=17 end=19[4,21,5,8,0] 20[5,23,1,9,0] final=d5a551bd | 52c73e57 d67f7ef6 8532802c
 Tomik, Izzet Sparkmage 02 : steps=385 turn=17 end=14[1,24,2,10,1] 11[4,22,2,9,1] final=be056706 | 7f7deb49 dd51d22c a92ec6ed
 Tomik, Izzet Sparkmage 03 : steps=322 turn=17 end=17[4,23,1,10,0] 20[4,22,4,8,0] final=e65d5140 | 5c06a30c 8b3a95fd 03c9ee71
 Tomik, Izzet Sparkmage 04 : steps=354 turn=17 end=17[2,23,4,9,0] 8[2,22,5,9,0] final=870eaaf4 | 96e59d60 623caa9f a0915db2
 Tomik, Orzhov Lawmage 01 : steps=313 turn=17 end=20[4,24,1,9,0] 18[6,22,3,7,0] final=4a8775f8 | 179ad031 c5937154 c0eb6f96
 Tomik, Orzhov Lawmage 02 : steps=341 turn=17 end=20[3,22,1,12,0] 7[6,21,3,8,0] final=51ccf6ad | 9dcac3b4 3d217442 ee6783f8
 Tomik, Orzhov Lawmage 03 : steps=310 turn=17 end=20[6,22,1,9,0] 17[3,23,3,9,0] final=576de29f | b597f2a3 a0b2562c 1cd05137
-Tomik, Orzhov Lawmage 04 : steps=352 turn=17 end=15[1,24,5,8,0] 16[3,24,4,9,0] final=afe847be | ecaeae07 587eeb5d f295b319
+Tomik, Orzhov Lawmage 04 : steps=338 turn=17 end=12[2,24,3,9,0] 18[2,24,2,10,1] final=e0544a5f | a2a48342 986130d0 c24f3c14
 Torbran, Thane of Red Fell 01 : steps=399 turn=17 end=13[4,18,7,9,0] 20[3,23,0,12,1] final=b3fc88a0 | 6b241173 b73eb636 a6779085
 Torbran, Thane of Red Fell 02 : steps=343 turn=17 end=18[2,23,2,11,0] 18[5,22,2,9,0] final=c522b2cc | 6a410da8 18a89a06 6ce8077e
 Torbran, Thane of Red Fell 03 : steps=304 turn=17 end=4[6,23,1,8,0] 20[2,24,1,10,2] final=6492cd4c | 56499a9b e37abdf7 19c6dd0a
@@ -2880,8 +2884,8 @@ Touch the Spirit Realm 04 : steps=312 turn=17 end=20[3,23,2,10,0] 18[2,24,2,9,1]
 Transformative Commons 01 : steps=311 turn=17 end=20[4,24,1,9,0] 18[4,21,4,9,0] final=44b19153 | b2471055 c56c5d40 f7a8c1b6
 Transformative Commons 02 : steps=339 turn=17 end=20[3,23,2,11,0] 6[4,23,2,9,0] final=a16f181c | 03b4586a 156f66b6 cb3c8893
 Transformative Commons 03 : steps=312 turn=17 end=3[7,22,0,8,1] 20[5,24,1,8,0] final=6a67f546 | f4664cea 23704d10 0bc31af1
-Transformative Commons 04 : steps=328 turn=17 end=20[6,22,3,7,0] 20[3,24,2,10,0] final=705559cb | 28c02fd4 4352af6c 758f0192
-Transmute Artifact 01 : steps=350 turn=17 end=20[3,24,1,10,0] 20[2,23,1,12,0] final=c7874d62 | be4598d3 3d48a95b 2ed315dc
+Transformative Commons 04 : steps=363 turn=17 end=11[5,22,2,8,1] 20[5,23,0,12,0] final=fdf39846 | 28c02fd4 543c3a5a 802569cd
+Transmute Artifact 01 : steps=381 turn=17 end=6[3,24,1,10,0] 20[3,21,2,12,1] final=28616290 | 9cc51d7e 242cc080 4d8f005b
 Transmute Artifact 02 : steps=333 turn=17 end=19[3,24,2,8,2] 19[2,21,5,10,1] final=6a72b9fc | b4bc3d2d d3f171b0 b9acfe08
 Transmute Artifact 03 : steps=285 turn=17 end=20[7,21,1,8,1] 20[4,24,3,7,0] final=dff41b84 | 56499a9b 20667fd1
 Transmute Artifact 04 : steps=327 turn=17 end=19[5,23,1,10,0] 18[3,23,0,12,0] final=91b06db0 | 4edbcfe4 dfb0d6c0 971fbb52
@@ -2965,7 +2969,7 @@ Una Chin-Riley, Number One 01 : steps=350 turn=17 end=17[2,23,3,10,0] 16[4,23,0,
 Una Chin-Riley, Number One 02 : steps=318 turn=15 end=18[4,24,1,9,0] -4L[3,24,2,8,1] final=d4151a42 | 8d43789b 12a68aea 559f027d
 Una Chin-Riley, Number One 03 : steps=299 turn=17 end=20[4,23,1,10,0] 14[5,24,1,8,0] final=49d12198 | 56499a9b 6e5bb30e
 Una Chin-Riley, Number One 04 : steps=367 turn=17 end=16[7,16,7,9,0] 20[7,16,5,10,0] final=e0f609c8 | f9d95076 ae484fb5 a49ef571
-Underworld Breach 01 : steps=299 turn=17 end=20[6,23,1,8,0] 20[4,23,1,10,0] final=34c9c177 | b8fdb573 45f5b51d
+Underworld Breach 01 : steps=339 turn=17 end=20[4,23,2,12,0] 4[7,23,0,8,0] final=cd589fdf | 0f12d242 0ce4ede7 59c0a092
 Underworld Breach 02 : steps=346 turn=17 end=9[5,24,3,6,0] 22[3,19,1,12,3] final=3d9e022c | 8695d537 e161001e ede13d82
 Underworld Breach 03 : steps=304 turn=17 end=20[5,23,2,8,0] 20[4,21,4,9,0] final=fe6c9afb | b43c0c6c abd22858 763d3d11
 Underworld Breach 04 : steps=342 turn=17 end=15[4,20,2,9,2] 19[3,23,2,10,1] final=1a0f255b | dddb7568 17437351 28f5877a
@@ -2997,7 +3001,7 @@ Urza, Lord High Artificer 01 : steps=338 turn=17 end=20[1,21,5,12,1] 12[4,23,2,8
 Urza, Lord High Artificer 02 : steps=394 turn=17 end=23[1,16,8,9,5] 11[5,20,2,9,2] final=9ff1c48d | b69fe6b4 449cbf58 70d9687e
 Urza, Lord High Artificer 03 : steps=320 turn=17 end=17[4,15,10,9,0] 20[7,14,9,8,0] final=ba482b53 | 3053e025 2a152c84 eb84c0c7
 Urza, Lord High Artificer 04 : steps=328 turn=15 end=-8L[5,24,2,8,0] 20[1,22,1,17,1] final=09fb54e0 | f9d95076 4a32af99 bbd186f2
-V'Ger, the Intruder 01 : steps=335 turn=17 end=18[3,22,2,11,0] 16[5,23,2,8,0] final=ddbfeb9b | 0f12d242 ac9f3d0c 51a5564a
+V'Ger, the Intruder 01 : steps=325 turn=17 end=14[4,24,2,8,0] 20[0,22,1,11,5] final=2b54946d | 0f12d242 263f6072 a1813edb
 V'Ger, the Intruder 02 : steps=336 turn=17 end=20[2,24,3,9,0] 16[4,23,3,8,0] final=9fbdec59 | 03522ec2 6dbb60b7 2c1eb47c
 V'Ger, the Intruder 03 : steps=306 turn=17 end=20[4,23,2,9,0] 20[5,23,0,9,1] final=db14e6a9 | 56499a9b f4155b26 56a287dd
 V'Ger, the Intruder 04 : steps=352 turn=17 end=17[5,23,2,8,0] 17[3,21,5,9,0] final=802b5b03 | 68204cea 1adac68b 7124e3f5
@@ -3022,7 +3026,7 @@ Verdant Kraken 02 : steps=365 turn=17 end=8[3,21,5,11,0] 14[2,22,4,12,0] final=d
 Verdant Kraken 03 : steps=277 turn=17 end=20[6,23,0,8,1] 20[6,24,1,7,0] final=3b5f3f11 | 56499a9b f4940459
 Verdant Kraken 04 : steps=300 turn=17 end=22[5,19,5,9,0] 19[4,24,0,10,0] final=8cb9b351 | c74117e8 037d85b9 8cb9b351
 Vexing Drone 01 : steps=322 turn=16 end=-4L[6,21,2,9,0] 14[7,20,1,10,1] final=a0a14a4d | 0f12d242 a0a26d6b 47af00f0
-Vexing Drone 02 : steps=330 turn=17 end=14[1,22,5,9,1] 18[3,23,1,11,0] final=c258c429 | 7578643b 2dd0f8f9 e51129a6
+Vexing Drone 02 : steps=352 turn=17 end=1[5,21,1,9,2] 28[3,23,0,12,0] final=977475ee | 6bea96f3 36693e80 07f4e794
 Vexing Drone 03 : steps=305 turn=17 end=20[5,23,1,9,0] 16[4,22,3,9,0] final=e63f4b0f | 56499a9b e9a60d7e 932f1fef
 Vexing Drone 04 : steps=333 turn=17 end=18[6,20,5,7,0] 18[1,24,2,10,1] final=9ad9c2b4 | 5208f63d 292b724c fbfcad87
 Vigorbloom Annex 01 : steps=344 turn=17 end=20[6,21,1,10,0] 22[6,21,2,9,0] final=ada61b42 | 08ad5771 34a48cfe ccbcf2d8
@@ -3109,7 +3113,7 @@ Way of the Deathbringer 01 : steps=364 turn=17 end=20[3,19,6,12,0] 8[5,20,3,10,0
 Way of the Deathbringer 02 : steps=378 turn=17 end=15[4,21,3,10,0] 17[4,20,3,11,0] final=a1ef0f42 | 9f84c749 e70ddb1e ae8c8fa9
 Way of the Deathbringer 03 : steps=336 turn=17 end=20[5,20,2,11,0] 20[3,22,3,11,0] final=522c0372 | 72c192aa 7d44f2ce e0ab4923
 Way of the Deathbringer 04 : steps=332 turn=17 end=18[4,21,3,11,0] 20[3,23,0,12,0] final=99ea3abe | f9d95076 38f96ce1 4581a110
-Way of the Healer 01 : steps=334 turn=17 end=17[4,24,1,9,0] 12[4,23,1,10,0] final=a2c489fb | a677f8a6 9b45b885 9c0c6234
+Way of the Healer 01 : steps=314 turn=17 end=18[5,24,2,7,0] 20[5,23,0,9,1] final=43d699ed | 24b86d3e 72506d96 b1de2039
 Way of the Healer 02 : steps=357 turn=17 end=22[3,20,3,11,1] 17[7,14,7,10,1] final=3bf5f9cf | f01b1644 d939d44b 0155a58a
 Way of the Healer 03 : steps=483 turn=17 end=16[6,19,4,10,0] 20[3,23,0,12,0] final=9eeaadb4 | 28cadecb bd646b34 9d1bb333 567f0db5
 Way of the Healer 04 : steps=309 turn=17 end=20[4,21,2,12,1] 19[5,24,2,7,0] final=bbcea818 | dfc69711 18ff29e5 b57e4415
@@ -3124,7 +3128,7 @@ Way of the Mind Sculptor 04 : steps=643 turn=17 end=20[5,21,2,11,0] 20[3,21,5,10
 Way of the Necromancer 01 : steps=353 turn=17 end=18[2,23,4,10,0] 15[4,18,6,10,0] final=843b3ebb | e4795421 f12357ea bad45816
 Way of the Necromancer 02 : steps=350 turn=17 end=18[2,22,6,9,0] 22[2,22,6,9,0] final=09427b9f | c5bb6bca 1b2feea4 e9377194
 Way of the Necromancer 03 : steps=319 turn=17 end=20[7,21,2,8,0] 20[3,22,4,9,0] final=9fdff8ec | fac639ea d227492d accb151b
-Way of the Necromancer 04 : steps=319 turn=17 end=16[7,23,1,7,0] 20[3,22,2,12,0] final=d25f0df4 | 741c94be 80da61ef 686ff762
+Way of the Necromancer 04 : steps=316 turn=17 end=20[5,23,1,9,0] 18[4,21,4,11,0] final=8401c579 | 51dacd6d 216ed35a 3ded24f9
 Way of the Paradox 01 : steps=369 turn=17 end=17[2,20,3,14,0] 19[5,22,0,12,0] final=3fe12267 | efd5bfc8 390b2232 41d91566
 Way of the Paradox 02 : steps=338 turn=17 end=12[1,18,3,16,0] 18[5,22,3,8,0] final=75ebc1e1 | 1603979b 9d726db5 308f697e
 Way of the Paradox 03 : steps=326 turn=17 end=12[6,22,1,9,0] 24[4,23,3,7,1] final=57d86633 | 46ca62c2 518028e8 eb755808
@@ -3134,7 +3138,7 @@ Way of the Pyromancer 02 : steps=344 turn=17 end=20[1,22,3,12,1] 19[6,21,1,10,1]
 Way of the Pyromancer 03 : steps=372 turn=17 end=17[5,20,3,10,0] 20[4,21,5,9,0] final=f5c5a30a | c2abdd7f 98b78042 155fb83f
 Way of the Pyromancer 04 : steps=366 turn=17 end=10[4,23,2,8,1] 20[3,20,5,10,1] final=cdc98dc7 | 35587c22 af662cda 05dbc24b
 Way of the Warlord 01 : steps=345 turn=17 end=19[3,19,0,11,5] 16[4,22,0,11,1] final=7e09e163 | 13e64fde e4986429 c4cc5651
-Way of the Warlord 02 : steps=384 turn=17 end=20[3,21,3,11,1] 18[7,20,1,10,0] final=217ae60a | 060d2e90 b2d7b6bc a7fcb1e5
+Way of the Warlord 02 : steps=398 turn=17 end=11[6,19,3,11,0] 20[4,22,1,11,0] final=b8ed109a | 94524adb 71744b48 fa3fe1c1
 Way of the Warlord 03 : steps=343 turn=17 end=14[5,16,8,9,0] 18[5,21,3,9,0] final=34594eb7 | 65530345 a0ff3651 fe8b6ecc
 Way of the Warlord 04 : steps=321 turn=17 end=21[6,21,2,9,0] 17[3,23,2,9,1] final=53954bcb | 0631c885 c606f43d 72be3730
 Way of the Wildspeaker 01 : steps=306 turn=15 end=20[5,16,6,13,0] -5L[6,16,9,7,0] final=4d5f72a5 | 0f12d242 9fd247da ccf792e2
@@ -3178,7 +3182,7 @@ Woodwork Prodigy // Soul Tether 02 : steps=407 turn=17 end=4[5,22,3,10,0] 20[1,1
 Woodwork Prodigy // Soul Tether 03 : steps=369 turn=17 end=8[5,23,2,9,0] 17[2,24,0,17,0] final=387a9084 | 059c3102 63bbf738 8c42388e
 Woodwork Prodigy // Soul Tether 04 : steps=313 turn=17 end=15[5,23,3,8,0] 20[5,24,1,9,0] final=fc222d85 | f9d95076 c12ac589 4b0a9599
 Worf, Honor-Bound Warrior 01 : steps=321 turn=17 end=14[3,23,2,9,1] 20[3,23,3,9,0] final=4512d19f | 0f12d242 f0a133c4 863e998c
-Worf, Honor-Bound Warrior 02 : steps=342 turn=17 end=6[4,22,2,10,0] 17[5,23,1,9,0] final=f476e8db | 77cf2795 a42c4310 e71c39e8
+Worf, Honor-Bound Warrior 02 : steps=348 turn=17 end=7[4,22,3,9,0] 20[4,22,2,11,0] final=9e2ee0cc | 3e58ec17 0b3b4d97 d1e70143
 Worf, Honor-Bound Warrior 03 : steps=332 turn=17 end=18[4,23,1,10,0] 20[2,23,1,12,0] final=359583d1 | f7292d3d 2ebc8518 565d13b3
 Worf, Honor-Bound Warrior 04 : steps=347 turn=17 end=5[5,24,3,7,0] 20[6,20,3,9,0] final=a9d71907 | a8727db1 190ed274 019ab5c9
 Worf, Intelligence Contractor 01 : steps=306 turn=17 end=17[5,24,1,9,0] 20[4,24,3,7,0] final=e05c63ac | a3a3ca92 1f55582e e6783019
@@ -3210,7 +3214,7 @@ Year of Hell 02 : steps=324 turn=16 end=-1L[9,18,3,8,0] 8[8,13,5,12,0] final=2b0
 Year of Hell 03 : steps=287 turn=13 end=0L[7,16,8,7,0] 2[7,14,5,12,0] final=22b838bd | 56c6b13f d686bf7a
 Year of Hell 04 : steps=328 turn=16 end=8[5,20,3,10,0] -3L[7,21,2,8,0] final=3595d4e3 | c79fccf7 75ae2b50 3c548ec2
 Yoshimaru, Beloved Companion 01 : steps=319 turn=17 end=20[4,23,1,10,0] 19[5,22,3,8,0] final=0b157202 | 0f12d242 bc24bbb0 c593e796
-Yoshimaru, Beloved Companion 02 : steps=411 turn=17 end=11[3,21,5,10,0] 2[4,23,1,10,0] final=3de00c69 | f14a8091 ec3cf93d 95d9b14c e7217b18
+Yoshimaru, Beloved Companion 02 : steps=449 turn=17 end=15[3,21,5,11,0] 11[3,16,9,10,0] final=c8fb9469 | 91d86102 ee1e5293 96c7769d 50c841ec
 Yoshimaru, Beloved Companion 03 : steps=309 turn=17 end=20[4,23,1,9,1] 14[5,23,1,9,0] final=8349e9a4 | 56499a9b 710e6a00 fa4d8c3b
 Yoshimaru, Beloved Companion 04 : steps=315 turn=17 end=19[7,20,1,7,3] 20[5,24,0,10,0] final=cc4ace91 | 5452d655 9fb4c605 94493a95
 Yoshimaru, Scrappy Stray 01 : steps=332 turn=17 end=15[5,23,3,8,0] 21[5,23,0,10,0] final=ac89f5c3 | e197bed1 853a6257 fb5a8729

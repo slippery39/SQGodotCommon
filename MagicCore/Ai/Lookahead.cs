@@ -125,7 +125,7 @@ public static class Lookahead
 			return [safe];
 		}
 		if (choice is DeclareAttackerChoice)
-			return [CombatOption.None];
+			return [DeclareAttackerChoice.NoAttack(choice)];
 		if (choice is AssignCombatDamageChoice divide)
 			return [divide.Default(s)];
 		if (choice is PayToKeepChoice or ChooseCastChoice) // looking ahead: keep the spell if it can be paid; cast it

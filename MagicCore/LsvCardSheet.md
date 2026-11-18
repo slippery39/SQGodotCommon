@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 30/46 · uncommon 39/86 · rare 112/279 · mythic 37/108 · **227/528**
+**Playable:** common 30/46 · uncommon 40/86 · rare 112/279 · mythic 37/108 · **228/528**
 
 ### "Name Sticker" Goblin
 
@@ -1146,7 +1146,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you take the initiative.  
 > At the beginning of your end step, if you have the initiative, create a 1/1 blue Faerie Dragon creature token with flying.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g3Tests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TakeTheInitiative` — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) —…; `YouHaveTheInitiative` — Feywild Caretaker: "if you have the initiative".
+
+```csharp
+["Feywild Caretaker"] =
+[
+	When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+	When(TriggerEvent.YourEndStep, [], new CreateTokens(FaerieDragon, 1)) with
+	{
+		If = new YouHaveTheInitiative(),
+	},
+],
+```
 
 ### Fire Covenant
 

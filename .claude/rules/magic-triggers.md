@@ -121,6 +121,17 @@ whose subsystem it lives in.
   begins — a TURN-BASED action in `EnterStep`, no stack (Shayne, 2026-11-01). The state-based check
   sacrifices a Saga at its last chapter only once no chapter ability of it is waiting: collected and not
   yet on the stack (`GivePriority` passes them to `StateBasedActions.Check`) or on the stack.
+- **Dungeons and the initiative** (CR 309, 701.49, 725; MC-4.4g3, `Effects/Dungeons.cs`). A dungeon is an object in its
+  venturer's command zone (`GetEmblem.ToCommandZone`) with `DungeonComponent(Room)`, an index into `Undercity.Rooms`
+  (the only dungeon: CR 725.2). A room is NOT a Saga chapter — Undercity branches, so no count says which room you
+  are in. `Venture` makes it, or moves the marker below — on the last room it completes that one and begins a new
+  one; two exits are ONE `ChooseKeywordChoice` (never a move per
+  path), and the room's ability is put on the stack as `WhenYouDo`'s is (`Triggers.QueueTargets`, its source the
+  dungeon). On its last room it is removed once that ability has left the stack — the Saga's check
+  (`ChapterToResolve`), in the state-based actions. **The initiative** is an object in its holder's command zone
+  (`InitiativeComponent`) carrying its two triggers: "at the beginning of your upkeep, venture", and "whenever
+  creatures deal combat damage to you, the active player takes it". `TakeTheInitiative(who)` moves it (one holder,
+  CR 725.3), then ventures — again when you already hold it. "If you have the initiative" is `YouHaveTheInitiative`.
 - **"Whenever [a creature with …] deals combat damage to a player"** — not "this" — is
   `Trigger.CombatDamageBy`, a filter on the damage's SOURCE (Phlox); the event's subject is the player.
 - **"Sacrifice it at the beginning of the next end step"** on a new token is `CreateTokens`/`CreateTokenCopy`
