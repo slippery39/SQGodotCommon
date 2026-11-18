@@ -54,7 +54,10 @@ public static class CardViews
 		card.AddChild(
 			Art(MagicArt.Crop(MagicArt.Key(c)), new Vector2(w - 6, h * 0.55f), new Vector2(3, 3))
 		);
-		card.AddChild(Text(c.Name, 16, new Vector2(4, h * 0.55f + 3), w - 8, wrap: true));
+		// Manifest dread's face-down 2/2 has no name (CR 708.2); its controller's "Turn face up" move names it while
+		// affordable — showing the card to its controller is TBL work (DesignNotes)
+		var name = c.Name is "" ? "Face down" : c.Name;
+		card.AddChild(Text(name, 16, new Vector2(4, h * 0.55f + 3), w - 8, wrap: true));
 
 		var stats = Stats(s, c);
 		if (stats != "")

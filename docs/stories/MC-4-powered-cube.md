@@ -1019,6 +1019,25 @@ as his three priorities.
   **Not taken:** `LookAndTake.Then` on a card Containment Priest exiled — `PutCounters` and the hexproof grant act on
   permanents only; the inspector's "No attack" for a plan whose goaded creature attacks anyway (a label); a last room
   with a target pending as the state check runs — no check runs while a choice is pending.
+- 2026-11-18, Claude — **4.4g4's notes (face-down permanents, manifest dread).** Built as planned, with one change on
+  reading: the nearest piece was not `ExiledFaceDown` but `EnteredAsCopy(Original)` — a face-down permanent is a COPY
+  stamp, a blank 2/2's copiable values (`Card.TurnedFaceDown`), the card kept on `FaceDown(Original)`. It cannot be an
+  option on `EnteredAsCopy`: the marker must be status (a Clone of a face-down 2/2 is a nameless 2/2 with no card
+  under it), and only it turns face up on the battlefield. It enters face down (`EnterBattlefield(faceDown:)`, stamped
+  before the entry event: no "enters" of its own, CR 708.3); leaving turns it face up (`Card.Fresh`, CR 708.9);
+  `Card.IsHiddenFrom` hides it from all but its controller. Manifest dread is `LookAndTake { FaceDown }`
+  (`LsvCards.ManifestDread`); "turn it face up any time for its mana cost" is `TurnFaceUpAction`, a special action —
+  offered with priority, no stack, the same object. Oculus' six is tier 1 as planned. **Legal actions:** one more
+  per face-down creature card you can pay for. **The table:** a face-down permanent reads "Face down"; its controller
+  sees the card only in the "Turn face up: X" move (TBL work, DesignNotes). Ceilings (DesignNotes): the AI's search
+  sees an opponent's face-down card; no "turned face up" event; Phyrexian and no-cost cards; X = 0.
+  **`/pre-commit`'s review: nine findings; four taken, three with a test that fails without it.** Turning face up
+  under a type change kept the stamp that remembered the 2/2 — `TurnedFaceUp` undoes it and the state check stamps
+  the card afresh. Containment Priest's check judged the hidden card's name, colour and mana value — it judges the
+  2/2 (`entering.TurnedFaceDown()`). Face up as it leaves moved from `WithoutCopyEffect` into `Fresh`, one job each.
+  The story. **Not taken (ceilings):** Phyrexian life and no-cost cards (`ponytail:`), the owner's view on the table
+  (TBL), the AI deciding at every window while it can turn one up (as with an instant held), the label read from the
+  empty name (a Clone's nameless copy reads "face-down" too).
 
 ## Tasks
 
@@ -1197,7 +1216,13 @@ as his three priorities.
           `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random and 64 card-replay games,
           added 4, the AI replay unmoved; probe 150 games, none unfinished, the Caretaker cast 380 times; full suite
           1,952 passed) — all run again after the review's fixes
-    - [ ] MC-4.4g4 Face-down, manifest dread: Abhorrent Oculus
+    - [x] MC-4.4g4 Face-down, manifest dread: Abhorrent Oculus — done 2026-11-18: `Card.TurnedFaceDown` /
+          `TurnedFaceUp`, `FaceDown(Original)`, `EnterBattlefield(faceDown:)`, `LookAndTake.FaceDown`,
+          `TurnFaceUpAction`; 7 tests, 12 breaks caught (the review's three fixes included); `batch_checks.py` all 8
+          steps (golden-out unchanged; golden-in moved 29 random and 58 card-replay games, added 4, the AI replay
+          unmoved; probe 150 games, none unfinished, the Oculus cast 320 times; full suite 1,957 passed) — all run again
+          after the review's fixes (12/12 caught; probe 150 games, 1 unfinished past 300 permanents, the Oculus cast 91
+          times; full suite 1,959 passed)
     - [ ] MC-4.4g5 Adventures: Brazen Borrower // Petty Theft
     - [ ] MC-4.4g6 Teamwork: We Say Thee Nay!
     - [ ] MC-4.4g7 Storm: Brain Freeze
@@ -1207,10 +1232,16 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first three parts —
-protection (4.4g1, with g1b's copy fix), delve (4.4g2) and dungeons and the initiative (4.4g3) — are done: **228 of
-528 play.** Next, in a NEW session: **MC-4.4g4 — face-down, manifest dread** (Abhorrent Oculus): the plan is in
-Decisions (4.4g's plan, part 4). Then g5–g10 in the plan's order, one a session.
+Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first four parts —
+protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3) and face-down permanents
+(4.4g4) — are done: **229 of 528 play.** Next, in a NEW session: **MC-4.4g5 — Adventures** (Brazen Borrower // Petty
+Theft): the plan is in Decisions (4.4g's plan, part 5). Then g6–g10 in the plan's order, one a session.
+From 4.4g4: a face-down permanent is a copy stamp — `Card.TurnedFaceDown` (a blank 2/2's copiable values) with the
+card on `FaceDown(Original)` (status), `Card.TurnedFaceUp` undoing it (and any type stamp: the state check re-stamps);
+entering face down is `EnterBattlefield(faceDown:)`, manifest dread `LsvCards.ManifestDread` (`LookAndTake {
+FaceDown }`), turning face up `TurnFaceUpAction` (a special action, offered with priority). Headliner Scarlett, Memory
+Jar and Shelldock Isle exile face down (`ExiledFaceDown`), not this. g4's helpers in `LsvBatch2g4Tests.cs`:
+`Manifest(pick)` (a {0} instant of manifest dread), `Ogre` (a {1}{G} 4/4 flier that draws as it enters).
 From 4.4g3: a dungeon is `DungeonComponent(Room)` on a command-zone object, `Undercity.Rooms` its data; `Venture` is
 "venture into Undercity" (a branch ONE `ChooseKeywordChoice`; on the last room, a new dungeon), a room's ability put
 on the stack as `WhenYouDo`'s; the initiative is `TakeTheInitiative(who)` / `YouHaveTheInitiative` /
@@ -1396,3 +1427,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   procedural price is MC-4.4g2b, later. Next: MC-4.4g3, dungeons and the initiative.
 - 2026-11-18: MC-4.4g3 done: Feywild Caretaker — 228 of 528 play. Undercity and venture (a room no chapter: it
   branches), the initiative, goad, `LookAndTake.Then`. Next: MC-4.4g4, face-down.
+- 2026-11-18: MC-4.4g4 done: Abhorrent Oculus — 229 of 528 play. Face-down permanents (a copy stamp, `FaceDown`),
+  manifest dread (`LookAndTake.FaceDown`), turning face up (`TurnFaceUpAction`, a special action). Next: MC-4.4g5,
+  Adventures.

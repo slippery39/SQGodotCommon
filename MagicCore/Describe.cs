@@ -68,6 +68,9 @@ public static class Describe
 			TapForManaAction { SacrificeId: not 0 } t =>
 				$"Tap {Name(s, t.CardId)}, sacrificing {Name(s, t.SacrificeId)}, for {t.Color}{(t.OfTheOther > 0 ? $" ({t.OfTheOther} of its other colour)" : "")}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
+			TurnFaceUpAction f => TurnFaceUpAction.CardOf(s, f.PlayerId, f.CardId) is { } card
+				? $"Turn face up: {card.Name} ({card.ManaCost})"
+				: "Turn face up",
 			_ => action.GetType().Name,
 		};
 
@@ -111,7 +114,7 @@ public static class Describe
 
 	public static string Card(GameState s, Card c)
 	{
-		var parts = new List<string> { c.Name };
+		var parts = new List<string> { c.Name is "" ? "Face-down" : c.Name };
 		if (c.Is(CardType.Creature))
 			parts.Add($"{s.Power(c)}/{s.Toughness(c)}");
 		if (c.Is(CardType.Planeswalker))
@@ -156,7 +159,10 @@ public static class Describe
 	public static string Modes(IReadOnlyList<Effects.Mode> modes, IEnumerable<int> chosen) =>
 		string.Join(" + ", chosen.Select(i => modes[i].Text.TrimStart('•', ' ')));
 
-	static string Name(GameState s, int id) => s.HasObject(id) ? s.GetObject(id).Name : $"#{id}";
+	static string Name(GameState s, int id) =>
+		!s.HasObject(id) ? $"#{id}"
+		: s.GetObject(id).Name is "" ? "a face-down 2/2" // manifest dread: no name (CR 708.2)
+		: s.GetObject(id).Name;
 
 	static string Targets(GameState s, ImmutableArray<int> targets) =>
 		targets.IsDefaultOrEmpty || targets.All(t => t == 0)

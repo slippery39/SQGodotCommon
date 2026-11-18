@@ -184,6 +184,18 @@ public static class MagicRules
 							ActivateCandidates(s, player, c)
 								.Concat(LoyaltyCandidates(s, player, c))
 								.Concat(ManaMoves(s, player, c))
+								.Concat(
+									c.HasComponent<FaceDown>()
+										?
+										[
+											new TurnFaceUpAction
+											{
+												PlayerId = player,
+												CardId = c.Id,
+											},
+										]
+										: []
+								)
 						),
 					.. s.CardsIn(player, ZoneType.Hand)
 						.Concat(s.CardsIn(player, ZoneType.Graveyard))
@@ -801,6 +813,7 @@ public static class MagicRules
 			ActivateAbilityAction a => a.CardId,
 			ActivateLoyaltyAction l => l.CardId,
 			TapForManaAction t => t.CardId,
+			TurnFaceUpAction f => f.CardId,
 			_ => 0,
 		};
 

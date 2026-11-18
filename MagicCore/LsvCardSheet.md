@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 30/46 · uncommon 40/86 · rare 112/279 · mythic 37/108 · **228/528**
+**Playable:** common 30/46 · uncommon 40/86 · rare 112/279 · mythic 38/108 · **229/528**
 
 ### "Name Sticker" Goblin
 
@@ -4470,7 +4470,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({U/P} can be paid with either {U} or 2 life.)  
 > You may have this creature enter as a copy of any artifact or creature on the battlefield, except it's an artifact in addition to its other types.
 
-**Status:** scripted · **tests naming it:** LsvBatch2eTests, LsvBatch2gTests
+**Status:** scripted · **tests naming it:** LsvBatch2eTests, LsvBatch2g4Tests, LsvBatch2gTests
 
 **Engine pieces:** `MayEnterAsCopy` — Flesh Duplicate: "You may have this creature enter as a copy of any creature on the…
 
@@ -6042,7 +6042,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > At the beginning of each opponent's upkeep, manifest dread. (Look at the top two cards of your library. Put one onto the battlefield face down as a 2/2 creature and the other into your graveyard. Turn it face up any time for its mana cost if it's a creature card.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g4Tests
+
+**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileFromGraveyardCost` — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is…
+
+```csharp
+["Abhorrent Oculus"] =
+[
+	new AdditionalCostsComponent([new ExileFromGraveyardCost(!Is.Source) { Count = 6 }]),
+	When(TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent), [], ManifestDread),
+],
+```
 
 ### Aerid Konstrari
 

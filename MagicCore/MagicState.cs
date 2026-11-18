@@ -436,6 +436,8 @@ public static class MagicState
 	/// <param name="sunburst">Sunburst: "a charge counter on it for each color of mana spent to cast it".</param>
 	/// <param name="loses">MoveTo.Loses — Enduring Innocence returns "an enchantment. (It's not a creature.)".</param>
 	/// <param name="attacking">CreateTokens.Attacking — mobilize's tokens are created "attacking" (tapped is its own word).</param>
+	/// <param name="faceDown">Manifest dread (LookAndTake.FaceDown): it enters a face-down 2/2 — none of its own
+	/// abilities as it enters (CR 708.3), so no "enters" trigger, counter or choice of its.</param>
 	public static GameState EnterBattlefield(
 		this GameState s,
 		int cardId,
@@ -449,7 +451,8 @@ public static class MagicState
 		int sunburst = 0,
 		CardType loses = CardType.None,
 		bool attacking = false,
-		TriggeredAbilityComponent? gains = null
+		TriggeredAbilityComponent? gains = null,
+		bool faceDown = false
 	)
 	{
 		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
@@ -461,10 +464,11 @@ public static class MagicState
 			&& s.GetCard(cardId) is var entering
 			&& EntryRules(
 					s,
-					entering with
+					// a face-down card is judged as the 2/2 it enters as
+					(faceDown ? entering.TurnedFaceDown() : entering) with
 					{
 						ControllerId = controllerId,
-						Types = entering.Types & ~loses,
+						Types = faceDown ? CardType.Creature : entering.Types & ~loses,
 					}
 				)
 				.Any(r => r.ExiledUnlessCast)
@@ -475,6 +479,8 @@ public static class MagicState
 			? (s.GetObject(parent) as Zone)?.ZoneType
 			: null;
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
+		if (faceDown)
+			s = s.UpdateObject(cardId, s.GetCard(cardId).TurnedFaceDown());
 		// Enduring Innocence: "It's an enchantment. (It's not a creature.)" — the types this entry takes, there
 		// as it enters and until it leaves.
 		if (loses != CardType.None && s.GetCard(cardId) is var printed)

@@ -174,6 +174,16 @@ whose subsystem it lives in.
   **"Look at an opponent's hand, then choose any card name"** (Anointed Peacekeeper) is the same piece
   `{ LooksAtHand, AnyName }` (MC-4.4d2b): the hand is made known before the name is asked, and the lands' names are
   offered too (`CardRegistry.CardNames(s, lands: true)`).
+- **A face-down permanent** (CR 708; Abhorrent Oculus' manifest dread, MC-4.4g4) is a COPY stamp, as `EnteredAsCopy`:
+  `Card.TurnedFaceDown` gives it a blank 2/2's copiable values (no name, creature only, no cost, colour or abilities)
+  and keeps the card on `FaceDown(Original)` — status, so a copy of it is a nameless 2/2 with no card under it, and
+  `Card.Fresh` turns it face up as it leaves (CR 708.9: the graveyard sees the card). It ENTERS face down —
+  `EnterBattlefield(faceDown:)`, stamped before the entry event, so none of its own "enters" happens (CR 708.3) and
+  Containment Priest sees a nontoken creature. Manifest dread is `LookAndTake { To = Battlefield, FaceDown, Must, Rest =
+  Graveyard }` (`LsvCards.ManifestDread`). **"Turn it face up any time for its mana cost if it's a creature card"** is
+  `TurnFaceUpAction`, a special action (CR 116.2b): offered with priority, no stack, the mana cost paid, the same object
+  (`Card.TurnedFaceUp`: damage, counters, tapped stay; a type stamp undone, the state check re-stamps it) — no "enters". `Card.IsHiddenFrom` hides it from all but its
+  controller (CR 708.5).
 - **Phasing** (The City on the Edge of Forever, CR 702.26) is `Rules.Phasing`: a phased-out permanent is MOVED, with
   `MoveObject`, to its controller's `PhasedOut` zone — no zone change: the same object, its counters, tapped state
   and links, nothing triggers, "until it leaves" never fires — and what is attached goes with it. It phases in as

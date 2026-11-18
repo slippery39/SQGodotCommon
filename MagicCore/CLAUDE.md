@@ -29,7 +29,7 @@ MagicCore/
 ├── Turns/Combat.cs      who may attack/block, declarations, simultaneous damage, end of combat
 ├── Turns/Triggers.cs    trigger events (MagicEvent: kind, subjects, who did it), the one matcher for a
 │                        Trigger, Collect (APNAP, intervening "if"), PutOnStack with target choices
-├── Actions/             PassPriority, PlayLand, TapForMana; CastSpell, ActivateAbility, StackAbility,
+├── Actions/             PassPriority, PlayLand, TapForMana, TurnFaceUp (CR 708); CastSpell, ActivateAbility, StackAbility,
 │                        StackResolution (fizzle); mulligan; hand, library, combat and target choices
 ├── Actions/LoyaltyActions.cs  Loyalty.AbilitiesOf (own + granted) and ActivateLoyaltyAction
 ├── Actions/ModeChoices.cs     ChooseModesChoice — a modal trigger's modes, chosen as it goes on the stack

@@ -116,6 +116,49 @@ public record PlayLandAction : GameAction
 }
 
 /// <summary>
+/// Abhorrent Oculus' manifest dread: "Turn it face up any time for its mana cost if it's a creature card." A special
+/// action (CR 116.2b): any time you have priority, no stack — its mana cost paid, it is what it was (Card.TurnedFaceUp),
+/// the same object: no "enters". Offered for a face-down permanent you control whose card is a creature card.
+/// </summary>
+public record TurnFaceUpAction : GameAction
+{
+	public int PlayerId { get; init; }
+	public int CardId { get; init; }
+
+	/// <summary>The face-down permanent's card, if this player may turn it face up — null otherwise.</summary>
+	public static Card? CardOf(GameState s, int playerId, int cardId) =>
+		s.HasObject(cardId)
+		&& s.IsIn(cardId, playerId, ZoneType.Battlefield)
+		&& s.GetCard(cardId).GetComponent<FaceDown>() is { Original: var card }
+		&& card.Is(CardType.Creature)
+			? card
+			: null;
+
+	// ponytail: a Phyrexian symbol is paid with its colour, never 2 life (PayMana's ceiling), and a creature card with
+	// no mana cost turns up free rather than never (CR 118.6) — none in the cube's sets; a move per life paid when one is.
+	static ManaCost Cost(Card card) => card.ManaCost.PayingLifeFor(0);
+
+	public override ValidationResult ValidateAdd(GameState s)
+	{
+		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
+			return noPriority;
+		if (CardOf(s, PlayerId, CardId) is not { } card)
+			return ValidationResult.Invalid("Not a face-down creature card you control");
+		return ManaPayment.Find(s, PlayerId, Cost(card), 0) is null
+			? ValidationResult.Invalid("Can't pay its mana cost")
+			: ValidationResult.Valid;
+	}
+
+	public override ActionResult Execute(GameState s)
+	{
+		var card = CardOf(s, PlayerId, CardId)!;
+		s = ManaPayment.Pay(s, PlayerId, ManaPayment.Find(s, PlayerId, Cost(card), 0)!);
+		s = s.UpdateObject(CardId, s.GetCard(CardId).TurnedFaceUp());
+		return new ActionResult(Priority.Retain(s, PlayerId));
+	}
+}
+
+/// <summary>
 /// Activates a land's mana ability. Only basic land types' intrinsic abilities so far (CR 305.6);
 /// nonbasic lands get hand-written abilities with their cards.
 ///

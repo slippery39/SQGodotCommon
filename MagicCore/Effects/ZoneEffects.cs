@@ -2311,6 +2311,12 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	public bool Tapped { get; init; }
 
 	/// <summary>
+	/// Manifest dread (Abhorrent Oculus): "Look at the top two cards of your library. Put one onto the battlefield face
+	/// down as a 2/2 creature and the other into your graveyard." — To = Battlefield, Must, Rest = Graveyard.
+	/// </summary>
+	public bool FaceDown { get; init; }
+
+	/// <summary>
 	/// Undercity's Throne of the Dead Three: "Put a creature card from among them onto the battlefield with three
 	/// +1/+1 counters on it. It gains hexproof until your next turn." — run after, with Ref.ThisWay the cards taken.
 	/// ponytail: the counters are put on once it has entered, not as it enters — the same unless a card counts them
@@ -2335,7 +2341,9 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 		var take = Math.Min(Take.Value(s, InputContext), choice.GetOptions(s, context).Count);
 		var where = To switch
 		{
-			ZoneType.Battlefield => "onto the battlefield",
+			ZoneType.Battlefield => FaceDown
+				? "onto the battlefield face down"
+				: "onto the battlefield",
 			ZoneType.Library => "on top of your library",
 			ZoneType.Hand => "into your hand",
 			_ => $"into your {To.ToString().ToLowerInvariant()}",
@@ -2355,6 +2363,7 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			Reveal = Reveal,
 			To = To,
 			Tapped = Tapped,
+			FaceDown = FaceDown,
 			Rest = Rest,
 			Then = Then,
 		};
@@ -2406,6 +2415,8 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 
 	public bool Tapped { get; init; }
 
+	public bool FaceDown { get; init; }
+
 	public TheRest Rest { get; init; }
 
 	/// <summary>LookAndTake.Then: run after the rest are put away, with Ref.ThisWay the cards taken.</summary>
@@ -2437,7 +2448,12 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 		{
 			s = To switch
 			{
-				ZoneType.Battlefield => s.EnterBattlefield(id, PlayerId, tapped: Tapped),
+				ZoneType.Battlefield => s.EnterBattlefield(
+					id,
+					PlayerId,
+					tapped: Tapped,
+					faceDown: FaceDown
+				),
 				// On top: it is among the top cards already and the rest leave from around it — no move, and
 				// its owner has looked at it. ponytail: several taken keep their old order, and with
 				// TopInAnyOrder the rest are ordered above them; no card says either yet.

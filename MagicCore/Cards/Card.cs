@@ -127,9 +127,14 @@ public record Card : GameObject
 	/// </summary>
 	public Knowers KnownTo { get; init; }
 
-	/// <summary>Vulcan Mind-Meld: a card exiled face down this player hasn't seen — a front end draws its back (CR 406.3).</summary>
+	/// <summary>
+	/// Vulcan Mind-Meld: a card exiled face down this player hasn't seen — a front end draws its back (CR 406.3). A
+	/// face-down permanent (Abhorrent Oculus' manifest dread) is hidden from all but its controller (CR 708.5).
+	/// </summary>
 	public bool IsHiddenFrom(int playerId) =>
-		HasComponent<Effects.ExiledFaceDown>() && !IsKnownTo(playerId);
+		HasComponent<FaceDown>()
+			? playerId != ControllerId
+			: HasComponent<Effects.ExiledFaceDown>() && !IsKnownTo(playerId);
 
 	/// <summary>This player has seen the card where it is (V'Ger's look at a hand, a reveal) — the table shows it face up (TBL-6).</summary>
 	public bool IsKnownTo(int playerId) =>
@@ -287,7 +292,7 @@ public record Card : GameObject
 	/// CR 400.7: a card that changes zones is a new object with no memory of its previous one.
 	/// The ONLY reset — every zone change goes through MagicState.MoveCard, which calls this.
 	/// </summary>
-	public Card Fresh() => WithoutAnimation().WithoutCopyEffect().Reset();
+	public Card Fresh() => WithoutAnimation().WithoutCopyEffect().TurnedFaceUp().Reset();
 
 	Card Reset() =>
 		this with
@@ -347,6 +352,7 @@ public record Card : GameObject
 				or Effects.ChosenPlayer
 				or CopyUntilEndOfTurn
 				or EnteredAsCopy
+				or FaceDown
 				or Effects.DelayedTrigger
 				or Animated
 				or Effects.TriggersAdditionalTime { UntilUntapped: true }
@@ -436,6 +442,34 @@ public record Card : GameObject
 		WithoutCopyUntilEndOfTurn() is var card && card.GetComponent<EnteredAsCopy>() is { } entered
 			? (Card)card.WithCopiableValuesOf(entered.Original).WithoutComponents<EnteredAsCopy>()
 			: card;
+
+	/// <summary>
+	/// Abhorrent Oculus' manifest dread: "Put one onto the battlefield face down as a 2/2 creature" — no name, types
+	/// but creature, cost, colour or abilities (CR 708.2): a blank 2/2's copiable values, what it was kept on
+	/// <see cref="FaceDown"/>. Its status (tapped, counters, damage) stays its own, as a copy's.
+	/// </summary>
+	public Card TurnedFaceDown() =>
+		(Card)WithCopiableValuesOf(FaceDownModel).WithComponent(new FaceDown(this));
+
+	static readonly Card FaceDownModel =
+		new()
+		{
+			Name = "",
+			Types = CardType.Creature,
+			BasePower = 2,
+			BaseToughness = 2,
+		};
+
+	/// <summary>
+	/// "Turn it face up" (TurnFaceUpAction) — or it leaves the battlefield, revealed (CR 708.9, Fresh): what it was, the
+	/// same object (CR 708.8), its status kept. A type change on the 2/2 is undone first: it remembers the 2/2, and the
+	/// state check stamps the card afresh (Attachments.Check).
+	/// </summary>
+	public Card TurnedFaceUp() =>
+		GetComponent<FaceDown>() is { } down
+			? (Card)
+				WithoutAnimation().WithCopiableValuesOf(down.Original).WithoutComponents<FaceDown>()
+			: this;
 
 	/// <summary>Cleanup: only Hall of Echoes' "until end of turn" copy ends — a Flesh Duplicate stays one.</summary>
 	public Card WithoutCopyUntilEndOfTurn() =>
@@ -547,6 +581,15 @@ public record CopyUntilEndOfTurn(Card Original) : GameComponent;
 /// (Card.WithoutCopyEffect), never in cleanup.
 /// </summary>
 public record EnteredAsCopy(Card Original) : GameComponent;
+
+/// <summary>
+/// Abhorrent Oculus' manifest dread: "Put one onto the battlefield face down as a 2/2 creature … Turn it face up any
+/// time for its mana cost if it's a creature card." — the card it is, kept while it is a face-down 2/2
+/// (Card.TurnedFaceDown). Status: a copy of the 2/2 is no face-down card, and leaving turns it face up.
+/// ponytail: the card is in the state, so the search knows an opponent's face-down card — Hidden.Sample would put a
+/// guess in its place when the AI should play fair against it (DesignNotes).
+/// </summary>
+public record FaceDown(Card Original) : GameComponent;
 
 /// <summary>Its types changed by this source's BecomesType (this object of it); the rest is what it was, to put back. SourceId 0: by an effect with no duration, until it leaves (Assimilate).</summary>
 public record Animated(

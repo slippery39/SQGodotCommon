@@ -1916,6 +1916,27 @@ public static class LsvCards
 					If = new YouHaveTheInitiative(),
 				},
 			],
+			// ===== MC-4.4g4: face-down permanents (Card.TurnedFaceDown, TurnFaceUpAction) =====
+			["Abhorrent Oculus"] =
+			[
+				new AdditionalCostsComponent(
+					[new ExileFromGraveyardCost(!Is.Source) { Count = 6 }]
+				),
+				When(TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent), [], ManifestDread),
+			],
+		};
+
+	/// <summary>
+	/// Manifest dread (Abhorrent Oculus): "Look at the top two cards of your library. Put one onto the battlefield face
+	/// down as a 2/2 creature and the other into your graveyard."
+	/// </summary>
+	public static LookAndTake ManifestDread =>
+		new(2)
+		{
+			Must = true,
+			To = ZoneType.Battlefield,
+			FaceDown = true,
+			Rest = TheRest.Graveyard,
 		};
 
 	/// <summary>Feywild Caretaker: "a 1/1 blue Faerie Dragon creature token with flying".</summary>

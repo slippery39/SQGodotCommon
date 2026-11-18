@@ -134,6 +134,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `To` (ZoneType): Where the taken go — your hand unless said. Hit It!: "Put a land card from among them onto the battlefield…
   - `Rest` (TheRest): Where the cards not taken go — Rutherford's "the rest on the bottom of your library in a random order"…
   - `Tapped` (bool): Hit It!: "… tapped".
+  - `FaceDown` (bool): Manifest dread (Abhorrent Oculus): "Look at the top two cards of your library. Put one onto the battlefield…
   - `Then` (ImmutableList<GameAction>): Undercity's Throne of the Dead Three: "Put a creature card from among them onto the battlefield with three…
 - **`LookAtHand(Ref Who)`** — V'Ger, the Intruder: "Look at target opponent's hand" — every card in it becomes known to its owner's opponent (Card.KnownTo); the table… [2: Gitaxian Probe, Sen Triplets]
 - **`LoseLife(Ref Who, Count Amount)`** — Life loss that is not damage — lifelink and damage triggers do not see it. [20: Rise of the Deathbringer, Vraska's Final Mercy, Bloodline Recollector // Ancestral Craving…]
@@ -304,7 +305,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`BeholdCost(string Subtype)`** — Countersculpt: "behold a [Subtype] or pay {N}" — a card you control or in your hand (not this one). Beholding moves nothing, so any one is… [1: Countersculpt]
 - **`DiscardCost(Filter? Filter = null)`** — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter matches; Solitary Cell: "Discard a legendary card" is… [8: Twinned Vision, Hallway Heckler // Vicious Verse, Murmuring Volume…]
 - **`DiscardSelfCost`** — Cycling: "Discard this card:". [7: Sureshot Sower, Proft, Sinister Mastermind, Gideon's Memorial…]
-- **`ExileFromGraveyardCost(Filter Filter)`** — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is !Is.Source; one legal action per card (ExileId).… [3: Gallia, Tragic Host, Underworld Breach, Drivnod, Carnage Dominus]
+- **`ExileFromGraveyardCost(Filter Filter)`** — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is !Is.Source; one legal action per card (ExileId).… [4: Gallia, Tragic Host, Underworld Breach, Abhorrent Oculus…]
   - `Count` (int): Drivnod: "three creature cards" — more than one is picked after activating.
 - **`ExileFromHandCost(Filter? Filter = null)`** — Q, Stacking the Deck's gift: "Exile a card from your hand:" — one legal action per card (not this one); Force of Will: "exile a blue card… [1: Pyrokinesis]
 - **`ExileSelfCost`** — "Exile this card from your graveyard:". [10: Campus Crier, Cryotheory Adept, Theoretical Necromancer…]
@@ -334,7 +335,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `OnlyIf` (Condition?): "Activate only if [condition]" — judged as it is activated.
   - `OncePerTurn` (bool): DOT-7 Repair Squad: "Activate only once each turn." — stamped on the card as it is activated…
   - `Exhaust` (bool): "Exhaust — … (Activate each exhaust ability only once.)" — stamped on the card as it is activated. ponytail:…
-- **`AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs)`** — "As an additional cost to cast this spell, …" — Silence the Echo: [SacrificeCost(Is.Creature | Is.Planeswalker) { Or = new PayManaCost(3)… [6: Silence the Echo, Countersculpt, Bitter Triumph…]
+- **`AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs)`** — "As an additional cost to cast this spell, …" — Silence the Echo: [SacrificeCost(Is.Creature | Is.Planeswalker) { Or = new PayManaCost(3)… [7: Silence the Echo, Countersculpt, Bitter Triumph…]
 - **`AdditionalLandEachTurn`** — Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops. [3: Captain Kathryn Janeway, Nog, Ambitious Cadet, Loot, Exuberant Explorer]
 - **`Animated(int SourceId, int SourceIncarnation, CardType Types, string? AddedSubtype, int BasePower, int BaseToughness)`** — Its types changed by this source's BecomesType (this object of it); the rest is what it was, to put back. SourceId 0: by an effect with no…
 - **`ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComponent> Abilities)`** — Draconic Visitor: "If one or more artifact tokens would be created under your control, that many [Token] are created instead." [2: Draconic Visitor, Holo-Engineer]
@@ -401,6 +402,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`ExiledFaceDown`** — Vulcan Mind-Meld: "exiles it face down" — in exile, seen only by whoever Card.KnownTo says (the player who looked). Gone with the zone…
 - **`ExiledUntilLeaves(int SourceId, int SourceIncarnation)`** — On a card exiled "until [source] leaves the battlefield" — MagicState.MoveCard returns it then.
 - **`ExtraRedFromMountains`** — Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf. [1: Pyre Rhymer // Molten Tide]
+- **`FaceDown(Card Original)`** — Abhorrent Oculus' manifest dread: "Put one onto the battlefield face down as a 2/2 creature … Turn it face up any time for its mana cost… [1: Vulcan Mind-Meld]
 - **`FlashbackComponent(ManaCost Cost)`** — "Flashback [cost] (You may cast this card from your graveyard for its flashback cost. Then exile it.)" Twinned Vision's flashback also… [8: Generous Revival, Predictive Preparations, Bestial Incursion…]
   - `Costs` (ImmutableList<AdditionalCost>): Twinned Vision: [DiscardCost()] — what the flashback costs beyond mana.
 - **`GrantedFlashback(int OnTurn)`** — Stingcaster Mage: "gains flashback until end of turn. The flashback cost is equal to its mana cost." Lost on any zone change.
