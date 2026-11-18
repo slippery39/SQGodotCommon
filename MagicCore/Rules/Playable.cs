@@ -33,6 +33,7 @@ public static class Playable
 		&& card.GetComponent<PlayableFromExile>() is { } playable
 		&& playable.PlayerId == playerId
 		&& s.GetGame().TurnNumber <= playable.UntilTurn
+		&& s.GetGame().TurnNumber >= playable.FromTurn
 		&& !(playable.CastOnly && card.Is(CardType.Land))
 		&& (
 			playable.If is null
@@ -172,7 +173,7 @@ public static class Playable
 			&& card.GetComponent<PlayableFromExile>() is { Free: true }
 				? [new MayCastFromHandFree(Filters.Is.Source)]
 				: Enumerable.Empty<MayCastFromHandFree>()
-		).Concat(s.IsIn(card.Id, playerId, ZoneType.Hand) ? s.CardsIn(playerId, ZoneType.Battlefield).SelectMany(p => s.AbilitiesOf<MayCastFromHandFree>(p).Where(m => m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id)) && (m.If?.Holds(s, Conditions.Of(p)) ?? true))) : []).Concat(Costs.Flashback(s, card) is null ? card.Components.OfType<MayCastFromHandFree>().Where(m => m.What.Equals(Filters.Is.Source) && (m.If?.Holds(s, Conditions.Of(card with { ControllerId = playerId })) ?? true)) : []).OrderBy(m => m.Costs.Count + (m.Mana is null ? 0 : 1)).FirstOrDefault();
+		).Concat(s.IsIn(card.Id, playerId, ZoneType.Hand) ? s.CardsIn(playerId, ZoneType.Battlefield).SelectMany(p => s.AbilitiesOf<MayCastFromHandFree>(p).Where(m => m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id)) && (m.If?.Holds(s, Conditions.Of(p)) ?? true))) : []).Concat(Costs.Flashback(s, card) is null ? card.Components.OfType<MayCastFromHandFree>().Where(m => m.What.Equals(Filters.Is.Source) && (m.From.IsEmpty || m.From.Any(zone => s.IsIn(card.Id, playerId, zone))) && (m.If?.Holds(s, Conditions.Of(card with { ControllerId = playerId })) ?? true)) : []).OrderBy(m => m.Costs.Count + (m.Mana is null ? 0 : 1)).FirstOrDefault();
 
 	/// <summary>What the free cast costs beyond mana (<see cref="FreeCast"/>), or null when nothing allows one.</summary>
 	public static System.Collections.Immutable.ImmutableList<AdditionalCost>? FreeCosts(

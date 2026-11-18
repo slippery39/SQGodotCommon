@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 31/46 · uncommon 41/86 · rare 113/279 · mythic 39/108 · **233/528**
+**Playable:** common 31/46 · uncommon 41/86 · rare 113/279 · mythic 40/108 · **234/528**
 
 ### "Name Sticker" Goblin
 
@@ -7179,7 +7179,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As long as you have one or fewer cards in hand, if you would draw one or more cards, you draw that many cards plus one instead.  
 > Warp {1}{U}
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g9Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `NumericReplacement` — "If [an event] would happen, [twice that many / that much plus N] instead" (CR 614) — on…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Quantum Riddler"] =
+[
+	When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+	new NumericReplacement(ReplacedEvent.Draw)
+	{
+		Affected = Is.Yours,
+		If = new Not(
+			new AtLeast(Count.NumberOf(Ref.All(ZoneType.Hand, of: Ref.You)), 2)
+		),
+		Plus = 1,
+	},
+	Warp("{1}{U}"),
+],
+```
 
 ### Questing Beast
 

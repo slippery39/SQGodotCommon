@@ -1112,6 +1112,22 @@ as his three priorities.
   would never pay it) and names a line with no " —". The summary of `CostToPay` names spree. **Not taken:** `EachWord`
   for every multi-mode spell (MC-8, Shayne); one helper for the four `added` sums (style); the AI's land and curve
   heuristics read the printed mana value (kicker's and replicate's costs the same: an AI-lane note).
+- 2026-11-18, Claude — **4.4g9's notes (warp).** No new piece — three options on the plan's nearest pieces: the card's
+  own alternative cost `MayCastFromHandFree(Is.Source) { Mana }` takes `From = [Hand]` (warp is cast from the hand
+  alone, CR 702.185a; empty is anywhere, as before) and `PaidAtNextEndStep` (effects put on the permanent as a delayed
+  trigger when that cost was paid — dash's return takes it as it comes), and `PlayPermission.LaterTurn` →
+  `PlayableFromExile.FromTurn` ("on a later turn"). The setup is in `EnterFromStackAction`, as the spell resolves —
+  not a "when it enters" trigger as evoke's (evoke IS a trigger; warp isn't, so Tishana's Tidebinder can't keep a
+  warped creature by countering its setup). `Scripting.Warp(cost)`. The draw replacement is tier 1:
+  `NumericReplacement(Draw) { Plus = 1, If }`, its `If` asked of numeric replacements too (`Replacements.Affects`).
+  **Legal actions:** two casts from the hand (paid, warp), one from exile on a later turn.
+  **`/pre-commit`'s review: nine findings; three taken, two with a test that fails without it (2 breaks caught):** the
+  hand asked was the card's OWNER's, so under Sen Triplets warp was offered from their hand — now the caster's; the
+  delayed trigger had no controller, so a stolen Riddler's exile was the thief's — now the spell's (CR 603.7d); a
+  summary claimed dash, which isn't built. **Not taken:** naming WHICH alternative cost was paid on the stack (a ceiling,
+  DesignNotes — no card has two); the evaluator's impulse term pricing the exiled card before its turn (it is the
+  player's card all the same; DesignNotes); reading warp from the spell before it enters (nothing re-stamps it there);
+  `LaterTurn` as a number (no second card); a bounce or flicker test (a zone change strips a delayed trigger, tested).
 
 ## Tasks
 
@@ -1322,15 +1338,25 @@ as his three priorities.
           casts word by word (`EachWord`); 6 tests, 7 breaks caught; `batch_checks.py` all 7 steps (golden-out
           unchanged; golden-in moved 29 random and 78 card-replay games, added 4, the AI replay unmoved; probe 150
           games, none unfinished, Three Steps Ahead cast 543 times; full suite 1,971 passed)
-    - [ ] MC-4.4g9 Warp: Quantum Riddler
+    - [x] MC-4.4g9 Warp: Quantum Riddler — done 2026-11-18: `Scripting.Warp` (`MayCastFromHandFree { From,
+          PaidAtNextEndStep }`, `PlayPermission.LaterTurn`); 5 tests, 8 breaks caught; `batch_checks.py` all 8 steps
+          (golden-out unchanged; golden-in moved 29 random and 68 card-replay games, added 4, the AI replay unmoved;
+          probe 150 games, 1 unfinished past 300 permanents, Quantum Riddler cast 802 times; full suite 1,979 passed)
     - [ ] MC-4.4g10 Classes: Does Machines
 
 ## Next
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
-(4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7) and spree (4.4g8) — are done: **233 of 528 play.** Next,
-in a NEW session: **MC-4.4g9 — Warp** (Quantum Riddler): the plan is in Decisions (4.4g's plan, part 9). Then g10.
+(4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8) and warp (4.4g9) — are done: **234 of
+528 play.** Next, in a NEW session: **MC-4.4g10 — Classes** (Does Machines): the plan is in Decisions (4.4g's plan,
+part 10) — the last of blue's tier 3.
+From 4.4g9: warp is `Scripting.Warp(cost)` — the card's own alternative cost `{ Mana, From = [Hand], PaidAtNextEndStep }`,
+the end-step effects put on the permanent as a delayed trigger by `EnterFromStackAction` when that cost was paid (no
+"enters" trigger), and `MakePlayable { LaterTurn }` → `PlayableFromExile.FromTurn`. g9's tests are in
+`LsvBatch2g9Tests.cs` (`CastRiddler(warp)`, `KeepInHand(n)`, `ToMyNextMain()`). The probe's 150 games had one
+unfinished past 300 permanents (g8's had none) — likely the Tribbles card that doubles itself (Shayne); look if it
+recurs. The probe's "activated 6" for Riddler (no activated ability of its own) is ignored unless it recurs (Shayne).
 From 4.4g8: spree is `Mode.Cost` — read from the printed "+ {cost} —" by `Scripting.Printed`, added per chosen mode in
 `CastSpellAction.CostBeforeLife` — and a spree text is `EachWord` (one cast per set of modes, targets word by word;
 Shayne). g8's tests are in `LsvBatch2g8Tests.cs` (`CastOf(card, modes)`: the cast offered for those modes).
@@ -1552,3 +1578,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   cast before it this turn (every player's, counted as it is cast). Next: MC-4.4g8, spree.
 - 2026-11-18: MC-4.4g8 done: Three Steps Ahead — 233 of 528 play. Spree is a cost on each mode, read from the printed
   line; its targets are chosen word by word (Shayne: 7 casts, not 199). Next: MC-4.4g9, warp.
+- 2026-11-18: MC-4.4g9 done: Quantum Riddler — 234 of 528 play. Warp is the card's alternative cost from the hand, its
+  end-step exile set up as the spell resolves, and the exiled card castable from the next turn on. Next: MC-4.4g10, Classes.

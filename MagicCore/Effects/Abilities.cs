@@ -995,6 +995,9 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 	/// by Playable.FreeCast, so the free cast replaces the paid one.
 	/// </summary>
 	public bool Free { get; init; }
+
+	/// <summary>Warp (Quantum Riddler): "Its owner may cast this card after the current turn has ended" — the first turn it may be (PlayPermission.LaterTurn).</summary>
+	public int FromTurn { get; init; }
 }
 
 /// <summary>
@@ -1548,6 +1551,20 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 
 	/// <summary>Baleful Mastery: "You may pay {1}{B} rather than pay this spell's mana cost." — mana paid instead (AlternativeCostWasPaid reads it).</summary>
 	public ManaCost? Mana { get; init; }
+
+	/// <summary>
+	/// Warp (Quantum Riddler): "You may cast this card from your HAND by paying [cost]" — the zones the card's own
+	/// alternative cost is cast from, the CASTER's (never another's hand under Sen Triplets); empty: wherever it is cast
+	/// (Flare of Fortitude).
+	/// </summary>
+	public ImmutableList<ZoneType> From { get; init; } = [];
+
+	/// <summary>
+	/// Warp (Quantum Riddler): "If this spell's warp cost was paid, exile the permanent this spell becomes at the
+	/// beginning of the next end step" — set up as the spell resolves (EnterFromStackAction), a delayed trigger on the
+	/// permanent, controlled by the spell's controller (CR 603.7d): no trigger to answer as it enters (CR 702.185a).
+	/// </summary>
+	public ImmutableList<GameAction> PaidAtNextEndStep { get; init; } = [];
 }
 
 /// <summary>On a card a permanent exiled for a linked ability (CR 607.2a) — which object of it.</summary>

@@ -172,6 +172,40 @@ public static class Scripting
 		];
 
 	/// <summary>
+	/// Warp (CR 702.185) — Quantum Riddler: "Warp {1}{U} (You can cast this card from your hand for its warp cost.
+	/// Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)" —
+	/// Baleful Mastery's alternative mana cost, from the hand only; paid, the permanent is exiled at the next end step
+	/// (MayCastFromHandFree.PaidAtNextEndStep), and its owner may cast it from there from the next turn on, as long as it
+	/// stays (PlayPermission { Forever, LaterTurn }) — for its mana cost: warp is cast from the hand alone.
+	/// </summary>
+	public static MayCastFromHandFree Warp(string cost) =>
+		new(Is.Source)
+		{
+			Mana = ManaCost.Parse(cost),
+			From = [ZoneType.Hand],
+			PaidAtNextEndStep =
+			[
+				new MoveTo(Ref.Source, ZoneType.Exile)
+				{
+					From = [ZoneType.Battlefield],
+					Then =
+					[
+						new MakePlayable(
+							Ref.ThisWay,
+							new PlayPermission
+							{
+								By = Ref.OwnerOf(Ref.ThisWay),
+								Forever = true,
+								LaterTurn = true,
+								CastOnly = true,
+							}
+						),
+					],
+				},
+			],
+		};
+
+	/// <summary>
 	/// Squad (CR 702.157) — Sicarian Infiltrator: "Squad {2} (As an additional cost to cast this spell, you may pay {2}
 	/// any number of times. When this creature enters, create that many tokens that are copies of it.)" — paid as
 	/// replicate is (CastSpellAction.Replicate, one cast per number of payments), copied as it enters: "if its squad cost

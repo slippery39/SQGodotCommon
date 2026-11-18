@@ -227,6 +227,12 @@ whose subsystem it lives in.
   cost on the card, `MayCastFromHandFree(Is.Source) { Costs = [ExileFromHandCost(colour)] }` (one cast per card
   exiled), and "when it enters, if its evoke cost was paid, sacrifice it" — an intervening if on
   `AlternativeCostWasPaid`, read on the permanent (`Card.CastAs`), so a flickered one stays.
+  **Warp** (CR 702.185, Quantum Riddler, MC-4.4g9) is `Scripting.Warp(cost)`: Baleful Mastery's alternative mana cost
+  `{ From = [Hand] }` (the zones the card's own alternative cost is cast from — the CASTER's: never another's hand
+  under Sen Triplets; empty: anywhere), and `PaidAtNextEndStep` — effects put on the permanent as a delayed trigger when
+  that cost was paid, controlled by the spell's controller (CR 603.7d), set up in `EnterFromStackAction` as it resolves, never a "when it enters" (nothing to answer, CR 702.185a). Warp's is `MoveTo(Ref.Source, Exile)` then
+  `MakePlayable(Ref.ThisWay, { By = its owner, Forever, LaterTurn, CastOnly })` — `LaterTurn` stamps
+  `PlayableFromExile.FromTurn`, the next turn, read by `Playable.IsImpulsePlayableBy`. From exile it costs its mana cost.
   **"Its owner puts it on their choice of the top or bottom of their library"** is Clash of Elements' `May { Who =
   Ref.OwnerOfTarget(), Otherwise }` over two `MoveTo(…, Library) { From = [Stack] }`.
 - **"Choose target [card] in your graveyard. You may cast that card this turn"** (Emry, Lurker of the Loch) is

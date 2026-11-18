@@ -1434,19 +1434,41 @@ public record EnterFromStackAction(
 	/// <summary>Serra Paragon: the triggered ability it gains as it enters (OnStackComponent.Gains).</summary>
 	public TriggeredAbilityComponent? Gains { get; init; }
 
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.EnterBattlefield(
-				CardId,
-				ControllerId,
-				Spell,
-				finality: Finality,
-				attachTo: AttachTo,
-				cast: Spell is not null,
-				sunburst: Sunburst,
-				gains: Gains
-			)
+	public override ActionResult Execute(GameState s)
+	{
+		s = s.EnterBattlefield(
+			CardId,
+			ControllerId,
+			Spell,
+			finality: Finality,
+			attachTo: AttachTo,
+			cast: Spell is not null,
+			sunburst: Sunburst,
+			gains: Gains
 		);
+		// Warp: "if this spell's warp cost was paid, exile the permanent … at the beginning of the next end step" — set
+		// up as it resolves, after it enters (entering strips a delayed trigger). ponytail: the card's first alternative
+		// cost with one is taken as the one paid — a card with two such costs would need OnStackComponent to name it.
+		if (
+			Spell is { AlternativeCost: true }
+			&& s.IsOnBattlefield(CardId)
+			&& s.GetCard(CardId)
+				.Components.OfType<MayCastFromHandFree>()
+				.FirstOrDefault(m => !m.PaidAtNextEndStep.IsEmpty)
+				is { } warp
+		)
+			s = MoveTo.Delay(
+				s,
+				CardId,
+				new DelayedTrigger(
+					new TriggeredAbilityComponent(TriggerEvent.EachEndStep, warp.PaidAtNextEndStep)
+				)
+				{
+					ControllerId = ControllerId, // CR 603.7d: the spell's, even once it is stolen
+				}
+			);
+		return new(s);
+	}
 }
 
 /// <summary>After a resolution, the active player gets priority (CR 117.3b).</summary>

@@ -1965,6 +1965,20 @@ public static class LsvCards
 					M([], new DrawCards(Ref.You, 2), new Discard(Ref.You, 1))
 				),
 			],
+			// ===== MC-4.4g9: warp (Scripting.Warp: MayCastFromHandFree { From, PaidAtNextEndStep }, PlayPermission.LaterTurn) =====
+			["Quantum Riddler"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)),
+				new NumericReplacement(ReplacedEvent.Draw)
+				{
+					Affected = Is.Yours,
+					If = new Not(
+						new AtLeast(Count.NumberOf(Ref.All(ZoneType.Hand, of: Ref.You)), 2)
+					),
+					Plus = 1,
+				},
+				Warp("{1}{U}"),
+			],
 		};
 
 	/// <summary>

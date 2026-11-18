@@ -1824,6 +1824,9 @@ public record PlayPermission
 	/// <summary>Robber of the Rich: "you may CAST that card" — a land exiled this way is never played.</summary>
 	public bool CastOnly { get; init; }
 
+	/// <summary>Warp (Quantum Riddler): "Its owner may cast this card after the current turn has ended" — from the next turn on.</summary>
+	public bool LaterTurn { get; init; }
+
 	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
 	public PlayableFromExile For(GameState s, int who) =>
 		new(
@@ -1841,6 +1844,7 @@ public record PlayPermission
 			If = If,
 			CastOnly = CastOnly,
 			Free = Free,
+			FromTurn = LaterTurn ? s.GetGame().TurnNumber + 1 : 0,
 		};
 }
 
