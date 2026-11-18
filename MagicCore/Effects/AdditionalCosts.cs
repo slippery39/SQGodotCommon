@@ -95,10 +95,42 @@ public sealed record TapSelfCost : AdditionalCost
 /// picking into SecondTap (Worf, Honor-Bound Warrior — Shayne: the player picks both). Only an
 /// activated ability splits it: no spell or ward costs "tap two" yet. "Tap three" or more (Collation
 /// Trimatrix, Captain Jean-Luc Picard's seven Officers) is one cost picking the whole set (TapSet,
-/// ActivateAbilityAction.TapIds) — the player picks every one (Shayne, 2026-11-05).
+/// ActivateAbilityAction.TapIds) — the player picks every one (Shayne, 2026-11-05). "Tap any number of
+/// creatures you control with total power N or more" (teamwork, We Say Thee Nay!; crew) is <see cref="TotalPower"/>.
 /// </summary>
 public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 {
+	/// <summary>
+	/// Teamwork 2 (We Say Thee Nay!): "tap any number of creatures you control with total power 2 or more" — no
+	/// pick in the action: the creatures are picked AFTER it, one at a time until the total is reached
+	/// (TapChosenForPowerAction) — a cast per set would be 4,096 against 12 creatures. Count is unused.
+	/// </summary>
+	public int TotalPower { get; init; }
+
+	static int PowerOf(GameState s, int id) => Math.Max(0, s.Power(s.GetCard(id)));
+
+	/// <summary>
+	/// Teamwork's creatures kept out of the mana payment, which comes first: the most powerful until the total —
+	/// any later pick among the untapped then reaches it too. ponytail: a mana creature can be reserved where a
+	/// smaller set would leave it to pay; reserve mana creatures last if a cast is ever refused that way.
+	/// </summary>
+	IEnumerable<int> Reserved(GameState s, int playerId, int sourceId)
+	{
+		var total = 0;
+		foreach (
+			var (id, power) in Candidates(s, playerId, sourceId)
+				.Select(id => (id, power: PowerOf(s, id)))
+				.Where(c => c.power > 0)
+				.OrderByDescending(c => c.power)
+		)
+		{
+			if (total >= TotalPower)
+				yield break;
+			total += power;
+			yield return id;
+		}
+	}
+
 	/// <summary>With "{T}" in the same cost the source is already spoken for — set by ActivatedAbilityComponent.Costs.</summary>
 	public bool NotTheSource { get; init; }
 
@@ -106,7 +138,8 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 	public bool Second { get; init; }
 
 	public override CostSlot Slot =>
-		Count >= 3 ? CostSlot.TapSet
+		TotalPower > 0 ? CostSlot.None
+		: Count >= 3 ? CostSlot.TapSet
 		: Second ? CostSlot.SecondTap
 		: CostSlot.Tap;
 
@@ -121,14 +154,34 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 
 	/// <summary>"Tap two": two untapped to choose from, for each half.</summary>
 	public override bool CanPay(GameState s, int playerId, int sourceId) =>
-		Candidates(s, playerId, sourceId).Count() >= Count;
+		TotalPower > 0
+			? Candidates(s, playerId, sourceId).Sum(id => PowerOf(s, id)) >= TotalPower
+			: Candidates(s, playerId, sourceId).Count() >= Count;
 
 	public override bool Taps => true;
 
-	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		chosen == 0 ? s : s.Tap(chosen);
+	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
+		TotalPower > 0 ? Reserved(s, playerId, sourceId)
+		: chosen == 0 ? []
+		: [chosen];
 
-	public override string Describe() => "Tap an untapped permanent";
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		TotalPower > 0
+			? s.SpawnAction(
+				TapChosenForPowerAction.Next(
+					playerId,
+					sourceId,
+					NotTheSource ? Filter & !Is.Source : Filter,
+					TotalPower
+				)
+			)
+		: chosen == 0 ? s
+		: s.Tap(chosen);
+
+	public override string Describe() =>
+		TotalPower > 0
+			? $"Tap creatures with total power {TotalPower} or more"
+			: "Tap an untapped permanent";
 }
 
 /// <summary>

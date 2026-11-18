@@ -47,7 +47,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`Counter(Ref What)`** — Precise Redaction: "Counter target spell" — through StackResolution.Counter. [16: Precise Redaction, Countersculpt, Consign to Memory…]
   - `To` (ZoneType): Remand: "If that spell is countered this way, put it into its owner's hand instead of into that player's…
   - `Then` (ImmutableList<GameAction>): Tishana's Tidebinder: "If an ability of an artifact, creature, or planeswalker is countered this way, that…
-- **`CounterUnlessPays(Ref What, ManaCost Cost)`** — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer CHOOSES (CR 118.12): asked only when they can pay.… [7: Icy Reception, Theorix Charm, Gideon the Oathless…]
+- **`CounterUnlessPays(Ref What, ManaCost Cost)`** — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer CHOOSES (CR 118.12): asked only when they can pay.… [8: Icy Reception, Theorix Charm, Gideon the Oathless…]
   - `Costs` (ImmutableList<AdditionalCost>): Ward with a cost beyond mana, paid by choosing as it resolves — Gideon the Oathless: [DiscardCost()];…
 - **`CreateTokenCopy(Ref What)`** — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new token under your control — never its counters,… [11: Sphinx of False Conclusions, Face Yourself, Sublime Epiphany…]
   - `AddingKeywords` (ImmutableArray<string>): "Except it has haste" — keywords the copies also have.
@@ -123,7 +123,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords)`** — Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn." [1: Hungering Puppetbeast]
 - **`GetEmblem(ImmutableArray<GameComponent> Abilities)`** — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good. [3: Ajani Resolute, Chandra, Chill of Compliance, Chandra, Torch of Defiance]
 - **`GrantChosenKeywordAction(Ref What, ImmutableArray<string> Keywords)`** — After the choice: the chosen keyword, until end of turn.
-- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [106: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
+- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [107: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
   - `Otherwise` (ImmutableList<GameAction>): Desperate Futurescribe: "… instead" — what happens when the condition does not hold.
 - **`IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then)`** — Captain Michael Burnham: "If this is the second time this ability has resolved this turn, put a +1/+1 counter on Captain Burnham." —… [2: Captain Michael Burnham, Jake Sisko, War Correspondent]
 - **`LandTapsForTwoUntilThisIsCast(Ref Land)`** — Emrakul, the Exigent Doom: "Target land gains '{T}: Add {C}{C}' until this card is cast from exile. You may cast this card for as long as… [1: Emrakul, the Exigent Doom]
@@ -273,7 +273,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`SourceWasCast`** — Null Summoner: "if you cast it" — it entered by resolving as a spell. Read from the source as it was when it triggered, so it leaving in… [3: Null Summoner, Uldaros Theorix, Crystalline Entity]
 - **`SubtypeEnteredThisTurn(ImmutableArray<string> Subtypes)`** — The context a condition is judged in outside a resolving ability: a permanent and its controller. Sulu, Space Swashbuckler: "if an… [2: Robber of the Rich, Sulu, Space Swashbuckler]
   - `Attacked` (bool): Robber of the Rich: "During any turn you attacked with a Rogue" — one of these subtypes ATTACKED under your…
-- **`WasKicked`** — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack. [5: Burst Lightning, Consult the Star Charts, Thieving Skydiver…]
+- **`WasKicked`** — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack. [6: Burst Lightning, Consult the Star Charts, Thieving Skydiver…]
 - **`YouCanBehold(string Subtype)`** — "You can behold a [Subtype]" — Theorist's Sanctum: a Jace you control or in your hand (it costs nothing). [1: Theorist's Sanctum]
 - **`YouHaveTheInitiative`** — Feywild Caretaker: "if you have the initiative". [1: Feywild Caretaker]
 - **`YourLibraryIsEmpty`** — Fblthp: "If your library has no cards in it". [2: Fblthp, Impossibly Lost, Jace, Wielder of Mysteries]
@@ -320,6 +320,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`SacrificeSelfCost`** — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana). [14: Budding Insurgent, Living Library, Room of Refuge…]
 - **`TapSelfCost`** — "{T}:" — tap this permanent. [50: Marwyn, the Clearcutter, Eardrum Rattler, Gallia, the Merrymaker…]
 - **`TapUntappedCost(int Count, Filter Filter)`** — Tenured Tethermage: "Tap two untapped artifacts you control:" — tapping for a cost isn't {T}, so summoning sickness doesn't matter (CR… [5: Tenured Tethermage, Urza, Lord High Artificer, Worf, Honor-Bound Warrior…]
+  - `TotalPower` (int): Teamwork 2 (We Say Thee Nay!): "tap any number of creatures you control with total power 2 or more" — no…
   - `NotTheSource` (bool): With "{T}" in the same cost the source is already spoken for — set by ActivatedAbilityComponent.Costs.
   - `Second` (bool): The second of "tap two" — set by ActivatedAbilityComponent.Costs; it picks into SecondTap.
 
@@ -418,6 +419,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`KickerComponent(ManaCost Mana)`** — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U} as you cast this spell.)" — CastSpellAction.Kicked;… [6: Burst Lightning, Consult the Star Charts, Thieving Skydiver…]
   - `Costs` (ImmutableList<AdditionalCost>): Eject the Warp Core: "Kicker—Sacrifice an artifact or creature." — paid only when kicked.
   - `MinX` (int): Thieving Skydiver: "Kicker {X}. X can't be 0." — the least X a kicked cast may choose. A kicker with {X}…
+  - `Word` (string): Teamwork (We Say Thee Nay!, LsvCards.Teamwork) is this optional additional cost by another name: "if this…
 - **`LifeTotalCantChange`** — Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life (Gain, Lose, CanPay). [2: Screaming Nemesis, Flare of Fortitude]
   - `GainOnly` (bool): Screaming Nemesis: "they can't gain life" — only gaining: life is still lost and paid (Life.Gain).
 - **`LoyaltyAbilityComponent(int Cost, ImmutableList<GameAction> Effects)`** — "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed, once per turn per permanent; the cost adds or… [1: Chandra, Chill of Compliance]

@@ -1059,6 +1059,27 @@ as his three priorities.
   and the AI rather than three entry points that delegate (no cube Adventure needs it yet); building the face once
   per script rather than per call (the probe ran at its usual speed); a cast left stamped in hand when its target
   choice is abandoned (latent: no Adventure chooses targets after the cast).
+- 2026-11-18, Claude — **4.4g6's notes (teamwork).** Built as planned, smaller: teamwork IS kicker — an optional
+  additional cost, one cast with it, one without — so `LsvCards.Teamwork(n)` is `KickerComponent(ManaCost.None) {
+  Costs, Word = "teamwork" }` (Eject the Warp Core's mana-less kicker with a cost), "cast using teamwork" `WasKicked`;
+  `Word` only names it in the cast's description. The new part is the cost: "tap any number of creatures with total
+  power 2 or more" is `TapUntappedCost { TotalPower }` — an option on the tap cost (Station, Worf, Trimatrix), no pick
+  in the action, the creatures picked after it one at a time until the total (`TapChosenForPowerAction`, an existing
+  `ChoosePermanentChoice` each, so no new choice type for the AI or the table). The cast pays its mana BEFORE the
+  picks, so `Uses` keeps the most powerful creatures out of the payment until the total (`Reserved`) — a mana
+  creature can't do both. Ceilings (DesignNotes): it stops at the total and offers no 0-power creature; the
+  reservation can refuse a cast a smaller set would allow. **Legal actions:** two casts per target, the creatures
+  picked after (a cast per set would be 4,096). Crew (Esika's Chariot, Reckoner Bankbuster) is the same cost on an
+  activated ability — read `ActivateAbilityAction`'s `Picks(c)` / `Uses` path first: a `CostSlot.None` cost asks
+  `Uses` nothing there yet, and the ability would go on the stack (its event card 0) before the picks tap anything.
+  **`/pre-commit`'s review: nine findings; one taken** — power asked once per creature, and `CanPay` a plain sum (no
+  behaviour change; its revert-check re-run, caught). **Ceilings, DesignNotes:** the picks come after the spell is on
+  the stack (as Drivnod's and delve's), so a cast trigger sees the creatures untapped and a power that changes as the
+  cast is paid could leave the total short. **Not taken:** teamwork as kicker (the plan: every "kicked" reader sees
+  it, and no cube card reads kicked spells); `Count` beside `TotalPower` (no card sets both); `Describe`'s fallback (a
+  guard). **Open (for Shayne):** the beam searches teamwork's picks — one branch per creature at each pick, every order
+  of a set. Delve's picks are a rule (Shayne, 2026-11-17); teamwork's could be too (the least valuable creatures
+  first). Default taken: left searched — the probe ran at its usual speed (150 games in 1.0 min).
 
 ## Tasks
 
@@ -1257,7 +1278,10 @@ as his three priorities.
           by the face's name. One line in `SQGodotCommon/MagicTable/MagicArt.ImageName`: a `CastAsAdventure` card shows
           its `Original`'s art, as a prepared copy shows its creature's. The table is the AI lane's file: do it there,
           or here with a note at the next merge
-    - [ ] MC-4.4g6 Teamwork: We Say Thee Nay!
+    - [x] MC-4.4g6 Teamwork: We Say Thee Nay! — done 2026-11-18: `LsvCards.Teamwork` (kicker), `TapUntappedCost.
+          TotalPower`, `TapChosenForPowerAction`, `KickerComponent.Word`; 4 tests, 8 breaks caught; `batch_checks.py`
+          all 8 steps (golden-out unchanged; golden-in moved 29 random and 63 card-replay games, added 4, the AI replay
+          unmoved; probe 150 games, 1 unfinished past 300 permanents, the Nay cast 447 times; full suite 1,966 passed)
     - [ ] MC-4.4g7 Storm: Brain Freeze
     - [ ] MC-4.4g8 Spree: Three Steps Ahead
     - [ ] MC-4.4g9 Warp: Quantum Riddler
@@ -1267,8 +1291,14 @@ as his three priorities.
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
-(4.4g4) and Adventures (4.4g5) — are done: **230 of 528 play.** Next, in a NEW session: **MC-4.4g6 — Teamwork** (We
-Say Thee Nay!): the plan is in Decisions (4.4g's plan, part 6). Then g7–g10 in the plan's order, one a session.
+(4.4g4), Adventures (4.4g5) and teamwork (4.4g6) — are done: **231 of 528 play.** Next, in a NEW session: **MC-4.4g7 —
+Storm** (Brain Freeze): the plan is in Decisions (4.4g's plan, part 7). Then g8–g10 in the plan's order, one a session.
+From 4.4g6: teamwork is kicker (`LsvCards.Teamwork(n)`, "cast using teamwork" `WasKicked`); "tap any number of
+creatures with total power N or more" is `TapUntappedCost { TotalPower }`, picked after the action
+(`TapChosenForPowerAction`) and kept out of the mana payment (`Uses` → `Reserved`) — crew's cost when Esika's Chariot
+comes. g6's tests are in `LsvBatch2g6Tests.cs` (`LeaveThemLands(n)`: their untapped lands cut to n, `Dork(size)`: a
+creature with "{T}: Add {U}"). **Open (for Shayne), from g6:** should the AI's teamwork picks be a rule, as delve's
+are? (Decisions, g6's notes; default: searched.)
 From 4.4g5: an Adventure is `AdventureComponent(Face, Text)` (`LsvCards.Adventure(card, targets, effects)`, the second
 face) and `CastSpellAction.Adventure` — the card stamped as the face for the cast (`Card.AsAdventure` →
 `CastAsAdventure`), exiled as it resolves with a `PlayPermission { Forever, CastOnly }` mark. Embereth Shieldbreaker //
@@ -1471,3 +1501,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-18: MC-4.4g5 done: Brazen Borrower // Petty Theft — 230 of 528 play. Adventures (the card stamped as its
   Adventure for the cast, `CastSpellAction.Adventure`; exiled on resolving, the creature castable from there),
   `CanBlockOnly`. Next: MC-4.4g6, teamwork.
+- 2026-11-18: MC-4.4g6 done: We Say Thee Nay! — 231 of 528 play. Teamwork is kicker with a new tap cost, "total power N
+  or more" (`TapUntappedCost.TotalPower`), its creatures picked after the cast. Next: MC-4.4g7, storm.

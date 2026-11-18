@@ -45,7 +45,11 @@ public static class Describe
 				)
 				+ (c.Replicate > 0 ? $" (replicate ×{c.Replicate})" : "")
 				+ (c.Delve > 0 ? $" (delve {c.Delve})" : "")
-				+ (c.Kicked ? " (kicked)" : "")
+				+ (
+					c.Kicked
+						? $" ({s.GetCard(c.CardId).GetComponent<KickerComponent>()?.Word ?? "kicked"})"
+						: ""
+				)
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")

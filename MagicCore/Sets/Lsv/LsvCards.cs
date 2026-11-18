@@ -1934,6 +1934,33 @@ public static class LsvCards
 					new MoveTo(Ref.Target(), ZoneType.Hand)
 				),
 			],
+			// ===== MC-4.4g6: teamwork (KickerComponent with TapUntappedCost.TotalPower) =====
+			["We Say Thee Nay!"] =
+			[
+				Teamwork(2),
+				Spell(
+					[TargetSpec.Spell()],
+					new If(
+						new WasKicked(),
+						[new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{4}"))]
+					)
+					{
+						Otherwise = [new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{2}"))],
+					}
+				),
+			],
+		};
+
+	/// <summary>
+	/// Teamwork N (We Say Thee Nay!): "As an additional cost to cast this spell, you may tap any number of creatures you
+	/// control with total power N or more." — an optional additional cost, kicker's cast (one with it, one without);
+	/// "if this spell was cast using teamwork" is WasKicked.
+	/// </summary>
+	static KickerComponent Teamwork(int power) =>
+		new(ManaCost.None)
+		{
+			Costs = [new TapUntappedCost(0, Is.Creature) { TotalPower = power }],
+			Word = "teamwork",
 		};
 
 	/// <summary>An adventurer card's Adventure (CR 715): its second face in the set's JSON, and its text.</summary>

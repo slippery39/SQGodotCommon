@@ -203,6 +203,9 @@ whose subsystem it lives in.
   join `CastSpellAction.CostsOf(…, kicked)` — a kicker sacrifice is the ordinary `SacrificeId`. The stack
   keeps it (`OnStackComponent.Kicked`, copies too); "if kicked" is `WasKicked`; a target word that reads
   differently kicked is `TargetSpec.IfKicked`, swapped in by `StackResolution.TextOf(…, kicked)`.
+  **Teamwork** (We Say Thee Nay!, MC-4.4g6) is kicker by another name — any optional additional cost is — `LsvCards.
+  Teamwork(n)`: `KickerComponent(ManaCost.None) { Costs = [TapUntappedCost { TotalPower }], Word = "teamwork" }`; "if
+  this spell was cast using teamwork" is `WasKicked`. `Word` is only the cast's description ("(teamwork)").
   **"Kicker {X}. X can't be 0"** (Thieving Skydiver, MC-4.4e2c) is `KickerComponent("{X}") { MinX = 1 }`: the KICKED
   cast chooses X (one per X from `MinX`; unkicked, X is 0), paid as any X and carried onto the permanent as
   `Card.CastX`. A permanent's "if it was kicked" reads its spell, `WasKicked` the stack's, the permanent's, or the

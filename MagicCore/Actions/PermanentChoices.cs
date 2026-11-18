@@ -262,6 +262,46 @@ public record RemoveACounterFromChosenAction : GameAction
 	}
 }
 
+/// <summary>
+/// Teamwork's cost after the cast (We Say Thee Nay!: "tap any number of creatures you control with total power 2 or
+/// more", TapUntappedCost.TotalPower): taps the chosen creature and, while the power tapped is short of the total,
+/// asks for another. ponytail: it stops at the total and never offers a creature with no power — "any number" may
+/// tap more (for a "becomes tapped" trigger); offer a "done" answer if a card ever cares.
+/// </summary>
+public record TapChosenForPowerAction(int PlayerId, int SourceId, Filter Filter, int Remaining)
+	: GameAction
+{
+	static Filter Offered(Filter filter) => filter & !Is.Tapped & Is.PowerAtLeast(1);
+
+	public static PipelineAction Next(int playerId, int sourceId, Filter filter, int remaining) =>
+		new()
+		{
+			Steps =
+			[
+				new ChoosePermanentChoice(playerId, sourceId, Offered(filter), required: true)
+				{
+					Prompt = $"Tap a creature for power {remaining} more",
+				},
+				new TapChosenForPowerAction(playerId, sourceId, filter, remaining),
+			],
+		};
+
+	public override ActionResult Execute(GameState s)
+	{
+		var left = Remaining;
+		foreach (var id in ChoosePermanentChoice.Read(InputContext))
+		{
+			left -= Math.Max(0, s.Power(s.GetCard(id)));
+			s = s.Tap(id);
+		}
+		return new ActionResult(
+			left > 0 && Offered(Filter).Among(s, PlayerId, ZoneType.Battlefield, SourceId).Any()
+				? s.SpawnAction(Next(PlayerId, SourceId, Filter, left))
+				: s
+		);
+	}
+}
+
 /// <summary>"If you do, …": runs the effects only when the previous choice picked something.</summary>
 public record IfChosenAction(ImmutableList<GameAction> Then) : GameAction
 {

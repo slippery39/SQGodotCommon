@@ -54,6 +54,12 @@ public record KickerComponent(ManaCost Mana) : GameComponent
 	/// kicked cast choose X (CastSpellAction.X), paid as any X and read as it enters (Card.CastX).
 	/// </summary>
 	public int MinX { get; init; }
+
+	/// <summary>
+	/// Teamwork (We Say Thee Nay!, LsvCards.Teamwork) is this optional additional cost by another name: "if this
+	/// spell was cast using teamwork" is WasKicked. Only the cast's description reads it ("(teamwork)").
+	/// </summary>
+	public string Word { get; init; } = "kicked";
 }
 
 /// <summary>The named counter kinds (Card.Counters) scripts and rules share.</summary>

@@ -104,6 +104,11 @@ whose subsystem it lives in.
   **"Tap three" or more** (Collation Trimatrix, Picard's seven Officers) is ONE cost picking the whole set
   (`CostSlot.TapSet`, `ActivateAbilityAction.TapIds`): one legal action per set, never per order
   (`MagicRules.TapSets`), clicked in any order on the table (`Targeting.Narrow`) — Shayne, 2026-11-05.
+  **"Tap any number of creatures you control with total power N or more"** (teamwork, We Say Thee Nay!, MC-4.4g6; crew
+  takes it as it comes) is `TapUntappedCost { TotalPower = N }`: no pick in the action, the creatures picked AFTER it
+  one at a time until the total (`TapChosenForPowerAction`, a `ChoosePermanentChoice` each) — a cast per set would be
+  4,096 against 12 creatures. The mana is paid first, so `Uses` keeps the most powerful out of the payment until the
+  total (`Reserved`) — a creature can't tap for the mana and the teamwork both.
 - **Sunburst** (`Sunburst`, Engineered Explosives) is the colours actually SPENT: the cast pays with the most
   different colours it can for the X chosen (`ManaPayment.Find(…, mostColors)`, Shayne, 2026-11-05), records
   them (`ManaPayment.ColorsSpent` → `OnStackComponent.ColorsSpent`), and `EnterFromStackAction` puts that many

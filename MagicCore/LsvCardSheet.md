@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 30/46 · uncommon 40/86 · rare 112/279 · mythic 39/108 · **230/528**
+**Playable:** common 31/46 · uncommon 40/86 · rare 112/279 · mythic 39/108 · **231/528**
 
 ### "Name Sticker" Goblin
 
@@ -781,7 +781,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Teamwork 2 (As an additional cost to cast this spell, you may tap any number of creatures you control with total power 2 or more.)  
 > Counter target spell unless its controller pays {2}. Counter that spell unless its controller pays {4} instead if this spell was cast using teamwork.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g6Tests
+
+**Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
+
+```csharp
+["We Say Thee Nay!"] =
+[
+	Teamwork(2),
+	Spell(
+		[TargetSpec.Spell()],
+		new If(
+			new WasKicked(),
+			[new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{4}"))]
+		)
+		{
+			Otherwise = [new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{2}"))],
+		}
+	),
+],
+```
 
 ### Wizard's Rockets
 
