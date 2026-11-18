@@ -115,6 +115,7 @@ public enum EventKind
 	AbilityActivated, // Kai Winn: "activates an ability of a source with the chosen name" — mana abilities too
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 	LandPlayed, // Prosper, Tome-Bound: "whenever you play a card from exile" — a land played (PlayLandAction), not one put onto the battlefield
+	BecameLevel, // Does Machines: "When this Class becomes level 2" — GainLevel (Trigger.Chapter)
 }
 
 /// <summary>
@@ -202,16 +203,19 @@ public record Trigger(EventKind On)
 
 	/// <summary>
 	/// A Saga's chapter N (CR 714.2b): it triggers as the number of lore counters on this becomes at
-	/// least N — written with Scripting.Chapter.
+	/// least N — written with Scripting.Chapter. On BecameLevel, a Class's level N (CR 716.2c, Does Machines:
+	/// "When this Class becomes level 2") — the level it became.
 	/// </summary>
 	public int Chapter
 	{
 		get => chapter;
 		init =>
 			chapter =
-				value == 0 || On == EventKind.CountersPut
+				value == 0 || On is EventKind.CountersPut or EventKind.BecameLevel
 					? value
-					: throw new ArgumentException($"A Chapter only fits CountersPut, not {On}");
+					: throw new ArgumentException(
+						$"A Chapter only fits CountersPut or BecameLevel, not {On}"
+					);
 	}
 
 	readonly int nth;
@@ -1022,6 +1026,13 @@ public record ChoosesNumberAsItEnters(int Max) : GameComponent;
 
 /// <summary>The number chosen as it entered (Nyota Uhura) — gone when it leaves.</summary>
 public record ChosenNumber(int N) : GameComponent;
+
+/// <summary>
+/// A Class's level (CR 716) — Does Machines: "{1}{U}: Level 2". No counter (Brad Boimler doesn't add to it, "a
+/// permanent with a counter" doesn't see it): status, gone as it leaves and never copied. None is level 1, as every
+/// Class enters (Count.ClassLevelOf). Set by GainLevel.
+/// </summary>
+public record ClassLevel(int N) : GameComponent;
 
 /// <summary>
 /// Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by

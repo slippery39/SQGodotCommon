@@ -1979,6 +1979,55 @@ public static class LsvCards
 				},
 				Warp("{1}{U}"),
 			],
+
+			// ===== MC-4.4g10: Classes (ClassLevel, Scripting.Level / WhenLevel / AtLevel) =====
+			["Does Machines"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Mill(Ref.You, 2),
+					new DrawCards(Ref.You, 2),
+					new Discard(Ref.You, 2)
+				),
+				Level("{1}{U}", 2),
+				WhenLevel(
+					2,
+					[
+						TargetSpec.InYourGraveyard(Is.Artifact) with
+						{
+							Optional = true,
+						},
+						TargetSpec.InYourGraveyard(Is.Artifact) with
+						{
+							Optional = true,
+							NotThePrevious = true,
+						},
+					],
+					new MoveTo(Ref.EachTarget, ZoneType.Hand) { From = [ZoneType.Graveyard] }
+				),
+				Level("{4}{U}", 3),
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn with
+					{
+						While = AtLevel(3),
+					},
+					[TargetSpec.Permanent(Is.Artifact & Is.Yours)],
+					new PutCounters(Ref.Target(), 3),
+					new If(
+						new Not(new Matches(Ref.Target(), Is.Creature)),
+						[
+							new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+							{
+								ForGood = true,
+								SetBase = (0, 0),
+								AlsoCreatureType = "Robot",
+								AlsoType = CardType.Creature,
+							},
+						]
+					)
+				),
+			],
 		};
 
 	/// <summary>

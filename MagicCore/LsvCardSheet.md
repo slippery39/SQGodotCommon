@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 31/46 · uncommon 41/86 · rare 113/279 · mythic 40/108 · **234/528**
+**Playable:** common 31/46 · uncommon 41/86 · rare 114/279 · mythic 40/108 · **235/528**
 
 ### "Name Sticker" Goblin
 
@@ -2884,7 +2884,59 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {4}{U}: Level 3  
 > At the beginning of combat on your turn, put three +1/+1 counters on target artifact you control. If it isn't a creature, it becomes a 0/0 Robot creature in addition to its other types.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g10Tests
+
+**Engine pieces:** `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Does Machines"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new Mill(Ref.You, 2),
+		new DrawCards(Ref.You, 2),
+		new Discard(Ref.You, 2)
+	),
+	Level("{1}{U}", 2),
+	WhenLevel(
+		2,
+		[
+			TargetSpec.InYourGraveyard(Is.Artifact) with
+			{
+				Optional = true,
+			},
+			TargetSpec.InYourGraveyard(Is.Artifact) with
+			{
+				Optional = true,
+				NotThePrevious = true,
+			},
+		],
+		new MoveTo(Ref.EachTarget, ZoneType.Hand) { From = [ZoneType.Graveyard] }
+	),
+	Level("{4}{U}", 3),
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn with
+		{
+			While = AtLevel(3),
+		},
+		[TargetSpec.Permanent(Is.Artifact & Is.Yours)],
+		new PutCounters(Ref.Target(), 3),
+		new If(
+			new Not(new Matches(Ref.Target(), Is.Creature)),
+			[
+				new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+				{
+					ForGood = true,
+					SetBase = (0, 0),
+					AlsoCreatureType = "Robot",
+					AlsoType = CardType.Creature,
+				},
+			]
+		)
+	),
+],
+```
 
 ### Elegant Parlor
 

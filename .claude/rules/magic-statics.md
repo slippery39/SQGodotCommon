@@ -71,6 +71,9 @@ whose subsystem it lives in.
   those values, entering through `EnterBattlefield` so its own "enters" fires; a source that just died
   is copied as it last existed. "Becomes a copy until end of turn" (Hall of Echoes) keeps the original
   in `CopyUntilEndOfTurn`, restored in cleanup AND as it leaves (`Card.Fresh`), so a dead Hall is a Hall.
+- **A type change by an effect, for good** (Does Machines: "it becomes a 0/0 Robot creature in addition to its other
+  types") is `ModifyUntilEndOfTurn { ForGood, AlsoType, SetBase, AlsoCreatureType }` — the card type stamped
+  (`Card.WithTypesUntilItLeaves`, Assimilate's), so ForGood only: no cleanup undoes it.
 - **A type change** is `BecomesType(scope) { Add, Remove, Subtype, Power, Toughness, If }` — Puppet Crafting
   (`Is.AttachedToSource`: "is a 5/5 Construct creature in addition"), Mogis (`Is.Source`, `Remove = Creature`,
   `If` devotion < 7). STAMPED on what the scope matches (`Card.AnimatedBy`, what it was kept in `Animated`) and

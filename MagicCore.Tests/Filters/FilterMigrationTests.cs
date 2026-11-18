@@ -620,6 +620,7 @@ public class FilterMigrationTests
 		TriggerEvent.SelfBecomesTapped, // Is.Source, on the one tap path (MagicState.Tap)
 		TriggerEvent.YouAttackWithTotalPower8, // YouAttack + While, judged as it triggers
 		new Trigger(EventKind.CountersPut) { Subject = Is.Source, Chapter = 1 }, // a Saga's chapter: the lore count crossing N (Scripting.Chapter)
+		new Trigger(EventKind.BecameLevel) { Subject = Is.Source, Chapter = 2 }, // a Class's level: the level it became (Scripting.WhenLevel)
 		TriggerEvent.OneOrMoreCardsLeaveYourGraveyard, // one per batch (Trigger.OneOrMore)
 	];
 

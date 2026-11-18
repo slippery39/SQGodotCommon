@@ -153,6 +153,12 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	public bool ForGood { get; init; }
 
 	/// <summary>
+	/// Does Machines: "it becomes a 0/0 Robot creature in addition to its other types" — card types added, STAMPED
+	/// (Card.WithTypesUntilItLeaves: every rule reads card.Is), so ForGood only. With SetBase and AlsoCreatureType.
+	/// </summary>
+	public Cards.CardType AlsoType { get; init; }
+
+	/// <summary>
 	/// The Wondrous Wasp: "It loses all abilities for as long as The Wondrous Wasp remains on the battlefield";
 	/// Tishana's Tidebinder: "… for as long as this creature remains on the battlefield". LosesAllAbilities only:
 	/// each permanent's EnchantedLosesAllAbilities { Object } stamped on THIS object of the source. With the source
@@ -207,9 +213,42 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			Gains = Gains,
 			AlsoCreatureType = AlsoCreatureType,
 		};
+		if (AlsoType != Cards.CardType.None && !ForGood)
+			throw new InvalidOperationException(
+				"AlsoType is a stamp no cleanup undoes: ForGood only (MC-4.4g10)"
+			);
 		return new(
-			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
+			Permanents(What, s)
+				.Aggregate(
+					s,
+					(st, c) =>
+						Update(
+							st,
+							(Card)
+								(
+									(c.Types & AlsoType) == AlsoType
+										? c
+										: c.WithTypesUntilItLeaves(c.Types | AlsoType)
+								).WithComponent(effect)
+						)
+				)
 		);
+	}
+}
+
+/// <summary>
+/// A Class's "[Cost]: Level N" (CR 716.2a; Does Machines: "{1}{U}: Level 2") as it resolves — "this Class's level
+/// becomes N": ClassLevel on this object of the source, and BecameLevelEvent ("when this Class becomes level 2").
+/// Written with Scripting.Level. A source gone (or a new object of it) gains nothing.
+/// </summary>
+public record GainLevel(int N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var c in Permanents(Ref.Source, s).ToList())
+			s = Update(s, (Card)c.WithComponentReplaced(new ClassLevel(N)))
+				.Raise(new BecameLevelEvent(c.Id, N));
+		return new(s);
 	}
 }
 

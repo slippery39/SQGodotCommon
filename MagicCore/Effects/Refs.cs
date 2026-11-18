@@ -381,6 +381,7 @@ public enum CountOf
 	NoncombatDamageToOpponentsThisTurn,
 	CreaturesDiedThisTurn, // anyone's
 	ChargeCountersOn, // Gardenize: "for each charge counter on [Ref]"
+	ClassLevelOf, // Does Machines: a Class's level — 1 until it gains one (ClassLevel)
 	CardsFromLibraryToGraveyardThisTurn, // Cruel Calculations: of the player [Ref]
 	PermanentsReturnedToHandThisTurn, // Miles O'Brien: "a permanent was returned to your hand from the battlefield this turn" — of the player [Ref]
 	NonlandCardsChosen, // Seasoned Cryomancer: "nonland cards [discarded] this way" — the last hand choice
@@ -495,6 +496,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		new(0, r, CountOf.DilemmasFacedThisTurnBy);
 
 	public static Count ChargeCountersOn(Ref r) => new(0, r, CountOf.ChargeCountersOn);
+
+	/// <summary>Does Machines: "Level 3" — the Class's level (ClassLevel), 1 as it enters.</summary>
+	public static Count ClassLevelOf(Ref r) => new(0, r, CountOf.ClassLevelOf);
 
 	public static Count TotalLoyaltyOf(Ref r) => new(0, r, CountOf.TotalLoyaltyOf);
 
@@ -703,6 +707,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				s.GetObject(id) is MagicPlayer p ? p.ThisTurn.DilemmasFaced : 0
 			),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
+			CountOf.ClassLevelOf => Cards().Sum(c => c.GetComponent<ClassLevel>()?.N ?? 1),
 			CountOf.ModesChosen => Cards()
 				.Sum(c => c.GetComponent<Actions.OnStackComponent>()?.Modes.Length ?? 0),
 			CountOf.TimesReplicated => Cards().Sum(c => c.AsCast?.Replicate ?? 0),

@@ -257,6 +257,15 @@ public record CountersPutEvent(int CardId, string CounterKind, int From, int To)
 		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
 }
 
+/// <summary>A Class became level N (Does Machines: "When this Class becomes level 2") — raised by GainLevel.</summary>
+public record BecameLevelEvent(int CardId, int Level) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.BecameLevel;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
+
 /// <summary>A permanent went from untapped to tapped — raised by MagicState.Tap, every tap path (Hemmer).</summary>
 public record BecameTappedEvent(int CardId) : MagicEvent
 {
@@ -743,10 +752,15 @@ public static class Triggers
 			return false;
 		if (
 			on.Chapter > 0
-			&& (
-				e is not CountersPutEvent { CounterKind: CounterKinds.Lore } lore
-				|| lore.From >= on.Chapter
-				|| lore.To < on.Chapter
+			&& !(
+				e switch
+				{
+					CountersPutEvent { CounterKind: CounterKinds.Lore } lore => lore.From
+						< on.Chapter
+						&& lore.To >= on.Chapter,
+					BecameLevelEvent level => level.Level == on.Chapter,
+					_ => false,
+				}
 			)
 		)
 			return false;

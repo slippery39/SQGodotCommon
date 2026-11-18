@@ -349,6 +349,7 @@ public record Card : GameObject
 				or Effects.ExiledBy
 				or Effects.ChosenColorMana
 				or Effects.ChosenNumber
+				or Effects.ClassLevel
 				or Effects.ChosenName
 				or Effects.ChosenPlayer
 				or CopyUntilEndOfTurn

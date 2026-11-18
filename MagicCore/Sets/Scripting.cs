@@ -72,6 +72,39 @@ public static class Scripting
 			Otherwise = [.. otherwise],
 		};
 
+	/// <summary>
+	/// A Class's level ability (CR 716.2a) — Does Machines: "{1}{U}: Level 2" is "[cost]: this Class's level becomes
+	/// N. Activate only if this Class is level N−1 and only as a sorcery." (GainLevel).
+	/// </summary>
+	public static ActivatedAbilityComponent Level(string cost, int n) =>
+		n < 2
+			? throw new ArgumentException(
+				$"A Class enters at level 1: Level {n} would never be offered"
+			)
+			: new(ManaCost.Parse(cost), [new GainLevel(n)])
+			{
+				SorcerySpeed = true,
+				OnlyIf = new Both(AtLevel(n - 1), new Not(AtLevel(n))),
+			};
+
+	/// <summary>
+	/// "While this Class is level N or higher" — Does Machines' level 3 text: a trigger's Trigger.While (it has the
+	/// ability only from that level on: judged as the event happens, never again as it resolves), a static's If.
+	/// </summary>
+	public static Condition AtLevel(int n) => new AtLeast(Count.ClassLevelOf(Ref.Source), n);
+
+	/// <summary>A Class's "When this Class becomes level N" (Does Machines) — Trigger.Chapter on BecameLevel.</summary>
+	public static TriggeredAbilityComponent WhenLevel(
+		int n,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) =>
+		When(
+			new Trigger(EventKind.BecameLevel) { Subject = Filters.Is.Source, Chapter = n },
+			targets,
+			effects
+		);
+
 	/// <summary>A Saga's chapter: "II — You gain 3 life." (Amok Time) — triggers as its lore counters reach N.</summary>
 	public static TriggeredAbilityComponent Chapter(
 		int n,

@@ -1128,6 +1128,22 @@ as his three priorities.
   DesignNotes — no card has two); the evaluator's impulse term pricing the exiled card before its turn (it is the
   player's card all the same; DesignNotes); reading warp from the spell before it enters (nothing re-stamps it there);
   `LaterTurn` as a number (no second card); a bounce or flicker test (a zone change strips a delayed trigger, tested).
+- 2026-11-18, Claude — **4.4g10's notes (Classes).** Built as planned, one new piece: a Class's level (CR 716) is
+  `ClassLevel(N)`, a STATUS component (gone as it leaves, never copied; none is level 1) — never a counter, which Brad
+  Boimler would add to and "a permanent with a counter" would see. "[Cost]: Level N" is `Scripting.Level(cost, n)`: an
+  activated ability, sorcery speed, `OnlyIf` level N−1, resolving to `GainLevel(n)`, which raises `BecameLevelEvent`.
+  "When this Class becomes level N" is an option on the Saga's piece, not a sibling: `Trigger.Chapter` on the new
+  `EventKind.BecameLevel` (`Scripting.WhenLevel`). A level's abilities are had from that level on: the level-3 trigger's
+  `Trigger.While = AtLevel(3)` (judged as the event happens; the ability exists once triggered, CR 113.7a). "It becomes
+  a 0/0 Robot creature in addition to its other types" is `ModifyUntilEndOfTurn { ForGood, SetBase, AlsoCreatureType }`
+  plus one option, `AlsoType` — the card type stamped as Assimilate's (`Card.WithTypesUntilItLeaves`), ForGood only.
+  **Legal actions:** one activation, the next level. 5 tests in `LsvBatch2g10Tests.cs`, 9 breaks caught (one first
+  NOT CAUGHT — a level trigger firing at any level; the level-2 test now goes on to level 3).
+  **`/pre-commit`'s review: seven findings; one taken:** `Level(cost, n)` with n < 2 was a silent inert ability — it
+  throws now. **Not taken:** the type stamp's single `Animated` (a `BecomesType` static on the same artifact — Assimilate's
+  limit too; a ceiling, DesignNotes); `AlsoType`'s ForGood check at resolution, not construction (the record's init order
+  can't cross-check; the fires test covers the one card); two counts in `OnlyIf` (trivial); `Chapter` read by the Saga's
+  state check (it checks the source is that Saga — no card is both).
 
 ## Tasks
 
@@ -1342,15 +1358,26 @@ as his three priorities.
           PaidAtNextEndStep }`, `PlayPermission.LaterTurn`); 5 tests, 8 breaks caught; `batch_checks.py` all 8 steps
           (golden-out unchanged; golden-in moved 29 random and 68 card-replay games, added 4, the AI replay unmoved;
           probe 150 games, 1 unfinished past 300 permanents, Quantum Riddler cast 802 times; full suite 1,979 passed)
-    - [ ] MC-4.4g10 Classes: Does Machines
+    - [x] MC-4.4g10 Classes: Does Machines — done 2026-11-18: `ClassLevel`, `GainLevel`, `BecameLevelEvent`
+          (`Trigger.Chapter` on it), `Count.ClassLevelOf`, `Scripting.Level` / `WhenLevel` / `AtLevel`,
+          `ModifyUntilEndOfTurn.AlsoType`; 5 tests, 9 breaks caught; `batch_checks.py` all 8 steps (golden-out unchanged;
+          golden-in moved 29 random and 66 card-replay games, added 4, the AI replay unmoved; probe 150 games, 1 unfinished
+          past 300 permanents, Does Machines cast 482 times, never leveled — random play, the ability offered (tests);
+          full suite 1,984 passed, run again after `EventKind.BecameLevel` joined the trigger-coverage table)
 
 ## Next
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
-(4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8) and warp (4.4g9) — are done: **234 of
-528 play.** Next, in a NEW session: **MC-4.4g10 — Classes** (Does Machines): the plan is in Decisions (4.4g's plan,
-part 10) — the last of blue's tier 3.
+(4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
+done: **blue is finished; 235 of 528 play.** Next: **no part is named after 4.4g** — the colours left (black, green,
+multicolour, the artifacts and lands) are unplanned. Ask Shayne which comes next; its first session surveys it by tier
+(`LsvSurvey.md`) and plans its parts, as 4.4c–g were.
+From 4.4g10: a Class's level is `ClassLevel(N)` (status, not a counter; none is level 1, `Count.ClassLevelOf`);
+"[cost]: Level N" `Scripting.Level(cost, n)` → `GainLevel`, "when this Class becomes level N" `Scripting.WhenLevel`
+(`Trigger.Chapter` on `BecameLevel`), a level's abilities gated by `AtLevel(n)` (a trigger's `While`, a static's `If`).
+"Becomes a [type] in addition" for good is `ModifyUntilEndOfTurn { ForGood, AlsoType }`. g10's tests are in
+`LsvBatch2g10Tests.cs` (`LevelUp(dm, answer)`: the one level on offer, activated and resolved; `Level(dm)`).
 From 4.4g9: warp is `Scripting.Warp(cost)` — the card's own alternative cost `{ Mana, From = [Hand], PaidAtNextEndStep }`,
 the end-step effects put on the permanent as a delayed trigger by `EnterFromStackAction` when that cost was paid (no
 "enters" trigger), and `MakePlayable { LaterTurn }` → `PlayableFromExile.FromTurn`. g9's tests are in
@@ -1580,3 +1607,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   line; its targets are chosen word by word (Shayne: 7 casts, not 199). Next: MC-4.4g9, warp.
 - 2026-11-18: MC-4.4g9 done: Quantum Riddler — 234 of 528 play. Warp is the card's alternative cost from the hand, its
   end-step exile set up as the spell resolves, and the exiled card castable from the next turn on. Next: MC-4.4g10, Classes.
+- 2026-11-18: MC-4.4g10 done: Does Machines — 235 of 528 play; blue's tier 3 is finished. A Class's level is status on
+  the card, not a counter; leveling is a sorcery-speed ability, and "becomes level N" triggers as a Saga's chapter does.

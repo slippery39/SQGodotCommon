@@ -122,6 +122,12 @@ whose subsystem it lives in.
   begins — a TURN-BASED action in `EnterStep`, no stack (Shayne, 2026-11-01). The state-based check
   sacrifices a Saga at its last chapter only once no chapter ability of it is waiting: collected and not
   yet on the stack (`GivePriority` passes them to `StateBasedActions.Check`) or on the stack.
+- **Classes** (CR 716; Does Machines, MC-4.4g10) have a LEVEL, never a counter: `ClassLevel(N)`, status on the card
+  (gone as it leaves, never copied; none is level 1), read by `Count.ClassLevelOf`. "[Cost]: Level N" is
+  `Scripting.Level(cost, n)` — sorcery speed, only at level N−1, resolving to `GainLevel(n)`, which raises
+  `BecameLevelEvent`; "when this Class becomes level N" is `Scripting.WhenLevel(n, …)`, `Trigger.Chapter` on that
+  event. An ability in a level's box is had from that level on: a trigger's `While = AtLevel(n)` (judged as the event
+  happens, never again on resolution), a static's `If`, an activated ability's `OnlyIf`.
 - **Dungeons and the initiative** (CR 309, 701.49, 725; MC-4.4g3, `Effects/Dungeons.cs`). A dungeon is an object in its
   venturer's command zone (`GetEmblem.ToCommandZone`) with `DungeonComponent(Room)`, an index into `Undercity.Rooms`
   (the only dungeon: CR 725.2). A room is NOT a Saga chapter — Undercity branches, so no count says which room you
