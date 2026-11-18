@@ -31,18 +31,59 @@ public static partial class Evaluator
 	static readonly AsyncLocal<HashSet<int>?> rootUnseen = new();
 
 	/// <summary>
+	/// What <see cref="LandUse"/> reads at the search's root, null when it is off: whose search it is, the mana sources in
+	/// play then, and that player's library as it is drawn - the land share and the average cost of a spell among its
+	/// unseen cards (our own list: never the opponent's hidden one).
+	/// </summary>
+	sealed record LandUseRoot(int Player, HashSet<int> Sources, (double, int) Deck);
+
+	static readonly AsyncLocal<LandUseRoot?> landUseOn = new();
+
+	static (double LandShare, int SpellCost) DeckOf(GameState root, int player)
+	{
+		var unseen = Hidden.Unseen(root, player).Where(c => !Hidden.IsUnknown(c)).ToList();
+		var spells = unseen.Where(c => !c.Is(CardType.Land)).ToList();
+		return unseen.Count == 0
+			? (0, 0)
+			: (
+				(double)(unseen.Count - spells.Count) / unseen.Count,
+				spells.Count == 0 ? 0 : (int)Math.Round(spells.Average(c => c.ManaCost.ManaValue))
+			);
+	}
+
+	/// <summary>The most turns ahead the land-use count looks (<see cref="LandUse"/>).</summary>
+	public const int LandUseTurns = 3;
+
+	/// <summary>
 	/// <paramref name="work"/> with the cards exiled "you may play" at <paramref name="root"/> remembered as real, and each
 	/// player's <see cref="OptionTurns"/> read there (<see cref="Terms.RootOptionTurns"/>). <paramref name="drawnCards"/>:
 	/// the library cards whose place nobody knew at the root remembered too, so a card the look-ahead draws counts as a
 	/// drawn card (<see cref="DrawnCredit"/>).
 	/// </summary>
-	public static T WithRootImpulse<T>(GameState root, Func<T> work, bool drawnCards = false)
+	public static T WithRootImpulse<T>(
+		GameState root,
+		Func<T> work,
+		bool drawnCards = false,
+		bool landUse = false
+	)
 	{
-		var (outer, outerTurns, outerUnseen) = (
+		var (outer, outerTurns, outerUnseen, outerLandUse) = (
 			rootImpulse.Value,
 			rootOptionTurns.Value,
-			rootUnseen.Value
+			rootUnseen.Value,
+			landUseOn.Value
 		);
+		landUseOn.Value = landUse
+			? new(
+				root.DecidingPlayerId(),
+				[
+					.. root.CardsIn(root.DecidingPlayerId(), ZoneType.Battlefield)
+						.Where(c => ManaAbilities.ColorsOf(root, c).Any())
+						.Select(c => c.Id),
+				],
+				DeckOf(root, root.DecidingPlayerId())
+			)
+			: null;
 		rootUnseen.Value = drawnCards
 			?
 			[
@@ -65,26 +106,27 @@ public static partial class Evaluator
 		}
 		finally
 		{
-			(rootImpulse.Value, rootOptionTurns.Value, rootUnseen.Value) = (
+			(rootImpulse.Value, rootOptionTurns.Value, rootUnseen.Value, landUseOn.Value) = (
 				outer,
 				outerTurns,
-				outerUnseen
+				outerUnseen,
+				outerLandUse
 			);
 		}
 	}
 
-	/// <summary><paramref name="work"/> with no drawn cards remembered — a measurement on another board (<see cref="OptionPrice.Gain"/>), whose ids mean other cards.</summary>
+	/// <summary><paramref name="work"/> with no drawn cards remembered, nor the land-use root — a measurement on another board (<see cref="OptionPrice.Gain"/>), whose ids mean other cards.</summary>
 	internal static T WithoutDrawnCards<T>(Func<T> work)
 	{
-		var outer = rootUnseen.Value;
-		rootUnseen.Value = null;
+		var (outer, outerLandUse) = (rootUnseen.Value, landUseOn.Value);
+		(rootUnseen.Value, landUseOn.Value) = (null, null); // the land-use root's ids too
 		try
 		{
 			return work();
 		}
 		finally
 		{
-			rootUnseen.Value = outer;
+			(rootUnseen.Value, landUseOn.Value) = (outer, outerLandUse);
 		}
 	}
 
@@ -100,6 +142,36 @@ public static partial class Evaluator
 	/// priced by what it became; carry the credit there too if a position shows one held for it.
 	/// </summary>
 	static bool IsDrawnGuess(Card c) => rootUnseen.Value?.Contains(c.Id) == true;
+
+	/// <summary>
+	/// Our lands priced by the cards they let us play (AI-27.9, Shayne 2026-11-18: "A needed land drop is worth the cards it
+	/// allows you to play. This is variable as the game goes on."): a drawn card for each card more that we get to play over
+	/// our next turns (<see cref="LandUnlock.Playable"/>: the hand and our library's curve, up to <see cref="LandUseTurns"/>
+	/// or the game's length) with the mana we have now - in play and lands in hand - than with only the sources in play at
+	/// the search's root. So a land that lets one more card be played is worth that card, a surplus land nothing; playing a
+	/// land changes neither count, and casting a spell moves both alike. Two first versions counted cards played, not what
+	/// the lands add: the one counting the hand alone held removal (a spell cast before the look-ahead's end had left
+	/// it), the next paid for using this turn's spare mana - Yoshimaru cast on turn 4 with nothing to fight. Beside the flat
+	/// land prices, which stay as its base. Off unless the search asks (<c>BeamSearchAi.Settings.LandUse</c>, beam+landuse).
+	/// </summary>
+	static double LandUse(GameState s, int player, HeldValues held)
+	{
+		if (landUseOn.Value is not { } root || root.Player != player)
+			return 0; // the search's own player only: the simulated opponent prices its lands as before
+		var turns = Math.Min(OptionTurns(s, player), LandUseTurns);
+		var deck = root.Deck;
+		// a land the look-ahead drew is a guess, a drawn card and nothing more (AI-27.7) - the library's curve brings lands
+		var now = LandUnlock.Playable(s, player, turns, deck, IsDrawnGuess, c => !IsDrawnGuess(c));
+		var before = LandUnlock.Playable(
+			s,
+			player,
+			turns,
+			deck,
+			IsDrawnGuess,
+			c => root.Sources.Contains(c.Id) && s.IsOnBattlefield(c.Id)
+		);
+		return Math.Max(0, now - before) * held.Unknown;
+	}
 
 	/// <summary>What our guessed lands in play carry over a land in hand (<see cref="IsDrawnGuess"/>).</summary>
 	static double DrawnCredit(GameState s, int player, HeldValues held) =>
@@ -534,6 +606,15 @@ public static partial class Evaluator
 		/// where they are not - so it never binned, and the surveil only cost the loyalty (`+nolooks`).
 		/// </summary>
 		Looks = 1L << 37,
+
+		/// <summary>
+		/// The look-ahead's: a "choose one" as a trigger goes on the stack (Divining Duelist's "When this creature enters,
+		/// choose one — Tap target creature. / Untap target creature. / Draw a card, then discard a card.") is answered by its
+		/// chooser's best, each mode settled - the rollout took the FIRST listed, so its Duelist tapped our own creature and
+		/// never looted, and casting Mindseeker Oculus first lost the loot it would have had (AI-27, Shayne 2026-11-18, seed 2
+		/// #16 - `+firstmode`).
+		/// </summary>
+		RolloutModes = 1L << 38,
 	}
 
 	/// <summary>
@@ -909,6 +990,7 @@ public static partial class Evaluator
 			);
 		if (held is not null)
 			hand += ImpulseCredit(s, player, held) + (own ? DrawnCredit(s, player, held) : 0);
+		var landsUsed = own && held is not null ? LandUse(s, player, held) : 0;
 		var graveyard = IsOff(Terms.GraveyardAccess)
 			? 0
 			: s.CardsIn(player, ZoneType.Graveyard)
@@ -925,7 +1007,7 @@ public static partial class Evaluator
 						)
 						: 0
 				);
-		return new(creatures, walkers, lands, others, hand, lifeValue, graveyard);
+		return new(creatures, walkers, lands + landsUsed, others, hand, lifeValue, graveyard);
 	}
 
 	static readonly AsyncLocal<int> byUseFor = new();

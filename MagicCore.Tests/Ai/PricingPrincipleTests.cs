@@ -295,4 +295,95 @@ public class PricingPrincipleTests
 			Assert.That(Life(+10) / card, Is.GreaterThanOrEqualTo(1), "10 life gained, in cards");
 		});
 	}
+
+	// "A needed land drop is worth the cards it allows you to play. This is variable as the game goes on." (Shayne,
+	// AI-27.9). Three Forests in play, our turn, the land drop still to come; in hand a Forest and three spells costing
+	// {2}{G}, {1}{G} and {1}{G}. Over two turns the Forest lets one more spell be played; with a curve that stops at 2 it
+	// lets nothing more. Playing the land never lowers the count; casting a spell never lowers the evaluator's land term.
+	[Test]
+	public void ALand_IsWorthTheCardsItLetsUsPlay()
+	{
+		var x = Lands(s, me, 3);
+		var three = TestGames.CreatureCosting("{2}{G}", "Three", "3/3");
+		var two = TestGames.CreatureCosting("{1}{G}", "Two", "2/2");
+		x = With(x, me, three, ZoneType.Hand, out _);
+		x = With(x, me, two, ZoneType.Hand, out var spell);
+		x = With(x, me, two, ZoneType.Hand, out _);
+		var full = With(x, me, TestGames.Card("Forest"), ZoneType.Hand, out var forest);
+		int Count(GameState y) => LandUnlock.Playable(y, me, 2);
+		var played = full.Act(full.LegalActions().OfType<Actions.PlayLandAction>().Single());
+		var cast = Lookahead.Settle(
+			full.Act(
+				full.LegalActions().OfType<Actions.CastSpellAction>().First(a => a.CardId == spell)
+			)
+		);
+		// the evaluator with the land term on, the search's root here: what the lands add over the sources in play then
+		double Score(GameState y) => Evaluator.WithRootImpulse(full, () => Eval(y), landUse: true);
+		double LandTerm(GameState y) =>
+			Evaluator.WithRootImpulse(
+				full,
+				() => Evaluator.Explain(y, me, Held).Single(e => e.Term == "our lands").Value,
+				landUse: true
+			);
+		var pitched = full.MoveCard(forest, full.ZoneId(me, ZoneType.Graveyard));
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				Count(full),
+				Is.EqualTo(Count(x) + 1),
+				"the needed land lets one more be played"
+			);
+			Assert.That(Count(played), Is.EqualTo(Count(full)), "playing the land");
+			Assert.That(
+				LandTerm(played),
+				Is.GreaterThan(LandTerm(full)),
+				"playing the land, priced"
+			);
+			// "You should never get an immediate loss for deploying a resource in hand" - the whole score; the land term
+			// itself may fall (with the 2-drop cast, the fourth land is needed less: "variable as the game goes on")
+			Assert.That(Score(cast), Is.GreaterThan(Score(full)), "casting a spell now");
+			Assert.That(
+				Score(full) - Score(pitched),
+				Is.EqualTo(Held.Unknown + Evaluator.LandInHand).Within(1e-9),
+				"the needed land lost: the card it lets us play, and its own price in hand"
+			);
+		});
+		// a curve that stops at 2: the same Forest lets nothing more be played
+		var low = With(
+			With(Lands(s, me, 3), me, two, ZoneType.Hand, out _),
+			me,
+			two,
+			ZoneType.Hand,
+			out _
+		);
+		Assert.That(
+			Count(With(low, me, TestGames.Card("Forest"), ZoneType.Hand, out _)),
+			Is.EqualTo(Count(low)),
+			"a surplus land"
+		);
+	}
+
+	// Seed 2 #16 of the position suite (White-Blue Jace vs Red-Green): our turn 5, three lands in play, this turn's land
+	// played; in hand Divining Duelist ({2}{U} flash 3/2, "choose one - tap target creature; untap target creature; draw a
+	// card, then discard a card"), Mindseeker Oculus ({2}{U} 2/1, "empower Jace 4"), an Island, Tam's Resistance and
+	// Academic Ascent; they have a tapped Marwyn, the Clearcutter (2/1) and a Jace token at 1. Shayne: casting Duelist to
+	// loot away the Island was a misplay - the Island is the next land drop. With land use the Island is kept. The
+	// CONTROL: without it the Duelist loots it away. (Oculus over Duelist is the flash's question - holding Duelist for
+	// their turn, which the look-ahead never plays - not the land's.)
+	[Test]
+	public void TheNextLandDrop_IsNotLootedAway_WithLandUse()
+	{
+		var suite = PositionSuite.Tracked()!;
+		var (_, x) = PositionSuite
+			.States(suite)
+			.Single(p =>
+				suite.Games[p.Position.GameIndex]
+					is { Deck1: "White-Blue Jace", Deck2: "Red-Green", Seed: 2 }
+				&& p.Position.Move == 16
+			);
+		var control = PositionSuite.TurnPlayed(x, "beam");
+		var turn = PositionSuite.TurnPlayed(x, "beam+landuse");
+		Assert.That(control, Has.Some.EqualTo("Discard 1 Island"), "control");
+		Assert.That(turn, Has.None.EqualTo("Discard 1 Island"));
+	}
 }

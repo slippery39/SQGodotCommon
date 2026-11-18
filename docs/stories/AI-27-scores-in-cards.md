@@ -224,6 +224,10 @@ Not agreed — to shape with Shayne.
 
 - 2026-11-18, Shayne: `beam+drawncard` the DEFAULT ("I wanted the switch on not off"); off is `beam+nodrawncard`.
 
+- 2026-11-18, Shayne, on pricing a land by need (asked: "a land is worth the turns its mana gets spent, from this hand
+  and this deck's curve"?): "Yes pretty much." And what a needed land drop is worth: "A needed land drop is worth the
+  cards it allows you to play. This is variable as the game goes on."
+
 Open questions:
 - Show in cards only (divide by 8.5 when printing — no play changes), or rescale the evaluator itself (every
   constant, threshold, table and test number moves; no decision changes if done exactly)? Claude's lean: show first.
@@ -240,12 +244,18 @@ Open questions:
 - [ ] AI-27.6 The three-ledger design, agreed with Shayne — then its five steps, each behind a switch
 - [x] AI-27.7 A drawn card worth a drawn card, whatever it turns out to be (Shayne, Decisions 2026-11-18) - the
       default since 2026-11-18 (off: beam+nodrawncard); its tests in `PricingPrincipleTests`; Log 2026-11-18.
+- [x] AI-27.8 The look-ahead answers a modal trigger by its chooser's best, not the first mode (`Terms.RolloutModes`,
+      off: beam+firstmode) - Divining Duelist's loot (seed 2 #16)
+- [ ] AI-27.9 Lands priced by the cards they let us play (Shayne, Decisions 2026-11-18) - built behind `beam+landuse`,
+      off; suite read (Log); match not run
 
 ## Next
 
-**Now (2026-11-18): AI-27.7 is the DEFAULT** (Shayne; off: `beam+nodrawncard`) - the suite's committed answers
-re-accepted (20 changed). Next: plan step 1, one card scale - seed 2 #16 and seed 1 #79 (misplays he agrees with) and
-seed 4 #43 (unclear) are its positions. Seed 2 #23's land order is AI-9.10.
+**Now (2026-11-18):** AI-27.7 (drawn card) and AI-27.8 (modal triggers) are the default; AI-27.9 (land use) is built
+behind `beam+landuse`, off, its suite read (Log) - a match only if Shayne wants it. Shayne then asked (2026-11-18)
+whether to add per-card or per-effect "AI notes" - specific evaluators the general one calls (a flash creature in
+their turn, Yoshimaru's fight, looting) - Forge-style, but only where the general evaluator struggles. Claude's answer
+is in the conversation; the decision is his. AI-27.8 and AI-27.9 are uncommitted.
 
 **Handoff (2026-11-17, second session).** Read `docs/findings/evaluator-pricing.md`: the inventory (§1), the
 principle tests and what they found (§2), the three-ledger proposal (§3) and five questions for Shayne. Nothing in
@@ -263,6 +273,50 @@ draw-or-board positions (findings, "AI-27") still wait for his read. AI-26.8 is 
 odd plays may be its own artifacts.)
 
 ## Log
+
+- 2026-11-18: /pre-commit on AI-27.8 and 27.9: the modal-trigger answer now "choose one" only ("up to N" and "one or
+  more" keep the cheap answer - GreedyAi tries exactly N - until measured); land use for the search's own player only
+  (the simulated opponent had priced its lands from a read of its real hidden library), only with the drawn-card rule
+  (which tells guessed draws apart), and cleared while the option price measures on its fixture. Its ceilings in
+  DesignNotes ("MagicCore known ceilings"). Shayne asked for the commit, then the flat Settle prices, with a
+  `beam+landuse` match in the background.
+
+- 2026-11-18: AI-27.9 built behind `beam+landuse` (off): `LandUnlock.Playable` counts the spells we get to play over our
+  next turns (the hand, plus a draw a turn from our library's curve read at the root: its land share, spread, else a
+  spell at its average cost), and `Evaluator.LandUse` prices what our mana now adds over the sources in play at the
+  root, a drawn card per card; guessed draws left out. Three versions: (1) counting the hand's playable cards and this
+  turn's casts - held removal (Vraska's Final Mercy, Compel Brutality: a spell cast before the look-ahead's end left
+  the count); suite 13 changed, oracle 74.0%. (2) counting from the root's hand - paid for this turn's spare mana
+  (Yoshimaru cast on turn 4 with nothing to fight); 10 changed, oracle 76.0%, score given up 0.67. (3) what the lands
+  ADD: 4 changed, oracle 75.7% (76.7%), score given up 0.66 (0.56), wins missed 2, engine steps 19 859. Changed: seed 1
+  #18 Greenhouse Propagator ({T}: Add {G}) over Koth; seed 3 #16 Mindseeker Oculus over Repurposed Enforcer; seed 4 #13
+  Plains over Island; seed 1 #90 Play Plains over Protege's Awakening. Seed 2 #16 keeps the Island (test
+  `TheNextLandDrop_IsNotLootedAway_WithLandUse`) but casts Duelist with its tap mode over Oculus by 0.26 - the flash
+  question, not the land. Principle tests 12 pass.
+
+- 2026-11-18: AI-27.8's full tests 1612 passed. AI-9.10 traced (its Log). `beam+twospells` added - up to two spells a
+  rollout turn (`ActionsPerTurn`), never measured alone: suite 17 changed, oracle 74.0% (76.7%), score given up 0.79
+  (0.56), 20 250 steps (+1.4%) - the oracle was read at one spell a turn, so a change to the rollout's own play is a
+  match's to judge, not the suite's. Not the default; not matched.
+
+- 2026-11-18: AI-27.8 (Shayne: the three in Claude's order - seed 2 #16's causes, AI-9.10, then the scales). The
+  rollout answered a modal trigger by `Lookahead.QuickAnswer`: the FIRST mode, always - its Divining Duelist tapped our
+  own creature. Now `GreedyAi`'s answer (each mode settled, the search's held values), as target choices already were;
+  default on, `beam+firstmode` off. Seed 2 #16's Oculus line: its rollout now loots in the not-a-land version (2.59 →
+  2.70); the decision is unchanged (Duelist 3.92). Suite: 0 changes, 19 965 engine steps (+0.1%), oracle 76.7%. What
+  is left at #16: (1) the loot pitches the Island - our next land drop, 3 lands in play - which a land in hand prices at
+  0.3 against a drawn card's 2.65, so looting it is +2.35 (Shayne's lands question); (2) in the land version the
+  look-ahead's loot is judged by `Settle`, whose discard uses FLAT prices (1.2 a card, 0.3 a land; §1 S8) - the third
+  scale; (3) Duelist's flash: the best line may hold it for their turn, which the rollout never plays.
+
+- 2026-11-18: the three positions traced (each first move's line, `BeamSearchAi.Explain`). None is the card scale:
+  seed 4 #43, Konstrari Charm (measured 5: two +1/+1 counters, the fixture has no flier) held at 2.50 against a drawn
+  card's 2.65 - a near tie, as Shayne found it unclear. Seed 1 #79 is a LOST position (every line about −8 590), choices
+  among dead lines. Seed 2 #16 (Divining Duelist cast to loot over Mindseeker Oculus and the −3), with the rule on:
+  Duelist 3.92, Oculus 2.59 (off: Oculus 4.01, Duelist 2.37). The look-ahead: the Oculus line's rollout casts Duelist on
+  turn 7 choosing "Tap target creature" on OUR OWN Duelist, not the loot - so that line never gets the loot, while the
+  Duelist line takes it now; the token left at 1 is 0.62 without its floor (2.10 before); and neither line holds
+  Duelist (flash) for their turn, which the rollout never plays. Shown to Shayne with the choice of what next.
 
 - 2026-11-18: `DrawnCard` made the default (Shayne); `--suite=beam --accept`: 20 answers changed, oracle 76.7%, score
   given up 0.56, wins missed 2, 19 944 engine steps a position.

@@ -105,6 +105,73 @@ public static class LandUnlock
 		return withSingles > withoutSingles || withPacked > withoutPacked;
 	}
 
+	/// <summary>
+	/// The spells <paramref name="player"/> gets to play over their next <paramref name="turns"/> turns (AI-27.9, Shayne
+	/// 2026-11-18: "A needed land drop is worth the cards it allows you to play"): each turn the spells its mana casts,
+	/// cheapest first - the mana in play and one land a turn from the hand (this turn's too, if still to come, as the
+	/// first). Each turn also draws a card of <paramref name="deck"/> (none without one): a land at its land share, spread (13 in 27: the
+	/// third draw), else a spell of its average cost - the curve still to come, which is what a fourth land is for once
+	/// the hand is cast. A land that raises the count lets a card be played; one that doesn't is surplus. Playing a land
+	/// never lowers it. <paramref name="skip"/>: hand cards left out (the look-ahead's guessed draws, AI-27.7);
+	/// <paramref name="sources"/>: the mana sources counted, in play or lands in hand (all, without it).
+	/// ponytail: lands played in hand order, not the best colours first; a drawn spell is colourless at the average cost;
+	/// a cost reduction or X read as printed; a source's colour pays the pips of every spell in its turn (as
+	/// <see cref="Cast"/> does) - so a second source of a colour two spells need can look surplus.
+	/// </summary>
+	public static int Playable(
+		GameState s,
+		int player,
+		int turns,
+		(double LandShare, int SpellCost)? deck = null,
+		Func<Card, bool>? skip = null,
+		Func<Card, bool>? sources = null
+	)
+	{
+		var hand = s.CardsIn(player, ZoneType.Hand)
+			.Where(c => !Hidden.IsUnknown(c) && skip?.Invoke(c) != true)
+			.ToList();
+		var spells = hand.Where(c => !c.Is(CardType.Land)).Select(c => c.ManaCost).ToList();
+		var lands = hand.Where(c => c.Is(CardType.Land) && sources?.Invoke(c) != false)
+			.Select(c => ManaAbilities.ColorsOf(s, c).ToList())
+			.ToList();
+		var board = s.CardsIn(player, ZoneType.Battlefield)
+			.Where(c => sources?.Invoke(c) != false)
+			.Select(c => ManaAbilities.ColorsOf(s, c).ToList())
+			.Where(colours => colours.Count > 0)
+			.ToList();
+		var ours = s.GetGame().ActivePlayerId == player;
+		var dropNow = ours && s.GetPlayer(player).ThisTurn.LandsPlayed < s.LandDrops(player);
+		var played = 0;
+		for (var k = 1; k <= turns; k++)
+		{
+			if (deck is { } d)
+			{
+				if (Math.Floor(k * d.LandShare) > Math.Floor((k - 1) * d.LandShare))
+					lands.Add(
+						[
+							ManaColor.White,
+							ManaColor.Blue,
+							ManaColor.Black,
+							ManaColor.Red,
+							ManaColor.Green,
+						]
+					); // any colour: ponytail above
+				else
+					spells.Add(ManaCost.Parse($"{{{d.SpellCost}}}"));
+			}
+			var mana = board.Concat(lands.Take(k + (dropNow ? 1 : 0))).ToList();
+			var left = mana.Count;
+			foreach (var cost in spells.OrderBy(c => c.ManaValue).ToList())
+				if (Castable(mana, cost) && cost.ManaValue <= left)
+				{
+					left -= cost.ManaValue;
+					spells.Remove(cost);
+					played++;
+				}
+		}
+		return played;
+	}
+
 	/// <summary>What each of <paramref name="player"/>'s mana sources makes: those in play and the lands in hand (AI-9.9).</summary>
 	public static List<List<ManaColor>> Sources(GameState s, int player) =>
 		[
@@ -137,11 +204,11 @@ public static class LandUnlock
 	}
 
 	static bool Castable(List<List<ManaColor>> sources, Card spell) =>
-		spell.ManaCost.ManaValue <= sources.Count
-		&& spell
-			.ManaCost.Symbols.Where(m =>
-				m.Kind == SymbolKind.Colored && m.Color != ManaColor.Colorless
-			)
+		Castable(sources, spell.ManaCost);
+
+	static bool Castable(List<List<ManaColor>> sources, ManaCost cost) =>
+		cost.ManaValue <= sources.Count
+		&& cost.Symbols.Where(m => m.Kind == SymbolKind.Colored && m.Color != ManaColor.Colorless)
 			.GroupBy(m => m.Color)
 			.All(g => g.Count() <= sources.Count(colours => colours.Contains(g.Key)));
 

@@ -101,6 +101,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// under <see cref="Hidden.Library.LandOrNot"/> only: another library mode ignores the switch. The default since
 	/// 2026-11-18 (Shayne; matched 51.0% ± 1.5pp over 384 against the search without it); off is beam+nodrawncard.
 	/// </param>
+	/// <param name="LandUse">
+	/// Our lands priced by the cards they let us play over the next turns (<see cref="LandUnlock.Playable"/>,
+	/// AI-27.9, Shayne: "A needed land drop is worth the cards it allows you to play"). Only with <see cref="DrawnCard"/>,
+	/// which tells the look-ahead's guessed draws apart. Off by default; on is beam+landuse.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -131,7 +136,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool SpellsRule = false,
 		bool OptionPrice = true,
 		bool ByUse = true,
-		bool DrawnCard = true
+		bool DrawnCard = true,
+		bool LandUse = false
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -300,7 +306,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 									Evaluator.WithRootImpulse(
 										decidedAt ?? sampled, // as Decide read it
 										() => ExplainLines(sampled),
-										DrawnCard
+										DrawnCard,
+										DrawnCard && options.LandUse // its guessed draws are DrawnCard's
 									)
 							)
 					)
@@ -434,7 +441,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 							options.OptionPrice,
 							s,
 							PlayerId,
-							() => Evaluator.WithRootImpulse(s, () => DecideHere(s), DrawnCard)
+							() =>
+								Evaluator.WithRootImpulse(
+									s,
+									() => DecideHere(s),
+									DrawnCard,
+									DrawnCard && options.LandUse // its guessed draws are DrawnCard's
+								)
 						)
 				)
 		);

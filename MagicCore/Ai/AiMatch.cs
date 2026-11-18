@@ -59,6 +59,9 @@ public static class AiMatch
 			["responds"] = Opponent(Rollout.OpponentModel.Responds),
 			// The board-only opponent, never casting even what we know — before AI-10.4: beam+boardonly.
 			["boardonly"] = Opponent(Rollout.OpponentModel.BoardOnly),
+			// Up to two spells a rollout turn, ours and a casting opponent's - never measured alone (AI-17.6's item 11, AI-19,
+			// AI-27: a land kept untapped for a double-spell turn is worth nothing at one spell a turn): beam+twospells.
+			["twospells"] = WithRollout(r => r with { ActionsPerTurn = 2 }),
 			// The library: honest since AI-3.9. One shuffled guess a decision, the default until AI-20.4, is
 			// beam+shuffle; the real order — the search sees its own future draws — is beam+realorder.
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
@@ -121,6 +124,8 @@ public static class AiMatch
 			// beam+nodrawncard as before.
 			["drawncard"] = o => o with { DrawnCard = true },
 			["nodrawncard"] = o => o with { DrawnCard = false },
+			// AI-27.9: our lands priced by the cards they let us play - off by default; beam+landuse.
+			["landuse"] = o => o with { LandUse = true },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.
@@ -135,6 +140,8 @@ public static class AiMatch
 			["spellfirst"] = o => o with { Without = o.Without | Evaluator.Terms.AbilityOverSpell },
 			// A look at an unseen card (a surveil) shifts no odds: it shows the card the look-ahead made up, before AI-20.9: beam+nolooks.
 			["nolooks"] = o => o with { Without = o.Without | Evaluator.Terms.Looks },
+			// A modal trigger's first mode in the look-ahead, before AI-27 (2026-11-18): beam+firstmode.
+			["firstmode"] = o => o with { Without = o.Without | Evaluator.Terms.RolloutModes },
 			// Only instants and flash held as options, before AI-13.10: beam+instantoptions.
 			["instantoptions"] = o =>
 				o with

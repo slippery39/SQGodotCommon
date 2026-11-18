@@ -818,7 +818,8 @@ public static class Rollout
 	/// and block only what they survive or join a block already made — Lookahead.Joins, AI-15) unless <see cref="Attacks.AllInToo"/> weighs "all attack" too. A target choice takes
 	/// its owner's best under <see cref="Targets.OwnersBest"/>; a choice of none or one — a "you may", an
 	/// optional target — its chooser's best under <see cref="Settings.Mays"/>, a pay-to-keep excepted (the
-	/// cheap answer pays); every other choice the cheap answer.
+	/// cheap answer pays); a modal trigger's modes its chooser's best (<see cref="Evaluator.Terms.RolloutModes"/>); every
+	/// other choice the cheap answer.
 	/// </summary>
 	static IEnumerable<int> Answer(
 		GameState s,
@@ -841,6 +842,13 @@ public static class Rollout
 				new GreedyAi(who, settings.Held).Answer(s, choice),
 			{ MinChoices: 0, MaxChoices: 1 } and not PayToKeepChoice when settings.Mays =>
 				new GreedyAi(who, settings.Held).Answer(s, choice),
+			// a modal trigger's modes: its chooser's best, each settled (Evaluator.Terms.RolloutModes)
+			// "choose one" only: "up to N" and "one or more" keep the cheap answer until measured (GreedyAi tries exactly N)
+			ChooseModesChoice { MaxChoices: 1 }
+				when !Evaluator.IsOff(Evaluator.Terms.RolloutModes) => new GreedyAi(
+				who,
+				settings.Held
+			).Answer(s, choice),
 			_ => Lookahead.QuickAnswer(s, choice),
 		};
 

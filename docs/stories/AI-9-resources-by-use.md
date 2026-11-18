@@ -220,7 +220,14 @@ Open questions:
 - [ ] AI-9.10 A land whose untapped condition holds only now is played first (Shayne, AI-27, 2026-11-18): FRA seed 2
       game White-Blue Jace vs Red-Green, turn 6 - Rockfall Vale ("enters tapped unless you control two or more other
       lands") played over Konstrari Annex ("enters tapped unless you control a planeswalker") with a Jace token at 1 in
-      play. Price a land in hand by whether it will enter untapped when it is next played, not a rule
+      play. Price a land in hand by whether it will enter untapped when it is next played, not a rule. TRACED (2026-11-18,
+      AI-27): the turn-6 choice now leads with Jace −1 36.10 = Play Rockfall Vale 36.10, Play Konstrari Annex 34.93. In
+      the Vale line the token surveils and dies, the Annex enters tapped next turn, and the rollout casts Ajani's Anguish
+      X=2 with three mana; in the Annex line it has four and casts Heartstring Puller - the gap is what the rollout
+      happens to cast and how its combat goes. The land's real worth (a fourth untapped mana) needs a second spell,
+      which the rollout never casts: a land priced "enters tapped next turn" in `LandUnlock` moves 0.3 to 0.05, too
+      small to change it, and `beam+twospells` (two spells a rollout turn) doesn't change it either. Waits on the
+      lands discussion (AI-27, Decisions 2026-11-17: what a land is worth "is highly variable")
 
 ## Next
 
