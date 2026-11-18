@@ -279,6 +279,9 @@ odd plays may be its own artifacts.)
 
 ## Log
 
+- 2026-11-18: the session closed on AI-9.10 (the Konstrari Annex) retried with the new defaults - still the Vale; the
+  lost mana happens inside the look-ahead's own turns (its Log). Proposed as an AI-29 note.
+
 - 2026-11-18: land use and Settle's held prices made the default (Shayne). `--suite=beam --accept`: 5 answers changed -
   the four of land use, and seed 2 #16 now casts Mindseeker Oculus (his play); oracle 76.0%, score given up 0.65, wins
   missed 2, 19 850 engine steps. /pre-commit: a test that the held prices fire (a settled discard keeps Aerid Konstrari

@@ -31,6 +31,14 @@ His examples, in his words (2026-11-18):
 "Now it sounds easy because Im saying this all in english, so the implementation is something we would need to figure
 out."
 
+A candidate from the same session (AI-9.10, 2026-11-18): land sequencing - Konstrari Annex ("enters tapped unless you
+control a planeswalker") played while a Jace token makes it enter untapped, before Rockfall Vale ("unless you control
+two or more other lands"), whose condition holds from then on anyway. The general evaluator can't see it: the look-ahead
+plays the Annex tapped inside its own turns, where its one spell a turn fits the mana left.
+Shayne (2026-11-18): "do we need to look ahead for this? Is there no way to determine which lands would come into play
+untapped in the current situation vs next turn and sequence the lands that way? Like the lookahead seems to be causing
+too much issues, even though in theory it should help."
+
 What pointed here (AI-27): seed 2 #16 — Divining Duelist cast in our main phase to loot away our next land drop, where
 Mindseeker Oculus now and Duelist held for their turn was the play; the look-ahead never plays our cards in their turn.
 

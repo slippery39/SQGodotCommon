@@ -227,7 +227,13 @@ Open questions:
       happens to cast and how its combat goes. The land's real worth (a fourth untapped mana) needs a second spell,
       which the rollout never casts: a land priced "enters tapped next turn" in `LandUnlock` moves 0.3 to 0.05, too
       small to change it, and `beam+twospells` (two spells a rollout turn) doesn't change it either. Waits on the
-      lands discussion (AI-27, Decisions 2026-11-17: what a land is worth "is highly variable")
+      lands discussion (AI-27, Decisions 2026-11-17: what a land is worth "is highly variable"). RETRIED (2026-11-18, the
+      session's last step, Shayne): with AI-27.9's land use on, still Play Rockfall Vale 38.75 = Jace −1 38.75, Play
+      Konstrari Annex 37.57 - the turn played: −1, Vale, Koth. Reading "enters tapped unless" for lands in hand in the
+      land count (`LandUnlock.Playable`) changed nothing and was reverted: the look-ahead plays the Annex, tapped, inside
+      its own turns, where one spell a turn fits in three mana; by the horizon it is on the battlefield like any land.
+      The lost mana is never scored. Candidate for AI-29 (AI notes): "play a land whose untapped condition holds only
+      now first" - a land-sequencing note
 
 ## Next
 
