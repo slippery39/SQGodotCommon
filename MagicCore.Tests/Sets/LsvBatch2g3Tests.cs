@@ -35,7 +35,11 @@ public class LsvBatch2g3Tests : FraBoardTest
 
 		Assert.That(InitiativeComponent.HolderOf(s), Nu.EqualTo(me), "I have the initiative");
 		Assert.That(Room(me), Nu.EqualTo("Secret Entrance"), "Undercity, its first room");
-		Assert.That(Basics(), Nu.EqualTo(basics + 1), "Secret Entrance: a basic land card into my hand");
+		Assert.That(
+			Basics(),
+			Nu.EqualTo(basics + 1),
+			"Secret Entrance: a basic land card into my hand"
+		);
 	}
 
 	[Test]
@@ -91,7 +95,6 @@ public class LsvBatch2g3Tests : FraBoardTest
 		);
 		Assert.That(Room(me), Nu.EqualTo("Secret Entrance"), "their upkeep: no venture of mine");
 
-
 		s = TestGames.PassUntil(
 			s,
 			x =>
@@ -99,11 +102,26 @@ public class LsvBatch2g3Tests : FraBoardTest
 				|| x.GetGame().Step == Step.Draw && x.GetGame().ActivePlayerId == me
 		);
 		var branch = (ChooseKeywordChoice)s.GetPendingChoice()!;
-		Assert.That(branch.Keywords, Nu.EqualTo(new[] { "Forge", "Lost Well" }), "one choice, two rooms");
-		Resolve(c => c is ChooseKeywordChoice ? [1] : c is ChooseTargetChoice ? [caretaker] : c.Options.Take(c.MinChoices).Select(o => o.Id));
+		Assert.That(
+			branch.Keywords,
+			Nu.EqualTo(new[] { "Forge", "Lost Well" }),
+			"one choice, two rooms"
+		);
+		Resolve(c =>
+			c switch
+			{
+				ChooseKeywordChoice => [1],
+				ChooseTargetChoice => [caretaker],
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			}
+		);
 
 		Assert.That(Room(me), Nu.EqualTo("Forge"));
-		Assert.That(s.GetCard(caretaker).PlusOneCounters, Nu.EqualTo(2), "Forge: two +1/+1 counters");
+		Assert.That(
+			s.GetCard(caretaker).PlusOneCounters,
+			Nu.EqualTo(2),
+			"Forge: two +1/+1 counters"
+		);
 	}
 
 	[Test]
@@ -130,7 +148,11 @@ public class LsvBatch2g3Tests : FraBoardTest
 		Assert.That(Alive(bear), "Throne: a creature from the top ten onto the battlefield");
 		Assert.That(s.GetCard(bear).PlusOneCounters, Nu.EqualTo(3), "with three +1/+1 counters");
 		Assert.That(s.Has(s.GetCard(bear), "Hexproof"), "it gains hexproof");
-		Assert.That(Undercity.Of(s, me), Nu.Null, "the last room's ability resolved: completed, removed");
+		Assert.That(
+			Undercity.Of(s, me),
+			Nu.Null,
+			"the last room's ability resolved: completed, removed"
+		);
 
 		Ventures();
 		Assert.That(Room(me), Nu.EqualTo("Secret Entrance"), "a new Undercity");
@@ -149,7 +171,11 @@ public class LsvBatch2g3Tests : FraBoardTest
 
 		s = StateBasedActions.Check(s);
 
-		Assert.That(Undercity.Of(s, me), Nu.Not.Null, "not removed before its ability has left the stack");
+		Assert.That(
+			Undercity.Of(s, me),
+			Nu.Not.Null,
+			"not removed before its ability has left the stack"
+		);
 	}
 
 	[Test]
@@ -168,7 +194,11 @@ public class LsvBatch2g3Tests : FraBoardTest
 		for (var i = 0; i < 10 && Room(me) == "Throne of the Dead Three"; i++)
 			s = TestGames.PassOrChoose(s);
 
-		Assert.That(Room(me), Nu.EqualTo("Secret Entrance"), "completed, and a new Undercity begun");
+		Assert.That(
+			Room(me),
+			Nu.EqualTo("Secret Entrance"),
+			"completed, and a new Undercity begun"
+		);
 	}
 
 	[Test]
@@ -176,11 +206,11 @@ public class LsvBatch2g3Tests : FraBoardTest
 	{
 		var bear = Field(Bear, me);
 		Ventures();
-		Ventures(c => c is ChooseTargetChoice ? [bear] : c.Options.Take(c.MinChoices).Select(o => o.Id));
+		Ventures(Targeting(bear, yes: false));
 		Assert.That(s.GetCard(bear).PlusOneCounters, Nu.EqualTo(2), "Forge");
 
 		var life = Life(them);
-		Ventures(c => c is ChooseTargetChoice ? [them] : c.Options.Take(c.MinChoices).Select(o => o.Id));
+		Ventures(Targeting(them, yes: false));
 		Assert.That(Room(me), Nu.EqualTo("Trap!"));
 		Assert.That(Life(them), Nu.EqualTo(life - 5), "Trap!: target player loses 5 life");
 
@@ -195,7 +225,7 @@ public class LsvBatch2g3Tests : FraBoardTest
 		var theirs = Field(Bear, them);
 		Ventures();
 		Ventures(On<ChooseKeywordChoice>(2)); // Lost Well
-		Ventures(c => c is ChooseTargetChoice ? [theirs] : c.Options.Take(c.MinChoices).Select(o => o.Id));
+		Ventures(Targeting(theirs, yes: false));
 		Assert.That(Room(me), Nu.EqualTo("Arena"));
 
 		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is DeclareAttackerChoice);
@@ -211,14 +241,23 @@ public class LsvBatch2g3Tests : FraBoardTest
 			Nu.EqualTo(new[] { me }),
 			"the look-ahead's quick answer attacks with it too"
 		);
-		var stripped = s.GetCard(theirs).WithComponent(new UntilEndOfTurn { LosesAllAbilities = true });
+		var stripped = s.GetCard(theirs)
+			.WithComponent(new UntilEndOfTurn { LosesAllAbilities = true });
 		s = s.UpdateObject(theirs, stripped); // TEST SETUP: Flourishing Grapple's "loses all abilities"
 		Assert.That(
 			s.GetPendingChoice()!.Options.Select(o => o.Id),
 			Nu.Not.Contains(CombatOption.None),
 			"goad is an effect, not an ability: losing all abilities doesn't end it"
 		);
-		var declared = WholeAttacks.Declare(s, them, new(System.Collections.Immutable.ImmutableDictionary<int, int>.Empty, []));
-		Assert.That(declared.GetCard(theirs).AttackingId, Nu.EqualTo(me), "the AI's no-attack plan still attacks with it");
+		var declared = WholeAttacks.Declare(
+			s,
+			them,
+			new(System.Collections.Immutable.ImmutableDictionary<int, int>.Empty, [])
+		);
+		Assert.That(
+			declared.GetCard(theirs).AttackingId,
+			Nu.EqualTo(me),
+			"the AI's no-attack plan still attacks with it"
+		);
 	}
 }
