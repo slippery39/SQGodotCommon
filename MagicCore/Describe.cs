@@ -168,7 +168,13 @@ public static class Describe
 
 	/// <summary>The chosen modes' printed lines, "Destroy … + You draw a card …" — for every front end.</summary>
 	public static string Modes(IReadOnlyList<Effects.Mode> modes, IEnumerable<int> chosen) =>
-		string.Join(" + ", chosen.Select(i => modes[i].Text.TrimStart('•', ' ')));
+		string.Join(" + ", chosen.Select(i => Line(modes[i])));
+
+	/// <summary>A mode's printed line without its bullet — or, spree's "+ {1}{U} — Counter target spell.", its cost.</summary>
+	static string Line(Effects.Mode mode) =>
+		mode.Cost is null
+			? mode.Text.TrimStart('•', ' ')
+			: mode.Text[(mode.Text.IndexOf(" — ", StringComparison.Ordinal) + 3)..];
 
 	static string Name(GameState s, int id) =>
 		!s.HasObject(id) ? $"#{id}"

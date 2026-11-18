@@ -1951,6 +1951,20 @@ public static class LsvCards
 			],
 			// ===== MC-4.4g7: storm (Scripting.Storm, CopySpell { N }, Count.SpellsCastBefore) =====
 			["Brain Freeze"] = [Spell([TargetSpec.Player()], new Mill(Ref.Target(), 3)), Storm],
+			// ===== MC-4.4g8: spree (Mode.Cost from the printed "+ {cost} —", targets word by word) =====
+			["Three Steps Ahead"] =
+			[
+				ModalSpell(
+					"Three Steps Ahead",
+					new() { AtMost = 3 },
+					M([TargetSpec.Spell()], new Counter(Ref.Target())),
+					M(
+						[Target((Is.Artifact | Is.Creature) & Is.Yours)],
+						new CreateTokenCopy(Ref.Target())
+					),
+					M([], new DrawCards(Ref.You, 2), new Discard(Ref.You, 1))
+				),
+			],
 		};
 
 	/// <summary>

@@ -172,6 +172,11 @@ whose subsystem it lives in.
   its target words chosen one at a time as it is cast** (MC-4.4e2f): `CastSpellAction.ChoosesTargets` with `EachWord`
   (the text's `Repeats`) — a `ChooseTargetChoice` per word, as a copy's are retargeted, never a cast per set: "return
   target creature" three times was 220 casts against 12 creatures, Mystic Confluence 576 with three spells on the stack.
+- **Spree** (CR 702.172, Three Steps Ahead, MC-4.4g8) is a modal spell whose modes have a cost each, `Mode.Cost` — read
+  from the printed "+ {1}{U} — …" by `Scripting.Printed`, never retyped — added to the cast's total for each mode chosen
+  (`CastSpellAction.CostBeforeLife`, beside replicate's; paid on a free cast too). "Choose one or more" is `{ AtMost = 3 }`.
+  A spree text is `EachWord` as the Confluences' (Shayne, 2026-11-18): 7 casts, never one per spell × permanent of yours
+  (199 with three spells on the stack). The other modal spells still enumerate until MC-8.
 - **"Target artifact a player controls and target artifact card in that player's graveyard"** (Goblin Welder) is the
   second word `TargetSpec.InAnyGraveyard(…) { OfThePreviousTargetsController }` — its card's owner controls the target
   before it (`TargetSpec.FitsPrevious`), asked by `AreLegal` and again on resolution, where a control change makes it

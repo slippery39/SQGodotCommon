@@ -239,7 +239,7 @@ public static class Scripting
 		string name,
 		ModeChoice choose,
 		params Mode[] modes
-	) => new([]) { Modes = Printed(name, modes), Choose = choose };
+	) => new([]) { Modes = Printed(name, modes, spree: true), Choose = choose };
 
 	/// <summary>"When …, choose one —" — Ertai Resurrected's "choose up to one —" is new() { AtLeast = 0 }.</summary>
 	public static TriggeredAbilityComponent ModalWhen(
@@ -249,17 +249,32 @@ public static class Scripting
 		params Mode[] modes
 	) => new(on, []) { Modes = Printed(name, modes), Choose = choose };
 
-	/// <summary>Names each mode with its printed bullet — and refuses a script whose count differs.</summary>
-	public static ImmutableList<Mode> Printed(string name, Mode[] modes)
+	/// <summary>
+	/// Names each mode with its printed bullet — and refuses a script whose count differs. Spree's "+ {1}{U} — …" gives
+	/// the mode its cost, paid only by a cast (<paramref name="spree"/>: ModalSpell) — refused anywhere else, where
+	/// nothing would pay it.
+	/// </summary>
+	public static ImmutableList<Mode> Printed(string name, Mode[] modes, bool spree = false)
 	{
 		var bullets = (CardRegistry.DataOf(name).OracleText ?? "")
 			.Split('\n')
-			.Where(l => l.StartsWith('•'))
+			.Where(l => l.StartsWith('•') || l.StartsWith("+ "))
 			.ToList();
 		if (bullets.Count != modes.Length)
 			throw new InvalidOperationException(
 				$"{name}: {modes.Length} modes scripted, {bullets.Count} printed"
 			);
-		return [.. modes.Select((m, i) => m with { Text = bullets[i] })];
+		ManaCost? CostOf(string line)
+		{
+			if (!line.StartsWith('+'))
+				return null;
+			var dash = line.IndexOf(" —", StringComparison.Ordinal);
+			if (!spree || dash < 0)
+				throw new InvalidOperationException(
+					$"{name}: a spree line is paid only on a spell, as \"+ {{cost}} — …\": {line}"
+				);
+			return ManaCost.Parse(line[2..dash]);
+		}
+		return [.. modes.Select((m, i) => m with { Text = bullets[i], Cost = CostOf(bullets[i]) })];
 	}
 }

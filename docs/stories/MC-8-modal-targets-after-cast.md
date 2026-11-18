@@ -68,3 +68,5 @@ plan" and "4.4e2f's notes" — the per-word choice is built there — and Design
 
 - 2026-11-17: opened from MC-4.4e2f (Shayne): Mystic Confluence's limit and the enumeration of the other modal
   spells, as one fix.
+- 2026-11-18: MC-4.4g8 (Shayne): spree (Three Steps Ahead, `Mode.Cost`) is `EachWord` too — word by word from the
+  start, so MC-8.2 has one fewer kind of text to move. Sublime Epiphany and the rest still enumerate.

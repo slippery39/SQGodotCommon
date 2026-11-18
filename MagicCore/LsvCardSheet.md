@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 31/46 · uncommon 41/86 · rare 112/279 · mythic 39/108 · **232/528**
+**Playable:** common 31/46 · uncommon 41/86 · rare 113/279 · mythic 39/108 · **233/528**
 
 ### "Name Sticker" Goblin
 
@@ -957,11 +957,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Engine pieces:** `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
-["Brain Freeze"] =
-[
-	Spell([TargetSpec.Player()], new Mill(Ref.Target(), 3)),
-	Storm,
-],
+["Brain Freeze"] = [Spell([TargetSpec.Player()], new Mill(Ref.Target(), 3)), Storm],
 ```
 
 ### Cabal Ritual
@@ -5556,7 +5552,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > + {3} — Create a token that's a copy of target artifact or creature you control.  
 > + {2} — Draw two cards, then discard a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g8Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Three Steps Ahead"] =
+[
+	ModalSpell(
+		"Three Steps Ahead",
+		new() { AtMost = 3 },
+		M([TargetSpec.Spell()], new Counter(Ref.Target())),
+		M(
+			[Target((Is.Artifact | Is.Creature) & Is.Yours)],
+			new CreateTokenCopy(Ref.Target())
+		),
+		M([], new DrawCards(Ref.You, 2), new Discard(Ref.You, 1))
+	),
+],
+```
 
 ### Thundering Falls
 

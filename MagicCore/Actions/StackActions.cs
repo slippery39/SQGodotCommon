@@ -191,9 +191,13 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public bool ChoosesTargets { get; init; }
 
-	/// <summary>Mystic Confluence: a text whose modes may repeat chooses its targets word by word as it is cast.</summary>
+	/// <summary>
+	/// Mystic Confluence: a text whose modes may repeat chooses its targets word by word as it is cast — and spree's
+	/// (Three Steps Ahead, a mode with a cost: Shayne, 2026-11-18): a cast per set of modes, never per pair of targets.
+	/// </summary>
 	public static bool EachWord(Card card) =>
-		card.GetComponent<SpellEffectsComponent>()?.Choose.Repeats == true;
+		card.GetComponent<SpellEffectsComponent>() is { } text
+		&& (text.Choose.Repeats || text.Modes.Any(m => m.Cost is not null));
 
 	/// <summary>
 	/// Pyrokinesis: how its 4 damage is divided among the targets chosen (TargetSpec.Divide), one number per
@@ -271,7 +275,7 @@ public record CastSpellAction : GameAction
 	/// The total cost: X and whatever is paid instead of a sacrifice are in it, so ManaPayment is
 	/// asked for X = 0 — and a reduction applies to the total (CR 601.2f). Mana beside the printed cost:
 	/// the kicker's, the replicate cost's each time (Lose Focus' {U}), and what is paid instead of the mana
-	/// cost (Baleful Mastery's {1}{B}).
+	/// cost (Baleful Mastery's {1}{B}), and each chosen mode's spree cost (Three Steps Ahead).
 	/// </summary>
 	ManaCost CostToPay(GameState s, Card card) =>
 		CostBeforeLife(s, card).PayingLifeFor(LifeForPhyrexian);
@@ -296,6 +300,11 @@ public record CastSpellAction : GameAction
 		if (card.GetComponent<ReplicateComponent>() is { } replicate)
 			for (var i = 0; i < Replicate; i++)
 				added = added?.Plus(replicate.Cost) ?? replicate.Cost;
+		// Spree: each chosen mode's cost — asked before the modes are validated, so an index out of range is nothing
+		if (card.GetComponent<SpellEffectsComponent>() is { } text)
+			foreach (var i in Modes)
+				if (text.Modes.ElementAtOrDefault(i)?.Cost is { } spree)
+					added = added?.Plus(spree) ?? spree;
 		var total = Costs.Of(
 			s,
 			PlayerId,

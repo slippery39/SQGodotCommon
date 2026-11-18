@@ -1099,6 +1099,19 @@ as his three priorities.
   the old count — true of every `EventCard` copier before this, and invisible on Brain Freeze (the copies retarget, the
   count is the same); a copy keeps `SpellsCastBefore` (nothing reads a copy's); the two-player sum (the engine is two
   players throughout, as `TurnStructure`'s reset).
+- 2026-11-18, Claude — **4.4g8's notes (spree).** Built as planned: `Mode.Cost`, read from the printed "+ {1}{U} — …"
+  by `Scripting.Printed` (never retyped), each chosen mode's cost added in `CastSpellAction.CostBeforeLife` beside
+  replicate's. **Legal actions, counted before building** (12 creatures and 12 artifacts of mine): a cast per set of
+  targets is 49 with an empty stack, 99 in response to one spell, 199 to three. **Shayne, 2026-11-18: word by word** —
+  a spree text is `EachWord` (a mode with a cost), as the Confluences': 7 casts, each target chosen as it is cast. The
+  other modal spells (Sublime Epiphany) are left to MC-8.
+  **`/pre-commit`'s review: nine findings; five taken, three with a test that fails without it (3 breaks caught):** a
+  mode index out of range is `Invalid`, never a throw (`CostBeforeLife` runs before the modes are validated, from the
+  Phyrexian and delve checks); `Describe.Modes` shows a spree mode's effect, not its cost, and no longer strips a "+"
+  from an ordinary bullet ("• +2/+0 …"); `Printed` refuses a spree line outside `ModalSpell` (a trigger or ability
+  would never pay it) and names a line with no " —". The summary of `CostToPay` names spree. **Not taken:** `EachWord`
+  for every multi-mode spell (MC-8, Shayne); one helper for the four `added` sums (style); the AI's land and curve
+  heuristics read the printed mana value (kicker's and replicate's costs the same: an AI-lane note).
 
 ## Tasks
 
@@ -1305,7 +1318,10 @@ as his three priorities.
           (`OnStackComponent.SpellsCastBefore`), a `SelfCast` trigger's snapshot; 2 tests, 4 breaks caught;
           `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random and 48 card-replay games, added
           4, the AI replay unmoved; probe 150 games, none unfinished, Brain Freeze cast 506 times; full suite 1,968 passed)
-    - [ ] MC-4.4g8 Spree: Three Steps Ahead
+    - [x] MC-4.4g8 Spree: Three Steps Ahead — done 2026-11-18: `Mode.Cost` (from the printed "+ {cost} —"), spree's
+          casts word by word (`EachWord`); 6 tests, 7 breaks caught; `batch_checks.py` all 7 steps (golden-out
+          unchanged; golden-in moved 29 random and 78 card-replay games, added 4, the AI replay unmoved; probe 150
+          games, none unfinished, Three Steps Ahead cast 543 times; full suite 1,971 passed)
     - [ ] MC-4.4g9 Warp: Quantum Riddler
     - [ ] MC-4.4g10 Classes: Does Machines
 
@@ -1313,9 +1329,11 @@ as his three priorities.
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
-(4.4g4), Adventures (4.4g5), teamwork (4.4g6) and storm (4.4g7) — are done: **232 of 528 play.** Next, in a NEW
-session: **MC-4.4g8 — Spree** (Three Steps Ahead): the plan is in Decisions (4.4g's plan, part 8 — its targets word by
-word or a cast per pair is MC-8's mechanism: ask Shayne then). Then g9–g10 in the plan's order, one a session.
+(4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7) and spree (4.4g8) — are done: **233 of 528 play.** Next,
+in a NEW session: **MC-4.4g9 — Warp** (Quantum Riddler): the plan is in Decisions (4.4g's plan, part 9). Then g10.
+From 4.4g8: spree is `Mode.Cost` — read from the printed "+ {cost} —" by `Scripting.Printed`, added per chosen mode in
+`CastSpellAction.CostBeforeLife` — and a spree text is `EachWord` (one cast per set of modes, targets word by word;
+Shayne). g8's tests are in `LsvBatch2g8Tests.cs` (`CastOf(card, modes)`: the cast offered for those modes).
 From 4.4g7: storm is `Scripting.Storm` — `SelfCast`, `CopySpell(Ref.EventCard) { N = Count.SpellsCastBefore(…) }`; the
 count is every player's spells, stamped as it is cast (`OnStackComponent.SpellsCastBefore`); a `SelfCast` trigger now
 carries the spell as it was cast (`EventSnapshot`), so a countered spell is still copied. `CopySpell { N }` is "copy it
@@ -1532,3 +1550,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   or more" (`TapUntappedCost.TotalPower`), its creatures picked after the cast. Next: MC-4.4g7, storm.
 - 2026-11-18: MC-4.4g7 done: Brain Freeze — 232 of 528 play. Storm is a cast trigger copying the spell once per spell
   cast before it this turn (every player's, counted as it is cast). Next: MC-4.4g8, spree.
+- 2026-11-18: MC-4.4g8 done: Three Steps Ahead — 233 of 528 play. Spree is a cost on each mode, read from the printed
+  line; its targets are chosen word by word (Shayne: 7 casts, not 199). Next: MC-4.4g9, warp.

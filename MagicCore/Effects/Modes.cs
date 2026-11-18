@@ -9,7 +9,14 @@ public record Mode(
 	string Text,
 	ImmutableList<TargetSpec> Targets,
 	ImmutableList<GameAction> Effects
-);
+)
+{
+	/// <summary>
+	/// Spree (Three Steps Ahead: "+ {1}{U} — Counter target spell."): the mode's additional cost, paid for each mode
+	/// chosen (CastSpellAction's total). Read from the printed "+ {cost} —" by Scripting.Printed, never retyped.
+	/// </summary>
+	public ManaCost? Cost { get; init; }
+}
 
 /// <summary>
 /// How many modes are chosen (CR 700.2) — on a spell, a triggered and an activated ability alike. "Choose one
