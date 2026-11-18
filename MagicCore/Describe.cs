@@ -17,7 +17,14 @@ public static class Describe
 			MulliganAction => "Mulligan",
 			PlayLandAction p => $"Play {Name(s, p.CardId)}"
 				+ (s.IsIn(p.CardId, p.PlayerId, ZoneType.Exile) ? " from exile" : ""),
-			CastSpellAction c => $"Cast {Name(s, c.CardId)}"
+			CastSpellAction c => (
+				c.Adventure
+				&& s.HasObject(c.CardId)
+				&& s.GetObject(c.CardId) is Card { } adventurer
+				&& adventurer.GetComponent<AdventureComponent>() is { } adventure
+					? $"Cast {adventure.Face.Name} (Adventure)"
+					: $"Cast {Name(s, c.CardId)}"
+			)
 				+ (
 					s.IsIn(c.CardId, c.PlayerId, ZoneType.Graveyard)
 						? " from graveyard (flashback)"

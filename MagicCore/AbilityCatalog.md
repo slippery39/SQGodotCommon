@@ -170,7 +170,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Otherwise` (ImmutableList<GameAction>): Temporal Conqueror: "If you can't, create a Treasure token." — nothing to pick; with May, "if you don't".
   - `Prompt` (string?): The question on the table; unset says where it goes.
   - `OnTop` (bool): Brainstorm: "put two cards from your hand on top of your library in any order" — two of these, the second on…
-- **`MoveTo(Ref What, ZoneType To)`** — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) — "return this card from your graveyard to the… [71: Fatehold Charm, Living Library, The Theorist, Jace Beleren…]
+- **`MoveTo(Ref What, ZoneType To)`** — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) — "return this card from your graveyard to the… [72: Fatehold Charm, Living Library, The Theorist, Jace Beleren…]
   - `From` (ImmutableList<ZoneType>): Where it must be now — "from your graveyard" is [Graveyard] (its owner's), Unsummon's "spell or creature"…
   - `Tapped` (bool): Gallia, Tragic Host: "to the battlefield tapped".
   - `Counters` (int): Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.
@@ -337,6 +337,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Exhaust` (bool): "Exhaust — … (Activate each exhaust ability only once.)" — stamped on the card as it is activated. ponytail:…
 - **`AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs)`** — "As an additional cost to cast this spell, …" — Silence the Echo: [SacrificeCost(Is.Creature | Is.Planeswalker) { Or = new PayManaCost(3)… [7: Silence the Echo, Countersculpt, Bitter Triumph…]
 - **`AdditionalLandEachTurn`** — Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops. [3: Captain Kathryn Janeway, Nog, Ambitious Cadet, Loot, Exuberant Explorer]
+- **`AdventureComponent(Cards.CardFace Face, SpellEffectsComponent Text)`** — An adventurer card's Adventure (CR 715; Brazen Borrower // Petty Theft: "Return target nonland permanent an opponent controls to its…
 - **`Animated(int SourceId, int SourceIncarnation, CardType Types, string? AddedSubtype, int BasePower, int BaseToughness)`** — Its types changed by this source's BecomesType (this object of it); the rest is what it was, to put back. SourceId 0: by an effect with no…
 - **`ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComponent> Abilities)`** — Draconic Visitor: "If one or more artifact tokens would be created under your control, that many [Token] are created instead." [2: Draconic Visitor, Holo-Engineer]
   - `AnyToken` (bool): Holo-Engineer: "If one or more tokens would be created under your control, that many 3/3 colorless Illusion…
@@ -347,6 +348,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Subtype` (string?): Puppet Crafting: "a Construct", in addition to its other types.
   - `Power` (int?): Puppet Crafting: "with base power and toughness 5/5"; unset keeps its own.
   - `If` (Condition?): Mogis: "As long as …" — asked of the source.
+- **`CanBlockOnly(Filters.Filter Attackers)`** — Brazen Borrower: "This creature can block only creatures with flying." — the BLOCKER's filter, asked of each attacker from its side… [1: Brazen Borrower // Petty Theft]
 - **`CantAttackThisTurn`** — Peace in Our Time: "they can't attack this turn" — on that player; Combat.CanAttack. [1: Peace in Our Time]
 - **`CantBeBlockedBy(Filters.Filter Blockers)`** — Cold-Blooded Crew: "This creature can't be blocked by creatures with power 2 or less."; Species 8472: "… by artifact creatures." — the… [2: Cold-Blooded Crew, Species 8472]
 - **`CantBeCountered`** — "This spell can't be countered." Read by StackResolution.Counter. [4: Ruric Thar, Magecrusher, Abrupt Decay, Delighted Halfling…]
@@ -360,6 +362,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `SpellsEachTurn` (int): Archon of Emeria: "Each player can't cast more than one spell each turn." — it binds only a player who has…
   - `Of` (Filters.Filter?): Clarion Conqueror: "Activated abilities of artifacts, creatures, and planeswalkers" — the spell cast, or the…
 - **`CantSacrificeTreasures`** — Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — MagicState.CanSacrifice, asked by every sacrifice (costs, choices,… [1: Quark, Humble Proprietor]
+- **`CastAsAdventure(Card Original)`** — Brazen Borrower // Petty Theft: the adventurer card cast as its Adventure (Card.AsAdventure) — kept while it is Petty Theft, "Return…
 - **`CastOnlyIf(Condition When)`** — Proft: "You can't cast this spell unless [When]." A restriction, not a cost — read by Playable.CanCastFromHere, so the card is never… [1: Proft, Sinister Mastermind]
 - **`ChoosesColorAsItEnters`** — Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield. [1: Room of Refuge]
 - **`ChoosesNameAsItEnters`** — Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by MagicState.EnterBattlefield — the names every… [2: Anointed Peacekeeper, Kai Winn, Faithless Leader]
@@ -741,7 +744,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 
 ## Shared script helpers (`MagicCore/Sets/Scripting.cs`)
 
-- `Target` — "Target [filter]" — a permanent: Target(Is.Creature & Is.Yours) is "target creature you control". [138: Terminal Criticism, Yoshimaru, Scrappy Stray, Way of the Warlord…]
+- `Target` — "Target [filter]" — a permanent: Target(Is.Creature & Is.Yours) is "target creature you control". [139: Terminal Criticism, Yoshimaru, Scrappy Stray, Way of the Warlord…]
 - `Loyalty` — "[cost]: effects" — a loyalty ability, own or granted. [13: The Theorist, Jace Beleren, Ajani Unrelenting, Ajani Resolute…]
 - `Threshold` — Threshold — "as long as there are seven or more cards in your graveyard". [7: Void Extrapolator // Omit Variables, Theorix Metamage // Omit Variables, Proft, Sinister Mastermind…]
 - `YouControlTwoOrMoreOtherLands` — "Enters tapped unless you control two or more other lands" (FRA's slow lands, TRK's enters-untapped lands). [5: Deserted Beach, Haunted Ridge, Overgrown Farmland…]

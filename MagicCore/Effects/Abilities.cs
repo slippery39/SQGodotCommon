@@ -1068,6 +1068,14 @@ public record GrantedFlashback(int OnTurn) : GameComponent;
 public record PrepareSpellComponent(Cards.CardFace Face, SpellEffectsComponent Text)
 	: GameComponent;
 
+/// <summary>
+/// An adventurer card's Adventure (CR 715; Brazen Borrower // Petty Theft: "Return target nonland permanent an
+/// opponent controls to its owner's hand."): its face and its text. The card is cast AS it from the hand
+/// (CastSpellAction.Adventure, Card.AsAdventure); resolved, it is exiled and its caster may cast the creature from
+/// there (FinishSpellAction). Prepare's shape, not its rules: a prepare spell is a copy in exile, never the card.
+/// </summary>
+public record AdventureComponent(Cards.CardFace Face, SpellEffectsComponent Text) : GameComponent;
+
 /// <summary>"This creature enters prepared." Applied by MagicState.EnterBattlefield.</summary>
 public record EntersPreparedComponent : GameComponent;
 
@@ -1175,6 +1183,12 @@ public record YourCreaturesAssignDamageByToughness : GameComponent;
 /// "… by artifact creatures." — the filter asked of each would-be blocker (Combat.CanBlock).
 /// </summary>
 public record CantBeBlockedBy(Filters.Filter Blockers) : GameComponent;
+
+/// <summary>
+/// Brazen Borrower: "This creature can block only creatures with flying." — the BLOCKER's filter, asked of each
+/// attacker from its side (Combat.CanBlock); CantBeBlockedBy is the attacker's, asked of its blockers.
+/// </summary>
+public record CanBlockOnly(Filters.Filter Attackers) : GameComponent;
 
 /// <summary>
 /// Species 8472: "This creature can't be the target of abilities from artifact sources your opponents

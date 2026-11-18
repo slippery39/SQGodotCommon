@@ -37,6 +37,8 @@ whose subsystem it lives in.
   of each blocker (`Combat.CanBlock`). **"Can't be the target of abilities from [sources]"** is
   `CantBeTargetedByAbilitiesFrom(filter)`, asked in `TargetSpec` beside hexproof — abilities only: the source
   is a permanent, not a spell on the stack.
+- **"Can block only creatures with flying"** (Brazen Borrower) is `CanBlockOnly(filter)` on the BLOCKER, the filter
+  asked of each attacker from its side (`Combat.CanBlock`) — `CantBeBlockedBy`'s mirror.
 - **"Can't attack alone"** (Pet Sehlat) is `Combat.CantAttackAlone`, a keyword-like grant judged on the whole
   declaration as it finishes (`FinishAttackersAction`): one such creature declared alone doesn't attack; two
   together each aren't alone. The table doesn't refuse the declaration yet (TBL-7).

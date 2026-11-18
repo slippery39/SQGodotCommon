@@ -292,7 +292,8 @@ public record Card : GameObject
 	/// CR 400.7: a card that changes zones is a new object with no memory of its previous one.
 	/// The ONLY reset — every zone change goes through MagicState.MoveCard, which calls this.
 	/// </summary>
-	public Card Fresh() => WithoutAnimation().WithoutCopyEffect().TurnedFaceUp().Reset();
+	public Card Fresh() =>
+		WithoutAdventure().WithoutAnimation().WithoutCopyEffect().TurnedFaceUp().Reset();
 
 	Card Reset() =>
 		this with
@@ -353,6 +354,7 @@ public record Card : GameObject
 				or CopyUntilEndOfTurn
 				or EnteredAsCopy
 				or FaceDown
+				or CastAsAdventure
 				or Effects.DelayedTrigger
 				or Animated
 				or Effects.TriggersAdditionalTime { UntilUntapped: true }
@@ -469,6 +471,34 @@ public record Card : GameObject
 		GetComponent<FaceDown>() is { } down
 			? (Card)
 				WithoutAnimation().WithCopiableValuesOf(down.Original).WithoutComponents<FaceDown>()
+			: this;
+
+	/// <summary>
+	/// Brazen Borrower // Petty Theft: cast as its Adventure (CR 715.3) — while it is cast and on the stack it has only
+	/// the Adventure's characteristics (Petty Theft, {1}{U}, Instant — Adventure, its text): the face's values as a
+	/// copy's, the card it is kept on <see cref="CastAsAdventure"/>, as a face-down card's (TurnedFaceDown). Anywhere
+	/// else it is the creature: leaving the stack undoes it (Fresh, WithoutAdventure).
+	/// </summary>
+	public Card AsAdventure() =>
+		GetComponent<Effects.AdventureComponent>() is { } adventure
+			? (Card)
+				(
+					WithCopiableValuesOf(
+						CardFactory.Create(
+							new CardDefinition(CardData.OfFace(adventure.Face), [adventure.Text]),
+							OwnerId
+						)
+					) with
+					{
+						Set = Set,
+					}
+				).WithComponent(new CastAsAdventure(this))
+			: this;
+
+	/// <summary>The adventurer card again (CR 715.4) — as it leaves the stack, resolved or not (Fresh).</summary>
+	public Card WithoutAdventure() =>
+		GetComponent<CastAsAdventure>() is { } cast
+			? (Card)WithCopiableValuesOf(cast.Original).WithoutComponents<CastAsAdventure>()
 			: this;
 
 	/// <summary>Cleanup: only Hall of Echoes' "until end of turn" copy ends — a Flesh Duplicate stays one.</summary>
@@ -590,6 +620,13 @@ public record EnteredAsCopy(Card Original) : GameComponent;
 /// guess in its place when the AI should play fair against it (DesignNotes).
 /// </summary>
 public record FaceDown(Card Original) : GameComponent;
+
+/// <summary>
+/// Brazen Borrower // Petty Theft: the adventurer card cast as its Adventure (Card.AsAdventure) — kept while it is
+/// Petty Theft, "Return target nonland permanent an opponent controls to its owner's hand." Status: a copy of Petty
+/// Theft is no adventurer card, and leaving the stack makes it the creature again.
+/// </summary>
+public record CastAsAdventure(Card Original) : GameComponent;
 
 /// <summary>Its types changed by this source's BecomesType (this object of it); the rest is what it was, to put back. SourceId 0: by an effect with no duration, until it leaves (Assimilate).</summary>
 public record Animated(

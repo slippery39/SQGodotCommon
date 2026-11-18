@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 30/46 · uncommon 40/86 · rare 112/279 · mythic 38/108 · **229/528**
+**Playable:** common 30/46 · uncommon 40/86 · rare 112/279 · mythic 39/108 · **230/528**
 
 ### "Name Sticker" Goblin
 
@@ -6049,7 +6049,9 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Abhorrent Oculus"] =
 [
-	new AdditionalCostsComponent([new ExileFromGraveyardCost(!Is.Source) { Count = 6 }]),
+	new AdditionalCostsComponent(
+		[new ExileFromGraveyardCost(!Is.Source) { Count = 6 }]
+	),
 	When(TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent), [], ManifestDread),
 ],
 ```
@@ -6297,7 +6299,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > //   
 > Return target nonland permanent an opponent controls to its owner's hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2g5Tests
+
+**Engine pieces:** `CanBlockOnly` — Brazen Borrower: "This creature can block only creatures with flying." — the BLOCKER's…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Brazen Borrower // Petty Theft"] =
+[
+	new CanBlockOnly(Is.With("Flying")),
+	Adventure(
+		"Brazen Borrower // Petty Theft",
+		[Target(!Is.Land & Is.Opponents)],
+		new MoveTo(Ref.Target(), ZoneType.Hand)
+	),
+],
+```
 
 ### Bristly Bill, Spine Sower
 

@@ -134,6 +134,23 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public int Delve { get; init; }
 
+	/// <summary>
+	/// Brazen Borrower // Petty Theft: cast as its Adventure (CR 715.3) — the card as Petty Theft (Card.AsAdventure),
+	/// validated and cast exactly as that card would be. ponytail: never from exile — the Adventure's own exile lets
+	/// only the creature be cast (CR 715.3d), and another effect's exile permission would allow the Adventure too
+	/// (715.3a); tell the two apart when a card casts from exile that way (DesignNotes).
+	/// </summary>
+	public bool Adventure { get; init; }
+
+	/// <summary>The state with this cast's card as its Adventure; null when it has none or is in exile.</summary>
+	GameState? AsAdventure(GameState s) =>
+		s.HasObject(CardId)
+		&& s.GetObject(CardId) is Card card
+		&& card.HasComponent<AdventureComponent>()
+		&& !s.IsIn(CardId, card.OwnerId, ZoneType.Exile)
+			? s.UpdateObject(CardId, card.AsAdventure())
+			: null;
+
 	/// <summary>Delve's cards: any in your graveyard but this one (a spell being cast from there).</summary>
 	ExileFromGraveyardCost Delving => new(!Filters.Is.Source) { Count = Delve };
 
@@ -297,6 +314,10 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public IReadOnlyList<ManaPayment.Payment>? PaymentPreview(GameState s)
 	{
+		if (Adventure) // Petty Theft's {1}{U}, not the creature's cost
+			return AsAdventure(s) is { } asAdventure
+				? (this with { Adventure = false }).PaymentPreview(asAdventure)
+				: null;
 		var card = s.GetCard(CardId);
 		return FindPayment(s, card, Paid(s, card), card.HasComponent<Sunburst>());
 	}
@@ -319,6 +340,10 @@ public record CastSpellAction : GameAction
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
+		if (Adventure)
+			return AsAdventure(s) is { } asAdventure
+				? (this with { Adventure = false }).ValidateAdd(asAdventure)
+				: ValidationResult.Invalid("It can't be cast as an Adventure from here");
 		if (!DuringResolution && Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
 		if (
@@ -415,7 +440,11 @@ public record CastSpellAction : GameAction
 	}
 
 	public override ActionResult Execute(GameState s) =>
-		new(ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId));
+		Adventure
+			? (this with { Adventure = false }).Execute(AsAdventure(s)!)
+			: new(
+				ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId)
+			);
 
 	/// <summary>
 	/// Dominion Infiltration: the X targets chosen, then this cast with them — Pyrokinesis: one to four; Mystic
@@ -470,6 +499,8 @@ public record CastSpellAction : GameAction
 	/// <summary>Pays and puts it on the stack — the priority action keeps priority after; a resolution goes on.</summary>
 	public GameState Cast(GameState s)
 	{
+		if (Adventure) // a cast during a resolution comes here without Execute
+			return (this with { Adventure = false }).Cast(AsAdventure(s)!);
 		if (ChoosesTargets)
 			return ChooseTargets(s, retain: false);
 		var card = s.GetCard(CardId);
@@ -626,6 +657,8 @@ public record CastSpellAction : GameAction
 		if (Prepare.CreatureOf(s, card) is { } prepared)
 			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
 		s = s.MoveCard(cardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
+		if (card.HasComponent<CastAsAdventure>()) // CR 715.3b: on the stack it is the Adventure (the move made it the card)
+			s = s.UpdateObject(cardId, s.GetCard(cardId).AsAdventure());
 		var proxies = s.ThisTurnEffects<NextSpellCantBeCountered>(playerId).ToList();
 		s = s.UpdateObject(
 			cardId,
@@ -1115,7 +1148,18 @@ public static class StackResolution
 		return s.SpawnAction(
 			new PipelineAction
 			{
-				Steps = fizzles ? [finish] : [.. effects, finish],
+				// a spell that fizzles doesn't resolve (CR 608.2b): no Adventure's exile (FinishSpellAction.Resolved)
+				Steps = fizzles
+					?
+					[
+						finish is FinishSpellAction unresolved
+							? unresolved with
+							{
+								Resolved = false,
+							}
+							: finish,
+					]
+					: [.. effects, finish],
 				PipelineContext = context,
 			}
 		);
@@ -1126,12 +1170,36 @@ public record FinishSpellAction : GameAction
 {
 	public int CardId { get; init; }
 
+	/// <summary>
+	/// False when it fizzled (CR 608.2b) — it didn't resolve, so an Adventure goes to the graveyard (715.3d): Petty Theft
+	/// whose "target nonland permanent an opponent controls" left is Brazen Borrower in the graveyard, not on an adventure.
+	/// </summary>
+	public bool Resolved { get; init; } = true;
+
 	public override ActionResult Execute(GameState s)
 	{
 		var card = s.GetCard(CardId);
 		if (s.GetParent(CardId) == s.GetWellKnownId(MagicKeys.Stack)) // Sphinx's Approach may have exiled itself
-			s = s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+			s =
+				Resolved && card.HasComponent<CastAsAdventure>()
+					? OnAnAdventure(s, card)
+					: s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 		return new ActionResult(Priority.Retain(s, s.GetGame().ActivePlayerId));
+	}
+
+	/// <summary>
+	/// Petty Theft resolved (CR 715.3d): "(Then exile this card. You may cast the creature later from exile.)" — its
+	/// caster may cast it for as long as it remains exiled, as the creature only (CastSpellAction.Adventure refuses
+	/// exile). Countered or fizzled, it goes to the graveyard as the creature (Fresh).
+	/// </summary>
+	static GameState OnAnAdventure(GameState s, Card spell)
+	{
+		s = s.MoveCard(spell.Id, s.ZoneId(spell.OwnerId, ZoneType.Exile));
+		var mark = new PlayPermission { Forever = true, CastOnly = true }.For(
+			s,
+			spell.ControllerId
+		);
+		return s.UpdateObject(spell.Id, (Card)s.GetCard(spell.Id).WithComponent(mark));
 	}
 }
 

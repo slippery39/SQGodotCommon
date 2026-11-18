@@ -175,6 +175,8 @@ public static class Combat
 		&& (!s.Has(attacker, "Flying") || s.Has(blocker, "Flying") || s.Has(blocker, "Reach"))
 		&& !s.AbilitiesOf<Effects.CantBeBlockedBy>(attacker)
 			.Any(r => r.Blockers.Matches(s, blocker, new(attacker.ControllerId, attacker.Id)))
+		&& s.AbilitiesOf<Effects.CanBlockOnly>(blocker)
+			.All(r => r.Attackers.Matches(s, attacker, new(blocker.ControllerId, blocker.Id)))
 		&& !Effects.Protection.Stops(s, attacker, blocker); // CR 702.16f
 
 	/// <summary>The active player's creatures that may be declared as attackers — one choice each.</summary>

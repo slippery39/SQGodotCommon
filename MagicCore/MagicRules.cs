@@ -221,9 +221,20 @@ public static class MagicRules
 					.Concat(CastCandidates(s, player, card, kicked, free!.Costs, true))
 				: CastCandidates(s, player, card, kicked, free?.Costs, false);
 		// Kicker: each cast once unkicked and once kicked — its targets and costs may differ.
-		return card.HasComponent<KickerComponent>()
+		var casts = card.HasComponent<KickerComponent>()
 			? Casts(false).Concat(Casts(true))
 			: Casts(false);
+		// Brazen Borrower: each cast again as its Adventure (CR 715.3) — the card as Petty Theft (ValidateAdd: not from exile)
+		if (
+			!card.HasComponent<AdventureComponent>()
+			|| s.IsIn(card.Id, card.OwnerId, ZoneType.Exile) // cheap: ValidateAdd refuses them all
+		)
+			return casts;
+		var adventure = card.AsAdventure();
+		return casts.Concat(
+			CastCandidates(s.UpdateObject(card.Id, adventure), player, adventure)
+				.Select(c => (GameAction)((CastSpellAction)c with { Adventure = true }))
+		);
 	}
 
 	/// <param name="free">Cast without paying its mana cost, paying these instead (Playable.FreeCosts); null: paid.</param>
@@ -710,7 +721,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Adventure ? "|a" : "")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>

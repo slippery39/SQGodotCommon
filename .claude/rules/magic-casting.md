@@ -71,6 +71,14 @@ whose subsystem it lives in.
   creature's id AND incarnation); its controller may cast it at the spell's own timing while that
   same creature is still prepared, and casting it unprepares the creature. A copy anywhere but the
   stack ceases to exist, unless it is a live prepared copy in exile (state-based, CR 704.5e).
+- **Adventures** (CR 715; Brazen Borrower // Petty Theft, MC-4.4g5) are `AdventureComponent(Face, Text)` (the second
+  face, `LsvCards.Adventure`) and `CastSpellAction.Adventure` — every cast of the card offered again as the Adventure
+  (`|a` in `MoveKey`), from anywhere but exile. The card BECOMES the Adventure for the cast, a copy stamp as face-down's
+  (`Card.AsAdventure` → `CastAsAdventure(Original)`, status): the action validates and casts the stamped card as any
+  other, so cost, timing, targets and "noncreature spell" all read Petty Theft; `PutOnStack` re-stamps it after the
+  move (whose `Fresh` undoes it — `WithoutAdventure`). Resolved, `FinishSpellAction` exiles it with its caster's
+  `PlayableFromExile { CastOnly }` (forever): the creature castable from there; fizzled (`Resolved = false`) or
+  countered, it goes to the graveyard as the creature.
 - **Abilities from the hand or graveyard** (landcycling, "exile this from your graveyard:") are
   `ActivatedAbilityComponent.From`; card costs (discard this / a card, exile this / another card)
   are chosen like a sacrifice, one legal action each. A finality counter exiles a creature instead

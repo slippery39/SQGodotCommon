@@ -1924,7 +1924,24 @@ public static class LsvCards
 				),
 				When(TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent), [], ManifestDread),
 			],
+			// ===== MC-4.4g5: Adventures (AdventureComponent, CastSpellAction.Adventure) =====
+			["Brazen Borrower // Petty Theft"] =
+			[
+				new CanBlockOnly(Is.With("Flying")),
+				Adventure(
+					"Brazen Borrower // Petty Theft",
+					[Target(!Is.Land & Is.Opponents)],
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+				),
+			],
 		};
+
+	/// <summary>An adventurer card's Adventure (CR 715): its second face in the set's JSON, and its text.</summary>
+	static AdventureComponent Adventure(
+		string card,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) => new(CardRegistry.DataOf(card).CardFaces![1], Spell(targets, effects));
 
 	/// <summary>
 	/// Manifest dread (Abhorrent Oculus): "Look at the top two cards of your library. Put one onto the battlefield face

@@ -1039,6 +1039,27 @@ as his three priorities.
   (TBL), the AI deciding at every window while it can turn one up (as with an instant held), the label read from the
   empty name (a Clone's nameless copy reads "face-down" too).
 
+- 2026-11-18, Claude — **4.4g5's notes (Adventures).** Built as planned, with one change on reading: the nearest piece
+  was face-down's copy stamp more than prepare. `PrepareSpellComponent` has the Adventure's shape (a face and a text)
+  but not its rules: a prepare spell is a COPY in exile, never the card from the hand, so the Adventure is its own
+  `AdventureComponent(Face, Text)`; the face-to-card step is shared (`CardData.OfFace`, Prepare's moved onto it). The
+  card cast as its Adventure is STAMPED (`Card.AsAdventure`: the face's copiable values, the card kept on
+  `CastAsAdventure(Original)`, status) and the action validates and casts the stamped card exactly as any other — one
+  `CastSpellAction.Adventure` flag that delegates, never a second copy of the cast's rules; `Fresh` undoes the stamp
+  (`WithoutAdventure`), and `PutOnStack` re-stamps it after its move. Resolved, it is exiled with its caster's
+  `PlayPermission { Forever, CastOnly }` mark; fizzled (`FinishSpellAction.Resolved = false`, CR 608.2b) or countered,
+  it is the creature in the graveyard. "Can block only creatures with flying" is `CanBlockOnly(filter)`, the blocker's
+  mirror of `CantBeBlockedBy` (the attacker's): a side flag on that piece would be a flag. **Legal actions:** an
+  adventurer card in hand offers its casts twice (`|a` in `MoveKey`). Ceilings (DesignNotes): never cast as the
+  Adventure from exile; a filter that admits only the Adventure never sees it; the AI's heuristics and the table's art
+  read the creature. **`/pre-commit`'s review: nine findings; five taken, one with a test that fails without it** — the
+  table's payment preview priced the creature's {1}{U}{U} (`PaymentPreview` delegates now); the Adventure candidates
+  skipped in exile (ValidateAdd refused them all); `Describe` guarded; the mark built by `PlayPermission.For`; two
+  summaries quote the card. **Not taken:** the instant-only filter (a ceiling, above); one stamp read by every member
+  and the AI rather than three entry points that delegate (no cube Adventure needs it yet); building the face once
+  per script rather than per call (the probe ran at its usual speed); a cast left stamped in hand when its target
+  choice is abandoned (latent: no Adventure chooses targets after the cast).
+
 ## Tasks
 
 - [x] MC-4.1 The list from Shayne; imported by name, with art (`fetch_set_art.py`) — `LSV.json`, 528 cards; art for
@@ -1223,7 +1244,19 @@ as his three priorities.
           unmoved; probe 150 games, none unfinished, the Oculus cast 320 times; full suite 1,957 passed) — all run again
           after the review's fixes (12/12 caught; probe 150 games, 1 unfinished past 300 permanents, the Oculus cast 91
           times; full suite 1,959 passed)
-    - [ ] MC-4.4g5 Adventures: Brazen Borrower // Petty Theft
+    - [x] MC-4.4g5 Adventures: Brazen Borrower // Petty Theft — done 2026-11-18: `AdventureComponent`,
+          `CastSpellAction.Adventure`, `Card.AsAdventure` / `CastAsAdventure(Original)`, `FinishSpellAction.Resolved`,
+          `CanBlockOnly`; 3 tests, 7 breaks caught (the review's one fix included); `batch_checks.py` all 7 steps
+          (golden-out unchanged; golden-in moved 29 random and 69 card-replay games, added 4, the AI replay unmoved;
+          probe 150 games, none unfinished, the Borrower cast 970 times; full suite 1,962 passed — run again after the
+          review's fixes)
+    - [ ] MC-4.4g5b (LATER — out of scope for now; Shayne, 2026-11-18) The AI's heuristics read an Adventure cast as
+          the creature in hand (`BeamSearchAi.InstantSpeed`, `FaceBurn`, the BlunderLint checks): read the card as
+          its Adventure for a `CastSpellAction.Adventure` (DesignNotes, MagicCore known ceilings)
+    - [ ] MC-4.4g5c (LATER; Shayne, 2026-11-18) The table draws Petty Theft on the stack with no art — it looks art up
+          by the face's name. One line in `SQGodotCommon/MagicTable/MagicArt.ImageName`: a `CastAsAdventure` card shows
+          its `Original`'s art, as a prepared copy shows its creature's. The table is the AI lane's file: do it there,
+          or here with a note at the next merge
     - [ ] MC-4.4g6 Teamwork: We Say Thee Nay!
     - [ ] MC-4.4g7 Storm: Brain Freeze
     - [ ] MC-4.4g8 Spree: Three Steps Ahead
@@ -1232,10 +1265,15 @@ as his three priorities.
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first four parts —
-protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3) and face-down permanents
-(4.4g4) — are done: **229 of 528 play.** Next, in a NEW session: **MC-4.4g5 — Adventures** (Brazen Borrower // Petty
-Theft): the plan is in Decisions (4.4g's plan, part 5). Then g6–g10 in the plan's order, one a session.
+Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
+protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
+(4.4g4) and Adventures (4.4g5) — are done: **230 of 528 play.** Next, in a NEW session: **MC-4.4g6 — Teamwork** (We
+Say Thee Nay!): the plan is in Decisions (4.4g's plan, part 6). Then g7–g10 in the plan's order, one a session.
+From 4.4g5: an Adventure is `AdventureComponent(Face, Text)` (`LsvCards.Adventure(card, targets, effects)`, the second
+face) and `CastSpellAction.Adventure` — the card stamped as the face for the cast (`Card.AsAdventure` →
+`CastAsAdventure`), exiled as it resolves with a `PlayPermission { Forever, CastOnly }` mark. Embereth Shieldbreaker //
+Battle Display is tier 1 now ("Destroy target artifact"). "Can block only [filter]" is `CanBlockOnly`. g5's tests are in
+`LsvBatch2g5Tests.cs` (`AsAdventure(card)`: the Adventure casts offered).
 From 4.4g4: a face-down permanent is a copy stamp — `Card.TurnedFaceDown` (a blank 2/2's copiable values) with the
 card on `FaceDown(Original)` (status), `Card.TurnedFaceUp` undoing it (and any type stamp: the state check re-stamps);
 entering face down is `EnterBattlefield(faceDown:)`, manifest dread `LsvCards.ManifestDread` (`LookAndTake {
@@ -1430,3 +1468,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-18: MC-4.4g4 done: Abhorrent Oculus — 229 of 528 play. Face-down permanents (a copy stamp, `FaceDown`),
   manifest dread (`LookAndTake.FaceDown`), turning face up (`TurnFaceUpAction`, a special action). Next: MC-4.4g5,
   Adventures.
+- 2026-11-18: MC-4.4g5 done: Brazen Borrower // Petty Theft — 230 of 528 play. Adventures (the card stamped as its
+  Adventure for the cast, `CastSpellAction.Adventure`; exiled on resolving, the creature castable from there),
+  `CanBlockOnly`. Next: MC-4.4g6, teamwork.
