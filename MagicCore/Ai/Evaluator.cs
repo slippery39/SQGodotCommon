@@ -30,6 +30,15 @@ public static partial class Evaluator
 
 	static readonly AsyncLocal<HashSet<int>?> rootUnseen = new();
 
+	static readonly AsyncLocal<HeldValues?> settleHeld = new();
+
+	/// <summary>
+	/// The card prices <see cref="Lookahead.Settle"/>'s single picks are judged by - the search's held values while it asks
+	/// (AI-27.10, the third scale: <c>BeamSearchAi.Settings.SettleHeld</c>, the default; off: beam+nosettleheld), else null: the flat price, 1.2 a
+	/// card and 0.3 a land, as GreedyAi and the card-value sandbox have always judged them.
+	/// </summary>
+	internal static HeldValues? SettleHeld => settleHeld.Value;
+
 	/// <summary>
 	/// What <see cref="LandUse"/> reads at the search's root, null when it is off: whose search it is, the mana sources in
 	/// play then, and that player's library as it is drawn - the land share and the average cost of a spell among its
@@ -55,53 +64,59 @@ public static partial class Evaluator
 	public const int LandUseTurns = 3;
 
 	/// <summary>
-	/// <paramref name="work"/> with the cards exiled "you may play" at <paramref name="root"/> remembered as real, and each
-	/// player's <see cref="OptionTurns"/> read there (<see cref="Terms.RootOptionTurns"/>). <paramref name="drawnCards"/>:
-	/// the library cards whose place nobody knew at the root remembered too, so a card the look-ahead draws counts as a
-	/// drawn card (<see cref="DrawnCredit"/>).
+	/// <paramref name="work"/> with what the search reads once at <paramref name="root"/>, restored after however it ends:
+	/// the cards exiled "you may play" there remembered as real, and each player's <see cref="OptionTurns"/> read there
+	/// (<see cref="Terms.RootOptionTurns"/>). <paramref name="drawnCards"/>: the library cards whose place nobody knew
+	/// remembered too, so a card the look-ahead draws counts as a drawn card (<see cref="DrawnCredit"/>, AI-27.7).
+	/// <paramref name="landUse"/>: our lands priced by the cards they let us play (<see cref="LandUse"/>, AI-27.9).
+	/// <paramref name="settle"/>: the card prices <see cref="Lookahead.Settle"/>'s single picks are judged by - the
+	/// search's own held values (<see cref="SettleHeld"/>, AI-27.10); null, the flat price.
 	/// </summary>
 	public static T WithRootImpulse<T>(
 		GameState root,
 		Func<T> work,
 		bool drawnCards = false,
-		bool landUse = false
+		bool landUse = false,
+		HeldValues? settle = null
 	)
 	{
-		var (outer, outerTurns, outerUnseen, outerLandUse) = (
+		var (outer, outerTurns, outerUnseen, outerLandUse, outerSettle) = (
 			rootImpulse.Value,
 			rootOptionTurns.Value,
 			rootUnseen.Value,
-			landUseOn.Value
+			landUseOn.Value,
+			settleHeld.Value
 		);
-		landUseOn.Value = landUse
-			? new(
-				root.DecidingPlayerId(),
-				[
-					.. root.CardsIn(root.DecidingPlayerId(), ZoneType.Battlefield)
-						.Where(c => ManaAbilities.ColorsOf(root, c).Any())
-						.Select(c => c.Id),
-				],
-				DeckOf(root, root.DecidingPlayerId())
-			)
-			: null;
-		rootUnseen.Value = drawnCards
-			?
-			[
-				.. new[] { root.Player1Id(), root.Player2Id() }
-					.SelectMany(p => Hidden.Unseen(root, p))
-					.Select(c => c.Id),
-			]
-			: null;
-		rootImpulse.Value = [.. ImpulseCards(root, -1).Select(c => c.Id)];
-		rootOptionTurns.Value =
-			IsOff(Terms.RootOptionTurns) || IsOff(Terms.HoldOption)
-				? null
-				: new[] { root.Player1Id(), root.Player2Id() }.ToDictionary(
-					p => p,
-					p => LiveOptionTurns(root, p)
-				);
 		try
 		{
+			settleHeld.Value = settle;
+			landUseOn.Value = landUse
+				? new(
+					root.DecidingPlayerId(),
+					[
+						.. root.CardsIn(root.DecidingPlayerId(), ZoneType.Battlefield)
+							.Where(c => ManaAbilities.ColorsOf(root, c).Any())
+							.Select(c => c.Id),
+					],
+					DeckOf(root, root.DecidingPlayerId())
+				)
+				: null;
+			rootUnseen.Value = drawnCards
+				?
+				[
+					.. new[] { root.Player1Id(), root.Player2Id() }
+						.SelectMany(p => Hidden.Unseen(root, p))
+						.Select(c => c.Id),
+				]
+				: null;
+			rootImpulse.Value = [.. ImpulseCards(root, -1).Select(c => c.Id)];
+			rootOptionTurns.Value =
+				IsOff(Terms.RootOptionTurns) || IsOff(Terms.HoldOption)
+					? null
+					: new[] { root.Player1Id(), root.Player2Id() }.ToDictionary(
+						p => p,
+						p => LiveOptionTurns(root, p)
+					);
 			return work();
 		}
 		finally
@@ -112,21 +127,31 @@ public static partial class Evaluator
 				outerUnseen,
 				outerLandUse
 			);
+			settleHeld.Value = outerSettle;
 		}
 	}
 
 	/// <summary><paramref name="work"/> with no drawn cards remembered, nor the land-use root — a measurement on another board (<see cref="OptionPrice.Gain"/>), whose ids mean other cards.</summary>
 	internal static T WithoutDrawnCards<T>(Func<T> work)
 	{
-		var (outer, outerLandUse) = (rootUnseen.Value, landUseOn.Value);
-		(rootUnseen.Value, landUseOn.Value) = (null, null); // the land-use root's ids too
+		var (outer, outerLandUse, outerSettle) = (
+			rootUnseen.Value,
+			landUseOn.Value,
+			settleHeld.Value
+		);
+		// the land-use root's ids too, and Settle's prices: a kept gain is the same whoever asks first
+		(rootUnseen.Value, landUseOn.Value, settleHeld.Value) = (null, null, null);
 		try
 		{
 			return work();
 		}
 		finally
 		{
-			(rootUnseen.Value, landUseOn.Value) = (outer, outerLandUse);
+			(rootUnseen.Value, landUseOn.Value, settleHeld.Value) = (
+				outer,
+				outerLandUse,
+				outerSettle
+			);
 		}
 	}
 
@@ -152,7 +177,8 @@ public static partial class Evaluator
 	/// land changes neither count, and casting a spell moves both alike. Two first versions counted cards played, not what
 	/// the lands add: the one counting the hand alone held removal (a spell cast before the look-ahead's end had left
 	/// it), the next paid for using this turn's spare mana - Yoshimaru cast on turn 4 with nothing to fight. Beside the flat
-	/// land prices, which stay as its base. Off unless the search asks (<c>BeamSearchAi.Settings.LandUse</c>, beam+landuse).
+	/// land prices, which stay as its base. The search's default since 2026-11-18 (<c>BeamSearchAi.Settings.LandUse</c>;
+	/// off: beam+nolanduse).
 	/// </summary>
 	static double LandUse(GameState s, int player, HeldValues held)
 	{

@@ -124,8 +124,13 @@ public static class AiMatch
 			// beam+nodrawncard as before.
 			["drawncard"] = o => o with { DrawnCard = true },
 			["nodrawncard"] = o => o with { DrawnCard = false },
-			// AI-27.9: our lands priced by the cards they let us play - off by default; beam+landuse.
+			// AI-27.9: our lands priced by the cards they let us play - the default since 2026-11-18; beam+nolanduse as before.
 			["landuse"] = o => o with { LandUse = true },
+			["nolanduse"] = o => o with { LandUse = false },
+			// AI-27.10: the look-ahead's quick single picks judged by the search's card prices - the default since 2026-11-18;
+			// beam+nosettleheld as before (flat prices).
+			["settleheld"] = o => o with { SettleHeld = true },
+			["nosettleheld"] = o => o with { SettleHeld = false },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.

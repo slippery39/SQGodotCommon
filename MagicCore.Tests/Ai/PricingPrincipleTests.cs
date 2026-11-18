@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 
@@ -381,9 +382,40 @@ public class PricingPrincipleTests
 					is { Deck1: "White-Blue Jace", Deck2: "Red-Green", Seed: 2 }
 				&& p.Position.Move == 16
 			);
-		var control = PositionSuite.TurnPlayed(x, "beam");
-		var turn = PositionSuite.TurnPlayed(x, "beam+landuse");
+		var control = PositionSuite.TurnPlayed(x, "beam+nolanduse");
+		var turn = PositionSuite.TurnPlayed(x, "beam");
 		Assert.That(control, Has.Some.EqualTo("Discard 1 Island"), "control");
 		Assert.That(turn, Has.None.EqualTo("Discard 1 Island"));
+	}
+
+	// AI-27.10: the look-ahead's quick single picks priced as the search prices cards (Settings.SettleHeld, the default) -
+	// a forced "discard a card" with Aerid Konstrari (a strong creature) and Academic Ascent (a weak trick) in hand. At the
+	// flat price both are 1.2, so the first listed went; at the search's prices the weaker one goes. The CONTROL: flat,
+	// the two answers differ.
+	[Test]
+	public void ASettledDiscard_IsPricedAsTheSearchPricesCards()
+	{
+		var x = With(s, me, TestGames.Card("Aerid Konstrari"), ZoneType.Hand, out var strong);
+		x = With(x, me, TestGames.Card("Academic Ascent"), ZoneType.Hand, out var weak);
+		x = With(
+			x,
+			me,
+			TestGames.Inline("Discarder", "{0}", "Sorcery", null, new Discard(Ref.You, 1)),
+			ZoneType.Hand,
+			out var discarder
+		);
+		var cast = x.Act(
+			x.LegalActions().OfType<Actions.CastSpellAction>().First(a => a.CardId == discarder)
+		);
+		bool Kept(GameState y, int id) => y.IsIn(id, me, ZoneType.Hand);
+		var flat = Lookahead.Settle(cast);
+		var priced = Evaluator.WithRootImpulse(x, () => Lookahead.Settle(cast), settle: Held);
+		Assert.Multiple(() =>
+		{
+			Assert.That(Kept(flat, strong) && Kept(flat, weak), Is.False, "one is discarded");
+			Assert.That(Kept(priced, strong), Is.True, "the strong card kept");
+			Assert.That(Kept(priced, weak), Is.False, "the weak card discarded");
+			Assert.That(Kept(flat, strong), Is.False, "control: flat, the first listed goes");
+		});
 	}
 }

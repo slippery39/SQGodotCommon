@@ -228,6 +228,9 @@ Not agreed — to shape with Shayne.
   and this deck's curve"?): "Yes pretty much." And what a needed land drop is worth: "A needed land drop is worth the
   cards it allows you to play. This is variable as the game goes on."
 
+- 2026-11-18, Shayne: land use (AI-27.9) and Settle's held prices (AI-27.10) the DEFAULT ("Sure turn both on and
+  commit"), after their matches (96-96, 48-48).
+
 Open questions:
 - Show in cards only (divide by 8.5 when printing — no play changes), or rescale the evaluator itself (every
   constant, threshold, table and test number moves; no decision changes if done exactly)? Claude's lean: show first.
@@ -246,16 +249,18 @@ Open questions:
       default since 2026-11-18 (off: beam+nodrawncard); its tests in `PricingPrincipleTests`; Log 2026-11-18.
 - [x] AI-27.8 The look-ahead answers a modal trigger by its chooser's best, not the first mode (`Terms.RolloutModes`,
       off: beam+firstmode) - Divining Duelist's loot (seed 2 #16)
-- [ ] AI-27.9 Lands priced by the cards they let us play (Shayne, Decisions 2026-11-18) - built behind `beam+landuse`,
-      off; suite read (Log); match not run
+- [x] AI-27.9 Lands priced by the cards they let us play (Shayne, Decisions 2026-11-18) - the default since 2026-11-18
+      (off: beam+nolanduse); match 50.0% ± 2.0pp over 192, no difference (Log)
+- [x] AI-27.10 The third price scale: `Lookahead.Settle`'s single picks judged by the search's card prices, not the flat
+      1.2 a card / 0.3 a land - the default since 2026-11-18 (off: beam+nosettleheld); match 48-48 (Log)
 
 ## Next
 
-**Now (2026-11-18):** AI-27.7 (drawn card) and AI-27.8 (modal triggers) are the default; AI-27.9 (land use) is built
-behind `beam+landuse`, off, its suite read (Log) - a match only if Shayne wants it. Shayne then asked (2026-11-18)
-whether to add per-card or per-effect "AI notes" - specific evaluators the general one calls (a flash creature in
-their turn, Yoshimaru's fight, looting) - Forge-style, but only where the general evaluator struggles. Claude's answer
-is in the conversation; the decision is his. AI-27.8 and AI-27.9 are uncommitted.
+**Now (2026-11-18): AI-27.7 to 27.10 are the default** - a drawn card worth a drawn card, the look-ahead's "choose one",
+lands priced by the cards they let us play, and Settle's single picks at the search's prices (off: beam+nodrawncard,
++firstmode, +nolanduse, +nosettleheld). Seed 2 #16 now plays as Shayne would (Mindseeker Oculus). Next in Next up: AI-29
+(AI notes), its pilot the flash creature. Left here: AI-27.1-27.3 and 27.6 (the card scale, the bodies, the ledgers),
+AI-9.10 (the Annex - waits on the lands, now priced), the Konstrari Charm read (unclear to Shayne).
 
 **Handoff (2026-11-17, second session).** Read `docs/findings/evaluator-pricing.md`: the inventory (§1), the
 principle tests and what they found (§2), the three-ledger proposal (§3) and five questions for Shayne. Nothing in
@@ -273,6 +278,30 @@ draw-or-board positions (findings, "AI-27") still wait for his read. AI-26.8 is 
 odd plays may be its own artifacts.)
 
 ## Log
+
+- 2026-11-18: land use and Settle's held prices made the default (Shayne). `--suite=beam --accept`: 5 answers changed -
+  the four of land use, and seed 2 #16 now casts Mindseeker Oculus (his play); oracle 76.0%, score given up 0.65, wins
+  missed 2, 19 850 engine steps. /pre-commit: a test that the held prices fire (a settled discard keeps Aerid Konstrari
+  and bins Academic Ascent; flat, the first listed goes), `WithRootImpulse` restores its settings however it ends,
+  DesignNotes brought up to date (the flat-price ceiling now outside a search only; the opponent's own quick picks read
+  its hidden cards by name, as the rest of its look-ahead did).
+
+- 2026-11-18: MATCH `--match=beam+settleheld,beam --until-clear`: 96 games (6 pairings x 8 seeds x both seats), 37 min,
+  **beam+settleheld 50.0% ± 0.0pp (48-48)** - every mirror pair split exactly: it barely changes a game. Early stop: no
+  5pp difference. Cost 10 259 against 10 363 engine steps a decision (−1.0%). By its deck: Red-Green 21-11, White-Black
+  17-15, White-Blue Jace 10-22.
+
+- 2026-11-18: MATCH `--match=beam+landuse,beam --until-clear`: 192 games (6 pairings x 16 seeds x both seats), 67 min,
+  **beam+landuse 50.0% ± 2.0pp (96-96)** - early stop: no 5pp difference either way. Cost 10 401 against 10 189 engine
+  steps a decision (+2.1%); lands 7.3 each, spells 9.7 against 9.8. By its deck: Red-Green 45-19, White-Black 34-30,
+  White-Blue Jace 17-47. Shayne asked for the `beam+settleheld` match next.
+
+- 2026-11-18: committed 01d9d290 (AI-27.8, 27.9, AI-29 noted). `beam+landuse` match started in the background (from a
+  copy of the console, so rebuilds can't touch it). AI-27.10 built behind `beam+settleheld` (off): `Settle`'s single picks
+  use the search's held values while it asks (`Evaluator.SettleHeld`, set at the root, cleared on the option price's
+  fixture; GreedyAi and the card-value sandbox stay flat outside a search). Suite: 0 changed, same cost, oracle 76.7%.
+  It fires: seed 2 #16's Oculus line, land version - the look-ahead's Duelist now loots (it tapped our own creature),
+  that line 2.70 → 2.78; the decision unchanged.
 
 - 2026-11-18: /pre-commit on AI-27.8 and 27.9: the modal-trigger answer now "choose one" only ("up to N" and "one or
   more" keep the cheap answer - GreedyAi tries exactly N - until measured); land use for the search's own player only

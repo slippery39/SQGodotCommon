@@ -104,7 +104,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <param name="LandUse">
 	/// Our lands priced by the cards they let us play over the next turns (<see cref="LandUnlock.Playable"/>,
 	/// AI-27.9, Shayne: "A needed land drop is worth the cards it allows you to play"). Only with <see cref="DrawnCard"/>,
-	/// which tells the look-ahead's guessed draws apart. Off by default; on is beam+landuse.
+	/// which tells the look-ahead's guessed draws apart. The default since 2026-11-18 (Shayne; matched 96-96 against the
+	/// search without it); off is beam+nolanduse.
+	/// </param>
+	/// <param name="SettleHeld">
+	/// The look-ahead's quick single picks (<see cref="Lookahead.Settle"/>: a target, a "you may", a forced discard) judged
+	/// by the search's card prices, not the flat 1.2 a card and 0.3 a land - the third price scale (AI-27). The default
+	/// since 2026-11-18 (Shayne; matched 48-48); off is beam+nosettleheld.
 	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
@@ -137,7 +143,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool OptionPrice = true,
 		bool ByUse = true,
 		bool DrawnCard = true,
-		bool LandUse = false
+		bool LandUse = true,
+		bool SettleHeld = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -307,7 +314,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 										decidedAt ?? sampled, // as Decide read it
 										() => ExplainLines(sampled),
 										DrawnCard,
-										DrawnCard && options.LandUse // its guessed draws are DrawnCard's
+										DrawnCard && options.LandUse, // its guessed draws are DrawnCard's
+										options.SettleHeld ? RolloutSettings.Held : null
 									)
 							)
 					)
@@ -446,7 +454,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 									s,
 									() => DecideHere(s),
 									DrawnCard,
-									DrawnCard && options.LandUse // its guessed draws are DrawnCard's
+									DrawnCard && options.LandUse, // its guessed draws are DrawnCard's
+									options.SettleHeld ? RolloutSettings.Held : null
 								)
 						)
 				)
