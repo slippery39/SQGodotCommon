@@ -117,8 +117,10 @@ public static class AiMatch
 			// 2026-11-16; beam+nobyuse as before. Read by the option price alone: with nooptionprice it changes nothing.
 			["byuse"] = o => o with { ByUse = true },
 			["nobyuse"] = o => o with { ByUse = false },
-			// AI-27.7: a card the look-ahead draws counts as a drawn card, whatever it guessed - off by default; beam+drawncard.
+			// AI-27.7: a card the look-ahead draws counts as a drawn card, whatever it guessed - the default since 2026-11-18;
+			// beam+nodrawncard as before.
 			["drawncard"] = o => o with { DrawnCard = true },
+			["nodrawncard"] = o => o with { DrawnCard = false },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.

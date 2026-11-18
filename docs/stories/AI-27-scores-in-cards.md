@@ -222,6 +222,8 @@ Not agreed — to shape with Shayne.
   Mindseeker Oculus and the −3) and seed 1 #79 (the token at 9 surveils where it drew) are misplays; seed 4 #43 (Konstrari
   Charm binned) "is not entirely clear". The match was run (`--match=beam+drawncard,beam --until-clear`).
 
+- 2026-11-18, Shayne: `beam+drawncard` the DEFAULT ("I wanted the switch on not off"); off is `beam+nodrawncard`.
+
 Open questions:
 - Show in cards only (divide by 8.5 when printing — no play changes), or rescale the evaluator itself (every
   constant, threshold, table and test number moves; no decision changes if done exactly)? Claude's lean: show first.
@@ -236,15 +238,14 @@ Open questions:
 - [x] AI-27.4 The inventory: every price, its formula, unit, story and ledger; every seen-against-unseen comparison
 - [x] AI-27.5 His principles as tests (`PricingPrincipleTests`): 8 pass, 4 fail (`[Explicit]`, the target)
 - [ ] AI-27.6 The three-ledger design, agreed with Shayne — then its five steps, each behind a switch
-- [ ] AI-27.7 A drawn card worth a drawn card, whatever it turns out to be (Shayne, Decisions 2026-11-18),
-      behind a switch. Done: the test, and the switch `beam+drawncard` (off by default; Log 2026-11-18)
+- [x] AI-27.7 A drawn card worth a drawn card, whatever it turns out to be (Shayne, Decisions 2026-11-18) - the
+      default since 2026-11-18 (off: beam+nodrawncard); its tests in `PricingPrincipleTests`; Log 2026-11-18.
 
 ## Next
 
-**Now (2026-11-18): AI-27.7 is built behind `beam+drawncard`, off by default, and matched: 51.0% ± 1.5pp over 384,
-no difference, +2.7% cost (Log).** Shayne decides whether it becomes the default. Next: plan step 1, one card scale -
-seed 2 #16 and seed 1 #79 (misplays he agrees with) and seed 4 #43 (unclear) are its positions. Seed 2 #23's land order
-is AI-9.10.
+**Now (2026-11-18): AI-27.7 is the DEFAULT** (Shayne; off: `beam+nodrawncard`) - the suite's committed answers
+re-accepted (20 changed). Next: plan step 1, one card scale - seed 2 #16 and seed 1 #79 (misplays he agrees with) and
+seed 4 #43 (unclear) are its positions. Seed 2 #23's land order is AI-9.10.
 
 **Handoff (2026-11-17, second session).** Read `docs/findings/evaluator-pricing.md`: the inventory (§1), the
 principle tests and what they found (§2), the three-ledger proposal (§3) and five questions for Shayne. Nothing in
@@ -262,6 +263,9 @@ draw-or-board positions (findings, "AI-27") still wait for his read. AI-26.8 is 
 odd plays may be its own artifacts.)
 
 ## Log
+
+- 2026-11-18: `DrawnCard` made the default (Shayne); `--suite=beam --accept`: 20 answers changed, oracle 76.7%, score
+  given up 0.56, wins missed 2, 19 944 engine steps a position.
 
 - 2026-11-18: /pre-commit on AI-27.7: the switch now applies under `LandOrNot` alone (another library mode ignores it -
   it had dropped the surveil bonus there with no look credit), and `Explain` reads the root `Decide` read. Five

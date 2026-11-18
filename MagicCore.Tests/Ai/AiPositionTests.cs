@@ -181,10 +181,15 @@ public class AiPositionTests
 	public void ShortOfALand_TheJaceTokenSurveilsForIt()
 	{
 		var s = KeptRecords.Before("ShayneNotesSeed1", 247);
-		string Chose(Evaluator.Terms without, bool spellsRule = false) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without, SpellsRule: spellsRule))
-				.Decide(s)
-				.What;
+		string Chose(Evaluator.Terms without, bool spellsRule = false) => new BeamSearchAi(
+				s.DecidingPlayerId(),
+				// the control without the drawn card's look credit too (AI-27.7), which finds the surveil alone
+				new(
+					Without: without,
+					SpellsRule: spellsRule,
+					DrawnCard: without == Evaluator.Terms.None
+				)
+			).Decide(s).What;
 
 		// the control also holds that a made-up card is never binned (AI-20.11): with a surveil's spells branched,
 		// binning it made 13 lands of 27 into 13 of 26, which alone paid for the loyalty - and counted the look
@@ -264,11 +269,14 @@ public class AiPositionTests
 	)
 	{
 		var s = KeptRecords.Before(record, at);
-		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		// the control without the drawn card's look credit too (AI-27.7), which prices the look in their place
+		string Chose(Evaluator.Terms without, bool drawnCard = true) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without, DrawnCard: drawnCard))
+				.Decide(s)
+				.What;
 
 		Assert.That(
-			Chose(Evaluator.Terms.SurveilPrice | Evaluator.Terms.Looks),
+			Chose(Evaluator.Terms.SurveilPrice | Evaluator.Terms.Looks, drawnCard: false),
 			Does.Contain("Exile"),
 			"control"
 		);

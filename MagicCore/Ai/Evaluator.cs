@@ -95,7 +95,7 @@ public static partial class Evaluator
 	/// the price a card nobody has seen has - whether the look-ahead made it a land or an unknown spell; a land of them
 	/// played keeps what it had over a land in hand, so deploying it scores as deploying any land ("You should never get
 	/// an immediate loss for deploying a resource in hand"). A card in hand at the root is seen, and priced by what it is.
-	/// Off unless the search asks (<c>BeamSearchAi.Settings.DrawnCard</c>, beam+drawncard).
+	/// The search's default since 2026-11-18 (<c>BeamSearchAi.Settings.DrawnCard</c>; off: beam+nodrawncard).
 	/// ponytail: only a land is credited on the battlefield - a guessed spell cast (the real 6th draw, beam+shuffle) is
 	/// priced by what it became; carry the credit there too if a position shows one held for it.
 	/// </summary>

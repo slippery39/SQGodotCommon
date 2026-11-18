@@ -98,8 +98,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// AI-27.7, Shayne: "The result of the drawn card should not impact the action of drawing a card") - and each look at
 	/// an unseen card (a surveil) credited a share of a drawn card, whatever it shows (<see cref="Evaluator.SurveilShare"/>),
 	/// in place of the pending-surveil bonus - and no walker floor of 2 for a walker its lifetime prices. All of it
-	/// under <see cref="Hidden.Library.LandOrNot"/> only: another library mode ignores the switch. Off by default; on is
-	/// beam+drawncard.
+	/// under <see cref="Hidden.Library.LandOrNot"/> only: another library mode ignores the switch. The default since
+	/// 2026-11-18 (Shayne; matched 51.0% ± 1.5pp over 384 against the search without it); off is beam+nodrawncard.
 	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
@@ -131,7 +131,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool SpellsRule = false,
 		bool OptionPrice = true,
 		bool ByUse = true,
-		bool DrawnCard = false
+		bool DrawnCard = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
