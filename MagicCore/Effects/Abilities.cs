@@ -1032,6 +1032,32 @@ public record ChoosesNameAsItEnters : GameComponent
 /// <summary>The card name chosen as it entered (Kai Winn) — gone when it leaves.</summary>
 public record ChosenName(string Name) : GameComponent;
 
+/// <summary>
+/// True-Name Nemesis: "As this creature enters, choose a player." Applied by MagicState.EnterBattlefield — a
+/// ChooseKeywordChoice of the two players (Bo1), an opponent first.
+/// </summary>
+public record ChoosesPlayerAsItEnters : GameComponent;
+
+/// <summary>The player chosen as it entered (True-Name Nemesis) — gone when it leaves.</summary>
+public record ChosenPlayer(int PlayerId) : GameComponent;
+
+/// <summary>
+/// Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the chosen player." What it is
+/// protected FROM is a filter asked of the SOURCE (a spell, an ability's source, a creature dealing damage or
+/// blocking, an Aura or Equipment) from the holder's side: "from [a player]" is the source's controller
+/// (Is.ControlledByChosenPlayer); "from everything" (Hexdrinker) is Is.AnyCard. DEBT, each in its one place: damage
+/// from it is prevented (Damage.Prevented), it can't enchant or equip it (Attachments), block it (Combat.CanBlock)
+/// or target it (TargetSpec). Read through AbilitiesOf, so one gained until end of turn (Giver of Runes) counts and
+/// losing all abilities ends it.
+/// </summary>
+public record Protection(Filters.Filter From) : GameComponent
+{
+	/// <summary>THE protection question: does this permanent's protection stop that source?</summary>
+	public static bool Stops(GameState s, Cards.Card holder, Cards.Card source) =>
+		s.AbilitiesOf<Protection>(holder)
+			.Any(p => p.From.Matches(s, source, new(holder.ControllerId, holder.Id)));
+}
+
 /// <summary>The City on the Edge of Forever's Human: "Permanents can't phase in." — read by Rules.Phasing.PhaseIn.</summary>
 public record PermanentsCantPhaseIn : GameComponent;
 

@@ -163,6 +163,16 @@ public record TargetSpec(From From, Filter? Filter = null)
 				&& o is Card target
 				&& FromARestrictedSource(s, target, sourceId)
 			)
+			// Protection (CR 702.16b): not a legal target for a spell or ability from that source — controlled by
+			// whoever casts or activates it (a card being cast is still in its owner's zone, Robber of the Rich).
+			&& !(
+				targeting
+				&& From == From.Battlefield
+				&& o is Card guarded
+				&& s.HasObject(sourceId)
+				&& s.GetObject(sourceId) is Card source
+				&& Effects.Protection.Stops(s, guarded, source with { ControllerId = controllerId })
+			)
 			// The Needs of the Many: "You gain hexproof" — a player, not a legal target for an opponent.
 			&& !(
 				targeting

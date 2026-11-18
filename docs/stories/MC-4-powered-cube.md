@@ -890,6 +890,81 @@ as his three priorities.
   (named in `MakePlayable`'s summary: ExileTopPlayable's own step, a mark built there with `Blind` and `Tax`); one more
   keyword check per payment for improvise; the AI's `Evaluator.ImpulseCards` scanning exile only, so it prices no
   graveyard mark (AI lane: Emry's activation is worth nothing to the evaluator until it is cast).
+- 2026-11-17, Claude — **4.4g's plan (blue's tier 3, 11 cards, ten new mechanics), read against the code.** Ten
+  parts, shared mechanics first; one built per session. Each names its nearest piece and why no option on it fits:
+  1. **g1 Protection** (CR 702.16; True-Name Nemesis — then Giver of Runes, Mother of Runes, Figure of Fable,
+     Hexdrinker, Seasoned Dungeoneer, The One Ring, Emrakul). Nearest: hexproof in `TargetSpec` and Species 8472's
+     `CantBeTargetedByAbilitiesFrom(Sources)`, which already asks a filter of the SOURCE — but targeting only, and
+     abilities only; protection is DEBT, four rules. `CantBeBlockedBy` is the attacker's filter on blockers (B only).
+     New: `Protection(Filter From)`, the filter asked of the source from the holder's side, in each rule's one place
+     (`TargetSpec`, `Damage.Prevented`, `Combat.CanBlock`, `Attachments` — enchant and the Equipment fall-off). Read
+     through `AbilitiesOf`, so Giver's grant until end of turn (`UntilEndOfTurn.Gains`) is the same piece; "from the
+     colour of your choice" will be a colour chosen, then `Protection(Is.Color(c))` gained. A player's protection
+     (The One Ring) waits for its card. "Choose a player as it enters" is `ChoosesPlayerAsItEnters` → `ChosenPlayer`,
+     beside its three siblings (colour, number, name): each chooses a different KIND of value with its own choice and
+     AI answer, so one generalised component would be a switch on the kind — not an option. "From the chosen
+     player" is `Is.ControlledByChosenPlayer`, `Is.NamedChosenName`'s pattern.
+  2. **g2 Delve** (Dig Through Time, Treasure Cruise). Nearest: Drivnod's `ExileFromGraveyardCost { Count }`, whose
+     cards are picked after the action — but its count is fixed, and delve's pays generic mana, so the count is the
+     caster's and the mana owed shrinks with it (replicate's shape: a number on the cast). Convoke/improvise's
+     `ManaPayment.Helps` is never a move — wrong here: WHICH graveyard cards go matters (threshold, Tarmogoyf), and
+     how many trades mana kept open against the graveyard. Plan: `CastSpellAction.Delve = N` (one cast per N, ≤ the
+     generic in its cost), `Costs.Of` less N generic, the N cards picked after the cast as Drivnod's. Dig's "the rest
+     on the bottom in any order" is `LookAndTake { Take = 2 }` with a bottom-in-any-order `Rest` (read first).
+  3. **g3 Dungeons and the initiative** (Feywild Caretaker — then White Plume Adventurer, Seasoned Dungeoneer, Caves
+     of Chaos Adventurer, Undermountain Adventurer, From the Catacombs). Nearest: Sagas (`SagaComponent`, chapter
+     triggers on lore counters) — a dungeon is a Saga-like card in the command zone (where emblems are) whose rooms
+     trigger as the venture marker moves; read whether a room is a chapter with a branch choice before building.
+     The initiative is a designation taken by combat damage to its holder (CR 725), nothing like it exists.
+  4. **g4 Face-down permanents** (Abhorrent Oculus' manifest dread — then Headliner Scarlett, Memory Jar, Shelldock
+     Isle). Nearest: `ExiledFaceDown` + `Card.KnownTo` (hidden in exile, Vulcan Mind-Meld) and "loses all abilities"
+     + base P/T: a face-down 2/2 is all three on the battlefield, plus turning face up (a special action). Oculus'
+     "exile six cards from your graveyard" is `AdditionalCostsComponent([ExileFromGraveyardCost { Count = 6 }])` —
+     tier 1 (Underworld Breach's escape picks them after the cast).
+  5. **g5 Adventures** (Brazen Borrower — then Embereth Shieldbreaker). Nearest: prepare (`PrepareSpellComponent`,
+     a second face cast as a spell) and `MayCastThisFrom(Exile)` (Khan): cast the Adventure face from the hand,
+     exiled as it resolves (Bilbo's `ExiledLeavingTheStack`), then the creature castable from that exile. The new
+     part is casting a card AS its other face. "Can block only creatures with flying" is the blocker's side of
+     `CantBeBlockedBy` — read `Combat.CanBlock` for an option first.
+  6. **g6 Teamwork** (We Say Thee Nay! — crew, Esika's Chariot and Reckoner Bankbuster, takes the same cost).
+     Nearest: kicker (`KickerComponent`, one cast with the optional cost, one without) and `RemoveCountersCost`
+     (picked after activating). "Tap any number of creatures with total power 2 or more" is a new cost picked after
+     the cast, one creature at a time until the total is reached; "if cast using teamwork" reads it on the stack.
+  7. **g7 Storm** (Brain Freeze). Nearest: replicate's cast trigger (`CopySpell` repeated, each copy retargeted). The
+     count is every player's spells cast before it this turn — not paid, so not `ReplicateComponent`; a
+     `Scripting.Storm` "when you cast this spell" (`TriggerEvent.SelfCast`) with the count read from the cast's number.
+  8. **g8 Spree** (Three Steps Ahead). Nearest: `ModeChoice { AtMost = 3 }` and replicate's added cost: a `Mode` with
+     a cost of its own, added in `Costs.Of` for each mode chosen. Targets chosen word by word (`EachWord`), or "copy
+     target artifact or creature you control" with "counter target spell" is a cast per pair — **MC-8's mechanism for
+     one more kind of text; ask Shayne then** (MC-8 itself is left alone).
+  9. **g9 Warp** (Quantum Riddler). Nearest: an alternative mana cost (`MayCastFromHandFree(Is.Source) { Mana }`,
+     Baleful Mastery), a delayed "exile it at the next end step" (`ExileAtNextEndStep`) and `MayCastThisFrom(Exile)`
+     with "a later turn". Its draw replacement is `NumericReplacement(Draw) { Plus = 1, If }` — tier 1.
+  10. **g10 Classes** (Does Machines). Nearest: Hexdrinker's level up (real level counters) and Sagas — but a Class
+     level is no counter (CR 716): a level on the card, "Level N" activations at sorcery speed gated on the level
+     before, "when this Class becomes level 2", and level-gated abilities.
+  **Legal actions, 12 creatures and 12 artifacts a side, a full hand and a full graveyard:** delve one cast per number
+  exiled (≤ 6 for Dig, 7 for Cruise, whatever the graveyard), the cards picked after; Oculus one cast, its six picked
+  after; spree 7 casts (sets of modes) with its words chosen one at a time — per pair it would be 24 × the stack;
+  storm one cast per target of the original (2 players), each copy retargeted as a choice; teamwork two casts, the
+  creatures picked after (a cast per set would be 4,096); Petty Theft one per nonland permanent of theirs (24); warp
+  two casts; a Class one activation, its next level; a dungeon one room choice per branch; protection none (a rule);
+  True-Name Nemesis' player two options as it enters.
+- 2026-11-17, Claude — **4.4g1's notes (protection).** Built as planned: `Protection(From)` with one question,
+  `Protection.Stops(s, holder, source)`, asked in `TargetSpec` (a spell or ability's source, battlefield targets),
+  `Damage.Prevented` (now given the source — combat's "dealt damage to a player" asks per hit), `Combat.CanBlock`,
+  `Attachments.CanEnchant` and the Equipment fall-off. True-Name Nemesis' player is a `ChooseKeywordChoice` of "An
+  opponent" / "You" (no new choice type; the AI's default answer takes the first). 4 tests in `LsvBatch2gTests.cs`,
+  7 breaks caught. Not done: the AI's evaluator prices no protection yet (an AI-lane note).
+  **`/pre-commit`'s review: seven findings; two taken, each with a test that fails without it (9 breaks caught):**
+  a spell being cast is still in its owner's zone, so its card's controller was its OWNER — `TargetSpec` now asks
+  protection of the source as controlled by the caster or activator (Robber of the Rich casting their card at my
+  Nemesis); `Attachments.Attach` refuses a host with protection from the attachment (CR 701.3b: a non-targeting
+  "attach it to" does nothing, it stays where it was). **Not taken (for Shayne):** a clone entering as a copy of
+  Nemesis isn't asked for a player, so it has protection from nobody — the same gap Kai Winn, Nyota Uhura and Room
+  of Refuge already have (the as-it-enters choices run before `MayEnterAsCopy`; one fix for all four); `Damage.Excess`
+  counts excess against a protected creature (no card reads excess from a damage that can reach one yet). AI lane:
+  `Lookahead`'s block and attack predictions and `BlunderLint`'s block check don't ask protection.
 
 ## Tasks
 
@@ -1044,17 +1119,36 @@ as his three priorities.
         (the review's three fixes included); `batch_checks.py` all 8 steps, run again after the review's fixes
         (golden-out unchanged; golden-in moved 29 random and 370 card-replay games, added 24, the AI replay unmoved;
         probe 150 games, none unfinished, each card cast or activated 301–526 times; full suite 1,929 passed)
+  - [ ] MC-4.4g Blue's tier 3 (Shayne, 2026-11-17) — 11 in `LsvSurvey.md`'s tier 3, ten mechanics in ten parts, one
+        per session (Decisions, 4.4g's plan):
+    - [x] MC-4.4g1 Protection: True-Name Nemesis — done 2026-11-17: `Protection(From)`, `Protection.Stops` in
+          targeting, damage, blocking and attachments; `ChoosesPlayerAsItEnters`, `Is.ControlledByChosenPlayer`; 5
+          tests, 9 breaks caught (the review's two fixes included); `batch_checks.py` all 8 steps (golden-out unchanged; golden-in moved 29 random and
+          72 card-replay games, added 4, the AI replay unmoved; probe 150 games, 1 unfinished past 300 permanents,
+          Nemesis cast 358 times; full suite 1,934 passed — run again after the review's fixes)
+    - [ ] MC-4.4g2 Delve: Dig Through Time, Treasure Cruise
+    - [ ] MC-4.4g3 Dungeons and the initiative: Feywild Caretaker
+    - [ ] MC-4.4g4 Face-down, manifest dread: Abhorrent Oculus
+    - [ ] MC-4.4g5 Adventures: Brazen Borrower // Petty Theft
+    - [ ] MC-4.4g6 Teamwork: We Say Thee Nay!
+    - [ ] MC-4.4g7 Storm: Brain Freeze
+    - [ ] MC-4.4g8 Spree: Three Steps Ahead
+    - [ ] MC-4.4g9 Warp: Quantum Riddler
+    - [ ] MC-4.4g10 Classes: Does Machines
 
 ## Next
 
-Red's tier 1 (4.4c), white's (4.4d) and blue's — all seven parts, the last "choices after the cast" (4.4e2f) — are
-done, and blue's tier 2 (4.4f): **224 of 528 play.** Next, in a NEW session: **MC-4.4g — blue's tier 3 (11)**:
-Dig Through Time and Treasure Cruise (delve: "a cost paid by exiling graveyard cards" — Drivnod's
-`ExileFromGraveyardCost { Count }` is nearest), True-Name Nemesis (protection, CR 702.16 — six more cube cards need
-it), Three Steps Ahead (spree: a cost per mode), Brain Freeze (storm), Brazen Borrower (adventures), Abhorrent Oculus
-(face-down), Quantum Riddler (warp), We Say Thee Nay! (teamwork), Feywild Caretaker (dungeons), Does Machines (Classes).
-Ten mechanics, each new: survey all eleven against the CODE, write the parts in Decisions (shared pieces first, the
-mechanics other colours reuse before one-card ones), give Shayne the order, then build the first part only.
+Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first part — protection,
+True-Name Nemesis (4.4g1) — are done: **225 of 528 play.** Next, in a NEW session: **MC-4.4g2 — delve** (Dig Through
+Time, Treasure Cruise): the plan is in Decisions (4.4g's plan, part 2) — `CastSpellAction.Delve = N`, one cast per
+N, the cards picked after the cast as Drivnod's; read `LookAndTake.Rest` for Dig's "bottom in any order". Then g3–g10
+in the plan's order, one a session.
+From 4.4g1: protection is ONE question, `Protection.Stops(s, holder, source)` — a `Protection(From)` filter asked of
+the SOURCE from the holder's side, read through `AbilitiesOf` (a grant until end of turn counts); "choose a player as
+it enters" is `ChoosesPlayerAsItEnters` → `ChosenPlayer`; `Damage.Prevented` takes the source. 4.4g's tests are in
+`LsvBatch2gTests.cs` (`Pyroclasm`: 2 damage to each creature, targeting nothing; `AttachedTo`: set up attached).
+**Open (for Shayne), from g1:** a clone entering as a copy of True-Name Nemesis (or Kai Winn, Nyota, Room of Refuge)
+makes no as-it-enters choice — those run before `MayEnterAsCopy`; one fix for all four, not yet taken.
 From 4.4f: a permanent's memory of its spell is ONE field, `Card.CastAs` (X, kicked, alternative cost, squad's count;
 `Card.AsCast` reads the stack's or the permanent's) — never a new `Cast…` field. Evoke is `Scripting.Evoke(colour)`
 (Solitude, Endurance, Fury, Grief take it as they come); squad `Scripting.Squad(cost)`; improvise and convoke one answer,
@@ -1214,3 +1308,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   (Fiery Confluence moved; 4 of its card replays re-kept). Next: Shayne's pick of blue's tiers 2–3 or the next colour.
 - 2026-11-17: MC-4.4f done: Emry, Sicarian Infiltrator, Subtlety, Kappa Cannoneer, Preordain, Lórien Revealed — 224 of
   528 play; blue's tier 2 done. `Card.CastAs`, squad, evoke, improvise, scry, `MakePlayable`. Next: blue's tier 3.
+- 2026-11-17: MC-4.4g planned (ten parts, Decisions) and g1 done: True-Name Nemesis — 225 of 528 play. Protection
+  (`Protection(From)`, `Protection.Stops` in targeting, damage, blocking, attachments). Next: MC-4.4g2, delve.

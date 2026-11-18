@@ -265,6 +265,21 @@ public record SetChosenNameAction(int CardId, ImmutableArray<string> Names) : Ga
 			);
 }
 
+/// <summary>True-Name Nemesis, after the choice: the player, kept on it (ChosenPlayer) — Players in the choice's order.</summary>
+public record SetChosenPlayerAction(int CardId, ImmutableArray<int> Players) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		!s.IsOnBattlefield(CardId)
+		|| InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is not int id
+			? new(s)
+			: new(
+				s.UpdateObject(
+					CardId,
+					s.GetCard(CardId).WithComponent(new Effects.ChosenPlayer(Players[id - 1]))
+				)
+			);
+}
+
 /// <summary>Nyota Uhura, after the choice: the number, kept on her (ChosenNumber).</summary>
 public record SetChosenNumberAction(int CardId) : GameAction
 {

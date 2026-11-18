@@ -85,6 +85,7 @@ public static class Is
 
 	public static readonly Filter ManaValueIsChosenNumber = new ManaValueIsChosenNumber();
 	public static readonly Filter NamedChosenName = new NamedChosenName();
+	public static readonly Filter ControlledByChosenPlayer = new ControlledByChosenPlayer();
 
 	/// <summary>Combadge: "with a Communicator attached to it".</summary>
 	public static Filter WithAttached(Filter attachment) => new WithAttached(attachment);

@@ -1887,6 +1887,12 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4g1: protection =====
+			["True-Name Nemesis"] =
+			[
+				new ChoosesPlayerAsItEnters(),
+				new Protection(Is.ControlledByChosenPlayer),
+			],
 		};
 
 	/// <summary>

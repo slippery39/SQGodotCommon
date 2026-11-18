@@ -21,7 +21,7 @@ public static class Damage
 		if (amount <= 0 || !s.HasObject(targetId))
 			return s;
 		amount = Replaced(s, source, targetId, amount, combat);
-		if (Prevented(s, targetId))
+		if (Prevented(s, targetId, source))
 			return s;
 
 		if (s.GetObject(targetId) is MagicPlayer player)
@@ -69,11 +69,18 @@ public static class Damage
 	/// <summary>The damage after replacements — Tomik: +1 noncombat to an opponent or a permanent they control.</summary>
 	/// <summary>
 	/// The Needs of the Many: "Prevent all damage that would be dealt to you this turn." — none is dealt, so
-	/// no life lost, no lifelink, and combat's "dealt combat damage to a player" doesn't count them.
+	/// no life lost, no lifelink, and combat's "dealt combat damage to a player" doesn't count them. A permanent's
+	/// protection from the source (CR 702.16e, True-Name Nemesis) prevents it the same way.
 	/// </summary>
-	public static bool Prevented(GameState s, int targetId) =>
-		s.GetObject(targetId) is MagicPlayer shielded
-		&& s.ThisTurnEffects<Effects.PreventAllDamageToYou>(shielded.Id).Any();
+	public static bool Prevented(GameState s, int targetId, Card source) =>
+		s.GetObject(targetId) switch
+		{
+			MagicPlayer shielded => s.ThisTurnEffects<Effects.PreventAllDamageToYou>(shielded.Id)
+				.Any(),
+			Card permanent => s.IsOnBattlefield(targetId)
+				&& Effects.Protection.Stops(s, permanent, source),
+			_ => false,
+		};
 
 	static int Replaced(GameState s, Card source, int targetId, int amount, bool combat) =>
 		Replacements.Apply(

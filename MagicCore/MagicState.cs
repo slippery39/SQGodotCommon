@@ -601,6 +601,23 @@ public static class MagicState
 					],
 				}
 			);
+		if (card.HasComponent<ChoosesPlayerAsItEnters>())
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new Actions.ChooseKeywordChoice(controllerId, ["An opponent", "You"])
+						{
+							Prompt = $"{card.Name}: choose a player",
+						},
+						new Actions.SetChosenPlayerAction(
+							cardId,
+							[s.OpponentOf(controllerId), controllerId]
+						),
+					],
+				}
+			);
 		if (card.GetComponent<ChoosesNameAsItEnters>() is { } naming)
 		{
 			// Anointed Peacekeeper: "look at an opponent's hand, then choose any card name"

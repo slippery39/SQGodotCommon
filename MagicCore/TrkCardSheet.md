@@ -2780,7 +2780,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Enchanted creature gets -4/-0, can't block, and is a Salamander. (It loses all other creature types.)  
 > Threshold — At the beginning of each upkeep, if there are seven or more cards in your graveyard, exile enchanted creature.
 
-**Status:** scripted · **tests naming it:** FraAttachmentTests, TrkBatch4bTests
+**Status:** scripted · **tests naming it:** FraAttachmentTests, LsvBatch2gTests, TrkBatch4bTests
 
 **Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `EnchantedIsCreatureType` — De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)"…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 

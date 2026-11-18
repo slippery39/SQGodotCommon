@@ -344,6 +344,7 @@ public record Card : GameObject
 				or Effects.ChosenColorMana
 				or Effects.ChosenNumber
 				or Effects.ChosenName
+				or Effects.ChosenPlayer
 				or CopyUntilEndOfTurn
 				or EnteredAsCopy
 				or Effects.DelayedTrigger

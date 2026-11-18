@@ -161,7 +161,8 @@ public static class Combat
 		&& !s.Has(attacker, CantBeBlocked)
 		&& (!s.Has(attacker, "Flying") || s.Has(blocker, "Flying") || s.Has(blocker, "Reach"))
 		&& !s.AbilitiesOf<Effects.CantBeBlockedBy>(attacker)
-			.Any(r => r.Blockers.Matches(s, blocker, new(attacker.ControllerId, attacker.Id)));
+			.Any(r => r.Blockers.Matches(s, blocker, new(attacker.ControllerId, attacker.Id)))
+		&& !Effects.Protection.Stops(s, attacker, blocker); // CR 702.16f
 
 	/// <summary>The active player's creatures that may be declared as attackers — one choice each.</summary>
 	public static List<Card> AttackCandidates(GameState s) =>
@@ -384,9 +385,9 @@ public static class Combat
 				hits.Add((blocker, blocker.BlockingId, Assigned(blocker)));
 
 		// Players never leave the game; a planeswalker token hit by first strike may already be gone.
-		var players = hits.Select(h => h.TargetId)
-			.Where(id => id == s.Player1Id() || id == s.Player2Id())
-			.Where(id => !Rules.Damage.Prevented(s, id)) // The Needs of the Many: none was dealt
+		var players = hits.Where(h => h.TargetId == s.Player1Id() || h.TargetId == s.Player2Id())
+			.Where(h => !Rules.Damage.Prevented(s, h.TargetId, h.Source)) // The Needs of the Many: none was dealt
+			.Select(h => h.TargetId)
 			.Distinct()
 			.ToImmutableList();
 		foreach (var (source, targetId, amount) in hits)

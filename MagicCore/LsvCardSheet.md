@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 29/46 · uncommon 39/86 · rare 111/279 · mythic 36/108 · **224/528**
+**Playable:** common 29/46 · uncommon 39/86 · rare 111/279 · mythic 37/108 · **225/528**
 
 ### "Name Sticker" Goblin
 
@@ -431,7 +431,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 	Spell([], new DrawCards(Ref.You, 3)),
 	Cycling(
 		"{1}",
-		new SearchLibrary(CardType.Land, ZoneType.Hand) { Subtype = "Island", Reveal = true }
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Subtype = "Island",
+			Reveal = true,
+		}
 	),
 ],
 ```
@@ -2890,12 +2894,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(TriggerEvent.SelfEnters, [], new Mill(Ref.You, 4)),
 	new ActivatedAbilityComponent(
 		ManaCost.None,
-		[
-			new MakePlayable(
-				Ref.Target(),
-				new() { ThisTurn = true, CastOnly = true }
-			),
-		]
+		[new MakePlayable(Ref.Target(), new() { ThisTurn = true, CastOnly = true })]
 	)
 	{
 		Costs = [new TapSelfCost()],
@@ -7702,7 +7701,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As this creature enters, choose a player.  
 > This creature has protection from the chosen player.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2gTests
+
+**Engine pieces:** `ChoosesPlayerAsItEnters` — True-Name Nemesis: "As this creature enters, choose a player." Applied by…; `Protection` — Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the…
+
+```csharp
+["True-Name Nemesis"] =
+[
+	new ChoosesPlayerAsItEnters(),
+	new Protection(Is.ControlledByChosenPlayer),
+],
+```
 
 ### Ugin, Eye of the Storms
 

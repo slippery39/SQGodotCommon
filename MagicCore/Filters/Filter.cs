@@ -156,6 +156,21 @@ public sealed record NamedChosenName : Filter
 		&& card.Name == chosen.Name;
 }
 
+/// <summary>True-Name Nemesis: "protection from the chosen player" — an object that player controls (ChosenPlayer on the source).</summary>
+public sealed record ControlledByChosenPlayer : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card
+		&& s.HasObject(c.Source)
+		&& s.GetObject(c.Source) is Card source
+		&& source.GetComponent<Effects.ChosenPlayer>() is { } chosen
+		&& card.ControllerId == chosen.PlayerId;
+}
+
 /// <summary>Koth: "a Plains"; Saheeli: "Thopters".</summary>
 public sealed record OfSubtype(string Subtype) : Filter
 {

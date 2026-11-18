@@ -164,6 +164,12 @@ whose subsystem it lives in.
 - **A player's hexproof and prevented damage** (The Needs of the Many) are `ThisTurnEffect`s on that player:
   `YouHaveHexproof` asked in `TargetSpec.IsLegal` (an opponent's spell or ability only), `PreventAllDamageToYou` in
   `Damage.Deal` before anything is dealt — so no lifelink, no "dealt damage" trigger.
+- **Protection** (CR 702.16, MC-4.4g1) is `Protection(From)`: a filter asked of the SOURCE (a spell, an ability's
+  source, a creature dealing damage or blocking, an Aura or Equipment) from the holder's side — True-Name Nemesis'
+  "from the chosen player" is `Is.ControlledByChosenPlayer`. ONE question, `Protection.Stops(s, holder, source)`, asked
+  in each DEBT rule's one place: `Damage.Prevented` (given the source), `Attachments` (enchant, and the Equipment
+  fall-off), `Combat.CanBlock`, `TargetSpec`. Read through `AbilitiesOf`: a grant until end of turn counts, losing all
+  abilities ends it. "As this enters, choose a player" is `ChoosesPlayerAsItEnters` → `ChosenPlayer` (status).
 - **An ability a card GAINS** (Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard'"; Q's exiled
   card) is `UntilEndOfTurn.Gains` — a static or activated ability read by `s.AbilitiesOf<T>` beside the card's own,
   so every rule sees it; for good (`ModifyUntilEndOfTurn.ForGood`) it lasts until the card changes zones. A gained

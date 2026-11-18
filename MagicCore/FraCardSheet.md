@@ -945,7 +945,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Equipped creature gets +1/+0 and has flying and "Whenever this creature attacks, you gain 1 life."  
 > Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
 
-**Status:** scripted · **tests naming it:** FraAttachmentTests
+**Status:** scripted · **tests naming it:** FraAttachmentTests, LsvBatch2gTests
 
 **Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
