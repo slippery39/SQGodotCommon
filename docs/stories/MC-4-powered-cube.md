@@ -1364,15 +1364,27 @@ as his three priorities.
           golden-in moved 29 random and 66 card-replay games, added 4, the AI replay unmoved; probe 150 games, 1 unfinished
           past 300 permanents, Does Machines cast 482 times, never leveled — random play, the ability offered (tests);
           full suite 1,984 passed, run again after `EventKind.BecameLevel` joined the trigger-coverage table)
+    - [ ] MC-4.4g10b (LATER; Shayne, 2026-11-18) Does Machines never levels in random play (probe: cast 482, activated
+          0) — likely because its levels pay off only with artifacts (in the graveyard for level 2, on the battlefield for
+          level 3), which the random decks seldom hold. An isolated test: a board with artifacts and the mana free — is
+          the level ability taken, by the probe's random play and by the AI?
+  - [ ] MC-4.4h Black (Shayne, 2026-11-18: the next colour in the list) — black's cards in `LsvSurvey.md` read card by
+        card and tiered, then planned in parts as red's, white's and blue's were (Decisions); one part per session
+- [ ] MC-4.5 (LATER; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
+      (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
+      the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
+      and AI-21's Tribble boards are the AI lane's, untouched. It moves the golden random games: regenerate them after
+      the change (Commands.md, "Golden replays").
 
 ## Next
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
-done: **blue is finished; 235 of 528 play.** Next: **no part is named after 4.4g** — the colours left (black, green,
-multicolour, the artifacts and lands) are unplanned. Ask Shayne which comes next; its first session surveys it by tier
-(`LsvSurvey.md`) and plans its parts, as 4.4c–g were.
+done: **blue is finished; 235 of 528 play.** Next, in a NEW session: **MC-4.4h — black** (Shayne, 2026-11-18: the next
+colour in the list). Its first session reads black's cards in `LsvSurvey.md` card by card, tiers them, and plans its
+parts, as 4.4c–g were — the plan goes to Shayne before anything is built. Later, not now: MC-4.4g10b (does Does
+Machines ever level?) and MC-4.5 (Troubling Tribbles out of the random decks).
 From 4.4g10: a Class's level is `ClassLevel(N)` (status, not a counter; none is level 1, `Count.ClassLevelOf`);
 "[cost]: Level N" `Scripting.Level(cost, n)` → `GainLevel`, "when this Class becomes level N" `Scripting.WhenLevel`
 (`Trigger.Chapter` on `BecameLevel`), a level's abilities gated by `AtLevel(n)` (a trigger's `While`, a static's `If`).
