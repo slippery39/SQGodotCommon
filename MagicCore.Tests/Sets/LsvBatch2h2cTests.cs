@@ -44,7 +44,11 @@ public class LsvBatch2h2cTests : FraBoardTest
 	{
 		var deluge = Hand(Lsv("Toxic Deluge"), me);
 		s = s.Act(Casts(deluge).First(c => c.X == 5));
-		Assert.That(s.GetCard(deluge).ManaValueNow, Nu.EqualTo(3), "CR 202.3e: only an X in the mana cost counts");
+		Assert.That(
+			s.GetCard(deluge).ManaValueNow,
+			Nu.EqualTo(3),
+			"CR 202.3e: only an X in the mana cost counts"
+		);
 	}
 
 	[Test]
@@ -83,7 +87,9 @@ public class LsvBatch2h2cTests : FraBoardTest
 		Assert.That(Alive(land), "play lands from the top");
 		Assert.That(Life(me), Nu.EqualTo(life - 2), "a land costs no life");
 
-		var citadel = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Bolas's Citadel").Id;
+		var citadel = s.CardsIn(me, ZoneType.Battlefield)
+			.Single(c => c.Name == "Bolas's Citadel")
+			.Id;
 		Assert.That(Activations(citadel), Nu.Empty, "two nonland permanents: not ten");
 		for (var i = 0; i < 8; i++)
 			Field(Bear, me);
@@ -104,7 +110,9 @@ public class LsvBatch2h2cTests : FraBoardTest
 		var rain = Hand(Lsv("Rain of Filth"), me);
 		Cast(rain, []);
 		TapMyLands();
-		var forest = s.CardsIn(me, ZoneType.Battlefield).First(c => c.Subtypes.Contains("Forest")).Id;
+		var forest = s.CardsIn(me, ZoneType.Battlefield)
+			.First(c => c.Subtypes.Contains("Forest"))
+			.Id;
 		s = s.Untap(forest);
 		var again = Hand(Lsv("Rain of Filth"), me);
 		Assert.That(
@@ -116,7 +124,9 @@ public class LsvBatch2h2cTests : FraBoardTest
 		Assert.That(
 			moves.Select(t => t.CardId),
 			Nu.EquivalentTo(
-				s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)).Select(c => c.Id)
+				s.CardsIn(me, ZoneType.Battlefield)
+					.Where(c => c.Is(CardType.Land))
+					.Select(c => c.Id)
 			),
 			"one move per land I control, tapped as they are"
 		);
@@ -156,9 +166,19 @@ public class LsvBatch2h2cTests : FraBoardTest
 		Assert.That(s.GetCard(talisman).PlusOneCounters, Nu.Zero);
 		var wanted = Put(Ogre, me, ZoneType.Library);
 		s = s.Act(Activations(talisman).Single());
-		Resolve(c => c is ChooseFromLibraryChoice ? [wanted] : c.Options.Take(c.MinChoices).Select(o => o.Id));
+		Resolve(c =>
+			c switch
+			{
+				ChooseFromLibraryChoice => [wanted],
+				_ => c.Options.Take(c.MinChoices).Select(o => o.Id),
+			}
+		);
 		Assert.That(s.IsIn(wanted, me, ZoneType.Hand), "search for a card, into your hand");
 		Assert.That(s.GetCard(talisman).CountersOf(CounterKinds.Wish), Nu.EqualTo(2));
-		Assert.That(s.GetCard(talisman).ControllerId, Nu.EqualTo(them), "an opponent gains control");
+		Assert.That(
+			s.GetCard(talisman).ControllerId,
+			Nu.EqualTo(them),
+			"an opponent gains control"
+		);
 	}
 }
