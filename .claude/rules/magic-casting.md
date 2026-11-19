@@ -113,6 +113,13 @@ whose subsystem it lives in.
   stamped `OnStackComponent.AlternativeCost`, read by `AlternativeCostWasPaid`; a copy has it too, CR 707.10), and in
   `Costs` Force of Will's `PayLifeCost(1)` and `ExileFromHandCost(blue)` (`CastSpellAction.ExileId`), Daze's
   `ReturnToHandCost(Island)` (beam me up's cost, its filter an option). `Playable.FreeCast` is the one answer.
+- **A counted life payment** is `PayLifeCost(Count)`, fixed for the cast before anything is paid (`PayLifeCost.For`,
+  from `CastSpellAction.CostsOf`: `Ref.Source` the card, `Count.X` its X). **"As an additional cost, pay X life"**
+  (Toxic Deluge, MC-4.4h2c) chooses X with no {X} in the cost (`CastSpellAction.XInCosts`): one cast per X up to the
+  caster's life, and X is never added as mana (`XIsMana`). **"Cast spells from the top of your library … pay life equal
+  to its mana value rather than pay its mana cost"** (Bolas's Citadel) is `MayPlayFromZone { Free, Costs }`: the
+  permission's cast is `WithoutPayingManaCost`, its `Costs` the free cast's (`Playable.FreeCast`), never added to a
+  paid cast, and the paid cast from there is refused; a land is played as ever.
 - **"[This cost] or [that]"** is `AdditionalCost.Or` (MC-4.4) — Silence the Echo's "or pay {3}" (`PayManaCost`),
   Bitter Triumph's "discard a card or pay 3 life", Bone Shards' "sacrifice a creature or discard a card": the cost's
   slot picking nothing (id 0) pays its `Or`. `CostList.Paid` is the one list validation, payment and the mana owed

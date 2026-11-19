@@ -178,6 +178,12 @@ public record TapForManaAction : GameAction
 	public int SacrificeId { get; init; }
 
 	/// <summary>
+	/// Rain of Filth's gained "Sacrifice this land: Add {B}." — set, this activates its mana ability without {T} (a move
+	/// in LegalActions, as Phyrexian Tower's), on a tapped land too; never the solver's.
+	/// </summary>
+	public bool NoTap { get; init; }
+
+	/// <summary>
 	/// Orcish Lumberjack: "three mana in any combination of {R} and/or {G}" — how many of the units are the ability's
 	/// other colour (ManaAbilityComponent.OrColor); the rest are Color.
 	/// </summary>
@@ -195,7 +201,9 @@ public record TapForManaAction : GameAction
 			: ManaAbilities.YieldOf(s, s.GetCard(CardId), (null, null));
 
 	ManaAbilityComponent? Chosen(GameState s) =>
-		ManaAbilities.AbilitiesOf(s, s.GetCard(CardId)).FirstOrDefault(m => m.ChoosesCost);
+		ManaAbilities
+			.AbilitiesOf(s, s.GetCard(CardId))
+			.FirstOrDefault(m => m.ChoosesCost || m.NoTap);
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
@@ -212,10 +220,11 @@ public record TapForManaAction : GameAction
 			return ValidationResult.Invalid(
 				"No mana abilities now: Sen Triplets, Clarion Conqueror"
 			);
-		if (SacrificeId != 0)
+		if (SacrificeId != 0 || NoTap)
 			return
 				s.IsIn(CardId, PlayerId, ZoneType.Battlefield)
 				&& Chosen(s) is { Cost: null } ability // ponytail: a mana cost beside a picked one isn't paid here — no card has both
+				&& ability.NoTap == NoTap
 				&& (ability.AnyOneColor || ability.Color == Color)
 				&& OfTheOther >= 0
 				&& OfTheOther
@@ -246,7 +255,7 @@ public record TapForManaAction : GameAction
 	/// <summary>Makes its whole yield: the chosen colour, all of it for Loot; Molten Tide's extra {R}.</summary>
 	public override ActionResult Execute(GameState s)
 	{
-		if (SacrificeId != 0)
+		if (SacrificeId != 0 || NoTap)
 			return new ActionResult(Priority.Retain(WithChosenCost(s), PlayerId));
 		var yield = YieldFor(s);
 		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);

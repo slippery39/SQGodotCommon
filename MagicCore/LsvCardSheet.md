@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 33/46 · uncommon 49/86 · rare 123/279 · mythic 48/108 · **262/528**
+**Playable:** common 33/46 · uncommon 50/86 · rare 126/279 · mythic 49/108 · **267/528**
 
 ### "Name Sticker" Goblin
 
@@ -1672,7 +1672,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Until end of turn, lands you control gain "Sacrifice this land: Add {B}."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2cTests
+
+**Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
+
+```csharp
+["Rain of Filth"] =
+[
+	Spell(
+		[],
+		new ModifyUntilEndOfTurn(Ref.Permanents(Is.Land & Is.Yours), 0, 0)
+		{
+			Gains =
+			[
+				new ManaAbilityComponent(ManaColor.Black)
+				{
+					Costs = [new SacrificeSelfCost()],
+				},
+			],
+		}
+	),
+],
+```
 
 ### Remand
 
@@ -2489,7 +2510,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may play lands and cast spells from the top of your library. If you cast a spell this way, pay life equal to its mana value rather than pay its mana cost.  
 > {T}, Sacrifice ten nonland permanents: Each opponent loses 10 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2cTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MayLookAtTopOfLibrary` — Zefram Cochrane: "You may look at the top card of your library any time." —…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Bolas's Citadel"] =
+[
+	new MayLookAtTopOfLibrary(),
+	new MayPlayFromZone(ZoneType.Library, Is.AnyCard)
+	{
+		AnyTime = true,
+		Free = true,
+		Costs = [new PayLifeCost(Count.GreatestManaValueOf(Ref.Source))],
+	},
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[new LoseLife(Ref.EachOpponent, 10)]
+	)
+	{
+		Costs = [new TapSelfCost(), new SacrificeCost(!Is.Land) { Count = 10 }],
+	},
+],
+```
 
 ### Boseiju, Who Endures
 
@@ -6039,7 +6082,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As an additional cost to cast this spell, pay X life.  
 > All creatures get -X/-X until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2cTests
+
+**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Toxic Deluge"] =
+[
+	new AdditionalCostsComponent([new PayLifeCost(Count.X)]),
+	Spell(
+		[],
+		new ModifyUntilEndOfTurn(
+			Ref.Permanents(Is.Creature),
+			Count.X with { Sign = -1 },
+			Count.X with { Sign = -1 }
+		)
+	),
+],
+```
 
 ### Transmute Artifact
 
@@ -6368,7 +6428,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This artifact enters with three wish counters on it.  
 > {1}, {T}, Remove a wish counter from this artifact: Search your library for a card, put it into your hand, then shuffle. An opponent gains control of this artifact. Activate only during your turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2cTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `EntersWithCountersComponent` — "This creature enters with N (or X) +1/+1 counters on it." Applied by…; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RemoveCountersCost` — "Remove N counters from among [Filter] you control" — Lieutenant Commander Data: "{1},…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Wishclaw Talisman"] =
+[
+	new EntersWithCountersComponent(3) { Kind = CounterKinds.Wish },
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[
+			new SearchLibrary(CardType.None, ZoneType.Hand),
+			new GainControl(Ref.Source, Ref.EachOpponent),
+		]
+	)
+	{
+		Costs =
+		[
+			new TapSelfCost(),
+			new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Wish },
+		],
+		OnlyIf = new DuringYourTurn(),
+	},
+],
+```
 
 ### Wooded Foothills
 
@@ -8454,7 +8538,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Until end of turn, you may play lands and cast spells from your graveyard.  
 > If a card would be put into your graveyard from anywhere this turn, exile that card instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2cTests
+
+**Engine pieces:** `ExileInsteadOfYourGraveyard` — Necrodominance: "If a card or token would be put into your graveyard from anywhere,…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Yawgmoth's Will"] =
+[
+	Spell(
+		[],
+		new ThisTurn(new MayPlayFromZone(ZoneType.Graveyard, Is.AnyCard)),
+		new ThisTurn(new ExileInsteadOfYourGraveyard { What = !Is.Token })
+	),
+],
+```
 
 ### Ancestral Recall
 

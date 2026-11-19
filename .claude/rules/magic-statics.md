@@ -110,6 +110,8 @@ whose subsystem it lives in.
   (+1/+1, -1/-1, charge, stun, time, loyalty) in their own fields
   (`Card.CountersOf`/`WithCounters`). Finality is a yes/no flag, not a count. `CounterWritesTests` fails on
   an engine file that adds to a counter field itself — it would skip every replacement.
+  "Enters with N [kind] counters" is `EntersWithCountersComponent(N) { Kind }` (+1/+1 unless said; Wishclaw Talisman's
+  three wish counters, MC-4.4h2c), put through `PutCounters` as it enters.
   "A permanent with a counter on it" is ANY kind — `Is.WithAnyCounter` (`Card.HasAnyCounter`) reads every
   field and the map; a new counter field must join it. Proliferate doesn't see the map yet (no card needs it).
 - **A permanent's subtypes are `s.Subtypes(card)`** (Characteristics) — never `Card.Subtypes` in a rule.

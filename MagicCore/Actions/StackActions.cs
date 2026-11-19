@@ -222,29 +222,33 @@ public record CastSpellAction : GameAction
 			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
 			.. flashback ? Costs.Flashback(s, card)?.Costs ?? [] : [],
 			// Underworld Breach's escape: what the rule letting this player cast it from where it is asks
-			.. permissionOf == 0 || Playable.MarkedInGraveyard(s, card, permissionOf)
-				? []
-				: Playable.ZonePermission(s, card, permissionOf)?.Rule.Costs ?? [],
+			// (Bolas's Citadel's are paid instead of the mana cost: the free cast's, Playable.FreeCast)
+			.. permissionOf == 0 || Playable.MarkedInGraveyard(s, card, permissionOf) ? []
+			: Playable.ZonePermission(s, card, permissionOf) is { Rule.Free: false } p
+				? p.Rule.Costs
+			: [],
 			.. kicked ? card.GetComponent<KickerComponent>()?.Costs ?? [] : [],
 			.. free ?? [],
 		];
 
 	/// <summary>
 	/// This cast's costs beyond mana — a free cast by a permission pays the permission's (never one an effect casts) —
-	/// and escalate's, one per mode chosen beyond the first (Collective Brutality), picked after the cast.
+	/// and escalate's, one per mode chosen beyond the first (Collective Brutality), picked after the cast. A life
+	/// payment counted is fixed here for this cast (Toxic Deluge's X, Bolas's Citadel's mana value: PayLifeCost.For).
 	/// </summary>
 	ImmutableList<AdditionalCost> CostsOf(GameState s, Card card) =>
 		[
 			.. CostsOf(
-				s,
-				card,
-				Kicked,
-				WithoutPayingManaCost && !DuringResolution
-					? Playable.FreeCosts(s, card, PlayerId)
-					: null,
-				DuringResolution ? 0 : PlayerId,
-				flashback: !DuringResolution
-			),
+					s,
+					card,
+					Kicked,
+					WithoutPayingManaCost && !DuringResolution
+						? Playable.FreeCosts(s, card, PlayerId)
+						: null,
+					DuringResolution ? 0 : PlayerId,
+					flashback: !DuringResolution
+				)
+				.Select(c => c is PayLifeCost life ? life.For(s, card, PlayerId, X) : c),
 			.. Modes.Length > 1
 			&& card.GetComponent<SpellEffectsComponent>()?.Escalate is { } escalate
 				? [escalate with { Count = Modes.Length - 1 }]
@@ -289,9 +293,20 @@ public record CastSpellAction : GameAction
 	ManaCost CostToPay(GameState s, Card card) =>
 		CostBeforeLife(s, card).PayingLifeFor(LifeForPhyrexian);
 
-	/// <summary>Thieving Skydiver: "Kicker {X}" — X is chosen only by a cast whose cost or kicker has one.</summary>
-	public static bool ChoosesX(Card card, bool kicked) =>
-		card.ManaCost.HasX || XInKicker(card, kicked);
+	/// <summary>Thieving Skydiver: "Kicker {X}" — X is chosen only by a cast whose cost or kicker has one, or whose
+	/// additional cost reads it (Toxic Deluge's "pay X life").</summary>
+	public static bool ChoosesX(Card card, bool kicked) => XIsMana(card, kicked) || XInCosts(card);
+
+	/// <summary>X is mana — in the mana cost or the kicker — so it joins the total; Toxic Deluge's is life only.</summary>
+	static bool XIsMana(Card card, bool kicked) => card.ManaCost.HasX || XInKicker(card, kicked);
+
+	/// <summary>
+	/// Toxic Deluge: "As an additional cost to cast this spell, pay X life." — X chosen with no {X} in its cost (CR
+	/// 107.3), one cast per X up to the caster's life (MagicRules.CastCandidates); a free cast still chooses it.
+	/// </summary>
+	public static bool XInCosts(Card card) =>
+		card.GetComponent<AdditionalCostsComponent>()
+			?.Costs.Any(c => c is PayLifeCost { Amount.Kind: CountOf.X }) == true;
 
 	/// <summary>The X is the kicker's — an additional cost, so a cast without paying the mana cost still chooses it.</summary>
 	public static bool XInKicker(Card card, bool kicked) =>
@@ -318,7 +333,7 @@ public record CastSpellAction : GameAction
 			s,
 			PlayerId,
 			card,
-			X + CostList.ManaOwed(Paid(s, card)),
+			(XIsMana(card, Kicked) ? X : 0) + CostList.ManaOwed(Paid(s, card)),
 			free: WithoutPayingManaCost,
 			targets: Targets,
 			added: added,
@@ -398,7 +413,10 @@ public record CastSpellAction : GameAction
 			X < 0
 			|| (
 				X > 0
-				&& (!ChoosesX(card, Kicked) || WithoutPayingManaCost && !XInKicker(card, Kicked))
+				&& (
+					!ChoosesX(card, Kicked)
+					|| WithoutPayingManaCost && !XInKicker(card, Kicked) && !XInCosts(card)
+				)
 			)
 			|| (Kicked && X < (card.GetComponent<KickerComponent>()?.MinX ?? 0)) // "X can't be 0"
 		)
@@ -433,6 +451,13 @@ public record CastSpellAction : GameAction
 			&& !Playable.MayCastWithoutPaying(s, card, PlayerId)
 		)
 			return ValidationResult.Invalid("You may not cast that without paying its mana cost");
+		if (
+			!WithoutPayingManaCost
+			&& !DuringResolution
+			&& !s.IsIn(CardId, PlayerId, ZoneType.Hand)
+			&& Playable.ZonePermission(s, card, PlayerId) is { Rule.Free: true }
+		)
+			return ValidationResult.Invalid("Cast this way, it is paid for in life"); // Bolas's Citadel
 		var text = card.GetComponent<SpellEffectsComponent>();
 		if (!(text?.Choose ?? 1).IsLegal(s, card, text?.Modes ?? [], Modes))
 			return ValidationResult.Invalid("Illegal choice of modes");
@@ -451,7 +476,16 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Not a card you can behold for this");
 		if (!CostList.Fits(costs, CostSlot.Return, ReturnId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can return for this");
-		if (costs.Any(c => !c.CanPay(s, PlayerId, CardId)))
+		if (
+			costs.Any(c => !c.CanPay(s, PlayerId, CardId))
+			// CR 119.4: every life payment of the cast together — Bolas's Citadel's beside Bitter Triumph's, Phyrexian mana's
+			|| !MagicCore.Rules.Life.CanPay(
+				s,
+				PlayerId,
+				costs.OfType<PayLifeCost>().Sum(c => c.Amount.Value(s, Conditions.Of(card)))
+					+ 2 * LifeForPhyrexian
+			)
+		)
 			return ValidationResult.Invalid("Cannot pay the additional cost");
 		if (FindPayment(s, card, costs, mostColors: false) is null)
 			return ValidationResult.Invalid("Cannot pay the cost");

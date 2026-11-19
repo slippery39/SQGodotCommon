@@ -38,6 +38,10 @@ whose subsystem it lives in.
   `CountersRemovedInsteadOfDestruction`) applies there. Several at once are JUDGED together before any
   leaves (CR 701.7) — a wrath doesn't end an indestructible grant halfway, nor kill McCoy before the creature
   he saves — then leave in the battlefield's order. 0 toughness isn't destruction and still kills.
+- **"If a card would be put into your graveyard from anywhere this turn, exile that card instead"** (Yawgmoth's Will,
+  MC-4.4h2c) is Necrodominance's `ExileInsteadOfYourGraveyard` in a `ThisTurn` (a `ThisTurnEffect`, read beside the
+  permanents' in `MoveCard`), `What = !Is.Token` — "a card"; Necrodominance's "a card or token" sets none. Its "you may
+  play lands and cast spells from your graveyard" is `ThisTurn(MayPlayFromZone(Graveyard, Is.AnyCard))`, Sen's shape.
 - **"Exile it instead" of dying** is decided in `MoveCard` alone: a finality counter, or Essence Burn's
   `UntilEndOfTurn.ExileIfItWouldDie` — so the card never dies and no "dies" trigger sees it.
 - **"If you cast it"** is `Card.WasCast`, set by `EnterBattlefield(cast: true)` from a resolving spell.

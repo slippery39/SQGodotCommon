@@ -233,16 +233,42 @@ public sealed record PayManaCost(int Generic) : AdditionalCost
 /// <summary>
 /// "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana Confluence: "{T}, Pay 1
 /// life: Add one mana of any color." Payable only with that much life, never while it can't change (Life.CanPay).
+/// A counted amount is fixed by the cast before it is paid (<see cref="For"/>): Toxic Deluge's "As an additional cost
+/// to cast this spell, pay X life" (Count.X — the cast chooses X with no {X} in its cost, CastSpellAction.XInCosts);
+/// Bolas's Citadel's "pay life equal to its mana value" (Count.GreatestManaValueOf(Ref.Source), the spell).
 /// </summary>
-public sealed record PayLifeCost(int Amount) : AdditionalCost
+public sealed record PayLifeCost(Count Amount) : AdditionalCost
 {
+	/// <summary>This cost with its amount counted for the spell being cast — Ref.Source the card, Count.X its X.</summary>
+	public PayLifeCost For(GameState s, Card spell, int playerId, int x) =>
+		Amount.Kind == CountOf.Fixed
+			? this
+			: this with
+			{
+				Amount = Amount.Value(
+					s,
+					Conditions.Of(spell with { ControllerId = playerId }).SetItem(ContextKeys.X, x)
+				),
+			};
+
+	int Life(GameState s, int sourceId) =>
+		Amount.Kind == CountOf.Fixed ? Amount.Fixed
+		: s.GetObject(sourceId) is Card source ? Amount.Value(s, Conditions.Of(source))
+		: 0;
+
 	public override bool CanPay(GameState s, int playerId, int sourceId) =>
-		Rules.Life.CanPay(s, playerId, Amount);
+		Rules.Life.CanPay(s, playerId, Life(s, sourceId));
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		Rules.Life.Lose(s, playerId, Amount);
+		Rules.Life.Lose(s, playerId, Life(s, sourceId));
 
-	public override string Describe() => $"Pay {Amount} life";
+	public override string Describe() =>
+		Amount.Kind switch
+		{
+			CountOf.Fixed => $"Pay {Amount.Fixed} life",
+			CountOf.X => "Pay X life",
+			_ => "Pay life equal to its mana value", // Bolas's Citadel's, the one counted otherwise
+		};
 }
 
 /// <summary>"Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).</summary>

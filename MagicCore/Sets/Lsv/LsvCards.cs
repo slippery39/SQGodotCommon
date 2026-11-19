@@ -2328,6 +2328,82 @@ public static class LsvCards
 					)
 				),
 			],
+			// ===== MC-4.4h2c: costs and permissions (PayLifeCost counted, X from a cost, MayPlayFromZone.Free, a mana ability without {T}, a "this turn" exile-instead, entering with any kind) =====
+			["Toxic Deluge"] =
+			[
+				new AdditionalCostsComponent([new PayLifeCost(Count.X)]),
+				Spell(
+					[],
+					new ModifyUntilEndOfTurn(
+						Ref.Permanents(Is.Creature),
+						Count.X with
+						{
+							Sign = -1,
+						},
+						Count.X with
+						{
+							Sign = -1,
+						}
+					)
+				),
+			],
+			["Bolas's Citadel"] =
+			[
+				new MayLookAtTopOfLibrary(),
+				new MayPlayFromZone(ZoneType.Library, Is.AnyCard)
+				{
+					AnyTime = true,
+					Free = true,
+					Costs = [new PayLifeCost(Count.GreatestManaValueOf(Ref.Source))],
+				},
+				new ActivatedAbilityComponent(ManaCost.None, [new LoseLife(Ref.EachOpponent, 10)])
+				{
+					Costs = [new TapSelfCost(), new SacrificeCost(!Is.Land) { Count = 10 }],
+				},
+			],
+			["Rain of Filth"] =
+			[
+				Spell(
+					[],
+					new ModifyUntilEndOfTurn(Ref.Permanents(Is.Land & Is.Yours), 0, 0)
+					{
+						Gains =
+						[
+							new ManaAbilityComponent(ManaColor.Black)
+							{
+								Costs = [new SacrificeSelfCost()],
+							},
+						],
+					}
+				),
+			],
+			["Yawgmoth's Will"] =
+			[
+				Spell(
+					[],
+					new ThisTurn(new MayPlayFromZone(ZoneType.Graveyard, Is.AnyCard)),
+					new ThisTurn(new ExileInsteadOfYourGraveyard { What = !Is.Token })
+				),
+			],
+			["Wishclaw Talisman"] =
+			[
+				new EntersWithCountersComponent(3) { Kind = CounterKinds.Wish },
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[
+						new SearchLibrary(CardType.None, ZoneType.Hand),
+						new GainControl(Ref.Source, Ref.EachOpponent),
+					]
+				)
+				{
+					Costs =
+					[
+						new TapSelfCost(),
+						new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Wish },
+					],
+					OnlyIf = new DuringYourTurn(),
+				},
+			],
 		};
 
 	/// <summary>

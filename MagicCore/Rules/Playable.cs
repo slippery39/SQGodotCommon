@@ -172,7 +172,11 @@ public static class Playable
 			IsImpulsePlayableBy(s, card, playerId)
 			&& card.GetComponent<PlayableFromExile>() is { Free: true }
 				? [new MayCastFromHandFree(Filters.Is.Source)]
-				: Enumerable.Empty<MayCastFromHandFree>()
+			// Bolas's Citadel: "pay life equal to its mana value rather than pay its mana cost" — the rule's costs
+			: !s.IsIn(card.Id, playerId, ZoneType.Hand)
+			&& ZonePermission(s, card, playerId) is { Rule.Free: true } citadel
+				? [new MayCastFromHandFree(Filters.Is.Source) { Costs = citadel.Rule.Costs }]
+			: Enumerable.Empty<MayCastFromHandFree>()
 		).Concat(s.IsIn(card.Id, playerId, ZoneType.Hand) ? s.CardsIn(playerId, ZoneType.Battlefield).SelectMany(p => s.AbilitiesOf<MayCastFromHandFree>(p).Where(m => m.What.Matches(s, card, new Filters.FilterContext(playerId, p.Id)) && (m.If?.Holds(s, Conditions.Of(p)) ?? true))) : []).Concat(Costs.Flashback(s, card) is null ? card.Components.OfType<MayCastFromHandFree>().Where(m => m.What.Equals(Filters.Is.Source) && (m.From.IsEmpty || m.From.Any(zone => s.IsIn(card.Id, playerId, zone))) && (m.If?.Holds(s, Conditions.Of(card with { ControllerId = playerId })) ?? true)) : []).OrderBy(m => m.Costs.Count + (m.Mana is null ? 0 : 1)).FirstOrDefault();
 
 	/// <summary>What the free cast costs beyond mana (<see cref="FreeCast"/>), or null when nothing allows one.</summary>

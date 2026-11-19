@@ -543,9 +543,10 @@ public record Card : GameObject
 			&& ChargeCounters >= station.CreatureAt
 		);
 
-	/// <summary>Its mana value — on the stack X counts (CR 202.3e); anywhere else X is 0.</summary>
+	/// <summary>Its mana value — on the stack an X in its mana cost counts (CR 202.3e); anywhere else X is 0, and an X
+	/// that is no mana (Toxic Deluge's "pay X life") never.</summary>
 	public int ManaValueNow =>
-		ManaCost.ManaValue + (GetComponent<Actions.OnStackComponent>()?.X ?? 0);
+		ManaCost.ManaValue + (ManaCost.HasX ? GetComponent<Actions.OnStackComponent>()?.X ?? 0 : 0);
 
 	public bool Is(Supertype supertype) => (Supertypes & supertype) != 0;
 }

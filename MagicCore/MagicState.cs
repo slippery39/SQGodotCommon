@@ -212,10 +212,20 @@ public static class MagicState
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		// Necrodominance: its controller's cards go to exile instead of their graveyard, from anywhere —
 		// so a creature never dies. Read while it is still on the battlefield, so it exiles itself too.
+		// Yawgmoth's Will: the same rule "this turn", in its owner's command zone — of a card only (What).
+		bool ExilesIt(Card holder, ExileInsteadOfYourGraveyard rule) =>
+			rule.What is not { } what
+			|| what.Matches(s, before, new Filters.FilterContext(before.OwnerId, holder.Id));
 		if (
 			zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
-			&& s.CardsIn(before.OwnerId, ZoneType.Battlefield)
-				.Any(s.HasAbility<ExileInsteadOfYourGraveyard>)
+			&& (
+				s.CardsIn(before.OwnerId, ZoneType.Battlefield)
+					.Any(p =>
+						s.AbilitiesOf<ExileInsteadOfYourGraveyard>(p).Any(r => ExilesIt(p, r))
+					)
+				|| s.ThisTurnEffects<ExileInsteadOfYourGraveyard>(before.OwnerId)
+					.Any(c => ExilesIt(c, c.GetComponent<ExileInsteadOfYourGraveyard>()!))
+			)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
@@ -573,20 +583,22 @@ public static class MagicState
 		// Entering with counters is putting them on (Yoshimaru, Brad Boimler: CR 122.6) — after control is set.
 		s = s.PutCounters(cardId, CounterKinds.Loyalty, card.PrintedLoyalty)
 			.PutCounters(cardId, CounterKinds.Time, card.GetComponent<Vanishing>()?.N ?? 0); // vanishing: "enters with N time counters"
+		var entersWith = card.GetComponent<EntersWithCountersComponent>();
+		var entersWithN =
+			entersWith?.Count.Value(
+				s,
+				ImmutableDictionary<string, object>
+					.Empty.Add(ContextKeys.Controller, controllerId)
+					.Add(ContextKeys.X, spell?.X ?? 0)
+			) ?? 0;
+		var plusOne = entersWith is null or { Kind: CounterKinds.PlusOne };
 		s = s.AddPlusOneCounters(
 			cardId,
-			extraCounters
-				+ (
-					card.GetComponent<EntersWithCountersComponent>()
-						?.Count.Value(
-							s,
-							ImmutableDictionary<string, object>
-								.Empty.Add(ContextKeys.Controller, controllerId)
-								.Add(ContextKeys.X, spell?.X ?? 0)
-						) ?? 0
-				),
+			extraCounters + (plusOne ? entersWithN : 0),
 			entering: true
 		);
+		if (!plusOne && entersWithN > 0) // Wishclaw Talisman's three wish counters
+			s = s.PutCounters(cardId, entersWith!.Kind, entersWithN, entering: true);
 		// CR 714.3a: "As a Saga enters the battlefield, its controller puts a lore counter on it" — chapter I.
 		if (card.HasComponent<SagaComponent>())
 			s = s.PutCounters(cardId, CounterKinds.Lore, 1);

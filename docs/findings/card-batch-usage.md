@@ -90,3 +90,4 @@ after the split is DEV-4.3.
 | 2026-11-18 | MC-4.4h1: black's tested pieces, 17 cards | 4a569576 | 71 | 177k | 2.2M |
 | 2026-11-19 | MC-4.4h2a: hands - YouChooseTheyDiscard Filter/UntilSourceLeaves, escalate, Chain of Smog, 5 cards | 38e66320 | 84 | 191k | 2.9M |
 | 2026-11-19 | MC-4.4h2b: graveyard returns + MC-4.5, 5 cards | b25199e7 | 135 | 224k | 4.5M |
+| 2026-11-19 | MC-4.4h2c: costs and permissions (PayLifeCost counted, X from a cost, MayPlayFromZone.Free, mana ability without {T}, this-turn exile-instead, entering counter kind), 5 cards | f0b96d71 | 114 | 244k | 4.4M |

@@ -78,6 +78,7 @@ public static class CounterKinds
 	public const string Peace = "peace"; // Peace in Our Time
 	public const string Story = "story"; // Staff of the Storyteller
 	public const string Chorus = "chorus"; // Malcolm, Alluring Scoundrel
+	public const string Wish = "wish"; // Wishclaw Talisman
 
 	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
 	public const string Indestructible = "indestructible";
@@ -776,9 +777,9 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// <summary>
 	/// The costs beyond mana — the shared list (AdditionalCosts.cs); "{T}" unless it says otherwise.
 	/// Treasure: [TapSelfCost, SacrificeSelfCost]. Phyrexian Tower: "{T}, Sacrifice a creature" — a cost
-	/// that picks (ChoosesCost) is never auto-paid: it is a move (TapForManaAction.SacrificeId).
-	/// ponytail: every mana ability taps (ManaAbilities.CanPayTapCost is asked of all) — a "Sacrifice
-	/// this: Add" without {T} would need CanTap to read the list.
+	/// that picks (ChoosesCost) is never auto-paid: it is a move (TapForManaAction.SacrificeId). So is one
+	/// without {T} (Rain of Filth's gained "Sacrifice this land: Add {B}." — TapForManaAction.NoTap): the solver's
+	/// sources tap once, and this one works on a tapped land.
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = TapOnly;
 
@@ -798,8 +799,14 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// <summary>Treasure: it is sacrificed as it makes the mana.</summary>
 	public bool SacrificesItself => Costs.Any(c => c is SacrificeSelfCost);
 
-	/// <summary>Tapped as payment or by hand with nothing more to pay: no mana cost, nothing to pick.</summary>
-	public bool IsPlain => Cost is null && !ChoosesCost;
+	/// <summary>
+	/// Rain of Filth's gained "Sacrifice this land: Add {B}." — a PERMANENT's mana ability without {T}: a move, never the
+	/// solver's. A card's in a hand never taps (a Spirit Guide's exile is its whole cost), so From = Hand is never this.
+	/// </summary>
+	public bool NoTap => From == ZoneType.Battlefield && !Costs.Any(c => c.Taps);
+
+	/// <summary>Tapped as payment or by hand with nothing more to pay: no mana cost, nothing to pick, a {T} (on a permanent).</summary>
+	public bool IsPlain => Cost is null && !ChoosesCost && !NoTap;
 }
 
 /// <summary>
@@ -886,7 +893,11 @@ public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComp
 public record AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs) : GameComponent;
 
 /// <summary>"This creature enters with N (or X) +1/+1 counters on it." Applied by MagicState.EnterBattlefield.</summary>
-public record EntersWithCountersComponent(Count Count) : GameComponent;
+public record EntersWithCountersComponent(Count Count) : GameComponent
+{
+	/// <summary>Wishclaw Talisman: "This artifact enters with three wish counters on it." — the kind (CounterKinds); +1/+1 unless said.</summary>
+	public string Kind { get; init; } = CounterKinds.PlusOne;
+}
 
 /// <summary>On a card exiled "until [source] leaves the battlefield" — MagicState.MoveCard returns it then.</summary>
 public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameComponent
@@ -1312,6 +1323,13 @@ public record MayPlayFromZone(ZoneType From, Filters.Filter What) : ThisTurnEffe
 	/// (CastSpellAction.CostsOf). Not flashback: an escaped spell isn't exiled as it leaves the stack.
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
+
+	/// <summary>
+	/// Bolas's Citadel: "If you cast a spell this way, pay life equal to its mana value rather than pay its mana cost."
+	/// — a spell cast by this rule is cast without paying its mana cost, paying Costs instead (Playable.FreeCast); the
+	/// paid cast is refused (CastSpellAction.ValidateAdd). A land is played as ever.
+	/// </summary>
+	public bool Free { get; init; }
 }
 
 /// <summary>
@@ -1528,9 +1546,15 @@ public record MaximumHandSize(int N) : GameComponent;
 
 /// <summary>
 /// Necrodominance: "If a card or token would be put into your graveyard from anywhere, exile it
-/// instead." — your graveyard is the one you own; read by MagicState.MoveCard, so nothing dies.
+/// instead." — your graveyard is the one you own; read by MagicState.MoveCard, so nothing dies. On a permanent, or
+/// in a ThisTurn: Yawgmoth's Will's "If a card would be put into your graveyard from anywhere this turn, exile that
+/// card instead." (What = !Is.Token).
 /// </summary>
-public record ExileInsteadOfYourGraveyard : GameComponent;
+public record ExileInsteadOfYourGraveyard : ThisTurnEffect
+{
+	/// <summary>Which of what would go there — Yawgmoth's Will's "a card" (!Is.Token); unset, anything.</summary>
+	public Filters.Filter? What { get; init; }
+}
 
 /// <summary>
 /// Splinter Twin: "Enchanted creature has '[ability]'" — an activated ability the host gets while

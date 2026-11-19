@@ -78,6 +78,7 @@ public static class Describe
 				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
 			TapForManaAction { SacrificeId: not 0 } t =>
 				$"Tap {Name(s, t.CardId)}, sacrificing {Name(s, t.SacrificeId)}, for {t.Color}{(t.OfTheOther > 0 ? $" ({t.OfTheOther} of its other colour)" : "")}",
+			TapForManaAction { NoTap: true } t => $"Sacrifice {Name(s, t.CardId)} for {t.Color}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
 			TurnFaceUpAction f => TurnFaceUpAction.CardOf(s, f.PlayerId, f.CardId) is { } card
 				? $"Turn face up: {card.Name} ({card.ManaCost})"

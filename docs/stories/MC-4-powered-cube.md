@@ -1226,6 +1226,23 @@ as his three priorities.
   `RandomGameTests.Dealt` (no land, not Tribbles), read by `RandomPlay_EveryScriptedCard` and the probe's extras
   (`CardProbeTests.Deck`); seed 21's skip is gone, every seed plays. Its own tests and AI-21's Tribble boards are
   untouched. The golden random games regenerated with h2b's.
+- 2026-11-19, Claude (cube lane) — **4.4h2c: costs and permissions, five options, no new piece.** Toxic Deluge:
+  `PayLifeCost.Amount` is a `Count`, fixed for the cast before paying (`PayLifeCost.For`: `Ref.Source` the card, `Count.X`
+  its X); a cost reading X makes the cast choose X with no {X} (`CastSpellAction.XInCosts`) — one cast per X up to the
+  life (21 at 20), never added as mana (`XIsMana`). Bolas's Citadel: `MayPlayFromZone.Free` — the permission's cast is
+  free, its `Costs` (`PayLifeCost(GreatestManaValueOf(Source))`) the free cast's (`Playable.FreeCast`), the paid cast
+  refused, `AnyTime` (instants at instant speed); "sacrifice ten" is Magda's `SacrificeCost { Count }`. Yawgmoth's Will:
+  Necrodominance's `ExileInsteadOfYourGraveyard` is a `ThisTurnEffect` now, `What = !Is.Token` ("a card"), beside
+  `ThisTurn(MayPlayFromZone(Graveyard))`. Wishclaw Talisman: `EntersWithCountersComponent.Kind`. **Rain of Filth differed
+  from the plan:** `AbilitiesOf` already read a gained mana ability — the gap was the solver, whose sources tap once, so a
+  land under Rain tapped for {B} and was never sacrificed. A permanent's mana ability without {T} is a move now, as
+  Phyrexian Tower's (`ManaAbilityComponent.NoTap` → `TapForManaAction.NoTap`, one per land, a tapped land too; DesignNotes'
+  "first such ability" line updated). Its first cut caught the Spirit Guides (a hand card's "exile this" has no {T}
+  either) — golden-out moved four games; `NoTap` is a permanent's only. Legal actions: Deluge's 21, Rain's one per land.
+  Probe 150: none unfinished; the Citadel's ten-for-ten activated once. The review: Deluge's X is no mana value
+  (`Card.ManaValueNow` counts an X in the mana cost only, CR 202.3e), Deluge from the Citadel still chooses X, a cast's
+  life payments are judged together (CR 119.4: the Citadel's beside X), `ExileInsteadOfYourGraveyard.What` is read on a
+  permanent too; two ceilings in DesignNotes (the Citadel beside Zefram Cochrane; Rain's moves one per land).
 
 ## Tasks
 
@@ -1457,8 +1474,8 @@ as his three priorities.
           Smog (Decisions, "4.4h2a")
     - [x] MC-4.4h2b Options, graveyard returns, 5: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones, Barrowgoyf
           (Decisions, "4.4h2b")
-    - [ ] MC-4.4h2c Options, costs and permissions, 5: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will,
-          Wishclaw Talisman
+    - [x] MC-4.4h2c Options, costs and permissions, 5: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will,
+          Wishclaw Talisman (Decisions, "4.4h2c")
     - [ ] MC-4.4h2d Options, triggers, 4: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black Widow
     - [ ] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
     - [ ] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white)
@@ -1480,11 +1497,14 @@ Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue'
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
-pieces), h2a (the five hand cards) and **h2b (the five graveyard returns, 262 of 528 play)** are done (Decisions,
-"4.4h1", "4.4h2a", "4.4h2b").
-Next, in a NEW session: **MC-4.4h2c — costs and permissions, 5**: Toxic Deluge, Bolas's Citadel, Rain of Filth,
-Yawgmoth's Will, Wishclaw Talisman (the plan's notes in Decisions, "4.4h"; Wishclaw's "enters with three wish counters"
-is `EntersWithCountersComponent`'s `Kind`, "4.4h1"). h2b's tests are in `LsvBatch2h2bTests.cs` (`ToEndStep()`, `Ogre`);
+pieces), h2a (the five hand cards), h2b (the five graveyard returns) and **h2c (costs and permissions, 267 of 528
+play)** are done (Decisions, "4.4h1", "4.4h2a", "4.4h2b", "4.4h2c").
+Next, in a NEW session: **MC-4.4h2d — triggers, 4**: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black
+Widow (the plan's notes in Decisions, "4.4h"). From h2c: a counted life cost is `PayLifeCost(Count)` (fixed per cast,
+`PayLifeCost.For`); X from a cost `CastSpellAction.XInCosts`; "rather than its mana cost" from a zone permission is
+`MayPlayFromZone.Free`; a permanent's mana ability without {T} is a move (`TapForManaAction.NoTap`); a "this turn"
+exile-instead is `ExileInsteadOfYourGraveyard { What }` in a `ThisTurn`. h2c's tests are in `LsvBatch2h2cTests.cs`.
+h2b's tests are in `LsvBatch2h2bTests.cs` (`ToEndStep()`, `Ogre`);
 `MoveChosen.As` is how a chosen move carries `MoveTo`'s options, `Ref.All { Top }` "the top [card] of", and `Exile`
 takes a graveyard card. h2a's are in `LsvBatch2h2aTests.cs` (`CastAt(card, target,
 answer)`, `Dear`: a {3} sorcery — as h1's in `LsvBatch2hTests.cs`). Remember both players start with an opening hand:
@@ -1739,3 +1759,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-19: MC-4.4h2b done: the five graveyard returns — 262 of 528 play. `Ref.All { Top }`, buyback as kicker,
   `MoveChosen { Who, As }` and from exile, `MillAndMayTake.N` a Count; `CountersPutEvent` for every kind and `Exile` of
   a graveyard card widened. MC-4.5 with it: Troubling Tribbles out of the random decks. Next: MC-4.4h2c.
+- 2026-11-19: MC-4.4h2c done: costs and permissions — 267 of 528 play. `PayLifeCost(Count)`, X from a cost,
+  `MayPlayFromZone.Free`, a mana ability without {T} as a move, `ExileInsteadOfYourGraveyard` "this turn",
+  `EntersWithCountersComponent.Kind`. Next: MC-4.4h2d.

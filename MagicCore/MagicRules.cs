@@ -250,7 +250,12 @@ public static class MagicRules
 	{
 		// Thieving Skydiver: "Kicker {X}" — the kicked cast chooses X ("X can't be 0" is ValidateAdd's), free or not.
 		var kickerX = CastSpellAction.XInKicker(card, kicked);
-		var maxX = CastSpellAction.ChoosesX(card, kicked) ? AvailableMana(s, player, card) : 0;
+		// Toxic Deluge: "pay X life" — X up to the life, no {X} to pay for
+		var costsX = CastSpellAction.XInCosts(card);
+		var maxX =
+			costsX && !card.ManaCost.HasX ? Math.Max(0, s.GetPlayer(player).Life)
+			: CastSpellAction.ChoosesX(card, kicked) ? AvailableMana(s, player, card)
+			: 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		IEnumerable<ImmutableArray<int>> ModeChoices() =>
 			(text?.Choose ?? 1).Choices(s, card, text?.Modes ?? []);
@@ -294,11 +299,12 @@ public static class MagicRules
 		var returns = CostList.Options(costs, CostSlot.Return, s, player, card.Id);
 		var exiles = CostList.Options(costs, CostSlot.Exile, s, player, card.Id);
 		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
+		// (Toxic Deluge free — from Bolas's Citadel — still chooses its X: the life, not the mana cost)
 		IEnumerable<(int x, bool free)> payments = onlyFree
-			? [(x: 0, free: true)]
+			? Enumerable.Range(0, costsX ? maxX + 1 : 1).Select(x => (x, free: true))
 			: Enumerable
 				.Range(0, maxX + 1)
-				.Select(x => (x, free: free is not null && (x == 0 || kickerX)));
+				.Select(x => (x, free: free is not null && (x == 0 || kickerX || costsX)));
 		// Gitaxian Probe: "{U/P}" — one cast per number of Phyrexian symbols paid with 2 life (ValidateAdd's life check)
 		var lives = Enumerable.Range(0, card.ManaCost.PhyrexianCount + 1);
 		// Replicate: one cast per number of payments, bounded loosely like X — ValidateAdd's payment decides.
@@ -370,17 +376,18 @@ public static class MagicRules
 
 	/// <summary>
 	/// Phyrexian Tower: "{T}, Sacrifice a creature: Add {B}{B}." — a mana ability whose cost picks a card
-	/// is never auto-paid (Shayne, 2026-11-06): a move, one per creature. Every other mana ability stays
-	/// out of LegalActions (pure branching for the AI).
+	/// is never auto-paid (Shayne, 2026-11-06): a move, one per creature. So is one without {T} (Rain of Filth's
+	/// gained "Sacrifice this land: Add {B}.", TapForManaAction.NoTap): one move per land. Every other mana ability
+	/// stays out of LegalActions (pure branching for the AI).
 	/// </summary>
 	static IEnumerable<GameAction> ManaMoves(GameState s, int player, Card card) =>
 		ManaAbilities
 			.AbilitiesOf(s, card)
-			.Where(m => m.ChoosesCost)
-			.Take(1) // ponytail: TapForManaAction.SacrificeId names the first such ability
+			.Where(m => m.ChoosesCost || m.NoTap)
+			.Take(1) // ponytail: TapForManaAction.SacrificeId / NoTap names the first such ability
 			.SelectMany(m =>
 				from id in CostList.Options(m.Costs, CostSlot.Sacrifice, s, player, card.Id)
-				where id != 0
+				where id != 0 || !m.ChoosesCost
 				from color in m.AnyOneColor ? ManaAbilities.AnyColor : [m.Color]
 				// Orcish Lumberjack: "any combination of {R} and/or {G}" — one move per split
 				from other in Enumerable.Range(
@@ -393,6 +400,7 @@ public static class MagicRules
 					CardId = card.Id,
 					Color = color,
 					SacrificeId = id,
+					NoTap = m.NoTap,
 					OfTheOther = other,
 				}
 			);

@@ -25,7 +25,10 @@ whose subsystem it lives in.
   it says otherwise); a grant is `GrantsManaAbility(filter, ability)` (Rok-Tahk, Rishkar), read with the
   permanent's own by `ManaAbilities.AbilitiesOf`. **A cost that picks a card** (Phyrexian Tower's "Sacrifice a
   creature") is never auto-paid: it is a move in `LegalActions`, one per candidate (`TapForManaAction.SacrificeId`,
-  Shayne 2026-11-06), its mana floating. **A mana ability that costs mana** (Starfleet Academy: "{5}, {T}:
+  Shayne 2026-11-06), its mana floating. **So is a mana ability without {T}** (Rain of Filth: "until end of turn, lands
+  you control gain 'Sacrifice this land: Add {B}'", MC-4.4h2c — gained through `ModifyUntilEndOfTurn.Gains`, read by
+  `AbilitiesOf` as any gain): `ManaAbilityComponent.NoTap` (a permanent's only — a Spirit Guide's in a hand never taps
+  and stays plain), so it is not `IsPlain` and the solver, which taps each source once, never sees it; it is a move per land, `TapForManaAction.NoTap`, on a tapped land too. **A mana ability that costs mana** (Starfleet Academy: "{5}, {T}:
   Choose a color. Add N"; Talon Gates' "{1}, {T}", `ManaAbilityComponent.Cost`) is never a plain tap: `Find` tries it only when
   nothing else pays (`WithCostlyMana`), its N units of one colour in place of its {C}, its own cost owed
   beside the spell's and never paid by the mana it makes (`Need.NotFrom`).
