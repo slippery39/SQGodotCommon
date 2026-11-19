@@ -59,7 +59,10 @@ Some of them are mechanical — grep the diff rather than reading for them:
 
 ## 4. Hygiene
 
-- **Tests:** run the test project for every changed project. Report counts.
+- **Tests:** `python -u tools/test_changed.py --run --commit` — the slices the changed paths need (DEV-8),
+  not whole projects; report its summary (counts per slice). The full suite and `CardReplayTests` run at a
+  story's end or before a merge, in the background (`test_changed.py --full`) — not per commit. A card batch's checks are
+  `tools/batch_checks.py`.
 - **Test count went down?** For each modified test file compare
   `git show HEAD:<file> | grep -c "\[Test"` with the working copy. A drop after "adding tests" is
   how eight tests were once silently overwritten.

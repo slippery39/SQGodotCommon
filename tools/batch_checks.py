@@ -59,10 +59,10 @@ def run(cmd, timeout, env=None):
         return None, out or "", time.time() - t0
 
 
-def dotnet_test(filt, timeout, env=None, build=False):
+def dotnet_test(filt, timeout, env=None, build=False, project=TESTS):
     """(ok, summary line, lines that matter, seconds). --blame-hang names a test that stops progressing;
     no filter runs the normal suite (a name filter would also run the [Explicit] tests)."""
-    cmd = ["dotnet", "test", TESTS, "--blame-hang", "--blame-hang-timeout", f"{max(timeout - 20, 10)}s",
+    cmd = ["dotnet", "test", project, "--blame-hang", "--blame-hang-timeout", f"{max(timeout - 20, 10)}s",
            "--blame-hang-dump-type", "none"] + (["--filter", filt] if filt else []) + ([] if build else ["--no-build"])
     code, out, secs = run(cmd, timeout, env)
     summary = next((l.strip() for l in out.splitlines() if re.match(r"\s*(Passed|Failed)!", l)), "")

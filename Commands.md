@@ -12,11 +12,15 @@ dotnet test MtgSimulator.Tests
 dotnet test SQGodotCommon.Tests
 dotnet test MagicCore.Tests
 dotnet test MagicCore.Tests --filter "TestCategory=Performance"   # wall-clock checks, explicit: run on a quiet machine
-# DEV-7: classes run in parallel (the full suite ~3 min 15 s on a quiet machine). WHILE WORKING run the slice your change
-# touches; the full suite at a story's end and before every commit (/pre-commit). Engine, rules or cards (7 s):
-dotnet test MagicCore.Tests --filter "FullyQualifiedName!~MagicCore.Tests.Ai&FullyQualifiedName!~MagicCore.Tests.Limited&FullyQualifiedName!~RandomGameTests&FullyQualifiedName!~GoldenReplay"
-# the AI or sealed (MagicCore/Ai, MagicCore/Limited; ~3 min - most of the suite):
-dotnet test MagicCore.Tests --filter "FullyQualifiedName~MagicCore.Tests.Ai|FullyQualifiedName~MagicCore.Tests.Limited"
+# DEV-8: WHILE WORKING and at a commit, run what the change touches - the script maps changed paths to slices
+# (an engine or card change ~1.5 min, a table or AI change ~1 min; docs nothing). /pre-commit runs it with --commit,
+# where an AI change gets the whole AI slice (~3 min). The full suite at a story's end or before a merge, in the background.
+python tools/test_changed.py                      # which tests and the commands, runs nothing; --paths A B: for those files
+python -u tools/test_changed.py --run [--commit]  # build and run them one after another, with progress
+python -u tools/test_changed.py --full           # a story's end / after a merge, in the background (~6 min): the solution, then CardReplayTests; ends FULL: all passed | FAILED
+# the slices it runs (MagicCore.Tests; classes in parallel since DEV-7, the full project ~3 min on a quiet machine):
+#   engine, cards, golden replays: --filter "FullyQualifiedName!~MagicCore.Tests.Ai&FullyQualifiedName!~MagicCore.Tests.Limited"
+#   AI and sealed:                 --filter "FullyQualifiedName~MagicCore.Tests.Ai|FullyQualifiedName~MagicCore.Tests.Limited"
 ```
 
 ## Import a real set's card data (MagicCore)
@@ -75,7 +79,7 @@ python -u tools/batch_checks.py "A;B" [--revert SPEC] [--bench] [--from STEP]  #
 
 ```
 dotnet test MagicCore.Tests --filter "FullyQualifiedName~RandomGameTests"   # 150 games, in the normal suite
-dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardReplayTests"   # every card, ~90 s, explicit
+dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardReplayTests"   # every card, ~1 min, explicit
 dotnet test MagicCore.Tests --filter "FullyQualifiedName~GreedyAiReplayTests"  # the AI's decisions, 12 games, in the normal suite
 $env:MAGIC_GOLDEN_UPDATE='1'; dotnet test MagicCore.Tests --filter "…"; Remove-Item Env:MAGIC_GOLDEN_UPDATE
 ```

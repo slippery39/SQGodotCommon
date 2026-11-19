@@ -14,6 +14,10 @@ namespace MagicCore.Tests.Ai;
 /// A play from a recorded table game needs no rebuilding: keep the record (<see cref="KeptRecords"/>)
 /// and start from the test the console prints.
 /// </summary>
+// DEV-8.4: the tests run in parallel - 61 in order were the suite's floor - each with its own instance, as
+// [SetUp] fills the fields below.
+[Parallelizable(ParallelScope.All)]
+[FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
 public class AiPositionTests
 {
 	GameState s = null!;

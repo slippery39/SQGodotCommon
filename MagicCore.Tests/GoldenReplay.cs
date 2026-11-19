@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -37,16 +38,21 @@ public sealed class GoldenReplay(string fileName)
 
 	static bool Updating => Mode is "1" or "all";
 
-	Dictionary<string, string>? recorded;
+	// DEV-8.4: a fixture's games run in parallel, so the file is read once (Lazy is thread-safe) and fresh
+	// lines are collected concurrently.
+	readonly Lazy<Dictionary<string, string>> recorded =
+		new(
+			() =>
+				File.Exists(Beside(fileName))
+					? File.ReadLines(Beside(fileName))
+						.Where(l => l != "" && !l.StartsWith('#'))
+						.ToDictionary(Key, l => l)
+					: []
+		);
 
-	Dictionary<string, string> Recorded =>
-		recorded ??= File.Exists(FilePath)
-			? File.ReadLines(FilePath)
-				.Where(l => l != "" && !l.StartsWith('#'))
-				.ToDictionary(Key, l => l)
-			: [];
+	Dictionary<string, string> Recorded => recorded.Value;
 
-	readonly Dictionary<string, string> Fresh = [];
+	readonly ConcurrentDictionary<string, string> Fresh = [];
 
 	static string Key(string line) => line[..line.IndexOf(" :", StringComparison.Ordinal)];
 
@@ -133,7 +139,7 @@ public sealed class GoldenReplay(string fileName)
 	/// <summary>After the fixture, in update mode: write this run's games — merged in, or alone ('all').</summary>
 	public void WriteIfUpdating()
 	{
-		if (!Updating || Fresh.Count == 0)
+		if (!Updating || Fresh.IsEmpty)
 			return;
 		var all = new Dictionary<string, string>(Mode == "all" ? [] : Recorded);
 		foreach (var (k, v) in Fresh)

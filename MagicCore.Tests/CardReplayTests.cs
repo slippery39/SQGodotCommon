@@ -8,10 +8,12 @@ namespace MagicCore.Tests;
 /// short games built around it — so a change to one card's behaviour fails THAT card. RandomGameTests
 /// is the broad net, but a card two scripts use is played there about once in 150 games.
 ///
-/// Explicit, as it takes ~90 s: run it at every refactor gate.
+/// Explicit, as it is slow: run it at every refactor gate (and `tools/test_changed.py --full` does).
 ///   dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardReplayTests"
 /// </summary>
-[Explicit("~90 s: run at a refactor gate")]
+// DEV-8.4: its games are independent, so they run in parallel (GoldenReplay is safe for it).
+[Parallelizable(ParallelScope.All)]
+[Explicit("a refactor gate, and in test_changed.py --full")]
 public class CardReplayTests
 {
 	const int Seeds = 4;
