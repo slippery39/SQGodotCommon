@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 32/46 · uncommon 45/86 · rare 118/279 · mythic 48/108 · **252/528**
+**Playable:** common 33/46 · uncommon 48/86 · rare 119/279 · mythic 48/108 · **257/528**
 
 ### "Name Sticker" Goblin
 
@@ -269,7 +269,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target opponent reveals their hand. You choose a noncreature, nonland card from it. That player discards that card.
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** FilterBoard
+**Status:** scripted · **tests naming it:** FilterBoard, LsvBatch2h2aTests
+
+**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Duress"] =
+[
+	Spell(
+		[TargetSpec.Player(Is.Opponents)],
+		new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+		{
+			Filter = !Is.Creature & !Is.Land,
+		}
+	),
+],
+```
 
 ### Eagles of the North
 
@@ -1003,7 +1018,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player discards two cards. That player may copy this spell and may choose a new target for that copy.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2aTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Chain of Smog"] =
+[
+	// ponytail: "that player may copy this spell" is asked only while their opponent has a card in hand (DesignNotes).
+	Spell(
+		[TargetSpec.Player()],
+		new Discard(Ref.Target(), 2),
+		new May(
+			"Copy Chain of Smog?",
+			new AtLeast(
+				Count.NumberOf(Ref.All(ZoneType.Hand, Is.AnyCard, Ref.EachOpponent)),
+				1
+			),
+			[new CopySpell(Ref.Source)]
+		)
+		{
+			Who = Ref.Target(),
+			ThenAsThem = true,
+		}
+	),
+],
+```
 
 ### Counterspell
 
@@ -1082,7 +1122,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying, lifelink  
 > When this creature enters, look at target opponent's hand. You may exile a nonland card from it until this creature leaves the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2aTests
+
+**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Deep-Cavern Bat"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Player(Is.Opponents)],
+		new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+		{
+			Filter = !Is.Land,
+			Optional = true,
+			UntilSourceLeaves = true,
+		}
+	),
+],
+```
 
 ### Demonic Consultation
 
@@ -1272,7 +1330,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player reveals their hand. You choose a nonland card from it with mana value 3 or less. That player discards that card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2aTests
+
+**Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Inquisition of Kozilek"] =
+[
+	Spell(
+		[TargetSpec.Player()],
+		new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+		{
+			Filter = !Is.Land & Is.ManaValueAtMost(3),
+		}
+	),
+],
+```
 
 ### Iron-Shield Elf
 
@@ -2619,7 +2692,35 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Target creature gets -2/-2 until end of turn.  
 > • Target opponent loses 2 life and you gain 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2aTests
+
+**Engine pieces:** `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Collective Brutality"] =
+[
+	ModalSpell(
+		"Collective Brutality",
+		new() { AtMost = 3 },
+		M(
+			[TargetSpec.Player(Is.Opponents)],
+			new YouChooseTheyDiscard(
+				Ref.Target(),
+				CardType.Instant | CardType.Sorcery
+			)
+		),
+		M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)),
+		M(
+			[TargetSpec.Player(Is.Opponents)],
+			new LoseLife(Ref.Target(), 2),
+			new GainLife(Ref.You, 2)
+		)
+	) with
+	{
+		Escalate = new DiscardCost(),
+	},
+],
+```
 
 ### Commercial District
 
@@ -5441,7 +5542,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
 		[],
-		new CounterUnlessPays(Ref.EventObject, ManaCost.None) { Costs = [new DiscardCost()] }
+		new CounterUnlessPays(Ref.EventObject, ManaCost.None)
+		{
+			Costs = [new DiscardCost()],
+		}
 	),
 	When(
 		TriggerEvent.SelfAttacks,

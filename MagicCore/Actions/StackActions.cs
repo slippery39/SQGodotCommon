@@ -229,18 +229,27 @@ public record CastSpellAction : GameAction
 			.. free ?? [],
 		];
 
-	/// <summary>This cast's costs beyond mana — a free cast by a permission pays the permission's (never one an effect casts).</summary>
+	/// <summary>
+	/// This cast's costs beyond mana — a free cast by a permission pays the permission's (never one an effect casts) —
+	/// and escalate's, one per mode chosen beyond the first (Collective Brutality), picked after the cast.
+	/// </summary>
 	ImmutableList<AdditionalCost> CostsOf(GameState s, Card card) =>
-		CostsOf(
-			s,
-			card,
-			Kicked,
-			WithoutPayingManaCost && !DuringResolution
-				? Playable.FreeCosts(s, card, PlayerId)
-				: null,
-			DuringResolution ? 0 : PlayerId,
-			flashback: !DuringResolution
-		);
+		[
+			.. CostsOf(
+				s,
+				card,
+				Kicked,
+				WithoutPayingManaCost && !DuringResolution
+					? Playable.FreeCosts(s, card, PlayerId)
+					: null,
+				DuringResolution ? 0 : PlayerId,
+				flashback: !DuringResolution
+			),
+			.. Modes.Length > 1
+			&& card.GetComponent<SpellEffectsComponent>()?.Escalate is { } escalate
+				? [escalate with { Count = Modes.Length - 1 }]
+				: (AdditionalCost[])[],
+		];
 
 	int Chosen(CostSlot slot) =>
 		slot switch

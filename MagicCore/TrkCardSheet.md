@@ -1784,7 +1784,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2hTests, ManaTests, OptionReportTests, RandomGameTests, RolloutTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2h2aTests, LsvBatch2hTests, ManaTests, OptionReportTests, RandomGameTests, RolloutTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
 
 ### Tactical Officer
 

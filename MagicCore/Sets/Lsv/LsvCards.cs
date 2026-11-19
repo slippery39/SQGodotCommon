@@ -2173,6 +2173,80 @@ public static class LsvCards
 				),
 				Cycling("{2}"),
 			],
+			// ===== MC-4.4h2a: hands (YouChooseTheyDiscard { Filter, UntilSourceLeaves }, escalate, a copy by another) =====
+			["Inquisition of Kozilek"] =
+			[
+				Spell(
+					[TargetSpec.Player()],
+					new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+					{
+						Filter = !Is.Land & Is.ManaValueAtMost(3),
+					}
+				),
+			],
+			["Duress"] =
+			[
+				Spell(
+					[TargetSpec.Player(Is.Opponents)],
+					new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+					{
+						Filter = !Is.Creature & !Is.Land,
+					}
+				),
+			],
+			["Deep-Cavern Bat"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+					{
+						Filter = !Is.Land,
+						Optional = true,
+						UntilSourceLeaves = true,
+					}
+				),
+			],
+			["Collective Brutality"] =
+			[
+				ModalSpell(
+					"Collective Brutality",
+					new() { AtMost = 3 },
+					M(
+						[TargetSpec.Player(Is.Opponents)],
+						new YouChooseTheyDiscard(Ref.Target(), CardType.Instant | CardType.Sorcery)
+					),
+					M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)),
+					M(
+						[TargetSpec.Player(Is.Opponents)],
+						new LoseLife(Ref.Target(), 2),
+						new GainLife(Ref.You, 2)
+					)
+				) with
+				{
+					Escalate = new DiscardCost(),
+				},
+			],
+			["Chain of Smog"] =
+			[
+				// ponytail: "that player may copy this spell" is asked only while their opponent has a card in hand (DesignNotes).
+				Spell(
+					[TargetSpec.Player()],
+					new Discard(Ref.Target(), 2),
+					new May(
+						"Copy Chain of Smog?",
+						new AtLeast(
+							Count.NumberOf(Ref.All(ZoneType.Hand, Is.AnyCard, Ref.EachOpponent)),
+							1
+						),
+						[new CopySpell(Ref.Source)]
+					)
+					{
+						Who = Ref.Target(),
+						ThenAsThem = true,
+					}
+				),
+			],
 		};
 
 	/// <summary>

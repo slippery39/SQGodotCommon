@@ -405,7 +405,13 @@ public sealed record DiscardSelfCost : AdditionalCost
 /// </summary>
 public sealed record DiscardCost(Filter? Filter = null) : AdditionalCost
 {
-	public override CostSlot Slot => CostSlot.Discard;
+	/// <summary>
+	/// Collective Brutality's escalate: one discard per mode beyond the first — that many cards, picked AFTER the
+	/// cast in one choice (as delve's), never a cast per card. Null is one card, picked by the action (DiscardId).
+	/// </summary>
+	public int? Count { get; init; }
+
+	public override CostSlot Slot => Count is null ? CostSlot.Discard : CostSlot.None;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		s.CardsIn(playerId, ZoneType.Hand)
@@ -414,12 +420,35 @@ public sealed record DiscardCost(Filter? Filter = null) : AdditionalCost
 			)
 			.Select(c => c.Id);
 
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		Count is not { } n || Candidates(s, playerId, sourceId).Count() >= n;
+
 	// Uses: the card discarded — a Spirit Guide discarded can't also be exiled for mana.
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		chosen == 0 ? s : s.Discard(playerId, [chosen]);
+		Count switch
+		{
+			null => chosen == 0 ? s : s.Discard(playerId, [chosen]),
+			int n => s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new ChooseCardsFromHandChoice
+						{
+							PlayerId = playerId,
+							Filter = Filter,
+							MinChoices = n,
+							MaxChoices = n,
+							Prompt = $"Discard {n}",
+						},
+						new MoveChosenToGraveyardAction { PlayerId = playerId },
+					],
+				}
+			),
+		};
 
-	public override string Describe() => "Discard a card";
+	public override string Describe() => Count is > 1 ? $"Discard {Count} cards" : "Discard a card";
 
 	public override GameAction? PaidByChoosing() => Filter is null ? new Discard(Ref.You, 1) : null;
 

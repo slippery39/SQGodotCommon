@@ -2179,21 +2179,35 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 	/// <summary>Salt Vampire: "If you do, that player exiles that card, then draws a card." — run only when a card was chosen.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
 
+	/// <summary>
+	/// Inquisition of Kozilek: "a nonland card from it with mana value 3 or less" (!Is.Land &amp; Is.ManaValueAtMost(3));
+	/// Duress: "a noncreature, nonland card" — what Types can't say (it matches ANY of its types). Null is Types alone.
+	/// </summary>
+	public Filters.Filter? Filter { get; init; }
+
+	/// <summary>
+	/// Deep-Cavern Bat: "You may exile a nonland card from it until this creature leaves the battlefield." — exiled by
+	/// ExileUntilSourceLeaves, back to its owner's hand as the Bat leaves; nothing if the Bat already left (CR 610.3c).
+	/// </summary>
+	public bool UntilSourceLeaves { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
 		{
-			foreach (var card in s.CardsIn(player, ZoneType.Hand).ToList()) // "reveals their hand"
+			// "reveals their hand" — ponytail: Deep-Cavern Bat's "look at" too, the same with two players (DesignNotes)
+			foreach (var card in s.CardsIn(player, ZoneType.Hand).ToList())
 				s = s.MakeKnown(card.Id, Knowers.Everyone);
 			var choice = new ChooseCardsFromHandChoice
 			{
 				PlayerId = player,
 				DeciderId = Controller,
 				Types = Types,
+				Filter = Filter,
 				MinChoices = Optional ? 0 : 1,
 				MaxChoices = 1,
 				Prompt =
-					ExileInstead || OwnerMayPlayTaxed is not null
+					ExileInstead || UntilSourceLeaves || OwnerMayPlayTaxed is not null
 						? "Choose a card to exile"
 						: "Choose a card for them to discard",
 			};
@@ -2215,9 +2229,9 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 							:
 							[
 								choice,
-								ExileInstead
-									? new ExileChosenLinkedAction()
-									: new MoveChosenToGraveyardAction { PlayerId = player },
+								UntilSourceLeaves ? new ExileUntilSourceLeaves(Ref.Chosen)
+								: ExileInstead ? new ExileChosenLinkedAction()
+								: new MoveChosenToGraveyardAction { PlayerId = player },
 								.. IfChosen(),
 							],
 					}
@@ -2733,7 +2747,11 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 	}
 }
 
-/// <summary>"Exile [it] until this leaves the battlefield." Does nothing if this already left (CR 610.3c).</summary>
+/// <summary>
+/// "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR 610.3c). A permanent, or a
+/// card in a hand (Deep-Cavern Bat: "exile a nonland card from it until this creature leaves the battlefield") —
+/// each comes back to the zone it left (ExiledUntilLeaves.From).
+/// </summary>
 public record ExileUntilSourceLeaves(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s)
@@ -2742,15 +2760,23 @@ public record ExileUntilSourceLeaves(Ref What) : Effect
 		var source = Ref.Source.Resolve(s, InputContext).FirstOrDefault(); // 0 if it left, even if it came back
 		if (source == 0 || !s.IsOnBattlefield(sourceId))
 			return new(s);
-		foreach (var card in Permanents(What, s).ToList())
+		foreach (var id in All(What, s).ToList())
 		{
-			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Exile));
+			if (s.GetObject(id) is not Card card)
+				continue;
+			var from = ((Zone)s.GetObject(s.GetParent(id)!.Value)).ZoneType;
+			if (from is not (ZoneType.Battlefield or ZoneType.Hand))
+				continue;
+			s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Exile));
 			s = Update(
 				s,
 				(Card)
-					s.GetCard(card.Id)
+					s.GetCard(id)
 						.WithComponent(
 							new ExiledUntilLeaves(sourceId, s.GetCard(sourceId).Incarnation)
+							{
+								From = from,
+							}
 						)
 			);
 		}

@@ -88,3 +88,4 @@ after the split is DEV-4.3.
 | 2026-11-18 | MC-4.4g9: warp - LSVPower Quantum Riddler, 1 card | b80d6d6e | 83 | 182k | 2.7M |
 | 2026-11-18 | MC-4.4g10: Classes - Does Machines (ClassLevel, GainLevel, Scripting.Level), 1 card | c123515f | 96 | 201k | 3.0M |
 | 2026-11-18 | MC-4.4h1: black's tested pieces, 17 cards | 4a569576 | 71 | 177k | 2.2M |
+| 2026-11-19 | MC-4.4h2a: hands - YouChooseTheyDiscard Filter/UntilSourceLeaves, escalate, Chain of Smog, 5 cards | 38e66320 | 84 | 191k | 2.9M |

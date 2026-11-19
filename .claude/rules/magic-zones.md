@@ -55,6 +55,13 @@ whose subsystem it lives in.
   read, never stamped — `MagicState.TopIsKnownToOwner` (the top changes on every path). A random order (Identity Echo's bottom) is NOT
   known. A new card that looks at or reveals a hidden card must do the same, or the search's "shuffle
   what isn't known" reshuffles a card its player has seen.
+- **"Target player reveals their hand. You choose a [kind of] card from it"** is ONE piece, `YouChooseTheyDiscard(who,
+  Types) { Filter, Optional, ExileInstead, UntilSourceLeaves, … }` (MC-4.4h2a): `Types` matches ANY of its types, so
+  Duress' "noncreature, nonland" and Inquisition of Kozilek's "nonland … mana value 3 or less" are a `Filter` (an
+  artifact creature is a creature). Deep-Cavern Bat's "you may exile a nonland card from it until this creature leaves
+  the battlefield" is `{ Optional, UntilSourceLeaves }` → `ExileUntilSourceLeaves(Ref.Chosen)`: a permanent OR a card in
+  a hand, each stamped with the zone it left (`ExiledUntilLeaves.From`) and returned there by `MoveCard` as the source
+  leaves — a hand card to its owner's hand, never onto the battlefield.
 - **"From outside the game"** (Extrapolate the Impossible) is the `Sideboard` zone — Bo1 limited's
   unplayed pool. It exists only in a game given one, through `MagicRules.WithSideboard` (NewGame's
   `sideboard1/2`, and tests), made after both decks: a game without keeps every id it had —

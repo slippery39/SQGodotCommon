@@ -177,6 +177,11 @@ whose subsystem it lives in.
   (`CastSpellAction.CostBeforeLife`, beside replicate's; paid on a free cast too). "Choose one or more" is `{ AtMost = 3 }`.
   A spree text is `EachWord` as the Confluences' (Shayne, 2026-11-18): 7 casts, never one per spell × permanent of yours
   (199 with three spells on the stack). The other modal spells still enumerate until MC-8.
+  **Escalate** (CR 702.120, Collective Brutality, MC-4.4h2a) is `SpellEffectsComponent.Escalate`, a `DiscardCost` (the
+  cube's only escalate; a mana or sacrifice escalate makes it any `AdditionalCost` with a count) paid once per mode beyond the first: `CastSpellAction.CostsOf` adds it `with { Count = modes − 1 }` (`DiscardCost.Count`
+  — the cards picked AFTER the cast in one choice, as delve's, never a cast per card; `CanPay` refuses a cast with too
+  few other cards in hand). The cast generator never sees it, so a cast with more modes than the hand can pay for is
+  offered and refused by `ValidateAdd`.
 - **"Target artifact a player controls and target artifact card in that player's graveyard"** (Goblin Welder) is the
   second word `TargetSpec.InAnyGraveyard(…) { OfThePreviousTargetsController }` — its card's owner controls the target
   before it (`TargetSpec.FitsPrevious`), asked by `AreLegal` and again on resolution, where a control change makes it

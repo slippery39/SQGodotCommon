@@ -14,6 +14,13 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 
 	/// <summary>How many of the Modes (ModeChoice) — Sublime Epiphany: new() { AtMost = 5 }.</summary>
 	public ModeChoice Choose { get; init; } = 1;
+
+	/// <summary>
+	/// Escalate (CR 702.120; Collective Brutality: "Escalate—Discard a card. (Pay this cost for each mode chosen beyond
+	/// the first.)") — paid once per mode beyond the first: a DiscardCost with that Count, its cards picked after the
+	/// cast (CastSpellAction.CostsOf), never a cast per card.
+	/// </summary>
+	public DiscardCost? Escalate { get; init; }
 }
 
 /// <summary>
@@ -887,7 +894,11 @@ public record AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs) : Ga
 public record EntersWithCountersComponent(Count Count) : GameComponent;
 
 /// <summary>On a card exiled "until [source] leaves the battlefield" — MagicState.MoveCard returns it then.</summary>
-public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameComponent;
+public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameComponent
+{
+	/// <summary>Where it returns: onto the battlefield, or its owner's hand (Deep-Cavern Bat's card).</summary>
+	public ZoneType From { get; init; } = ZoneType.Battlefield;
+}
 
 /// <summary>
 /// A static ability that changes characteristics while its source is on the battlefield — Saheeli:

@@ -309,7 +309,10 @@ public static class MagicState
 			)
 			.ToList();
 		foreach (var card in exiled)
-			s = s.EnterBattlefield(card.Id, card.OwnerId);
+			s =
+				card.GetComponent<ExiledUntilLeaves>()!.From == ZoneType.Battlefield
+					? s.EnterBattlefield(card.Id, card.OwnerId)
+					: s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Hand)); // Deep-Cavern Bat's
 		return s;
 	}
 

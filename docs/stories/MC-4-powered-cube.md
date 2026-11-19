@@ -1196,6 +1196,16 @@ as his three priorities.
   with three wish counters" has no piece: `EntersWithCountersComponent` puts +1/+1 counters only, a `Kind` option (h2c,
   now 5). Sunset Saboteur's "Ward—Discard a card" is Gideon the Oathless' ward, inline; Archon of Cruelty's two triggers
   share one effect list (`LsvCards.ArchonsCruelty`). Every FIRES test passed first time — no engine line changed.
+- 2026-11-19, Claude (cube lane) — **4.4h2a: the five hand cards, four options, no new piece.** `YouChooseTheyDiscard.
+  Filter` (Inquisition, Duress — passed to its hand choice's existing `Filter`). Deep-Cavern Bat is `{ Optional,
+  UntilSourceLeaves }` → `ExileUntilSourceLeaves(Ref.Chosen)`, widened from permanents to a card in a hand: each stamped
+  with the zone it left (`ExiledUntilLeaves.From`), and `MoveCard` returns a hand card to its owner's hand. Escalate is
+  `SpellEffectsComponent.Escalate` — not spree's `Mode.Cost`, a `ManaCost`, which can't hold a discard — added by the
+  cast's `CostsOf` once per mode beyond the first as `DiscardCost { Count }` (Drivnod's `Count` shape: picked after the
+  cast, one choice; `CanPay` bounds it). Chain of Smog composed with no engine change: `May { Who = Ref.Target(),
+  ThenAsThem }` over `CopySpell(Ref.Source)` — the copy is theirs; asked only while their opponent has a card in hand, so
+  an AI that always says yes can't copy forever (DesignNotes). Legal actions: Brutality's 7 mode sets × targets (12 against
+  12 creatures), the discards one choice after.
 
 ## Tasks
 
@@ -1423,8 +1433,8 @@ as his three priorities.
   - [ ] MC-4.4h Black (Shayne, 2026-11-18: the next colour in the list) — 48 cards read card by card and tiered
         (Decisions, "4.4h"): 19 tested pieces, 22 options, 7 new pieces; one part per session:
     - [x] MC-4.4h1 The tested pieces, 17 of the 19 (list in Decisions; Duress and Wishclaw Talisman moved to h2a, h2c)
-    - [ ] MC-4.4h2a Options, hands, 5: Inquisition of Kozilek, Duress, Deep-Cavern Bat, Collective Brutality, Chain of
-          Smog
+    - [x] MC-4.4h2a Options, hands, 5: Inquisition of Kozilek, Duress, Deep-Cavern Bat, Collective Brutality, Chain of
+          Smog (Decisions, "4.4h2a")
     - [ ] MC-4.4h2b Options, graveyard returns, 5: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones, Barrowgoyf
     - [ ] MC-4.4h2c Options, costs and permissions, 5: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will,
           Wishclaw Talisman
@@ -1448,12 +1458,12 @@ as his three priorities.
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
-done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written), and **h1 is
-done: 17 tested pieces, 252 of 528 play**; Duress moved to h2a and Wishclaw Talisman to h2c (Decisions, "4.4h1").
-Next, in a NEW session: **MC-4.4h2a — hands, 5**: Inquisition of Kozilek and Duress (a `Filter` on
-`YouChooseTheyDiscard`), Deep-Cavern Bat, Collective Brutality, Chain of Smog (the plan's notes in Decisions, "4.4h").
-h1's tests are in `LsvBatch2hTests.cs` (`CastAt(card, target, answer)`: a cast with one target, the choices asked;
-`Dear`: a {3} sorcery). A mechanic's cards of another colour wait for that colour (Winds of Abandon, Through the Breach).
+done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
+pieces) and **h2a (the five hand cards, 257 of 528 play)** are done (Decisions, "4.4h1", "4.4h2a").
+Next, in a NEW session: **MC-4.4h2b — graveyard returns, 5**: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones,
+Barrowgoyf (the plan's notes in Decisions, "4.4h"). h2a's tests are in `LsvBatch2h2aTests.cs` (`CastAt(card, target,
+answer)`, `Dear`: a {3} sorcery — as h1's in `LsvBatch2hTests.cs`). Remember both players start with an opening hand:
+assert hand counts relative, or clear it (Collective Brutality's test). A mechanic's cards of another colour wait for that colour (Winds of Abandon, Through the Breach).
 The probe's "activated N" for a card with no activated ability (g9's Riddler; h1's Dismember, Thoughtseize, Hymn) is
 answered: Q, Stacking the Deck's exiled card gains "exile a card from your hand: copy this" — counted under that card.
 Later, not now: MC-4.4g10b (does Does
@@ -1698,3 +1708,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   seven new mechanics one a session (h3–h9). Next: MC-4.4h1.
 - 2026-11-18: MC-4.4h1 done: 17 of black's tested pieces — 252 of 528 play, no engine change. Duress and Wishclaw
   Talisman each need an option, moved to h2a and h2c. Next: MC-4.4h2a.
+- 2026-11-19: MC-4.4h2a done: the five hand cards — 257 of 528 play. `YouChooseTheyDiscard { Filter,
+  UntilSourceLeaves }`, `ExileUntilSourceLeaves` from a hand, escalate (`SpellEffectsComponent.Escalate`,
+  `DiscardCost.Count`); Chain of Smog composed. Next: MC-4.4h2b.
