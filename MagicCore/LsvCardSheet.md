@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 31/46 · uncommon 41/86 · rare 114/279 · mythic 40/108 · **235/528**
+**Playable:** common 32/46 · uncommon 45/86 · rare 118/279 · mythic 48/108 · **252/528**
 
 ### "Name Sticker" Goblin
 
@@ -763,7 +763,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Return target creature card with mana value 3 or less from your graveyard to the battlefield.  
 > Cycling {2} ({2}, Discard this card: Draw a card.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Unearth"] =
+[
+	Spell(
+		[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))],
+		new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+	),
+	Cycling("{2}"),
+],
+```
 
 ### Unholy Heat
 
@@ -1086,7 +1099,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({B/P} can be paid with either {B} or 2 life.)  
 > Target creature gets -5/-5 until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Dismember"] = [Spell([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -5, -5))],
+```
 
 ### Dragon's Rage Channeler
 
@@ -1236,7 +1255,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player discards two cards at random.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `DiscardAtRandom` — Curse-Marred Demon: "discard a card at random" — MtgCore's DiscardRandomCardAction,…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Hymn to Tourach"] =
+[
+	Spell([TargetSpec.Player()], new DiscardAtRandom(Ref.Target(), 2)),
+],
+```
 
 ### Inquisition of Kozilek
 
@@ -1252,7 +1280,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Discard a card: This creature gains indestructible until end of turn. Tap it. (Damage and effects that say "destroy" don't destroy it. If its toughness is 0 or less, it still dies.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Tap` — "Tap [What]" — permanents only.
+
+```csharp
+["Iron-Shield Elf"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Indestructible"),
+			new Tap(Ref.Source),
+		]
+	)
+	{
+		Costs = [new DiscardCost()],
+	},
+],
+```
 
 ### Ivora, Insatiable Heir
 
@@ -1616,7 +1662,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Each opponent sacrifices a creature token of their choice.  
 > • Each opponent sacrifices a planeswalker of their choice.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sheoldred's Edict"] =
+[
+	ModalSpell(
+		"Sheoldred's Edict",
+		1,
+		M([], new EachSacrifices(Ref.EachOpponent, Is.Creature & !Is.Token)),
+		M([], new EachSacrifices(Ref.EachOpponent, Is.Creature & Is.Token)),
+		M([], new EachSacrifices(Ref.EachOpponent, Is.Planeswalker))
+	),
+],
+```
 
 ### Sicarian Infiltrator
 
@@ -3086,7 +3147,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for a card, put that card into your graveyard, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Entomb"] = [Spell([], new SearchLibrary(CardType.None, ZoneType.Graveyard))],
+```
 
 ### Erode
 
@@ -4721,7 +4788,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Reanimate"] =
+[
+	// The loss first: the card that enters is a new object (the same number).
+	Spell(
+		[TargetSpec.InAnyGraveyard(Is.Creature)],
+		new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.Target())),
+		new MoveTo(Ref.Target(), ZoneType.Battlefield)
+		{
+			From = [ZoneType.Graveyard],
+			UnderYourControl = true,
+		}
+	),
+],
+```
 
 ### Reckoner Bankbuster
 
@@ -5345,7 +5430,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ward—Discard a card.  
 > Whenever this creature attacks, put a +1/+1 counter on target creature an opponent controls.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sunset Saboteur"] =
+[
+	// Ward—Discard a card (Gideon the Oathless' ward).
+	When(
+		TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+		[],
+		new CounterUnlessPays(Ref.EventObject, ManaCost.None) { Costs = [new DiscardCost()] }
+	),
+	When(
+		TriggerEvent.SelfAttacks,
+		[Target(Is.Creature & Is.Opponents)],
+		new PutCounters(Ref.Target(), 1)
+	),
+],
+```
 
 ### Superior Spider-Man
 
@@ -5593,7 +5697,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player reveals their hand. You choose a nonland card from it. That player discards that card. You lose 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Thoughtseize"] =
+[
+	Spell(
+		[TargetSpec.Player()],
+		new YouChooseTheyDiscard(Ref.Target(), NonlandTypes),
+		new LoseLife(Ref.You, 2)
+	),
+],
+```
 
 ### Three Steps Ahead
 
@@ -6234,7 +6351,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Whenever this creature enters or attacks, target opponent sacrifices a creature or planeswalker of their choice, discards a card, and loses 3 life. You draw a card and gain 3 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Archon of Cruelty"] =
+[
+	When(TriggerEvent.SelfEnters, [TargetSpec.Player(Is.Opponents)], ArchonsCruelty),
+	When(TriggerEvent.SelfAttacks, [TargetSpec.Player(Is.Opponents)], ArchonsCruelty),
+],
+```
 
 ### Arwen, Mortal Queen
 
@@ -6568,7 +6695,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > At the beginning of your upkeep, reveal the top card of your library and put that card into your hand. You lose life equal to its mana value.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Dark Confidant"] =
+[
+	When(
+		TriggerEvent.YourUpkeep,
+		[],
+		new LookAndTake(1)
+		{
+			Must = true,
+			Reveal = true,
+			Then = [new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.ThisWay))],
+		}
+	),
+],
+```
 
 ### Demonic Tutor
 
@@ -6576,7 +6721,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for a card, put that card into your hand, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Demonic Tutor"] = [Spell([], new SearchLibrary(CardType.None, ZoneType.Hand))],
+// Mystical Tutor's search: "then shuffle and put that card on top".
+```
 
 ### Echo of Eons
 
@@ -6837,7 +6989,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, target opponent reveals their hand. You choose a nonland card from it. That player discards that card.  
 > Evoke—Exile a black card from your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Grief"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Player(Is.Opponents)],
+		new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+	),
+	.. Evoke(ManaColor.Black),
+],
+```
 
 ### Grindstone
 
@@ -6854,7 +7020,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying, lifelink  
 > Pay 7 life: Draw seven cards.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Griselbrand"] =
+[
+	new ActivatedAbilityComponent(ManaCost.None, [new DrawCards(Ref.You, 7)])
+	{
+		Costs = [new PayLifeCost(7)],
+	},
+],
+```
 
 ### Harvester of Misery
 
@@ -6864,7 +7042,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, other creatures get -2/-2 until end of turn.  
 > {1}{B}, Discard this card: Target creature gets -2/-2 until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DiscardSelfCost` — Cycling: "Discard this card:".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Harvester of Misery"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ModifyUntilEndOfTurn(Ref.Permanents(Is.Creature & !Is.Source), -2, -2)
+	),
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}{B}"),
+		[new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)]
+	)
+	{
+		Costs = [new DiscardSelfCost()],
+		From = ZoneType.Hand,
+		Targets = [Creature],
+	},
+],
+```
 
 ### Hexdrinker
 
@@ -6886,7 +7086,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for a card, then shuffle and put that card on top. You lose 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Imperial Seal"] =
+[
+	Spell(
+		[],
+		new SearchLibrary(CardType.None, ZoneType.Library),
+		new LoseLife(Ref.You, 2)
+	),
+],
+```
 
 ### Jace, Vryn's Prodigy // Jace, Telepath Unbound
 
@@ -7963,7 +8176,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for a card, then shuffle and put that card on top. You lose 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2hTests
+
+**Engine pieces:** `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Vampiric Tutor"] =
+[
+	Spell(
+		[],
+		new SearchLibrary(CardType.None, ZoneType.Library),
+		new LoseLife(Ref.You, 2)
+	),
+],
+```
 
 ### Vaultborn Tyrant
 

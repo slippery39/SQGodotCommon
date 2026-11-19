@@ -1190,6 +1190,12 @@ as his three priorities.
 - 2026-11-18, Shayne (reviewing 4.4h's plan): **as written — h2 in five parts.** **A mechanic's other cards wait for
   their colour:** h3 builds Damn only (Winds of Abandon with white), h4 Goryo's Vengeance only (Through the Breach with
   red).
+- 2026-11-18, Claude (cube lane) — **4.4h1: 17 of the 19 scripted; two were options, moved.** Duress' "noncreature,
+  nonland" can't be a `CardType` — `ChooseCardsFromHandChoice` matches ANY of the types, so an artifact creature would
+  pass as an artifact — it is Inquisition's `Filter` on `YouChooseTheyDiscard` (h2a, now 5). Wishclaw Talisman's "enters
+  with three wish counters" has no piece: `EntersWithCountersComponent` puts +1/+1 counters only, a `Kind` option (h2c,
+  now 5). Sunset Saboteur's "Ward—Discard a card" is Gideon the Oathless' ward, inline; Archon of Cruelty's two triggers
+  share one effect list (`LsvCards.ArchonsCruelty`). Every FIRES test passed first time — no engine line changed.
 
 ## Tasks
 
@@ -1416,10 +1422,12 @@ as his three priorities.
           the level ability taken, by the probe's random play and by the AI?
   - [ ] MC-4.4h Black (Shayne, 2026-11-18: the next colour in the list) — 48 cards read card by card and tiered
         (Decisions, "4.4h"): 19 tested pieces, 22 options, 7 new pieces; one part per session:
-    - [ ] MC-4.4h1 The tested pieces, 19 (list in Decisions)
-    - [ ] MC-4.4h2a Options, hands, 4: Inquisition of Kozilek, Deep-Cavern Bat, Collective Brutality, Chain of Smog
+    - [x] MC-4.4h1 The tested pieces, 17 of the 19 (list in Decisions; Duress and Wishclaw Talisman moved to h2a, h2c)
+    - [ ] MC-4.4h2a Options, hands, 5: Inquisition of Kozilek, Duress, Deep-Cavern Bat, Collective Brutality, Chain of
+          Smog
     - [ ] MC-4.4h2b Options, graveyard returns, 5: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones, Barrowgoyf
-    - [ ] MC-4.4h2c Options, costs and permissions, 4: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will
+    - [ ] MC-4.4h2c Options, costs and permissions, 5: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will,
+          Wishclaw Talisman
     - [ ] MC-4.4h2d Options, triggers, 4: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black Widow
     - [ ] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
     - [ ] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white)
@@ -1440,10 +1448,14 @@ as his three priorities.
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
-done: **blue is finished; 235 of 528 play.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as
-written): 19 tested pieces, 22 options in five parts, 7 new pieces one a session. Next, in a NEW session: **MC-4.4h1 —
-black's 19 tested pieces**, scripts only (list in Decisions); a card whose FIRES test shows a missing option moves to
-the h2 part it fits. A mechanic's cards of another colour wait for that colour (Winds of Abandon, Through the Breach).
+done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written), and **h1 is
+done: 17 tested pieces, 252 of 528 play**; Duress moved to h2a and Wishclaw Talisman to h2c (Decisions, "4.4h1").
+Next, in a NEW session: **MC-4.4h2a — hands, 5**: Inquisition of Kozilek and Duress (a `Filter` on
+`YouChooseTheyDiscard`), Deep-Cavern Bat, Collective Brutality, Chain of Smog (the plan's notes in Decisions, "4.4h").
+h1's tests are in `LsvBatch2hTests.cs` (`CastAt(card, target, answer)`: a cast with one target, the choices asked;
+`Dear`: a {3} sorcery). A mechanic's cards of another colour wait for that colour (Winds of Abandon, Through the Breach).
+The probe's "activated N" for a card with no activated ability (g9's Riddler; h1's Dismember, Thoughtseize, Hymn) is
+answered: Q, Stacking the Deck's exiled card gains "exile a card from your hand: copy this" — counted under that card.
 Later, not now: MC-4.4g10b (does Does
 Machines ever level?) and MC-4.5 (Troubling Tribbles out of the random decks).
 From 4.4g10: a Class's level is `ClassLevel(N)` (status, not a counter; none is level 1, `Count.ClassLevelOf`);
@@ -1684,3 +1696,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   the card, not a counter; leveling is a sorcery-speed ability, and "becomes level N" triggers as a Saga's chapter does.
 - 2026-11-18: MC-4.4h planned (Shayne took it): black's 48 — 19 tested pieces (h1), 22 options in five parts (h2a–e),
   seven new mechanics one a session (h3–h9). Next: MC-4.4h1.
+- 2026-11-18: MC-4.4h1 done: 17 of black's tested pieces — 252 of 528 play, no engine change. Duress and Wishclaw
+  Talisman each need an option, moved to h2a and h2c. Next: MC-4.4h2a.

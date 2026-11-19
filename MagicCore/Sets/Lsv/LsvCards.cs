@@ -2028,7 +2028,165 @@ public static class LsvCards
 					)
 				),
 			],
+			// ===== MC-4.4h1: black's tier 1, tested pieces =====
+			["Dark Confidant"] =
+			[
+				When(
+					TriggerEvent.YourUpkeep,
+					[],
+					new LookAndTake(1)
+					{
+						Must = true,
+						Reveal = true,
+						Then = [new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.ThisWay))],
+					}
+				),
+			],
+			["Iron-Shield Elf"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Indestructible"),
+						new Tap(Ref.Source),
+					]
+				)
+				{
+					Costs = [new DiscardCost()],
+				},
+			],
+			["Sunset Saboteur"] =
+			[
+				// Ward—Discard a card (Gideon the Oathless' ward).
+				When(
+					TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+					[],
+					new CounterUnlessPays(Ref.EventObject, ManaCost.None)
+					{
+						Costs = [new DiscardCost()],
+					}
+				),
+				When(
+					TriggerEvent.SelfAttacks,
+					[Target(Is.Creature & Is.Opponents)],
+					new PutCounters(Ref.Target(), 1)
+				),
+			],
+			["Harvester of Misery"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ModifyUntilEndOfTurn(Ref.Permanents(Is.Creature & !Is.Source), -2, -2)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{B}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)]
+				)
+				{
+					Costs = [new DiscardSelfCost()],
+					From = ZoneType.Hand,
+					Targets = [Creature],
+				},
+			],
+			["Archon of Cruelty"] =
+			[
+				When(TriggerEvent.SelfEnters, [TargetSpec.Player(Is.Opponents)], ArchonsCruelty),
+				When(TriggerEvent.SelfAttacks, [TargetSpec.Player(Is.Opponents)], ArchonsCruelty),
+			],
+			["Griselbrand"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.None, [new DrawCards(Ref.You, 7)])
+				{
+					Costs = [new PayLifeCost(7)],
+				},
+			],
+			["Grief"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+				),
+				.. Evoke(ManaColor.Black),
+			],
+			["Entomb"] = [Spell([], new SearchLibrary(CardType.None, ZoneType.Graveyard))],
+			["Demonic Tutor"] = [Spell([], new SearchLibrary(CardType.None, ZoneType.Hand))],
+			// Mystical Tutor's search: "then shuffle and put that card on top".
+			["Vampiric Tutor"] =
+			[
+				Spell(
+					[],
+					new SearchLibrary(CardType.None, ZoneType.Library),
+					new LoseLife(Ref.You, 2)
+				),
+			],
+			["Imperial Seal"] =
+			[
+				Spell(
+					[],
+					new SearchLibrary(CardType.None, ZoneType.Library),
+					new LoseLife(Ref.You, 2)
+				),
+			],
+			["Sheoldred's Edict"] =
+			[
+				ModalSpell(
+					"Sheoldred's Edict",
+					1,
+					M([], new EachSacrifices(Ref.EachOpponent, Is.Creature & !Is.Token)),
+					M([], new EachSacrifices(Ref.EachOpponent, Is.Creature & Is.Token)),
+					M([], new EachSacrifices(Ref.EachOpponent, Is.Planeswalker))
+				),
+			],
+			["Dismember"] = [Spell([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -5, -5))],
+			["Thoughtseize"] =
+			[
+				Spell(
+					[TargetSpec.Player()],
+					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes),
+					new LoseLife(Ref.You, 2)
+				),
+			],
+			["Hymn to Tourach"] =
+			[
+				Spell([TargetSpec.Player()], new DiscardAtRandom(Ref.Target(), 2)),
+			],
+			["Reanimate"] =
+			[
+				// The loss first: the card that enters is a new object (the same number).
+				Spell(
+					[TargetSpec.InAnyGraveyard(Is.Creature)],
+					new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.Target())),
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						UnderYourControl = true,
+					}
+				),
+			],
+			["Unearth"] =
+			[
+				Spell(
+					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))],
+					new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+				),
+				Cycling("{2}"),
+			],
 		};
+
+	/// <summary>
+	/// Archon of Cruelty: "target opponent sacrifices a creature or planeswalker of their choice, discards a card, and
+	/// loses 3 life. You draw a card and gain 3 life." — on entering and on attacking alike.
+	/// </summary>
+	static GameAction[] ArchonsCruelty =>
+		[
+			new EachSacrifices(Ref.Target(), Is.Creature | Is.Planeswalker),
+			new Discard(Ref.Target(), 1),
+			new LoseLife(Ref.Target(), 3),
+			new DrawCards(Ref.You, 1),
+			new GainLife(Ref.You, 3),
+		];
 
 	/// <summary>
 	/// Teamwork N (We Say Thee Nay!): "As an additional cost to cast this spell, you may tap any number of creatures you

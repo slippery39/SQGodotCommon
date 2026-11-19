@@ -87,3 +87,4 @@ after the split is DEV-4.3.
 | 2026-11-18 | MC-4.4g8: spree (Three Steps Ahead), 1 card | 471f3273 | 57 | 167k | 1.7M |
 | 2026-11-18 | MC-4.4g9: warp - LSVPower Quantum Riddler, 1 card | b80d6d6e | 83 | 182k | 2.7M |
 | 2026-11-18 | MC-4.4g10: Classes - Does Machines (ClassLevel, GainLevel, Scripting.Level), 1 card | c123515f | 96 | 201k | 3.0M |
+| 2026-11-18 | MC-4.4h1: black's tested pieces, 17 cards | 4a569576 | 71 | 177k | 2.2M |
