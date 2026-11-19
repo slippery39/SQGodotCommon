@@ -18,14 +18,6 @@ public class TrkBatch7cTests : FraBoardTest
 {
 	static CardDefinition Trk(string name) => CardRegistry.Get(name, "TRK");
 
-	int OnTop(CardDefinition card, int player)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(player, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	int InGraveyard(CardDefinition card, int player)
 	{
 		int id;
@@ -328,7 +320,7 @@ public class TrkBatch7cTests : FraBoardTest
 	{
 		// Shayne, 2026-11-06 (limited): step by step.
 		Hand(Trk("Kai Winn, Faithless Leader"), me); // TRK in the game: its names are offered
-		var names = CardRegistry.NonlandNames(s);
+		var names = CardRegistry.CardNames(s);
 		var choice = new ChooseKeywordChoice(me, names) { NamesACard = true };
 		string Named() => names[new MagicCore.Ai.GreedyAi(me).Answer(s, choice).Single() - 1];
 

@@ -25,8 +25,13 @@ public abstract record MagicEvent : GameEvent
 }
 
 /// <param name="Types">What it was as it entered — Karn, Argent Defender asks, whatever it is by the next priority.</param>
+/// <param name="From">"Name Sticker" Goblin: "enters from anywhere other than a graveyard or exile" — the zone it left (Trigger.From, NotFrom); null for a token just made.</param>
 /// <summary>A permanent entered the battlefield — raised by MagicState.EnterBattlefield, the one way in.</summary>
-public record EnteredBattlefieldEvent(int CardId, CardType Types = CardType.None) : MagicEvent
+public record EnteredBattlefieldEvent(
+	int CardId,
+	CardType Types = CardType.None,
+	ZoneType? From = null
+) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.Entered;
 
@@ -169,17 +174,29 @@ public record LandPlayedEvent(int PlayerId, int CardId, ZoneType From) : MagicEv
 }
 
 /// <summary>Data, New Life: "Whenever you draw a card" — a player drew one card; raised by MagicState.Draw, once per card.</summary>
-public record DrewCardEvent(int PlayerId) : MagicEvent
+/// <param name="Number">Faerie Mastermind: "their second card each turn" — which card of that player's turn this is, numbered as it is drawn.</param>
+public record DrewCardEvent(int PlayerId, int Number = 0) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.Drew;
 
 	public override int By(GameState s) => PlayerId;
 }
 
-/// <summary>A card left its owner's graveyard, to any zone — raised by MagicState.MoveCard, every path (Vash).</summary>
-public record LeftGraveyardEvent(int PlayerId, int CardId) : MagicEvent
+/// <summary>
+/// A card changed zones — raised by MagicState.MoveCard, every path, for the moves a card reads: out of its owner's
+/// graveyard to any zone (Vash: "whenever a card leaves your graveyard") and from their library into exile (Laelia,
+/// the Blade Reforged: "put into exile from your library and/or your graveyard") — a token isn't a card — and off
+/// the battlefield to any zone, a token too, for a permanent that reads its OWN leaving (Skyclave Apparition: "When
+/// this creature leaves the battlefield"; Serra Paragon: "put into a graveyard from the battlefield"). ponytail: not
+/// every zone change — MoveCard is the hottest path; widen the cases there when a card reads another move
+/// ("whenever ANOTHER permanent leaves the battlefield": raise it for every permanent, MagicState.ReadsItsLeaving).
+/// </summary>
+public record ChangedZoneEvent(int PlayerId, int CardId, ZoneType From, ZoneType To) : MagicEvent
 {
-	public override EventKind Kind() => EventKind.LeftGraveyard;
+	/// <summary>Off the battlefield: the permanent as it last was — its own leaving abilities look back (CR 603.10a).</summary>
+	public Card? LastKnown { get; init; }
+
+	public override EventKind Kind() => EventKind.ChangedZone;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
 		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
@@ -235,6 +252,15 @@ public record LoyaltyActivatedEvent(int PlayerId, int Cost) : MagicEvent
 public record CountersPutEvent(int CardId, string CounterKind, int From, int To) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.CountersPut;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
+
+/// <summary>A Class became level N (Does Machines: "When this Class becomes level 2") — raised by GainLevel.</summary>
+public record BecameLevelEvent(int CardId, int Level) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.BecameLevel;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
 		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
@@ -312,16 +338,20 @@ public static class Triggers
 		Card? EventSnapshot = null,
 		GameObject? EventObject = null,
 		int X = 0
-	);
+	)
+	{
+		/// <summary>A delayed trigger (CR 603.7) — set by PutOnStack, carried to StackAbility.Delayed.</summary>
+		public bool Delayed { get; init; }
+	}
 
 	/// <summary>
 	/// Every ability that triggered on the staged events, the active player's first (CR 101.4 APNAP:
 	/// they go on the stack first, so the other player's resolve first).
 	///
-	/// A dying card's OWN "when this dies" ability is read from the card as it last existed (CR
-	/// 603.10a). ponytail: other leaves-the-battlefield abilities are read from permanents still on
-	/// the battlefield, so Edgar dying alongside another creature misses that one's death. Look back
-	/// for every leaves trigger if a card ever needs it.
+	/// A dying card's OWN "when this dies" ability, and a permanent's own "when this leaves the battlefield",
+	/// are read from the card as it last existed (CR 603.10a). ponytail: other leaves-the-battlefield
+	/// abilities are read from permanents still on the battlefield, so Edgar dying alongside another
+	/// creature misses that one's death. Look back for every leaves trigger if a card ever needs it.
 	/// </summary>
 	public static List<Pending> Collect(GameState s)
 	{
@@ -380,6 +410,21 @@ public static class Triggers
 			.Where(p => p.HasComponent<TriggersAdditionalTime>() && s.IsOnBattlefield(p.Id))
 			.ToList();
 		var events = WithoutSilencedEntries(s, permanents);
+		// A card that left the battlefield: its own abilities, as it last existed (CR 603.10a) — and a doubler's
+		// "additional time" for them (Lwaxana's linked creature).
+		IEnumerable<Pending> LookingBack(
+			Card was,
+			GameEvent left,
+			IEnumerable<TriggeredAbilityComponent> abilities
+		) =>
+			abilities
+				.Where(a => !a.FromGraveyard && Concerns(s, a.On, was, was))
+				.SelectMany(a =>
+					Enumerable.Repeat(
+						new Pending(was, a, was.Id, was),
+						1 + AdditionalTimes(s, doublers, was, a, left, lookBack: true)
+					)
+				);
 		var fromTheBattlefield = permanents
 			.SelectMany(source =>
 				AbilitiesOf(s, source)
@@ -404,13 +449,19 @@ public static class Triggers
 								found.a,
 								EventCard(e),
 								Snapshot(s, e),
-								EventObject(s, e),
-								e switch
-								{
-									CreatureDealtDamageEvent damaged => damaged.Amount,
-									PlayerDealtDamageEvent dealt => dealt.Amount,
-									_ => 0,
-								}
+								// Phelia: a delayed trigger's "Phelia" is the object that set it up
+								found
+									.source.GetComponents<DelayedTrigger>()
+									.FirstOrDefault(d => d.Ability == found.a)
+									?.MadeBy ?? EventObject(s, e),
+								found.a.X != 0
+									? found.a.X
+									: e switch
+									{
+										CreatureDealtDamageEvent damaged => damaged.Amount,
+										PlayerDealtDamageEvent dealt => dealt.Amount,
+										_ => 0,
+									}
 							),
 							1 + AdditionalTimes(s, doublers, found.source, found.a, e)
 						)
@@ -419,40 +470,28 @@ public static class Triggers
 		var fromTheDead = s
 			.PendingGameEvents.OfType<DiedEvent>()
 			.SelectMany(died =>
-				// As it last existed (CR 603.10a): under Infinite Coursework it had no abilities — the
-				// Aura is gone from the battlefield by now, so ask what was attached as it died.
-				(
-					died.Attached.Any(a => a.HasComponent<EnchantedLosesAllAbilities>())
-						? []
-						: AbilitiesOf(s, died.LastKnown)
-				)
-					// "When this dies", and its own "whenever [this or another] creature … dies" seeing
-					// its own death — leaves-the-battlefield abilities look back (CR 603.10a; Excalbian
-					// Gamemaster). Another's death is matched on the battlefield.
-					// ponytail: so a creature dying ALONGSIDE others misses their deaths (a wrath: Gamemaster
-					// triggers once, not three times). Match its Died abilities against every DiedEvent in
-					// the batch if a card needs it (DesignNotes).
-					.Where(a =>
+				LookingBack(
+						died.LastKnown,
+						died,
+						// As it last existed (CR 603.10a): under Infinite Coursework it had no abilities — the
+						// Aura is gone from the battlefield by now, so ask what was attached as it died.
+						// ponytail: The Wondrous Wasp's strip is stamped on the Wasp, so a creature dying WITH
+						// the Wasp (a wrath) reads as having its abilities. Carry the stripping objects on
+						// DiedEvent beside Attached if a cube game shows it (DesignNotes).
 						(
-							a.On.ReadFrom == ReadFrom.TheDyingCard
-							|| a.On.On == EventKind.Died && a.On.ReadFrom == ReadFrom.Battlefield
+							died.Attached.Any(a => a.HasComponent<EnchantedLosesAllAbilities>())
+								? []
+								: AbilitiesOf(s, died.LastKnown)
 						)
-						&& !a.FromGraveyard
-						&& Concerns(s, a.On, died.LastKnown, died.LastKnown)
-					)
-					// Lwaxana's linked creature dying: its "when this dies" looks back (CR 603.10a), doubled too.
-					.SelectMany(a =>
-						Enumerable.Repeat(
-							new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown),
-							1
-								+ AdditionalTimes(
-									s,
-									doublers,
-									died.LastKnown,
-									a,
-									died,
-									lookBack: true
-								)
+						// "When this dies", and its own "whenever [this or another] creature … dies" seeing
+						// its own death — leaves-the-battlefield abilities look back (CR 603.10a; Excalbian
+						// Gamemaster). Another's death is matched on the battlefield.
+						// ponytail: so a creature dying ALONGSIDE others misses their deaths (a wrath: Gamemaster
+						// triggers once, not three times). Match its Died abilities against every DiedEvent in
+						// the batch if a card needs it (DesignNotes).
+						.Where(a =>
+							a.On.On == EventKind.Died
+							&& a.On.ReadFrom is ReadFrom.TheCardThatLeft or ReadFrom.Battlefield
 						)
 					)
 					// The Aura is in the graveyard by the time triggers are collected — the state-based
@@ -470,7 +509,28 @@ public static class Triggers
 						)
 					)
 			);
-		// "When you cast this spell" (Emrakul): the spell's own, read from it on the stack.
+		// "When this leaves the battlefield" (Skyclave Apparition), "when this permanent is put into a graveyard
+		// from the battlefield" (Serra Paragon's gift): the card's own, whatever zone it went to — a death too.
+		// ponytail: "had it lost all abilities" is asked of the state NOW (AbilitiesOf) — an Aura's
+		// EnchantedLosesAllAbilities that the state check has taken by then is missed, as DiedEvent.Attached
+		// isn't here. Carry what was attached on this event if a pool has both (DesignNotes).
+		var fromThoseThatLeft = s
+			.PendingGameEvents.OfType<ChangedZoneEvent>()
+			.Where(left => left.LastKnown is not null)
+			.SelectMany(left =>
+				LookingBack(
+					left.LastKnown!,
+					left,
+					AbilitiesOf(s, left.LastKnown!)
+						.Where(a =>
+							a.On.On == EventKind.ChangedZone
+							&& a.On.ReadFrom == ReadFrom.TheCardThatLeft
+							&& ZonesFit(a.On, left)
+						)
+				)
+			);
+		// "When you cast this spell" (Emrakul): the spell's own, read from it on the stack — and as it was cast once
+		// it is gone (storm's copies of a countered spell, Brain Freeze).
 		var fromTheSpell = s
 			.PendingGameEvents.OfType<SpellCastEvent>()
 			.Where(cast => s.HasObject(cast.CardId))
@@ -480,7 +540,12 @@ public static class Triggers
 						a.On.ReadFrom == ReadFrom.TheSpellCast
 						&& Concerns(s, a.On, s.GetCard(cast.CardId), s.GetCard(cast.CardId))
 					)
-					.Select(a => new Pending(s.GetCard(cast.CardId), a, cast.CardId))
+					.Select(a => new Pending(
+						s.GetCard(cast.CardId),
+						a,
+						cast.CardId,
+						s.GetCard(cast.CardId)
+					))
 			);
 		// Delayed triggers set off by a cast (Way of the Cryomancer): "copy that spell" — one per copy.
 		var fromACast = s
@@ -502,6 +567,7 @@ public static class Triggers
 			);
 		return fromTheBattlefield
 			.Concat(fromTheDead)
+			.Concat(fromThoseThatLeft)
 			.Concat(fromACast)
 			.Concat(fromTheSpell)
 			.Where(p => InterveningIfHolds(s, p))
@@ -596,11 +662,21 @@ public static class Triggers
 			.Empty.Add(ContextKeys.Controller, t.Source.ControllerId)
 			.Add(ContextKeys.Source, t.Source.Id)
 			.Add(ContextKeys.SourceSnapshot, t.Source) // a dying card as it was: "if it isn't a token"
-			.Add(ContextKeys.EventCard, t.EventCardId);
+			.Add(ContextKeys.EventCard, t.EventCardId)
+			.Add(ContextKeys.X, XOf(t));
 		return t.EventSnapshot is { } snapshot
 			? context.Add(ContextKeys.EventSnapshot, snapshot)
 			: context;
 	}
+
+	/// <summary>
+	/// The X a trigger's intervening "if" and its effects both read: for "when this enters", the X it was cast
+	/// for (Jacked Rabbit's ravenous: "If X is 5 or more, draw a card when it enters"); else the event's number.
+	/// </summary>
+	static int XOf(Pending t) =>
+		t.Ability.On.On == EventKind.Entered && t.Ability.On.Subject == Is.Source
+			? t.Source.CastX
+			: t.X;
 
 	/// <summary>The event's card as it is now — so "that creature's controller" survives it leaving (CR 608.2h).</summary>
 	static Card? Snapshot(GameState s, GameEvent e) =>
@@ -676,10 +752,15 @@ public static class Triggers
 			return false;
 		if (
 			on.Chapter > 0
-			&& (
-				e is not CountersPutEvent { CounterKind: CounterKinds.Lore } lore
-				|| lore.From >= on.Chapter
-				|| lore.To < on.Chapter
+			&& !(
+				e switch
+				{
+					CountersPutEvent { CounterKind: CounterKinds.Lore } lore => lore.From
+						< on.Chapter
+						&& lore.To >= on.Chapter,
+					BecameLevelEvent level => level.Level == on.Chapter,
+					_ => false,
+				}
 			)
 		)
 			return false;
@@ -691,19 +772,17 @@ public static class Triggers
 		)
 			return false;
 		if (
-			on.SpellNumber > 0
-			&& (e is not SpellCastEvent numbered || numbered.SpellNumber != on.SpellNumber)
+			on.Nth > 0
+			&& on.Nth
+				!= e switch
+				{
+					SpellCastEvent cast => cast.SpellNumber,
+					DrewCardEvent drew => drew.Number,
+					_ => 0,
+				}
 		)
 			return false;
-		if (
-			on.From is { } zone
-			&& e switch
-			{
-				SpellCastEvent cast => cast.From,
-				LandPlayedEvent land => land.From,
-				_ => (ZoneType?)null,
-			} != zone
-		)
+		if (!ZonesFit(on, e))
 			return false;
 		if (
 			on.CombatDamageBy is { } by
@@ -745,6 +824,30 @@ public static class Triggers
 		};
 	}
 
+	/// <summary>
+	/// Trigger.From, NotFrom and To against the zones an event names — the one test, for a trigger matched on the
+	/// battlefield and for one read from the card that left.
+	/// </summary>
+	static bool ZonesFit(Trigger on, GameEvent e)
+	{
+		if (on.From is not null || !on.NotFrom.IsEmpty)
+		{
+			var from = e switch
+			{
+				SpellCastEvent cast => cast.From,
+				LandPlayedEvent land => land.From,
+				ChangedZoneEvent moved => moved.From,
+				EnteredBattlefieldEvent entered => entered.From,
+				_ => (ZoneType?)null,
+			};
+			if (on.From is { } zone && from != zone)
+				return false;
+			if (from is { } left && on.NotFrom.Contains(left))
+				return false;
+		}
+		return on.To is not { } to || e is ChangedZoneEvent arrived && arrived.To == to;
+	}
+
 	/// <summary>What a spell targeted as it was cast — every mode's targets (CR 115.1).</summary>
 	static IEnumerable<int> SpellTargets(GameState s, SpellCastEvent cast) =>
 		s.HasObject(cast.CardId)
@@ -781,8 +884,9 @@ public static class Triggers
 	public static GameState PutOnStack(GameState s, List<Pending> triggers, int priorityPlayerId)
 	{
 		var firedOnce = new HashSet<(int Id, int Incarnation)>();
-		foreach (var t in triggers)
+		foreach (var pending in triggers)
 		{
+			var t = pending with { Delayed = FiredDelayedTrigger(s, pending) is not null };
 			s = WithoutFiredDelayedTrigger(s, t);
 			if (t.Ability.OncePerTurn)
 			{
@@ -836,14 +940,9 @@ public static class Triggers
 	/// </summary>
 	static GameState WithoutFiredDelayedTrigger(GameState s, Pending t)
 	{
-		if (
-			!s.HasObject(t.Source.Id)
-			|| s.GetObject(t.Source.Id) is not Card host
-			|| host.Incarnation != t.Source.Incarnation
-			|| host.GetComponents<DelayedTrigger>().FirstOrDefault(d => d.Ability == t.Ability)
-				is not { } fired
-		)
+		if (FiredDelayedTrigger(s, t) is not { } fired)
 			return s;
+		var host = s.GetCard(t.Source.Id);
 		var rest = host.GetComponents<DelayedTrigger>().Where(d => d != fired).ToList();
 		var without = rest.Aggregate(
 			host.WithoutComponents<DelayedTrigger>(),
@@ -853,6 +952,14 @@ public static class Triggers
 			? s.RemoveObject(host.Id)
 			: s.UpdateObject(host.Id, without);
 	}
+
+	/// <summary>The delayed trigger this pending trigger is, still on its host (that object of it); null for any other.</summary>
+	static DelayedTrigger? FiredDelayedTrigger(GameState s, Pending t) =>
+		s.HasObject(t.Source.Id)
+		&& s.GetObject(t.Source.Id) is Card host
+		&& host.Incarnation == t.Source.Incarnation
+			? host.GetComponents<DelayedTrigger>().FirstOrDefault(d => d.Ability == t.Ability)
+			: null;
 
 	/// <summary>Modes whose required targets all have a legal choice (CR 700.2a).</summary>
 	public static ImmutableList<int> ChoosableModes(GameState s, Pending t) =>
@@ -907,12 +1014,8 @@ public static class Triggers
 						EventCardId = t.EventCardId,
 						EventSnapshot = t.EventSnapshot,
 						EventObject = t.EventObject,
-						// "When this enters": the X it was cast for.
-						X =
-							t.Ability.On.On == EventKind.Entered
-							&& t.Ability.On.Subject == Is.Source
-								? t.Source.CastX
-								: t.X,
+						X = XOf(t),
+						Delayed = t.Delayed,
 					},
 				],
 			}
@@ -933,6 +1036,9 @@ public record PutTriggerOnStackAction : GameAction
 	public Card? EventSnapshot { get; init; }
 	public GameObject? EventObject { get; init; }
 	public int X { get; init; }
+
+	/// <summary>A delayed trigger (CR 603.7) — StackAbility.Delayed.</summary>
+	public bool Delayed { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -956,6 +1062,7 @@ public record PutTriggerOnStackAction : GameAction
 					EventObject = EventObject,
 					X = X,
 					Triggered = true,
+					Delayed = Delayed,
 				}
 			)
 		);

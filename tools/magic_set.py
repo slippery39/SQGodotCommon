@@ -57,18 +57,28 @@ def oracle(c):
     return "\n// \n".join(f.get("oracle_text") or "" for f in c.get("card_faces") or [])
 
 
+def is_reminder(line):
+    """A line wholly in parentheses has no rules force (CR 207.2) — the original duals' "({T}: Add {W} or {U}.)",
+    whose mana their land types make (CR 305.6). CardRegistry.IsReminderOnly is the C# side."""
+    return line.startswith("(") and line.endswith(")")
+
+
 def keyword_only(text, keywords):
-    lines = [l for l in text.split("\n") if l.strip()]
+    """Only engine keywords — and reminder text (is_reminder)."""
+    lines = [l for l in text.split("\n") if l.strip() and not is_reminder(l)]
     return all(all(p.strip().lower() in keywords for p in l.split(",")) for l in lines)
 
 
 def status(c, keys, keywords):
-    """'scripted', 'basic land', 'keywords only' or None (not playable)."""
+    """'scripted', 'basic land', 'keywords only', 'reminder text only' (the original duals) or None (not playable)."""
     if c["name"] in keys:
         return "scripted"
     if "Basic Land" in (c.get("type_line") or ""):
         return "basic land"
-    return "keywords only" if keyword_only(oracle(c), keywords) else None
+    if not keyword_only(oracle(c), keywords):
+        return None
+    lines = [l for l in oracle(c).split("\n") if l.strip()]
+    return "reminder text only" if lines and all(is_reminder(l) for l in lines) else "keywords only"
 
 
 def playable(c, keys, keywords=None):

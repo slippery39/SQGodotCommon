@@ -130,7 +130,10 @@ public class TrkBatch4bTests : FraBoardTest
 			"{1}",
 			"Sorcery",
 			null,
-			new ExileFromGraveyard(Ref.All(ZoneType.Graveyard, Is.Creature, of: Ref.You))
+			new MoveTo(Ref.All(ZoneType.Graveyard, Is.Creature, of: Ref.You), ZoneType.Exile)
+			{
+				From = [ZoneType.Graveyard],
+			}
 		);
 
 	[Test]
@@ -185,7 +188,13 @@ public class TrkBatch4bTests : FraBoardTest
 			"{1}",
 			"Sorcery",
 			null,
-			new ExileFromGraveyard(Ref.All(ZoneType.Graveyard, Is.Creature, of: Ref.EachOpponent))
+			new MoveTo(
+				Ref.All(ZoneType.Graveyard, Is.Creature, of: Ref.EachOpponent),
+				ZoneType.Exile
+			)
+			{
+				From = [ZoneType.Graveyard],
+			}
 		);
 		var spell = Hand(theirPurge, me);
 		var hand = HandCount(me);
@@ -482,13 +491,6 @@ public class TrkBatch4bTests : FraBoardTest
 
 	// ===== Tier 2: exile until a nonland; tier 3: cast from your graveyard =====
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
 
 	[Test]
 	public void ExploratoryMission_ExilesUntilANonland_OnlyThatPlayable_RRAtFiveQuests()
@@ -573,6 +575,121 @@ public class TrkBatch4bTests : FraBoardTest
 		On(erica, new Tap(Ref.Target())); // "you may": answered no
 		ToTurn(s.GetGame().TurnNumber + 1);
 		Assert.That(Lands(me), Nu.EqualTo(lands));
+	}
+
+	// MC-6.12: a chosen move keeps its zone's choice — a permanent you control is a ChoosePermanentChoice — and
+	// goes to its OWNER's hand (Erica's "return a land you control to its owner's hand").
+	[Test]
+	public void MoveChosen_APermanentYouControl_GoesToItsOwnersHand()
+	{
+		var theirs = Field(TestGames.Inline("Waste", "", "Land"), them);
+		s = s.GainControl(theirs, me);
+		var bounce = Hand(
+			TestGames.Inline(
+				"Bounce",
+				"{1}",
+				"Sorcery",
+				null,
+				new MoveChosen(ZoneType.Battlefield, Is.Land, ZoneType.Hand)
+			),
+			me
+		);
+		ChoiceAction? asked = null;
+		s = s.Act(Casts(bounce).First());
+		Resolve(c =>
+		{
+			asked ??= c;
+			return [theirs];
+		});
+		Assert.That(asked, Nu.TypeOf<ChoosePermanentChoice>());
+		Assert.That(s.IsIn(theirs, them, ZoneType.Hand), Nu.True, "its owner's hand");
+	}
+
+	// MC-6.12: the hand's choice takes MoveChosen's filter — Erica's "a land card from your hand" offers no creature.
+	[Test]
+	public void EricaOrtegas_OffersOnlyLandCards()
+	{
+		var erica = Field(Trk("Erica Ortegas, Plucky Pilot"), me);
+		var land = Hand(TestGames.Inline("Waste", "", "Land"), me);
+		var bear = Hand(Bear, me);
+		var tap = Hand(TestCards.Targeted("Tap", TargetSpec.Creature, new Tap(Ref.Target())), me);
+		s = s.Act(Casts(tap).Single(c => c.Targets[0] == erica));
+		ChooseCardsFromHandChoice? asked = null;
+		Resolve(c =>
+		{
+			if (c is ChooseCardsFromHandChoice hand)
+				asked = hand;
+			return c.Options.Take(c.MinChoices).Select(o => o.Id);
+		});
+		Assert.That(asked, Nu.Not.Null, "Erica asks for a land card");
+		var offered = asked!.Options.Select(o => o.Id).ToList();
+		Assert.That(offered, Does.Contain(land).And.Not.Contain(bear));
+		Assert.That(offered.Select(s.GetCard), Nu.All.Matches<Card>(c => c.Is(CardType.Land)));
+	}
+
+	// MC-6.12: a token that has left the battlefield moves nowhere (CR 111.8) — MoveTo for every move, where only
+	// the return from exile asked it before.
+	[Test]
+	public void MoveTo_ATokenThatLeft_DoesntComeBack()
+	{
+		var token = Field(Bear, me);
+		s = s.UpdateObject(token, s.GetCard(token) with { IsToken = true }); // TEST SETUP
+		var again = Hand(
+			TestCards.Targeted(
+				"Again",
+				TargetSpec.Creature,
+				new Sacrifice(Ref.Target()),
+				new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+			),
+			me
+		);
+		Cast(again, [], token);
+		Assert.That(Alive(token), Nu.False);
+	}
+
+	// MC-6.12: From is where it must STILL be — "return target card from your graveyard" fetches nothing once an
+	// earlier step exiled it.
+	[Test]
+	public void MoveTo_From_ACardNoLongerThere_StaysPut()
+	{
+		int card;
+		(s, card) = TestGames.Put(s, me, Bear, ZoneType.Graveyard);
+		var spell = Hand(
+			TestCards.Targeted(
+				"Exile Then Return",
+				TargetSpec.InYourGraveyard(),
+				new MoveTo(Ref.Target(), ZoneType.Exile),
+				new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+			),
+			me
+		);
+		Cast(spell, [], card);
+		Assert.That(InExile(card), Nu.True);
+	}
+
+	// MC-6.12: "its owner shuffles it into their library" — shuffled, not put on the bottom.
+	[Test]
+	public void MoveTo_Shuffle_ItsOwnerShufflesTheLibrary()
+	{
+		var bear = Field(Bear, me);
+		var library = s.ZoneId(me, ZoneType.Library);
+		var before = s.GetChildrenIds(library).ToList();
+		var tuck = Hand(
+			TestCards.Targeted(
+				"Tuck",
+				TargetSpec.Creature,
+				new MoveTo(Ref.Target(), ZoneType.Library)
+				{
+					From = [ZoneType.Battlefield],
+					Shuffle = true,
+				}
+			),
+			me
+		);
+		Cast(tuck, [], bear);
+		var after = s.GetChildrenIds(library).ToList();
+		Assert.That(after, Does.Contain(bear));
+		Assert.That(after, Nu.Not.EqualTo(before.Append(bear).ToList()), "shuffled");
 	}
 
 	// ===== The review's fixes =====

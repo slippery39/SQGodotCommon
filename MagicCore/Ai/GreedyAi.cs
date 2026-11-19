@@ -162,6 +162,12 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		}
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
+		if (choice is ChooseXTargetsChoice && choice.MinChoices != choice.MaxChoices)
+			// Pyrokinesis: ponytail: one target takes all 4 — whichever plays out best; splitting it among
+			// several (two 2/2s) is never tried: evaluate the pairs and their splits if it misplays (AI-19).
+			return choice
+				.Options.Select(o => (IEnumerable<int>)[o.Id])
+				.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 		if (choice is ChooseXTargetsChoice)
 			// Dominion Infiltration copies them: the biggest. ponytail: power, then mana value, stands in for worth.
 			return choice
@@ -172,6 +178,10 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 				.Select(c => c.Id);
 		if (choice is OrderLibraryTopChoice order)
 			return LandUnlock.Order(s, order.PlayerId, [.. choice.Options.Select(o => o.Id)], held);
+		if (choice is ChooseAmongChoice { Delve: true })
+			// ponytail: the first card left in the graveyard, whatever it is — blind to Barrowgoyf's card types, an
+			// Animate Dead or Regrowth target, threshold. Upgrade: a cheap procedural price per card (DesignNotes).
+			return choice.Options.Take(1).Select(o => o.Id);
 		if (choice is ChooseKeywordChoice { NamesACard: true } naming)
 			return [naming.Keywords.IndexOf(LikeliestName(s, naming.Keywords)) + 1];
 		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max })
@@ -200,6 +210,8 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		if (choice is ChooseFromLibraryChoice { MaxChoices: > 1 })
 			return choice.Options.Take(choice.MaxChoices).Select(o => o.Id); // "up to N lands": more is better
 		if (choice.MaxChoices != 1)
+			// ponytail: the first ones offered — a sacrifice of several (Balance's "the rest", Emrakul's ward)
+			// gives up whatever is listed first, not what is worth least. WorstCards' like for permanents: AI-19.28.
 			return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 
 		var options = choice.Options.Select(o => (IEnumerable<int>)[o.Id]).ToList();

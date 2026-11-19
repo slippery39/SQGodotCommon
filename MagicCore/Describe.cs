@@ -17,7 +17,14 @@ public static class Describe
 			MulliganAction => "Mulligan",
 			PlayLandAction p => $"Play {Name(s, p.CardId)}"
 				+ (s.IsIn(p.CardId, p.PlayerId, ZoneType.Exile) ? " from exile" : ""),
-			CastSpellAction c => $"Cast {Name(s, c.CardId)}"
+			CastSpellAction c => (
+				c.Adventure
+				&& s.HasObject(c.CardId)
+				&& s.GetObject(c.CardId) is Card { } adventurer
+				&& adventurer.GetComponent<AdventureComponent>() is { } adventure
+					? $"Cast {adventure.Face.Name} (Adventure)"
+					: $"Cast {Name(s, c.CardId)}"
+			)
 				+ (
 					s.IsIn(c.CardId, c.PlayerId, ZoneType.Graveyard)
 						? " from graveyard (flashback)"
@@ -29,14 +36,28 @@ public static class Describe
 					: ""
 				)
 				+ (c.X > 0 ? $" (X={c.X})" : "")
+				// Baleful Mastery's {1}{B}, Snuff Out's life: told from the paid cast beside it (a resolution's free
+				// cast is a choice's option, whose text a record's fingerprint hashes — left as it was)
+				+ (
+					c.WithoutPayingManaCost && !c.DuringResolution
+						? " (not paying its mana cost)"
+						: ""
+				)
 				+ (c.Replicate > 0 ? $" (replicate ×{c.Replicate})" : "")
-				+ (c.Kicked ? " (kicked)" : "")
+				+ (c.Delve > 0 ? $" (delve {c.Delve})" : "")
+				+ (
+					c.Kicked
+						? $" ({s.GetCard(c.CardId).GetComponent<KickerComponent>()?.Word ?? "kicked"})"
+						: ""
+				)
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")
 				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : "")
 				+ (c.BeholdId != 0 ? $", beholding {Name(s, c.BeholdId)}" : "")
-				+ (c.ReturnId != 0 ? $", returning {Name(s, c.ReturnId)}" : ""),
+				+ (c.ReturnId != 0 ? $", returning {Name(s, c.ReturnId)}" : "")
+				+ (c.ExileId != 0 ? $", exiling {Name(s, c.ExileId)}" : "")
+				+ (c.LifeForPhyrexian > 0 ? $", paying {2 * c.LifeForPhyrexian} life" : ""),
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{WhichAbility(s, a)}"
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")
@@ -56,8 +77,11 @@ public static class Describe
 			ActivateLoyaltyAction l =>
 				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
 			TapForManaAction { SacrificeId: not 0 } t =>
-				$"Tap {Name(s, t.CardId)}, sacrificing {Name(s, t.SacrificeId)}, for {t.Color}",
+				$"Tap {Name(s, t.CardId)}, sacrificing {Name(s, t.SacrificeId)}, for {t.Color}{(t.OfTheOther > 0 ? $" ({t.OfTheOther} of its other colour)" : "")}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
+			TurnFaceUpAction f => TurnFaceUpAction.CardOf(s, f.PlayerId, f.CardId) is { } card
+				? $"Turn face up: {card.Name} ({card.ManaCost})"
+				: "Turn face up",
 			_ => action.GetType().Name,
 		};
 
@@ -85,6 +109,8 @@ public static class Describe
 		{
 			DeclareAttackerChoice a => $"Attack with {Card(s, s.GetCard(a.CreatureId))}?",
 			DeclareBlockerChoice b => $"Block with {Card(s, s.GetCard(b.CreatureId))}?",
+			AssignCombatDamageChoice d =>
+				$"{Name(s, d.AttackerId)}: how much damage to {Name(s, d.BlockerId)}? ({d.Options.Count - 1} left to divide)",
 			ChooseModesChoice m => $"{Name(s, m.SourceId)}: {m.Prompt.ToLowerInvariant()}",
 			ChooseTargetChoice t =>
 				$"{Name(s, t.SourceId)}: choose target {t.Index + 1}{(t.Spec.Optional ? " (optional)" : "")}",
@@ -99,7 +125,7 @@ public static class Describe
 
 	public static string Card(GameState s, Card c)
 	{
-		var parts = new List<string> { c.Name };
+		var parts = new List<string> { c.Name is "" ? "Face-down" : c.Name };
 		if (c.Is(CardType.Creature))
 			parts.Add($"{s.Power(c)}/{s.Toughness(c)}");
 		if (c.Is(CardType.Planeswalker))
@@ -142,9 +168,18 @@ public static class Describe
 
 	/// <summary>The chosen modes' printed lines, "Destroy … + You draw a card …" — for every front end.</summary>
 	public static string Modes(IReadOnlyList<Effects.Mode> modes, IEnumerable<int> chosen) =>
-		string.Join(" + ", chosen.Select(i => modes[i].Text.TrimStart('•', ' ')));
+		string.Join(" + ", chosen.Select(i => Line(modes[i])));
 
-	static string Name(GameState s, int id) => s.HasObject(id) ? s.GetObject(id).Name : $"#{id}";
+	/// <summary>A mode's printed line without its bullet — or, spree's "+ {1}{U} — Counter target spell.", its cost.</summary>
+	static string Line(Effects.Mode mode) =>
+		mode.Cost is null
+			? mode.Text.TrimStart('•', ' ')
+			: mode.Text[(mode.Text.IndexOf(" — ", StringComparison.Ordinal) + 3)..];
+
+	static string Name(GameState s, int id) =>
+		!s.HasObject(id) ? $"#{id}"
+		: s.GetObject(id).Name is "" ? "a face-down 2/2" // manifest dread: no name (CR 708.2)
+		: s.GetObject(id).Name;
 
 	static string Targets(GameState s, ImmutableArray<int> targets) =>
 		targets.IsDefaultOrEmpty || targets.All(t => t == 0)

@@ -120,7 +120,7 @@ public class FilterMigrationTests
 		RefKind.EachPlayer,
 		RefKind.Target,
 		RefKind.ControllerOfTarget,
-		RefKind.OwnerOfTarget,
+		RefKind.OwnerOf,
 		RefKind.Source,
 		RefKind.SourceHost, // keeps the Aura's last-known information
 		RefKind.EventCard,
@@ -130,6 +130,8 @@ public class FilterMigrationTests
 		RefKind.ActivePlayer, // Peace in Our Time: whose turn it is
 		RefKind.It, // Bristly Bill: the object an effect is acting on
 		RefKind.ThisWay, // Decree of Pain: what the effect did its thing to
+		RefKind.Chosen, // Temporal Conqueror: the card just chosen (MoveChosen)
+		RefKind.Id, // explore's revealed card: an id the engine knows as it builds the step
 	];
 
 	[TestCaseSource(nameof(RefRows))]
@@ -618,6 +620,7 @@ public class FilterMigrationTests
 		TriggerEvent.SelfBecomesTapped, // Is.Source, on the one tap path (MagicState.Tap)
 		TriggerEvent.YouAttackWithTotalPower8, // YouAttack + While, judged as it triggers
 		new Trigger(EventKind.CountersPut) { Subject = Is.Source, Chapter = 1 }, // a Saga's chapter: the lore count crossing N (Scripting.Chapter)
+		new Trigger(EventKind.BecameLevel) { Subject = Is.Source, Chapter = 2 }, // a Class's level: the level it became (Scripting.WhenLevel)
 		TriggerEvent.OneOrMoreCardsLeaveYourGraveyard, // one per batch (Trigger.OneOrMore)
 	];
 
@@ -625,6 +628,7 @@ public class FilterMigrationTests
 	static readonly Trigger[] ReadFromTheCard =
 	[
 		TriggerEvent.SelfDies, // the dying card as it last was
+		TriggerEvent.SelfLeaves, // the card that left the battlefield, as it last was
 		TriggerEvent.AttachedCreatureDies, // looks back through DiedEvent.Attached
 		TriggerEvent.SelfCast, // the spell on the stack
 		TriggerEvent.Reflexive, // put on the stack by WhenYouDo

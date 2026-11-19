@@ -75,14 +75,6 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 			s = s.MoveObject(c.Id, s.ZoneId(player, ZoneType.Exile)); // TEST SETUP
 	}
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP
-		return id;
-	}
-
 	void ToMyNextTurn()
 	{
 		var turn = s.GetGame().TurnNumber;
@@ -245,8 +237,14 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 				{
 					Restricted =
 					[
-						new RestrictedMana(ManaColor.Blue, ManaRestriction.OnlyNoncreatureSpells),
-						new RestrictedMana(ManaColor.Blue, ManaRestriction.OnlyNoncreatureSpells),
+						new RestrictedMana(
+							ManaColor.Blue,
+							new(!global::MagicCore.Filters.Is.Creature)
+						),
+						new RestrictedMana(
+							ManaColor.Blue,
+							new(!global::MagicCore.Filters.Is.Creature)
+						),
 					],
 				},
 			}
@@ -350,6 +348,19 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 			(asked, Life(them)),
 			Is.EqualTo((false, life - 6)),
 			"no target for it: it can't be cast"
+		);
+	}
+
+	[Test]
+	public void ChandraTorch_PlusOne_Declined_NoPermissionIsLeftOnTheCard()
+	{
+		var chandra = Walker("Chandra, Torch of Defiance");
+		var other = OnTop(TestGames.Inline("Other", "{1}", "Sorcery"));
+		Activate(chandra, 0, answer: _ => []);
+		Assert.That(
+			(s.IsIn(other, me, ZoneType.Exile), Casts(other).Any()),
+			Is.EqualTo((true, false)),
+			"\"you may cast that card\" is as it resolves, never later"
 		);
 	}
 

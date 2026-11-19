@@ -9,7 +9,13 @@ namespace MagicCore;
 /// <summary>Which permanents make mana, and when they may. The one place both are answered.</summary>
 public static class ManaAbilities
 {
-	public static IEnumerable<ManaColor> ColorsOf(GameState s, Card card)
+	/// <param name="paying">The spell (or ability source) the mana is for: only the abilities whose mana may pay for it
+	/// (Delighted Halfling's any colour, for a legendary spell). (null, null): mana that pays for anything. Unset: all.</param>
+	public static IEnumerable<ManaColor> ColorsOf(
+		GameState s,
+		Card card,
+		(Card? Spell, Card? AbilitySource)? paying = null
+	)
 	{
 		// A basic land type's mana ability is intrinsic (CR 305.6) — an ability all the same.
 		var intrinsic = card.Subtypes.Select(BasicLandColor).OfType<ManaColor>();
@@ -18,17 +24,105 @@ public static class ManaAbilities
 		return intrinsic
 			.Concat(
 				AbilitiesOf(s, card)
-					.Where(m => m.IsPlain)
+					.Where(m => Usable(s, card, m) && Pays(s, m, paying))
 					.SelectMany(m => m.AnyOneColor ? AnyColor : [m.Color])
 			)
 			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
 			.Distinct();
 	}
 
-	/// <summary>THE list of a permanent's mana abilities: its own, then those granted to it (Rok-Tahk, Rishkar).</summary>
-	public static IEnumerable<ManaAbilityComponent> AbilitiesOf(GameState s, Card card)
+	/// <summary>
+	/// Tapped as payment or by hand: plain (no mana cost, nothing picked), and what it costs beyond {T} payable —
+	/// Mana Confluence's "Pay 1 life" only with the life (Life.CanPay).
+	/// ponytail: each source is asked against the life alone, and the solver doesn't weigh pain or life
+	/// (DesignNotes, MagicCore known ceilings) — weigh them in ManaPayment.Solve if the AI pays needlessly.
+	/// </summary>
+	static bool Usable(GameState s, Card card, ManaAbilityComponent m) =>
+		m.IsPlain && m.Costs.All(c => c.Taps || c.CanPay(s, card.ControllerId, card.Id));
+
+	static bool Pays(
+		GameState s,
+		ManaAbilityComponent m,
+		(Card? Spell, Card? AbilitySource)? paying
+	) => paying is not { } p || Allows(m.Restriction, s, p.Spell, p.AbilitySource);
+
+	/// <summary>
+	/// Elvish Spirit Guide: "Exile this card from your hand: Add {G}." — the mana abilities of the cards in this
+	/// player's hand (From = Hand) whose mana may pay for it; never the spell being cast itself (it is still there).
+	/// </summary>
+	public static IEnumerable<(Card Card, ManaAbilityComponent Ability)> FromHand(
+		GameState s,
+		int playerId,
+		Card? forSpell,
+		Card? forAbilityOf
+	) =>
+		s.CardsIn(playerId, ZoneType.Hand)
+			.Where(c => c.Id != forSpell?.Id)
+			.SelectMany(c =>
+				AbilitiesOf(s, c, ZoneType.Hand)
+					.Where(m => Usable(s, c, m) && Pays(s, m, (forSpell, forAbilityOf)))
+					.Select(m => (c, m))
+			);
+
+	/// <summary>
+	/// The mana ability that made this colour — Talisman of Conviction's {C}, or its {R}/{W} that deals 1 damage:
+	/// the plain one making the most of it (YieldOf's pick), then the one costing nothing beyond {T}. Null for a
+	/// land type's intrinsic mana. Asked AFTER the payment chose it, so its costs aren't asked again: a second Mana
+	/// Confluence planned at 1 life still pays its life (the solver's ceiling, above), never makes its mana free.
+	/// </summary>
+	public static ManaAbilityComponent? Used(
+		GameState s,
+		Card card,
+		ManaColor color,
+		ZoneType from = ZoneType.Battlefield
+	)
 	{
-		var own = s.AbilitiesOf<ManaAbilityComponent>(card);
+		var context = Conditions.Of(card);
+		return AbilitiesOf(s, card, from)
+			// "any color" is never {C}: Delighted Halfling's {C} is its unrestricted ability's
+			.Where(m =>
+				m.IsPlain && (m.AnyOneColor ? color != ManaColor.Colorless : m.Color == color)
+			)
+			.OrderByDescending(m => m.Amount.Value(s, context))
+			.ThenBy(m => m.Costs.Count + m.DealsDamageToYou)
+			.FirstOrDefault();
+	}
+
+	/// <summary>
+	/// THE rest of tapping it for mana, beyond {T} and a Treasure's sacrifice: the ability's other costs (Mana
+	/// Confluence's life) and its damage to you (Talismans, Ancient Tomb) — manual tapping and payment alike; from the
+	/// hand, a Spirit Guide's exile.
+	/// </summary>
+	public static GameState PayAsUsed(
+		GameState s,
+		int playerId,
+		Card card,
+		ManaColor color,
+		ZoneType from = ZoneType.Battlefield
+	)
+	{
+		if (Used(s, card, color, from) is not { } m)
+			return s;
+		foreach (var cost in m.Costs.Where(c => !c.Taps && c is not SacrificeSelfCost))
+			s = cost.Pay(s, playerId, card.Id, 0);
+		return m.DealsDamageToYou > 0
+			? Rules.Damage.Deal(s, card, playerId, m.DealsDamageToYou)
+			: s;
+	}
+
+	/// <summary>
+	/// THE list of a permanent's mana abilities: its own, then those granted to it (Rok-Tahk, Rishkar). From another
+	/// zone, the card's own abilities that work there (a Spirit Guide's, From = Hand) — none granted.
+	/// </summary>
+	public static IEnumerable<ManaAbilityComponent> AbilitiesOf(
+		GameState s,
+		Card card,
+		ZoneType from = ZoneType.Battlefield
+	)
+	{
+		var own = s.AbilitiesOf<ManaAbilityComponent>(card).Where(m => m.From == from);
+		if (from != ZoneType.Battlefield)
+			return own;
 		var granted = Granted(s, card);
 		return granted is null ? own : own.Concat(granted);
 	}
@@ -66,6 +160,47 @@ public static class ManaAbilities
 			found.Add((g, grant));
 		(grantsOf, grants) = (s, found);
 		return found;
+	}
+
+	/// <summary>
+	/// Urza, Lord High Artificer: "Tap an untapped artifact you control: Add {U}." — this player's mana abilities whose
+	/// one cost taps ANOTHER permanent (TapUntappedCost) and whose mana may pay for this. The payment taps what their
+	/// filter matches, as convoke's creature (ManaPayment.Find) — never a move: a {T} it isn't, so summoning sickness
+	/// doesn't matter. ponytail: one mana each (Amount isn't read), and the colour it makes is paid as the tapped
+	/// permanent's own (PayAsUsed: a Talisman's damage, its activation event — convoke's too); tapping by hand can't
+	/// use it (TapOptions). Read Amount and pay as the holder when a card needs it.
+	/// </summary>
+	public static List<(
+		Card Holder,
+		ManaAbilityComponent Ability,
+		TapUntappedCost Cost
+	)> TappingAnother(GameState s, int playerId, (Card? Spell, Card? AbilitySource) paying)
+	{
+		List<(Card, ManaAbilityComponent, TapUntappedCost)> found = [];
+		foreach (var holder in s.CardsIn(playerId, ZoneType.Battlefield))
+		foreach (var m in AbilitiesOf(s, holder))
+			if (
+				m is { Cost: null, Costs: [TapUntappedCost { Count: 1 } cost] }
+				&& Pays(s, m, paying)
+			)
+				found.Add((holder, m, cost));
+		return found;
+	}
+
+	/// <summary>What tapping it for another permanent's ability pays (TappingAnother), or null.</summary>
+	public static ImmutableArray<ManaColor>? TappedFor(
+		GameState s,
+		Card card,
+		List<(Card Holder, ManaAbilityComponent Ability, TapUntappedCost Cost)> rules
+	)
+	{
+		if (card.IsTapped || rules.Count == 0)
+			return null;
+		ImmutableArray<ManaColor>? colors = null;
+		foreach (var (holder, m, cost) in rules)
+			if (cost.Filter.Matches(s, card, new(holder.ControllerId, holder.Id)))
+				colors = [.. (colors ?? []).Union(m.AnyOneColor ? AnyColor : [m.Color])];
+		return colors;
 	}
 
 	/// <summary>Plains, Island, Swamp, Mountain, Forest — domain counts these.</summary>
@@ -117,22 +252,33 @@ public static class ManaAbilities
 		GameState s,
 		Card? spell,
 		Card? abilitySource = null
-	) =>
-		restriction switch
-		{
-			ManaRestriction.OnlyArtifacts => (spell ?? abilitySource)?.Is(CardType.Artifact)
-				== true,
-			ManaRestriction.NotForSpellsFromHand => spell is null
-				|| !s.IsIn(spell.Id, spell.OwnerId, ZoneType.Hand),
-			ManaRestriction.OnlyPlaneswalkerSpells => spell is not null
-				&& spell.Is(CardType.Planeswalker),
-			ManaRestriction.OnlyNoncreatureSpells => spell is not null
-				&& !spell.Is(CardType.Creature),
-			_ => true,
-		};
+	)
+	{
+		if (
+			restriction.NotFromHand
+			&& spell is not null
+			&& s.IsIn(spell.Id, spell.OwnerId, ZoneType.Hand)
+		)
+			return false;
+		var paidFor = spell ?? (restriction.Abilities ? abilitySource : null);
+		return restriction.Spells is null
+			|| paidFor is not null
+				&& restriction.Spells.Matches(
+					s,
+					paidFor,
+					new Filters.FilterContext(paidFor.OwnerId, paidFor.Id)
+				);
+	}
 
 	/// <summary>THE answer to "what does tapping this make" — payment, manual tapping and the X bound all ask.</summary>
-	public static Yield YieldOf(GameState s, Card card)
+	/// <param name="paying">Payment's spell or ability source: the abilities whose mana can't pay for it are left out —
+	/// Delighted Halfling taps for {C} for a nonlegendary spell, any colour for a legendary one. (null, null): only mana
+	/// that pays for anything (its {C}, tapped by hand). Unset: every ability.</param>
+	public static Yield YieldOf(
+		GameState s,
+		Card card,
+		(Card? Spell, Card? AbilitySource)? paying = null
+	)
 	{
 		// Emrakul's grant: "{T}: Add {C}{C}" while that card is still the one in exile. ponytail: it
 		// replaces the land's own ability instead of being a second choice — the yield is one per
@@ -152,7 +298,7 @@ public static class ManaAbilities
 				false,
 				ManaRestriction.None
 			);
-		var colors = ColorsOf(s, card).ToImmutableArray();
+		var colors = ColorsOf(s, card, paying).ToImmutableArray();
 		if (colors.IsEmpty)
 			return new([], false, ManaRestriction.None);
 		var context = Conditions.Of(card);
@@ -164,7 +310,7 @@ public static class ManaAbilities
 		var most = 0;
 		foreach (var m in AbilitiesOf(s, card)) // a loop, not LINQ: payment asks per source
 		{
-			if (!m.IsPlain)
+			if (!Usable(s, card, m) || !Pays(s, m, paying))
 				continue;
 			first ??= m;
 			if (!m.AnyOneColor && m.Amount is { Kind: CountOf.Fixed, Fixed: 1 })

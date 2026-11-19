@@ -32,7 +32,14 @@ public static class FilterChoices
 }
 
 /// <summary>Who is asking: "you", "this", "the event's card". 0 where there is none.</summary>
-public readonly record struct FilterContext(int Controller, int Source = 0, int EventCard = 0);
+/// <param name="SourceIncarnation">The ability's source AS IT WAS (ContextKeys.SourceSnapshot), for "the exiled card"
+/// asked once the source has left; none where nothing resolves (a static, a cost): the source as it is now.</param>
+public readonly record struct FilterContext(
+	int Controller,
+	int Source = 0,
+	int EventCard = 0,
+	int? SourceIncarnation = null
+);
 
 /// <summary>
 /// "Creature you control", "other nontoken creature", "card with mana value 3 or less" — asked about
@@ -147,6 +154,21 @@ public sealed record NamedChosenName : Filter
 		&& s.GetObject(c.Source) is Card source
 		&& source.GetComponent<Effects.ChosenName>() is { } chosen
 		&& card.Name == chosen.Name;
+}
+
+/// <summary>True-Name Nemesis: "protection from the chosen player" — an object that player controls (ChosenPlayer on the source).</summary>
+public sealed record ControlledByChosenPlayer : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card
+		&& s.HasObject(c.Source)
+		&& s.GetObject(c.Source) is Card source
+		&& source.GetComponent<Effects.ChosenPlayer>() is { } chosen
+		&& card.ControllerId == chosen.PlayerId;
 }
 
 /// <summary>Koth: "a Plains"; Saheeli: "Thopters".</summary>
@@ -268,6 +290,7 @@ public enum Stat
 	Power,
 	Toughness,
 	ManaValue, // on the stack X counts (CR 202.3e)
+	PowerPlusToughness, // Cut Down: "total power and toughness"
 }
 
 /// <summary>
@@ -275,7 +298,7 @@ public enum Stat
 /// P/T, through s.Power / s.Toughness — a noncreature has 0, so add Is.Creature where the text says it.
 /// A bound may be counted (an int converts): Omnipresence's "less than or equal to the number of
 /// creatures you control", Sisay's "less than Sisay's power" — counted as it is asked, with the filter's
-/// controller and source (X reads 0 here).
+/// controller and source (X is the source's: Thieving Skydiver).
 /// </summary>
 public sealed record StatBetween(Stat Stat, Effects.Count Min, Effects.Count Max) : Filter
 {
@@ -295,6 +318,7 @@ public sealed record StatBetween(Stat Stat, Effects.Count Min, Effects.Count Max
 		{
 			Stat.Power => s.Power(card),
 			Stat.Toughness => s.Toughness(card),
+			Stat.PowerPlusToughness => s.Power(card) + s.Toughness(card),
 			_ => card.ManaValueNow,
 		};
 		return n >= Bound(s, Min, c) && n <= Bound(s, Max, c);
@@ -311,7 +335,24 @@ public sealed record StatBetween(Stat Stat, Effects.Count Min, Effects.Count Max
 						c.Controller
 					)
 					.Add(Effects.ContextKeys.Source, c.Source)
+					// Thieving Skydiver: "target artifact with mana value X or less" — the source's X, on the stack
+					// or as it was cast (CR 107.3m)
+					.Add(
+						Effects.ContextKeys.X,
+						bound.Kind == Effects.CountOf.X ? XOf(s, c.Source) : 0
+					)
 		);
+
+	/// <summary>
+	/// The source's X: on the stack its OnStackComponent.X, on the battlefield the X it was cast for (CR 107.3m).
+	/// ponytail: a SPELL's own target filter is judged in the hand as it is cast, where X reads 0, and an "{X}, {T}:"
+	/// ability's filter reads the permanent's cast X, not the X paid — thread the action's X through FilterContext
+	/// when such a card is scripted (DesignNotes).
+	/// </summary>
+	static int XOf(GameState s, int sourceId) =>
+		sourceId != 0 && s.HasObject(sourceId) && s.GetObject(sourceId) is Cards.Card source
+			? source.GetComponent<Actions.OnStackComponent>()?.X ?? source.CastX
+			: 0;
 }
 
 /// <summary>The yes/no properties HasProperty reads — one per property, never per combination.</summary>
@@ -336,6 +377,7 @@ public enum Property
 	DealtCombatDamage, // Ruric Thar: "as long as they haven't dealt combat damage yet"
 	Tapped, // U.S.S. Excelsior: "target tapped creature"
 	Modal, // Riku of Many Paths: "a modal spell" — its text has modes ("choose one —")
+	ExiledBySource, // Null Summoner: "the exiled card" — exiled by THIS object of the source (ExiledBy, CR 607.2a)
 }
 
 /// <summary>Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.</summary>
@@ -383,6 +425,16 @@ public sealed record HasProperty(Property Property) : Filter
 			Property.Tapped => card.IsTapped,
 			Property.Modal => card.GetComponent<Effects.SpellEffectsComponent>()
 				is { Modes.IsEmpty: false },
+			// Skyclave Apparition's "the exiled card", asked as it leaves: the object the ability came from.
+			Property.ExiledBySource => card.GetComponent<Effects.ExiledBy>() is { } link
+				&& link.SourceId == c.Source
+				&& (
+					c.SourceIncarnation is { } was
+						? link.SourceIncarnation == was
+						: s.HasObject(c.Source)
+							&& s.GetObject(c.Source) is Card source
+							&& source.Incarnation == link.SourceIncarnation
+				),
 			_ => false,
 		};
 }

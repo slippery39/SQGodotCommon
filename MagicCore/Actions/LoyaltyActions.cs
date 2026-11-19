@@ -71,13 +71,15 @@ public record ActivateLoyaltyAction : GameAction
 		if (Loyalty.AbilitiesOf(s, walker).ElementAtOrDefault(AbilityIndex) is not { } ability)
 			return ValidationResult.Invalid("No such loyalty ability");
 		var game = s.GetGame();
-		var instantSpeedJace =
-			walker.Subtypes.Contains("Jace")
-			&& s.ThisTurnEffects<Effects.JaceLoyaltyAtInstantSpeed>(PlayerId).Any();
-		if (!instantSpeedJace && !Priority.AtSorcerySpeed(s, PlayerId))
+		// Jace's Machinations (this turn, the player's) and The Wandering Emperor (her own, the turn she entered)
+		var atInstantSpeed = s.ThisTurnEffects<Effects.LoyaltyAtInstantSpeed>(PlayerId)
+			.Select(c => c.GetComponent<Effects.LoyaltyAtInstantSpeed>()!)
+			.Concat(s.AbilitiesOf<Effects.LoyaltyAtInstantSpeed>(walker))
+			.Any(rule => rule.Of.Matches(s, walker, new(PlayerId, walker.Id)));
+		if (!atInstantSpeed && !Priority.AtSorcerySpeed(s, PlayerId))
 			return ValidationResult.Invalid("Loyalty abilities are sorcery speed");
-		if (Turns.Combat.LockedDown(s, PlayerId)) // split second, Yuriko, Sen Triplets
-			return ValidationResult.Invalid("No abilities now: combat lockdown or split second");
+		if (Turns.Combat.LockedDown(s, PlayerId, walker)) // split second, Yuriko, Sen Triplets, Clarion Conqueror
+			return ValidationResult.Invalid("No abilities now: a lock or split second");
 		if (walker.LoyaltyActivatedOnTurn == game.TurnNumber)
 			return ValidationResult.Invalid(
 				"Already activated a loyalty ability of this planeswalker this turn"

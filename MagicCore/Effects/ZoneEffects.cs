@@ -108,24 +108,44 @@ public record Flicker(Ref What) : Effect
 	/// </summary>
 	public bool AtNextEndStep { get; init; }
 
-	static readonly TriggeredAbilityComponent ReturnItAtTheEndStep =
-		new(
-			TriggerEvent.EachEndStep,
-			[new ReturnFromExileUnderYourControl(Ref.Source) { UnderItsOwnersControl = true }]
-		);
+	/// <summary>
+	/// Phelia, Exuberant Shepherd: "… return that card to the battlefield under its owner's control. If it entered
+	/// under your control, put a +1/+1 counter on Phelia." — run by the delayed return (AtNextEndStep), after it:
+	/// Ref.ThisWay is the card as it entered, Ref.EventObject the object this ability came from.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
 
 	public override ActionResult Execute(GameState s)
 	{
+		if (!Then.IsEmpty && !AtNextEndStep)
+			throw new NotSupportedException("Flicker.Then is the delayed return's (AtNextEndStep)");
+		var returnIt = !AtNextEndStep
+			? null
+			: new DelayedTrigger(
+				new TriggeredAbilityComponent(
+					TriggerEvent.EachEndStep,
+					[
+						new MoveTo(Ref.Source, ZoneType.Battlefield)
+						{
+							From = [ZoneType.Exile],
+							Then = Then,
+						},
+					]
+				)
+			)
+			{
+				ControllerId = Controller, // CR 603.7d: yours
+				// the object this ability came from, not whatever has its id now (CR 400.7)
+				MadeBy = Then.IsEmpty
+					? null
+					: GetInput<Card?>(ContextKeys.SourceSnapshot) ?? Source(s),
+			};
 		foreach (var card in Permanents(What, s).ToList())
 		{
 			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Exile));
 			if (!card.IsToken && s.IsIn(card.Id, card.OwnerId, ZoneType.Exile))
-				s = AtNextEndStep
-					? ReturnFromExileUnderYourControl.Delay(
-						s,
-						card.Id,
-						new DelayedTrigger(ReturnItAtTheEndStep) { ControllerId = Controller } // CR 603.7d: yours
-					)
+				s = returnIt is not null
+					? MoveTo.Delay(s, card.Id, returnIt)
 					: s.EnterBattlefield(card.Id, card.OwnerId);
 		}
 		return new(s);
@@ -224,11 +244,7 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 		{
 			s = s.EnterBattlefield(hit, Controller, tapped: Tapped);
 			if (SacrificeAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					hit,
-					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, hit, MoveTo.SacrificeItAtTheEndStep);
 		}
 		// ponytail: Deep Space 9's permanents go library -> battlefield, never through exile; a card that
 		// watches cards leaving exile would miss them. Move them via exile if one appears.
@@ -238,16 +254,11 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 				s = s.MoveCard(id, s.ZoneId(Controller, ZoneType.Exile));
 			return new(s);
 		}
-		(var rng, s) = s.TakeRng();
-		rng.Shuffle(rest);
-		var libraryId = s.ZoneId(Controller, ZoneType.Library);
-		// Out and back in: MoveObject appends, and the end is the bottom. Not marked known (story AI-3):
-		// their ORDER is random, and a miss sends the whole library down — known, its real order would
-		// survive "shuffle what isn't known". ponytail: so they are shuffled with the rest, losing "they
-		// are at the bottom"; keep them at the bottom, shuffled among themselves, if that ever matters.
-		foreach (var id in rest)
-			s = s.MoveObject(id, 0).MoveObject(id, libraryId);
-		return new(s);
+		// Not known (story AI-3): their ORDER is random, and a miss sends the whole library down — known,
+		// its real order would survive "shuffle what isn't known". ponytail: so they are shuffled with the
+		// rest, losing "they are at the bottom"; keep them at the bottom, shuffled among themselves, if that
+		// ever matters.
+		return new(s.ToBottomAtRandom(Controller, rest));
 	}
 }
 
@@ -292,7 +303,7 @@ public record Exile(Ref What) : Effect
 
 	/// <summary>
 	/// The Measure of a Man: "I — Exile up to one target …" whose III returns "the exiled card" — linked
-	/// to this object of the source (ExiledBy, CR 607.2a); ReturnLinkedExile brings it back.
+	/// to this object of the source (ExiledBy, CR 607.2a); MoveTo(Ref.All(Exile, Is.ExiledBySource)) brings it back.
 	/// </summary>
 	public bool Linked { get; init; }
 
@@ -335,10 +346,19 @@ public record Surveil(int N) : Effect
 	/// <summary>Riders on the cards put into the graveyard "this way" — they read the surveil's choice.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
 
+	/// <summary>
+	/// Where the chosen go. Library is a scry (CR 701.22, Preordain: "look at the top two cards of your library, then put
+	/// any number of them on the bottom and the rest on top in any order") — the bottom, and no surveil: no
+	/// SurveilledEvent, no tally. ponytail: the bottom ones go in the order chosen, never asked (CR 701.22a: any order);
+	/// ask it as the top's order is if a card ever reads the bottom.
+	/// </summary>
+	public ZoneType To { get; init; } = ZoneType.Graveyard;
+
 	public override ActionResult Execute(GameState s)
 	{
-		s = s.Tally(Controller, t => t with { Surveils = t.Surveils + 1 }) // "if you've surveilled"
-			.Raise(new SurveilledEvent(Controller));
+		if (To == ZoneType.Graveyard)
+			s = s.Tally(Controller, t => t with { Surveils = t.Surveils + 1 }) // "if you've surveilled"
+				.Raise(new SurveilledEvent(Controller));
 		var n = Math.Min(N, s.CardsIn(Controller, ZoneType.Library).Count());
 		if (n == 0)
 			return new(s);
@@ -354,7 +374,9 @@ public record Surveil(int N) : Effect
 				MinChoices = 0,
 				MaxChoices = n,
 			},
-			new MoveChosenToGraveyardAction { PlayerId = Controller },
+			To == ZoneType.Graveyard
+				? new MoveChosenToGraveyardAction { PlayerId = Controller }
+				: new MoveChosenToAction(Controller, To),
 			new OrderKeptOnTopAction { PlayerId = Controller, Looked = n },
 			.. Then,
 		];
@@ -408,29 +430,59 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>Tenured Tethermage: "create two tapped Heartwood tokens".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>
+	/// Skyclave Apparition: "an X/X blue Illusion creature token, where X is the mana value of the exiled card" —
+	/// the tokens' power and toughness, counted once as it resolves.
+	/// </summary>
+	public Count? Size { get; init; }
+
 	/// <summary>L'Rell, Fierce Visionary: "Sacrifice it at the beginning of the next end step." — set once it has entered.</summary>
 	public bool SacrificeAtNextEndStep { get; init; }
+
+	/// <summary>
+	/// Voice of Victory's mobilize: "create two tapped and attacking 1/1 red Warrior creature tokens" — attacking
+	/// as they enter (EnterBattlefield), never declared, so no "whenever … attacks" (CR 508.4); the opponent, as Kira's.
+	/// </summary>
+	public bool Attacking { get; init; }
 
 	/// <summary>Gwyndala, the Progeny: "create … Neuroflux Heirloom … Attach it to Gwyndala." — once it has entered, if that is still there.</summary>
 	public Ref? AttachTo { get; init; }
 
+	/// <summary>
+	/// Cori-Steel Cutter: "create a 1/1 white Monk creature token with prowess. You may attach this Equipment to it." —
+	/// run after, with Ref.ThisWay the tokens created (as Destroy.Then, Decree of Pain).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
-		var count = Count.Value(s, InputContext);
+		var made = ImmutableArray.CreateBuilder<int>();
 		var counters = Counters.Value(s, InputContext);
 		var controller = ControlledBy is null ? Controller : All(ControlledBy, s).FirstOrDefault();
 		if (controller == 0)
 			return new(s);
-		var template = Instead(
+		var count = Replacements.Apply( // Elspeth, Storm Slayer: "twice that many of those tokens"
 			s,
-			controller,
-			CardFactory.Create(new(Token, Abilities), controller)
+			ReplacedEvent.Tokens,
+			s.GetPlayer(controller),
+			Count.Value(s, InputContext)
 		);
+		var printed = CardFactory.Create(new(Token, Abilities), controller);
+		if (Size?.Value(s, InputContext) is { } size)
+			printed = printed with { BasePower = size, BaseToughness = size };
+		var template = Instead(s, controller, printed);
 		for (var i = 0; i < count; i++)
 		{
 			var token = template with { IsToken = true };
 			(s, token) = s.AddObject(token);
-			s = s.EnterBattlefield(token.Id, controller, extraCounters: counters, tapped: Tapped);
+			made.Add(token.Id);
+			s = s.EnterBattlefield(
+				token.Id,
+				controller,
+				extraCounters: counters,
+				tapped: Tapped,
+				attacking: Attacking
+			);
 			if (GainsUntilEndOfTurn is { } keyword)
 				s = Update(
 					s,
@@ -443,13 +495,22 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 			)
 				s = Attachments.Attach(s, token.Id, host.Id);
 			if (SacrificeAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					token.Id,
-					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, token.Id, MoveTo.SacrificeItAtTheEndStep);
 		}
-		return new(s);
+		return Then.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							made.ToImmutable()
+						),
+						Steps = Then,
+					}
+				)
+			);
 	}
 
 	/// <summary>
@@ -497,8 +558,14 @@ public record CreateTokenCopy(Ref What) : Effect
 	/// <summary>Replicator: "Create a tapped token that's a copy of target token you control."</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>Squad (Sicarian Infiltrator): "create that many tokens that are copies of it" — how many of each; unset is one.</summary>
+	public Count? N { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var n = N?.Value(s, InputContext) ?? 1;
+		if (n <= 0)
+			return new(s);
 		var originals = OfAnExiledCard
 			? All(What, s)
 				.Where(id => s.GetObject(id) is Card c && s.IsIn(id, c.OwnerId, ZoneType.Exile))
@@ -511,7 +578,8 @@ public record CreateTokenCopy(Ref What) : Effect
 			&& GetInput<Card?>(ContextKeys.SourceSnapshot) is { } lastKnown
 		)
 			originals.Add(lastKnown);
-		foreach (var original in originals)
+		var each = Replacements.Apply(s, ReplacedEvent.Tokens, s.GetPlayer(Controller), n); // Elspeth: twice that many
+		foreach (var original in originals.SelectMany(o => Enumerable.Repeat(o, each)))
 		{
 			var copy = new Card
 			{
@@ -538,36 +606,70 @@ public record CreateTokenCopy(Ref What) : Effect
 			s = s.EnterBattlefield(copy.Id, Controller, tapped: Tapped);
 			// after entering: a zone change strips a delayed trigger, entering included
 			if (ExileAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					copy.Id,
-					ReturnFromExileUnderYourControl.ExileItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, copy.Id, MoveTo.ExileItAtTheEndStep);
 			if (SacrificeAtNextEndStep)
-				s = ReturnFromExileUnderYourControl.Delay(
-					s,
-					copy.Id,
-					ReturnFromExileUnderYourControl.SacrificeItAtTheEndStep
-				);
+				s = MoveTo.Delay(s, copy.Id, MoveTo.SacrificeItAtTheEndStep);
 		}
 		return new(s);
 	}
 }
 
 /// <summary>
-/// Vindictive Triumph: "return it to the battlefield tapped under your control. Exile it at the
-/// beginning of the next end step." — a card exiled earlier in this resolution; a token that left
-/// can't come back (CR 111.8).
+/// MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) — "return this card from your
+/// graveyard to the battlefield" (Darklight Phoenix), "return target creature to its owner's hand" (Unsummon), "put
+/// target nonland permanent on the bottom of its owner's library" (Paradox Shaper), "its owner shuffles it into their
+/// library" (Fblthp), "return it to the battlefield tapped under your control. Exile it at the beginning of the next end
+/// step" (Vindictive Triumph), "return the exiled card" (The Measure of a Man: <c>Ref.All(Exile, Is.ExiledBySource)</c>).
+/// Onto the battlefield through EnterBattlefield, under its owner unless <see cref="UnderYourControl"/>. A token that
+/// has left the battlefield moves nowhere (CR 111.8).
 /// </summary>
-public record ReturnFromExileUnderYourControl(Ref What) : Effect
+public record MoveTo(Ref What, ZoneType To) : Effect
 {
+	/// <summary>
+	/// Where it must be now — "from your graveyard" is [Graveyard] (its owner's), Unsummon's "spell or creature"
+	/// [Battlefield, Stack] (anyone's), Talon Gates' "from your hand" [Hand]. Empty: wherever it is (Paradox Shaper).
+	/// </summary>
+	public ImmutableList<ZoneType> From { get; init; } = [];
+
+	/// <summary>Gallia, Tragic Host: "to the battlefield tapped".</summary>
 	public bool Tapped { get; init; }
 
-	/// <summary>"Exile it at the beginning of the next end step" — a delayed trigger on it.</summary>
+	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
+	public int Counters { get; init; }
+
+	/// <summary>Grim Repriser, Proctor: "with a finality counter on it".</summary>
+	public bool Finality { get; init; }
+
+	/// <summary>Vindictive Triumph: "under your control" — unset is its owner's (Ghost of Illyria, The Measure of a Man).</summary>
+	public bool UnderYourControl { get; init; }
+
+	/// <summary>Vindictive Triumph: "Exile it at the beginning of the next end step" — a delayed trigger on it.</summary>
 	public bool ExileAtNextEndStep { get; init; }
 
-	/// <summary>Ghost of Illyria: "Return that card to the battlefield under its owner's control".</summary>
-	public bool UnderItsOwnersControl { get; init; }
+	/// <summary>Clash of Elements: "on top of its owner's library" — unset is the bottom.</summary>
+	public bool OnTop { get; init; }
+
+	/// <summary>
+	/// How far below the top — Oust: "into its owner's library second from the top" (1), Unexpectedly Absent: "just
+	/// beneath the top X cards of that library" (Count.X; 0 is the top). A library with fewer cards: the bottom.
+	/// </summary>
+	public Count? Beneath { get; init; }
+
+	/// <summary>Fblthp, Those Old Scientists: "shuffles it into their library" — its owner shuffles, once per card.</summary>
+	public bool Shuffle { get; init; }
+
+	/// <summary>
+	/// Enduring Innocence: "return it to the battlefield under its owner's control. It's an enchantment. (It's not a
+	/// creature.)" — the types it isn't, for as long as it stays: EnterBattlefield stamps it as it enters, so no
+	/// "whenever a creature enters" and no Containment Priest sees a creature.
+	/// </summary>
+	public CardType Loses { get; init; }
+
+	/// <summary>
+	/// Phelia, Exuberant Shepherd: "If it entered under your control, …" — run after, with Ref.ThisWay the cards
+	/// that moved (as Destroy.Then).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
 
 	/// <summary>"Exile it at the beginning of the next end step" — CreateTokenCopy's too.</summary>
 	internal static readonly DelayedTrigger ExileItAtTheEndStep =
@@ -589,85 +691,165 @@ public record ReturnFromExileUnderYourControl(Ref What) : Effect
 	internal static GameState Delay(GameState s, int id, DelayedTrigger trigger) =>
 		Update(s, (Card)s.GetCard(id).WithComponent(trigger));
 
+	bool IsWhereItMustBe(GameState s, Card card) =>
+		From.IsEmpty
+		|| From.Any(zone =>
+			zone switch
+			{
+				ZoneType.Battlefield => s.IsOnBattlefield(card.Id),
+				ZoneType.Stack => s.GetParent(card.Id) == s.GetWellKnownId(MagicKeys.Stack),
+				_ => s.IsIn(card.Id, card.OwnerId, zone),
+			}
+		);
+
 	public override ActionResult Execute(GameState s)
 	{
+		var moved = ImmutableArray.CreateBuilder<int>();
 		foreach (var id in All(What, s).ToList())
 		{
 			if (
-				s.GetObject(id) is not Card { IsToken: false } card
-				|| !s.IsIn(id, card.OwnerId, ZoneType.Exile)
+				s.GetObject(id) is not Card card
+				|| !IsWhereItMustBe(s, card)
+				|| (card.IsToken && !s.IsOnBattlefield(id))
 			)
 				continue;
-			s = s.EnterBattlefield(
-				id,
-				UnderItsOwnersControl ? card.OwnerId : Controller,
-				tapped: Tapped
-			);
-			if (ExileAtNextEndStep)
-				s = Delay(s, id, ExileItAtTheEndStep);
+			if (To == ZoneType.Battlefield)
+			{
+				s = s.EnterBattlefield(
+					id,
+					UnderYourControl ? Controller : card.OwnerId,
+					extraCounters: Counters,
+					tapped: Tapped,
+					finality: Finality,
+					loses: Loses
+				);
+				if (!s.IsOnBattlefield(id))
+					continue; // Containment Priest exiled it instead
+				moved.Add(id);
+				if (ExileAtNextEndStep)
+					s = Delay(s, id, ExileItAtTheEndStep);
+				continue;
+			}
+			moved.Add(id);
+			var zone = s.ZoneId(card.OwnerId, To);
+			var above = s.GetChildrenIds(zone)
+				.Where(other => other != id)
+				.Take(Beneath?.Value(s, InputContext) ?? 0)
+				.Reverse()
+				.ToList();
+			s = s.MoveCard(id, zone, toTop: OnTop || Beneath is not null);
+			foreach (var top in above) // back on top, in their order — a reorder: each as known as it was
+				s = s.MoveObjectToFront(top, zone);
+			if (Shuffle && To == ZoneType.Library)
+				s = s.Shuffle(card.OwnerId);
 		}
-		return new(s);
-	}
-}
-
-/// <summary>
-/// The Measure of a Man: "III — Return the exiled card to the battlefield under its owner's control." —
-/// every card this object of the source exiled (Exile.Linked); nothing once the source left (CR 607.2a).
-/// </summary>
-public record ReturnLinkedExile : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		if (!Ref.Source.Resolve(s, InputContext).Any() || !s.IsOnBattlefield(Source(s).Id))
-			return new(s);
-		var source = Source(s);
-		foreach (
-			var card in new[] { s.Player1Id(), s.Player2Id() }
-				.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
-				.Where(c =>
-					c.GetComponent<ExiledBy>() is { } by
-					&& by.SourceId == source.Id
-					&& by.SourceIncarnation == source.Incarnation
+		return Then.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							moved.ToImmutable()
+						),
+						Steps = Then,
+					}
 				)
-				.ToList()
-		)
-			s = s.EnterBattlefield(card.Id, card.OwnerId);
-		return new(s);
+			);
 	}
 }
 
 /// <summary>
-/// Temporal Conqueror: "Then return a land card from your graveyard to your hand. If you can't, create a
-/// Treasure token." — chosen, not targeted; Otherwise runs only when there is none.
+/// MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your hand. If you can't, create a
+/// Treasure token" (Temporal Conqueror), "exile a card from your graveyard" (Sylvia Tilly), "you may put a land card
+/// from your hand onto the battlefield. If you do, …" and "return a land you control to its owner's hand" (Erica
+/// Ortegas). The controller picks one of their From zone's cards the filter matches (null: any), then MoveTo. Each zone
+/// keeps its own choice: a graveyard's is ChooseAmongChoice, the battlefield's ChoosePermanentChoice, the hand's
+/// ChooseCardsFromHandChoice.
 /// </summary>
-public record ReturnFromYourGraveyard(Filters.Filter? Filter) : Effect // null: any card (Sylvia Tilly)
+public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : Effect
 {
+	/// <summary>Erica Ortegas: "you MAY put" — none is an answer, and it is asked even with nothing to pick.</summary>
+	public bool May { get; init; }
+
+	/// <summary>Erica Ortegas: "If you do, …" — after a pick.</summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	/// <summary>Temporal Conqueror: "If you can't, create a Treasure token." — nothing to pick; with May, "if you don't".</summary>
 	public ImmutableList<GameAction> Otherwise { get; init; } = [];
 
-	/// <summary>Sylvia Tilly: "exile a card from your graveyard" — chosen as it resolves, not targeted.</summary>
-	public ZoneType To { get; init; } = ZoneType.Hand;
+	/// <summary>The question on the table; unset says where it goes.</summary>
+	public string? Prompt { get; init; }
+
+	/// <summary>Brainstorm: "put two cards from your hand on top of your library in any order" — two of these, the second on top.</summary>
+	public bool OnTop { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
-		var choice = new ChooseAmongChoice
+		var prompt =
+			Prompt
+			?? To switch
+			{
+				ZoneType.Hand when From == ZoneType.Battlefield => "Return to its owner's hand",
+				ZoneType.Hand => "Put one into your hand",
+				ZoneType.Exile => "Exile one",
+				ZoneType.Battlefield => "Put one onto the battlefield",
+				_ => $"Put one into your {To.ToString().ToLowerInvariant()}",
+			};
+		ChoiceAction choice = From switch
 		{
-			PlayerId = Controller,
-			Ids = [.. s.CardsIn(Controller, ZoneType.Graveyard).Select(c => c.Id)],
-			Filter = Filter,
-			MinChoices = 1,
-			Prompt = To == ZoneType.Exile ? "Exile one" : "Put one into your hand",
-		};
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
-					Steps = choice.GetOptions(s, InputContext).IsEmpty
-						? Otherwise
-						: [choice, new MoveChosenToAction(Controller, To)],
-				}
+			ZoneType.Graveyard => new ChooseAmongChoice
+			{
+				PlayerId = Controller,
+				Ids = [.. s.CardsIn(Controller, ZoneType.Graveyard).Select(c => c.Id)],
+				Filter = Filter,
+				MinChoices = May ? 0 : 1,
+				Prompt = prompt,
+			},
+			ZoneType.Battlefield => new ChoosePermanentChoice(
+				Controller,
+				GetInput<int>(ContextKeys.Source),
+				Filter,
+				required: !May
 			)
-		);
+			{
+				Prompt = prompt,
+				OutputKey = ChooseCardsFromHandChoice.Chosen, // Ref.Chosen reads one key
+			},
+			ZoneType.Hand => new ChooseCardsFromHandChoice
+			{
+				PlayerId = Controller,
+				Filter = Filter,
+				MinChoices = May ? 0 : 1,
+				MaxChoices = 1,
+				Prompt = prompt,
+			},
+			_ => throw new NotSupportedException($"a chosen move from {From}"),
+		};
+		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
+		if (!May && choice.GetOptions(s, InputContext).IsEmpty)
+			return Otherwise.IsEmpty
+				? new(s)
+				: new(
+					s.SpawnAction(
+						new PipelineAction { PipelineContext = context, Steps = Otherwise }
+					)
+				);
+		ImmutableList<GameAction> steps =
+		[
+			choice,
+			new MoveTo(Ref.Chosen, To) { From = [From], OnTop = OnTop },
+		];
+		if (!Then.IsEmpty || (May && !Otherwise.IsEmpty))
+			steps = steps.Add(
+				new IfChosenAction(Then)
+				{
+					Key = ChooseCardsFromHandChoice.Chosen,
+					Otherwise = May ? Otherwise : [],
+				}
+			);
+		return new(s.SpawnAction(new PipelineAction { PipelineContext = context, Steps = steps }));
 	}
 }
 
@@ -696,76 +878,33 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 }
 
 /// <summary>
-/// Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card. If you
-/// don't, [Otherwise]." Cast right then (CastNow), paying its cost. Asked only when it could be cast —
-/// a land, or one you can't pay for or target with, is "don't".
-/// ponytail: "If you don't" runs on a NO to the up-front question only; backing out of the cast itself
-/// afterwards (an empty answer to ChooseCastChoice, TBL-2.16) casts nothing and skips it - make the decline answer
-/// the question again if a table player ever says yes and then backs out for the damage.
+/// "You may cast one of [these cards]" as it resolves — one chosen among those that can be cast now (CastNow), or
+/// none. Brazen Bluff: "you may cast a noncreature spell from your hand without paying its mana cost"
+/// (Ref.All(Hand, !Is.Creature, Ref.You)); Bilbo, Thief in the Night: "you may cast an artifact, instant, or sorcery
+/// spell from your graveyard" (paid); Malcolm, Alluring Scoundrel: "you may cast the discarded card without paying
+/// its mana cost" (Ref.Chosen, in Discard.Then).
 /// </summary>
-public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
+public record CastOneOf(Ref Among) : Effect
 {
-	public override ActionResult Execute(GameState s)
-	{
-		var top = s.CardsIn(Controller, ZoneType.Library).FirstOrDefault();
-		if (top is not null)
-			s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
-		var castable =
-			top is not null && CastNow.CanCast(s, Controller, s.GetCard(top.Id), free: false);
-		if (!castable)
-			return new(
-				s.SpawnAction(
-					new PipelineAction { Steps = Otherwise, PipelineContext = InputContext }
-				)
-			);
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps =
-					[
-						new YesNoChoice(Controller, $"Cast {top!.Name}?"),
-						new IfChosenAction([new CastNow(top.Id, Free: false)])
-						{
-							Otherwise = Otherwise,
-						},
-					],
-				}
-			)
-		);
-	}
-}
+	/// <summary>"Without paying its mana cost" — X is 0. Unset, the spell is paid for (Bilbo).</summary>
+	public bool Free { get; init; } = true;
 
-/// <summary>Brazen Bluff: "That player may exile it." — a spell (a card on the stack), to its owner's exile.</summary>
-public record ExileSpell(Ref What) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var stack = s.GetWellKnownId(MagicKeys.Stack);
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card spell && s.GetParent(id) == stack)
-				s = s.MoveCard(id, s.ZoneId(spell.OwnerId, ZoneType.Exile));
-		return new(s);
-	}
-}
+	/// <summary>
+	/// Bilbo: "If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead" — the
+	/// spells this filter matches are exiled leaving the stack, as flashback's (CastSpellAction.ExiledLeavingTheStack).
+	/// </summary>
+	public Filters.Filter? Exiled { get; init; }
 
-/// <summary>
-/// Brazen Bluff: "you may cast a noncreature spell from your hand without paying its mana cost" — one
-/// chosen among those that can be cast free now (CastNow).
-/// </summary>
-public record CastFromHandFree(Filters.Filter What) : Effect
-{
 	public override ActionResult Execute(GameState s)
 	{
 		ImmutableList<int> castable =
 		[
-			.. s.CardsIn(Controller, ZoneType.Hand)
-				.Where(c =>
-					What.Matches(s, c, new(Controller, 0))
-					&& CastNow.CanCast(s, Controller, c, free: true)
-				)
-				.Select(c => c.Id),
+			.. All(Among, s)
+				.Where(id =>
+					s.HasObject(id)
+					&& s.GetObject(id) is Card c
+					&& CastNow.CanCast(s, Controller, c, free: Free)
+				),
 		];
 		return castable.IsEmpty
 			? new(s)
@@ -780,10 +919,12 @@ public record CastFromHandFree(Filters.Filter What) : Effect
 							{
 								PlayerId = Controller,
 								Ids = castable,
-								Zone = ZoneType.Hand,
-								Prompt = "You may cast one free",
+								Zone = (
+									(Zone)s.GetObject(s.GetParent(castable[0])!.Value)
+								).ZoneType,
+								Prompt = Free ? "You may cast one free" : "You may cast one",
 							},
-							new CastChosenFree(),
+							new CastChosen { Free = Free, Exiled = Exiled },
 						],
 					}
 				)
@@ -791,9 +932,18 @@ public record CastFromHandFree(Filters.Filter What) : Effect
 	}
 }
 
-/// <summary>After the choice: the chosen card cast free (CastNow), if one was chosen.</summary>
-public record CastChosenFree : Effect
+/// <summary>
+/// After CastOneOf's choice: the chosen card cast (CastNow), if one was chosen — Bilbo, Thief in the Night: "you may
+/// cast an artifact, instant, or sorcery spell from your graveyard", paid.
+/// </summary>
+public record CastChosen : Effect
 {
+	/// <summary>Malcolm, Alluring Scoundrel: "without paying its mana cost".</summary>
+	public bool Free { get; init; }
+
+	/// <summary>Bilbo: "If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead".</summary>
+	public Filters.Filter? Exiled { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		ChooseCardsFromHandChoice.Read(InputContext).FirstOrDefault() is > 0 and var id
 			? new(
@@ -801,7 +951,18 @@ public record CastChosenFree : Effect
 					new PipelineAction
 					{
 						PipelineContext = InputContext,
-						Steps = [new CastNow(id, Free: true)],
+						Steps =
+						[
+							new CastNow(id, Free)
+							{
+								ExiledLeavingTheStack =
+									Exiled?.Matches(
+										s,
+										s.GetCard(id),
+										new(Controller, GetInput<int>(ContextKeys.Source))
+									) ?? false,
+							},
+						],
 					}
 				)
 			)
@@ -835,10 +996,7 @@ public record Assimilate(Ref What) : Effect
 		return s.UpdateObject(
 			cardId,
 			(Card)
-				(card with { Types = card.Types | CardType.Artifact })
-					.WithComponent(
-						new Animated(0, 0, card.Types, null, card.BasePower, card.BaseToughness)
-					)
+				card.WithTypesUntilItLeaves(card.Types | CardType.Artifact)
 					.WithComponent(
 						new Cards.UntilEndOfTurn
 						{
@@ -858,22 +1016,11 @@ public record AssimilateExiledWithSource(ImmutableList<GameAction> IfYouCant) : 
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var source = Ref.Source.Resolve(s, InputContext).Any() ? Source(s) : null;
 		ImmutableList<int> linked =
-			source is null || !s.IsOnBattlefield(source.Id)
-				? []
-				:
-				[
-					.. new[] { s.Player1Id(), s.Player2Id() }
-						.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
-						.Where(c =>
-							c.Is(CardType.Creature)
-							&& c.GetComponent<ExiledBy>() is { } by
-							&& by.SourceId == source.Id
-							&& by.SourceIncarnation == source.Incarnation
-						)
-						.Select(c => c.Id),
-				];
+		[
+			.. Ref.All(ZoneType.Exile, Filters.Is.Creature & Filters.Is.ExiledBySource)
+				.Resolve(s, InputContext),
+		];
 		if (linked.IsEmpty)
 			return new(
 				s.SpawnAction(
@@ -918,117 +1065,6 @@ public record AssimilateChosen : Effect
 }
 
 /// <summary>
-/// The Caretaker: "target opponent exiles cards from the top of their library until they exile a
-/// nonland card. You may cast that card without paying its mana cost." — cast right then (CastNow,
-/// free), asked only when it could be; the rest stay exiled. Discover N (U.S.S. Discovery, CR 701.57):
-/// with ManaValueAtMost, OrIntoHand and RestOnBottom.
-/// </summary>
-public record ExileUntilNonlandCastFree(Ref Of) : Effect
-{
-	/// <summary>Discover 5: "until you exile a nonland card with mana value 5 or less".</summary>
-	public int? ManaValueAtMost { get; init; }
-
-	/// <summary>Discover: "Cast it without paying its mana cost or put it into your hand."</summary>
-	public bool OrIntoHand { get; init; }
-
-	/// <summary>Discover: "Put the rest on the bottom in a random order."</summary>
-	public bool RestOnBottom { get; init; }
-
-	/// <summary>Q, Stacking the Deck: "shuffle your library, then exile cards …".</summary>
-	public bool ShuffleFirst { get; init; }
-
-	/// <summary>
-	/// Q, Stacking the Deck: "That nonland card gains '[ability]'" — in place of the cast: an UntilEndOfTurn
-	/// that never ends, so the card has it while it stays this exiled object.
-	/// </summary>
-	public ActivatedAbilityComponent? Gains { get; init; }
-
-	public override ActionResult Execute(GameState s)
-	{
-		if (
-			All(Of, s).FirstOrDefault(id => s.GetObject(id) is MagicPlayer)
-			is not (> 0 and var owner)
-		)
-			return new(s);
-		if (ShuffleFirst)
-			s = s.Shuffle(owner);
-		var library = s.CardsIn(owner, ZoneType.Library).ToList();
-		var hit = library.FirstOrDefault(c =>
-			!c.Is(CardType.Land)
-			&& (ManaValueAtMost is not { } most || c.ManaCost.ManaValue <= most)
-		);
-		var exiled = hit is null ? library : library.TakeWhile(c => c.Id != hit.Id).Append(hit);
-		foreach (var card in exiled.ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(owner, ZoneType.Exile));
-		if (RestOnBottom)
-		{
-			var rest = exiled.Where(c => c.Id != hit?.Id).Select(c => c.Id).ToArray();
-			(var rng, s) = s.TakeRng();
-			rng.Shuffle(rest);
-			foreach (var id in rest)
-				s = s.MoveCard(id, s.ZoneId(owner, ZoneType.Library)); // appended: the bottom
-		}
-		if (hit is null)
-			return new(s);
-		if (Gains is not null)
-			return new(
-				Update(
-					s,
-					(Card)
-						s.GetCard(hit.Id)
-							.WithComponent(
-								new UntilEndOfTurn
-								{
-									UntilTurnOf = UntilEndOfTurn.Never,
-									Gains = [Gains],
-								}
-							)
-				)
-			);
-		ImmutableList<GameAction> toHand = OrIntoHand
-			? [new MoveCardTo(hit.Id, ZoneType.Hand)]
-			: [];
-		if (!CastNow.CanCast(s, Controller, s.GetCard(hit.Id), free: true))
-			return new(
-				s.SpawnAction(new PipelineAction { Steps = toHand, PipelineContext = InputContext })
-			);
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps =
-					[
-						new YesNoChoice(
-							Controller,
-							OrIntoHand
-								? $"Cast {hit.Name} free? (No: into your hand)"
-								: $"Cast {hit.Name} free?"
-						),
-						new IfChosenAction([new CastNow(hit.Id, Free: true)])
-						{
-							Otherwise = toHand,
-						},
-					],
-				}
-			)
-		);
-	}
-}
-
-/// <summary>Discover: "… or put it into your hand" — the card, if it is still where it was put (its owner's exile), to its OWNER's zone (CR 400.3).</summary>
-public record MoveCardTo(int CardId, ZoneType To) : Effect
-{
-	/// <summary>Explore: "put the card back or put it into your graveyard" — where it must still be; unset is exile.</summary>
-	public ZoneType From { get; init; } = ZoneType.Exile;
-
-	public override ActionResult Execute(GameState s) =>
-		s.GetObject(CardId) is Card card && s.IsIn(CardId, card.OwnerId, From)
-			? new(s.MoveCard(CardId, s.ZoneId(card.OwnerId, To)))
-			: new(s);
-}
-
-/// <summary>
 /// "You may cast that card" in the middle of a resolution (CR 608.2g) — Chandra, Torch of Defiance;
 /// Uldaros' free copies. A real CastSpellAction (DuringResolution): the engine's own cast candidates,
 /// so modes, targets, X, convoke and additional costs are all chosen and checked by ValidateAdd, the
@@ -1036,12 +1072,16 @@ public record MoveCardTo(int CardId, ZoneType To) : Effect
 /// </summary>
 public record CastNow(int CardId, bool Free) : Effect
 {
+	/// <summary>Bilbo's instants and sorceries: exiled leaving the stack (CastSpellAction.ExiledLeavingTheStack).</summary>
+	public bool ExiledLeavingTheStack { get; init; }
+
 	/// <summary>Every legal way to cast it now — free means X is 0 and no mana cost.</summary>
 	public static ImmutableList<CastSpellAction> Options(
 		GameState s,
 		int playerId,
 		int cardId,
-		bool free
+		bool free,
+		bool exiled = false
 	) =>
 		!s.HasObject(cardId) || s.GetObject(cardId) is not Card card || card.Is(CardType.Land)
 			? []
@@ -1057,6 +1097,7 @@ public record CastNow(int CardId, bool Free) : Effect
 								{
 									DuringResolution = true,
 									WithoutPayingManaCost = free,
+									ExiledLeavingTheStack = exiled,
 								}
 							)
 					)
@@ -1069,7 +1110,7 @@ public record CastNow(int CardId, bool Free) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var options = Options(s, Controller, CardId, Free);
+		var options = Options(s, Controller, CardId, Free, ExiledLeavingTheStack);
 		return options.Count switch
 		{
 			0 => new(s),
@@ -1237,43 +1278,6 @@ public record CastCopiesWithinBudget(int Budget, ImmutableList<int> Done) : Effe
 		);
 }
 
-/// <summary>
-/// Captain Benjamin Sisko: "Exile the top five cards of your library. You may cast any number of spells
-/// with mana value less than or equal to the number of Officers you control from among those cards
-/// without paying their mana costs." — exiled linked to this ability's source, the cap counted once as it
-/// resolves, then CastCopiesWithinBudget's choose-and-cast loop on the cards themselves. What isn't cast
-/// stays exiled.
-/// </summary>
-public record ExileTopAndCastFree(int N, Count ManaValueAtMost) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var sourceId = GetInput<int>(ContextKeys.Source);
-		var incarnation = s.HasObject(sourceId) ? s.GetCard(sourceId).Incarnation : -1;
-		var cap = ManaValueAtMost.Value(s, InputContext);
-		foreach (var card in s.CardsIn(Controller, ZoneType.Library).Take(N).ToList())
-		{
-			s = s.MoveCard(card.Id, s.ZoneId(Controller, ZoneType.Exile));
-			s = Update(
-				s,
-				(Card)s.GetCard(card.Id).WithComponent(new ExiledBy(sourceId, incarnation))
-			);
-		}
-		return new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext,
-					Steps =
-					[
-						new CastCopiesWithinBudget(cap, []) { Originals = true, EachAtMost = true },
-					],
-				}
-			)
-		);
-	}
-}
-
 /// <summary>The chosen card's copy (Sisko: the card itself), cast free — then the loop's next choice, with what is left.</summary>
 public record CastChosenCopy(CastCopiesWithinBudget Loop) : Effect
 {
@@ -1395,36 +1399,6 @@ public record CastCopyOf(int CardId, int Left) : Effect
 			)
 		);
 	}
-}
-
-/// <summary>Emrakul: "Sacrifice three permanents" — the payer chooses which (never what can't be sacrificed).</summary>
-public record SacrificePermanents(int N) : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps =
-					[
-						new ChoosePermanentChoice(
-							Controller,
-							GetInput<int>(ContextKeys.Source),
-							null,
-							required: true
-						)
-						{
-							MinChoices = N,
-							MaxChoices = N,
-							Prompt = $"Sacrifice {N} permanents",
-							Sacrifice = true,
-						},
-						new SacrificeChosenAction(),
-					],
-				}
-			)
-		);
 }
 
 /// <summary>
@@ -1560,6 +1534,23 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>Captain Jean-Luc Picard: "put it onto the battlefield with seven charge counters on it".</summary>
 	public int ChargeCounters { get; init; }
 
+	/// <summary>
+	/// Spellseeker: "you MAY search your library for … then shuffle" — a search that takes no card was declined, so
+	/// nothing is shuffled and a top card its owner knows stays known. Unset (Mystical Tutor, landcycling), the
+	/// library is shuffled whatever was found (CR 701.19).
+	/// ponytail: a player can't search, take nothing and shuffle anyway on purpose (to be rid of a known top) —
+	/// ask "shuffle?" after a "may" search that took nothing if that is ever missed (DesignNotes).
+	/// </summary>
+	public bool May { get; init; }
+
+	/// <summary>
+	/// Transmute Artifact: "search your library for an artifact card. If that card's mana value is less than or equal
+	/// to the sacrificed artifact's mana value, put it onto the battlefield. If it's greater, you may pay {X} … If you
+	/// don't, put it into its owner's graveyard. Then shuffle." — where the found card goes, decided by these steps:
+	/// run with it in Ref.Chosen, still in the library, IN PLACE of putting it To; then the shuffle.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var searcher = Who is null ? Controller : All(Who, s).FirstOrDefault();
@@ -1567,8 +1558,12 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 		return searcher == 0 || owner == 0 ? new(s) : new(Search(s, searcher, owner));
 	}
 
-	GameState Search(GameState s, int searcher, int owner) =>
-		s.SpawnAction(
+	GameState Search(GameState s, int searcher, int owner)
+	{
+		GameAction shuffle = new ShuffleLibrary(Ref.Id(owner));
+		if (May)
+			shuffle = new IfChosenAction([shuffle]) { Key = ChooseCardsFromHandChoice.Chosen };
+		return s.SpawnAction(
 			new PipelineAction
 			{
 				PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
@@ -1588,50 +1583,54 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{(FilterText is null ? "" : FilterText + " ")}{(Subtype is null ? "" : Subtype + " ")}{(Type == CardType.None ? "" : Type.ToString().ToLowerInvariant() + " ")}card{(UpTo == 1 ? "" : "s")}{(DifferentNames ? " with different names" : "")}",
 					},
 					// Loyal Tutor: "then shuffle and put that card on top" — the shuffle comes first.
-					.. To == ZoneType.Library
+					.. !Then.IsEmpty
+						?
+						[
+							new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
+							shuffle,
+						]
+					: To == ZoneType.Library
 						? (GameAction[])
 							[
-								new ShuffleLibraryAction(owner),
+								shuffle,
 								new MoveChosenToAction(owner, ZoneType.Library) { OnTop = true },
 							]
-						:
-						[
-							// Onto the battlefield under the searcher's control; anywhere else, the owner's zone.
-							new MoveChosenToAction(
-								To == ZoneType.Battlefield ? searcher : owner,
-								To
-							)
-							{
-								Tapped = Tapped,
-								ChargeCounters = ChargeCounters,
-								Playable = Play is { } play
-									? play.For(
-										s,
-										play.By is { } by ? All(by, s).FirstOrDefault() : Controller
-									)
-									: null,
-							},
-							new ShuffleLibraryAction(owner),
-						],
+					:
+					[
+						// Onto the battlefield under the searcher's control; anywhere else, the owner's zone.
+						new MoveChosenToAction(To == ZoneType.Battlefield ? searcher : owner, To)
+						{
+							Tapped = Tapped,
+							ChargeCounters = ChargeCounters,
+							Playable = Play is { } play
+								? play.For(
+									s,
+									play.By is { } by ? All(by, s).FirstOrDefault() : Controller
+								)
+								: null,
+						},
+						shuffle,
+					],
 					.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],
 				],
 			}
 		);
+	}
 }
 
 /// <summary>
-/// "Put [it] on the bottom (or top) of its owner's library" — Paradox Shaper's graveyard card,
-/// Clash of Elements' permanent.
+/// Ponder: "You may shuffle." Timetwister: "Each player shuffles their hand and graveyard into their library" —
+/// after the cards are moved. Each player named shuffles their library, once, with or without anything put into
+/// it; every position anyone knew is forgotten (MagicState.Shuffle). A search's "then shuffle" is this too.
 /// </summary>
-public record PutIntoLibrary(Ref What, bool OnTop) : Effect
+public record ShuffleLibrary(Ref Who) : Effect
 {
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card card)
-				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Library), toTop: OnTop);
-		return new(s);
-	}
+	public override ActionResult Execute(GameState s) =>
+		new(
+			All(Who, s)
+				.Where(id => s.GetObject(id) is MagicPlayer)
+				.Aggregate(s, (st, player) => st.Shuffle(player))
+		);
 }
 
 /// <summary>
@@ -1671,9 +1670,9 @@ public record Explore(Ref What) : Effect
 							new YesNoChoice(player, $"Put {top.Name} into your graveyard?"),
 							new IfChosenAction(
 								[
-									new MoveCardTo(top.Id, ZoneType.Graveyard)
+									new MoveTo(Ref.Id(top.Id), ZoneType.Graveyard)
 									{
-										From = ZoneType.Library,
+										From = [ZoneType.Library],
 									},
 								]
 							),
@@ -1773,43 +1772,11 @@ public record GainFlashbackThisTurn(Ref What) : Effect
 		);
 }
 
-/// <summary>"Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to your hand" (Command the Stage).</summary>
-public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
-{
-	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
-	public int Counters { get; init; }
-
-	/// <summary>Gallia, Tragic Host: "to the battlefield tapped".</summary>
-	public bool Tapped { get; init; }
-
-	/// <summary>Grim Repriser, Proctor: "with a finality counter on it".</summary>
-	public bool Finality { get; init; }
-
-	/// <summary>Talon Gates of Madara: "Put this card from your HAND onto the battlefield" — where it must be.</summary>
-	public ZoneType From { get; init; } = ZoneType.Graveyard;
-
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, From))
-				s =
-					To == ZoneType.Battlefield
-						? s.EnterBattlefield(
-							id,
-							card.OwnerId,
-							extraCounters: Counters,
-							tapped: Tapped,
-							finality: Finality
-						)
-						: s.MoveCard(id, s.ZoneId(card.OwnerId, To));
-		return new(s);
-	}
-}
-
 /// <summary>
-/// "You may play that card" — the permission an effect gives a card it exiles (a PlayableFromExile, read by
-/// Rules/Playable.cs): who, and how long. Unset is you, until the end of your next turn (Blazing Crescendo).
-/// ExileTopPlayable.Play and SearchLibrary.Play (Thada Adel). MC-6.9 grows it into the one permission.
+/// MC-6.9: "You may play [cast] that card" — THE permission an effect gives the cards it exiles: who, how long, free or
+/// paid. Unset is you, until the end of your next turn (Blazing Crescendo) — a PlayableFromExile on the card, read by
+/// Rules/Playable.cs. <see cref="Now"/> is a cast during the resolution instead (CastNow): Chandra, The Caretaker,
+/// discover, Sisko. ExileTopPlayable.Play and SearchLibrary.Play (Thada Adel).
 /// </summary>
 public record PlayPermission
 {
@@ -1825,33 +1792,90 @@ public record PlayPermission
 	/// <summary>Vulcan Mind-Meld: "Mana of any type can be spent to cast spells this way."</summary>
 	public bool AnyType { get; init; }
 
+	/// <summary>
+	/// Chandra, Torch of Defiance: "You may cast that card." — now, as this resolves (a yes/no, then CastNow), asked only
+	/// when it could be cast; never a permission left on the card.
+	/// </summary>
+	public bool Now { get; init; }
+
+	/// <summary>The Caretaker, discover, Sisko: "without paying its mana cost".</summary>
+	public bool Free { get; init; }
+
+	/// <summary>
+	/// Sisko: "You may cast any number of spells … from among those cards" — chosen one at a time
+	/// (CastCopiesWithinBudget on the cards themselves, linked to the source while it runs).
+	/// </summary>
+	public bool AnyNumber { get; init; }
+
+	/// <summary>
+	/// Sisko: "with mana value less than or equal to the number of Officers you control" — a cap on each, counted once
+	/// as it resolves (CR 608.2h), so a cast's own cost can't move it.
+	/// </summary>
+	public Count? ManaValueAtMost { get; init; }
+
+	/// <summary>Chandra: "If you don't, [Otherwise]." — also when there was nothing to cast.</summary>
+	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
+	/// <summary>Discover: "Cast it without paying its mana cost or put it into your hand."</summary>
+	public bool OrIntoHand { get; init; }
+
+	/// <summary>
+	/// Inti, Seneschal of the Sun: "You may play that card until your next end step." — this turn's when it is yours and
+	/// its end step hasn't begun, else your next turn's. ponytail: through that whole turn, as ThisTurn is — so the card
+	/// is still playable in that end step and cleanup; end it as the end step begins if a card ever cares.
+	/// </summary>
+	public bool UntilYourNextEndStep { get; init; }
+
+	/// <summary>Robber of the Rich: "During any turn you attacked with a Rogue, you may cast that card" — while it holds.</summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Robber of the Rich: "you may CAST that card" — a land exiled this way is never played.</summary>
+	public bool CastOnly { get; init; }
+
+	/// <summary>Warp (Quantum Riddler): "Its owner may cast this card after the current turn has ended" — from the next turn on.</summary>
+	public bool LaterTurn { get; init; }
+
 	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
 	public PlayableFromExile For(GameState s, int who) =>
 		new(
 			who,
 			Forever ? int.MaxValue
 				: ThisTurn ? s.GetGame().TurnNumber
+				: UntilYourNextEndStep
+				&& s.GetGame().ActivePlayerId == who
+				&& s.GetGame().Step < Step.End
+					? s.GetGame().TurnNumber
 				: Playable.EndOfNextTurnOf(s, who)
 		)
 		{
 			AnyType = AnyType,
+			If = If,
+			CastOnly = CastOnly,
+			Free = Free,
+			FromTurn = LaterTurn ? s.GetGame().TurnNumber + 1 : 0,
 		};
 }
 
-/// <summary>Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn, you may play that card."</summary>
+/// <summary>
+/// MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top card of your library. Until
+/// the end of your next turn, you may play that card." What is exiled: the top N (or <see cref="Until"/> one matches),
+/// of whose library, face down, shuffled first, the rest to the bottom; what may be played, by whom and how long:
+/// <see cref="Play"/> — a permission left on the card, or a cast now (Chandra, The Caretaker, discover, Sisko).
+/// </summary>
 public record ExileTopPlayable : Effect
 {
-	/// <summary>Who may play them, and how long (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }.</summary>
+	/// <summary>Who may play them, how long, free or now (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }.</summary>
 	public PlayPermission Play { get; init; } = new();
 
 	/// <summary>Reckless Impulse: "Exile the top two cards of your library."; Ensign Pavel Chekov: "the top X cards".</summary>
 	public Count N { get; init; } = 1;
 
 	/// <summary>
-	/// Exploratory Mission: "exile cards from the top of your library until you exile a nonland card.
-	/// You may play that card" — the lands stay exiled, unplayable.
+	/// Exploratory Mission, The Caretaker: "exile cards from the top of your library until you exile a nonland card"
+	/// (!Is.Land); discover N: "… a nonland card with mana value N or less". Only that card ("that card") may be played
+	/// — the rest stay exiled, unplayable; none matching, the whole library is exiled.
 	/// </summary>
-	public bool UntilNonland { get; init; }
+	public Filters.Filter? Until { get; init; }
 
 	/// <summary>Vulcan Mind-Meld: "the top two cards of their library"; Chekov: "each opponent exiles the top X cards of their library" — whose library; unset is yours.</summary>
 	public Ref? Of { get; init; }
@@ -1865,23 +1889,72 @@ public record ExileTopPlayable : Effect
 	/// </summary>
 	public Filters.Filter? Choose { get; init; }
 
+	/// <summary>Q, Stacking the Deck: "shuffle your library, then exile cards …".</summary>
+	public bool ShuffleFirst { get; init; }
+
+	/// <summary>Discover: "Put the rest on the bottom in a random order."</summary>
+	public bool RestOnBottom { get; init; }
+
+	/// <summary>
+	/// Q, Stacking the Deck: "That nonland card gains '[ability]'" — in place of any permission: an UntilEndOfTurn that
+	/// never ends, so the card has it while it stays this exiled object.
+	/// </summary>
+	public ActivatedAbilityComponent? Gains { get; init; }
+
+	/// <summary>
+	/// Tersa Lightshatter: "exile a card at random from your graveyard" — the zone the cards come from (Graveyard); unset
+	/// is the library's top.
+	/// </summary>
+	public ZoneType From { get; init; } = ZoneType.Library;
+
+	/// <summary>Tersa Lightshatter: "a card at random" — the N taken in a random order (s.TakeRng), not from the top.</summary>
+	public bool AtRandom { get; init; }
+
+	/// <summary>
+	/// Bonehoard Dracosaur: "If you exiled a land card this way, create … If you exiled a nonland card this way, create
+	/// a Treasure token." — run after, with Ref.ThisWay the cards exiled.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var who = Play.By is { } by ? All(by, s).FirstOrDefault() : Controller;
 		if (who == 0)
 			return new(s);
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		var incarnation = s.HasObject(sourceId) ? s.GetCard(sourceId).Incarnation : -1;
+		var cap = Play.ManaValueAtMost?.Value(s, InputContext) ?? int.MaxValue;
 		var playable = Play.For(s, who);
 		var steps = ImmutableList<GameAction>.Empty;
-		foreach (var owner in Of is { } of ? All(of, s).ToList() : [Controller])
+		var done = ImmutableArray.CreateBuilder<int>();
+		foreach (
+			var owner in Of is { } of
+				? All(of, s).Where(id => s.GetObject(id) is MagicPlayer).ToList()
+				: [Controller]
+		)
 		{
-			var library = s.CardsIn(owner, ZoneType.Library).ToList();
-			var count = UntilNonland
-				? library.TakeWhile(c => c.Is(CardType.Land)).Count() + 1
-				: N.Value(s, InputContext);
-			var exiled = library.Take(count).ToList();
+			if (ShuffleFirst)
+				s = s.Shuffle(owner);
+			var library = s.CardsIn(owner, From).ToList();
+			if (AtRandom)
+			{
+				var order = library.ToArray();
+				(var shuffler, s) = s.TakeRng();
+				shuffler.Shuffle(order);
+				library = [.. order];
+			}
+			var context = new Filters.FilterContext(Controller, sourceId);
+			var hit = Until is { } until
+				? library.FirstOrDefault(c => until.Matches(s, c, context))
+				: null;
+			var exiled =
+				Until is null ? library.Take(N.Value(s, InputContext)).ToList()
+				: hit is null ? library
+				: [.. library.TakeWhile(c => c.Id != hit.Id), hit];
 			foreach (var top in exiled)
 			{
 				s = s.MoveCard(top.Id, s.ZoneId(owner, ZoneType.Exile));
+				done.Add(top.Id);
 				if (FaceDown) // known only to the one who looked (CR 406.3)
 					s = Update(
 						s,
@@ -1893,7 +1966,18 @@ public record ExileTopPlayable : Effect
 								}
 							).WithComponent(new ExiledFaceDown())
 					);
-				if ((UntilNonland && top.Is(CardType.Land)) || Choose is not null)
+				if (Play.AnyNumber)
+					s = Update(
+						s,
+						(Card)s.GetCard(top.Id).WithComponent(new ExiledBy(sourceId, incarnation))
+					);
+				if (
+					(Until is not null && top.Id != hit?.Id)
+					|| Choose is not null
+					|| Play.Now
+					|| Play.AnyNumber // a cast now, too
+					|| Gains is not null
+				)
 					continue;
 				s = Update(
 					s,
@@ -1903,13 +1987,52 @@ public record ExileTopPlayable : Effect
 								playable with
 								{
 									Blind =
-										!FaceDown
+										From == ZoneType.Library // a graveyard card was public (Tersa)
+										&& !FaceDown
 										&& who == owner
 										&& !top.KnownTo.HasFlag(Knowers.Owner),
 								}
 							)
 				);
 			}
+			if (RestOnBottom)
+			{
+				var rest = exiled.Where(c => c.Id != hit?.Id).Select(c => c.Id).ToArray();
+				(var rng, s) = s.TakeRng();
+				rng.Shuffle(rest);
+				foreach (var id in rest)
+					s = s.MoveCard(id, s.ZoneId(owner, ZoneType.Library)); // appended: the bottom
+			}
+			if (Gains is not null && hit is not null)
+				s = Update(
+					s,
+					(Card)
+						s.GetCard(hit.Id)
+							.WithComponent(
+								new UntilEndOfTurn
+								{
+									UntilTurnOf = UntilEndOfTurn.Never,
+									Gains = [Gains],
+								}
+							)
+				);
+			if (Play.AnyNumber)
+				s = s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext,
+						Steps =
+						[
+							new CastCopiesWithinBudget(cap, [])
+							{
+								Originals = true,
+								EachAtMost = true,
+							},
+						],
+					}
+				);
+			else if (Play.Now)
+				s = CastThatCard(s, Until is null ? exiled.FirstOrDefault() : hit);
 			var choice = new ChooseAmongChoice
 			{
 				PlayerId = owner,
@@ -1923,7 +2046,87 @@ public record ExileTopPlayable : Effect
 			if (Choose is not null && !choice.GetOptions(s, InputContext).IsEmpty) // none of them a land: nothing to choose
 				steps = steps.AddRange([choice, new MakeChosenPlayableAction(playable)]);
 		}
+		if (!Then.IsEmpty)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.SetItem(ContextKeys.ThisWay, done.ToImmutable()),
+					Steps = Then,
+				}
+			);
 		return steps.IsEmpty ? new(s) : new(s.SpawnAction(new PipelineAction { Steps = steps }));
+	}
+
+	/// <summary>
+	/// "You may cast that card [without paying its mana cost]. If you don't, …" — a yes/no asked only when it could be
+	/// cast, then CastNow. Declined, uncastable or nothing exiled: discover's "or put it into your hand", Chandra's damage.
+	/// ponytail: "If you don't" runs on a NO to the up-front question only; backing out of the cast itself afterwards (an
+	/// empty answer to ChooseCastChoice, TBL-2.16) casts nothing and skips it - make the decline answer the question again
+	/// if a table player ever says yes and then backs out for the damage.
+	/// </summary>
+	GameState CastThatCard(GameState s, Card? that)
+	{
+		ImmutableList<GameAction> declined =
+		[
+			.. Play.OrIntoHand && that is not null
+				? [new MoveTo(Ref.Id(that.Id), ZoneType.Hand) { From = [ZoneType.Exile] }]
+				: Array.Empty<GameAction>(),
+			.. Play.Otherwise,
+		];
+		if (that is null)
+			return declined.IsEmpty
+				? s
+				: s.SpawnAction(
+					new PipelineAction { Steps = declined, PipelineContext = InputContext }
+				);
+		if (!CastNow.CanCast(s, Controller, s.GetCard(that.Id), free: Play.Free))
+			return s.SpawnAction(
+				new PipelineAction { Steps = declined, PipelineContext = InputContext }
+			);
+		return s.SpawnAction(
+			new PipelineAction
+			{
+				PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+				Steps =
+				[
+					new YesNoChoice(
+						Controller,
+						$"Cast {that.Name}{(Play.Free ? " free" : "")}?"
+							+ (Play.OrIntoHand ? " (No: into your hand)" : "")
+					),
+					new IfChosenAction([new CastNow(that.Id, Free: Play.Free)])
+					{
+						Otherwise = declined,
+					},
+				],
+			}
+		);
+	}
+}
+
+/// <summary>
+/// Emry, Lurker of the Loch: "Choose target artifact card in your graveyard. You may cast that card this turn." — the
+/// permission (PlayPermission's mark, PlayableFromExile) on cards that stay where they are: a graveyard or exile. Every
+/// other PlayPermission rides an effect that exiles first (ExileTopPlayable, SearchLibrary); the nearest,
+/// MakeChosenPlayableAction, is ExileTopPlayable's own step, a mark built there (Blind, Tax) on the cards it just exiled.
+/// Cast from a graveyard by it is not flashback (Playable.MarkedInGraveyard) — it isn't exiled, and a permanent spell
+/// enters. A card marked again REPLACES its mark: one left from an earlier turn would hide the new one.
+/// </summary>
+public record MakePlayable(Ref What, PlayPermission Play) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var who = Play.By is null ? Controller : All(Play.By, s).FirstOrDefault(Controller);
+		foreach (var id in All(What, s).ToList())
+			if (
+				s.GetObject(id) is Card card
+				&& (
+					s.IsIn(id, card.OwnerId, ZoneType.Graveyard)
+					|| s.IsIn(id, card.OwnerId, ZoneType.Exile)
+				)
+			)
+				s = Update(s, (Card)card.WithComponentReplaced(Play.For(s, who)));
+		return new(s);
 	}
 }
 
@@ -1935,18 +2138,6 @@ public record MakeChosenPlayableAction(PlayableFromExile Playable) : GameAction
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
 			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Exile))
 				s = s.UpdateObject(id, (Card)card.WithComponent(Playable));
-		return new(s);
-	}
-}
-
-/// <summary>Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.</summary>
-public record ExileFromGraveyard(Ref What) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in All(What, s).ToList())
-			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
-				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Exile));
 		return new(s);
 	}
 }
@@ -2093,9 +2284,11 @@ public record MillAndMayTake(int N, CardType Types) : Effect
 /// <summary>
 /// Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal an artifact
 /// card from among them and put it into your hand. Put the rest on the bottom of your library in a
-/// random order." Hoshi Sato's "put one of them into your hand" is Must; Pattern Buffer Preservation's
-/// "… and the other into your graveyard" is RestToGraveyard. A revealed card is known to everyone; the
-/// rest go down as Identity Echo's do — a random order is not known (magic-mechanics.md).
+/// random order." How many are taken is Take (Stock Up: "Put two of them into your hand"; Ponder: none), where
+/// they go is To (Hit It!: "onto the battlefield tapped"; Thassa's Oracle: "up to one of them on top of your
+/// library"), where the others go is Rest (TheRest). Hoshi Sato's "put one of them into your hand" is Must. A
+/// revealed card is known to everyone; the rest go down as Identity Echo's do — a random order is not known
+/// (magic-zones.md).
 /// ponytail: Spock's "in any order" is a random order too (Shayne, 2026-10-31; DesignNotes).
 /// </summary>
 public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
@@ -2103,17 +2296,45 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	/// <summary>"You may reveal [it] and put it into your hand" — known to everyone there.</summary>
 	public bool Reveal { get; init; }
 
-	/// <summary>Hoshi Sato: "Put one of them into your hand" — not "you may".</summary>
+	/// <summary>Hoshi Sato: "Put one of them into your hand" — not "you may": exactly Take, not up to it.</summary>
 	public bool Must { get; init; }
 
-	/// <summary>Pattern Buffer Preservation: "the other into your graveyard", not the bottom.</summary>
-	public bool RestToGraveyard { get; init; }
+	/// <summary>
+	/// Stock Up: "Put two of them into your hand" — how many are taken (never more than there are to take).
+	/// Ponder takes none: no pick is asked.
+	/// </summary>
+	public Count Take { get; init; } = 1;
 
-	/// <summary>Hit It!: "Put a land card from among them onto the battlefield tapped"; Loot, Exuberant Explorer: "put it onto the battlefield" — not into your hand.</summary>
-	public bool OntoBattlefield { get; init; }
+	/// <summary>
+	/// Where the taken go — your hand unless said. Hit It!: "Put a land card from among them onto the battlefield
+	/// tapped"; Loot, Exuberant Explorer: "put it onto the battlefield" (Battlefield). Thassa's Oracle: "Put up
+	/// to one of them on top of your library" (Library): it stays above the rest, and you know it is there.
+	/// </summary>
+	public ZoneType To { get; init; } = ZoneType.Hand;
+
+	/// <summary>
+	/// Where the cards not taken go — Rutherford's "the rest on the bottom of your library in a random order"
+	/// unless said; Pattern Buffer Preservation: "the other into your graveyard" (Graveyard); Ponder: "then put
+	/// them back in any order" (TopInAnyOrder).
+	/// </summary>
+	public TheRest Rest { get; init; }
 
 	/// <summary>Hit It!: "… tapped".</summary>
 	public bool Tapped { get; init; }
+
+	/// <summary>
+	/// Manifest dread (Abhorrent Oculus): "Look at the top two cards of your library. Put one onto the battlefield face
+	/// down as a 2/2 creature and the other into your graveyard." — To = Battlefield, Must, Rest = Graveyard.
+	/// </summary>
+	public bool FaceDown { get; init; }
+
+	/// <summary>
+	/// Undercity's Throne of the Dead Three: "Put a creature card from among them onto the battlefield with three
+	/// +1/+1 counters on it. It gains hexproof until your next turn." — run after, with Ref.ThisWay the cards taken.
+	/// ponytail: the counters are put on once it has entered, not as it enters — the same unless a card counts them
+	/// entering.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -2121,87 +2342,177 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			.Take(N.Value(s, InputContext))
 			.Select(c => c.Id)
 			.ToImmutableList();
+		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
 		var choice = new ChooseAmongChoice
 		{
 			PlayerId = Controller,
 			Ids = top,
 			Zone = ZoneType.Library,
 			Filter = Filter,
-			Prompt =
-				(Must ? "Put one " : "You may put one ")
-				+ (OntoBattlefield ? "onto the battlefield" : "into your hand"),
-			MinChoices = Must ? 1 : 0,
 		};
-		var put = new PutLookedAtAction(Controller, top, Reveal, RestToGraveyard)
+		var take = Math.Min(Take.Value(s, InputContext), choice.GetOptions(s, context).Count);
+		var where = To switch
 		{
-			OntoBattlefield = OntoBattlefield,
-			Tapped = Tapped,
+			ZoneType.Battlefield => FaceDown
+				? "onto the battlefield face down"
+				: "onto the battlefield",
+			ZoneType.Library => "on top of your library",
+			ZoneType.Hand => "into your hand",
+			_ => $"into your {To.ToString().ToLowerInvariant()}",
 		};
-		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
+		var many =
+			take == 1 ? "one"
+			: Must ? $"{take}"
+			: $"up to {take}";
+		choice = choice with
+		{
+			Prompt = $"{(Must ? "Put" : "You may put")} {many} {where}",
+			MinChoices = Must ? take : 0,
+			MaxChoices = take,
+		};
+		var put = new PutLookedAtAction(Controller, top)
+		{
+			Reveal = Reveal,
+			To = To,
+			Tapped = Tapped,
+			FaceDown = FaceDown,
+			Rest = Rest,
+			Then = Then,
+		};
 		return new(
 			s.SpawnAction(
 				new PipelineAction
 				{
 					PipelineContext = context,
 					// Nothing to take: no prompt with no options, but the rest still go.
-					Steps = choice.GetOptions(s, context).IsEmpty ? [put] : [choice, put],
+					Steps = take <= 0 ? [put] : [choice, put],
 				}
 			)
 		);
 	}
 }
 
-/// <summary>After LookAndTake's choice: the chosen card into the hand, the rest to the bottom in a random order (or the graveyard).</summary>
-public record PutLookedAtAction(
-	int PlayerId,
-	ImmutableList<int> Looked,
-	bool Reveal,
-	bool RestToGraveyard
-) : GameAction
+/// <summary>
+/// Where the cards a LookAndTake doesn't take go — Rutherford: "Put the rest on the bottom of your library in a
+/// random order"; Pattern Buffer Preservation: "the other into your graveyard"; Ponder: "put them back in any order".
+/// </summary>
+public enum TheRest
 {
-	public bool OntoBattlefield { get; init; }
+	/// <summary>Rutherford: "Put the rest on the bottom of your library in a random order" — known to nobody.</summary>
+	BottomAtRandom,
+
+	/// <summary>Pattern Buffer Preservation: "the other into your graveyard".</summary>
+	Graveyard,
+
+	/// <summary>
+	/// Ponder: "Look at the top three cards of your library, then put them back in any order" — they stay on top,
+	/// their owner knowing each and ordering two or more (a surveil's choice, OrderLibraryTopChoice).
+	/// </summary>
+	TopInAnyOrder,
+
+	/// <summary>
+	/// Dig Through Time: "the rest on the bottom of your library in any order" — known to their owner. ponytail: in
+	/// the order they were looked at, never chosen (scry's bottom is the same, DesignNotes); a choice when a card
+	/// reads the bottom.
+	/// </summary>
+	BottomInAnyOrder,
+}
+
+/// <summary>After LookAndTake's choice: the chosen cards where To says, the rest where Rest says.</summary>
+public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameAction
+{
+	public bool Reveal { get; init; }
+
+	public ZoneType To { get; init; } = ZoneType.Hand;
 
 	public bool Tapped { get; init; }
 
+	public bool FaceDown { get; init; }
+
+	public TheRest Rest { get; init; }
+
+	/// <summary>LookAndTake.Then: run after the rest are put away, with Ref.ThisWay the cards taken.</summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
+	{
+		var result = Put(s);
+		return Then.IsEmpty
+			? result
+			: new(
+				result.GameState.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							ChooseCardsFromHandChoice.Read(InputContext).ToImmutableArray()
+						),
+						Steps = Then,
+					}
+				)
+			);
+	}
+
+	ActionResult Put(GameState s)
 	{
 		var taken = ChooseCardsFromHandChoice.Read(InputContext).ToHashSet();
 		foreach (var id in taken)
 		{
-			s = OntoBattlefield
-				? s.EnterBattlefield(id, PlayerId, tapped: Tapped)
-				: s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Hand));
+			s = To switch
+			{
+				ZoneType.Battlefield => s.EnterBattlefield(
+					id,
+					PlayerId,
+					tapped: Tapped,
+					faceDown: FaceDown
+				),
+				// On top: it is among the top cards already and the rest leave from around it — no move, and
+				// its owner has looked at it. ponytail: several taken keep their old order, and with
+				// TopInAnyOrder the rest are ordered above them; no card says either yet.
+				ZoneType.Library => s.MakeKnown(id, Knowers.Owner),
+				_ => s.MoveCard(id, s.ZoneId(PlayerId, To)), // the hand; any other zone of yours as it is named
+			};
 			if (Reveal)
 				s = s.MakeKnown(id, Knowers.Everyone);
 		}
 		var rest = Looked
 			.Where(id => !taken.Contains(id) && s.IsIn(id, PlayerId, ZoneType.Library))
 			.ToArray();
-		if (RestToGraveyard)
+		if (Rest == TheRest.Graveyard)
 			return new(
 				rest.Aggregate(
 					s,
 					(st, id) => st.MoveCard(id, st.ZoneId(PlayerId, ZoneType.Graveyard))
 				)
 			);
-		(var rng, s) = s.TakeRng();
-		rng.Shuffle(rest);
-		var libraryId = s.ZoneId(PlayerId, ZoneType.Library);
-		// Out and back in, as RevealUntilOntoBattlefield does: MoveObject appends, and the end is the bottom.
-		foreach (var id in rest)
-			s = s.MoveObject(id, 0).MoveObject(id, libraryId);
-		return new(s);
+		if (Rest == TheRest.BottomInAnyOrder)
+			return new(s.ToBottom(PlayerId, rest, Knowers.Owner));
+		if (Rest == TheRest.TopInAnyOrder)
+			// They stay where they are, each looked at (as a surveil's kept cards: magic-zones.md), then ordered.
+			return new(
+				OrderKeptOnTopAction.Ask(
+					rest.Aggregate(s, (st, id) => st.MakeKnown(id, Knowers.Owner)),
+					PlayerId,
+					[.. rest]
+				)
+			);
+		return new(s.ToBottomAtRandom(PlayerId, rest));
 	}
 }
 
-/// <summary>Equip: "Attach to target creature you control." This Equipment, to the target.</summary>
-public record AttachSourceTo(Ref Host) : Effect
+/// <summary>
+/// Equip: "Attach to target creature you control." — this Equipment (What = Ref.Source) to the target; Thieving
+/// Skydiver: "If that artifact is an Equipment, attach it to this creature." — the target to this (To = Ref.Source).
+/// </summary>
+public record Attach(Ref What, Ref To) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var self = Ref.Source.Resolve(s, InputContext).FirstOrDefault();
-		var host = Permanents(Host, s).FirstOrDefault();
-		return new(self == 0 || host is null ? s : Attachments.Attach(s, self, host.Id));
+		var attachment = Permanents(What, s).FirstOrDefault();
+		var host = Permanents(To, s).FirstOrDefault();
+		return new(
+			attachment is null || host is null ? s : Attachments.Attach(s, attachment.Id, host.Id)
+		);
 	}
 }
 
@@ -2223,17 +2534,26 @@ public record DiscardHand(Ref Who) : Effect
 	}
 }
 
-/// <summary>Each player named discards, choosing for themselves.</summary>
-public record Discard(Ref Who, int Count) : Effect
+/// <summary>
+/// Each player named discards, choosing for themselves — the number counted for each player, Ref.It that player
+/// (Balance: "Players discard cards … the same way", Count.BeyondTheFewest of the cards in Ref.It's hand).
+/// </summary>
+public record Discard(Ref Who, Count Count) : Effect
 {
 	/// <summary>Seasoned Cryomancer: "When you discard one or more nonland cards this way" — run after, reading the discarded.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	/// <summary>Tersa Lightshatter: "discard up to two cards, then draw that many cards" — none is an answer.</summary>
+	public bool UpTo { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s))
 		{
-			var n = Math.Min(Count, s.CardsIn(player, ZoneType.Hand).Count());
+			var n = Math.Min(
+				Count.Value(s, InputContext.SetItem(ContextKeys.It, player)),
+				s.CardsIn(player, ZoneType.Hand).Count()
+			);
 			if (n == 0 && !Then.IsEmpty) // Garruk: an empty hand "didn't discard two nonland cards"
 				s = s.SpawnAction(
 					new PipelineAction
@@ -2252,9 +2572,9 @@ public record Discard(Ref Who, int Count) : Effect
 							new ChooseCardsFromHandChoice
 							{
 								PlayerId = player,
-								MinChoices = n,
+								MinChoices = UpTo ? 0 : n,
 								MaxChoices = n,
-								Prompt = $"Discard {n}",
+								Prompt = UpTo ? $"Discard up to {n}" : $"Discard {n}",
 							},
 							new MoveChosenToGraveyardAction { PlayerId = player },
 							.. Then,
@@ -2262,41 +2582,6 @@ public record Discard(Ref Who, int Count) : Effect
 					}
 				);
 		}
-		return new(s);
-	}
-}
-
-/// <summary>"Return target spell or creature to its owner's hand" - from the battlefield or the stack.</summary>
-public record ReturnToHand(Ref What) : Effect
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var stack = s.GetWellKnownId(MagicKeys.Stack);
-		var cards = All(What, s)
-			.Where(id => s.IsOnBattlefield(id) || s.GetParent(id) == stack)
-			.Select(s.GetCard)
-			.ToList();
-		return new(
-			cards.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Hand)))
-		);
-	}
-}
-
-/// <summary>"Its owner shuffles it into their library."</summary>
-public record ShuffleIntoLibrary(Ref What) : Effect
-{
-	/// <summary>Those Old Scientists: "Choose up to two target cards in graveyards. The owners of those cards shuffle them into their libraries."</summary>
-	public bool FromGraveyards { get; init; }
-
-	public override ActionResult Execute(GameState s)
-	{
-		var cards = FromGraveyards
-			? All(What, s)
-				.Where(id => s.GetObject(id) is Card c && s.IsIn(id, c.OwnerId, ZoneType.Graveyard))
-				.Select(s.GetCard)
-			: Permanents(What, s);
-		foreach (var card in cards.ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Library)).Shuffle(card.OwnerId);
 		return new(s);
 	}
 }
@@ -2323,89 +2608,6 @@ public record SacrificeGreatestManaValue(Ref Who, CardType Types) : Effect
 }
 
 /// <summary>
-/// Erica Ortegas: "you may put a land card from your hand onto the battlefield. If you do, [Then]" —
-/// chosen from your hand, entering through EnterBattlefield.
-/// </summary>
-public record MayPutFromHandOntoBattlefield(CardType Types, ImmutableList<GameAction> Then) : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
-					Steps =
-					[
-						new ChooseCardsFromHandChoice
-						{
-							PlayerId = Controller,
-							Types = Types,
-							MinChoices = 0,
-							MaxChoices = 1,
-							Prompt =
-								$"Put a {Types.ToString().ToLowerInvariant()} card from your hand onto the battlefield?",
-						},
-						new MoveChosenToAction(Controller, ZoneType.Battlefield),
-						new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
-					],
-				}
-			)
-		);
-}
-
-/// <summary>
-/// Erica Ortegas: "return a land you control to its owner's hand" — chosen as it resolves, not
-/// targeted; nothing when you control none.
-/// </summary>
-public record ReturnYourPermanentToHand(Filters.Filter Filter) : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		!Filters
-			.FilterChoices.Among(
-				Filter,
-				s,
-				Controller,
-				ZoneType.Battlefield,
-				GetInput<int>(ContextKeys.Source)
-			)
-			.Any()
-			? new(s)
-			: new(
-				s.SpawnAction(
-					new PipelineAction
-					{
-						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-						Steps =
-						[
-							new ChoosePermanentChoice(
-								Controller,
-								GetInput<int>(ContextKeys.Source),
-								Filter,
-								required: true
-							)
-							{
-								Prompt = "Return to its owner's hand",
-							},
-							new ReturnChosenToHandAction(),
-						],
-					}
-				)
-			);
-}
-
-/// <summary>After the choice: the chosen permanent to its owner's hand.</summary>
-public record ReturnChosenToHandAction : GameAction
-{
-	public override ActionResult Execute(GameState s)
-	{
-		foreach (var id in ChoosePermanentChoice.Read(InputContext))
-			if (s.IsOnBattlefield(id))
-				s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Hand));
-		return new(s);
-	}
-}
-
-/// <summary>
 /// The City on the Edge of Forever: "All artifacts and creatures phase out." — Rules.Phasing, each with what
 /// is attached to it.
 /// </summary>
@@ -2416,8 +2618,9 @@ public record PhaseOut(Ref What) : Effect
 }
 
 /// <summary>
-/// "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the Then
-/// effects run only if something was sacrificed, with this ability's context.
+/// "You may sacrifice a [Filter]. If you do, [Then]" — the controller picks one or none; Then runs only if something
+/// was sacrificed, reading it as Ref.ThisWay (Transmute
+/// Artifact: "the sacrificed artifact's mana value"), as every "[done] this way".
 /// </summary>
 public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then) : Effect
 {
@@ -2462,7 +2665,7 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 							MaxChoices = AnyNumber ? Math.Max(1, candidates) : 1,
 						},
 						new SacrificeChosenAction(),
-						new IfChosenAction(Then),
+						new IfChosenAction(Then) { ThisWay = true },
 					],
 				}
 			)
@@ -2470,11 +2673,21 @@ public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then
 	}
 }
 
-/// <summary>Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.</summary>
+/// <summary>
+/// Winter: "each opponent sacrifices a creature of their choice" — each chooses their own (never what can't be
+/// sacrificed). Emrakul's ward, "sacrifice three permanents", is (Ref.You, Is.AnyCard) { N = 3 }.
+/// </summary>
 public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 {
 	/// <summary>Garruk, Veiled Butcher: "If you sacrificed a creature this way, [IfYouDid]."</summary>
 	public ImmutableList<GameAction> IfYouDid { get; init; } = [];
+
+	/// <summary>
+	/// Balance: "chooses a number of lands … equal to [the fewest], then sacrifices the rest" — how many each
+	/// sacrifices, counted for each player (Ref.It that player: Count.BeyondTheFewest); as many of it as they can.
+	/// One choice of that many, never a choice each.
+	/// </summary>
+	public Count N { get; init; } = 1;
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -2483,21 +2696,31 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 			var choice = new ChoosePermanentChoice(
 				player,
 				GetInput<int>(ContextKeys.Source),
-				Filter,
-				required: true
+				Filter
 			)
 			{
-				Prompt = $"Sacrifice ({Source(s).Name})",
 				Sacrifice = true,
 			};
-			if (!choice.GetOptions(s, InputContext).IsEmpty)
+			var n = Math.Min(
+				N.Value(s, InputContext.SetItem(ContextKeys.It, player)),
+				choice.GetOptions(s, InputContext).Count
+			);
+			if (n > 0)
 				s = s.SpawnAction(
 					new PipelineAction
 					{
 						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
 						Steps =
 						[
-							choice,
+							choice with
+							{
+								MinChoices = n,
+								MaxChoices = n,
+								Prompt =
+									n == 1
+										? $"Sacrifice ({Source(s).Name})"
+										: $"Sacrifice {n} ({Source(s).Name})",
+							},
 							new SacrificeChosenAction(),
 							.. player == Controller && !IfYouDid.IsEmpty
 								? [new IfChosenAction(IfYouDid)]

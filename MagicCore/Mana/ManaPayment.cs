@@ -43,7 +43,7 @@ public static class ManaPayment
 		ManaColor Color,
 		bool Floats = false,
 		bool Sacrificed = false,
-		ManaRestriction Restriction = ManaRestriction.None
+		ManaRestriction Restriction = default
 	);
 
 	/// <summary>
@@ -56,11 +56,11 @@ public static class ManaPayment
 		bool SameColor,
 		ImmutableArray<Unit> Units,
 		bool Sacrificed = false,
-		ManaRestriction Restriction = ManaRestriction.None
+		ManaRestriction Restriction = default
 	)
 	{
 		public string Kind { get; } =
-			$"{LandId == 0}|{IsCreature}|{SameColor}|{Sacrificed}|{Restriction}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
+			$"{LandId == 0}|{IsCreature}|{SameColor}|{Sacrificed}|{(Restriction == default ? "" : Restriction.ToString())}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
 	}
 
 	/// <summary>One mana a source makes, and the colours it may be.</summary>
@@ -89,23 +89,12 @@ public static class ManaPayment
 		ManaCost cost,
 		int x,
 		int excludeId = 0,
-		bool convoke = false,
 		Card? forSpell = null,
 		IReadOnlyCollection<int>? alsoExclude = null,
 		Card? forAbilityOf = null
 	)
 	{
-		var plain = Find(
-			s,
-			playerId,
-			cost,
-			x,
-			excludeId,
-			convoke,
-			forSpell,
-			alsoExclude,
-			forAbilityOf
-		);
+		var plain = Find(s, playerId, cost, x, excludeId, forSpell, alsoExclude, forAbilityOf);
 		if (plain is null)
 			return null;
 		var generic = cost.WithGeneric(x)
@@ -133,7 +122,6 @@ public static class ManaPayment
 							),
 						0,
 						excludeId,
-						convoke,
 						forSpell,
 						alsoExclude,
 						forAbilityOf
@@ -141,10 +129,14 @@ public static class ManaPayment
 						is { } found
 					&& found.Count(p => p.Sacrificed) <= plain.Count(p => p.Sacrificed)
 					&& found.Count(p => p.Floats) <= plain.Count(p => p.Floats)
+					&& FromHand(s, playerId, found) <= FromHand(s, playerId, plain) // nor a Spirit Guide
 				)
 					return found;
 		return plain;
 	}
+
+	static int FromHand(GameState s, int playerId, IEnumerable<Payment> payment) =>
+		payment.Count(p => p.LandId != 0 && s.IsIn(p.LandId, playerId, ZoneType.Hand));
 
 	/// <summary>Sunburst's count: the different colours a payment spent — not {C}, not mana that only floats.</summary>
 	public static int ColorsSpent(IEnumerable<Payment> payment) =>
@@ -165,8 +157,37 @@ public static class ManaPayment
 			.Select(rest => (ManaColor[])[colors[0], .. rest])
 			.Concat(Subsets(colors[1..], k));
 
+	/// <summary>
+	/// Convoke (CR 702.51) and improvise (CR 702.126): whether this spell's creatures and its artifacts may tap to help
+	/// pay — read once per payment, then asked of each permanent by <see cref="Helps"/>.
+	/// </summary>
+	public static (bool Creatures, bool Artifacts) Helpers(GameState s, Card? spell) =>
+		spell is null ? default : (s.Has(spell, "Convoke"), s.Has(spell, "Improvise"));
+
+	/// <summary>
+	/// What tapping this permanent pays toward a spell its <see cref="Helpers"/> let it help, or null: a creature, for
+	/// convoke, {1} or one mana of its colour (Colorless is how it pays generic only); an artifact, for improvise
+	/// (Kappa Cannoneer: "Each artifact you tap after you're done activating mana abilities pays for {1}"), {1} only.
+	/// Not a {T} cost, so summoning sickness doesn't matter.
+	/// </summary>
+	public static ImmutableArray<ManaColor>? Helps(
+		(bool Creatures, bool Artifacts) helpers,
+		Card permanent
+	)
+	{
+		if (permanent.IsTapped)
+			return null;
+		ImmutableArray<ManaColor>? pays = null;
+		if (helpers.Creatures && permanent.Is(CardType.Creature))
+			pays = [.. permanent.Colors, ManaColor.Colorless];
+		if (helpers.Artifacts && permanent.Is(CardType.Artifact))
+			pays ??= [ManaColor.Colorless]; // a convoking creature already pays {1}
+		return pays;
+	}
+
 	/// <param name="alsoExclude">Permanents the rest of the cost uses — sacrificed, tapped.</param>
-	/// <param name="forSpell">The spell being cast (in its zone, before it moves) — restricted mana asks what it is; null for an ability.</param>
+	/// <param name="forSpell">The spell being cast (in its zone, before it moves) — restricted mana asks what it is, and
+	/// its convoke or improvise lets permanents help (Helps); null for an ability.</param>
 	/// <param name="forAbilityOf">The source of the activated ability being paid for — Isolinear Processor's mana asks.</param>
 	public static IReadOnlyList<Payment>? Find(
 		GameState s,
@@ -174,7 +195,6 @@ public static class ManaPayment
 		ManaCost cost,
 		int x,
 		int excludeId = 0,
-		bool convoke = false,
 		Card? forSpell = null,
 		IReadOnlyCollection<int>? alsoExclude = null,
 		Card? forAbilityOf = null,
@@ -188,33 +208,40 @@ public static class ManaPayment
 				cost,
 				x,
 				excludeId,
-				convoke,
 				forSpell,
 				alsoExclude,
 				forAbilityOf
 			);
 		var player = s.GetPlayer(playerId);
+		var helpers = Helpers(s, forSpell);
 		var tappable = new List<Tappable>();
-		var manaLocked = Turns.Combat.LockedDown(s, playerId, manaAbility: true); // Sen Triplets: floating mana and convoke only
+		// Sen Triplets: floating mana and convoke only; Clarion Conqueror: no artifact's or creature's mana
+		var locks = Turns.Combat.Locks(s, playerId);
+		// Urza: "Tap an untapped artifact you control: Add {U}" — what tapping each one for him pays (a lock on him stops it)
+		var tappingAnother = ManaAbilities.TappingAnother(s, playerId, (forSpell, forAbilityOf));
+		// his ability doesn't tap him, so another cost tapping or sacrificing him leaves it (CR 601.2g: activated first)
+		tappingAnother.RemoveAll(r => Turns.Combat.Stopped(locks, s, r.Holder, manaAbility: true));
 		foreach (var c in s.CardsIn(playerId, ZoneType.Battlefield))
 		{
 			// Its own {T} cost, or a permanent another cost sacrifices or taps: not mana for this too.
 			if (c.Id == excludeId || alsoExclude?.Contains(c.Id) == true)
 				continue;
 			var yield =
-				!manaLocked && ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null;
-			if (yield is not null && !yield.CanPayFor(s, forSpell, forAbilityOf))
-				yield = null; // its mana can't pay — but it may still convoke
-			// Convoke (CR 702.51): an untapped creature you control may pay {1} or one mana of its
-			// colour — Colorless is how it pays generic only. Summoning sickness doesn't matter:
-			// tapping for convoke isn't a {T} cost. A one-mana creature may pay either way.
-			ImmutableArray<ManaColor>? convokes =
-				convoke && c.Is(CardType.Creature) && !c.IsTapped
-					? [.. c.Colors, ManaColor.Colorless]
+				!Turns.Combat.Stopped(locks, s, c, manaAbility: true) && ManaAbilities.CanTap(s, c)
+					? ManaAbilities.YieldOf(s, c, (forSpell, forAbilityOf))
 					: null;
+			if (yield is { Units.IsEmpty: true })
+				yield = null; // its mana can't pay (YieldOf left out what can't) — but it may still convoke
+			// Convoke and improvise (Helps): an untapped creature or artifact you control may pay {1} (and a
+			// creature one mana of its colour). A one-mana creature may pay either way.
+			var convokes = Helps(helpers, c);
 			if (yield is { Sacrificed: true } && convokes is not null)
 				yield = null; // ponytail: convoking only taps it, so a Sculpture Treasure convokes
 			// rather than being sacrificed for a colour; offer both if that ever matters
+			// Urza's artifacts join them: tapped for another's cost, each pays that ability's colour — after the line
+			// above, so a Lotus or a Treasure keeps its own sacrifice (ponytail: and is sacrificed for his {U} too, DesignNotes).
+			if (ManaAbilities.TappedFor(s, c, tappingAnother) is { } forAnother)
+				convokes = [.. (convokes ?? []).Union(forAnother)];
 			if (yield is not null && convokes is { } own && yield.Units.Length == 1)
 				tappable.Add(
 					(
@@ -235,6 +262,11 @@ public static class ManaPayment
 				tappable.Add((c.Id, true, false, [only], false));
 		}
 		return Solve(s, player, tappable, Needs(cost, x), forSpell, forAbilityOf)
+			?? (
+				Turns.Combat.Stopped(locks, s, null, manaAbility: true)
+					? null
+					: FromHand(s, player, cost, x, tappable, forSpell, forAbilityOf, alsoExclude)
+			)
 			?? WithCostlyMana(
 				s,
 				player,
@@ -244,8 +276,53 @@ public static class ManaPayment
 				excludeId,
 				alsoExclude,
 				forSpell,
-				forAbilityOf
+				forAbilityOf,
+				locks
 			);
+	}
+
+	/// <summary>
+	/// Elvish Spirit Guide: "Exile this card from your hand: Add {G}." — tried only when the battlefield can't pay: the
+	/// hand's mana joins the sources after every permanent (a card spent is dearer than a tap). Pay exiles it.
+	/// ponytail: not with Starfleet Academy's costly mana (WithCostlyMana) — no deck mixes them yet.
+	/// </summary>
+	static IReadOnlyList<Payment>? FromHand(
+		GameState s,
+		MagicPlayer player,
+		ManaCost cost,
+		int x,
+		List<Tappable> tappable,
+		Card? forSpell,
+		Card? forAbilityOf,
+		IReadOnlyCollection<int>? alsoExclude
+	)
+	{
+		List<Tappable> hand =
+		[
+			.. ManaAbilities
+				.FromHand(s, player.Id, forSpell, forAbilityOf)
+				.Where(h => alsoExclude?.Contains(h.Card.Id) != true) // Force of Will's exiled card
+				.Select(h =>
+					(
+						h.Card.Id,
+						false,
+						h.Ability.AnyOneColor,
+						(ImmutableArray<ImmutableArray<ManaColor>>)
+							[
+								.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
+									h.Ability.AnyOneColor
+										? ManaAbilities.AnyColor
+										: [h.Ability.Color],
+									Math.Max(0, h.Ability.Amount.Value(s, Conditions.Of(h.Card)))
+								),
+							],
+						false
+					)
+				),
+		];
+		return hand.Count == 0
+			? null
+			: Solve(s, player, tappable, Needs(cost, x), forSpell, forAbilityOf, last: hand);
 	}
 
 	/// <summary>
@@ -265,7 +342,8 @@ public static class ManaPayment
 		int excludeId,
 		IReadOnlyCollection<int>? alsoExclude,
 		Card? forSpell,
-		Card? forAbilityOf
+		Card? forAbilityOf,
+		IReadOnlyList<(CantCastOrActivate Rule, Card Holder)> locks
 	)
 	{
 		foreach (var c in s.CardsIn(player.Id, ZoneType.Battlefield))
@@ -274,6 +352,7 @@ public static class ManaPayment
 				c.Id == excludeId
 				|| alsoExclude?.Contains(c.Id) == true
 				|| !ManaAbilities.CanPayTapCost(s, c)
+				|| Turns.Combat.Stopped(locks, s, c, manaAbility: true) // Sen Triplets, Clarion Conqueror
 			)
 				continue;
 			foreach (
@@ -344,7 +423,8 @@ public static class ManaPayment
 		List<Tappable> tappable,
 		ImmutableList<Need> needs,
 		Card? forSpell,
-		Card? forAbilityOf
+		Card? forAbilityOf,
+		List<Tappable>? last = null
 	)
 	{
 		var sources = new List<Source>();
@@ -368,6 +448,7 @@ public static class ManaPayment
 				.ThenBy(p => p.IsCreature)
 				// {C} is no colour: a colourless land goes before a basic, whatever their order on the table
 				.ThenBy(p => p.Units.Sum(u => u.Count(c => c != ManaColor.Colorless)))
+				.Concat(last ?? []) // the hand's (Spirit Guides): after everything
 		)
 			sources.Add(
 				new(
@@ -484,14 +565,47 @@ public static class ManaPayment
 	public static GameState Pay(GameState s, int playerId, IEnumerable<Payment> payments)
 	{
 		var sacrificed = new HashSet<int>();
+		var exiled = new HashSet<int>();
 		foreach (var p in payments)
 		{
 			if (p.Sacrificed)
 				sacrificed.Add(p.LandId); // Treasure: "{T}, Sacrifice this"
-			if (p.LandId != 0 && !s.GetCard(p.LandId).IsTapped)
+			// A Spirit Guide: exiled from the hand (its ExileSelfCost) once, never tapped; what it made beyond floats.
+			if (exiled.Contains(p.LandId))
+			{
+				if (p.Floats)
+					s = s.WithPlayer(
+						s.GetPlayer(playerId) with
+						{
+							ManaPool = s.GetPlayer(playerId).ManaPool.Add(p.Color, 1),
+						}
+					);
+				continue;
+			}
+			if (p.LandId != 0 && s.IsIn(p.LandId, playerId, ZoneType.Hand))
+			{
+				exiled.Add(p.LandId);
+				// Kai Winn: activating it is activating an ability (CR 605), as a land's or creature's
+				s = Turns.Triggers.Raise(
+					s,
+					new Turns.AbilityActivatedEvent(playerId, s.GetCard(p.LandId))
+				);
+				s = ManaAbilities.PayAsUsed(
+					s,
+					playerId,
+					s.GetCard(p.LandId),
+					p.Color,
+					ZoneType.Hand
+				);
+				continue;
+			}
+			var firstTap = p.LandId != 0 && !s.GetCard(p.LandId).IsTapped;
+			if (firstTap)
 				s = RaiseActivated(s, playerId, p.LandId);
 			if (p.LandId != 0)
 				s = s.Tap(p.LandId);
+			if (firstTap) // Talismans' damage, Mana Confluence's life: once, for the colour it made
+				s = ManaAbilities.PayAsUsed(s, playerId, s.GetCard(p.LandId), p.Color);
 			if (p.Restriction != ManaRestriction.None)
 			{
 				var pool = s.GetPlayer(playerId).ManaPool;
@@ -518,6 +632,28 @@ public static class ManaPayment
 		}
 		return sacrificed.Aggregate(s, (st, id) => st.Sacrifice(id));
 	}
+
+	/// <summary>
+	/// Delighted Halfling: "Spend this mana only to cast a legendary spell, and that spell can't be countered." — did this
+	/// payment spend such mana (floating, or made by the ability that paid)? Asked before Pay, while the sources are there.
+	/// </summary>
+	public static bool MakesUncounterable(
+		GameState s,
+		int playerId,
+		IEnumerable<Payment> payment
+	) =>
+		payment.Any(p =>
+			!p.Floats
+			&& (
+				p.LandId == 0 ? p.Restriction
+				: s.IsIn(p.LandId, playerId, ZoneType.Hand)
+					? ManaAbilities
+						.Used(s, s.GetCard(p.LandId), p.Color, ZoneType.Hand)
+						?.Restriction
+				: ManaAbilities.Used(s, s.GetCard(p.LandId), p.Color)?.Restriction
+			)
+				is { CantBeCountered: true }
+		);
 
 	/// <summary>
 	/// Kai Winn: a mana ability is an activated ability (CR 605) — "activates an ability of a source with the

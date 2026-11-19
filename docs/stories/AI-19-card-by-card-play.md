@@ -240,6 +240,43 @@ Open questions:
       30/30 left are inside won lines (a turn-end-board tie-break, an exact tie). Remain: Cold-Blooded Crew held (3), 30/30
       in three new positions; Mikaeus tapping in his own turn (5), 24/30 in a new one, not a tie; stations with an
       attacker, 20 → 20. S1 rose (105 → 132), spread thin, not traced to the potential score.
+- [ ] AI-19.24 Tersa Lightshatter (LSV cube, MC-4.4c2a): "discard up to two cards, then draw that many" — `GreedyAi`
+      answers a hand choice with its minimum unless it is "up to one", so "up to two" is answered with none and the AI's
+      Tersa never loots. Wanted: a rule for "up to N" hand choices — discard the cards it values least below what a
+      draw is worth (Shayne, 2026-11-14: backlog for now; added from the cube lane).
+- [ ] AI-19.25 Pyrokinesis (LSV cube, MC-4.4c2e): "4 damage divided as you choose among any number of target
+      creatures" — `GreedyAi` answers its targets with ONE creature, whichever plays out best, so it never kills two
+      2/2s; and `BeamSearchAi.Damage` reads `Count.Share` as 0. Wanted: the pairs (and their splits) evaluated too
+      (backlog; added from the cube lane).
+- [ ] AI-19.26 X spells (LSV cube, MC-4.4d2a's Open; Shayne, 2026-11-15: "we need to fix the way the AI handles X
+      spells for sure, but another time"): a spell with X and a target is one cast per X × target — Unexpectedly
+      Absent (84 with 8 lands and 12 nonland permanents), Mind Twist, Khaaaaaaaaaaaannn! — and the AI weighs every
+      one. Wanted: how the AI handles X spells (the few X that matter, or X as a choice after the cast). A note only:
+      nothing built (backlog; added from the cube lane).
+- [ ] AI-19.27 Anointed Peacekeeper (LSV cube, MC-4.4d2b): its name is asked as Kai Winn's (`ChooseKeywordChoice
+      { NamesACard }`), so `GreedyAi.LikeliestName` answers by HER rule — first a card on the opponent's battlefield
+      with an activated, mana or loyalty ability. The Peacekeeper taxes neither mana nor (a ceiling) loyalty
+      abilities, and in a singleton cube a card in play is no spell left to tax: with a Mox or an Elf across the
+      table the AI names it and the tax does nothing, though it has just looked at the hand. Wanted: the naming
+      rule by what the namer does — for a tax, the best card known in their hand first (backlog; added from the
+      cube lane, found by `/pre-commit`'s review).
+- [ ] AI-19.28 Balance (LSV cube, MC-4.4d4): "sacrifices the rest" is one choice of exactly N permanents, and
+      `GreedyAi.Answer` gives a choice of several picks its first N options — the first N lands or creatures on the
+      battlefield, not the N it values least (a hand choice has `WorstCards`; Emrakul's "sacrifice three permanents"
+      was answered so already). The beam branches on the picks only up to 32 of them (`BeamSearchAi.MaxPicks`), so
+      on a real board it is the greedy answer. And `Evaluator.Effect` prices `EachSacrifices` as ONE sacrifice
+      whatever its `N` (read only for a loyalty ability; none has an N). Wanted: the least-valued N for a sacrifice
+      of several, and whether the AI casts Balance well at all — it is priced by rollout alone (backlog; added from
+      the cube lane).
+- [ ] AI-19.29 The library's top (LSV cube, MC-4.4e2a): a look that takes TWO (Stock Up; Consult the Star Charts
+      kicked) is a `ChooseAmongChoice` of exactly two, and `GreedyAi.Answer` gives that the two of greatest mana
+      value — Extrapolate the Impossible's rule, written for a reveal an OPPONENT picks from, not for cards you
+      keep (a land it needs is never taken). The beam branches on the pairs only up to 32 (`BeamSearchAi.MaxPicks`:
+      Stock Up's 10; a kicked Consult up to 8 lands), so past that, and in every rollout, it is the greedy answer.
+      Ponder's order is the surveil rule (`LandUnlock.Order`); its "you may shuffle" and a declined "may" search
+      (which no longer shuffles, `SearchLibrary { May }`) are answers the search judges with what `Hidden.Sample`
+      knows of the top. Wanted: the two worth most by held values, and a read of whether the AI casts Ponder and
+      Thassa's Oracle well (backlog; added from the cube lane).
 
 ## Next
 
@@ -254,6 +291,13 @@ boards and counts were in the session scratchpad and are gone.
 
 ## Log
 
+- 2026-11-15: AI-19.29 — the AI's pick of two from a look (Stock Up, Consult the Star Charts) added from the cube
+  lane (MC-4.4e2a).
+- 2026-11-15: AI-19.28 — the AI's "sacrifice N" answer (Balance) added from the cube lane (MC-4.4d4).
+- 2026-11-15: AI-19.27 — the AI's name for Anointed Peacekeeper added from the cube lane (MC-4.4d2b's review).
+- 2026-11-15: AI-19.26 — how the AI handles X spells added from the cube lane (MC-4.4d2a's Open, answered by Shayne).
+- 2026-11-14: AI-19.25 — Pyrokinesis' one-target answer added from the cube lane (MC-4.4c2e).
+- 2026-11-14: AI-19.24 — Tersa's "discard up to two" added from the cube lane (MC-4.4c2a's Open).
 - 2026-11-11: AI-19.23 — the scan rerun after AI-13.11/13.12 on the same 300 seeds; the VALUE items re-decided under 30
   guesses (findings, "the scan again").
 - 2026-11-11: AI-19.23 — the misplay scan built (BlunderLint on TRK sealed, records kept and read, S1–S6) and run on 300

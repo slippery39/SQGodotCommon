@@ -31,8 +31,9 @@ public record ChooseFromLibraryTopChoice : ChoiceAction
 }
 
 /// <summary>
-/// Surveil's "the rest on top of your library in any order" (CR 701.25a, TBL-9.2): the kept cards, every one
-/// picked, the first picked going on top. Asked only when two or more are kept (<see cref="OrderKeptOnTopAction"/>).
+/// Surveil's "the rest on top of your library in any order" (CR 701.25a, TBL-9.2) and Ponder's "put them back in
+/// any order": the kept cards, every one picked, the first picked going on top. Asked only when two or more are
+/// kept (<see cref="OrderKeptOnTopAction"/>).
 /// The AI answers it by a rule, never branching on orders (LandUnlock.Order).
 /// </summary>
 public record OrderLibraryTopChoice : ChoiceAction
@@ -85,27 +86,32 @@ public record OrderKeptOnTopAction : GameAction
 			.Take(Looked - binned)
 			.Select(c => c.Id)
 			.ToImmutableArray();
-		if (kept.Length < 2)
-			return new(s);
-		return new(
-			s.SpawnAction(
+		return new(Ask(s, PlayerId, kept));
+	}
+
+	/// <summary>
+	/// Two or more cards staying on top of a library: their owner orders them — a surveil's kept cards, and
+	/// Ponder's "put them back in any order" (LookAndTake's TheRest.TopInAnyOrder). Fewer: nothing to ask.
+	/// </summary>
+	public static GameState Ask(GameState s, int playerId, ImmutableArray<int> kept) =>
+		kept.Length < 2
+			? s
+			: s.SpawnAction(
 				new PipelineAction
 				{
 					Steps =
 					[
 						new OrderLibraryTopChoice
 						{
-							PlayerId = PlayerId,
+							PlayerId = playerId,
 							Kept = kept,
 							MinChoices = kept.Length,
 							MaxChoices = kept.Length,
 						},
-						new PutOnTopInOrderAction { PlayerId = PlayerId, Kept = kept },
+						new PutOnTopInOrderAction { PlayerId = playerId, Kept = kept },
 					],
 				}
-			)
-		);
-	}
+			);
 }
 
 /// <summary>The kept cards on top in the answered order. Not a zone change: the owner still knows each one.</summary>

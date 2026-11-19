@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
@@ -199,8 +200,29 @@ public class CombatTests
 		Assert.That(s.GetPlayer(them).Life, Is.EqualTo(startingLife - 3));
 	}
 
+	/// <summary>Passes to the "divide combat damage" questions and answers them in turn with these amounts (MC-7).</summary>
+	List<AssignCombatDamageChoice> Divide(params int[] amounts)
+	{
+		s = TestGames.PassUntil(
+			s,
+			x =>
+				x.GetPendingChoice() is AssignCombatDamageChoice
+				|| x.GetGame().Step == Step.PostCombatMain
+		);
+		var asked = new List<AssignCombatDamageChoice>();
+		foreach (var n in amounts)
+		{
+			var choice = (AssignCombatDamageChoice)s.GetPendingChoice()!;
+			asked.Add(choice);
+			s = s.Choose([n + 1]);
+		}
+		return asked;
+	}
+
+	// CR 510.1c since Foundations (2024): "divided as its controller chooses among them" — no order, no
+	// lethal to the first before the next. One question per blocker but the last, which takes the rest.
 	[Test]
-	public void DoubleBlock_AttackerSplitsLethalDamage_AndTakesBoth()
+	public void DoubleBlock_TheAttackersControllerDividesTheDamage_NoLethalFirst()
 	{
 		var attacker = Put(me, "3/3");
 		var first = Put(them, "2/2");
@@ -208,11 +230,160 @@ public class CombatTests
 
 		Attack(attacker);
 		Block((first, attacker), (second, attacker));
+		var asked = Divide(1);
 		ToSecondMain();
 
-		Assert.That(Alive(attacker), Is.False);
-		Assert.That(Alive(first), Is.False, "took lethal 2");
-		Assert.That(s.GetCard(second).Damage, Is.EqualTo(1), "the remaining 1");
+		Assert.That(asked.Single().BlockerId, Is.EqualTo(first));
+		Assert.That(
+			asked[0].GetDecidingPlayerId(s, ImmutableDictionary<string, object>.Empty),
+			Is.EqualTo(me),
+			"the attacker's controller divides"
+		);
+		Assert.That(Alive(attacker), Is.False, "the blockers' 4 back");
+		Assert.That(Alive(first), Is.True, "1 isn't lethal — allowed");
+		Assert.That(Alive(second), Is.False, "the rest, 2");
+	}
+
+	[Test]
+	public void DoubleBlock_OffersNothingToEverything()
+	{
+		var attacker = Put(me, "3/3");
+		var first = Put(them, "2/2");
+		var second = Put(them, "2/2");
+
+		Attack(attacker);
+		Block((first, attacker), (second, attacker));
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is AssignCombatDamageChoice);
+
+		Assert.That(
+			s.GetPendingChoice()!.Options.Select(o => o.Id - 1),
+			Is.EqualTo(new[] { 0, 1, 2, 3 }),
+			"0 to its whole power"
+		);
+		s = s.Choose([3 + 1]);
+		ToSecondMain();
+		Assert.That(Alive(first), Is.False);
+		Assert.That(s.GetCard(second).Damage, Is.Zero, "all 3 went to the first");
+	}
+
+	[Test]
+	public void OneBlocker_AsksNothing()
+	{
+		var attacker = Put(me, "3/3");
+		var bear = Put(them, "2/2");
+
+		Attack(attacker);
+		Block((bear, attacker));
+
+		Assert.That(Divide(), Is.Empty);
+		Assert.That(s.GetGame().Step, Is.EqualTo(Step.PostCombatMain));
+		Assert.That(Alive(bear), Is.False);
+	}
+
+	// CR 702.19c: trample still needs lethal on every blocker before any reaches the player.
+	[Test]
+	public void TrampleOverTwoBlockers_OnlyOnceEachHasLethal()
+	{
+		var wurm = Put(me, "6/6", "Trample");
+		var first = Put(them, "2/2");
+		var second = Put(them, "2/2");
+
+		Attack(wurm);
+		Block((first, wurm), (second, wurm));
+		Divide(2);
+		ToSecondMain();
+
+		Assert.That(Alive(first) || Alive(second), Is.False);
+		Assert.That(s.GetPlayer(them).Life, Is.EqualTo(startingLife - 2), "6 - 2 - 2");
+	}
+
+	[Test]
+	public void TrampleOverTwoBlockers_LessThanLethalToOne_NoneToThePlayer()
+	{
+		var wurm = Put(me, "6/6", "Trample");
+		var first = Put(them, "2/2");
+		var second = Put(them, "2/2");
+
+		Attack(wurm);
+		Block((first, wurm), (second, wurm));
+		Divide(1);
+		ToSecondMain();
+
+		Assert.That(s.GetCard(first).Damage, Is.EqualTo(1));
+		Assert.That(Alive(second), Is.False, "the rest, 5, stays on the blockers");
+		Assert.That(s.GetPlayer(them).Life, Is.EqualTo(startingLife));
+	}
+
+	// First strike divides in its own step; a blocker it kills never strikes back.
+	[Test]
+	public void FirstStrike_DividesInItsOwnStep_TheDeadDontStrikeBack()
+	{
+		var knight = Put(me, "4/4", "First strike");
+		var first = Put(them, "2/2");
+		var second = Put(them, "2/2");
+
+		Attack(knight);
+		Block((first, knight), (second, knight));
+		var asked = Divide(2);
+		ToSecondMain();
+
+		Assert.That(asked, Has.Count.EqualTo(1), "asked once: first strike only");
+		Assert.That(Alive(first) || Alive(second), Is.False);
+		Assert.That(s.GetCard(knight).Damage, Is.Zero);
+	}
+
+	// Deathtouch: 1 is lethal, so one point each kills both (CR 702.2c).
+	[Test]
+	public void Deathtouch_OneEachKillsBoth()
+	{
+		var snake = Put(me, "2/2", "Deathtouch");
+		var first = Put(them, "3/3");
+		var second = Put(them, "3/3");
+
+		Attack(snake);
+		Block((first, snake), (second, snake));
+		Divide(1);
+		ToSecondMain();
+
+		Assert.That(Alive(first) || Alive(second), Is.False);
+	}
+
+	// MC-7 (Shayne, 2026-11-12): an AI splits by value — the split worth most to its board, GreedyAi's pick
+	// (the beam asks it); a human is asked. Declared first, the vanilla 2/2 would
+	// take lethal by the old order; the value pick kills the flier with lifelink instead.
+	[Test]
+	public void TheValuePick_KillsTheBlockerWorthMore_NotTheFirstDeclared()
+	{
+		var attacker = Put(me, "3/3");
+		var vanilla = Put(them, "2/2");
+		var flier = Put(them, "2/2", "Flying", "Lifelink");
+
+		Attack(attacker);
+		Block((vanilla, attacker), (flier, attacker));
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is AssignCombatDamageChoice);
+		var split = (AssignCombatDamageChoice)s.GetPendingChoice()!;
+		s = s.Choose(new MagicCore.Ai.GreedyAi(me).Answer(s, split));
+		ToSecondMain();
+
+		Assert.That(Alive(flier), Is.False, "the one worth more");
+		Assert.That(Alive(vanilla), Is.True);
+	}
+
+	// The look-ahead's quick answer is the split made before it was a choice: lethal in declaration order,
+	// the rest onto the first — so the AI's rollouts see combat as they did.
+	[Test]
+	public void QuickAnswer_IsTheOldSplit()
+	{
+		var attacker = Put(me, "5/5");
+		var first = Put(them, "2/2");
+		var second = Put(them, "2/2");
+
+		Attack(attacker);
+		Block((first, attacker), (second, attacker));
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is AssignCombatDamageChoice);
+		var answer = MagicCore.Ai.Lookahead.QuickAnswer(s, s.GetPendingChoice()!).Single();
+
+		Assert.That(answer - 1, Is.EqualTo(3), "lethal 2 and the excess 1 onto the first");
 	}
 
 	[Test]

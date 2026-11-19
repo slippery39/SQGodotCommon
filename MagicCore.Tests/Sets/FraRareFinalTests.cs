@@ -28,13 +28,6 @@ public class FraRareFinalTests : FraBoardTest
 	static CardDefinition Kill =>
 		Targeted("Kill", "{1}", "Instant", TargetSpec.Permanent(), new Destroy(Ref.Target()));
 
-	int Put(CardDefinition card, int player, ZoneType zone)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, zone);
-		return id;
-	}
-
 	int UntappedLands() =>
 		s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
 
@@ -367,7 +360,7 @@ public class FraRareFinalTests : FraBoardTest
 
 	// The Caretaker / Chandra "you may cast it": a player who clicked into the cast can back out
 	// (TBL-2.16) - nothing is cast. Chandra's "if you don't" belongs to saying no up front (a known
-	// ceiling, ExileTopMayCast): backing out after a yes deals neither her 2 nor the spell's 3.
+	// ceiling, ExileTopPlayable.CastThatCard): backing out after a yes deals neither her 2 nor the spell's 3.
 	[Test]
 	public void CastNow_ThePlayerMayDeclineTheCast()
 	{
@@ -456,7 +449,7 @@ public class FraRareFinalTests : FraBoardTest
 			Components =
 			[
 				new AdditionalCostsComponent(
-					[new SacrificeCost(MagicCore.Filters.Is.Creature) { OrPay = 2 }]
+					[new SacrificeCost(MagicCore.Filters.Is.Creature) { Or = new PayManaCost(2) }]
 				),
 			],
 		};

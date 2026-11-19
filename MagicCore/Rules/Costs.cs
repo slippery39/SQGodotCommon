@@ -44,7 +44,7 @@ public static class Costs
 				is { } scotty
 			? new FlashbackComponent(card.ManaCost)
 			{
-				Costs = [new BeamMeUpCost { ExceptId = scotty.Id }],
+				Costs = [new ReturnToHandCost(Filters.Is.Creature) { ExceptId = scotty.Id }],
 			}
 			: null;
 	}
@@ -61,13 +61,40 @@ public static class Costs
 		int sourceId
 	)
 	{
-		if (ability.CostChange is not { } change)
-			return ability.Cost;
-		var context = Conditions
-			.Of(s.GetCard(sourceId) with { ControllerId = controllerId })
-			.Add(ContextKeys.Targets, targets);
-		var delta = change.If?.Holds(s, context) == false ? 0 : change.Amount.Value(s, context);
-		return delta == 0 ? ability.Cost : ability.Cost.WithGeneric(delta);
+		var source = s.GetCard(sourceId);
+		var delta = 0;
+		var floored = 0; // Forensic Gadgeteer: reductions with a floor, applied last
+		var floor = 0;
+		if (ability.CostChange is { } change)
+		{
+			var context = Conditions
+				.Of(source with { ControllerId = controllerId })
+				.Add(ContextKeys.Targets, targets);
+			delta = change.If?.Holds(s, context) == false ? 0 : change.Amount.Value(s, context);
+		}
+		// Anointed Peacekeeper: a permanent's tax on the abilities of the sources its filter names — looked
+		// for only while one is in play (the board's flag, found once per state).
+		if (Characteristics.RuleWork(s).AbilityTaxes)
+			foreach (var player in new[] { s.Player1Id(), s.Player2Id() })
+			foreach (var permanent in s.CardsIn(player, ZoneType.Battlefield))
+			foreach (var tax in s.AbilitiesOf<CostChange>(permanent))
+				if (
+					tax.Abilities
+					&& Conditions.Of(permanent) is var asItsHolder
+					&& Applies(s, tax, source, asItsHolder)
+					&& tax.Amount.Value(s, asItsHolder) is var amount
+				)
+				{
+					if (tax.Floor > 0 && amount < 0)
+						(floored, floor) = (floored + amount, Math.Max(floor, tax.Floor));
+					else
+						delta += amount;
+				}
+		var cost = delta == 0 ? ability.Cost : ability.Cost.WithGeneric(delta);
+		// "can't reduce the mana in that cost to less than one mana" — nor raise a cost already below it
+		return floored == 0
+			? cost
+			: cost.WithGeneric(Math.Max(floored, Math.Min(0, floor - cost.ManaValue)));
 	}
 
 	/// <param name="addedGeneric">
@@ -77,6 +104,8 @@ public static class Costs
 	/// <param name="free">"Without paying its mana cost" (Omnipresence) — taxes and additional costs still apply.</param>
 	/// <param name="targets">The spell's chosen targets — Guidance Failure: "costs {1} less to cast if it targets an attacking creature".</param>
 	/// <param name="added">An additional mana cost beyond generic — a kicker's {1}{U}; paid even when cast free.</param>
+	/// <param name="flashback">False for a cast an effect makes as it resolves (Bilbo): from the graveyard by its
+	/// permission, never flashback — the mana cost is paid, not the flashback cost.</param>
 	public static ManaCost Of(
 		GameState s,
 		int casterId,
@@ -84,10 +113,14 @@ public static class Costs
 		int addedGeneric = 0,
 		bool free = false,
 		System.Collections.Immutable.ImmutableArray<int> targets = default,
-		ManaCost? added = null
+		ManaCost? added = null,
+		bool flashback = true
 	)
 	{
-		var printed = free ? ManaCost.None : Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
+		var printed =
+			free ? ManaCost.None
+			: flashback ? Flashback(s, card)?.Cost ?? card.ManaCost // flashback is an alternative cost: taxes still apply
+			: card.ManaCost;
 		if (added is not null)
 			printed = printed.Plus(added);
 		// Cast from exile by impulse: Vulcan Mind-Meld's "mana of any type", Zero's "costs {2} more".
@@ -96,7 +129,12 @@ public static class Costs
 			: null;
 		// Null Summoner: "mana of any type can be spent to cast that spell".
 		if (
-			!free && (Playable.IsCastableThroughLink(s, card, casterId) || impulse?.AnyType == true)
+			!free
+			&& (
+				impulse?.AnyType == true
+				|| !s.IsIn(card.Id, casterId, ZoneType.Hand)
+					&& Playable.ZonePermission(s, card, casterId) is { Rule.AnyType: true }
+			)
 		)
 			printed = printed.OfAnyType();
 		var delta = addedGeneric + (impulse?.Tax ?? 0);
@@ -108,6 +146,7 @@ public static class Costs
 			var context = Conditions.Of(permanent);
 			if (
 				!change.OnItself
+				&& !change.Abilities
 				&& change.By.Includes(casterId, permanent.ControllerId)
 				&& Applies(s, change, card, context)
 			)
@@ -130,5 +169,10 @@ public static class Costs
 		System.Collections.Immutable.ImmutableDictionary<string, object> context
 	) =>
 		(change.Spells?.Matches(s, spell, ContextKeys.Asking(context)) ?? true)
-		&& (change.If?.Holds(s, context) ?? true);
+		&& (change.If?.Holds(s, context) ?? true)
+		&& (
+			change.NotFrom.IsEmpty
+			|| s.GetParent(spell.Id) is not { } zone
+			|| !change.NotFrom.Contains(((Zone)s.GetObject(zone)).ZoneType)
+		);
 }

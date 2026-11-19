@@ -69,17 +69,41 @@ public record DealDamage(Ref To, Count Amount) : Effect
 	/// </summary>
 	public ImmutableList<GameAction> IfExcess { get; init; } = [];
 
+	/// <summary>
+	/// Screaming Nemesis: "If a player is dealt damage this way, they can't gain life for the rest of the game." — run
+	/// after, with Ref.ThisWay what was actually dealt damage (none prevented, none whose target is gone).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
-		var amount = Amount.Value(s, InputContext);
 		var source = Source(s);
 		var excess = 0;
+		var dealt = ImmutableArray.CreateBuilder<int>();
+		var before = s;
 		foreach (var id in All(To, s).ToList())
 		{
+			// counted per object, Ref.It that one (Pyrokinesis: each target its share, Count.Share) — and
+			// before any of it is dealt: the damage is simultaneous
+			var amount = Amount.Value(before, InputContext.SetItem(ContextKeys.It, id));
 			if (!IfExcess.IsEmpty)
 				excess += Damage.Excess(s, source, id, amount);
-			s = Damage.Deal(s, source, id, amount);
+			var after = Damage.Deal(s, source, id, amount);
+			if (!ReferenceEquals(after, s)) // Damage.Deal hands back the same state when it dealt none
+				dealt.Add(id);
+			s = after;
 		}
+		if (!Then.IsEmpty && dealt.Count > 0)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps = Then,
+					PipelineContext = InputContext.SetItem(
+						ContextKeys.ThisWay,
+						dealt.ToImmutable()
+					),
+				}
+			);
 		return excess == 0 || IfExcess.IsEmpty
 			? new(s)
 			: new(
@@ -128,8 +152,49 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Seven of Nine, Unassimilated: "Seven of Nine's base power and toughness become 7/9." — no duration: until it leaves the battlefield.</summary>
 	public bool ForGood { get; init; }
 
+	/// <summary>
+	/// Does Machines: "it becomes a 0/0 Robot creature in addition to its other types" — card types added, STAMPED
+	/// (Card.WithTypesUntilItLeaves: every rule reads card.Is), so ForGood only. With SetBase and AlsoCreatureType.
+	/// </summary>
+	public Cards.CardType AlsoType { get; init; }
+
+	/// <summary>
+	/// The Wondrous Wasp: "It loses all abilities for as long as The Wondrous Wasp remains on the battlefield";
+	/// Tishana's Tidebinder: "… for as long as this creature remains on the battlefield". LosesAllAbilities only:
+	/// each permanent's EnchantedLosesAllAbilities { Object } stamped on THIS object of the source. With the source
+	/// gone as it resolves, nothing (CR 611.2b).
+	/// </summary>
+	public bool WhileSourceRemains { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		if (WhileSourceRemains)
+		{
+			if (!LosesAllAbilities)
+				throw new InvalidOperationException(
+					"WhileSourceRemains lasts for LosesAllAbilities only (MC-4.4e2e)"
+				);
+			if (!Ref.Source.Resolve(s, InputContext).Any() || !s.IsOnBattlefield(Source(s).Id))
+				return new(s);
+			return new(
+				Permanents(What, s)
+					.Aggregate(
+						s,
+						(st, c) =>
+							Update(
+								st,
+								(Card)
+									st.GetCard(Source(s).Id)
+										.WithComponent(
+											new EnchantedLosesAllAbilities
+											{
+												Object = new Filters.TheObject(c.Id, c.Incarnation),
+											}
+										)
+							)
+					)
+			);
+		}
 		var effect = new UntilEndOfTurn(
 			Power.Value(s, InputContext),
 			Toughness.Value(s, InputContext),
@@ -148,9 +213,42 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			Gains = Gains,
 			AlsoCreatureType = AlsoCreatureType,
 		};
+		if (AlsoType != Cards.CardType.None && !ForGood)
+			throw new InvalidOperationException(
+				"AlsoType is a stamp no cleanup undoes: ForGood only (MC-4.4g10)"
+			);
 		return new(
-			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
+			Permanents(What, s)
+				.Aggregate(
+					s,
+					(st, c) =>
+						Update(
+							st,
+							(Card)
+								(
+									(c.Types & AlsoType) == AlsoType
+										? c
+										: c.WithTypesUntilItLeaves(c.Types | AlsoType)
+								).WithComponent(effect)
+						)
+				)
 		);
+	}
+}
+
+/// <summary>
+/// A Class's "[Cost]: Level N" (CR 716.2a; Does Machines: "{1}{U}: Level 2") as it resolves — "this Class's level
+/// becomes N": ClassLevel on this object of the source, and BecameLevelEvent ("when this Class becomes level 2").
+/// Written with Scripting.Level. A source gone (or a new object of it) gains nothing.
+/// </summary>
+public record GainLevel(int N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var c in Permanents(Ref.Source, s).ToList())
+			s = Update(s, (Card)c.WithComponentReplaced(new ClassLevel(N)))
+				.Raise(new BecameLevelEvent(c.Id, N));
+		return new(s);
 	}
 }
 
@@ -160,8 +258,18 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 /// </summary>
 public record TakeExtraTurn : Effect
 {
+	/// <summary>Time Warp: "Target player takes an extra turn after this one."</summary>
+	public Ref Who { get; init; } = Ref.You;
+
 	public override ActionResult Execute(GameState s) =>
-		new(s.WithGame(s.GetGame() with { ExtraTurns = s.GetGame().ExtraTurns.Add(Controller) }));
+		new(
+			s.WithGame(
+				s.GetGame() with
+				{
+					ExtraTurns = s.GetGame().ExtraTurns.AddRange(All(Who, s)),
+				}
+			)
+		);
 }
 
 /// <summary>
@@ -297,12 +405,44 @@ public record AddLoyalty(Ref What, Count Amount) : Effect
 	}
 }
 
-/// <summary>Proft: "you may pay {2}" — the first step of a May's Then; its Can is <see cref="CanPay"/>.</summary>
+/// <summary>
+/// Proft: "you may pay {2}" — the first step of a May's Then; its Can is <see cref="CanPay"/> (Scripting.MayPay
+/// for "if you don't" too). The cost is Cost, or the mana cost of ManaCostOf, plus Generic, reduced by ReducedBy.
+/// </summary>
 public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
 {
+	/// <summary>Flash: "its mana cost" — the printed mana cost of the card this names (X is 0), in place of Cost.</summary>
+	public Ref? ManaCostOf { get; init; }
+
+	/// <summary>Transmute Artifact: "{X}, where X is the difference" — generic mana added, counted as it is paid.</summary>
+	public Count? Generic { get; init; }
+
+	/// <summary>
+	/// Flash: "reduced by {2}"; Transmute: X is the found card's mana value reduced by the sacrificed one's — generic
+	/// taken off, never the coloured pips (CR 601.2f), never below none.
+	/// </summary>
+	public Count? ReducedBy { get; init; }
+
+	/// <summary>What paying it costs now.</summary>
+	public ManaCost Owed(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var cost =
+			ManaCostOf is null ? Cost
+			: ManaCostOf.Resolve(s, context).FirstOrDefault() is var id
+			&& id != 0
+			&& s.HasObject(id)
+			&& s.GetObject(id) is Card card
+				? card.ManaCost
+			: ManaCost.None;
+		cost = cost.WithGeneric(Math.Max(0, Generic?.Value(s, context) ?? 0));
+		// ponytail: a printed {U/P} (Flash putting in Phyrexian Metamorph) is paid with its colour, never 2 life —
+		// offer the life as a yes/no when a card makes it matter (DesignNotes).
+		return cost.WithGeneric(-Math.Max(0, ReducedBy?.Value(s, context) ?? 0)).PayingLifeFor(0);
+	}
+
 	/// <summary>Pays, then runs Then — or, unable to pay, does nothing at all ("if you do").</summary>
 	public override ActionResult Execute(GameState s) =>
-		ManaPayment.Find(s, Controller, Cost, 0) is not { } payment
+		ManaPayment.Find(s, Controller, Owed(s, InputContext), 0) is not { } payment
 			? new(s)
 			: new(
 				ManaPayment
@@ -321,8 +461,12 @@ public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
 /// </summary>
 public record CopySpell(Ref What) : Effect
 {
+	/// <summary>Storm (Brain Freeze): "copy it for each spell cast before it this turn" — how many copies; unset is one.</summary>
+	public Count? N { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var n = N?.Value(s, InputContext) ?? 1;
 		var stack = s.GetWellKnownId(MagicKeys.Stack);
 		// Countered or gone in response, it is still copied — as it last was on the stack.
 		var originals = All(What, s)
@@ -331,7 +475,11 @@ public record CopySpell(Ref What) : Effect
 			.ToList();
 		if (originals.Count == 0 && GetInput<Card?>(ContextKeys.EventSnapshot) is { } lastKnown)
 			originals.Add(lastKnown);
-		foreach (var original in originals.Where(c => c.HasComponent<OnStackComponent>()))
+		foreach (
+			var original in originals
+				.Where(c => c.HasComponent<OnStackComponent>())
+				.SelectMany(c => Enumerable.Repeat(c, Math.Max(0, n)))
+		)
 		{
 			Card copy;
 			(s, copy) = s.AddObject(
@@ -617,8 +765,49 @@ public record Fight(Ref A, Ref B) : Effect
 /// <summary>"Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.</summary>
 public record Untap(Ref What) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(Permanents(What, s).Aggregate(s, (st, c) => st.Untap(c.Id)));
+	/// <summary>
+	/// Frantic Search: "Untap up to three lands" (Time Spiral's six) — a choice among what What names, then those
+	/// untapped. ponytail: only the TAPPED ones you control are offered, and as many as can be untapped are asked
+	/// for (unasked when that is all of them): an untapped land does nothing untapped, an opponent's is never yours
+	/// to want, and the AI answers a choice of several with its minimum — asked as "up to", it would never untap one.
+	/// </summary>
+	public Count? UpTo { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		if (UpTo is null)
+			return new(Permanents(What, s).Aggregate(s, (st, c) => st.Untap(c.Id)));
+		ImmutableList<int> mine =
+		[
+			.. Permanents(What, s)
+				.Where(c => c.IsTapped && c.ControllerId == Controller)
+				.Select(c => c.Id),
+		];
+		var n = Math.Min(UpTo.Value(s, InputContext), mine.Count);
+		if (n == mine.Count)
+			return new(mine.Aggregate(s, (st, id) => st.Untap(id)));
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps =
+					[
+						new ChooseAmongChoice
+						{
+							PlayerId = Controller,
+							Ids = mine,
+							Zone = ZoneType.Battlefield,
+							MinChoices = n,
+							MaxChoices = n,
+							Prompt = $"Untap {n}",
+						},
+						new Untap(Ref.Chosen),
+					],
+				}
+			)
+		);
+	}
 }
 
 /// <summary>"You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.</summary>
@@ -746,30 +935,54 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 	/// Dr. Leonard "Bones" McCoy: "When it dies this turn, return that card to the battlefield … at the
 	/// beginning of the next end step" — the delayed trigger on that card where it now is (its
 	/// graveyard), as Flicker's is on its exiled card: gone if the card leaves (a new object, CR 400.7);
-	/// a token never gets one. Its "this" (Ref.Source) is that card.
+	/// a token never gets one. Its "this" (Ref.Source) is that card. Sneak Attack: "Sacrifice the creature at the
+	/// beginning of the next end step" — on a permanent on the battlefield the same way (a token too).
 	/// </summary>
 	public Ref? On { get; init; }
 
+	/// <summary>
+	/// Mana Drain: "At the beginning of your next main phase" — your precombat main, or this turn's postcombat main
+	/// when set up during your turn before it (CR 505.1: both are main phases; the card's rulings).
+	/// </summary>
+	public bool NextMainPhase { get; init; }
+
+	/// <summary>Mana Drain: "equal to that spell's mana value" — counted as it is set up, the delayed trigger's X.</summary>
+	public Count? X { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var game = s.GetGame();
 		var trigger = new DelayedTrigger(
-			new TriggeredAbilityComponent(TriggerEvent.EachEndStep, Effects)
+			new TriggeredAbilityComponent(
+				!NextMainPhase ? TriggerEvent.EachEndStep
+					: game.ActivePlayerId == Controller
+					&& game.Step is >= Step.PreCombatMain and < Step.PostCombatMain
+						? TriggerEvent.Beginning(Step.PostCombatMain, Whose.You)
+					: TriggerEvent.YourFirstMainPhase,
+				Effects
+			)
+			{
+				X = X?.Value(s, InputContext) ?? 0,
+			}
 		);
 		if (On is { } on)
 			return new(
 				All(on, s)
-					// in its owner's graveyard, where it died to — ponytail: by id, so a card that left
-					// and came back there inside the same response would still return; stamp the
-					// incarnation it died as if that ever matters
+					// on the battlefield (Sneak Attack), or in its owner's graveyard, where it died to —
+					// ponytail: by id, so a card that left and came back there inside the same response
+					// would still return; stamp the incarnation it died as if that ever matters
 					.Where(id =>
 						s.HasObject(id)
-						&& s.GetObject(id) is Card { IsToken: false } card
-						&& s.IsIn(id, card.OwnerId, ZoneType.Graveyard)
+						&& s.GetObject(id) is Card card
+						&& (
+							s.IsOnBattlefield(id)
+							|| (!card.IsToken && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
+						)
 					)
 					.Aggregate(
 						s,
 						(st, id) =>
-							ReturnFromExileUnderYourControl.Delay(
+							MoveTo.Delay(
 								st,
 								id,
 								trigger with
@@ -780,7 +993,12 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 					)
 			);
 		return new(
-			GetEmblem.ToCommandZone(s, Controller, $"{Source(s).Name} (next end step)", [trigger])
+			GetEmblem.ToCommandZone(
+				s,
+				Controller,
+				$"{Source(s).Name} ({(NextMainPhase ? "next main phase" : "next end step")})",
+				[trigger]
+			)
 		);
 	}
 }
@@ -806,9 +1024,7 @@ public record AtBeginningOfNextCombat(Ref On, ImmutableList<GameAction> Effects)
 			ControllerId = Controller,
 		};
 		return new(
-			Permanents(On, s)
-				.ToList()
-				.Aggregate(s, (st, c) => ReturnFromExileUnderYourControl.Delay(st, c.Id, trigger))
+			Permanents(On, s).ToList().Aggregate(s, (st, c) => MoveTo.Delay(st, c.Id, trigger))
 		);
 	}
 }
@@ -860,51 +1076,100 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 	/// <summary>Sen Triplets: "This turn, that player can't …" — whose command zone (Ref.Target(0)); unset is you.</summary>
 	public Ref? On { get; init; }
 
+	/// <summary>
+	/// Screaming Nemesis: "they can't gain life for the rest of the game" — the same object, never removed with the
+	/// turn (<see cref="Effects.RestOfTheGame"/>); a player who already has that one gets no second.
+	/// </summary>
+	public bool RestOfTheGame { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		var who = On is null ? Controller : All(On, s).FirstOrDefault();
+		var who = On is null
+			? Controller
+			: All(On, s).FirstOrDefault(id => s.HasObject(id) && s.GetObject(id) is MagicPlayer); // "if a PLAYER is dealt damage this way"
+		if (
+			RestOfTheGame
+			&& who != 0
+			&& s.CardsIn(who, ZoneType.Command)
+				.Any(c => c.HasComponent<RestOfTheGame>() && c.Components.Contains(What))
+		)
+			return new(s);
 		// Sen Triplets' "that player's hand": who it names, kept as it resolves — a target can't be read later.
 		var what = What switch
 		{
-			MayPlayFrom may => may with { OwnerId = All(may.Of, s).FirstOrDefault() },
+			MayPlayFromZone { Of: { } of } may => may with
+			{
+				OwnerId = All(of, s).FirstOrDefault(),
+			},
 			_ => What,
 		};
 		return who == 0
 			? new(s)
-			: new(GetEmblem.ToCommandZone(s, who, $"{Source(s).Name} (this turn)", [what]));
+			: new(
+				GetEmblem.ToCommandZone(
+					s,
+					who,
+					$"{Source(s).Name} ({(RestOfTheGame ? "rest of the game" : "this turn")})",
+					RestOfTheGame ? [what, new RestOfTheGame()] : [what]
+				)
+			);
 	}
 }
+
+/// <summary>
+/// Screaming Nemesis: "for the rest of the game" — marks a ThisTurn object the turn's end leaves (TurnStructure).
+/// </summary>
+public record RestOfTheGame : GameComponent;
 
 /// <summary>
 /// "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat, players can't
 /// cast spells or activate abilities that aren't mana abilities." (a permanent's: every player); Sen
 /// Triplets: "This turn, that player can't cast spells or activate abilities" (in that player's command
-/// zone, mana abilities too). Combat.LockedDown.
+/// zone, mana abilities too). Whose, which of the two, of which sources and when are its options (MC-4.4d2b:
+/// Voice of Victory, Archon of Emeria, Clarion Conqueror). Combat.LockedDown.
 /// </summary>
 public record CantCastOrActivate : ThisTurnEffect
 {
-	/// <summary>Yuriko: "During combat".</summary>
-	public bool DuringCombat { get; init; }
+	/// <summary>Yuriko: "During combat" (DuringCombat); Voice of Victory: "during your turn" — judged as its holder's.</summary>
+	public Condition? If { get; init; }
 
 	/// <summary>Sen Triplets: "activate abilities" — mana abilities too (Kai Winn's ruling); TapForManaAction and ManaPayment ask.</summary>
 	public bool ManaAbilitiesToo { get; init; }
-}
 
-/// <summary>
-/// Sen Triplets: "You may play lands and cast spells from that player's hand this turn." — every card in
-/// that zone while it lasts, one drawn later too; the land drop and the costs as usual. Read by Playable
-/// (CanCastFromHere, CanPlayLandFromHere, Candidates). <see cref="Of"/> is resolved as it is made (OwnerId).
-/// </summary>
-public record MayPlayFrom(ZoneType Zone, Ref Of) : ThisTurnEffect
-{
-	public int OwnerId { get; init; }
+	/// <summary>
+	/// Voice of Victory: "Your opponents can't cast spells" — whose, from its holder's controller: a PERMANENT's.
+	/// A "this turn" lock is put with the player it binds (ThisTurn.On, Sen Triplets) and needs none.
+	/// </summary>
+	public Whose By { get; init; } = Whose.Any;
+
+	/// <summary>Clarion Conqueror: "Activated abilities … can't be activated" — false: spells are still cast.</summary>
+	public bool Spells { get; init; } = true;
+
+	/// <summary>Voice of Victory, Archon of Emeria: "can't cast spells" — false: abilities are still activated.</summary>
+	public bool Abilities { get; init; } = true;
+
+	/// <summary>
+	/// Archon of Emeria: "Each player can't cast more than one spell each turn." — it binds only a player who
+	/// has cast that many this turn (TurnTally.SpellsCast); 0: from the first.
+	/// </summary>
+	public int SpellsEachTurn { get; init; }
+
+	/// <summary>
+	/// Clarion Conqueror: "Activated abilities of artifacts, creatures, and planeswalkers" — the spell cast, or
+	/// the PERMANENT whose ability it is (never a card in a hand or graveyard), asked from its holder.
+	/// </summary>
+	public Filters.Filter? Of { get; init; }
 }
 
 /// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>
 public record ExtraRedFromMountains : ThisTurnEffect;
 
 /// <summary>Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life (Gain, Lose, CanPay).</summary>
-public record LifeTotalCantChange : ThisTurnEffect;
+public record LifeTotalCantChange : ThisTurnEffect
+{
+	/// <summary>Screaming Nemesis: "they can't gain life" — only gaining: life is still lost and paid (Life.Gain).</summary>
+	public bool GainOnly { get; init; }
+}
 
 /// <summary>Peace in Our Time: "they can't attack this turn" — on that player; Combat.CanAttack.</summary>
 public record CantAttackThisTurn : ThisTurnEffect;
@@ -929,8 +1194,14 @@ public record ThisTurnReplacement(NumericReplacement Replacement) : ThisTurnEffe
 /// </summary>
 public record CopyNextInstantOrSorcery : ThisTurnEffect;
 
-/// <summary>Jace's Machinations: "you may activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant" — LoyaltyActions.</summary>
-public record JaceLoyaltyAtInstantSpeed : ThisTurnEffect;
+/// <summary>
+/// "You may activate [their] loyalty abilities any time you could cast an instant" — Jace's Machinations: "you may
+/// activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant" this turn
+/// (Is.Subtype("Jace"), in a ThisTurn); The Wandering Emperor: "As long as The Wandering Emperor entered this
+/// turn, you may activate her loyalty abilities any time you could cast an instant." (Is.EnteredThisTurn, on
+/// her — a planeswalker's own is about itself). The filter is asked of the planeswalker; LoyaltyActions.
+/// </summary>
+public record LoyaltyAtInstantSpeed(Filters.Filter Of) : ThisTurnEffect;
 
 /// <summary>Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by that cast.</summary>
 public record NextSpellCantBeCountered : ThisTurnEffect;
@@ -1102,8 +1373,55 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 /// <summary>Precise Redaction: "Counter target spell" — through StackResolution.Counter.</summary>
 public record Counter(Ref What) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(All(What, s).ToList().Aggregate(s, StackResolution.Counter));
+	/// <summary>
+	/// Remand: "If that spell is countered this way, put it into its owner's hand instead of into that player's
+	/// graveyard" (Hand); Memory Lapse: "on top of its owner's library" (Library — the top).
+	/// </summary>
+	public ZoneType To { get; init; } = ZoneType.Graveyard;
+
+	/// <summary>
+	/// Tishana's Tidebinder: "If an ability of an artifact, creature, or planeswalker is countered this way, that
+	/// permanent …" — run with Ref.ThisWay what was countered: a spell's card, an ability's SOURCE while it is still
+	/// that object on the battlefield (StackAbility.Source's incarnation).
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var done = ImmutableArray.CreateBuilder<int>();
+		foreach (var id in All(What, s).ToList())
+		{
+			var countered = s.HasObject(id) ? s.GetObject(id) : null;
+			var after = StackResolution.Counter(s, id, To);
+			if (!ReferenceEquals(after, s))
+				switch (countered)
+				{
+					case Card spell:
+						done.Add(spell.Id);
+						break;
+					case StackAbility { Delayed: false, Source: var source }
+						when after.IsOnBattlefield(source.Id)
+							&& after.GetCard(source.Id).Incarnation == source.Incarnation:
+						done.Add(source.Id);
+						break;
+				}
+			s = after;
+		}
+		return Then.IsEmpty || done.Count == 0
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							done.ToImmutable()
+						),
+						Steps = Then,
+					}
+				)
+			);
+	}
 }
 
 /// <summary>After the payer's answer: pay the cost, or the spell or ability is countered.</summary>
@@ -1209,6 +1527,51 @@ public record IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then) : E
 			: new(s);
 	}
 }
+
+/// <summary>
+/// Mana Crypt: "flip a coin. If you lose the flip, this artifact deals 3 damage to you." — a fair flip, taken
+/// from the game's seeded random (s.TakeRng(), so a recorded game replays); the steps run as If's do.
+/// </summary>
+public record FlipACoin(ImmutableList<GameAction> IfLost) : Effect
+{
+	/// <summary>"If you win the flip, …".</summary>
+	public ImmutableList<GameAction> IfWon { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		(var rng, s) = s.TakeRng();
+		var steps = rng.Next(2) == 0 ? IfWon : IfLost;
+		return steps.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(new PipelineAction { Steps = steps, PipelineContext = InputContext })
+			);
+	}
+}
+
+/// <summary>
+/// "Name Sticker" Goblin: "roll a 20-sided die. 1-6 | Add {R}{R}{R}{R}. 7-14 | … 15-20 | …" — one fair roll
+/// (CR 706) from the game's seeded random (s.TakeRng(), so a recorded game replays), then the steps of the row
+/// the result falls in, run as If's do. Not FlipACoin with sides: a flip is won or lost (CR 705), a roll is a
+/// number read against a table — and "whenever you roll a die" never sees a flip.
+/// </summary>
+public record RollDie(int Sides, ImmutableList<DieRow> Rows) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		(var rng, s) = s.TakeRng();
+		var rolled = rng.Next(Sides) + 1;
+		var steps = Rows.FirstOrDefault(r => r.From <= rolled && rolled <= r.To)?.Then ?? [];
+		return steps.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(new PipelineAction { Steps = steps, PipelineContext = InputContext })
+			);
+	}
+}
+
+/// <summary>"Name Sticker" Goblin: "7-14 | Add {R}{R}{R}{R}{R}." — a row of a die's table: the results From to To, and what happens.</summary>
+public record DieRow(int From, int To, ImmutableList<GameAction> Then);
 
 /// <summary>"If [condition], [effects]" — the effects run in order with this ability's context.</summary>
 public record If(Condition When, ImmutableList<GameAction> Then) : Effect

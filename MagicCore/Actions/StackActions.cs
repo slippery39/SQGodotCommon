@@ -19,11 +19,20 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>"If this spell was cast from a graveyard" — and flashback exiles it as it leaves the stack.</summary>
 	public ZoneType CastFrom { get; init; } = ZoneType.Hand;
 
+	/// <summary>
+	/// Pyrokinesis: "4 damage divided as you choose" — how many each target chosen takes, in the targets' order,
+	/// announced as it was cast (CR 601.2d); a copy keeps the division (CR 707.10). Read by Count.Share.
+	/// </summary>
+	public ImmutableArray<int> Shares { get; init; } = [];
+
 	/// <summary>Overflow Submatrix, The Holodeck: cast from a graveyard by a permanent's permission — not flashback, so not exiled leaving the stack; it resolves onto the battlefield.</summary>
 	public bool ByPermission { get; init; }
 
 	/// <summary>Overflow Submatrix: "that artifact creature enters with a finality counter on it".</summary>
 	public bool Finality { get; init; }
+
+	/// <summary>Serra Paragon: "If you do, it gains '[trigger]'" — the permission's gift (MayPlayFromZone.Gains), given as it enters.</summary>
+	public TriggeredAbilityComponent? Gains { get; init; }
 
 	/// <summary>Theorist's Proxy: this cast can't be countered — gone with the stack object, so a recast can be.</summary>
 	public bool CantBeCountered { get; init; }
@@ -31,8 +40,28 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>Kicker: "if this spell was kicked" — a copy of it is kicked too (CR 707.10).</summary>
 	public bool Kicked { get; init; }
 
+	/// <summary>
+	/// Replicate and squad: how many times its replicate cost was paid (CastSpellAction.Replicate) — squad's "create
+	/// that many tokens" reads it on the permanent (Card.CastAs, Count.TimesReplicated). A copy has it too (CR 707.10:
+	/// additional costs paid are copied), as it is kicked.
+	/// </summary>
+	public int Replicate { get; init; }
+
+	/// <summary>
+	/// Storm (Brain Freeze): "copy it for each spell cast before it this turn" — every player's spells, counted as it is
+	/// cast (CR 702.40a), so a spell cast in response to the storm trigger isn't one (Count.SpellsCastBefore).
+	/// </summary>
+	public int SpellsCastBefore { get; init; }
+
 	/// <summary>First Contact: it is the first spell its caster cast this game — a copy wasn't cast (CopySpell clears it).</summary>
 	public bool FirstSpellThisGame { get; init; }
+
+	/// <summary>
+	/// Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card itself
+	/// (MayCastFromHandFree(Is.Source)), not for its mana cost or by another permission — a copy
+	/// has it too, as it is kicked (CR 707.10).
+	/// </summary>
+	public bool AlternativeCost { get; init; }
 }
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
@@ -57,6 +86,12 @@ public record StackAbility : GameObject
 
 	/// <summary>A triggered ability, not an activated one — Consign to Memory counters only these.</summary>
 	public bool Triggered { get; init; }
+
+	/// <summary>
+	/// A delayed trigger (CR 603.7): its source is the source of the ability that made it, never the card it sits on —
+	/// Tishana's Tidebinder countering Sneak Attack's "sacrifice the creature" strips no creature (Counter.Then).
+	/// </summary>
+	public bool Delayed { get; init; }
 }
 
 /// <summary>
@@ -82,17 +117,54 @@ public record CastSpellAction : GameAction
 	/// <summary>The card beheld for a "behold … or pay" cost; 0 when paying instead.</summary>
 	public int BeholdId { get; init; }
 
-	/// <summary>Beam me up: the creature returned to its owner's hand; 0 if none is owed.</summary>
+	/// <summary>Beam me up: the creature returned to its owner's hand (Daze: the Island); 0 if none is owed.</summary>
 	public int ReturnId { get; init; }
+
+	/// <summary>Force of Will: the blue card exiled from your hand; 0 if none is owed.</summary>
+	public int ExileId { get; init; }
 
 	/// <summary>Omnipresence: cast without paying its mana cost — X is 0 (CR 107.3c).</summary>
 	public bool WithoutPayingManaCost { get; init; }
 
-	/// <summary>Consign to Memory: how many times its replicate cost is paid — that many copies.</summary>
+	/// <summary>Consign to Memory, Lose Focus: how many times its replicate cost is paid — that many copies.</summary>
 	public int Replicate { get; init; }
 
 	/// <summary>Kicker: its kicker cost is paid too (KickerComponent).</summary>
 	public bool Kicked { get; init; }
+
+	/// <summary>
+	/// Delve (CR 702.66; Treasure Cruise, Dig Through Time): "Each card you exile from your graveyard while casting
+	/// this spell pays for {1}." — how many: one cast per number, at most the generic in its total cost; the cards
+	/// themselves are picked after the cast, one at a time (ExileFromGraveyardCost.PickAfter, Drivnod's), never a
+	/// cast per set of cards.
+	/// </summary>
+	public int Delve { get; init; }
+
+	/// <summary>
+	/// Brazen Borrower // Petty Theft: cast as its Adventure (CR 715.3) — the card as Petty Theft (Card.AsAdventure),
+	/// validated and cast exactly as that card would be. ponytail: never from exile — the Adventure's own exile lets
+	/// only the creature be cast (CR 715.3d), and another effect's exile permission would allow the Adventure too
+	/// (715.3a); tell the two apart when a card casts from exile that way (DesignNotes).
+	/// </summary>
+	public bool Adventure { get; init; }
+
+	/// <summary>The state with this cast's card as its Adventure; null when it has none or is in exile.</summary>
+	GameState? AsAdventure(GameState s) =>
+		s.HasObject(CardId)
+		&& s.GetObject(CardId) is Card card
+		&& card.HasComponent<AdventureComponent>()
+		&& !s.IsIn(CardId, card.OwnerId, ZoneType.Exile)
+			? s.UpdateObject(CardId, card.AsAdventure())
+			: null;
+
+	/// <summary>Delve's cards: any in your graveyard but this one (a spell being cast from there).</summary>
+	ExileFromGraveyardCost Delving => new(!Filters.Is.Source) { Count = Delve };
+
+	/// <summary>
+	/// Gitaxian Probe: "{U/P}" — how many of the Phyrexian symbols are paid with 2 life each (CR 107.4f), one legal
+	/// cast per number, as an activation's (ActivateAbilityAction.LifeForPhyrexian); the rest are paid with their colour.
+	/// </summary>
+	public int LifeForPhyrexian { get; init; }
 
 	/// <summary>
 	/// Cast by an effect as it resolves (CastNow — Chandra, Uldaros): no priority, no timing, and the
@@ -102,11 +174,36 @@ public record CastSpellAction : GameAction
 	public bool DuringResolution { get; init; }
 
 	/// <summary>
+	/// Bilbo, Thief in the Night: "If an instant or sorcery spell cast this way would be put into your graveyard, exile
+	/// it instead" — a cast during a resolution from a graveyard keeps flashback's exile (MoveCard) rather than being
+	/// by the effect's permission (OnStackComponent.ByPermission). ponytail: flashback's exile takes it from the stack
+	/// to anywhere — a Bilbo instant bounced to the hand is exiled too (DesignNotes).
+	/// </summary>
+	public bool ExiledLeavingTheStack { get; init; }
+
+	/// <summary>
 	/// Dominion Infiltration: "Choose X target creatures your opponents control" — the X targets are a
 	/// choice made as it is cast (ChooseXTargetsChoice), before it is paid (CR 601.2c), not one legal cast
 	/// per set: 2^n casts hung the fuzz probe (Shayne, 2026-11-05). One cast per X; Targets empty until chosen.
+	/// Mystic Confluence, Fiery Confluence: "Choose three. You may choose the same mode more than once." — one cast
+	/// per choice of modes, each target word then chosen in turn (ChooseTargetChoice, as a copy's are), never a
+	/// cast per set: "return target creature" three times is 220 casts against 12 creatures (<see cref="EachWord"/>).
 	/// </summary>
 	public bool ChoosesTargets { get; init; }
+
+	/// <summary>
+	/// Mystic Confluence: a text whose modes may repeat chooses its targets word by word as it is cast — and spree's
+	/// (Three Steps Ahead, a mode with a cost: Shayne, 2026-11-18): a cast per set of modes, never per pair of targets.
+	/// </summary>
+	public static bool EachWord(Card card) =>
+		card.GetComponent<SpellEffectsComponent>() is { } text
+		&& (text.Choose.Repeats || text.Modes.Any(m => m.Cost is not null));
+
+	/// <summary>
+	/// Pyrokinesis: how its 4 damage is divided among the targets chosen (TargetSpec.Divide), one number per
+	/// target in their order — empty when the number of targets leaves one way (one target, or one each).
+	/// </summary>
+	public ImmutableArray<int> Shares { get; init; } = [];
 
 	/// <summary>
 	/// What casting it costs beyond mana: its additional costs, then its flashback's when cast that way, then
@@ -117,11 +214,17 @@ public record CastSpellAction : GameAction
 		GameState s,
 		Card card,
 		bool kicked = false,
-		ImmutableList<AdditionalCost>? free = null
+		ImmutableList<AdditionalCost>? free = null,
+		int permissionOf = 0,
+		bool flashback = true
 	) =>
 		[
 			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
-			.. Costs.Flashback(s, card)?.Costs ?? [],
+			.. flashback ? Costs.Flashback(s, card)?.Costs ?? [] : [],
+			// Underworld Breach's escape: what the rule letting this player cast it from where it is asks
+			.. permissionOf == 0 || Playable.MarkedInGraveyard(s, card, permissionOf)
+				? []
+				: Playable.ZonePermission(s, card, permissionOf)?.Rule.Costs ?? [],
 			.. kicked ? card.GetComponent<KickerComponent>()?.Costs ?? [] : [],
 			.. free ?? [],
 		];
@@ -134,7 +237,9 @@ public record CastSpellAction : GameAction
 			Kicked,
 			WithoutPayingManaCost && !DuringResolution
 				? Playable.FreeCosts(s, card, PlayerId)
-				: null
+				: null,
+			DuringResolution ? 0 : PlayerId,
+			flashback: !DuringResolution
 		);
 
 	int Chosen(CostSlot slot) =>
@@ -145,25 +250,77 @@ public record CastSpellAction : GameAction
 			CostSlot.Discard => DiscardId,
 			CostSlot.Behold => BeholdId,
 			CostSlot.Return => ReturnId,
+			CostSlot.Exile => ExileId,
 			_ => throw new InvalidOperationException($"A spell's cost can't pick into {slot}"),
 		};
 
 	/// <summary>
+	/// Bone Shards' casts, before validating them: the slots it picks are exactly the slots of the costs it pays —
+	/// one half of each "or", never both, never neither (ValidateAdd refuses the rest anyway; this is cheap).
+	/// </summary>
+	public bool PicksOnlyWhatIsPaid(ImmutableList<AdditionalCost> costs)
+	{
+		var paid = CostList.Paid(costs, Chosen).Select(c => c.Slot).ToHashSet();
+		return costs
+			.SelectMany(c => c.Or is { } or ? [c.Slot, or.Slot] : new[] { c.Slot })
+			.Where(slot => slot != CostSlot.None)
+			.All(slot => paid.Contains(slot) == (Chosen(slot) != 0));
+	}
+
+	/// <summary>The costs this cast pays: each "or" resolved by what it picked (CostList.Paid).</summary>
+	ImmutableList<AdditionalCost> Paid(GameState s, Card card) =>
+		CostList.Paid(CostsOf(s, card), Chosen);
+
+	/// <summary>
 	/// The total cost: X and whatever is paid instead of a sacrifice are in it, so ManaPayment is
-	/// asked for X = 0 — and a reduction applies to the total (CR 601.2f).
+	/// asked for X = 0 — and a reduction applies to the total (CR 601.2f). Mana beside the printed cost:
+	/// the kicker's, the replicate cost's each time (Lose Focus' {U}), and what is paid instead of the mana
+	/// cost (Baleful Mastery's {1}{B}), and each chosen mode's spree cost (Three Steps Ahead).
 	/// </summary>
 	ManaCost CostToPay(GameState s, Card card) =>
-		Costs.Of(
+		CostBeforeLife(s, card).PayingLifeFor(LifeForPhyrexian);
+
+	/// <summary>Thieving Skydiver: "Kicker {X}" — X is chosen only by a cast whose cost or kicker has one.</summary>
+	public static bool ChoosesX(Card card, bool kicked) =>
+		card.ManaCost.HasX || XInKicker(card, kicked);
+
+	/// <summary>The X is the kicker's — an additional cost, so a cast without paying the mana cost still chooses it.</summary>
+	public static bool XInKicker(Card card, bool kicked) =>
+		kicked && card.GetComponent<KickerComponent>()?.Mana.HasX == true;
+
+	ManaCost CostBeforeLife(GameState s, Card card)
+	{
+		var added = Kicked ? card.GetComponent<KickerComponent>()?.Mana : null;
+		if (
+			WithoutPayingManaCost
+			&& !DuringResolution
+			&& Playable.FreeCast(s, card, PlayerId)?.Mana is { } instead
+		)
+			added = added?.Plus(instead) ?? instead;
+		if (card.GetComponent<ReplicateComponent>() is { } replicate)
+			for (var i = 0; i < Replicate; i++)
+				added = added?.Plus(replicate.Cost) ?? replicate.Cost;
+		// Spree: each chosen mode's cost — asked before the modes are validated, so an index out of range is nothing
+		if (card.GetComponent<SpellEffectsComponent>() is { } text)
+			foreach (var i in Modes)
+				if (text.Modes.ElementAtOrDefault(i)?.Cost is { } spree)
+					added = added?.Plus(spree) ?? spree;
+		var total = Costs.Of(
 			s,
 			PlayerId,
 			card,
-			X
-				+ Replicate * (card.GetComponent<ReplicateComponent>()?.Generic ?? 0)
-				+ CostList.OrPayOwed(CostsOf(s, card), Chosen),
+			X + CostList.ManaOwed(Paid(s, card)),
 			free: WithoutPayingManaCost,
 			targets: Targets,
-			added: Kicked ? card.GetComponent<KickerComponent>()?.Mana : null
+			added: added,
+			flashback: !DuringResolution
 		);
+		return Delve == 0 ? total : total.WithGeneric(-Delve); // delve pays from the TOTAL (CR 702.66a)
+	}
+
+	/// <summary>Delve's bound: the generic mana in this cast's total cost (X, kicker, taxes), before delve pays any.</summary>
+	public int GenericBeforeDelve(GameState s, Card card) =>
+		(this with { Delve = 0 }).CostBeforeLife(s, card).Generic;
 
 	/// <summary>
 	/// What paying for this cast taps and spends, or null if it can't be paid — THE call: validation, the cast
@@ -172,8 +329,12 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public IReadOnlyList<ManaPayment.Payment>? PaymentPreview(GameState s)
 	{
+		if (Adventure) // Petty Theft's {1}{U}, not the creature's cost
+			return AsAdventure(s) is { } asAdventure
+				? (this with { Adventure = false }).PaymentPreview(asAdventure)
+				: null;
 		var card = s.GetCard(CardId);
-		return FindPayment(s, card, CostsOf(s, card), card.HasComponent<Sunburst>());
+		return FindPayment(s, card, Paid(s, card), card.HasComponent<Sunburst>());
 	}
 
 	IReadOnlyList<ManaPayment.Payment>? FindPayment(
@@ -187,7 +348,6 @@ public record CastSpellAction : GameAction
 			PlayerId,
 			CostToPay(s, card),
 			0,
-			convoke: s.Has(card, "Convoke"),
 			forSpell: card,
 			alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))],
 			mostColors: mostColors
@@ -195,6 +355,10 @@ public record CastSpellAction : GameAction
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
+		if (Adventure)
+			return AsAdventure(s) is { } asAdventure
+				? (this with { Adventure = false }).ValidateAdd(asAdventure)
+				: ValidationResult.Invalid("It can't be cast as an Adventure from here");
 		if (!DuringResolution && Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
 		if (
@@ -203,26 +367,57 @@ public record CastSpellAction : GameAction
 			|| (
 				DuringResolution
 					? !Playable.CastRestrictionHolds(s, candidate, PlayerId)
-					: !Playable.CanCastFromHere(s, candidate, PlayerId)
+					: !Playable.CanCastFromHere(s, candidate, PlayerId, X)
 			)
 		)
 			return ValidationResult.Invalid("You may not cast that card from where it is");
 		var card = s.GetCard(CardId);
-		if (Turns.Combat.LockedDown(s, PlayerId))
-			return ValidationResult.Invalid("No spells now: combat lockdown or split second");
+		if (Turns.Combat.LockedDown(s, PlayerId, card, spell: true))
+			return ValidationResult.Invalid("No spells now: a lock or split second");
 		if (Kicked && !card.HasComponent<KickerComponent>())
 			return ValidationResult.Invalid("It has no kicker");
-		var costs = CostsOf(s, card);
+		var costs = Paid(s, card);
 		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
+		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
+			return ValidationResult.Invalid("Not a card you can exile for this");
 		if (card.Is(CardType.Land))
 			return ValidationResult.Invalid("Lands are played, not cast");
 		if (!DuringResolution && !CanCastNow(s, card))
 			return ValidationResult.Invalid("Sorcery speed: your main phase with an empty stack");
-		if (X < 0 || (X > 0 && (!card.ManaCost.HasX || WithoutPayingManaCost)))
+		if (
+			X < 0
+			|| (
+				X > 0
+				&& (!ChoosesX(card, Kicked) || WithoutPayingManaCost && !XInKicker(card, Kicked))
+			)
+			|| (Kicked && X < (card.GetComponent<KickerComponent>()?.MinX ?? 0)) // "X can't be 0"
+		)
 			return ValidationResult.Invalid("Invalid X");
+		if (
+			LifeForPhyrexian != 0
+			&& (
+				LifeForPhyrexian < 0
+				|| LifeForPhyrexian > CostBeforeLife(s, card).PhyrexianCount
+				|| !MagicCore.Rules.Life.CanPay(s, PlayerId, 2 * LifeForPhyrexian) // CR 119.4
+			)
+		)
+			return ValidationResult.Invalid("Can't pay that much life for its Phyrexian mana");
 		if (Replicate < 0 || (Replicate > 0 && !card.HasComponent<ReplicateComponent>()))
 			return ValidationResult.Invalid("It has no replicate cost");
+		if (
+			Delve != 0
+			&& (
+				Delve < 0
+				|| !s.Has(card, "Delve")
+				|| Delve > GenericBeforeDelve(s, card)
+				// Underworld Breach's escape exiles from the same graveyard
+				|| Delve
+					> Delving.Candidates(s, PlayerId, CardId).Count()
+						- costs.OfType<ExileFromGraveyardCost>().Sum(c => c.Count)
+			)
+		)
+			return ValidationResult.Invalid("Can't delve that many");
 		if (
 			WithoutPayingManaCost
 			&& !DuringResolution
@@ -239,12 +434,14 @@ public record CastSpellAction : GameAction
 				: !TargetSpec.AreLegal(s, specs, Targets, PlayerId, CardId)
 		)
 			return ValidationResult.Invalid("Illegal targets");
+		if (!ChoosesTargets && !Division.Fits(Division.Of(card), Targets, Shares))
+			return ValidationResult.Invalid("Illegal division");
 		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (!CostList.Fits(costs, CostSlot.Behold, BeholdId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a card you can behold for this");
 		if (!CostList.Fits(costs, CostSlot.Return, ReturnId, s, PlayerId, CardId))
-			return ValidationResult.Invalid("Not a creature you can return for this");
+			return ValidationResult.Invalid("Not a permanent you can return for this");
 		if (costs.Any(c => !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Cannot pay the additional cost");
 		if (FindPayment(s, card, costs, mostColors: false) is null)
@@ -258,55 +455,141 @@ public record CastSpellAction : GameAction
 	}
 
 	public override ActionResult Execute(GameState s) =>
-		new(ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId));
+		Adventure
+			? (this with { Adventure = false }).Execute(AsAdventure(s)!)
+			: new(
+				ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId)
+			);
 
-	/// <summary>Dominion Infiltration: the X targets chosen, then this cast with them.</summary>
-	GameState ChooseTargets(GameState s, bool retain) =>
-		s.SpawnAction(
+	/// <summary>
+	/// Dominion Infiltration: the X targets chosen, then this cast with them — Pyrokinesis: one to four; Mystic
+	/// Confluence: each word in turn.
+	/// </summary>
+	GameState ChooseTargets(GameState s, bool retain)
+	{
+		var card = s.GetCard(CardId);
+		var specs = StackResolution.TextOf(card, Modes, Kicked, X).Specs;
+		if (EachWord(card))
+			return s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						.. specs.Select(
+							(spec, i) => new ChooseTargetChoice(PlayerId, CardId, spec, i)
+						),
+						new CastWithChosenTargetsAction(
+							this with
+							{
+								ChoosesTargets = false,
+							},
+							retain
+						)
+						{
+							Words = specs.Count,
+						},
+					],
+				}
+			);
+		return s.SpawnAction(
 			new PipelineAction
 			{
 				Steps =
 				[
-					new ChooseXTargetsChoice(PlayerId, CardId, X, Modes, Kicked),
+					new ChooseXTargetsChoice(
+						PlayerId,
+						CardId,
+						X,
+						Modes,
+						Kicked,
+						specs.Count(t => !t.Optional),
+						specs.Count
+					),
 					new CastWithChosenTargetsAction(this with { ChoosesTargets = false }, retain),
 				],
 			}
 		);
+	}
 
 	/// <summary>Pays and puts it on the stack — the priority action keeps priority after; a resolution goes on.</summary>
 	public GameState Cast(GameState s)
 	{
+		if (Adventure) // a cast during a resolution comes here without Execute
+			return (this with { Adventure = false }).Cast(AsAdventure(s)!);
 		if (ChoosesTargets)
 			return ChooseTargets(s, retain: false);
 		var card = s.GetCard(CardId);
-		var costs = CostsOf(s, card); // read before paying: flashback's are known only in the graveyard
+		var costs = Paid(s, card); // read before paying: flashback's are known only in the graveyard
+		var alternative =
+			WithoutPayingManaCost
+			&& !DuringResolution
+			&& Playable.FreeCast(s, card, PlayerId) is { } freeCast
+			&& freeCast.What.Equals(Filters.Is.Source)
+			&& card.Components.Contains(freeCast); // the card's own — never Urza's free mark (Baleful Mastery)
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
-		var permission = from switch
-		{
-			ZoneType.Library => Playable.LibraryTopPermission(s, card, PlayerId),
-			ZoneType.Graveyard or ZoneType.Sideboard => Playable.GraveyardPermission(
-				s,
-				card,
-				PlayerId
-			),
-			_ => null,
-		};
-		if (permission is not null)
+		// A cast during a resolution is by that effect's permission, never a permanent's.
+		// Emry: "You may cast that card this turn" — a mark in the graveyard, not flashback, and no permanent's rule
+		var marked = !DuringResolution && Playable.MarkedInGraveyard(s, card, PlayerId);
+		var permission =
+			!DuringResolution
+			&& !marked
+			&& from is ZoneType.Library or ZoneType.Graveyard or ZoneType.Sideboard
+				? Playable.ZonePermission(s, card, PlayerId)
+				: null;
+		// Malcolm, Bilbo: cast from a graveyard as an effect resolves (CR 608.2g) — not flashback, so it isn't exiled
+		// leaving the stack and a permanent spell resolves onto the battlefield, unless the effect exiles it.
+		var byEffect =
+			DuringResolution && from == ZoneType.Graveyard && !ExiledLeavingTheStack || marked;
+		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
-				permission.Id,
-				permission with
+				holder.Id,
+				holder with
 				{
 					PermissionUsedOn = s.GetGame().TurnNumber,
 				}
 			);
 		var sunburst = card.HasComponent<Sunburst>();
 		var payment = FindPayment(s, card, costs, mostColors: sunburst)!;
+		var uncounterable = ManaPayment.MakesUncounterable(s, PlayerId, payment);
 		s = ManaPayment.Pay(s, PlayerId, payment);
+		s = MagicCore.Rules.Life.Lose(s, PlayerId, 2 * LifeForPhyrexian);
 		foreach (var cost in costs)
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
+		if (Delve > 0)
+			s = Delving.PickAfter(s, PlayerId, CardId, delve: true);
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
-		if (permission is not null && from != ZoneType.Library)
+		if (Division.Of(card) is > 0 and var divided) // Pyrokinesis, Pure Energy: the division is announced now
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							Shares = Shares.IsEmpty
+								? Division.Splits(divided, Targets.Count(id => id != 0)).Single()
+								: Shares,
+						}
+					)
+			);
+		if (alternative || uncounterable)
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							AlternativeCost = alternative,
+							// Delighted Halfling's mana: "that spell can't be countered"
+							CantBeCountered =
+								uncounterable
+								|| s.GetCard(CardId)
+									.GetComponent<OnStackComponent>()!
+									.CantBeCountered,
+						}
+					)
+			);
+		if (permission is not null && from != ZoneType.Library || byEffect)
 			s = s.UpdateObject(
 				CardId,
 				s.GetCard(CardId)
@@ -314,8 +597,8 @@ public record CastSpellAction : GameAction
 						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
 						{
 							ByPermission = true,
-							Finality = s.AbilitiesOf<MayPlayFromYourGraveyard>(permission)
-								.Any(m => m.Finality),
+							Finality = permission?.Rule.Finality ?? false,
+							Gains = permission?.Rule.Gains,
 						}
 					)
 			);
@@ -332,6 +615,19 @@ public record CastSpellAction : GameAction
 			);
 		if (Replicate == 0)
 			return s;
+		s = s.UpdateObject(
+			CardId,
+			s.GetCard(CardId)
+				.WithComponentReplaced(
+					s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+					{
+						Replicate = Replicate,
+					}
+				)
+		);
+		// Squad (CR 702.157): the copies are made as it enters, by its own trigger (Scripting.Squad) — none now.
+		if (card.GetComponent<ReplicateComponent>() is { AsItEnters: true })
+			return s;
 		// Replicate (CR 702.56a): "when you cast this spell, copy it for each time you paid its
 		// replicate cost" — a triggered ability above it; CopySpell lets each copy choose new targets.
 		// ponytail: pushed here, not through Triggers.Collect — other "whenever you cast" triggers go
@@ -345,10 +641,7 @@ public record CastSpellAction : GameAction
 				SourceId = CardId,
 				Source = spell,
 				ControllerId = PlayerId,
-				Effects =
-				[
-					.. Enumerable.Repeat<GameAction>(new CopySpell(Ref.EventCard), Replicate),
-				],
+				Effects = [new CopySpell(Ref.EventCard) { N = Replicate }],
 				EventCardId = CardId,
 				EventSnapshot = spell,
 				Triggered = true,
@@ -376,6 +669,8 @@ public record CastSpellAction : GameAction
 		if (Prepare.CreatureOf(s, card) is { } prepared)
 			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
 		s = s.MoveCard(cardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
+		if (card.HasComponent<CastAsAdventure>()) // CR 715.3b: on the stack it is the Adventure (the move made it the card)
+			s = s.UpdateObject(cardId, s.GetCard(cardId).AsAdventure());
 		var proxies = s.ThisTurnEffects<NextSpellCantBeCountered>(playerId).ToList();
 		s = s.UpdateObject(
 			cardId,
@@ -388,6 +683,9 @@ public record CastSpellAction : GameAction
 					CantBeCountered = proxies.Count > 0,
 					Kicked = kicked,
 					FirstSpellThisGame = s.GetPlayer(playerId).SpellsCastThisGame == 0,
+					SpellsCastBefore =
+						s.GetPlayer(s.Player1Id()).ThisTurn.SpellsCast
+						+ s.GetPlayer(s.Player2Id()).ThisTurn.SpellsCast,
 				}
 			)
 		);
@@ -514,8 +812,8 @@ public record ActivateAbilityAction : GameAction
 		)
 			return ValidationResult.Invalid("No such ability where you can activate it");
 		var card = s.GetCard(CardId);
-		if (Turns.Combat.LockedDown(s, PlayerId))
-			return ValidationResult.Invalid("No abilities now: combat lockdown or split second");
+		if (Turns.Combat.LockedDown(s, PlayerId, card))
+			return ValidationResult.Invalid("No abilities now: a lock or split second");
 		// Judged as the activating player's: a card off the battlefield may still carry an old
 		// controller (CR 108.4a — in a graveyard it is its owner's).
 		if (
@@ -669,7 +967,18 @@ public static class StackResolution
 						? Enumerable
 							.Range(0, x)
 							.Select(i => t with { PerX = false, NotThePrevious = i > 0 })
-						: [t]
+					: t.Divide > 0
+						? Enumerable
+							.Range(0, t.Divide)
+							.Select(i =>
+								t with
+								{
+									Divide = 0,
+									Optional = i > 0,
+									NotThePrevious = i > 0,
+								}
+							)
+					: [t]
 				),
 			],
 			steps
@@ -697,9 +1006,14 @@ public static class StackResolution
 	/// THE counter (CR 701.6): a spell goes to its owner's graveyard — through MoveCard, so flashback
 	/// still exiles it and a prepared copy still ceases to exist — and an ability is removed. A spell
 	/// that "can't be countered" stays: the counter does nothing to it, and it was still cast
-	/// (MtgCore's counter traps keep the same two rules).
+	/// (MtgCore's counter traps keep the same two rules). Remand's hand or Memory Lapse's library top
+	/// instead (<paramref name="to"/>) — "countered this way" only: one that can't be countered stays.
 	/// </summary>
-	public static GameState Counter(GameState s, int stackObjectId)
+	public static GameState Counter(
+		GameState s,
+		int stackObjectId,
+		ZoneType to = ZoneType.Graveyard
+	)
 	{
 		if (
 			!s.HasObject(stackObjectId)
@@ -709,7 +1023,11 @@ public static class StackResolution
 		return s.GetObject(stackObjectId) switch
 		{
 			Card spell when !CanBeCountered(spell) => s,
-			Card spell => s.MoveCard(spell.Id, s.ZoneId(spell.OwnerId, ZoneType.Graveyard)),
+			Card spell => s.MoveCard(
+				spell.Id,
+				s.ZoneId(spell.OwnerId, to),
+				toTop: to == ZoneType.Library
+			),
 			_ => s.RemoveObject(stackObjectId),
 		};
 	}
@@ -743,7 +1061,7 @@ public static class StackResolution
 			}
 			var fromGraveyard = cast?.CastFrom == ZoneType.Graveyard;
 			var mayCastThere =
-				permanent.HasComponent<MayCastFromYourGraveyard>() // Storied Veteran
+				MayCastThisFrom.On(permanent, ZoneType.Graveyard) // Storied Veteran
 				|| cast?.ByPermission == true; // Overflow Submatrix, The Holodeck
 			if ((fromGraveyard && !mayCastThere) || auraFizzles)
 				return Priority.Retain(
@@ -760,17 +1078,19 @@ public static class StackResolution
 						new EnterFromStackAction(
 							permanent.Id,
 							permanent.ControllerId,
-							cast?.X ?? 0,
-							auraHost,
-							cast is not null
+							cast,
+							auraHost
 						)
 						{
 							Finality =
 								fromGraveyard
 								&& (
-									permanent.HasComponent<MayCastFromYourGraveyard>()
+									permanent
+										.Components.OfType<MayCastThisFrom>()
+										.Any(m => m is { From: ZoneType.Graveyard, Finality: true })
 									|| cast?.Finality == true
 								), // "it enters with a finality counter on it"
+							Gains = cast?.Gains,
 							Sunburst = permanent.HasComponent<Sunburst>()
 								? cast?.ColorsSpent ?? 0
 								: 0,
@@ -814,7 +1134,14 @@ public static class StackResolution
 			};
 
 		var legal = chosen
-			.Select((id, i) => id != 0 && specs[i].IsLegal(s, controller, sourceId, id) ? id : 0)
+			.Select(
+				(id, i) =>
+					id != 0
+					&& specs[i].IsLegal(s, controller, sourceId, id)
+					&& TargetSpec.FitsPrevious(s, specs[i], chosen, i) // Goblin Welder: still that player's graveyard
+						? id
+						: 0
+			)
 			.ToImmutableArray();
 		var fizzles = chosen.Any(id => id != 0) && legal.All(id => id == 0);
 
@@ -827,6 +1154,8 @@ public static class StackResolution
 			.Add(ContextKeys.AllTargets, legal)
 			.Add(ContextKeys.ChosenTargets, chosen.ToImmutableArray())
 			.Add(ContextKeys.EventCard, eventCard);
+		if (top is Card divided && divided.GetComponent<OnStackComponent>() is { } division)
+			context = context.Add(ContextKeys.Shares, division.Shares);
 		if (top is StackAbility { EventSnapshot: { } snapshotOfEvent })
 			context = context.Add(ContextKeys.EventSnapshot, snapshotOfEvent);
 		if (top is StackAbility { EventObject: { } eventObject })
@@ -834,7 +1163,18 @@ public static class StackResolution
 		return s.SpawnAction(
 			new PipelineAction
 			{
-				Steps = fizzles ? [finish] : [.. effects, finish],
+				// a spell that fizzles doesn't resolve (CR 608.2b): no Adventure's exile (FinishSpellAction.Resolved)
+				Steps = fizzles
+					?
+					[
+						finish is FinishSpellAction unresolved
+							? unresolved with
+							{
+								Resolved = false,
+							}
+							: finish,
+					]
+					: [.. effects, finish],
 				PipelineContext = context,
 			}
 		);
@@ -845,19 +1185,83 @@ public record FinishSpellAction : GameAction
 {
 	public int CardId { get; init; }
 
+	/// <summary>
+	/// False when it fizzled (CR 608.2b) — it didn't resolve, so an Adventure goes to the graveyard (715.3d): Petty Theft
+	/// whose "target nonland permanent an opponent controls" left is Brazen Borrower in the graveyard, not on an adventure.
+	/// </summary>
+	public bool Resolved { get; init; } = true;
+
 	public override ActionResult Execute(GameState s)
 	{
 		var card = s.GetCard(CardId);
 		if (s.GetParent(CardId) == s.GetWellKnownId(MagicKeys.Stack)) // Sphinx's Approach may have exiled itself
-			s = s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+			s =
+				Resolved && card.HasComponent<CastAsAdventure>()
+					? OnAnAdventure(s, card)
+					: s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 		return new ActionResult(Priority.Retain(s, s.GetGame().ActivePlayerId));
+	}
+
+	/// <summary>
+	/// Petty Theft resolved (CR 715.3d): "(Then exile this card. You may cast the creature later from exile.)" — its
+	/// caster may cast it for as long as it remains exiled, as the creature only (CastSpellAction.Adventure refuses
+	/// exile). Countered or fizzled, it goes to the graveyard as the creature (Fresh).
+	/// </summary>
+	static GameState OnAnAdventure(GameState s, Card spell)
+	{
+		s = s.MoveCard(spell.Id, s.ZoneId(spell.OwnerId, ZoneType.Exile));
+		var mark = new PlayPermission { Forever = true, CastOnly = true }.For(
+			s,
+			spell.ControllerId
+		);
+		return s.UpdateObject(spell.Id, (Card)s.GetCard(spell.Id).WithComponent(mark));
+	}
+}
+
+/// <summary>
+/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — the ways to divide a
+/// total among the targets chosen, each taking at least one (CR 601.2d), in the targets' order. ponytail: a
+/// text with one divided word, outside any mode, as Pyrokinesis' and Pure Energy's.
+/// </summary>
+public static class Division
+{
+	/// <summary>The total a card's text divides (TargetSpec.Divide); 0 when it divides nothing.</summary>
+	public static int Of(Card card) =>
+		card.GetComponent<SpellEffectsComponent>()?.Targets.Sum(t => t.Divide) ?? 0;
+
+	/// <summary>Every way to divide the total among k targets, the first target's biggest share first.</summary>
+	public static ImmutableList<ImmutableArray<int>> Splits(int total, int k) =>
+		k <= 0 || total < k ? []
+		: k == 1
+			?
+			[
+				[total],
+			]
+		:
+		[
+			.. Enumerable
+				.Range(1, total - k + 1)
+				.Reverse()
+				.SelectMany(first =>
+					Splits(total - first, k - 1).Select(rest => rest.Insert(0, first))
+				),
+		];
+
+	/// <summary>A cast's shares fit its targets: none without a division or when only one way is left, else one of the ways.</summary>
+	public static bool Fits(int total, ImmutableArray<int> targets, ImmutableArray<int> shares)
+	{
+		var splits = Splits(total, targets.Count(id => id != 0));
+		return shares.IsEmpty
+			? total == 0 || splits.Count == 1
+			: splits.Any(split => split.SequenceEqual(shares));
 	}
 }
 
 /// <summary>
 /// Dominion Infiltration: "Choose X target creatures your opponents control" — exactly X different ones,
-/// the candidates of its X target words (all the same word). ponytail: a text whose only target words are
-/// the X ones, outside any mode, as Dominion Infiltration's; another word or a mode waits for a card that has one.
+/// the candidates of its X target words (all the same word); Pyrokinesis' "any number of target creatures":
+/// one to four of them. ponytail: a text whose only target words are those, outside any mode, as Dominion
+/// Infiltration's; another word or a mode waits for a card that has one.
 /// </summary>
 public record ChooseXTargetsChoice : ChoiceAction
 {
@@ -874,7 +1278,9 @@ public record ChooseXTargetsChoice : ChoiceAction
 		int cardId,
 		int x,
 		ImmutableArray<int> modes,
-		bool kicked
+		bool kicked,
+		int min,
+		int max
 	)
 	{
 		PlayerId = playerId;
@@ -882,18 +1288,40 @@ public record ChooseXTargetsChoice : ChoiceAction
 		X = x;
 		Modes = modes;
 		Kicked = kicked;
-		MinChoices = x;
-		MaxChoices = x;
+		MinChoices = min;
+		MaxChoices = max;
 		OutputKey = Chosen;
-		Prompt = $"Choose {x} target{(x == 1 ? "" : "s")}";
+		Prompt =
+			min == max
+				? $"Choose {min} target{(min == 1 ? "" : "s")}"
+				: $"Choose {min} to {max} targets";
 	}
 
+	/// <summary>
+	/// Each word and the NotThePrevious repeats after it have as many candidates as they need — Dominion
+	/// Infiltration's X words are one run, each of Mystic Confluence's chosen modes its own. ponytail: runs don't
+	/// share candidates, as no card's modes overlap (a spell and a creature; artifacts alone); two overlapping modes
+	/// would need their words checked together, and could leave a later word nothing after earlier picks.
+	/// </summary>
 	public static bool CanChoose(
 		GameState s,
 		int playerId,
 		int cardId,
 		IReadOnlyList<TargetSpec> specs
-	) => specs.Count > 0 && specs[0].Candidates(s, playerId, cardId).Count() >= specs.Count;
+	)
+	{
+		for (var i = 0; i < specs.Count; )
+		{
+			var run = 1;
+			while (i + run < specs.Count && specs[i + run].NotThePrevious)
+				run++;
+			var need = specs.Skip(i).Take(run).Count(t => !t.Optional);
+			if (specs[i].Candidates(s, playerId, cardId).Take(need).Count() < need)
+				return false;
+			i += run;
+		}
+		return specs.Count > 0;
+	}
 
 	public override ImmutableList<ChoiceOption> GetOptions(
 		GameState s,
@@ -921,19 +1349,81 @@ public record ChooseXTargetsChoice : ChoiceAction
 		};
 }
 
-/// <summary>After ChooseXTargetsChoice: the cast with those targets, in increasing order (one set, one cast).</summary>
+/// <summary>
+/// After ChooseXTargetsChoice: the cast with those targets, in increasing order (one set, one cast). Pyrokinesis: two or three targets can share its 4 damage several ways, so that is asked
+/// next (a ChooseKeywordChoice of the ways), before the cast. Mystic Confluence: after a ChooseTargetChoice per word,
+/// those, in the words' order.
+/// </summary>
 public record CastWithChosenTargetsAction(CastSpellAction Cast, bool Retain) : GameAction
 {
+	/// <summary>Mystic Confluence: how many words were chosen one at a time (ChooseTargetChoice); 0 is one ChooseXTargetsChoice.</summary>
+	public int Words { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		var cast = Cast with { Targets = ChooseXTargetsChoice.Read(InputContext) };
+		var card = s.GetCard(Cast.CardId);
+		var chosen =
+			Words > 0
+				? ChooseTargetChoice.Read(InputContext, Words)
+				: ChooseXTargetsChoice.Read(InputContext);
+		var cast = Cast with { Targets = chosen };
+		var splits = Division.Splits(Division.Of(card), chosen.Length);
+		if (splits.Count > 1)
+			return new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						Steps =
+						[
+							new ChooseKeywordChoice(
+								cast.PlayerId,
+								[
+									.. splits.Select(split =>
+										string.Join(
+											", ",
+											split.Select(
+												(n, i) => $"{n} to {s.GetObject(chosen[i]).Name}"
+											)
+										)
+									),
+								]
+							)
+							{
+								Prompt = "Divide among the targets",
+							},
+							new CastWithChosenDivisionAction(cast, splits, Retain),
+						],
+					}
+				)
+			);
 		return Retain ? cast.Execute(s) : new(cast.Cast(s));
 	}
 }
 
-/// <summary>A resolving permanent spell enters the battlefield (CR 608.3) — then ActivePlayerGetsPriorityAction.</summary>
-public record EnterFromStackAction(int CardId, int ControllerId, int X, int AttachTo, bool Cast)
-	: GameAction
+/// <summary>Pyrokinesis: after the division was chosen among the ways offered, the cast with it.</summary>
+public record CastWithChosenDivisionAction(
+	CastSpellAction Cast,
+	ImmutableList<ImmutableArray<int>> Splits,
+	bool Retain
+) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var cast = Cast with { Shares = Splits[(int)InputContext[ChooseKeywordChoice.Chosen] - 1] };
+		return Retain ? cast.Execute(s) : new(cast.Cast(s));
+	}
+}
+
+/// <summary>
+/// A resolving permanent spell enters the battlefield (CR 608.3) — then ActivePlayerGetsPriorityAction. Spell: what it
+/// was on the stack (null: a copy-less resolution that wasn't cast), carried onto it as Card.CastAs.
+/// </summary>
+public record EnterFromStackAction(
+	int CardId,
+	int ControllerId,
+	OnStackComponent? Spell,
+	int AttachTo
+) : GameAction
 {
 	/// <summary>Storied Veteran: "If you do, it enters with a finality counter on it."</summary>
 	public bool Finality { get; init; }
@@ -941,18 +1431,44 @@ public record EnterFromStackAction(int CardId, int ControllerId, int X, int Atta
 	/// <summary>Sunburst: "This artifact enters with a charge counter on it for each color of mana spent to cast it."</summary>
 	public int Sunburst { get; init; }
 
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.EnterBattlefield(
-				CardId,
-				ControllerId,
-				X,
-				finality: Finality,
-				attachTo: AttachTo,
-				cast: Cast,
-				sunburst: Sunburst
-			)
+	/// <summary>Serra Paragon: the triggered ability it gains as it enters (OnStackComponent.Gains).</summary>
+	public TriggeredAbilityComponent? Gains { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		s = s.EnterBattlefield(
+			CardId,
+			ControllerId,
+			Spell,
+			finality: Finality,
+			attachTo: AttachTo,
+			cast: Spell is not null,
+			sunburst: Sunburst,
+			gains: Gains
 		);
+		// Warp: "if this spell's warp cost was paid, exile the permanent … at the beginning of the next end step" — set
+		// up as it resolves, after it enters (entering strips a delayed trigger). ponytail: the card's first alternative
+		// cost with one is taken as the one paid — a card with two such costs would need OnStackComponent to name it.
+		if (
+			Spell is { AlternativeCost: true }
+			&& s.IsOnBattlefield(CardId)
+			&& s.GetCard(CardId)
+				.Components.OfType<MayCastFromHandFree>()
+				.FirstOrDefault(m => !m.PaidAtNextEndStep.IsEmpty)
+				is { } warp
+		)
+			s = MoveTo.Delay(
+				s,
+				CardId,
+				new DelayedTrigger(
+					new TriggeredAbilityComponent(TriggerEvent.EachEndStep, warp.PaidAtNextEndStep)
+				)
+				{
+					ControllerId = ControllerId, // CR 603.7d: the spell's, even once it is stolen
+				}
+			);
+		return new(s);
+	}
 }
 
 /// <summary>After a resolution, the active player gets priority (CR 117.3b).</summary>

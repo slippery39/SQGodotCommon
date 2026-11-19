@@ -12,14 +12,6 @@ namespace MagicCore.Tests.Sets;
 /// <summary>Commons (7e-1a): impulse draw, reflexive triggers, revealed hands, chosen colors — each ability fires.</summary>
 public class FraCommonTests : FraBoardTest
 {
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	[Test]
 	public void ShatterwingPegasus_PumpsYourTeam()
 	{

@@ -26,6 +26,9 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 	/// <summary>Only cards of these types ("a nonland permanent card"); None means any.</summary>
 	public CardType Types { get; init; }
 
+	/// <summary>MoveChosen's filter on a hand — Erica Ortegas: "a land card from your hand"; none is any.</summary>
+	public Filters.Filter? Filter { get; init; }
+
 	public ChooseCardsFromHandChoice() => OutputKey = Chosen;
 
 	public override ImmutableList<ChoiceOption> GetOptions(
@@ -34,6 +37,7 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 	) =>
 		s.CardsIn(PlayerId, ZoneType.Hand)
 			.Where(c => Types == CardType.None || c.Is(Types))
+			.Where(c => Filter?.Matches(s, c, new(PlayerId, SourceOf.Context(context))) ?? true)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();
 
@@ -155,11 +159,6 @@ public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 	}
 }
 
-public record ShuffleLibraryAction(int PlayerId) : GameAction
-{
-	public override ActionResult Execute(GameState s) => new(s.Shuffle(PlayerId));
-}
-
 /// <summary>Something Worth Saving: "You may put a [Types] card from among them into your hand."</summary>
 public record ChooseAmongChoice : ChoiceAction
 {
@@ -178,6 +177,11 @@ public record ChooseAmongChoice : ChoiceAction
 
 	/// <summary>There's Coffee in that Nebula: "a Plains card or nonland permanent card with mana value 3 or less" — what Types can't say.</summary>
 	public Filters.Filter? Filter { get; init; }
+
+	/// <summary>
+	/// Delve's card to exile (Treasure Cruise): the AI answers by rule, never searching it — GreedyAi.Answer.
+	/// </summary>
+	public bool Delve { get; init; }
 
 	public ChooseAmongChoice()
 	{
@@ -262,6 +266,21 @@ public record SetChosenNameAction(int CardId, ImmutableArray<string> Names) : Ga
 				s.UpdateObject(
 					CardId,
 					s.GetCard(CardId).WithComponent(new Effects.ChosenName(Names[id - 1]))
+				)
+			);
+}
+
+/// <summary>True-Name Nemesis, after the choice: the player, kept on it (ChosenPlayer) — Players in the choice's order.</summary>
+public record SetChosenPlayerAction(int CardId, ImmutableArray<int> Players) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		!s.IsOnBattlefield(CardId)
+		|| InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is not int id
+			? new(s)
+			: new(
+				s.UpdateObject(
+					CardId,
+					s.GetCard(CardId).WithComponent(new Effects.ChosenPlayer(Players[id - 1]))
 				)
 			);
 }

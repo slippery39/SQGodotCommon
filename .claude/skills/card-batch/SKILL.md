@@ -19,7 +19,7 @@ So this skill is built to start cold and cheap: read the short generated docs, n
   — never carry a finished batch's context into the next one. The handoff and these docs make a cold
   start cheap; a 400k-token context makes every call expensive.
 - **Read, in this order, and nothing more yet:** the handoff's "next" section, `MagicCore/Cookbook.md`
-  (how scripts are written). `.claude/rules/magic-mechanics.md` loads itself when you open an engine file.
+  (how scripts are written). The mechanics' rules load themselves (`.claude/rules/magic-*.md`, one per subsystem — all of them once you open a card script).
 - **Grep `MagicCore/AbilityCatalog.md`, don't read it whole** (what pieces exist — instead of the engine
   source). It is ~40k tokens, and everything read stays in the context every later call re-reads:
   `grep -n "Station\|charge" MagicCore/AbilityCatalog.md` for the pieces the batch's cards name; its
@@ -69,6 +69,14 @@ become a CHOICE made after the action, not more actions.
 
 ## 3. Check, by tier
 
+- **The end-of-batch checks are ONE command** (DEV-5), once the batch's own tests pass:
+  `python -u tools/batch_checks.py "Card A;Card B" [--revert SPEC] [--bench]` — build; the golden replays
+  with the batch's cards OUT (`MAGIC_UNSCRIPTED`, no file edited: the engine change must move no recorded
+  game), then regenerated with them IN (which games moved); the revert-checks; the probe at 10 then 150; the
+  bench; the full suite; the docs check. One summary; it stops at the first failure with the lines that
+  matter (`--from STEP` resumes). It takes ~15 minutes: ask Shayne first, as for any long run. A golden-out
+  failure in a batch that MOVED old cards onto a new piece can be intended — read the trace it names. The
+  bullets below say what each step is for and what to read in it.
 - **Tiers 2–3: a test that the ability FIRES**, through real casting (`FraBoardTest`, `TestCards`).
   New test file: check `git status` first; never overwrite.
 - **Revert-checks** (tiers 2–3): one spec (`@@ path | TestFilter` blocks) through
@@ -82,8 +90,9 @@ become a CHOICE made after the action, not more actions.
   them). **Run it with `MAGIC_PROBE_GAMES=10` first** (seconds): a hang shows there, not after the full
   150's ~5 minutes or a 28-minute timeout (batch 6a). The decks also hold RANDOM scripted cards, so a slow
   card can hang a probe that doesn't name it — time the named cards one at a time to find it.
-- **Hot path touched** (MoveCard, Triggers.Collect, the state-based check, mana payment, the AI):
-  `tools/bench_vs_head.sh`.
+- **No bench for a card batch** (Shayne, 2026-11-13): a rule the cards need stays whatever it costs, so timing it
+  decides nothing. `tools/bench_vs_head.sh` is for OPTIMIZATION work — comparing ways to make a hot path (MoveCard,
+  Triggers.Collect, the state-based check, mana payment, the AI) faster.
 - **Tier 1 check:** `python tools/magic_docs.py`, then read the batch's entries in
   `MagicCore/FraCardSheet.md`: printed text against script — a missing clause, a wrong "whose", the wrong
   target kind. That replaces a test for a card made of tested pieces.
@@ -94,7 +103,7 @@ become a CHOICE made after the action, not more actions.
 ## 4. Docs, review, commit
 
 - `python tools/magic_docs.py` (catalog + sheet), `python tools/magic_set.py coverage` → the coverage
-  line in `MagicCore/FraCoverage.md`; new mechanics' rules in `.claude/rules/magic-mechanics.md`;
+  line in `MagicCore/FraCoverage.md`; new mechanics' rules in the one `.claude/rules/magic-<subsystem>.md` they live in;
   deliberate simplifications in `DesignNotes.md` ("MagicCore known ceilings", append in binary, CRLF).
 - `/pre-commit`. Point its code review at the ENGINE changes: tier 0–1 card scripts are checked by the
   card sheet, not line by line. Fix each finding with a test that fails without the fix.
@@ -102,3 +111,18 @@ become a CHOICE made after the action, not more actions.
 - **Every batch, just before its commit:** `python tools/usage_report.py --log "<task>: <what>, <N> cards"`
   — one row in `docs/findings/card-batch-usage.md`, committed with the batch; it is how we know the
   fresh-session workflow holds its savings. Then start the NEXT batch in a NEW session.
+- **Once committed, with every open question answered, end with the next session's prompt** (Shayne, 2026-11-18) —
+  unasked, if the story's Next names another batch — in a code block ready to paste, in the shape his own prompts take:
+
+  ```
+  /card-batch <task id> - <mechanic>: <card(s)>
+
+  Lane: <lane> (<branch>). Sprint <n>, item <id>; story <path>. Its Next section is the handoff, so read it first;
+  <where the plan is: "4.4g's plan", part N>.
+
+  <anything to ask him before building, from the plan — or leave the line out>
+
+  At the end, give me <what he asked for at the end of this batch, e.g. the cube's total cards implemented, by rarity>.
+  ```
+
+  Take every field from the story's Next and the plan, never from memory. If no batch is left, say so instead.

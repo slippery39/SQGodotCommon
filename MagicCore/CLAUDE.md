@@ -29,7 +29,7 @@ MagicCore/
 ├── Turns/Combat.cs      who may attack/block, declarations, simultaneous damage, end of combat
 ├── Turns/Triggers.cs    trigger events (MagicEvent: kind, subjects, who did it), the one matcher for a
 │                        Trigger, Collect (APNAP, intervening "if"), PutOnStack with target choices
-├── Actions/             PassPriority, PlayLand, TapForMana; CastSpell, ActivateAbility, StackAbility,
+├── Actions/             PassPriority, PlayLand, TapForMana, TurnFaceUp (CR 708); CastSpell, ActivateAbility, StackAbility,
 │                        StackResolution (fizzle); mulligan; hand, library, combat and target choices
 ├── Actions/LoyaltyActions.cs  Loyalty.AbilitiesOf (own + granted) and ActivateLoyaltyAction
 ├── Actions/ModeChoices.cs     ChooseModesChoice — a modal trigger's modes, chosen as it goes on the stack
@@ -42,7 +42,7 @@ MagicCore/
 ├── Effects/AdditionalCosts.cs  costs beyond mana (tap, sacrifice, discard, exile, behold): one list for
 │                        abilities, spells, flashback and ward; CostList (candidates, legality, or-pay)
 ├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, Matches(Ref, Filter)
-├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
+├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction; Dungeons.cs: Undercity, venture, the initiative (MC-4.4g3)
 ├── Targeting/TargetSpec.cs  a target word = a zone (From) + a Filter + the targeting rules; one legality
 │                        test for choosing AND resolving; Combinations
 ├── Filters/            "which objects": Filter (& | !), leaves, and `Is` — the vocabulary scripts read.
@@ -52,9 +52,9 @@ MagicCore/
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions: every CostChange)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
-├── FraCoverage.md / TrkCoverage.md   per set: what is scripted, what waits and why — status, not rules
+├── FraCoverage.md / TrkCoverage.md   per set: what is scripted, what waits and why — status, not rules; LsvSurvey.md: the cube's survey (GENERATED, tools/survey.py)
 ├── AbilityCatalog.md    GENERATED: every effect, trigger, ref, count, condition, component — one line each
-├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests
+├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests (Trk-, LsvCardSheet.md too)
 ├── Cookbook.md          how to script a card, by pattern; the tiers of checking
 ├── DesignAudit.md       2026-10-10: what was reinvented instead of reused from MtgCore, and MtgCore's own flaws
 ├── FilterRefactorPlan.md  DONE (story MC-2): one composable Filter replacing the closed enums — the design and why
@@ -67,7 +67,7 @@ MagicCore/
 ├── Cards/CardData.cs    printed RULES data (Scryfall), one per name; CardPrinting: a set's rarity, number; Load(set)
 ├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities
 ├── Sets/CardRegistry.cs EVERY set's cards by name: Get(name[, set]), IsImplemented, Printings(set); Tokens.cs: Treasure, Clue, Food; Scripting.cs: the helpers every set scripts with (When, Spell, M …)
-├── Sets/Fra/, Sets/Trk/ <Set>Cards.cs: a set's abilities by name — a reprint scripted ONCE (MC-5.5); Fra/EmpowerJace.cs
+├── Sets/Fra/, Sets/Trk/, Sets/Lsv/ <Set>Cards.cs: a set's abilities by name (LSV: the LSVPower cube, MC-4) — a reprint scripted ONCE (MC-5.5); Fra/EmpowerJace.cs
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named; ReadPool: a sealed
 │                        pool (every section) of any set (MC-5.4), what isn't that set's left out by name
@@ -125,7 +125,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Child index 0 is the TOP** of the library and of the stack; `MoveObject` appends (= bottom).
 - **Every zone change goes through `MagicState.MoveCard`** (or `EnterBattlefield`), which calls
   `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
-  stack choices die there. Only `Shuffle`, `RevealUntilOntoBattlefield`, `GainControl` and `Rules.Phasing` (no zone change) and the AI's `Hidden.Sample`
+  stack choices die there. Only `Shuffle`, `RevealUntilOntoBattlefield`, `MoveTo.Beneath` (the cards put back over it), `GainControl` and `Rules.Phasing` (no zone change) and the AI's `Hidden.Sample`
   use `MoveObject`, to reorder within one zone (`MoveCard` would reset `KnownTo`) — and
   `Hidden.Sample`'s hand modes, in a hypothetical position where a real zone change's events must
   not fire: swapping opponent cards between hand and library (AI-3.4), or replacing one in place
@@ -167,8 +167,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   one-card component. A new piece names the nearest one and why no option fits; generalising moves old cards.
 - **Each mechanic's rules** — planeswalkers, modes, step triggers and "this turn", flashback, prepare,
   abilities from the hand and graveyard, hexproof and indestructible, Auras and Equipment, countering
-  and ward, reflexive and intervening triggers — are in `.claude/rules/magic-mechanics.md`, which
-  loads with any MagicCore file. Add a new mechanic's rule there, not here.
+  and ward, reflexive and intervening triggers — are in `.claude/rules/magic-<subsystem>.md` (casting, triggers, combat, mana, zones, statics,
+  ai — DEV-4), each loading with its own engine files and all with a card script. Add a new rule there, not here.
 - **A spell or ability whose targets are ALL illegal on resolution does nothing** (CR 608.2b) — the
   drain on Extended Absence included. Partially illegal: those targets read as 0 to the effects.
 - **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered.

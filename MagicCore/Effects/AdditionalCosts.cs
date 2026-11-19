@@ -23,15 +23,21 @@ public enum CostSlot
 	Behold,
 	Tap, // Station: "Tap another creature you control" — which one is the player's choice
 	SecondTap, // Worf: "Tap two untapped artifacts and/or creatures" — the second one
-	Return, // Beam me up: "return a creature you control to its owner's hand"
+	Return, // Beam me up: "return a creature you control to its owner's hand"; Daze's Island
 	TapSet, // Collation Trimatrix: "Tap three untapped artifact creatures you control" — the whole set (ActivateAbilityAction.TapIds)
 }
 
 /// <summary>A cost beyond mana — what may be chosen to pay it, whether it can be paid, and paying it.</summary>
 public abstract record AdditionalCost
 {
-	/// <summary>"… or pay {N}" — Silence the Echo: choosing nothing (id 0) pays N more generic instead.</summary>
-	public int OrPay { get; init; }
+	/// <summary>
+	/// "[This] or [that]" — paid INSTEAD when this cost's slot picks nothing (id 0): Silence the Echo's "sacrifice a
+	/// creature or pay {3}" (<see cref="PayManaCost"/>), Bitter Triumph's "discard a card or pay 3 life"
+	/// (<see cref="PayLifeCost"/>), Bone Shards' "sacrifice a creature or discard a card" (a cost that picks into its
+	/// own slot). Only on a cost that picks (CostList.Paid), in a SPELL's costs — activation and ward read their
+	/// lists unresolved; resolve them with CostList.Paid when an ability's cost says "or".
+	/// </summary>
+	public AdditionalCost? Or { get; init; }
 
 	/// <summary>The action's payment id that names the chosen card; None when nothing is chosen.</summary>
 	public virtual CostSlot Slot => CostSlot.None;
@@ -89,10 +95,42 @@ public sealed record TapSelfCost : AdditionalCost
 /// picking into SecondTap (Worf, Honor-Bound Warrior — Shayne: the player picks both). Only an
 /// activated ability splits it: no spell or ward costs "tap two" yet. "Tap three" or more (Collation
 /// Trimatrix, Captain Jean-Luc Picard's seven Officers) is one cost picking the whole set (TapSet,
-/// ActivateAbilityAction.TapIds) — the player picks every one (Shayne, 2026-11-05).
+/// ActivateAbilityAction.TapIds) — the player picks every one (Shayne, 2026-11-05). "Tap any number of
+/// creatures you control with total power N or more" (teamwork, We Say Thee Nay!; crew) is <see cref="TotalPower"/>.
 /// </summary>
 public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 {
+	/// <summary>
+	/// Teamwork 2 (We Say Thee Nay!): "tap any number of creatures you control with total power 2 or more" — no
+	/// pick in the action: the creatures are picked AFTER it, one at a time until the total is reached
+	/// (TapChosenForPowerAction) — a cast per set would be 4,096 against 12 creatures. Count is unused.
+	/// </summary>
+	public int TotalPower { get; init; }
+
+	static int PowerOf(GameState s, int id) => Math.Max(0, s.Power(s.GetCard(id)));
+
+	/// <summary>
+	/// Teamwork's creatures kept out of the mana payment, which comes first: the most powerful until the total —
+	/// any later pick among the untapped then reaches it too. ponytail: a mana creature can be reserved where a
+	/// smaller set would leave it to pay; reserve mana creatures last if a cast is ever refused that way.
+	/// </summary>
+	IEnumerable<int> Reserved(GameState s, int playerId, int sourceId)
+	{
+		var total = 0;
+		foreach (
+			var (id, power) in Candidates(s, playerId, sourceId)
+				.Select(id => (id, power: PowerOf(s, id)))
+				.Where(c => c.power > 0)
+				.OrderByDescending(c => c.power)
+		)
+		{
+			if (total >= TotalPower)
+				yield break;
+			total += power;
+			yield return id;
+		}
+	}
+
 	/// <summary>With "{T}" in the same cost the source is already spoken for — set by ActivatedAbilityComponent.Costs.</summary>
 	public bool NotTheSource { get; init; }
 
@@ -100,7 +138,8 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 	public bool Second { get; init; }
 
 	public override CostSlot Slot =>
-		Count >= 3 ? CostSlot.TapSet
+		TotalPower > 0 ? CostSlot.None
+		: Count >= 3 ? CostSlot.TapSet
 		: Second ? CostSlot.SecondTap
 		: CostSlot.Tap;
 
@@ -115,23 +154,45 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 
 	/// <summary>"Tap two": two untapped to choose from, for each half.</summary>
 	public override bool CanPay(GameState s, int playerId, int sourceId) =>
-		Candidates(s, playerId, sourceId).Count() >= Count;
+		TotalPower > 0
+			? Candidates(s, playerId, sourceId).Sum(id => PowerOf(s, id)) >= TotalPower
+			: Candidates(s, playerId, sourceId).Count() >= Count;
 
 	public override bool Taps => true;
 
-	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		chosen == 0 ? s : s.Tap(chosen);
+	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
+		TotalPower > 0 ? Reserved(s, playerId, sourceId)
+		: chosen == 0 ? []
+		: [chosen];
 
-	public override string Describe() => "Tap an untapped permanent";
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		TotalPower > 0
+			? s.SpawnAction(
+				TapChosenForPowerAction.Next(
+					playerId,
+					sourceId,
+					NotTheSource ? Filter & !Is.Source : Filter,
+					TotalPower
+				)
+			)
+		: chosen == 0 ? s
+		: s.Tap(chosen);
+
+	public override string Describe() =>
+		TotalPower > 0
+			? $"Tap creatures with total power {TotalPower} or more"
+			: "Tap an untapped permanent";
 }
 
 /// <summary>
-/// Beam me up: "You may cast this card from your graveyard for [cost] if you also return a creature
-/// you control to its owner's hand. Then exile this spell." — the cost beside the mana on its
-/// FlashbackComponent (TrkCards.BeamMeUp). Marooned: a creature whose Aura says it "can't be beamed
-/// up" is never offered.
+/// "Return a [Filter] you control to its owner's hand" — beam me up: "You may cast this card from your
+/// graveyard for [cost] if you also return a creature you control to its owner's hand" (Is.Creature, the cost
+/// beside the mana on its FlashbackComponent, TrkCards.BeamMeUp); Daze: "return an Island you control to its
+/// owner's hand rather than pay this spell's mana cost" (Is.Subtype("Island")). Marooned: a permanent whose
+/// Aura says it "can't be beamed up" is never offered. ponytail: for Daze too — an Island under Marooned
+/// can't meet Daze in any one set's game; read the cost's kind if a cube ever mixes them.
 /// </summary>
-public sealed record BeamMeUpCost : AdditionalCost
+public sealed record ReturnToHandCost(Filter Filter) : AdditionalCost
 {
 	/// <summary>Scotty, Miracle Worker: "Scotty can't be beamed up to cast a spell this way."</summary>
 	public int ExceptId { get; init; }
@@ -139,8 +200,8 @@ public sealed record BeamMeUpCost : AdditionalCost
 	public override CostSlot Slot => CostSlot.Return;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
-		Is
-			.Creature.Among(s, playerId, ZoneType.Battlefield, sourceId)
+		Filter
+			.Among(s, playerId, ZoneType.Battlefield, sourceId)
 			.Where(id =>
 				id != ExceptId
 				&& !MagicCore
@@ -155,7 +216,33 @@ public sealed record BeamMeUpCost : AdditionalCost
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
 		chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(s.GetCard(chosen).OwnerId, ZoneType.Hand));
 
-	public override string Describe() => "Return a creature you control to its owner's hand";
+	public override string Describe() => "Return a permanent you control to its owner's hand";
+}
+
+/// <summary>
+/// "Pay {N}" in a cost list — the other half of an "or": Silence the Echo's "sacrifice a creature or pay {3}",
+/// Countersculpt's "behold a Jace or pay {1}". Paid with the spell's mana, in one payment (CostList.ManaOwed).
+/// </summary>
+public sealed record PayManaCost(int Generic) : AdditionalCost
+{
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) => s;
+
+	public override string Describe() => $"Pay {{{Generic}}}";
+}
+
+/// <summary>
+/// "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana Confluence: "{T}, Pay 1
+/// life: Add one mana of any color." Payable only with that much life, never while it can't change (Life.CanPay).
+/// </summary>
+public sealed record PayLifeCost(int Amount) : AdditionalCost
+{
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		Rules.Life.CanPay(s, playerId, Amount);
+
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		Rules.Life.Lose(s, playerId, Amount);
+
+	public override string Describe() => $"Pay {Amount} life";
 }
 
 /// <summary>"Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).</summary>
@@ -176,26 +263,54 @@ public sealed record SacrificeSelfCost : AdditionalCost
 
 /// <summary>
 /// "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none: any
-/// permanent); Silence the Echo's "sacrifice a creature or pay {3}" with OrPay. Emrakul's ward
-/// "sacrifice three permanents" is Count = 3, paid by choosing.
+/// permanent); Silence the Echo's "sacrifice a creature or pay {3}" with Or. Emrakul's ward
+/// "sacrifice three permanents" is Count = 3, paid by choosing. Magda, Brazen Outlaw's "Sacrifice five
+/// Treasures:" is Count = 5 with a filter: picked AFTER activating, all at once — one action per set would be
+/// 252 from ten Treasures (as ExileFromGraveyardCost's Count).
 /// </summary>
 public sealed record SacrificeCost(Filter? Filter = null) : AdditionalCost
 {
 	public int Count { get; init; } = 1;
 
-	public override CostSlot Slot => CostSlot.Sacrifice;
+	public override CostSlot Slot => Count == 1 ? CostSlot.Sacrifice : CostSlot.None;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		Filter.Among(s, playerId, ZoneType.Battlefield, sourceId).Where(s.CanSacrifice);
 
+	/// <summary>
+	/// ponytail: Count &gt; 1 picks nothing in the action, so Uses names none and the mana payment may sacrifice one of
+	/// them (a Treasure) first — harmless while no such cost has a mana cost beside it (Magda's has none); reserve
+	/// Count candidates from the payment if one ever does.
+	/// </summary>
+	public override bool CanPay(GameState s, int playerId, int sourceId) =>
+		Count == 1 || Candidates(s, playerId, sourceId).Count() >= Count;
+
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		chosen == 0 ? s : s.Sacrifice(chosen);
+		Count > 1
+			? s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new ChoosePermanentChoice(playerId, sourceId, Filter, required: true)
+						{
+							MinChoices = Count,
+							MaxChoices = Count,
+							Prompt = $"Sacrifice {Count}",
+							Sacrifice = true,
+						},
+						new SacrificeChosenAction(),
+					],
+				}
+			)
+		: chosen == 0 ? s
+		: s.Sacrifice(chosen);
 
 	public override string Describe() =>
 		Count == 1 ? "Sacrifice a permanent" : $"Sacrifice {Count} permanents";
 
 	public override GameAction? PaidByChoosing() =>
-		Filter is null ? new SacrificePermanents(Count) : null;
+		Filter is null ? new EachSacrifices(Ref.You, Is.AnyCard) { N = Count } : null;
 
 	public override bool CanPayByChoosing(GameState s, int payerId) =>
 		Filter is null
@@ -299,8 +414,7 @@ public sealed record DiscardCost(Filter? Filter = null) : AdditionalCost
 			)
 			.Select(c => c.Id);
 
-	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
-		[];
+	// Uses: the card discarded — a Spirit Guide discarded can't also be exiled for mana.
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
 		chosen == 0 ? s : s.Discard(playerId, [chosen]);
@@ -337,16 +451,21 @@ public sealed record PutSelfOnBottomCost : AdditionalCost
 	public override string Describe() => "Put this card on the bottom of your library";
 }
 
-/// <summary>Q, Stacking the Deck's gift: "Exile a card from your hand:" — one legal action per card.</summary>
-public sealed record ExileFromHandCost : AdditionalCost
+/// <summary>
+/// Q, Stacking the Deck's gift: "Exile a card from your hand:" — one legal action per card (not this one); Force of
+/// Will: "exile a blue card from your hand" is Filter = Is.Color(Blue). The card exiled is what it Uses: a Spirit
+/// Guide exiled for this can't also make mana.
+/// </summary>
+public sealed record ExileFromHandCost(Filter? Filter = null) : AdditionalCost
 {
 	public override CostSlot Slot => CostSlot.Exile;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
-		s.CardsIn(playerId, ZoneType.Hand).Where(c => c.Id != sourceId).Select(c => c.Id);
-
-	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
-		[];
+		s.CardsIn(playerId, ZoneType.Hand)
+			.Where(c =>
+				c.Id != sourceId && (Filter?.Matches(s, c, new(playerId, sourceId)) ?? true)
+			)
+			.Select(c => c.Id);
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
 		chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile));
@@ -376,10 +495,20 @@ public sealed record ExileFromGraveyardCost(Filter Filter) : AdditionalCost
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
 		[];
 
-	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen)
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		Count == 1
+			? chosen == 0
+				? s
+				: s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile))
+			: PickAfter(s, playerId, sourceId);
+
+	/// <summary>
+	/// The Count cards picked after the action, one at a time — Drivnod's three, and delve's N
+	/// (CastSpellAction.Delve: one too, since how many is the cast's and which is a choice).
+	/// </summary>
+	/// <param name="delve">Delve's picks: the AI answers them by rule (ChooseAmongChoice.Delve).</param>
+	public GameState PickAfter(GameState s, int playerId, int sourceId, bool delve = false)
 	{
-		if (Count == 1)
-			return chosen == 0 ? s : s.MoveCard(chosen, s.ZoneId(playerId, ZoneType.Exile));
 		var candidates = Candidates(s, playerId, sourceId).ToImmutableList();
 		return s.SpawnAction(
 			new PipelineAction
@@ -397,6 +526,7 @@ public sealed record ExileFromGraveyardCost(Filter Filter) : AdditionalCost
 										Ids = candidates, // one picked already has left: no longer offered
 										MinChoices = 1,
 										Prompt = "Exile from your graveyard",
+										Delve = delve,
 									},
 									new MoveChosenToAction(playerId, ZoneType.Exile),
 								]
@@ -455,7 +585,11 @@ public static class CostList
 			);
 	}
 
-	/// <summary>What a slot may hold: 0 when nothing picks into it (or "or pay" is allowed), else each candidate.</summary>
+	/// <summary>
+	/// What a slot may hold: 0 when nothing picks into it, else each candidate — and 0 too when either half of an
+	/// "or" picks into it (the other half is paid). Bone Shards' sacrifice and discard are both offered; a cast
+	/// picking both or neither is refused (<see cref="Paid"/>).
+	/// </summary>
 	public static IEnumerable<int> Options(
 		IEnumerable<AdditionalCost> costs,
 		CostSlot slot,
@@ -464,13 +598,24 @@ public static class CostList
 		int sourceId
 	)
 	{
-		if (In(costs, slot) is not { } cost)
+		var either = costs.Where(c => c.Or is not null).ToList();
+		if (In([.. costs, .. either.Select(c => c.Or!)], slot) is not { } cost)
 			return [0];
 		var candidates = cost.Candidates(s, playerId, sourceId);
 		if (cost.AnyOneWillDo)
 			candidates = candidates.Take(1);
-		return cost.OrPay > 0 ? [0, .. candidates] : candidates;
+		return either.Any(c => c == cost || c.Or == cost) ? [0, .. candidates] : candidates;
 	}
+
+	/// <summary>
+	/// The costs actually paid: each "or" resolved by what its slot picked — the cost itself when it picked a card,
+	/// its <see cref="AdditionalCost.Or"/> when it picked nothing (id 0). Validation, payment and the mana owed all
+	/// read this list, so picking into a slot whose cost isn't paid is refused like any wrong pick.
+	/// </summary>
+	public static ImmutableList<AdditionalCost> Paid(
+		IEnumerable<AdditionalCost> costs,
+		Func<CostSlot, int> chosen
+	) => [.. costs.Select(c => c.Or is { } or && chosen(c.Slot) == 0 ? or : c)];
 
 	/// <summary>The chosen id fits the slot: 0 where nothing picks (or where it may pay instead), else a candidate.</summary>
 	public static bool Fits(
@@ -481,11 +626,11 @@ public static class CostList
 		int playerId,
 		int sourceId
 	) =>
-		In(costs, slot) is not { } cost ? chosen == 0
-		: chosen == 0 ? cost.OrPay > 0
-		: cost.Candidates(s, playerId, sourceId).Contains(chosen);
+		In(costs, slot) is not { } cost
+			? chosen == 0
+			: chosen != 0 && cost.Candidates(s, playerId, sourceId).Contains(chosen);
 
-	/// <summary>"… or pay {N}" owed for the slots left empty.</summary>
-	public static int OrPayOwed(IEnumerable<AdditionalCost> costs, Func<CostSlot, int> chosen) =>
-		costs.Where(c => c.Slot != CostSlot.None && chosen(c.Slot) == 0).Sum(c => c.OrPay);
+	/// <summary>"… or pay {N}" owed: the mana among the costs paid (<see cref="Paid"/>).</summary>
+	public static int ManaOwed(IEnumerable<AdditionalCost> paid) =>
+		paid.OfType<PayManaCost>().Sum(c => c.Generic);
 }

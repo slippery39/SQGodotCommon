@@ -47,14 +47,6 @@ public class TrkBatch4cTests : FraBoardTest
 		Resolve(answer);
 	}
 
-	/// <summary>Puts a card on top of a player's library.</summary>
-	int OnTop(CardDefinition card, int player)
-	{
-		var id = Hand(card, player);
-		s = s.MoveCard(id, s.ZoneId(player, ZoneType.Library), toTop: true);
-		return id;
-	}
-
 	bool InExile(int card) => s.IsIn(card, s.GetCard(card).OwnerId, ZoneType.Exile);
 
 	bool CanPlay(int card, int player) =>
@@ -181,6 +173,23 @@ public class TrkBatch4cTests : FraBoardTest
 		Declare(sehlat, other);
 		Assert.That(s.GetCard(sehlat).AttackingId, Nu.EqualTo(them));
 		Assert.That(s.GetCard(other).AttackingId, Nu.EqualTo(them), "neither is alone");
+	}
+
+	// MC-6.10: a rule for entering permanents (PermanentsEnter) is asked from its holder's side, and never of the
+	// holder itself — Deanna Troi: "Other creatures you control enter with an additional +1/+1 counter on them."
+	[Test]
+	public void PermanentsEnter_IsItsHoldersRule_NeverForItself()
+	{
+		var deanna = Hand(Trk("Deanna Troi, Psychic Counsel"), me);
+		s = s.EnterBattlefield(deanna, me);
+		var mine = Hand(Bear, me);
+		s = s.EnterBattlefield(mine, me);
+		var theirs = Hand(Bear, them);
+		s = s.EnterBattlefield(theirs, them);
+
+		Assert.That(s.GetCard(deanna).PlusOneCounters, Nu.Zero, "not her own entry: 'other'");
+		Assert.That(s.GetCard(mine).PlusOneCounters, Nu.EqualTo(1));
+		Assert.That(s.GetCard(theirs).PlusOneCounters, Nu.Zero, "creatures YOU control");
 	}
 
 	// ===== Warp Speed: "Lands you control enter untapped." =====

@@ -127,9 +127,14 @@ public record Card : GameObject
 	/// </summary>
 	public Knowers KnownTo { get; init; }
 
-	/// <summary>Vulcan Mind-Meld: a card exiled face down this player hasn't seen — a front end draws its back (CR 406.3).</summary>
+	/// <summary>
+	/// Vulcan Mind-Meld: a card exiled face down this player hasn't seen — a front end draws its back (CR 406.3). A
+	/// face-down permanent (Abhorrent Oculus' manifest dread) is hidden from all but its controller (CR 708.5).
+	/// </summary>
 	public bool IsHiddenFrom(int playerId) =>
-		HasComponent<Effects.ExiledFaceDown>() && !IsKnownTo(playerId);
+		HasComponent<FaceDown>()
+			? playerId != ControllerId
+			: HasComponent<Effects.ExiledFaceDown>() && !IsKnownTo(playerId);
 
 	/// <summary>This player has seen the card where it is (V'Ger's look at a hand, a reveal) — the table shows it face up (TBL-6).</summary>
 	public bool IsKnownTo(int playerId) =>
@@ -143,8 +148,18 @@ public record Card : GameObject
 	/// <summary>Loyalty counters on a planeswalker. Damage removes them (CR 120.3c); at 0 it dies (CR 704.5i).</summary>
 	public int Loyalty { get; init; }
 
+	/// <summary>
+	/// The spell this permanent resolved from — what was decided as it was cast, carried onto it (EnterBattlefield):
+	/// its X (CR 107.3m), Thieving Skydiver's "if it was kicked", evoke's alternative cost (Subtlety), squad's payments
+	/// (Sicarian Infiltrator). Null when it wasn't cast; gone as it leaves.
+	/// </summary>
+	public Actions.OnStackComponent? CastAs { get; init; }
+
 	/// <summary>The X paid to cast this permanent — its "when this enters" abilities use it (CR 107.3m).</summary>
-	public int CastX { get; init; }
+	public int CastX => CastAs?.X ?? 0;
+
+	/// <summary>What was decided as it was cast — THE read: on the stack its OnStackComponent, a permanent the spell it was (CastAs).</summary>
+	public Actions.OnStackComponent? AsCast => GetComponent<Actions.OnStackComponent>() ?? CastAs;
 
 	/// <summary>Null Summoner: "if you cast it" — it entered by resolving as a spell.</summary>
 	public bool WasCast { get; init; }
@@ -277,7 +292,8 @@ public record Card : GameObject
 	/// CR 400.7: a card that changes zones is a new object with no memory of its previous one.
 	/// The ONLY reset — every zone change goes through MagicState.MoveCard, which calls this.
 	/// </summary>
-	public Card Fresh() => WithoutAnimation().WithoutCopyEffect().Reset();
+	public Card Fresh() =>
+		WithoutAdventure().WithoutAnimation().WithoutCopyEffect().TurnedFaceUp().Reset();
 
 	Card Reset() =>
 		this with
@@ -288,7 +304,7 @@ public record Card : GameObject
 			PlusOneCounters = 0,
 			MinusOneCounters = 0,
 			Loyalty = 0,
-			CastX = 0,
+			CastAs = null,
 			WasCast = false,
 			ChargeCounters = 0,
 			TimeCounters = 0,
@@ -333,12 +349,17 @@ public record Card : GameObject
 				or Effects.ExiledBy
 				or Effects.ChosenColorMana
 				or Effects.ChosenNumber
+				or Effects.ClassLevel
 				or Effects.ChosenName
+				or Effects.ChosenPlayer
 				or CopyUntilEndOfTurn
 				or EnteredAsCopy
+				or FaceDown
+				or CastAsAdventure
 				or Effects.DelayedTrigger
 				or Animated
 				or Effects.TriggersAdditionalTime { UntilUntapped: true }
+				or Effects.EnchantedLosesAllAbilities { Object: not null }
 				or Effects.TapsForTwoColorlessWhileExiled;
 
 	/// <summary>
@@ -390,6 +411,17 @@ public record Card : GameObject
 			);
 	}
 
+	/// <summary>
+	/// Its types changed by an effect with no duration, so until it leaves — Assimilate: "It's a Borg artifact
+	/// creature"; Enduring Innocence returned: "It's an enchantment. (It's not a creature.)" What it was is kept on
+	/// an Animated with no source: the state check leaves it, WithoutAnimation puts it back (leaving, a copy).
+	/// </summary>
+	public Card WithTypesUntilItLeaves(CardType types) =>
+		(Card)
+			(this with { Types = types }).WithComponent(
+				new Animated(0, 0, Types, null, BasePower, BaseToughness)
+			);
+
 	/// <summary>Back to what it was before a type change — its source left or stopped, or it leaves (CR 400.7).</summary>
 	public Card WithoutAnimation() =>
 		GetComponent<Animated>() is { } a
@@ -413,6 +445,62 @@ public record Card : GameObject
 		WithoutCopyUntilEndOfTurn() is var card && card.GetComponent<EnteredAsCopy>() is { } entered
 			? (Card)card.WithCopiableValuesOf(entered.Original).WithoutComponents<EnteredAsCopy>()
 			: card;
+
+	/// <summary>
+	/// Abhorrent Oculus' manifest dread: "Put one onto the battlefield face down as a 2/2 creature" — no name, types
+	/// but creature, cost, colour or abilities (CR 708.2): a blank 2/2's copiable values, what it was kept on
+	/// <see cref="FaceDown"/>. Its status (tapped, counters, damage) stays its own, as a copy's.
+	/// </summary>
+	public Card TurnedFaceDown() =>
+		(Card)WithCopiableValuesOf(FaceDownModel).WithComponent(new FaceDown(this));
+
+	static readonly Card FaceDownModel =
+		new()
+		{
+			Name = "",
+			Types = CardType.Creature,
+			BasePower = 2,
+			BaseToughness = 2,
+		};
+
+	/// <summary>
+	/// "Turn it face up" (TurnFaceUpAction) — or it leaves the battlefield, revealed (CR 708.9, Fresh): what it was, the
+	/// same object (CR 708.8), its status kept. A type change on the 2/2 is undone first: it remembers the 2/2, and the
+	/// state check stamps the card afresh (Attachments.Check).
+	/// </summary>
+	public Card TurnedFaceUp() =>
+		GetComponent<FaceDown>() is { } down
+			? (Card)
+				WithoutAnimation().WithCopiableValuesOf(down.Original).WithoutComponents<FaceDown>()
+			: this;
+
+	/// <summary>
+	/// Brazen Borrower // Petty Theft: cast as its Adventure (CR 715.3) — while it is cast and on the stack it has only
+	/// the Adventure's characteristics (Petty Theft, {1}{U}, Instant — Adventure, its text): the face's values as a
+	/// copy's, the card it is kept on <see cref="CastAsAdventure"/>, as a face-down card's (TurnedFaceDown). Anywhere
+	/// else it is the creature: leaving the stack undoes it (Fresh, WithoutAdventure).
+	/// </summary>
+	public Card AsAdventure() =>
+		GetComponent<Effects.AdventureComponent>() is { } adventure
+			? (Card)
+				(
+					WithCopiableValuesOf(
+						CardFactory.Create(
+							new CardDefinition(CardData.OfFace(adventure.Face), [adventure.Text]),
+							OwnerId
+						)
+					) with
+					{
+						Set = Set,
+					}
+				).WithComponent(new CastAsAdventure(this))
+			: this;
+
+	/// <summary>The adventurer card again (CR 715.4) — as it leaves the stack, resolved or not (Fresh).</summary>
+	public Card WithoutAdventure() =>
+		GetComponent<CastAsAdventure>() is { } cast
+			? (Card)WithCopiableValuesOf(cast.Original).WithoutComponents<CastAsAdventure>()
+			: this;
 
 	/// <summary>Cleanup: only Hall of Echoes' "until end of turn" copy ends — a Flesh Duplicate stays one.</summary>
 	public Card WithoutCopyUntilEndOfTurn() =>
@@ -524,6 +612,22 @@ public record CopyUntilEndOfTurn(Card Original) : GameComponent;
 /// (Card.WithoutCopyEffect), never in cleanup.
 /// </summary>
 public record EnteredAsCopy(Card Original) : GameComponent;
+
+/// <summary>
+/// Abhorrent Oculus' manifest dread: "Put one onto the battlefield face down as a 2/2 creature … Turn it face up any
+/// time for its mana cost if it's a creature card." — the card it is, kept while it is a face-down 2/2
+/// (Card.TurnedFaceDown). Status: a copy of the 2/2 is no face-down card, and leaving turns it face up.
+/// ponytail: the card is in the state, so the search knows an opponent's face-down card — Hidden.Sample would put a
+/// guess in its place when the AI should play fair against it (DesignNotes).
+/// </summary>
+public record FaceDown(Card Original) : GameComponent;
+
+/// <summary>
+/// Brazen Borrower // Petty Theft: the adventurer card cast as its Adventure (Card.AsAdventure) — kept while it is
+/// Petty Theft, "Return target nonland permanent an opponent controls to its owner's hand." Status: a copy of Petty
+/// Theft is no adventurer card, and leaving the stack makes it the creature again.
+/// </summary>
+public record CastAsAdventure(Card Original) : GameComponent;
 
 /// <summary>Its types changed by this source's BecomesType (this object of it); the rest is what it was, to put back. SourceId 0: by an effect with no duration, until it leaves (Assimilate).</summary>
 public record Animated(

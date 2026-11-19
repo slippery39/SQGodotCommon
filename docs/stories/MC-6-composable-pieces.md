@@ -38,6 +38,87 @@ really are unique), but the families below are.
   same cost list. Phyrexian Tower's sacrifice is never auto-paid: it is always activated by hand, and the
   AI gets it as a move (one per creature).
 
+- 2026-11-12, Claude (cube lane, overnight; MC-6.10, for review): **a card's own "this enters tapped / with N counters"
+  stays its own component** — it is the card's replacement effect on itself (CR 614.12), with the shocklands' "unless
+  you pay 2 life" and X on it; the composed `PermanentsEnter` is a permanent's rule for OTHER permanents, and never
+  applies to its holder (Metallic Mimic's ruling) — one rule now where Warp Speed's check alone had included itself
+  (no card could tell: Warp Speed isn't a land). **Karn's "entering doesn't cause abilities to trigger" stays apart**:
+  it is not how a permanent enters but which entry EVENTS triggers see, judged on the event's types when triggers are
+  collected — the card may be gone by then, so a filter on it can't be asked. Its filter gains `Is.Yours` where the
+  old piece read only its controller's permanents (Deanna Troi, Zefram).
+- 2026-11-12, Claude: **MC-6.10 before 6.9** — LSVPower's survey (MC-4) needs both (57 cards enter-related, 53
+  play-from-another-zone), and 6.10 is the smaller, self-contained family; 6.9 is next.
+- 2026-11-13, Claude (cube lane; MC-6.9, for review): **two shapes of "may play", not one.** A RULE over a zone —
+  `MayPlayFromZone`, on a permanent or (now) a `ThisTurn` object: Null Summoner's linked card is its `Exile` row with
+  `Is.ExiledBySource` (asked from the holder, so CR 607.2a's "that same object" is the filter), Sen Triplets' its `Hand`
+  row in the command zone. A MARK on one card — `PlayableFromExile`, what `ExileTopPlayable`/`SearchLibrary` leave
+  through `PlayPermission`: it must die with the card's zone change (CR 400.7), which a mark does for free and a rule
+  naming an id would have to re-check. Both read by `Playable`. **Shayne, 2026-11-13: confirmed** — "different enough to
+  be two pieces. One is for an entire zone (i.e. marks the zone), one is for individual cards."
+- 2026-11-13, Claude: **"you may cast that card" as it resolves is the same `PlayPermission`, `Now`** — never a mark
+  (a test: Chandra's declined card isn't castable later). Sisko's cap stays a `Count` counted ONCE as it resolves, not
+  a filter asked at each choice: CR 608.2h ("determined only once, when the effect is applied"), so a free cast's own
+  sacrifice of an Officer can't lower it. MC-6.4's note asked for "a filter on that loop"; the rule says otherwise.
+  **Shayne, 2026-11-13: confirmed** — counted once, as the ability resolves: "All spells cast this way are cast together
+  at the same time (or else it would say you may cast it this turn)." The planeswalker price of a cast now (`Evaluator.Lifetime`) now reads every `Now`, not only Chandra's — no
+  planeswalker or emblem uses the others, so nothing scores differently today.
+- 2026-11-13, Claude: **Brazen Bluff's `CastFromHandFree(filter)` stays** — it moves nothing (not "exile these"), and
+  it is the one hand-cast-now card; its choose-one step is Sisko's loop at most once. Merge them into one "cast from
+  among [a Ref] now" when a second hand card needs it (LSVPower: none in the survey's play-from-another-zone list).
+  **Shayne, 2026-11-13: confirmed** — leave it; "a niche ability we can revisit later".
+
+- 2026-11-13, Claude (cube lane; MC-6.12): **"a token that has left the battlefield can't move" (CR 111.8) is MoveTo's,
+  for every move** — the old exile return alone asked it; a token is off the battlefield only inside one resolution
+  (the state-based check takes it before anyone acts), so no game could tell. **A chosen move is its own piece**
+  (`MoveChosen`), not a `MoveTo` option: the choice is a step the replays answer, and each zone keeps the choice type
+  it had (graveyard `ChooseAmongChoice`, battlefield `ChoosePermanentChoice`, hand `ChooseCardsFromHandChoice`).
+
+- 2026-11-13, Claude (cube lane; MC-6.15): **"doesn't untap" is the holder's rule, not a keyword it grants.** A grant
+  (`StaticEffectComponent` + a keyword-like word, as `Combat.CantBlock`) would be read through `s.Has`, which drops every
+  grant on a creature that lost all abilities — Infinite Coursework's own creature would start untapping. The Aura's
+  "doesn't untap" is the Aura's effect (CR 613: losing abilities doesn't end another object's effect), so it is
+  `DoesntUntap(filter)` on the holder, as `PermanentsEnter` is.
+- 2026-11-13, Claude — **Open (for Shayne), MC-6.15: the player-side "can't"s.** Today each is a marker read in its one
+  place: a this-turn object on a player (`CantCastOrActivate`, `LifeTotalCantChange`, `CantAttackThisTurn`,
+  `YouHaveHexproof`, `PreventAllDamageToYou`) or a permanent's for its controller (`DontLoseForZeroLife`,
+  `CantSacrificeTreasures`) — only `CantCastOrActivate` is both. LSVPower varies who and how long: "your opponents can't
+  cast spells during your turn" (Voice of Victory, Jennifer Walters), "each player can't cast more than one spell each
+  turn" (Archon of Emeria), "activated abilities of artifacts, creatures and planeswalkers can't be activated" (Clarion
+  Conqueror), "each opponent can't draw more than one card each turn" (Narset, Leovold), "can't gain life for the rest of
+  the game" (Screaming Nemesis), "can't cause you to discard or sacrifice" (Tamiyo). Options:
+  **(A)** one reader for every player rule, `s.PlayerRules<T>(player)` — the player's command-zone objects (this turn, or
+  the rest of the game) AND every permanent's `T` whose `Who` filter (from the holder's side: you by default, opponents,
+  each player) matches — so any marker works from either source with any who. Cost: a battlefield scan on hot paths
+  (targeting, damage, life, casting legality — asked per move by the AI; `Combat.LockedDown` scans permanents only in
+  combat today for that reason), so it wants a per-state cache (AI-22's kind of work).
+  **(B)** keep each marker; give the one a card needs its `Who` / duration when its batch is scripted (Voice of Victory:
+  `CantCastOrActivate { Who = Is.Opponents, DuringYourTurn }`; Narset a draw-limit marker; Nemesis a rest-of-game object).
+  Nothing speculative, no hot path touched until a card pays for it.
+  **Default (B)**, with (A)'s reader at the first batch that needs a second marker on a permanent with a `Who`.
+  **Shayne, 2026-11-13: (B)** — options per card as LSVPower's batches need them. Kept
+  apart either way: `CantBeCountered` (the spell's own characteristic) and `NextSpellCantBeCountered` (a one-shot the next
+  cast takes, setting `OnStackComponent.CantBeCountered` — Delighted Halfling's mana sets the same flag), and
+  `PermanentsCantPhaseIn` (one rule, its one place).
+
+- 2026-11-13, Claude — **Open (for Shayne), MC-6.14: the "this turn / this game" conditions.** The four read four
+  different things: `FirstSpellYouCastThisGame` a stamp on the stack object (it must be — a spell cast in response would
+  change a count read later, as `Trigger.SpellNumber` is stamped), `SubtypeEnteredThisTurn` a set of subtype NAMES in
+  the tally, `HaventBegunAnExtraTurn` a player flag, `IfNthResolutionThisTurn` a per-card count the effect itself
+  writes as it resolves. No count sits under them today, so "a `Count` and `AtLeast`" means new data. Options:
+  **(A)** make each a count: `Count.SpellNumberThisGame(Ref.Source)` (an int stamp for the bool) under
+  `Not(AtLeast(…, 2))`; `Count.ExtraTurnsBegunThisGame` (an int for the flag); `Count.EnteredThisTurn(filter)`, the
+  tally keeping what entered as it entered so a filter can ask it; `Count.TimesResolvedThisTurn(Ref.Source)`, the stamp
+  moved into every resolution, with an "exactly" condition — four one-card conditions become counts, plus a condition
+  and a stamp on every resolution.
+  **(B)** keep the four; LSVPower's "this turn" texts land on counts that exist or one a batch adds: "if you gained
+  life this turn" (Ocelot Pride: `LifeYouGainedThisTurn`), "if you've cast another spell this turn" (Sage of the Skies:
+  a spells-cast count beside `NoncreatureSpellsYouCastThisTurn`), revolt (Fatal Push: a new tally, "a permanent left the
+  battlefield under your control"), "if it wasn't the first land you played this turn" (Fastbond: the land's number,
+  stamped as it is played), "the second time … instead" (Scythecat Cub: `IfNthResolutionThisTurn { Otherwise }`), "the
+  first spell you've cast this game" (Once Upon a Time: `FirstSpellYouCastThisGame` on its free cast).
+  **Default (B)**: no two of the four share a datum, so (A) renames them without removing a rule; nothing built.
+  **Shayne, 2026-11-13: (B)** — keep the four; counts added as the batches need them.
+
 ## Tasks
 
 The audit (2026-11-06): each family, its members today, and the composed piece. **MC-5.6** marks the ones
@@ -99,7 +180,15 @@ the Stardates fix.
       `ModifyUntilEndOfTurn.Gains`); no combat rule changed. `Combat.CantBeBlocked` and
       `CantBeBlockedBy(filter)` exist; landwalk and fear are those under a condition or a filter (helpers in
       `Scripting.cs`), with no new combat rule.
-- [ ] MC-6.9 **Playing from another zone** — part done 2026-11-06 (MC-5.6): `PlayPermission { ThisTurn, Forever,
+- [x] MC-6.9 **Playing from another zone** — done 2026-11-13 (cube lane): the linked and this-turn permissions →
+      `MayPlayFromZone` rows (`Of`, `OwnerId`, `AnyTime`, `If`, `AnyType`; a `ThisTurnEffect` too; `Is.ExiledBySource`,
+      `Is.AnyCard`) — Null Summoner, Sen Triplets moved, `MayCastWhatItExiled`, `MayPlayFrom`,
+      `Playable.IsCastableThroughLink` / `IsPlayableFromTheirZone` gone. The effects → `ExileTopPlayable { Until,
+      ShuffleFirst, RestOnBottom, Gains }` with `PlayPermission { Now, Free, AnyNumber, ManaValueAtMost, Otherwise,
+      OrIntoHand }` — Chandra, Torch of Defiance, The Caretaker, discover (U.S.S. Discovery), Q, Sisko, Exploratory
+      Mission moved; `ExileTopMayCast`, `ExileTopAndCastFree`, `ExileUntilNonlandCastFree` and `UntilNonland` gone.
+      Every golden file unchanged; two tests (Null Summoner's other object and their turn; Chandra's no-mark),
+      revert-checked. Kept: `PlayableFromExile` (the mark) and Bluff's `CastFromHandFree` — Decisions. Earlier: part done 2026-11-06 (MC-5.6): `PlayPermission { ThisTurn, Forever,
       By, AnyType }`, taken out of `ExileTopPlayable` (Kirk, Exploratory Mission, Chekov, Vulcan Mind-Meld moved) and
       given to `SearchLibrary.Play` with `SearchLibrary.Of` (Thada). Batch 3a: Prosper's "play from exile" is
       `Trigger.From`. Batch 3b (2026-11-07): Sen Triplets' `MayPlayFrom(zone, of)`, a "this turn" permission on the
@@ -108,25 +197,55 @@ the Stardates fix.
       `CastFromHandFree`, `CastFromHandFreeUpToCreatureCount`, `ExileTopPlayable` and its options, `ExileTopMayCast`,
       `ExileTopAndCastFree`, `ExileUntilNonlandCastFree` → one permission (which zone, whose, a filter, how
       long, free or paid), read by `Rules/Playable.cs`, and one "exile these, they may be played" effect.
-- [ ] MC-6.10 **Entering** — `EntersTappedComponent`, `PermanentsEnterTapped`, `LandsYouControlEnterUntapped`,
+      2026-11-12 (cube lane): the permanents' permissions — `MayPlayFromYourGraveyard`, `MayCastArtifactFromLibraryTop`,
+      `MayPlayLandsFromLibraryTop` → `MayPlayFromZone(From, filter) { OncePerTurn, Finality, OutsideTheGame }`, read by
+      ONE `Playable.ZonePermission` (casts and land plays; `GraveyardPermission`, `LibraryTopPermission` and Pike's
+      check gone). Overflow Submatrix, The Holodeck, Nog, Zefram, Pike moved; no game moved; revert-checked. A use is
+      stamped only for a once-each-turn rule (Nog's unlimited one was stamped before, read by nothing). Then the card's own:
+      `MayCastFromExile`, `MayCastFromYourGraveyard` → `MayCastThisFrom(From) { Finality }` (Storied Veteran, Khan; no
+      game moved, revert-checked). LEFT: the linked (`MayCastWhatItExiled`) and this-turn (`MayPlayFrom`,
+      `PlayableFromExile`) permissions, and the effects (`ExileTopPlayable`, `ExileTopMayCast`, `ExileTopAndCastFree`,
+      `ExileUntilNonlandCastFree`, `CastFromHandFree`).
+- [x] MC-6.10 **Entering** — `EntersTappedComponent`, `PermanentsEnterTapped`, `LandsYouControlEnterUntapped`,
       `EntersWithCountersComponent`, `YourPermanentsEnterWithCounters`, `YourCreaturesEnterAttacking`,
       `EnteringArtifactsAndCreaturesDontTrigger` → "permanents matching a filter enter [tapped / untapped /
-      with counters / attacking]".
+      with counters / attacking]". Done 2026-11-12 (cube lane): `PermanentsEnter(filter) { Tapped, Untapped,
+      CounterKind, Counters, Attacking }` — Root Maze, Warp Speed, Zefram Cochrane, Deanna Troi, Kira Nerys moved; four
+      pieces deleted; one funnel in `EnterBattlefield` (`EntryRules`). No game moved (every golden file unchanged); a
+      test that the filter is the holder's and never applies to itself, revert-checked. Kept apart, with reasons in
+      Decisions: a card's OWN entry (`EntersTappedComponent`, `EntersWithCountersComponent`) and Karn's
+      `EnteringArtifactsAndCreaturesDontTrigger`.
 - [ ] MC-6.11 **Chosen as it enters** — `ChoosesColorAsItEnters`, `ChoosesNameAsItEnters`,
       `ChoosesNumberAsItEnters` (+ their `Chosen*` markers) → one component, by what is chosen.
-- [ ] MC-6.12 **Moving a card** — `ReturnFromGraveyard` (moves from any zone, despite its name),
-      `ReturnFromYourGraveyard`, `ReturnFromExileUnderYourControl`, `ReturnLinkedExile`, `ReturnToHand`,
-      `ReturnYourPermanentToHand`, `MayPutFromHandOntoBattlefield`, `PutIntoLibrary`, `ShuffleIntoLibrary` →
-      a move to a zone with options (chosen or targeted, tapped, under whose control).
+- [x] MC-6.12 **Moving a card** — done 2026-11-13 (cube lane): `MoveTo(What, To) { From (zones it must still be in;
+      empty anywhere), Tapped, Counters, Finality, UnderYourControl, ExileAtNextEndStep, OnTop, Shuffle }` — 60 uses:
+      `ReturnFromGraveyard` (`From = [Graveyard]`, Talon Gates' `[Hand]`), `ReturnToHand` (`[Battlefield, Stack]`),
+      `PutIntoLibrary`, `ShuffleIntoLibrary` (`Shuffle`), `ReturnFromExileUnderYourControl` (Vindictive Triumph; Ghost of
+      Illyria's delayed return), `ReturnLinkedExile` (`Ref.All(Exile, Is.ExiledBySource)`, The Measure of a Man),
+      `MoveCardTo` (explore, discover: `Ref.Id`), and two the audit hadn't listed, `ExileFromGraveyard` and `ExileSpell`.
+      The chosen ones → `MoveChosen(From, filter, To) { May, Then, Otherwise }`, then `MoveTo(Ref.Chosen)`, each zone
+      keeping its choice type: `ReturnFromYourGraveyard` (Temporal Conqueror, Sylvia), `ReturnYourPermanentToHand` +
+      `ReturnChosenToHandAction`, `MayPutFromHandOntoBattlefield` (Erica; `ChooseCardsFromHandChoice.Filter`). Twelve
+      pieces gone; every golden file unchanged; five tests (owner's hand, hand filter, From, shuffle, CR 111.8),
+      revert-checked. Ruling: a token that left the battlefield moves nowhere (CR 111.8) for every move — only the
+      exile return asked it before; no game moved (a token off the battlefield lives only inside a resolution).
 - [ ] MC-6.13 **Statics on the enchanted creature** — part done 2026-11-07 (MC-5.6 batch 3b): `EnchantedBecomesCreature`
       → `BecomesType(scope) { Add, Remove, Subtype, Power, Toughness, If }` (Puppet Crafting moved; Mogis's "isn't a
       creature" on it), `Attachments.Animations` made general and run in `EnterBattlefield` too. The rest after MC-5.4:
       `EnchantedIsCreatureType`, `EnchantedLosesAllAbilities`,
-      `EnchantedDoesntUntap`, `EnchantedCantBeBeamedUp` → the general statics with the scope
+      `EnchantedDoesntUntap` (done in 6.15: `DoesntUntap(Is.AttachedToSource)`), `EnchantedCantBeBeamedUp` → the general statics with the scope
       `Is.AttachedToSource`.
-- [ ] MC-6.14 **"This turn" and "this game" conditions** — `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
+- [x] MC-6.14 **"This turn" and "this game" conditions** — closed 2026-11-13 by decision, nothing built: the four
+      kept (Shayne: (B), Decisions); LSVPower's counts are added by the batches that need them. `FirstSpellYouCastThisGame`, `SubtypeEnteredThisTurn`,
       `HaventBegunAnExtraTurn`, `IfNthResolutionThisTurn` → a `Count` and `AtLeast`, where a tally exists.
-- [ ] MC-6.15 **Rule-changing statics** — part done 2026-11-07 (MC-5.6 batch 3b): `NoSpellsOrAbilitiesDuringCombat` →
+- [x] MC-6.15 **Rule-changing statics** — closed 2026-11-13: done 2026-11-13 (cube lane): "doesn't untap during its controller's
+      untap step" → `DoesntUntap(filter)`, the holder's rule (Traxos `Is.Source`; Infinite Coursework, Marooned
+      `Is.AttachedToSource`) — `DoesntUntapInYourUntapStep` and 6.13's `EnchantedDoesntUntap` gone; no game moved; two tests (Marooned holds
+      down another player's artifact; Traxos that lost all abilities untaps, as before), revert-checked. One reading
+      changed, rules-correct and in no game: an AURA that loses its abilities no longer holds its creature down (it was
+      read with HasComponent). The player-side rest stays one marker each, given a `Who` /
+      duration when a card needs it (Shayne: (B), Decisions).
+      Part done 2026-11-07 (MC-5.6 batch 3b): `NoSpellsOrAbilitiesDuringCombat` →
       `CantCastOrActivate { DuringCombat, ManaAbilitiesToo }`, on a permanent (Yuriko moved) or a `ThisTurn { On }`
       effect (Sen Triplets); `LifeTotalCantChange` (Flare of Fortitude) with paying life one question (`Life.CanPay`).
       The rest after MC-5.4 ("can't", "doesn't", "don't"): `CantAttackThisTurn`, `CantBeCountered`,
@@ -146,12 +265,28 @@ the Stardates fix.
 
 ## Next
 
-MC-5.6 does MC-6.1–6.8 and part of 6.9 as it builds the Stardates (its story's Next has the prompt). Then this
-story, after MC-5.4 (the boosters): one family a step, its old cards moved onto the composed piece, each step
-checked by the golden replays (Commands.md, "Golden replays") and the full suite. At the end, count the
-catalog's one-card pieces again (entries whose use count reads `[1: …]`, per section) against the Log's.
+C4 is done as far as LSVPower needs: Shayne took (B) on both 2026-11-13 decisions — 6.15's player-side "can't"s get
+`Who` / duration options per card at batch time, 6.14's conditions stay, counts added as batches need them. What is left
+of MC-6 (6.11 chosen as it enters, 6.13's other Aura statics, 6.16 naming a card) is small for the cube (6.11: 4 cards,
+6.16: 3 by MC-4's grep; 6.13 not counted) and follows the batches. Next: MC-4's batch 1 in a fresh session
+(`/card-batch`); each new piece a card needs names its nearest MC-6 piece.
 
 ## Log
 
 - 2026-11-06: created from the MC-5.6 survey (Shayne). The audit counted the catalog's `[N: …]` use counts per
   section: effects 118 (34 used by one card), components 103 (54), conditions 18 (9), costs 13 (4).
+- 2026-11-12 (night, cube lane): MC-6.10 — entering composed (`PermanentsEnter`), four pieces gone, no game moved.
+- 2026-11-12 (night, cube lane): MC-6.9 part — the permanents' play-from-a-zone permissions composed (`MayPlayFromZone`), three pieces gone, no game moved.
+- 2026-11-12 (night, cube lane): MC-6.9 part — the card's own cast-from-a-zone permission composed (`MayCastThisFrom`), two pieces gone, no game moved.
+- 2026-11-13 (cube lane, sprint 5 C4): MC-6.9 done — the linked and this-turn permissions onto `MayPlayFromZone`
+  (Null Summoner, Sen Triplets), the four exile/cast-now effects onto `ExileTopPlayable` + `PlayPermission.Now`
+  (Chandra, The Caretaker, discover, Q, Sisko, Exploratory Mission); five pieces gone, every golden file unchanged,
+  three new tests, 8/8 breaks caught. Stopped before 6.12 (context; its design is in Next). For Shayne: the three
+  2026-11-13 Decisions (two shapes of "may play"; Sisko's cap counted once, CR 608.2h; Brazen Bluff's hand cast kept apart).
+- 2026-11-13: Shayne confirmed all three MC-6.9 Decisions as built — nothing waits on him from MC-6.9.
+- 2026-11-13 (cube lane, sprint 5 C4): MC-6.12 done — `MoveTo` (what a Ref names: nine pieces plus `ExileFromGraveyard`,
+  `ExileSpell`) and `MoveChosen` (a chosen card, each zone's choice kept), twelve pieces gone; CR 111.8 for every move.
+  MC-6.15 part — `DoesntUntap(filter)`, the holder's rule; two pieces gone. Every golden file unchanged both times;
+  seven tests, 12/12 breaks caught. For Shayne: the two Open decisions (6.15's player-side rules, 6.14's conditions),
+  each with options and a default — nothing else waits on him.
+- 2026-11-13: Shayne took (B) on both Open decisions (6.15, 6.14) — tasks closed, nothing waits on him from MC-6.

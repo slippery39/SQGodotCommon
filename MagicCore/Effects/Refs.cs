@@ -23,8 +23,11 @@ public static class ContextKeys
 	/// <summary>Every chosen target, all modes together; Targets is narrowed to one mode's slice.</summary>
 	public const string AllTargets = "AllTargets";
 
-	/// <summary>The targets as they were chosen, legal now or not — Pure Energy's split was announced then (TargetChosen).</summary>
+	/// <summary>The targets as they were chosen, legal now or not — Pure Energy's split was announced then (Count.Share).</summary>
 	public const string ChosenTargets = "ChosenTargets";
+
+	/// <summary>Pyrokinesis: what each chosen target takes of what was divided, in the chosen targets' order (OnStackComponent.Shares).</summary>
+	public const string Shares = "Shares";
 
 	/// <summary>The spell card or the permanent whose ability this is.</summary>
 	public const string Source = "Source";
@@ -52,7 +55,8 @@ public static class ContextKeys
 		new(
 			(int)context[Controller],
 			context.TryGetValue(Source, out var source) ? (int)source : 0,
-			context.TryGetValue(EventCard, out var e) ? (int)e : 0
+			context.TryGetValue(EventCard, out var e) ? (int)e : 0,
+			context.GetValueOrDefault(SourceSnapshot) is Card was ? was.Incarnation : null
 		);
 }
 
@@ -63,7 +67,7 @@ public enum RefKind
 	EachPlayer,
 	Target,
 	ControllerOfTarget,
-	OwnerOfTarget, // Clash of Elements: "its owner" — wherever the card now is
+	OwnerOf, // Clash of Elements: "its owner" — of the cards a Ref names (Of), wherever they now are
 	Source,
 	SourceHost, // an Aura's "enchanted creature" — what the source is attached to
 	EventCard,
@@ -74,6 +78,8 @@ public enum RefKind
 	ActivePlayer, // Peace in Our Time: "on each player's turn, that player" — whose turn it is
 	It, // Bristly Bill: "double the number of +1/+1 counters on EACH creature" — the one being acted on
 	ThisWay, // Decree of Pain: "each creature destroyed this way" — what the effect did its thing to
+	Chosen, // Temporal Conqueror: "return a land card from your graveyard" — the card(s) just chosen (MoveChosen)
+	Id, // explore's revealed card, discover's exiled one — a card the engine named as it built the step
 }
 
 /// <summary>
@@ -90,7 +96,7 @@ public record Ref(RefKind Kind, int Index = 0)
 
 	/// <summary>
 	/// For All: whose zone — Twisted Fates: "each creature target player controls" is Of =
-	/// Target(i); "your graveyard" is Of = You. None is every player's, yours first.
+	/// Target(i); "your graveyard" is Of = You. None is every player's, yours first. For OwnerOf: the cards.
 	/// </summary>
 	public Ref? Of { get; init; }
 
@@ -120,6 +126,19 @@ public record Ref(RefKind Kind, int Index = 0)
 	/// effect did its thing to (Destroy.Then): Count.NumberOf(Ref.ThisWay). The ids, wherever they are now.
 	/// </summary>
 	public static readonly Ref ThisWay = new(RefKind.ThisWay);
+
+	/// <summary>
+	/// MC-6.12: Temporal Conqueror's "a land card from your graveyard", chosen as it resolves — in the steps after a
+	/// choice, what it picked (ChooseCardsFromHandChoice.Chosen; MoveChosen moves it with MoveTo).
+	/// </summary>
+	public static readonly Ref Chosen = new(RefKind.Chosen);
+
+	/// <summary>
+	/// MC-6.12: explore's "put the card back or put it into your graveyard" — one card the engine already knows by
+	/// id as it builds the step (the revealed card), never from a script.
+	/// </summary>
+	public static Ref Id(int cardId) => new(RefKind.Id, cardId);
+
 	public static readonly Ref EventCard = new(RefKind.EventCard);
 	public static readonly Ref EventObject = new(RefKind.EventObject);
 	public static readonly Ref ControllerOfEventCard = new(RefKind.ControllerOfEventCard);
@@ -168,7 +187,13 @@ public record Ref(RefKind Kind, int Index = 0)
 
 	public static Ref ControllerOfTarget(int index = 0) => new(RefKind.ControllerOfTarget, index);
 
-	public static Ref OwnerOfTarget(int index = 0) => new(RefKind.OwnerOfTarget, index);
+	public static Ref OwnerOfTarget(int index = 0) => OwnerOf(Target(index));
+
+	/// <summary>
+	/// Skyclave Apparition: "the exiled card's owner creates …" — the owners of the cards a Ref names, each once:
+	/// OwnerOf(All(Exile, Is.ExiledBySource)). Clash of Elements' "its owner" is OwnerOf(Target()).
+	/// </summary>
+	public static Ref OwnerOf(Ref cards) => new(RefKind.OwnerOf) { Of = cards };
 
 	/// <summary>Twisted Fates: "each creature target player controls".</summary>
 	public static Ref PermanentsOfTargetPlayer(CardType type, int index) =>
@@ -203,6 +228,7 @@ public record Ref(RefKind Kind, int Index = 0)
 				{
 					Card c => [c.ControllerId],
 					Actions.StackAbility a => [a.ControllerId],
+					MagicPlayer p => [p.Id], // Chain Lightning: "that player or that permanent's controller"
 					_ => [],
 				},
 			// The Aura as it was (last-known, CR 608.2h) — so removing it in response changes nothing,
@@ -216,10 +242,12 @@ public record Ref(RefKind Kind, int Index = 0)
 			&& Rules.Attachments.IsOn(aura, s.GetCard(aura.AttachedToId))
 				? [aura.AttachedToId]
 				: [],
-			RefKind.OwnerOfTarget => s.HasObject(TargetAt(Index))
-			&& s.GetObject(TargetAt(Index)) is Card owned
-				? [owned.OwnerId]
-				: [],
+			RefKind.OwnerOf => Of!
+				.Resolve(s, context)
+				.Select(s.GetObject)
+				.OfType<Card>()
+				.Select(c => c.OwnerId)
+				.Distinct(),
 			RefKind.Source => SameObject(s, context) ? [(int)context[ContextKeys.Source]] : [],
 			RefKind.EventCard => [eventCard],
 			RefKind.EventObject => context.GetValueOrDefault(ContextKeys.EventObject) switch
@@ -246,6 +274,8 @@ public record Ref(RefKind Kind, int Index = 0)
 			RefKind.ThisWay => context.TryGetValue(ContextKeys.ThisWay, out var done)
 				? (ImmutableArray<int>)done
 				: [],
+			RefKind.Chosen => ChooseCardsFromHandChoice.Read(context),
+			RefKind.Id => [Index],
 			_ => throw new ArgumentOutOfRangeException(
 				nameof(Kind),
 				Kind,
@@ -336,13 +366,14 @@ public enum CountOf
 	PowerOf, // "equal to its power"
 	LoyaltyOf, // "equal to its loyalty"
 	X, // the X paid
+	Share, // Pyrokinesis: what this target takes of what was divided
 	CountersOn, // "+1/+1 counters on [Ref]"
 	LifeYouGainedThisTurn,
 	CardsYouDrewThisTurn,
 	CardsYouDiscardedThisTurn,
 	LoyaltyAbilitiesYouActivatedThisTurn,
 	BasicLandTypesAmongLandsYouControl, // domain
-	CardTypesInAllGraveyards, // Tarmogoyf
+	CardTypesAmong, // Tarmogoyf: "card types among cards in all graveyards"
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
 	NoncreatureSpellsYouCastThisTurn, // Discovery of the Doomsayer's "if you've cast a noncreature spell this turn"
@@ -350,6 +381,7 @@ public enum CountOf
 	NoncombatDamageToOpponentsThisTurn,
 	CreaturesDiedThisTurn, // anyone's
 	ChargeCountersOn, // Gardenize: "for each charge counter on [Ref]"
+	ClassLevelOf, // Does Machines: a Class's level — 1 until it gains one (ClassLevel)
 	CardsFromLibraryToGraveyardThisTurn, // Cruel Calculations: of the player [Ref]
 	PermanentsReturnedToHandThisTurn, // Miles O'Brien: "a permanent was returned to your hand from the battlefield this turn" — of the player [Ref]
 	NonlandCardsChosen, // Seasoned Cryomancer: "nonland cards [discarded] this way" — the last hand choice
@@ -365,7 +397,10 @@ public enum CountOf
 	LifeLostThisTurnOf, // Gul Dukat: "the life that player lost this turn" — the players [Ref] names
 	DilemmasFacedThisTurnBy, // Sisko: "each dilemma you've faced this turn" — the players [Ref] names
 	ModesChosen, // Riku of Many Paths: "the number of times you chose a mode for that spell" — the spell on the stack [Ref]
+	TimesReplicated, // Sicarian Infiltrator's squad: "create that many tokens" — the times [Ref]'s replicate cost was paid, on the stack or the permanent it became
+	SpellsCastBefore, // Storm (Brain Freeze): "for each spell cast before it this turn" — every player's, counted as [Ref] was cast
 	DevotionTo, // Mogis: "your devotion to black and red" — Count.Colors
+	BeyondTheFewest, // Balance: "equal to the number … controlled by the player who controls the fewest, then sacrifices the rest" — the rest, for the player Ref.It
 }
 
 /// <summary>
@@ -419,10 +454,33 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static readonly Count X = new(0, null, CountOf.X);
 
+	/// <summary>
+	/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — what the object being
+	/// acted on (Ref.It) takes: its share as the spell was cast (TargetSpec.Divide, CR 601.2d). Read by its
+	/// place among the targets as CHOSEN, so a target gone illegal takes its share with it — never handed to
+	/// the others (Pure Energy's second creature killed in response).
+	/// </summary>
+	public static readonly Count Share = new(0, null, CountOf.Share);
+
 	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
+
+	/// <summary>
+	/// Balance: "Each player chooses a number of lands they control equal to the number of lands controlled by the
+	/// player who controls the fewest, then sacrifices the rest" — the rest: how many more of [r] the player being
+	/// acted on (Ref.It) has than the player with the fewest: BeyondTheFewest(Battlefield, Is.Land), each player's
+	/// own counted. It is 0 where no player is being acted on.
+	/// </summary>
+	public static Count BeyondTheFewest(ZoneType zone, Filter? filter = null) =>
+		new(0, Ref.All(zone, filter, Ref.It), CountOf.BeyondTheFewest);
 
 	/// <summary>Riku of Many Paths: "the number of times you chose a mode for that spell" — Count.ModesChosen(Ref.EventCard).</summary>
 	public static Count ModesChosen(Ref r) => new(0, r, CountOf.ModesChosen);
+
+	/// <summary>Squad (Sicarian Infiltrator): "create that many tokens" — the times [r]'s squad (replicate) cost was paid, read from its spell (Card.AsCast).</summary>
+	public static Count TimesReplicated(Ref r) => new(0, r, CountOf.TimesReplicated);
+
+	/// <summary>Storm (Brain Freeze): "for each spell cast before it this turn" — every player's, counted as [r] was cast (OnStackComponent.SpellsCastBefore).</summary>
+	public static Count SpellsCastBefore(Ref r) => new(0, r, CountOf.SpellsCastBefore);
 
 	/// <summary>Jadzia Dax, Living Legacy: "an amount of {G} equal to the number of counters on her" — every kind.</summary>
 	public static Count AllCountersOn(Ref r) => new(0, r, CountOf.AllCountersOn);
@@ -438,6 +496,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		new(0, r, CountOf.DilemmasFacedThisTurnBy);
 
 	public static Count ChargeCountersOn(Ref r) => new(0, r, CountOf.ChargeCountersOn);
+
+	/// <summary>Does Machines: "Level 3" — the Class's level (ClassLevel), 1 as it enters.</summary>
+	public static Count ClassLevelOf(Ref r) => new(0, r, CountOf.ClassLevelOf);
 
 	public static Count TotalLoyaltyOf(Ref r) => new(0, r, CountOf.TotalLoyaltyOf);
 
@@ -462,15 +523,23 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static readonly Count LifeYouGainedThisTurn =
 		new(0, null, CountOf.LifeYouGainedThisTurn);
+
+	/// <summary>
+	/// "Cards you've drawn this turn" — and, as each of the "you … this turn" counts, another player's with Of:
+	/// Narset, Parter of Veils' "[an opponent] can't draw more than one card each turn" is
+	/// CardsYouDrewThisTurn with { Of = Ref.It }, the player drawing.
+	/// </summary>
 	public static readonly Count CardsYouDrewThisTurn = new(0, null, CountOf.CardsYouDrewThisTurn);
 	public static readonly Count CardsYouDiscardedThisTurn =
 		new(0, null, CountOf.CardsYouDiscardedThisTurn);
 	public static readonly Count LoyaltyAbilitiesYouActivatedThisTurn =
 		new(0, null, CountOf.LoyaltyAbilitiesYouActivatedThisTurn);
 
-	/// <summary>Tarmogoyf: "the number of card types among cards in all graveyards".</summary>
-	public static readonly Count CardTypesInAllGraveyards =
-		new(0, null, CountOf.CardTypesInAllGraveyards);
+	/// <summary>
+	/// "The number of card types among [Ref]" — Tarmogoyf's "cards in all graveyards" (Ref.All(Graveyard)), Occult
+	/// Epiphany's "cards discarded this way" (Ref.Chosen in Discard.Then).
+	/// </summary>
+	public static Count CardTypesAmong(Ref r) => new(0, r, CountOf.CardTypesAmong);
 
 	/// <summary>Domain: "the number of basic land types among lands you control".</summary>
 	public static readonly Count BasicLandTypesAmongLandsYouControl =
@@ -517,6 +586,23 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return Fixed;
 		if (Kind == CountOf.X)
 			return context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0;
+		if (Kind == CountOf.Share)
+			return
+				context.GetValueOrDefault(ContextKeys.Shares) is ImmutableArray<int> shares
+				&& context.GetValueOrDefault(ContextKeys.ChosenTargets)
+					is ImmutableArray<int> chosen
+				&& context.GetValueOrDefault(ContextKeys.It) is int it
+				&& chosen.Where(id => id != 0).ToList().IndexOf(it) is >= 0 and var place // a word left empty has no share
+				? shares[place]
+				: 0;
+		if (Kind == CountOf.BeyondTheFewest)
+		{
+			// Two players: what one has beyond the other, or nothing — a Ref.It that is no player has none.
+			int Has(int player) => Of!.Resolve(s, context.SetItem(ContextKeys.It, player)).Count();
+			return context.GetValueOrDefault(ContextKeys.It) is int it
+				? Math.Max(0, Has(it) - Has(s.OpponentOf(it)))
+				: 0;
+		}
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
 		if (Kind == CountOf.PermanentsChosen)
@@ -537,13 +623,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Select(s.GetObject)
 				.OfType<MagicPlayer>()
 				.Sum(p => p.ThisTurn.PermanentsReturnedToHand);
-		if (Kind == CountOf.CardTypesInAllGraveyards) // one pass: it sits under Tarmogoyf's P/T
-			return System.Numerics.BitOperations.PopCount(
-				(uint)
-					new[] { s.Player1Id(), s.Player2Id() }
-						.SelectMany(p => s.CardsIn(p, ZoneType.Graveyard))
-						.Aggregate(CardType.None, (types, c) => types | c.Types)
-			);
+
 		if (Kind == CountOf.BasicLandTypesAmongLandsYouControl)
 			return Ref
 				.LandsYouControl.Resolve(s, context)
@@ -570,7 +650,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				or CountOf.NoncreatureSpellsYouCastThisTurn
 		)
 		{
-			var tally = s.GetPlayer((int)context[ContextKeys.Controller]).ThisTurn;
+			// Whose turn tally: Of (Narset: Ref.It, the player drawing); unset is you.
+			var whose = Of is null
+				? (int)context[ContextKeys.Controller]
+				: Of.Resolve(s, context).FirstOrDefault();
+			if (!s.HasObject(whose) || s.GetObject(whose) is not MagicPlayer whoseTally)
+				return 0;
+			var tally = whoseTally.ThisTurn;
 			return Kind switch
 			{
 				CountOf.LifeYouGainedThisTurn => tally.LifeGained,
@@ -593,11 +679,19 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.DefaultIfEmpty(0)
 				.Max(),
 			CountOf.GreatestManaValueOf => Cards()
-				.Select(c => c.ManaCost.ManaValue)
+				.Select(c => c.ManaValueNow) // a spell on the stack: its X too (Mana Drain, CR 202.3e)
 				.DefaultIfEmpty(0)
 				.Max(),
 			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),
 			CountOf.DistinctPowersOf => Cards().Select(c => s.Power(c)).Distinct().Count(),
+			// the ids, not Cards()' two lists as they were: it sits under Tarmogoyf's P/T
+			CountOf.CardTypesAmong => System.Numerics.BitOperations.PopCount(
+				(uint)
+					ids.Aggregate(
+						CardType.None,
+						(types, id) => s.GetObject(id) is Card c ? types | c.Types : types
+					)
+			),
 			CountOf.ColorsAmong => Cards()
 				.SelectMany(c => c.Colors)
 				.Where(c => c != ManaColor.Colorless)
@@ -613,8 +707,11 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				s.GetObject(id) is MagicPlayer p ? p.ThisTurn.DilemmasFaced : 0
 			),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
+			CountOf.ClassLevelOf => Cards().Sum(c => c.GetComponent<ClassLevel>()?.N ?? 1),
 			CountOf.ModesChosen => Cards()
 				.Sum(c => c.GetComponent<Actions.OnStackComponent>()?.Modes.Length ?? 0),
+			CountOf.TimesReplicated => Cards().Sum(c => c.AsCast?.Replicate ?? 0),
+			CountOf.SpellsCastBefore => Cards().Sum(c => c.AsCast?.SpellsCastBefore ?? 0),
 			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
 			CountOf.DevotionTo => Cards()
 				.SelectMany(c => c.ManaCost.Symbols)

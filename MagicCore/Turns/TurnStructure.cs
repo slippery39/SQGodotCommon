@@ -112,18 +112,22 @@ public static class TurnStructure
 	public static GameState FinishUntap(GameState s, int keepTapped)
 	{
 		var active = s.GetGame().ActivePlayerId;
-		// Held down by an Aura (Infinite Coursework) — found once for the step.
-		var heldDown = new[] { s.Player1Id(), s.Player2Id() }
+		// MC-6.15: what a "doesn't untap" rule holds down (Traxos itself, Infinite Coursework's creature) — the rules
+		// found once for the step, each asked from its holder's side.
+		var holdDown = new[] { s.Player1Id(), s.Player2Id() }
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-			.Where(a => a.HasComponent<Effects.EnchantedDoesntUntap>())
-			.Select(a => (a.AttachedToId, a.AttachedToIncarnation))
-			.ToHashSet();
+			.SelectMany(h => s.AbilitiesOf<Effects.DoesntUntap>(h).Select(rule => (h, rule)))
+			.ToList();
 		foreach (
 			var card in s.CardsIn(active, ZoneType.Battlefield)
 				.Where(c =>
 					c.IsTapped
-					&& !s.HasAbility<Effects.DoesntUntapInYourUntapStep>(c)
-					&& !heldDown.Contains((c.Id, c.Incarnation))
+					&& (
+						holdDown.Count == 0
+						|| !holdDown.Any(x =>
+							x.rule.Which.Matches(s, c, new(x.h.ControllerId, x.h.Id))
+						)
+					)
 					&& c.Id != keepTapped // Lwaxana Troi, kept tapped
 				)
 				.ToList()
@@ -142,7 +146,8 @@ public static class TurnStructure
 			// cleanup (CR 514.2), as the tally flags they replaced did; differs only if a cleanup
 			// gives priority. Move both into cleanup if a card ever cares.
 			foreach (var effect in s.ThisTurnEffects<Effects.ThisTurnEffect>(id).ToList())
-				s = s.RemoveObject(effect.Id);
+				if (!effect.HasComponent<Effects.RestOfTheGame>()) // Screaming Nemesis: "for the rest of the game"
+					s = s.RemoveObject(effect.Id);
 		}
 		s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0 });
 		return EndStep(s); // nobody gets priority during untap (CR 502.4)
@@ -194,9 +199,17 @@ public static class TurnStructure
 			&& s.CardsIn(active, ZoneType.Battlefield).Any(s.HasAbility<Effects.SkipYourDrawStep>)
 		)
 			return EndStep(s);
-		// "At the beginning of …" (CR 503.1a, 504.2, 505.4, 507.1, 513.1a) — the main phase is the first one
-		// only: Gardenize's "your first main phase".
-		if (step is Step.Upkeep or Step.Draw or Step.PreCombatMain or Step.BeginCombat or Step.End)
+		// "At the beginning of …" (CR 503.1a, 504.2, 505.4, 507.1, 513.1a) — Gardenize's "your first main phase";
+		// the second main phase too, for Mana Drain's "your next main phase" (a trigger names its step).
+		if (
+			step
+			is Step.Upkeep
+				or Step.Draw
+				or Step.PreCombatMain
+				or Step.BeginCombat
+				or Step.PostCombatMain
+				or Step.End
+		)
 			s = s.Raise(new StepBeganEvent(step));
 		// CR 714.3b: a turn-based action, no stack — "as a player's precombat main phase begins, that
 		// player puts a lore counter on each Saga they control" (Shayne, 2026-11-01).
@@ -248,7 +261,7 @@ public static class TurnStructure
 			case Step.Draw:
 				// The starting player skips their first draw (CR 103.8a).
 				if (game.TurnNumber > 1)
-					s = s.Draw(active);
+					s = s.Draw(active, turnDraw: true);
 				return GivePriority(s, active);
 
 			case Step.DeclareAttackers:
@@ -260,12 +273,12 @@ public static class TurnStructure
 			case Step.FirstStrikeDamage:
 				if (!Combat.Attackers(s).Any() || !Combat.AnyFirstStrike(s))
 					return EndStep(s);
-				return GivePriority(Combat.DealDamage(s, firstStrikeStep: true), active);
+				return Combat.BeginDamage(s, firstStrikeStep: true);
 
 			case Step.CombatDamage:
 				if (!Combat.Attackers(s).Any())
 					return EndStep(s);
-				return GivePriority(Combat.DealDamage(s, firstStrikeStep: false), active);
+				return Combat.BeginDamage(s, firstStrikeStep: false);
 
 			case Step.PostCombatMain:
 				return GivePriority(Combat.EndCombat(s), active);
@@ -406,6 +419,14 @@ public static class StateBasedActions
 					s = s.Sacrifice(card.Id);
 				field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 			}
+			// CR 704.5t: a dungeon on its last room is removed once that room's ability has left the stack —
+			// the Saga's rule (ponytail: nothing reads "completed a dungeon" yet).
+			if (
+				Effects.Undercity.Of(s, id) is { } dungeon
+				&& Effects.Undercity.IsOnLastRoom(dungeon)
+				&& !ChapterToResolve(s, dungeon, pending)
+			)
+				s = s.RemoveObject(dungeon.Id);
 
 			var beforeAttachments = s;
 			s = Rules.Attachments.Check(s, id); // CR 704.5m/n

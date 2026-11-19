@@ -32,7 +32,28 @@ public sealed record CardData(
 	string[]? Colors,
 	string[] Keywords,
 	CardFace[]? CardFaces
-);
+)
+{
+	/// <summary>
+	/// One face as a card of its own — a prepare spell's copy in exile (Rules.Prepare), an Adventure on the stack
+	/// (Card.AsAdventure, Brazen Borrower // Petty Theft): its name, cost, type line and text; colours from its cost.
+	/// </summary>
+	public static CardData OfFace(CardFace face) =>
+		new(
+			face.Name,
+			"normal",
+			face.ManaCost,
+			0,
+			face.TypeLine,
+			face.OracleText,
+			face.Power,
+			face.Toughness,
+			face.Loyalty,
+			[.. "WUBRG".Where(c => face.ManaCost?.Contains(c) == true).Select(c => c.ToString())],
+			[],
+			null
+		);
+}
 
 /// <summary>
 /// One set's printing of a card: its rarity and collector number there (its art is Art/&lt;set&gt;/,

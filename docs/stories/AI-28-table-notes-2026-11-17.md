@@ -50,7 +50,7 @@ table's three are TBL-2.20–2.22.
 - [ ] AI-28.2 Cantankerous Captain's +1/+0 on a creature that attacks (turn 14: it chose L'Rell, who stayed home).
       Traced (`--explain=340`): every target tied at 7.93 and the first listed won, because no imagined line attacked
       after it. **Done: a creature sacrificed or exiled at the next end step is worth nothing past this turn**
-      (`Evaluator.CreatureValue`, `ReturnFromExileUnderYourControl.LeavesAtTheEndStep`) — the Klingon now attacks in
+      (`Evaluator.CreatureValue`, `MoveTo.LeavesAtTheEndStep`) — the Klingon now attacks in
       every line. **Still tied:** the menace half ("if creatures you control have total power 8 or greater") needs
       L'Rell's token on the battlefield before the Captain's ability resolves, and the engine stacks a player's
       simultaneous triggers in battlefield order — the rules let the controller choose (CR 603.3b). An engine gap; for

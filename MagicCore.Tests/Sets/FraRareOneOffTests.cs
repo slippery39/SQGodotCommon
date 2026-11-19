@@ -55,13 +55,6 @@ public class FraRareOneOffTests : FraBoardTest
 			s = s.UpdateObject(c.Id, c with { IsTapped = true }); // TEST SETUP
 	}
 
-	int Put(CardDefinition card, int player, ZoneType zone)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, zone);
-		return id;
-	}
-
 	/// <summary>They cast it at this target in my main phase; I hold priority with it on the stack.</summary>
 	void TheyCastAt(int spell, int target)
 	{
@@ -579,6 +572,49 @@ public class FraRareOneOffTests : FraBoardTest
 		Assert.That(
 			s.IsIn(theirs, me, ZoneType.Battlefield),
 			"I cast it, so it enters under my control"
+		);
+	}
+
+	[Test]
+	public void NullSummoner_InTheirTurnToo_OnlyWhileItIsThatObject()
+	{
+		var theirs = Hand(TestGames.Inline("Theirs", "{G}{G}", "Instant"), them);
+		var summoner = Hand("Null Summoner", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = summoner });
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseCardsFromHandChoice => [theirs],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			}
+		);
+		for (var i = 0; i < 7; i++)
+			Put(Fodder, me, ZoneType.Graveyard);
+		bool Castable() => Rules.Playable.CanCastFromHere(s, s.GetCard(theirs), me);
+		s = s.WithGame(s.GetGame() with { ActivePlayerId = them });
+		Assert.That(Castable(), Is.True, "no \"during your turn\": an instant in their turn too");
+		s = s.MoveCard(summoner, s.ZoneId(me, ZoneType.Hand));
+		s = s.EnterBattlefield(summoner, me); // TEST SETUP: back, a new object
+		Assert.That(Castable(), Is.False, "exiled by the old object (CR 607.2a)");
+	}
+
+	[Test]
+	public void PlayFromExile_NeverAFaceDownCard()
+	{
+		Field(
+			new CardDefinition(
+				TestGames.Inline("Exile Reader", "{1}", "Enchantment").Data,
+				[new MayPlayFromZone(ZoneType.Exile, global::MagicCore.Filters.Is.AnyCard)]
+			),
+			me
+		);
+		var up = Put(TestGames.Inline("Up", "{1}", "Sorcery"), me, ZoneType.Exile);
+		var down = Put(TestGames.Inline("Down", "{1}", "Sorcery"), me, ZoneType.Exile);
+		s = s.UpdateObject(down, (Card)s.GetCard(down).WithComponent(new ExiledFaceDown())); // TEST SETUP
+		Assert.That(
+			(Casts(up).Any(), Casts(down).Any()),
+			Is.EqualTo((true, false)),
+			"a face-down card is hidden: nothing plays it (CR 406.3)"
 		);
 	}
 

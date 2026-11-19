@@ -612,14 +612,6 @@ public class FraTriggerTests : FraBoardTest
 		Assert.That(Named("Cadet", me), Has.Count.EqualTo(3));
 	}
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	[Test]
 	public void EnlightenedConfidant_GainedLife_SurveilsAndReturnsACheapCard()
 	{

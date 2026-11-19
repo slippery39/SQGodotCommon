@@ -28,9 +28,12 @@ public static class Attachments
 			? host
 			: null;
 
-	/// <summary>Attaches it — only while both are on the battlefield.</summary>
+	/// <summary>Attaches it — only while both are on the battlefield, and never to a permanent with protection from it
+	/// (CR 701.3b: the attach does nothing; it stays where it was).</summary>
 	public static GameState Attach(GameState s, int attachmentId, int hostId) =>
-		s.IsOnBattlefield(attachmentId) && s.IsOnBattlefield(hostId)
+		s.IsOnBattlefield(attachmentId)
+		&& s.IsOnBattlefield(hostId)
+		&& !Protection.Stops(s, s.GetCard(hostId), s.GetCard(attachmentId))
 			? s.UpdateObject(
 				attachmentId,
 				s.GetCard(attachmentId) with
@@ -50,7 +53,8 @@ public static class Attachments
 	/// <summary>Could this Aura be on that permanent? The enchant restriction — not targeting, so hexproof doesn't matter.</summary>
 	public static bool CanEnchant(GameState s, Card aura, int hostId) =>
 		aura.GetComponent<AuraComponent>() is { } enchant
-		&& enchant.Enchant.IsLegal(s, aura.ControllerId, aura.Id, hostId, targeting: false);
+		&& enchant.Enchant.IsLegal(s, aura.ControllerId, aura.Id, hostId, targeting: false)
+		&& !(s.GetObject(hostId) is Card host && Protection.Stops(s, host, aura)); // CR 702.16c
 
 	/// <summary>
 	/// An Aura put onto the battlefield without being cast (Return to the Light Realms): its
@@ -154,7 +158,7 @@ public static class Attachments
 		return s;
 	}
 
-	/// <summary>An Aura with no legal host dies; an Equipment off a non-creature falls off.</summary>
+	/// <summary>An Aura with no legal host dies; an Equipment off a non-creature, or one its host has protection from (CR 702.16d), falls off.</summary>
 	static GameState Detach(GameState s, int playerId)
 	{
 		foreach (var card in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
@@ -167,7 +171,12 @@ public static class Attachments
 			}
 			else if (
 				card.AttachedToId != 0
-				&& (host is null || !host.Is(CardType.Creature) || card.Is(CardType.Creature))
+				&& (
+					host is null
+					|| !host.Is(CardType.Creature)
+					|| card.Is(CardType.Creature)
+					|| Protection.Stops(s, host, card)
+				)
 			)
 				s = s.UpdateObject(
 					card.Id,

@@ -225,6 +225,12 @@ public static class Characteristics
 
 		/// <summary>A type change on the battlefield, stamped or that can stamp — what <c>Attachments.Animations</c> can act on (AI-22).</summary>
 		public bool TypeChanges { get; init; }
+
+		/// <summary>A "can't cast or activate" on the battlefield or in a command zone — what <c>Combat.Locks</c> can find (MC-4.4d2b).</summary>
+		public bool Locks { get; init; }
+
+		/// <summary>A permanent's tax on activated abilities (Anointed Peacekeeper) — what <c>Costs.OfAbility</c> can find (MC-4.4d2b).</summary>
+		public bool AbilityTaxes { get; init; }
 	}
 
 	static readonly HashSet<(int, int)> NoneStripped = [];
@@ -245,6 +251,14 @@ public static class Characteristics
 	public static (bool Attachments, bool TypeChanges) AttachmentWork(GameState s) =>
 		BoardOf(s) is var board ? (board.Attachments, board.TypeChanges) : default;
 
+	/// <summary>
+	/// Whether a lock (<see cref="CantCastOrActivate"/>) or a tax on abilities (CostChange.Abilities) is in play
+	/// at all: every cast and activation the AI weighs asks, and with none there is nothing to scan the
+	/// battlefield for. Read from the board already built.
+	/// </summary>
+	public static (bool Locks, bool AbilityTaxes) RuleWork(GameState s) =>
+		BoardOf(s) is var board ? (board.Locks, board.AbilityTaxes) : default;
+
 	static Board BoardOf(GameState s)
 	{
 		if (!ReferenceEquals(lastBoard.State, s))
@@ -260,7 +274,9 @@ public static class Characteristics
 		List<(Card Aura, GrantsActivatedAbility Grant)>? grants = null;
 		Dictionary<(int, int), string>? typeSet = null;
 		bool attachments = false,
-			typeChanges = false;
+			typeChanges = false,
+			locks = false,
+			abilityTaxes = false;
 		foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
 		foreach (
 			var c in state
@@ -277,10 +293,24 @@ public static class Characteristics
 					component is Animated or BecomesType
 					|| component is UntilEndOfTurn { Gains.Count: > 0 } u
 						&& u.Gains.Any(g => g is BecomesType);
+				// MC-4.4d2b: a lock or a tax on abilities, its own or gained — noted in the same pass
+				var gained = component is UntilEndOfTurn { Gains.Count: > 0 } until
+					? until.Gains
+					: null;
+				locks |=
+					component is CantCastOrActivate
+					|| gained?.Any(g => g is CantCastOrActivate) == true;
+				abilityTaxes |=
+					component is CostChange { Abilities: true }
+					|| gained?.Any(g => g is CostChange { Abilities: true }) == true;
 				if (component is StaticEffectComponent effect)
 					statics.Add((c, effect));
-				else if (component is EnchantedLosesAllAbilities)
-					(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
+				else if (component is EnchantedLosesAllAbilities strips)
+					(stripped ??= []).Add(
+						strips.Object is { } o
+							? (o.Id, o.Incarnation)
+							: (c.AttachedToId, c.AttachedToIncarnation)
+					);
 				else if (component is GrantsActivatedAbility grant && c.AttachedToId != 0)
 					(grants ??= []).Add((c, grant));
 				else if (component is EnchantedIsCreatureType type && c.AttachedToId != 0)
@@ -303,6 +333,8 @@ public static class Characteristics
 		{
 			Attachments = attachments,
 			TypeChanges = typeChanges,
+			Locks = locks,
+			AbilityTaxes = abilityTaxes,
 			TypeSet = typeSet,
 			Granted = live is null or []
 				? null

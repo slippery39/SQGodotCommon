@@ -226,7 +226,8 @@ def test_mentions(code):
     texts = {p.name: p.read_text(encoding="utf-8") for p in TESTS.rglob("*.cs") if "bin" not in p.parts and "obj" not in p.parts}
     for c in card_data(code):
         for fname, t in texts.items():
-            if f'"{c["name"]}"' in t:
+            # as C# writes it: "Name Sticker" Goblin's own quotes are escaped in a string
+            if '"' + c["name"].replace('"', '\\"') + '"' in t:
                 out[c["name"]].add(fname.removesuffix(".cs"))
     return out
 
@@ -283,8 +284,8 @@ def sheet(code, title, types, blocks, users_of_card, tests):
     for c in cards:
         name, oracle = c["name"], magic_set.oracle(c)
         status = magic_set.status(c, set(blocks), keywords) or "NOT IMPLEMENTED"
-        if status == "keywords only":
-            status = "keywords only — needs no script"
+        if status in ("keywords only", "reminder text only"):
+            status += " — needs no script"
         counts[c["rarity"]][1] += 1
         counts[c["rarity"]][0] += status != "NOT IMPLEMENTED"
         e = [f"### {name}", "",

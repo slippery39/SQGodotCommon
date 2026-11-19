@@ -1,7 +1,7 @@
 ---
 id: DEV-6
 title: Two lanes at once — a second worktree for the cube, merged back often
-status: in-progress
+status: done
 area: DEV
 created: 2026-11-11
 ---
@@ -70,14 +70,14 @@ Claude's notes on the risks, each with its mitigation (to become the written rul
       MEMORY.md line word for word, and Claude made no memory folder of its own for it (session logs ARE per folder)
 - [x] DEV-6.3 `tools/usage_report.py` reads every worktree's sessions (`git worktree list`): `--all` tags each lane; the default and `--log` stay this folder's
 - [x] DEV-6.4 The two-lane rule written: `.claude/rules/two-lanes.md`
-- [ ] DEV-6.5 The first session in the cube folder: `git merge mtg-real` (picks up the rule once committed), a
-      build, the full tests, `/regen-card-values`
+- [x] DEV-6.5 The first session in the cube folder: `git merge mtg-real` (a fast-forward to 502a4d93), a build
+      (0 errors), the full tests — MagicCore.Tests 1586 passed / 2 skipped (4 m 47 s, the position suite in it),
+      MtgCore.Tests 846, MtgSimulator.Tests 468, SQGodotCommon.Tests 192, ImmutableGameObjects.Tests 111, none
+      failed — and `/regen-card-values` (408 CSC cards, none 0)
 
 ## Next
 
-Commit this step (the rule, `usage_report.py`, this story) on `mtg-real`. Then DEV-6.5 in a VS Code window on
-`D:\GameDev\SQGodotCommon-cube`: `git merge mtg-real` there (a fast-forward), build, full tests, `/regen-card-values`.
-The story is done when that passes.
+Done. The lanes now merge as the rule says (`.claude/rules/two-lanes.md`): often, small, the full tests after each.
 
 ## Log
 
@@ -85,3 +85,4 @@ The story is done when that passes.
 - 2026-11-11 (evening): set up now instead — `mtg-real` pushed, the worktree on D:, memory found shared, the usage
   report reads both lanes, the rule written and checked to load.
 - 2026-11-12: the first cube-lane session set for tonight (sprint 5).
+- 2026-11-12 (night, cube lane): DEV-6.5 — merged, built, every test project green, the card values regenerated. Done.

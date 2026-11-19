@@ -29,14 +29,6 @@ public class TrkBatch7bTests : FraBoardTest
 			[new SpellEffectsComponent([new GainLife(Ref.You, 3)])]
 		);
 
-	int OnTop(CardDefinition card, int player)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(player, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	Card Named(int player, string name) =>
 		s.CardsIn(player, ZoneType.Battlefield).Single(c => c.Name == name);
 
@@ -297,6 +289,42 @@ public class TrkBatch7bTests : FraBoardTest
 			"IV — If all cards exiled … share a card type"
 		);
 		Assert.That(s.IsOnBattlefield(saga), Nu.False, "Sacrifice after IV");
+	}
+
+	[Test]
+	public void AllGoodThings_GoneWithChapterIVOnTheStack_StillReadsWhatItExiled()
+	{
+		var saga = Field(Trk("All Good Things..."), me);
+		var was = s.GetCard(saga);
+		foreach (var _ in new[] { 1, 2 })
+		{
+			int card;
+			(s, card) = TestGames.Put(s, me, Bear, ZoneType.Exile);
+			s = s.UpdateObject(
+				card,
+				(Card)s.GetCard(card).WithComponent(new ExiledBy(saga, was.Incarnation)) // TEST SETUP: exiled with it
+			);
+		}
+		s = s.MoveCard(saga, s.ZoneId(me, ZoneType.Graveyard));
+		var itsAbility = System
+			.Collections.Immutable.ImmutableDictionary<string, object>.Empty.Add(
+				ContextKeys.Controller,
+				me
+			)
+			.Add(ContextKeys.Source, saga)
+			.Add(ContextKeys.SourceSnapshot, was);
+		Assert.That(
+			new ExiledWithSourceShareACardType().Holds(s, itsAbility),
+			"the ability is still that object's (CR 607.2a)"
+		);
+		Assert.That(
+			new ExiledWithSourceShareACardType().Holds(
+				s,
+				itsAbility.Remove(ContextKeys.SourceSnapshot)
+			),
+			Nu.False,
+			"the card in the graveyard is another object"
+		);
 	}
 
 	[Test]

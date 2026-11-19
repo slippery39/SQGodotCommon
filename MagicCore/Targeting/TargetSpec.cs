@@ -49,10 +49,26 @@ public record TargetSpec(From From, Filter? Filter = null)
 	public bool NotThePrevious { get; init; }
 
 	/// <summary>
+	/// Goblin Welder: "target artifact a player controls and target artifact card in THAT PLAYER's graveyard" — this
+	/// word's card is owned by the controller of the target before it. Asked on choosing (AreLegal) and resolving.
+	/// </summary>
+	public bool OfThePreviousTargetsController { get; init; }
+
+	/// <summary>
 	/// Dominion Infiltration: "Choose X target creatures your opponents control" — this word X times, X as
 	/// cast, each a different object: one cast per SET, never per order (StackResolution.TextOf).
 	/// </summary>
 	public bool PerX { get; init; }
+
+	/// <summary>
+	/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — N of something divided
+	/// among one to N targets of this word, each taking at least one (CR 601.2d); Pure Energy's "distribute two +1/+1
+	/// counters among one or two target creatures" is 2. StackResolution.TextOf makes it N words, all but the first
+	/// optional and each a different object; what each target takes is Count.Share. Past two, the targets and the
+	/// split are chosen as it is cast (CastSpellAction.ChoosesTargets), never a cast per set and split — four
+	/// among 12 creatures would be 1,365 casts.
+	/// </summary>
+	public int Divide { get; init; }
 
 	/// <summary>
 	/// Fatehold Charm: "target spell or creature" — also legal where this one says, in its own zone.
@@ -147,6 +163,16 @@ public record TargetSpec(From From, Filter? Filter = null)
 				&& o is Card target
 				&& FromARestrictedSource(s, target, sourceId)
 			)
+			// Protection (CR 702.16b): not a legal target for a spell or ability from that source — controlled by
+			// whoever casts or activates it (a card being cast is still in its owner's zone, Robber of the Rich).
+			&& !(
+				targeting
+				&& From == From.Battlefield
+				&& o is Card guarded
+				&& s.HasObject(sourceId)
+				&& s.GetObject(sourceId) is Card source
+				&& Effects.Protection.Stops(s, guarded, source with { ControllerId = controllerId })
+			)
 			// The Needs of the Many: "You gain hexproof" — a player, not a legal target for an opponent.
 			&& !(
 				targeting
@@ -216,6 +242,24 @@ public record TargetSpec(From From, Filter? Filter = null)
 		return combos;
 	}
 
+	/// <summary>Goblin Welder's "in that player's graveyard": target i's owner controls the target before it.</summary>
+	public static bool FitsPrevious(
+		GameState s,
+		TargetSpec spec,
+		ImmutableArray<int> targets,
+		int i
+	) =>
+		!spec.OfThePreviousTargetsController
+		|| i == 0
+		|| targets[i] == 0
+		|| (
+			s.HasObject(targets[i])
+			&& s.HasObject(targets[i - 1])
+			&& s.GetObject(targets[i]) is Cards.Card card
+			&& s.GetObject(targets[i - 1]) is Cards.Card before
+			&& card.OwnerId == before.ControllerId
+		);
+
 	/// <summary>Chosen targets fit the specs: one per word, each legal, 0 only where optional — a
 	/// NotThePrevious word never repeats one before it (X targets are all different).</summary>
 	public static bool AreLegal(
@@ -233,6 +277,7 @@ public record TargetSpec(From From, Filter? Filter = null)
 						? spec.Optional
 						: spec.IsLegal(s, controllerId, sourceId, targets[i])
 							&& !(spec.NotThePrevious && targets[..i].Contains(targets[i]))
+							&& FitsPrevious(s, spec, targets, i)
 			)
 			.All(ok => ok);
 }

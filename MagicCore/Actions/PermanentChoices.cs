@@ -64,19 +64,24 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 	/// <summary>Dominion Saboteur: "with additional counters … the same number and kinds" as the copied permanent.</summary>
 	public bool WithCounters { get; init; }
 
+	/// <summary>Phyrexian Metamorph: "except it's an artifact in addition to its other types".</summary>
+	public CardType AlsoType { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		if (!s.IsOnBattlefield(CardId))
+			return new(s);
 		if (
-			!s.IsOnBattlefield(CardId)
-			|| ChoosePermanentChoice.Read(InputContext).FirstOrDefault() is not (> 0 and var id)
+			ChoosePermanentChoice.Read(InputContext).FirstOrDefault() is not (> 0 and var id)
 			|| !s.IsOnBattlefield(id)
 		)
-			return new(s);
+			return new(s.ChooseAsItEnters(CardId)); // itself after all
 		var card = s.GetCard(CardId);
 		var model = s.GetCard(id);
 		var copy = (Card)card.WithCopiableValuesOf(model).WithComponent(new EnteredAsCopy(card));
 		if (NotLegendary)
 			copy = copy with { Supertypes = copy.Supertypes & ~Supertype.Legendary };
+		copy = copy with { Types = copy.Types | AlsoType };
 		if (VanishingIfNone > 0 && !s.HasAbility<Vanishing>(model))
 			foreach (var component in Vanishing.Of(VanishingIfNone))
 				copy = (Card)copy.WithComponent(component);
@@ -86,7 +91,7 @@ public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAc
 		if (WithCounters)
 			foreach (var (kind, n) in model.AllCounters())
 				s = s.PutCounters(CardId, kind, n, entering: true);
-		return new(s);
+		return new(s.ChooseAsItEnters(CardId)); // the copy's "as this enters" choices (CR 707.5)
 	}
 }
 
@@ -257,6 +262,46 @@ public record RemoveACounterFromChosenAction : GameAction
 	}
 }
 
+/// <summary>
+/// Teamwork's cost after the cast (We Say Thee Nay!: "tap any number of creatures you control with total power 2 or
+/// more", TapUntappedCost.TotalPower): taps the chosen creature and, while the power tapped is short of the total,
+/// asks for another. ponytail: it stops at the total and never offers a creature with no power — "any number" may
+/// tap more (for a "becomes tapped" trigger); offer a "done" answer if a card ever cares.
+/// </summary>
+public record TapChosenForPowerAction(int PlayerId, int SourceId, Filter Filter, int Remaining)
+	: GameAction
+{
+	static Filter Offered(Filter filter) => filter & !Is.Tapped & Is.PowerAtLeast(1);
+
+	public static PipelineAction Next(int playerId, int sourceId, Filter filter, int remaining) =>
+		new()
+		{
+			Steps =
+			[
+				new ChoosePermanentChoice(playerId, sourceId, Offered(filter), required: true)
+				{
+					Prompt = $"Tap a creature for power {remaining} more",
+				},
+				new TapChosenForPowerAction(playerId, sourceId, filter, remaining),
+			],
+		};
+
+	public override ActionResult Execute(GameState s)
+	{
+		var left = Remaining;
+		foreach (var id in ChoosePermanentChoice.Read(InputContext))
+		{
+			left -= Math.Max(0, s.Power(s.GetCard(id)));
+			s = s.Tap(id);
+		}
+		return new ActionResult(
+			left > 0 && Offered(Filter).Among(s, PlayerId, ZoneType.Battlefield, SourceId).Any()
+				? s.SpawnAction(Next(PlayerId, SourceId, Filter, left))
+				: s
+		);
+	}
+}
+
 /// <summary>"If you do, …": runs the effects only when the previous choice picked something.</summary>
 public record IfChosenAction(ImmutableList<GameAction> Then) : GameAction
 {
@@ -266,16 +311,23 @@ public record IfChosenAction(ImmutableList<GameAction> Then) : GameAction
 	/// <summary>Run instead on a "no" — Clash of Elements' "if they didn't, … the bottom".</summary>
 	public ImmutableList<GameAction> Otherwise { get; init; } = [];
 
+	/// <summary>MaySacrifice: what was chosen is Ref.ThisWay for Then — "the sacrificed artifact" (Transmute Artifact).</summary>
+	public bool ThisWay { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		var chosen = InputContext.GetValueOrDefault(Key) switch
+		ImmutableArray<int> picked = InputContext.GetValueOrDefault(Key) switch
 		{
-			int => true,
-			ImmutableList<int> ids => !ids.IsEmpty,
-			_ => false,
+			int id => [id],
+			ImmutableList<int> ids => [.. ids],
+			_ => [],
 		};
-		foreach (var effect in chosen ? Then : Otherwise)
-			s = (effect with { InputContext = InputContext }).Execute(s).GameState;
+		var context =
+			ThisWay && !picked.IsEmpty
+				? InputContext.SetItem(ContextKeys.ThisWay, picked)
+				: InputContext;
+		foreach (var effect in !picked.IsEmpty ? Then : Otherwise)
+			s = (effect with { InputContext = context }).Execute(s).GameState;
 		return new ActionResult(s);
 	}
 }

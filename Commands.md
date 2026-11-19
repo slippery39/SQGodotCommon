@@ -23,6 +23,8 @@ dotnet test MagicCore.Tests --filter "FullyQualifiedName~MagicCore.Tests.Ai|Full
 
 ```
 python tools/import_scryfall_set.py fra    # -> MagicCore/Sets/FRA.json, embedded in MagicCore
+python tools/import_scryfall_set.py lsv    # a cube: MagicCore/Sets/LSV.list.txt by name -> LSV.json, in the list's order (MC-4)
+python tools/survey.py lsv                 # the survey's first pass -> MagicCore/LsvSurvey.md (each card: what it needs)
 python tools/import_mtgjson_boosters.py fra    # -> MagicCore/Sets/FRA.boosters.json (pack collation, LIM-1)
 python tools/build_trk_boosters.py    # -> MagicCore/Sets/TRK.boosters.json, PROVISIONAL from Wizards' odds until MTGJSON has TRK's (MC-5.4); SSL_CERT_FILE as below
 python tools/import_17lands.py fra    # -> MagicCore/Sets/FRA.17lands.json (GIH WR from 17lands' public game data, ~30 s)
@@ -66,6 +68,7 @@ python -u tools/revert_check.py SPEC                # @@ path | TestFilter — b
 MAGIC_PROBE_CARDS="A;B" dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardProbeTests"
 tools/bench_vs_head.sh [filter] [rounds]            # timing vs HEAD (builds HEAD in a worktree)
 python tools/usage_report.py [SESSION_ID | --all]   # what a Claude session cost, by batch
+python -u tools/batch_checks.py "A;B" [--revert SPEC] [--bench] [--from STEP]  # every end-of-batch check, one summary (DEV-5)
 ```
 
 ### Golden replays — "did this change any behaviour?" (MagicCore)

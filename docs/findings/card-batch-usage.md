@@ -36,3 +36,54 @@ session per batch was simulated to save 37–40%.
 | 2026-11-07 | MC-5.6 batch 3b: Sen Triplets, Flare of Fortitude, Mogis on MC-6.15/6.9/6.13 + Granted perf fix, 3 cards | b3f0fe83 | 181 | 232k | 5.2M |
 | 2026-11-07 | MC-5.4 overnight: TRK collation, art, interim ratings, sealed + draft on the table; DATA-2 self-play checked on FRA (loses to interim); walker games -> AI-9.3 next | 872d3ed6 | 325 | 337k | 13.1M |
 | 2026-11-07 | AI-9.3: walkers priced over their lifetime, 2 positions, match no difference | d0d30868 | 144 | 217k | 4.9M |
+
+## DEV-4: the mechanics rules split by subsystem (2026-11-12)
+
+**Before:** `.claude/rules/magic-mechanics.md`, 65.7 KB (~16k tokens), loaded by ANY MagicCore file. Of the last
+58 `mtg-real` sessions, 45 loaded it: 23 card batches or card-script edits (7,220 calls after it loaded) and **22
+others** — AI, sealed and table work that opened an `Ai/`, `Limited/` or engine file (12,785 calls).
+
+**Which files a batch opens** (the last ten `/card-batch` sessions, Read/Write/Edit and Bash paths): `Effects/` in
+every one, then `Sets/` scripts and `MagicCore.Tests/Sets/`, `Actions/`, `Turns/`, `Rules/`, `Mana/`, `Filters/`. A
+batch touches nearly every subsystem, so a batch saves nothing; the split pays in the other sessions.
+
+**After:** seven files, every rule in exactly one — casting 20.1 KB, triggers 14.3, statics 13.2, zones 13.1,
+mana 6.8, combat 2.9, ai 0.9. A card script, card test or `Effects/` file loads the six mechanics files (69.3 KB,
++5% for their headers); an engine file loads its own subsystem's; `Ai/` loads 0.9 KB; `Limited/` nothing.
+
+**Estimate (an upper bound — some of the 22 opened an engine file too):** at 0.1 per cache read, ~16k × 12,785 ×
+0.1 ≈ **20M** over those 22 sessions (~0.9M each) not spent; card batches pay ~+0.02M each. A real batch's row
+after the split is DEV-4.3.
+| 2026-11-13 | MC-4.3a: LSV batch 1 power and mana, 54 cards (44 scripted + 10 duals), 4 new pieces | 0d5f7560 | 128 | 247k | 4.2M |
+| 2026-11-13 | MC-4.3b: LSV batch 1 plain spells, 22 cards, 4 options | 0d5f7560 | 177 | 297k | 7.6M |
+| 2026-11-13 | MC-4.4a: batch 2's alternative and or costs, 10 cards | 14ab6621 | 143 | 290k | 5.7M |
+| 2026-11-13 | MC-4.4b: the Spirit Guides and Delighted Halfling, mana from the hand and a yield per spell, 3 cards | 3368d9ff | 114 | 213k | 3.9M |
+| 2026-11-13 | MC-4.4c1: red's tier 1, the tested pieces, 11 cards | 3368d9ff | 133 | 227k | 4.6M |
+| 2026-11-13 | MC-4.4c2a: LSVPower, red's options part a, 6 cards | 5b15092f | 106 | 241k | 4.0M |
+| 2026-11-14 | MC-4.4c2b: LSVPower, red's options part b, 7 cards | 743a66fb | 58 | 196k | 2.1M |
+| 2026-11-14 | MC-4.4c2c: Laelia, the zone-change event, 1 card | 743a66fb | 70 | 230k | 2.5M |
+| 2026-11-14 | MC-4.4c2d: "Name Sticker" Goblin - NotFrom on the entry event, RollDie, 1 card | 909c1a69 | 45 | 170k | 1.5M |
+| 2026-11-14 | MC-4.4c2e: Pyrokinesis - TargetSpec.Divide, Pure Energy moved onto it, 1 card | 909c1a69 | 78 | 213k | 2.8M |
+| 2026-11-14 | MC-4.4d1: white's tier 1 surveyed (36, five parts) and its tested pieces scripted, 21 cards | c4f7ec87 | 59 | 214k | 2.0M |
+| 2026-11-15 | MC-4.4d2a: white's options, zones and tokens - MoveTo.Beneath/Loses/Then, DelayedTrigger.MadeBy, tokens doubled, an entry refused, one X for a trigger, 7 cards | 70b49af9 | 92 | 239k | 4.3M |
+| 2026-11-15 | MC-4.4d2b: LSVPower white's options, restrictions and timing, 5 cards | 472a6aaa | 64 | 271k | 3.8M |
+| 2026-11-15 | MC-4.4d3: LSVPower, white's options - leaving the battlefield, 2 cards | 771fbcee | 99 | 314k | 5.4M |
+| 2026-11-15 | MC-4.4d4: LSVPower, Balance - the rest beyond the fewest as one count, Emrakul's ward moved onto EachSacrifices.N, 1 card | db1e96c0 | 60 | 227k | 2.8M |
+| 2026-11-15 | MC-4.4e1: LSVPower, blue's tier 1 split in seven parts, and its tested pieces, 12 cards | f5fb4b80 | 53 | 248k | 3.4M |
+| 2026-11-16 | MC-4.4e2a: LSVPower, blue's options - the library's top, 4 cards | 3f336516 | 80 | 302k | 4.3M |
+| 2026-11-16 | MC-4.4e2b: LSVPower blue's options - draws, 4 cards | 24bec349 | 51 | 232k | 2.8M |
+| 2026-11-16 | MC-4.4e2c: LSVPower blue's options - mana and costs, 5 cards | fe033ae1 | 134 | 240k | 5.1M |
+| 2026-11-16 | MC-4.4e2d: casting off the hand, 4 cards | 8bdc7f1e | 144 | 237k | 4.9M |
+| 2026-11-17 | MC-4.4e2e: blue's options, for as long as this remains, 2 cards | c090bbd1 | 89 | 188k | 2.8M |
+| 2026-11-17 | MC-4.4e2f: LSVPower, blue's options - choices after the cast, 4 cards | bf9c2a7a | 107 | 242k | 4.2M |
+| 2026-11-17 | MC-4.4f: blue's tier 2 - squad, evoke, improvise, scry, a graveyard cast, 6 cards | 28f01c34 | 147 | 282k | 6.3M |
+| 2026-11-17 | MC-4.4g1: protection + blue tier 3 plan, 1 card | 126064e1 | 78 | 191k | 3.1M |
+| 2026-11-17 | MC-4.4g1b+g2: a clone's choices, delve, 2 cards | deb22edb | 116 | 213k | 3.9M |
+| 2026-11-18 | MC-4.4g3: dungeons and the initiative (Undercity, venture, goad), 1 card | ff3671cc | 109 | 220k | 3.8M |
+| 2026-11-18 | MC-4.4g4: face-down permanents, manifest dread, 1 card | e89ba4c1 | 74 | 206k | 2.8M |
+| 2026-11-18 | MC-4.4g5: Adventures (Brazen Borrower // Petty Theft), 1 card | fdc9b8fb | 79 | 213k | 3.1M |
+| 2026-11-18 | MC-4.4g6: teamwork (We Say Thee Nay!), 1 card | e2798839 | 58 | 182k | 2.1M |
+| 2026-11-18 | MC-4.4g7: storm (Brain Freeze), 1 card | d8cb5e5f | 73 | 171k | 2.1M |
+| 2026-11-18 | MC-4.4g8: spree (Three Steps Ahead), 1 card | 471f3273 | 57 | 167k | 1.7M |
+| 2026-11-18 | MC-4.4g9: warp - LSVPower Quantum Riddler, 1 card | b80d6d6e | 83 | 182k | 2.7M |
+| 2026-11-18 | MC-4.4g10: Classes - Does Machines (ClassLevel, GainLevel, Scripting.Level), 1 card | c123515f | 96 | 201k | 3.0M |

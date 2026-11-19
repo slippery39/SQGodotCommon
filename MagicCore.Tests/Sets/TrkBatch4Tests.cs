@@ -29,14 +29,6 @@ public class TrkBatch4Tests : FraBoardTest
 		return id;
 	}
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	void CastAndResolve(int card, Func<ChoiceAction, IEnumerable<int>>? answer = null)
 	{
 		s = s.Act(Casts(card).First(c => !c.Kicked));
@@ -220,6 +212,22 @@ public class TrkBatch4Tests : FraBoardTest
 			Nu.True,
 			"the new Saga's III didn't exile it"
 		);
+	}
+
+	[Test]
+	public void MeasureOfAMan_GoneWithChapterIIIOnTheStack_StillReturnsWhatItExiled()
+	{
+		var bear = Field(Bear, them);
+		var saga = Hand(Trk("The Measure of a Man"), me);
+		CastAndResolve(saga, Targeting(bear));
+		ToMyNextMain();
+		Resolve();
+		ToMyNextMain();
+		Assert.That(s.StackIsEmpty(), Nu.False, "chapter III is on the stack");
+		// The Saga leaves in response: the ability is still that object's (CR 607.2a), MC-4.4d3.
+		s = s.MoveCard(saga, s.ZoneId(me, ZoneType.Graveyard));
+		Resolve();
+		Assert.That(s.IsIn(bear, them, ZoneType.Battlefield), Nu.True, "the exiled card returns");
 	}
 
 	[Test]

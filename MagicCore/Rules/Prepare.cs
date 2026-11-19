@@ -23,24 +23,9 @@ public static class Prepare
 			return s;
 		s = s.UpdateObject(creatureId, creature with { IsPrepared = true });
 
-		var face = spell.Face;
-		var data = new CardData(
-			face.Name,
-			"normal",
-			face.ManaCost,
-			0,
-			face.TypeLine,
-			face.OracleText,
-			null,
-			null,
-			null,
-			[.. "WUBRG".Where(c => face.ManaCost?.Contains(c) == true).Select(c => c.ToString())],
-			[],
-			null
-		);
 		var copy = CardFactory.Create(
 			new CardDefinition(
-				data,
+				CardData.OfFace(spell.Face),
 				[spell.Text, new PreparedCopyOf(creatureId, creature.Incarnation)]
 			),
 			creature.ControllerId

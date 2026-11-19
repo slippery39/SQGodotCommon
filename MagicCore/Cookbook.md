@@ -3,7 +3,7 @@
 How a card becomes playable, by pattern, with real FRA scripts to copy. For **what pieces exist**, read
 `MagicCore/AbilityCatalog.md` (generated); for **every card's script next to its printed text**,
 `MagicCore/<Set>CardSheet.md` (generated, one per set). The rules each mechanic follows are in
-`.claude/rules/magic-mechanics.md`.
+`.claude/rules/magic-*.md` (one per subsystem).
 
 ## How a card is built
 
@@ -80,7 +80,8 @@ options (`Costs`, `Targets`, `From = ZoneType.Graveyard`, `SorcerySpeed`, …). 
 list, in the order paid: `Costs = [new TapSelfCost(), new SacrificeCost(Is.Artifact & !Is.Source)]` — also
 `SacrificeSelfCost`, `DiscardSelfCost`, `DiscardCost(filter)`, `ExileSelfCost`, `ExileFromGraveyardCost(filter)`,
 `TapUntappedCost(n, filter)`, `BeholdCost(subtype)`. The same list is a spell's additional cost
-(`new AdditionalCostsComponent([new SacrificeCost(…) { OrPay = 3 }])` — "or pay {3}"), a flashback's
+(`new AdditionalCostsComponent([new SacrificeCost(…) { Or = new PayManaCost(3) }])` — "or pay {3}"; any cost may be
+the `Or`: Bitter Triumph's `new DiscardCost() { Or = new PayLifeCost(3) }`), a flashback's
 (`FlashbackComponent(cost) { Costs = [new DiscardCost()] }`) and ward's (`CounterUnlessPays { Costs = … }`).
 **"Costs {N} more/less"** is `CostChange(amount, spellsFilter)`: on a permanent for whose spells (`By`), or
 `OnItself = true` for "this spell costs … less", with an `If`.
@@ -101,7 +102,7 @@ list, in the order paid: `Costs = [new TapSelfCost(), new SacrificeCost(Is.Artif
 ```
 
 **"If …" on a trigger** — an *intervening* if ("When/At …, if X, …") is `When(…) with { If = condition }`
-— checked as it triggers AND as it resolves. Never a bare `If` effect for that (rule in magic-mechanics.md).
+— checked as it triggers AND as it resolves. Never a bare `If` effect for that (rule in magic-triggers.md).
 
 **"You may … If you do, …"** — `new May(prompt, canDoIt, [the doing, then the rest])`:
 

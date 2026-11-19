@@ -17,11 +17,19 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 }
 
 /// <summary>
-/// "Replicate {N} (When you cast this spell, copy it for each time you paid its replicate cost. You
-/// may choose new targets for the copies.)" — CastSpellAction.Replicate. ponytail: a generic cost
-/// only (Consign to Memory's {1}); a coloured one would add symbols, not generic.
+/// "Replicate [cost] (When you cast this spell, copy it for each time you paid its replicate cost. You
+/// may choose new targets for the copies.)" — CastSpellAction.Replicate: Consign to Memory's {1}, Lose
+/// Focus' {U} — the cost added once per payment, beside the spell's own.
 /// </summary>
-public record ReplicateComponent(int Generic) : GameComponent;
+public record ReplicateComponent(ManaCost Cost) : GameComponent
+{
+	/// <summary>
+	/// Squad (Sicarian Infiltrator): "As an additional cost to cast this spell, you may pay {2} any number of times.
+	/// When this creature enters, create that many tokens that are copies of it." — paid as replicate is, but nothing
+	/// is copied as it is cast: Scripting.Squad's trigger reads the payments (Count.TimesReplicated).
+	/// </summary>
+	public bool AsItEnters { get; init; }
+}
 
 /// <summary>
 /// A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore counter.
@@ -40,6 +48,18 @@ public record KickerComponent(ManaCost Mana) : GameComponent
 {
 	/// <summary>Eject the Warp Core: "Kicker—Sacrifice an artifact or creature." — paid only when kicked.</summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
+
+	/// <summary>
+	/// Thieving Skydiver: "Kicker {X}. X can't be 0." — the least X a kicked cast may choose. A kicker with {X} lets the
+	/// kicked cast choose X (CastSpellAction.X), paid as any X and read as it enters (Card.CastX).
+	/// </summary>
+	public int MinX { get; init; }
+
+	/// <summary>
+	/// Teamwork (We Say Thee Nay!, LsvCards.Teamwork) is this optional additional cost by another name: "if this
+	/// spell was cast using teamwork" is WasKicked. Only the cast's description reads it ("(teamwork)").
+	/// </summary>
+	public string Word { get; init; } = "kicked";
 }
 
 /// <summary>The named counter kinds (Card.Counters) scripts and rules share.</summary>
@@ -49,6 +69,8 @@ public static class CounterKinds
 	public const string Quest = "quest";
 	public const string Promotion = "promotion";
 	public const string Peace = "peace"; // Peace in Our Time
+	public const string Story = "story"; // Staff of the Storyteller
+	public const string Chorus = "chorus"; // Malcolm, Alluring Scoundrel
 
 	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
 	public const string Indestructible = "indestructible";
@@ -88,11 +110,12 @@ public enum EventKind
 	BecameTapped, // Hemmer: "whenever Hemmer becomes tapped"
 	FacedDilemma, // "whenever you face a dilemma" — modes chosen for a spell or ability
 	CountersPut, // a Saga's chapter: "as the number of lore counters becomes at least N" (Trigger.Chapter)
-	LeftGraveyard, // Vash: "whenever a card leaves your graveyard" — MagicState.MoveCard, every path
+	ChangedZone, // Vash: "whenever a card leaves your graveyard"; Laelia: "put into exile from your library and/or your graveyard"; Skyclave Apparition: "when this leaves the battlefield" — MagicState.MoveCard, every path (Trigger.From, To)
 	Drew, // Data, New Life: "whenever you draw a card" — MagicState.Draw, one per card
 	AbilityActivated, // Kai Winn: "activates an ability of a source with the chosen name" — mana abilities too
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 	LandPlayed, // Prosper, Tome-Bound: "whenever you play a card from exile" — a land played (PlayLandAction), not one put onto the battlefield
+	BecameLevel, // Does Machines: "When this Class becomes level 2" — GainLevel (Trigger.Chapter)
 }
 
 /// <summary>
@@ -102,7 +125,7 @@ public enum EventKind
 public enum ReadFrom
 {
 	Battlefield,
-	TheDyingCard, // "when this dies" — the dying card as it last existed; Subject asked of it
+	TheCardThatLeft, // "when this dies", "when this leaves the battlefield" — the card that left, as it last existed; Subject asked of it
 	ItsAttachment, // "when enchanted creature dies" — read from the Aura as it was; Subject not asked (it has left)
 	TheSpellCast, // Emrakul: "when you cast this spell" — the spell on the stack; Subject asked of it
 }
@@ -180,32 +203,36 @@ public record Trigger(EventKind On)
 
 	/// <summary>
 	/// A Saga's chapter N (CR 714.2b): it triggers as the number of lore counters on this becomes at
-	/// least N — written with Scripting.Chapter.
+	/// least N — written with Scripting.Chapter. On BecameLevel, a Class's level N (CR 716.2c, Does Machines:
+	/// "When this Class becomes level 2") — the level it became.
 	/// </summary>
 	public int Chapter
 	{
 		get => chapter;
 		init =>
 			chapter =
-				value == 0 || On == EventKind.CountersPut
+				value == 0 || On is EventKind.CountersPut or EventKind.BecameLevel
 					? value
-					: throw new ArgumentException($"A Chapter only fits CountersPut, not {On}");
+					: throw new ArgumentException(
+						$"A Chapter only fits CountersPut or BecameLevel, not {On}"
+					);
 	}
 
-	readonly int spellNumber;
+	readonly int nth;
 
 	/// <summary>
-	/// Stella Lee, Wild Card: "Whenever you cast your second spell each turn" — the SpellCast event of the
-	/// caster's Nth spell this turn, numbered as it is cast (SpellCastEvent.SpellNumber).
+	/// Stella Lee, Wild Card: "Whenever you cast your second spell each turn"; Faerie Mastermind: "Whenever an
+	/// opponent draws their second card each turn" — the event of that player's Nth spell (SpellCast) or Nth
+	/// card drawn (Drew) this turn, numbered as it happens (SpellCastEvent.SpellNumber, DrewCardEvent.Number).
 	/// </summary>
-	public int SpellNumber
+	public int Nth
 	{
-		get => spellNumber;
+		get => nth;
 		init =>
-			spellNumber =
-				value == 0 || On == EventKind.SpellCast
+			nth =
+				value == 0 || On is EventKind.SpellCast or EventKind.Drew
 					? value
-					: throw new ArgumentException($"A SpellNumber only fits SpellCast, not {On}");
+					: throw new ArgumentException($"An Nth only fits SpellCast or Drew, not {On}");
 	}
 
 	readonly string? ability;
@@ -252,15 +279,51 @@ public record Trigger(EventKind On)
 	/// <summary>
 	/// Prosper, Tome-Bound: "Whenever you play a card from exile" — a spell cast from, or a land played from,
 	/// this zone (SpellCastEvent.From, LandPlayedEvent.From). "Play" is both: two rows, as Isshin's are.
+	/// A permanent entering from it too (EnteredBattlefieldEvent.From).
 	/// </summary>
 	public ZoneType? From
 	{
 		get => from;
+		init => from = value is null || KnowsFrom ? value : throw FromDoesntFit("From");
+	}
+
+	bool KnowsFrom =>
+		On
+			is EventKind.SpellCast
+				or EventKind.LandPlayed
+				or EventKind.ChangedZone
+				or EventKind.Entered;
+
+	ArgumentException FromDoesntFit(string option) =>
+		new($"{option} fits SpellCast, LandPlayed, ChangedZone or Entered, not {On}");
+
+	readonly ImmutableList<ZoneType> notFrom = [];
+
+	/// <summary>
+	/// "Name Sticker" Goblin: "When this creature enters from anywhere other than a graveyard or exile" — the
+	/// zones the event's From must NOT be; a token just made came from no zone, so it triggers.
+	/// </summary>
+	public ImmutableList<ZoneType> NotFrom
+	{
+		get => notFrom;
+		init => notFrom = value.IsEmpty || KnowsFrom ? value : throw FromDoesntFit("NotFrom");
+	}
+
+	readonly ZoneType? to;
+
+	/// <summary>
+	/// Laelia, the Blade Reforged: "Whenever one or more cards are put into exile from your library and/or your
+	/// graveyard" — the zone a card moved TO (ChangedZoneEvent.To); with no From, from any zone the event is raised
+	/// for (hers: NotFrom = [Battlefield]). Vash's "leaves your graveyard" is From = Graveyard, any To.
+	/// </summary>
+	public ZoneType? To
+	{
+		get => to;
 		init =>
-			from =
-				value is null || On is EventKind.SpellCast or EventKind.LandPlayed
+			to =
+				value is null || On is EventKind.ChangedZone
 					? value
-					: throw new ArgumentException($"From fits SpellCast or LandPlayed, not {On}");
+					: throw new ArgumentException($"To fits ChangedZone, not {On}");
 	}
 
 	readonly Filters.Filter? combatDamageBy;
@@ -351,7 +414,7 @@ public static class TriggerEvent
 
 	/// <summary>Vash, Hologram Stalker: "Whenever a card leaves your graveyard" — to any zone; a token isn't a card.</summary>
 	public static readonly Trigger CardLeavesYourGraveyard =
-		new(EventKind.LeftGraveyard) { By = Whose.You };
+		new(EventKind.ChangedZone) { By = Whose.You, From = ZoneType.Graveyard };
 
 	/// <summary>Blastoneuron: "Whenever one or more cards leave your graveyard" — once per batch (Trigger.OneOrMore).</summary>
 	public static readonly Trigger OneOrMoreCardsLeaveYourGraveyard = CardLeavesYourGraveyard with
@@ -368,7 +431,19 @@ public static class TriggerEvent
 
 	/// <summary>Read from the dying card as it last existed (CR 603.10a).</summary>
 	public static readonly Trigger SelfDies =
-		new(EventKind.Died) { Subject = Filters.Is.Source, ReadFrom = ReadFrom.TheDyingCard };
+		new(EventKind.Died) { Subject = Filters.Is.Source, ReadFrom = ReadFrom.TheCardThatLeft };
+
+	/// <summary>
+	/// Skyclave Apparition: "When this creature leaves the battlefield" — to any zone, read from the card as it last
+	/// existed (CR 603.10a). Serra Paragon's "When this permanent is put into a graveyard from the battlefield" is
+	/// this with { To = Graveyard }.
+	/// </summary>
+	public static readonly Trigger SelfLeaves =
+		new(EventKind.ChangedZone)
+		{
+			Subject = Filters.Is.Source,
+			ReadFrom = ReadFrom.TheCardThatLeft, // the battlefield: no From to say
+		};
 
 	/// <summary>"When enchanted creature dies" — looks back: the Aura is already gone (CR 603.10a).</summary>
 	public static readonly Trigger AttachedCreatureDies =
@@ -499,6 +574,12 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 {
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
 
+	/// <summary>
+	/// Mana Drain's delayed trigger: "add an amount of {C} equal to that spell's mana value" — a number fixed as it
+	/// was set up (AtNextEndStep.X), its effects' X when it triggers. 0: the event's ("that much damage").
+	/// </summary>
+	public int X { get; init; }
+
 	/// <summary>"When this enters, choose one —": chosen as it goes on the stack (CR 700.2b).</summary>
 	public ImmutableList<Mode> Modes { get; init; } = [];
 
@@ -626,14 +707,27 @@ public record GrantsLoyaltyAbility(LoyaltyAbilityComponent Ability) : GameCompon
 /// <summary>Sanctum Lurker: "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty."</summary>
 public record YourPlaneswalkersSurviveZeroLoyalty : GameComponent;
 
-/// <summary>What a permanent's mana may pay for.</summary>
-public enum ManaRestriction
+/// <summary>
+/// What mana may pay for (MC-4): "Spend this mana only to cast [Spells]" — Mishra's Workshop: artifact spells
+/// (<c>new(Is.Artifact)</c>); Gideon's Memorial: a planeswalker spell; Chandra, Chill of Compliance: a noncreature
+/// spell. The filter is asked of the spell being paid for. <c>default</c> is no restriction. Read by
+/// <c>ManaAbilities.Allows</c> alone — a permanent's mana and floating mana alike.
+/// </summary>
+public readonly record struct ManaRestriction(Filters.Filter? Spells)
 {
-	None,
-	NotForSpellsFromHand, // Heartwood Crafter
-	OnlyPlaneswalkerSpells, // Gideon's Memorial
-	OnlyNoncreatureSpells, // Chandra, Chill of Compliance
-	OnlyArtifacts, // Isolinear Processor: "only to cast an artifact spell or activate an ability of an artifact source"
+	public static readonly ManaRestriction None = default;
+
+	/// <summary>Isolinear Processor: "only to cast an artifact spell or activate an ability of an artifact source" — Spells asked of the ability's source too.</summary>
+	public bool Abilities { get; init; }
+
+	/// <summary>Heartwood Crafter: "This mana can't be spent to cast spells from your hand."</summary>
+	public bool NotFromHand { get; init; }
+
+	/// <summary>
+	/// Delighted Halfling: "Spend this mana only to cast a legendary spell, and that spell can't be countered." — a
+	/// spell this mana paid for is stamped OnStackComponent.CantBeCountered (ManaPayment.MakesUncounterable).
+	/// </summary>
+	public bool CantBeCountered { get; init; }
 }
 
 /// <summary>
@@ -653,8 +747,22 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// <summary>How much: Rok-Tahk's {G}{G} is 2; Loot, the Nexus counts it as it is tapped.</summary>
 	public Count Amount { get; init; } = 1;
 
+	/// <summary>
+	/// Talisman of Conviction: "{T}: Add {R} or {W}. This artifact deals 1 damage to you."; Ancient Tomb's 2 —
+	/// dealt as this ability makes the mana (ManaAbilities.PayAsUsed), through Damage.Deal.
+	/// </summary>
+	public int DealsDamageToYou { get; init; }
+
 	/// <summary>"Add [Amount] mana of any one color" — every unit the one colour chosen; Color is unused.</summary>
 	public bool AnyOneColor { get; init; }
+
+	/// <summary>
+	/// Orcish Lumberjack: "Add three mana in any combination of {R} and/or {G}." — each unit Color or this one; how
+	/// many of this one is the activation's (TapForManaAction.OfTheOther, one move per split). Read for an ability
+	/// whose cost picks a card. ponytail: a plain {T} ability with it makes only Color — a yield unit of two colours
+	/// (ManaAbilities.YieldOf) when a card needs one.
+	/// </summary>
+	public ManaColor? OrColor { get; init; }
 
 	/// <summary>
 	/// Starfleet Academy: "{5}, {T}: Choose a color. Add …"; Talon Gates of Madara: "{1}, {T}: Add one
@@ -671,6 +779,12 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// this: Add" without {T} would need CanTap to read the list.
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = TapOnly;
+
+	/// <summary>
+	/// Elvish Spirit Guide: "Exile this card from your hand: Add {G}." (Costs = [ExileSelfCost]) — a mana ability of a
+	/// card in that zone, never of the permanent; ManaPayment.Find spends it only when nothing on the battlefield pays.
+	/// </summary>
+	public ZoneType From { get; init; } = ZoneType.Battlefield;
 
 	/// <summary>"Add one mana of any color" / "Choose a color. Add N of it".</summary>
 	public static ManaAbilityComponent OfAnyOneColor(Count amount) =>
@@ -729,10 +843,17 @@ public record EntersTappedComponent(Condition? Unless = null) : GameComponent
 /// "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost (negative: less).
 /// Thalia: new CostChange(1, !Is.Creature) { By = Whose.Opponent } — on a permanent, for the spells
 /// its controller's opponents cast; Ghalta: new CostChange(Count.GreatestPowerOf(Ref.CreaturesYouControl)
-/// .Negated) { OnItself = true }. Read by Costs.Of only.
+/// .Negated) { OnItself = true }. Read by Costs.Of — and, with Abilities, by Costs.OfAbility only.
 /// </summary>
 public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComponent
 {
+	/// <summary>
+	/// Anointed Peacekeeper: "Activated abilities of sources with the chosen name cost {2} more to activate
+	/// unless they're mana abilities." — the filter is asked of the ability's SOURCE, whoever activates it (By
+	/// isn't read), and no spell is changed.
+	/// </summary>
+	public bool Abilities { get; init; }
+
 	/// <summary>Whose spells it changes, from the permanent's controller: "you cast", "your opponents cast".</summary>
 	public Whose By { get; init; } = Whose.You;
 
@@ -741,11 +862,24 @@ public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComp
 
 	/// <summary>"This spell costs …": read from the card being cast (any zone), not from the battlefield.</summary>
 	public bool OnItself { get; init; }
+
+	/// <summary>
+	/// Bilbo, Thief in the Night: "Spells you cast from anywhere other than your hand" — [Hand]: not for a spell cast
+	/// from these zones. Asked of where the card is as it is cast (Costs.Of runs before it moves to the stack).
+	/// </summary>
+	public ImmutableList<ZoneType> NotFrom { get; init; } = [];
+
+	/// <summary>
+	/// Forensic Gadgeteer: "This effect can't reduce the mana in that cost to less than one mana." — a reduction never
+	/// takes the cost below Floor mana (nor below what it was): applied after every other change (Costs.OfAbility).
+	/// </summary>
+	public int Floor { get; init; }
 }
 
 /// <summary>
 /// "As an additional cost to cast this spell, …" — Silence the Echo: [SacrificeCost(Is.Creature |
-/// Is.Planeswalker) { OrPay = 3 }]; Countersculpt: [BeholdCost("Jace") { OrPay = 1 }].
+/// Is.Planeswalker) { Or = new PayManaCost(3) }]; Countersculpt: [BeholdCost("Jace") { Or = new PayManaCost(1) }];
+/// Bitter Triumph: [DiscardCost() { Or = new PayLifeCost(3) }]; Bone Shards: [SacrificeCost(Is.Creature) { Or = new DiscardCost() }].
 /// </summary>
 public record AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs) : GameComponent;
 
@@ -818,10 +952,13 @@ public record StaticEffectComponent(Filters.Filter Affects, string? Keyword = nu
 }
 
 /// <summary>
-/// Traxos: "doesn't untap during your untap step" — read by the untap step ONLY; an untap effect
-/// still untaps it. (MtgCore's freeze blocks every untap: Dungeon Geists' wording, not this one.)
+/// MC-6.15: "[It] doesn't untap during its controller's untap step" — the holder's rule over what its filter matches,
+/// asked from the holder's side: Traxos, Scourge Eternal's own (Is.Source), Infinite Coursework's and Marooned's
+/// "enchanted creature/permanent" (Is.AttachedToSource). Read by the untap step ONLY; an untap effect still untaps it
+/// (MtgCore's freeze blocks every untap: Dungeon Geists' wording, not this one). It is the HOLDER's ability (read with
+/// AbilitiesOf): the enchanted creature losing its own changes nothing; Traxos — or an Aura — losing its own ends it.
 /// </summary>
-public record DoesntUntapInYourUntapStep : GameComponent;
+public record DoesntUntap(Filters.Filter Which) : GameComponent;
 
 /// <summary>
 /// "Flashback [cost] (You may cast this card from your graveyard for its flashback cost. Then exile
@@ -847,6 +984,24 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 	/// a random card and never plays the sample's (Evaluator Terms.ImpulseValue). A known card — Emrakul, a chosen one — is not.
 	/// </summary>
 	public bool Blind { get; init; }
+
+	/// <summary>
+	/// Robber of the Rich: "During any turn you attacked with a Rogue, you may cast that card" — judged with the
+	/// player it names as "you" (the card's own controller is its owner, the opponent).
+	/// </summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Robber of the Rich: "you may CAST that card" — never a land played.</summary>
+	public bool CastOnly { get; init; }
+
+	/// <summary>
+	/// Urza, Lord High Artificer: "Until end of turn, you may play that card without paying its mana cost." — answered
+	/// by Playable.FreeCast, so the free cast replaces the paid one.
+	/// </summary>
+	public bool Free { get; init; }
+
+	/// <summary>Warp (Quantum Riddler): "Its owner may cast this card after the current turn has ended" — the first turn it may be (PlayPermission.LaterTurn).</summary>
+	public int FromTurn { get; init; }
 }
 
 /// <summary>
@@ -873,14 +1028,55 @@ public record ChoosesNumberAsItEnters(int Max) : GameComponent;
 public record ChosenNumber(int N) : GameComponent;
 
 /// <summary>
+/// A Class's level (CR 716) — Does Machines: "{1}{U}: Level 2". No counter (Brad Boimler doesn't add to it, "a
+/// permanent with a counter" doesn't see it): status, gone as it leaves and never copied. None is level 1, as every
+/// Class enters (Count.ClassLevelOf). Set by GainLevel.
+/// </summary>
+public record ClassLevel(int N) : GameComponent;
+
+/// <summary>
 /// Kai Winn, Faithless Leader: "As Kai Winn enters, choose a nonland card name." Applied by
 /// MagicState.EnterBattlefield — the names every nonland card printed in the game's sets has
-/// (CardRegistry.NonlandNames, Shayne 2026-11-06); the AI names the opponent's commonest known (GreedyAi).
+/// (CardRegistry.CardNames, Shayne 2026-11-06); the AI names the opponent's commonest known (GreedyAi).
+/// Anointed Peacekeeper: "As this creature enters, look at an opponent's hand, then choose any card name."
 /// </summary>
-public record ChoosesNameAsItEnters : GameComponent;
+public record ChoosesNameAsItEnters : GameComponent
+{
+	/// <summary>Anointed Peacekeeper: "look at an opponent's hand, then" — known to you before the name is asked.</summary>
+	public bool LooksAtHand { get; init; }
+
+	/// <summary>Anointed Peacekeeper: "any card name" — the lands' too.</summary>
+	public bool AnyName { get; init; }
+}
 
 /// <summary>The card name chosen as it entered (Kai Winn) — gone when it leaves.</summary>
 public record ChosenName(string Name) : GameComponent;
+
+/// <summary>
+/// True-Name Nemesis: "As this creature enters, choose a player." Applied by MagicState.EnterBattlefield — a
+/// ChooseKeywordChoice of the two players (Bo1), an opponent first.
+/// </summary>
+public record ChoosesPlayerAsItEnters : GameComponent;
+
+/// <summary>The player chosen as it entered (True-Name Nemesis) — gone when it leaves.</summary>
+public record ChosenPlayer(int PlayerId) : GameComponent;
+
+/// <summary>
+/// Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the chosen player." What it is
+/// protected FROM is a filter asked of the SOURCE (a spell, an ability's source, a creature dealing damage or
+/// blocking, an Aura or Equipment) from the holder's side: "from [a player]" is the source's controller
+/// (Is.ControlledByChosenPlayer); "from everything" (Hexdrinker) is Is.AnyCard. DEBT, each in its one place: damage
+/// from it is prevented (Damage.Prevented), it can't enchant or equip it (Attachments), block it (Combat.CanBlock)
+/// or target it (TargetSpec). Read through AbilitiesOf, so one gained until end of turn (Giver of Runes) counts and
+/// losing all abilities ends it.
+/// </summary>
+public record Protection(Filters.Filter From) : GameComponent
+{
+	/// <summary>THE protection question: does this permanent's protection stop that source?</summary>
+	public static bool Stops(GameState s, Cards.Card holder, Cards.Card source) =>
+		s.AbilitiesOf<Protection>(holder)
+			.Any(p => p.From.Matches(s, source, new(holder.ControllerId, holder.Id)));
+}
 
 /// <summary>The City on the Edge of Forever's Human: "Permanents can't phase in." — read by Rules.Phasing.PhaseIn.</summary>
 public record PermanentsCantPhaseIn : GameComponent;
@@ -891,6 +1087,14 @@ public record GrantedFlashback(int OnTurn) : GameComponent;
 /// <summary>A prepare card's spell half (CR: "a preparation card is a creature card in every zone"): its face and its text.</summary>
 public record PrepareSpellComponent(Cards.CardFace Face, SpellEffectsComponent Text)
 	: GameComponent;
+
+/// <summary>
+/// An adventurer card's Adventure (CR 715; Brazen Borrower // Petty Theft: "Return target nonland permanent an
+/// opponent controls to its owner's hand."): its face and its text. The card is cast AS it from the hand
+/// (CastSpellAction.Adventure, Card.AsAdventure); resolved, it is exiled and its caster may cast the creature from
+/// there (FinishSpellAction). Prepare's shape, not its rules: a prepare spell is a copy in exile, never the card.
+/// </summary>
+public record AdventureComponent(Cards.CardFace Face, SpellEffectsComponent Text) : GameComponent;
 
 /// <summary>"This creature enters prepared." Applied by MagicState.EnterBattlefield.</summary>
 public record EntersPreparedComponent : GameComponent;
@@ -918,6 +1122,7 @@ public enum ReplacedEvent
 	Counters, // MagicState.PutCounters — every kind, entering with them included
 	Draw, // MagicState.Draw
 	Mill, // Mill.Top
+	Tokens, // CreateTokens and CreateTokenCopy — the player they are created under
 }
 
 /// <summary>
@@ -929,7 +1134,9 @@ public enum ReplacedEvent
 /// Yoshimaru: "+1/+1 counters would be put on a creature you control … plus one"; Geordi: "twice that many
 /// charge counters on an artifact you control"; Dr. M'Benga: every kind on a creature you control, twice;
 /// Mr. Spock: "If you would draw a card, draw two cards instead" (Draw, Affected = Is.Yours, Times = 2);
-/// Bruvac: "If an opponent would mill one or more cards, they mill twice that many".
+/// Bruvac: "If an opponent would mill one or more cards, they mill twice that many"; Elspeth, Storm Slayer: "If
+/// one or more tokens would be created under your control, twice that many of those tokens are created instead"
+/// (Tokens, Affected = Is.Yours, Times = 2).
 /// </summary>
 public record NumericReplacement(ReplacedEvent Event) : GameComponent
 {
@@ -950,6 +1157,39 @@ public record NumericReplacement(ReplacedEvent Event) : GameComponent
 
 	/// <summary>"That much plus N".</summary>
 	public int Plus { get; init; }
+
+	/// <summary>
+	/// Jace, Wielder of Mysteries: "while your library has no cards in it"; Narset, Parter of Veils: "can't draw
+	/// more than one card each turn" (they have drawn one) — judged from its holder's side as the event would
+	/// happen, Ref.It what it happens to (the player drawing). None: always.
+	/// </summary>
+	public Condition? If { get; init; }
+
+	readonly ImmutableList<GameAction>? instead;
+
+	/// <summary>
+	/// Draw only — what happens in place of ONE card's draw (MagicState.Draw), run as the rule's controller; the
+	/// numbers don't apply. Hullbreacher: "instead you create a Treasure token"; Jace: "you win the game instead";
+	/// Narset: "can't draw" is empty — nothing instead, and it is asked before any other. On a PERMANENT only:
+	/// one in a ThisTurnReplacement is not read (Replacements.InsteadOfDraw) — widen it there when a card
+	/// says "this turn, if [a player] would draw".
+	/// </summary>
+	public ImmutableList<GameAction>? Instead
+	{
+		get => instead;
+		init =>
+			instead =
+				value is null || Event == ReplacedEvent.Draw
+					? value
+					: throw new ArgumentException($"An Instead only fits Draw, not {Event}");
+	}
+
+	/// <summary>
+	/// Hullbreacher: "except the first one they draw in each of their draw steps" — the draw step's own draw is
+	/// left alone. ponytail: when the turn's draw didn't happen (the starting player's first turn), another
+	/// card drawn in that draw step isn't excepted; count the draw step's draws in the tally if it matters.
+	/// </summary>
+	public bool ExceptTheTurnsDraw { get; init; }
 }
 
 /// <summary>Loot, the Anomaly: "If his power is negative, he assigns combat damage as though it were positive."</summary>
@@ -963,6 +1203,12 @@ public record YourCreaturesAssignDamageByToughness : GameComponent;
 /// "… by artifact creatures." — the filter asked of each would-be blocker (Combat.CanBlock).
 /// </summary>
 public record CantBeBlockedBy(Filters.Filter Blockers) : GameComponent;
+
+/// <summary>
+/// Brazen Borrower: "This creature can block only creatures with flying." — the BLOCKER's filter, asked of each
+/// attacker from its side (Combat.CanBlock); CantBeBlockedBy is the attacker's, asked of its blockers.
+/// </summary>
+public record CanBlockOnly(Filters.Filter Attackers) : GameComponent;
 
 /// <summary>
 /// Species 8472: "This creature can't be the target of abilities from artifact sources your opponents
@@ -979,48 +1225,87 @@ public record YourInstantsAndSorceriesHaveSplitSecond : GameComponent;
 public record OneAttackerPerPlaneswalkerYouControl : GameComponent;
 
 /// <summary>Infinite Coursework: "Enchanted creature loses all abilities" — Characteristics.HasLostAllAbilities.</summary>
-public record EnchantedLosesAllAbilities : GameComponent;
+public record EnchantedLosesAllAbilities : GameComponent
+{
+	/// <summary>
+	/// The Wondrous Wasp: "It loses all abilities for as long as The Wondrous Wasp remains on the battlefield" —
+	/// this object (id, incarnation: CR 400.7) in place of what the holder is attached to. Stamped on the source
+	/// by ModifyUntilEndOfTurn.WhileSourceRemains, as Lwaxana's link is: an effect's result, so it holds while the
+	/// source has lost its own abilities, and goes as the source leaves (Card.IsStatus).
+	/// </summary>
+	public Filters.TheObject? Object { get; init; }
+}
 
 /// <summary>De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)" — Characteristics.Subtypes.</summary>
 public record EnchantedIsCreatureType(string Subtype) : GameComponent;
 
 /// <summary>
-/// Storied Veteran: "You may cast this card from your graveyard. If you do, it enters with a finality
-/// counter on it." — read by Playable.CanCastFromHere; unlike flashback it isn't exiled leaving the stack
-/// (MagicState.MoveCard), so it resolves onto the battlefield (StackResolution).
+/// MC-6.9: "You may cast this card from your graveyard / from exile" — the card's own permission, read by
+/// Playable.CanCastFromHere. Storied Veteran: (Graveyard) { Finality } — "If you do, it enters with a finality
+/// counter on it"; unlike flashback it isn't exiled leaving the stack (MagicState.MoveCard), so it resolves onto
+/// the battlefield (StackResolution). Khan, Vengeful Heart: (Exile) — your own exile; face down it has no
+/// abilities (CR 708.2), so not then.
 /// </summary>
-public record MayCastFromYourGraveyard : GameComponent;
-
-/// <summary>
-/// Khan, Vengeful Heart: "You may cast this card from exile." — your own exile, read by
-/// Playable.CanCastFromHere; face down it has no abilities (CR 708.2), so not then.
-/// </summary>
-public record MayCastFromExile : GameComponent;
-
-/// <summary>
-/// Zefram Cochrane, Warp Pioneer: "Once during each of your turns, you may cast an artifact spell from
-/// the top of your library." — read by Playable.LibraryTopPermission; the cast stamps this permanent
-/// (Card.PermissionUsedOn).
-/// </summary>
-public record MayCastArtifactFromLibraryTop : GameComponent;
-
-/// <summary>
-/// Overflow Submatrix: "Once during each of your turns, you may cast an artifact creature spell from your
-/// graveyard. If you cast a spell this way, that artifact creature enters with a finality counter on it."
-/// The Holodeck: "Once during each of your turns, you may play a permanent card you own from outside the
-/// game or from your graveyard." — read by Playable.GraveyardPermission; a cast or land play stamps this
-/// permanent (Card.PermissionUsedOn). Not flashback: what is cast this way isn't exiled leaving the stack.
-/// </summary>
-public record MayPlayFromYourGraveyard(Filters.Filter What) : GameComponent
+public record MayCastThisFrom(ZoneType From) : GameComponent
 {
-	/// <summary>Overflow Submatrix: "that artifact creature enters with a finality counter on it".</summary>
 	public bool Finality { get; init; }
 
-	/// <summary>The Holodeck: "from outside the game" — the sideboard, when the game has one.</summary>
+	/// <summary>The card's own permission from <paramref name="zone"/> — what it printed, not what it was granted.</summary>
+	public static bool On(Cards.Card card, ZoneType zone) =>
+		card.Components.OfType<MayCastThisFrom>().Any(m => m.From == zone);
+}
+
+/// <summary>
+/// MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your graveyard / the top of your
+/// library [/ outside the game]" — a permanent's permission for its controller, during their turn, read by
+/// Playable.ZonePermission for casts and land plays alike (What filters which: a "cast" says !Is.Land).
+/// Overflow Submatrix: (Graveyard, Is.Artifact &amp; Is.Creature) { OncePerTurn, Finality } — "that artifact creature
+/// enters with a finality counter on it". The Holodeck: (Graveyard, a permanent card) { OncePerTurn, OutsideTheGame }
+/// — the sideboard too, when the game has one. Nog's gained "You may play lands from your graveyard": (Graveyard,
+/// Is.Land). Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of your
+/// library." (Library, Is.Artifact &amp; !Is.Land) { OncePerTurn }. Captain Pike: "You may play lands from the top of
+/// your library." (Library, Is.Land). A once-each-turn use stamps the permanent (Card.PermissionUsedOn). Not
+/// flashback: a spell cast from the graveyard this way isn't exiled leaving the stack (OnStackComponent.ByPermission).
+/// Null Summoner: "As long as [threshold], you may cast the exiled card, and mana of any type can be spent to cast that
+/// spell." (Exile, Is.ExiledBySource) { Of = Ref.EachPlayer, AnyTime, If, AnyType } — the card it exiled, whoever owns it, while that
+/// same object is on the battlefield (CR 607.2a). Sen Triplets: "You may play lands and cast spells from that player's
+/// hand this turn." — (Hand, any card) { Of = Ref.Target(0) } in a ThisTurn: the whole zone while it lasts.
+/// </summary>
+public record MayPlayFromZone(ZoneType From, Filters.Filter What) : ThisTurnEffect
+{
+	public bool OncePerTurn { get; init; }
+	public bool Finality { get; init; }
 	public bool OutsideTheGame { get; init; }
 
-	/// <summary>Nog, Ambitious Cadet: "You may play lands from your graveyard" — not once each turn.</summary>
-	public bool Unlimited { get; init; }
+	/// <summary>Whose zone; unset is yours. Resolved from the holder's side; in a ThisTurn, bound as it is made (OwnerId).</summary>
+	public Ref? Of { get; init; }
+
+	/// <summary>Of as it resolved, for a "this turn" permission (Sen Triplets: a target can't be read later).</summary>
+	public int OwnerId { get; init; }
+
+	/// <summary>Null Summoner: no "during your turn" — at whatever speed the card itself may be cast.</summary>
+	public bool AnyTime { get; init; }
+
+	/// <summary>Null Summoner: "As long as [threshold]" — judged from the holder's side.</summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Null Summoner: "mana of any type can be spent to cast that spell" — Costs.Of.</summary>
+	public bool AnyType { get; init; }
+
+	/// <summary>
+	/// Serra Paragon: "If you do, it gains 'When this permanent is put into a graveyard from the battlefield, exile
+	/// it and you gain 2 life.'" — a triggered ability the permanent has from entering until it leaves, carried as
+	/// Finality is (a spell: OnStackComponent.Gains; a land: PlayLandAction) into EnterBattlefield.
+	/// </summary>
+	public TriggeredAbilityComponent? Gains { get; init; }
+
+	/// <summary>
+	/// Underworld Breach: "Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana
+	/// cost plus exile three other cards from your graveyard." — (Graveyard, !Is.Land) { AnyTime, Costs =
+	/// [ExileFromGraveyardCost(!Is.Source) { Count = 3 }] }: what a cast by this rule costs beside its mana
+	/// (CastSpellAction.CostsOf). Not flashback: an escaped spell isn't exiled as it leaves the stack.
+	/// </summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
 }
 
 /// <summary>
@@ -1059,22 +1344,8 @@ public record MayChooseNotToUntap : GameComponent;
 /// </summary>
 public record GraveyardSpellsHaveBeamMeUp : GameComponent;
 
-/// <summary>
-/// Captain Pike, Fullness of Time: "You may play lands from the top of your library." — read by
-/// Playable.CanPlayLandFromHere; the land drop is the only limit.
-/// </summary>
-public record MayPlayLandsFromLibraryTop : GameComponent;
-
 /// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — MagicState.CanSacrifice, asked by every sacrifice (costs, choices, Treasure's own mana).</summary>
 public record CantSacrificeTreasures : GameComponent;
-
-/// <summary>
-/// Kira Nerys, Firebrand: "If a creature you control would enter while you control an attacking creature,
-/// instead it enters tapped and attacking." — MagicState.EnterBattlefield. Never declared, so "whenever …
-/// attacks" doesn't trigger (CR 508.4). ponytail: it attacks the opponent, never a planeswalker — the
-/// rules let its controller choose; make it a choice if a planeswalker deck wants it.
-/// </summary>
-public record YourCreaturesEnterAttacking : GameComponent;
 
 /// <summary>Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops.</summary>
 public record AdditionalLandEachTurn : GameComponent;
@@ -1092,10 +1363,7 @@ public record DontLoseForZeroLife : GameComponent;
 /// </summary>
 public record MayLookAtTopOfLibrary : GameComponent;
 
-/// <summary>Infinite Coursework: "… and doesn't untap during its controller's untap step" — the Aura's, not the creature's.</summary>
-public record EnchantedDoesntUntap : GameComponent;
-
-/// <summary>Marooned: "Enchanted permanent … can't be beamed up." — read by BeamMeUpCost: never returned to pay one.</summary>
+/// <summary>Marooned: "Enchanted permanent … can't be beamed up." — read by ReturnToHandCost: never returned to pay one.</summary>
 public record EnchantedCantBeBeamedUp : GameComponent;
 
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
@@ -1113,6 +1381,13 @@ public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent
 {
 	/// <summary>Who controls it (CR 603.7d: whoever created it) — Ghost of Illyria's controller, not the exiled card's owner. 0: its host's.</summary>
 	public int ControllerId { get; init; }
+
+	/// <summary>
+	/// The object whose ability set it up, as it was then (CR 603.7f: the delayed trigger's source) — Phelia,
+	/// Exuberant Shepherd: "… return that card … put a +1/+1 counter on Phelia". Its "this" (Ref.Source) is the
+	/// card it is on; this is its Ref.EventObject — nothing once that object has left (CR 400.7).
+	/// </summary>
+	public Cards.Card? MadeBy { get; init; }
 }
 
 /// <summary>
@@ -1168,24 +1443,33 @@ public record TapsForTwoColorlessWhileExiled(int CardId, int Incarnation) : Game
 public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
 
 /// <summary>
-/// Root Maze: "Artifacts and lands enter tapped." — every player's permanents the filter matches,
-/// read by MagicState.EnterBattlefield while this is on the battlefield.
+/// MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters / tapped and attacking" —
+/// a permanent's rule for OTHER permanents entering, never itself (CR 614.12; Metallic Mimic's ruling), read by
+/// MagicState.EnterBattlefield. The filter is asked from the rule's holder (Is.Yours: its controller's).
+/// Root Maze: (Is.Artifact | Is.Land) { Tapped }. Warp Speed: "Lands you control enter untapped." (Is.Land &amp;
+/// Is.Yours) { Untapped } — over every "enters tapped": the land's own, Root Maze's, a token created tapped,
+/// "onto the battlefield tapped" (Shayne, 2026-11-01). Zefram Cochrane: "Spacecraft you control enter with two
+/// additional charge counters on them." { CounterKind, Counters }. Kira Nerys, Firebrand: "If a creature you
+/// control would enter while you control an attacking creature, instead it enters tapped and attacking."
+/// (Is.Creature &amp; Is.Yours) { Attacking } — never declared, so "whenever … attacks" doesn't trigger (CR 508.4).
+/// ponytail: Kira's attacks the opponent, never a planeswalker — the rules let its controller choose; make it a
+/// choice if a planeswalker deck wants it. A card's OWN "this enters tapped / with counters" is its own
+/// component (EntersTappedComponent, EntersWithCountersComponent): its replacement on itself.
 /// </summary>
-public record PermanentsEnterTapped(Filters.Filter Which) : GameComponent;
+public record PermanentsEnter(Filters.Filter Which) : GameComponent
+{
+	/// <summary>
+	/// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead." — decided
+	/// before the entry: it goes to its owner's exile and never enters (no event, nothing of the entry).
+	/// </summary>
+	public bool ExiledUnlessCast { get; init; }
 
-/// <summary>
-/// Warp Speed: "Lands you control enter untapped." — read by MagicState.EnterBattlefield over every
-/// "enters tapped": the land's own, Root Maze's, a token created tapped, "onto the battlefield tapped"
-/// (Shayne, 2026-11-01).
-/// </summary>
-public record LandsYouControlEnterUntapped : GameComponent;
-
-/// <summary>
-/// Zefram Cochrane, Warp Pioneer: "Spacecraft you control enter with two additional charge counters on
-/// them." — your permanents the filter matches, read by MagicState.EnterBattlefield; never itself.
-/// </summary>
-public record YourPermanentsEnterWithCounters(Filters.Filter Which, string Kind, int N)
-	: GameComponent;
+	public bool Tapped { get; init; }
+	public bool Untapped { get; init; }
+	public string? CounterKind { get; init; }
+	public int Counters { get; init; }
+	public bool Attacking { get; init; }
+}
 
 /// <summary>
 /// Flesh Duplicate: "You may have this creature enter as a copy of any creature on the battlefield,
@@ -1202,6 +1486,9 @@ public record MayEnterAsCopy : GameComponent
 
 	/// <summary>Dominion Saboteur: "except it isn't legendary".</summary>
 	public bool NotLegendary { get; init; }
+
+	/// <summary>Phyrexian Metamorph: "except it's an artifact in addition to its other types" — the type added to the copy's.</summary>
+	public Cards.CardType AlsoType { get; init; }
 
 	/// <summary>Dominion Saboteur: "it enters with additional counters on it equal to the same number and kinds of counters the copied permanent has on it".</summary>
 	public bool WithCounters { get; init; }
@@ -1266,16 +1553,30 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 	/// <summary>
 	/// Flare of Fortitude: "You may sacrifice a nontoken white creature rather than pay this spell's mana
 	/// cost." — paid instead (CastSpellAction.SacrificeId); a free cast with a cost is offered beside the paid one.
+	/// Force of Will: [PayLifeCost(1), ExileFromHandCost(blue)]; Daze: [ReturnToHandCost(Island)].
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
-}
 
-/// <summary>
-/// Null Summoner: "As long as [While], you may cast the exiled card, and mana of any type can be
-/// spent to cast that spell." On the source — a static, so only while it is on the battlefield;
-/// the card it exiled is <see cref="ExiledBy"/> it (Rules/Playable.cs).
-/// </summary>
-public record MayCastWhatItExiled(Condition While) : GameComponent;
+	/// <summary>Snuff Out: "If you control a Swamp, you may pay 4 life rather than …"; Force of Negation: "If it's not your turn" — judged as it is cast.</summary>
+	public Condition? If { get; init; }
+
+	/// <summary>Baleful Mastery: "You may pay {1}{B} rather than pay this spell's mana cost." — mana paid instead (AlternativeCostWasPaid reads it).</summary>
+	public ManaCost? Mana { get; init; }
+
+	/// <summary>
+	/// Warp (Quantum Riddler): "You may cast this card from your HAND by paying [cost]" — the zones the card's own
+	/// alternative cost is cast from, the CASTER's (never another's hand under Sen Triplets); empty: wherever it is cast
+	/// (Flare of Fortitude).
+	/// </summary>
+	public ImmutableList<ZoneType> From { get; init; } = [];
+
+	/// <summary>
+	/// Warp (Quantum Riddler): "If this spell's warp cost was paid, exile the permanent this spell becomes at the
+	/// beginning of the next end step" — set up as the spell resolves (EnterFromStackAction), a delayed trigger on the
+	/// permanent, controlled by the spell's controller (CR 603.7d): no trigger to answer as it enters (CR 702.185a).
+	/// </summary>
+	public ImmutableList<GameAction> PaidAtNextEndStep { get; init; } = [];
+}
 
 /// <summary>On a card a permanent exiled for a linked ability (CR 607.2a) — which object of it.</summary>
 public record ExiledBy(int SourceId, int SourceIncarnation) : GameComponent;

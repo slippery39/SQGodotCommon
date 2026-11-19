@@ -26,6 +26,9 @@ public static class Is
 	public static readonly Filter Opponents = new OfController(Whose.Opponent);
 	public static readonly Filter Player = new HasProperty(Property.Player);
 
+	/// <summary>Sen Triplets: "lands and spells from that player's hand" — any card at all.</summary>
+	public static readonly Filter AnyCard = !Player;
+
 	/// <summary>"This" — so "another" is !Is.Source.</summary>
 	public static readonly Filter Source = new HasProperty(Property.Source);
 
@@ -49,6 +52,9 @@ public static class Is
 
 	/// <summary>Riku of Many Paths: "Whenever you cast a modal spell".</summary>
 	public static readonly Filter Modal = new HasProperty(Property.Modal);
+
+	/// <summary>Null Summoner: "you may cast the exiled card" — one this same object of the source exiled (a linked ability, CR 607.2a).</summary>
+	public static readonly Filter ExiledBySource = new HasProperty(Property.ExiledBySource);
 	public static readonly Filter AttackingAPlayer = new HasProperty(Property.AttackingAPlayer);
 
 	/// <summary>"Attacks you or a planeswalker you control".</summary>
@@ -79,6 +85,7 @@ public static class Is
 
 	public static readonly Filter ManaValueIsChosenNumber = new ManaValueIsChosenNumber();
 	public static readonly Filter NamedChosenName = new NamedChosenName();
+	public static readonly Filter ControlledByChosenPlayer = new ControlledByChosenPlayer();
 
 	/// <summary>Combadge: "with a Communicator attached to it".</summary>
 	public static Filter WithAttached(Filter attachment) => new WithAttached(attachment);
@@ -108,6 +115,10 @@ public static class Is
 
 	public static Filter ToughnessAtMost(Effects.Count n) =>
 		new StatBetween(Stat.Toughness, int.MinValue, n);
+
+	/// <summary>Cut Down: "with total power and toughness 5 or less".</summary>
+	public static Filter TotalPowerAndToughnessAtMost(Effects.Count n) =>
+		new StatBetween(Stat.PowerPlusToughness, int.MinValue, n);
 
 	public static Filter ManaValueAtLeast(Effects.Count n) =>
 		new StatBetween(Stat.ManaValue, n, int.MaxValue);

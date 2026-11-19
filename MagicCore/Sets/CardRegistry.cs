@@ -3,6 +3,7 @@ using System.Text.Json;
 using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Sets.Fra;
+using MagicCore.Sets.Lsv;
 using MagicCore.Sets.Trk;
 
 namespace MagicCore.Sets;
@@ -17,7 +18,7 @@ namespace MagicCore.Sets;
 public static class CardRegistry
 {
 	/// <summary>The sets the engine plays, oldest first — a reprint's default printing is its first.</summary>
-	public static readonly ImmutableArray<string> Sets = ["FRA", "TRK"];
+	public static readonly ImmutableArray<string> Sets = ["FRA", "TRK", "LSV"];
 
 	static readonly Dictionary<string, IReadOnlyList<CardPrinting>> printings = Sets.ToDictionary(
 		s => s,
@@ -40,7 +41,41 @@ public static class CardRegistry
 
 	// Lazy: a set's Scripts initializer may read the printed data above (FraCards' Printed).
 	static readonly Lazy<Dictionary<string, ImmutableArray<GameComponent>>> Scripts =
-		new(() => Merge(printings, ("FRA", FraCards.Scripts), ("TRK", TrkCards.Scripts)));
+		new(
+			() =>
+				LeftUnscripted(
+					Merge(
+						printings,
+						("FRA", FraCards.Scripts),
+						("TRK", TrkCards.Scripts),
+						("LSV", LsvCards.Scripts)
+					)
+				)
+		);
+
+	/// <summary>
+	/// <c>MAGIC_UNSCRIPTED="A;B"</c> plays those cards as unscripted — out of every random deck and card
+	/// replay — so the end-of-batch check (<c>tools/batch_checks.py</c>, DEV-5) can run the golden replays
+	/// with a batch's new cards out, editing no file. A name that isn't scripted throws: a typo would leave
+	/// the card in and read as an engine change.
+	/// </summary>
+	static Dictionary<string, ImmutableArray<GameComponent>> LeftUnscripted(
+		Dictionary<string, ImmutableArray<GameComponent>> scripts
+	)
+	{
+		var names = Environment.GetEnvironmentVariable("MAGIC_UNSCRIPTED") ?? "";
+		foreach (
+			var name in names.Split(
+				';',
+				StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+			)
+		)
+			if (!scripts.Remove(name))
+				throw new InvalidOperationException(
+					$"MAGIC_UNSCRIPTED names '{name}', which isn't scripted"
+				);
+		return scripts;
+	}
 
 	/// <summary>Keywords the engine implements; a text line made only of these needs no script.</summary>
 	public static readonly ImmutableHashSet<string> EngineKeywords = ImmutableHashSet.Create(
@@ -74,7 +109,11 @@ public static class CardRegistry
 		);
 	}
 
-	/// <summary>Scripted, or nothing in its text but keywords the engine already implements.</summary>
+	/// <summary>
+	/// Scripted, or nothing in its text but keywords the engine already implements and reminder text —
+	/// a line wholly in parentheses has no rules force (CR 207.2): Tundra's "({T}: Add {W} or {U}.)" is its
+	/// land types' mana, made by the subtypes (CR 305.6), as a basic land's is.
+	/// </summary>
 	public static bool IsImplemented(string name) =>
 		Scripts.Value.ContainsKey(name)
 		|| Data[name].TypeLine.StartsWith("Basic Land") // mana from the subtype, CR 305.6
@@ -82,8 +121,10 @@ public static class CardRegistry
 			Data[name].CardFaces is null
 			&& (Data[name].OracleText ?? "")
 				.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-				.All(line => line.Split(", ").All(EngineKeywords.Contains))
+				.All(line => IsReminderOnly(line) || line.Split(", ").All(EngineKeywords.Contains))
 		);
+
+	static bool IsReminderOnly(string line) => line.StartsWith('(') && line.EndsWith(')');
 
 	public static IEnumerable<string> Scripted => Scripts.Value.Keys;
 
@@ -100,7 +141,8 @@ public static class CardRegistry
 	/// Kai Winn's "choose a nonland card name": every nonland name printed in the sets the game's cards
 	/// come from (every set when none says) — never the decks themselves, which would show a hidden list.
 	/// </summary>
-	public static ImmutableArray<string> NonlandNames(GameState s)
+	/// <param name="lands">Anointed Peacekeeper's "any card name": the lands' too.</param>
+	public static ImmutableArray<string> CardNames(GameState s, bool lands = false)
 	{
 		var inGame = new[] { s.Player1Id(), s.Player2Id() }
 			.SelectMany(p =>
@@ -118,13 +160,13 @@ public static class CardRegistry
 			.Distinct()
 			.ToList();
 		var sets = inGame.Count > 0 ? inGame.Order(StringComparer.Ordinal).ToList() : [.. Sets];
-		return nonlandNames.GetOrAdd(
-			string.Join(",", sets),
+		return cardNames.GetOrAdd(
+			string.Join(",", lands ? [.. sets, "+lands"] : sets),
 			_ =>
 				[
 					.. sets.SelectMany(Printings)
 						.Select(p => p.Card)
-						.Where(d => !d.TypeLine.Split("//")[0].Contains("Land"))
+						.Where(d => lands || !d.TypeLine.Split("//")[0].Contains("Land"))
 						.Select(d => d.Name)
 						.Distinct()
 						.Order(StringComparer.Ordinal),
@@ -132,11 +174,11 @@ public static class CardRegistry
 		);
 	}
 
-	/// <summary>NonlandNames by its sets — Kai Winn enters in rollouts too, and the list never changes.</summary>
+	/// <summary>CardNames by its sets — Kai Winn enters in rollouts too, and the list never changes.</summary>
 	static readonly System.Collections.Concurrent.ConcurrentDictionary<
 		string,
 		ImmutableArray<string>
-	> nonlandNames = new();
+	> cardNames = new();
 
 	/// <summary>A card's rules data, one per name — refusing a reprint whose rules data differs by set.</summary>
 	public static Dictionary<string, CardData> SameInEverySet(IEnumerable<CardPrinting> all)

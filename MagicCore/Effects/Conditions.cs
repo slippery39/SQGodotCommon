@@ -49,6 +49,13 @@ public record DuringYourTurn : Condition
 		s.GetGame().ActivePlayerId == (int)context[ContextKeys.Controller];
 }
 
+/// <summary>Yuriko, Blade of the Mighty: "During combat" — from the beginning of combat to its end.</summary>
+public record DuringCombat : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat;
+}
+
 /// <summary>H.M.S. Bounty: "[if you] haven't begun an extra turn this game" — MagicPlayer.BegunExtraTurn.</summary>
 public record HaventBegunAnExtraTurn : Condition
 {
@@ -84,10 +91,19 @@ public record Both(Condition A, Condition B) : Condition
 /// </summary>
 public record SubtypeEnteredThisTurn(ImmutableArray<string> Subtypes) : Condition
 {
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		s.GetPlayer((int)context[ContextKeys.Controller])
-			.ThisTurn.SubtypesEntered.Intersect(Subtypes)
+	/// <summary>
+	/// Robber of the Rich: "During any turn you attacked with a Rogue" — one of these subtypes ATTACKED under your
+	/// control this turn instead (TurnTally.SubtypesAttacked), even if it has left since.
+	/// </summary>
+	public bool Attacked { get; init; }
+
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var tally = s.GetPlayer((int)context[ContextKeys.Controller]).ThisTurn;
+		return (Attacked ? tally.SubtypesAttacked : tally.SubtypesEntered)
+			.Intersect(Subtypes)
 			.Any();
+	}
 }
 
 public static class Conditions
@@ -118,9 +134,26 @@ public record CastFrom(ZoneType Zone) : Condition
 /// <summary>Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.</summary>
 public record WasKicked : Condition
 {
+	/// <summary>The spell on the stack, or the permanent it became (Thieving Skydiver: "if it was kicked") — as it
+	/// last was too, so one bounced in response was still kicked.</summary>
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetObject((int)context[ContextKeys.Source]) is Card card && Kicked(card)
+		|| context.GetValueOrDefault(ContextKeys.SourceSnapshot) is Card snapshot
+			&& Kicked(snapshot);
+
+	static bool Kicked(Card card) => card.AsCast?.Kicked == true;
+}
+
+/// <summary>
+/// Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost).
+/// Evoke (Subtlety): "When this creature enters, if its evoke cost was paid, its controller sacrifices it" — the
+/// permanent it became (Card.CastAs); a new object of it wasn't evoked.
+/// </summary>
+public record AlternativeCostWasPaid : Condition
+{
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
 		s.GetObject((int)context[ContextKeys.Source]) is Card spell
-		&& spell.GetComponent<Actions.OnStackComponent>()?.Kicked == true;
+		&& spell.AsCast?.AlternativeCost == true;
 }
 
 /// <summary>First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast.</summary>
@@ -150,18 +183,9 @@ public record ExiledWithSourceShareACardType : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
 	{
-		var sourceId = (int)context[ContextKeys.Source];
-		if (!s.IsOnBattlefield(sourceId))
-			return false;
-		var source = s.GetCard(sourceId);
-		var types = new[] { s.Player1Id(), s.Player2Id() }
-			.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
-			.Where(c =>
-				c.GetComponent<ExiledBy>() is { } by
-				&& by.SourceId == source.Id
-				&& by.SourceIncarnation == source.Incarnation
-			)
-			.Select(c => c.Types)
+		var types = Ref.All(ZoneType.Exile, Filters.Is.ExiledBySource)
+			.Resolve(s, context)
+			.Select(id => s.GetCard(id).Types)
 			.ToList();
 		return types.Count > 0 && types.Aggregate((a, b) => a & b) != CardType.None;
 	}
@@ -183,27 +207,23 @@ public record CanPayLife(int N) : Condition
 /// <summary>Proft: "you may pay {2}" — asked only when it can be paid.</summary>
 public record CanPay(ManaCost Cost) : Condition
 {
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		ManaPayment.Find(s, (int)context[ContextKeys.Controller], Cost, 0) is not null;
-}
+	/// <summary>Flash, Transmute Artifact: the cost that PayMana owes now, in place of Cost (PayMana.Owed).</summary>
+	public Effects.PayMana? Pay { get; init; }
 
-/// <summary>
-/// Pure Energy: "Distribute two +1/+1 counters among one or two target creatures" — whether target
-/// word Index was chosen as it was cast, legal now or not: the split is announced then (CR 601.2d),
-/// so a second target gone illegal loses its counter instead of handing it to the first. Index counts
-/// every target word of the spell, all modes together — for a non-modal spell, as Pure Energy is.
-/// </summary>
-public record TargetChosen(int Index) : Condition
-{
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		context.GetValueOrDefault(ContextKeys.ChosenTargets) is ImmutableArray<int> chosen
-		&& Index < chosen.Length
-		&& chosen[Index] != 0;
+		ManaPayment.Find(s, (int)context[ContextKeys.Controller], Pay?.Owed(s, context) ?? Cost, 0)
+			is not null;
 }
 
 /// <summary>Eye of Jace: "if there are seven or more cards in your graveyard".</summary>
 public record AtLeast(Count Count, int N) : Condition
 {
+	/// <summary>
+	/// Robber of the Rich: "if defending player has more cards in hand than you" — at least N more than this count
+	/// (their hand, 1, MoreThan your hand).
+	/// </summary>
+	public Count? MoreThan { get; init; }
+
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Count.Value(s, context) >= N;
+		Count.Value(s, context) >= N + (MoreThan?.Value(s, context) ?? 0);
 }

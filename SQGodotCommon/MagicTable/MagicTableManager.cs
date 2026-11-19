@@ -168,7 +168,7 @@ public sealed class MagicTableManager
 		var declaring = false;
 		foreach (var move in record.Moves)
 		{
-			while (GameRecord.UnaskedOrder(m.State, move.Offers) is { } answer) // a record from before TBL-9.2
+			while (GameRecord.Unasked(m.State, move.Offers) is { } answer) // a record from before TBL-9.2 or MC-7
 				m.Play(answer, "rule");
 			if (differs is null && MoveTokens.Offers(m.State) != move.Offers)
 				differs = played + 1;
@@ -466,7 +466,11 @@ public sealed class MagicTableManager
 				&& o.Id != CombatOption.None
 				&& o.Id == chosen.GetValueOrDefault(creature)
 			);
-			answers.Add(MoveTokens.Token(next, null, [pick?.Id ?? CombatOption.None]));
+			var none =
+				choice is DeclareAttackerChoice
+					? DeclareAttackerChoice.NoAttack(choice)
+					: CombatOption.None;
+			answers.Add(MoveTokens.Token(next, null, [pick?.Id ?? none])); // goaded and unclicked: it attacks
 			next = MoveTokens.Apply(next, answers[^1]);
 		}
 

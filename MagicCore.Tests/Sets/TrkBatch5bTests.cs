@@ -46,13 +46,6 @@ public class TrkBatch5bTests : FraBoardTest
 
 	void ToTurn(int turn) => s = TestGames.PassUntil(s, x => x.GetGame().TurnNumber == turn);
 
-	int OnTop(CardDefinition card, int player)
-	{
-		var id = Hand(card, player);
-		s = s.MoveCard(id, s.ZoneId(player, ZoneType.Library), toTop: true);
-		return id;
-	}
-
 	void NoLands(int player)
 	{
 		foreach (

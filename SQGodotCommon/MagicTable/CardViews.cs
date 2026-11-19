@@ -62,7 +62,15 @@ public static class CardViews
 		card.AddChild(
 			Art(MagicArt.Crop(MagicArt.Key(c)), new Vector2(w - 6, art), new Vector2(3, 3))
 		);
-		var name = Text(c.Name, 16, new Vector2(4, art + 3), w - 8, wrap: true);
+		// Manifest dread's face-down 2/2 has no name (CR 708.2); its controller's "Turn face up" move names it while
+		// affordable — showing the card to its controller is TBL work (DesignNotes)
+		var name = Text(
+			c.Name is "" ? "Face down" : c.Name,
+			16,
+			new Vector2(4, art + 3),
+			w - 8,
+			wrap: true
+		);
 		// The text keeps its size as the card shrinks: as many lines as fit under the art, at least one.
 		name.MaxLinesVisible = Math.Max(1, (int)((h - art - 4) / 21));
 		card.AddChild(name);

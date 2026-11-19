@@ -47,27 +47,27 @@ Hand-ordered — reorder freely. Everything here must be an open story (`python 
 9. **AI-23** — stationing priced: the positions first, Shayne confirms
 10. **TBL-4** — the MTGA reference page (TBL-4.4), then animations at MTGO's level (TBL-4.5)
 11. **TBL-10** — the game reviewer: step, rewind, notes, the AI's next decision while paused
-12. **DEV-6** — the cube lane's first session (DEV-6.5), tonight
-13. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
-14. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
-15. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
-16. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
-17. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
-18. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
-19. **AI-13** — Shayne's lessons as general rules for the search, each measured
-20. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
-21. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
-22. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
-23. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
-24. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-25. **MC-5** — Star Trek: every task done; its requirements to tick and close
-26. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
-27. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-28. **DATA-1** — bring in 17lands data
-29. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
-30. **AI-4** — strategic plans above single actions
-31. **AI-12** — a card's threat over time
-32. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
+12. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
+13. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
+14. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
+15. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
+16. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
+17. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
+18. **AI-13** — Shayne's lessons as general rules for the search, each measured
+19. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
+20. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
+21. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
+22. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
+23. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+24. **MC-5** — Star Trek: every task done; its requirements to tick and close
+25. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
+26. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+27. **DATA-1** — bring in 17lands data
+28. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
+29. **AI-4** — strategic plans above single actions
+30. **AI-12** — a card's threat over time
+31. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
+32. **MC-8** — every modal spell one cast per choice of modes, its targets chosen after; Mystic Confluence's triple counter (cube lane)
 
 ## How it works
 
@@ -128,9 +128,12 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-20](AI-20-lookahead-unknown-cards.md) | The look-ahead stops betting on one guessed future — unknown cards handled honestly | in-progress |
 | [AI-28](AI-28-table-notes-2026-11-17.md) | Shayne's table notes of 2026-11-17 — the AI plays they flagged, each traced and fixed | in-progress |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | in-progress |
-| [DEV-6](DEV-6-two-worktrees.md) | Two lanes at once — a second worktree for the cube, merged back often | in-progress |
+| [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | in-progress |
+| [DEV-5](DEV-5-batch-check-script.md) | One script for a card batch's end-of-batch checks, one summary out | in-progress |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed for Reality Fracture — authentic Arena packs, an AI build, played on the table | in-progress |
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | in-progress |
+| [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | in-progress |
+| [MC-7](MC-7-combat-damage-assignment.md) | The attacker assigns combat damage among its blockers | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
@@ -147,10 +150,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-29](AI-29-ai-notes.md) | AI notes — specific evaluators for troublesome effects, called by the general one | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
-| [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | backlog |
-| [DEV-5](DEV-5-batch-check-script.md) | One script for a card batch's end-of-batch checks, one summary out | backlog |
-| [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | backlog |
-| [MC-7](MC-7-combat-damage-assignment.md) | The attacker assigns combat damage among its blockers | backlog |
+| [MC-8](MC-8-modal-targets-after-cast.md) | Every modal spell is one cast per choice of modes, its targets chosen after | backlog |
 | [TBL-10](TBL-10-game-reviewer.md) | A game reviewer — step, rewind and play a game on the table, with notes and the AI's next decision | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
@@ -166,6 +166,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-25](AI-25-lookahead-combat-tricks.md) | The look-ahead's attacker uses its tricks after blocks — a block isn't free when the attacker can pump | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
+| [DEV-6](DEV-6-two-worktrees.md) | Two lanes at once — a second worktree for the cube, merged back often | done |
 | [DEV-7](DEV-7-faster-tests.md) | Faster tests while working — run what a change touches, the full suite at a story's end | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |
 | [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | done |
@@ -180,5 +181,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-30 · DATA-3 · DEV-8 · LIM-6 · MC-8 · TBL-11
+Next free id per area: AI-30 · DATA-3 · DEV-8 · LIM-6 · MC-9 · TBL-11
 <!-- stories:end -->

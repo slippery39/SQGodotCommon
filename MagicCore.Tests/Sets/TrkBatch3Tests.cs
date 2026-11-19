@@ -39,14 +39,6 @@ public class TrkBatch3Tests : FraBoardTest
 		return id;
 	}
 
-	int OnTop(CardDefinition card)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
-		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
-		return id;
-	}
-
 	void TapAllMyLands()
 	{
 		foreach (var land in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)))

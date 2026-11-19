@@ -36,6 +36,7 @@ public static class Targeting
 				.. Cost(c.DiscardId, "discard", "discarding"),
 				.. Cost(c.BeholdId, "behold", "beholding"),
 				.. Cost(c.ReturnId, "return", "returning"),
+				.. Cost(c.ExileId, "exile", "exiling"),
 			],
 			ActivateAbilityAction a =>
 			[
@@ -226,6 +227,7 @@ public static class Targeting
 				DiscardId = 0,
 				BeholdId = 0,
 				ReturnId = 0,
+				ExileId = 0,
 			},
 			ActivateAbilityAction a => a with
 			{

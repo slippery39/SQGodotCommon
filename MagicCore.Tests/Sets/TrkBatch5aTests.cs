@@ -53,13 +53,6 @@ public class TrkBatch5aTests : FraBoardTest
 		Resolve(answer);
 	}
 
-	int OnTop(CardDefinition card, int player)
-	{
-		var id = Hand(card, player);
-		s = s.MoveCard(id, s.ZoneId(player, ZoneType.Library), toTop: true);
-		return id;
-	}
-
 	void Activate(
 		ActivateAbilityAction activation,
 		Func<ChoiceAction, IEnumerable<int>>? answer = null
