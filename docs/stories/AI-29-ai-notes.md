@@ -53,7 +53,34 @@ Kai Winn's name, tap abilities at their last chance, waiting wins a tie) and can
 
 ## Requirements
 
-Not agreed — to shape with Shayne.
+Notes in general: not agreed — to shape with Shayne (AI-29.1).
+
+**Land sequencing (AI-29.3), agreed 2026-11-19.** On a land turn the AI plays the land a rule picks, from what it
+holds and its deck, no look-ahead; the search keeps everything else (when to play it, what to cast). The rule compares
+the lands in hand, first difference wins:
+1. the mana the hand can spend THIS turn (entering as it would: tapped adds none; an X spell for X 1 or more,
+   spending the rest) - changed from "the spells castable" on 2026-11-19, below;
+2. the coloured pips in hand no source in play makes, that it makes;
+3. untapped now on a condition that can break (a planeswalker, beholding a Jace) - it goes first, the only move, so
+   nothing this turn breaks it;
+4. enters tapped now - free when the mana isn't needed;
+5. the colours the rest of the deck's spells need, uncovered.
+
+Common scenarios first, edge cases after (Shayne). **Curated tests up front** - positions built to be the scenario,
+not found in games - each in `MagicCore.Tests/Ai/LandOrderTests.cs`:
+- [x] an untapped land on turn 1 to play the one-drop
+- [x] a tapped land on turn 1 with no one-drop
+- [x] a Plains on turn 1 in a two-colour deck with a WW card in hand
+- [x] a Plains on turn 1 in a two-colour deck with WW cards in the deck
+- [x] the red source (Rockfall Vale) not discarded beside a Forest
+- [x] Rockfall Vale over a Forest on turn 2 with nothing to cast (`ShayneNotesSeed1` #24)
+- [x] Konstrari Annex first while a planeswalker makes it untapped (AI-9.10)
+- [x] an X spell is no reason for an untapped land on turn 1 (from the suite)
+- [x] the untapped land that casts the 5-drop over a tapped one (from the suite)
+
+**Open:** an R card and a WW card in hand, two Plains and a Mountain - which land first is a question of card value
+(the R card on turn 1 against the WW card on turn 2), not a rule; the rule's step 1 plays the Mountain. More scenarios
+like it to be thought of (Shayne's todo).
 
 ## Decisions
 
@@ -64,6 +91,11 @@ Not agreed — to shape with Shayne.
   a tag up instead of checking each card; later, search in deck building): built only when the first note or shortcut
   needs one, derived from the card's components by reflection, hand tags only where reflection can't see (Claude's
   recommendation at sprint 6 planning, Shayne agreed the plan).
+- 2026-11-19, Shayne (AI-29.3): colours by rule, not look-ahead - "look at our hand / deck, determine color
+  requirements, determine which colors we might need this turn / next turn and play out our lands accordingly". "A
+  real player wouldn't look 3 turns ahead to realize playing the red green land is better than a forest." Basic
+  scenarios before edge cases; curated tests written up front "so that we aren't solely relying on in game scenarios".
+  Rockfall Vale tapped on turn 2 is fine: it enters untapped on turn 3.
 
 ## Tasks
 
@@ -75,9 +107,38 @@ Not agreed — to shape with Shayne.
 
 ## Next
 
-Not started. Read the Why (his rules, verbatim) and AI-27's Log for seed 2 #16. Start with AI-29.1 — a discussion.
+AI-29.3: built, suite accepted, match flat (Log); the commit when Shayne asks. Shayne's OPEN case (an R card
+and a WW card, two Plains and a Mountain - card value decides) and his harder scenarios are the next tests. AI-29.1
+after - a discussion.
 
 ## Log
 
 - 2026-11-18: created from Shayne's question during AI-27.
 - 2026-11-18: sprint 6 - AI-29.3 (land sequencing) added and put first; card tags recorded as a decision.
+- 2026-11-19: AI-29.3's rule agreed with Shayne (Requirements), and his curated scenarios as tests up front.
+- 2026-11-19: AI-29.3 built - `LandOrder.cs`, `Terms.LandOrder` (`beam+nolandorder`), in `BeamSearchAi.Children`. The
+  seven scenarios written first (`LandOrderTests`): the search before the rule failed FOUR (both Plains cases played the
+  Mountain, the Annex lost to the Vale, #24 the Forest) - the first run showed six passing only because a tie took the
+  first land in hand; the expected land now goes last, and each of the four has the old search as its control. All
+  seven pass; #24 decides in 1 s, not 20-34 s (one land, no search over two). `HiddenTests`' sample test keeps its
+  game with the rule off (the land choices it saw differ are the rule's now). Suite: 15 of 288 changed (5.2%), cost
+  19028 steps a position; oracle agreement 72.9% (committed 76.0%) - being read.
+- 2026-11-19: the 15 read (`--boards`). Right: the Annex played first under a Jace token six times (before a −1 or
+  −3), Deserted Beach tapped on turn 1 twice; neutral three. WRONG four, one cause - step 1 counted SPELLS: Ajani's
+  Anguish for X=0 made a Mountain "cast" on turn 1 (over the Annex, free tapped; twice), and a 2-drop tied Way of the
+  Wildspeaker / a 3-drop, so a tapped Annex wasted a turn's mana (seed 3 #32, seed 4 #13; seed 2 #9 the same).
+  Step 1 is now the MANA the hand can spend (X 1 or more, spending the rest); two tests from these. Suite: 10 of 288
+  changed (3.5%), all the right or neutral ones; 19102 steps a position; oracle 74.0% (committed 76.0%), score given
+  up 0.65 a position.
+- 2026-11-19: the 10 read with Shayne and accepted (`FRA.positions.txt`): Deserted Beach tapped on turn 1 right
+  (twice); the Annex first under a Jace token - only seed 3 #43 (loyalty 1, its −1 kills it) needed it, five neutral;
+  two draw-step instants now cast in main, same play. Ceiling noted: step 3 goes first even when nothing this turn can
+  break the condition, so a Jace −3's card is drawn after the land is chosen.
+- 2026-11-19: match `beam,beam+nolandorder --until-clear`: 288 games, beam 50.7% ± 1.3pp (146-142) - early stop, NO
+  difference of 5pp either way; cost per decision 10225 steps vs 10645 (4% less, one land searched instead of
+  several); lands played 7.5 vs 7.4 a game, spells 9.6 both. 114 min on a busy machine (cost-deterministic: only
+  slower). A flat match is the expected result for a rule that fixes occasional land plays.
+- 2026-11-19: pre-commit review fixes - a land that enters tapped and asks a choice as it enters (Room of Refuge's
+  colour) read as untapped, and its colour unknown in hand made a Plains win step 2; now tapped, and any colour in
+  hand (`TurnOne_ATappedLand_ThatAsksAColourAsItEnters`, failed before). A land making no mana no longer counts as
+  a source. Suite: 0 changed.

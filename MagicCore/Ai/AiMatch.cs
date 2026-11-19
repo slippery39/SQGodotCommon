@@ -104,6 +104,8 @@ public static class AiMatch
 			["nosurveilprice"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilPrice },
 			// The search may pass with a land to play, before AI-13.7: beam+nolanddrop.
 			["nolanddrop"] = o => o with { Without = o.Without | Evaluator.Terms.LandDrop },
+			// The search tries every land, before AI-29.3's rule: beam+nolandorder.
+			["nolandorder"] = o => o with { Without = o.Without | Evaluator.Terms.LandOrder },
 			// A Spacecraft's charge counted past its station threshold, before 2026-11-09: beam+nostationcap.
 			["nostationcap"] = o => o with { Without = o.Without | Evaluator.Terms.StationCap },
 			// A land in hand at a flat 0.3 whatever it unlocks, before AI-9.1: beam+nolandunlock.

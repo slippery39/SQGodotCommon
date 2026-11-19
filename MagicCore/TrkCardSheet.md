@@ -833,7 +833,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandOrderTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Free Borg Revolutionaries
 
@@ -1154,7 +1154,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch6aTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LandOrderTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch6aTests
 
 ### Oberth-Class Starship
 
@@ -1322,7 +1322,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2dTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, LandOrderTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2dTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Planetary Bombardment
 

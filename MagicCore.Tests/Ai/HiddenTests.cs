@@ -205,13 +205,15 @@ public class HiddenTests
 
 	// The search in this mode plays a real FRA game — every decision it takes in its sample is one the
 	// real game accepts (PlayAis fails on a refused one) — and plays it differently from the real
-	// order: the same seed, a different game, so the search really decides from the sample.
+	// order: the same seed, a different game, so the search really decides from the sample. AI-29.3's land rule off:
+	// the land choices the sample used to separate in these six turns are its now, read from the deck list.
 	[Test]
 	public void TheSearch_PlaysARealGame_FromItsSamples()
 	{
+		const Evaluator.Terms rule = Evaluator.Terms.LandOrder;
 		Assert.That(
-			Play(new(Library: Hidden.Library.ShuffleUnknown)),
-			Is.Not.EqualTo(Play(new(Library: Hidden.Library.RealOrder)))
+			Play(new(Library: Hidden.Library.ShuffleUnknown, Without: rule)),
+			Is.Not.EqualTo(Play(new(Library: Hidden.Library.RealOrder, Without: rule)))
 		);
 	}
 

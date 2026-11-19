@@ -236,6 +236,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	// The cards of our library the plan's search hadn't seen (LandOrNot): one of them in our hand is news it was made without.
 	HashSet<int> planUnseen = [];
+
+	/// <summary>Our unseen nonland cards as the real game has them, read before the root is sampled - the deck <see cref="LandOrder"/> reads colours from.</summary>
+	List<Cards.Card> deck = [];
 	int rollouts;
 	int secondRollouts; // a line's second rollout under LandOrNot: a cost, not a line of the budget
 
@@ -498,6 +501,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
+		deck =
+		[
+			.. Hidden
+				.Unseen(s, PlayerId)
+				.Where(c => !Hidden.IsUnknown(c) && !c.Is(Cards.CardType.Land)),
+		];
 		planUnseen =
 			options.Library == Hidden.Library.LandOrNot
 				? [.. Hidden.Unseen(s, PlayerId).Select(c => c.Id)]
@@ -798,6 +807,17 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			// a land is never worth passing on (Terms.LandDrop): the land first, then whatever else
 			if (!Evaluator.IsOff(Evaluator.Terms.LandDrop) && moves.Any(a => a is PlayLandAction))
 				moves.RemoveAll(a => a is PassPriorityAction);
+			// which land is a rule (Terms.LandOrder): the land it picks, alone when it must go first
+			if (
+				!Evaluator.IsOff(Evaluator.Terms.LandOrder)
+				&& moves.OfType<PlayLandAction>().ToList() is { Count: > 0 } lands
+			)
+			{
+				var (keep, first) = LandOrder.Pick(s, PlayerId, lands, deck);
+				moves.RemoveAll(a =>
+					a is PlayLandAction l && !keep.Contains(l) || first && a is not PlayLandAction
+				);
+			}
 			// a Spacecraft that already has its threshold gains nothing from another counter (Terms.StationCap)
 			if (!Evaluator.IsOff(Evaluator.Terms.StationCap))
 				moves.RemoveAll(a => a is ActivateAbilityAction act && OverCharges(s, act));

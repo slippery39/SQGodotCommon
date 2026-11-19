@@ -641,6 +641,13 @@ public static partial class Evaluator
 		/// #16 - `+firstmode`).
 		/// </summary>
 		RolloutModes = 1L << 38,
+
+		/// <summary>
+		/// Which land to play is a rule, not the search (<see cref="LandOrder"/>, AI-29.3, Shayne 2026-11-19): the casts it
+		/// allows now, the colours the hand and the deck need, a condition that can break first, a tapped land when free
+		/// (`+nolandorder`).
+		/// </summary>
+		LandOrder = 1L << 39,
 	}
 
 	/// <summary>

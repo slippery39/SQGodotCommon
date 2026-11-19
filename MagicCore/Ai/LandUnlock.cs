@@ -206,7 +206,7 @@ public static class LandUnlock
 	static bool Castable(List<List<ManaColor>> sources, Card spell) =>
 		Castable(sources, spell.ManaCost);
 
-	static bool Castable(List<List<ManaColor>> sources, ManaCost cost) =>
+	internal static bool Castable(List<List<ManaColor>> sources, ManaCost cost) =>
 		cost.ManaValue <= sources.Count
 		&& cost.Symbols.Where(m => m.Kind == SymbolKind.Colored && m.Color != ManaColor.Colorless)
 			.GroupBy(m => m.Color)
