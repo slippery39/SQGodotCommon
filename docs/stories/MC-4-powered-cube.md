@@ -1144,6 +1144,52 @@ as his three priorities.
   limit too; a ceiling, DesignNotes); `AlsoType`'s ForGood check at resolution, not construction (the record's init order
   can't cross-check; the fires test covers the one card); two counts in `OnlyIf` (trivial); `Chapter` read by the Saga's
   state check (it checks the source is that Saga — no card is both).
+- 2026-11-18, Claude (cube lane) — **4.4h: black read card by card — 59 mono-black, 11 play; of the 48, 19 are tested
+  pieces, 22 options, 7 new pieces (seven mechanics).** The survey's 35/6/7 moved: Grief is tier 1 now (evoke, 4.4f),
+  From the Catacombs and Corpse Dance are options (the initiative is g3's; buyback is kicker by another name); Sedgemoor
+  Witch's magecraft ("cast or copy" — a copy raises no event) and Rain of Filth (`ManaAbilities` reads no gained ability)
+  are options, not tier 1; Animate Dead and Necromancy hide a new piece. Parts:
+  **h1** the 19 — Dark Confidant, Iron-Shield Elf, Sunset Saboteur, Harvester of Misery, Archon of Cruelty, Griselbrand,
+  Grief, Entomb, Demonic Tutor, Vampiric Tutor, Imperial Seal, Sheoldred's Edict, Dismember, Duress, Thoughtseize, Hymn
+  to Tourach, Reanimate, Unearth, Wishclaw Talisman. "Lose life equal to its mana value" (Confidant, Reanimate) is
+  `Count.GreatestManaValueOf` of the one card — Reanimate's loss scripted BEFORE the move (the card entered is a new
+  object; the same result); Vampiric Tutor and Imperial Seal are Mystical Tutor's `SearchLibrary(None, Library)`;
+  **h2a** hands, 4 — Inquisition of Kozilek (a `Filter` on `YouChooseTheyDiscard`; its hand choice has one), Deep-Cavern
+  Bat ("look at", not reveal; exile from a HAND until it leaves — `ExileUntilSourceLeaves` takes permanents only),
+  Collective Brutality (escalate: spree's `Mode.Cost` per mode beyond the first, a discard — picked after the cast, as
+  delve's), Chain of Smog ("that player may copy this spell": `CopySpell` controlled by another);
+  **h2b** graveyard returns, 5 — Shallow Grave, Corpse Dance ("the top creature card of your graveyard", a `Ref` option;
+  buyback = kicker + to its owner's hand as it resolves), Exhume (each player's own `MoveChosen`), Emperor of Bones
+  (adapt composed; `MoveChosen` from exile, under your control, with finality, haste and the end-step sacrifice —
+  Sneak Attack's `Then`), Barrowgoyf (`MillAndMayTake`'s N a `Count`; Tarmogoyf's P/T);
+  **h2c** costs and permissions, 4 — Toxic Deluge and Bolas's Citadel (`PayLifeCost`'s amount a `Count`; Deluge's X
+  chosen with no {X} in its cost, a cast per X up to the life; Citadel is the top-of-library `MayPlayFromZone { Free,
+  Costs }`, its sacrifice `SacrificeCost { Count = 10 }`), Rain of Filth (a mana ability gained until end of turn, read
+  by `ManaAbilities`), Yawgmoth's Will (Necrodominance's exile-instead in a `ThisTurn`, beside a `ThisTurn` play-from-
+  graveyard);
+  **h2d** triggers, 4 — Sedgemoor Witch (an event `CopySpell` raises), Orcish Bowmasters (Hullbreacher's "except the
+  first in their draw step" on the draw event; amass composed), Gollum (odd or even: a parity option on
+  `ChoosesNumberAsItEnters`), Black Widow (`ExileTopPlayable.Then`: may put a counter, else `MakePlayable { ThisTurn,
+  AnyType }`);
+  **h2e** zones and combat, 4 — Fatal Push (revolt, a `TurnTally` count), Troll of Khazad-dûm (menace's "two or more"
+  a number; swampcycling is Lórien Revealed's), Dauthi Voidwalker (shadow is `CantBeBlockedBy` + `CanBlockOnly`; the
+  exile-instead with "whose graveyard" and a void counter; a choice among exiled cards, then a free play), From the
+  Catacombs (the card's own escape, `MayCastThisFrom { Costs }`; Essence Burn's "would die" widened to "would leave");
+  **h3–h9** new pieces, one a session, each with its nearest piece: **h3 overload** (Damn) — `TargetSpec.IfKicked`
+  swaps a target word, overload removes targeting; **h4 splice onto Arcane** (Goryo's Vengeance) — no piece adds one
+  card's effects to another spell; **h5 Auras returning a creature from a graveyard** (Animate Dead, Necromancy) —
+  `AuraComponent` attaches to permanents, and the state check bins an Aura on a graveyard card; Necromancy's "flash,
+  sacrificed at cleanup if cast at instant speed" too; **h6 naming a card as a spell resolves** (Demonic Consultation)
+  — Kai Winn's name is chosen as a permanent enters and kept on it, a spell has nowhere; the AI's rule for naming in
+  its own library; **h7 saddle** (Caustic Bronco) — teamwork's `TapUntappedCost { TotalPower }` plus a "saddled"
+  status until end of turn, crew's later; **h8 emerge** (Crabomination) — an alternative cost that sacrifices exists,
+  none reduced by the sacrificed's mana value; **h9 miracle** (Metamorphosis Fanatic) — nothing triggers from the hand
+  on a draw (its lifelink counter is the keyword counter, Drivnod's).
+  **Legal actions, counted on a 12-creature board:** one per single choice — the discards, sacrifices and escalate's
+  cards picked after the cast; the most are Deluge's X (~20) and Reanimate (one per creature card in all graveyards).
+- 2026-11-18, Shayne (reviewing 4.4h's plan): **as written — h2 in five parts.** **A mechanic's other cards wait for
+  their colour:** h3 builds Damn only (Winds of Abandon with white), h4 Goryo's Vengeance only (Through the Breach with
+  red).
 
 ## Tasks
 
@@ -1368,8 +1414,21 @@ as his three priorities.
           0) — likely because its levels pay off only with artifacts (in the graveyard for level 2, on the battlefield for
           level 3), which the random decks seldom hold. An isolated test: a board with artifacts and the mana free — is
           the level ability taken, by the probe's random play and by the AI?
-  - [ ] MC-4.4h Black (Shayne, 2026-11-18: the next colour in the list) — black's cards in `LsvSurvey.md` read card by
-        card and tiered, then planned in parts as red's, white's and blue's were (Decisions); one part per session
+  - [ ] MC-4.4h Black (Shayne, 2026-11-18: the next colour in the list) — 48 cards read card by card and tiered
+        (Decisions, "4.4h"): 19 tested pieces, 22 options, 7 new pieces; one part per session:
+    - [ ] MC-4.4h1 The tested pieces, 19 (list in Decisions)
+    - [ ] MC-4.4h2a Options, hands, 4: Inquisition of Kozilek, Deep-Cavern Bat, Collective Brutality, Chain of Smog
+    - [ ] MC-4.4h2b Options, graveyard returns, 5: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones, Barrowgoyf
+    - [ ] MC-4.4h2c Options, costs and permissions, 4: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will
+    - [ ] MC-4.4h2d Options, triggers, 4: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black Widow
+    - [ ] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
+    - [ ] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white)
+    - [ ] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red)
+    - [ ] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy
+    - [ ] MC-4.4h6 Naming a card as a spell resolves: Demonic Consultation
+    - [ ] MC-4.4h7 Saddle: Caustic Bronco
+    - [ ] MC-4.4h8 Emerge: Crabomination
+    - [ ] MC-4.4h9 Miracle: Metamorphosis Fanatic
 - [ ] MC-4.5 (LATER; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -1381,9 +1440,11 @@ as his three priorities.
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
-done: **blue is finished; 235 of 528 play.** Next, in a NEW session: **MC-4.4h — black** (Shayne, 2026-11-18: the next
-colour in the list). Its first session reads black's cards in `LsvSurvey.md` card by card, tiers them, and plans its
-parts, as 4.4c–g were — the plan goes to Shayne before anything is built. Later, not now: MC-4.4g10b (does Does
+done: **blue is finished; 235 of 528 play.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as
+written): 19 tested pieces, 22 options in five parts, 7 new pieces one a session. Next, in a NEW session: **MC-4.4h1 —
+black's 19 tested pieces**, scripts only (list in Decisions); a card whose FIRES test shows a missing option moves to
+the h2 part it fits. A mechanic's cards of another colour wait for that colour (Winds of Abandon, Through the Breach).
+Later, not now: MC-4.4g10b (does Does
 Machines ever level?) and MC-4.5 (Troubling Tribbles out of the random decks).
 From 4.4g10: a Class's level is `ClassLevel(N)` (status, not a counter; none is level 1, `Count.ClassLevelOf`);
 "[cost]: Level N" `Scripting.Level(cost, n)` → `GainLevel`, "when this Class becomes level N" `Scripting.WhenLevel`
@@ -1621,3 +1682,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   end-step exile set up as the spell resolves, and the exiled card castable from the next turn on. Next: MC-4.4g10, Classes.
 - 2026-11-18: MC-4.4g10 done: Does Machines — 235 of 528 play; blue's tier 3 is finished. A Class's level is status on
   the card, not a counter; leveling is a sorcery-speed ability, and "becomes level N" triggers as a Saga's chapter does.
+- 2026-11-18: MC-4.4h planned (Shayne took it): black's 48 — 19 tested pieces (h1), 22 options in five parts (h2a–e),
+  seven new mechanics one a session (h3–h9). Next: MC-4.4h1.
