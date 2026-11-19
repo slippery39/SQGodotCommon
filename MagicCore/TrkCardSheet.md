@@ -2088,7 +2088,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4Tests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
 
 ```csharp
 ["70,000 Light-Years from Home"] =
@@ -2782,7 +2782,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraAttachmentTests, LsvBatch2gTests, TrkBatch4bTests
 
-**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `EnchantedIsCreatureType` — De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)"…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `EnchantedIsCreatureType` — De-evolve: "Enchanted creature … is a Salamander. (It loses all other creature types.)"…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["De-evolve"] =
@@ -4392,7 +4392,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch4Tests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…
 
 ```csharp
 ["The Measure of a Man"] =
@@ -5055,7 +5055,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7aTests
 
-**Engine pieces:** `Always` — A "you may" that can always be done.; `CastOneOf` — "You may cast one of [these cards]" as it resolves — one chosen among those that can be…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `Always` — A "you may" that can always be done.; `CastOneOf` — "You may cast one of [these cards]" as it resolves — one chosen among those that can be…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Brazen Bluff"] =
@@ -6770,7 +6770,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7bTests
 
-**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PreventAllDamageToYou` — The Needs of the Many: "Prevent all damage that would be dealt to you this turn." —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.; `YouHaveHexproof` — The Needs of the Many: "You gain hexproof until end of turn." — TargetSpec: no…
+**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PreventAllDamageToYou` — The Needs of the Many: "Prevent all damage that would be dealt to you this turn." —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.; `YouHaveHexproof` — The Needs of the Many: "You gain hexproof until end of turn." — TargetSpec: no…
 
 ```csharp
 ["The Needs of the Many"] =
@@ -6823,7 +6823,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7aTests
 
-**Engine pieces:** `AtBeginningOfNextCombat` — The Wrath of Khan, chapter I: "At the beginning of the next combat this turn, gain…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.; `UntilEndOfTurn` — "Gets +P/+T and gains Keyword until end of turn" on a permanent. Removed in cleanup (CR…
+**Engine pieces:** `AtBeginningOfNextCombat` — The Wrath of Khan, chapter I: "At the beginning of the next combat this turn, gain…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.; `UntilEndOfTurn` — "Gets +P/+T and gains Keyword until end of turn" on a permanent. Removed in cleanup (CR…
 
 ```csharp
 ["The Wrath of Khan"] =
@@ -6854,7 +6854,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This creature can't block.  
 > At the beginning of your upkeep, create a token that's a copy of this creature.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** RandomGameTests
 
 **Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
@@ -7702,7 +7702,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** TrkBatch7aTests
 
-**Engine pieces:** `CastCopiesOf` — Infinite Diversity: "Copy that card X times … You may cast the copies without paying…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `CastCopiesOf` — Infinite Diversity: "Copy that card X times … You may cast the copies without paying…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Infinite Diversity"] =

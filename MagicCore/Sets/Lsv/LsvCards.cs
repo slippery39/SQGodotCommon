@@ -95,7 +95,11 @@ public static class LsvCards
 
 	/// <summary>Brainstorm: "then put two cards from your hand on top of your library in any order" — one at a time, the second on top.</summary>
 	static MoveChosen PutOnTop(string prompt) =>
-		new(ZoneType.Hand, null, ZoneType.Library) { OnTop = true, Prompt = prompt };
+		new(ZoneType.Hand, null, ZoneType.Library)
+		{
+			As = new(Ref.Chosen, ZoneType.Library) { OnTop = true },
+			Prompt = prompt,
+		};
 
 	/// <summary>The Monoliths and Mana Vault: "This artifact doesn't untap during your untap step."</summary>
 	static readonly DoesntUntap DoesntUntapItself = new(Is.Source);
@@ -505,11 +509,7 @@ public static class LsvCards
 			],
 			["Pyrogoyf"] =
 			[
-				new StaticEffectComponent(Is.Source)
-				{
-					Power = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
-					Toughness = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
-				},
+				LhurgoyfSize,
 				// "this creature or another Lhurgoyf creature you control" — "that creature deals"
 				When(
 					new Trigger(EventKind.Entered)
@@ -2247,6 +2247,116 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4h2b: graveyard returns (Ref.All { Top }, MoveChosen { Who, As } from exile, +1/+1 counters put) =====
+			["Shallow Grave"] = [Spell([], ShallowGrave)],
+			["Corpse Dance"] =
+			[
+				// Buyback is kicker by another name: an optional additional cost, "if kicked" put back into the hand.
+				new KickerComponent(ManaCost.Parse("{2}")) { Word = "buyback" },
+				Spell(
+					[],
+					ShallowGrave,
+					new If(
+						new WasKicked(),
+						[new MoveTo(Ref.Source, ZoneType.Hand) { From = [ZoneType.Stack] }]
+					)
+				),
+			],
+			["Exhume"] =
+			[
+				Spell(
+					[],
+					new MoveChosen(ZoneType.Graveyard, Is.Creature, ZoneType.Battlefield)
+					{
+						Who = Ref.EachPlayer,
+					}
+				),
+			],
+			["Emperor of Bones"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[TargetSpec.InAnyGraveyard() with { Optional = true }],
+					new Exile(Ref.Target()) { Linked = true }
+				),
+				// Adapt 2 (CR 701.46): "If this creature has no +1/+1 counters on it, put two +1/+1 counters on it."
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{B}"),
+					[
+						new If(
+							new Not(new AtLeast(Count.CountersOn(Ref.Source), 1)),
+							[new PutCounters(Ref.Source, 2)]
+						),
+					]
+				),
+				When(
+					new Trigger(EventKind.CountersPut)
+					{
+						Subject = Is.Source,
+						Counters = CounterKinds.PlusOne,
+					},
+					[],
+					new MoveChosen(
+						ZoneType.Exile,
+						Is.Creature & Is.ExiledBySource,
+						ZoneType.Battlefield
+					)
+					{
+						As = new(Ref.Chosen, ZoneType.Battlefield)
+						{
+							UnderYourControl = true,
+							Finality = true,
+						},
+						Then =
+						[
+							new ModifyUntilEndOfTurn(Ref.Chosen, 0, 0, "Haste") { ForGood = true },
+							new AtNextEndStep([new Sacrifice(Ref.Source)]) { On = Ref.Chosen },
+						],
+					}
+				),
+			],
+			["Barrowgoyf"] =
+			[
+				LhurgoyfSize,
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					new May(
+						"Mill that many cards?",
+						new Always(),
+						[new MillAndMayTake(Count.X, CardType.Creature)]
+					)
+				),
+			],
+		};
+
+	/// <summary>
+	/// Pyrogoyf, Barrowgoyf: "power is equal to the number of card types among cards in all graveyards and its toughness
+	/// is equal to that number plus 1" — the plus 1 is the printed */1+*'s base toughness.
+	/// </summary>
+	static StaticEffectComponent LhurgoyfSize =>
+		new(Is.Source)
+		{
+			Power = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
+			Toughness = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
+		};
+
+	/// <summary>
+	/// Shallow Grave, Corpse Dance: "Return the top creature card of your graveyard to the battlefield. That creature
+	/// gains haste until end of turn. Exile it at the beginning of the next end step."
+	/// </summary>
+	static MoveTo ShallowGrave =>
+		new(
+			Ref.All(ZoneType.Graveyard, Is.Creature, Ref.You) with
+			{
+				Top = true,
+			},
+			ZoneType.Battlefield
+		)
+		{
+			From = [ZoneType.Graveyard],
+			ExileAtNextEndStep = true,
+			Then = [new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0, "Haste")],
 		};
 
 	/// <summary>

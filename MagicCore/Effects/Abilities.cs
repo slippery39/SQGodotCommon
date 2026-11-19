@@ -262,22 +262,17 @@ public record Trigger(EventKind On)
 
 	/// <summary>
 	/// U.S.S. Enterprise-D: "Whenever one or more charge counters are put on [it]" — a CountersPut
-	/// event of this kind. MagicState.PutCounters raises it for the named kinds and charge only, so
-	/// any other kind (+1/+1 …) is refused here rather than built inert.
+	/// event of this kind (Emperor of Bones: +1/+1). MagicState.PutCounters raises it for every kind but loyalty (its own event), so that is refused rather than built inert.
 	/// </summary>
 	public string? Counters
 	{
 		get => counters;
 		init =>
 			counters =
-				value is null
-				|| (
-					On == EventKind.CountersPut
-					&& (value == CounterKinds.Charge || !CounterKinds.Fielded.Contains(value))
-				)
+				value is null || (On == EventKind.CountersPut && value != CounterKinds.Loyalty)
 					? value
 					: throw new ArgumentException(
-						$"Counters fits CountersPut of a named kind or charge, not {On} / {value}"
+						$"Counters fits CountersPut of any kind but loyalty, not {On} / {value}"
 					);
 	}
 

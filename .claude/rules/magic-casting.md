@@ -221,6 +221,9 @@ whose subsystem it lives in.
   **Teamwork** (We Say Thee Nay!, MC-4.4g6) is kicker by another name — any optional additional cost is — `LsvCards.
   Teamwork(n)`: `KickerComponent(ManaCost.None) { Costs = [TapUntappedCost { TotalPower }], Word = "teamwork" }`; "if
   this spell was cast using teamwork" is `WasKicked`. `Word` is only the cast's description ("(teamwork)").
+  **Buyback** (Corpse Dance, MC-4.4h2b) is the same: `KickerComponent("{2}") { Word = "buyback" }`, and the spell's last
+  step `If(WasKicked, MoveTo(Ref.Source, Hand) { From = [Stack] })` — `FinishSpellAction` leaves a spell that is no
+  longer on the stack where it went.
   **"Kicker {X}. X can't be 0"** (Thieving Skydiver, MC-4.4e2c) is `KickerComponent("{X}") { MinX = 1 }`: the KICKED
   cast chooses X (one per X from `MinX`; unkicked, X is 0), paid as any X and carried onto the permanent as
   `Card.CastX`. A permanent's "if it was kicked" reads its spell, `WasKicked` the stack's, the permanent's, or the

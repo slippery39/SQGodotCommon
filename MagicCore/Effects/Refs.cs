@@ -106,6 +106,12 @@ public record Ref(RefKind Kind, int Index = 0)
 	/// </summary>
 	public Count? ManaValueIs { get; init; }
 
+	/// <summary>
+	/// For All: Shallow Grave: "the top creature card of your graveyard" — only the one nearest the top of each
+	/// player's zone that the filter matches: a library's first, a graveyard's last put there (MoveObject appends).
+	/// </summary>
+	public bool Top { get; init; }
+
 	public static readonly Ref You = new(RefKind.You);
 	public static readonly Ref EachTarget = new(RefKind.EachTarget);
 	public static readonly Ref EachOpponent = new(RefKind.EachOpponent);
@@ -332,14 +338,24 @@ public record Ref(RefKind Kind, int Index = 0)
 	{
 		// ZoneType's default is Hand: a Ref.All built without a zone must not quietly mean "hands".
 		var zone = Zone ?? throw new InvalidOperationException("Ref.All needs a Zone");
+		if (Top && zone is not (ZoneType.Library or ZoneType.Graveyard))
+			throw new InvalidOperationException(
+				$"Ref.All's Top means a library or a graveyard, not {zone}"
+			);
 		var asking = ContextKeys.Asking(context);
 		var manaValue = ManaValueIs?.Value(s, context);
 		return Whose(s, context, controller)
-			.SelectMany(p => s.CardsIn(p, zone))
-			.Where(c =>
-				(Filter?.Matches(s, c, asking) ?? true)
-				&& (manaValue is null || c.ManaValueNow == manaValue)
-			)
+			.SelectMany(p =>
+			{
+				var matching = s.CardsIn(p, zone)
+					.Where(c =>
+						(Filter?.Matches(s, c, asking) ?? true)
+						&& (manaValue is null || c.ManaValueNow == manaValue)
+					);
+				return !Top ? matching
+					: zone == ZoneType.Library ? matching.Take(1)
+					: matching.TakeLast(1);
+			})
 			.Select(c => c.Id);
 	}
 

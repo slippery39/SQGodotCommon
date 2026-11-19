@@ -504,7 +504,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCardTests
 
-**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Extended Absence"] =
@@ -1335,7 +1335,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareOneOffTests
 
-**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `GraveyardHasCopiesOfSource` — "[N] cards named [this card] in your graveyard" — not this one.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `GraveyardHasCopiesOfSource` — "[N] cards named [this card] in your graveyard" — not this one.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
 
 ```csharp
 ["Sphinx's Approach"] =
@@ -3472,7 +3472,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraUncommonTests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
 ```csharp
 ["Refute Destiny"] =
@@ -5112,7 +5112,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraKnowledgeTests, FraRareOneOffTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RevealUntilOntoBattlefield` — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types]…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RevealUntilOntoBattlefield` — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types]…
 
 ```csharp
 ["Identity Echo"] =
@@ -6078,7 +6078,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareCopyTests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Vindictive Triumph"] =
@@ -6928,7 +6928,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Overwrite the Multiverse"] =

@@ -104,9 +104,10 @@ whose subsystem it lives in.
   boosters, ratings and drafts take a set code (`Boosters.Pack(set, rng)`, `CardRatings.Of(set)`,
   `Draft.New(set, seed)`). Rarity is never read from `CardData` — it isn't there.
 - **Counters of every kind are put on and removed through `MagicState.PutCounters` alone** (`CounterKinds`):
-  the named ones (TRK: quest, lore, promotion) in ONE map, `Card.Counters`, raising `CountersPutEvent` (how
-  many it had and has — charge raises it too: Enterprise-D's "whenever charge counters are put on", read by
-  `Trigger.Counters`, the kind); the older kinds (+1/+1, -1/-1, charge, stun, time, loyalty) in their own fields
+  the named ones (TRK: quest, lore, promotion) in ONE map, `Card.Counters`; every kind put but loyalty (its own `LoyaltyCountersPutEvent`) raises `CountersPutEvent`
+  (how many it had and has: Enterprise-D's "whenever charge counters are put on", Emperor of Bones' "whenever one or
+  more +1/+1 counters are put on this creature" — read by `Trigger.Counters`, the kind, MC-4.4h2b); the older kinds
+  (+1/+1, -1/-1, charge, stun, time, loyalty) in their own fields
   (`Card.CountersOf`/`WithCounters`). Finality is a yes/no flag, not a count. `CounterWritesTests` fails on
   an engine file that adds to a counter field itself — it would skip every replacement.
   "A permanent with a counter on it" is ANY kind — `Is.WithAnyCounter` (`Card.HasAnyCounter`) reads every

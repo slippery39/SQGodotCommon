@@ -295,7 +295,7 @@ public record GraveyardHasCopiesOfSource(int N) : Condition
 		&& Copies(s, (int)context[ContextKeys.Controller], source).Count() >= N;
 }
 
-/// <summary>"Exile [What]" — permanents, to their owners' exile.</summary>
+/// <summary>"Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their owners' exile.</summary>
 public record Exile(Ref What) : Effect
 {
 	/// <summary>Overwrite the Multiverse: "… where X is the number of creatures exiled this way" — run after, with X.</summary>
@@ -309,7 +309,12 @@ public record Exile(Ref What) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var exiled = Permanents(What, s).ToList();
+		// A permanent, or a card in a graveyard — Emperor of Bones: "exile up to one target card from a graveyard".
+		var exiled = All(What, s)
+			.Select(id => s.GetObject(id) as Card)
+			.OfType<Card>()
+			.Where(c => s.IsOnBattlefield(c.Id) || s.IsIn(c.Id, c.OwnerId, ZoneType.Graveyard))
+			.ToList();
 		s = exiled.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Exile)));
 		// Linked to the object the ability came from — one that left and came back never finds it (CR 607.2a).
 		if (Linked && Ref.Source.Resolve(s, InputContext).Any() && s.IsOnBattlefield(Source(s).Id))
@@ -766,10 +771,25 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 /// from your hand onto the battlefield. If you do, …" and "return a land you control to its owner's hand" (Erica
 /// Ortegas). The controller picks one of their From zone's cards the filter matches (null: any), then MoveTo. Each zone
 /// keeps its own choice: a graveyard's is ChooseAmongChoice, the battlefield's ChoosePermanentChoice, the hand's
-/// ChooseCardsFromHandChoice.
+/// ChooseCardsFromHandChoice; exile's a ChooseAmongChoice among EVERY player's exile (Emperor of Bones: "a creature card
+/// exiled with this creature" — its filter says which).
 /// </summary>
 public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : Effect
 {
+	/// <summary>
+	/// Exhume: "Each player puts a creature card from their graveyard onto the battlefield" — each player named chooses
+	/// from their own zone, one after another; none is "you". ponytail: each enters as it is chosen, not all at once
+	/// (CR 608.2): an "enters" trigger sees only those before it — make it one move if a card ever cares.
+	/// </summary>
+	public Ref? Who { get; init; }
+
+	/// <summary>
+	/// How the chosen card moves, MoveTo's options — Emperor of Bones: "onto the battlefield under your control with a
+	/// finality counter on it" (UnderYourControl, Finality); Brainstorm: "on top of your library" (OnTop). What, To and
+	/// From are this move's.
+	/// </summary>
+	public MoveTo? As { get; init; }
+
 	/// <summary>Erica Ortegas: "you MAY put" — none is an answer, and it is asked even with nothing to pick.</summary>
 	public bool May { get; init; }
 
@@ -782,10 +802,22 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 	/// <summary>The question on the table; unset says where it goes.</summary>
 	public string? Prompt { get; init; }
 
-	/// <summary>Brainstorm: "put two cards from your hand on top of your library in any order" — two of these, the second on top.</summary>
-	public bool OnTop { get; init; }
-
 	public override ActionResult Execute(GameState s)
+	{
+		// APNAP (CR 101.4): the active player chooses first.
+		var active = s.GetGame().ActivePlayerId;
+		foreach (
+			var player in Who is null
+				? (IEnumerable<int>)[Controller]
+				: All(Who, s)
+					.Where(id => s.GetObject(id) is MagicPlayer)
+					.OrderBy(id => id != active)
+		)
+			s = For(s, player);
+		return new(s);
+	}
+
+	GameState For(GameState s, int player)
 	{
 		var prompt =
 			Prompt
@@ -799,16 +831,22 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 			};
 		ChoiceAction choice = From switch
 		{
-			ZoneType.Graveyard => new ChooseAmongChoice
+			ZoneType.Graveyard or ZoneType.Exile => new ChooseAmongChoice
 			{
-				PlayerId = Controller,
-				Ids = [.. s.CardsIn(Controller, ZoneType.Graveyard).Select(c => c.Id)],
+				PlayerId = player,
+				Zone = From,
+				Ids =
+				[
+					.. (From == ZoneType.Exile ? (int[])[player, s.OpponentOf(player)] : [player])
+						.SelectMany(p => s.CardsIn(p, From))
+						.Select(c => c.Id),
+				],
 				Filter = Filter,
 				MinChoices = May ? 0 : 1,
 				Prompt = prompt,
 			},
 			ZoneType.Battlefield => new ChoosePermanentChoice(
-				Controller,
+				player,
 				GetInput<int>(ContextKeys.Source),
 				Filter,
 				required: !May
@@ -819,7 +857,7 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 			},
 			ZoneType.Hand => new ChooseCardsFromHandChoice
 			{
-				PlayerId = Controller,
+				PlayerId = player,
 				Filter = Filter,
 				MinChoices = May ? 0 : 1,
 				MaxChoices = 1,
@@ -830,16 +868,19 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 		var context = InputContext.Remove(ChooseCardsFromHandChoice.Chosen);
 		if (!May && choice.GetOptions(s, InputContext).IsEmpty)
 			return Otherwise.IsEmpty
-				? new(s)
-				: new(
-					s.SpawnAction(
-						new PipelineAction { PipelineContext = context, Steps = Otherwise }
-					)
+				? s
+				: s.SpawnAction(
+					new PipelineAction { PipelineContext = context, Steps = Otherwise }
 				);
 		ImmutableList<GameAction> steps =
 		[
 			choice,
-			new MoveTo(Ref.Chosen, To) { From = [From], OnTop = OnTop },
+			(As ?? new MoveTo(Ref.Chosen, To)) with
+			{
+				What = Ref.Chosen,
+				To = To,
+				From = [From],
+			},
 		];
 		if (!Then.IsEmpty || (May && !Otherwise.IsEmpty))
 			steps = steps.Add(
@@ -849,7 +890,7 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 					Otherwise = May ? Otherwise : [],
 				}
 			);
-		return new(s.SpawnAction(new PipelineAction { PipelineContext = context, Steps = steps }));
+		return s.SpawnAction(new PipelineAction { PipelineContext = context, Steps = steps });
 	}
 }
 
@@ -2267,13 +2308,14 @@ public record ExileChosenLinkedAction : Effect
 
 /// <summary>
 /// Something Worth Saving: "Mill N. You may put a [Types] card from among them into your hand." Mill,
-/// CHOOSE, move — MtgCore's dig once shipped without its middle step and did nothing at all.
+/// CHOOSE, move — MtgCore's dig once shipped without its middle step and did nothing at all. N is counted as it
+/// resolves — Barrowgoyf: "you may mill that many cards" (Count.X, the combat damage dealt).
 /// </summary>
-public record MillAndMayTake(int N, CardType Types) : Effect
+public record MillAndMayTake(Count N, CardType Types) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		(s, var milled) = Mill.Top(s, Controller, N);
+		(s, var milled) = Mill.Top(s, Controller, N.Value(s, InputContext));
 		var choice = new ChooseAmongChoice
 		{
 			PlayerId = Controller,

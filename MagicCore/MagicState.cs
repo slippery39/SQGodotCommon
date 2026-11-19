@@ -777,9 +777,9 @@ public static class MagicState
 	/// putting them applies in this one place: Yoshimaru's "that many plus one" (+1/+1 on a creature you
 	/// control), Brad Boimler's (every kind, Rules.Replacements.Counters), Geordi's and M'Benga's
 	/// doubling. Never write a counter field elsewhere; CounterWritesTests fails on one that does.
-	/// Negative removes, never below 0. A named kind, or charge, raises CountersPutEvent: what a Saga's
-	/// chapter reads (CR 714.2b: "as the number of lore counters becomes at least the chapter number")
-	/// and Enterprise-D's "charge counters are put on" (Trigger.Counters).
+	/// Negative removes, never below 0. Every kind put but loyalty raises CountersPutEvent: what a Saga's chapter reads
+	/// (CR 714.2b: "as the number of lore counters becomes at least the chapter number"), Enterprise-D's
+	/// "charge counters are put on" and Emperor of Bones' "+1/+1 counters are put on" (Trigger.Counters).
 	/// </summary>
 	/// <param name="entering">It is entering with them: its own replacement doesn't apply (CR 614.12).</param>
 	public static GameState PutCounters(
@@ -806,12 +806,10 @@ public static class MagicState
 		if (now == had)
 			return s;
 		s = s.UpdateObject(cardId, card.WithCounters(kind, now));
-		return now > had && (IsNamed(kind) || kind == CounterKinds.Charge) // Enterprise-D: "charge counters are put on"
+		return now > had && kind != CounterKinds.Loyalty // loyalty raises its own (LoyaltyCountersPutEvent)
 			? s.Raise(new CountersPutEvent(cardId, kind, had, now))
 			: s;
 	}
-
-	static bool IsNamed(string kind) => !CounterKinds.Fielded.Contains(kind);
 
 	/// <summary>
 	/// THE control change (CR 108.4, Rules of Acquisition) — the same object, so its counters, damage,

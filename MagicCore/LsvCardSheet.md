@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 33/46 · uncommon 48/86 · rare 119/279 · mythic 48/108 · **257/528**
+**Playable:** common 33/46 · uncommon 49/86 · rare 123/279 · mythic 48/108 · **262/528**
 
 ### "Name Sticker" Goblin
 
@@ -690,7 +690,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2cTests
 
-**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Suplex"] =
@@ -1202,7 +1202,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Each player puts a creature card from their graveyard onto the battlefield.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2bTests
+
+**Engine pieces:** `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Exhume"] =
+[
+	Spell(
+		[],
+		new MoveChosen(ZoneType.Graveyard, Is.Creature, ZoneType.Battlefield)
+		{
+			Who = Ref.EachPlayer,
+		}
+	),
+],
+```
 
 ### Exorcise
 
@@ -1212,7 +1227,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2dTests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Exorcise"] =
@@ -1583,7 +1598,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Path to Exile"] = [Spell([Creature], ItsControllerMayFetch, new Exile(Ref.Target()))],
@@ -1869,7 +1884,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch1Tests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Swords to Plowshares"] =
@@ -2292,7 +2307,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2Tests, LsvBatch2eTests
 
-**Engine pieces:** `AlternativeCostWasPaid` — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AlternativeCostWasPaid` — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Baleful Mastery"] =
@@ -2333,7 +2348,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Barrowgoyf's power is equal to the number of card types among cards in all graveyards and its toughness is equal to that number plus 1.  
 > Whenever this creature deals combat damage to a player, you may mill that many cards. If you do, you may put a creature card from among them into your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2bTests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `MillAndMayTake` — Something Worth Saving: "Mill N. You may put a [Types] card from among them into your…
+
+```csharp
+["Barrowgoyf"] =
+[
+	LhurgoyfSize,
+	When(
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		[],
+		new May(
+			"Mill that many cards?",
+			new Always(),
+			[new MillAndMayTake(Count.X, CardType.Creature)]
+		)
+	),
+],
+```
 
 ### Batroc the Leaper
 
@@ -2704,10 +2737,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new() { AtMost = 3 },
 		M(
 			[TargetSpec.Player(Is.Opponents)],
-			new YouChooseTheyDiscard(
-				Ref.Target(),
-				CardType.Instant | CardType.Sorcery
-			)
+			new YouChooseTheyDiscard(Ref.Target(), CardType.Instant | CardType.Sorcery)
 		),
 		M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)),
 		M(
@@ -2857,7 +2887,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Buyback {2} (You may pay an additional {2} as you cast this spell. If you do, put this card into your hand as it resolves.)  
 > Return the top creature card of your graveyard to the battlefield. That creature gains haste until end of turn. Exile it at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2bTests
+
+**Engine pieces:** `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `KickerComponent` — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U}…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
+
+```csharp
+["Corpse Dance"] =
+[
+	// Buyback is kicker by another name: an optional additional cost, "if kicked" put back into the hand.
+	new KickerComponent(ManaCost.Parse("{2}")) { Word = "buyback" },
+	Spell(
+		[],
+		ShallowGrave,
+		new If(
+			new WasKicked(),
+			[new MoveTo(Ref.Source, ZoneType.Hand) { From = [ZoneType.Stack] }]
+		)
+	),
+],
+```
 
 ### Council's Judgment
 
@@ -3144,7 +3192,55 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {1}{B}: Adapt 2.  
 > Whenever one or more +1/+1 counters are put on this creature, put a creature card exiled with this creature onto the battlefield under your control with a finality counter on it. It gains haste. Sacrifice it at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2bTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Emperor of Bones"] =
+[
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn,
+		[TargetSpec.InAnyGraveyard() with { Optional = true }],
+		new Exile(Ref.Target()) { Linked = true }
+	),
+	// Adapt 2 (CR 701.46): "If this creature has no +1/+1 counters on it, put two +1/+1 counters on it."
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}{B}"),
+		[
+			new If(
+				new Not(new AtLeast(Count.CountersOn(Ref.Source), 1)),
+				[new PutCounters(Ref.Source, 2)]
+			),
+		]
+	),
+	When(
+		new Trigger(EventKind.CountersPut)
+		{
+			Subject = Is.Source,
+			Counters = CounterKinds.PlusOne,
+		},
+		[],
+		new MoveChosen(
+			ZoneType.Exile,
+			Is.Creature & Is.ExiledBySource,
+			ZoneType.Battlefield
+		)
+		{
+			As = new(Ref.Chosen, ZoneType.Battlefield)
+			{
+				UnderYourControl = true,
+				Finality = true,
+			},
+			Then =
+			[
+				new ModifyUntilEndOfTurn(Ref.Chosen, 0, 0, "Haste") { ForGood = true },
+				new AtNextEndStep([new Sacrifice(Ref.Source)]) { On = Ref.Chosen },
+			],
+		}
+	),
+],
+```
 
 ### Emry, Lurker of the Loch
 
@@ -4791,16 +4887,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2cTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DamageFrom` — "[A] deals damage equal to its power (or loyalty) to [B]" - the source is A, not the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DamageFrom` — "[A] deals damage equal to its power (or loyalty) to [B]" - the source is A, not the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Pyrogoyf"] =
 [
-	new StaticEffectComponent(Is.Source)
-	{
-		Power = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
-		Toughness = Count.CardTypesAmong(Ref.All(ZoneType.Graveyard)),
-	},
+	LhurgoyfSize,
 	// "this creature or another Lhurgoyf creature you control" — "that creature deals"
 	When(
 		new Trigger(EventKind.Entered)
@@ -5160,7 +5252,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Return the top creature card of your graveyard to the battlefield. That creature gains haste until end of turn. Exile it at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2bTests
+
+```csharp
+["Shallow Grave"] = [Spell([], ShallowGrave)],
+```
 
 ### Shelldock Isle
 
@@ -5212,7 +5308,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2c2Tests, LsvBatch2dTests
 
-**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Skyclave Apparition"] =
@@ -5863,7 +5959,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2eTests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ExileSourceAndCopiesFromGraveyard` — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
 ```csharp
 ["Time Spiral"] =
@@ -8106,7 +8202,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2dTests
 
-**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoyaltyAtInstantSpeed` — "You may activate [their] loyalty abilities any time you could cast an instant" — Jace's…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoyaltyAtInstantSpeed` — "You may activate [their] loyalty abilities any time you could cast an instant" — Jace's…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["The Wandering Emperor"] =

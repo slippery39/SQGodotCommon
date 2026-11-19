@@ -30,7 +30,7 @@ public class CardProbeTests
 		var rng = new Random(seed);
 		var extras = CardRegistry
 			.Scripted.Select(CardRegistry.Get)
-			.Where(c => !c.Data.TypeLine.Contains("Land"))
+			.Where(RandomGameTests.Dealt)
 			.OrderBy(_ => rng.Next())
 			.Take(10);
 		return
@@ -44,8 +44,8 @@ public class CardProbeTests
 	}
 
 	/// <summary>
-	/// A random game nobody wins can grow without end — Troubling Tribbles doubles every upkeep, 936 tokens
-	/// by turn 26 (batch 6b), and each step then scans them all. Past 300 permanents it counts as unfinished.
+	/// A random game nobody wins can grow without end — Troubling Tribbles doubled every upkeep, 936 tokens
+	/// by turn 26 (batch 6b; it is dealt no more, MC-4.5), and each step then scans them all. Past 300 permanents it counts as unfinished.
 	/// </summary>
 	static bool Overrun(GameState s)
 	{

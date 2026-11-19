@@ -207,8 +207,17 @@ whose subsystem it lives in.
   graveyard", "a land you control", "you may put a land card from your hand") is `MoveChosen(From, filter, To) { May,
   Then, Otherwise }` — each zone its own choice (graveyard `ChooseAmongChoice`, battlefield `ChoosePermanentChoice`,
   hand `ChooseCardsFromHandChoice`, so a record's answers still fit), then `MoveTo(Ref.Chosen)`; "if you can't" is
-  `Otherwise`, "if you do" `Then` (Temporal Conqueror, Sylvia Tilly, Erica Ortegas). "Put two cards from your hand on
-  top of your library in any order" (Brainstorm) is two of them `{ OnTop }`, the second on top.
+  `Otherwise`, "if you do" `Then` (Temporal Conqueror, Sylvia Tilly, Erica Ortegas). How the card moves is `As`, a
+  `MoveTo` with its options (What, To and From are the choice's): Brainstorm's "on top of your library in any order" is
+  two of them `{ As = …{ OnTop } }`, the second on top; Emperor of Bones' "onto the battlefield under your control with
+  a finality counter" `{ UnderYourControl, Finality }`, from EXILE — a `ChooseAmongChoice` among every player's exile,
+  the filter (`Is.ExiledBySource`) saying which (MC-4.4h2b). "Each player puts a creature card from their graveyard"
+  (Exhume) is `Who = Ref.EachPlayer`: each chooses from their own zone, the active player first (APNAP), one after another (each enters as chosen — a
+  ceiling, DesignNotes). **"The top creature card of your graveyard"** (Shallow Grave) is `Ref.All { Top }`: per
+  player, the one the filter matches nearest the top — a library's first, a graveyard's LAST (cards are appended);
+  any other zone is refused.
+  **`Exile` takes a card in a graveyard too** (Emperor of Bones: "exile up to one target card from a graveyard",
+  `{ Linked }`), never a card elsewhere.
 - **"Sacrifice an artifact. If you do, …the sacrificed artifact's mana value"** (Transmute Artifact) is `MaySacrifice
   { Must }` whose `Then` reads the sacrificed as `Ref.ThisWay` (MC-4.4e2d). **A search whose card's zone is decided
   after it is found** ("if that card's mana value is … put it onto the battlefield … If you don't, put it into its

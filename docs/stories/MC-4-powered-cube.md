@@ -1206,6 +1206,26 @@ as his three priorities.
   ThenAsThem }` over `CopySpell(Ref.Source)` — the copy is theirs; asked only while their opponent has a card in hand, so
   an AI that always says yes can't copy forever (DesignNotes). Legal actions: Brutality's 7 mode sets × targets (12 against
   12 creatures), the discards one choice after.
+- 2026-11-19, Claude (cube lane) — **4.4h2b: the five graveyard returns, five options and two widenings, no new piece.**
+  Shallow Grave's "the top creature card of your graveyard" is `Ref.All { Top }` (a graveyard's top is its LAST card:
+  cards are appended); Corpse Dance's buyback is kicker (`Word = "buyback"`) with `If(WasKicked, MoveTo(Source, Hand) {
+  From = [Stack] })` as its last step — `FinishSpellAction` leaves it there. Exhume is `MoveChosen.Who` (each player
+  from their own graveyard, one after another — each enters as chosen, a ceiling in DesignNotes). Emperor of Bones:
+  `MoveChosen` from EXILE (every player's, `Is.ExiledBySource` saying which) and `MoveChosen.As`, a `MoveTo` carrying
+  the move's options (under your control, finality) — Brainstorm's `OnTop` moved onto it, the bool gone; adapt composed
+  (`If(Not(AtLeast(CountersOn(Source), 1)))`). **Two pieces widened the plan didn't see:** +1/+1 counters raised no
+  `CountersPutEvent` (named kinds and charge only) — now EVERY kind does, and `Trigger.Counters` takes any kind; and
+  `Exile` exiled permanents only, so "exile target card from a graveyard" was inert — it takes a graveyard card now (no
+  old card targeted one). Barrowgoyf: `MillAndMayTake.N` a `Count` (`Count.X`, the damage); its printed `*/1+*` is
+  already base toughness 1, so its toughness static is Tarmogoyf's (Pyrogoyf's), not `Plus = 1`. Legal actions: one
+  per choice — Exhume's and Emperor's are a choice each as they resolve. The review: Exhume asks the active player
+  first (`Ref.EachPlayer` is always Player 1 first), loyalty raises no second event, `Top` and a loyalty `Counters`
+  trigger are refused, the Lhurgoyfs share `LhurgoyfSize`. Seed 28 of `RandomPlay_EveryScriptedCard` hung as 21 did —
+  Troubling Tribbles dealt into its decks, 915 permanents by turn 62 — so MC-4.5 was done first (Shayne, 2026-11-19).
+- 2026-11-19, Claude (cube lane) — **4.5: Troubling Tribbles out of the random decks.** One filter,
+  `RandomGameTests.Dealt` (no land, not Tribbles), read by `RandomPlay_EveryScriptedCard` and the probe's extras
+  (`CardProbeTests.Deck`); seed 21's skip is gone, every seed plays. Its own tests and AI-21's Tribble boards are
+  untouched. The golden random games regenerated with h2b's.
 
 ## Tasks
 
@@ -1435,7 +1455,8 @@ as his three priorities.
     - [x] MC-4.4h1 The tested pieces, 17 of the 19 (list in Decisions; Duress and Wishclaw Talisman moved to h2a, h2c)
     - [x] MC-4.4h2a Options, hands, 5: Inquisition of Kozilek, Duress, Deep-Cavern Bat, Collective Brutality, Chain of
           Smog (Decisions, "4.4h2a")
-    - [ ] MC-4.4h2b Options, graveyard returns, 5: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones, Barrowgoyf
+    - [x] MC-4.4h2b Options, graveyard returns, 5: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones, Barrowgoyf
+          (Decisions, "4.4h2b")
     - [ ] MC-4.4h2c Options, costs and permissions, 5: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will,
           Wishclaw Talisman
     - [ ] MC-4.4h2d Options, triggers, 4: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black Widow
@@ -1447,7 +1468,7 @@ as his three priorities.
     - [ ] MC-4.4h7 Saddle: Caustic Bronco
     - [ ] MC-4.4h8 Emerge: Crabomination
     - [ ] MC-4.4h9 Miracle: Metamorphosis Fanatic
-- [ ] MC-4.5 (LATER; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
+- [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
       and AI-21's Tribble boards are the AI lane's, untouched. It moves the golden random games: regenerate them after
@@ -1459,15 +1480,19 @@ Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue'
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
-pieces) and **h2a (the five hand cards, 257 of 528 play)** are done (Decisions, "4.4h1", "4.4h2a").
-Next, in a NEW session: **MC-4.4h2b — graveyard returns, 5**: Shallow Grave, Corpse Dance, Exhume, Emperor of Bones,
-Barrowgoyf (the plan's notes in Decisions, "4.4h"). h2a's tests are in `LsvBatch2h2aTests.cs` (`CastAt(card, target,
+pieces), h2a (the five hand cards) and **h2b (the five graveyard returns, 262 of 528 play)** are done (Decisions,
+"4.4h1", "4.4h2a", "4.4h2b").
+Next, in a NEW session: **MC-4.4h2c — costs and permissions, 5**: Toxic Deluge, Bolas's Citadel, Rain of Filth,
+Yawgmoth's Will, Wishclaw Talisman (the plan's notes in Decisions, "4.4h"; Wishclaw's "enters with three wish counters"
+is `EntersWithCountersComponent`'s `Kind`, "4.4h1"). h2b's tests are in `LsvBatch2h2bTests.cs` (`ToEndStep()`, `Ogre`);
+`MoveChosen.As` is how a chosen move carries `MoveTo`'s options, `Ref.All { Top }` "the top [card] of", and `Exile`
+takes a graveyard card. h2a's are in `LsvBatch2h2aTests.cs` (`CastAt(card, target,
 answer)`, `Dear`: a {3} sorcery — as h1's in `LsvBatch2hTests.cs`). Remember both players start with an opening hand:
 assert hand counts relative, or clear it (Collective Brutality's test). A mechanic's cards of another colour wait for that colour (Winds of Abandon, Through the Breach).
 The probe's "activated N" for a card with no activated ability (g9's Riddler; h1's Dismember, Thoughtseize, Hymn) is
 answered: Q, Stacking the Deck's exiled card gains "exile a card from your hand: copy this" — counted under that card.
 Later, not now: MC-4.4g10b (does Does
-Machines ever level?) and MC-4.5 (Troubling Tribbles out of the random decks).
+Machines ever level?). MC-4.5 is done (Decisions, "4.5").
 From 4.4g10: a Class's level is `ClassLevel(N)` (status, not a counter; none is level 1, `Count.ClassLevelOf`);
 "[cost]: Level N" `Scripting.Level(cost, n)` → `GainLevel`, "when this Class becomes level N" `Scripting.WhenLevel`
 (`Trigger.Chapter` on `BecameLevel`), a level's abilities gated by `AtLevel(n)` (a trigger's `While`, a static's `If`).
@@ -1711,3 +1736,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-19: MC-4.4h2a done: the five hand cards — 257 of 528 play. `YouChooseTheyDiscard { Filter,
   UntilSourceLeaves }`, `ExileUntilSourceLeaves` from a hand, escalate (`SpellEffectsComponent.Escalate`,
   `DiscardCost.Count`); Chain of Smog composed. Next: MC-4.4h2b.
+- 2026-11-19: MC-4.4h2b done: the five graveyard returns — 262 of 528 play. `Ref.All { Top }`, buyback as kicker,
+  `MoveChosen { Who, As }` and from exile, `MillAndMayTake.N` a Count; `CountersPutEvent` for every kind and `Exile` of
+  a graveyard card widened. MC-4.5 with it: Troubling Tribbles out of the random decks. Next: MC-4.4h2c.

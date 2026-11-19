@@ -89,3 +89,4 @@ after the split is DEV-4.3.
 | 2026-11-18 | MC-4.4g10: Classes - Does Machines (ClassLevel, GainLevel, Scripting.Level), 1 card | c123515f | 96 | 201k | 3.0M |
 | 2026-11-18 | MC-4.4h1: black's tested pieces, 17 cards | 4a569576 | 71 | 177k | 2.2M |
 | 2026-11-19 | MC-4.4h2a: hands - YouChooseTheyDiscard Filter/UntilSourceLeaves, escalate, Chain of Smog, 5 cards | 38e66320 | 84 | 191k | 2.9M |
+| 2026-11-19 | MC-4.4h2b: graveyard returns + MC-4.5, 5 cards | b25199e7 | 135 | 224k | 4.5M |
