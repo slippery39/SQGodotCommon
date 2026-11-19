@@ -83,9 +83,16 @@ public static partial class Evaluator
 		);
 	}
 
-	/// <summary>A walker's price from its lifetime: never below AI-8.2's flat body of 2, and a counter more always more.</summary>
+	/// <summary>
+	/// A walker's price from its lifetime: never below AI-8.2's flat body of 2, and a counter more always more. Under the
+	/// drawn-card switch (AI-27.7) the floor holds only for a walker the lifetime prices at nothing - one whose abilities it
+	/// can't read: a Jace token at 1 is its one Surveil 1 to come, not 2 (seed 4 #75, Shayne: "No use keeping the token
+	/// around"). ponytail: a walker with one cheap priced ability and an unpriced strong one loses its floor too; tell them
+	/// apart (Makes returning null for an unpriced effect) if one is misjudged.
+	/// </summary>
 	static double Priced(double lifetime, int loyalty) =>
-		Math.Max(2, lifetime) + PerCounter * loyalty;
+		(rootUnseen.Value is not null && lifetime > 0 ? lifetime : Math.Max(2, lifetime))
+		+ PerCounter * loyalty;
 
 	/// <summary>
 	/// The best sequence's worth over the walker's life: <paramref name="options"/> its abilities (cost, what

@@ -59,10 +59,16 @@ public static class AiMatch
 			["responds"] = Opponent(Rollout.OpponentModel.Responds),
 			// The board-only opponent, never casting even what we know — before AI-10.4: beam+boardonly.
 			["boardonly"] = Opponent(Rollout.OpponentModel.BoardOnly),
-			// The library: honest by default since AI-3.9 (shuffle, kept as a name); the real order — the
-			// search sees its own future draws, 5pp or more stronger — is beam+realorder.
+			// Up to two spells a rollout turn, ours and a casting opponent's - never measured alone (AI-17.6's item 11, AI-19,
+			// AI-27: a land kept untapped for a double-spell turn is worth nothing at one spell a turn): beam+twospells.
+			["twospells"] = WithRollout(r => r with { ActionsPerTurn = 2 }),
+			// The library: honest since AI-3.9. One shuffled guess a decision, the default until AI-20.4, is
+			// beam+shuffle; the real order — the search sees its own future draws — is beam+realorder.
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
 			["realorder"] = o => o with { Library = Hidden.Library.RealOrder },
+			// The default since AI-20.4 (the name is kept): nothing shuffled, every look-ahead played both ways -
+			// our unseen draws are lands, or not - by the land odds of our deck list.
+			["landornot"] = o => o with { Library = Hidden.Library.LandOrNot },
 			// The evaluator without its threat term (AI-5.2) — the search before it: beam+nothreat.
 			["nothreat"] = o => o with { Without = o.Without | Evaluator.Terms.Threat },
 			// Without the six keywords AI-5.3 added to a creature's value: beam+nokeywords.
@@ -76,6 +82,22 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirCombatTricks,
 				},
+			// A hand over its maximum priced whole in our turn, before AI-13.13: beam+nohandsize.
+			["nohandsize"] = o => o with { Without = o.Without | Evaluator.Terms.HandSize },
+			// The rollout's own blocks never see the attacker's trick, before AI-25.3: beam+noblocktricks.
+			["noblocktricks"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.BlocksSeeTricks,
+				},
+			// A held card short only on colour priced as castable, before AI-9.9: beam+nocolorshort.
+			["nocolorshort"] = o => o with { Without = o.Without | Evaluator.Terms.ColorShort },
+			// The simulated attacker's trick after blocks never picks a card for its cost (Edgar's sacrifice), before AI-25: beam+notheirsacrifices.
+			["notheirsacrifices"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.TheirSacrificeTricks,
+				},
 			// A simulated attacker judged against the look-ahead's weaker defender, before AI-19.21: beam+nodefender.
 			["nodefender"] = o => o with { Without = o.Without | Evaluator.Terms.TrueDefender },
 			// A surveil on the stack is priced at nothing, before AI-17.11: beam+nosurveilprice.
@@ -88,12 +110,27 @@ public static class AiMatch
 			["nolandunlock"] = o => o with { Without = o.Without | Evaluator.Terms.LandUnlock },
 			// A surveil decided by the rollout alone, lands never binned, before AI-17.20: beam+nosurveillands.
 			["nosurveillands"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilLands },
-			// A surveil keeps every spell and branches it by rollout, before the spells rule: beam+nosurveilspells.
-			["nosurveilspells"] = o =>
-				o with
-				{
-					Without = o.Without | Evaluator.Terms.SurveilSpells,
-				},
+			// A surveil's real spells decided by price, not by the search - the default until AI-20.11: beam+surveilspells.
+			["surveilspells"] = o => o with { SpellsRule = true },
+			// AI-26.4: our held answers priced by what they are likely to meet (OptionPrice) - the default since 2026-11-16;
+			// beam+nooptionprice as before.
+			["optionprice"] = o => o with { OptionPrice = true },
+			["nooptionprice"] = o => o with { OptionPrice = false },
+			// AI-26.12: their creatures that ours hold off count for less as TARGETS (Evaluator.HeldOff) - the default since
+			// 2026-11-16; beam+nobyuse as before. Read by the option price alone: with nooptionprice it changes nothing.
+			["byuse"] = o => o with { ByUse = true },
+			["nobyuse"] = o => o with { ByUse = false },
+			// AI-27.7: a card the look-ahead draws counts as a drawn card, whatever it guessed - the default since 2026-11-18;
+			// beam+nodrawncard as before.
+			["drawncard"] = o => o with { DrawnCard = true },
+			["nodrawncard"] = o => o with { DrawnCard = false },
+			// AI-27.9: our lands priced by the cards they let us play - the default since 2026-11-18; beam+nolanduse as before.
+			["landuse"] = o => o with { LandUse = true },
+			["nolanduse"] = o => o with { LandUse = false },
+			// AI-27.10: the look-ahead's quick single picks judged by the search's card prices - the default since 2026-11-18;
+			// beam+nosettleheld as before (flat prices).
+			["settleheld"] = o => o with { SettleHeld = true },
+			["nosettleheld"] = o => o with { SettleHeld = false },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.
@@ -104,6 +141,12 @@ public static class AiMatch
 				{
 					Without = o.Without | Evaluator.Terms.TheirAbilities,
 				},
+			// The simulated opponent casts a spell before any ability on its board, before AI-20.8: beam+spellfirst.
+			["spellfirst"] = o => o with { Without = o.Without | Evaluator.Terms.AbilityOverSpell },
+			// A look at an unseen card (a surveil) shifts no odds: it shows the card the look-ahead made up, before AI-20.9: beam+nolooks.
+			["nolooks"] = o => o with { Without = o.Without | Evaluator.Terms.Looks },
+			// A modal trigger's first mode in the look-ahead, before AI-27 (2026-11-18): beam+firstmode.
+			["firstmode"] = o => o with { Without = o.Without | Evaluator.Terms.RolloutModes },
 			// Only instants and flash held as options, before AI-13.10: beam+instantoptions.
 			["instantoptions"] = o =>
 				o with
@@ -147,6 +190,10 @@ public static class AiMatch
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.
 			["nocounter"] = WithRollout(r => r with { CounterAttack = false }),
+			// AI-26.5: our tap abilities wait in the look-ahead for the opponent's end step (Rollout.Settings.LastChance) - the
+			// default since 2026-11-16; beam+lastchance is the default's own name, beam+nolastchance as before.
+			["lastchance"] = WithRollout(r => r with { LastChance = true }),
+			["nolastchance"] = WithRollout(r => r with { LastChance = false }),
 			// A fresh search at every decision, no plan committed and replayed (review item 9, AI-17.6): beam+noplans.
 			["noplans"] = o => o with { CommitPlans = false },
 			// The cheap look-ahead's chooser's best one level deep, targets and "you may" only, as before: beam+shallowsettle.
@@ -244,7 +291,7 @@ public static class AiMatch
 			|| models.Contains("responds")
 		)
 		&& models.Count(m => m is "casts" or "responds" or "boardonly") <= 1 // one opponent model
-		&& !(models.Contains("shuffle") && models.Contains("realorder")) // one library mode
+		&& models.Count(m => m is "shuffle" or "realorder" or "landornot") <= 1 // one library mode
 		// GreedyAi makes all our rollout decisions: allin and firsttarget would reach only the opponent's.
 		&& !(
 			models.Contains("greedyrollout")

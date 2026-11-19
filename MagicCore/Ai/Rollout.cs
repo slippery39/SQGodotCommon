@@ -84,6 +84,18 @@ public static class Rollout
 	/// know — no stronger over 96 games (49.0% ± 1.0pp), +1% cost, and it stops an Aura run into a known
 	/// removal spell. Off (the whole hand) is beam+casts or beam+responds; board-only, beam+boardonly.
 	/// </param>
+	/// <param name="LastChance">
+	/// Our tap abilities wait for their last chance (AI-26.5, Shayne: "the time limit is before the end of the opponents
+	/// turn"): in our own turn our rollout uses a "{T}:" ability only to take something of theirs off the battlefield (a
+	/// kill now - the 3/3 our 2/2 left damaged is whole again by their end step), and uses each at the opponent's end step
+	/// if that leaves us better, the best first (<see cref="AtTheirEndStep"/>) - so a line that waits is seen to get the
+	/// same point, and the potential tie-break keeps the creature up. The search's own decisions still use one whenever it
+	/// scores better: their attacker tapped in their upkeep, a combat finished. ponytail: a tap in our own turn that only
+	/// pays THEN and kills nothing (a blocker tapped before our attack) is left to the search's tree; let the rollout use
+	/// one before its attack if a position shows the look-ahead missing it. Nothing is held in a turn of ours the rollout
+	/// plays no end step of theirs after; the Greedy policy (<see cref="OurPolicy.Greedy"/>) ignores it. The default since
+	/// 2026-11-16 (Shayne: "please put on all 3 and let's try it out"); off is beam+nolastchance.
+	/// </param>
 	/// <param name="TheirWalkers">
 	/// The simulated opponent uses its best planeswalker ability every turn it can, whatever its model
 	/// (<see cref="TheirLoyalty"/>, story AI-8.1). False: only a casting opponent does, and only when
@@ -105,7 +117,8 @@ public static class Rollout
 		bool LostLines = true,
 		bool Mays = true,
 		bool CounterAttack = true,
-		int AttackShortlist = WholeAttacks.Shortlist
+		int AttackShortlist = WholeAttacks.Shortlist,
+		bool LastChance = true
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>
@@ -234,24 +247,32 @@ public static class Rollout
 	/// win or loss decayed by the turns since the search's root, which the horizon fixes).
 	/// </summary>
 	public static double Score(GameState s, int me, int horizon, Settings settings) =>
-		Score(s, me, horizon, settings, out _);
+		Score(s, me, horizon, settings, out _, out _);
 
 	/// <summary>
 	/// <see cref="Score(GameState, int, int, Settings)"/>, and <paramref name="rootTurnEnd"/>: the last position of the
 	/// search's own turn the rollout played through (before the next turn's untap) - in the OPPONENT'S turn the last before
 	/// its end step, from where whatever we spend is free (our untap is next; Shayne's lesson 6: use it at their end step)
 	/// - or null if <paramref name="s"/> is already past it: what a line keeps up (the potential score, AI-13.11).
+	/// <paramref name="landsDrawn"/> (<see cref="Hidden.Library.LandOrNot"/>, AI-20.3): which way this rollout's unseen
+	/// draws go - after anything random in it (a landcycler's shuffle) the libraries are arranged that way again.
+	/// <paramref name="unseen"/> (AI-20.9): the unknown cards our looks showed (<see cref="Hidden.Looked"/>) before
+	/// any card left our library - a later look is for a draw past this look-ahead's first - and the cards that left
+	/// it by the end (its draws, mostly): a look moves the next of them only.
 	/// </summary>
 	public static double Score(
 		GameState s,
 		int me,
 		int horizon,
 		Settings settings,
-		out GameState? rootTurnEnd
+		out GameState? rootTurnEnd,
+		out (int Looked, int Drawn) unseen,
+		bool? landsDrawn = null
 	)
 	{
 		var rootTurn = horizon - 1 - settings.LookaheadTurns;
 		rootTurnEnd = null;
+		var (looked, library) = (0, s.CardsIn(me, ZoneType.Library).Count());
 		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
 		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 		var them = s.OpponentOf(me);
@@ -273,6 +294,8 @@ public static class Rollout
 					break;
 				stopAt++;
 			}
+			if (landsDrawn is { } lands && s.RngSeed != Hidden.Arranged)
+				s = Hidden.Unknown(s, me, lands);
 			if (s.GetGame().TurnNumber != turn)
 				(turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 			if (turnEnd is null && turn > rootTurn)
@@ -286,6 +309,11 @@ public static class Rollout
 				s = OpponentStep(s, who, settings);
 				continue;
 			}
+			if (
+				Hidden.Looked(s, me) is > 0 and var shown
+				&& s.CardsIn(me, ZoneType.Library).Count() == library
+			)
+				looked += shown;
 			if (greedy is not null)
 			{
 				s = greedy.Play(s);
@@ -293,12 +321,28 @@ public static class Rollout
 			}
 			if (s.GetPendingChoice() is { } choice)
 			{
-				s = Choose(s, choice, who, settings);
+				s = Choose(s, choice, who, settings, ours: true);
+				continue;
+			}
+			if (settings.LastChance && AtTheirEndStep(s, me, settings) is { } tap)
+			{
+				s = Do(s, who, tap);
 				continue;
 			}
 			var spent = plays >= settings.ActionsPerTurn;
 			var play = !(landDone && spent)
-				? OurPlay(s, me, spent ? null : AnyPlay, ref landDone, settings)
+				? OurPlay(
+					s,
+					me,
+					spent ? null
+						// held only while their next turn is still to be played (the counter-attack plays the horizon's)
+						: settings.LastChance
+						&& (turn + 1 < stopAt || turn + 1 == horizon && settings.CounterAttack)
+							? a => AnyPlay(a) && !Waits(s, me, a)
+						: AnyPlay,
+					ref landDone,
+					settings
+				)
 				: null;
 			if (play is not null)
 			{
@@ -311,6 +355,7 @@ public static class Rollout
 
 		if (s.GetGame().TurnNumber == rootTurn && !FreeToSpend(s, me))
 			rootTurnEnd = s; // the game ended, or the rollout stopped, inside the turn
+		unseen = (looked, Math.Max(0, library - s.CardsIn(me, ZoneType.Library).Count()));
 		var score = Evaluator.Evaluate(s, me, settings.Held);
 		if (!s.IsOver())
 			return score;
@@ -321,6 +366,44 @@ public static class Rollout
 		return settings.LostLines && turnEnd is not null
 			? score + TurnEndBoard(turnEnd, me, settings) // lost after our turn: the board we kept
 			: score;
+	}
+
+	/// <summary>
+	/// An ability of a permanent of ours with "{T}" in its cost that can be used at instant speed - what
+	/// <see cref="Settings.LastChance"/> keeps for the opponent's end step.
+	/// </summary>
+	static bool WaitsForTheirEndStep(GameState s, GameAction a) =>
+		a is ActivateAbilityAction act
+		&& s.ActivatedAbilitiesOf(s.GetCard(act.CardId)).ElementAtOrDefault(act.AbilityIndex)
+			is { From: ZoneType.Battlefield, TapsItself: true, SorcerySpeed: false };
+
+	/// <summary>A tap ability <see cref="Settings.LastChance"/> keeps for their end step: one that takes nothing of theirs off the battlefield now.</summary>
+	static bool Waits(GameState s, int me, GameAction a)
+	{
+		if (!WaitsForTheirEndStep(s, a))
+			return false;
+		var after = Lookahead.Settle(s.Act(a));
+		return s.CardsIn(s.OpponentOf(me), ZoneType.Battlefield)
+			.All(c => after.HasObject(c.Id) && after.IsOnBattlefield(c.Id));
+	}
+
+	/// <summary>
+	/// <see cref="Settings.LastChance"/>: at the opponent's end step, the stack empty, our tap ability whose settled result
+	/// leaves us best - if better than passing. Each taps its own permanent, so the step ends.
+	/// </summary>
+	static GameAction? AtTheirEndStep(GameState s, int me, Settings settings)
+	{
+		if (
+			s.GetGame() is not { Step: Step.End } game
+			|| game.ActivePlayerId == me
+			|| !s.StackIsEmpty()
+		)
+			return null;
+		var taps = s.AiMoves([.. s.SearchMoves().Where(a => WaitsForTheirEndStep(s, a))]);
+		if (taps.Count == 0)
+			return null;
+		var (best, score) = BestSettled(s, me, taps, settings);
+		return score > Evaluator.Evaluate(s, me, settings.Held) ? best : null;
 	}
 
 	/// <summary>The opponent's end step or cleanup: what we spend from here is back at our untap.</summary>
@@ -352,7 +435,7 @@ public static class Rollout
 	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
 		s.GetPendingChoice() is { } choice ? Choose(s, choice, who, settings)
 		: settings.Opponent != OpponentModel.BoardOnly && TheirPlay(s, who, settings) is { } play
-			? Do(s, who, play)
+			? Do(s, who, AbilityOver(s, who, play, settings) ?? play)
 		: settings.TheirWalkers && TheirLoyalty(s, who, settings) is { } loyalty
 			? Do(s, who, loyalty)
 		: settings.Opponent != OpponentModel.BoardOnly
@@ -369,7 +452,12 @@ public static class Rollout
 	/// 2 life" (AI-17.22, Shayne's playtest: the AI on 4 raced a 2/1 the drain made lethal). Bounded by its mana, as the
 	/// combat tricks are (`+notheirabilities`).
 	/// </summary>
-	static GameAction? TheirAbility(GameState s, int who, Settings settings)
+	static GameAction? TheirAbility(
+		GameState s,
+		int who,
+		Settings settings,
+		GameAction? over = null
+	)
 	{
 		if (
 			Evaluator.IsOff(Evaluator.Terms.TheirAbilities)
@@ -391,9 +479,26 @@ public static class Rollout
 		if (abilities.Count == 0)
 			return null;
 		var passing = Evaluator.Evaluate(Lookahead.Settle(Pass(s, who)), who, settings.Held);
+		if (over is not null)
+			passing = Math.Max(
+				passing,
+				Evaluator.Evaluate(Lookahead.Settle(s.Act(over)), who, settings.Held)
+			);
 		var (best, score) = BestSettled(s, who, abilities, settings);
 		return score > passing ? best : null;
 	}
+
+	/// <summary>
+	/// The ability on its board that does more with the mana than the spell it was about to cast (AI-20.8, Shayne's
+	/// table game 2026-11-15: "it does need to account for on board decisions"). A spell that left it no worse always
+	/// went first, so the imagined Shayne recast Boarding Action (his 2/1 returned for a 2/1) and had no
+	/// mana for Artificial Anomaly's "each opponent loses 2 life" - the AI on 4 never saw the 2/1 plus the drain kill
+	/// it next turn (`+spellfirst`). A land is still played first: it costs no mana.
+	/// </summary>
+	static GameAction? AbilityOver(GameState s, int who, GameAction play, Settings settings) =>
+		play is CastSpellAction && !Evaluator.IsOff(Evaluator.Terms.AbilityOverSpell)
+			? TheirAbility(s, who, settings, play)
+			: null;
 
 	[ThreadStatic]
 	static Action<GameState, int, AiDecision>? trace;
@@ -435,7 +540,15 @@ public static class Rollout
 	}
 
 	/// <summary>A choice answered — a declaration's first attacker by a whole attack (<see cref="Attacks.AsOne"/>), the rest by <see cref="Answer"/>.</summary>
-	static GameState Choose(GameState s, ChoiceAction choice, int who, Settings settings) =>
+	/// <param name="ours">The rollout's own side answering — its blocks face the attacker's trick (AI-25.3); the
+	/// simulated opponent's don't fear ours.</param>
+	static GameState Choose(
+		GameState s,
+		ChoiceAction choice,
+		int who,
+		Settings settings,
+		bool ours = false
+	) =>
 		choice is DeclareAttackerChoice ask
 		&& settings.Attacks == Attacks.AsOne
 		&& WholeAttacks.IsFirst(s, ask)
@@ -445,7 +558,7 @@ public static class Rollout
 				WholeAttacks.Best(s, who, settings.Held, settings),
 				(at, ids) => Do(at, who, ids)
 			)
-			: Do(s, who, Answer(s, choice, who, settings));
+			: Do(s, who, Answer(s, choice, who, settings, ours));
 
 	static GameState Do(GameState s, int who, GameAction action)
 	{
@@ -538,7 +651,15 @@ public static class Rollout
 		var spells = s.AiMoves([.. s.SearchMoves().Where(Allowed(s, who, settings))])
 			.Where(a =>
 				a is CastSpellAction
-				|| (!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks) && IsManaPump(s, a))
+				|| (
+					!Evaluator.IsOff(Evaluator.Terms.TheirCombatTricks)
+					&& IsManaPump(
+						s,
+						a,
+						// in their own combat, a cost that picks a card too (Edgar's sacrifice, AI-25)
+						picks: theirs && !Evaluator.IsOff(Evaluator.Terms.TheirSacrificeTricks)
+					)
+				)
 			)
 			.ToList();
 		if (spells.Count == 0)
@@ -552,20 +673,20 @@ public static class Rollout
 	/// An ability of a permanent that costs mana and picks no card to pay (Astute Terraformer's "{6}: +2/+2",
 	/// less per differently named land) — a response like a trick (AI-17.10), or an ability used in its own turn
 	/// (<see cref="TheirAbility"/>, AI-17.22); either way bounded by its mana.
-	/// ponytail: a free ability, or one whose cost picks a card (a sacrifice), stays unseen; add them with a count.
+	/// <paramref name="picks"/>: a cost that picks a card (a sacrifice, a discard, an exile) too — still mana-costed, so
+	/// still bounded by its mana; only the attacker's trick after blocks asks for it (AI-25: Edgar's sacrifice).
+	/// ponytail: a free ability stays unseen, and picks only in their own combat; add them with a count.
 	/// </summary>
 	static bool TapsACreature(GameState s, ActivateAbilityAction a) =>
 		s.GetCard(a.CardId) is var card
 		&& card.Is(CardType.Creature)
 		&& s.ActivatedAbilitiesOf(card).ElementAtOrDefault(a.AbilityIndex) is { TapsItself: true };
 
-	static bool IsManaPump(GameState s, GameAction a)
+	static bool IsManaPump(GameState s, GameAction a, bool picks = false)
 	{
 		if (
 			a is not ActivateAbilityAction act
-			|| act.SacrificeId != 0
-			|| act.DiscardId != 0
-			|| act.ExileId != 0
+			|| !picks && (act.SacrificeId != 0 || act.DiscardId != 0 || act.ExileId != 0)
 			|| act.TapId != 0
 			|| act.SecondTapId != 0
 			|| !act.TapIds.IsEmpty
@@ -697,16 +818,23 @@ public static class Rollout
 	/// and block only what they survive or join a block already made — Lookahead.Joins, AI-15) unless <see cref="Attacks.AllInToo"/> weighs "all attack" too. A target choice takes
 	/// its owner's best under <see cref="Targets.OwnersBest"/>; a choice of none or one — a "you may", an
 	/// optional target — its chooser's best under <see cref="Settings.Mays"/>, a pay-to-keep excepted (the
-	/// cheap answer pays); every other choice the cheap answer.
+	/// cheap answer pays); a modal trigger's modes its chooser's best (<see cref="Evaluator.Terms.RolloutModes"/>); every
+	/// other choice the cheap answer.
 	/// </summary>
-	static IEnumerable<int> Answer(GameState s, ChoiceAction choice, int who, Settings settings) =>
+	static IEnumerable<int> Answer(
+		GameState s,
+		ChoiceAction choice,
+		int who,
+		Settings settings,
+		bool ours = false
+	) =>
 		choice switch
 		{
 			DeclareAttackerChoice attacker when settings.Attacks == Attacks.AllInToo =>
 				AllInOrAlone(s, attacker, who, settings),
 			DeclareAttackerChoice or DeclareBlockerChoice =>
 			[
-				BestAlone(s, choice, who, settings).Id,
+				BestAlone(s, choice, who, settings, ours).Id,
 			],
 			// Each legal target (or none, when optional) settled, the best for its owner — GreedyAi's
 			// answer to one pick, with the search's held values.
@@ -714,6 +842,13 @@ public static class Rollout
 				new GreedyAi(who, settings.Held).Answer(s, choice),
 			{ MinChoices: 0, MaxChoices: 1 } and not PayToKeepChoice when settings.Mays =>
 				new GreedyAi(who, settings.Held).Answer(s, choice),
+			// a modal trigger's modes: its chooser's best, each settled (Evaluator.Terms.RolloutModes)
+			// "choose one" only: "up to N" and "one or more" keep the cheap answer until measured (GreedyAi tries exactly N)
+			ChooseModesChoice { MaxChoices: 1 }
+				when !Evaluator.IsOff(Evaluator.Terms.RolloutModes) => new GreedyAi(
+				who,
+				settings.Held
+			).Answer(s, choice),
 			_ => Lookahead.QuickAnswer(s, choice),
 		};
 
@@ -722,17 +857,46 @@ public static class Rollout
 	/// potential margin of the best, the one leaving the damage marked best for it (<see cref="Evaluator.DamageShare"/>,
 	/// AI-19.22: the Cerritos 4/4 blocks the 1/1, not the Romulan 2/2 a −1/−1 then finishes).
 	/// </summary>
+	/// <summary>
+	/// A block of ours with the rest of the declaration answered cheaply, then the attacker's trick once blocks are
+	/// declared (<see cref="TheirResponse"/>'s own window) — so the rollout's defender sees Edgar's sacrifice pump as the
+	/// search's decisions do (AI-25.3). Anything else, and with the term off, as it was.
+	/// </summary>
+	static GameState FacingTheirTrick(GameState s, int who, Settings settings)
+	{
+		if (
+			Evaluator.IsOff(Evaluator.Terms.BlocksSeeTricks)
+			|| settings.Opponent != OpponentModel.Responds
+			|| s.GetGame().ActivePlayerId == who
+		)
+			return s;
+		for (var i = 0; i < 50 && s.GetPendingChoice() is DeclareBlockerChoice rest; i++)
+			s = s.Choose(Lookahead.QuickAnswer(s, rest));
+		var attacker = s.GetGame().PriorityPlayerId;
+		return
+			attacker != 0
+			&& attacker != who
+			&& s.GetPendingChoice() is null
+			&& TheirResponse(s, attacker, settings) is { } trick
+			? s.Act(trick)
+			: s;
+	}
+
 	static (int Id, double Score) BestAlone(
 		GameState s,
 		ChoiceAction choice,
 		int who,
-		Settings settings
+		Settings settings,
+		bool ours = false
 	)
 	{
 		var scored = choice
 			.Options.Select(o =>
 			{
-				var after = Lookahead.Settle(s.Choose([o.Id]));
+				var chosen = s.Choose([o.Id]);
+				var after = Lookahead.Settle(
+					ours ? FacingTheirTrick(chosen, who, settings) : chosen
+				);
 				return (
 					o.Id,
 					Score: Evaluator.Evaluate(after, who, settings.Held),

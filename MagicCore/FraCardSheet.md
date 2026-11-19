@@ -14,7 +14,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Target creature gets +2/+2 and gains flying until end of turn.  
 > Empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** FraCardTests, PricingPrincipleTests
 
 **Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -620,7 +620,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Formidable Commons
 
@@ -831,7 +831,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you put one or more loyalty counters on a planeswalker, put a +1/+1 counter on this creature.  
 > {6}: Empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraCommonTests
+**Status:** scripted · **tests naming it:** FraCommonTests, PricingPrincipleTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -849,7 +849,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2eTests, LsvBatch2fTests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2eTests, LsvBatch2fTests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Keeper of the Quiet Hour
 
@@ -1004,7 +1004,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, empower Jace 4. (Put four loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** FraCardTests, OptionReportTests
 
 ```csharp
 ["Mindseeker Oculus"] = [When(TriggerEvent.SelfEnters, [], new EmpowerJace(4))],
@@ -1016,7 +1016,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, ManaTests, RandomGameTests, TrkBatch6aTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch6aTests
 
 ### Murmuring Volume
 
@@ -1185,7 +1185,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Whenever this creature attacks, it deals 1 damage to each opponent and you gain 1 life.
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** FraCardTests, OptionReportTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1455,7 +1455,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2Tests, ManaTests, RandomGameTests, RolloutTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
+**Status:** basic land · **tests naming it:** AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2Tests, ManaTests, OptionReportTests, RandomGameTests, RolloutTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests
 
 ### Tam's Resistance
 
@@ -3737,7 +3737,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Creatures you control with power or toughness 1 or less can't be blocked.
 
-**Status:** scripted · **tests naming it:** FraStaticTests
+**Status:** scripted · **tests naming it:** FraStaticTests, OptionReportTests
 
 **Engine pieces:** `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
@@ -5629,7 +5629,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Whenever this creature attacks, empower Jace X, where X is the number of creatures you control. (Put that many loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** FraCardTests, OptionReportTests
 
 **Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…
 
@@ -6113,7 +6113,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • You lose 2 life. Destroy target creature or planeswalker.  
 > • You lose 2 life. Empower Jace 6. (Put six loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraModalTests
+**Status:** scripted · **tests naming it:** FraModalTests, OptionReportTests
 
 **Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -6194,7 +6194,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Aerid Konstrari enters or dies, create a Heartwood token. (It's a red and green artifact with "{T}: Add {R} or {G}.")  
 > {6}: Create a Heartwood token. Then Aerid Konstrari gets +X/+0 until end of turn, where X is the number of artifacts you control.
 
-**Status:** scripted · **tests naming it:** FraRareTests
+**Status:** scripted · **tests naming it:** FraRareTests, PricingPrincipleTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

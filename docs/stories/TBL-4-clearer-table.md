@@ -33,6 +33,28 @@ between MTG Arena and MTGO, keeping the best of both — feeling more like Arena
 - 2026-11-12, Shayne: **animations are required, not polish** — "things happen but its not clear what"; MTGO's
   level is enough (a card to the stack and onto the battlefield, the stack visible, arrows, damage, deaths). The
   table is the screen that matters most. Claude gathers MTGA reference screenshots and clips; Shayne marks what to copy.
+- 2026-11-13, Shayne (TBL-4.5): the animations are for CLARITY — what is going on, and where every card goes. What
+  one move does together animates together, as ONE beat (three creatures dying in combat damage go at once, never
+  one after another). A beat is **0.2 s** (five moves a second), configurable while watching — the Tools menu and
+  `--beat=` — and the replay (TBL-10) uses the same setting. First rows: A1–A3, A5, A6.
+- 2026-11-13 (Claude, Shayne agreed): **what happened is read from a diff of the two states**, not MagicCore's
+  staged events — they are cleared within the same move (`GivePriority`), exist only where a trigger needs one (no
+  "went to the stack", "resolved", bounce or exile) and a life gain carries no amount; a card keeps its id across
+  zones, so the diff sees every move. MagicCore is untouched; the manager keeps each move's state only when the
+  scene asks (`Animate`), so tests and simulations cost nothing. A creature that dies shows no damage number (its
+  damage goes with it) — dimmed, then to the graveyard.
+- 2026-11-13, Shayne, after watching a game: "even very slow can seem way too fast" — the old Very slow (0.8 s) is
+  Normal now: Fast 0.4, Normal 0.8, Slow 1.2, Very slow 1.6. Still hard to follow: attackers (asks for a combat row:
+  attackers and blockers MOVE into it, apart from the rest of the board — TBL-4.6), and the stack (when something
+  went on it, and what it targets — TBL-4.5's arrows). Permanents may be shorter — the stats moved up off the unused
+  bottom margin — to make room (TBL-4.7).
+- 2026-11-13, Shayne: watching a game he wants their hand FACE UP — "to see what they have in hand and determine
+  whether or not they are making reasonable plays. That was the point of it"; backs do nothing for him. Built: Tools
+  · Show their hand (and `--show-hand`) — their hand in their plate, face up and readable (118x164, wrapping three
+  across; hover / hold zooms), and their cards fly face up. A viewer's switch, off by default (a live game hides it).
+- 2026-11-13, Shayne: the combat row sits in the MIDDLE, between the two halves (where the phase bar is), and only
+  while there is combat (TBL-4.6). A target arrow shows only while its spell or ability is ON THE STACK — not while
+  picking targets — "for now and see how it looks" (TBL-4.5).
 
 Open questions:
 - Which of MTGO's strengths to keep (stops, the full log, full control, card zoom, …)?
@@ -63,12 +85,49 @@ Open questions:
       first, the rest after (`MagicTableScene.Fill`, `ColumnWidth`). Captured on two real games, in both
       directions (Garak under-blocked by two Conquerors; my Culber blocked by Pet Sehlat + Khan). Not pinned
       by a test (Godot layout). New debug flag `--resume-at=N` (Commands.md)
+- [x] TBL-4.6 A combat row (Shayne, 2026-11-13: "attackers was hard to follow"): when attackers are declared they
+      move into a row of their own, apart from the rest of the board, and blockers join them — so who attacks and
+      who blocks is clear. Builds on TBL-4.3's columns; the move is a beat (a card whose place changed flies there).
+      BUILT (2026-11-13), awaiting Shayne's look: a red-edged band under the phase bar while there is combat, a
+      column per attacker, the opponent's side on top; TBL-4.3's columns in the creature rows are gone
+      (`ColumnWidth` deleted). The cost: six rows share the board while it is open, so every card shrinks ~35%
+      for the combat (1.38x → 0.86x at 1280x720) and grows back after. Captured: AI vs AI turn 6 and turn 14 (two
+      attackers, a blocker flying under the second), and your block by real clicks — your creature, then the
+      attacker in the band, then Block (`shots/tbl46-a` … `-d`). Shayne, watching it: no flight into or out of the
+      band — it showed the full card, then went back to the crop; "I would rather it just be instant". Now they
+      appear there at once; the declaration still holds a beat
+- [x] TBL-4.7 Shorter permanents: the stats and loyalty moved up off the crop's unused bottom margin, the rows less
+      tall — room for what the table lacks (the opponent's hand, the combat row). BUILT (2026-11-13): 140 tall, not
+      168; stats, count and status on the art (`CardViews.ArtShare`), the name below as many lines as fit. Alone it
+      frees nothing — a row's height comes from the screen, so the cards just scale up to fill it (captured:
+      `shots/tbl45-b` frame 219 vs `shots/tbl47-after`); the room appears when TBL-4.6's row takes its band
 - [ ] TBL-4.4 The MTGA reference: current screenshots and clips of the table, gathered into one page for Shayne to
       mark (2018's beta guides show the layout but no motion) — then TBL-4.1's interview against it
 - [ ] TBL-4.5 Animations, MTGO's level: a cast to the stack and onto the battlefield, the stack shown while it holds
-      anything, attack and target arrows, damage numbers, deaths to the graveyard; each a short beat the eye can follow
+      anything, attack and target arrows, damage numbers, deaths to the graveyard; each a short beat the eye can follow.
+      First: A1–A3 (cast, resolve, settle), A5 (damage, deaths), A6 (life counting); then A4 (tap), A7 (trigger pulse),
+      and the stack made followable (Shayne: unclear WHEN something went on it and WHAT it targets): target arrows.
+      STACK BUILT (2026-11-13): `TargetArrows` — an orange arrow from each stack row to each target on screen (a
+      card, a player's plate) while the spell or ability is on the stack; an ability going on the stack is a beat of
+      its own, its row and its source pulsing (A7; `TableChanges.Triggered`). Captured: Extended Absence's arrow to
+      Greenhouse Propagator from its cast to its resolution (`shots/tbl45-arrow` frames 187–193). A target off screen
+      (a graveyard's card) gets no arrow
+      FIRST ROWS BUILT (2026-11-13), awaiting Shayne's look: `TableChanges` (the diff, tested on a whole game),
+      `MagicTableManager.Animate`/`TakeSteps`, `MagicTableScene.Motion.cs` (the beats); Tools · Animation and `--beat=`.
+      Captured at `--beat=0.8` (10 fps, 8 frames a beat), each frame-diffed: an AI's land drop and cast from its hand
+      backs to the stack, a resolve onto the battlefield and settle, your cast by a REAL click (hand → stack →
+      battlefield, its trigger, the AI's discard → graveyard, each waiting its turn), turn 6's block — Rank Rat and
+      Yoshimaru dying in ONE beat — and 23 → 18 counting with "-5" floating (`shots/tbl45-a` … `-e`)
 
 ## Next
+
+**TBL-4.5, 4.6, 4.7 built and committed (2026-11-13)** — beats (cast, resolve, settle, deaths, damage, life,
+abilities going on the stack), Normal 0.8 s; their hand face up (Tools); shorter permanents; the combat row
+(instant, no flight); target arrows on the stack. Open, Shayne to answer: should a creature resolving onto the
+battlefield or dying fly as the CROP rather than the full card (it lands as the crop)? Then A4 (tapping turns over a
+beat). Open edges: a tapped card flies upright; the graveyard count and the log change as a beat starts; a land
+joining a stack shows its count at once; during combat every card shrinks ~35% (six rows) — reserve the band, or
+shrink only the lands, if that jars; a target off screen gets no arrow.
 
 **TBL-4.2 is done** — Shayne: "fine for now" (2026-10-23).
 Open edges, should they bite: the pass label is by step alone ("To combat" in main 1 even with no
@@ -91,3 +150,5 @@ Read `MtgVisualDesign.md`, `.claude/rules/magic-table.md`, TBL-3, and capture to
   "Attack: X → You". Checked by capture and real input (a hold zoomed and didn't play; a click played).
 - 2026-11-12: TBL-4.4 and TBL-4.5 added (Shayne, sprint 5 planning).
 - 2026-11-12: TBL-4.4's page gathered — `docs/mockups/magictable/mtga-reference.md`, each row for Shayne to mark copy / skip / later; his own Arena screenshots asked for.
+- 2026-11-13: TBL-4.5 started — Shayne: one beat per move (all it changed at once), 0.2 s, configurable in play
+  and in the replay; the diff of two states chosen over the staged events; A1–A3, A5, A6 built and captured.

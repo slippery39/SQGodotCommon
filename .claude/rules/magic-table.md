@@ -12,7 +12,8 @@ that shaped it, and what was built, are story TBL-1 (`docs/stories/`); playtesti
 ```
 MagicTable/
 ├── MagicTableManager.cs  THE bridge to MagicCore (plain C#, no Godot types): game, seed, replay,
-│                         stops, one AI move per StepAi (the search capped at ~1 s, or GreedyAi),
+│                         stops, the AI deciding in the background (BeginAi/FinishAi, TBL-2.22 — StepAi blocks, for tests and autoplay; the search capped at ~1 s — FullSearch / --full-ai /
+│                         Tools uncaps it, switchable mid-game — or GreedyAi),
 │                         undo, log, the game record (every move via Play, from its token, written
 │                         to game_records/ — story TBL-5); Resume: a record's moves made again, an
 │                         undo step at each of yours, written as a new file (TBL-5.7). Tested in SQGodotCommon.Tests
@@ -40,18 +41,27 @@ MagicTable/
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer;
 │                         Tools menu (undo, sandbox, full control, pause / step / speed); the turn
 │                         banner; each side's board half (gold on its turn); permanents scaled to the room
+├── MagicTableScene.Motion.cs  the animations (TBL-4.5): each move a BEAT (Tools · Animation, --beat=S; 0.8 s) —
+│                         cards fly from where they were drawn to where they are, deaths dim, numbers float, life counts
+├── TableChanges.cs       what one move changed, for the beats: a diff of two states by id (plain C#). Tested
+├── GameNotes.cs          Shayne's notes for Claude (TBL-10.3): Tools · Write a note / N pauses the game; each note is
+│                         appended to <record>.notes.md beside its record — text, move number (reopen with
+│                         --resume-at), the board as names, the last log lines, the AI's last search. Tested
+├── TargetArrows.cs       an arrow from each stack row to its targets while it is on the stack (TBL-4.5); the plates
+│                         are tagged with their player's id so a player is a target too
 ├── AiInspector.cs        F6: the AI's last search — its moves ranked, then each imagined line with its terms (AI-14.4)
 ├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)
 ├── MagicHandView.cs      your hand: Common's Hand2D + Card2D fan (KIN's, TBL-3), Scryfall image as the
 │                         whole face, glow as a plate behind it; click AND drag → ObjectClicked
-├── CardViews.cs          permanent crops (tapped lies sideways, lands stack, phased out dimmed in its row), card faces (zone viewer), thumbs;
+├── CardViews.cs          permanent crops (stats on the art, TBL-4.7; tapped lies sideways, lands stack, phased out dimmed in its row), card faces (zone viewer), thumbs;
 │                         Hook: hover, click, hold-to-zoom for every card
 ├── PhaseBar.cs           the active player's steps (Stops shows both); each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
 ├── Targeting.cs          click a spell, then its picks — X on a spinner first (Xs), targets, then what a cost takes (plain C#)
 ├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
-├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
-├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; the other hand as backs, a known card face up (TBL-6); a click target
+├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no; Hide puts it away to see the board (TBL-2.21)
+├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; the other hand as backs, a known card face up (TBL-6),
+│                         all of it face up with Tools · Show their hand / --show-hand; a click target
 ├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live
 ├── DeckColumns.cs        the visual deck's layout (plain C#, LIM-5): rows of columns by mana value / creatures apart / colour
 ├── DeckView.cs           the deck as overlapping cards under the pool; Wire: Godot's drag-and-drop, pool ↔ deck ↔ column
@@ -117,13 +127,30 @@ MagicTable/
 - **Everything stays in view** (Shayne, 2026-10-23): a screen that doesn't fit is reorganised or
   scrolls — never clipped off the edge. Capture every screen a change touches (TBL-2.5: a new button
   pushed Start off the deck select).
-- **Combat reads by column, MTGO's way** (Shayne chose it over Arena's arrows, TBL-4.3): each attacker and
-  the creatures blocking it share one column in the two creature rows, which face each other across the
-  phase bar; the rows are left-aligned while attackers exist. Both rows build the same column widths
-  (`ColumnWidth`) — change one side and they stop meeting.
+- **Combat has a row of its own, read by column** (TBL-4.6; MTGO's pairing, TBL-4.3 — Shayne chose it over Arena's
+  arrows): while there is combat a red-edged band opens under the phase bar (`FillCombat`), and every attacker and
+  blocker of the declaration (`_columns`) leaves its creature row for it — one column per attacker, the opponent's
+  side on top, yours below. Clicks reach them there as anywhere (`ObjectClicked` by id). Joining or leaving the
+  band is a beat though no zone changed (`Fighting`), but NOT a flight — they appear there at once (Shayne: the
+  flier showed the full card, then the crop; "I would rather it just be instant"). The band has a fixed height (`2 * _rowHeight`):
+  inside a ScrollContainer, which reports none of its content's, it collapsed to a line.
 - **A right-click is a card's zoom, or the table's menu** (TBL-9.3: Concede): `_Input` opens the menu unless the
   pointer is on a card (`CardViews.CardMeta`, or the hand's hovered card). A concession is the MANAGER's
   (`Conceded`): the engine never ended the game, so the record stays unfinished.
+- **The animations read a DIFF of two states, never MagicCore's staged events** (TBL-4.5): those are cleared within
+  the move and raised only where a trigger needs one. The manager keeps each move's state only while `Animate` is on
+  (the scene's, so tests and runs keep nothing); each move is one beat, all it changed moving together. While beats
+  play, `Refresh` draws `_onScreen` (the beat reached), `Moves()` is empty and the AI's timer waits. A card is found
+  on screen by its tag (`CardViews.Tag`) — **a new view of an object must be tagged, or it never animates**. Seen
+  once each: `Animate` switched on AFTER the first input missed that move (your first cast appeared at once); a flier
+  made after the layout frame left a frame with the card gone — make it first, launch it after. A rect is read only
+  after a frame has laid its row out (`PlayBeats` waits one first — a precaution, not a seen bug). Found in review:
+  a state drawn MID-BEAT is never "the same question" (`_shownAnimating`) — the last beat draws the final state with
+  its choice withheld, and the panel then never opened; and `PlayBeats` ends in a `finally`, or a throw leaves
+  `_onScreen` set and the table waiting forever (no clicks, no AI). **A pause holds the beats too** (P, Tools, Space in
+  AI vs AI, or a note being written — Shayne: "it should pause the animations as well"): `PlayBeats` waits at the next
+  beat. Each queued beat carries its record move count (`_onScreenMoves`), so a note saves the position ON SCREEN
+  (`Shown()`), not the game's, which may be a decision ahead.
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.
 - **A card's click fires on RELEASE** (`CardViews.Hook`): holding it 0.4 s zooms instead (a phone's
   only way to read a card), so a hold must never also play it. A new click target on a card goes
@@ -137,7 +164,7 @@ MagicTable/
   **Nor does a row's HEIGHT follow the scale** (`_rowHeight`, fixed by the screen): rows sized to the scale
   bounced ~100 px as permanents came and went (TBL-2.18). Combat's columns come from `_columns`, the declaration,
   not from who is still on the board (TBL-2.17).
-- **`BoardScale` counts a row as `Fill` BUILDS it** (TBL-2.19): a combat's columns are in BOTH creature rows, a
-  land stack is one card, attachment strips stack under their host. Change what a row holds, change the count.
+- **`BoardScale` counts a row as `Fill` BUILDS it** (TBL-2.19): six equal rows while the combat band is open, four
+  otherwise; combatants count in the band, not their row; a land stack is one card, attachment strips stack under their host. Change what a row holds, change the count.
   Behind it, each permanent row and the action buttons sit in a `ScrollContainer` (`Scrolling`): what still
   doesn't fit scrolls in place, and the table never grows off the screen.

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using ImmutableGameObjects;
 using MagicCore;
 using MagicCore.Actions;
@@ -62,7 +63,26 @@ public sealed class MagicTableManager
 	/// <summary>A folder to write <see cref="Record"/> into as the game goes; null writes nothing (tests).</summary>
 	public string? RecordTo { get; init; }
 	private string? _recordFile;
+
+	/// <summary>Where the record is written, once it has been — the notes go beside it (<see cref="GameNotes"/>).</summary>
+	public string? RecordFile => _recordFile;
 	public bool CanUndo => _undo.Count > 0 || Conceded;
+
+	/// <summary>
+	/// The table's animations (TBL-4.5): while on, each move's state is kept, in order, for <see cref="TakeSteps"/>.
+	/// Off by default, so tests and runs keep nothing.
+	/// </summary>
+	public bool Animate { get; set; }
+
+	private readonly List<GameState> _steps = new();
+
+	/// <summary>The state after each move since the last call, oldest first.</summary>
+	public List<GameState> TakeSteps()
+	{
+		var steps = _steps.ToList();
+		_steps.Clear();
+		return steps;
+	}
 
 	public MagicTableManager(
 		IReadOnlyList<CardDefinition> deck1,
@@ -103,6 +123,8 @@ public sealed class MagicTableManager
 		_ais[OpponentId] = NewAi(OpponentId);
 		if (aiVsAi)
 			_ais[HumanId] = NewAi(HumanId);
+		if (Search)
+			OptionPrice.Warm(State, OpponentId); // its 200-deck sample, ~10 s, off the first decision (AI-26)
 		_start = State;
 		Settle();
 	}
@@ -193,15 +215,33 @@ public sealed class MagicTableManager
 		{
 			RecordTo = RecordTo,
 			Stops = Stops,
+			FullSearch = FullSearch,
 		};
 
 	private readonly IReadOnlyList<CardDefinition> _sideboard1;
+
+	/// <summary>
+	/// The search without the table's time cap (~1 s a decision) — the one a sealed run plays (Shayne, 2026-11-13: "try
+	/// without the 1 second cap and see if I can note any differences"). Slower: the table waits on each decision.
+	/// Switchable mid-game — both AIs are made again, as Undo makes them.
+	/// </summary>
+	public bool FullSearch
+	{
+		get => _fullSearch;
+		set
+		{
+			_fullSearch = value;
+			foreach (var id in _ais.Keys.ToList())
+				_ais[id] = NewAi(id);
+		}
+	}
+	private bool _fullSearch;
 	private readonly IReadOnlyList<CardDefinition> _sideboard2;
 
 	private IAi NewAi(int playerId) =>
-		Search
-			? new BeamSearchAi(playerId, BeamSearchAi.Settings.Interactive)
-			: new GreedyAi(playerId);
+		!Search ? new GreedyAi(playerId)
+		: FullSearch ? new BeamSearchAi(playerId)
+		: new BeamSearchAi(playerId, BeamSearchAi.Settings.Interactive);
 
 	public bool IsOver => Conceded || State.IsOver();
 
@@ -228,7 +268,19 @@ public sealed class MagicTableManager
 		string Who,
 		string Chose,
 		IReadOnlyList<(string Move, double Score)> Ranked
-	);
+	)
+	{
+		/// <summary>The record's move count when it decided: its move is the next one (a note's "before this move").</summary>
+		public int AtMove { get; init; }
+	}
+
+	private readonly List<Inspection> _searches = new();
+
+	/// <summary>
+	/// The last search decided before move <paramref name="moves"/> was reached — a note on a position the table still
+	/// shows, while the game has run ahead (TBL-10.3). Kept for the last 64 searches.
+	/// </summary>
+	public Inspection? SearchBefore(int moves) => _searches.LastOrDefault(i => i.AtMove < moves);
 
 	/// <summary>The last AI decision that searched among two or more moves; null before one (or with --greedy).</summary>
 	public Inspection? LastSearch { get; private set; }
@@ -241,9 +293,59 @@ public sealed class MagicTableManager
 	/// only while that search is the AI's latest decision: the next one clears what it imagined.
 	/// </summary>
 	public string ExplainLastSearch() =>
-		_lastSearcher is var (ai, at) && at == _decisions
-			? ai.Explain()
-			: "(The AI has decided again since, so its lines are gone — pause it from Tools to hold a decision.)";
+		Thinking && !AiDecided
+			? "(The AI is deciding — its last search's lines are being replaced; look again once it moves.)"
+		: _lastSearcher is var (ai, at) && at == _decisions ? ai.Explain()
+		: "(The AI has decided again since, so its lines are gone — pause it from Tools to hold a decision.)";
+
+	// The AI's decision being made in the background (TBL-2.22, Shayne: "the AI thiking blocks the UI for everything"):
+	// the position it was asked in, and the answer to come. One at a time — an AI is never asked twice at once.
+	private (GameState At, IAi Ai, Task<AiDecision> Decision)? _thinking;
+
+	/// <summary>An AI decision is being made in the background (<see cref="BeginAi"/>).</summary>
+	public bool Thinking => _thinking is not null;
+
+	/// <summary>The background decision is made: <see cref="FinishAi"/> plays it.</summary>
+	public bool AiDecided => _thinking is { Decision.IsCompleted: true };
+
+	/// <summary>
+	/// The AI starts deciding in the background, on the position as it stands — the table stays live meanwhile. Nothing
+	/// if one is already deciding, or it is no AI's turn.
+	/// </summary>
+	public void BeginAi()
+	{
+		if (_thinking is not null || !AiToAct)
+			return;
+		var (at, ai) = (State, _ais[State.DecidingPlayerId()]);
+		_thinking = (at, ai, Task.Run(() => ai.Decide(at)));
+	}
+
+	/// <summary>
+	/// The background decision played, once made — its log line if it shows, null for a pass. Dropped if the game
+	/// moved on meanwhile (an undo, the sandbox) or that AI was replaced (full search switched): the AI is rebuilt, as
+	/// Undo rebuilds it — the plan it committed to was for a move never played — and asked again on the next
+	/// <see cref="BeginAi"/>.
+	/// </summary>
+	public string? FinishAi()
+	{
+		if (_thinking is not { Decision.IsCompleted: true } done)
+			return null;
+		_thinking = null;
+		var decision = done.Decision.GetAwaiter().GetResult(); // a search's exception, unwrapped, even if dropped
+		var who = done.At.DecidingPlayerId();
+		if (
+			!ReferenceEquals(done.At, State)
+			|| !ReferenceEquals(_ais.GetValueOrDefault(who), done.Ai)
+		)
+		{
+			if (ReferenceEquals(_ais.GetValueOrDefault(who), done.Ai))
+				_ais[who] = NewAi(who);
+			return null;
+		}
+		var shown = Apply(decision);
+		Save();
+		return shown;
+	}
 
 	public bool HumanToAct => !IsOver && !_ais.ContainsKey(State.DecidingPlayerId());
 	public bool AiToAct => !IsOver && _ais.ContainsKey(State.DecidingPlayerId());
@@ -254,26 +356,36 @@ public sealed class MagicTableManager
 	/// </summary>
 	public string? StepAi()
 	{
+		if (_thinking is not null) // the AI is already deciding in the background
+			return null;
 		string? shown = null;
 		while (AiToAct && shown is null)
-		{
-			var who = State.DecidingPlayerId();
-			var turn = State.GetGame().TurnNumber;
-			var decision = _ais[who].Decide(State);
-			var what = Declared(State, decision) ?? decision.What;
-			_decisions++;
-			if (_ais[who] is BeamSearchAi search && search.Ranked(State) is { Count: > 1 } ranked)
-			{
-				LastSearch = new(turn, State.GetPlayer(who).Name, what, ranked);
-				_lastSearcher = (search, _decisions);
-			}
-			Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);
-			Settle();
-			if (what != "Pass")
-				shown = Write(turn, who, what);
-		}
+			shown = Apply(_ais[State.DecidingPlayerId()].Decide(State));
 		Save();
 		return shown;
+	}
+
+	/// <summary>The AI's decision played, with its search kept for the inspector; its log line if it shows.</summary>
+	private string? Apply(AiDecision decision)
+	{
+		var who = State.DecidingPlayerId();
+		var turn = State.GetGame().TurnNumber;
+		var what = Declared(State, decision) ?? decision.What;
+		_decisions++;
+		if (_ais[who] is BeamSearchAi search && search.Ranked(State) is { Count: > 1 } ranked)
+		{
+			LastSearch = new(turn, State.GetPlayer(who).Name, what, ranked)
+			{
+				AtMove = Record.Moves.Count,
+			};
+			_searches.Add(LastSearch);
+			if (_searches.Count > 64)
+				_searches.RemoveAt(0);
+			_lastSearcher = (search, _decisions);
+		}
+		Play(MoveTokens.Token(State, decision), "ai", what == "Pass" ? "" : what);
+		Settle();
+		return what != "Pass" ? Write(turn, who, what) : null;
 	}
 
 	/// <summary>Your move. Ignored unless it is yours to make (a click landing while the AI decides).</summary>
@@ -447,6 +559,7 @@ public sealed class MagicTableManager
 		var (state, logCount, moveCount) = _undo[^1];
 		_undo.RemoveAt(_undo.Count - 1);
 		State = state;
+		_steps.Clear();
 		_log.RemoveRange(logCount, _log.Count - logCount);
 		Record = Record.Truncate(moveCount);
 		// The search commits to a plan; one made past the undone decisions would replay out of order.
@@ -488,6 +601,8 @@ public sealed class MagicTableManager
 		var before = State;
 		var seen = KnownInOpponentsHand(before).Select(c => c.Id).ToHashSet();
 		State = next;
+		if (Animate)
+			_steps.Add(next);
 		// V'Ger's "look at target opponent's hand", a revealed search: the log says what you now know is
 		// there — only cards that came from a hidden zone (a bounced creature was seen already).
 		// Noted after the line of the move that caused it (Write, Save). In the hand itself: TBL-6.

@@ -31,7 +31,14 @@ public enum Glow
 /// </summary>
 public static class CardViews
 {
-	public static readonly Vector2 PermanentSize = new(126, 168);
+	/// <summary>
+	/// The art, then the name below it; stats, count and status sit ON the art (TBL-4.7, Shayne: the bottom only held
+	/// the stats over an unused margin) — 140 tall, not 168, for the combat row's room.
+	/// </summary>
+	public static readonly Vector2 PermanentSize = new(126, 140);
+
+	/// <summary>The art's share of a permanent's height (92 of 140 at scale 1, as before).</summary>
+	private const float ArtShare = 0.66f;
 
 	/// <summary>An Attachment strip under its host — a 44 px thumb (32 tall), 6 px margins — and the 2 px gap above it, rounded up. Unscaled.</summary>
 	public const float AttachmentHeight = 48;
@@ -51,19 +58,28 @@ public static class CardViews
 		var size = PermanentSize * scale;
 		var (w, h) = (size.X, size.Y);
 		var card = Frame(glow, size);
+		var art = h * ArtShare;
 		card.AddChild(
-			Art(MagicArt.Crop(MagicArt.Key(c)), new Vector2(w - 6, h * 0.55f), new Vector2(3, 3))
+			Art(MagicArt.Crop(MagicArt.Key(c)), new Vector2(w - 6, art), new Vector2(3, 3))
 		);
 		// Manifest dread's face-down 2/2 has no name (CR 708.2); its controller's "Turn face up" move names it while
 		// affordable — showing the card to its controller is TBL work (DesignNotes)
-		var name = c.Name is "" ? "Face down" : c.Name;
-		card.AddChild(Text(name, 16, new Vector2(4, h * 0.55f + 3), w - 8, wrap: true));
+		var name = Text(
+			c.Name is "" ? "Face down" : c.Name,
+			16,
+			new Vector2(4, art + 3),
+			w - 8,
+			wrap: true
+		);
+		// The text keeps its size as the card shrinks: as many lines as fit under the art, at least one.
+		name.MaxLinesVisible = Math.Max(1, (int)((h - art - 4) / 21));
+		card.AddChild(name);
 
 		var stats = Stats(s, c);
 		if (stats != "")
-			card.AddChild(Badge(stats, new Vector2(w - 60, h - 36), c.Damage > 0));
+			card.AddChild(Badge(stats, new Vector2(w - 60, art - 31), c.Damage > 0));
 		if (count > 1)
-			card.AddChild(Badge($"×{count}", new Vector2(4, h - 36), false));
+			card.AddChild(Badge($"×{count}", new Vector2(4, art - 31), false));
 		if (Status(s, c) is { Length: > 0 } status)
 			card.AddChild(Badge(status, new Vector2(4, 4), false, 16, w - 8)); // on the art, clear of the name
 
@@ -82,7 +98,7 @@ public static class CardViews
 			slot.Modulate = new Color(1, 1, 1, 0.4f); // still visible, clearly not there (Shayne, 2026-11-06)
 		slot.AddChild(card);
 		Hook(slot, MagicArt.Key(c), preview, onClick);
-		return slot;
+		return Tag(slot, c.Id);
 	}
 
 	/// <param name="from">Where a card castable from outside the hand is ("graveyard", "exile"); null in hand.</param>
@@ -135,7 +151,7 @@ public static class CardViews
 		row.AddChild(name);
 		strip.AddChild(row);
 		Hook(strip, MagicArt.Key(a), preview, onClick);
-		return strip;
+		return Tag(strip, a.Id);
 	}
 
 	/// <summary>A small art crop for lists (the stack, choice options).</summary>
@@ -151,6 +167,16 @@ public static class CardViews
 
 	/// <summary>Marks a control <see cref="Hook"/> made a card.</summary>
 	public const string CardMeta = "card";
+
+	/// <summary>The object ids a control shows (a land stack shows several) — where the animations find a card (TBL-4.5).</summary>
+	public const string IdsMeta = "ids";
+
+	public static T Tag<T>(T node, params int[] ids)
+		where T : Control
+	{
+		node.SetMeta(IdsMeta, ids);
+		return node;
+	}
 
 	/// <summary>Shows a card big while it is held (TBL-4.2), null to hide it — set by the table.</summary>
 	public static Action<string?>? Zoom { get; set; }

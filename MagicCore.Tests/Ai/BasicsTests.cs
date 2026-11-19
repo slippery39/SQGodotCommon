@@ -293,9 +293,10 @@ public class BasicsTests
 
 	// AI-17.20, the spells half (Shayne, 2026-11-09): a surveil over the cheapest-priced card in the table and the dearest
 	// - the dear one stays, the cheap one (under the unknown-card average) goes. Read from the table, not restated.
-	// No control here: without Terms.SurveilSpells the branching bins the cheap card too (AI-13.10 - the old control
-	// kept it only for a stale 54.53 option price). The rule's control is keeping a GOOD card, on a real position:
-	// AiPositionTests.ASurveil_KeepsAGoodSpellOnTop.
+	// The rule is a switch since AI-20.11 (Settings.SpellsRule, off by default): this is the check that it still fires.
+	// No control here: without it the branching bins the cheap card too (AI-13.10 - the old control kept it only for
+	// a stale 54.53 option price). The rule's control is keeping a GOOD card, on a real position:
+	// AiPositionTests.ASurveil_KeepsAGoodSpellOnTop_UnderTheSpellsRule.
 	[Test]
 	public void Surveil_BinsTheCheapSpell_KeepsTheDear()
 	{
@@ -318,7 +319,7 @@ public class BasicsTests
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = surveil });
 		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is not null);
 
-		s = new BeamSearchAi(me).Decide(s).State;
+		s = new BeamSearchAi(me, new(SpellsRule: true)).Decide(s).State;
 
 		Assert.That(s.IsIn(dearId, me, ZoneType.Graveyard), Is.False);
 		Assert.That(s.IsIn(cheapId, me, ZoneType.Graveyard), Is.True);
@@ -548,7 +549,7 @@ public class BasicsTests
 			var casts = 0;
 			Parallel.For(
 				1,
-				31,
+				AiPositionTests.SeedsFor(settings.Library) + 1,
 				k =>
 				{
 					if (
@@ -562,10 +563,12 @@ public class BasicsTests
 			return casts;
 		}
 
-		// the potential score (AI-13.11: the mana kept up) holds it too - the control switches both off
+		// the potential score (AI-13.11: the mana kept up) holds it too - the control switches both off, in the search
+		// before AI-20.4 (the default look-ahead holds it without them: AiPositionTests.OneGuess)
 		var noRule = new BeamSearchAi.Settings(
 			Without: Evaluator.Terms.SaveBurn | Evaluator.Terms.Potential,
-			Threads: 1
+			Threads: 1,
+			Library: AiPositionTests.OneGuess
 		);
 		Assert.That(
 			Casts(theirLife == 20 ? noRule.WithoutHeld() : noRule),

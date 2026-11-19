@@ -28,30 +28,183 @@ public static partial class Evaluator
 
 	static readonly AsyncLocal<Dictionary<int, int>?> rootOptionTurns = new();
 
+	static readonly AsyncLocal<HashSet<int>?> rootUnseen = new();
+
+	static readonly AsyncLocal<HeldValues?> settleHeld = new();
+
 	/// <summary>
-	/// <paramref name="work"/> with the cards exiled "you may play" at <paramref name="root"/> remembered as real, and each
-	/// player's <see cref="OptionTurns"/> read there (<see cref="Terms.RootOptionTurns"/>).
+	/// The card prices <see cref="Lookahead.Settle"/>'s single picks are judged by - the search's held values while it asks
+	/// (AI-27.10, the third scale: <c>BeamSearchAi.Settings.SettleHeld</c>, the default; off: beam+nosettleheld), else null: the flat price, 1.2 a
+	/// card and 0.3 a land, as GreedyAi and the card-value sandbox have always judged them.
 	/// </summary>
-	public static T WithRootImpulse<T>(GameState root, Func<T> work)
+	internal static HeldValues? SettleHeld => settleHeld.Value;
+
+	/// <summary>
+	/// What <see cref="LandUse"/> reads at the search's root, null when it is off: whose search it is, the mana sources in
+	/// play then, and that player's library as it is drawn - the land share and the average cost of a spell among its
+	/// unseen cards (our own list: never the opponent's hidden one).
+	/// </summary>
+	sealed record LandUseRoot(int Player, HashSet<int> Sources, (double, int) Deck);
+
+	static readonly AsyncLocal<LandUseRoot?> landUseOn = new();
+
+	static (double LandShare, int SpellCost) DeckOf(GameState root, int player)
 	{
-		var (outer, outerTurns) = (rootImpulse.Value, rootOptionTurns.Value);
-		rootImpulse.Value = [.. ImpulseCards(root, -1).Select(c => c.Id)];
-		rootOptionTurns.Value =
-			IsOff(Terms.RootOptionTurns) || IsOff(Terms.HoldOption)
-				? null
-				: new[] { root.Player1Id(), root.Player2Id() }.ToDictionary(
-					p => p,
-					p => LiveOptionTurns(root, p)
-				);
+		var unseen = Hidden.Unseen(root, player).Where(c => !Hidden.IsUnknown(c)).ToList();
+		var spells = unseen.Where(c => !c.Is(CardType.Land)).ToList();
+		return unseen.Count == 0
+			? (0, 0)
+			: (
+				(double)(unseen.Count - spells.Count) / unseen.Count,
+				spells.Count == 0 ? 0 : (int)Math.Round(spells.Average(c => c.ManaCost.ManaValue))
+			);
+	}
+
+	/// <summary>The most turns ahead the land-use count looks (<see cref="LandUse"/>).</summary>
+	public const int LandUseTurns = 3;
+
+	/// <summary>
+	/// <paramref name="work"/> with what the search reads once at <paramref name="root"/>, restored after however it ends:
+	/// the cards exiled "you may play" there remembered as real, and each player's <see cref="OptionTurns"/> read there
+	/// (<see cref="Terms.RootOptionTurns"/>). <paramref name="drawnCards"/>: the library cards whose place nobody knew
+	/// remembered too, so a card the look-ahead draws counts as a drawn card (<see cref="DrawnCredit"/>, AI-27.7).
+	/// <paramref name="landUse"/>: our lands priced by the cards they let us play (<see cref="LandUse"/>, AI-27.9).
+	/// <paramref name="settle"/>: the card prices <see cref="Lookahead.Settle"/>'s single picks are judged by - the
+	/// search's own held values (<see cref="SettleHeld"/>, AI-27.10); null, the flat price.
+	/// </summary>
+	public static T WithRootImpulse<T>(
+		GameState root,
+		Func<T> work,
+		bool drawnCards = false,
+		bool landUse = false,
+		HeldValues? settle = null
+	)
+	{
+		var (outer, outerTurns, outerUnseen, outerLandUse, outerSettle) = (
+			rootImpulse.Value,
+			rootOptionTurns.Value,
+			rootUnseen.Value,
+			landUseOn.Value,
+			settleHeld.Value
+		);
+		try
+		{
+			settleHeld.Value = settle;
+			landUseOn.Value = landUse
+				? new(
+					root.DecidingPlayerId(),
+					[
+						.. root.CardsIn(root.DecidingPlayerId(), ZoneType.Battlefield)
+							.Where(c => ManaAbilities.ColorsOf(root, c).Any())
+							.Select(c => c.Id),
+					],
+					DeckOf(root, root.DecidingPlayerId())
+				)
+				: null;
+			rootUnseen.Value = drawnCards
+				?
+				[
+					.. new[] { root.Player1Id(), root.Player2Id() }
+						.SelectMany(p => Hidden.Unseen(root, p))
+						.Select(c => c.Id),
+				]
+				: null;
+			rootImpulse.Value = [.. ImpulseCards(root, -1).Select(c => c.Id)];
+			rootOptionTurns.Value =
+				IsOff(Terms.RootOptionTurns) || IsOff(Terms.HoldOption)
+					? null
+					: new[] { root.Player1Id(), root.Player2Id() }.ToDictionary(
+						p => p,
+						p => LiveOptionTurns(root, p)
+					);
+			return work();
+		}
+		finally
+		{
+			(rootImpulse.Value, rootOptionTurns.Value, rootUnseen.Value, landUseOn.Value) = (
+				outer,
+				outerTurns,
+				outerUnseen,
+				outerLandUse
+			);
+			settleHeld.Value = outerSettle;
+		}
+	}
+
+	/// <summary><paramref name="work"/> with no drawn cards remembered, nor the land-use root — a measurement on another board (<see cref="OptionPrice.Gain"/>), whose ids mean other cards.</summary>
+	internal static T WithoutDrawnCards<T>(Func<T> work)
+	{
+		var (outer, outerLandUse, outerSettle) = (
+			rootUnseen.Value,
+			landUseOn.Value,
+			settleHeld.Value
+		);
+		// the land-use root's ids too, and Settle's prices: a kept gain is the same whoever asks first
+		(rootUnseen.Value, landUseOn.Value, settleHeld.Value) = (null, null, null);
 		try
 		{
 			return work();
 		}
 		finally
 		{
-			(rootImpulse.Value, rootOptionTurns.Value) = (outer, outerTurns);
+			(rootUnseen.Value, landUseOn.Value, settleHeld.Value) = (
+				outer,
+				outerLandUse,
+				outerSettle
+			);
 		}
 	}
+
+	/// <summary>
+	/// A card the look-ahead drew is a GUESS (AI-27.7, Shayne 2026-11-18: "A drawn card should be woth a drawn card and
+	/// nothing more or less … The result of the drawn card should not impact the action of drawing a card"): one that was
+	/// in our library at the root, its place unknown. In hand it is priced as a drawn card - <see cref="HeldValues.Unknown"/>,
+	/// the price a card nobody has seen has - whether the look-ahead made it a land or an unknown spell; a land of them
+	/// played keeps what it had over a land in hand, so deploying it scores as deploying any land ("You should never get
+	/// an immediate loss for deploying a resource in hand"). A card in hand at the root is seen, and priced by what it is.
+	/// The search's default since 2026-11-18 (<c>BeamSearchAi.Settings.DrawnCard</c>; off: beam+nodrawncard).
+	/// ponytail: only a land is credited on the battlefield - a guessed spell cast (the real 6th draw, beam+shuffle) is
+	/// priced by what it became; carry the credit there too if a position shows one held for it.
+	/// </summary>
+	static bool IsDrawnGuess(Card c) => rootUnseen.Value?.Contains(c.Id) == true;
+
+	/// <summary>
+	/// Our lands priced by the cards they let us play (AI-27.9, Shayne 2026-11-18: "A needed land drop is worth the cards it
+	/// allows you to play. This is variable as the game goes on."): a drawn card for each card more that we get to play over
+	/// our next turns (<see cref="LandUnlock.Playable"/>: the hand and our library's curve, up to <see cref="LandUseTurns"/>
+	/// or the game's length) with the mana we have now - in play and lands in hand - than with only the sources in play at
+	/// the search's root. So a land that lets one more card be played is worth that card, a surplus land nothing; playing a
+	/// land changes neither count, and casting a spell moves both alike. Two first versions counted cards played, not what
+	/// the lands add: the one counting the hand alone held removal (a spell cast before the look-ahead's end had left
+	/// it), the next paid for using this turn's spare mana - Yoshimaru cast on turn 4 with nothing to fight. Beside the flat
+	/// land prices, which stay as its base. The search's default since 2026-11-18 (<c>BeamSearchAi.Settings.LandUse</c>;
+	/// off: beam+nolanduse).
+	/// </summary>
+	static double LandUse(GameState s, int player, HeldValues held)
+	{
+		if (landUseOn.Value is not { } root || root.Player != player)
+			return 0; // the search's own player only: the simulated opponent prices its lands as before
+		var turns = Math.Min(OptionTurns(s, player), LandUseTurns);
+		var deck = root.Deck;
+		// a land the look-ahead drew is a guess, a drawn card and nothing more (AI-27.7) - the library's curve brings lands
+		var now = LandUnlock.Playable(s, player, turns, deck, IsDrawnGuess, c => !IsDrawnGuess(c));
+		var before = LandUnlock.Playable(
+			s,
+			player,
+			turns,
+			deck,
+			IsDrawnGuess,
+			c => root.Sources.Contains(c.Id) && s.IsOnBattlefield(c.Id)
+		);
+		return Math.Max(0, now - before) * held.Unknown;
+	}
+
+	/// <summary>What our guessed lands in play carry over a land in hand (<see cref="IsDrawnGuess"/>).</summary>
+	static double DrawnCredit(GameState s, int player, HeldValues held) =>
+		rootUnseen.Value is null
+			? 0
+			: s.CardsIn(player, ZoneType.Battlefield)
+				.Count(c => c.Is(CardType.Land) && IsDrawnGuess(c)) * (held.Unknown - LandInHand);
 
 	/// <summary>Cards in exile with a live play permission for <paramref name="player"/> (-1: anyone's).</summary>
 	static IEnumerable<Card> ImpulseCards(GameState s, int player) =>
@@ -351,13 +504,6 @@ public static partial class Evaluator
 		SurveilLands = 2097152,
 
 		/// <summary>
-		/// A surveil bins a spell priced below the expected replacement and keeps one at or above it (AI-17.20, the
-		/// spells half): the next draw is a known card or an unknown one, <see cref="HeldValues.Unknown"/> on average
-		/// (`+nosurveilspells`). Needs the held table; every card on top is then decided, none branched.
-		/// </summary>
-		SurveilSpells = 4194304,
-
-		/// <summary>
 		/// "Exile the top card, you may play it" is worth a RANDOM card, not the one the search sampled (AI-17.16, Shayne
 		/// 2026-11-09: "it shouldn't matter what the exact top card is"): inside the search a card exiled this way after the
 		/// root can't be played - the sample's luck - and is credited <see cref="ImpulseShare"/> of an unknown card, each
@@ -435,6 +581,66 @@ public static partial class Evaluator
 		/// a concrete score"), 17 tests moved and the rollout's defender at 13 ate a 1/1 with its 3/2 over trading it for a 3/2.
 		/// </summary>
 		DamagePotential = 1L << 31,
+
+		/// <summary>
+		/// The simulated attacker's trick after blocks may be an ability whose cost picks a card — Edgar, Ancient Bloodlord's
+		/// "{2}, Sacrifice another creature or planeswalker: Put a +1/+1 counter on Edgar" — still bounded by its mana
+		/// (AI-25, Shayne's notes 2026-11-13: "trading the 2/3 Greenhouse for a 1/1 rat"; the defender blocked a 2/3
+		/// Edgar with a 2/3, the block looked free, and the Rat's sacrifice killed the blocker; `+notheirsacrifices`).
+		/// </summary>
+		TheirSacrificeTricks = 1L << 32,
+
+		/// <summary>
+		/// A held card is short on COLOUR too (AI-9.9, Shayne's notes 2026-11-13: "Nobody is discarding Rockfall Vale in this
+		/// situation" — it was the only red source for four red cards): each coloured pip none of our sources (in play or
+		/// in hand) can make counts as a source short, with no free first one — a land draw fixes generic mana, only that
+		/// colour fixes a colour (<see cref="LandUnlock.ColorsShort"/>). Before it the Vale and a third Forest were priced
+		/// alike at the horizon, and the Rank Rat took the Vale (`+nocolorshort`).
+		/// </summary>
+		ColorShort = 1L << 33,
+
+		/// <summary>
+		/// The look-ahead's OWN blocks are judged against the attacker's trick after blocks too (AI-25.3) — the window AI-17.10
+		/// and AI-25 opened for the search's decisions, given to the blocks the rollout answers itself. Without it the rollout
+		/// blocked Edgar with Koth and AI 1's sacrifice pump killed Koth, so the line that KEPT Koth looked bad and the
+		/// Rank Rat discard took Koth over a Forest (Shayne, 2026-11-13: "Why would trading it in the future cause him to
+		/// discard it now?"; `+noblocktricks`).
+		/// </summary>
+		BlocksSeeTricks = 1L << 34,
+
+		/// <summary>
+		/// In our own turn, the cards a hand over its maximum size will discard at cleanup — the cheapest — count nothing
+		/// (AI-13.13, Shayne's notes 2026-11-13: Yoshimaru cast early because the look-ahead, keeping it, discarded Koth to
+		/// hand size on turn 12 instead of casting it then — it never saw the cleanup coming; `+nohandsize`).
+		/// </summary>
+		HandSize = 1L << 35,
+
+		/// <summary>
+		/// The look-ahead's: the simulated opponent uses a mana-costed ability on its board BEFORE a spell that does less
+		/// with the mana (<see cref="Rollout"/>'s AbilityOver, AI-20.8, Shayne 2026-11-15: "it does need to account for on
+		/// board decisions") - a spell that left it no worse always went first, so it recast Boarding Action for nothing
+		/// and Artificial Anomaly's drain, lethal with its 2/1, waited two turns (`+spellfirst`).
+		/// </summary>
+		AbilityOverSpell = 1L << 36,
+
+		/// <summary>
+		/// The look-ahead's: a look at an unseen card of ours (the Jace token's "[−1]: Surveil 1") is decided BEFORE the
+		/// look, by what it does to the odds of the draw the line wants - each card looked at is binned unless it is
+		/// that draw (<see cref="Hidden.LandOdds"/>; AI-20, Shayne 2026-11-15, three Forests and six red cards in hand:
+		/// "It doesn't matter what is actually on top or not, I am looking for a specific card and thats it"). Without
+		/// it the look showed a card the look-ahead had already made up - a land where the draws are lands, no land
+		/// where they are not - so it never binned, and the surveil only cost the loyalty (`+nolooks`).
+		/// </summary>
+		Looks = 1L << 37,
+
+		/// <summary>
+		/// The look-ahead's: a "choose one" as a trigger goes on the stack (Divining Duelist's "When this creature enters,
+		/// choose one — Tap target creature. / Untap target creature. / Draw a card, then discard a card.") is answered by its
+		/// chooser's best, each mode settled - the rollout took the FIRST listed, so its Duelist tapped our own creature and
+		/// never looted, and casting Mindseeker Oculus first lost the loot it would have had (AI-27, Shayne 2026-11-18, seed 2
+		/// #16 - `+firstmode`).
+		/// </summary>
+		RolloutModes = 1L << 38,
 	}
 
 	/// <summary>
@@ -506,6 +712,24 @@ public static partial class Evaluator
 	}
 
 	static readonly AsyncLocal<Terms> off = new();
+
+	/// <summary>
+	/// <paramref name="work"/> with EXACTLY <paramref name="terms"/> off, whatever the caller has off — for a
+	/// measurement kept for every search (<see cref="OptionPrice.Gain"/>), which must not depend on who asked first.
+	/// </summary>
+	internal static T WithOnlyOff<T>(Terms terms, Func<T> work)
+	{
+		var outer = off.Value;
+		off.Value = terms;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			off.Value = outer;
+		}
+	}
 
 	/// <summary>
 	/// Threat (story AI-5.2): how soon <paramref name="attacker"/>'s board kills <paramref name="defender"/>
@@ -683,6 +907,8 @@ public static partial class Evaluator
 	static SideTerms Side(GameState s, int player, HeldValues? held, bool own, string[] keywords)
 	{
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
+		// their creatures at full value: the held-off share prices them as TARGETS only (OptionPrice, AI-26.16) - on the
+		// board it counted a wall twice (the clock term already does) and jumped when the wall died (Shayne: option A)
 		var creatures = board
 			.Where(c => c.Is(CardType.Creature))
 			.Sum(c => CreatureValue(s, c, keywords));
@@ -705,31 +931,47 @@ public static partial class Evaluator
 		// at the search's root if a reveal spell is ever misjudged.
 		// counted only when a held card could be short (lazily: Evaluate is the search's innermost loop)
 		int? mana = null;
-		bool Short(Card c) =>
-			own
-			&& !IsOff(Terms.ManaShort)
-			&& c.ManaCost.ManaValue - 1 > (mana ??= ManaWithin(s, player));
-		// a held price kept ManaShortShare per source short past the first - an option's too (AI-13.10's review: a 6-mana
-		// targeted sorcery on two lands was priced as castable)
+		List<List<ManaColor>>? sources = null;
+		// sources short: generic past the first (a land draw), and every coloured pip none of ours makes (AI-9.9)
+		int ShortBy(Card c) =>
+			!own
+				? 0
+				: Math.Max(
+					IsOff(Terms.ManaShort)
+						? 0
+						: c.ManaCost.ManaValue - 1 - (mana ??= ManaWithin(s, player)),
+					IsOff(Terms.ColorShort)
+						? 0
+						: LandUnlock.ColorsShort(c, sources ??= LandUnlock.Sources(s, player))
+				);
+		// a held price kept ManaShortShare per source short - an option's too (AI-13.10's review: a 6-mana targeted
+		// sorcery on two lands was priced as castable)
 		double ShortOf(Card c, double price) =>
-			Short(c)
-				? Math.Max(
-					FlatHandCard,
-					price * Math.Pow(ManaShortShare, c.ManaCost.ManaValue - 1 - mana!.Value)
-				)
+			ShortBy(c) is > 0 and var n
+				? Math.Max(FlatHandCard, price * Math.Pow(ManaShortShare, n))
 				: price;
-		var hand = s.CardsIn(player, ZoneType.Hand)
-			.Sum(c =>
+		// AI-26.4 (the default since 2026-11-16): our answers are priced TOGETHER by what they are likely to meet (OptionPrice) -
+		// each stands at the flat price here, and the rest of their worth is added to the hand below
+		var answers = own && OptionPrice.Active(player) ? new List<Card>() : null;
+		double Answer(Card c)
+		{
+			answers!.Add(c);
+			return FlatHandCard;
+		}
+		var prices = s.CardsIn(player, ZoneType.Hand)
+			.Select(c =>
 				held is not null
 				&& !own
 				&& !(c.KnownTo.HasFlag(Knowers.Opponent) && !IsOff(Terms.KnownHand))
 					? held.Unknown
+				: held is not null && own && IsDrawnGuess(c) ? held.Unknown
 				: c.Is(CardType.Land)
 					? (
 						own && !IsOff(Terms.LandUnlock) && !LandUnlock.Unlocks(s, player, c)
 							? LandSurplus
 							: LandInHand
 					)
+				: answers is not null && ShortBy(c) <= 0 && OptionPrice.IsAnswer(s, c) ? Answer(c)
 				: held is null ? FlatHandCard
 				: own
 				&& !IsOff(Terms.HoldOption)
@@ -752,9 +994,29 @@ public static partial class Evaluator
 						CreatureValue(s, c, keywords) - RecastPerMana * c.ManaCost.ManaValue
 					)
 				: ShortOf(c, held.Of(c.Name))
+			)
+			.ToList();
+		// In our own turn, a hand over its maximum loses its cheapest cards at cleanup: they count nothing - so the
+		// look-ahead casts one rather than discard it, and keeping a card until the hand is full isn't charged a card
+		// (AI-13.13, Shayne: "you would wait until you were forced to discard to actually play something for minimal
+		// value, not before"; `+nohandsize`).
+		var over =
+			own
+			&& !IsOff(Terms.HandSize)
+			&& s.GetGame().ActivePlayerId == player
+			&& s.GetGame().Step != Step.Cleanup
+			&& prices.Count > 0
+				? prices.Count - TurnStructure.MaxHandSizeOf(s, player) // the statics walked only here
+				: 0;
+		var hand = over > 0 ? prices.OrderBy(p => p).Skip(over).Sum() : prices.Sum();
+		if (answers is { Count: > 0 })
+			hand += Math.Max(
+				0,
+				OptionPrice.Value(s, player, answers) - FlatHandCard * answers.Count
 			);
 		if (held is not null)
-			hand += ImpulseCredit(s, player, held);
+			hand += ImpulseCredit(s, player, held) + (own ? DrawnCredit(s, player, held) : 0);
+		var landsUsed = own && held is not null ? LandUse(s, player, held) : 0;
 		var graveyard = IsOff(Terms.GraveyardAccess)
 			? 0
 			: s.CardsIn(player, ZoneType.Graveyard)
@@ -771,7 +1033,115 @@ public static partial class Evaluator
 						)
 						: 0
 				);
-		return new(creatures, walkers, lands, others, hand, lifeValue, graveyard);
+		return new(creatures, walkers, lands + landsUsed, others, hand, lifeValue, graveyard);
+	}
+
+	static readonly AsyncLocal<int> byUseFor = new();
+
+	/// <summary>
+	/// <paramref name="work"/> with the creatures facing <paramref name="player"/> priced, as targets of that player's
+	/// answers (<see cref="OptionPrice"/>), by what they can still do against that player's board (<see cref="HeldOff"/>,
+	/// AI-26.12) — 0: as always. The default since 2026-11-16 (<c>BeamSearchAi.Settings.ByUse</c>; off: <c>beam+nobyuse</c>).
+	/// Not on the board score since 2026-11-17 (AI-26.16, Shayne's option A): there a wall was counted twice - the clock
+	/// term already prices what it stops - and their creature jumped back to full value the moment the wall died, so the
+	/// AI refused to trade its wall (Jace −1 for −3, s1 #69) and flashed Divining Duelist in its own combat (s3 #15).
+	/// </summary>
+	public static T WithByUse<T>(int player, Func<T> work)
+	{
+		var outer = byUseFor.Value;
+		byUseFor.Value = player;
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			byUseFor.Value = outer;
+		}
+	}
+
+	/// <summary>
+	/// What a creature held off (<see cref="HeldOff"/>) keeps of its value AS A TARGET of our answers — chosen, not
+	/// measured: a vanilla 1/1, 4.5 or 0.53 of a card on its own (Shayne's range for one is 0.33 to 0.5), is 1.8 or 0.21
+	/// of a card once a blocker of ours handles it.
+	/// </summary>
+	public const double HeldOffShare = 0.4;
+
+	/// <summary>
+	/// <paramref name="player"/>'s creatures that the other side HOLDS OFF (AI-26.12; Shayne, 2026-11-16: "if I have
+	/// like a 3 mana 2/2 or 4 mana 3/3 in my hand that would be able to potentially block those 1/1's … then I have an
+	/// answer to those 1/1's its just it will take a bit of time"): one of ours beats it outright in a block — kills
+	/// it and survives it — each of ours holding off one of theirs, their biggest first, our smallest that does. Only
+	/// a creature of ours that is untapped for their next attack counts: one we attack with holds nothing off. A
+	/// creature in our hand we can cast within a land counts as ours. Null: <c>ByUse</c> is off, or it isn't that
+	/// player's search. Read by the option price alone (AI-26.16).
+	/// ponytail: one blocker each, by power and toughness alone (first strike, menace and tricks not read; a flier
+	/// needs a flier or reach); a creature in hand is read by its printed stats. Their deathtouch and indestructible
+	/// creatures are never held off.
+	/// </summary>
+	internal static HashSet<int>? HeldOff(GameState s, int player)
+	{
+		var us = s.OpponentOf(player);
+		if (byUseFor.Value != us)
+			return null;
+		// by what LASTS past this turn, as CreatureValue and Through read a creature: a pump until end of turn on ours
+		// holds nothing off next turn, and one on theirs does not free it
+		(Card Card, int Power, int Toughness) Lasting(Card c)
+		{
+			var next = NextTurn(c);
+			var (power, toughness) = Pumps(next);
+			return (next, s.Power(next) - power, s.Toughness(next) - toughness);
+		}
+		var theirs = s.CardsIn(player, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Creature) && Alive(s, c) && !s.IsIndestructible(c))
+			.Select(Lasting)
+			.Where(x => !s.Has(x.Card, "Deathtouch"))
+			.OrderByDescending(x => x.Power + x.Toughness)
+			.ToList();
+		if (theirs.Count == 0)
+			return null;
+		var mana = ManaWithin(s, us) + 1;
+		// Only a creature that will be UNTAPPED for their next attack holds anything off - as Through counts blockers:
+		// one that attacked this turn is tapped in theirs (Shayne, 2026-11-16: "if we are just pure racing, we might
+		// kill the 3/2 and attack. If we want to be more defensive, we kill the 1/3 and keep our guys back to block").
+		// It untaps first only when their own combat this turn is already over.
+		var game = s.GetGame();
+		var untapsFirst = game.ActivePlayerId == player && game.Step >= Step.EndCombat;
+		var ours = s.CardsIn(us, ZoneType.Battlefield)
+			.Where(c => c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))
+			.Select(c => Lasting(c.IsTapped ? c with { IsTapped = false } : c))
+			.Select(x => (x.Card, x.Power, x.Toughness, Down: true))
+			.Concat(
+				s.CardsIn(us, ZoneType.Hand)
+					.Where(c => c.Is(CardType.Creature) && c.ManaCost.ManaValue <= mana)
+					.Select(c =>
+						(Card: c, Power: c.OwnPower, Toughness: c.OwnToughness, Down: false)
+					)
+			)
+			.OrderBy(x => x.Power + x.Toughness)
+			.ToList();
+		var held = new HashSet<int>();
+		var used = new bool[ours.Count];
+		foreach (var t in theirs)
+			for (var i = 0; i < ours.Count; i++)
+				if (
+					!used[i]
+					&& ours[i].Power >= t.Toughness
+					&& ours[i].Toughness > t.Power
+					&& (
+						ours[i].Down
+							? Combat.CanBlock(s, ours[i].Card, t.Card)
+							: !s.Has(t.Card, "Flying")
+								|| ours[i].Card.Keywords.Contains("Flying")
+								|| ours[i].Card.Keywords.Contains("Reach")
+					)
+				)
+				{
+					used[i] = true;
+					held.Add(t.Card.Id);
+					break;
+				}
+		return held;
 	}
 
 	/// <summary>Lands in play: 1.5 each to 7, 0.4 beyond — the ONE land price (a walker's mana reads it too).</summary>
@@ -928,6 +1298,12 @@ public static partial class Evaluator
 		// end-of-turn pumps and grants no.
 		if (s.Toughness(c) <= 0 || (s.Toughness(c) - c.Damage <= 0 && !s.IsIndestructible(c)))
 			return 0; // the state-based check's own question: lethal damage doesn't kill indestructible
+		// gone at the next end step (L'Rell's Klingon): nothing lasts past this turn, so nothing to keep - it attacks
+		// for free and chumps first (AI-28.2, Shayne: "This is free because the 2/1 gets sacrificed at end of turn anyways").
+		// ponytail: one made DURING an end step waits for the next turn's and lives through a whole turn - priced 0 all the
+		// same; read when it was set up if a token made in an end step is ever misjudged
+		if (MoveTo.LeavesAtTheEndStep(c))
+			return 0;
 		var pumps = c.GetComponents<UntilEndOfTurn>().Where(u => u.UntilTurnOf == 0).ToList(); // "until your next turn" lasts
 		var power = s.Power(c) - pumps.Sum(u => u.Power);
 		var toughness = Math.Max(1, s.Toughness(c) - pumps.Sum(u => u.Toughness) - c.Damage);
@@ -980,7 +1356,11 @@ public sealed class HeldValues
 			.DefaultIfEmpty(Evaluator.FlatHandCard)
 			.Average();
 		Unknown = LandShare * Evaluator.LandInHand + (1 - LandShare) * spell;
+		Spell = spell;
 	}
+
+	/// <summary>A card of ours we can't see that isn't a land (<see cref="Hidden.UnknownCard"/>, AI-20.3): the average held price of a measured card.</summary>
+	public double Spell { get; }
 
 	public IReadOnlyDictionary<string, CardValues.Entry> Values { get; }
 
@@ -998,7 +1378,8 @@ public sealed class HeldValues
 			);
 
 	/// <summary>Our own card, by name; an unmeasured one (a land, a card the fixture can't cast) is flat.</summary>
-	public double Of(string name) => Price(Values.GetValueOrDefault(name), Fraction);
+	public double Of(string name) =>
+		name == Hidden.UnknownCard ? Spell : Price(Values.GetValueOrDefault(name), Fraction);
 
 	/// <summary>A card we can't see, land or spell.</summary>
 	public double Unknown { get; }

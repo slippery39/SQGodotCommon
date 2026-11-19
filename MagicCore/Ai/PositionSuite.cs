@@ -334,6 +334,91 @@ public static class PositionSuite
 		return new OracleReading(position, best, scores);
 	}
 
+	/// <summary>
+	/// A position for a reader (<c>--suite=A --boards</c>, AI-26.9): whose turn and step, each side's life, lands and
+	/// other permanents, the mover's hand, and the printed text of every card named — so a play can be judged by what
+	/// the cards do, never by a name.
+	/// </summary>
+	public static string Board(GameState s)
+	{
+		var (me, game) = (s.DecidingPlayerId(), s.GetGame());
+		var them = s.OpponentOf(me);
+		string Side(int p)
+		{
+			var field = s.CardsIn(p, ZoneType.Battlefield).ToList();
+			var lands = field.Where(c => c.Is(Cards.CardType.Land)).ToList();
+			var others = field.Where(c => !c.Is(Cards.CardType.Land)).ToList();
+			return $"{s.GetPlayer(p).Life} life; {lands.Count} lands ({lands.Count(c => !c.IsTapped)} untapped); "
+				+ (
+					others.Count == 0
+						? "no other permanents"
+						: string.Join(", ", others.Select(c => MagicCore.Describe.Card(s, c)))
+				);
+		}
+		var hand = s.CardsIn(me, ZoneType.Hand).ToList();
+		var stack = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
+			.Select(s.GetObject)
+			.Select(o => o is Cards.Card c ? c.Name : "an ability")
+			.ToList();
+		var lines = new List<string>
+		{
+			$"      Turn {game.TurnNumber}, {game.Step}, {(game.ActivePlayerId == me ? "the mover's own turn" : "the opponent's turn")}"
+				+ (stack.Count > 0 ? $"; on the stack: {string.Join(", ", stack)}" : ""),
+			$"      Mover: {Side(me)}",
+			$"      Mover's hand: {(hand.Count == 0 ? "empty" : string.Join(", ", hand.Select(c => c.Name)))}",
+			$"      Opponent: {Side(them)}; {s.CardsIn(them, ZoneType.Hand).Count()} card(s) in hand",
+		};
+		foreach (
+			var name in hand.Concat(s.CardsIn(me, ZoneType.Battlefield))
+				.Concat(s.CardsIn(them, ZoneType.Battlefield))
+				.Where(c => !c.Is(Cards.CardType.Land))
+				.Select(c => c.Name)
+				.Distinct()
+		)
+			try
+			{
+				var d = Sets.CardRegistry.Get(name).Data;
+				var text =
+					d.OracleText
+					?? string.Join(" // ", (d.CardFaces ?? []).Select(f => f.OracleText));
+				lines.Add(
+					$"        {name} {d.ManaCost} — {d.TypeLine}{(d.Power is null ? "" : $" {d.Power}/{d.Toughness}")}: {text.Replace("\n", " / ")}"
+				);
+			}
+			catch (KeyNotFoundException) { } // a token: its line on the board says what it is
+		return string.Join("\n", lines);
+	}
+
+	/// <summary>
+	/// The turn played out from a position (<c>--suite=A --boards</c>, AI-26.9): <paramref name="ai"/> in the mover's
+	/// seat, the default search in the other, to the end of that turn — every decision the mover made but a bare
+	/// pass. A first move that only reorders the turn (a land before the spell) shows as the same line.
+	/// </summary>
+	public static List<string> TurnPlayed(GameState s, string ai)
+	{
+		var mover = s.DecidingPlayerId();
+		var other = s.OpponentOf(mover);
+		var ais = new Dictionary<int, IAi>
+		{
+			[mover] = AiMatch.Create(ai, mover, 1, searchThreads: 1),
+			[other] = AiMatch.Create("beam", other, 1, searchThreads: 1),
+		};
+		var turn = s.GetGame().TurnNumber;
+		var played = new List<string>();
+		for (var i = 0; i < 300; i++)
+		{
+			s = s.AutoPass();
+			if (s.IsOver() || s.GetGame().TurnNumber != turn)
+				break;
+			var who = s.DecidingPlayerId();
+			var decision = ais[who].Decide(s);
+			if (who == mover && decision.What != "Pass")
+				played.Add(decision.What);
+			s = decision.State;
+		}
+		return played;
+	}
+
 	/// <summary>What <paramref name="ai"/> decides at every position, against the stored answers.</summary>
 	public static Check Run(Suite suite, string ai)
 	{
@@ -367,6 +452,101 @@ public static class PositionSuite
 				)
 				: null
 		);
+	}
+
+	/// <summary>
+	/// The flip rate (AI-20.2): <paramref name="ai"/> decides every position again under <paramref name="guesses"/>
+	/// guesses of the cards it can't see (the hidden cards' sample is seeded by the state's RngSeed, as
+	/// <c>--record=FILE --guesses=N --at=N</c> does for one position), and each position's answers are counted. A
+	/// position with more than one answer FLIPS: the decision was made by the guess, not by the position.
+	/// </summary>
+	public static FlipCheck Flips(Suite suite, string ai, int guesses)
+	{
+		var clock = Stopwatch.StartNew();
+		var states = States(suite);
+		var answers = new IReadOnlyList<(string What, int Count)>[states.Count];
+		var (progress, flipped) = (new RunProgress($"flip rate ({ai})", states.Count), 0);
+		Parallel.For(
+			0,
+			states.Count,
+			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+			i =>
+			{
+				var s = states[i].State;
+				var tokens = new List<(string Token, int Count)>();
+				for (var k = 1; k <= guesses; k++)
+				{
+					var token = Token(
+						s,
+						AiMatch
+							.Create(ai, s.DecidingPlayerId(), k, searchThreads: 1)
+							.Decide(s with { RngSeed = k * 7919 })
+					);
+					var at = tokens.FindIndex(t => Same(t.Token, token));
+					if (at < 0)
+						tokens.Add((token, 1));
+					else
+						tokens[at] = (tokens[at].Token, tokens[at].Count + 1);
+				}
+				answers[i] =
+				[
+					.. tokens
+						.OrderByDescending(t => t.Count)
+						.Select(t => (Describe(s, t.Token), t.Count)),
+				];
+				if (tokens.Count > 1)
+					Interlocked.Increment(ref flipped);
+				progress.Tick(() => $"{flipped} flipped");
+			}
+		);
+		return new FlipCheck(
+			suite,
+			ai,
+			guesses,
+			[.. states.Select((x, i) => (x.Position, answers[i]))],
+			clock.Elapsed
+		);
+	}
+
+	/// <summary>What <see cref="Flips"/> found: every position's answers, the commonest first.</summary>
+	public sealed record FlipCheck(
+		Suite Suite,
+		string Ai,
+		int Guesses,
+		IReadOnlyList<(
+			Position Position,
+			IReadOnlyList<(string What, int Count)> Answers
+		)> Positions,
+		TimeSpan Elapsed
+	)
+	{
+		public int Flipped => Positions.Count(p => p.Answers.Count > 1);
+
+		/// <summary>The guesses that did not give their position's commonest answer, of all guesses.</summary>
+		public double Minority =>
+			Positions.Sum(p => Guesses - p.Answers[0].Count) / (double)(Positions.Count * Guesses);
+
+		/// <summary>The rates, then the <paramref name="shown"/> most divided positions with each answer's count.</summary>
+		public string Report(int shown)
+		{
+			var text = new System.Text.StringBuilder(
+				$"{Ai}, {Guesses} guesses a position: {Flipped} of {Positions.Count} positions flipped ({100.0 * Flipped / Positions.Count:0.0}%), "
+					+ $"{100 * Minority:0.0}% of guesses against their position's commonest answer; {Elapsed.TotalMinutes:0.0} min\n"
+			);
+			foreach (
+				var (p, answers) in Positions
+					.Where(p => p.Answers.Count > 1)
+					.OrderBy(p => p.Answers[0].Count)
+					.Take(shown)
+			)
+			{
+				var game = Suite.Games[p.GameIndex];
+				text.Append(
+					$"- {game.Deck1} vs {game.Deck2}, seed {game.Seed}, move {p.Move}: {string.Join("; ", answers.Select(a => $"{a.Count} {a.What}"))}\n"
+				);
+			}
+			return text.ToString();
+		}
 	}
 
 	/// <summary>The oracle's readings, one per position and in its order — anything else is stale.</summary>

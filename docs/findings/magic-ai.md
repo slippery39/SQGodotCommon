@@ -1759,3 +1759,514 @@ and it **changed a decision** — `TheCerritos_BlocksTheBorg…` (two Officer to
 Identical creatures don't score identically in the look-ahead (its ties fall to the lower id), so dropping a twin's plan
 changes what the AI imagines. For AI-21: grouping twins is a behaviour change, not a shortcut, until the settle treats
 twins alike.
+
+## AI-25 — a block that loses to the attacker's sacrifice pump (2026-11-13)
+
+Shayne's first notes session (TBL-10.3), seed 1 AI vs AI: AI 2 blocked Edgar, Ancient Bloodlord 2/3 with Greenhouse
+Propagator 2/3; AI 1 paid {2} and sacrificed Rank Rat ("{2}, Sacrifice another creature or planeswalker: Put a +1/+1
+counter on Edgar"), Edgar 3/4, the Propagator dead. Kept as `ShayneNotesSeed1` #175.
+
+- **Reproduced, control holds:** the search blocks (c42), 0.95 against −1.19 for not blocking; `--explain` shows the
+  attacker doing nothing after the block.
+- **Cause:** AI-17.10's own gap, named in its `ponytail:` — `Rollout.IsManaPump` took no ability whose cost picks a card.
+- **Fix:** `Evaluator.Terms.TheirSacrificeTricks` (`+notheirsacrifices`): in the attacker's own combat after blocks
+  (AI-17.10's window) only, a mana-costed ability whose cost picks a card (sacrifice, discard, exile) counts as a trick.
+- **After:** the block line imagines "Activate Edgar, sacrificing Rank Rat"; blocking −13.10 against −1.19; no block.
+- **Suite:** 0 of 288 decisions moved by it (one change, seed 2 #81, is there with the switch off too); cost 10633 vs
+  10594 steps a position.
+- **Match:** `beam,beam+notheirsacrifices --until-clear`, 96 games: **50.0%** (48–48), no 5pp difference either way;
+  cost per decision 4364.1 vs 4399.3 steps. Kept by AI-5's rule: it fixes a reported misplay and is no worse.
+
+## AI-9.9 — a held card short on colour (2026-11-13)
+
+Shayne's first notes session, seed 1 AI vs AI (`ShayneNotesSeed1` #97): the Rank Rat's discard took Rockfall Vale, AI 2's
+only red source with four red cards in hand — "Nobody is discarding Rockfall Vale in this situation."
+
+- **Cause:** not the land term (AI-9.1). Three turns ahead no land is left in hand; the red cards a Vale discard
+  stranded were priced as castable — `ManaWithin` counted mana value only (its `ponytail:` named the colour case).
+- **Fix:** `Evaluator.Terms.ColorShort` (`+nocolorshort`): a held card's price is kept `ManaShortShare` (0.6) per coloured
+  pip no source of ours (in play or in hand) makes, with no free first one (`LandUnlock.ColorsShort`).
+- **Position:** Vale 9.43 → 0.84; alone it discards Koth (5.23), not the Forest — that was AI-25.3's gap, below.
+- **Suite:** 0 of 288 moved, cost unchanged. The Borg landcycle test's control needed ColorShort off too.
+- **Match:** `beam,beam+nocolorshort --until-clear`, 96 games: **51.0% ± 1.0pp** (49–47), no 5pp difference; cost per
+  decision 4391.5 vs 4414.5 steps. Kept.
+- **Not fixed — #24**, turn 2, Forest played over the Vale: an exact tie (18.64), and with this hand only a drawn red
+  2-drop would separate them — an option on unknown draws, AI-20's.
+
+## AI-25.3 — the rollout's own blocks face the attacker's trick (2026-11-13)
+
+Found at AI-9.9's #97: with the Vale kept, the discard took Koth over a Forest (Shayne: "Why would trading it in the future
+cause him to discard it now?"). Not a trade: in the Forest line the play-out cast Koth, blocked Edgar with it, and AI 1's
+sacrifice pump killed Koth for a spent Rank Rat — the rollout judged its OWN blocks with `Lookahead.Settle`, which only
+passes in combat, so AI-25's trick window never reached them.
+
+- **Fix:** `Evaluator.Terms.BlocksSeeTricks` (`+noblocktricks`): `Rollout.BestAlone` answers the rest of the declaration
+  cheaply, then gives the attacker `TheirResponse` before settling (`FacingTheirTrick`) — OUR side's blocks only.
+- **Position:** #97 discards the Forest (Koth with the term off). Alone it also keeps the Vale.
+- **Both sides, tried first:** the rollout's opponent fearing our tricks moved a Rampart Hunter attack (seed 2 #85) against
+  the oracle at +6.4% cost a position. Narrowed to ours: suite 0 of 288 moved, 10660.5 vs 10633.1 steps (+0.3%).
+- **Match:** `beam,beam+noblocktricks --until-clear`, 192 games: **48.4% ± 0.9pp** (93–99) — NO difference of 5pp; the
+  point estimate leans negative (1.8 SE). Cost per decision 4626.4 vs 4570.6 (+1.2%). Kept by AI-5's rule (no difference,
+  a recorded blunder fixed with a test), as AI-5's 95–97 at 192 was. Watch it: a rerun on more seeds if a sealed run dips.
+
+## AI-13.13 — a card kept until the hand is full (2026-11-13)
+
+Shayne's notes (`ShayneNotesSeed1` #196): AI 2 cast Yoshimaru with no creature to fight — "it doesn't do anything and has
+more potential value later on". Pass and the cast tied (−13.81, later −27.86).
+
+- **Cause:** not "the pass hands the card to the rollout". In the search's sampled library, AI 2 (colour-screwed by its
+  #97 discard) kept Yoshimaru into an eight-card hand on turn 12 and the rollout DISCARDED Koth to hand size rather than
+  cast Yoshimaru — its cast-or-keep choice was judged before cleanup, so the discard was never seen: keeping cost a card
+  (hold-all-turn −32.08 against cast-now −27.86, probed on the sampled library; on the real one hold led, −14.97 vs −17.79).
+- **Fix:** `Evaluator.Terms.HandSize` (`+nohandsize`): in our own turn, before cleanup, a hand over its maximum prices its
+  cheapest excess at nothing — Shayne: "wait until you were forced to discard to actually play something".
+- **After:** both lines −27.86; the potential tie-break (3 vs 1) keeps it; Yoshimaru is cast on turn 12.
+- **Suite:** 0 of 288 moved, cost unchanged. **Match:** `beam,beam+nohandsize --until-clear`, 96 games: **51.0% ± 1.0pp**
+  (49–47), no 5pp difference; cost 4485.7 vs 4532.1 steps a decision. Kept.
+- **#213 (Extended Absence on the 1/1) is AI-20's:** exiling it, the drain and the clock (8.0) beat keeping the removal
+  (7.7) because the look-ahead's opponent never casts its unknown hand — no future target ever comes.
+
+## The flip rate: how often the guess decides (2026-11-14, AI-20.2)
+
+`--suite=beam --guesses=10`: the default search decides each of the 288 suite positions again under 10 guesses of the
+cards it can't see (`Hidden.Sample`, seeded by the state's RngSeed), and each position's answers are counted.
+
+| | |
+|---|---|
+| Positions with more than one answer | **69 of 288 (24.0%)** |
+| Guesses against their position's commonest answer | 6.9% |
+| Time | 9.2 min, 16 threads |
+
+- **What flips most:** the Jace token's −3 (draw a card) and −1 (surveil 1) against a land or a spell first - 22 of the
+  40 most divided positions name one - then a cast against a pass (Vraska's Final Mercy, Chandra's Emberling, Academic
+  Ascent), and an attack against none (Samut, the Cadet token).
+- **The count is of FIRST MOVES, so it is rough both ways.** Two orders of the same turn count as a flip (Play Island
+  / Jace −3). And one first move hides two plans: `RogueLandcycleSkipped` #153-#159 answer Pass in 119 of 120
+  guesses, but under most guesses that Pass is "wait, attack, then landcycle and play the land this turn" (a tie the
+  wait wins, AI-13.12) and under the others "keep the 6/5, a land is coming" (`--explain=159 --guess=K`). The game
+  got a different guess at every stop, waited through its second main phase, and cycled in the opponent's upkeep.
+- The kept positions, 10 guesses each: #247 (the token's surveil) Pass 8, surveil 2; #24 (Forest or Rockfall Vale)
+  Forest 9, Vale 1; `LintTrkSeed1` #48 (the landcycle's search) none 5, Plains 4, Island 1.
+- After AI-20.3 the rate must be 0 - nothing is guessed - which either way of counting shows.
+
+## The land / not-a-land look-ahead: first numbers (2026-11-14, AI-20.3)
+
+**The default since AI-20.4 (Shayne, after the match below): `beam` is now this search and the `beam` column
+below is `beam+shuffle`.** The numbers were measured under the names of the day. `beam+landornot` (then a trial): nothing is shuffled, an unseen card on top of a library is an unknown
+card, and every line is rolled out twice - our unseen draws are lands, or not - averaged by the deck list's land odds.
+On the 288 suite positions, against today's search (`beam`, identical to the last commit's):
+
+| | `beam` | `beam+landornot` |
+|---|---|---|
+| Positions whose answer moves with the seed | 69 of 288 (24.0%, 10 seeds) | **0 of 288** (3 seeds) |
+| Decisions changed from the committed answers | 1 | 38 (13.2%) |
+| Engine steps a position | 10 660 | 19 885 (+87%) |
+| Rollouts a position | 21.2 | 40.9 |
+| Agrees with the oracle | 79.9% | 76.7% |
+| Score given up against the oracle | 0.42 | 0.76 |
+| Misses a win the oracle found | 2 | 5 |
+
+- **The oracle does not judge this change.** It searches on the REAL library order (`PositionSuite.OracleSettings`),
+  so it knows the draws an honest search can't; "whether another model is better is the match's question".
+- **The match** (`--match=beam+landornot,beam --until-clear`, 80.7 min): stopped after 576 games (6 pairings × 48
+  seeds × both seats) with **beam+landornot better: 54.2% ± 1.5pp** (312–264, no draws; every game finished). The
+  running score was above 50% from the first batch on (53.4% at 296 games). By its deck: Red-Green 134-58, White-Black
+  112-80, White-Blue Jace 66-126 (also the losing deck in the progress match above, 23-73). Per game the two play alike: lands played 7.3
+  against 7.4, spells cast 9.5 against 9.4, 18.9 turns. **Cost per decision: 9781 engine steps against 4498 (2.17×)**,
+  23.0 rollouts against 10.2.
+- **After the match, as the default** (AI-20.6): a surveil keeping an unknown card made it a known card that is
+  never a land, so the surveil line lost its "lands" half (Dominion Assault Force: surveil then keep 15.53, exile
+  21.09 - the first level read 21.96 and 21.09). Fixed: 34 decisions change where 38 did, 19 882.5 engine steps a
+  position, agrees with the oracle 76.0%, score given up 0.81; 0 of 288 flip (3 seeds, 3.4 min). The match above
+  played WITH the bug. **Played again as committed** (2026-11-15, `--match=beam,beam+shuffle --until-clear`, with
+  AI-20.6 and AI-20.8 on both sides): 480 games, **54.0% ± 1.5pp** (259-221), stopped as "better", 99.2 min on a
+  busy machine; by deck RG 115-45, WB 95-65, Jace 49-111; 9973.8 engine steps a decision against 4533.1 (2.20×),
+  23.5 rollouts against 10.3; lands 7.4 each, spells 9.6 against 9.5, 19.0 turns. The same result as before the fix.
+- **Shayne's lesson tests under it** (AI-20.7): 1583 pass, 12 fail. `PatrolRacesIntoDrain` #287 attacks again -
+  232.81 against −2.19: the attack wins where the next draw is a land (50%, +9034.71) and loses where it is not
+  (−8569.09), and a win a turn sooner outweighs the loss. Nine controls no longer reproduce their misplay with the
+  patch off; four of those counted over 30 shuffles (Ajani's Anguish 0 of 30 cast where 10 or more did; the Tasha
+  attack 0 where 6 or more; Energize binned 0 where 7 or more).
+- **The look-ahead's opponent, an ability before a spell that does less** (AI-20.8, 2026-11-15):
+  `PatrolRacesIntoDrain` #287 - No attack −2.19, Attack −9499.14 (lost in both halves: turn 13, the Mountain from
+  exile, the drain 4 → 2, the 2/1 for 2). With it off (`beam+spellfirst`) Attack 232.81; `beam+notheirabilities`
+  Attack 4564.61; `beam+liveoptionturns` now No attack −4.84 against −9502.10 (that control no longer shows its
+  misplay). Suite: 0 of 288 changed, 19 883.7 engine steps a position (19 882.5 before), 40.9 rollouts, oracle 76.0%.
+  **The match** (`--match=beam,beam+spellfirst --until-clear`): 96 games, 50.0% (48-48), stopped as no difference
+  of 5pp either way, 49.2 min on a busy machine; 9676.1 engine steps a decision against 9676.0, 21.7 rollouts each;
+  by deck RG 19-13, WB 18-14, Jace 11-21; lands 7.6 and spells 9.9 a game each, 20.4 turns. Every mirror pair
+  split, so the ± reads 0.0pp: in these three decks the term almost never fires.
+- **The 38 changed decisions:** 22 are the Jace token's −1, −2 or −3 against another first move (used where it
+  passed, or a land or a spell played first where it drew); 10 a cast against a pass or another cast; 3 blocks; 2
+  abilities no longer activated; 1 is today's own (Compel Brutality's mode, changed in `beam` too).
+- **The landcycle game** (`RogueLandcycleSkipped` #157, 3 Swamps, a 6-mana 6/5 with "Basic landcycling {2}"): Pass and
+  cycling now both score 8.72, and both best lines cycle this turn (unseen draws not lands, 54%: 10.06; lands, 46%:
+  7.18). The wait wins the tie (AI-13.12) and its plan cycles: played forward, turn 8 ends with the land played, under
+  two seeds; today's search at the record's seed ends it on 3 lands (the test's control). #153, #155 and #159 answer
+  Pass under 4 of 4 seeds.
+- **The other kept positions, 4 seeds each, now one answer:** `LintTrkSeed1` #48 (the landcycle's search) "none" 4 -
+  no longer luck but a price: none −8.97, Plains −8.98. The fetched land scores −0.20 in hand (16.23 → 16.03 where the
+  draws are not lands); why is not traced - a land-valuation question, with #24. #247 (the token's surveil) Pass 4;
+  #24 (Forest or Rockfall Vale) Forest 4 - both are other problems (the surveil's split; land valuation).
+
+## A look at an unseen card (2026-11-15, AI-20.9)
+
+A surveil over a card the look-ahead made up moves the land odds of the NEXT draw instead of showing that card
+(`Evaluator.Terms.Looks`; `beam+nolooks` is the look-ahead before it). The positions and the suite were measured before the commit
+(`3ddc4602`), the match after it.
+
+- **The match:** `--match=beam,beam+nolooks --until-clear` stopped after 288 games (6 pairings × 24 seeds × both
+  seats, 6103.6 s; 396 games had finished, 197-199). beam **49.3% ± 1.5pp** (142-146, no draws); **no 5pp
+  difference either way** (log-likelihood: better −7.32, worse −4.14; decided at ±2.94). Cost per decision: 9386.7
+  engine steps and 22.0 rollouts against 10 033.8 and 22.8 - the look is no dearer. Lands played 7.4 against 7.6 a
+  game, spells cast 9.5 each, 19.4 turns. By deck (beam's record with it): Red-Green 59-37, White-Black 57-39,
+  White-Blue Jace 26-70 - that deck's usual share with either search (23-73 in the progress match above), so the
+  split says nothing about the token. Both sides are the fair look-ahead: neither sees a card it shouldn't.
+
+- **`ShayneNotesSeed1` #247** (three Forests, six red cards in hand, a Jace token at loyalty 2, 27 unseen cards: 13
+  lands, 9 of them red sources). Before: Pass −17.99 = 52% × −23.40 (draws not lands) + 48% × −12.18 (lands: a
+  Mountain, Heartstring Puller on turn 14); Jace −1 −18.09, the same two lines 0.10 lower (loyalty 1). After:
+  Jace −1 **−15.19** = 26% × −23.50 + 74% × −12.28; Pass's best line is the same surveil after combat, −15.19.
+- **The suite, first cut** (the look moving every draw of the look-ahead): 10 of 288 changed, 19 802.0 engine steps
+  a position, oracle 76.4%, score given up 0.93. One was wrong - `White-Blue Jace vs Red-Green seed 2, move 60`, a
+  token at loyalty 6: Jace −1 9.55 (84% × 10.63 + 16% × 3.75; 41% lands before the look) over Jace −3 9.02 (59% ×
+  12.81 + 41% × 3.51).
+- **The suite, as built** (the move divided by the cards leaving our library in the not-lands rollout): **9 of 288
+  changed (3.1%)**, 19 805.8 engine steps a position (19 883.7 committed), 40.6 rollouts, **oracle 77.1%** (76.0%
+  committed), **score given up 0.76** (0.81), misses a win 4. The nine: the token's −1 where it passed (3), before
+  a land (2) or before a cast (1); Koth attacks where he stayed home (47.07 against 45.19 - the attack line
+  surveils for a land after it); Fatehold Charm on a Cadet token where it passed (−108.45 against −108.84); Jace −2
+  → Protege's Awakening (not read).
+- **What the looks look for** (the first cut's 8 token surveils, read with Explain): 6 look for NOT a land (lands
+  37-50% → 13-24%) - an unknown card held is priced at the average spell, a land past the ones needed at nothing -
+  and 2 for a land. In two of the eight the two ways are a won and a lost game (9046 / −8553) and the look moves
+  24-27 points of share between them - the look-ahead taken at its word, as `PatrolRacesIntoDrain` was.
+- **Dominion Assault Force** (`DominionExilesOwnCard` #127, `DominionExilesTheirCard` #294): with `SurveilPrice`
+  off it surveils all the same - the flat third of a card is no longer what finds it.
+- **What the REAL look answers at #247** (after the match; the −1 played with each of the 27 unseen cards in turn
+  really on top - 9 red sources: 7 Mountain, 2 Konstrari Annex; 4 Forest; 14 spells, 10 of them red and
+  uncastable). As committed: the red sources kept, the Forests binned (`LandUnlock.Surveil`), and of the 14 spells
+  only 2 binned (Konstrari Charm, Way of the Pyromancer - priced under the unknown card) - **12 kept, 9 of them red
+  cards it can't cast**. So the next draw is a red source 33.3% without the look, **41.0% with it as played**
+  (9/27 + 6/27 × 9/26), 56.4% binning all 18 - where the plan credited 48% → 74% (any land). With
+  `Terms.SurveilSpells` off (the spells branched, not ruled): 17 of 18 binned, **55.1%**; the one kept is Compel
+  Brutality ({1}{G}, castable). And that rule's own lesson (`SurveilNone` #173: Energize stays on top) holds
+  without it under the default - Mountain binned, Energize kept, either way.
+- **The spells rule off, on the suite (AI-20.11):** `--suite=beam+nosurveilspells` changes **0 of 288**. Before
+  the fix below it cost 20 311.5 engine steps a position (41.6 rollouts) against 19 805.8 (40.6); after it, the
+  same 19 805.8 - every extra step was the branch over a made-up card. No suite position looks at a real spell
+  where the rule and the search differ, so the suite cannot judge the rule.
+- **A made-up card binned (found by the tests with the rule off, fixed):** with the spells branched, the search
+  binned the unknown card a look showed - #247's 13 lands of 27 unseen became 13 of 26 (48.1% → 50.0%, 0.21 of
+  score against the loyalty's 0.10), so the token's −1 was played even without `Looks`; with `Looks` on the same
+  bin was counted again (76% for 74%). A made-up card is now always kept; the default search never branched one
+  (suite 0 changed, same cost).
+- **The spells rule off, the match (AI-20.11, after that fix):** `--match=beam+nosurveilspells,beam --until-clear`
+  stopped after 192 games (6 pairings × 16 seeds × both seats, 3403.8 s; 216 had finished, 109-107).
+  beam+nosurveilspells **50.0% ± 1.3pp** (96-96, no draws); **no 5pp difference either way** (log-likelihood:
+  better −7.60, worse −7.60). Cost per decision 9831.1 engine steps and 22.3 rollouts against 9690.5 and 22.0
+  (+1.5%). Lands played 7.5 each, spells cast 9.9 against 9.8, 19.9 turns. By deck: Red-Green 40-24, White-Black
+  40-24, White-Blue Jace 16-48.
+- **Since 2026-11-16 the rule is off by default** (Shayne: "this is reasonable"), so the names above read the
+  other way round: `beam` is what was `beam+nosurveilspells`, and `beam+surveilspells` (`Settings.SpellsRule`)
+  is the search with the rule. The suite changes 0 of 288 for either, 19 805.8 engine steps a position each.
+
+
+## AI-26.2: the option report's first numbers (2026-11-16)
+
+`OptionReport` (`--record=FILE --options=N`; hand-built positions: `--filter "TestCategory=OptionReport"`) — a report,
+nothing in the AI reads it. A targeted card's gain NOW (its best cast, settled, less the settled position) against the
+same cast on each creature the opponent is likely to play: the creatures of 200 sample AI sealed decks (seeds 5000+)
+sharing the colours they have shown, each put onto their real battlefield. 400 sampled futures (their unseen hand and
+draws, the creatures they have the mana for; our draws from our own list); a card's HELD price is what the hand's
+answers make with it less without it. Mana charge: `RecastPerMana` (0.5) × (mana idle now if held + its cost × how
+busy our mana is later). All in the evaluator's points.
+
+| Position | Now | Later, alone | Held | Waiting adds | Mana charge | Net |
+|---|---|---|---|---|---|---|
+| #213 (`ShayneNotesSeed1`): Extended Absence ({3}{B}), their board a 1/1 Yoshimaru; 38 decks fit Green, 3.3 new creatures in 4 turns | 8.0 | 15.2 | 11.6 | +3.7 | 2.0 | hold by 1.7 |
+| Hand-built: one "Bolt" ({R} instant, 3 damage, any target), their vanilla 1/1, life 20 each | 5.0 (face 3.0) | 8.3 | 8.3 | +3.3 | 0.3 | hold by 3.0 |
+| The same with three Bolts | 5.0 | 8.4 | 4.8 | +0.5 | 0.4 | hold by 0.1 |
+| Hand-built tempo swing: two "Kill" ({2}{B} sorcery, destroy), their 3/3 and 2/4 at 14 life, our 4/4 and 3/3, six lands, a 5-mana 5/5 in hand | 11.6 (the 3/3; the 2/4 11.1) | 12.8 | 11.5 | +0.2 | 1.5 | cast now by 1.3 |
+| #547 (`GalliaWontAttack`): Unsummon in their turn, we are at 5 | 38.5 | 40.0 | 37.0 | +1.5 | 0.2 | hold by 1.4 |
+
+- **The spare answer is priced as the n-th best target**: one Bolt is held at 8.3, one of three at 4.8 — below the
+  5.0 the 1/1 gives now.
+- **What a card can hit is read, not told**: the Bolt gains nothing from 26% of their likely creatures (toughness 4
+  or more), Extended Absence from 1%; only 16% of them beat a 3/3 for the Kill.
+- **A 1/1 is priced at about half a 3/2** (Bolt: 5.0 against 10.0; Extended Absence on Yoshimaru 8.0 against 15–18
+  for a 5/5) — `Evaluator.Body` gives every creature a flat 2. Shayne's read of #213 was "almost nothing". The
+  option arithmetic inherits it (AI-12's ground).
+- **#547 is not readable yet**: at 5 life every creature put onto their board is priced by the low-life term as if
+  it attacked now (20–37 each), and a bounce is priced like a kill of the clock.
+- **The tempo swing today**: the search already fires both Kills and attacks for 7 (9067.99, a WON line — its imagined
+  opponent plays nothing from an unseen hand; Pass 47.47). So the position does not yet test a price against tempo.
+- Cost: ~8 s a position after the first (which samples the decks, ~10 s).
+- **Shayne's reading (2026-11-16): the three-Bolt row is wrong** — he holds, "not even close". The 1/1's 5.0 is body
+  4.5 (2 + 1.5 × power + toughness) plus 0.5 of clock. The horizon is not the cause: the same position priced 6, 8
+  and 10 turns ahead is hold by 0.5, 0.9 and 1.3 (held 5.4, 5.9, 6.4; 3.3, 3.9, 4.6 new creatures). **Today's search
+  plays it wrong too:** Cast Bolt → the 1/1 at −6.73, tied with Pass (−6.73); Bolt at the face −12.73.
+- **With his rule and 8 turns priced (AI-26.6, the same day).** A card is 8.5 points (the average measured card:
+  FRA 8.97 over 257, TRK 8.17 over 294, merged by name); their vanilla 1/1 as a target is 0.4 of it, 3.4, plus its
+  0.5 of clock — where the evaluator's body, 4.5, is 0.53 of a card. The rows above read 4 turns and the body; now:
+
+  | Position | Now | Held | Waiting adds | Net |
+  |---|---|---|---|---|
+  | One Bolt, their vanilla 1/1 | 3.9 | 9.0 | +5.1 | hold by 4.8 |
+  | Three Bolts | 3.9 | 5.6 | +1.8 | hold by 1.5 (the rule alone, 4 turns: 0.4; 10 turns: 2.1) |
+  | The tempo swing | 11.6 | 11.7 | +0.3 | cast now by 1.0 |
+  | #213, Extended Absence | 8.0 | 11.8 | +3.9 | hold by 2.3 (mana charge 1.5) |
+  | #547, Unsummon (one turn priced: the clock) | 38.5 | 37.0 | +1.5 | hold by 1.4 |
+
+## AI-26.4: the option price in the search, off by default (2026-11-16)
+
+`beam+optionprice` (`BeamSearchAi.Settings.OptionPrice`, `OptionPrice.cs`): our answers in hand priced together by
+what they are likely to meet, in place of their held prices; gains measured once per (answer, creature) in the
+card-value fixture; 32 futures read at the root. The default is unchanged (1598 tests pass, golden replays included).
+
+- **The three-Bolt position, no look-ahead** (`OptionReportTests`, the hand-built one): today hold −11.99, Bolt the
+  1/1 −8.19 — the Bolt costs 1.20 of hand and gains 4.50 (their creature) + 0.50 (their clock). With the price on:
+  hold 3.44, Bolt 3.21 — the Bolt costs 5.22 of hand, so holding leads by 0.23.
+- **The search still Bolts it**: Cast Bolt → the 1/1 at 1.15, tied with Pass (1.15, whose line Bolts later); Bolt at
+  the face −8.79. The look-ahead's two turns add the 1/1's two attacks, 2 life at 1.0 a point at 20 — the board's own
+  scale (AI-27), not the option price.
+- **The tempo swing** still casts both Kills and attacks (the won line, as today).
+- **Suite** (`--suite=beam+optionprice`, 262 s): **11 of 288 decisions change (3.8%)**; 20 374.4 engine steps a
+  position against 19 805.8 (+2.9%), 40.6 rollouts; agrees with the oracle 74.7% (committed 77.1% — the oracle is
+  today's evaluator read deeper, so it leans against any new term), score given up 0.81 (0.76). The changes: No
+  Admittance held three times (once a land played instead), Vraska's Final Mercy on Repurposed Enforcer held,
+  Prophesied End on Koth held, Academic Ascent on Keeper of the Quiet Hour held, Extended Absence on Eardrum Rattler
+  held; Koth and Rampart Hunter cast where it passed; a Plains for a Swamp on turn 1 twice. None read yet.
+- **Shayne's blocker-in-hand position** (three Bolts, three Mountains, their vanilla 1/1, four unseen cards;
+  `OptionReportTests.ThreeBolts_AndABlockerInHand_Printed`):
+
+  | In hand with the Bolts | Today | `beam+optionprice` |
+  |---|---|---|
+  | a {2}{R} 2/2 (castable) | Cast the 2/2 −0.21; Bolt the 1/1 −0.35; Bolt the face −6.53 | Cast the 2/2 11.26; Bolt the 1/1 9.15; Bolt the face −0.13 |
+  | a {3}{R} 3/3 (a land short) | Bolt the 1/1 −2.02 (= Pass, which Bolts later); face −8.13 | Bolt the 1/1 6.42 (= Pass); face −3.46 |
+
+  With the 2/2 down their 1/1 does not attack in either look-ahead, and both imagined next turns still Bolt it to
+  attack past it with the 2/2: the leaf pays 4.50 for their 1/1 gone whatever it could do.
+- **With AI-26.12 too (`beam+optionprice+byuse`: their creatures that ours hold off count 0.4):** the 2/2 is cast
+  at 12.90 against 9.15 for the Bolt first, and the imagined next turn attacks with the 2/2 without Bolting the
+  1/1; with the 3/3 a land short it PASSES at 6.58 against 6.42 for the Bolt (face −0.98) and casts the 3/3 when the
+  land comes. Three Bolts and no creature anywhere: unchanged, Bolt the 1/1 (1.15). The tempo swing: both Kills.
+- **Suites with the held-off trial** (2026-11-16, run beside the full tests, so the seconds are slow):
+
+  | Search | Changed of 288 | Engine steps a position | Agrees with the oracle | Score given up |
+  |---|---|---|---|---|
+  | committed | — | 19 805.8 | 77.1% | 0.76 |
+  | `beam+optionprice` | 11 | 20 374.4 | 74.7% | 0.81 |
+  | `beam+byuse` | 11 | 20 533.0 | 75.3% | 0.80 |
+  | `beam+optionprice+byuse` | 15 | 21 074.4 | 74.3% | 0.87 |
+
+  Each misses a win the oracle found 3 times (the committed answers' count was not read). `beam+byuse` alone: a block
+  on Thalia instead of a Cadet, Chandra's Emberling cast where it passed, No Admittance on Tetsuko for an X=1 Ajani's
+  Anguish, Vraska's Final Mercy held twice, Prophesied End, Academic Ascent, Extended Absence and Break Under
+  Pressure held, Mindseeker Oculus held once and cast once. Both: the same removal held, No Admittance held three
+  times, Rampart Hunter and Koth cast where it passed, the two turn-1 lands. None read yet.
+- No match run.
+
+## AI-26.13: after the pre-commit review's fixes (2026-11-16)
+
+The numbers in "AI-26.4" above and "AI-26.9" below were read BEFORE these fixes (the last answer in hand over-held, a
+monotonic mana charge, held-off by lasting stats, gains measured the same for every search — story AI-26.13).
+
+| Search | Changed of 288 | Engine steps a position | Agrees with the oracle | Score given up |
+|---|---|---|---|---|
+| committed | — | 19 805.8 | 77.1% | 0.76 |
+| `beam+optionprice` | 5 (was 11) | 20 134.1 | 76.4% | 0.71 |
+| `beam+byuse` | 10 (was 11) | 20 256.3 | 76.0% | 0.90 |
+| `beam+optionprice+byuse` | 12 (was 15) | 20 432.9 | 75.0% | 0.84 |
+
+- **The hand-built positions:** three Bolts and a {3}{R} 3/3 — Pass 6.70 against 6.45 for the Bolt (both trials;
+  the option price alone still Bolts, 6.45 tied); and a {2}{R} 2/2 — the 2/2 cast at 13.01, Bolt at the face 2.39.
+  Three Bolts alone: Bolt the 1/1 (1.19, tied with Pass). The tempo swing: both Kills. A lone Bolt in hand is priced
+  7.8, three together 19.1.
+- **The 12 changes under both trials, turns played out** (`--boards`, now 1 min for 12 with a progress line): as
+  "AI-26.9" for s1 #121, s2 #10, s2 #83, s2 #16, s3 #16, s4 #24, s4 #49, s4 #96 and the two turn-1 lands; **s2 #38
+  now casts Prophesied End on Koth the same turn, after its creature and its land** (a reorder, not a hold); and one
+  new: **s2 #47** — Vraska's Final Mercy (destroy target creature or planeswalker, lose 2 life) on their Mindseeker
+  Oculus 2/1, which can't be blocked (their Tetsuko), where the default kills their Repurposed Enforcer 3/2, which
+  our 5/5 holds off. Gone from the list (the default's play again): s2 #21, s2 #73, s3 #44, s4 #18.
+
+## AI-26.15: the match — both trials against the default (2026-11-16)
+
+`--match=beam+optionprice+byuse,beam --until-clear`, on the code after AI-26.13 and AI-26.14 (its third start; the
+two before were stopped for those fixes at 19 and 107 games and are not results).
+
+- **49.2% ± 1.7pp over 384 games** (6 deck pairings × 32 seeds × both seats): the trials 189, the default 195, no
+  draws; **early stop: no difference of 5pp either way** (log-likelihood: better −5.88, worse −3.08; decided at
+  ±2.94). 102.9 min.
+- Cost a decision (deterministic): 11 312.3 engine steps and 22.8 rollouts against 10 500.1 and 22.3 (+7.7%).
+- A game: 67 decisions against 65, 19.1 turns; lands played 7.4 against 7.3, spells cast 9.6 each.
+- By the trials' deck: Red-Green 80-48, White-Black 75-53, White-Blue Jace 34-94.
+- The match stopped before AI-26.14 had leaned the other way (43.9%, 47-60 at 107 games) — on a rule that counted
+  our attackers as walls, and on a third of the games.
+
+## AI-26.14: a creature we attack with holds nothing off (2026-11-16)
+
+After Shayne's "never destroy the 2/1" (suite White-Black v White-Blue Jace seed 2 move 47): `Evaluator.HeldOff`
+counts only our creatures untapped for their next attack. `--suite=beam+optionprice+byuse --boards` on that code:
+**14 of 288 changed**, 20 515.8 engine steps a position, agrees with the oracle 74.7%, score given up 0.57.
+
+- **s2 #47 is gone from the list**: the trials destroy the 3/2, as the default does.
+- Two of the 14 are timing only (the same turn, a pass first): s2 #93 Extended Absence on their Jace token, s3 #98
+  Break Under Pressure. Two are the turn-1 land.
+- Held or moved as before: s2 #10 (burn at the face held), s2 #16 (the flash 3/2 for the 2/1 and a card), s2 #38
+  (Prophesied End on Koth after combat, the same turn), s3 #16 (the 3-drop with its Jace token for the 2-drop),
+  s4 #24 (burn on the 3/2 held, a land and a 4-drop), s4 #49 (Extended Absence on the 3/1 trampler, not the 2/2),
+  s4 #96 (the edict held, they are at 3).
+- New, not read by Shayne: s1 #70 (Tam's Resistance's counter on its 2/1 before Thalia is cast, where the default
+  casts Thalia and puts it on her), s1 #111 (the 1/4 flier stays home where it attacked), s1 #121 (the same turn in
+  another order; Chandra's Emberling is no longer cast).
+- **The match so far is NOT a result**: stopped at 19 games for AI-26.13's fixes, then at 107 games for this one —
+  43.9% (47-60) for the trials on the code before this fix.
+
+## AI-26.9: the 15 changed turns played out (2026-11-16)
+
+`--suite=beam+optionprice+byuse --shown=30 --boards`: each changed position's board, then its whole turn under the
+default search and under the trials (the default search in the other seat). By game and move:
+
+| Position | The default search's turn | Both trials' turn |
+|---|---|---|
+| Jace v RG s1 #121 | no attack, Jace −1 | the same, with Chandra's Emberling cast first |
+| WB v RG s2 #10 | No Admittance at the face (18 life, empty board) | nothing |
+| WB v RG s2 #21 | the 1/1 attacks, No Admittance finishes the 1/4 flier it met | Koth cast, no attack, burn held |
+| Jace v WB s2 #73 | Extended Absence on their Jace token (8 loyalty), both attack the face | Rampart Hunter cast (its +2/+2 on our flier), the 3/3 attacks the token, the flier the face |
+| Jace v WB s2 #83 | Extended Absence on the Jace token | Rampart Hunter cast |
+| Jace v RG s2 #16 | Mindseeker Oculus, Jace −3 (a card) | Divining Duelist (flash 3/2) cast later in the turn, its loot |
+| Jace v RG s2 #38 | Prophesied End on Koth in the draw step, Island, Oculus, the 4/3 attacks, Jace −3 | the same without Prophesied End (held; the mana was there) |
+| WB v Jace s3 #44 | Academic Ascent on its 3/2, Oculus, land, attack as a 5/4 flier, Jace −3 | Oculus, land, Way of the Mentor, attack as a 3/2, Jace −3 |
+| Jace v WB s3 #16 | Repurposed Enforcer (2 of 3 mana) | Mindseeker Oculus, Jace −3 (a card) |
+| WB v RG s4 #24 | No Admittance on the 3/2, Forest, the 2/2 and the 1/1 attack | Forest, the 2/2 attacks, Heartstring Puller cast; burn held |
+| WB v RG s4 #49 | Extended Absence on the 2/2 (unblockable-maker), Swamp, attack, Jace +2 | the same turn, Extended Absence on the 3/1 trampler instead |
+| RG v WB s4 #96 | Break Under Pressure at their end step (their 2/2 token; they are at 3) | nothing |
+| Jace v RG s4 #18 | No Admittance on the 3/2, Mountain, Yoshimaru: Koth fights the 1/3, the 2/2 and Koth attack | Mountain, no attack, Heartstring Puller cast; burn and Yoshimaru held |
+| two turn-1 hands | Swamp | Plains (a tie) |
+
+So of the seven "removal held", five are held through the turn, one is the same spell on another target (#49), and
+in two the mana goes to a 4-drop (#24, #18). For Shayne's word: #18 (two creatures killed and 5 damage given up),
+#21 (their flier left alive) and #73 (their 8-loyalty Jace token left alive).
+
+## AI-26.5: tap abilities kept for their end step (2026-11-16)
+
+`beam+lastchance` (`Rollout.Settings.LastChance`, OFF by default): in our own turn the look-ahead uses a "{T}:" ability
+only to take something of theirs off the battlefield; otherwise it keeps it for the opponent's end step and uses it
+there if that leaves us better. Read with `AbilityTimingTests` (hand-built, explicit; our seat under each search, theirs
+under the default).
+
+| Position | `beam` | `beam+lastchance` |
+|---|---|---|
+| Pinger 1/1 alone against their vanilla 2/3, from our first main | pings their face at our beginning of combat; tapped through their turn; 18–19 | keeps it up through their turn, pings their face at their end step; 18–19 |
+| the same, from our upkeep | pings their face in our draw step; 18–19 | as from our main: their end step; 18–19 |
+| Pinger 1/1 and a vanilla 2/2 against their vanilla 3/3 | the 2/2 attacks, the 3/3 blocks, the ping finishes it after damage; 20–20 | the same |
+| Tapper 1/1 and a vanilla 2/2 against their 3/3 and 2/2, from main or upkeep | taps the 3/3 in their upkeep, their 2/2 stays home; 20–20 | the same |
+
+- **A first version kept every tap for their end step** and lost the 3/3: the look-ahead no longer saw "the 3/3 blocks,
+  the ping finishes it in our second main" (its damage is gone by their end step), so the search pinged the 3/3 before
+  combat, it didn't block, and its attack back made it 17–18. Hence the exception for a kill now.
+- **Position suite: 0 of 288 changed**, 19 860.4 engine steps a position against 19 805.8 (+0.3%). FRA has 13 creatures
+  with a tap ability that isn't mana, so the suite seldom reaches one: it shows the trial is safe, not that it matters.
+- **It does not replace `WaitOnTies` (AI-13.12).** `beam+actnow` changes 17 of 288 with or without the trial, the same
+  17 (oracle agreement 77.1% → 79.5%, score given up 0.76 → 0.83). None is a tap ability: Extended Absence ×4 on a Jace
+  token, Living Library's "{6}, Sacrifice" ×4, Prophesied End ×2, Break Under Pressure ×2, Fulminous Forte, Academic
+  Ascent, Konstrari Charm, Skilled Battlecarver's pump, Yoshimaru's "{6}: counter" — each made earlier in the same turn
+  without the tie-break. Retiring it needs the same idea for instants and mana-costed abilities, a different "later".
+- **Shayne on the two changed positions: "Yeah those plays are correct".** The match,
+  `--match=beam+lastchance,beam --until-clear`: **51.0% ± 1.0pp over 96 games (49-47)**, no difference of 5pp either
+  way; 9379.0 engine steps a decision against 9359.3 (+0.2%); 30 min. By deck: Red-Green 22-10, White-Black 16-16,
+  White-Blue Jace 11-21.
+
+## AI-26.16: all three the default (2026-11-16)
+
+Shayne: "please put on all 3 and let's try it out". As first turned on: suite 14 of 288 changed (+4.0% engine steps), 12
+tests failing — ten controls, two real changes of his agreed plays. Traced with a throwaway probe (each switch off in turn):
+
+| Position | Old default | All three | Which | Why |
+|---|---|---|---|---|
+| Guidance Failure's game, #187 (`GuidanceNoAttack`) | the Spanner Jockey 3/3 attacks | stays home | `byuse` | their Fugitive Listener 3/1 "held off" by our Dominion Assault Force 4/4 in hand, so the Jockey trading with it lost 0.6 of the Listener |
+| Unsummon against a 2/2 with Ferocity of the Hunt, attacking | bounces it (the Aura dies) | holds | `optionprice` | Unsummon held priced 10.3 (flat 1.2); casting gained ~9.3 |
+
+The second: `OptionPrice.Gain` measured with no held values, so a creature bounced to their hand was a flat card (1.2)
+and a bounce gained the whole creature. Unsummon's gains before → after the fix: Verdant Kraken 15.8 → 3.5, Archive
+Arbiter 11.6 → 3.0, Proft 14.1 → 1.5, a vanilla 2/2 5.8 → 0.5. Prophesied End on Fugitive Listener 7.2 → 4.85 (the card
+it gives a non-attacker is priced as the search prices their unseen cards).
+
+Also found: kept gains were keyed by name, and the filler deck's FRA cards are vanilla with real names — so which test
+ran first set every later test's gains (RankRat failed in the full run, passed alone; its control the reverse).
+
+After the fixes (a creature that kills one of ours blocking it is never held off — reverted under option A, below;
+gains with held values; gains keyed by `Identity`): **1600 of 1601 pass**, seven controls moved to `Before26`. Shayne's AI-26 positions unchanged — three
+Bolts and a 2/2 in hand: casts the 2/2; a 3/3 a land short: passes; three Bolts alone: Bolts; the tempo swing: both
+Kills; "never the 2/1": the 3/2. **Suite: 14 of 288 changed, 19 961.4 engine steps a position against 19 805.8
+(+0.8%)**; oracle agreement 74.3% (committed 77.1% — the oracle is the old evaluator read deeper). Nine of the 14 he
+read before (AI-26.9/26.14); new or unread: s1 #52 (Koth blocks a Cadet), s1 #69 (Jace −1 for −3), s1 #111 (the
+Soulbreaker stays home at 3 life), s3 #15 (Divining Duelist flashed in our own combat, looting), s3 #71 (a land before
+Prophesied End on Koth — the same turn reordered).
+
+Open: `ASurveil_KeepsAGoodSpellOnTop` (#173) — `optionprice` now bins Energize ("{1}{U} Sorcery: Return target creature
+an opponent controls to its owner's hand"; beam me up {3}{U}) with the Mountain: −6.05 against −6.93 for the Mountain alone.
+
+**Then (2026-11-17), Shayne's answers and option A.** Of the six changed positions he had not read: fine — the surveil
+binning Energize with the Mountain ("Binning both is actually fine"), Koth trading with a Cadet, the Soulbreaker home at 3
+life, a turn reordered; **wrong — s1 #69 (Jace −1 for −3: "its better to draw"; the top was a Plains the AI did not know)
+and s3 #15 (Divining Duelist flashed in our own combat: "it should play it during the opponents turn")**. Each switch off
+in turn: both `byuse` (#69 −3.98 against −10.72; #15 18.69 against 16.87). The explain at #69: blocking their Rampart
+Hunter (deathtouch) with Thalia traded the wall that held off Edgar, so Edgar jumped from 0.4 back to full value — the
+block refused, the Jace-at-1 line punished. On the board the share counts a wall twice (the clock term prices it too).
+
+The held-off share on targets only (option A, `Evaluator.Side` no longer reads it):
+
+| Position | share on the board | targets only |
+|---|---|---|
+| s1 #69 | Jace −1 | Jace −3 |
+| s3 #15 | Divining Duelist now | Pass (Mindseeker Oculus in main) |
+| three Bolts, a {2}{R} 2/2 in hand | casts the 2/2 | casts the 2/2 |
+| three Bolts, a {3}{R} 3/3 a land short | Pass (by 0.16) | **Bolts the 1/1** |
+| Guidance Failure, Unsummon on the Aura, the tempo swing, "never the 2/1" | as he said | as he said |
+
+**1601 tests pass. Suite: 6 of 288 changed** (s2 #10, s4 #24, s4 #49, s4 #2 twice — read in AI-26.9 — and s3 #71
+reordered), **20 134.6 engine steps a position against 19 805.8 (+1.7%)**, oracle agreement 76.0% (77.1%). Accepted.
+After the review's fixes (the Guidance exclusion reverted — option A fixes that position alone; the gains' key without
+status components): 0 of 288 changed against the accepted answers, 20 132.2 steps.
+
+## AI-28.4: Tricorder and the AI's think time (2026-11-17)
+
+Shayne's table game (`game_records/2026-11-17_105828_seed1084418130.json`, Soup-Red-AGT against RB-Investigator): "it
+seems like tricorder caused a balooning effect in the AI speed". Every AI decision of the game re-asked, the search
+uncapped, a quiet machine:
+
+| AI turn | decisions | engine steps | s | slowest | Tricorder equipped |
+|---|---|---|---|---|---|
+| 8 | 7 | 148 286 | 6.7 | 1.5 s | no |
+| 10 | 20 | 1 516 632 | 62.2 | 7.9 s | no |
+| 12 | 27 | 1 116 595 | 53.1 | 5.9 s | yes |
+| 14 | 24 | 2 870 044 | 112.2 | 10.8 s | yes |
+| 16 | 20 | 2 279 053 | 88.1 | 9.3 s | yes |
+| 18 | 15 | 1 197 878 | 61.5 | 9.6 s | no |
+| 20 | 15 | 2 534 557 | 114.6 | 31.5 s (equipping it) | yes |
+
+**Tricorder is not the cause:** the 72 decisions with it equipped, asked again with it unattached (the only change),
+took 7 153 689 steps against 6 161 874 with it on (0.86). The growth is the board's (tokens: L'Rell's Klingons, Q).
+The table's 1 s cap overran at his three slowest: #347 1 109 ms, #412 1 722 ms, #529 2 431 ms.
+
+The AI's card prices, for AI-27 (Shayne: 5 life paid at 20 is about a card): an unseen card 2.65, an unseen spell 4.38,
+a land in hand 0.30, the flat 1.20, held at 0.5 of measured value. Life: 1.0 a point below 20, 0.5 above.
+
+## AI-27: a card at ~5 points — two trials (2026-11-17)
+
+Shayne's rule: 5 life paid at 20 is about a card. Today an unseen card is 2.65 (held at 0.5), life 1.0 a point below 20.
+
+- **Every card at full value** (`beam-held=1.0`, unseen ~5.2): #364 investigates (7.65 / 5.70); suite 32 of 288
+  changed; **match 47.5% ± 1.4pp over 600 (285-315)**, undecided at the cap (about −2.5pp); spells cast 9.8 against
+  9.7, lands 7.5 / 7.4 — not hoarding.
+- **Unseen cards only at full value** (`beam+unseenfull`, a trial switch since removed — it priced a seen card at 0.5 and
+  an unseen one at 1.0, so seen-against-unseen choices were skewed; read these as partly its artifacts): #364 investigates by 0.07; suite 23 of 288
+  changed, oracle 73.6% (76.0%), 20 016.7 steps. Draw over board 2 (s4 #34: Jace −3 instead of Way of the Healer; s3
+  #43: Jace −3 instead of +2), board over draw 3 (s2 #56 Eardrum Rattler for Jace −1; s3 #28 Thalia for Jace −3; s3
+  #100 Repurposed Enforcer for Tam's Resistance), Jace −3 kept 3 (s2 #43, #53, #74), removal held 4 (s1 #11 Vraska's
+  Final Mercy, s2 #38 Prophesied End, s3 #44 Academic Ascent, s4 #53 Fatehold Charm), plays where it passed 5, other 6.
+
+Shayne on the last two groups: drawing later is never better than drawing now, and a bounce gives no card — so these
+are evaluator inconsistencies, not judgement. The story became the pricing pass (AI-27, Why).

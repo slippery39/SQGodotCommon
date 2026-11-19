@@ -41,6 +41,21 @@ public class PositionSuiteTests
 		Assert.That(PositionSuite.Run(Greedy.Value, "random").Changed, Is.Not.Empty);
 	}
 
+	// The flip rate (AI-20.2): an AI that guesses nothing gives one answer a position whatever the guess; one whose
+	// answer moves with the guess (RandomAi, seeded by it) flips - and every guess is counted.
+	[Test]
+	public void TheFlipRate_IsNothingWithoutAGuess_AndCountsAnAnswerThatMovesWithIt()
+	{
+		var steady = PositionSuite.Flips(Greedy.Value, "greedy", guesses: 3);
+		var moving = PositionSuite.Flips(Greedy.Value, "random", guesses: 3);
+
+		Assert.That(steady.Flipped, Is.Zero);
+		Assert.That(steady.Minority, Is.Zero);
+		Assert.That(moving.Flipped, Is.GreaterThan(0));
+		Assert.That(moving.Positions.Select(p => p.Answers.Sum(a => a.Count)), Is.All.EqualTo(3));
+		Assert.That(moving.Report(shown: 1), Does.Contain("positions flipped"));
+	}
+
 	[Test]
 	public void AMoveThatNoLongerApplies_IsStale()
 	{

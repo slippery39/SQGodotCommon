@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Sets;
 
 namespace MagicCore.Ai;
@@ -17,10 +18,206 @@ public static class Hidden
 		RealOrder,
 
 		/// <summary>
-		/// THE DEFAULT (AI-3.9). Every card whose place the searching player doesn't know is shuffled among the unknown
+		/// The default from AI-3.9 to AI-20.4 (`+shuffle`). Every card whose place the searching player doesn't know is shuffled among the unknown
 		/// places; the known stay put — a surveil's keep, a mulligan's bottom, a card seen going on top.
 		/// </summary>
 		ShuffleUnknown,
+
+		/// <summary>
+		/// THE DEFAULT (AI-20.4, Shayne; `+landornot` names it too; Shayne: "what happens if i draw a land vs not"). Nothing is shuffled and no
+		/// order is guessed: an unseen card on top of a library is an unknown card (<see cref="UnknownCard"/>), and the
+		/// search plays every line's look-ahead BOTH ways - our unseen draws are lands, or they are not - averaged by
+		/// the land odds of our own deck list (<see cref="LandOdds"/>). So the same position decides the same way.
+		/// </summary>
+		LandOrNot,
+	}
+
+	/// <summary>
+	/// An unseen card as the look-ahead draws it under <see cref="Library.LandOrNot"/>: no type, no cost, never cast
+	/// or played - held at the average spell's price (<see cref="HeldValues.Spell"/>). It takes the id of the card it
+	/// stands for, as <see cref="GuessHand"/>'s guesses do.
+	/// </summary>
+	public const string UnknownCard = "Unknown card";
+
+	/// <summary>
+	/// How many unseen places on top of a library hold unknown cards; below them the library's real cards stay, so a
+	/// search of it still finds them. ponytail: the 6th unseen draw of one look-ahead is a real card, the lowest id
+	/// left (five covers two draw steps and three draws by effects); raise it if a draw engine is ever misjudged.
+	/// </summary>
+	public const int UnknownDraws = 5;
+
+	/// <summary>
+	/// The RNG seed every position arranged by <see cref="Unknown"/> carries - never the real game's, so a shuffle
+	/// inside the look-ahead doesn't predict the real one, and the same for every position, so nothing in the
+	/// look-ahead moves with the game's seed. Anything random (a shuffle) moves it: that is how the search and the
+	/// rollout see a library needs arranging again.
+	/// </summary>
+	public const int Arranged = 20_203;
+
+	public static bool IsUnknown(Card c) => c.Name == UnknownCard;
+
+	// "You can't cast this": a condition that never holds (in your turn and not in your turn).
+	static readonly CardDefinition Blank =
+		new(
+			new CardData(
+				UnknownCard,
+				"normal",
+				null,
+				0,
+				"",
+				null,
+				null,
+				null,
+				null,
+				null,
+				[],
+				null
+			),
+			[new CastOnlyIf(new Both(new DuringYourTurn(), new Not(new DuringYourTurn())))]
+		);
+
+	/// <summary>
+	/// The position as <see cref="Library.LandOrNot"/> lets <paramref name="me"/> know it. The opponent's library: its
+	/// unseen top cards are unknown cards. Mine, one of two ways - <paramref name="lands"/>: the unseen lands of my
+	/// deck on top (each name spread by its share, so the commonest comes first) and every unknown card already in my
+	/// hand a land too; or not: unknown cards on top. Places I know (a surveil's keep) stay, as in
+	/// <see cref="ShuffleUnknown"/>; a card a pending choice offers is never made unknown.
+	/// ponytail: one look-ahead's unseen draws ALL go one way, so two draws are two lands or none - the average
+	/// number of lands is right, their spread too wide; and the land is the commonest name, never the colour we
+	/// miss. Split further (AI-20's open question on the surveil) if a position shows it.
+	/// </summary>
+	public static GameState Unknown(GameState s, int me, bool lands)
+	{
+		s = Arrange(s, s.OpponentOf(me), Knowers.Opponent, lands: false);
+		if (lands)
+			foreach (
+				var (drawn, land) in s.CardsIn(me, ZoneType.Hand)
+					.Where(IsUnknown)
+					.ToList()
+					.Zip(Spread(Unseen(s, me).Where(c => c.Is(CardType.Land))))
+			)
+				s = s.MoveObject(land.Id, s.ZoneId(me, ZoneType.Hand))
+					.MoveObject(drawn.Id, s.ZoneId(me, ZoneType.Library));
+		s = Arrange(s, me, Knowers.Owner, lands);
+		return s.RngSeed == Arranged ? s : s with { RngSeed = Arranged };
+	}
+
+	/// <summary>
+	/// The chance an unseen draw of <paramref name="me"/>'s is a land: the lands among the cards of my library whose
+	/// place I don't know, over those cards - exact, since I know my deck list (Shayne, AI-20.1) - an unknown card
+	/// already drawn in the look-ahead counted back in.
+	/// After <paramref name="looks"/> looks at an unseen card on top (the Jace token's "[−1]: Surveil 1", AI-20.9): each
+	/// card looked at is binned unless it is the draw we look for - a land (<paramref name="forLand"/>), or not a
+	/// land - so the draw misses only if every card looked at and the one under them all miss. Decided before the
+	/// look (Shayne, 2026-11-15: "I am looking for a specific card and thats it"): 13 lands in 27 are 48% a draw,
+	/// 74% after one look for a land.
+	/// These are the odds of the NEXT draw; the search spreads them over a look-ahead's draws (BeamSearchAi.RolloutScore).
+	/// ponytail: "a land" is any land, never the colour we miss - split the lands by what they unlock (AI-20.10).
+	/// </summary>
+	public static double LandOdds(GameState s, int me, int looks = 0, bool forLand = true)
+	{
+		var unseen = Unseen(s, me).ToList();
+		var all = unseen.Count + s.CardsIn(me, ZoneType.Hand).Count(IsUnknown);
+		var lands = unseen.Count(c => c.Is(CardType.Land));
+		if (all == 0 || looks == 0)
+			return all == 0 ? 0 : lands / (double)all;
+		var miss = 1.0; // every card looked at, then the draw, is not what we look for
+		for (var i = 0; i <= looks; i++)
+			miss *= Math.Max(0.0, (forLand ? all - lands : lands) - i) / Math.Max(1, all - i);
+		return forLand ? 1 - miss : miss;
+	}
+
+	/// <summary>
+	/// The unknown cards a look of <paramref name="me"/>'s is showing: a surveil's choice waiting over cards the
+	/// look-ahead made up (<see cref="UnknownCard"/>). Nothing can be decided by them - they count as looks
+	/// (<see cref="LandOdds"/>). A real card looked at (the real game's surveil; a land where the draws are lands) is none.
+	/// </summary>
+	public static int Looked(GameState s, int me) =>
+		s.GetPendingChoice() is Actions.ChooseFromLibraryTopChoice top && top.PlayerId == me
+			? top.Options.Count(o => IsUnknown(s.GetCard(o.Id)))
+			: 0;
+
+	/// <summary>The cards of <paramref name="me"/>'s library whose place I don't know.</summary>
+	public static IEnumerable<Card> Unseen(GameState s, int me)
+	{
+		var ids = s.GetChildrenIds(s.ZoneId(me, ZoneType.Library)).ToArray();
+		return Places(s, me, Knowers.Owner, ids).Select(i => s.GetCard(ids[i]));
+	}
+
+	/// <summary>Lands in the order they are drawn: the j-th of a name's n copies at (j + ½) / n, so 7 Islands and 6 Swamps alternate, an Island first.</summary>
+	static List<Card> Spread(IEnumerable<Card> lands) =>
+		[
+			.. lands
+				.GroupBy(c => c.Name)
+				.SelectMany(g =>
+				{
+					var n = g.Count();
+					return g.OrderBy(c => c.Id).Select((c, j) => (Card: c, At: (j + 0.5) / n));
+				})
+				.OrderBy(x => x.At)
+				.ThenBy(x => x.Card.Name, StringComparer.Ordinal)
+				.Select(x => x.Card),
+		];
+
+	static GameState Arrange(GameState s, int owner, Knowers mine, bool lands)
+	{
+		var libraryId = s.ZoneId(owner, ZoneType.Library);
+		var ids = s.GetChildrenIds(libraryId).ToArray();
+		var places = Places(s, owner, mine, ids);
+		if (places.Length == 0)
+			return s;
+		// a choice of objects only: a mode's or a number's option ids are no card ids
+		var offered =
+			s.GetPendingChoice() is { } choice && MagicRules.OptionsAreObjects(choice)
+				? choice.Options.Select(o => o.Id).ToHashSet()
+				: [];
+		var unseen = places.Select(i => s.GetCard(ids[i])).ToList();
+		var spread = Spread(unseen.Where(c => c.Is(CardType.Land)));
+		// by id, never by where they really are: the unknown cards first, a card a choice offers last
+		var rest = unseen
+			.Where(c => !c.Is(CardType.Land))
+			.OrderBy(c =>
+				IsUnknown(c) ? 0
+				: offered.Contains(c.Id) ? 2
+				: 1
+			)
+			.ThenBy(c => c.Id)
+			.ToList();
+		List<Card> order = lands ? [.. spread, .. rest] : [.. rest, .. spread];
+		foreach (
+			var c in order
+				.Take(UnknownDraws)
+				.Where(c => !c.Is(CardType.Land) && !IsUnknown(c) && !offered.Contains(c.Id))
+		)
+			s = s.UpdateObject(c.Id, CardFactory.Create(Blank, owner));
+		var arranged = (int[])ids.Clone();
+		for (var k = 0; k < places.Length; k++)
+			arranged[places[k]] = order[k].Id;
+		if (arranged.AsSpan().SequenceEqual(ids))
+			return s;
+		// Out and back in, as ShuffleUnknown does: MoveObject appends, so this is the new order.
+		foreach (var id in arranged)
+			s = s.MoveObject(id, 0);
+		foreach (var id in arranged)
+			s = s.MoveObject(id, libraryId);
+		return s;
+	}
+
+	/// <summary>The places of a library <paramref name="mine"/> doesn't know (Zefram Cochrane: "You may look at the top card of your library any time.").</summary>
+	static int[] Places(GameState s, int owner, Knowers mine, int[] ids)
+	{
+		var topKnown = (mine & Knowers.Owner) != 0 && s.TopIsKnownToOwner(owner);
+		return
+		[
+			.. Enumerable
+				.Range(0, ids.Length)
+				// an unknown card looked at (a surveil's keep) is still unknown: its place stays one to arrange, or the
+				// lands half of the look-ahead would draw it as a card that is never a land
+				.Where(i =>
+					((s.GetCard(ids[i]).KnownTo & mine) == 0 || IsUnknown(s.GetCard(ids[i])))
+					&& !(i == 0 && topKnown)
+				),
+		];
 	}
 
 	public enum Hand
@@ -52,7 +249,8 @@ public static class Hidden
 	/// RNG, which the real game draws from next — and the sample gets a fresh RNG seed, so a shuffle
 	/// inside a rollout doesn't predict the real game's (so either mode also hides that foresight). The real position when a pending choice would offer different
 	/// ids in the sample (a search lists the first copy of each name in library order): the search's
-	/// pick must be one the real choice accepts.
+	/// pick must be one the real choice accepts. Under <see cref="Library.LandOrNot"/> nothing is sampled: the
+	/// libraries are arranged (<see cref="Unknown"/>), the same for every seed.
 	/// </summary>
 	public static GameState Sample(GameState s, int me, Library mode, Hand hand = Hand.Real)
 	{
@@ -76,7 +274,13 @@ public static class Hidden
 					owner == me ? Knowers.Owner : Knowers.Opponent,
 					rng
 				);
-		sample = sample with { RngSeed = rng.Next(1, int.MaxValue) };
+		sample =
+			mode == Library.LandOrNot
+				? Unknown(sample, me, lands: false)
+				: sample with
+				{
+					RngSeed = rng.Next(1, int.MaxValue),
+				};
 		return
 			s.GetPendingChoice() is { } real
 			&& !real
@@ -229,12 +433,7 @@ public static class Hidden
 	{
 		var libraryId = s.ZoneId(owner, ZoneType.Library);
 		var ids = s.GetChildrenIds(libraryId).ToArray();
-		// Zefram Cochrane: "You may look at the top card of your library any time."
-		var topKnown = (mine & Knowers.Owner) != 0 && s.TopIsKnownToOwner(owner);
-		var places = Enumerable
-			.Range(0, ids.Length)
-			.Where(i => (s.GetCard(ids[i]).KnownTo & mine) == 0 && !(i == 0 && topKnown))
-			.ToArray();
+		var places = Places(s, owner, mine, ids);
 		var unknown = places.Select(i => ids[i]).ToArray();
 		rng.Shuffle(unknown);
 		for (var k = 0; k < places.Length; k++)

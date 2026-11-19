@@ -6159,7 +6159,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Aerid Konstrari enters or dies, create a Heartwood token. (It's a red and green artifact with "{T}: Add {R} or {G}.")  
 > {6}: Create a Heartwood token. Then Aerid Konstrari gets +X/+0 until end of turn, where X is the number of artifacts you control.
 
-**Status:** scripted · **tests naming it:** FraRareTests
+**Status:** scripted · **tests naming it:** FraRareTests, PricingPrincipleTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

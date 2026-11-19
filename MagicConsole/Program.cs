@@ -281,8 +281,50 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 		);
 		return;
 	}
+	if (Arg("guesses") is { } suiteGuesses) // the flip rate (AI-20.2): every position decided again under N guesses
+	{
+		Console.WriteLine(
+			PositionSuite.Flips(tracked, name, suiteGuesses).Report(Arg("shown") ?? 10)
+		);
+		return;
+	}
 	var check = PositionSuite.Run(tracked, name);
 	Console.WriteLine(check.Report(Arg("shown") ?? 10)); // --shown=N: list N changed decisions
+	if (flags.Contains("--boards")) // each changed decision's position, for a reader (AI-26.9)
+	{
+		var states = PositionSuite.States(tracked);
+		var changes = check.Changed.Take(Arg("shown") ?? 10).ToList();
+		var texts = new string[changes.Count];
+		var boards = new RunProgress("boards", changes.Count);
+		var differ = 0;
+		// each position's turn played out twice, a position a core: slot i is position i, so the order is the report's
+		Parallel.For(
+			0,
+			changes.Count,
+			i =>
+			{
+				var (p, was, now) = changes[i];
+				var g = tracked.Games[p.GameIndex];
+				var at = states
+					.First(x => x.Position.GameIndex == p.GameIndex && x.Position.Move == p.Move)
+					.State;
+				// the whole turn under each search: a first move that only reorders the turn reads the same
+				var turns = new[] { "beam", name }
+					.Select(ai => string.Join("; ", PositionSuite.TurnPlayed(at, ai)))
+					.ToList();
+				if (turns[0] != turns[1])
+					Interlocked.Increment(ref differ);
+				texts[i] =
+					$"\n=== {g.Deck1} vs {g.Deck2} seed {g.Seed}, move {p.Move}: was \"{was}\", now \"{now}\"\n"
+					+ $"{PositionSuite.Board(at)}\n"
+					+ $"      The turn, beam: {turns[0]}\n"
+					+ $"      The turn, {name}: {turns[1]}";
+				boards.Tick(() => $"{differ} turn(s) played differently");
+			}
+		);
+		foreach (var text in texts)
+			Console.WriteLine(text);
+	}
 	if (flags.Contains("--accept"))
 	{
 		File.WriteAllText(path, PositionSuite.ToText(check.Accepted));
@@ -311,11 +353,20 @@ if (args.FirstOrDefault(a => a.StartsWith("--builds-records=")) is { } buildsRec
 // MagicCore.Tests/Records/NAME.json (run from the solution root), and a test to start from printed.
 // --record=FILE --compare: your choices beside the AI's (TBL-5.6) — at each of your decisions, the
 // default search's pick and where the oracle ranks yours; one line where either differs, then a summary.
+// --record=FILE --options=N: the option report before move N (AI-26.2) — what each targeted card in the deciding
+// player's hand gains now, against the creatures the opponent is likely to play; nothing in the AI reads it yet.
 if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 {
 	try
 	{
 		var record = GameRecord.FromJson(File.ReadAllText(recordArg["--record=".Length..]));
+		// --ai=beam+landornot: the search that decides again under --guesses and --explain (the default search otherwise)
+		var recordAi = args.FirstOrDefault(a => a.StartsWith("--ai="))?["--ai=".Length..] ?? "beam";
+		if (!AiMatch.IsKnown(recordAi) || !recordAi.StartsWith("beam"))
+		{
+			Console.WriteLine($"--ai=A with a beam search, one of: {AiMatch.Usage}");
+			return;
+		}
 		if (args.FirstOrDefault(a => a.StartsWith("--keep="))?["--keep=".Length..] is { } keep)
 			Console.WriteLine(Keep(record, keep, Arg("at")));
 		else if (
@@ -326,8 +377,9 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 			Console.WriteLine(RecordComparison.Compare(record).Text());
 		else if (Arg("guesses") is { } guesses && Arg("at") is { } guessAt)
 		{
-			// noise or value (AI-19.23, AI-20.2's flip rate for one position): the default search decides move N again
-			// under N different guesses of what it can't see (the hidden cards' sample is the state's RngSeed)
+			// noise or value (AI-19.23, AI-20.2's flip rate for one position): the search decides move N again under N
+			// different guesses of what it can't see (the hidden cards' sample is the state's RngSeed) - for
+			// --ai=beam+shuffle; the default guesses nothing (AI-20.4), so every answer is the same
 			var at = record.Before(guessAt);
 			var picks = new string[guesses];
 			var guessing = new RunProgress("guesses", guesses);
@@ -336,10 +388,8 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 				guesses + 1,
 				k =>
 				{
-					picks[k - 1] = new BeamSearchAi(
-						at.DecidingPlayerId(),
-						new BeamSearchAi.Settings(Threads: 1)
-					)
+					picks[k - 1] = AiMatch
+						.Create(recordAi, at.DecidingPlayerId(), k, searchThreads: 1)
 						.Decide(at with { RngSeed = k * 7919 })
 						.What;
 					guessing.Tick(
@@ -360,11 +410,22 @@ if (args.FirstOrDefault(a => a.StartsWith("--record=")) is { } recordArg)
 			foreach (var g in picks.GroupBy(p => p).OrderByDescending(g => g.Count()))
 				Console.WriteLine($"  {g.Count(), 3}  {g.Key}");
 		}
+		else if (Arg("options") is { } optionsAt)
+		{
+			// AI-26.2: each targeted card in the deciding player's hand before move N - now, later, held, mana
+			var at = record.Before(optionsAt);
+			Console.WriteLine($"# Before #{optionsAt}");
+			// --turns=N: price N turns ahead instead of the clocks' 1 to 4
+			Console.WriteLine(OptionReport.Of(at, at.DecidingPlayerId(), Arg("turns")));
+		}
 		else if (Arg("explain") is { } explainAt)
 		{
-			// what the default search imagined before move N (AI-17): each first move's best line
+			// what the default search imagined before move N (AI-17): each first move's best line; --guess=K: under
+			// --guesses' Kth guess of the hidden cards (AI-20)
 			var at = record.Before(explainAt);
-			var ai = new BeamSearchAi(at.DecidingPlayerId());
+			if (Arg("guess") is { } guess)
+				at = at with { RngSeed = guess * 7919 };
+			var ai = (BeamSearchAi)AiMatch.Create(recordAi, at.DecidingPlayerId(), 1);
 			var decided = ai.Decide(at);
 			Console.WriteLine($"# Before #{explainAt}: the search plays {decided.What}");
 			Console.WriteLine(ai.Explain());
@@ -893,6 +954,8 @@ IAi NewAi(int player) =>
 		? new GreedyAi(player)
 		: new BeamSearchAi(player, BeamSearchAi.Settings.Interactive);
 var ais = new Dictionary<int, IAi> { [opponent] = NewAi(opponent) };
+if (!flags.Contains("--greedy"))
+	OptionPrice.Warm(s, opponent); // its 200-deck sample, ~10 s, off the first decision (AI-26)
 if (watch)
 	ais[human] = NewAi(human);
 

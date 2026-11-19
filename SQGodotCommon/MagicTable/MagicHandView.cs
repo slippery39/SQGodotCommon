@@ -235,6 +235,19 @@ public sealed class MagicHandView
 		_hand.SetCardsDetails([.. _hand.GetCards().Select(ui => Face(_faces[ui.Id]))]);
 	}
 
+	/// <summary>Where each hand card is drawn (TBL-4.5): a card-sized rect about its node, by id.</summary>
+	public IEnumerable<(int Id, Rect2 Rect)> Rects() =>
+		from ui in _hand.GetCards()
+		where int.TryParse(ui.Id, out _)
+		select (
+			int.Parse(ui.Id),
+			new Rect2(ui.GlobalPosition - CardViews.HandSize / 2, CardViews.HandSize)
+		);
+
+	/// <summary>The fan's card for this id, if it holds one — hidden while a card flies into it (TBL-4.5).</summary>
+	public CanvasItem? Card(int id) =>
+		_hand.GetCards().FirstOrDefault(ui => ui.Id == id.ToString());
+
 	/// <summary>The card's face: its Scryfall image as the whole card, the glow behind it.</summary>
 	private static InternalCardUI2D.Details Face(
 		(int Id, string Image, Glow Glow, string? From) card

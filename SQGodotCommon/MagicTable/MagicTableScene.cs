@@ -7,6 +7,7 @@ using MagicCore;
 using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Limited;
 using MagicCore.Rules;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
@@ -21,8 +22,9 @@ namespace MagicTable;
 /// then click its targets; a choice about objects on the table is answered by clicking them
 /// (<see cref="BoardChoice"/>), anything else in the <see cref="ChoicePanel"/>. Space passes, Esc
 /// leaves; the AI moves on a timer.
-/// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names),
-/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>, <c>--resume=FILE</c> with <c>--resume-at=N</c>.
+/// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names or Arena export files, with <c>--set=TRK</c> for TRK lists),
+/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>, <c>--resume=FILE</c> with <c>--resume-at=N</c>,
+/// <c>--show-hand</c> (their hand face up), <c>--full-ai</c> (the search uncapped), <c>--beat=S</c> (the animation beat in seconds, 0 for none — MagicTableScene.Motion.cs).
 /// </summary>
 public partial class MagicTableScene : Control
 {
@@ -56,6 +58,12 @@ public partial class MagicTableScene : Control
 	private readonly HFlowContainer _oppField = Row();
 	private readonly HFlowContainer _myField = Row();
 	private readonly HFlowContainer _myLands = Row();
+
+	// The combat row (TBL-4.6): in the middle, only while there is combat; edged red.
+	private readonly HBoxContainer _combatRow =
+		new() { Alignment = BoxContainer.AlignmentMode.Center };
+	private readonly PanelContainer _combatPanel = new() { Visible = false };
+	private readonly TargetArrows _arrows = new(); // the stack's targets (TBL-4.5)
 
 	// Your hand: Common's fan (TBL-3), a Node2D placed over this space — the column reserves the room,
 	// it can't contain a Node2D. Ignores the mouse: card hover is physics picking, which any Control
@@ -94,12 +102,20 @@ public partial class MagicTableScene : Control
 		Sandbox,
 		FullControl,
 		Pause,
+		ShowHand,
+		Note,
+		FullAi,
 		Step,
 		Inspector,
 		Speed = 10, // + the index into Speeds
+		Beat = 20, // + the index into Beats (TBL-4.5)
 	}
 
 	private bool _paused;
+
+	// Their hand face up (Shayne, 2026-11-13: watching a game, "to see what they have in hand and determine whether
+	// or not they are making reasonable plays"). A viewer's switch, not a rule: Tools, or --show-hand.
+	private bool _showHand = OS.GetCmdlineUserArgs().Contains("--show-hand");
 
 	// A right-click on the table (not on a card — that zooms it): Concede, confirmed first (TBL-9.3).
 	private readonly PopupMenu _context = new();
@@ -161,6 +177,7 @@ public partial class MagicTableScene : Control
 	// The state last drawn. GetPendingChoice() builds a NEW choice object on every call, so "is this
 	// still the same question?" compares the immutable state, which changes only when something happens.
 	private GameState? _shownState;
+	private bool _shownAnimating; // drawn mid-beat, the question unasked: the same state is a NEW question after
 	private readonly List<int> _picked = new(); // a multi board choice's picks so far
 	private HashSet<int> _onTable = new(); // what can be clicked where it is, this redraw
 	private CombatDeclaration? _combat; // your attacks or blocks, clicked on the table before submitting
@@ -184,14 +201,26 @@ public partial class MagicTableScene : Control
 		_handSpace.ItemRectChanged += PlaceHand;
 		_phases.StopsChanged += stops => Do(() => _m.Stops = stops);
 		_phases.RowsChanged += Refresh;
+		_choice.HiddenChanged += Refresh;
 
-		// The AI moves on the timer; Pause stops it, Step makes one move, the speed sets the beat.
+		// The AI moves on the timer; Pause stops it, Step makes one move, the speed sets the beat. It decides in the
+		// background (TBL-2.22) - _Process plays the move once made - so the table stays live while it thinks.
 		_timer.Timeout += () =>
 		{
-			if (!_paused && _m.AiToAct)
-				Do(() => _m.StepAi());
+			if (!_paused && _onScreen is null) // the AI waits for the table to catch up
+				_m.BeginAi();
 		};
 		AddChild(_timer);
+		// --beat=S: an animation beat of S seconds (0: none) — Tools sets it while playing (TBL-4.5)
+		if (
+			double.TryParse(
+				Arg("beat"),
+				System.Globalization.NumberStyles.Float,
+				System.Globalization.CultureInfo.InvariantCulture,
+				out var beat
+			)
+		)
+			_beat = beat;
 		BuildTools();
 		BuildContextMenu();
 		Action<string?> zoom = name =>
@@ -231,6 +260,7 @@ public partial class MagicTableScene : Control
 					: TableSetup.Current?.Seed ?? Random.Shared.Next(1, int.MaxValue),
 				Stops.Arena
 			);
+		_m.FullSearch = OS.GetCmdlineUserArgs().Contains("--full-ai"); // before --autoplay plays with it
 		if (int.TryParse(Arg("autoplay"), out var turn))
 			_m.AutoplayTo(turn);
 		// --put=Name:Zone (repeatable): the sandbox from the command line, into your seat. Without
@@ -274,21 +304,43 @@ public partial class MagicTableScene : Control
 	private static MagicTableManager NewGame(int seed, Stops stops)
 	{
 		var setup = TableSetup.Current;
-		var decks = Arg("decks")?.Split(',');
+		var decks = Arg("decks")?.Split(',').Select(DeckArg).ToList();
+		if (decks is { Count: not 2 })
+			throw new ArgumentException(
+				"--decks takes two decks: yours,theirs (FraDecks names or Arena export files)"
+			);
 		return new MagicTableManager(
-			decks is null ? setup?.Mine ?? FraDecks.All["White-Black"] : FraDecks.All[decks[0]],
-			decks is null ? setup?.Theirs ?? FraDecks.All["Red-Green"] : FraDecks.All[decks[1]],
+			decks?[0].Main ?? setup?.Mine ?? FraDecks.All["White-Black"],
+			decks?[1].Main ?? setup?.Theirs ?? FraDecks.All["Red-Green"],
 			seed,
 			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai") || setup?.AiVsAi == true,
 			UseSearch,
-			decks is null ? setup?.MySideboard : null,
-			decks is null ? setup?.TheirSideboard : null
+			decks is null ? setup?.MySideboard : decks[0].Sideboard,
+			decks is null ? setup?.TheirSideboard : decks[1].Sideboard
 		)
 		{
 			RecordTo = RecordsDir,
 			Stops = stops,
 		};
 	}
+
+	/// <summary>
+	/// One deck of <c>--decks=A,B</c>: a FraDecks name, or an Arena export file (relative to the solution root, e.g.
+	/// <c>sim_results/builds/RB.txt</c>) read as a sealed run reads it — the main deck, the rest of its pool outside the
+	/// game — in the set of <c>--set=</c> (FRA by default).
+	/// </summary>
+	private static SealedBuildMatch.Build DeckArg(string name) =>
+		FraDecks.All.TryGetValue(name, out var deck)
+			? new(name, deck, [])
+			: SealedBuildMatch.FromExport(
+				Path.GetFileNameWithoutExtension(name),
+				File.ReadAllText(
+					Path.IsPathRooted(name)
+						? name
+						: Path.GetFullPath(ProjectSettings.GlobalizePath("res://../" + name))
+				),
+				DeckSelectScene.LimitedSet
+			);
 
 	private static bool UseSearch =>
 		!OS.GetCmdlineUserArgs().Contains("--greedy") && TableSetup.Current?.Search != false;
@@ -319,6 +371,16 @@ public partial class MagicTableScene : Control
 	/// </summary>
 	public override void _Process(double delta)
 	{
+		// The AI's background decision, once made (TBL-2.22): a pass shows nothing, so the next decision starts at once
+		// and the table redraws when a move shows or the turn comes back to you - as the timer's old loop did.
+		if (!_paused && _onScreen is null && _m.AiDecided)
+		{
+			_m.Animate = _beat > 0;
+			if (_m.FinishAi() is null && _m.AiToAct)
+				_m.BeginAi();
+			else
+				Do(() => { });
+		}
 		var dragged =
 			Common.Cards.CardUIManager.DraggingCard is { Id: { } id } && int.TryParse(id, out var n)
 				? n
@@ -378,6 +440,11 @@ public partial class MagicTableScene : Control
 			Do(() => _m.Act(pass));
 		else if (key.Keycode == Key.Z && key.CtrlPressed)
 			Do(_m.Undo);
+		else if (key.Keycode == Key.N && !key.CtrlPressed)
+			OpenNote();
+		// P pauses the game — the AI and the animations; in AI vs AI Space does too (it has nothing to pass there)
+		else if (key.Keycode == Key.P || key.Keycode == Key.Space && _m.AiVsAi)
+			TogglePause();
 	}
 
 	/// <summary>Every input goes through here: apply it, then redraw.</summary>
@@ -385,13 +452,16 @@ public partial class MagicTableScene : Control
 	{
 		_plays = null;
 		_targeting = null;
+		_m.Animate = _beat > 0; // before the change: the first move made is shown too
 		change();
-		Refresh();
+		QueueBeats();
+		if (_onScreen is null) // the beats redraw as they play
+			Refresh();
 	}
 
 	/// <summary>The human's distinct moves right now; none while a choice is pending or it is not their turn to decide.</summary>
 	private IReadOnlyList<GameAction> Moves() =>
-		_m.HumanToAct && !_m.State.IsWaitingForChoice
+		_onScreen is null && _m.HumanToAct && !_m.State.IsWaitingForChoice
 			? _m.State.DistinctMoves(_m.State.LegalActions())
 			: [];
 
@@ -408,7 +478,7 @@ public partial class MagicTableScene : Control
 
 	private void Refresh()
 	{
-		var s = _m.State;
+		var s = _onScreen ?? _m.State;
 		var game = s.GetGame();
 		var moves = Moves();
 		// A prepared creature → its castable copy, from the legal moves themselves (TBL-2.7): wherever
@@ -423,8 +493,8 @@ public partial class MagicTableScene : Control
 			.DistinctBy(x => x.Creature!.Id)
 			.ToDictionary(x => x.Creature!.Id, x => x.Copy);
 
-		var choice = _m.HumanToAct ? s.GetPendingChoice() : null;
-		var sameQuestion = ReferenceEquals(s, _shownState);
+		var choice = _m.HumanToAct && _onScreen is null ? s.GetPendingChoice() : null;
+		var sameQuestion = ReferenceEquals(s, _shownState) && !_shownAnimating;
 		if (!sameQuestion)
 			_picked.Clear();
 		_onTable = OnTable(s);
@@ -447,6 +517,7 @@ public partial class MagicTableScene : Control
 		else if (!sameQuestion)
 			_choice.Show(s, choice, Preview, ids => Do(() => _m.Choose(ids)));
 		_shownState = s;
+		_shownAnimating = _onScreen is not null;
 
 		var clickable = Clickable();
 		var about = OnItsCreature(
@@ -496,7 +567,8 @@ public partial class MagicTableScene : Control
 					Refresh();
 				},
 				_m.HumanId,
-				active: player == active
+				active: player == active,
+				showHand: _showHand
 			);
 
 		// Auras and Equipment sit under their host — on its side of the table, whoever controls them.
@@ -506,12 +578,13 @@ public partial class MagicTableScene : Control
 			.Where(x => x.Host is not null)
 			.ToLookup(x => x.Host!.Id, x => x.Card);
 		RememberColumns(s);
-		_phases.Show(_m); // first: the scale reads its height
+		_phases.Show(_m, s); // first: the scale reads its height
 		var scale = BoardScale(s);
 		Fill(_oppLands, s, _m.OpponentId, lands: true, attached, c => GlowOf(c.Id, c), scale);
 		Fill(_oppField, s, _m.OpponentId, lands: false, attached, c => GlowOf(c.Id, c), scale);
 		Fill(_myField, s, _m.HumanId, lands: false, attached, c => GlowOf(c.Id, c), scale);
 		Fill(_myLands, s, _m.HumanId, lands: true, attached, c => GlowOf(c.Id, c), scale);
+		FillCombat(s, attached, c => GlowOf(c.Id, c), scale);
 
 		var hand = s.CardsIn(_m.HumanId, ZoneType.Hand).ToList();
 		// Anything castable from elsewhere (flashback, impulse exile) joins the hand row — but a
@@ -540,6 +613,20 @@ public partial class MagicTableScene : Control
 		);
 
 		ShowStack(s, id => GlowOf(id, null));
+		// The plates are where a player is targeted; the arrows find everything by its tag.
+		CardViews.Tag(_oppPlate, _m.OpponentId);
+		CardViews.Tag(_myPlate, _m.HumanId);
+		_arrows.Pairs =
+		[
+			.. s.GetChildren(s.GetWellKnownId(MagicKeys.Stack))
+				.SelectMany(o => (
+						o switch
+						{
+							StackAbility a => a.Targets,
+							_ => o.GetComponent<OnStackComponent>()?.Targets ?? [],
+						}
+					).Where(t => t != 0 && t != o.Id).Distinct().Select(t => (o.Id, t))),
+		];
 		ShowButtons(s, moves);
 		_buttonsScroll.CustomMinimumSize = new Vector2(
 			0,
@@ -547,10 +634,12 @@ public partial class MagicTableScene : Control
 		);
 		var tools = _tools.GetPopup();
 		tools.SetItemChecked(tools.GetItemIndex((int)Tool.FullControl), _m.Stops.FullControl);
-		tools.SetItemChecked(tools.GetItemIndex((int)Tool.Pause), _paused);
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.ShowHand), _showHand);
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.FullAi), _m.FullSearch);
+		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.FullAi), !_m.Search);
 		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Undo), !_m.CanUndo);
 		tools.SetItemDisabled(tools.GetItemIndex((int)Tool.Step), !_m.AiToAct);
-		_tools.Text = _paused ? "Tools · AI paused" : "Tools";
+		ShowPaused();
 		_sandbox.Allow(_m.CanSandbox);
 		_log.Text = string.Join("\n", _m.Log.TakeLast(200));
 		if (_inspector.Visible && !ReferenceEquals(_inspected, _m.LastSearch))
@@ -760,60 +849,13 @@ public partial class MagicTableScene : Control
 		// scrolls inside it, never pushing the hand off the screen (TBL-2.19)
 		((Control)row.GetParent()).CustomMinimumSize = new Vector2(0, _rowHeight);
 		var onSomething = attached.SelectMany(g => g).Select(a => a.Id).ToHashSet();
-		// Combat, MTGO's way (TBL-4.3): each attacker and the creatures blocking it take the same column
-		// in the two rows, which face each other across the phase bar — so who blocks whom reads at a
-		// glance, even between two creatures of one name. Left-aligned while it lasts, so the columns meet.
-		var here = s.CardsIn(s.GetGame().ActivePlayerId, ZoneType.Battlefield)
-			.Concat(
-				s.CardsIn(
-					s.GetGame().ActivePlayerId == _m.HumanId ? _m.OpponentId : _m.HumanId,
-					ZoneType.Battlefield
-				)
-			)
-			.ToDictionary(c => c.Id);
-		var groups = _columns
-			.Select(g =>
-				(
-					Attacker: g.Attacker,
-					Blockers: g.Blockers.Where(here.ContainsKey).Select(id => here[id]).ToList()
-				)
-			)
-			.ToList();
-		var combatants = groups
-			.SelectMany(g => g.Blockers.Select(c => c.Id).Append(g.Attacker))
-			.ToHashSet();
-		row.Alignment =
-			groups.Count > 0 && !lands
-				? FlowContainer.AlignmentMode.Begin
-				: FlowContainer.AlignmentMode.Center;
+		var combatants = Combatants();
 		var cards = s.CardsIn(player, ZoneType.Battlefield)
 			.Where(c =>
 				c.Is(CardType.Land) == lands
 				&& !onSomething.Contains(c.Id)
-				&& !combatants.Contains(c.Id)
+				&& !combatants.Contains(c.Id) // in the combat row (FillCombat)
 			);
-		if (!lands)
-			foreach (var (attacker, blockers) in groups)
-			{
-				var mine =
-					player == s.GetGame().ActivePlayerId
-						? here
-							.Values.Where(c => c.Id == attacker && c.ControllerId == player)
-							.ToList()
-						: blockers.Where(b => b.ControllerId == player).ToList();
-				var column = new HBoxContainer
-				{
-					Alignment = BoxContainer.AlignmentMode.Center,
-					CustomMinimumSize = new Vector2(
-						ColumnWidth(here.GetValueOrDefault(attacker), blockers, scale),
-						0
-					),
-				};
-				column.AddThemeConstantOverride("separation", 6);
-				foreach (var c in mine)
-					column.AddChild(Permanent(c, 1));
-				row.AddChild(column);
-			}
 		// Identical lands stack, as on Arena: everything the crop shows is the same.
 		foreach (
 			var group in cards.GroupBy(c =>
@@ -821,7 +863,14 @@ public partial class MagicTableScene : Control
 			)
 		)
 		{
-			row.AddChild(Permanent(group.First(), group.Count()));
+			row.AddChild(
+				group.Count() > 1 // a land stack: every land in it (Permanent tags its one card)
+					? CardViews.Tag(
+						PermanentView(s, group.First(), group.Count(), attached, glow, scale),
+						[.. group.Select(c => c.Id)]
+					)
+					: PermanentView(s, group.First(), 1, attached, glow, scale)
+			);
 		}
 
 		// Phased out (The City on the Edge of Forever): still shown in its row, dimmed and badged — nothing
@@ -830,50 +879,113 @@ public partial class MagicTableScene : Control
 			var c in s.CardsIn(player, ZoneType.PhasedOut).Where(c => c.Is(CardType.Land) == lands)
 		)
 			row.AddChild(CardViews.Permanent(s, c, 1, glow(c), Preview, () => { }, scale));
+	}
 
-		// A permanent as a view, with what is attached to it under it.
-		Control Permanent(Card c, int count)
+	/// <summary>
+	/// The combat row (TBL-4.6, Shayne: "attackers was hard to follow"): in the middle, only while there is combat.
+	/// Each attacker takes a column with the creatures blocking it — MTGO's pairing (TBL-4.3) — the opponent's side
+	/// on top, yours below, so who attacks and who blocks whom reads at a glance, apart from the rest of the board.
+	/// </summary>
+	private void FillCombat(
+		GameState s,
+		ILookup<int, Card> attached,
+		Func<Card, Glow> glow,
+		float scale
+	)
+	{
+		CardViews.Clear(_combatRow);
+		_combatPanel.Visible = _shownColumns.Count > 0;
+		// its two rows' height: a ScrollContainer reports none of its content's, and the band collapsed to a line
+		((Control)_combatRow.GetParent()).CustomMinimumSize = new Vector2(0, 2 * _rowHeight + 4);
+		foreach (var (attacker, blockers) in _shownColumns)
 		{
-			var view = CardViews.Permanent(
-				s,
-				c,
-				count,
-				glow(c),
-				Preview,
-				() => ObjectClicked(c.Id),
-				scale
-			);
-			if (!attached.Contains(c.Id))
-				return view;
-			var stack = new VBoxContainer();
-			stack.AddThemeConstantOverride("separation", 2);
-			stack.AddChild(view);
-			AddAttachments(stack, c.Id);
-			return stack;
+			var column = new VBoxContainer();
+			column.AddThemeConstantOverride("separation", 4);
+			foreach (var side in new[] { _m.OpponentId, _m.HumanId })
+			{
+				var half = new HBoxContainer
+				{
+					Alignment = BoxContainer.AlignmentMode.Center,
+					CustomMinimumSize = new Vector2(0, _rowHeight),
+				};
+				half.AddThemeConstantOverride("separation", 6);
+				foreach (var id in blockers.Prepend(attacker))
+					if (s.IsOnBattlefield(id) && s.GetCard(id) is { } c && c.ControllerId == side)
+						half.AddChild(PermanentView(s, c, 1, attached, glow, scale));
+				column.AddChild(half);
+			}
+			_combatRow.AddChild(column);
 		}
+	}
+
+	/// <summary>Who is in the combat row: every attacker and blocker of the declaration (<see cref="_shownColumns"/>).</summary>
+	private HashSet<int> Combatants() =>
+		[.. _shownColumns.SelectMany(g => g.Blockers.Prepend(g.Attacker))];
+
+	/// <summary>
+	/// The columns as shown, made once a redraw (<see cref="RememberColumns"/>): the declaration's (<see cref="_columns"/>),
+	/// with the blocks you have clicked but not yet submitted in them too (TBL-2.20, Shayne: "The creatures should move
+	/// into the combat area showing that they are going to block after I have chosen them") — shown only, never
+	/// remembered, so one you take back goes home.
+	/// </summary>
+	private List<(int Attacker, List<int> Blockers)> _shownColumns = [];
+
+	private List<(int Attacker, List<int> Blockers)> ShownColumns() =>
+		_combat is { Attacking: false } blocking && blocking.Declared.Count > 0
+			?
+			[
+				.. _columns.Select(g =>
+					(
+						g.Attacker,
+						g.Blockers.Union(
+								blocking
+									.Declared.Where(d => d.Value == g.Attacker)
+									.Select(d => d.Key)
+							)
+							.ToList()
+					)
+				),
+			]
+			: _columns;
+
+	/// <summary>A permanent as a view, with what is attached to it under it.</summary>
+	private Control PermanentView(
+		GameState s,
+		Card c,
+		int count,
+		ILookup<int, Card> attached,
+		Func<Card, Glow> glow,
+		float scale
+	)
+	{
+		var view = CardViews.Permanent(
+			s,
+			c,
+			count,
+			glow(c),
+			Preview,
+			() => ObjectClicked(c.Id),
+			scale
+		);
+		if (!attached.Contains(c.Id))
+			return view;
+		var stack = new VBoxContainer();
+		stack.AddThemeConstantOverride("separation", 2);
+		stack.AddChild(view);
+		AddAttachments(c.Id);
+		return stack;
 
 		// An Aura on an Equipment on a creature: each strip followed by what is on it.
-		void AddAttachments(VBoxContainer stack, int hostId)
+		void AddAttachments(int hostId)
 		{
 			foreach (var a in attached[hostId])
 			{
 				stack.AddChild(
 					CardViews.Attachment(a, glow(a), Preview, () => ObjectClicked(a.Id))
 				);
-				AddAttachments(stack, a.Id);
+				AddAttachments(a.Id);
 			}
 		}
-	}
-
-	/// <summary>How wide an attacker's column is: its card, or its blockers side by side, whichever is wider (a tapped card lies sideways).</summary>
-	private static float ColumnWidth(Card? attacker, List<Card> blockers, float scale)
-	{
-		float Width(Card c) =>
-			(c.IsTapped ? CardViews.PermanentSize.Y : CardViews.PermanentSize.X) * scale;
-		return Mathf.Max(
-			attacker is null ? 0 : Width(attacker),
-			blockers.Sum(Width) + 6 * Math.Max(0, blockers.Count - 1)
-		);
 	}
 
 	/// <summary>
@@ -899,6 +1011,7 @@ public partial class MagicTableScene : Control
 			else
 				_columns[i] = (id, _columns[i].Blockers.Union(blockers).ToList());
 		}
+		_shownColumns = ShownColumns();
 	}
 
 	private List<(int Attacker, List<int> Blockers)> _columns = [];
@@ -931,7 +1044,7 @@ public partial class MagicTableScene : Control
 			plate.AddChild(row);
 			var id = obj.Id;
 			CardViews.Hook(plate, name, Preview, () => ObjectClicked(id));
-			_stack.AddChild(plate);
+			_stack.AddChild(CardViews.Tag(plate, id));
 		}
 	}
 
@@ -939,7 +1052,7 @@ public partial class MagicTableScene : Control
 	{
 		CardViews.Clear(_buttons);
 		var winner = _m.WinnerId;
-		if (_m.IsOver)
+		if (_m.IsOver && _onScreen is null)
 		{
 			_status.Text =
 				winner == 0 ? "Draw."
@@ -960,8 +1073,19 @@ public partial class MagicTableScene : Control
 			AddButton("Replay this seed", () => _m = _m.Replay());
 			AddButton(
 				"New game",
-				() => _m = NewGame(Random.Shared.Next(1, int.MaxValue), _m.Stops)
+				() =>
+				{
+					var full = _m.FullSearch;
+					_m = NewGame(Random.Shared.Next(1, int.MaxValue), _m.Stops);
+					_m.FullSearch = full;
+				}
 			);
+			return;
+		}
+		if (_choice.Hidden) // put away to see the board (TBL-2.21): the choice still waits
+		{
+			_status.Text = "A choice is waiting";
+			AddButton("Show the choice", _choice.Unhide);
 			return;
 		}
 		if (_targeting is (var candidates, var index))
@@ -1037,11 +1161,12 @@ public partial class MagicTableScene : Control
 			}
 			return;
 		}
-		_status.Text = _m.HumanToAct
-			? s.IsWaitingForChoice
-				? "Your choice."
-				: $"Your priority — {s.GetGame().Step}"
-			: "AI is thinking…";
+		_status.Text =
+			_m.HumanToAct && _onScreen is null
+				? s.IsWaitingForChoice
+					? "Your choice."
+					: $"Your priority — {s.GetGame().Step}"
+				: "AI is thinking…";
 		foreach (var move in moves.Where(a => MagicRules.CardOf(a) == 0))
 			AddButton(
 				move is PassPriorityAction ? $"{PassLabel(s)}  (Space)" : Describe.Action(s, move),
@@ -1086,8 +1211,71 @@ public partial class MagicTableScene : Control
 		_inspector.Show(_inspected, _m.ExplainLastSearch, () => _inspector.Visible = false);
 	}
 
+	// A note for Claude (TBL-10.3): the AI waits while it is written, the position saved with it (GameNotes).
+	private readonly ConfirmationDialog _note =
+		new()
+		{
+			Title = "Note — for Claude to analyse",
+			OkButtonText = "Save note",
+			MinSize = new Vector2I(900, 420),
+		};
+	private readonly TextEdit _noteText =
+		new()
+		{
+			PlaceholderText = "What looks wrong, or worth a look, at this moment?",
+			WrapMode = TextEdit.LineWrappingMode.Boundary,
+		};
+	private bool _pausedBeforeNote;
+
+	private void TogglePause()
+	{
+		_paused = !_paused;
+		ShowPaused();
+	}
+
+	/// <summary>The pause on show — set at once, as a redraw waits while beats play.</summary>
+	private void ShowPaused()
+	{
+		var tools = _tools.GetPopup();
+		tools.SetItemChecked(tools.GetItemIndex((int)Tool.Pause), _paused);
+		_tools.Text = _paused ? "Tools · paused" : "Tools";
+	}
+
+	private void OpenNote()
+	{
+		if (_note.Visible)
+			return;
+		_pausedBeforeNote = _paused;
+		_paused = true;
+		ShowPaused();
+		_noteText.Text = "";
+		_note.PopupCentered();
+		_noteText.GrabFocus();
+	}
+
+	private void CloseNote(bool save)
+	{
+		_paused = _pausedBeforeNote;
+		if (save && _noteText.Text.Trim() is { Length: > 0 } text)
+			ShowBanner(
+				GameNotes.Write(_m, text, Shown().State, Shown().Moves) is { } path
+					? $"Note saved — {System.IO.Path.GetFileName(path)}"
+					: "Not saved: this game keeps no record yet",
+				28
+			);
+		Refresh();
+	}
+
 	private void BuildContextMenu()
 	{
+		_noteText.AddThemeFontSizeOverride("font_size", TextSize);
+		_noteText.SizeFlagsVertical = SizeFlags.ExpandFill;
+		_note.AddChild(_noteText);
+		_note.GetOkButton().AddThemeFontSizeOverride("font_size", TextSize);
+		_note.GetCancelButton().AddThemeFontSizeOverride("font_size", TextSize);
+		_note.Confirmed += () => CloseNote(save: true);
+		_note.Canceled += () => CloseNote(save: false);
+		AddChild(_note);
 		_context.AddThemeFontSizeOverride("font_size", TextSize);
 		_context.AddItem("Concede", 0);
 		_context.IdPressed += _ => _concede.PopupCentered();
@@ -1118,13 +1306,22 @@ public partial class MagicTableScene : Control
 		menu.AddItem("Sandbox", (int)Tool.Sandbox);
 		menu.AddSeparator();
 		menu.AddCheckItem("Full control", (int)Tool.FullControl);
-		menu.AddCheckItem("Pause AI", (int)Tool.Pause);
+		menu.AddCheckItem("Pause  (P)", (int)Tool.Pause);
+		menu.AddCheckItem("Show their hand", (int)Tool.ShowHand);
+		menu.AddItem("Write a note  (N)", (int)Tool.Note);
+		menu.AddCheckItem("Full AI (no 1 s cap)", (int)Tool.FullAi);
 		menu.AddItem("Step the AI", (int)Tool.Step);
 		menu.AddItem("AI inspector  (F6)", (int)Tool.Inspector);
 		menu.AddSeparator("AI speed");
 		for (var i = 0; i < Speeds.Length; i++)
 			menu.AddRadioCheckItem(Speeds[i].Label, (int)Tool.Speed + i);
 		menu.SetItemChecked(menu.GetItemIndex((int)Tool.Speed + 2), true);
+		menu.AddSeparator("Animation");
+		for (var i = 0; i < Beats.Length; i++)
+		{
+			menu.AddRadioCheckItem(Beats[i].Label, (int)Tool.Beat + i);
+			menu.SetItemChecked(menu.GetItemIndex((int)Tool.Beat + i), Beats[i].Seconds == _beat);
+		}
 		menu.IdPressed += id =>
 		{
 			switch ((Tool)id)
@@ -1139,15 +1336,34 @@ public partial class MagicTableScene : Control
 					Do(() => _m.Stops = _m.Stops with { FullControl = !_m.Stops.FullControl });
 					break;
 				case Tool.Pause:
-					_paused = !_paused;
+					TogglePause();
+					break;
+				case Tool.FullAi:
+					_m.FullSearch = !_m.FullSearch;
 					Refresh();
+					break;
+				case Tool.Note:
+					OpenNote();
+					break;
+				case Tool.ShowHand:
+					_showHand = !_showHand;
+					if (_onScreen is null) // mid-beat, the next beat redraws
+						Refresh();
 					break;
 				case Tool.Inspector:
 					OpenInspector();
 					break;
-				case Tool.Step:
-					if (_m.AiToAct)
+				case Tool.Step: // paused: a decision made in the background is played first
+					if (_m.AiDecided)
+						Do(() => _m.FinishAi());
+					else if (_m.AiToAct && !_m.Thinking)
 						Do(() => _m.StepAi());
+					break;
+				case >= Tool.Beat:
+					var beat = (int)id - (int)Tool.Beat;
+					_beat = Beats[beat].Seconds;
+					for (var i = 0; i < Beats.Length; i++)
+						menu.SetItemChecked(menu.GetItemIndex((int)Tool.Beat + i), i == beat);
 					break;
 				default:
 					var speed = (int)id - (int)Tool.Speed;
@@ -1278,6 +1494,13 @@ public partial class MagicTableScene : Control
 		_oppField.SizeFlagsVertical = _myField.SizeFlagsVertical = SizeFlags.ExpandFill;
 		center.AddChild(Half(_oppBoard, _oppLands, _oppField));
 		center.AddChild(_phases);
+		var band = CardViews.Board(active: false);
+		band.BorderColor = new Color("d0583a"); // Glow.Attacking's red
+		band.SetBorderWidthAll(3);
+		_combatPanel.AddThemeStyleboxOverride("panel", band);
+		_combatRow.AddThemeConstantOverride("separation", 16);
+		_combatPanel.AddChild(Scrolling(_combatRow, SizeFlags.Fill));
+		center.AddChild(_combatPanel);
 		center.AddChild(Half(_myBoard, _myField, _myLands));
 		center.AddChild(_handSpace);
 		columns.AddChild(center);
@@ -1312,6 +1535,8 @@ public partial class MagicTableScene : Control
 			overlay.AddChild(panel);
 			AddChild(overlay);
 		}
+		_arrows.Rects = () => Rects(Nodes());
+		AddChild(_arrows);
 	}
 
 	/// <summary>
@@ -1332,20 +1557,23 @@ public partial class MagicTableScene : Control
 	{
 		var screen = GetViewportRect().Size - new Vector2(2 * Margin, 2 * Margin);
 		var w = screen.X - LeftWidth - RightWidth - 2 * Gap - 8; // less the half's own margins
-		var h =
-			(screen.Y - _phases.GetCombinedMinimumSize().Y - (CardViews.HandSize.Y + 12) - 12) / 2
-			- 12; // per half: two rows, less the margins and the gap between them
-		// In combat a creature row also holds a column for each of the OTHER side's attackers, as wide as its
-		// blockers (TBL-4.3) — counted here, or the row wraps (TBL-2.19).
-		var combatants = _columns.SelectMany(g => g.Blockers.Append(g.Attacker)).ToHashSet();
-		var columns = _columns.Sum(g => Math.Max(1, g.Blockers.Count));
+		// Two rows a half, and while there is combat the combat row's two more (TBL-4.6): every row the same
+		// height, less each panel's margins (12) and the gaps between them.
+		var combat = _shownColumns.Count > 0;
+		var (rows, panels) = combat ? (6, 3) : (4, 2);
+		var room = screen.Y - _phases.GetCombinedMinimumSize().Y - (CardViews.HandSize.Y + 12) - 12;
+		var rowHeight = (room - 12 - 12 * panels - (combat ? 8 : 0)) / rows; // the band's border and its gap
+		// The combat row's columns side by side, each as wide as its wider side — counted here, or it wraps (TBL-2.19).
+		var combatants = Combatants();
+		var columns = _shownColumns.Sum(g => Math.Max(1, g.Blockers.Count));
 		var fullest = new[] { _m.HumanId, _m.OpponentId }
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield).GroupBy(c => c.Is(CardType.Land)))
 			.Select(g =>
 				g.Key
 					? g.Select(c => CardViews.Looks(s, c)).Distinct().Count() // identical lands stack (Fill); a glow may split one
-					: columns + g.Count(c => !combatants.Contains(c.Id))
+					: g.Count(c => !combatants.Contains(c.Id))
 			)
+			.Append(columns)
 			.DefaultIfEmpty(1)
 			.Max();
 		// Auras and Equipment stack under their host's card, at their own height — an Aura on an Equipment
@@ -1359,8 +1587,8 @@ public partial class MagicTableScene : Control
 			.DefaultIfEmpty(0)
 			.Max();
 		var size = CardViews.PermanentSize;
-		_rowHeight = h / 2;
-		var byHeight = (h / 2 - strips * CardViews.AttachmentHeight) / size.Y;
+		_rowHeight = rowHeight;
+		var byHeight = (rowHeight - strips * CardViews.AttachmentHeight) / size.Y;
 		var byWidth = w / (fullest * (size.Y + 6));
 		return Mathf.Clamp(Mathf.Min(byHeight, byWidth), MinBoardScale, 1.5f);
 	}
@@ -1412,11 +1640,9 @@ public partial class MagicTableScene : Control
 	// stack identical permanents if a real board ever gets there.
 	private static HFlowContainer Row()
 	{
-		var row = new HFlowContainer
-		{
-			CustomMinimumSize = new Vector2(0, CardViews.PermanentSize.Y),
-			Alignment = FlowContainer.AlignmentMode.Center,
-		};
+		// No height of its own: its scroll holds _rowHeight (Fill). An unscaled card's height here overflowed every
+		// row once six shared the screen (TBL-4.6) — each row scrolled.
+		var row = new HFlowContainer { Alignment = FlowContainer.AlignmentMode.Center };
 		row.AddThemeConstantOverride("h_separation", 6);
 		return row;
 	}

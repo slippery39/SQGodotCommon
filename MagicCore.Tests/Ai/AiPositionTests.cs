@@ -20,6 +20,41 @@ public class AiPositionTests
 	int me;
 	int them;
 
+	/// <summary>
+	/// The search before AI-20.4: what it can't see shuffled into ONE guess (`beam+shuffle`). Ten controls run under
+	/// it (AI-20.7): with their patch off, the default look-ahead - unseen draws played as lands and as not lands -
+	/// no longer makes the misplay in that position, so the control shows what the patch fixed in the search it was
+	/// written for. Whether the default still needs each patch is AI-20.5's, measured one at a time.
+	/// </summary>
+	internal const Hidden.Library OneGuess = Hidden.Library.ShuffleUnknown;
+
+	/// <summary>A control (a term switched off) under <see cref="OneGuess"/>; the play itself under the default.</summary>
+	static Hidden.Library LibraryFor(Evaluator.Terms without) =>
+		without == Evaluator.Terms.None ? new BeamSearchAi.Settings().Library : OneGuess;
+
+	/// <summary>
+	/// A control's search as it was before AI-26's three became the default (2026-11-16, Shayne: "please put on all 3"):
+	/// no option price, no held-off share, tap abilities used at once. Seven controls run under it - with their patch off,
+	/// the new default no longer makes the misplay in that position, so the control shows what the patch fixed in the
+	/// search it was written for (as <see cref="OneGuess"/> does for AI-20.7's ten).
+	/// </summary>
+	internal static BeamSearchAi.Settings Before26(BeamSearchAi.Settings o) =>
+		o with
+		{
+			OptionPrice = false,
+			ByUse = false,
+			RolloutSettings = (o.RolloutSettings ?? BeamSearchAi.DefaultRollout) with
+			{
+				LastChance = false,
+			},
+		};
+
+	/// <summary><see cref="Before26"/> as --match names add it to a search's name.</summary>
+	internal const string Before26Names = "+nooptionprice+nobyuse+nolastchance";
+
+	/// <summary>How many seeds to count over: 30 guesses for a <see cref="OneGuess"/> search, one for the default - it guesses nothing, so every seed is the same search.</summary>
+	internal static int SeedsFor(Hidden.Library library) => library == OneGuess ? 30 : 1;
+
 	[SetUp]
 	public void OurFirstMain_EmptyHands()
 	{
@@ -44,6 +79,128 @@ public class AiPositionTests
 
 		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.TheirCombatTricks), "c15"), "control");
 		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), "c15"), Is.False);
+	}
+
+	// Shayne, 2026-11-13 (AI-25, his first notes session): "AI2 should not block the Edgar here. Trading the 2/3
+	// Greenhouse for a 1/1 rat does not seem like a positive ev play." Edgar, Ancient Bloodlord 2/3 attacked, AI 2
+	// blocked with Greenhouse Propagator 2/3, and AI 1 paid {2} and sacrificed Rank Rat: Edgar 3/4, the Propagator
+	// dead. The look-ahead's attacker had tricks after blocks (AI-17.10) but never one whose cost picks a card.
+	// The CONTROL: without TheirSacrificeTricks the AI still blocks (c42).
+	[Test]
+	public void ABlock_ThatLosesToTheirSacrificePump_IsNotMade()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 175);
+		string Choice(Evaluator.Terms without) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s)
+			);
+
+		Assert.That(
+			MoveTokens.Same(Choice(Evaluator.Terms.TheirSacrificeTricks), "c42"),
+			"control"
+		);
+		Assert.That(MoveTokens.Same(Choice(Evaluator.Terms.None), "c42"), Is.False);
+	}
+
+	// Shayne, 2026-11-13 (AI-9.9, his first notes session): Rank Rat made AI 2 discard, and it discarded Rockfall Vale -
+	// "which makes no sense as he had a forest in hand, no red source in play and the rockwell vale as his only red
+	// source. Nobody is discarding Rockfall Vale in this situation." Three turns ahead the Vale and a Forest were priced
+	// alike: no land was left in hand, and the red cards it left uncastable were priced as castable.
+	// AI-25.3's block fix also keeps it here (the Forest goes): this tests ColorShort ALONE. The CONTROL: without both,
+	// the AI still discards the Vale (c73). Both under the search before AI-20.4 (OneGuess): in the default, ColorShort
+	// alone no longer keeps the Vale - a land may be the next draw - and the block fix does (the Forest goes: the test below).
+	[Test]
+	public void TheOnlySourceOfAColour_IsNotDiscarded()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 97);
+		string Choice(Evaluator.Terms without, bool control = false) =>
+			MoveTokens.Token(
+				s,
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					control
+						? Before26(new(Without: without, Library: OneGuess))
+						: new(Without: without, Library: OneGuess)
+				).Decide(s)
+			);
+
+		const Evaluator.Terms blocks = Evaluator.Terms.BlocksSeeTricks;
+		Assert.That(
+			MoveTokens.Same(Choice(Evaluator.Terms.ColorShort | blocks, control: true), "c73"),
+			"control"
+		);
+		Assert.That(MoveTokens.Same(Choice(blocks), "c73"), Is.False);
+	}
+
+	// Shayne, 2026-11-13 (AI-25.3): with the Vale kept (AI-9.9), the same discard took Koth, the Geomancer over a Forest
+	// - "Why would trading it in the future cause him to discard it now?" It wasn't a trade: the rollout's own block put
+	// Koth in front of Edgar, and AI 1's sacrifice pump killed it for a spent Rank Rat - so keeping Koth looked bad. The
+	// rollout's blocks now face the attacker's trick. The CONTROL: without BlocksSeeTricks it discards Koth.
+	[Test]
+	public void KeepingACreature_IsNotJudgedByTheRolloutBlockingIntoAPump()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 97);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(
+				s.DecidingPlayerId(),
+				without == Evaluator.Terms.None
+					? new(Without: without, Library: LibraryFor(without))
+					: Before26(new(Without: without, Library: LibraryFor(without)))
+			)
+				.Decide(s)
+				.What;
+
+		Assert.That(Chose(Evaluator.Terms.BlocksSeeTricks), Does.Contain("Koth"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Discard 1 Forest"));
+	}
+
+	// Shayne, 2026-11-13 (AI-13.13, his notes): AI 2 cast Yoshimaru with no creature of its own to fight - "it doesn't do
+	// anything and has more potential value later on". Pass and the cast tied: keeping it, the look-ahead discarded Koth
+	// to hand size on turn 12 rather than cast Yoshimaru then - it never saw the cleanup coming - so keeping it cost a
+	// card. Now a hand over its maximum prices the cards it will discard at nothing: Yoshimaru is kept and cast on turn
+	// 12, "when you were forced to discard". The CONTROL: without HandSize it casts now.
+	[Test]
+	public void ACardIsKeptUntilTheHandIsFull_NotCastEarly()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 196);
+		string Chose(Evaluator.Terms without) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+
+		Assert.That(Chose(Evaluator.Terms.HandSize), Does.StartWith("Cast Yoshimaru"), "control");
+		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Pass"));
+	}
+
+	// Shayne, 2026-11-13 (his notes; AI-20.9): AI 2 on three Forests, six red cards in hand, a Jace token at loyalty 2
+	// ("[−1]: Surveil 1") - "he really needs that red source … so he should be aggresively surveiling for it here."
+	// 2026-11-15: "It doesn't matter what is actually on top or not, I am looking for a specific card and thats it."
+	// The look showed a card the look-ahead had made up - a land where its draws are lands, none where they are not -
+	// so it never binned and the surveil only cost a loyalty. Now a look moves the odds of the draw the line wants.
+	// The CONTROL: without Looks it passes.
+	[Test]
+	public void ShortOfALand_TheJaceTokenSurveilsForIt()
+	{
+		var s = KeptRecords.Before("ShayneNotesSeed1", 247);
+		string Chose(Evaluator.Terms without, bool spellsRule = false) => new BeamSearchAi(
+				s.DecidingPlayerId(),
+				// the control without the drawn card's look credit too (AI-27.7), which finds the surveil alone
+				new(
+					Without: without,
+					SpellsRule: spellsRule,
+					DrawnCard: without == Evaluator.Terms.None
+				)
+			).Decide(s).What;
+
+		// the control also holds that a made-up card is never binned (AI-20.11): with a surveil's spells branched,
+		// binning it made 13 lands of 27 into 13 of 26, which alone paid for the loyalty - and counted the look
+		// twice once Looks was on
+		Assert.That(Chose(Evaluator.Terms.Looks), Is.EqualTo("Pass"), "control");
+		Assert.That(
+			Chose(Evaluator.Terms.Looks, spellsRule: true),
+			Is.EqualTo("Pass"),
+			"control, the old rule"
+		);
+		Assert.That(Chose(Evaluator.Terms.None), Does.StartWith("Jace"));
 	}
 
 	// Shayne, 2026-11-08 (AI-19.21): General Chang ("{1}, Sacrifice a creature: a +1/+1 counter on each
@@ -77,7 +234,12 @@ public class AiPositionTests
 					{
 						FreePasses = without == Evaluator.Terms.None,
 						WaitOnTies = without == Evaluator.Terms.None,
+						Library = LibraryFor(without),
 					}
+						is var o
+					&& without != Evaluator.Terms.None
+						? Before26(o)
+						: o
 				).Decide(s)
 			);
 
@@ -96,7 +258,9 @@ public class AiPositionTests
 	// surveil 1"). The AI exiled its OWN Infinite Diversity and Shayne's Tal Shiar Operative: "surveiling here is
 	// 100% the correct play". Not a judgement - a TIE: the rollout's one sampled top card is kept, so surveil gained
 	// nothing, exiling a card with no graveyard value cost nothing, and the first listed mode won. A surveil on the
-	// stack now counts a third of a card (Terms.SurveilPrice). The CONTROL: without it the AI still exiles.
+	// stack now counts a third of a card (Terms.SurveilPrice). Since AI-20.9 the look moves the land odds too
+	// (Terms.Looks), and that alone finds the surveil - the flat price is one of AI-20.5's patches to try off.
+	// The CONTROL: without both the AI still exiles.
 	[TestCase("DominionExilesOwnCard", 127)]
 	[TestCase("DominionExilesTheirCard", 294)]
 	public void DominionAssaultForce_Surveils_RatherThanExilingACardWorthNothing(
@@ -105,10 +269,18 @@ public class AiPositionTests
 	)
 	{
 		var s = KeptRecords.Before(record, at);
-		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		// the control without the drawn card's look credit too (AI-27.7), which prices the look in their place
+		string Chose(Evaluator.Terms without, bool drawnCard = true) =>
+			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without, DrawnCard: drawnCard))
+				.Decide(s)
+				.What;
 
-		Assert.That(Chose(Evaluator.Terms.SurveilPrice), Does.Contain("Exile"), "control");
+		Assert.That(
+			Chose(Evaluator.Terms.SurveilPrice | Evaluator.Terms.Looks, drawnCard: false),
+			Does.Contain("Exile"),
+			"control"
+		);
+		Assert.That(Chose(Evaluator.Terms.SurveilPrice), Does.Contain("Surveil"), "the look alone");
 		Assert.That(Chose(Evaluator.Terms.None), Does.Contain("Surveil"));
 	}
 
@@ -165,7 +337,10 @@ public class AiPositionTests
 		var ai = start.DecidingPlayerId();
 		int LandsPlayed(Evaluator.Terms without)
 		{
-			var (s, search) = (start, new BeamSearchAi(ai, new(Without: without)));
+			var (s, search) = (
+				start,
+				new BeamSearchAi(ai, new(Without: without, Library: LibraryFor(without)))
+			);
 			for (var i = 0; i < 200 && s.GetGame().TurnNumber == 5; i++)
 				s = s.DecidingPlayerId() == ai ? search.Decide(s).State : TestGames.PassOrChoose(s);
 			return s.GetGame().TurnNumber == 5
@@ -173,7 +348,12 @@ public class AiPositionTests
 				: s.GetPlayer(ai).LastTurn.LandsPlayed;
 		}
 
-		Assert.That(LandsPlayed(Evaluator.Terms.ManaShort), Is.EqualTo(0), "control");
+		// the control prices the Borg as castable: short on white too (AI-9.9), so both kinds of short are off
+		Assert.That(
+			LandsPlayed(Evaluator.Terms.ManaShort | Evaluator.Terms.ColorShort),
+			Is.EqualTo(0),
+			"control"
+		);
 		Assert.That(LandsPlayed(Evaluator.Terms.None), Is.EqualTo(1));
 	}
 
@@ -186,15 +366,31 @@ public class AiPositionTests
 	public void AtFourLife_AgainstAVisibleDrain_ThePatrolStaysHomeToBlock()
 	{
 		var s = KeptRecords.Before("PatrolRacesIntoDrain", 287);
-		string Chose(Evaluator.Terms without) =>
-			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
+		string Chose(Evaluator.Terms without, bool oneGuess = false) =>
+			new BeamSearchAi(
+				s.DecidingPlayerId(),
+				new(Without: without, Library: oneGuess ? OneGuess : LibraryFor(default))
+			)
+				.Decide(s)
+				.What;
 
 		Assert.That(Chose(Evaluator.Terms.TheirAbilities), Does.EndWith("Attack You"), "control");
 		// AI-13.9: once TRK's instants had offers, options read per line made the imagined Shayne hold his 2/1 back
+		// the search as it was: with the drain used before a spell (AI-20.8) his 2/1 kills whatever he holds back
 		Assert.That(
-			Chose(Evaluator.Terms.RootOptionTurns),
+			Chose(
+				Evaluator.Terms.RootOptionTurns | Evaluator.Terms.AbilityOverSpell,
+				oneGuess: true
+			),
 			Does.EndWith("Attack You"),
 			"control: options per line"
+		);
+		// AI-20.8 (Shayne, 2026-11-15: "the AI was Dead on board from its attack"): once unseen draws were played as lands
+		// too, the imagined Shayne recasting Boarding Action before the drain gave the AI a turn to win in first
+		Assert.That(
+			Chose(Evaluator.Terms.AbilityOverSpell),
+			Does.EndWith("Attack You"),
+			"control: a spell before the drain"
 		);
 		Assert.That(Chose(Evaluator.Terms.None), Does.EndWith("Don't attack"));
 	}
@@ -310,12 +506,12 @@ public class AiPositionTests
 			var attacked = 0;
 			Parallel.For(
 				1,
-				31,
+				SeedsFor(LibraryFor(without)) + 1,
 				k =>
 				{
 					var ai = new BeamSearchAi(
 						s.DecidingPlayerId(),
-						new(Without: without, Threads: 1)
+						new(Without: without, Threads: 1, Library: LibraryFor(without))
 					);
 					if (ai.Decide(s with { RngSeed = k * 7919 }).What.EndsWith("Attack You"))
 						Interlocked.Increment(ref attacked);
@@ -329,28 +525,32 @@ public class AiPositionTests
 			Is.GreaterThanOrEqualTo(6),
 			"control: a kind sample attacks"
 		);
-		Assert.That(Attacks(Evaluator.Terms.None), Is.LessThanOrEqualTo(3));
+		Assert.That(Attacks(Evaluator.Terms.None), Is.EqualTo(0));
 	}
 
 	// AI-17.20's spells half, on the same surveil (checked 2026-11-09, AI-13.10, Shayne: "run 173 with the rule on and
 	// off"): Energize, priced above the unknown card, stays on top. Counted over 30 shuffles, the sample decides each.
-	// The CONTROL: without Terms.SurveilSpells the branching bins it too in about half (14 of 30 when checked).
+	// The CONTROL: the one-guess search (before AI-20.4) branching it bins it in about half (14 of 30 when checked) -
+	// what the spells rule (Settings.SpellsRule) was for. The default search keeps it without the rule (AI-20.11).
 	[Test]
-	public void ASurveil_KeepsAGoodSpellOnTop()
+	public void ASurveil_KeepsAGoodSpellOnTop_UnderTheSpellsRule()
 	{
 		var s = KeptRecords.Before("SurveilNone", 173);
 		var held = BeamSearchAi.DefaultRollout.Held!;
 		Assert.That(held.Of("Energize"), Is.GreaterThan(held.Unknown));
-		int BinsEnergize(Evaluator.Terms without)
+		int BinsEnergize(Hidden.Library library, bool spellsRule = false)
 		{
 			var bins = 0;
 			Parallel.For(
 				1,
-				31,
+				SeedsFor(library) + 1,
 				k =>
 				{
 					if (
-						new BeamSearchAi(s.DecidingPlayerId(), new(Without: without, Threads: 1))
+						new BeamSearchAi(
+							s.DecidingPlayerId(),
+							new(Threads: 1, Library: library, SpellsRule: spellsRule)
+						)
 							.Decide(s with { RngSeed = k * 7919 })
 							.What.Contains("Energize")
 					)
@@ -360,12 +560,12 @@ public class AiPositionTests
 			return bins;
 		}
 
-		Assert.That(
-			BinsEnergize(Evaluator.Terms.SurveilSpells),
-			Is.GreaterThanOrEqualTo(7),
-			"control"
-		);
-		Assert.That(BinsEnergize(Evaluator.Terms.None), Is.EqualTo(0));
+		Assert.That(BinsEnergize(OneGuess), Is.GreaterThanOrEqualTo(7), "control");
+		Assert.That(BinsEnergize(OneGuess, spellsRule: true), Is.EqualTo(0), "the old rule");
+		// The default kept it until the option price became the default (AI-26.16): it now bins Energize with the
+		// Mountain - Energize ("return target creature an opponent controls to its owner's hand") is a bounce, priced as
+		// tempo, and beam me up still casts it from the graveyard. Shayne, 2026-11-17: "Binning both is actually fine."
+		// So either answer is right for the default, and nothing is asserted of it here.
 	}
 
 	// Shayne, 2026-11-09 (AI-17.20): turn 8, Emergency Holographic Crew's surveil 2 over a Mountain and an Energize, with
@@ -488,10 +688,26 @@ public class AiPositionTests
 	public void RankRat_Control_ThePlainSearchStillMakesTheBadPlay() =>
 		Assert.That(
 			KillsTheRatWhileItIsNotAttacking(
-				new BeamSearchAi(me, new BeamSearchAi.Settings().WithoutHeld())
+				new BeamSearchAi(me, Before26(new BeamSearchAi.Settings().WithoutHeld()))
 			),
 			Is.True
 		);
+
+	// Shayne, 2026-11-17 (AI-28.1, his table notes, #225): the AI copied L'Rell, Fierce Visionary off Q in its declare
+	// blockers step - "It would have been better to cast the L'Rell before combat, so that they would get the 2/1 token".
+	// Legal (CR 608.2g), badly timed: L'Rell's "at the beginning of combat on your turn, create a 2/1 red Klingon Warrior
+	// creature token with haste. Sacrifice it at the beginning of the next end step" makes nothing this turn. The cause
+	// was the token's price: kept as a 2/1, losing it in combat cost a 2/1, so the line that made one scored 11.8 BELOW
+	// passing at #211, the main phase. A creature gone at the next end step now counts nothing past this turn (AI-28.2:
+	// "This is free because the 2/1 gets sacrificed at end of turn anyways"). Kept table game, move #211 (turn 10).
+	[Test]
+	public void LRellsCopy_IsCastBeforeCombat_ForItsKlingon()
+	{
+		var s = KeptRecords.Before("LRellCopyBeforeCombat", 211);
+		var chose = new BeamSearchAi(s.DecidingPlayerId()).Decide(s).What;
+
+		Assert.That(chose, Does.StartWith("Activate L'Rell, Fierce Visionary"));
+	}
 
 	// The search as it plays — held cards priced by their measured value (AI-1, the default since
 	// AI-1.9) — keeps Prophesied End: worth more in hand than the Rat is dead.
@@ -513,7 +729,10 @@ public class AiPositionTests
 		string Choice(Evaluator.Terms without) =>
 			MoveTokens.Token(
 				s,
-				new BeamSearchAi(s.DecidingPlayerId(), new() { Without = without }).Decide(s)
+				new BeamSearchAi(
+					s.DecidingPlayerId(),
+					new() { Without = without, Library = LibraryFor(without) }
+				).Decide(s)
 			);
 		// Blocking either Beast: every option of the Duelist's block but "don't".
 		var trades = s.GetPendingChoice()!
@@ -607,6 +826,7 @@ public class AiPositionTests
 									: Rollout.Attacks.EachAlone,
 						},
 						Without: without,
+						Library: LibraryFor(without),
 						// the control is the search as it was: whole attacks (AI-17.3) avoid it too
 						WholeAttacks: without == Evaluator.Terms.None
 					)
@@ -785,20 +1005,13 @@ public class AiPositionTests
 		var (before, _) = record.Replay();
 		var me = before[256].DecidingPlayerId();
 
-		return DeathbringerTurn(
-				record,
-				before,
-				me,
-				new()
-				{
-					// the control also turns off TrueDefender (AI-19.21), which makes the Beast unaided
-					Without = counterAttack ? Evaluator.Terms.None : Evaluator.Terms.TrueDefender,
-					RolloutSettings = BeamSearchAi.DefaultRollout with
-					{
-						CounterAttack = counterAttack,
-					},
-				}
-			)
+		var settings = new BeamSearchAi.Settings
+		{
+			// the control also turns off TrueDefender (AI-19.21), which makes the Beast unaided
+			Without = counterAttack ? Evaluator.Terms.None : Evaluator.Terms.TrueDefender,
+			RolloutSettings = BeamSearchAi.DefaultRollout with { CounterAttack = counterAttack },
+		};
+		return DeathbringerTurn(record, before, me, counterAttack ? settings : Before26(settings))
 				is var after
 			&& after.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name == "Beast")
 			&& after.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name.StartsWith("Tinybones"))
@@ -1101,7 +1314,7 @@ public class AiPositionTests
 		) =>
 			new BeamSearchAi(
 				s547.DecidingPlayerId(),
-				new(RolloutSettings: rollout, Without: without)
+				new(RolloutSettings: rollout, Without: without, Library: LibraryFor(without))
 			).Decide(s547);
 		// the control is the look-ahead as it was: Settle's choices (AI-17.6) hold too
 		var boardOnly = BeamSearchAi.DefaultRollout with

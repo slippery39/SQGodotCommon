@@ -192,6 +192,48 @@ Open questions:
       seed 4, move 53 (`AiPositionTests.ABounce_TakesTheToken_…`, its control without the term). Suite
       accepted, the oracle re-read: beam 82.6% agreement (given up 0.87) against beam+blindhand 83.0%
       (0.78) — slightly worse on the positions, recorded in the findings
+- [ ] AI-9.9 A land priced by HOW MUCH it unlocks, not whether (Shayne's notes, TBL-10.3, 2026-11-13; kept game
+      `Records/ShayneNotesSeed1.json`). Two positions, AI 2 (Red-Green) with Rockfall Vale its ONLY red source and four
+      red cards in hand: **#97** the Rank Rat discard — "Nobody is discarding Rockfall Vale in this situation" — Vale
+      9.43, Forest 9.18: `LandUnlock` is a yes/no on next turn's mana, both lands unlock, both 0.3; the 0.25 is the
+      rollout (keeping the Vale cast Koth, which then traded with Edgar). **#24** turn 2, Forest played over the Vale —
+      "it would actually be better to play the Rockfall Vale" (it enters tapped for free with nothing to cast; later it
+      costs a turn): an exact tie, 18.64 each, broken by list order — nobody casts anything in the rollout, so colour
+      and tapped never mattered. Read each with `MagicConsole --record=… --explain=N`. Wanted: the only source of a
+      colour the hand needs worth more than a fourth Forest; and a land that enters tapped played on the turn it costs
+      nothing. Watch AI-13's potential term here — "a basic over a tapped land" was one of its wrong versions
+      **#97 BUILT 2026-11-13:** the land term was not the gap — at the horizon no land is left in hand; the red cards the
+      discard stranded were priced as castable. `Evaluator.Terms.ColorShort` (`+nocolorshort`): a held card's price is
+      kept `ManaShortShare` per coloured pip none of our sources (in play or in hand) makes, no free first one
+      (`LandUnlock.ColorsShort`; `ManaWithin`'s ponytail named it). Now: discard Koth 5.23, Forest 1.57, Vale 0.84
+      (was Vale 9.43, Forest 9.18) — test `TheOnlySourceOfAColour_IsNotDiscarded` (control: the term off). Koth over the
+      Forest is not this term: in the Forest line the play-out casts Koth, blocks Edgar with it, and AI 1 sacrifices
+      Rank Rat to pump Edgar — Koth dies for a spent Rat (no trade). The play-out's OWN blocks don't foresee the
+      attacker's after-block tricks that AI-25 taught the real decision: AI-25.3 (Shayne, 2026-11-13: discarding Koth
+      is "a judgement call", fine if it's the land, not if it's a misread). The Borg
+      landcycle test's control now turns ColorShort off too (the Borg is short on white). Suite: 0 of 288 moved, cost
+      unchanged. **#24 NOT fixed, and not this term's:** with this hand the order only matters if AI 2 draws a red
+      card castable on turn 2 (Koth is 3, Heartstring 4) — an option on unknown draws, AI-20's one-sampled-future
+      problem; the tie stands (18.64 each). **MATCH (2026-11-13):** `beam,beam+nocolorshort --until-clear`, 96 games,
+      51.0% ± 1.0pp (49–47), no difference; cost 4391.5 vs 4414.5 steps a decision. KEPT (findings "AI-9.9"). With
+      AI-25.3 also on, #97 discards the Forest (Shayne's answer). Task open for #24 only — moved to AI-20's evidence
+- [ ] AI-9.10 A land whose untapped condition holds only now is played first (Shayne, AI-27, 2026-11-18): FRA seed 2
+      game White-Blue Jace vs Red-Green, turn 6 - Rockfall Vale ("enters tapped unless you control two or more other
+      lands") played over Konstrari Annex ("enters tapped unless you control a planeswalker") with a Jace token at 1 in
+      play. Price a land in hand by whether it will enter untapped when it is next played, not a rule. TRACED (2026-11-18,
+      AI-27): the turn-6 choice now leads with Jace −1 36.10 = Play Rockfall Vale 36.10, Play Konstrari Annex 34.93. In
+      the Vale line the token surveils and dies, the Annex enters tapped next turn, and the rollout casts Ajani's Anguish
+      X=2 with three mana; in the Annex line it has four and casts Heartstring Puller - the gap is what the rollout
+      happens to cast and how its combat goes. The land's real worth (a fourth untapped mana) needs a second spell,
+      which the rollout never casts: a land priced "enters tapped next turn" in `LandUnlock` moves 0.3 to 0.05, too
+      small to change it, and `beam+twospells` (two spells a rollout turn) doesn't change it either. Waits on the
+      lands discussion (AI-27, Decisions 2026-11-17: what a land is worth "is highly variable"). RETRIED (2026-11-18, the
+      session's last step, Shayne): with AI-27.9's land use on, still Play Rockfall Vale 38.75 = Jace −1 38.75, Play
+      Konstrari Annex 37.57 - the turn played: −1, Vale, Koth. Reading "enters tapped unless" for lands in hand in the
+      land count (`LandUnlock.Playable`) changed nothing and was reverted: the look-ahead plays the Annex, tapped, inside
+      its own turns, where one spell a turn fits in three mana; by the horizon it is on the battlefield like any land.
+      The lost mana is never scored. Candidate for AI-29 (AI notes): "play a land whose untapped condition holds only
+      now first" - a land-sequencing note
 
 ## Next
 
@@ -217,3 +259,5 @@ found it hiding Way of the Wildspeaker); one switch and one match.
 - 2026-11-07: AI-9.3 built (`WalkerLifetime`), the Theorist and a Jace token's −3 flip; match no difference; kept.
 - 2026-11-07: AI-9.7 and AI-9.8 added (Shayne).
 - 2026-11-07: the match rerun on the committed version (2c5232ac): no difference.
+- 2026-11-13: AI-9.9 added from Shayne's first notes session (TBL-10.3): the Vale discarded, the Forest played first.
+- 2026-11-13: AI-9.9's #97 built and kept (`ColorShort`, match no difference); #24 is AI-20's.

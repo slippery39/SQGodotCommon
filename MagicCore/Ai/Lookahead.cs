@@ -79,8 +79,8 @@ public static class Lookahead
 	/// Before, a trigger's target was the first legal one (ours are listed first: "destroy target creature"
 	/// killed our own) and every "you may" was declined, and Settle ranks which children the search rolls
 	/// out (BeamSearchAi.Narrow), which play our rollout makes, and the simulated opponent's plays.
-	/// ponytail: hand cards at the flat price (Settle has no held values) — pass them in if a pick between
-	/// two cards in hand is ever misjudged.
+	/// Priced flat (1.2 a card, 0.3 a land) unless the search asks for its own prices (<see cref="Evaluator.SettleHeld"/>,
+	/// the default since 2026-11-18, AI-27.10: a loot in the look-ahead's land version looked worthless at the flat price).
 	/// </summary>
 	static IEnumerable<int> Chosen(GameState s, ChoiceAction choice, int deeper)
 	{
@@ -90,7 +90,9 @@ public static class Lookahead
 			picks.Insert(0, []);
 		if (picks.Count == 1)
 			return picks[0]; // nothing to weigh
-		return picks.MaxBy(pick => Evaluator.Evaluate(Settle(s.Choose(pick), false, deeper), who))!;
+		return picks.MaxBy(pick =>
+			Evaluator.Evaluate(Settle(s.Choose(pick), false, deeper), who, Evaluator.SettleHeld)
+		)!;
 	}
 
 	public static bool InCombat(GameState s) =>

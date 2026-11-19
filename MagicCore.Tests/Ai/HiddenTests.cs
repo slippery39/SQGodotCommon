@@ -246,6 +246,136 @@ public class HiddenTests
 		);
 	}
 
+	// ===== Land or not (AI-20.3): nothing shuffled, the unseen draws played both ways =====
+
+	// My unseen top cards are unknown cards, or - the other way - the lands of my deck; a place I know stays, their
+	// unseen top cards are unknown cards, no id is made or lost, and none of it moves with the game's seed.
+	[Test]
+	public void LandOrNot_MyUnseenDrawsAreUnknownCards_OrLands_WhateverTheSeed()
+	{
+		var mine = Library(s, me);
+		s = s.MakeKnown(mine[1], Knowers.Owner);
+		var unseen = s.CardsIn(me, ZoneType.Library).Where(c => c.Id != mine[1]).ToList();
+
+		var none = Hidden.Sample(s, me, Hidden.Library.LandOrNot);
+		var lands = Hidden.Unknown(none, me, lands: true);
+		List<Card> Top(GameState state, int player) =>
+			[
+				.. state
+					.CardsIn(player, ZoneType.Library)
+					.Where(c => c.Id != mine[1])
+					.Take(Hidden.UnknownDraws),
+			];
+
+		Assert.That(Top(none, me), Is.All.Matches<Card>(Hidden.IsUnknown));
+		Assert.That(Top(none, them), Is.All.Matches<Card>(Hidden.IsUnknown));
+		Assert.That(Top(lands, me), Is.All.Matches<Card>(c => c.Is(CardType.Land)));
+		foreach (var world in new[] { none, lands })
+		{
+			Assert.That(Library(world, me)[1], Is.EqualTo(mine[1]));
+			Assert.That(Library(world, me), Is.EquivalentTo(mine));
+			Assert.That(world.NextId, Is.EqualTo(s.NextId));
+		}
+		Assert.That(
+			Library(Hidden.Sample(s with { RngSeed = 99 }, me, Hidden.Library.LandOrNot), me),
+			Is.EqualTo(Library(none, me))
+		);
+		Assert.That(
+			Hidden.LandOdds(none, me),
+			Is.EqualTo(unseen.Count(c => c.Is(CardType.Land)) / (double)unseen.Count)
+		);
+	}
+
+	// An unknown card drawn can't be cast or played; the other way, it is a land of my deck in my hand.
+	[Test]
+	public void AnUnknownCardDrawn_OffersNoMove_AndIsALandTheOtherWay()
+	{
+		var none = Hidden.Sample(s, me, Hidden.Library.LandOrNot).Draw(me);
+		var drawn = none.CardsIn(me, ZoneType.Hand).Single(Hidden.IsUnknown);
+		var lands = Hidden.Unknown(none, me, lands: true);
+		int LandsHeld(GameState state) =>
+			state.CardsIn(me, ZoneType.Hand).Count(c => c.Is(CardType.Land));
+
+		Assert.That(none.LegalActions().Select(MagicRules.CardOf), Has.None.EqualTo(drawn.Id));
+		Assert.That(lands.CardsIn(me, ZoneType.Hand), Has.None.Matches<Card>(Hidden.IsUnknown));
+		Assert.That(LandsHeld(lands), Is.EqualTo(LandsHeld(none) + 1));
+		Assert.That(Hand(lands, me), Has.Count.EqualTo(Hand(none, me).Count));
+	}
+
+	// A look at an unknown card tells us nothing (a surveil keeping it marks it known): the other way it is still a
+	// land. Before, the kept card was never a land, so a surveil lost the whole "lands" half (the Dominion Assault
+	// Force positions chose "exile a card" over "surveil 1" again).
+	[Test]
+	public void AnUnknownCardLookedAt_IsStillALandTheOtherWay()
+	{
+		var none = Hidden.Sample(s, me, Hidden.Library.LandOrNot);
+		var looked = none.MakeKnown(Library(none, me)[0], Knowers.Owner);
+
+		Assert.That(
+			Hidden
+				.Unknown(looked, me, lands: true)
+				.CardsIn(me, ZoneType.Library)
+				.First()
+				.Is(CardType.Land)
+		);
+		Assert.That(Hidden.LandOdds(looked, me), Is.EqualTo(Hidden.LandOdds(none, me)));
+	}
+
+	// AI-20.9 (Shayne, 2026-11-15: "I am looking for a specific card and thats it"): a look at an unseen card is binned
+	// unless it is the draw we look for, so the draw misses only if the card looked at and the one under it both miss.
+	[Test]
+	public void ALookAtAnUnseenCard_MovesTheOddsTowardsTheDrawWeLookFor()
+	{
+		var none = Hidden.Sample(s, me, Hidden.Library.LandOrNot);
+		var unseen = Hidden.Unseen(none, me).ToList();
+		double all = unseen.Count;
+		double lands = unseen.Count(c => c.Is(CardType.Land));
+		Assume.That(lands, Is.GreaterThan(1).And.LessThan(all - 1));
+
+		Assert.That(
+			Hidden.LandOdds(none, me, looks: 1),
+			Is.EqualTo(1 - (all - lands) / all * ((all - lands - 1) / (all - 1))).Within(1e-9)
+		);
+		Assert.That(
+			Hidden.LandOdds(none, me, looks: 1, forLand: false),
+			Is.EqualTo(lands / all * ((lands - 1) / (all - 1))).Within(1e-9)
+		);
+		Assert.That(Hidden.LandOdds(none, me, looks: 0), Is.EqualTo(lands / all));
+	}
+
+	// AI-17.24 (Shayne, 2026-11-10; Records/RogueLandcycleSkipped #157): on 3 Swamps, holding a 6-mana 6/5 with "Basic
+	// landcycling {2}", the AI passed its whole turn 8 - the one library it guessed drew a land in time - and cycled
+	// in Shayne's upkeep, its land drop lost. Played both ways it cycles and plays the land in that turn, whatever
+	// the game's seed. CONTROL: on one shuffled guess (beam+shuffle), at the record's seed, the turn ends on the same
+	// 3 lands.
+	[Test]
+	public void TheLandcycler_OnThreeLands_IsCycledAndTheLandPlayed_ThatTurn()
+	{
+		var at = KeptRecords.Get("RogueLandcycleSkipped").Before(157);
+		var (ai, turn) = (at.DecidingPlayerId(), at.GetGame().TurnNumber);
+		int Lands(GameState state) =>
+			state.CardsIn(ai, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
+		GameState TurnPlayed(string search, int seed) =>
+			TestGames.PlayAis(
+				at with
+				{
+					RngSeed = seed,
+				},
+				turn,
+				AiMatch.Create(search, ai, 1),
+				new GreedyAi(at.OpponentOf(ai))
+			);
+
+		Assert.That(
+			// as written, before AI-26's three became the default (AiPositionTests.Before26)
+			Lands(TurnPlayed("beam+shuffle" + AiPositionTests.Before26Names, at.RngSeed)),
+			Is.EqualTo(Lands(at)),
+			"the control"
+		);
+		foreach (var seed in new[] { at.RngSeed, 7919 })
+			Assert.That(Lands(TurnPlayed("beam", seed)), Is.EqualTo(Lands(at) + 1), $"seed {seed}");
+	}
+
 	static string Play(BeamSearchAi.Settings options)
 	{
 		var game = MagicRules.NewGame(
