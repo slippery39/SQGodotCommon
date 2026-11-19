@@ -215,8 +215,10 @@ Open questions (for Shayne, before `ready`):
 
 ## Tasks
 
-- [ ] AI-20.1 Shayne picks the approach and answers the open questions - the principle decided (known used, unknown
+- [x] AI-20.1 Shayne picks the approach and answers the open questions - the principle decided (known used, unknown
       unknown) and land odds in principle; the land-odds details and the opponent's draws open, to discuss at the start
+      — CLOSED 2026-11-18 at the sprint 5 review (Shayne: "whatever we have can be the default"): the land / not-a-land
+      look-ahead as built (AI-20.3-20.11) is the answer; no further details to decide
 - [x] AI-20.2 The flip rate: `--suite=A --guesses=N` (`PositionSuite.Flips`, with `RunProgress`) decides each suite
       position under N guesses and counts the positions with more than one answer. **The baseline: 69 of 288 (24.0%)
       flip under 10 guesses**, 9.2 min - mostly the Jace token's draw or surveil against a land or spell first. It

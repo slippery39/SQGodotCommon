@@ -1,7 +1,7 @@
 ---
 id: AI-26
 title: Option pricing by the target — a held card is worth what it will hit later, less the mana it costs then
-status: backlog
+status: in-progress
 area: AI
 created: 2026-11-16
 ---

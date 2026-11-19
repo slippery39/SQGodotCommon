@@ -58,11 +58,20 @@ Not agreed — to shape with Shayne.
 ## Decisions
 
 - 2026-11-18, Shayne: noted, not started — "I want to finish what we have in this session first."
+- 2026-11-18, Shayne (sprint 5 review): notes can also SAVE search - "this could be a way to both save on performance
+  and make the AI play better if done correctly" - so each note is written as a shortcut where it can replace search.
+  **Card tags** (his idea: tag a card by what it does - FaceDamage, removal - by hand or by reflection, so the AI looks
+  a tag up instead of checking each card; later, search in deck building): built only when the first note or shortcut
+  needs one, derived from the card's components by reflection, hand tags only where reflection can't see (Claude's
+  recommendation at sprint 6 planning, Shayne agreed the plan).
 
 ## Tasks
 
 - [ ] AI-29.1 The shape agreed: where a note lives, how the general evaluator calls it, its three kinds
 - [ ] AI-29.2 The pilot: flash (his rule above), on seed 2 #16
+- [ ] AI-29.3 Land sequencing as a simple rule, not the look-ahead (Shayne, 2026-11-18, above): which land to play -
+      what enters untapped now and not later, the colours the hand needs - on the Konstrari Annex position (AI-9.10).
+      Sprint 6 item 3, before the flash pilot
 
 ## Next
 
@@ -71,3 +80,4 @@ Not started. Read the Why (his rules, verbatim) and AI-27's Log for seed 2 #16. 
 ## Log
 
 - 2026-11-18: created from Shayne's question during AI-27.
+- 2026-11-18: sprint 6 - AI-29.3 (land sequencing) added and put first; card tags recorded as a decision.

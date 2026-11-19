@@ -103,7 +103,7 @@ Open questions:
       `shots/tbl45-b` frame 219 vs `shots/tbl47-after`); the room appears when TBL-4.6's row takes its band
 - [ ] TBL-4.4 The MTGA reference: current screenshots and clips of the table, gathered into one page for Shayne to
       mark (2018's beta guides show the layout but no motion) — then TBL-4.1's interview against it
-- [ ] TBL-4.5 Animations, MTGO's level: a cast to the stack and onto the battlefield, the stack shown while it holds
+- [x] TBL-4.5 Animations, MTGO's level: a cast to the stack and onto the battlefield, the stack shown while it holds
       anything, attack and target arrows, damage numbers, deaths to the graveyard; each a short beat the eye can follow.
       First: A1–A3 (cast, resolve, settle), A5 (damage, deaths), A6 (life counting); then A4 (tap), A7 (trigger pulse),
       and the stack made followable (Shayne: unclear WHEN something went on it and WHAT it targets): target arrows.
@@ -152,3 +152,5 @@ Read `MtgVisualDesign.md`, `.claude/rules/magic-table.md`, TBL-3, and capture to
 - 2026-11-12: TBL-4.4's page gathered — `docs/mockups/magictable/mtga-reference.md`, each row for Shayne to mark copy / skip / later; his own Arena screenshots asked for.
 - 2026-11-13: TBL-4.5 started — Shayne: one beat per move (all it changed at once), 0.2 s, configurable in play
   and in the replay; the diff of two states chosen over the staged events; A1–A3, A5, A6 built and captured.
+- 2026-11-18: TBL-4.5 done at the sprint 5 review — Shayne, after playing on it: "the animations make it much
+  clearer to see whats going on".

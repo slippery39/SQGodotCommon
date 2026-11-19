@@ -1,7 +1,7 @@
 ---
 id: AI-27
 title: An evaluator pricing pass — one consistent theory, scored in cards, instead of piecemeal fixes
-status: backlog
+status: in-progress
 area: AI
 created: 2026-11-16
 ---
@@ -253,6 +253,9 @@ Open questions:
       (off: beam+nolanduse); match 50.0% ± 2.0pp over 192, no difference (Log)
 - [x] AI-27.10 The third price scale: `Lookahead.Settle`'s single picks judged by the search's card prices, not the flat
       1.2 a card / 0.3 a land - the default since 2026-11-18 (off: beam+nosettleheld); match 48-48 (Log)
+- [ ] AI-27.11 The three-ledger evaluator (value, tempo, options) as a SEPARATE evaluator, swappable for the current
+      one - played against it, or swapped in for the tests to see what works and what breaks (Shayne, sprint 5 review,
+      2026-11-18). Sprint 6 item 7
 
 ## Next
 
