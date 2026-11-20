@@ -96,3 +96,4 @@ after the split is DEV-4.3.
 | 2026-11-19 | MC-4.4h3: overload (Damn), 1 card | f5a8fcd4 | 77 | 198k | 2.5M |
 | 2026-11-20 | MC-4.4h4: splice onto Arcane, 1 card | 3f6773f9 | 97 | 227k | 3.6M |
 | 2026-11-20 | MC-4.4h5: Auras returning a creature (Animate Dead, Necromancy), 2 cards | f4253bfd | 85 | 224k | 3.3M |
+| 2026-11-20 | MC-4.4h6: naming a card as a spell resolves (Demonic Consultation), 1 card | d929fb26 | 63 | 179k | 1.8M |

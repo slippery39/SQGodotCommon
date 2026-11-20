@@ -255,11 +255,11 @@ public record ChooseColorChoice : ChoiceAction
 	) => PlayerId;
 }
 
-/// <summary>Kai Winn, after the choice: the name, kept on her (ChosenName).</summary>
+/// <summary>Kai Winn, after the choice: the name, kept on her (ChosenName) — or on Demonic Consultation, the spell on the stack.</summary>
 public record SetChosenNameAction(int CardId, ImmutableArray<string> Names) : GameAction
 {
 	public override ActionResult Execute(GameState s) =>
-		!s.IsOnBattlefield(CardId)
+		!(s.IsOnBattlefield(CardId) || s.IsOnStack(CardId))
 		|| InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is not int id
 			? new(s)
 			: new(
@@ -383,6 +383,9 @@ public record ChooseKeywordChoice : ChoiceAction
 
 	/// <summary>Kai Winn: "choose a nonland card name" — answered by the AI's rule, never searched (GreedyAi).</summary>
 	public bool NamesACard { get; init; }
+
+	/// <summary>Demonic Consultation: a name to find in your OWN library — the AI's rule names a card of its own.</summary>
+	public bool NamesYourOwn { get; init; }
 
 	public ChooseKeywordChoice(int playerId, ImmutableArray<string> keywords)
 	{

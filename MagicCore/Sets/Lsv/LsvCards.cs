@@ -2669,6 +2669,21 @@ public static class LsvCards
 				},
 				When(TriggerEvent.SelfLeaves, [], new Sacrifice(Ref.EnchantedCreature)),
 			],
+			// ===== MC-4.4h6: naming a card as a spell resolves (ChooseCardName: the name on the spell on the stack) =====
+			["Demonic Consultation"] =
+			[
+				Spell(
+					[],
+					new ChooseCardName { YourOwn = true },
+					new ExileTopPlayable { N = 6, Play = null },
+					new RevealUntilOntoBattlefield(CardType.None)
+					{
+						Matching = Is.NamedChosenName,
+						To = ZoneType.Hand,
+						Exile = true,
+					}
+				),
+			],
 		};
 
 	/// <summary>

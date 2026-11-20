@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 34/46 · uncommon 53/86 · rare 132/279 · mythic 51/108 · **279/528**
+**Playable:** common 34/46 · uncommon 54/86 · rare 132/279 · mythic 51/108 · **280/528**
 
 ### "Name Sticker" Goblin
 
@@ -1198,7 +1198,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Choose a card name. Exile the top six cards of your library, then reveal cards from the top of your library until you reveal a card with the chosen name. Put that card into your hand and exile all other cards revealed this way.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h6Tests
+
+**Engine pieces:** `ChooseCardName` — Demonic Consultation: "Choose a card name." — as the spell resolves, the name kept on…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `RevealUntilOntoBattlefield` — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types]…
+
+```csharp
+["Demonic Consultation"] =
+[
+	Spell(
+		[],
+		new ChooseCardName { YourOwn = true },
+		new ExileTopPlayable { N = 6, Play = null },
+		new RevealUntilOntoBattlefield(CardType.None)
+		{
+			Matching = Is.NamedChosenName,
+			To = ZoneType.Hand,
+			Exile = true,
+		}
+	),
+],
+```
 
 ### Dismember
 
@@ -2344,7 +2363,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Add {C}{C}. This land deals 2 damage to you.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2h6Tests
 
 ```csharp
 ["Ancient Tomb"] = [ColorlessMana(2) with { DealsDamageToYou = 2 }],
@@ -7281,7 +7300,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > At the beginning of your upkeep, reveal the top card of your library and put that card into your hand. You lose life equal to its mana value.
 
-**Status:** scripted · **tests naming it:** LsvBatch2hTests
+**Status:** scripted · **tests naming it:** LsvBatch2h6Tests, LsvBatch2hTests
 
 **Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -7627,7 +7646,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying, lifelink  
 > Pay 7 life: Draw seven cards.
 
-**Status:** scripted · **tests naming it:** LsvBatch2hTests
+**Status:** scripted · **tests naming it:** LsvBatch2h6Tests, LsvBatch2hTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

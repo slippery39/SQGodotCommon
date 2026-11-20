@@ -58,6 +58,12 @@ public static class MagicState
 		&& s.GetObject(cardId) is Card card
 		&& s.IsIn(cardId, card.ControllerId, ZoneType.Battlefield);
 
+	/// <summary>A spell on the stack (a card, not an ability) — Demonic Consultation's name is kept there while it resolves.</summary>
+	public static bool IsOnStack(this GameState s, int cardId) =>
+		s.HasObject(cardId)
+		&& s.GetObject(cardId) is Card
+		&& s.GetParent(cardId) == s.GetWellKnownId(MagicKeys.Stack);
+
 	public static bool StackIsEmpty(this GameState s) =>
 		!s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).Any();
 
@@ -745,24 +751,40 @@ public static class MagicState
 			if (naming.LooksAtHand)
 				foreach (var seen in s.CardsIn(s.OpponentOf(controllerId), ZoneType.Hand).ToList())
 					s = s.MakeKnown(seen.Id, Knowers.Opponent);
-			var names = Sets.CardRegistry.CardNames(s, naming.AnyName);
-			s = s.SpawnAction(
-				new PipelineAction
-				{
-					Steps =
-					[
-						new Actions.ChooseKeywordChoice(controllerId, names)
-						{
-							NamesACard = true,
-							Prompt =
-								$"{card.Name}: choose a {(naming.AnyName ? "" : "nonland ")}card name",
-						},
-						new Actions.SetChosenNameAction(cardId, names),
-					],
-				}
-			);
+			s = s.AskName(controllerId, card, naming.AnyName);
 		}
 		return s;
+	}
+
+	/// <summary>
+	/// "Choose a [nonland] card name", the name kept on the card (ChosenName) — as Kai Winn enters, or as Demonic
+	/// Consultation resolves (ChooseCardName: on the spell, while it is on the stack). The names every card printed in
+	/// the game's sets has (CardRegistry.CardNames); <paramref name="yourLibrary"/> tells the AI to name a card of its own.
+	/// </summary>
+	public static GameState AskName(
+		this GameState s,
+		int controllerId,
+		Card card,
+		bool anyName,
+		bool yourLibrary = false
+	)
+	{
+		var names = Sets.CardRegistry.CardNames(s, anyName);
+		return s.SpawnAction(
+			new PipelineAction
+			{
+				Steps =
+				[
+					new Actions.ChooseKeywordChoice(controllerId, names)
+					{
+						NamesACard = true,
+						NamesYourOwn = yourLibrary,
+						Prompt = $"{card.Name}: choose a {(anyName ? "" : "nonland ")}card name",
+					},
+					new Actions.SetChosenNameAction(card.Id, names),
+				],
+			}
+		);
 	}
 
 	/// <summary>

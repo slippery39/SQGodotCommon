@@ -211,6 +211,15 @@ public record DiscardAtRandom(Ref Who, Count N) : Effect
 /// </summary>
 public record RevealUntilOntoBattlefield(CardType Types) : Effect
 {
+	/// <summary>
+	/// Demonic Consultation: "until you reveal a card with the chosen name" — a filter in place of Types (None), asked
+	/// with this source (Is.NamedChosenName reads the name on the resolving spell).
+	/// </summary>
+	public Filters.Filter? Matching { get; init; }
+
+	/// <summary>Demonic Consultation: "Put that card into your hand" — revealed, so known to everyone; unset is the battlefield.</summary>
+	public ZoneType To { get; init; } = ZoneType.Battlefield;
+
 	/// <summary>U.S.S. Voyager: "until you reveal two land cards. Put those land cards …" — what it found, if the library ran out first.</summary>
 	public int HowMany { get; init; } = 1;
 
@@ -230,8 +239,9 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 	{
 		var library = s.CardsIn(Controller, ZoneType.Library).ToList();
 		var top = Top is { } t ? Math.Clamp(t.Value(s, InputContext), 0, library.Count) : -1;
+		var context = new Filters.FilterContext(Controller, GetInput<int>(ContextKeys.Source));
 		var hits = (top >= 0 ? library.Take(top) : library)
-			.Where(c => c.Is(Types))
+			.Where(c => Matching?.Matches(s, c, context) ?? c.Is(Types))
 			.Take(top >= 0 ? int.MaxValue : HowMany)
 			.Select(c => c.Id)
 			.ToList();
@@ -242,6 +252,11 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 		var rest = library.Take(revealed).Select(c => c.Id).Except(hits).ToArray();
 		foreach (var hit in hits)
 		{
+			if (To != ZoneType.Battlefield)
+			{
+				s = s.MoveCard(hit, s.ZoneId(Controller, To)).MakeKnown(hit, Knowers.Everyone);
+				continue;
+			}
 			s = s.EnterBattlefield(hit, Controller, tapped: Tapped);
 			if (SacrificeAtNextEndStep)
 				s = MoveTo.Delay(s, hit, MoveTo.SacrificeItAtTheEndStep);
@@ -259,6 +274,28 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 		// rest, losing "they are at the bottom"; keep them at the bottom, shuffled among themselves, if that
 		// ever matters.
 		return new(s.ToBottomAtRandom(Controller, rest));
+	}
+}
+
+/// <summary>
+/// Demonic Consultation: "Choose a card name." — as the spell resolves, the name kept on the spell itself while it is on
+/// the stack (ChosenName, status: gone as it leaves), read by Is.NamedChosenName in the steps after. Kai Winn's is
+/// ChoosesNameAsItEnters (a permanent keeps it). YourOwn: the AI names a card in its own library (ChooseKeywordChoice.NamesYourOwn).
+/// </summary>
+public record ChooseCardName : Effect
+{
+	/// <summary>"Choose a card name" — the lands' too; false is Kai Winn's "nonland".</summary>
+	public bool AnyName { get; init; } = true;
+
+	/// <summary>Demonic Consultation: the name is for your own library — the AI names a card of its own (else the opponent's likeliest).</summary>
+	public bool YourOwn { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var source = GetInput<int>(ContextKeys.Source);
+		return !s.IsOnStack(source) && !s.IsOnBattlefield(source)
+			? new(s)
+			: new(s.AskName(Controller, s.GetCard(source), AnyName, YourOwn));
 	}
 }
 

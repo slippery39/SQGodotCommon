@@ -43,6 +43,9 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`CastOneOf(Ref Among)`** — "You may cast one of [these cards]" as it resolves — one chosen among those that can be cast now (CastNow), or none. Brazen Bluff: "you… [3: Bilbo, Thief in the Night, Malcolm, Alluring Scoundrel, Brazen Bluff]
   - `Free` (bool): "Without paying its mana cost" — X is 0. Unset, the spell is paid for (Bilbo).
   - `Exiled` (Filters.Filter?): Bilbo: "If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead" —…
+- **`ChooseCardName`** — Demonic Consultation: "Choose a card name." — as the spell resolves, the name kept on the spell itself while it is on the stack… [1: Demonic Consultation]
+  - `AnyName` (bool): "Choose a card name" — the lands' too; false is Kai Winn's "nonland".
+  - `YourOwn` (bool): Demonic Consultation: the name is for your own library — the AI names a card of its own (else the opponent's…
 - **`CopySpell(Ref What)`** — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on the stack above it, controlled by you; it is not… [6: Codie, Ravenous Codex, Chain Lightning, Sage of the Skies…]
   - `N` (Count?): Storm (Brain Freeze): "copy it for each spell cast before it this turn" — how many copies; unset is one.
 - **`Counter(Ref What)`** — Precise Redaction: "Counter target spell" — through StackResolution.Counter. [17: Precise Redaction, Countersculpt, Consign to Memory…]
@@ -88,7 +91,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`EachSacrifices(Ref Who, Filters.Filter Filter)`** — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own (never what can't be sacrificed). Emrakul's ward,… [10: Winter, Tormented Loner, Garruk, Veiled Butcher, Balance…]
   - `IfYouDid` (ImmutableList<GameAction>): Garruk, Veiled Butcher: "If you sacrificed a creature this way, [IfYouDid]."
   - `N` (Count): Balance: "chooses a number of lands … equal to [the fewest], then sacrifices the rest" — how many each…
-- **`Exile(Ref What)`** — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their owners' exile. [22: Extended Absence, Refute Destiny, Overwrite the Multiverse…]
+- **`Exile(Ref What)`** — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their owners' exile. [23: Extended Absence, Refute Destiny, Overwrite the Multiverse…]
   - `ThenWithXExiled` (ImmutableList<GameAction>): Overwrite the Multiverse: "… where X is the number of creatures exiled this way" — run after, with X.
   - `Linked` (bool): The Measure of a Man: "I — Exile up to one target …" whose III returns "the exiled card" — linked to this…
 - **`ExileAllButBottom(Ref Who)`** — Jace, Reality Sculptor: "Exile all but the bottom card of each opponent's library." [1: Jace, Reality Sculptor]
@@ -96,7 +99,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`ExileOneOfEachTypeAndCastCopies(int Budget)`** — Uldaros Theorix: "exile up to one target nonland card of each card type from your graveyard. Copy those cards. You may cast any number of… [1: Uldaros Theorix]
 - **`ExileOneOfTypeFromGraveyard(CardType Type)`** — Up to one nonland card of this type from your graveyard, exiled and linked to the source.
 - **`ExileSourceAndCopiesFromGraveyard(int N)`** — Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your graveyard" — the first of a May's Then; asked only… [4: Sphinx's Approach, Time Spiral, Infinite Diversity…]
-- **`ExileTopPlayable`** — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top card of your library. Until the end of your next… [24: Blazing Crescendo, Chandra, Torch of Defiance, Bonehoard Dracosaur…]
+- **`ExileTopPlayable`** — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top card of your library. Until the end of your next… [25: Blazing Crescendo, Chandra, Torch of Defiance, Bonehoard Dracosaur…]
   - `Play` (PlayPermission?): Who may play them, how long, free or now (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }.…
   - `N` (Count): Reckless Impulse: "Exile the top two cards of your library."; Ensign Pavel Chekov: "the top X cards".
   - `Until` (Filters.Filter?): Exploratory Mission, The Caretaker: "exile cards from the top of your library until you exile a nonland…
@@ -204,7 +207,9 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`ReturnChosenToHandIf(Filters.Filter What)`** — Enlightened Confidant: "If you put a card with mana value N or less into your graveyard this way, put that card into your hand"… [2: Enlightened Confidant, Chandra, Chill of Compliance]
 - **`RevealTwoFromOutsideTheGame`** — Extrapolate the Impossible: "You may reveal exactly two cards you own with different names from outside the game. An opponent chooses one… [1: Extrapolate the Impossible]
   - `Revealing` (bool): Set once "you may" was answered yes: now the two cards are chosen.
-- **`RevealUntilOntoBattlefield(CardType Types)`** — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types] card. Put that card onto the battlefield and the rest… [4: Identity Echo, U.S.S. Voyager, Lone Wanderer, Branching Timeline…]
+- **`RevealUntilOntoBattlefield(CardType Types)`** — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types] card. Put that card onto the battlefield and the rest… [5: Identity Echo, Demonic Consultation, U.S.S. Voyager, Lone Wanderer…]
+  - `Matching` (Filters.Filter?): Demonic Consultation: "until you reveal a card with the chosen name" — a filter in place of Types (None),…
+  - `To` (ZoneType): Demonic Consultation: "Put that card into your hand" — revealed, so known to everyone; unset is the…
   - `HowMany` (int): U.S.S. Voyager: "until you reveal two land cards. Put those land cards …" — what it found, if the library…
   - `Tapped` (bool): U.S.S. Voyager: "onto the battlefield tapped".
   - `Top` (Count?): Branching Timeline: "Reveal the top X cards of your library … Put all permanent cards revealed this way onto…
@@ -601,6 +606,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`ChooseHostChoice`** — An Aura entering without being cast: its controller chooses what it enchants (CR 303.4f).
 - **`ChooseKeywordChoice`** — "Your choice of [keywords]" — option ids 1..n, one per keyword.
   - `NamesACard` (bool): Kai Winn: "choose a nonland card name" — answered by the AI's rule, never searched (GreedyAi).
+  - `NamesYourOwn` (bool): Demonic Consultation: a name to find in your OWN library — the AI's rule names a card of its own.
 - **`ChooseModesChoice`** — "Choose one/two —" for a triggered ability as it goes on the stack. Option ids are mode indexes.
 - **`ChooseNumberChoice`** — "Pay any amount of life" — a number from 0 to Max. Option id = the number + 1: 0 means "none" across this engine, so no answer may be 0.
   - `NamesAManaValue` (bool): Nyota Uhura's number is a mana value to wait for — the AI answers by its rule, never by search.

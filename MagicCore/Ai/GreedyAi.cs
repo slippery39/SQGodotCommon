@@ -90,6 +90,23 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 			?? names[0];
 	}
 
+	/// <summary>
+	/// Demonic Consultation: the card in this player's own library worth most in hand — each name priced once, a copy of
+	/// it moved to the hand and the position evaluated. Blind to the ORDER (the library's contents are its decklist; where
+	/// a card lies isn't known), so a card among the six it is about to exile may be named. Else the list's first.
+	/// </summary>
+	string BestNameInYourLibrary(GameState s, ImmutableArray<string> names)
+	{
+		// ponytail: never weighs the miss (the whole library exiled) — price it when a deck carries a win-on-empty-library card (DesignNotes).
+		var named = names.ToHashSet();
+		var hand = s.ZoneId(PlayerId, ZoneType.Hand);
+		return s.CardsIn(PlayerId, ZoneType.Library)
+				.Where(c => named.Contains(c.Name))
+				.DistinctBy(c => c.Name)
+				.MaxBy(c => Evaluate(s.MoveCard(c.Id, hand)))
+				?.Name ?? names[0];
+	}
+
 	/// <summary>Kai Winn's third step: the highest-rated common all of whose colours their lands show.</summary>
 	static string? BestCommonIn(HashSet<ManaColor> colors, HashSet<string> named) =>
 		colors.Count == 0
@@ -184,7 +201,14 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 			// Animate Dead or Regrowth target, threshold. Upgrade: a cheap procedural price per card (DesignNotes).
 			return choice.Options.Take(1).Select(o => o.Id);
 		if (choice is ChooseKeywordChoice { NamesACard: true } naming)
-			return [naming.Keywords.IndexOf(LikeliestName(s, naming.Keywords)) + 1];
+			return
+			[
+				naming.Keywords.IndexOf(
+					naming.NamesYourOwn
+						? BestNameInYourLibrary(s, naming.Keywords)
+						: LikeliestName(s, naming.Keywords)
+				) + 1,
+			];
 		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max } number)
 			return
 			[

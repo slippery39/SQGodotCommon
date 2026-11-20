@@ -200,6 +200,12 @@ whose subsystem it lives in.
   **"Look at an opponent's hand, then choose any card name"** (Anointed Peacekeeper) is the same piece
   `{ LooksAtHand, AnyName }` (MC-4.4d2b): the hand is made known before the name is asked, and the lands' names are
   offered too (`CardRegistry.CardNames(s, lands: true)`).
+  **"Choose a card name" as a spell resolves** (Demonic Consultation, MC-4.4h6) is the effect `ChooseCardName` — the same
+  question (`MagicState.AskName`), the name kept on the SPELL while it is on the stack (`SetChosenNameAction` takes a
+  stack card; `ChosenName` is status, gone as it leaves), so `Is.NamedChosenName` reads it in the steps after. `{ YourOwn }`
+  makes its choice `NamesYourOwn`: the AI names the card in its OWN library worth most in hand (`GreedyAi.BestNameInYourLibrary`), blind
+  to the order. "Reveal until you reveal a card with the chosen name. Put that card into your hand and exile all other
+  cards revealed" is Identity Echo's `RevealUntilOntoBattlefield { Matching, To = Hand, Exile }` — revealed, so known to everyone.
 - **A face-down permanent** (CR 708; Abhorrent Oculus' manifest dread, MC-4.4g4) is a COPY stamp, as `EnteredAsCopy`:
   `Card.TurnedFaceDown` gives it a blank 2/2's copiable values (no name, creature only, no cost, colour or abilities)
   and keeps the card on `FaceDown(Original)` — status, so a copy of it is a nameless 2/2 with no card under it, and

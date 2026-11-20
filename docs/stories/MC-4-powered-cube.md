@@ -1337,6 +1337,23 @@ as his three priorities.
   missed it); and the search's "could as well wait for instant speed" (`BeamSearchAi.InstantSpeed`) no longer holds
   Necromancy, whose late cast costs the creature. Protection on a graveyard host is a ceiling, and the AI's "lasts this turn" an AI issue for after
   the cube's implementations (Shayne, 2026-11-20; DesignNotes, the fix outlined). Suite 2,094 and card replays 861 passed after.
+- 2026-11-20, Claude (cube lane) — **4.4h6: naming a card as a spell resolves (Demonic Consultation), one small piece
+  and one option, 280 of 528 play.** Nearest pieces read: Kai Winn's `ChoosesNameAsItEnters` (asked by
+  `EnterBattlefield` only, the name kept on the permanent — a spell had nowhere), Identity Echo's
+  `RevealUntilOntoBattlefield` (a card type, the battlefield) and `ExileTopPlayable { Until }` (exiles the found card
+  too — Consultation's goes from the library to the hand, never through exile). **The piece:** `ChooseCardName`, an
+  effect asking Kai Winn's question (`MagicState.AskName`, now shared), the name kept on the SPELL on the stack
+  (`SetChosenNameAction` takes a stack card; `ChosenName` is status, gone as it leaves), so `Is.NamedChosenName` reads
+  it in the next steps. **The option:** `RevealUntilOntoBattlefield { Matching, To }` — a filter in place of the type,
+  and the hand (revealed: known to everyone); `Exile` was already its "exile the rest". The top six are
+  `ExileTopPlayable { N = 6, Play = null }`. **The AI's rule** (`ChooseCardName { YourOwn }` →
+  `ChooseKeywordChoice.NamesYourOwn` → `GreedyAi.BestNameInYourLibrary`): the card in its own library worth most in
+  hand, by the static evaluator, one name each, blind to the order — never searched (a rule, as Kai Winn's). A ceiling
+  (DesignNotes): it never weighs the miss. Legal actions: one cast. 3 tests in `LsvBatch2h6Tests.cs` (`Naming(name)`:
+  the name choice answered); 8/8 revert-checks caught. Golden-out moved nothing (162 random, 861 card games); golden-in
+  moved 30 random and 75 card games, 4 added; probe 150: none unfinished, Consultation cast 187 times; full suite 2,097
+  passed. The review (2026-11-20) made "your own" an option on the effect (it was hardcoded: a Cabal Therapy would have
+  named its own card); the singleton miss stays a ceiling.
 
 ## Tasks
 
@@ -1577,7 +1594,7 @@ as his three priorities.
     - [x] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white; Decisions, "4.4h3")
     - [x] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red; Decisions, "4.4h4")
     - [x] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy (Decisions, "4.4h5")
-    - [ ] MC-4.4h6 Naming a card as a spell resolves: Demonic Consultation
+    - [x] MC-4.4h6 Naming a card as a spell resolves: Demonic Consultation (Decisions, "4.4h6")
     - [ ] MC-4.4h7 Saddle: Caustic Bronco
     - [ ] MC-4.4h8 Emerge: Crabomination
     - [ ] MC-4.4h9 Miracle: Metamorphosis Fanatic
@@ -1594,12 +1611,14 @@ protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiat
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
 pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions), h2d (triggers) and
-h2e (zones and combat), h3 (overload: Damn), h4 (splice onto Arcane: Goryo's Vengeance) and **h5 (Auras returning a
-creature: Animate Dead, Necromancy, 279 of 528 play)** are done — black's options are finished (Decisions, "4.4h1",
-"4.4h2a" … "4.4h2e", "4.4h3", "4.4h4", "4.4h5").
-Next, in a NEW session: **MC-4.4h6 — naming a card as a spell resolves: Demonic Consultation** (the plan's note in
-Decisions, "4.4h": Kai Winn's name is chosen as a permanent enters and kept on it, a spell has nowhere; the AI's rule for
-naming in its own library). From h5: an Aura's host may be a card in its owner's graveyard (`Attachments.HostOf`); its
+h2e (zones and combat), h3 (overload: Damn), h4 (splice onto Arcane: Goryo's Vengeance), h5 (Auras returning a
+creature: Animate Dead, Necromancy) and **h6 (naming a card as a spell resolves: Demonic Consultation, 280 of 528 play)**
+are done — black's options are finished (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3" … "4.4h6").
+Next, in a NEW session: **MC-4.4h7 — saddle: Caustic Bronco** (the plan's note in Decisions, "4.4h": teamwork's
+`TapUntappedCost { TotalPower }` plus a "saddled" status until end of turn; crew's later). From h6: "choose a card name" as
+a spell resolves is `ChooseCardName` (the name on the spell on the stack, `MagicState.AskName` the one question; the AI
+names its own card when `ChooseKeywordChoice.NamesYourOwn`); Identity Echo's reveal-until takes `{ Matching, To }`. h6's
+tests are in `LsvBatch2h6Tests.cs` (`Naming(name)`). From h5: an Aura's host may be a card in its owner's graveyard (`Attachments.HostOf`); its
 enchant changed for good is `ModifyUntilEndOfTurn { ForGood, Enchant }` (`Attachments.EnchantOf`); "you may cast this as
 though it had flash" `CastAsThoughItHadFlash(effects at the next cleanup)`, and the cleanup step raises `StepBeganEvent`.
 h5's tests are in `LsvBatch2h5Tests.cs` (`Ogre`: a 3/3, `Disenchant`, `ToMyEndStep()`, `ToTheirTurn()`). From h4: splice is `CastSpellAction.Splice`
@@ -1894,3 +1913,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   `TextOf` appending a spliced text. Next: MC-4.4h5.
 - 2026-11-20: MC-4.4h5 done: Auras returning a creature — 279 of 528 play. An Aura's host in a graveyard,
   `ModifyUntilEndOfTurn.Enchant`, `CastAsThoughItHadFlash` with a cleanup delayed trigger. Next: MC-4.4h6.
+- 2026-11-20: MC-4.4h6 done: naming a card as a spell resolves — 280 of 528 play. `ChooseCardName` (the name on the
+  spell on the stack), `RevealUntilOntoBattlefield { Matching, To }`, the AI naming its own best card. Next: MC-4.4h7.
