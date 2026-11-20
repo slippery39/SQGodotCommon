@@ -813,7 +813,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				&& moves.OfType<PlayLandAction>().ToList() is { Count: > 0 } lands
 			)
 			{
-				var (keep, first) = LandOrder.Pick(s, PlayerId, lands, deck);
+				var (keep, first) = LandOrder.Pick(s, PlayerId, lands, deck, RolloutSettings.Held);
 				moves.RemoveAll(a =>
 					a is PlayLandAction l && !keep.Contains(l) || first && a is not PlayLandAction
 				);

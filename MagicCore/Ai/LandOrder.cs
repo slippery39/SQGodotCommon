@@ -18,9 +18,13 @@ namespace MagicCore.Ai;
 ///    played before anything else, so nothing this turn breaks it;
 /// 4. it enters tapped now - free when the mana isn't needed (Rockfall Vale on turn 2);
 /// 5. the spells left in the deck short of a colour it makes.
-/// Lands still tied are all left to the search. Off: <see cref="Evaluator.Terms.LandOrder"/> (`+nolandorder`).
+/// One exception to step 1 (AI-29.8, Shayne 2026-11-19: "the value of the R card played on turn 1 vs the value of the WW
+/// card played on turn 2"): a land spending less now that casts a spell in hand NEXT turn which the step-1 land casts
+/// neither now nor next turn is played instead when that spell's measured value is higher than what the step-1 land
+/// casts now. Lands still tied are all left to the search. Off: <see cref="Evaluator.Terms.LandOrder"/> (`+nolandorder`).
 /// ponytail: printed costs (no reductions, X as 0); a summoning-sick mana creature counts as untapped; a shockland's
-/// "pay 2 life" read as untapped; each spell judged alone for colour; step 3 goes first even when nothing this turn
+/// "pay 2 life" read as untapped; each spell judged alone for colour; the exception weighs ONE spell next turn, with
+/// next turn's land the best other land in hand (a drawn one unknown), and only against step 1; step 3 goes first even when nothing this turn
 /// can break the condition (a Jace token at 5 and its −3: the card is drawn after the land is chosen). Upgrade per
 /// position that shows one.
 /// </summary>
@@ -28,13 +32,15 @@ public static class LandOrder
 {
 	/// <summary>
 	/// The lands of <paramref name="lands"/> the rule keeps (one, unless tied), and whether they go before any other
-	/// move. <paramref name="deck"/>: our unseen nonland cards, known as a deck list is.
+	/// move. <paramref name="deck"/>: our library's nonland cards, known as a deck list is. <paramref name="held"/>: the
+	/// measured values the exception to step 1 compares (none: no exception).
 	/// </summary>
 	public static (List<PlayLandAction> Keep, bool First) Pick(
 		GameState s,
 		int player,
 		IReadOnlyList<PlayLandAction> lands,
-		IReadOnlyList<Card> deck
+		IReadOnlyList<Card> deck,
+		HeldValues? held = null
 	)
 	{
 		var spells = s.CardsIn(player, ZoneType.Hand)
@@ -52,12 +58,14 @@ public static class LandOrder
 				var land = s.GetCard(l.CardId);
 				var makes = ManaAbilities.ColorsOf(s, land).ToList();
 				var tapped = EntersTapped(s, l);
-				var spend = Spend(
+				var (spend, cast) = Spend(
 					tapped || makes.Count == 0 ? untapped : [.. untapped, makes],
 					spells
 				);
 				return (
 					Land: l,
+					Cast: cast,
+					Next: Next(s, player, l, inPlay, makes, spells),
 					Key: (
 						spend,
 						Short(spells, inPlay, makes),
@@ -69,30 +77,93 @@ public static class LandOrder
 			})
 			.ToList();
 		var best = keyed.Max(k => k.Key);
-		return ([.. keyed.Where(k => k.Key == best).Select(k => k.Land)], best.Fragile == 1);
+		var winners = keyed.Where(k => k.Key == best).ToList();
+		if (held is not null)
+		{
+			// the exception (AI-29.8): a spell next turn worth more than what step 1's land casts now
+			var now = winners.Max(w => w.Cast.Sum(c => held.Of(c.Name)));
+			var later = keyed
+				.Where(k => k.Key.spend < best.spend)
+				.Select(k =>
+					(
+						k,
+						Worth: k.Next.Where(c =>
+								winners.All(w => !w.Cast.Contains(c) && !w.Next.Contains(c))
+							)
+							.Select(c => held.Of(c.Name))
+							.DefaultIfEmpty(0)
+							.Max()
+					)
+				)
+				.Where(x => x.Worth > now)
+				.ToList();
+			if (later.Count > 0)
+			{
+				var top = later.Max(x => (x.Worth, x.k.Key));
+				return (
+					[.. later.Where(x => (x.Worth, x.k.Key) == top).Select(x => x.k.Land)],
+					false
+				);
+			}
+		}
+		return ([.. winners.Select(k => k.Land)], best.Fragile == 1);
 	}
 
 	/// <summary>
-	/// The most mana <paramref name="spells"/> can spend together from <paramref name="sources"/>: every set of them that
-	/// fits, each castable alone on colour; an X spell costs X = 1 at least and spends whatever is left.
+	/// The spells in hand castable NEXT turn, each alone, if <paramref name="land"/> is played now: every source in play,
+	/// it, and the best other land in hand as next turn's land drop - read from the hand, not the moves: the search
+	/// offers one move for two Plains.
+	/// </summary>
+	static List<Card> Next(
+		GameState s,
+		int player,
+		PlayLandAction land,
+		List<List<ManaColor>> inPlay,
+		List<ManaColor> makes,
+		List<Card> spells
+	)
+	{
+		List<List<ManaColor>> after = makes.Count == 0 ? inPlay : [.. inPlay, makes];
+		var drops = s.CardsIn(player, ZoneType.Hand)
+			.Where(c => c.Is(CardType.Land) && c.Id != land.CardId)
+			.Select(c => ManaAbilities.ColorsOf(s, c).ToList())
+			.Where(c => c.Count > 0)
+			.ToList();
+		return
+		[
+			.. spells.Where(c =>
+				drops.Count == 0
+					? LandUnlock.Castable(after, c.ManaCost)
+					: drops.Any(d => LandUnlock.Castable([.. after, d], c.ManaCost))
+			),
+		];
+	}
+
+	/// <summary>
+	/// The most mana <paramref name="spells"/> can spend together from <paramref name="sources"/>, and the spells that
+	/// spend it: every set of them that fits, each castable alone on colour; an X spell costs X = 1 at least and spends
+	/// whatever is left.
 	/// ponytail: every subset of the hand (2^n, n a hand's size); colours not shared between spells.
 	/// </summary>
-	static int Spend(List<List<ManaColor>> sources, List<Card> spells)
+	static (int Mana, List<Card> Cast) Spend(List<List<ManaColor>> sources, List<Card> spells)
 	{
 		var fits = spells
-			.Select(c => (c.ManaCost, X: c.ManaCost.Symbols.Count(m => m.Kind == SymbolKind.X)))
+			.Select(c =>
+				(Card: c, c.ManaCost, X: c.ManaCost.Symbols.Count(m => m.Kind == SymbolKind.X))
+			)
 			.Where(c =>
 				c.ManaCost.ManaValue + c.X <= sources.Count
 				&& LandUnlock.Castable(sources, c.ManaCost)
 			)
 			.ToList();
-		var best = 0;
+		(int Mana, List<Card> Cast) best = (0, []);
 		for (var mask = 1; mask < 1 << Math.Min(fits.Count, 12); mask++)
 		{
 			var picked = fits.Where((_, i) => (mask & (1 << i)) != 0).ToList();
 			var cost = picked.Sum(c => c.ManaCost.ManaValue + c.X);
-			if (cost <= sources.Count)
-				best = Math.Max(best, picked.Any(c => c.X > 0) ? sources.Count : cost);
+			var mana = picked.Any(c => c.X > 0) ? sources.Count : cost;
+			if (cost <= sources.Count && mana > best.Mana)
+				best = (mana, [.. picked.Select(c => c.Card)]);
 		}
 		return best;
 	}

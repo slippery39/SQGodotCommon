@@ -124,6 +124,57 @@ public class LandOrderTests
 		Assert.That(Played(s), Is.EqualTo("Plains"));
 	}
 
+	/// <summary>The default search with a value table of our own: these cards measured, the rest flat.</summary>
+	static string PlayedValuing(GameState at, params (CardDefinition Card, double Value)[] values)
+	{
+		var held = new HeldValues(
+			values.ToDictionary(
+				v => v.Card.Data.Name,
+				v => new CardValues.Entry(v.Card.Data.Name, v.Value)
+			),
+			BeamSearchAi.Settings.HeldFraction
+		);
+		var d = new BeamSearchAi(
+			at.DecidingPlayerId(),
+			new(RolloutSettings: BeamSearchAi.DefaultRollout with { Held = held })
+		).Decide(at);
+		return d.Action is PlayLandAction l ? at.GetCard(l.CardId).Name : $"not a land: {d.What}";
+	}
+
+	/// <summary>Shayne's open case: an R card and a WW card in hand, two Plains and a Mountain.</summary>
+	void RedOneAndWhiteTwo_TwoPlainsAndAMountain()
+	{
+		WhiteRedDeck();
+		Put("Mountain", ZoneType.Hand);
+		Put("Plains", ZoneType.Hand);
+		Put("Plains", ZoneType.Hand);
+		Put(RedOne, ZoneType.Hand);
+		Put(WhiteTwo, ZoneType.Hand);
+	}
+
+	// AI-29.8 (Shayne, 2026-11-19): "the value of the R card played on turn 1 vs the value of the WW card played on turn
+	// 2". The Mountain casts the R card now; the Plains casts the WW card next turn, which the Mountain line can't.
+	[Test]
+	public void TurnOne_APlains_WhenTheWhiteDoublePipNextTurnIsWorthMore()
+	{
+		RedOneAndWhiteTwo_TwoPlainsAndAMountain();
+
+		Assert.That(
+			Played(s),
+			Is.EqualTo("Mountain"),
+			"control: neither card measured, a tie keeps step 1"
+		);
+		Assert.That(PlayedValuing(s, (RedOne, 2), (WhiteTwo, 8)), Is.EqualTo("Plains"));
+	}
+
+	[Test]
+	public void TurnOne_AMountain_WhenTheRedOneDropNowIsWorthMore()
+	{
+		RedOneAndWhiteTwo_TwoPlainsAndAMountain();
+
+		Assert.That(PlayedValuing(s, (RedOne, 8), (WhiteTwo, 2)), Is.EqualTo("Mountain"));
+	}
+
 	// AI-29.6: a card we know is on top (a scry or surveil kept it there) is in the deck the colours are read from -
 	// here the only white card of the deck.
 	[Test]

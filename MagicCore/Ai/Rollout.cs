@@ -795,7 +795,8 @@ public static class Rollout
 						[
 							.. s.CardsIn(me, ZoneType.Library)
 								.Where(c => !Hidden.IsUnknown(c) && !c.Is(CardType.Land)),
-						]
+						],
+						settings.Held
 					)
 					.Keep[0];
 		landDone = true; // none now: none this turn worth asking for again

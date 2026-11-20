@@ -66,6 +66,10 @@ the lands in hand, first difference wins:
 4. enters tapped now - free when the mana isn't needed;
 5. the colours the rest of the deck's spells need, uncovered.
 
+One exception to step 1 (AI-29.8): a land spending less now that casts a spell in hand next turn which the step-1
+land casts neither now nor next turn is played instead when that spell's measured value is higher than what the
+step-1 land casts now.
+
 Common scenarios first, edge cases after (Shayne). **Curated tests up front** - positions built to be the scenario,
 not found in games - each in `MagicCore.Tests/Ai/LandOrderTests.cs`:
 - [x] an untapped land on turn 1 to play the one-drop
@@ -77,10 +81,10 @@ not found in games - each in `MagicCore.Tests/Ai/LandOrderTests.cs`:
 - [x] Konstrari Annex first while a planeswalker makes it untapped (AI-9.10)
 - [x] an X spell is no reason for an untapped land on turn 1 (from the suite)
 - [x] the untapped land that casts the 5-drop over a tapped one (from the suite)
+- [x] an R card and a WW card in hand, two Plains and a Mountain - card value decides (AI-29.8): the Plains when the
+      WW card is worth more, the Mountain when the R card is
 
-**Open:** an R card and a WW card in hand, two Plains and a Mountain - which land first is a question of card value
-(the R card on turn 1 against the WW card on turn 2), not a rule; the rule's step 1 plays the Mountain. More scenarios
-like it to be thought of (Shayne's todo).
+More scenarios like the last to be thought of (Shayne's todo).
 
 ## Decisions
 
@@ -96,6 +100,9 @@ like it to be thought of (Shayne's todo).
   real player wouldn't look 3 turns ahead to realize playing the red green land is better than a forest." Basic
   scenarios before edge cases; curated tests written up front "so that we aren't solely relying on in game scenarios".
   Rockfall Vale tapped on turn 2 is fine: it enters untapped on turn 3.
+- 2026-11-19, Shayne (AI-29.8): the R-and-WW case is decided by measured card value, "the value of the R card played
+  on turn 1 vs the value of the WW card played on turn 2" - and only that case: an exception to step 1, not a two-turn
+  value for every land (Claude's options; he chose the narrow one).
 
 ## Tasks
 
@@ -112,12 +119,11 @@ like it to be thought of (Shayne's todo).
 - [x] AI-29.6 Step 5 counts the spells we KNOW are on top of the library (a scry or surveil kept them there) - today
       `Hidden.Unseen` leaves them out
 - [x] AI-29.7 `HiddenTests`' sample test covers the DEFAULT search too, not only with the land rule off
+- [x] AI-29.8 Shayne's open case: the R card now against the WW card next turn, by measured value (Decisions)
 
 ## Next
 
-AI-29.4-29.7 are done (suite accepted, match flat) and wait for their commit. Then Shayne's OPEN case (an R card
-and a WW card, two Plains and a Mountain - card value decides) and his harder scenarios are the next tests. AI-29.1
-after - a discussion.
+AI-29.8 is done and waits for its commit. Then Shayne's harder scenarios as tests; AI-29.1 after - a discussion.
 
 ## Log
 
@@ -158,3 +164,9 @@ after - a discussion.
   the known top included. 29.7: the sample test runs the default search, on seed 2 (seed 3's difference was land
   choices). Suite: 2 of 288 changed (seed 2 #21 Koth cast before combat instead of after, no attack either way;
   seed 4 #13 an Island instead of a Plains, Repurposed Enforcer cast either way); 19094 steps a position. Both accepted (Shayne); match beam vs beam+nolandorder flat: 144-144, 50.0% ± 1.3pp, no 5pp difference either way; 10346 vs 10588 steps a decision (2% cheaper), lands 7.5 vs 7.4.
+- 2026-11-19: AI-29.4-29.7 committed (f073adb3).
+- 2026-11-19: AI-29.8 built. Probe first: in Shayne's position the search played the Mountain with the rule and
+  without it, the R card a 1/1, 3/3 or 5/5 - the search would not have decided it either. `LandOrder.Pick` takes the
+  held values (search and rollout alike); next turn's land is read from the hand, not the moves (the search offers one
+  move for two Plains - the first version missed exactly that). Two tests, one each way, values given by the test;
+  unmeasured cards tie at the flat price and keep step 1. Suite: 0 of 288 changed - no match run (nothing to measure).
