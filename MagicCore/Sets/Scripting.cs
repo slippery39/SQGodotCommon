@@ -315,11 +315,11 @@ public static class Scripting
 	/// <summary>
 	/// Multikicker (CR 702.33c) — Batroc the Leaper: "Multikicker {2} (You may pay an additional {2} any number of times
 	/// as you cast this spell.)" — squad's payment (CastSpellAction.Replicate, one cast per number of payments) with nothing
-	/// made of it: the card reads the count, Count.TimesReplicated (on the stack, or the permanent it became). ponytail:
-	/// WasKicked doesn't read it — no multikicker card says "if this spell was kicked".
+	/// made of it: the card reads the count, Count.TimesReplicated (on the stack, or the permanent it became); paid at
+	/// least once, it was kicked (WasKicked, CR 702.33d).
 	/// </summary>
 	public static ReplicateComponent Multikicker(string cost) =>
-		new(ManaCost.Parse(cost)) { AsItEnters = true };
+		new(ManaCost.Parse(cost)) { AsItEnters = true, Kicker = true };
 
 	/// <summary>
 	/// Dash (CR 702.109) — Ragavan, Nimble Pilferer: "Dash {1}{R} (You may cast this spell for its dash cost. If you do,
@@ -343,18 +343,18 @@ public static class Scripting
 
 	/// <summary>
 	/// Backup N (CR 702.165) — Death-Greeter's Champion: "Backup 1 (When this creature enters, put a +1/+1 counter on
-	/// target creature. If that's another creature, it gains the following ability until end of turn.)" — the ability
-	/// below it is a keyword (Double strike). ponytail: one keyword; a backup granting a triggered ability needs
-	/// ModifyUntilEndOfTurn.Gains.
+	/// target creature. If that's another creature, it gains the following ability until end of turn.)" — the abilities
+	/// below it, keywords (Double strike), each granted until end of turn. ponytail: keywords only; a backup granting a
+	/// triggered ability needs ModifyUntilEndOfTurn.Gains — no backup card in any set has one.
 	/// </summary>
-	public static TriggeredAbilityComponent Backup(int n, string keyword) =>
+	public static TriggeredAbilityComponent Backup(int n, params string[] keywords) =>
 		When(
 			TriggerEvent.SelfEnters,
 			[Creature],
 			new PutCounters(Ref.Target(), n),
 			new If(
 				new Matches(Ref.Target(0), !Is.Source),
-				[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, keyword)]
+				[.. keywords.Select(k => new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, k))]
 			)
 		);
 

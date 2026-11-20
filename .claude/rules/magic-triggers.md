@@ -210,7 +210,8 @@ whose subsystem it lives in.
 - **An additional combat phase** (CR 500.8, Fear of Missing Out, MC-4.4i3) is `AdditionalCombatPhase`: a count on
   `MagicGame.AdditionalCombats`, taken by `TurnStructure.EndStep` as an end of combat step ends — creatures removed
   from combat (`Combat.EndCombat`), then a beginning of combat step, no main phase between; reset as each turn begins.
-  "After this phase" is read as after this combat (DesignNotes). Every combat step's triggers fire again in it.
+  Set up during combat or the first main phase it is right (two combats in a row either way); anywhere else the effect
+  THROWS (DesignNotes). Every combat step's triggers fire again in it.
   **"Whenever this creature attacks for the first time each turn"** is `Trigger.Nth = 1` on an `Attacked` trigger,
   against `AttackedEvent.Number` — that object's attacks this turn (`Card.TimesAttacked`, with `AttackedOnTurn`) —
   never `OncePerTurn`, which stamps a TRIGGER: an attack before delirium never triggered.

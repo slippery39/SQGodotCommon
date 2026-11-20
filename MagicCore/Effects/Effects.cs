@@ -290,14 +290,26 @@ public record TakeExtraTurn : Effect
 
 /// <summary>
 /// Fear of Missing Out: "After this phase, there is an additional combat phase." (CR 500.8) — counted on
-/// MagicGame.AdditionalCombats, taken as the end of combat step ends (TurnStructure.EndStep). ponytail: "after this
-/// phase" is read as after this COMBAT — the only card says it during one; a main-phase "additional combat phase
-/// followed by an additional main phase" (Relentless Assault) needs the main phase too.
+/// MagicGame.AdditionalCombats, taken as the end of combat step ends (TurnStructure.EndStep): right for a combat step,
+/// and for the precombat main phase (that combat, then the turn's own: two in a row either way). ponytail: refused
+/// anywhere else — after the second main phase it would need a combat begun from there and the end step after it, and
+/// "followed by an additional main phase" (Relentless Assault) a main phase owed; no card in any set says either.
 /// </summary>
 public record AdditionalCombatPhase : Effect
 {
 	public override ActionResult Execute(GameState s) =>
-		new(s.WithGame(s.GetGame() with { AdditionalCombats = s.GetGame().AdditionalCombats + 1 }));
+		s.GetGame().Step is < Step.PreCombatMain or > Step.EndCombat
+			? throw new InvalidOperationException(
+				$"An additional combat phase after the {s.GetGame().Step} isn't built — only during combat or the first main phase"
+			)
+			: new(
+				s.WithGame(
+					s.GetGame() with
+					{
+						AdditionalCombats = s.GetGame().AdditionalCombats + 1,
+					}
+				)
+			);
 }
 
 /// <summary>

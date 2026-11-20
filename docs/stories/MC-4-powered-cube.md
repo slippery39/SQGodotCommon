@@ -1486,6 +1486,16 @@ as his three priorities.
   (2/2 revert-checks): a required "X targets" trigger with fewer objects than X is removed (CR 603.3d), never an
   unanswerable pick; the evaluator's "their combat is over" (`untapsFirst`, a walker's `attackFirst`) reads
   `AdditionalCombats` — a tapped blocker can't block the combat still owed. After them the full suite again, 2,134 passed.
+- 2026-11-20, Shayne (after the 4.4i2b + i3 commit): **look at the "not fixed" items before moving on** — "better to make
+  sure everything works now, then me having to find them afterwards". Claude (cube lane): no card in FRA, TRK or LSV
+  meets any of the four, but each now works or fails LOUDLY, never silently wrong — **multikicker is kicked** once paid
+  (CR 702.33d: `ReplicateComponent.Kicker` → `OnStackComponent.Kicked`, `WasKicked` reads it); **backup grants any
+  number of keywords** (`Scripting.Backup(n, keywords)`); **a spell's "X targets" other than its X throws**, and so does
+  **an activated ability's** — the search found Candelabra of Tawnos ("{X}, {T}: Untap X target lands", unscripted)
+  would have taken ONE silent target: its batch builds a `ChooseXTargetsChoice` for activations (DesignNotes); Pest
+  Infestation's "up to X target" spell already works (`ChooseXTargetsChoice`'s min is the required words); **an
+  additional combat phase** is right during combat AND the first main phase (two combats in a row either way, now
+  tested) and throws anywhere else. 7 tests, 5/5 revert-checks.
 
 ## Tasks
 
@@ -2099,3 +2109,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   Next: MC-4.4i2b + i3.
 - 2026-11-20: MC-4.4i2b + i3 done as one batch: multikicker, dash, backup, an additional combat phase — 297 of 528 play
   (red 51 of 54). `TargetSpec.PerX` a `Count`; `AdditionalCombatPhase`; `Trigger.Nth` on attacks. Next: MC-4.4i4–i6.
+- 2026-11-20: Shayne: the batch's four ceilings looked at before moving on — multikicker is kicked, backup any keywords,
+  the rest refused loudly (Candelabra of Tawnos' activated X targets found waiting). Next: MC-4.4i4–i6.

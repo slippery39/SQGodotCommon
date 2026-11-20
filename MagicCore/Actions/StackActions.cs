@@ -764,6 +764,10 @@ public record CastSpellAction : GameAction
 					s.GetCard(CardId).GetComponent<OnStackComponent>()! with
 					{
 						Replicate = Replicate,
+						// Multikicker (CR 702.33d): kicked if its kicker cost was paid at least once — WasKicked reads it
+						Kicked =
+							s.GetCard(CardId).GetComponent<OnStackComponent>()!.Kicked
+							|| card.GetComponent<ReplicateComponent>() is { Kicker: true },
 					}
 				)
 		);
@@ -919,7 +923,13 @@ public record ActivateAbilityAction : GameAction
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		ActivatedAbilityComponent ability,
 		ImmutableArray<int> modes
-	) => Modal.Compose(ability.Targets, ability.Effects, ability.Modes, modes);
+	) =>
+		ability.Targets.Any(t => t.PerX is not null)
+			// never one silent target: Candelabra of Tawnos' "{X}, {T}: Untap X target lands" needs its own choice
+			? throw new InvalidOperationException(
+				"An activated ability's X targets (TargetSpec.PerX) aren't built — a ChooseXTargetsChoice for activations"
+			)
+			: Modal.Compose(ability.Targets, ability.Effects, ability.Modes, modes);
 
 	int Chosen(CostSlot slot) =>
 		slot switch
@@ -1119,10 +1129,15 @@ public static class StackResolution
 		ImmutableList<TargetSpec> words =
 		[
 			.. specs.SelectMany(t =>
-				t.PerX is not null // ponytail: a spell's PerX is its X — another Count there would need the state here
-					? Enumerable
-						.Range(0, x)
-						.Select(i => t with { PerX = null, NotThePrevious = i > 0 })
+				t.PerX is { } n
+					? n.Kind != CountOf.X
+						// never silently X: a spell's "X targets" counts its X (Pest Infestation, Dominion Infiltration)
+						? throw new InvalidOperationException(
+							$"{card.Name}: a spell's TargetSpec.PerX must be Count.X — another count needs the state here"
+						)
+						: Enumerable
+							.Range(0, x)
+							.Select(i => t with { PerX = null, NotThePrevious = i > 0 })
 					: Division.Words(t)
 			),
 		];

@@ -332,4 +332,132 @@ public class LsvBatch2i2bTests : FraBoardTest
 		Assert.That(AttackInEveryCombat(fomo), Nu.EqualTo(1));
 		Assert.That(s.GetCard(fomo).IsTapped, Nu.True, "nothing untapped it");
 	}
+
+	static CardDefinition Rally =>
+		TestGames.Inline("Rally", "{0}", "Instant", null, new AdditionalCombatPhase());
+
+	/// <summary>To my second main phase, passing; how many combat phases began.</summary>
+	int CombatsToSecondMain()
+	{
+		var combats = 0;
+		var last = s.GetGame().Step;
+		for (var i = 0; i < 200 && s.GetGame().Step != Step.PostCombatMain; i++)
+		{
+			s = s.GetPendingChoice() is { } c
+				? s.Choose(Defaults(c))
+				: s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
+			if (s.GetGame().Step == Step.BeginCombat && last != Step.BeginCombat)
+				combats++;
+			last = s.GetGame().Step;
+		}
+		return combats;
+	}
+
+	[Test]
+	public void AdditionalCombatPhase_InTheFirstMainPhase_TwoCombats()
+	{
+		Cast(Hand(Rally, me), []);
+		Assert.That(
+			CombatsToSecondMain(),
+			Nu.EqualTo(2),
+			"after this main phase: a combat, then the turn's own"
+		);
+	}
+
+	[Test]
+	public void AdditionalCombatPhase_AfterCombat_RefusedLoudly_NeverLostInSilence()
+	{
+		s = TestGames.PassUntil(s, x => x.GetGame().Step == Step.PostCombatMain);
+		Assert.Throws<InvalidOperationException>(() => Cast(Hand(Rally, me), []));
+	}
+
+	// ===== The rest of the batch's ceilings, closed =====
+
+	[TestCase(0, 0)]
+	[TestCase(2, 1)]
+	public void Multikicker_PaidAtLeastOnce_IsKicked(int kicks, int draws)
+	{
+		var kicky = TestGames.Inline("Kicky", "{1}", "Sorcery") with
+		{
+			Components =
+			[
+				Scripting.Multikicker("{1}"),
+				new SpellEffectsComponent([new If(new WasKicked(), [new DrawCards(Ref.You, 1)])]),
+			],
+		};
+		var card = Hand(kicky, me);
+		var hand = HandCount(me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = card,
+				Replicate = kicks,
+			}
+		);
+		Resolve();
+		Assert.That(
+			HandCount(me) - (hand - 1),
+			Nu.EqualTo(draws),
+			"kicked once paid, however many times (CR 702.33d)"
+		);
+	}
+
+	[Test]
+	public void Backup_SeveralKeywords_EachGranted()
+	{
+		var backer = TestGames.Creature("Backer", "1/1") with
+		{
+			Components = [Scripting.Backup(1, "Flying", "Trample")],
+		};
+		var bear = Field(Bear, me);
+		CastAsking(
+			Hand(backer, me),
+			c =>
+				c switch
+				{
+					ChooseTargetChoice => [bear],
+					_ => Defaults(c),
+				}
+		);
+		Assert.That(
+			(s.Has(s.GetCard(bear), "Flying"), s.Has(s.GetCard(bear), "Trample")),
+			Nu.EqualTo((true, true))
+		);
+	}
+
+	[Test]
+	public void XTargets_OnASpell_AnotherCountThanX_RefusedLoudly()
+	{
+		var odd = TestGames.Inline("Odd", "{1}", "Sorcery") with
+		{
+			Components =
+			[
+				new SpellEffectsComponent([new Tap(Ref.EachTarget)])
+				{
+					Targets = [Scripting.Creature with { PerX = (Count)2 }],
+				},
+			],
+		};
+		Ox("Ox");
+		var card = Hand(odd, me);
+		Assert.Throws<InvalidOperationException>(() => Casts(card).ToList());
+	}
+
+	[Test]
+	public void XTargets_OnAnActivatedAbility_RefusedLoudly_NeverOneSilentTarget()
+	{
+		var candle = TestGames.Inline("Candle", "{1}", "Artifact") with
+		{
+			Components =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{X}"), [new Untap(Ref.EachTarget)])
+				{
+					Targets = [Scripting.Target(MagicCore.Filters.Is.Land) with { PerX = Count.X }],
+				},
+			],
+		};
+		var card = Field(candle, me);
+		Assert.Throws<InvalidOperationException>(() => Activations(card).ToList());
+	}
 }

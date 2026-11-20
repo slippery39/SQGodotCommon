@@ -3952,9 +3952,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Fear of Missing Out"] =
 [
-	When(TriggerEvent.SelfEnters, [], new Discard(Ref.You, 1), new DrawCards(Ref.You, 1)),
 	When(
-		TriggerEvent.SelfAttacks with { Nth = 1 },
+		TriggerEvent.SelfEnters,
+		[],
+		new Discard(Ref.You, 1),
+		new DrawCards(Ref.You, 1)
+	),
+	When(
+		TriggerEvent.SelfAttacks with
+		{
+			Nth = 1,
+		},
 		[Creature],
 		new Untap(Ref.Target()),
 		new AdditionalCombatPhase()

@@ -538,6 +538,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`Protection(Filters.Filter From)`** — Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the chosen player." What it is protected FROM is a filter… [1: True-Name Nemesis]
 - **`ReplicateComponent(ManaCost Cost)`** — "Replicate [cost] (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the… [2: Consign to Memory, Lose Focus]
   - `AsItEnters` (bool): Squad (Sicarian Infiltrator): "As an additional cost to cast this spell, you may pay {2} any number of…
+  - `Kicker` (bool): Multikicker (CR 702.33c): the payments are kicks — paid at least once, the spell is kicked…
 - **`RestOfTheGame`** — Screaming Nemesis: "for the rest of the game" — marks a ThisTurn object the turn's end leaves (TurnStructure). [1: Screaming Nemesis]
 - **`SagaComponent(int Chapters)`** — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)" The lore counters:… [10: Amok Time, In the Pale Moonlight, The Measure of a Man…]
 - **`SkipYourDrawStep`** — Necrodominance: "Skip your draw step." — it never begins: no draw, no trigger, no priority. Read by TurnStructure. [1: Necrodominance]

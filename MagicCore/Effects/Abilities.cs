@@ -37,6 +37,12 @@ public record ReplicateComponent(ManaCost Cost) : GameComponent
 	/// (Batroc the Leaper, Scripting.Multikicker) is the same payment, read by the card's own text.
 	/// </summary>
 	public bool AsItEnters { get; init; }
+
+	/// <summary>
+	/// Multikicker (CR 702.33c): the payments are kicks — paid at least once, the spell is kicked (OnStackComponent.Kicked,
+	/// so WasKicked reads it, a copy too).
+	/// </summary>
+	public bool Kicker { get; init; }
 }
 
 /// <summary>

@@ -161,10 +161,13 @@ whose subsystem it lives in.
   Count.TimesReplicated(Ref.Source) }`. A token copy wasn't cast, so its squad makes none.
   **Multikicker** (CR 702.33c, Batroc the Leaper, MC-4.4i2b) is that payment with nothing made of it,
   `Scripting.Multikicker(cost)`: the card reads `Count.TimesReplicated(Ref.Source)` — "enters with a +1/+1 counter for
-  each time" is `EntersWithCountersComponent(that count)` (its context has `Ref.Source`, the card entering). Not
-  `WasKicked` (DesignNotes). **"Each of up to X targets, where X is …"** is `TargetSpec.PerX` — a `Count`, this word
-  that many times, each `NotThePrevious` (`Optional`: "up to"): a trigger's counted as it triggers
-  (`Triggers.QueueTargets`, one `ChooseTargetChoice` per word), a spell's always its X (Dominion Infiltration's `Count.X`).
+  each time" is `EntersWithCountersComponent(that count)` (its context has `Ref.Source`, the card entering). Paid at
+  least once, it was kicked (CR 702.33d: `ReplicateComponent.Kicker` stamps `OnStackComponent.Kicked`, so `WasKicked`
+  reads it). **"Each of up to X targets, where X is …"** is `TargetSpec.PerX` — a `Count`, this word that many times,
+  each `NotThePrevious` (`Optional`: "up to"): a trigger's counted as it triggers (`Triggers.QueueTargets`, one
+  `ChooseTargetChoice` per word; a required one with fewer objects than X removes the trigger), a spell's its X
+  (Dominion Infiltration, Pest Infestation: `Count.X` — another count THROWS), an activated ability's THROWS (not built:
+  Candelabra of Tawnos, DesignNotes).
   **Storm** (CR 702.40, Brain Freeze, MC-4.4g7) is `Scripting.Storm`: a "when you cast this spell" trigger
   (`TriggerEvent.SelfCast`) of `CopySpell(Ref.EventCard) { N = Count.SpellsCastBefore(Ref.EventCard) }`. The count is
   EVERY player's spells this turn, stamped as it is cast (`OnStackComponent.SpellsCastBefore`, from both tallies), so a
@@ -263,8 +266,8 @@ whose subsystem it lives in.
   **Dash** (CR 702.109, Ragavan, Death-Greeter's Champion, MC-4.4i2b) is `Scripting.Dash(cost)`: warp's shape, its
   `PaidAtNextEndStep` `MoveTo(Ref.Source, Hand) { From = [Battlefield] }`, and haste a static `If =
   AlternativeCostWasPaid` (read on the permanent, `Card.CastAs`: a new object of it wasn't dashed).
-  **Backup N** (CR 702.165, Death-Greeter's Champion) is `Scripting.Backup(n, keyword)`: a `SelfEnters` trigger,
-  `PutCounters(target, n)`, then `If(Matches(Target(0), !Is.Source))` the keyword until end of turn — one keyword
+  **Backup N** (CR 702.165, Death-Greeter's Champion) is `Scripting.Backup(n, keywords)`: a `SelfEnters` trigger,
+  `PutCounters(target, n)`, then `If(Matches(Target(0), !Is.Source))` each keyword until end of turn — keywords only
   (DesignNotes).
   **"You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't have been cast, …
   sacrifices it at the beginning of the next cleanup step"** (Necromancy, MC-4.4h5) is `CastAsThoughItHadFlash(effects)`:
