@@ -2346,3 +2346,22 @@ Konstrari Annex (enters tapped), counted as covering turn 4's drop, while a draw
 Since then **only a land that would enter untapped covers a drop** (`LandDropsCovered`). Suite: **13 582 steps a
 position** (+1.6% on 13 374; −16.7% on A), 1 changed - seed 2 #21 back to A's "Cast Koth" (an Annex in that hand),
 oracle 73.6%. In match 2 the pair played identically on both sides (`beam` has D), so B never met it.
+
+**AI-30.4d (2026-11-20): the "lands" way only where a drawn land could change something** - in place of B's ranking
+(B ranks by the "not lands" score: Koth's landfall line, its lift +10, was given the average +4 and lost at seed 2
+#21). `LandMatters`: a card the line drew, the hand's spells costing more than our mana to come, an X spell, or our
+landfall. A first cut counting cards castable (`LandUnlock.Playable`) and skipping this turn's draws cost 10 578 steps
+but changed 6, Koth and Jace's draw-first among them. As built:
+
+| Run | Steps / position | Rollouts | Changed | Oracle |
+|---|---|---|---|---|
+| D (committed) | 13 582 | 30.0 | 0 | 73.6% |
+| B, `contenders3` (removed) | 12 455 | 27.0 | 3 | 74.7% |
+| D + `landmatters` | **12 326** (−9.2%) | 25.6 | 5 | 71.9% |
+
+Its five: two Jace −3 draws moved first (seed 1 #70, seed 2 #60), three orders (seed 1 #104 Anguish after the attack,
+seed 1 #70 Way of the Mentor after combat, seed 3 #56 Winter after combat). Match, `beam+landmatters` vs `beam`
+(`--until-clear`): **50.0% ± 1.5pp over 96 games (48-48)**, no 5pp difference; cost per decision **6 671 against 7 620
+engine steps (−12.5%)**, rollouts 16.0 / 19.1; lands 7.3 / 7.4, spells 10.0 both. 24 min. Then, from the review: a land in hand
+that enters tapped no longer counts as mana, and the drawn land's own "enters" trigger counts - suite 12 354 steps, 0
+changed; the default since.

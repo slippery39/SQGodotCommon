@@ -914,7 +914,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {6}, Sacrifice this creature: Choose target creature or planeswalker an opponent controls. Its owner shuffles it into their library.
 
-**Status:** scripted · **tests naming it:** FraSacrificeTests
+**Status:** scripted · **tests naming it:** FraSacrificeTests, RolloutTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
 
@@ -2903,7 +2903,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Reach  
 > Landfall — Whenever a land you control enters, Koth deals 1 damage to each opponent. If that land is a Mountain, add {R}.
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** FraCardTests, RolloutTests
 
 **Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

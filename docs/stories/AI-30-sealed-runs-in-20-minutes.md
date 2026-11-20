@@ -47,6 +47,9 @@ plans (`WholeAttacks.Best`) 50%, free passes 36%, the engine's per-step checks t
             2026-11-20: "if I already have 2 lands in hand, I don't need to simulate what happens if i need to draw a
             land next turn"; `beam+nolandscovered` off) - only lands that enter untapped count (Shayne, 2026-11-20:
             "D should only count untapped lands that makes more sense")
+      - [x] AI-30.4d In place of B's ranking, the "lands" way only where a drawn land could change something (Shayne,
+            2026-11-20: "fixing this obvious bias") - the default (match 48-48, −12.5%), `beam+nolandmatters` off; B's
+            code removed
 - [ ] AI-30.5 The before/after sealed run, in `docs/findings/magic-ai.md`
 
 ## Next
@@ -101,3 +104,13 @@ till the end), and Shayne's margin. Read AI-22 (done) and its findings ("AI-22.1
   (landfall) - blended 27.64, the best. Under B, Koth ranked below the top 3 by "not lands" alone, so its "lands" way
   was guessed with the batch's average lift - 25.06 - and the Yoshimaru attack + No Admittance line (29.39) won. B's
   own ceiling (`SecondWays`' ponytail), seen: the card a land lifts most is the one it ranks by the average.
+- 2026-11-20: committed D + B's switch (b116e3d7). Shayne: build option 1 instead of B's ranking. `LandMatters`: a card
+  the line drew (a land the other way), the hand's spells costing more than our mana to come, an X spell, or our
+  landfall (the engine's trigger matcher) - else the not-lands way alone. First cut counted CARDS castable
+  (`LandUnlock.Playable`) and ignored this turn's draws: 10 578 steps (−22%) but 6 changed, Koth #21 back to Pass and
+  Jace −3 played late - fixed. Now: suite **12 326 steps (−9.2% on D's 13 582)**, rollouts 25.6, 5 changed - Koth #21
+  and seed 2 #71 kept; seed 1 #70 and seed 2 #60 now draw with Jace −3 first; the rest order changes. Oracle 71.9% (the
+  committed 73.6%).
+- 2026-11-20: Shayne: run the match. `beam+landmatters` vs `beam`: 50.0% (48-48), no 5pp difference, **6 671 against
+  7 620 steps a decision (−12.5%)** - more than D (−8.7%) or B (−10.0%) saved. For Shayne: make it the default.
+- 2026-11-20: Shayne: "sure" - the default; its 5 suite changes accepted.

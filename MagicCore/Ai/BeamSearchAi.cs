@@ -121,10 +121,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// 2026-11-20: "if I already have 2 lands in hand, I don't need to simulate what happens if i need to draw a land
 	/// next turn"); off (beam+nolandscovered) plays both.
 	/// </param>
-	/// <param name="Contenders">
-	/// With more than this many lines in a batch, only the best this many by their "not lands" rollout get the "lands"
-	/// one too (AI-30.4b); the rest are given the contenders' average difference between the two. 0 (the default): every
-	/// line both ways. beam+contendersN.
+	/// <param name="LandMatters">
+	/// A line's "lands" rollout only where a drawn land could change something (<see cref="LandMatters"/>, AI-30.4d,
+	/// Shayne 2026-11-20 - in place of AI-30.4b's top lines by the "not lands" score, which ranked Koth's landfall line
+	/// by the average lift). The default since 2026-11-20 (Shayne; matched 48-48, −12.5% a decision); off is
+	/// beam+nolandmatters.
 	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
@@ -161,7 +162,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool SettleHeld = true,
 		bool SharedStart = true,
 		bool LandsCovered = true,
-		int Contenders = 0
+		bool LandMatters = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -603,13 +604,6 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	{
 		var expected = parent.Expected.Add(Evaluator.Evaluate(at, PlayerId, RolloutSettings.Held));
 		var nodes = new Node[children.Count];
-		// AI-30.4b: more lines than contenders - each line's "lands" way waits until it is known to be in contention
-		var contenders =
-			options.Contenders > 0
-			&& children.Count > options.Contenders
-			&& options.Library == Hidden.Library.LandOrNot
-			&& options.SharedStart;
-		var pending = new Waiting?[children.Count];
 		var atRoot = parent.Path.IsEmpty;
 		var looks = parent.Looks + Hidden.Looked(at, PlayerId); // every child answers the look waiting here
 		void RollOut(int i)
@@ -625,26 +619,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 						Evaluator.PendingSurveil(state, PlayerId, RolloutSettings.Held)
 							- Evaluator.PendingSurveil(at, PlayerId, RolloutSettings.Held)
 					);
-			GameState? turnEnd;
-			double score,
-				odds = 0;
-			if (contenders && LandShare(state, horizon) is > 0 and < 1 and var share)
-			{
-				// AI-30.4b: the "not lands" way now, the "lands" way later - only if this line is in contention
-				var none = Rollout.ScoreFirst(
-					state,
-					PlayerId,
-					horizon,
-					RolloutSettings,
-					out var fork,
-					out turnEnd,
-					out var unseen
-				);
-				pending[i] = new(state, share, none, fork, unseen, bonus);
-				score = none + bonus; // for now: the contenders are picked by it
-			}
-			else
-				score = RolloutScore(state, horizon, looks, out turnEnd, out odds) + bonus;
+			var score = RolloutScore(state, horizon, looks, out var turnEnd, out var odds) + bonus;
 			Interlocked.Increment(ref rollouts);
 			// read as the search's turn ends (Rollout.Score's rootTurnEnd); a move that ended it, as the turn stood before
 			nodes[i] = new Node(
@@ -673,8 +648,6 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				},
 				RollOut
 			);
-		if (pending.Any(p => p is not null))
-			SecondWays(nodes, pending, looks);
 		foreach (var node in nodes) // after the parallel loop: one thread writes the reading
 		{
 			var first = node.Path[0];
@@ -684,65 +657,6 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				(firstMoves[first], bestLines[first]) = (node.Score, node);
 		}
 		return [.. nodes];
-	}
-
-	/// <summary>A line whose "lands" rollout waits (AI-30.4b): its position, share, "not lands" score, where the other starts.</summary>
-	sealed record Waiting(
-		GameState State,
-		double Odds,
-		double None,
-		Rollout.Fork Fork,
-		(int Looked, int Drawn) Unseen,
-		double Bonus
-	);
-
-	/// <summary>
-	/// AI-30.4b: the "lands" rollout for the best <see cref="Settings.Contenders"/> lines by their "not lands" one, in
-	/// parallel; every other waiting line is given the contenders' average difference between the two ways. Each line
-	/// is then blended as <see cref="RolloutScore"/> blends it.
-	/// ponytail: the contenders are picked per batch (one parent's children), not across the beam's level, and by the
-	/// "not lands" score alone - a line that a land would lift far more than the others is ranked by the average lift;
-	/// pick by the expected lift (cards in hand that need the land) if a position shows one dropped.
-	/// </summary>
-	void SecondWays(Node[] nodes, Waiting?[] pending, int looks)
-	{
-		var waiting = Enumerable.Range(0, nodes.Length).Where(i => pending[i] is not null).ToList();
-		var picked = waiting
-			.OrderByDescending(i => nodes[i].Score)
-			.ThenBy(i => i)
-			.Take(options.Contenders)
-			.ToList();
-		var lands = new double[nodes.Length];
-		void Second(int k)
-		{
-			lands[picked[k]] = Rollout.ScoreSecond(pending[picked[k]]!.Fork);
-			Interlocked.Increment(ref secondRollouts);
-		}
-		if (options.Threads == 1)
-			for (var k = 0; k < picked.Count; k++)
-				Second(k);
-		else
-			Parallel.For(
-				0,
-				picked.Count,
-				new ParallelOptions
-				{
-					MaxDegreeOfParallelism = options.Threads is > 1 and var n ? n : -1,
-				},
-				Second
-			);
-		var lift = picked.Average(i => lands[i] - pending[i]!.None);
-		foreach (var i in waiting)
-		{
-			var w = pending[i]!;
-			var odds = w.Odds;
-			var land = picked.Contains(i) ? lands[i] : w.None + lift;
-			nodes[i] = nodes[i] with
-			{
-				Score = Blend(w.State, ref odds, land, w.None, looks, w.Unseen) + w.Bonus,
-				Odds = odds,
-			};
-		}
 	}
 
 	/// <summary>
@@ -808,12 +722,18 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		return Blend(state, ref odds, land, none, looks, unseen);
 	}
 
-	/// <summary>The share of a line's "lands" rollout (<see cref="Hidden.LandOdds"/>), or 0 when its land drawn would sit in hand (<see cref="Settings.LandsCovered"/>).</summary>
+	/// <summary>
+	/// The share of a line's "lands" rollout (<see cref="Hidden.LandOdds"/>), or 0 when its land drawn would sit in hand
+	/// (<see cref="Settings.LandsCovered"/>) or change nothing (<see cref="Settings.LandMatters"/>).
+	/// </summary>
 	double LandShare(GameState state, int horizon) =>
-		// a land drawn would sit in hand, and a drawn card is priced alike whatever it is (DrawnCard): the not-lands way alone
-		options.LandsCovered
-		&& DrawnCard
-		&& LandDropsCovered(state, PlayerId, horizon)
+		// a drawn card is priced alike whatever it is (DrawnCard), so a land that is not played, or changes nothing played,
+		// scores as the not-lands way does: that way alone
+		DrawnCard
+		&& (
+			options.LandsCovered && LandDropsCovered(state, PlayerId, horizon)
+			|| options.LandMatters && !LandMatters(state, PlayerId, horizon)
+		)
 			? 0
 			: Hidden.LandOdds(state, PlayerId);
 
@@ -860,7 +780,50 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// a drop whatever it makes - a land that would be played for its COLOUR still counts as surplus; count only lands that
 	/// unlock nothing more if a position shows a colour draw misjudged.
 	/// </summary>
-	public static bool LandDropsCovered(GameState s, int me, int horizon)
+	public static bool LandDropsCovered(GameState s, int me, int horizon) =>
+		s.CardsIn(me, ZoneType.Hand)
+			.Count(c =>
+				!Hidden.IsUnknown(c) && c.Is(Cards.CardType.Land) && EntersUntapped(s, me, c)
+			) >= Drops(s, me, horizon);
+
+	/// <summary>
+	/// Whether a land drawn in the look-ahead to <paramref name="horizon"/> could change anything (AI-30.4d): a card the
+	/// line has already drawn (a land the other way, playable now); the hand's spells costing more than the mana we will
+	/// have - our sources and the untapped lands in hand we get to play (a tapped Konstrari Annex is not turn 4's mana) -
+	/// or an X spell to pour it into; or a trigger of ours on a land entering, the land's own included (Koth's landfall -
+	/// read by the engine's own trigger matcher).
+	/// ponytail: mana counted, not colours (a land for a missing colour reads as changing nothing once the count is
+	/// met); mana sinks on the board (Yoshimaru's {6}), a land as a cost (Marwyn's sacrifice) and "lands you control"
+	/// counts are not read; spells castable from elsewhere (flashback, impulse exile) are not counted; a card in hand that
+	/// triggers on a land (Koth not yet cast) only through the line that casts it; the land tested for a trigger is the
+	/// first unseen, not the commonest name the lands way draws; a land's own price on the battlefield (Evaluator's
+	/// LandUse) still differs between the two ways - skipped, as under LandsCovered. Read them if a position shows one.
+	/// </summary>
+	public static bool LandMatters(GameState s, int me, int horizon)
+	{
+		var hand = s.CardsIn(me, ZoneType.Hand).ToList();
+		if (hand.Any(Hidden.IsUnknown))
+			return true;
+		var spells = hand.Where(c => !c.Is(Cards.CardType.Land)).ToList();
+		if (spells.Any(c => c.ManaCost.HasX))
+			return true;
+		var mana =
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => ManaAbilities.ColorsOf(s, c).Any())
+			+ Math.Min(
+				hand.Count(c => c.Is(Cards.CardType.Land) && EntersUntapped(s, me, c)),
+				Drops(s, me, horizon)
+			);
+		if (spells.Sum(c => c.ManaCost.ManaValue) > mana)
+			return true;
+		if (Hidden.Unseen(s, me).FirstOrDefault(c => c.Is(Cards.CardType.Land)) is not { } land)
+			return false;
+		return global::MagicCore
+			.Turns.Triggers.Collect(s.EnterBattlefield(land.Id, me))
+			.Any(p => p.EventCardId == land.Id && p.Source.ControllerId == me);
+	}
+
+	/// <summary>Our land drops the look-ahead to <paramref name="horizon"/> has left: this turn's if ours and not yet made, one each later turn of ours.</summary>
+	static int Drops(GameState s, int me, int horizon)
 	{
 		var game = s.GetGame();
 		var ours = game.ActivePlayerId == me;
@@ -871,10 +834,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					turn == game.TurnNumber
 						? Math.Max(0, s.LandDrops(me) - s.GetPlayer(me).ThisTurn.LandsPlayed)
 						: 1;
-		return s.CardsIn(me, ZoneType.Hand)
-				.Count(c =>
-					!Hidden.IsUnknown(c) && c.Is(Cards.CardType.Land) && EntersUntapped(s, me, c)
-				) >= drops;
+		return drops;
 	}
 
 	/// <summary>Whether a land in hand would enter untapped by its own text: no "enters tapped", its "unless" holds now, or a shockland's life.</summary>

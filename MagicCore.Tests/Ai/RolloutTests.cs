@@ -54,6 +54,61 @@ public class RolloutTests
 		Assert.That(BeamSearchAi.LandDropsCovered(s, me, horizon), Is.True, "two lands");
 	}
 
+	// AI-30.4d (Shayne, 2026-11-20): the "lands" rollout only where a drawn land could change something - a card it
+	// casts, or a permanent that triggers on it - not ranked by the "not lands" score (AI-30.4b's bias: Koth).
+	[Test]
+	public void ADrawnLand_Matters_ForASpellItCasts_OrALandfall_NotForAnEmptyHand()
+	{
+		var horizon = Rollout.Horizon(s, Rollout.Default);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Battlefield);
+		Assert.That(
+			BeamSearchAi.LandMatters(s, me, horizon),
+			Is.False,
+			"nothing to cast, nothing on a land"
+		);
+
+		var (spell, _) = TestGames.Put(s, me, CardRegistry.Get("Living Library"), ZoneType.Hand); // {2}: the second land casts it
+		Assert.That(
+			BeamSearchAi.LandMatters(spell, me, horizon),
+			Is.True,
+			"a spell the land casts"
+		);
+
+		var (afforded, _) = TestGames.Put(
+			spell,
+			me,
+			CardRegistry.Get("Forest"),
+			ZoneType.Battlefield
+		);
+		Assert.That(
+			BeamSearchAi.LandMatters(afforded, me, horizon),
+			Is.False,
+			"the spell already paid for"
+		);
+		var (tapped, _) = TestGames.Put(
+			spell,
+			me,
+			CardRegistry.Get("Konstrari Annex"),
+			ZoneType.Hand
+		);
+		Assert.That(
+			BeamSearchAi.LandMatters(tapped, me, horizon),
+			Is.True,
+			"a land in hand that enters tapped pays nothing"
+		);
+
+		var drew = Hidden.Sample(s, me, Hidden.Library.LandOrNot).Draw(me); // a card drawn this turn: a land the other way
+		Assert.That(BeamSearchAi.LandMatters(drew, me, horizon), Is.True, "a card the line drew");
+
+		var (koth, _) = TestGames.Put(
+			s,
+			me,
+			CardRegistry.Get("Koth, the Geomancer"),
+			ZoneType.Battlefield
+		);
+		Assert.That(BeamSearchAi.LandMatters(koth, me, horizon), Is.True, "Koth's landfall");
+	}
+
 	// A land that enters tapped covers no drop: a land drawn would be played over it (Konstrari Annex, no planeswalker).
 	[Test]
 	public void ATappedLandInHand_CoversNoLandDrop()

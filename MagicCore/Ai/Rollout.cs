@@ -294,57 +294,20 @@ public static class Rollout
 		out (int Looked, int Drawn) unseen
 	)
 	{
-		var none = ScoreFirst(s, me, horizon, settings, out var lands, out rootTurnEnd, out unseen);
-		return (ScoreSecond(lands), none);
-	}
-
-	/// <summary>
-	/// <see cref="ScoreBoth"/>'s first half: the "not lands" rollout played to its end, and <paramref name="lands"/> - where
-	/// the "lands" one starts - for <see cref="ScoreSecond"/>, if it is ever wanted (AI-30.4b: only the lines in contention).
-	/// </summary>
-	public static double ScoreFirst(
-		GameState s,
-		int me,
-		int horizon,
-		Settings settings,
-		out Fork lands,
-		out GameState? rootTurnEnd,
-		out (int Looked, int Drawn) unseen
-	)
-	{
 		var none = new Walk(s, me, horizon, settings, landsDrawn: false);
-		var share = !s.CardsIn(me, ZoneType.Hand).Any(Hidden.IsUnknown);
-		lands = new(none.Run(fork: share), s, me, horizon, settings);
-		return none.Finish(out rootTurnEnd, out unseen);
-	}
-
-	/// <summary><see cref="ScoreBoth"/>'s second half: the "lands" rollout from where <see cref="ScoreFirst"/> left it.</summary>
-	public static double ScoreSecond(Fork lands)
-	{
-		var walk =
-			lands.Start?.AsLands()
+		var start = none.Run(fork: !s.CardsIn(me, ZoneType.Hand).Any(Hidden.IsUnknown));
+		var noneScore = none.Finish(out rootTurnEnd, out unseen);
+		var lands =
+			start?.AsLands()
 			?? new Walk(
-				Hidden.Unknown(lands.Root, lands.Me, lands: true),
-				lands.Me,
-				lands.Horizon,
-				lands.Settings,
+				Hidden.Unknown(s, me, lands: true),
+				me,
+				horizon,
+				settings,
 				landsDrawn: true
 			);
-		walk.Run(fork: false);
-		return walk.Finish(out _, out _);
-	}
-
-	/// <summary>Where a line's "lands" rollout starts (<see cref="ScoreFirst"/>): the shared start's place, or none - from the line's position.</summary>
-	public sealed class Fork
-	{
-		internal Fork(Walk? start, GameState root, int me, int horizon, Settings settings) =>
-			(Start, Root, Me, Horizon, Settings) = (start, root, me, horizon, settings);
-
-		internal Walk? Start { get; }
-		internal GameState Root { get; }
-		internal int Me { get; }
-		internal int Horizon { get; }
-		internal Settings Settings { get; }
+		lands.Run(fork: false);
+		return (lands.Finish(out _, out _), noneScore);
 	}
 
 	/// <summary>
