@@ -18,6 +18,12 @@ public record MagicPlayer : GameObject
 	/// <summary>First Contact: "If this spell is the first spell you've cast this game" — never reset.</summary>
 	public int SpellsCastThisGame { get; init; }
 
+	/// <summary>
+	/// Caves of Chaos Adventurer: "if you've completed a dungeon" — counted as one is removed on its last room
+	/// (Undercity.Complete, CR 309.7), never reset.
+	/// </summary>
+	public int DungeonsCompleted { get; init; }
+
 	/// <summary>H.M.S. Bounty: "haven't begun an extra turn this game" — set as one begins.</summary>
 	public bool BegunExtraTurn { get; init; }
 

@@ -536,7 +536,9 @@ public static class TriggerEvent
 		new(EventKind.LoyaltyActivated) { By = Whose.Opponent };
 
 	/// <summary>Tinybones: "whenever a player discards one or more cards".</summary>
-	public static readonly Trigger APlayerDiscards = new(EventKind.Discarded);
+	// ponytail: OneOrMore is one trigger per player per priority pass — one player's two separate discards before
+	// anyone has priority trigger it once; a batch number on DiscardedEvent when a card does that (DesignNotes).
+	public static readonly Trigger APlayerDiscards = new(EventKind.Discarded) { OneOrMore = true };
 
 	/// <summary>Titanbones: "when you discard this card" — From = Graveyard, where the card now is.</summary>
 	public static readonly Trigger SelfDiscarded =

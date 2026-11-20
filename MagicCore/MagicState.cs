@@ -826,17 +826,18 @@ public static class MagicState
 
 	/// <summary>
 	/// The ONE discard (CR 701.8) — effects, costs and the cleanup alike: each card to its owner's
-	/// graveyard, counted for "this turn", and ONE event for the batch ("discards one or more cards").
-	/// MtgCore's lesson: a discard paid as a cost once fired no discard trigger.
+	/// graveyard, counted for "this turn", and an event per card (Ivora: "whenever you discard a card" triggers twice
+	/// for two; "discards one or more cards" is Trigger.OneOrMore). MtgCore's lesson: a discard paid as a cost once
+	/// fired no discard trigger.
 	/// </summary>
 	public static GameState Discard(this GameState s, int playerId, IReadOnlyList<int> cardIds)
 	{
 		if (cardIds.Count == 0)
 			return s;
 		foreach (var id in cardIds)
-			s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Graveyard));
-		return s.Tally(playerId, t => t with { CardsDiscarded = t.CardsDiscarded + cardIds.Count })
-			.Raise(new DiscardedEvent(playerId, [.. cardIds]));
+			s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Graveyard))
+				.Raise(new DiscardedEvent(playerId, id));
+		return s.Tally(playerId, t => t with { CardsDiscarded = t.CardsDiscarded + cardIds.Count });
 	}
 
 	/// <summary>"Put N +1/+1 counters on it" — PutCounters with that kind.</summary>

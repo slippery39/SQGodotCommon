@@ -139,6 +139,9 @@ whose subsystem it lives in.
   (`InitiativeComponent`) carrying its two triggers: "at the beginning of your upkeep, venture", and "whenever
   creatures deal combat damage to you, the active player takes it". `TakeTheInitiative(who)` moves it (one holder,
   CR 725.3), then ventures — again when you already hold it. "If you have the initiative" is `YouHaveTheInitiative`.
+  **A dungeon removed on its last room is completed** (CR 309.7) — `Undercity.Complete`, from both removals (the state
+  check and a venture), counts it on its venturer for the game (`MagicPlayer.DungeonsCompleted`); "if you've completed
+  a dungeon" (Caves of Chaos Adventurer, MC-4.4i2a) is `YouCompletedADungeon`.
 - **"Whenever [a creature with …] deals combat damage to a player"** — not "this" — is
   `Trigger.CombatDamageBy`, a filter on the damage's SOURCE (Phlox); the event's subject is the player.
 - **"Sacrifice it at the beginning of the next end step"** on a new token is `CreateTokens`/`CreateTokenCopy`

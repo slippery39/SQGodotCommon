@@ -109,6 +109,9 @@ public record StackAbility : GameObject
 	/// Tishana's Tidebinder countering Sneak Attack's "sacrifice the creature" strips no creature (Counter.Then).
 	/// </summary>
 	public bool Delayed { get; init; }
+
+	/// <summary>Fury's trigger: how its 4 damage is divided among the targets chosen — a spell's OnStackComponent.Shares.</summary>
+	public ImmutableArray<int> Shares { get; init; } = [];
 }
 
 /// <summary>
@@ -1120,18 +1123,7 @@ public static class StackResolution
 					? Enumerable
 						.Range(0, x)
 						.Select(i => t with { PerX = false, NotThePrevious = i > 0 })
-				: t.Divide > 0
-					? Enumerable
-						.Range(0, t.Divide)
-						.Select(i =>
-							t with
-							{
-								Divide = 0,
-								Optional = i > 0,
-								NotThePrevious = i > 0,
-							}
-						)
-				: [t]
+					: Division.Words(t)
 			),
 		];
 		// Goryo's Vengeance spliced on (CR 702.47b): its target words after the spell's own, its effects after — each
@@ -1325,6 +1317,8 @@ public static class StackResolution
 			.Add(ContextKeys.EventCard, eventCard);
 		if (top is Card divided && divided.GetComponent<OnStackComponent>() is { } division)
 			context = context.Add(ContextKeys.Shares, division.Shares);
+		if (top is StackAbility { Shares.IsEmpty: false } dividedAbility) // Fury's trigger
+			context = context.Add(ContextKeys.Shares, dividedAbility.Shares);
 		if (top is StackAbility { EventSnapshot: { } snapshotOfEvent })
 			context = context.Add(ContextKeys.EventSnapshot, snapshotOfEvent);
 		if (top is StackAbility { EventObject: { } eventObject })
@@ -1415,6 +1409,39 @@ public static class Division
 					Splits(total - first, k - 1).Select(rest => rest.Insert(0, first))
 				),
 		];
+
+	/// <summary>A divided word as the N words it is (CR 601.2d): the first required, the rest optional and different.</summary>
+	public static IEnumerable<TargetSpec> Words(TargetSpec t) =>
+		t.Divide > 0
+			? Enumerable
+				.Range(0, t.Divide)
+				.Select(i => t with { Divide = 0, Optional = i > 0, NotThePrevious = i > 0 })
+			: [t];
+
+	/// <summary>"Divide among the targets": one of the ways, named for the targets chosen (0 is a word left empty).</summary>
+	public static ChooseKeywordChoice Ask(
+		GameState s,
+		int playerId,
+		ImmutableList<ImmutableArray<int>> splits,
+		ImmutableArray<int> chosen
+	)
+	{
+		var named = chosen.Where(id => id != 0).ToList();
+		return new ChooseKeywordChoice(
+			playerId,
+			[
+				.. splits.Select(split =>
+					string.Join(
+						", ",
+						split.Select((n, i) => $"{n} to {s.GetObject(named[i]).Name}")
+					)
+				),
+			]
+		)
+		{
+			Prompt = "Divide among the targets",
+		};
+	}
 
 	/// <summary>A cast's shares fit its targets: none without a division or when only one way is left, else one of the ways.</summary>
 	public static bool Fits(int total, ImmutableArray<int> targets, ImmutableArray<int> shares)
@@ -1544,22 +1571,7 @@ public record CastWithChosenTargetsAction(CastSpellAction Cast, bool Retain) : G
 					{
 						Steps =
 						[
-							new ChooseKeywordChoice(
-								cast.PlayerId,
-								[
-									.. splits.Select(split =>
-										string.Join(
-											", ",
-											split.Select(
-												(n, i) => $"{n} to {s.GetObject(chosen[i]).Name}"
-											)
-										)
-									),
-								]
-							)
-							{
-								Prompt = "Divide among the targets",
-							},
+							Division.Ask(s, cast.PlayerId, splits, chosen),
 							new CastWithChosenDivisionAction(cast, splits, Retain),
 						],
 					}

@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 34/46 · uncommon 54/86 · rare 135/279 · mythic 51/108 · **283/528**
+**Playable:** common 36/46 · uncommon 58/86 · rare 137/279 · mythic 53/108 · **293/528**
 
 ### "Name Sticker" Goblin
 
@@ -535,7 +535,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever this creature attacks, another target creature you control gets +2/+0 and gains trample until end of turn.  
 > Mountaincycling {1} ({1}, Discard this card: Search your library for a Mountain card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Oliphaunt"] =
+[
+	When(
+		TriggerEvent.SelfAttacks,
+		[Target(Is.Creature & Is.Yours & !Is.Source)],
+		new ModifyUntilEndOfTurn(Ref.Target(), 2, 0, "Trample")
+	),
+	Cycling(
+		"{1}",
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Subtype = "Mountain",
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Orcish Lumberjack
 
@@ -820,7 +841,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Unholy Heat deals 2 damage to target creature or planeswalker.  
 > Delirium — Unholy Heat deals 6 damage instead if there are four or more card types among cards in your graveyard.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Unholy Heat"] =
+[
+	Spell(
+		[CreatureOrPlaneswalker],
+		new If(Delirium, [new DealDamage(Ref.Target(), 6)])
+		{
+			Otherwise = [new DealDamage(Ref.Target(), 2)],
+		}
+	),
+],
+```
 
 ### We Say Thee Nay!
 
@@ -1241,7 +1277,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you cast a noncreature spell, surveil 1. (Look at the top card of your library. You may put that card into your graveyard.)  
 > Delirium — As long as there are four or more card types among cards in your graveyard, this creature gets +2/+2, has flying, and attacks each combat if able.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2iTests
+
+**Engine pieces:** `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
+
+```csharp
+["Dragon's Rage Channeler"] =
+[
+	When(TriggerEvent.YouCastNoncreatureSpell, [], new Surveil(1)),
+	new StaticEffectComponent(Is.Source, "Flying")
+	{
+		Power = 2,
+		Toughness = 2,
+		If = Delirium,
+	},
+	new StaticEffectComponent(Is.Source, Combat.AttacksEachCombat) { If = Delirium },
+],
+```
 
 ### Elvish Spirit Guide
 
@@ -1263,7 +1315,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > //   
 > Destroy target artifact. (Then exile this card. You may cast the creature later from exile.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Embereth Shieldbreaker // Battle Display"] =
+[
+	Adventure(
+		"Embereth Shieldbreaker // Battle Display",
+		[Target(Is.Artifact)],
+		new Destroy(Ref.Target())
+	),
+],
+```
 
 ### Exhume
 
@@ -1410,7 +1475,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you attack, you may sacrifice another creature or an artifact. If you do, create a 4/1 black Skeleton creature token with menace that's tapped and attacking. (It can't be blocked except by two or more creatures.)  
 > Choose a Background (You can have a Background as a second commander.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `MaySacrifice` — "You may sacrifice a [Filter]. If you do, [Then]" — the controller picks one or none;…
+
+```csharp
+["Gut, True Soul Zealot"] =
+[
+	When(
+		TriggerEvent.YouAttack,
+		[],
+		new MaySacrifice(
+			Is.Creature & !Is.Source | Is.Artifact,
+			[
+				new CreateTokens(Skeleton, 1) { Tapped = true, Attacking = true },
+			]
+		)
+	),
+],
+```
 
 ### Haywire Mite
 
@@ -1495,7 +1578,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Ivora enters and whenever it deals combat damage to a player, create a Blood token. (It's an artifact with "{1}, {T}, Discard a card, Sacrifice this token: Draw a card.")  
 > Whenever you discard a card, put a +1/+1 counter on Ivora.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2iTests
+
+**Engine pieces:** `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Ivora, Insatiable Heir"] =
+[
+	When(TriggerEvent.SelfEnters, [], CreateBlood(1)),
+	When(TriggerEvent.SelfDealsCombatDamageToPlayer, [], CreateBlood(1)),
+	When(
+		new Trigger(EventKind.Discarded) { By = Whose.You },
+		[],
+		new PutCounters(Ref.Source, 1)
+	),
+],
+```
 
 ### Life // Death
 
@@ -2819,7 +2917,39 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you take the initiative.  
 > Whenever this creature attacks, exile the top card of your library. If you've completed a dungeon, you may play that card this turn without paying its mana cost. Otherwise, you may play that card this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2iTests
+
+**Engine pieces:** `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MakePlayable` — Emry, Lurker of the Loch: "Choose target artifact card in your graveyard. You may cast…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TakeTheInitiative` — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) —…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.; `YouCompletedADungeon` — Caves of Chaos Adventurer: "If you've completed a dungeon" — this game…
+
+```csharp
+["Caves of Chaos Adventurer"] =
+[
+	When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new ExileTopPlayable
+		{
+			Play = null,
+			Then =
+			[
+				new If(
+					new YouCompletedADungeon(),
+					[
+						new MakePlayable(
+							Ref.ThisWay,
+							new() { ThisTurn = true, Free = true }
+						),
+					]
+				)
+				{
+					Otherwise = [new MakePlayable(Ref.ThisWay, new() { ThisTurn = true })],
+				},
+			],
+		}
+	),
+],
+```
 
 ### Cecil, Dark Knight // Cecil, Redeemed Paladin
 
@@ -4282,7 +4412,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Headliner Scarlett enters, creatures target player controls can't block this turn.  
 > At the beginning of your upkeep, exile the top card of your library face down. You may look at and play that card this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `FaceDown` — Abhorrent Oculus' manifest dread: "Put one onto the battlefield face down as a 2/2…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Headliner Scarlett"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Player()],
+		new ModifyUntilEndOfTurn(
+			Ref.PermanentsOfTargetPlayer(CardType.Creature, 0),
+			0,
+			0,
+			Combat.CantBlock
+		)
+	),
+	When(
+		TriggerEvent.YourUpkeep,
+		[],
+		new ExileTopPlayable { FaceDown = true, Play = new() { ThisTurn = true } }
+	),
+],
+```
 
 ### Hedge Maze
 
@@ -7545,7 +7698,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, it deals 4 damage divided as you choose among any number of target creatures and/or planeswalkers.  
 > Evoke—Exile a red card from your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2iTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Fury"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[CreatureOrPlaneswalker with { Divide = 4 }],
+		new DealDamage(Ref.EachTarget, Count.Share)
+	),
+	.. Evoke(ManaColor.Red),
+],
+```
 
 ### Garruk, Curse Breaker
 
@@ -8747,7 +8914,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may put a creature card from your hand onto the battlefield. That creature gains haste. Sacrifice that creature at the beginning of the next end step.  
 > Splice onto Arcane {2}{R}{R} (As you cast an Arcane spell, you may reveal this card from your hand and pay its splice cost. If you do, add this card's effects to that spell.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AtNextEndStep` — Erica Ortegas: "return a land you control to its owner's hand at the beginning of the…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.
+
+```csharp
+["Through the Breach"] =
+[
+	Spell(
+		[],
+		new MoveChosen(ZoneType.Hand, Is.Creature, ZoneType.Battlefield)
+		{
+			May = true,
+			Then =
+			[
+				// "That creature gains haste." — no duration: while it stays that permanent
+				new ModifyUntilEndOfTurn(Ref.Chosen, 0, 0, "Haste") { ForGood = true },
+				new AtNextEndStep([new Sacrifice(Ref.Source)]) { On = Ref.Chosen },
+			],
+		}
+	),
+	SpliceOntoArcane("{2}{R}{R}"),
+],
+// "Choose a Background" has no rules force outside a Commander game — no Background is in the cube.
+```
 
 ### Time Vault
 
@@ -8932,7 +9122,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Each player discards their hand, then draws seven cards.
 
-**Status:** scripted · **tests naming it:** LsvBatch2cTests
+**Status:** scripted · **tests naming it:** LsvBatch2cTests, LsvBatch2iTests
 
 **Engine pieces:** `DiscardHand` — Ajani Unrelenting: "Discard your hand" — the whole hand, so there is nothing to choose.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

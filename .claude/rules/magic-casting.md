@@ -222,6 +222,10 @@ whose subsystem it lives in.
   place among the targets as CHOSEN, so one gone illegal takes its share with it. Past two it is ONE cast
   (`ChoosesTargets`): `ChooseXTargetsChoice` (one to N), then — two or three targets — a `ChooseKeywordChoice` of the
   ways (`Division.Splits`); never a cast per set and split (1,365 against 12 creatures). Pure Energy's two stay casts.
+  **A triggered ability divides too** (Fury: "4 damage divided as you choose among any number of target creatures
+  and/or planeswalkers", MC-4.4i2a): `Triggers.QueueTargets` makes the same words (`Division.Words`), a
+  `ChooseTargetChoice` each, and `PutTriggerOnStackAction` asks the split (`Division.Ask`) after them — the shares on
+  `StackAbility.Shares`, read as a spell's.
 - **Kicker** is `KickerComponent(mana) { Costs }` and `CastSpellAction.Kicked` (one cast unkicked, one
   kicked; `|k` in `MoveKey` only when kicked): the mana joins the total in `Costs.Of(…, added:)`, the costs
   join `CastSpellAction.CostsOf(…, kicked)` — a kicker sacrifice is the ordinary `SacrificeId`. The stack

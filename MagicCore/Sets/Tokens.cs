@@ -5,7 +5,7 @@ using MagicCore.Effects;
 namespace MagicCore.Sets;
 
 /// <summary>
-/// The tokens more than one set makes — Treasure, Clue, Food — and the helper every set's token
+/// The tokens more than one set makes — Treasure, Clue, Food, Blood — and the helper every set's token
 /// definitions are written with. A set's own tokens (FRA's Cadet, TRK's Officer) stay in its Cards file.
 /// </summary>
 public static class Tokens
@@ -60,6 +60,22 @@ public static class Tokens
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new DrawCards(Ref.You, 1)])
 				{
 					Costs = [new SacrificeSelfCost()],
+				},
+			],
+		};
+
+	/// <summary>"A Blood token. (It's an artifact with '{1}, {T}, Discard a card, Sacrifice this token: Draw a card.')"</summary>
+	public static readonly CardData Blood = Token("Blood", "Artifact — Blood");
+
+	/// <summary>"Create a Blood token" (Ivora, Insatiable Heir).</summary>
+	public static CreateTokens CreateBlood(Count count) =>
+		new(Blood, count)
+		{
+			Abilities =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new DrawCards(Ref.You, 1)])
+				{
+					Costs = [new TapSelfCost(), new DiscardCost(), new SacrificeSelfCost()],
 				},
 			],
 		};

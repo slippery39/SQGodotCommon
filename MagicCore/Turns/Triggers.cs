@@ -148,13 +148,16 @@ public record SurveilledEvent(int PlayerId) : MagicEvent
 	public override int By(GameState s) => PlayerId;
 }
 
-/// <summary>A player discarded these cards — one event per discard, however many cards.</summary>
-public record DiscardedEvent(int PlayerId, ImmutableList<int> CardIds) : MagicEvent
+/// <summary>
+/// A player discarded this card — one event per card (Ivora, Insatiable Heir: "Whenever you discard a card"), as
+/// DrewCardEvent; "one or more cards" (Tinybones, Inti) is Trigger.OneOrMore.
+/// </summary>
+public record DiscardedEvent(int PlayerId, int CardId) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.Discarded;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
-		CardIds.Where(s.HasObject).Select(s.GetObject);
+		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
 
 	public override int By(GameState s) => PlayerId;
 }
@@ -462,9 +465,11 @@ public static class Triggers
 			.Concat(offTheBattlefield)
 			.Concat(delayedInExile)
 			.SelectMany(found =>
-				events
-					.Where(e => Matches(s, found.source, found.a.On, e))
-					.Take(found.a.On.OneOrMore ? 1 : int.MaxValue) // "one or more": one per batch
+				OnePerBatch(
+						s,
+						events.Where(e => Matches(s, found.source, found.a.On, e)),
+						found.a.On.OneOrMore
+					)
 					.SelectMany(e =>
 						Enumerable.Repeat(
 							new Pending(
@@ -885,6 +890,16 @@ public static class Triggers
 			? s.GetObject(targeted.ByStackObjectId)
 			: null;
 
+	/// <summary>
+	/// "One or more" (Trigger.OneOrMore): one event per player per batch — each player's own (CR 603.2c: Wheel of
+	/// Fortune's two discards trigger Tinybones twice; Laelia's and Vash's are By you, so one).
+	/// </summary>
+	static IEnumerable<GameEvent> OnePerBatch(
+		GameState s,
+		IEnumerable<GameEvent> matched,
+		bool oneOrMore
+	) => oneOrMore ? matched.DistinctBy(e => (e as MagicEvent)?.By(s) ?? 0) : matched;
+
 	/// <summary>The card the event is about — what "that creature" and "that land" mean; 0 if none.</summary>
 	static int EventCard(GameEvent e) =>
 		e switch
@@ -1024,6 +1039,10 @@ public static class Triggers
 		var controller = t.Source.ControllerId;
 		if (specs.Any(spec => !spec.Optional && !spec.Candidates(s, controller, t.Source.Id).Any()))
 			return s;
+		// Fury: "4 damage divided as you choose among any number of target creatures and/or planeswalkers" — N words
+		// chosen one at a time, as a spell's are (Division.Words), the division after them (CR 603.3d).
+		var divided = specs.Sum(spec => spec.Divide);
+		specs = [.. specs.SelectMany(Actions.Division.Words)];
 		if (t.Ability.If is { } condition)
 			steps = [new If(condition, steps)]; // CR 603.4: checked again on resolution
 		return s.SpawnAction(
@@ -1045,6 +1064,7 @@ public static class Triggers
 						EventObject = t.EventObject,
 						X = XOf(t),
 						Delayed = t.Delayed,
+						Divided = divided,
 					},
 				],
 			}
@@ -1069,11 +1089,43 @@ public record PutTriggerOnStackAction : GameAction
 	/// <summary>A delayed trigger (CR 603.7) — StackAbility.Delayed.</summary>
 	public bool Delayed { get; init; }
 
+	/// <summary>Fury: the total its targets divide (TargetSpec.Divide); 0 when it divides nothing.</summary>
+	public int Divided { get; init; }
+
+	/// <summary>The targets read before the division was asked, and its ways — set (Splits not empty) when it runs again after.</summary>
+	public ImmutableArray<int> Chosen { get; init; } = [];
+	public ImmutableList<ImmutableArray<int>> Splits { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
-		var targets = ChooseTargetChoice.Read(InputContext, Specs.Count);
+		var targets = Splits.IsEmpty ? ChooseTargetChoice.Read(InputContext, Specs.Count) : Chosen;
 		if (Specs.Where((spec, i) => !spec.Optional && targets[i] == 0).Any())
 			return new(s);
+		ImmutableArray<int> shares = [];
+		if (Divided > 0 && !Splits.IsEmpty)
+			shares = Splits[(int)InputContext[ChooseKeywordChoice.Chosen] - 1];
+		else if (Divided > 0)
+		{
+			var splits = Actions.Division.Splits(Divided, targets.Count(id => id != 0));
+			if (splits.Count > 1)
+				return new(
+					s.SpawnAction(
+						new PipelineAction
+						{
+							Steps =
+							[
+								Actions.Division.Ask(s, ControllerId, splits, targets),
+								this with
+								{
+									Chosen = targets,
+									Splits = splits,
+								},
+							],
+						}
+					)
+				);
+			shares = splits.Single();
+		}
 		return new(
 			StackResolution.Push(
 				s,
@@ -1092,6 +1144,7 @@ public record PutTriggerOnStackAction : GameAction
 					X = X,
 					Triggered = true,
 					Delayed = Delayed,
+					Shares = shares,
 				}
 			)
 		);

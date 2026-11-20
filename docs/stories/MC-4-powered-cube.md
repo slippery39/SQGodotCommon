@@ -1443,6 +1443,28 @@ as his three priorities.
   cards, as h7–h9), **i7** (the five missed DFCs, on i5's transform; Sink into Stupor is modal, its own piece). **Each
   session's summary gives the cube's cards implemented by rarity AND by colour** — `python tools/magic_set.py coverage
   --set LSV` prints both (its colour line reads a DFC's front face, the survey's gap).
+- 2026-11-20, Claude (cube lane) — **4.4i1 + i2a as one batch: red's 6 tested pieces and 4 trigger and combat options —
+  293 of 528 play (red 47 of 54).** i1 as planned, all tier 1 (read on the card sheet): Embereth Shieldbreaker
+  (`Adventure`), Oliphaunt (Troll's landcycling as Mountain), Unholy Heat (`If { Otherwise }` on `LsvCards.Delirium`,
+  `CardTypesAmong(Ref.CardsInYourGraveyard)` ≥ 4), Through the Breach (Sneak Attack's `MoveChosen { Then }` +
+  `SpliceOntoArcane("{2}{R}{R}")`), Gut (`YouAttack`, `MaySacrifice`, a Skeleton `{ Tapped, Attacking }`; "Choose a
+  Background" unscripted), Headliner Scarlett (`PermanentsOfTargetPlayer` + `Combat.CantBlock`; `ExileTopPlayable {
+  FaceDown, Play { ThisTurn } }`). i2a, four options: **Fury** — `TargetSpec.Divide` on a TRIGGER: `QueueTargets` makes
+  the words (`Division.Words`, now shared with `TextOf`), one `ChooseTargetChoice` each, and `PutTriggerOnStackAction`
+  asks the split (`Division.Ask`, shared with the cast) after them, the shares on `StackAbility.Shares`. **Ivora** —
+  `DiscardedEvent` is one per CARD (`CardId`), and `TriggerEvent.APlayerDiscards` (Tinybones, Inti: "one or more") is
+  `OneOrMore`, one per PLAYER per priority pass (`Triggers.OnePerBatch`: Wheel of Fortune's two discards trigger Tinybones
+  twice, CR 603.2c — the review caught it collapsing to one; a ceiling left: one player's two separate discards before
+  priority trigger Inti once, DesignNotes); the Blood token is `Tokens.CreateBlood`. **Dragon's Rage Channeler** — goad's requirement generalised to
+  `Combat.MustAttack` (goaded, or the keyword-like `Combat.AttacksEachCombat`, granted by its delirium static).
+  **Caves of Chaos Adventurer** — `Undercity.Complete` (both removals) counts `MagicPlayer.DungeonsCompleted`, read by
+  `YouCompletedADungeon`; the exile `ExileTopPlayable { Play = null, Then }` → `MakePlayable { ThisTurn [, Free] }`.
+  Legal actions: none grow with the board (Fury's targets one word at a time, the split one choice — the review noted
+  the words reach one set in every order, k! duplicates for the AI's search; left as it is, the probe's 272 Fury casts
+  finished, and `ChooseXTargetsChoice` taking a spec is the upgrade). 12 tests in `LsvBatch2iTests.cs`; 8/8
+  revert-checks caught (Tinybones' OneOrMore by its own old test). Golden-out moved nothing (162 random, 865 card games);
+  golden-in moved 30 random and 618 card games, 40 added; probe 150: none unfinished, every card used (Oliphaunt cycled
+  248, Fury 272 casts); the checks 17.2 min; after the review's fixes the full suite again, 2,121 passed.
 
 ## Tasks
 
@@ -1690,9 +1712,9 @@ as his three priorities.
   - [ ] MC-4.4i Red beyond tier 1 (Shayne, 2026-11-20: the next colour) — 17 cards read card by card and tiered
         (Decisions, "4.4i"): 6 tested pieces, 7 options, 4 new pieces; four batches — i1 + i2a, i2b + i3, i4–i6, i7
         (Shayne: more cards a session):
-    - [ ] MC-4.4i1 The tested pieces, 6 (one batch with i2a): Embereth Shieldbreaker // Battle Display, Oliphaunt, Unholy Heat, Through the
+    - [x] MC-4.4i1 The tested pieces, 6 (one batch with i2a): Embereth Shieldbreaker // Battle Display, Oliphaunt, Unholy Heat, Through the
           Breach, Gut, True Soul Zealot, Headliner Scarlett
-    - [ ] MC-4.4i2a Options, triggers and combat, 4: Fury, Ivora, Insatiable Heir, Dragon's Rage Channeler, Caves of
+    - [x] MC-4.4i2a Options, triggers and combat, 4: Fury, Ivora, Insatiable Heir, Dragon's Rage Channeler, Caves of
           Chaos Adventurer
     - [ ] MC-4.4i2b Options, casting, 3 (one batch with i3): Batroc the Leaper (multikicker), Ragavan, Nimble Pilferer and Death-Greeter's
           Champion (dash, backup)
@@ -1723,7 +1745,13 @@ which every colour's survey missed (Decisions, "4.4i"; blue's three too). **Red 
 4.4i** (Decisions, "4.4i") — i1 the 6 tested pieces, i2a/i2b the 7 options, then i3–i6 one new piece a session (an
 extra combat, energy, transforming DFCs, Etali); i7 the missed blue and black DFCs — built as four batches, i1 + i2a,
 i2b + i3, i4–i6, i7 (Shayne: more cards a session). Each session ends with the cube's cards implemented by rarity AND
-by colour (`python tools/magic_set.py coverage --set LSV`). Next, in a NEW session: **MC-4.4i1 + i2a** (10 cards). From
+by colour (`python tools/magic_set.py coverage --set LSV`). **i1 + i2a are done** (Decisions, "4.4i1 + i2a"; 293 of 528
+play, red 47 of 54). Next, in a NEW session: **MC-4.4i2b + i3** (4 cards: Batroc the Leaper, Ragavan, Death-Greeter's
+Champion, Fear of Missing Out). From i1 + i2a: delirium is `LsvCards.Delirium`; a trigger's divided targets are
+`Division.Words` / `Division.Ask` (`StackAbility.Shares`); `DiscardedEvent` is one per card ("one or more" is
+`OneOrMore`); "attacks each combat if able" is `Combat.AttacksEachCombat` (`Combat.MustAttack`); "if you've completed a
+dungeon" `YouCompletedADungeon`; the Blood token `Tokens.CreateBlood`. Their tests are in `LsvBatch2iTests.cs`
+(`Delirium()`: four card types in my graveyard, `Ox(name)`: their 1/5). From
 h7–h9: saddle is `LsvCards.Saddle(n)` ("saddled"
 `Is.With("Saddled")`); emerge `Scripting.Emerge(cost, filter)` (`MayCastFromHandFree.LessTheSacrificed`);
 `ExileTopPlayable { Linked }` groups exiles from several zones for `Is.ExiledBySource`; a trigger read from a hand or
@@ -2039,3 +2067,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   Next: MC-4.4i1, after Shayne's review.
 - 2026-11-20: Shayne: more cards a session — red's parts as four batches (i1 + i2a, i2b + i3, i4–i6, i7); each
   session's summary by rarity and by colour (`magic_set.py coverage` prints both). Next: MC-4.4i1 + i2a.
+- 2026-11-20: MC-4.4i1 + i2a done as one batch: red's 6 tested pieces and 4 options — 293 of 528 play (red 47 of 54).
+  A trigger's divided targets, one discard event per card, `Combat.MustAttack`, completed dungeons counted.
+  Next: MC-4.4i2b + i3.

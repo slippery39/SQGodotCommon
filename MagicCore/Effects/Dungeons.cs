@@ -114,6 +114,17 @@ public static class Undercity
 	/// </summary>
 	public static bool IsOnLastRoom(Card dungeon) =>
 		dungeon.GetComponent<DungeonComponent>() is { } d && Rooms[d.Room].Exits.IsEmpty;
+
+	/// <summary>
+	/// CR 309.7: a dungeon removed on its last room is completed — removed, and counted on its venturer
+	/// (MagicPlayer.DungeonsCompleted: Caves of Chaos Adventurer's "if you've completed a dungeon").
+	/// </summary>
+	public static GameState Complete(GameState s, int playerId, Card dungeon)
+	{
+		s = s.RemoveObject(dungeon.Id);
+		var player = s.GetPlayer(playerId);
+		return s.WithPlayer(player with { DungeonsCompleted = player.DungeonsCompleted + 1 });
+	}
 }
 
 /// <summary>
@@ -130,7 +141,7 @@ public record Venture : Effect
 	public static GameState Into(GameState s, int playerId)
 	{
 		if (Undercity.Of(s, playerId) is { } done && Undercity.IsOnLastRoom(done))
-			s = s.RemoveObject(done.Id);
+			s = Undercity.Complete(s, playerId, done);
 		if (Undercity.Of(s, playerId) is not { } dungeon)
 		{
 			s = GetEmblem.ToCommandZone(s, playerId, Undercity.Name, [new DungeonComponent(0)]);
@@ -245,6 +256,13 @@ public record TakeTheInitiative(Ref Who) : Effect
 			s = Venture.Into(InitiativeComponent.Take(s, player), player);
 		return new(s);
 	}
+}
+
+/// <summary>Caves of Chaos Adventurer: "If you've completed a dungeon" — this game (MagicPlayer.DungeonsCompleted).</summary>
+public record YouCompletedADungeon : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetPlayer((int)context[ContextKeys.Controller]).DungeonsCompleted > 0;
 }
 
 /// <summary>Feywild Caretaker: "if you have the initiative".</summary>

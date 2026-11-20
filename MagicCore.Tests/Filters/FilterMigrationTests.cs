@@ -711,7 +711,7 @@ public class FilterMigrationTests
 							p,
 							ev == Ev.Targeted
 								? new BecameTargetEvent(c.Id, p, 0)
-								: new DiscardedEvent(p, [c.Id])
+								: new DiscardedEvent(p, c.Id)
 						);
 					break;
 				default:

@@ -98,3 +98,4 @@ after the split is DEV-4.3.
 | 2026-11-20 | MC-4.4h5: Auras returning a creature (Animate Dead, Necromancy), 2 cards | f4253bfd | 85 | 224k | 3.3M |
 | 2026-11-20 | MC-4.4h6: naming a card as a spell resolves (Demonic Consultation), 1 card | d929fb26 | 63 | 179k | 1.8M |
 | 2026-11-20 | MC-4.4h7-h9: saddle, emerge, miracle as ONE batch (Caustic Bronco, Crabomination, Metamorphosis Fanatic), 3 cards | 35f5d2dd | 127 | 243k | 4.7M |
+| 2026-11-20 | MC-4.4i1 + i2a: red's tested pieces and trigger/combat options, 10 cards | f62f97fb | 103 | 222k | 3.7M |

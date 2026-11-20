@@ -49,7 +49,9 @@ whose subsystem it lives in.
   SacrificeAtNextEndStep }` (MC-4.4d2b) — `EnterBattlefield(attacking:)`, the same stamp; tapped is its own word there.
 - **Goad** (CR 701.15, Undercity's Arena) is `Undercity.Goad(ref)`: the keyword-like grant `Combat.Goaded` until the
   goader's next turn (`ModifyUntilEndOfTurn { UntilYourNextTurn }`), read from that stamp by `Combat.IsGoaded` — an
-  effect, so losing all abilities doesn't end it. `DeclareAttackerChoice` offers a goaded creature no "Don't attack",
+  effect, so losing all abilities doesn't end it. **"Attacks each combat if able"** (Dragon's Rage Channeler's delirium,
+  MC-4.4i2a) is the ability-side twin, the keyword-like grant `Combat.AttacksEachCombat` (a static's, so losing all
+  abilities ends it); both are ONE question, `Combat.MustAttack`. `DeclareAttackerChoice` offers such a creature no "Don't attack",
   so **"don't attack" is ONE answer, `DeclareAttackerChoice.NoAttack`** (the first target for a goaded creature) — the
   look-ahead's quick answer, `WholeAttacks` and the table's `DeclareCombat`; never a literal `CombatOption.None`.
 - **Exalted** (CR 702.83, Noble Hierarch) is a scripted trigger, `Scripting.Exalted`, not an engine keyword: a creature

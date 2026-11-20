@@ -2762,7 +2762,164 @@ public static class LsvCards
 				),
 				Miracle("{1}{B}"),
 			],
+			// ===== MC-4.4i1: red's tested pieces =====
+			["Embereth Shieldbreaker // Battle Display"] =
+			[
+				Adventure(
+					"Embereth Shieldbreaker // Battle Display",
+					[Target(Is.Artifact)],
+					new Destroy(Ref.Target())
+				),
+			],
+			["Oliphaunt"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[Target(Is.Creature & Is.Yours & !Is.Source)],
+					new ModifyUntilEndOfTurn(Ref.Target(), 2, 0, "Trample")
+				),
+				Cycling(
+					"{1}",
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Subtype = "Mountain",
+						Reveal = true,
+					}
+				),
+			],
+			["Unholy Heat"] =
+			[
+				Spell(
+					[CreatureOrPlaneswalker],
+					new If(Delirium, [new DealDamage(Ref.Target(), 6)])
+					{
+						Otherwise = [new DealDamage(Ref.Target(), 2)],
+					}
+				),
+			],
+			["Through the Breach"] =
+			[
+				Spell(
+					[],
+					new MoveChosen(ZoneType.Hand, Is.Creature, ZoneType.Battlefield)
+					{
+						May = true,
+						Then =
+						[
+							// "That creature gains haste." — no duration: while it stays that permanent
+							new ModifyUntilEndOfTurn(Ref.Chosen, 0, 0, "Haste") { ForGood = true },
+							new AtNextEndStep([new Sacrifice(Ref.Source)]) { On = Ref.Chosen },
+						],
+					}
+				),
+				SpliceOntoArcane("{2}{R}{R}"),
+			],
+			// "Choose a Background" has no rules force outside a Commander game — no Background is in the cube.
+			["Gut, True Soul Zealot"] =
+			[
+				When(
+					TriggerEvent.YouAttack,
+					[],
+					new MaySacrifice(
+						Is.Creature & !Is.Source | Is.Artifact,
+						[new CreateTokens(Skeleton, 1) { Tapped = true, Attacking = true }]
+					)
+				),
+			],
+			["Headliner Scarlett"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player()],
+					new ModifyUntilEndOfTurn(
+						Ref.PermanentsOfTargetPlayer(CardType.Creature, 0),
+						0,
+						0,
+						Combat.CantBlock
+					)
+				),
+				When(
+					TriggerEvent.YourUpkeep,
+					[],
+					new ExileTopPlayable
+					{
+						FaceDown = true,
+						Play = new() { ThisTurn = true },
+					}
+				),
+			],
+			// ===== MC-4.4i2a: red's options, triggers and combat =====
+			["Fury"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[CreatureOrPlaneswalker with { Divide = 4 }],
+					new DealDamage(Ref.EachTarget, Count.Share)
+				),
+				.. Evoke(ManaColor.Red),
+			],
+			["Ivora, Insatiable Heir"] =
+			[
+				When(TriggerEvent.SelfEnters, [], CreateBlood(1)),
+				When(TriggerEvent.SelfDealsCombatDamageToPlayer, [], CreateBlood(1)),
+				When(
+					new Trigger(EventKind.Discarded) { By = Whose.You },
+					[],
+					new PutCounters(Ref.Source, 1)
+				),
+			],
+			["Dragon's Rage Channeler"] =
+			[
+				When(TriggerEvent.YouCastNoncreatureSpell, [], new Surveil(1)),
+				new StaticEffectComponent(Is.Source, "Flying")
+				{
+					Power = 2,
+					Toughness = 2,
+					If = Delirium,
+				},
+				new StaticEffectComponent(Is.Source, Combat.AttacksEachCombat) { If = Delirium },
+			],
+			["Caves of Chaos Adventurer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new ExileTopPlayable
+					{
+						Play = null,
+						Then =
+						[
+							new If(
+								new YouCompletedADungeon(),
+								[
+									new MakePlayable(
+										Ref.ThisWay,
+										new() { ThisTurn = true, Free = true }
+									),
+								]
+							)
+							{
+								Otherwise =
+								[
+									new MakePlayable(Ref.ThisWay, new() { ThisTurn = true }),
+								],
+							},
+						],
+					}
+				),
+			],
 		};
+
+	/// <summary>
+	/// Delirium (Unholy Heat, Dragon's Rage Channeler): "if there are four or more card types among cards in your
+	/// graveyard".
+	/// </summary>
+	static Condition Delirium => new AtLeast(Count.CardTypesAmong(Ref.CardsInYourGraveyard), 4);
+
+	/// <summary>Gut, True Soul Zealot: "a 4/1 black Skeleton creature token with menace".</summary>
+	static CardData Skeleton =>
+		Token("Skeleton", "Creature — Skeleton", "4", "1", ["B"], ["Menace"]);
 
 	/// <summary>
 	/// Saddle N (CR 702.171, Caustic Bronco): "Tap any number of other creatures you control with total power N or more:

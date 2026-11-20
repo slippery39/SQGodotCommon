@@ -17,7 +17,9 @@ here. The rules that hold on every task are in `MagicCore/CLAUDE.md`. One file p
 whose subsystem it lives in.
 
 - **Discarding is `MagicState.Discard`** — effects, costs (cast or ability) and the cleanup alike: one
-  `DiscardedEvent` per batch ("one or more cards"), counted in `TurnTally.CardsDiscarded`. A chosen
+  `DiscardedEvent` per CARD (MC-4.4i2a: Ivora's "whenever you discard a card" triggers twice for two, as `DrewCardEvent`;
+  "one or more cards" — Tinybones, Inti — is `Trigger.OneOrMore`, `TriggerEvent.APlayerDiscards`), counted in
+  `TurnTally.CardsDiscarded`. A chosen
   card going to the graveyard is a discard only from the hand (`MoveChosenToGraveyardAction`; surveil
   isn't). "When you discard this card" triggers `From = Graveyard`, where the card now is. Something that
   triggers in the cleanup (a discard to hand size) gets priority THERE, then another cleanup step

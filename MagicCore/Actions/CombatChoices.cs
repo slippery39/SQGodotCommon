@@ -35,8 +35,8 @@ public record DeclareAttackerChoice : ChoiceAction
 			.Any(s.HasAbility<Effects.OneAttackerPerPlaneswalkerYouControl>);
 		return
 		[
-			// CR 508.1d: a goaded creature that can attack must (Combat.Goaded)
-			.. Combat.IsGoaded(s.GetCard(CreatureId))
+			// CR 508.1d: a creature that attacks if able and can attack must (goad, "attacks each combat if able")
+			.. Combat.MustAttack(s, s.GetCard(CreatureId))
 				? (ChoiceOption[])[]
 				: [new ChoiceOption { Id = CombatOption.None, DisplayText = "Don't attack" }],
 			new ChoiceOption { Id = opponent.Id, DisplayText = $"Attack {opponent.Name}" },

@@ -168,6 +168,19 @@ public static class Combat
 		c.Components.Any(x => x is UntilEndOfTurn { Keyword: Goaded });
 
 	/// <summary>
+	/// Dragon's Rage Channeler: "attacks each combat if able" — a keyword-like grant (its delirium static), read with
+	/// goad's requirement by MustAttack.
+	/// </summary>
+	public const string AttacksEachCombat = "Attacks each combat if able";
+
+	/// <summary>
+	/// CR 508.1d: it attacks if able — goaded (an effect, IsGoaded) or "attacks each combat if able" (an ability,
+	/// s.Has, so losing all abilities ends it). DeclareAttackerChoice offers it no "Don't attack".
+	/// </summary>
+	public static bool MustAttack(GameState s, Card c) =>
+		IsGoaded(c) || s.Has(c, AttacksEachCombat);
+
+	/// <summary>
 	/// How many creatures it takes to block this attacker — menace's two (CR 702.110b), Troll of Khazad-dûm's three
 	/// (MinimumBlockers); fewer are dropped as blockers are declared (FinishBlockersAction).
 	/// </summary>
