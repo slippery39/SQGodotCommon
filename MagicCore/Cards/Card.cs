@@ -356,6 +356,7 @@ public record Card : GameObject
 				or EnteredAsCopy
 				or FaceDown
 				or CastAsAdventure
+				or Actions.Spliced
 				or Effects.DelayedTrigger
 				or Animated
 				or Effects.TriggersAdditionalTime { UntilUntapped: true }

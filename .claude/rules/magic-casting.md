@@ -255,6 +255,13 @@ whose subsystem it lives in.
   NO target words (`StackResolution.TextOf(…, alternative)`; a copy's too, from the stack's `AlternativeCost`),
   so hexproof and protection never stop it and nothing fizzles. "Each" is the script's: `If(AlternativeCostWasPaid,
   [the each version]) { Otherwise = [the target version] }` — never an effect rewritten by the engine. One cast overloaded.
+  **Splice** (CR 702.47, Goryo's Vengeance, MC-4.4h4) is `Scripting.SpliceOntoArcane(cost)` (`SpliceComponent(Cost,
+  Onto)`, a filter asked of the spell) and `CastSpellAction.Splice` — the ids of cards in the caster's hand, one cast per
+  set (`|s` in `MoveKey`). The cast is validated and made on the card stamped `Spliced` (the texts and costs, status — an
+  Adventure's shape): the costs join the total as kicker's, the cards are revealed and stay in the hand, and
+  `StackResolution.TextOf` appends each text after the spell's own, its targets scoped as a mode's (`ScopeTargetsAction`:
+  Goryo's `Target(0)` is its own word; the spell's own text scoped to its own words, so its "each target" isn't Goryo's). `PutOnStack` re-stamps it after the move; leaving the stack takes it, a copy keeps it.
+  Through the Breach takes it with red.
   **"Its owner puts it on their choice of the top or bottom of their library"** is Clash of Elements' `May { Who =
   Ref.OwnerOfTarget(), Otherwise }` over two `MoveTo(…, Library) { From = [Stack] }`.
 - **"Choose target [card] in your graveyard. You may cast that card this turn"** (Emry, Lurker of the Loch) is

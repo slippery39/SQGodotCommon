@@ -9,6 +9,17 @@ using MagicCore.Turns;
 
 namespace MagicCore.Actions;
 
+/// <summary>
+/// Splice (CR 702.47c; Goryo's Vengeance onto We Say Thee Nay!): the texts of the cards spliced onto this spell as it
+/// was cast — kept on the spell, so the card leaving its hand changes nothing — and their splice costs. Status: gone as
+/// it leaves the stack (Card.Fresh); a copy of the spell has it too (CR 707.10). Read by StackResolution.TextOf.
+/// </summary>
+public record Spliced(
+	ImmutableArray<int> CardIds,
+	ImmutableList<SpellEffectsComponent> Texts,
+	ManaCost Cost
+) : GameComponent;
+
 /// <summary>What was decided while casting, carried by the card while it is on the stack.</summary>
 public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArray<int> Modes)
 	: GameComponent
@@ -147,6 +158,46 @@ public record CastSpellAction : GameAction
 	/// (715.3a); tell the two apart when a card casts from exile that way (DesignNotes).
 	/// </summary>
 	public bool Adventure { get; init; }
+
+	/// <summary>
+	/// Splice onto Arcane (CR 702.47; Goryo's Vengeance): the cards in the caster's hand revealed and spliced onto this
+	/// spell — each one's splice cost added, its text after the spell's own (Spliced); the cards stay in the hand. One
+	/// cast per set of them (MagicRules.CastCandidates). Validated and cast as the card stamped with Spliced would be.
+	/// </summary>
+	public ImmutableArray<int> Splice { get; init; } = [];
+
+	/// <summary>"As you cast an Arcane spell, you may reveal this card from your hand": may this card splice onto it.</summary>
+	public static bool CanSplice(GameState s, int player, Card spell, int id) =>
+		id != spell.Id
+		&& s.IsIn(id, player, ZoneType.Hand)
+		&& s.GetCard(id).GetComponent<SpliceComponent>() is { } splice
+		&& splice.Onto.Matches(s, spell, new FilterContext(player, spell.Id));
+
+	/// <summary>The state with this cast's card carrying what is spliced onto it; null when that can't be spliced.</summary>
+	public GameState? SplicedState(GameState s)
+	{
+		if (
+			!s.HasObject(CardId)
+			|| s.GetObject(CardId) is not Card card
+			|| card.HasComponent<Spliced>()
+			|| Splice.Distinct().Count() != Splice.Length
+			|| !Splice.All(id => CanSplice(s, PlayerId, card, id))
+		)
+			return null;
+		var spliced = Splice.Select(s.GetCard).ToList();
+		return s.UpdateObject(
+			CardId,
+			card.WithComponent(
+				new Spliced(
+					Splice,
+					[.. spliced.Select(c => c.GetComponent<SpellEffectsComponent>() ?? new([]))],
+					spliced
+						.Select(c => c.GetComponent<SpliceComponent>()!.Cost)
+						.Aggregate((a, b) => a.Plus(b))
+				)
+			)
+		);
+	}
 
 	/// <summary>The state with this cast's card as its Adventure; null when it has none or is in exile.</summary>
 	GameState? AsAdventure(GameState s) =>
@@ -325,6 +376,8 @@ public record CastSpellAction : GameAction
 	ManaCost CostBeforeLife(GameState s, Card card)
 	{
 		var added = Kicked ? card.GetComponent<KickerComponent>()?.Mana : null;
+		if (card.GetComponent<Spliced>() is { } spliced) // Goryo's Vengeance's {2}{B}: an additional cost, paid on a free cast too
+			added = added?.Plus(spliced.Cost) ?? spliced.Cost;
 		if (
 			WithoutPayingManaCost
 			&& !DuringResolution
@@ -367,6 +420,10 @@ public record CastSpellAction : GameAction
 			return AsAdventure(s) is { } asAdventure
 				? (this with { Adventure = false }).PaymentPreview(asAdventure)
 				: null;
+		if (!Splice.IsDefaultOrEmpty)
+			return SplicedState(s) is { } spliced
+				? (this with { Splice = [] }).PaymentPreview(spliced)
+				: null;
 		var card = s.GetCard(CardId);
 		return FindPayment(s, card, Paid(s, card), card.HasComponent<Sunburst>());
 	}
@@ -393,6 +450,10 @@ public record CastSpellAction : GameAction
 			return AsAdventure(s) is { } asAdventure
 				? (this with { Adventure = false }).ValidateAdd(asAdventure)
 				: ValidationResult.Invalid("It can't be cast as an Adventure from here");
+		if (!Splice.IsDefaultOrEmpty)
+			return SplicedState(s) is { } spliced
+				? (this with { Splice = [] }).ValidateAdd(spliced)
+				: ValidationResult.Invalid("Those cards can't be spliced onto it");
 		if (!DuringResolution && Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
 		if (
@@ -510,11 +571,9 @@ public record CastSpellAction : GameAction
 	}
 
 	public override ActionResult Execute(GameState s) =>
-		Adventure
-			? (this with { Adventure = false }).Execute(AsAdventure(s)!)
-			: new(
-				ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId)
-			);
+		Adventure ? (this with { Adventure = false }).Execute(AsAdventure(s)!)
+		: !Splice.IsDefaultOrEmpty ? (this with { Splice = [] }).Execute(SplicedState(s)!)
+		: new(ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId));
 
 	/// <summary>
 	/// Dominion Infiltration: the X targets chosen, then this cast with them — Pyrokinesis: one to four; Mystic
@@ -579,6 +638,8 @@ public record CastSpellAction : GameAction
 	{
 		if (Adventure) // a cast during a resolution comes here without Execute
 			return (this with { Adventure = false }).Cast(AsAdventure(s)!);
+		if (!Splice.IsDefaultOrEmpty)
+			return (this with { Splice = [] }).Cast(SplicedState(s)!);
 		if (ChoosesTargets)
 			return ChooseTargets(s, retain: false);
 		var card = s.GetCard(CardId);
@@ -616,6 +677,8 @@ public record CastSpellAction : GameAction
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		if (Delve > 0)
 			s = Delving.PickAfter(s, PlayerId, CardId, delve: true);
+		foreach (var id in card.GetComponent<Spliced>()?.CardIds ?? []) // "you may reveal this card from your hand"
+			s = s.MakeKnown(id, Knowers.Everyone);
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
 		if (Division.Of(card) is > 0 and var divided) // Pyrokinesis, Pure Energy: the division is announced now
 			s = s.UpdateObject(
@@ -729,6 +792,8 @@ public record CastSpellAction : GameAction
 		s = s.MoveCard(cardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
 		if (card.HasComponent<CastAsAdventure>()) // CR 715.3b: on the stack it is the Adventure (the move made it the card)
 			s = s.UpdateObject(cardId, s.GetCard(cardId).AsAdventure());
+		if (card.GetComponent<Spliced>() is { } spliced) // CR 702.47c: the spliced text rides the spell (the move's Fresh took it)
+			s = s.UpdateObject(cardId, s.GetCard(cardId).WithComponent(spliced));
 		var proxies = s.ThisTurnEffects<NextSpellCantBeCountered>(playerId).ToList();
 		s = s.UpdateObject(
 			cardId,
@@ -1026,29 +1091,45 @@ public static class StackResolution
 			// CR 702.96b: "target" becomes "each" — the script's If(AlternativeCostWasPaid) says each what.
 			// ponytail: the card's first alternative cost, not the one paid — none prints two (DesignNotes).
 			specs = [];
-		return (
-			[
-				.. specs.SelectMany(t =>
-					t.PerX
-						? Enumerable
-							.Range(0, x)
-							.Select(i => t with { PerX = false, NotThePrevious = i > 0 })
-					: t.Divide > 0
-						? Enumerable
-							.Range(0, t.Divide)
-							.Select(i =>
-								t with
-								{
-									Divide = 0,
-									Optional = i > 0,
-									NotThePrevious = i > 0,
-								}
-							)
-					: [t]
-				),
-			],
-			steps
-		);
+		ImmutableList<TargetSpec> words =
+		[
+			.. specs.SelectMany(t =>
+				t.PerX
+					? Enumerable
+						.Range(0, x)
+						.Select(i => t with { PerX = false, NotThePrevious = i > 0 })
+				: t.Divide > 0
+					? Enumerable
+						.Range(0, t.Divide)
+						.Select(i =>
+							t with
+							{
+								Divide = 0,
+								Optional = i > 0,
+								NotThePrevious = i > 0,
+							}
+						)
+				: [t]
+			),
+		];
+		// Goryo's Vengeance spliced on (CR 702.47b): its target words after the spell's own, its effects after — each
+		// text's Target(0) its own first, as a mode's is (ScopeTargetsAction). ponytail: a spliced text's X or divided
+		// target words aren't expanded — no splice card has one.
+		if (card.HasComponent<Spliced>())
+			// the spell's own text sees only its own words: "each target" is never Goryo's card too
+			steps = steps.Insert(0, new ScopeTargetsAction(0, words.Count));
+		foreach (var spliced in card.GetComponent<Spliced>()?.Texts ?? [])
+		{
+			if (!spliced.Modes.IsEmpty) // never silently inert: compose its chosen modes when such a card comes
+				throw new InvalidOperationException(
+					"A modal text spliced on — splice reads Targets and Effects only"
+				);
+			steps = steps
+				.Add(new ScopeTargetsAction(words.Count, spliced.Targets.Count))
+				.AddRange(spliced.Effects);
+			words = words.AddRange(spliced.Targets);
+		}
+		return (words, steps);
 	}
 
 	public static GameState Push(GameState s, StackAbility ability)

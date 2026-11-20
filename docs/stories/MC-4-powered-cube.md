@@ -1289,6 +1289,26 @@ as his three priorities.
   cast as "(overload)" (`Describe`; Shayne, 2026-11-19 — not Baleful Mastery's "(not paying its mana cost)"). 3 tests in `LsvBatch2h3Tests.cs`, 6/6 revert-checks
   caught. Legal actions: one overloaded cast whatever the board. Golden-out moved nothing; probe 150: none unfinished,
   Damn cast 701 times.
+- 2026-11-19, Claude (cube lane) — **4.4h4: splice onto Arcane (Goryo's Vengeance), one new piece, 277 of 528 play.**
+  Nearest pieces read: an Adventure's cast stamp (`CastSpellAction.Adventure`, `Card.AsAdventure`: the card cast differs
+  from the card in hand), kicker's added mana, and a mode's `ScopeTargetsAction` (a text's `Target(0)` its own first). No
+  option on them adds a card's text from the hand to another spell, so splice is new: `SpliceComponent(Cost, Onto)`
+  (`Scripting.SpliceOntoArcane`) and `CastSpellAction.Splice`, the ids of the hand cards spliced. The cast is validated and
+  made on the card stamped `Spliced` (texts, ids, the summed cost — status, as `CastAsAdventure`): `CostBeforeLife` adds
+  the cost as kicker's, `Cast` reveals the cards (`MakeKnown`), `PutOnStack` re-stamps after the move, and
+  `StackResolution.TextOf` appends each text after the spell's own, scoped. So the validation, the target choice, the
+  resolution and a copy (`CopySpell` keeps the card's components, CR 707.10) all read one text with no new parameter;
+  leaving the stack drops it (`Card.IsStatus`). Candidates: one cast per set of splice cards in hand (`|s` in `MoveKey`,
+  "(splicing …)" in `Describe`) — 2^n, a ceiling (DesignNotes; the cube has two). Goryo's own text is tested pieces:
+  `MoveTo { From = [Graveyard], ExileAtNextEndStep, Then = haste ForGood }`. 6 tests in `LsvBatch2h4Tests.cs`; 9/9
+  revert-checks caught. The review (2026-11-20) added two: the spell's own text is scoped to its own words (an Arcane
+  "exile each target" took Goryo's graveyard card too — `Banish`'s test), and a modal spliced text throws rather than
+  sitting inert; four shapes no card prints are ceilings (DesignNotes). Legal actions: an Arcane cast × (1 + Goryo's targets) — We Say Thee Nay!
+  against S spells with L legends in the graveyard is 2S(1 + L) with teamwork. Golden-out moved nothing; golden-in moved
+  30 random games and 81 card games (the new card in the decks); probe 150: none unfinished, Goryo's cast 205 times; full
+  suite 2,086 passed. Two findings on the way: four card replays (Bat'leth 02, Damn 01, Data 04, Semester Foreseer 01)
+  failed at HEAD already — h3's recording was made before its review's last change; and `tools/batch_checks.py`'s probe
+  ran `--no-build` after the revert-checks, so it played the last revert's DLL — it builds now.
 
 ## Tasks
 
@@ -1527,7 +1547,7 @@ as his three priorities.
     - [x] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
           (Decisions, "4.4h2e")
     - [x] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white; Decisions, "4.4h3")
-    - [ ] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red)
+    - [x] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red; Decisions, "4.4h4")
     - [ ] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy
     - [ ] MC-4.4h6 Naming a card as a spell resolves: Demonic Consultation
     - [ ] MC-4.4h7 Saddle: Caustic Bronco
@@ -1546,10 +1566,15 @@ protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiat
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
 pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions), h2d (triggers) and
-h2e (zones and combat) and **h3 (overload: Damn, 276 of 528 play)** are done — black's options are finished (Decisions,
-"4.4h1", "4.4h2a" … "4.4h2e", "4.4h3").
-Next, in a NEW session: **MC-4.4h4 — splice onto Arcane: Goryo's Vengeance** (Through the Breach waits for red; the
-plan's note in Decisions, "4.4h": no piece adds one card's effects to another spell). From h3: overload is
+h2e (zones and combat), h3 (overload: Damn) and **h4 (splice onto Arcane: Goryo's Vengeance, 277 of 528 play)** are done
+— black's options are finished (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3", "4.4h4").
+Next, in a NEW session: **MC-4.4h5 — Auras that return a creature from a graveyard: Animate Dead, Necromancy** (the
+plan's note in Decisions, "4.4h": `AuraComponent` attaches to permanents, and the state check bins an Aura on a graveyard
+card; Necromancy's "flash, sacrificed at cleanup if cast at instant speed" too). From h4: splice is `CastSpellAction.Splice`
+(hand card ids, one cast per set) and the `Spliced` stamp on the spell (Adventure's shape), its text appended by
+`StackResolution.TextOf`, scoped as a mode's; Through the Breach takes `Scripting.SpliceOntoArcane("{2}{R}{R}")` with red.
+h4's tests are in `LsvBatch2h4Tests.cs` (`Legend`: a legendary 3/3, `Rite`: a {1} Arcane instant, "target player gains 2
+life", `ToEndStep()`). From h3: overload is
 `Scripting.Overload(cost)` — the cast has no target words (`StackResolution.TextOf(…, alternative)`), "each" the
 script's `If(AlternativeCostWasPaid) { Otherwise }`; Winds of Abandon takes it with white. h3's tests are in
 `LsvBatch2h3Tests.cs` (`Twin`: an instant copying target spell). From h2e: revolt is
@@ -1830,3 +1855,7 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-19: MC-4.4h2e done: zones and combat — 275 of 528 play; black's options finished. Revolt's tally,
   `Combat.MinimumBlockers`, shadow, `ExileInsteadOfYourGraveyard { Whose, CounterKind }`, `Is.WithCounter`, escape's
   `MayCastThisFrom.Costs`, `ExileInsteadOf` (three cards moved). Next: MC-4.4h3.
+- 2026-11-19: MC-4.4h3 done: overload — 276 of 528 play. `Scripting.Overload`, `TextOf(…, alternative)` with no target
+  words. Next: MC-4.4h4.
+- 2026-11-19: MC-4.4h4 done: splice onto Arcane — 277 of 528 play. `CastSpellAction.Splice`, the `Spliced` stamp,
+  `TextOf` appending a spliced text. Next: MC-4.4h5.

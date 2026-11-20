@@ -2602,6 +2602,24 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4h4: splice onto Arcane (CastSpellAction.Splice, Spliced) =====
+			["Goryo's Vengeance"] =
+			[
+				Spell(
+					[TargetSpec.InYourGraveyard(Is.Creature & Is.Legendary)],
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						ExileAtNextEndStep = true,
+						// "That creature gains haste." — no duration: while it stays that permanent
+						Then =
+						[
+							new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0, "Haste") { ForGood = true },
+						],
+					}
+				),
+				SpliceOntoArcane("{2}{B}"),
+			],
 		};
 
 	/// <summary>

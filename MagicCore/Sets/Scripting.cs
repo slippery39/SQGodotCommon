@@ -218,6 +218,10 @@ public static class Scripting
 	public static MayCastFromHandFree Overload(string cost) =>
 		new(Is.Source) { Mana = ManaCost.Parse(cost), Overload = true };
 
+	/// <summary>Splice onto Arcane (CR 702.47) — Goryo's Vengeance: "Splice onto Arcane {2}{B}" (CastSpellAction.Splice).</summary>
+	public static SpliceComponent SpliceOntoArcane(string cost) =>
+		new(ManaCost.Parse(cost), Is.Subtype("Arcane"));
+
 	/// <summary>
 	/// Warp (CR 702.185) — Quantum Riddler: "Warp {1}{U} (You can cast this card from your hand for its warp cost.
 	/// Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)" —

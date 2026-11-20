@@ -53,6 +53,11 @@ public static class Describe
 						? $" ({s.GetCard(c.CardId).GetComponent<KickerComponent>()?.Word ?? "kicked"})"
 						: ""
 				)
+				+ (
+					c.Splice.IsDefaultOrEmpty
+						? ""
+						: $" (splicing {string.Join(", ", c.Splice.Select(id => Name(s, id)))})"
+				)
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")

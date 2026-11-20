@@ -152,6 +152,8 @@ def main():
             done(step, ok, text if ok else s, secs, lines + notes)
         elif step == "revert":
             code, out, secs = run([sys.executable, "-u", "tools/revert_check.py", a.revert], 3600)
+            # the DLL still holds the last revert (restored source, stale binary): the probes run --no-build
+            run(["dotnet", "build", TESTS, "-v", "q"], 900)
             lines = [l.strip() for l in out.splitlines() if l.strip()]
             at = next((i for i, l in enumerate(lines) if re.match(r"\d+/\d+ caught", l)), max(len(lines) - 8, 0))
             lines = lines[at:]

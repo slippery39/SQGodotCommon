@@ -69,6 +69,13 @@ public record KickerComponent(ManaCost Mana) : GameComponent
 	public string Word { get; init; } = "kicked";
 }
 
+/// <summary>
+/// Splice (CR 702.47) — Goryo's Vengeance: "Splice onto Arcane {2}{B} (As you cast an Arcane spell, you may reveal this
+/// card from your hand and pay its splice cost. If you do, add this card's effects to that spell.)" — the card in its
+/// owner's hand, the spell cast matching <see cref="Onto"/>: CastSpellAction.Splice, the text carried by Spliced.
+/// </summary>
+public record SpliceComponent(ManaCost Cost, Filters.Filter Onto) : GameComponent;
+
 /// <summary>The named counter kinds (Card.Counters) scripts and rules share.</summary>
 public static class CounterKinds
 {

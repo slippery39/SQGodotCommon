@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 34/46 · uncommon 51/86 · rare 131/279 · mythic 51/108 · **276/528**
+**Playable:** common 34/46 · uncommon 51/86 · rare 132/279 · mythic 51/108 · **277/528**
 
 ### "Name Sticker" Goblin
 
@@ -829,7 +829,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Teamwork 2 (As an additional cost to cast this spell, you may tap any number of creatures you control with total power 2 or more.)  
 > Counter target spell unless its controller pays {2}. Counter that spell unless its controller pays {4} instead if this spell was cast using teamwork.
 
-**Status:** scripted · **tests naming it:** LsvBatch2g6Tests
+**Status:** scripted · **tests naming it:** LsvBatch2g6Tests, LsvBatch2h4Tests
 
 **Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `WasKicked` — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack.
 
@@ -4050,7 +4050,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Return target legendary creature card from your graveyard to the battlefield. That creature gains haste. Exile it at the beginning of the next end step.  
 > Splice onto Arcane {2}{B} (As you cast an Arcane spell, you may reveal this card from your hand and pay its splice cost. If you do, add this card's effects to that spell.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h4Tests
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Goryo's Vengeance"] =
+[
+	Spell(
+		[TargetSpec.InYourGraveyard(Is.Creature & Is.Legendary)],
+		new MoveTo(Ref.Target(), ZoneType.Battlefield)
+		{
+			From = [ZoneType.Graveyard],
+			ExileAtNextEndStep = true,
+			// "That creature gains haste." — no duration: while it stays that permanent
+			Then =
+			[
+				new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0, "Haste") { ForGood = true },
+			],
+		}
+	),
+	SpliceOntoArcane("{2}{B}"),
+],
+```
 
 ### Green Sun's Zenith
 

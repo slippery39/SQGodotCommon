@@ -94,3 +94,4 @@ after the split is DEV-4.3.
 | 2026-11-19 | MC-4.4h2d: triggers (magecraft's copy event, the turn's draw, odd or even, an exile Then decides), 4 cards | 8febb927 | 104 | 227k | 3.9M |
 | 2026-11-19 | MC-4.4h2e: zones and combat (revolt, three blockers, shadow/void, escape), 4 cards | cab75733 | 105 | 240k | 3.8M |
 | 2026-11-19 | MC-4.4h3: overload (Damn), 1 card | f5a8fcd4 | 77 | 198k | 2.5M |
+| 2026-11-20 | MC-4.4h4: splice onto Arcane, 1 card | 3f6773f9 | 97 | 227k | 3.6M |

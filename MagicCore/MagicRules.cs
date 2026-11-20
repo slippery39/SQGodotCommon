@@ -224,6 +224,31 @@ public static class MagicRules
 		var casts = card.HasComponent<KickerComponent>()
 			? Casts(false).Concat(Casts(true))
 			: Casts(false);
+		// Goryo's Vengeance: each cast again with each set of splice cards in hand (CR 702.47) — the card stamped with
+		// their text (CastSpellAction.Splice). ponytail: one cast per set, 2^n — the cube has two splice cards.
+		var splices = card.HasComponent<Spliced>()
+			? []
+			: s.CardsIn(player, ZoneType.Hand)
+				.Where(c => CastSpellAction.CanSplice(s, player, card, c.Id))
+				.Select(c => c.Id)
+				.ToArray();
+		for (var set = 1; set < 1 << splices.Length; set++)
+		{
+			ImmutableArray<int> spliced = [.. splices.Where((_, i) => (set & (1 << i)) != 0)];
+			var probe = new CastSpellAction
+			{
+				PlayerId = player,
+				CardId = card.Id,
+				Splice = spliced,
+			};
+			if (probe.SplicedState(s) is not { } stamped)
+				continue;
+			casts = casts.Concat(
+				CastCandidates(stamped, player, stamped.GetCard(card.Id))
+					.Select(c => (GameAction)((CastSpellAction)c with { Splice = spliced }))
+					.ToList() // enumerated in the stamped state, before the loop's `spliced` moves on
+			);
+		}
 		// Brazen Borrower: each cast again as its Adventure (CR 715.3) — the card as Petty Theft (ValidateAdd: not from exile)
 		if (
 			!card.HasComponent<AdventureComponent>()
@@ -731,7 +756,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Adventure ? "|a" : "")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Adventure ? "|a" : "")}{(c.Splice.IsDefaultOrEmpty ? "" : $"|s{string.Join(",", c.Splice.Select(id => Fodder(s, id)))}")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>
