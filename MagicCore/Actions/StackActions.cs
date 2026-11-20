@@ -471,7 +471,9 @@ public record CastSpellAction : GameAction
 		var text = card.GetComponent<SpellEffectsComponent>();
 		if (!(text?.Choose ?? 1).IsLegal(s, card, text?.Modes ?? [], Modes))
 			return ValidationResult.Invalid("Illegal choice of modes");
-		var specs = StackResolution.TextOf(card, Modes, Kicked, X).Specs;
+		var specs = StackResolution
+			.TextOf(card, Modes, Kicked, X, PaysItsAlternativeCost(s, card))
+			.Specs;
 		if (
 			ChoosesTargets
 				? !(Targets.IsEmpty && ChooseXTargetsChoice.CanChoose(s, PlayerId, CardId, specs))
@@ -521,7 +523,9 @@ public record CastSpellAction : GameAction
 	GameState ChooseTargets(GameState s, bool retain)
 	{
 		var card = s.GetCard(CardId);
-		var specs = StackResolution.TextOf(card, Modes, Kicked, X).Specs;
+		var specs = StackResolution
+			.TextOf(card, Modes, Kicked, X, PaysItsAlternativeCost(s, card))
+			.Specs;
 		if (EachWord(card))
 			return s.SpawnAction(
 				new PipelineAction
@@ -564,6 +568,12 @@ public record CastSpellAction : GameAction
 		);
 	}
 
+	/// <summary>Baleful Mastery, Damn's overload: this cast pays the alternative cost on the card itself.</summary>
+	bool PaysItsAlternativeCost(GameState s, Card card) =>
+		WithoutPayingManaCost
+		&& !DuringResolution
+		&& Playable.OwnAlternativeCost(s, card, PlayerId);
+
 	/// <summary>Pays and puts it on the stack — the priority action keeps priority after; a resolution goes on.</summary>
 	public GameState Cast(GameState s)
 	{
@@ -573,12 +583,7 @@ public record CastSpellAction : GameAction
 			return ChooseTargets(s, retain: false);
 		var card = s.GetCard(CardId);
 		var costs = Paid(s, card); // read before paying: flashback's are known only in the graveyard
-		var alternative =
-			WithoutPayingManaCost
-			&& !DuringResolution
-			&& Playable.FreeCast(s, card, PlayerId) is { } freeCast
-			&& freeCast.What.Equals(Filters.Is.Source)
-			&& card.Components.Contains(freeCast); // the card's own — never Urza's free mark (Baleful Mastery)
+		var alternative = PaysItsAlternativeCost(s, card);
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		// Zefram Cochrane, Overflow Submatrix, The Holodeck: "once during each of your turns" — this one is used.
 		// A cast during a resolution is by that effect's permission, never a permanent's.
@@ -999,11 +1004,15 @@ public static class StackResolution
 	/// <summary>A spell's target words and steps for the chosen modes (the whole text when not modal).</summary>
 	/// <param name="kicked">Highly Illogical: a target word with an IfKicked reads as that instead.</param>
 	/// <param name="x">The X cast with — "X target creatures" (TargetSpec.PerX) is X words.</param>
+	/// <param name="alternative">
+	/// Cast for the card's own alternative cost: overloaded (Damn, MayCastFromHandFree.Overload), it has no target words.
+	/// </param>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		Card card,
 		ImmutableArray<int> modes,
 		bool kicked = false,
-		int x = 0
+		int x = 0,
+		bool alternative = false
 	)
 	{
 		var (specs, steps) =
@@ -1013,6 +1022,10 @@ public static class StackResolution
 			: ([], []);
 		if (kicked)
 			specs = [.. specs.Select(t => t.IfKicked ?? t)];
+		if (alternative && card.GetComponent<MayCastFromHandFree>() is { Overload: true })
+			// CR 702.96b: "target" becomes "each" — the script's If(AlternativeCostWasPaid) says each what.
+			// ponytail: the card's first alternative cost, not the one paid — none prints two (DesignNotes).
+			specs = [];
 		return (
 			[
 				.. specs.SelectMany(t =>

@@ -1,36 +1,36 @@
 # Seeded games' fingerprints — see MagicCore.Tests/GoldenReplay.cs. Regenerate only
 # for an intended behaviour change, with the diff reviewed. Format: game seed : steps, last
 # turn, each player's life [hand,library,graveyard,battlefield,exile], hash | hash per 100 steps.
-EveryScriptedCard 01 : steps=1160 turn=55 end=0L[7,374,23,5,1] 14[8,376,17,6,3] final=1fc66330 | 3996b01e 05d1880d 09a9f9d9 c30de6b5 9988f3bd 69a1c882 7f18e215 31da88a0 15a5d494 1a881e83 c583f9b3
-EveryScriptedCard 02 : steps=1732 turn=88 end=-6L[5,355,40,6,4] 19[7,350,42,12,1] final=a6c6b81c | 47b41bbc fbe26298 b8fd5140 696764fc 7f2baa3d ab8c023e 1bd6916b 4be7beaf 33252da9 9cb60051 07c41ccc 7b039957 b383b938 22b354c5 6efc2303 a063142f d03a2a95
-EveryScriptedCard 03 : steps=1348 turn=69 end=-1L[7,366,28,9,0] 13[7,365,30,6,3] final=58806abf | fdff6226 1feb6ed0 02211c4d d005d9ea 540c85c9 02a51127 52addc88 dd59c721 8d386521 cc824a5e 552670ce 6be864c7 261111e3
-EveryScriptedCard 04 : steps=1261 turn=69 end=-4L[7,369,34,0,0] 20[8,365,28,7,2] final=66a15c98 | 7fe1a473 fd785fd5 7d611b09 2be094ca 2bc3f776 c48bc7d2 9007ed1c b3e1db4c 3ef133de d7193b1d cc0d27b4 1b2de08b
-EveryScriptedCard 05 : steps=460 turn=24 end=-2L[7,392,11,0,0] 42[8,391,10,2,0] final=25da9e12 | 7707398c 60575f27 9a4c34e3 60d7a5ea
-EveryScriptedCard 06 : steps=1313 turn=73 end=0L[7,367,35,1,0] 20[8,367,33,2,1] final=1fbdb53b | 6900aa21 5ed89138 d7de3f2f 619d2053 7176c993 cc944a0b fcbdf47e fe243da9 a0747720 15670483 27769c11 6dc29f7c 50708dd0
-EveryScriptedCard 07 : steps=975 turn=52 end=20[8,377,19,7,0] 0L[7,378,25,0,0] final=bf32218d | ad30f8ac db79eb76 47668c1b d9903cf3 1f13d8ee e9a61f44 60ace853 d21b9fbd 14ef2716
-EveryScriptedCard 08 : steps=1418 turn=72 end=22[7,365,32,4,2] 0L[6,367,33,5,0] final=3809a8e8 | 1d693136 cd4847c2 1f0449e4 2a888a6b b341557a aca64120 ebeda79e e3c0f5dd 76424693 74b74804 a3525717 9197c45f 37f93113 4071143d
-EveryScriptedCard 09 : steps=1373 turn=72 end=-2L[7,368,33,1,1] 13[8,359,36,7,1] final=f9e38fac | 4a80589a 587a6271 71972c9a 5b3035d8 a4abe0bf efe3c95b f3b0d694 1be41afd 6da5f19a b58a6368 41a17dee f029f9e9 600407c5
-EveryScriptedCard 10 : steps=681 turn=38 end=20[8,384,15,2,1] 0L[7,385,17,0,1] final=9cc84383 | b545ad69 a7a91ddd 6c9346bf f6aafde6 2b7cae8a 04dcb3da
-EveryScriptedCard 11 : steps=1231 turn=59 end=0L[9,372,25,3,1] 5[7,373,27,3,0] final=6ec2a6ea | 956d12bf c578beff 5530d5e6 77893870 896803ea 86e54c01 47e53818 53991580 3138c6ce 39f64ec2 3b1b724b c1bdd50e
-EveryScriptedCard 12 : steps=2859 turn=157 end=11[8,316,79,5,2] -2L[0,325,80,3,2] final=b8d3f05b | b6166ec5 c33aa43b 0fa54423 6fc2346a e3847e51 72f7d809 d0938c06 3d70d1db 3ba07e47 6a922899 f4b8c526 3ddac7c3 90fa448b 7be906df 7489bb29 f4b3f7b6 7c3be3b1 247e232a 010834f7 de13e932 539111fc 88cc55e1 d19cc40f 656f6882 88d4f86b 36587761 4422ed7c 85dc81d8
-EveryScriptedCard 13 : steps=2162 turn=119 end=16[6,344,55,4,1] 0L[8,344,54,4,0] final=7d570ea8 | 4423e011 bff1e5c5 91f97e96 f20466c1 7777b00a 6d8deee8 1b52eae8 59d9efa0 fb4f5c88 c2c2b428 bdc8f13a 8af0bde0 715a3954 f31566cb 9d6dcb73 eff8d2ac dddaec33 10c64755 cd0cc8ea 5cce6d1a 1503adff
-EveryScriptedCard 14 : steps=697 turn=35 end=20[7,386,14,2,1] 0L[7,388,12,3,0] final=c9d6801e | 684283fb f3fb9b36 2caa8348 23bc29b4 6caf96ae e34aad3a
-EveryScriptedCard 15 : steps=714 turn=37 end=18[7,380,15,9,0] 0L[7,385,16,1,1] final=98760bde | 25bb8ff6 fad529c3 5c62537d dccb09f8 63005520 0ab25b69 0ea4ec5c
-EveryScriptedCard 16 : steps=1879 turn=101 end=-34L[7,353,44,6,0] 14[9,349,39,7,6] final=fff310bd | 46418825 1e2baa05 ce2eded1 10816665 e7a0927a 28018797 4fc45243 d9b64666 11c76b6c 2c4a209c a1d1aa4d 9229870a 6c2ac0a0 5c6eff56 3f5694b7 a89c886a 1d6b23aa 19baa786
-EveryScriptedCard 17 : steps=808 turn=44 end=20[7,381,16,5,1] -1L[7,382,21,0,0] final=93fcf189 | 6044680c fe1ef5c3 085972b9 86ce760d 52e9d71b d1d6335e 11da8e81 c75f2988
-EveryScriptedCard 18 : steps=1694 turn=85 end=15[8,361,34,7,1] -3L[7,359,40,4,0] final=b03921b5 | 4a16dacd c0cb6796 fa50680b 6f2bce23 f61ba85e a595f144 6e89148a dd9294cf ef0a1cc0 c980fd2e 6e5def31 7914348d 1e11c839 36514c29 7b88b752 d949ab84
-EveryScriptedCard 19 : steps=970 turn=50 end=0L[7,397,6,0,0] 27[6,390,4,11,0] final=295d807e | 6ba8ee5e 6a32d347 5a545f2f 5b48e454 b85ffafb 8b7c9b85 a878990c 434b7696 f1e9e9c5
-EveryScriptedCard 20 : steps=1420 turn=78 end=20[8,361,34,7,0] -3L[7,365,37,1,0] final=f0eea76d | 7ec00aac 872ccd72 a80fee1c 595744b4 e14ec0d0 17d5f1e9 ab5f2fc8 7ee193db dce153e7 71bafc90 5805cb92 2b966f83 cd255539 ccbd4577
-EveryScriptedCard 21 : steps=1070 turn=55 end=0L[7,376,25,1,1] 22[7,375,20,6,2] final=faffa1ee | e9b790fa bbd38be0 0698148f bc89ab62 e3f23f8a 8644b9d2 3ba3f924 a3de164f 0597105a 051a8a53
-EveryScriptedCard 22 : steps=1343 turn=74 end=-1L[7,367,34,2,0] 20[8,366,32,5,0] final=f52f9495 | 8c4e67cf 91832458 021fe58d af50ed16 b875c2a4 5b11413e 76f2515a c1ce1e01 d0b64801 93e0d523 73097644 e3477c61 2f93818d
-EveryScriptedCard 23 : steps=1794 turn=100 end=20[8,353,45,4,0] 0L[7,353,47,3,0] final=7d0db41c | 3739b7ac 3b19bf46 440dc4e6 decdc3ed 34eb13f6 85058288 ab6b3912 bdbb4885 8727e9e5 773fd8ef 79f1fd30 a2c8e6f6 cd1b768b ec5f0bf3 df1b39c5 ebaadebc 3fe6a155
-EveryScriptedCard 24 : steps=1622 turn=88 end=18[8,355,42,5,1] -5L[7,360,40,3,0] final=5e7c0570 | c179610b 3f791217 f648fe92 077f3cb4 d450221c 8f844311 7bff5d75 716ebc77 36ffd9a6 675a7a72 fed7540f 8b3650ca 7dc0f959 72d74188 392d9cfb 1e057ac7
-EveryScriptedCard 25 : steps=1155 turn=62 end=0L[7,373,26,5,1] 20[5,371,25,7,2] final=55150804 | f5a6127a 68b5b0c7 51f83367 51d73fce 55181394 9a1ffbb0 849925a3 6a5877a2 1df9544b f8c75c2f 5825a914
-EveryScriptedCard 26 : steps=2700 turn=147 end=15[7,328,66,8,2] -1L[7,326,70,6,1] final=a22d8a0e | d4cd9939 5f5356fa 0f5e1329 a9910747 1252900f c8f45c0a ae8179f4 89fa9f7a 820225e1 dd49fde2 62e56baa 67af5a48 d177feb3 23e15fb3 bc93fc27 9c6b2f81 2d06f632 e0967bb6 8bfbc145 eec7cb8c c7a13a74 748a7165 ec068716 930803ef 1fad204d 834feccd a22d8a0e
-EveryScriptedCard 27 : steps=536 turn=28 end=20[9,387,9,5,1] -1L[7,390,13,0,0] final=fbb31c3a | 8cf5b490 d8c010ca fc7daf29 e9a32ea9 19430c01
-EveryScriptedCard 28 : steps=1456 turn=79 end=20[7,354,37,9,4] -1L[7,364,39,0,0] final=8fb24cbb | 7dafa427 3f7e225b 307590c2 7a85e53c 9a3e73d8 a40c1967 315972b7 202e2cfc d40a6118 074780c2 342479ef 9ab01b81 b09bdaf5 edc469e7
-EveryScriptedCard 29 : steps=731 turn=37 end=31[8,385,13,5,1] -7L[7,386,17,0,0] final=ad379876 | d9846262 746d3574 02b05b54 92675035 3ecfe86c 08b84344 487f1af9
-EveryScriptedCard 30 : steps=1466 turn=76 end=11[7,362,34,6,1] 0L[7,365,34,4,0] final=7c902fa9 | 0c785171 297d562d 3bac12de f38e4106 164241f5 4f1381a7 9b21166a 42e6c873 ffc84268 23271d2f 1578d20e 3fd358cc 7427c301 63195c15
+EveryScriptedCard 01 : steps=1469 turn=75 end=0L[6,365,34,5,0] 14[8,362,30,9,4] final=adc186e7 | 0a783d8b 80d02c72 1c781a65 665432ff ae557c73 d79af0e0 25c5b227 183abeb4 2a23c0f2 674485be 443a34d1 b797978a 0316120a 166b076e
+EveryScriptedCard 02 : steps=1131 turn=59 end=16[0,366,29,18,2] -3L[7,375,28,1,0] final=dc38ca3a | 9b5a1e2a 5cdf9bcc 3b2f3c07 46a49ebe 8642772b 4740b3f9 37c9bc58 db7fd102 ee591b24 8409120c 5be08871
+EveryScriptedCard 03 : steps=1700 turn=90 end=19[5,357,37,8,3] -1L[7,360,42,2,0] final=05ec2b76 | fdff6226 7c374771 771e1eb6 5964318b d6871cb0 403146af d19865b4 03d73d5e 53531765 bc0902a9 6126556c ed6a72de 3fa8f36b 6dca4349 7bedd9de ed144691 05ec2b76
+EveryScriptedCard 04 : steps=1916 turn=105 end=-1L[7,351,51,1,0] 23[8,352,44,6,1] final=ae612d4d | 8621856e 2bf96017 9ec310bf f38f8131 b9b2f30a eb0785d8 46b9b521 3aa86ad7 bff909a0 38cd5989 9e864983 5910a87b aa579d20 67d57349 15d448fd 8f6824bc c815a950 8ee6b26f fc8c3b2e
+EveryScriptedCard 05 : steps=2424 turn=128 end=-1L[7,335,60,6,2] 10[7,332,62,10,0] final=0e2f58fd | 2926bc44 0f726d85 c2e665b6 9ffd2d4c 76f651e1 10921554 643ff8bc bb9bd523 203fefd9 33f13b0f 812b515b f5d54640 a98704c6 bf23f175 566871ad 9ff774d1 226e7446 222dded6 1766d76c 7bbfee7d fea8efaa 87ec5173 26880ba4 fbc7a2e8
+EveryScriptedCard 06 : steps=2177 turn=121 end=-1L[7,397,1,6,0] 22[8,393,4,5,1] final=4e72e3f0 | 822ee4f4 f5d29453 e21d36e7 3173432f e359aade 0b858b03 33a8d002 f59a65c7 1b11860c 89e1fdb6 97965146 3617a450 c8954dde 48760e56 c3a9c5a4 011a9df9 e82c4b5f bdf48722 7292cb40 dd760c7c f28fefbe
+EveryScriptedCard 07 : steps=975 turn=52 end=20[8,377,19,7,0] 0L[7,379,25,0,0] final=f749324c | eb59fd4e 6a94a968 975f6e8c e2b59b0a b250afb6 857745f0 52700791 ae87cede f8a517f4
+EveryScriptedCard 08 : steps=1248 turn=64 end=-4L[7,372,29,2,0] 12[6,372,23,8,2] final=9f10a1fc | 5d0805ad 17ba8f9c 418afa2f 47e97102 ad13fff6 9d927552 a4bfb5ff d7e8dedf 501ed460 43b27715 f69d9ac6 c40369a5
+EveryScriptedCard 09 : steps=435 turn=25 end=-1L[7,392,10,1,0] 20[7,392,12,0,0] final=6ddff2a1 | 93fa9db4 c4cb85fb 7c9bb6ef 3b0379d7
+EveryScriptedCard 10 : steps=642 turn=36 end=20[8,385,14,2,1] 0L[7,387,16,0,1] final=b73cff4f | 7da1295e 0b8a6d38 77cdc4f1 ba625185 553108d9 ef949c1b
+EveryScriptedCard 11 : steps=822 turn=42 end=-1L[7,382,18,2,1] 16[8,378,20,5,0] final=c257ac12 | 7c974e1e a3dd7770 dd84ee4d 0c1aac44 8fc3af4c d9932a0e 24cac766 d98a29e0
+EveryScriptedCard 12 : steps=1736 turn=96 end=0L[7,356,46,1,0] 20[8,356,44,3,0] final=0528d064 | b28644e0 d56ed0bd c876f2b1 b09bad8b 3a937049 9d3e5ab5 4a9bd67f 51767bce 30df233f 6434cbee 553753fa 4079f868 f0aebe9e 7bbc9526 18b9a763 3670cbde 9c14e31b
+EveryScriptedCard 13 : steps=3015 turn=168 end=20[8,314,75,8,5] -17L[7,319,81,4,0] final=8fe565bf | f27ff109 cb83a2ef 6d6ea022 0bbd8c88 d88e8439 b2192bff ce74f813 8f42c930 71cd0df3 06c63b02 d76d24e7 3a1f8c4c 78738f93 1711655f 36c30c42 d9c756ea e3bf562a 6f8e7326 d0ba0703 643a198d 5e65a879 cbed2c7d 9fd18c52 160a632f e19349bb 9e496ab5 f5924535 22579c96 e5c8332a b5aea295
+EveryScriptedCard 14 : steps=680 turn=34 end=20[8,386,13,3,1] 0L[7,389,15,0,0] final=ae0ed6c5 | 7689c1cb b4e8b30d 2cce2383 60be8a25 b94a5497 e7395bea
+EveryScriptedCard 15 : steps=714 turn=37 end=18[7,380,15,9,0] 0L[7,386,16,1,1] final=d6ba35fd | 25bb8ff6 1336bf66 0b2ebcb8 1e38f306 4ef9d1f6 6d0b1078 b146cc1e
+EveryScriptedCard 16 : steps=1080 turn=59 end=-2L[7,374,29,0,0] 23[9,375,22,5,1] final=03496f04 | 1a5b6203 18872dd2 8d2042b8 89092b7b 535cd9ba 0012f0c5 c9448497 97e771c9 083b8fe3 7ff60a5d
+EveryScriptedCard 17 : steps=921 turn=48 end=11[7,375,20,8,1] -5L[7,380,23,1,0] final=e44c646a | 2027b62b c84ea832 947e00be c846f588 2928f265 64d57561 50bbc0ab de713daf 5137014b
+EveryScriptedCard 18 : steps=572 turn=30 end=-1L[7,388,13,2,0] 20[8,389,6,8,1] final=2196eda6 | 5cfc4825 2495ed8c aa506f92 52d174fb ab755bf9
+EveryScriptedCard 19 : steps=2141 turn=114 end=13[5,346,50,25,1] 0L[8,344,52,6,1] final=af177400 | 9394d195 c372aebe 54422e8e d71574ca 77f71e41 47083fbf 21a125e7 5c7bbec9 2e85de46 8c021045 924673df 7a906c76 b7584dd5 5dec8fe1 055afd8b 4ec9e565 91c8fb17 7b8e9db4 d2680f93 6785f1ee 45c3abc4
+EveryScriptedCard 20 : steps=1178 turn=65 end=-1L[7,371,30,2,0] 20[7,371,26,6,1] final=9f469311 | 6835cec7 1df74288 abbc3040 cd5f9828 e0a3fc53 b5008f23 6ba0c0b7 9f8610ce 998a03de 1b9725e7 f31781cd
+EveryScriptedCard 21 : steps=1148 turn=65 end=-10L[7,371,31,0,1] 19[8,371,26,6,0] final=71966a12 | 371de0b9 7ab27cb1 af600c49 0c8b8580 5a493263 09780f63 a4f5e27a fd19023e 80af0971 62ae670a 4b114ed5
+EveryScriptedCard 22 : steps=1596 turn=85 end=24[8,361,35,6,0] -4L[7,359,40,3,2] final=74ddaad8 | f6b7e256 607070a5 e57fc9d5 ef1b0c6c 35885820 cd1d2bd5 5bb8e359 45ef12cb 390be4a8 fd97d10d 57249e3b 72fa60a0 647e4301 0195aec1 e73d3ecd
+EveryScriptedCard 23 : steps=743 turn=39 end=2[7,384,19,0,0] -1L[7,384,17,3,0] final=f35a5a27 | b92df66e 3b77b1ca 93ae2795 a1c52174 64130aba e180f8da 8fcc2a72
+EveryScriptedCard 24 : steps=644 turn=36 end=20[8,385,14,3,0] 0L[7,385,18,0,1] final=0d56db7e | c179610b 4ec43dbb bdf14757 5a0e2791 94e2ca1a 0f0628be
+EveryScriptedCard 25 : steps=1637 turn=87 end=12[7,387,9,8,0] -1L[7,388,11,4,1] final=e827884d | feec452b 2abfec1d c3c305b2 98c146b9 6ee7b4a0 65693935 80721657 2cc08d20 4d94dbe2 6232321b b486caaa 075e3582 f0be092d bd44c2fd bb52c24e 5ab8fb9c
+EveryScriptedCard 26 : steps=727 turn=38 end=-2L[7,384,17,2,0] 18[7,385,12,8,1] final=483b84f0 | b93e8293 d0573212 3d65ee02 46d479ba 5a05b7c8 eacba863 6b1d5eef
+EveryScriptedCard 27 : steps=790 turn=38 end=15[8,384,13,5,0] -1L[7,386,18,0,0] final=9dabc421 | 4e25443c 4124b43c 04cd767a 42095c40 879f0065 2fafea92 1ae6d23b
+EveryScriptedCard 28 : steps=1456 turn=79 end=20[7,354,37,9,4] -1L[7,365,39,0,0] final=289e325d | 7dafa427 ae9285ea 150f9e2b 84f4d397 63dbffa4 64a28f53 4feda75a 0bcc4e47 99ffab7d 32222f89 73e304d3 e68c40c9 ba8d6c6b ea47bcf8
+EveryScriptedCard 29 : steps=731 turn=37 end=31[8,385,13,5,1] -7L[7,387,17,0,0] final=3ab75fe9 | 70c44c94 a9171052 ad3ccd04 40d8bcea 0c24514c 96b00233 19f9d185
+EveryScriptedCard 30 : steps=1267 turn=60 end=7[7,364,32,6,1] -1L[7,363,24,9,9] final=97e6105e | 44a4af24 ba252be0 07eef545 5eef2ae8 de1687cd e05ff9ee 21f3ce68 8d3459a2 b1109422 8830b6a3 280f8ae8 2a2462d0
 RealFraDecks 01 : steps=946 turn=36 end=0L[0,14,13,12,1] 11[1,10,14,17,0] final=b8360787 | 6e97cc14 ebc7d4ca 87cad65f 7623e94b 4bf0e553 5819df2c dcb00527 ec9bc8b7 40bdb233
 RealFraDecks 02 : steps=578 turn=24 end=0L[1,21,9,10,0] 8[0,21,9,9,1] final=84f11347 | 36a8e42d 042ea9bf 12647772 b7e18c19 223d0b42
 RealFraDecks 03 : steps=476 turn=19 end=0L[1,24,6,10,0] 7[3,19,9,10,0] final=e46b221d | d45c0f79 354c5f75 c9de670b f97dab55

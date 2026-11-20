@@ -504,7 +504,7 @@ public record CopySpell(Ref What) : Effect
 				.Raise(new SpellCopiedEvent(copy.Id, Controller));
 			var onStack = copy.GetComponent<OnStackComponent>()!;
 			var specs = StackResolution
-				.TextOf(copy, onStack.Modes, onStack.Kicked, onStack.X)
+				.TextOf(copy, onStack.Modes, onStack.Kicked, onStack.X, onStack.AlternativeCost)
 				.Specs;
 			if (specs.IsEmpty)
 				continue;

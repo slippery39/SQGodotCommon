@@ -257,6 +257,8 @@ public static class MagicRules
 			: CastSpellAction.ChoosesX(card, kicked) ? AvailableMana(s, player, card)
 			: 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
+		// Damn: overloaded, it targets nothing (StackResolution.TextOf)
+		var alternative = onlyFree && Rules.Playable.OwnAlternativeCost(s, card, player);
 		IEnumerable<ImmutableArray<int>> ModeChoices() =>
 			(text?.Choose ?? 1).Choices(s, card, text?.Modes ?? []);
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> ChoicesFor(int x) =>
@@ -265,7 +267,7 @@ public static class MagicRules
 					TargetSpec
 						.Combinations(
 							s,
-							StackResolution.TextOf(card, modes, kicked, x).Specs,
+							StackResolution.TextOf(card, modes, kicked, x, alternative).Specs,
 							player,
 							card.Id
 						)
@@ -283,7 +285,7 @@ public static class MagicRules
 		// targets chosen word by word as it is cast; "return target creature" three times is 220 casts otherwise.
 		var eachWord = CastSpellAction.EachWord(card);
 		bool Words(ImmutableArray<int> modes) =>
-			StackResolution.TextOf(card, modes, kicked).Specs.Count > 0;
+			StackResolution.TextOf(card, modes, kicked, alternative: alternative).Specs.Count > 0;
 		var once =
 			divided ? unchosen
 			: perX ? null

@@ -2589,6 +2589,19 @@ public static class LsvCards
 					Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 5 }],
 				},
 			],
+			// ===== MC-4.4h3: overload (an alternative cost that removes the target words) =====
+			["Damn"] =
+			[
+				Overload("{2}{W}{W}"),
+				// "A creature destroyed this way can't be regenerated": the engine has no regeneration (Wrath of God's note).
+				Spell(
+					[Creature],
+					new If(new AlternativeCostWasPaid(), [new Destroy(Ref.Permanents(Is.Creature))])
+					{
+						Otherwise = [new Destroy(Ref.Target())],
+					}
+				),
+			],
 		};
 
 	/// <summary>

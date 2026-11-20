@@ -250,6 +250,11 @@ whose subsystem it lives in.
   that cost was paid, controlled by the spell's controller (CR 603.7d), set up in `EnterFromStackAction` as it resolves, never a "when it enters" (nothing to answer, CR 702.185a). Warp's is `MoveTo(Ref.Source, Exile)` then
   `MakePlayable(Ref.ThisWay, { By = its owner, Forever, LaterTurn, CastOnly })` — `LaterTurn` stamps
   `PlayableFromExile.FromTurn`, the next turn, read by `Playable.IsImpulsePlayableBy`. From exile it costs its mana cost.
+  **Overload** (CR 702.96, Damn, MC-4.4h3) is `Scripting.Overload(cost)`: Baleful Mastery's alternative mana cost with
+  `Overload` — cast for it (`CastSpellAction.PaysItsAlternativeCost`, the candidates' `Playable.OwnAlternativeCost`), the text has
+  NO target words (`StackResolution.TextOf(…, alternative)`; a copy's too, from the stack's `AlternativeCost`),
+  so hexproof and protection never stop it and nothing fizzles. "Each" is the script's: `If(AlternativeCostWasPaid,
+  [the each version]) { Otherwise = [the target version] }` — never an effect rewritten by the engine. One cast overloaded.
   **"Its owner puts it on their choice of the top or bottom of their library"** is Clash of Elements' `May { Who =
   Ref.OwnerOfTarget(), Otherwise }` over two `MoveTo(…, Library) { From = [Stack] }`.
 - **"Choose target [card] in your graveyard. You may cast that card this turn"** (Emry, Lurker of the Loch) is

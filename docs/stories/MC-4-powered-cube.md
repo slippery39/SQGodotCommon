@@ -1276,6 +1276,19 @@ as his three priorities.
   `What` asked from the holder's side, one pass over the rules. 11 tests in `LsvBatch2h2eTests.cs` (`Costing(cost)`: a 3/3 of that cost, `Bounce`,
   `TrollAttacks(troll, n)`), 12/12 revert-checks caught. Legal actions: none grow with the board (the choices come after).
   Golden-out moved nothing; probe 150: none unfinished, each card used 297–434 times (Troll cast 38, cycled 405).
+- 2026-11-19, Claude (cube lane) — **4.4h3: overload (Damn), one option, 276 of 528 play.** Nearest pieces read: kicker's
+  `TargetSpec.IfKicked` swaps a word in `StackResolution.TextOf`, and Baleful Mastery's `MayCastFromHandFree { Mana }` is
+  the alternative mana cost. Overload is both: `MayCastFromHandFree.Overload` (`Scripting.Overload(cost)`), and `TextOf(…,
+  alternative)` drops every target word when that cost is paid — the cast's validation and target choice
+  (`CastSpellAction.PaysItsAlternativeCost`, extracted from `Cast`'s inline check), the candidates
+  (`Playable.OwnAlternativeCost`, moved there by the review: the "may it be cast" place) and a copy (`CopySpell`, from the stack's `AlternativeCost`: no new target asked). "Each" is the
+  script's `If(AlternativeCostWasPaid, [Destroy(Ref.Permanents(Is.Creature))]) { Otherwise = [Destroy(Ref.Target())] }`
+  — not an engine rewrite of `Ref.Target` (a word holds one id; "each" is many), so Winds of Abandon is the same shape.
+  Resolution's `TextOf` was given the flag too and the revert-check said NOT CAUGHT: an empty target list never fizzles,
+  so it was taken out. "Can't be regenerated" is inert: no card in any set regenerates. The table reads the overloaded
+  cast as "(overload)" (`Describe`; Shayne, 2026-11-19 — not Baleful Mastery's "(not paying its mana cost)"). 3 tests in `LsvBatch2h3Tests.cs`, 6/6 revert-checks
+  caught. Legal actions: one overloaded cast whatever the board. Golden-out moved nothing; probe 150: none unfinished,
+  Damn cast 701 times.
 
 ## Tasks
 
@@ -1513,7 +1526,7 @@ as his three priorities.
           (Decisions, "4.4h2d")
     - [x] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
           (Decisions, "4.4h2e")
-    - [ ] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white)
+    - [x] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white; Decisions, "4.4h3")
     - [ ] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red)
     - [ ] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy
     - [ ] MC-4.4h6 Naming a card as a spell resolves: Demonic Consultation
@@ -1533,10 +1546,13 @@ protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiat
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
 pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions), h2d (triggers) and
-**h2e (zones and combat, 275 of 528 play)** are done — **black's options are finished** (Decisions, "4.4h1", "4.4h2a" …
-"4.4h2e").
-Next, in a NEW session: **MC-4.4h3 — overload: Damn** (Winds of Abandon waits for white; the plan's notes in Decisions,
-"4.4h": `TargetSpec.IfKicked` swaps a target word, overload removes targeting). From h2e: revolt is
+h2e (zones and combat) and **h3 (overload: Damn, 276 of 528 play)** are done — black's options are finished (Decisions,
+"4.4h1", "4.4h2a" … "4.4h2e", "4.4h3").
+Next, in a NEW session: **MC-4.4h4 — splice onto Arcane: Goryo's Vengeance** (Through the Breach waits for red; the
+plan's note in Decisions, "4.4h": no piece adds one card's effects to another spell). From h3: overload is
+`Scripting.Overload(cost)` — the cast has no target words (`StackResolution.TextOf(…, alternative)`), "each" the
+script's `If(AlternativeCostWasPaid) { Otherwise }`; Winds of Abandon takes it with white. h3's tests are in
+`LsvBatch2h3Tests.cs` (`Twin`: an instant copying target spell). From h2e: revolt is
 `Count.PermanentsLeftTheBattlefieldThisTurn` (the controller's tally); how many must block is ONE number,
 `Combat.MinimumBlockers` (menace, `MinimumBlockers(N)`); shadow `Scripting.Shadow`; "an opponent's graveyard … with a
 void counter" `ExileInsteadOfYourGraveyard { Whose, CounterKind }`; "with a [kind] counter" `Is.WithCounter`; a choice

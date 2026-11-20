@@ -39,9 +39,12 @@ public static class Describe
 				// Baleful Mastery's {1}{B}, Snuff Out's life: told from the paid cast beside it (a resolution's free
 				// cast is a choice's option, whose text a record's fingerprint hashes — left as it was)
 				+ (
-					c.WithoutPayingManaCost && !c.DuringResolution
-						? " (not paying its mana cost)"
-						: ""
+					!c.WithoutPayingManaCost || c.DuringResolution ? ""
+					// Damn: "cast this spell for its overload cost"
+					: Rules.Playable.OwnAlternativeCost(s, s.GetCard(c.CardId), c.PlayerId)
+					&& s.GetCard(c.CardId).GetComponent<MayCastFromHandFree>() is { Overload: true }
+						? " (overload)"
+					: " (not paying its mana cost)"
 				)
 				+ (c.Replicate > 0 ? $" (replicate ×{c.Replicate})" : "")
 				+ (c.Delve > 0 ? $" (delve {c.Delve})" : "")

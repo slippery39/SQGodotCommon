@@ -212,6 +212,13 @@ public static class Scripting
 		];
 
 	/// <summary>
+	/// Overload (CR 702.96) — Damn: "Overload {2}{W}{W}" — Baleful Mastery's alternative mana cost, from wherever it is
+	/// cast, with no target words when paid; the text's "each" is an If(AlternativeCostWasPaid) beside its "target".
+	/// </summary>
+	public static MayCastFromHandFree Overload(string cost) =>
+		new(Is.Source) { Mana = ManaCost.Parse(cost), Overload = true };
+
+	/// <summary>
 	/// Warp (CR 702.185) — Quantum Riddler: "Warp {1}{U} (You can cast this card from your hand for its warp cost.
 	/// Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)" —
 	/// Baleful Mastery's alternative mana cost, from the hand only; paid, the permanent is exiled at the next end step

@@ -74,7 +74,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`DealDamage(Ref To, Count Amount)`** — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply. [67: Extended Absence, Cast Away Doubt, Screeching Soulbreaker…]
   - `IfExcess` (ImmutableList<GameAction>): Violent Echoes: "if excess damage was dealt to that permanent this way, [IfExcess]" — X is the excess. For a…
   - `Then` (ImmutableList<GameAction>): Screaming Nemesis: "If a player is dealt damage this way, they can't gain life for the rest of the game." —…
-- **`Destroy(Ref What)`** — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7). [43: Prophesied End, Terminal Criticism, Surgical Precision…]
+- **`Destroy(Ref What)`** — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7). [44: Prophesied End, Terminal Criticism, Surgical Precision…]
   - `Then` (ImmutableList<GameAction>): Decree of Pain: "Destroy all creatures. … Draw a card for each creature destroyed this way." — run after,…
 - **`DestroyCreaturesNotOfChosenType`** — Kindred Judgment: "Choose a creature type. Destroy all creatures that aren't of the chosen type." The options are the types among… [1: Kindred Judgment]
 - **`DestroyCreaturesNotOfTypeAction(ImmutableArray<string> Types)`** — After the choice: every creature without the chosen type is destroyed.
@@ -125,7 +125,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords)`** — Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn." [1: Hungering Puppetbeast]
 - **`GetEmblem(ImmutableArray<GameComponent> Abilities)`** — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good. [3: Ajani Resolute, Chandra, Chill of Compliance, Chandra, Torch of Defiance]
 - **`GrantChosenKeywordAction(Ref What, ImmutableArray<string> Keywords)`** — After the choice: the chosen keyword, until end of turn.
-- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [113: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
+- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [114: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
   - `Otherwise` (ImmutableList<GameAction>): Desperate Futurescribe: "… instead" — what happens when the condition does not hold.
 - **`IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then)`** — Captain Michael Burnham: "If this is the second time this ability has resolved this turn, put a +1/+1 counter on Captain Burnham." —… [2: Captain Michael Burnham, Jake Sisko, War Correspondent]
 - **`LandTapsForTwoUntilThisIsCast(Ref Land)`** — Emrakul, the Exigent Doom: "Target land gains '{T}: Add {C}{C}' until this card is cast from exile. You may cast this card for as long as… [1: Emrakul, the Exigent Doom]
@@ -258,7 +258,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 
 ## Conditions — "if …" (`Effects/Conditions.cs`)
 
-- **`AlternativeCostWasPaid`** — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost). Evoke… [1: Baleful Mastery]
+- **`AlternativeCostWasPaid`** — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost). Evoke… [2: Baleful Mastery, Damn]
 - **`Always`** — A "you may" that can always be done. [13: Clash of Elements, Plan for All Outcomes, Generous Plunderer…]
 - **`AtLeast(Count Count, int N)`** — Eye of Jace: "if there are seven or more cards in your graveyard". [62: Wrath of the Bloodmane, Eye of Jace, Traxos, Academy Guardian…]
   - `MoreThan` (Count?): Robber of the Rich: "if defending player has more cards in hand than you" — at least N more than this count…
@@ -456,6 +456,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Costs` (ImmutableList<AdditionalCost>): Flare of Fortitude: "You may sacrifice a nontoken white creature rather than pay this spell's mana cost." —…
   - `If` (Condition?): Snuff Out: "If you control a Swamp, you may pay 4 life rather than …"; Force of Negation: "If it's not your…
   - `Mana` (ManaCost?): Baleful Mastery: "You may pay {1}{B} rather than pay this spell's mana cost." — mana paid instead…
+  - `Overload` (bool): Overload (CR 702.96) — Damn: "Overload {2}{W}{W} (You may cast this spell for its overload cost. If you do,…
   - `From` (ImmutableList<ZoneType>): Warp (Quantum Riddler): "You may cast this card from your HAND by paying [cost]" — the zones the card's own…
   - `PaidAtNextEndStep` (ImmutableList<GameAction>): Warp (Quantum Riddler): "If this spell's warp cost was paid, exile the permanent this spell becomes at the…
 - **`MayCastThisFrom(ZoneType From)`** — MC-6.9: "You may cast this card from your graveyard / from exile" — the card's own permission, read by Playable.CanCastFromHere. Storied… [3: From the Catacombs, Storied Veteran, Khan, Vengeful Heart]
@@ -792,6 +793,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - `Fear` — Fear (CR 702.36) — Shizo: "gains fear until end of turn. (It can't be blocked except by artifact creatures and/or black creatures.)" —… [1: Shizo, Death's Storehouse]
 - `Shadow` — Shadow (CR 702.28) — Dauthi Voidwalker: "Shadow (This creature can block or be blocked by only creatures with shadow.)" — no combat rule… [1: Dauthi Voidwalker]
 - `Evoke` — Evoke (CR 702.74) — Subtlety: "Evoke—Exile a blue card from your hand." (Solitude, Endurance, Fury, Grief: their colours.) An alternative… [2: Subtlety, Grief]
+- `Overload` — Overload (CR 702.96) — Damn: "Overload {2}{W}{W}" — Baleful Mastery's alternative mana cost, from wherever it is cast, with no target… [1: Damn]
 - `Warp` — Warp (CR 702.185) — Quantum Riddler: "Warp {1}{U} (You can cast this card from your hand for its warp cost. Exile this creature at the… [6: Time Warp, Quantum Riddler, Warp Core…]
 - `Squad` — Squad (CR 702.157) — Sicarian Infiltrator: "Squad {2} (As an additional cost to cast this spell, you may pay {2} any number of times. When… [2: Sicarian Infiltrator, DOT-7 Repair Squad]
 - `Storm` — Storm (CR 702.40) — Brain Freeze: "When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets… [2: Elspeth, Storm Slayer, Brain Freeze]

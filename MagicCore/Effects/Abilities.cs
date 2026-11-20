@@ -1633,6 +1633,13 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 	public ManaCost? Mana { get; init; }
 
 	/// <summary>
+	/// Overload (CR 702.96) — Damn: "Overload {2}{W}{W} (You may cast this spell for its overload cost. If you do, change
+	/// "target" in its text to "each.")" — cast for this cost, the spell has no target words (StackResolution.TextOf), and
+	/// what "each" reads is the script's If(AlternativeCostWasPaid) over Ref.Permanents (Scripting.Overload).
+	/// </summary>
+	public bool Overload { get; init; }
+
+	/// <summary>
 	/// Warp (Quantum Riddler): "You may cast this card from your HAND by paying [cost]" — the zones the card's own
 	/// alternative cost is cast from, the CASTER's (never another's hand under Sen Triplets); empty: wherever it is cast
 	/// (Flare of Fortitude).

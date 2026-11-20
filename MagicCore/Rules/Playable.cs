@@ -154,6 +154,15 @@ public static class Playable
 		s.CardsIn(playerId, ZoneType.Battlefield)
 			.Any(p => s.AbilitiesOf<MayPlayFromZone>(p).Any(may => may.OutsideTheGame));
 
+	/// <summary>
+	/// Baleful Mastery, Damn's overload: "You may pay {1}{B} rather than pay this spell's mana cost" — the free cast open
+	/// to the player (FreeCast) is the card's own alternative cost, never Urza's free mark or Omnipresence's static.
+	/// </summary>
+	public static bool OwnAlternativeCost(GameState s, Card card, int playerId) =>
+		FreeCast(s, card, playerId) is { } freeCast
+		&& freeCast.What.Equals(Filters.Is.Source)
+		&& card.Components.Contains(freeCast);
+
 	/// <summary>Proft: "You can't cast this spell unless …" — wherever and however it is cast.</summary>
 	public static bool CastRestrictionHolds(GameState s, Card card, int playerId) =>
 		card.GetComponent<CastOnlyIf>() is not { } only

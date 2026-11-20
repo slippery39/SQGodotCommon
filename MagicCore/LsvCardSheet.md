@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 34/46 · uncommon 51/86 · rare 130/279 · mythic 51/108 · **275/528**
+**Playable:** common 34/46 · uncommon 51/86 · rare 131/279 · mythic 51/108 · **276/528**
 
 ### "Name Sticker" Goblin
 
@@ -3051,7 +3051,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Destroy target creature. A creature destroyed this way can't be regenerated.  
 > Overload {2}{W}{W} (You may cast this spell for its overload cost. If you do, change "target" in its text to "each.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h3Tests
+
+**Engine pieces:** `AlternativeCostWasPaid` — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Damn"] =
+[
+	Overload("{2}{W}{W}"),
+	// "A creature destroyed this way can't be regenerated": the engine has no regeneration (Wrath of God's note).
+	Spell(
+		[Creature],
+		new If(
+			new AlternativeCostWasPaid(),
+			[new Destroy(Ref.Permanents(Is.Creature))]
+		)
+		{
+			Otherwise = [new Destroy(Ref.Target())],
+		}
+	),
+],
+```
 
 ### Dark Matter Manipulator
 
