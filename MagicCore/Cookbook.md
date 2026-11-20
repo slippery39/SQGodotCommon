@@ -215,7 +215,7 @@ OLD `s`); and in a choice answer use a `switch`, never `c is T ? [x] : []` (CSha
 
 ```
 python tools/magic_set.py text "Card Name"…        # printed text
-python tools/magic_set.py coverage                 # playable by rarity, and what's missing
+python tools/magic_set.py coverage                 # playable by rarity and by colour, and what's missing
 python tools/magic_docs.py                          # regenerate the catalog and the card sheet
 python tools/edit.py SPEC                           # replace-exactly-once edits, all or none
 python tools/revert_check.py SPEC                   # break each piece, confirm its test fails

@@ -2,7 +2,7 @@
 
     python tools/magic_set.py text "Gideon the Oathless" "Gardenize"   # printed text of these cards
     python tools/magic_set.py text --missing                         # every card not yet playable
-    python tools/magic_set.py coverage                               # playable by rarity
+    python tools/magic_set.py coverage                               # playable by rarity, then by colour
     python tools/magic_set.py ... --set FRA                          # another set's JSON (default FRA)
 
 "Playable" = scripted in ANY set's Cards file (a reprint is scripted once, MC-5.5), keywords only
@@ -49,6 +49,16 @@ def load(set_code):
     d = json.loads((ROOT / "MagicCore" / "Sets" / f"{set_code}.json").read_text(encoding="utf-8"))
     cards = d if isinstance(d, list) else d.get("cards") or d.get("data")
     return cards, all_script_keys()
+
+
+def colour(c):
+    """W/U/B/R/G, 'multicolour' or 'colourless'. A DFC has no top-level colors in Scryfall's JSON (every colour's
+    survey missed them, MC-4.4i), so its front face's mana cost decides."""
+    cols = c.get("colors")
+    if cols is None:
+        cost = (c.get("card_faces") or [{}])[0].get("mana_cost") or ""
+        cols = [k for k in "WUBRG" if "{" + k in cost or "/" + k + "}" in cost]
+    return cols[0] if len(cols) == 1 else "multicolour" if cols else "colourless"
 
 
 def oracle(c):
@@ -109,6 +119,12 @@ def main():
             ok[c["rarity"]] += playable(c, keys, keywords)
         parts = [f"{r} {ok[r]}/{total[r]}" for r in RARITIES if total[r]]
         print(" · ".join(parts) + f" · **{sum(ok.values())}/{sum(total.values())}**")
+        by, ok_by = Counter(), Counter()
+        for c in cards:
+            by[colour(c)] += 1
+            ok_by[colour(c)] += playable(c, keys, keywords)
+        order = [*"WUBRG", "multicolour", "colourless"]
+        print("by colour: " + " · ".join(f"{k} {ok_by[k]}/{by[k]}" for k in order if by[k]))
         missing = [c["name"] for c in cards if not playable(c, keys, keywords)]
         if missing:
             print(f"not playable ({len(missing)}): " + ", ".join(missing))

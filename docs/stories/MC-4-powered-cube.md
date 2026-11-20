@@ -1436,6 +1436,13 @@ as his three priorities.
   each, asked again.
   **Open (for Shayne): the five blue and black DFCs** — in i5, or a part after it (default: **i7**, after Etali, so i5
   builds the transform on one card first).
+- 2026-11-20, Shayne (reviewing 4.4i's plan): **more cards a session** — h7–h9 as one batch cost 4.7M against 1.8–3.6M
+  for each one-mechanic part (`card-batch-usage.md`), so red's eight parts are four batches: **i1 + i2a** (the 6 tested
+  pieces and the 4 trigger and combat options, 10 cards), **i2b + i3** (multikicker, dash, backup and the extra combat,
+  4 cards), **i4–i6** (energy, transforming DFCs, Etali — poison is i4's player counters, Etali i5's transform; 3
+  cards, as h7–h9), **i7** (the five missed DFCs, on i5's transform; Sink into Stupor is modal, its own piece). **Each
+  session's summary gives the cube's cards implemented by rarity AND by colour** — `python tools/magic_set.py coverage
+  --set LSV` prints both (its colour line reads a DFC's front face, the survey's gap).
 
 ## Tasks
 
@@ -1681,15 +1688,16 @@ as his three priorities.
     - [x] MC-4.4h8 Emerge: Crabomination
     - [x] MC-4.4h9 Miracle: Metamorphosis Fanatic
   - [ ] MC-4.4i Red beyond tier 1 (Shayne, 2026-11-20: the next colour) — 17 cards read card by card and tiered
-        (Decisions, "4.4i"): 6 tested pieces, 7 options, 4 new pieces; one part per session:
-    - [ ] MC-4.4i1 The tested pieces, 6: Embereth Shieldbreaker // Battle Display, Oliphaunt, Unholy Heat, Through the
+        (Decisions, "4.4i"): 6 tested pieces, 7 options, 4 new pieces; four batches — i1 + i2a, i2b + i3, i4–i6, i7
+        (Shayne: more cards a session):
+    - [ ] MC-4.4i1 The tested pieces, 6 (one batch with i2a): Embereth Shieldbreaker // Battle Display, Oliphaunt, Unholy Heat, Through the
           Breach, Gut, True Soul Zealot, Headliner Scarlett
     - [ ] MC-4.4i2a Options, triggers and combat, 4: Fury, Ivora, Insatiable Heir, Dragon's Rage Channeler, Caves of
           Chaos Adventurer
-    - [ ] MC-4.4i2b Options, casting, 3: Batroc the Leaper (multikicker), Ragavan, Nimble Pilferer and Death-Greeter's
+    - [ ] MC-4.4i2b Options, casting, 3 (one batch with i3): Batroc the Leaper (multikicker), Ragavan, Nimble Pilferer and Death-Greeter's
           Champion (dash, backup)
     - [ ] MC-4.4i3 An additional combat phase: Fear of Missing Out
-    - [ ] MC-4.4i4 Counters on a player — energy: Galvanic Discharge (Guide of Souls waits for white)
+    - [ ] MC-4.4i4 Counters on a player — energy (one batch with i5, i6): Galvanic Discharge (Guide of Souls waits for white)
     - [ ] MC-4.4i5 Transforming double-faced cards: Fable of the Mirror-Breaker
     - [ ] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
     - [ ] MC-4.4i7 (default, Shayne to confirm) The blue and black DFCs every survey missed: Tamiyo, Inquisitive
@@ -1713,8 +1721,10 @@ batch (saddle: Caustic Bronco; emerge: Crabomination; miracle: Metamorphosis Fan
 **black is finished** (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3" … "4.4h6", "4.4h7–h9") — but for its two DFCs,
 which every colour's survey missed (Decisions, "4.4i"; blue's three too). **Red is next (Shayne, 2026-11-20), planned:
 4.4i** (Decisions, "4.4i") — i1 the 6 tested pieces, i2a/i2b the 7 options, then i3–i6 one new piece a session (an
-extra combat, energy, transforming DFCs, Etali); i7 the missed blue and black DFCs, if Shayne takes the default.
-Next, in a NEW session: **MC-4.4i1**, once Shayne has reviewed the plan. From h7–h9: saddle is `LsvCards.Saddle(n)` ("saddled"
+extra combat, energy, transforming DFCs, Etali); i7 the missed blue and black DFCs — built as four batches, i1 + i2a,
+i2b + i3, i4–i6, i7 (Shayne: more cards a session). Each session ends with the cube's cards implemented by rarity AND
+by colour (`python tools/magic_set.py coverage --set LSV`). Next, in a NEW session: **MC-4.4i1 + i2a** (10 cards). From
+h7–h9: saddle is `LsvCards.Saddle(n)` ("saddled"
 `Is.With("Saddled")`); emerge `Scripting.Emerge(cost, filter)` (`MayCastFromHandFree.LessTheSacrificed`);
 `ExileTopPlayable { Linked }` groups exiles from several zones for `Is.ExiledBySource`; a trigger read from a hand or
 graveyard is `TriggeredAbilityComponent.From` (was `FromGraveyard`); miracle `Scripting.Miracle(cost)` (`CastOneOf {
@@ -2027,3 +2037,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-20: Shayne picked red. MC-4.4i planned: red's 17 — 6 tested pieces (i1), 7 options in two parts (i2a, i2b),
   four new mechanics one a session (i3–i6); the survey's filter missed every DFC (blue's 3, black's 2: i7 by default).
   Next: MC-4.4i1, after Shayne's review.
+- 2026-11-20: Shayne: more cards a session — red's parts as four batches (i1 + i2a, i2b + i3, i4–i6, i7); each
+  session's summary by rarity and by colour (`magic_set.py coverage` prints both). Next: MC-4.4i1 + i2a.

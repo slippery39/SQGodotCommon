@@ -122,7 +122,7 @@ become a CHOICE made after the action, not more actions.
 
   <anything to ask him before building, from the plan — or leave the line out>
 
-  At the end, give me <what he asked for at the end of this batch, e.g. the cube's total cards implemented, by rarity>.
+  At the end, give me <what he asked for at the end of this batch, e.g. the cube's total cards implemented, by rarity and by colour>.
   ```
 
   Take every field from the story's Next and the plan, never from memory. If no batch is left, say so instead.
