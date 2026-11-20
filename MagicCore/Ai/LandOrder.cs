@@ -50,17 +50,7 @@ public static class LandOrder
 			.Select(l =>
 			{
 				var land = s.GetCard(l.CardId);
-				// Room of Refuge's colour is chosen as it enters: in hand, any of them
-				var makes = land.HasComponent<Effects.ChoosesColorAsItEnters>()
-					?
-					[
-						ManaColor.White,
-						ManaColor.Blue,
-						ManaColor.Black,
-						ManaColor.Red,
-						ManaColor.Green,
-					]
-					: ManaAbilities.ColorsOf(s, land).ToList();
+				var makes = ManaAbilities.ColorsOf(s, land).ToList();
 				var tapped = EntersTapped(s, l);
 				var spend = Spend(
 					tapped || makes.Count == 0 ? untapped : [.. untapped, makes],

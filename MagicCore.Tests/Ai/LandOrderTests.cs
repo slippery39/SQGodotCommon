@@ -124,6 +124,55 @@ public class LandOrderTests
 		Assert.That(Played(s), Is.EqualTo("Plains"));
 	}
 
+	// AI-29.6: a card we know is on top (a scry or surveil kept it there) is in the deck the colours are read from -
+	// here the only white card of the deck.
+	[Test]
+	public void TurnOne_APlains_ForTheWhiteDoublePipKnownOnTop()
+	{
+		Library(
+			(WhiteTwo, 1),
+			(CardRegistry.Get("Plains"), 8),
+			(CardRegistry.Get("Mountain"), 8),
+			(GreyThree, 8)
+		);
+		var top = s.CardsIn(me, ZoneType.Library).First();
+		s = s.MakeKnown(top.Id, Knowers.Owner);
+		Put("Mountain", ZoneType.Hand);
+		Put("Plains", ZoneType.Hand);
+		Put(GreyThree, ZoneType.Hand);
+
+		Assert.That(top.Name, Is.EqualTo("White Two"), "setup: the white card on top");
+		Assert.That(Played(s), Is.EqualTo("Plains"));
+	}
+
+	// AI-29.5: the rollout that scores a line plays the land the rule picks, not the first in hand - so a line is scored
+	// with the lands the AI would really play.
+	[Test]
+	public void TheRollout_PlaysTheLandTheRulePicks()
+	{
+		WhiteRedDeck();
+		Put("Mountain", ZoneType.Hand);
+		Put("Plains", ZoneType.Hand);
+		Put(WhiteTwo, ZoneType.Hand);
+		string? Rolled()
+		{
+			string? land = null;
+			Rollout.Traced(
+				(at, _, d) =>
+					land ??= d.Action is PlayLandAction l ? at.GetCard(l.CardId).Name : null,
+				() => Rollout.Score(s, me, Rollout.Horizon(s, Rollout.Default), Rollout.Default)
+			);
+			return land;
+		}
+
+		Assert.That(
+			Evaluator.Without(Evaluator.Terms.LandOrder, Rolled),
+			Is.EqualTo("Mountain"),
+			"control"
+		);
+		Assert.That(Rolled(), Is.EqualTo("Plains"));
+	}
+
 	// Review, 2026-11-19: a land that enters tapped and asks a choice as it enters (Room of Refuge's colour) is a tapped
 	// land - the choice pending after the play is no shockland's "pay 2 life".
 	[Test]

@@ -28,6 +28,12 @@ public static class ManaAbilities
 					.SelectMany(m => m.AnyOneColor ? AnyColor : [m.Color])
 			)
 			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
+			// Room of Refuge's colour is chosen as it enters: off the battlefield it can be any (AI-29.4)
+			.Concat(
+				card.HasComponent<ChoosesColorAsItEnters>() && !s.IsOnBattlefield(card.Id)
+					? AnyColor
+					: []
+			)
 			.Distinct();
 	}
 

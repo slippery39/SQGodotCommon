@@ -1157,7 +1157,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add one mana of the chosen color.  
 > {5}, {T}, Sacrifice this land: Put two +1/+1 counters on target creature. Activate only as a sorcery.
 
-**Status:** scripted · **tests naming it:** FraCommonTests, LandOrderTests
+**Status:** scripted · **tests naming it:** FraCommonTests, LandOrderTests, LandUnlockTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ChoosesColorAsItEnters` — Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Room` — A dungeon room (CR 309.4): its ability, triggered as the venture marker moves into it,…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `TapSelfCost` — "{T}:" — tap this permanent.
 

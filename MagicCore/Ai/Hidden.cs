@@ -349,7 +349,12 @@ public static class Hidden
 				.Where(c => !c.IsToken && !c.IsCopy),
 		];
 		var colors = shown
-			.SelectMany(c => c.Is(CardType.Land) ? ManaAbilities.ColorsOf(s, c) : c.Colors)
+			// a land making more than two (any colour: Room of Refuge off the battlefield) shows none (OptionPrice's rule)
+			.SelectMany<Card, ManaColor>(c =>
+				!c.Is(CardType.Land) ? c.Colors
+				: ManaAbilities.ColorsOf(s, c).Distinct().ToList() is { Count: <= 2 } made ? made
+				: []
+			)
 			.Where(c => c != ManaColor.Colorless)
 			.ToHashSet();
 		if (colors.Count == 0)

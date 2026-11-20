@@ -101,13 +101,21 @@ like it to be thought of (Shayne's todo).
 
 - [ ] AI-29.1 The shape agreed: where a note lives, how the general evaluator calls it, its three kinds
 - [ ] AI-29.2 The pilot: flash (his rule above), on seed 2 #16
-- [ ] AI-29.3 Land sequencing as a simple rule, not the look-ahead (Shayne, 2026-11-18, above): which land to play -
+- [x] AI-29.3 Land sequencing as a simple rule, not the look-ahead (Shayne, 2026-11-18, above): which land to play -
       what enters untapped now and not later, the colours the hand needs - on the Konstrari Annex position (AI-9.10).
       Sprint 6 item 3, before the flash pilot
+- [x] AI-29.4 A land whose colour is chosen as it enters (Room of Refuge) is any colour off the battlefield, in
+      `ManaAbilities.ColorsOf` - every reader (LandUnlock's discard and surveil, Castability) sees it as no source today;
+      LandOrder's own patch goes
+- [x] AI-29.5 The rollout plays the land LandOrder picks, not the first in hand - lines are scored with the land
+      sequence the AI would really play
+- [x] AI-29.6 Step 5 counts the spells we KNOW are on top of the library (a scry or surveil kept them there) - today
+      `Hidden.Unseen` leaves them out
+- [x] AI-29.7 `HiddenTests`' sample test covers the DEFAULT search too, not only with the land rule off
 
 ## Next
 
-AI-29.3: built, suite accepted, match flat (Log); the commit when Shayne asks. Shayne's OPEN case (an R card
+AI-29.4-29.7 are done (suite accepted, match flat) and wait for their commit. Then Shayne's OPEN case (an R card
 and a WW card, two Plains and a Mountain - card value decides) and his harder scenarios are the next tests. AI-29.1
 after - a discussion.
 
@@ -142,3 +150,11 @@ after - a discussion.
   colour) read as untapped, and its colour unknown in hand made a Plains win step 2; now tapped, and any colour in
   hand (`TurnOne_ATappedLand_ThatAsksAColourAsItEnters`, failed before). A land making no mana no longer counts as
   a source. Suite: 0 changed.
+- 2026-11-19: AI-29.3 committed (31929632). The review's four leftovers made AI-29.4-29.7, to fix now (Shayne).
+- 2026-11-19: AI-29.4-29.7 done, each with a test that fails without it. 29.4: `ManaAbilities.ColorsOf` reads a
+  colour chosen as it enters as any colour OFF the battlefield (LandUnlock's discard and surveil, LandOrder - its own
+  patch gone); `Hidden`'s guess of the opponent's colours ignores a land of more than two, as `OptionPrice` does.
+  29.5: the rollout plays `LandOrder`'s land, under `Terms.LandOrder`. 29.6: the rule's deck is the whole library,
+  the known top included. 29.7: the sample test runs the default search, on seed 2 (seed 3's difference was land
+  choices). Suite: 2 of 288 changed (seed 2 #21 Koth cast before combat instead of after, no attack either way;
+  seed 4 #13 an Island instead of a Plains, Repurposed Enforcer cast either way); 19094 steps a position. Both accepted (Shayne); match beam vs beam+nolandorder flat: 144-144, 50.0% ± 1.3pp, no 5pp difference either way; 10346 vs 10588 steps a decision (2% cheaper), lands 7.5 vs 7.4.

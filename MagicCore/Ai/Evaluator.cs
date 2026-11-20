@@ -645,7 +645,7 @@ public static partial class Evaluator
 		/// <summary>
 		/// Which land to play is a rule, not the search (<see cref="LandOrder"/>, AI-29.3, Shayne 2026-11-19): the casts it
 		/// allows now, the colours the hand and the deck need, a condition that can break first, a tapped land when free
-		/// (`+nolandorder`).
+		/// (`+nolandorder`). The rollout plays the land it picks too (AI-29.5), under the same switch.
 		/// </summary>
 		LandOrder = 1L << 39,
 	}

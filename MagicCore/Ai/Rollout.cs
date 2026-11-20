@@ -761,7 +761,7 @@ public static class Rollout
 		);
 
 	/// <summary>
-	/// Our policy: on our own turn at sorcery speed, the land first, then the best-scoring
+	/// Our policy: on our own turn at sorcery speed, the land first (the one LandOrder picks), then the best-scoring
 	/// <paramref name="playable"/> move (none: the turn's plays are spent) if it leaves us no worse. "No worse", not "better" as GreedyAi asks:
 	/// a setup play scores flat, and MtgSimulator found strict improvement stops at exactly the play a
 	/// rollout exists to see. Never responds. An ACTIVATED ability must leave us better (with the potential score,
@@ -782,8 +782,22 @@ public static class Rollout
 		var moves = s.AiMoves(
 			allowed is null ? s.SearchMoves() : [.. s.SearchMoves().Where(allowed)]
 		);
-		if (moves.OfType<PlayLandAction>().FirstOrDefault() is { } land)
-			return land;
+		if (moves.OfType<PlayLandAction>().ToList() is { Count: > 0 } lands)
+			// the land the search's rule picks (AI-29.5), not the first in hand: a line is scored with the lands the AI
+			// would really play. The deck: this rollout's library, its known cards.
+			return Evaluator.IsOff(Evaluator.Terms.LandOrder) || lands.Count == 1
+				? lands[0]
+				: LandOrder
+					.Pick(
+						s,
+						me,
+						lands,
+						[
+							.. s.CardsIn(me, ZoneType.Library)
+								.Where(c => !Hidden.IsUnknown(c) && !c.Is(CardType.Land)),
+						]
+					)
+					.Keep[0];
 		landDone = true; // none now: none this turn worth asking for again
 		if (playable is null)
 			return null;

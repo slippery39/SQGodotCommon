@@ -205,15 +205,14 @@ public class HiddenTests
 
 	// The search in this mode plays a real FRA game — every decision it takes in its sample is one the
 	// real game accepts (PlayAis fails on a refused one) — and plays it differently from the real
-	// order: the same seed, a different game, so the search really decides from the sample. AI-29.3's land rule off:
-	// the land choices the sample used to separate in these six turns are its now, read from the deck list.
+	// order: the same seed, a different game, so the search really decides from the sample. The DEFAULT search (AI-29.7):
+	// on seed 3 the land choices that separated the two games are AI-29.3's land rule's now; on seed 2 they still differ.
 	[Test]
 	public void TheSearch_PlaysARealGame_FromItsSamples()
 	{
-		const Evaluator.Terms rule = Evaluator.Terms.LandOrder;
 		Assert.That(
-			Play(new(Library: Hidden.Library.ShuffleUnknown, Without: rule)),
-			Is.Not.EqualTo(Play(new(Library: Hidden.Library.RealOrder, Without: rule)))
+			Play(new(Library: Hidden.Library.ShuffleUnknown), seed: 2),
+			Is.Not.EqualTo(Play(new(Library: Hidden.Library.RealOrder), seed: 2))
 		);
 	}
 
@@ -378,12 +377,12 @@ public class HiddenTests
 			Assert.That(Lands(TurnPlayed("beam", seed)), Is.EqualTo(Lands(at) + 1), $"seed {seed}");
 	}
 
-	static string Play(BeamSearchAi.Settings options)
+	static string Play(BeamSearchAi.Settings options, int seed = 3)
 	{
 		var game = MagicRules.NewGame(
 			FraDecks.All["White-Blue Jace"],
 			FraDecks.All["White-Black"],
-			seed: 3
+			seed: seed
 		);
 		game = TestGames.PlayAis(
 			game,

@@ -237,7 +237,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	// The cards of our library the plan's search hadn't seen (LandOrNot): one of them in our hand is news it was made without.
 	HashSet<int> planUnseen = [];
 
-	/// <summary>Our unseen nonland cards as the real game has them, read before the root is sampled - the deck <see cref="LandOrder"/> reads colours from.</summary>
+	/// <summary>Our library's nonland cards as the real game has them, read before the root is sampled - the deck <see cref="LandOrder"/> reads colours from.</summary>
 	List<Cards.Card> deck = [];
 	int rollouts;
 	int secondRollouts; // a line's second rollout under LandOrNot: a cost, not a line of the budget
@@ -501,10 +501,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
+		// the whole library, the known top cards too - kept there by a scry or surveil (AI-29.6)
 		deck =
 		[
-			.. Hidden
-				.Unseen(s, PlayerId)
+			.. s.CardsIn(PlayerId, ZoneType.Library)
 				.Where(c => !Hidden.IsUnknown(c) && !c.Is(Cards.CardType.Land)),
 		];
 		planUnseen =
