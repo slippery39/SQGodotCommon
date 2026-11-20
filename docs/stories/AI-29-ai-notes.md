@@ -53,7 +53,35 @@ Kai Winn's name, tap abilities at their last chance, waiting wins a tie) and can
 
 ## Requirements
 
-Notes in general: not agreed — to shape with Shayne (AI-29.1).
+**Notes in general (AI-29.1), the shape - Claude's proposal, Shayne 2026-11-19: "Great".**
+- A note is AI code about one MECHANIC (flash, loot, bounce, "enters, fight"), matched by what the card has (the Flash
+  keyword, a discard effect) - every card using it gets the note; a card-name note only for a truly unique card.
+- Three kinds, each called at ONE place, every note asked in turn: **when to play it** (the search's move list, where
+  `LandOrder`, `SaveBurn`, `LandDrop`, `StationCap` sit), **how to answer its choice** (before the search branches on it;
+  `SurveilLands` is one), **what holding it is worth** (the held price; `HoldOption` / `OptionPrice` are).
+- Two strengths: a note DECIDES (drops the other moves - saves search, as the land rule did: 1 s, not 20-34 s) or
+  TILTS (adds to or takes from a move's score - the search can still overrule it). Tilt by default; decide only where
+  the answer is clear without looking ahead (lands; loot away the extra land).
+- Home: `MagicCore/Ai/Notes/`, a file per mechanic; each its own switch in `Evaluator.Terms` (`beam+no<note>`), a test
+  from a position, the suite and a match. In the AI only - the rules engine stays AI-free, game state serializable.
+- The rules already in the AI move into that home when next touched - not one big move.
+
+**The flash pilot's tests (AI-29.2), Shayne 2026-11-19, in his words** - "a nice basic test suite, if anything fails
+here, it is likely that more complicated examples would fail as well". A Flash 3/3 creature:
+1. "Playing the 3/3 flash creature main phase for no extra value - should never happen"
+2. "Waiting and playing the 3/3 flash creature at opponents end step - ideal."
+3. The opponent has a 2/2: "Opponent attacks with 2/2, instead of playing the 3/3 at end step, you play it before
+   blocks, block the 2/2 and gain extra value."
+4. "You have some sort of creature in play already, that draws you a card whenever a creature of yours comes into
+   play, and you have 6 mana - play the 3/3 flash" (in the main phase).
+5. "You have that same creature in play, but you only have 3 mana untapped, have already played your land, and have
+   no other plays - wait until opponents end of turn."
+Tests 4 and 5 differ in one thing (Shayne, 2026-11-19): "One has no mana left over, so (in theory) you won't be able to
+play anything extra that turn anyways so there is no use to main phasing it. The other has [mana] left over, so in
+theory you could draw something else and play that. That's the whole difference." So the main-phase value of the draw
+is mana left over to cast what it draws. How little leftover still counts (1 or 2 mana) is for a position to show.
+"We can think of more." Written up front, before the note, each with the search today as its control where it fails;
+then the note; then seed 2 #16 (Divining Duelist looting away our next land drop in our main phase).
 
 **Land sequencing (AI-29.3), agreed 2026-11-19.** On a land turn the AI plays the land a rule picks, from what it
 holds and its deck, no look-ahead; the search keeps everything else (when to play it, what to cast). The rule compares
@@ -106,8 +134,8 @@ More scenarios like the last to be thought of (Shayne's todo).
 
 ## Tasks
 
-- [ ] AI-29.1 The shape agreed: where a note lives, how the general evaluator calls it, its three kinds
-- [ ] AI-29.2 The pilot: flash (his rule above), on seed 2 #16
+- [x] AI-29.1 The shape agreed: where a note lives, how the general evaluator calls it, its three kinds
+- [ ] AI-29.2 The pilot: flash (his rule above) - his five tests first (Requirements), then the note, then seed 2 #16
 - [x] AI-29.3 Land sequencing as a simple rule, not the look-ahead (Shayne, 2026-11-18, above): which land to play -
       what enters untapped now and not later, the colours the hand needs - on the Konstrari Annex position (AI-9.10).
       Sprint 6 item 3, before the flash pilot
@@ -123,7 +151,9 @@ More scenarios like the last to be thought of (Shayne's todo).
 
 ## Next
 
-AI-29.8 is done and waits for its commit. Then Shayne's harder scenarios as tests; AI-29.1 after - a discussion.
+AI-29.2, the flash pilot - a PLANNING session on 2026-11-19, nothing built. Start by writing Shayne's five tests
+(Requirements; the Flash 3/3 costs 2, so 6 mana leaves his 4) and running them against the search as it is: which fail says what the note must do. Then the note
+(tilt, `Notes/Flash.cs`, its switch), the suite and a match. Shayne's harder land scenarios stay his todo.
 
 ## Log
 
@@ -170,3 +200,5 @@ AI-29.8 is done and waits for its commit. Then Shayne's harder scenarios as test
   held values (search and rollout alike); next turn's land is read from the hand, not the moves (the search offers one
   move for two Plains - the first version missed exactly that). Two tests, one each way, values given by the test;
   unmeasured cards tie at the flat price and keep step 1. Suite: 0 of 288 changed - no match run (nothing to measure).
+- 2026-11-19: AI-29.8 committed (c00328c4). AI-29.1 started.
+- 2026-11-19: AI-29.1 - the shape proposed and agreed ("Great"); Shayne's five flash tests recorded for AI-29.2. Planning only.

@@ -44,7 +44,7 @@ plans (`WholeAttacks.Best`) 50%, free passes 36%, the engine's per-step checks t
 
 ## Next
 
-Start at AI-30.1 on a quiet machine (ask Shayne). Read AI-22 (done) and its findings ("AI-22.1", "AI-22.2" in
+Start at AI-30.1 on a quiet machine - an OVERNIGHT run, when Shayne isn't using it (2026-11-19). Read AI-22 (done) and its findings ("AI-22.1", "AI-22.2" in
 `docs/findings/magic-ai.md`), AI-21's Next and AI-24. `dotnet-trace` is in `~/.dotnet/tools`.
 
 ## Log
