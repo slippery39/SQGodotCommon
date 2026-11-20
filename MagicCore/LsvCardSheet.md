@@ -701,7 +701,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 		M(
 			[Creature],
 			new DealDamage(Ref.Target(), 3),
-			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileInsteadOf = [ZoneType.Graveyard] }
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+			{
+				ExileInsteadOf = [ZoneType.Graveyard],
+			}
 		),
 		M([Target(Is.Artifact)], new Exile(Ref.Target()))
 	),
@@ -1280,13 +1283,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 [
 	Spell(
 		[Creature],
-		new If(new Matches(Ref.Target(), Is.ManaValueAtMost(2)), [new Destroy(Ref.Target())])
+		new If(
+			new Matches(Ref.Target(), Is.ManaValueAtMost(2)),
+			[new Destroy(Ref.Target())]
+		)
 		{
 			Otherwise =
 			[
 				new If(
 					new Both(
-						new AtLeast(Count.PermanentsLeftTheBattlefieldThisTurn(Ref.You), 1),
+						new AtLeast(
+							Count.PermanentsLeftTheBattlefieldThisTurn(Ref.You),
+							1
+						),
 						new Matches(Ref.Target(), Is.ManaValueAtMost(4))
 					),
 					[new Destroy(Ref.Target())]
@@ -3834,7 +3843,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 				new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
 				{
 					ForGood = true,
-					ExileInsteadOf = [ZoneType.Graveyard, ZoneType.Hand, ZoneType.Library],
+					ExileInsteadOf =
+					[
+						ZoneType.Graveyard,
+						ZoneType.Hand,
+						ZoneType.Library,
+					],
 				},
 			],
 		},
