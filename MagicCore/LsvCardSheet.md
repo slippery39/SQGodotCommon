@@ -3062,10 +3062,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	// "A creature destroyed this way can't be regenerated": the engine has no regeneration (Wrath of God's note).
 	Spell(
 		[Creature],
-		new If(
-			new AlternativeCostWasPaid(),
-			[new Destroy(Ref.Permanents(Is.Creature))]
-		)
+		new If(new AlternativeCostWasPaid(), [new Destroy(Ref.Permanents(Is.Creature))])
 		{
 			Otherwise = [new Destroy(Ref.Target())],
 		}
