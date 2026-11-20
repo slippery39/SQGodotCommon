@@ -1380,6 +1380,62 @@ as his three priorities.
   full suite 2,109 passed — all 8 steps run again after the review's fixes. **The one-batch experiment:** the checks ran
   as one batch (22 min, then 34 min in full after the review) where three batches would each have run them; its cost is
   its row in `docs/findings/card-batch-usage.md`.
+- 2026-11-20, Shayne: **red is the next colour** (4.4i; its tier 1 was 4.4c).
+- 2026-11-20, Claude (cube lane) — **4.4i: red read card by card — 17 left of 54 (52 mono-red, 37 play, and the two
+  transforming DFCs); 6 tested pieces, 7 options, 4 new pieces (four mechanics).** **Every colour's survey missed its
+  double-faced cards:** it counted `colors == [X]`, and Scryfall's JSON has no top-level `colors` on a transforming or
+  modal DFC — so Etali and Fable were outside red's 52, and blue's (Tamiyo, Inquisitive Student; Jace, Vryn's Prodigy;
+  Sink into Stupor) and black's (Cecil, Dark Knight; Concealing Curtains) were never counted: **blue and black are not
+  finished.** White's and green's DFCs (Ajani, Witch Enchanter, Outland Liberator, Ulvenwald Oddity) are read from the
+  front face's mana cost when their colour comes. Parts:
+  **i1** the 6 — Embereth Shieldbreaker // Battle Display (tier 1 since g5), Oliphaunt (swampcycling's piece as
+  mountaincycling; "another target creature you control" +2/+0 and trample), Unholy Heat (delirium is `AtLeast(
+  Count.CardTypesAmong(your graveyard), 4)`: `If { Otherwise }` for the 6 or the 2), Through the Breach (Sneak Attack's
+  `MoveChosen { Then }` + `Scripting.SpliceOntoArcane("{2}{R}{R}")`, h4's), Gut, True Soul Zealot ("whenever you
+  attack" `AttackersDeclared`, `MaySacrifice { Then }`, a Skeleton token `{ Attacking, Tapped }` with menace; "Choose
+  a Background" has no rules force outside a Commander game — no Background is in the cube — so it stays unscripted),
+  Headliner Scarlett (`ModifyUntilEndOfTurn(Ref.PermanentsOfTargetPlayer(Creature, 0))` granting `Combat.CantBlock`;
+  her upkeep is Vulcan Mind-Meld's `ExileTopPlayable { FaceDown, Play { ThisTurn, AnyType } }`, the looker you);
+  **i2a** options, triggers and combat, 4 — Fury (evoke is `Scripting.Evoke`; `TargetSpec.Divide` is read only from a
+  SPELL's text, `Division.Of` → `SpellEffectsComponent` — a triggered ability's targets take it, chosen after it
+  triggers as Pyrokinesis' are after the cast), Ivora (`DiscardedEvent` is one event per discard however many cards,
+  so "whenever you discard a card" triggers once for two: one event per card, as `DrewCardEvent`, and a "one or more"
+  discard trigger takes `Trigger.OneOrMore` — the old cards moved; the Blood token composed from tested costs, a
+  `Tokens` property), Dragon's Rage Channeler (delirium's static `If`; "attacks each combat if able" is goad's
+  requirement — `Combat.IsGoaded`, read by `DeclareAttackerChoice` — generalised to the keyword, granted by the static;
+  the surveil trigger is prowess' with `Surveil`), Caves of Chaos Adventurer ("if you've completed a dungeon" — `Venture`
+  completes one on its last room and keeps nothing: a game-long count on the player, as `SpellsCastThisGame`, read by a
+  condition; White Plume and Undermountain Adventurer read it later; the exile is `ExileTopPlayable { Play = null,
+  Then }` → `MakePlayable { ThisTurn [, Free] }`);
+  **i2b** options, casting, 3 — Batroc the Leaper (multikicker is kicker paid any number of times: replicate's count on
+  the cast, `Card.CastAs`, read as a `Count`; "enters with a counter for each time" `EntersWithCounters` by it; "each of
+  up to X targets" PerX words with X that count), Ragavan and Death-Greeter's Champion (dash is warp's alternative cost
+  `{ Mana, From = [Hand], PaidAtNextEndStep = return it to its owner's hand }` and haste while that cost was paid, a
+  static `If` reading `Card.AsCast`: `Scripting.Dash(cost)`; Ragavan's exile is `ExileTopPlayable { Of = that player,
+  Play { ThisTurn, CastOnly } }`; backup is `Scripting.Backup(n, keywords)` — a `SelfEnters` trigger, `PutCounters`, and
+  `If(Matches(target, !Is.Source))` the grant until end of turn);
+  **i3–i6** new pieces, one a session, each with its nearest piece: **i3 an additional combat phase** (Fear of Missing
+  Out) — the steps are an enum walked by `game.Step + 1` (`TurnStructure`), and extra TURNS a queue on `MagicGame`
+  read by `FinishCleanup`: an extra combat is a count read as `EndCombat` ends (back to `BeginCombat`, no main phase:
+  CR 500.8); its "attacks for the first time each turn" can't be `OncePerTurn` — that stamps a trigger, and an attack
+  before delirium never triggered — so an attack's number this turn on `AttackedEvent`, read by `Trigger.Nth` (as
+  `SpellNumber`); **i4 counters on a player: energy** (Galvanic Discharge; Guide of Souls waits for white) — counters
+  exist on permanents only (`Card.Counters`, `PutCounters`); a player has none, so `MagicPlayer` gets them (CR 122.1),
+  "pay any amount of {E}" one number chosen as it resolves; **i5 transforming double-faced cards** (Fable of the
+  Mirror-Breaker) — nearest: the face-down copy stamp (`Card.TurnedFaceDown` / `TurnedFaceUp`: the same object, another
+  face's copiable values) and the Adventure's second face (`AdventureComponent(Face, Text)`); chapter III "exile, then
+  return it transformed" an option on the return; Reflection's copy `CreateTokenCopy { SacrificeAtNextEndStep }` with
+  haste; chapter II Tersa's "discard up to two, then draw that many"; **i6 Etali, Primal Conqueror** — transform by an
+  activation ({G/P} paid as an activation's Phyrexian mana), poison as the second kind of i4's player counters with
+  its state-based loss (CR 704.5c), and "cast any number of spells from among [them] free" `CastOneOf { Free, Exiled }`
+  asked again until declined (it casts one); the "until a nonland" exile is `ExileTopPlayable { Until, Of }` for each
+  player.
+  **Legal actions, counted on a 12-creature board:** none grow with it if Batroc's and Fury's targets are a choice
+  after the action — up to X of 14 creatures and players as one move per set is 2^14; picked word by word it is one
+  move per kick count (~6). Dash adds one cast per card; Galvanic Discharge's amount and Etali's casts are one choice
+  each, asked again.
+  **Open (for Shayne): the five blue and black DFCs** — in i5, or a part after it (default: **i7**, after Etali, so i5
+  builds the transform on one card first).
 
 ## Tasks
 
@@ -1624,6 +1680,20 @@ as his three priorities.
     - [x] MC-4.4h7 Saddle: Caustic Bronco (one batch with h8, h9; Decisions, "4.4h7–h9")
     - [x] MC-4.4h8 Emerge: Crabomination
     - [x] MC-4.4h9 Miracle: Metamorphosis Fanatic
+  - [ ] MC-4.4i Red beyond tier 1 (Shayne, 2026-11-20: the next colour) — 17 cards read card by card and tiered
+        (Decisions, "4.4i"): 6 tested pieces, 7 options, 4 new pieces; one part per session:
+    - [ ] MC-4.4i1 The tested pieces, 6: Embereth Shieldbreaker // Battle Display, Oliphaunt, Unholy Heat, Through the
+          Breach, Gut, True Soul Zealot, Headliner Scarlett
+    - [ ] MC-4.4i2a Options, triggers and combat, 4: Fury, Ivora, Insatiable Heir, Dragon's Rage Channeler, Caves of
+          Chaos Adventurer
+    - [ ] MC-4.4i2b Options, casting, 3: Batroc the Leaper (multikicker), Ragavan, Nimble Pilferer and Death-Greeter's
+          Champion (dash, backup)
+    - [ ] MC-4.4i3 An additional combat phase: Fear of Missing Out
+    - [ ] MC-4.4i4 Counters on a player — energy: Galvanic Discharge (Guide of Souls waits for white)
+    - [ ] MC-4.4i5 Transforming double-faced cards: Fable of the Mirror-Breaker
+    - [ ] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
+    - [ ] MC-4.4i7 (default, Shayne to confirm) The blue and black DFCs every survey missed: Tamiyo, Inquisitive
+          Student; Jace, Vryn's Prodigy; Sink into Stupor (modal); Cecil, Dark Knight; Concealing Curtains
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -1640,9 +1710,11 @@ pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs
 h2e (zones and combat), h3 (overload: Damn), h4 (splice onto Arcane: Goryo's Vengeance), h5 (Auras returning a
 creature: Animate Dead, Necromancy), h6 (naming a card as a spell resolves: Demonic Consultation) and **h7–h9 as one
 batch (saddle: Caustic Bronco; emerge: Crabomination; miracle: Metamorphosis Fanatic — 283 of 528 play)** are done:
-**black is finished** (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3" … "4.4h6", "4.4h7–h9").
-Next, in a NEW session: **Shayne's pick of the next colour** — red is next in the list (its tier 1 was 4.4c), read card by
-card, tiered and planned as 4.4h was; no batch is planned yet. From h7–h9: saddle is `LsvCards.Saddle(n)` ("saddled"
+**black is finished** (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3" … "4.4h6", "4.4h7–h9") — but for its two DFCs,
+which every colour's survey missed (Decisions, "4.4i"; blue's three too). **Red is next (Shayne, 2026-11-20), planned:
+4.4i** (Decisions, "4.4i") — i1 the 6 tested pieces, i2a/i2b the 7 options, then i3–i6 one new piece a session (an
+extra combat, energy, transforming DFCs, Etali); i7 the missed blue and black DFCs, if Shayne takes the default.
+Next, in a NEW session: **MC-4.4i1**, once Shayne has reviewed the plan. From h7–h9: saddle is `LsvCards.Saddle(n)` ("saddled"
 `Is.With("Saddled")`); emerge `Scripting.Emerge(cost, filter)` (`MayCastFromHandFree.LessTheSacrificed`);
 `ExileTopPlayable { Linked }` groups exiles from several zones for `Is.ExiledBySource`; a trigger read from a hand or
 graveyard is `TriggeredAbilityComponent.From` (was `FromGraveyard`); miracle `Scripting.Miracle(cost)` (`CastOneOf {
@@ -1952,3 +2024,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-20: MC-4.4h7–h9 done as one batch: saddle, emerge, miracle — 283 of 528 play; black is finished. `Saddle`,
   `Emerge` (`LessTheSacrificed`), `ExileTopPlayable.Linked`, `TriggeredAbilityComponent.From` (hand), `CastOneOf.Instead`;
   the opening hand no longer raises draw events. Next: Shayne's pick of the next colour (red is next in the list).
+- 2026-11-20: Shayne picked red. MC-4.4i planned: red's 17 — 6 tested pieces (i1), 7 options in two parts (i2a, i2b),
+  four new mechanics one a session (i3–i6); the survey's filter missed every DFC (blue's 3, black's 2: i7 by default).
+  Next: MC-4.4i1, after Shayne's review.
