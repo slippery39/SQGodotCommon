@@ -417,6 +417,7 @@ public enum CountOf
 	DevotionTo, // Mogis: "your devotion to black and red" — Count.Colors
 	BeyondTheFewest, // Balance: "equal to the number … controlled by the player who controls the fewest, then sacrifices the rest" — the rest, for the player Ref.It
 	PermanentsLeftTheBattlefieldThisTurn, // Revolt (Fatal Push): "if a permanent left the battlefield under your control this turn" — of the player [Ref]
+	AmountPaid, // PayAnyAmount: "that many" / "that much" — the number paid
 }
 
 /// <summary>
@@ -500,6 +501,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	/// <summary>Jadzia Dax, Living Legacy: "an amount of {G} equal to the number of counters on her" — every kind.</summary>
 	public static Count AllCountersOn(Ref r) => new(0, r, CountOf.AllCountersOn);
+
+	/// <summary>Galvanic Discharge: "deals that much damage"; Necrodominance: "draw that many cards" — what PayAnyAmount paid.</summary>
+	public static readonly Count AmountPaid = new(0, null, CountOf.AmountPaid);
 
 	/// <summary>Live Long and Prosper: "Double your life total" — gain this much (CR 119.5).</summary>
 	public static Count LifeTotalOf(Ref r) => new(0, r, CountOf.LifeTotalOf);
@@ -626,6 +630,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return s.GetGame().CreaturesDiedThisTurn;
 		if (Kind == CountOf.PermanentsChosen)
 			return ChoosePermanentChoice.Read(context).Count();
+		if (Kind == CountOf.AmountPaid)
+			return context.GetValueOrDefault(ChooseNumberChoice.Chosen) is int paid ? paid - 1 : 0;
 		if (Kind == CountOf.NonlandCardsChosen)
 			return ChooseCardsFromHandChoice
 				.Read(context)

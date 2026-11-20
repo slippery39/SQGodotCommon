@@ -2962,7 +2962,139 @@ public static class LsvCards
 					If = Delirium,
 				},
 			],
+			// ===== MC-4.4i4–i6: counters on a player (energy, poison), transforming double-faced cards =====
+			["Galvanic Discharge"] =
+			[
+				Spell(
+					[CreatureOrPlaneswalker],
+					new PutCounters(Ref.You, 3) { Kind = CounterKinds.Energy },
+					new PayAnyAmount
+					{
+						Kind = CounterKinds.Energy,
+						Prompt = "Pay how much {E}? Galvanic Discharge deals that much damage.",
+						Then = [new DealDamage(Ref.Target(), Count.AmountPaid)],
+					}
+				),
+			],
+			["Fable of the Mirror-Breaker // Reflection of Kiki-Jiki"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[],
+					new CreateTokens(GoblinShaman, 1)
+					{
+						Abilities = [When(TriggerEvent.SelfAttacks, [], CreateTreasure(1))],
+					}
+				),
+				Chapter(
+					2,
+					[],
+					new Discard(Ref.You, 2)
+					{
+						UpTo = true,
+						Then = [new DrawCards(Ref.You, Count.NumberOf(Ref.Chosen))],
+					}
+				),
+				Chapter(
+					3,
+					[],
+					new MoveTo(Ref.Source, ZoneType.Exile)
+					{
+						Then =
+						[
+							new MoveTo(Ref.ThisWay, ZoneType.Battlefield)
+							{
+								UnderYourControl = true,
+								Transformed = true,
+							},
+						],
+					}
+				),
+				BackFace(
+					"Fable of the Mirror-Breaker // Reflection of Kiki-Jiki",
+					new ActivatedAbilityComponent(
+						ManaCost.Parse("{1}"),
+						[
+							new CreateTokenCopy(Ref.Target())
+							{
+								AddingKeywords = ["Haste"],
+								SacrificeAtNextEndStep = true,
+							},
+						]
+					)
+					{
+						Costs = [new TapSelfCost()],
+						Targets = [Target(Is.Creature & Is.Yours & !Is.Source & !Is.Legendary)],
+					}
+				),
+			],
+			["Etali, Primal Conqueror // Etali, Primal Sickness"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ExileTopPlayable
+					{
+						Of = Ref.You,
+						Until = !Is.Land,
+						Play = null,
+						Linked = true,
+					},
+					new ExileTopPlayable
+					{
+						Of = Ref.EachOpponent,
+						Until = !Is.Land,
+						Play = null,
+						Linked = true,
+					},
+					new CastOneOf(
+						Ref.All(ZoneType.Exile, Is.ExiledBySource & !Is.Land, Ref.EachPlayer)
+					)
+					{
+						AnyNumber = true,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{9}{G/P}"),
+					[new Transform(Ref.Source)]
+				)
+				{
+					SorcerySpeed = true,
+				},
+				BackFace(
+					"Etali, Primal Conqueror // Etali, Primal Sickness",
+					When(
+						TriggerEvent.SelfDealsCombatDamageToPlayer,
+						[],
+						new PutCounters(Ref.EachOpponent, Count.X) { Kind = CounterKinds.Poison }
+					)
+				),
+			],
 		};
+
+	/// <summary>
+	/// A transforming double-faced card's back face (CR 712): its second face in the set's JSON, the keywords its text
+	/// names (Scryfall merges both faces'), and its abilities — Card.Transform turns the card into it.
+	/// </summary>
+	static TransformsInto BackFace(string card, params GameComponent[] abilities)
+	{
+		var data = CardRegistry.DataOf(card);
+		var face = data.CardFaces![1];
+		return new(
+			face,
+			[
+				.. data.Keywords.Where(k =>
+					face.OracleText?.Contains(k, StringComparison.OrdinalIgnoreCase) == true
+				),
+			],
+			[.. abilities]
+		);
+	}
+
+	/// <summary>Fable of the Mirror-Breaker, chapter I: "a 2/2 red Goblin Shaman creature token".</summary>
+	static CardData GoblinShaman =>
+		Token("Goblin Shaman", "Creature — Goblin Shaman", "2", "2", ["R"]);
 
 	/// <summary>
 	/// Delirium (Unholy Heat, Dragon's Rage Channeler): "if there are four or more card types among cards in your

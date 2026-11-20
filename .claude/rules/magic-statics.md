@@ -197,5 +197,23 @@ whose subsystem it lives in.
   `Count.CountersOn(Ref.It)`, Beckett's "remove those counters" `Count.CountersOfKind(Ref.It, kind)`. **A +1/+1 counter
   goes on any permanent** (CR 122.1): "if it's a creature" (Teyo, Shields Up!) is the card's own `If`. A remove COST is
   `RemoveCountersCost(N, Filter) { Kind }` — "from Mikaeus" is `(1, Is.Source)`, paid unasked when one permanent can.
+- **Counters on a player** (CR 122.1; Galvanic Discharge's energy, Etali, Primal Sickness' poison — MC-4.4i4–i6) are
+  `MagicPlayer.Counters`, put and removed through the same `MagicState.PutCounters` (given a player's id) — "you get
+  {E}{E}{E}" is `PutCounters(Ref.You, 3) { Kind = CounterKinds.Energy }`, which puts on every player its Ref names too.
+  No replacement or `CountersPutEvent` for a player yet (DesignNotes). Ten or more poison counters lose the game in the
+  state-based check (CR 704.5c, `StateBasedActions`). **"You may pay any amount of [life / {E}]" is ONE piece,
+  `PayAnyAmount { Kind, AtMost, Then }`** — a `ChooseNumberChoice` from 0 to what you have (life: never all of it), the
+  amount paid, then `Then` with `Count.AmountPaid` — "deals that much damage", Necrodominance's "draw that many cards"
+  (`AtMost`: the cards in your library). Never a "pay X, then do Y" piece per card.
+- **A transforming double-faced card** (CR 712; Fable of the Mirror-Breaker, Etali, Primal Conqueror — MC-4.4i5–i6) is
+  its front face, with its back as `TransformsInto(Face, Keywords, Abilities)` — `LsvCards.BackFace(card, abilities…)`,
+  the back face's script. **`Card.Transform` is a copy stamp, as face-down's**: the back face's values, the front kept
+  on `Transformed(Original)` (status), so leaving the battlefield turns it front face up (`Card.Fresh` → `FrontFaceUp`,
+  CR 712.14), and a copy of it is the back face with nothing to transform into. "Transform [it]" is `Transform(ref)` —
+  the same object, its damage and counters kept; "return it to the battlefield transformed" `MoveTo { Transformed }` →
+  `EnterBattlefield(transformed:)`, stamped before the entry event (a Saga returned transformed is no Saga). A token copy
+  transforms (a transforming token); a permanent under a copy effect never does (Phyrexian Metamorph, Hall of Echoes:
+  CR 701.28c). Each face's colours are Scryfall's (`CardFace.Colors` — the back's colour indicator: Etali, Primal Sickness
+  is red and green; the front's when the card has none at the top); a back face has mana value 0 (DesignNotes).
 - **A keyword counter** (CR 122.1b; Drivnod's indestructible counter, `CounterKinds.Indestructible`) is read by
   `Card.HasOwn`: a counter named as the keyword, lower case, gives it — so every rule that asks `s.Has` sees it.

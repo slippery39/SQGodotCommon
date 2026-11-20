@@ -333,8 +333,14 @@ public record PutCounters(Ref What, Count N) : Effect
 	{
 		if (Kind is null)
 			return OfAKindOnIt(s);
-		foreach (var c in Permanents(What, s).ToList())
-			s = s.PutCounters(c.Id, Kind, N.Value(s, InputContext.SetItem(ContextKeys.It, c.Id)));
+		// on a permanent, or a player (CR 122.1) — Galvanic Discharge: "You get {E}{E}{E}"; Etali: "they get that many
+		// poison counters"
+		foreach (
+			var id in All(What, s)
+				.Where(id => s.IsOnBattlefield(id) || s.GetObject(id) is MagicPlayer)
+				.ToList()
+		)
+			s = s.PutCounters(id, Kind, N.Value(s, InputContext.SetItem(ContextKeys.It, id)));
 		return new(s);
 	}
 
@@ -690,55 +696,86 @@ public record RemoveTimeCounter(Ref What) : Effect
 }
 
 /// <summary>
-/// Necrodominance: "you may pay any amount of life. If you do, draw that many cards." — a number
-/// from 0 (not paying) to your life total.
+/// "You may pay any amount of [life / {E}]" and what that many does — Necrodominance: "you may pay any amount of life.
+/// If you do, draw that many cards."; Galvanic Discharge: "then you may pay any amount of {E}. Galvanic Discharge deals
+/// that much damage to that permanent." A number from 0 (not paying) to what you have, then <see cref="Then"/> with
+/// Count.AmountPaid that number — only when it is more than 0.
 /// </summary>
-public record PayAnyLifeThenDraw : Effect
+public record PayAnyAmount : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
+	/// <summary>The kind of counter paid — Galvanic Discharge's CounterKinds.Energy (MagicPlayer.Counters). Null is life.</summary>
+	public string? Kind { get; init; }
+
+	/// <summary>Necrodominance: never more cards than your library — the most that may be paid.</summary>
+	public Count? AtMost { get; init; }
+
+	public string Prompt { get; init; } = "Pay how much?";
+
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var player = s.GetPlayer(Controller);
+		// ponytail: never your whole life — it loses the game, and each number is a look-ahead the AI settles.
+		var max =
+			Kind is { } kind ? player.CountersOf(kind)
+			: Rules.Life.CantChange(s, Controller) ? 0 // CR 119.8: no life can be paid
+			: player.Life - 1;
+		if (AtMost is { } most)
+			max = Math.Min(max, most.Value(s, InputContext));
+		return new(
 			s.SpawnAction(
 				new PipelineAction
 				{
 					PipelineContext = InputContext,
 					Steps =
 					[
-						// ponytail: never your whole life or more cards than your library — either loses
-						// the game, and each number is a look-ahead the AI settles.
-						new ChooseNumberChoice(
-							Controller,
-							Rules.Life.CantChange(s, Controller)
-								? 0 // CR 119.8: no life can be paid
-								: Math.Max(
-									0,
-									Math.Min(
-										s.GetPlayer(Controller).Life - 1,
-										s.CardsIn(Controller, ZoneType.Library).Count()
-									)
-								)
-						)
-						{
-							Prompt = "Pay how much life? You draw that many cards.",
-						},
-						new PayChosenLifeThenDraw(),
+						new ChooseNumberChoice(Controller, Math.Max(0, max)) { Prompt = Prompt },
+						new PayChosenAmount(this),
 					],
 				}
 			)
 		);
+	}
 }
 
-/// <summary>After the choice: that much life paid, that many cards drawn.</summary>
-public record PayChosenLifeThenDraw : Effect
+/// <summary>
+/// After PayAnyAmount's choice: that much paid, then its Then — Galvanic Discharge's {E} removed, then "deals that much
+/// damage"; Necrodominance's life lost, then "draw that many cards".
+/// </summary>
+public record PayChosenAmount(PayAnyAmount Pay) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var n = InputContext.GetValueOrDefault(ChooseNumberChoice.Chosen) is int id ? id - 1 : 0;
+		var n = Count.AmountPaid.Value(s, InputContext);
 		if (n <= 0)
 			return new(s);
-		s = new LoseLife(Ref.You, n) { InputContext = InputContext }
-			.Execute(s)
-			.GameState;
-		return new DrawCards(Ref.You, n) { InputContext = InputContext }.Execute(s);
+		s = Pay.Kind is { } kind
+			? s.PutCounters(Controller, kind, -n)
+			: new LoseLife(Ref.You, n) { InputContext = InputContext }
+				.Execute(s)
+				.GameState;
+		return Pay.Then.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction { PipelineContext = InputContext, Steps = Pay.Then }
+				)
+			);
+	}
+}
+
+/// <summary>
+/// Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with its other face up
+/// (Card.Transform): no zone change, its damage and counters stay; a card with no back face doesn't.
+/// </summary>
+public record Transform(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var card in Permanents(What, s).ToList())
+			s = s.UpdateObject(card.Id, card.Transform());
+		return new(s);
 	}
 }
 

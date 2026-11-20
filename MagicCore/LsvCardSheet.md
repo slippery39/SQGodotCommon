@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 36/46 · uncommon 58/86 · rare 140/279 · mythic 54/108 · **297/528**
+**Playable:** common 37/46 · uncommon 58/86 · rare 142/279 · mythic 54/108 · **300/528**
 
 ### "Name Sticker" Goblin
 
@@ -365,7 +365,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Choose target creature or planeswalker. You get {E}{E}{E} (three energy counters), then you may pay any amount of {E}. Galvanic Discharge deals that much damage to that permanent.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i4Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `PayAnyAmount` — "You may pay any amount of [life / {E}]" and what that many does — Necrodominance: "you…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Galvanic Discharge"] =
+[
+	Spell(
+		[CreatureOrPlaneswalker],
+		new PutCounters(Ref.You, 3) { Kind = CounterKinds.Energy },
+		new PayAnyAmount
+		{
+			Kind = CounterKinds.Energy,
+			Prompt = "Pay how much {E}? Galvanic Discharge deals that much damage.",
+			Then = [new DealDamage(Ref.Target(), Count.AmountPaid)],
+		}
+	),
+],
+```
 
 ### Generous Ent
 
@@ -3876,7 +3894,51 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample, indestructible  
 > Whenever Etali deals combat damage to a player, they get that many poison counters. (A player with ten or more poison counters loses the game.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i4Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CastOneOf` — "You may cast one of [these cards]" as it resolves — one chosen among those that can be…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Transform` — Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with…
+
+```csharp
+["Etali, Primal Conqueror // Etali, Primal Sickness"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ExileTopPlayable
+		{
+			Of = Ref.You,
+			Until = !Is.Land,
+			Play = null,
+			Linked = true,
+		},
+		new ExileTopPlayable
+		{
+			Of = Ref.EachOpponent,
+			Until = !Is.Land,
+			Play = null,
+			Linked = true,
+		},
+		new CastOneOf(
+			Ref.All(ZoneType.Exile, Is.ExiledBySource & !Is.Land, Ref.EachPlayer)
+		)
+		{
+			AnyNumber = true,
+		}
+	),
+	new ActivatedAbilityComponent(ManaCost.Parse("{9}{G/P}"), [new Transform(Ref.Source)])
+	{
+		SorcerySpeed = true,
+	},
+	BackFace(
+		"Etali, Primal Conqueror // Etali, Primal Sickness",
+		When(
+			TriggerEvent.SelfDealsCombatDamageToPlayer,
+			[],
+			new PutCounters(Ref.EachOpponent, Count.X) { Kind = CounterKinds.Poison }
+		)
+	),
+],
+```
 
 ### Fable of the Mirror-Breaker // Reflection of Kiki-Jiki
 
@@ -3889,7 +3951,65 @@ How to write a script: `MagicCore/Cookbook.md`.
 > //   
 > {1}, {T}: Create a token that's a copy of another target nonlegendary creature you control, except it has haste. Sacrifice it at the beginning of the next end step.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i4Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SagaComponent` — A Saga (CR 714) — Amok Time: "(As this Saga enters and after your draw step, add a lore…; `TapSelfCost` — "{T}:" — tap this permanent.; `Transformed` — Reflection of Kiki-Jiki: a double-faced card with its back face up (Card.Transform) —…
+
+```csharp
+["Fable of the Mirror-Breaker // Reflection of Kiki-Jiki"] =
+[
+	new SagaComponent(3),
+	Chapter(
+		1,
+		[],
+		new CreateTokens(GoblinShaman, 1)
+		{
+			Abilities = [When(TriggerEvent.SelfAttacks, [], CreateTreasure(1))],
+		}
+	),
+	Chapter(
+		2,
+		[],
+		new Discard(Ref.You, 2)
+		{
+			UpTo = true,
+			Then = [new DrawCards(Ref.You, Count.NumberOf(Ref.Chosen))],
+		}
+	),
+	Chapter(
+		3,
+		[],
+		new MoveTo(Ref.Source, ZoneType.Exile)
+		{
+			Then =
+			[
+				new MoveTo(Ref.ThisWay, ZoneType.Battlefield)
+				{
+					UnderYourControl = true,
+					Transformed = true,
+				},
+			],
+		}
+	),
+	BackFace(
+		"Fable of the Mirror-Breaker // Reflection of Kiki-Jiki",
+		new ActivatedAbilityComponent(
+			ManaCost.Parse("{1}"),
+			[
+				new CreateTokenCopy(Ref.Target())
+				{
+					AddingKeywords = ["Haste"],
+					SacrificeAtNextEndStep = true,
+				},
+			]
+		)
+		{
+			Costs = [new TapSelfCost()],
+			Targets = [Target(Is.Creature & Is.Yours & !Is.Source & !Is.Legendary)],
+		}
+	),
+],
+```
 
 ### Faerie Mastermind
 

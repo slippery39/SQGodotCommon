@@ -497,6 +497,7 @@ public static class MagicState
 	/// <param name="attacking">CreateTokens.Attacking — mobilize's tokens are created "attacking" (tapped is its own word).</param>
 	/// <param name="faceDown">Manifest dread (LookAndTake.FaceDown): it enters a face-down 2/2 — none of its own
 	/// abilities as it enters (CR 708.3), so no "enters" trigger, counter or choice of its.</param>
+	/// <param name="transformed">MoveTo.Transformed (Fable of the Mirror-Breaker): it enters with its back face up.</param>
 	public static GameState EnterBattlefield(
 		this GameState s,
 		int cardId,
@@ -511,28 +512,35 @@ public static class MagicState
 		CardType loses = CardType.None,
 		bool attacking = false,
 		TriggeredAbilityComponent? gains = null,
-		bool faceDown = false
+		bool faceDown = false,
+		bool transformed = false
 	)
 	{
 		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
 		// ponytail: judged by its types before it moves, less what this entry takes (loses) — a permanent's
 		// type change stamped as it enters (Mogis, no creature at low devotion) isn't seen yet. Judge it
 		// after Retype if a cube ever has both.
-		if (
-			!cast
-			&& s.GetCard(cardId) is var entering
-			&& EntryRules(
-					s,
-					// a face-down card is judged as the 2/2 it enters as
-					(faceDown ? entering.TurnedFaceDown() : entering) with
-					{
-						ControllerId = controllerId,
-						Types = faceDown ? CardType.Creature : entering.Types & ~loses,
-					}
-				)
-				.Any(r => r.ExiledUnlessCast)
-		)
-			return s.MoveCard(cardId, s.ZoneId(entering.OwnerId, ZoneType.Exile));
+		if (!cast)
+		{
+			var entering = s.GetCard(cardId);
+			// a face-down card is judged as the 2/2 it enters as, a transformed one as its back face
+			var judged =
+				faceDown ? entering.TurnedFaceDown()
+				: transformed ? entering.Transform()
+				: entering;
+			if (
+				EntryRules(
+						s,
+						judged with
+						{
+							ControllerId = controllerId,
+							Types = faceDown ? CardType.Creature : judged.Types & ~loses,
+						}
+					)
+					.Any(r => r.ExiledUnlessCast)
+			)
+				return s.MoveCard(cardId, s.ZoneId(entering.OwnerId, ZoneType.Exile));
+		}
 		// "Name Sticker" Goblin: where it enters from — a token just made is in no zone
 		var from = s.GetParent(cardId) is { } parent
 			? (s.GetObject(parent) as Zone)?.ZoneType
@@ -540,6 +548,8 @@ public static class MagicState
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
 		if (faceDown)
 			s = s.UpdateObject(cardId, s.GetCard(cardId).TurnedFaceDown());
+		if (transformed)
+			s = s.UpdateObject(cardId, s.GetCard(cardId).Transform());
 		// Enduring Innocence: "It's an enchantment. (It's not a creature.)" — the types this entry takes, there
 		// as it enters and until it leaves.
 		if (loses != CardType.None && s.GetCard(cardId) is var printed)
@@ -864,6 +874,12 @@ public static class MagicState
 		bool entering = false
 	)
 	{
+		// A player's (CR 122.1: energy, poison). ponytail: no replacement and no CountersPutEvent — no card in the
+		// cube doubles a player's counters or triggers on getting them; route them here when one does.
+		if (s.GetObject(cardId) is MagicPlayer player)
+			return s.WithPlayer(
+				player.WithCounters(kind, Math.Max(0, player.CountersOf(kind) + n))
+			);
 		var card = s.GetCard(cardId);
 		// ponytail: M'Benga's (and Geordi's) "if YOU would put" doubles whoever puts them — PutCounters
 		// doesn't know the putter. Pass it through every caller if an opponent's counters ever matter.

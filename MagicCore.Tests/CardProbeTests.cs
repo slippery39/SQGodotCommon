@@ -67,6 +67,9 @@ public class CardProbeTests
 		var games = int.TryParse(Environment.GetEnvironmentVariable("MAGIC_PROBE_GAMES"), out var g)
 			? g
 			: 150;
+		// a transformed card is named for its back face: counted under the card's name (Reflection of Kiki-Jiki)
+		static string NameOf(global::MagicCore.Cards.Card c) =>
+			c.GetComponent<global::MagicCore.Cards.Transformed>()?.Original.Name ?? c.Name;
 		var casts = batch.ToDictionary(n => n, _ => 0);
 		var activations = batch.ToDictionary(n => n, _ => 0);
 		var onStack = batch.ToDictionary(n => n, _ => new HashSet<int>());
@@ -102,9 +105,9 @@ public class CardProbeTests
 				var act = pool[rng.Next(pool.Count)];
 				var name = act switch
 				{
-					CastSpellAction c => s.GetCard(c.CardId).Name,
-					ActivateAbilityAction a => s.GetCard(a.CardId).Name,
-					ActivateLoyaltyAction l => s.GetCard(l.CardId).Name,
+					CastSpellAction c => NameOf(s.GetCard(c.CardId)),
+					ActivateAbilityAction a => NameOf(s.GetCard(a.CardId)),
+					ActivateLoyaltyAction l => NameOf(s.GetCard(l.CardId)),
 					_ => null,
 				};
 				if (name is not null && casts.ContainsKey(name))
@@ -119,7 +122,7 @@ public class CardProbeTests
 					var ability in s.GetChildren(s.GetWellKnownId(MagicKeys.Stack))
 						.OfType<StackAbility>()
 				)
-					if (onStack.TryGetValue(ability.Source.Name, out var seen))
+					if (onStack.TryGetValue(NameOf(ability.Source), out var seen))
 						seen.Add(ability.Id);
 			}
 			unfinished += s.IsOver() ? 0 : 1;

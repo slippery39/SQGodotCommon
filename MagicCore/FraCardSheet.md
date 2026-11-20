@@ -1016,7 +1016,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch6aTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, LsvBatch2i4Tests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch6aTests
 
 ### Murmuring Volume
 
@@ -6894,13 +6894,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraSpecialGuestTests
 
-**Engine pieces:** `ExileInsteadOfYourGraveyard` — Necrodominance: "If a card or token would be put into your graveyard from anywhere,…; `MaximumHandSize` — Necrodominance: "Your maximum hand size is five." The lowest applies; read by the…; `PayAnyLifeThenDraw` — Necrodominance: "you may pay any amount of life. If you do, draw that many cards." — a…; `SkipYourDrawStep` — Necrodominance: "Skip your draw step." — it never begins: no draw, no trigger, no…
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ExileInsteadOfYourGraveyard` — Necrodominance: "If a card or token would be put into your graveyard from anywhere,…; `MaximumHandSize` — Necrodominance: "Your maximum hand size is five." The lowest applies; read by the…; `PayAnyAmount` — "You may pay any amount of [life / {E}]" and what that many does — Necrodominance: "you…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SkipYourDrawStep` — Necrodominance: "Skip your draw step." — it never begins: no draw, no trigger, no…
 
 ```csharp
 ["Necrodominance"] =
 [
 	new SkipYourDrawStep(),
-	When(TriggerEvent.YourEndStep, [], new PayAnyLifeThenDraw()),
+	When(
+		TriggerEvent.YourEndStep,
+		[],
+		new PayAnyAmount
+		{
+			AtMost = Count.NumberOf(Ref.All(ZoneType.Library, Is.AnyCard, Ref.You)),
+			Prompt = "Pay how much life? You draw that many cards.",
+			Then = [new DrawCards(Ref.You, Count.AmountPaid)],
+		}
+	),
 	new MaximumHandSize(5),
 	new ExileInsteadOfYourGraveyard(),
 ],

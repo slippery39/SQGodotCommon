@@ -1025,8 +1025,11 @@ void Board(GameState s)
 	string Zone(int p, ZoneType z) =>
 		string.Join(" | ", s.CardsIn(p, z).Select(c => Describe.Card(s, c)));
 	var (you, them) = (s.GetPlayer(human), s.GetPlayer(opponent));
+	// a player's counters (energy, poison), when they have any
+	string Counters(MagicPlayer p) =>
+		string.Concat(p.Counters.Where(k => k.Value > 0).Select(k => $" · {k.Key} {k.Value}"));
 	Console.WriteLine(
-		$"  AI   life {them.Life} · hand {s.CardsIn(opponent, ZoneType.Hand).Count()} · library {s.CardsIn(opponent, ZoneType.Library).Count()}"
+		$"  AI   life {them.Life}{Counters(them)} · hand {s.CardsIn(opponent, ZoneType.Hand).Count()} · library {s.CardsIn(opponent, ZoneType.Library).Count()}"
 	);
 	Console.WriteLine($"       {Zone(opponent, ZoneType.Battlefield)}");
 	var stack = s.GetChildren(s.GetWellKnownId(MagicKeys.Stack)).Select(o => o.Name).ToList();
@@ -1039,7 +1042,7 @@ void Board(GameState s)
 			? $" · floating {you.ManaPool.Total}{(restricted > 0 ? $" (+{restricted} restricted)" : "")}"
 			: "";
 	Console.WriteLine(
-		$"  You  life {you.Life} · library {s.CardsIn(human, ZoneType.Library).Count()}{pool}"
+		$"  You  life {you.Life}{Counters(you)} · library {s.CardsIn(human, ZoneType.Library).Count()}{pool}"
 	);
 	Console.WriteLine($"  Hand {Zone(human, ZoneType.Hand)}");
 }

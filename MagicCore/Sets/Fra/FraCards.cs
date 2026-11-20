@@ -3463,7 +3463,16 @@ public static class FraCards
 			["Necrodominance"] =
 			[
 				new SkipYourDrawStep(),
-				When(TriggerEvent.YourEndStep, [], new PayAnyLifeThenDraw()),
+				When(
+					TriggerEvent.YourEndStep,
+					[],
+					new PayAnyAmount
+					{
+						AtMost = Count.NumberOf(Ref.All(ZoneType.Library, Is.AnyCard, Ref.You)),
+						Prompt = "Pay how much life? You draw that many cards.",
+						Then = [new DrawCards(Ref.You, Count.AmountPaid)],
+					}
+				),
 				new MaximumHandSize(5),
 				new ExileInsteadOfYourGraveyard(),
 			],

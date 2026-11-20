@@ -2,7 +2,10 @@ using System.Text.Json;
 
 namespace MagicCore.Cards;
 
-/// <summary>One face of a multi-face card (FRA's "prepare" layout: creature // spell).</summary>
+/// <summary>
+/// One face of a multi-face card (FRA's "prepare" layout: creature // spell). Its colours are Scryfall's — a back face's
+/// colour indicator (Etali, Primal Sickness: red and green); null in a set imported before faces kept them.
+/// </summary>
 public sealed record CardFace(
 	string Name,
 	string? ManaCost,
@@ -10,7 +13,8 @@ public sealed record CardFace(
 	string? OracleText,
 	string? Power,
 	string? Toughness,
-	string? Loyalty
+	string? Loyalty,
+	string[]? Colors = null
 );
 
 /// <summary>
@@ -36,7 +40,8 @@ public sealed record CardData(
 {
 	/// <summary>
 	/// One face as a card of its own — a prepare spell's copy in exile (Rules.Prepare), an Adventure on the stack
-	/// (Card.AsAdventure, Brazen Borrower // Petty Theft): its name, cost, type line and text; colours from its cost.
+	/// (Card.AsAdventure, Brazen Borrower // Petty Theft), a back face (Card.Transform): its name, cost, type line and
+	/// text; its colours, else from its cost.
 	/// </summary>
 	public static CardData OfFace(CardFace face) =>
 		new(
@@ -49,7 +54,13 @@ public sealed record CardData(
 			face.Power,
 			face.Toughness,
 			face.Loyalty,
-			[.. "WUBRG".Where(c => face.ManaCost?.Contains(c) == true).Select(c => c.ToString())],
+			face.Colors
+				??
+				[
+					.. "WUBRG"
+						.Where(c => face.ManaCost?.Contains(c) == true)
+						.Select(c => c.ToString()),
+				],
 			[],
 			null
 		);

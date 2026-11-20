@@ -96,6 +96,12 @@ public static class CounterKinds
 	public const string Void = "void"; // Dauthi Voidwalker
 	public const string Corpse = "corpse"; // From the Catacombs
 
+	/// <summary>Galvanic Discharge: "You get {E}{E}{E} (three energy counters)" — a player's (MagicPlayer.Counters).</summary>
+	public const string Energy = "energy";
+
+	/// <summary>Etali, Primal Sickness: "they get that many poison counters" — ten or more loses (CR 704.5c).</summary>
+	public const string Poison = "poison";
+
 	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
 	public const string Indestructible = "indestructible";
 
@@ -1154,6 +1160,17 @@ public record PrepareSpellComponent(Cards.CardFace Face, SpellEffectsComponent T
 /// there (FinishSpellAction). Prepare's shape, not its rules: a prepare spell is a copy in exile, never the card.
 /// </summary>
 public record AdventureComponent(Cards.CardFace Face, SpellEffectsComponent Text) : GameComponent;
+
+/// <summary>
+/// A transforming double-faced card's back face (CR 712; Fable of the Mirror-Breaker // Reflection of Kiki-Jiki: "{1},
+/// {T}: Create a token that's a copy of another target nonlegendary creature you control, except it has haste."): the
+/// face, its keywords (Scryfall merges both faces') and its abilities — what Card.Transform turns it into.
+/// </summary>
+public record TransformsInto(
+	Cards.CardFace Face,
+	ImmutableArray<string> Keywords,
+	ImmutableArray<GameComponent> Abilities
+) : GameComponent;
 
 /// <summary>"This creature enters prepared." Applied by MagicState.EnterBattlefield.</summary>
 public record EntersPreparedComponent : GameComponent;

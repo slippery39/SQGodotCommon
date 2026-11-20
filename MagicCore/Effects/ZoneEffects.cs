@@ -692,6 +692,13 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 	public bool OnTop { get; init; }
 
 	/// <summary>
+	/// Fable of the Mirror-Breaker, chapter III: "return it to the battlefield transformed" — it enters with its back
+	/// face up (Card.Transform), so it is that face as it enters (no Saga's lore counter). A card with no back face
+	/// enters as it is.
+	/// </summary>
+	public bool Transformed { get; init; }
+
+	/// <summary>
 	/// How far below the top — Oust: "into its owner's library second from the top" (1), Unexpectedly Absent: "just
 	/// beneath the top X cards of that library" (Count.X; 0 is the top). A library with fewer cards: the bottom.
 	/// </summary>
@@ -763,7 +770,8 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 					extraCounters: Counters,
 					tapped: Tapped,
 					finality: Finality,
-					loses: Loses
+					loses: Loses,
+					transformed: Transformed
 				);
 				if (!s.IsOnBattlefield(id))
 					continue; // Containment Priest exiled it instead
@@ -981,13 +989,23 @@ public record CastOneOf(Ref Among) : Effect
 	/// <summary>Miracle (Scripting.Miracle): "by paying [cost] rather than its mana cost" (CastNow.Instead) — Free or not.</summary>
 	public ManaCost? Instead { get; init; }
 
+	/// <summary>
+	/// Etali, Primal Conqueror: "You may cast any number of spells from among [them]" — asked again after each cast,
+	/// among what is left, until declined or none can be cast.
+	/// </summary>
+	public bool AnyNumber { get; init; }
+
+	/// <summary>AnyNumber: the cards already picked, cast or not — each is offered once, so a declined cast ends nothing it shouldn't and loops nowhere.</summary>
+	public ImmutableList<int> Picked { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		ImmutableList<int> castable =
 		[
 			.. All(Among, s)
 				.Where(id =>
-					s.HasObject(id)
+					!Picked.Contains(id)
+					&& s.HasObject(id)
 					&& s.GetObject(id) is Card c
 					&& CastNow.CanCast(s, Controller, c, free: Free, Instead)
 				),
@@ -1018,6 +1036,7 @@ public record CastOneOf(Ref Among) : Effect
 								Free = Free,
 								Exiled = Exiled,
 								Instead = Instead,
+								Again = AnyNumber ? this : null,
 							},
 						],
 					}
@@ -1041,6 +1060,9 @@ public record CastChosen : Effect
 	/// <summary>Miracle: the cost paid rather than its mana cost (CastNow.Instead).</summary>
 	public ManaCost? Instead { get; init; }
 
+	/// <summary>CastOneOf.AnyNumber: the choice asked again once this one is cast (Etali).</summary>
+	public CastOneOf? Again { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		ChooseCardsFromHandChoice.Read(InputContext).FirstOrDefault() is > 0 and var id
 			? new(
@@ -1060,6 +1082,9 @@ public record CastChosen : Effect
 										new(Controller, GetInput<int>(ContextKeys.Source))
 									) ?? false,
 							},
+							.. Again is null
+								? (GameAction[])[]
+								: [Again with { Picked = Again.Picked.Add(id) }],
 						],
 					}
 				)

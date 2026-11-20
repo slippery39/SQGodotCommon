@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MagicCore;
@@ -41,6 +42,22 @@ public record MagicPlayer : GameObject
 	public bool AttemptedDrawFromEmptyLibrary { get; init; }
 
 	public bool HasLost { get; init; }
+
+	/// <summary>
+	/// Counters on a player (CR 122.1) — Galvanic Discharge's energy, Etali's poison — put and removed through
+	/// MagicState.PutCounters alone, as a permanent's.
+	/// </summary>
+	public ImmutableDictionary<string, int> Counters { get; init; } =
+		ImmutableDictionary<string, int>.Empty;
+
+	public int CountersOf(string kind) => Counters.GetValueOrDefault(kind);
+
+	/// <summary>MagicState.PutCounters' own write for a player — never called elsewhere (CounterWritesTests).</summary>
+	public MagicPlayer WithCounters(string kind, int n) =>
+		this with
+		{
+			Counters = n == 0 ? Counters.Remove(kind) : Counters.SetItem(kind, n),
+		};
 }
 
 /// <summary>

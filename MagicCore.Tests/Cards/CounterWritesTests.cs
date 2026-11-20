@@ -32,6 +32,7 @@ public class CounterWritesTests
 				!f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
 			)
 			.Where(f => !f.EndsWith(Path.Combine("Cards", "Card.cs"))) // Card.WithCounters: the funnel's own write
+			.Where(f => !f.EndsWith(Path.DirectorySeparatorChar + "MagicPlayer.cs")) // a player's: MagicPlayer.WithCounters
 			.SelectMany(f =>
 				AddsToACounter
 					.Matches(File.ReadAllText(f))

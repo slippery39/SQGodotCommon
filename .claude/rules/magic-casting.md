@@ -384,7 +384,9 @@ whose subsystem it lives in.
   unless the effect exiles it: Bilbo's "if an instant or sorcery spell cast this way would be put into your
   graveyard, exile it instead" is `Exiled = Is.Instant | Is.Sorcery` → `CastSpellAction.ExiledLeavingTheStack`,
   flashback's exile. Such a cast pays the mana cost, never a flashback cost (`Costs.Of(…, flashback: false)`), and never
-  uses up a permanent's once-each-turn zone permission.
+  uses up a permanent's once-each-turn zone permission. **"You may cast any number of spells from among [them]"**
+  (Etali, Primal Conqueror, MC-4.4i6: each player's top cards until a nonland, `ExileTopPlayable { Of, Until, Linked,
+  Play = null }` twice) is `CastOneOf { AnyNumber }` — asked again after each cast, among what is left, until declined.
 - **"Choose one that hasn't been chosen"** (Kobayashi Maru Scenario) is `ModeChoice.NotChosenBefore`:
   the modes chosen are stamped on that object (`Card.ModesChosen`, a bit per mode, in `QueueModalTriggerAction`) and
   left out by `Triggers.ChoosableModes`; none left and it is removed (CR 700.2a); a new object starts afresh.

@@ -18,7 +18,7 @@ from pathlib import Path
 
 CARD_FIELDS = ["name", "layout", "mana_cost", "cmc", "type_line", "oracle_text", "power", "toughness",
                "loyalty", "colors", "keywords", "rarity", "collector_number"]
-FACE_FIELDS = ["name", "mana_cost", "type_line", "oracle_text", "power", "toughness", "loyalty"]
+FACE_FIELDS = ["name", "mana_cost", "type_line", "oracle_text", "power", "toughness", "loyalty", "colors"]
 
 # Cards printed elsewhere that a set's boosters hold — they play as the set's own (story MC-3).
 GUESTS = {"fra": "set:spg cn>=159 cn<=168", "trk": "set:sds"}

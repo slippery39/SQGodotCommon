@@ -102,14 +102,21 @@
     "type_line": "Legendary Creature — Cat Warrior",
     "oracle_text": "When Ajani enters, create a 2/1 white Cat Warrior creature token.\nWhenever one or more other Cats you control die, you may exile Ajani, then return him to the battlefield transformed under his owner's control.",
     "power": "1",
-    "toughness": "2"
+    "toughness": "2",
+    "colors": [
+     "W"
+    ]
    },
    {
     "name": "Ajani, Nacatl Avenger",
     "mana_cost": "",
     "type_line": "Legendary Planeswalker — Ajani",
     "oracle_text": "+2: Put a +1/+1 counter on each Cat you control.\n0: Create a 2/1 white Cat Warrior creature token. When you do, if you control a red permanent other than Ajani, he deals damage equal to the number of creatures you control to any target.\n−4: Each opponent chooses an artifact, a creature, an enchantment, and a planeswalker from among the nonland permanents they control, then sacrifices the rest.",
-    "loyalty": "3"
+    "loyalty": "3",
+    "colors": [
+     "R",
+     "W"
+    ]
    }
   ]
  },
@@ -565,13 +572,17 @@
     "type_line": "Creature — Human Warlock",
     "oracle_text": "When this creature enters, destroy target artifact or enchantment an opponent controls.",
     "power": "2",
-    "toughness": "2"
+    "toughness": "2",
+    "colors": [
+     "W"
+    ]
    },
    {
     "name": "Witch-Blessed Meadow",
     "mana_cost": "",
     "type_line": "Land",
-    "oracle_text": "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {W}."
+    "oracle_text": "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {W}.",
+    "colors": []
    }
   ]
  },
@@ -1009,14 +1020,21 @@
     "type_line": "Legendary Creature — Moonfolk Wizard",
     "oracle_text": "Flying\nWhenever Tamiyo attacks, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")\nWhen you draw your third card in a turn, exile Tamiyo, then return her to the battlefield transformed under her owner's control.",
     "power": "0",
-    "toughness": "3"
+    "toughness": "3",
+    "colors": [
+     "U"
+    ]
    },
    {
     "name": "Tamiyo, Seasoned Scholar",
     "mana_cost": "",
     "type_line": "Legendary Planeswalker — Tamiyo",
     "oracle_text": "+2: Until your next turn, whenever a creature attacks you or a planeswalker you control, it gets -1/-0 until end of turn.\n−3: Return target instant or sorcery card from your graveyard to your hand. If it's a green card, add one mana of any color.\n−7: Draw cards equal to half the number of cards in your library, rounded up. You get an emblem with \"You have no maximum hand size.\"",
-    "loyalty": "2"
+    "loyalty": "2",
+    "colors": [
+     "G",
+     "U"
+    ]
    }
   ]
  },
@@ -1073,14 +1091,20 @@
     "type_line": "Legendary Creature — Human Wizard",
     "oracle_text": "{T}: Draw a card, then discard a card. If there are five or more cards in your graveyard, exile Jace, then return him to the battlefield transformed under his owner's control.",
     "power": "0",
-    "toughness": "2"
+    "toughness": "2",
+    "colors": [
+     "U"
+    ]
    },
    {
     "name": "Jace, Telepath Unbound",
     "mana_cost": "",
     "type_line": "Legendary Planeswalker — Jace",
     "oracle_text": "+1: Up to one target creature gets -2/-0 until your next turn.\n−3: You may cast target instant or sorcery card from your graveyard this turn. If that spell would be put into your graveyard, exile it instead.\n−9: You get an emblem with \"Whenever you cast a spell, target opponent mills five cards.\"",
-    "loyalty": "5"
+    "loyalty": "5",
+    "colors": [
+     "U"
+    ]
    }
   ]
  },
@@ -1915,13 +1939,17 @@
     "name": "Sink into Stupor",
     "mana_cost": "{1}{U}{U}",
     "type_line": "Instant",
-    "oracle_text": "Return target spell or nonland permanent an opponent controls to its owner's hand."
+    "oracle_text": "Return target spell or nonland permanent an opponent controls to its owner's hand.",
+    "colors": [
+     "U"
+    ]
    },
    {
     "name": "Soporific Springs",
     "mana_cost": "",
     "type_line": "Land",
-    "oracle_text": "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {U}."
+    "oracle_text": "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {U}.",
+    "colors": []
    }
   ]
  },
@@ -2281,7 +2309,10 @@
     "type_line": "Legendary Creature — Human Knight",
     "oracle_text": "Deathtouch\nDarkness — Whenever Cecil deals damage, you lose that much life. Then if your life total is less than or equal to half your starting life total, untap Cecil and transform it.",
     "power": "2",
-    "toughness": "3"
+    "toughness": "3",
+    "colors": [
+     "B"
+    ]
    },
    {
     "name": "Cecil, Redeemed Paladin",
@@ -2289,7 +2320,10 @@
     "type_line": "Legendary Creature — Human Knight",
     "oracle_text": "Lifelink\nProtect — Whenever Cecil attacks, other attacking creatures gain indestructible until end of turn.",
     "power": "4",
-    "toughness": "4"
+    "toughness": "4",
+    "colors": [
+     "W"
+    ]
    }
   ]
  },
@@ -2312,7 +2346,10 @@
     "type_line": "Creature — Wall",
     "oracle_text": "Defender\n{2}{B}: Transform this creature. Activate only as a sorcery.",
     "power": "0",
-    "toughness": "4"
+    "toughness": "4",
+    "colors": [
+     "B"
+    ]
    },
    {
     "name": "Revealing Eye",
@@ -2320,7 +2357,10 @@
     "type_line": "Creature — Eye Horror",
     "oracle_text": "Menace\nWhen this creature transforms into Revealing Eye, target opponent reveals their hand. You may choose a nonland card from it. If you do, that player discards that card, then draws a card.",
     "power": "3",
-    "toughness": "4"
+    "toughness": "4",
+    "colors": [
+     "B"
+    ]
    }
   ]
  },
@@ -3856,7 +3896,10 @@
     "type_line": "Legendary Creature — Elder Dinosaur",
     "oracle_text": "Trample\nWhen Etali enters, each player exiles cards from the top of their library until they exile a nonland card. You may cast any number of spells from among the nonland cards exiled this way without paying their mana costs.\n{9}{G/P}: Transform Etali. Activate only as a sorcery.",
     "power": "7",
-    "toughness": "7"
+    "toughness": "7",
+    "colors": [
+     "R"
+    ]
    },
    {
     "name": "Etali, Primal Sickness",
@@ -3864,7 +3907,11 @@
     "type_line": "Legendary Creature — Phyrexian Elder Dinosaur",
     "oracle_text": "Trample, indestructible\nWhenever Etali deals combat damage to a player, they get that many poison counters. (A player with ten or more poison counters loses the game.)",
     "power": "11",
-    "toughness": "11"
+    "toughness": "11",
+    "colors": [
+     "G",
+     "R"
+    ]
    }
   ]
  },
@@ -4215,7 +4262,10 @@
     "name": "Fable of the Mirror-Breaker",
     "mana_cost": "{2}{R}",
     "type_line": "Enchantment — Saga",
-    "oracle_text": "(As this Saga enters and after your draw step, add a lore counter.)\nI — Create a 2/2 red Goblin Shaman creature token with \"Whenever this token attacks, create a Treasure token.\"\nII — You may discard up to two cards. If you do, draw that many cards.\nIII — Exile this Saga, then return it to the battlefield transformed under your control."
+    "oracle_text": "(As this Saga enters and after your draw step, add a lore counter.)\nI — Create a 2/2 red Goblin Shaman creature token with \"Whenever this token attacks, create a Treasure token.\"\nII — You may discard up to two cards. If you do, draw that many cards.\nIII — Exile this Saga, then return it to the battlefield transformed under your control.",
+    "colors": [
+     "R"
+    ]
    },
    {
     "name": "Reflection of Kiki-Jiki",
@@ -4223,7 +4273,10 @@
     "type_line": "Enchantment Creature — Goblin Shaman",
     "oracle_text": "{1}, {T}: Create a token that's a copy of another target nonlegendary creature you control, except it has haste. Sacrifice it at the beginning of the next end step.",
     "power": "2",
-    "toughness": "2"
+    "toughness": "2",
+    "colors": [
+     "R"
+    ]
    }
   ]
  },
@@ -4554,7 +4607,10 @@
     "type_line": "Creature — Human Werewolf",
     "oracle_text": "{1}, Sacrifice this creature: Destroy target artifact or enchantment.\nDaybound (If a player casts no spells during their own turn, it becomes night next turn.)",
     "power": "2",
-    "toughness": "2"
+    "toughness": "2",
+    "colors": [
+     "G"
+    ]
    },
    {
     "name": "Frenzied Trapbreaker",
@@ -4562,7 +4618,10 @@
     "type_line": "Creature — Werewolf",
     "oracle_text": "{1}, Sacrifice this creature: Destroy target artifact or enchantment.\nWhenever this creature attacks, destroy target artifact or enchantment defending player controls.\nNightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)",
     "power": "3",
-    "toughness": "3"
+    "toughness": "3",
+    "colors": [
+     "G"
+    ]
    }
   ]
  },
@@ -4929,7 +4988,10 @@
     "type_line": "Creature — Beast",
     "oracle_text": "Trample, haste\n{5}{G}{G}: Transform this creature.",
     "power": "4",
-    "toughness": "4"
+    "toughness": "4",
+    "colors": [
+     "G"
+    ]
    },
    {
     "name": "Ulvenwald Behemoth",
@@ -4937,7 +4999,10 @@
     "type_line": "Creature — Beast Horror",
     "oracle_text": "Trample, haste\nOther creatures you control get +1/+1 and have trample and haste.",
     "power": "8",
-    "toughness": "8"
+    "toughness": "8",
+    "colors": [
+     "G"
+    ]
    }
   ]
  },
@@ -5282,7 +5347,11 @@
     "type_line": "Legendary Creature — Human Avatar Ally",
     "oracle_text": "Flash\nFlying\nWhen Aang enters, airbend up to one other target creature or spell. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)\nWaterbend {8}: Transform Aang.",
     "power": "2",
-    "toughness": "3"
+    "toughness": "3",
+    "colors": [
+     "U",
+     "W"
+    ]
    },
    {
     "name": "Aang and La, Ocean's Fury",
@@ -5290,7 +5359,8 @@
     "type_line": "Legendary Creature — Avatar Spirit Ally",
     "oracle_text": "Reach, trample\nWhenever Aang and La attack, put a +1/+1 counter on each tapped creature you control.",
     "power": "5",
-    "toughness": "5"
+    "toughness": "5",
+    "colors": []
    }
   ]
  },
@@ -5748,7 +5818,10 @@
     "type_line": "Legendary Creature — Human Advisor Hero",
     "oracle_text": "Your opponents can't cast spells during your turn.\n{3}{G}{W}{W}: Transform Jennifer Walters. Activate only as a sorcery.",
     "power": "2",
-    "toughness": "3"
+    "toughness": "3",
+    "colors": [
+     "W"
+    ]
    },
    {
     "name": "The Sensational She-Hulk",
@@ -5756,7 +5829,11 @@
     "type_line": "Legendary Creature — Gamma Hero",
     "oracle_text": "Reach, trample\nYour opponents can't cast spells during your turn.\nWhenever a creature you control is dealt damage, you may have The Sensational She-Hulk deal that much damage to any target. Do this only once each turn.",
     "power": "6",
-    "toughness": "6"
+    "toughness": "6",
+    "colors": [
+     "G",
+     "W"
+    ]
    }
   ]
  },

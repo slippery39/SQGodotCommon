@@ -351,7 +351,9 @@ public static class StateBasedActions
 						player.Life <= 0
 						&& !s.CardsIn(id, ZoneType.Battlefield)
 							.Any(s.HasAbility<Effects.DontLoseForZeroLife>)
-					) || player.AttemptedDrawFromEmptyLibrary
+					)
+					|| player.AttemptedDrawFromEmptyLibrary
+					|| player.CountersOf(Effects.CounterKinds.Poison) >= 10 // CR 704.5c
 				)
 			)
 				s = s.WithPlayer(player with { HasLost = true });

@@ -299,7 +299,12 @@ public record Card : GameObject
 	/// The ONLY reset — every zone change goes through MagicState.MoveCard, which calls this.
 	/// </summary>
 	public Card Fresh() =>
-		WithoutAdventure().WithoutAnimation().WithoutCopyEffect().TurnedFaceUp().Reset();
+		WithoutAdventure()
+			.WithoutAnimation()
+			.WithoutCopyEffect()
+			.TurnedFaceUp()
+			.FrontFaceUp()
+			.Reset();
 
 	Card Reset() =>
 		this with
@@ -363,6 +368,7 @@ public record Card : GameObject
 				or EnteredAsCopy
 				or FaceDown
 				or CastAsAdventure
+				or Transformed
 				or Actions.Spliced
 				or Effects.DelayedTrigger
 				or Animated
@@ -502,6 +508,47 @@ public record Card : GameObject
 						Set = Set,
 					}
 				).WithComponent(new CastAsAdventure(this))
+			: this;
+
+	/// <summary>
+	/// Fable of the Mirror-Breaker, chapter III: "return it to the battlefield transformed"; Etali, Primal Conqueror:
+	/// "{9}{G/P}: Transform Etali." (CR 701.28, 712) — the same object with its back face's characteristics: the face's
+	/// values as a copy's (its keywords and abilities from <see cref="Effects.TransformsInto"/>), the front kept on
+	/// <see cref="Transformed"/>, as a face-down card's (TurnedFaceDown). Transformed again, it is the front. Only a
+	/// double-faced card transforms, or a token copy of one (a transforming token) — never a permanent that is a copy of
+	/// one by a copy effect (Phyrexian Metamorph, Hall of Echoes: CR 701.28c), nor one under a copy effect taken after it
+	/// transformed. Its colours are the face's (Scryfall's colour indicator: Etali, Primal Sickness is red and green).
+	/// ponytail: the back face has mana value 0, where CR 712.8e reads the front's — Card.ManaValue reading
+	/// Transformed.Original's when a card asks.
+	/// </summary>
+	public Card Transform() =>
+		HasComponent<EnteredAsCopy>() || HasComponent<CopyUntilEndOfTurn>() ? this
+		: GetComponent<Transformed>() is { } front ? FrontFaceUp()
+		: GetComponent<Effects.TransformsInto>() is { } back
+			? (Card)
+				(
+					WithCopiableValuesOf(
+						CardFactory.Create(
+							new CardDefinition(
+								CardData.OfFace(back.Face) with
+								{
+									Keywords = [.. back.Keywords],
+								},
+								back.Abilities
+							),
+							OwnerId
+						)
+					) with
+					{
+						Set = Set,
+					}
+				).WithComponent(new Transformed(this))
+		: this;
+
+	/// <summary>Its front face up again — transformed back, or as it leaves the battlefield (CR 712.14, Fresh).</summary>
+	public Card FrontFaceUp() =>
+		GetComponent<Transformed>() is { } front
+			? (Card)WithCopiableValuesOf(front.Original).WithoutComponents<Transformed>()
 			: this;
 
 	/// <summary>The adventurer card again (CR 715.4) — as it leaves the stack, resolved or not (Fresh).</summary>
@@ -648,6 +695,12 @@ public record FaceDown(Card Original) : GameComponent;
 /// </summary>
 public record CastAsAdventure(Card Original) : GameComponent;
 
+/// <summary>
+/// Reflection of Kiki-Jiki: a double-faced card with its back face up (Card.Transform) — the card as its front was,
+/// kept while it is transformed. Status: leaving the battlefield turns it front face up (CR 712.14).
+/// </summary>
+public record Transformed(Card Original) : GameComponent;
+
 /// <summary>Its types changed by this source's BecomesType (this object of it); the rest is what it was, to put back. SourceId 0: by an effect with no duration, until it leaves (Assimilate).</summary>
 public record Animated(
 	int SourceId,
@@ -694,7 +747,13 @@ public static class CardFactory
 			BasePower = ParsePowerToughness(front?.Power ?? data.Power),
 			BaseToughness = ParsePowerToughness(front?.Toughness ?? data.Toughness),
 			PrintedLoyalty = ParsePowerToughness(front?.Loyalty ?? data.Loyalty),
-			Colors = [.. (data.Colors ?? []).Select(ManaCost.ColorOf)],
+			// a transforming card has no colours of its own in Scryfall's JSON: its front face's
+			Colors =
+			[
+				.. (data.Colors ?? (front is null ? [] : CardData.OfFace(front).Colors!)).Select(
+					ManaCost.ColorOf
+				),
+			],
 			// Scryfall merges every face's keywords; keep the ones the front face's text names.
 			Keywords = front is null
 				? [.. data.Keywords]

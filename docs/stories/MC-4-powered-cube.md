@@ -1496,6 +1496,38 @@ as his three priorities.
   Infestation's "up to X target" spell already works (`ChooseXTargetsChoice`'s min is the required words); **an
   additional combat phase** is right during combat AND the first main phase (two combats in a row either way, now
   tested) and throws anywhere else. 7 tests, 5/5 revert-checks.
+- 2026-11-20, Claude (cube lane) — **4.4i4–i6 as one batch: counters on a player, transforming double-faced cards,
+  transform by an activation — 300 of 528 play, red 54 of 54: red is finished.** **Galvanic Discharge** (i4) — counters
+  exist on a player now (CR 122.1): `MagicPlayer.Counters`, put and removed through the one `MagicState.PutCounters`
+  (given a player's id; `MagicPlayer.WithCounters` its own write, as `Card.WithCounters` — `CounterWritesTests` excludes
+  both), and `PutCounters` puts on every player its Ref names. "Then you may pay any amount of {E}. … deals that much
+  damage" is Necrodominance's piece generalised, not a sibling: `PayAnyLifeThenDraw` became `PayAnyAmount { Kind,
+  AtMost, Then }` — a `ChooseNumberChoice` up to what you have, then `Then` with `Count.AmountPaid` (Necrodominance:
+  `AtMost` the cards in its library, `Then` the draw; golden-out moved nothing). **Fable of the Mirror-Breaker** (i5) —
+  nearest pieces the Adventure's second face and the face-down copy stamp, and a DFC is both: `TransformsInto(Face,
+  Keywords, Abilities)` on the card (`LsvCards.BackFace`, the keywords its text names — Scryfall merges both faces'),
+  `Card.Transform` the copy stamp (the front on `Transformed`, status; `Card.Fresh` → `FrontFaceUp`, CR 712.14; never a
+  token or a copy, CR 701.28c); chapter III `MoveTo(Source, Exile) { Then = MoveTo(ThisWay, Battlefield) { UnderYourControl,
+  Transformed } }` → `EnterBattlefield(transformed:)`, stamped before the entry event (so no lore counter, no Saga);
+  chapters I–II and Reflection tested pieces (a token with a trigger, Tersa's `Discard { UpTo, Then }`, `CreateTokenCopy
+  { AddingKeywords, SacrificeAtNextEndStep }`). **Etali, Primal Conqueror** (i6) — `Transform(ref)` for "{9}{G/P}:
+  Transform Etali" (the same object), poison the second kind of player counter with its state-based loss (CR 704.5c),
+  "cast any number of spells from among [them]" `CastOneOf { AnyNumber }` (asked again after each cast), the exile two
+  `ExileTopPlayable { Of, Until = !Is.Land, Linked, Play = null }`. **Found on the way:** a transforming card has no
+  top-level `colors` in Scryfall's JSON, so every cube DFC was COLOURLESS in the engine — `CardFactory` reads the front
+  face's now (LSV's 13 DFCs only; none was scripted). The review found the back faces' colour indicators differ (Etali,
+  Primal Sickness is red-green; Ajani's, Tamiyo's, Cecil's and She-Hulk's too): the importer keeps `card_faces[].colors`
+  (`CardFace.Colors`), LSV re-imported — only face colours changed. A back face has mana value 0 (DesignNotes).
+  The review's other fixes, each with a test (5/5 revert-checks): a permanent under a copy effect never transforms, a
+  token copy does (CR 701.28c); `CastOneOf { AnyNumber }` offers each card once (`Picked`) — a pick whose cast was
+  declined re-offered it forever; a player's counter at 0 is removed, as a permanent's. Legal actions: none grow with the board (the amount is one choice; Etali's casts one choice each, asked
+  again; Reflection one activation per creature). 14 tests in `LsvBatch2i4Tests.cs` (2 the review's); 12/12
+  revert-checks caught, and the review's 5/5.
+  Golden-out moved nothing (162 random, 879 card games); golden-in moved 30 random and 195 card games, 12 added, no AI
+  game; probe 150: none unfinished, every card used (Galvanic Discharge 378 casts, Reflection activated 486, Etali
+  transformed 77) — the probe counted a transformed card under its back face's name, so Reflection first read
+  "activated 0": `CardProbeTests` counts it under the card's name now. After the review's fixes the checks again from
+  golden-in (no AI game moved, probe 150 clean); suite 2,155 passed.
 
 ## Tasks
 
@@ -1750,9 +1782,9 @@ as his three priorities.
     - [x] MC-4.4i2b Options, casting, 3 (one batch with i3): Batroc the Leaper (multikicker), Ragavan, Nimble Pilferer and Death-Greeter's
           Champion (dash, backup)
     - [x] MC-4.4i3 An additional combat phase: Fear of Missing Out
-    - [ ] MC-4.4i4 Counters on a player — energy (one batch with i5, i6): Galvanic Discharge (Guide of Souls waits for white)
-    - [ ] MC-4.4i5 Transforming double-faced cards: Fable of the Mirror-Breaker
-    - [ ] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
+    - [x] MC-4.4i4 Counters on a player — energy (one batch with i5, i6): Galvanic Discharge (Guide of Souls waits for white)
+    - [x] MC-4.4i5 Transforming double-faced cards: Fable of the Mirror-Breaker
+    - [x] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
     - [ ] MC-4.4i7 (default, Shayne to confirm) The blue and black DFCs every survey missed: Tamiyo, Inquisitive
           Student; Jace, Vryn's Prodigy; Sink into Stupor (modal); Cecil, Dark Knight; Concealing Curtains
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
@@ -1776,10 +1808,22 @@ which every colour's survey missed (Decisions, "4.4i"; blue's three too). **Red 
 4.4i** (Decisions, "4.4i") — i1 the 6 tested pieces, i2a/i2b the 7 options, then i3–i6 one new piece a session (an
 extra combat, energy, transforming DFCs, Etali); i7 the missed blue and black DFCs — built as four batches, i1 + i2a,
 i2b + i3, i4–i6, i7 (Shayne: more cards a session). Each session ends with the cube's cards implemented by rarity AND
-by colour (`python tools/magic_set.py coverage --set LSV`). **i1 + i2a and i2b + i3 are done** (Decisions, "4.4i1 +
-i2a", "4.4i2b + i3"; 297 of 528 play, red 51 of 54). Next, in a NEW session: **MC-4.4i4–i6** (3 cards: Galvanic
-Discharge — energy, counters on a player; Fable of the Mirror-Breaker — transforming DFCs; Etali, Primal Conqueror —
-transform by an activation, poison, casting any number free). From i2b + i3: multikicker is `Scripting.Multikicker`
+by colour (`python tools/magic_set.py coverage --set LSV`). **i1 + i2a, i2b + i3 and i4–i6 are done: red is
+finished** (Decisions, "4.4i1 + i2a", "4.4i2b + i3", "4.4i4–i6"; 300 of 528 play, red 54 of 54). Next, in a NEW
+session: **MC-4.4i7** — the five blue and black DFCs every survey missed (Tamiyo, Inquisitive Student; Jace, Vryn's
+Prodigy; Cecil, Dark Knight; Concealing Curtains — transforming, on i5's `Card.Transform`; Sink into Stupor — a MODAL
+DFC, its own piece). **Open (for Shayne): i7 as the default, or another colour first** (the task's "Shayne to
+confirm"). From i4–i6: counters on a player are `MagicPlayer.Counters` through `MagicState.PutCounters` (a player's id;
+`PutCounters(Ref.You, 3) { Kind = CounterKinds.Energy }`), poison's loss at ten in the state-based check; "pay any amount
+of [life / {E}]" is `PayAnyAmount { Kind, AtMost, Then }` with `Count.AmountPaid` (Necrodominance moved onto it); a
+transforming DFC's back face is `LsvCards.BackFace(card, abilities…)` (`TransformsInto`), `Card.Transform` the copy
+stamp (`Transformed(Original)`, front face up again in `Fresh`), "transform" `Transform(ref)`, "return it transformed"
+`MoveTo { Transformed }`; "cast any number of spells from among them" `CastOneOf { AnyNumber }`. A DFC's colours are its
+front face's cost now (`CardFactory`) — the survey's gap was the engine's too. i4–i6's tests are in `LsvBatch2i4Tests.cs`
+(`Discharge(target, pay)`, `CastFable(toChapter)`: real turns — a lore counter put by hand never reaches a chapter
+trigger outside an action, `Reflection()`: Fable transformed, `CastingAll(cast)`). **For the AI lane (after the cube's
+implementations):** the evaluator prices neither energy nor poison, and the table's `PlayerPlate` shows neither
+(DesignNotes). From i2b + i3: multikicker is `Scripting.Multikicker`
 (`Count.TimesReplicated(Ref.Source)`); `TargetSpec.PerX` is a `Count` (a trigger's counted as it triggers); dash
 `Scripting.Dash(cost)`, backup `Scripting.Backup(n, keyword)`; an additional combat `AdditionalCombatPhase`
 (`MagicGame.AdditionalCombats`, `TurnStructure.EndStep`); "attacks for the first time each turn" `Trigger.Nth = 1` on
@@ -2111,3 +2155,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   (red 51 of 54). `TargetSpec.PerX` a `Count`; `AdditionalCombatPhase`; `Trigger.Nth` on attacks. Next: MC-4.4i4–i6.
 - 2026-11-20: Shayne: the batch's four ceilings looked at before moving on — multikicker is kicked, backup any keywords,
   the rest refused loudly (Candelabra of Tawnos' activated X targets found waiting). Next: MC-4.4i4–i6.
+- 2026-11-20: MC-4.4i4–i6 done as one batch: counters on a player (energy, poison), transforming DFCs, transform by an
+  activation — 300 of 528 play, **red finished (54 of 54)**. `PayAnyAmount` (Necrodominance moved onto it);
+  `Card.Transform`; DFC colours from the front face. Next: MC-4.4i7 (Shayne to confirm).
