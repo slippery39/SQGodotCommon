@@ -128,8 +128,11 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Lyra: "until end of turn, whenever …" — a triggered ability it has until cleanup.</summary>
 	public TriggeredAbilityComponent? Trigger { get; init; }
 
-	/// <summary>Essence Burn: "if that permanent would die this turn, exile it instead".</summary>
-	public bool ExileIfItWouldDie { get; init; }
+	/// <summary>
+	/// Essence Burn: "if that permanent would die this turn, exile it instead" ([Graveyard]); From the Catacombs: "If
+	/// that creature would leave the battlefield, exile it instead of putting it anywhere else" (every other zone).
+	/// </summary>
+	public ImmutableArray<ZoneType> ExileInsteadOf { get; init; } = [];
 
 	/// <summary>Flourishing Grapple: "loses all abilities until end of turn".</summary>
 	public bool LosesAllAbilities { get; init; }
@@ -203,7 +206,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 		{
 			SetBase = SetBase,
 			Trigger = Trigger,
-			ExileIfItWouldDie = ExileIfItWouldDie,
+			ExileInsteadOf = ExileInsteadOf,
 			LosesAllAbilities = LosesAllAbilities,
 			UntilTurnOf =
 				ForGood ? UntilEndOfTurn.Never

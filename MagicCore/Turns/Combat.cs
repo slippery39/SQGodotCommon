@@ -167,6 +167,19 @@ public static class Combat
 	public static bool IsGoaded(Card c) =>
 		c.Components.Any(x => x is UntilEndOfTurn { Keyword: Goaded });
 
+	/// <summary>
+	/// How many creatures it takes to block this attacker — menace's two (CR 702.110b), Troll of Khazad-dûm's three
+	/// (MinimumBlockers); fewer are dropped as blockers are declared (FinishBlockersAction).
+	/// </summary>
+	public static int MinimumBlockers(GameState s, Card attacker) =>
+		Math.Max(
+			s.Has(attacker, "Menace") ? 2 : 1,
+			s.AbilitiesOf<Effects.MinimumBlockers>(attacker)
+				.Select(m => m.N)
+				.DefaultIfEmpty(1)
+				.Max()
+		);
+
 	public static bool CanBlock(GameState s, Card blocker, Card attacker) =>
 		blocker.Is(CardType.Creature)
 		&& !blocker.IsTapped

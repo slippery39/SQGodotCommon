@@ -190,6 +190,13 @@ public static class Scripting
 		new(Is.Creature & !Is.Artifact & !Is.Color(ManaColor.Black));
 
 	/// <summary>
+	/// Shadow (CR 702.28) — Dauthi Voidwalker: "Shadow (This creature can block or be blocked by only creatures with
+	/// shadow.)" — no combat rule of its own: CantBeBlockedBy those without it, CanBlockOnly those with it.
+	/// </summary>
+	public static GameComponent[] Shadow =>
+		[new CantBeBlockedBy(!Is.With("Shadow")), new CanBlockOnly(Is.With("Shadow"))];
+
+	/// <summary>
 	/// Evoke (CR 702.74) — Subtlety: "Evoke—Exile a blue card from your hand." (Solitude, Endurance, Fury, Grief: their
 	/// colours.) An alternative cost on the card (MayCastFromHandFree(Is.Source), Force of Will's), and "when this
 	/// creature enters, if its evoke cost was paid, its controller sacrifices it" — read on the permanent

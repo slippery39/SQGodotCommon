@@ -79,6 +79,8 @@ public static class CounterKinds
 	public const string Story = "story"; // Staff of the Storyteller
 	public const string Chorus = "chorus"; // Malcolm, Alluring Scoundrel
 	public const string Wish = "wish"; // Wishclaw Talisman
+	public const string Void = "void"; // Dauthi Voidwalker
+	public const string Corpse = "corpse"; // From the Catacombs
 
 	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
 	public const string Indestructible = "indestructible";
@@ -1236,6 +1238,12 @@ public record YourCreaturesAssignDamageByToughness : GameComponent;
 public record CantBeBlockedBy(Filters.Filter Blockers) : GameComponent;
 
 /// <summary>
+/// Troll of Khazad-dûm: "This creature can't be blocked except by three or more creatures." — menace's "two or more"
+/// as a number (Combat.MinimumBlockers). Not a CantBeBlockedBy option: that asks one blocker at a time, this counts them.
+/// </summary>
+public record MinimumBlockers(int N) : GameComponent;
+
+/// <summary>
 /// Brazen Borrower: "This creature can block only creatures with flying." — the BLOCKER's filter, asked of each
 /// attacker from its side (Combat.CanBlock); CantBeBlockedBy is the attacker's, asked of its blockers.
 /// </summary>
@@ -1280,6 +1288,13 @@ public record EnchantedIsCreatureType(string Subtype) : GameComponent;
 public record MayCastThisFrom(ZoneType From) : GameComponent
 {
 	public bool Finality { get; init; }
+
+	/// <summary>
+	/// Escape (CR 702.138) — From the Catacombs: "Escape—{3}{B}{B}, Exile five other cards from your graveyard." — the
+	/// costs beside its mana cost, from the graveyard only (CastSpellAction.CostsOf); not flashback, so it goes back to
+	/// the graveyard as it resolves.
+	/// </summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
 
 	/// <summary>The card's own permission from <paramref name="zone"/> — what it printed, not what it was granted.</summary>
 	public static bool On(Cards.Card card, ZoneType zone) =>
@@ -1568,6 +1583,16 @@ public record ExileInsteadOfYourGraveyard : ThisTurnEffect
 {
 	/// <summary>Which of what would go there — Yawgmoth's Will's "a card" (!Is.Token); unset, anything.</summary>
 	public Filters.Filter? What { get; init; }
+
+	/// <summary>
+	/// Dauthi Voidwalker: "If a card would be put into an opponent's graveyard from anywhere" — whose graveyard, asked of
+	/// its owner from the holder's side (Is.Opponents); unset, yours. On a permanent only: a "this turn" one is read from
+	/// the card's owner's command zone alone.
+	/// </summary>
+	public Filters.Filter? Whose { get; init; }
+
+	/// <summary>Dauthi Voidwalker: "instead exile it with a void counter on it" — put on as it is exiled.</summary>
+	public string? CounterKind { get; init; }
 }
 
 /// <summary>

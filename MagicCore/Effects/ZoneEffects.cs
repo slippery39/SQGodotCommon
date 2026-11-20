@@ -823,6 +823,7 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 			Prompt
 			?? To switch
 			{
+				_ when To == From => "Choose one",
 				ZoneType.Hand when From == ZoneType.Battlefield => "Return to its owner's hand",
 				ZoneType.Hand => "Put one into your hand",
 				ZoneType.Exile => "Exile one",
@@ -872,16 +873,20 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 				: s.SpawnAction(
 					new PipelineAction { PipelineContext = context, Steps = Otherwise }
 				);
+		// Dauthi Voidwalker: "Choose an exiled card …" — To the zone it is in already is a choice that moves nothing
 		ImmutableList<GameAction> steps =
-		[
-			choice,
-			(As ?? new MoveTo(Ref.Chosen, To)) with
-			{
-				What = Ref.Chosen,
-				To = To,
-				From = [From],
-			},
-		];
+			To == From
+				? [choice]
+				:
+				[
+					choice,
+					(As ?? new MoveTo(Ref.Chosen, To)) with
+					{
+						What = Ref.Chosen,
+						To = To,
+						From = [From],
+					},
+				];
 		if (!Then.IsEmpty || (May && !Otherwise.IsEmpty))
 			steps = steps.Add(
 				new IfChosenAction(Then)

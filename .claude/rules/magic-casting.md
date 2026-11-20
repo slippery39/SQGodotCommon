@@ -299,7 +299,10 @@ whose subsystem it lives in.
 - **"You may cast this card from your graveyard / from exile"** is the card's own `MayCastThisFrom(From) { Finality }`
   (MC-6.9), read by `Playable.CanCastFromHere` — Storied Veteran (Graveyard) is not flashback: it isn't exiled leaving
   the stack, it resolves onto the battlefield (with a finality counter, `EnterFromStackAction.Finality`); Khan (Exile):
-  your own exile, never face down (a face-down card has no abilities).
+  your own exile, never face down (a face-down card has no abilities). **Escape** (From the Catacombs: "Escape—{3}{B}{B},
+  Exile five other cards from your graveyard", MC-4.4h2e) is that permission with `Costs` — joined by
+  `CastSpellAction.CostsOf` for a cast from the graveyard by its player (never during a resolution, nor by a mark), the
+  five picked after the cast as Underworld Breach's; not flashback, so the sorcery goes back to the graveyard.
 - **An activated ability's event card** is the creature tapped for its cost (Station's "its power") or, with
   none tapped, the one sacrificed (Gowron: "if you sacrificed a Klingon this way" — `Matches(Ref.EventCard, …)
   { AsItLastWas }`, its snapshot from before the cost: a sacrificed token has ceased to exist by then).

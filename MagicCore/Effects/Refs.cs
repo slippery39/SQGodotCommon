@@ -417,6 +417,7 @@ public enum CountOf
 	SpellsCastBefore, // Storm (Brain Freeze): "for each spell cast before it this turn" — every player's, counted as [Ref] was cast
 	DevotionTo, // Mogis: "your devotion to black and red" — Count.Colors
 	BeyondTheFewest, // Balance: "equal to the number … controlled by the player who controls the fewest, then sacrifices the rest" — the rest, for the player Ref.It
+	PermanentsLeftTheBattlefieldThisTurn, // Revolt (Fatal Push): "if a permanent left the battlefield under your control this turn" — of the player [Ref]
 }
 
 /// <summary>
@@ -532,6 +533,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count PermanentsReturnedToHandThisTurn(Ref player) =>
 		new(0, player, CountOf.PermanentsReturnedToHandThisTurn);
 
+	public static Count PermanentsLeftTheBattlefieldThisTurn(Ref player) =>
+		new(0, player, CountOf.PermanentsLeftTheBattlefieldThisTurn);
+
 	public static readonly Count NonlandCardsChosen = new(0, null, CountOf.NonlandCardsChosen);
 
 	/// <summary>Genesis Device: "Sacrifice any number of lands …, then search … for up to that many" — the last permanent choice.</summary>
@@ -639,6 +643,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Select(s.GetObject)
 				.OfType<MagicPlayer>()
 				.Sum(p => p.ThisTurn.PermanentsReturnedToHand);
+		if (Kind == CountOf.PermanentsLeftTheBattlefieldThisTurn)
+			return Of!
+				.Resolve(s, context)
+				.Select(s.GetObject)
+				.OfType<MagicPlayer>()
+				.Sum(p => p.ThisTurn.PermanentsLeftTheBattlefield);
 
 		if (Kind == CountOf.BasicLandTypesAmongLandsYouControl)
 			return Ref

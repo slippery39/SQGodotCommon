@@ -41,7 +41,11 @@ public static class Is
 	public static readonly Filter Copy = new HasProperty(Property.Copy);
 	public static readonly Filter Prepared = new HasProperty(Property.Prepared);
 	public static readonly Filter PreparedCopy = new HasProperty(Property.PreparedCopy);
-	public static readonly Filter WithPlusOneCounter = new HasProperty(Property.PlusOneCounter);
+	public static readonly Filter WithPlusOneCounter = WithCounter(Effects.CounterKinds.PlusOne);
+
+	/// <summary>Dauthi Voidwalker: "with a void counter on it" — a counter of that kind (CounterKinds).</summary>
+	public static Filter WithCounter(string kind) => new HasCounter(kind);
+
 	public static readonly Filter WithAnyCounter = new HasProperty(Property.AnyCounter);
 	public static readonly Filter EnteredThisTurn = new HasProperty(Property.EnteredThisTurn);
 	public static readonly Filter AttackedThisTurn = new HasProperty(Property.AttackedThisTurn);

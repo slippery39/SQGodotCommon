@@ -3383,7 +3383,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 [
 	Spell(
 		[Creature],
-		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true },
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileInsteadOf = [ZoneType.Graveyard] },
 		new DealDamage(Ref.Target(), Count.X with { Times = 2 })
 	),
 ],

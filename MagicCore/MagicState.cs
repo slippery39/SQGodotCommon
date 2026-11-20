@@ -193,15 +193,13 @@ public static class MagicState
 			&& zoneId != s.GetWellKnownId(MagicKeys.Stack)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
-		// It would die, so it is exiled instead — and never dies: a finality counter (CR 122.1i),
-		// Essence Burn's "if that permanent would die this turn", or Garruk, Veiled Butcher's
-		// "a creature an opponent controls".
+		// It would die, so it is exiled instead — and never dies: a finality counter (CR 122.1i), or
+		// Garruk, Veiled Butcher's "a creature an opponent controls" (Essence Burn's is ExileInsteadOf, below).
 		if (
 			zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
 			&& s.IsOnBattlefield(cardId)
 			&& (
 				before.HasFinalityCounter
-				|| before.Components.OfType<UntilEndOfTurn>().Any(u => u.ExileIfItWouldDie)
 				|| (
 					before.Is(CardType.Creature)
 					&& s.CardsIn(s.OpponentOf(before.ControllerId), ZoneType.Battlefield)
@@ -210,24 +208,59 @@ public static class MagicState
 			)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
+		// Essence Burn's "would die", From the Catacombs' "would leave the battlefield … anywhere else": the zones
+		// it would go to that exile it instead.
+		if (
+			s.IsOnBattlefield(cardId)
+			&& s.GetObject(zoneId) is Zone { ZoneType: var to }
+			&& before.Components.OfType<UntilEndOfTurn>().Any(u => u.ExileInsteadOf.Contains(to))
+		)
+			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		// Necrodominance: its controller's cards go to exile instead of their graveyard, from anywhere —
 		// so a creature never dies. Read while it is still on the battlefield, so it exiles itself too.
 		// Yawgmoth's Will: the same rule "this turn", in its owner's command zone — of a card only (What).
+		// Dauthi Voidwalker: an opponent's graveyard (Whose), with a void counter (CounterKind) — the owner
+		// picks among several (CR 616.1), so a rule without a counter first.
 		bool ExilesIt(Card holder, ExileInsteadOfYourGraveyard rule) =>
-			rule.What is not { } what
-			|| what.Matches(s, before, new Filters.FilterContext(before.OwnerId, holder.Id));
-		if (
-			zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
-			&& (
-				s.CardsIn(before.OwnerId, ZoneType.Battlefield)
-					.Any(p =>
-						s.AbilitiesOf<ExileInsteadOfYourGraveyard>(p).Any(r => ExilesIt(p, r))
-					)
-				|| s.ThisTurnEffects<ExileInsteadOfYourGraveyard>(before.OwnerId)
-					.Any(c => ExilesIt(c, c.GetComponent<ExileInsteadOfYourGraveyard>()!))
+			(rule.Whose ?? Filters.Is.Yours).Matches(
+				s,
+				s.GetPlayer(before.OwnerId),
+				new Filters.FilterContext(holder.ControllerId, holder.Id)
 			)
-		)
-			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
+			&& (
+				rule.What is not { } what
+				|| what.Matches(
+					s,
+					before,
+					new Filters.FilterContext(holder.ControllerId, holder.Id)
+				)
+			);
+		ExileInsteadOfYourGraveyard? exiledBy = null;
+		if (zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard))
+		{
+			var rules = new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.SelectMany(p =>
+					s.AbilitiesOf<ExileInsteadOfYourGraveyard>(p).Where(r => ExilesIt(p, r))
+				)
+				.Concat(
+					s.ThisTurnEffects<ExileInsteadOfYourGraveyard>(before.OwnerId)
+						.Select(c => (c, Rule: c.GetComponent<ExileInsteadOfYourGraveyard>()!))
+						.Where(x => ExilesIt(x.c, x.Rule))
+						.Select(x => x.Rule)
+				);
+			foreach (var rule in rules) // one pass, no list: MoveCard is the hottest path
+			{
+				exiledBy ??= rule;
+				if (rule.CounterKind is null)
+				{
+					exiledBy = rule;
+					break;
+				}
+			}
+			if (exiledBy is not null)
+				zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
+		}
 		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
 		var leavesGraveyard = // Vash: "a card leaves your graveyard" — a token isn't a card
 			!before.IsToken
@@ -244,6 +277,8 @@ public static class MagicState
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
 		).UpdateObject(cardId, before.Fresh() with { KnownTo = knownTo });
+		if (exiledBy?.CounterKind is { } voidKind) // Dauthi Voidwalker: "with a void counter on it"
+			s = s.PutCounters(cardId, voidKind, 1);
 		if (
 			(before.IsToken || before.IsCopy)
 			&& new[] { s.Player1Id(), s.Player2Id() }.Any(p =>
@@ -255,6 +290,11 @@ public static class MagicState
 			s = s.Tally(
 				before.OwnerId,
 				t => t with { PermanentsReturnedToHand = t.PermanentsReturnedToHand + 1 }
+			);
+		if (leavesBattlefield) // revolt (Fatal Push): "a permanent left the battlefield under your control this turn"
+			s = s.Tally(
+				before.ControllerId,
+				t => t with { PermanentsLeftTheBattlefield = t.PermanentsLeftTheBattlefield + 1 }
 			);
 		if (milled) // mill, surveil, any "from your library into your graveyard" — counted in one place
 			s = s.Tally(

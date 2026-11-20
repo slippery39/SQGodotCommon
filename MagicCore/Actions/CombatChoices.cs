@@ -246,17 +246,17 @@ public record FinishAttackersAction : GameAction
 public record FinishBlockersAction : GameAction
 {
 	/// <summary>
-	/// ponytail: a lone blocker on a menace attacker is dropped rather than refused, so every
-	/// sequence of per-creature answers yields a legal declaration (CR 702.110b). Arena instead
-	/// refuses to submit; the reachable outcomes are the same.
+	/// ponytail: too few blockers on a menace attacker (or Troll of Khazad-dûm's three, Combat.MinimumBlockers)
+	/// are dropped rather than refused, so every sequence of per-creature answers yields a legal declaration
+	/// (CR 702.110b). Arena instead refuses to submit; the reachable outcomes are the same.
 	/// </summary>
 	public override ActionResult Execute(GameState s)
 	{
 		var blocks = Declarations.Read(InputContext, DeclareBlockerChoice.KeyPrefix).ToList();
 		blocks = blocks
 			.Where(b =>
-				!s.Has(s.GetCard(b.ChosenId), "Menace")
-				|| blocks.Count(o => o.ChosenId == b.ChosenId) >= 2
+				blocks.Count(o => o.ChosenId == b.ChosenId)
+				>= Turns.Combat.MinimumBlockers(s, s.GetCard(b.ChosenId))
 			)
 			.ToList();
 

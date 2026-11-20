@@ -227,6 +227,16 @@ public record CastSpellAction : GameAction
 			: Playable.ZonePermission(s, card, permissionOf) is { Rule.Free: false } p
 				? p.Rule.Costs
 			: [],
+			// From the Catacombs' escape: the card's own permission from its graveyard, cast by its player — never
+			// with flashback (Snapcaster's grant), a second alternative cost (CR 118.9a)
+			.. permissionOf == 0
+			|| !s.IsIn(card.Id, card.OwnerId, ZoneType.Graveyard)
+			|| flashback && Costs.Flashback(s, card) is not null
+			|| Playable.MarkedInGraveyard(s, card, permissionOf)
+				? []
+				: s.AbilitiesOf<MayCastThisFrom>(card)
+					.FirstOrDefault(m => m.From == ZoneType.Graveyard)
+					?.Costs ?? [],
 			.. kicked ? card.GetComponent<KickerComponent>()?.Costs ?? [] : [],
 			.. free ?? [],
 		];

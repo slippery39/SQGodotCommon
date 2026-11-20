@@ -266,6 +266,17 @@ public sealed record HasKeyword(string Keyword) : Filter
 		o is Card card && s.Has(card, Keyword);
 }
 
+/// <summary>"With a +1/+1 counter on it"; Dauthi Voidwalker: "with a void counter on it" — Card.CountersOf.</summary>
+public sealed record HasCounter(string Kind) : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card && card.CountersOf(Kind) > 0;
+}
+
 /// <summary>Mabel: "creature you control"; Gideon the Oathless: "an opponent controls" — or the player itself.</summary>
 public sealed record OfController(Whose Whose) : Filter
 {
@@ -367,7 +378,6 @@ public enum Property
 	Copy,
 	Prepared, // the creature is prepared (it has a copy of its spell in exile)
 	PreparedCopy, // Codie: the copy of a prepare spell, cast from exile
-	PlusOneCounter, // "with a +1/+1 counter on it"
 	AnyCounter, // Dominion Supervisor: "with counters on them" — any kind (Card.HasAnyCounter)
 	EnteredThisTurn,
 	AttackedThisTurn,
@@ -407,7 +417,6 @@ public sealed record HasProperty(Property Property) : Filter
 			Property.Copy => card.IsCopy,
 			Property.Prepared => card.IsPrepared,
 			Property.PreparedCopy => card.HasComponent<Effects.PreparedCopyOf>(),
-			Property.PlusOneCounter => card.PlusOneCounters > 0,
 			Property.AnyCounter => card.HasAnyCounter,
 			Property.EnteredThisTurn => card.EnteredOnTurn == s.GetGame().TurnNumber,
 			Property.AttackedThisTurn => card.AttackedOnTurn == s.GetGame().TurnNumber,

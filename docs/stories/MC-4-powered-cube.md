@@ -1258,6 +1258,24 @@ as his three priorities.
   gone, she can't take the counter, so you may cast. "That player" is `Ref.EachOpponent` (Bo1, two players). Legal
   actions: none grow with the board. Golden-out moved nothing; probe 150: none unfinished, each card cast 311–343 times. The
   suite's trigger table (`FilterMigrationTests`) takes `SpellCopied` and Bowmasters' row.
+- 2026-11-19, Claude (cube lane) — **4.4h2e: zones and combat, five options and one small piece.** Fatal Push: revolt
+  is `TurnTally.PermanentsLeftTheBattlefield` (its CONTROLLER's, any zone, counted in `MoveCard`) read by
+  `Count.PermanentsLeftTheBattlefieldThisTurn` — not Miles O'Brien's tally, which is the OWNER's and the hand only;
+  the spell is `If(≤2) { Otherwise = If(Both(revolt, ≤4)) }`. Troll of Khazad-dûm: the one new piece,
+  `MinimumBlockers(3)`, read with menace by ONE number, `Combat.MinimumBlockers` — the blockers' finish, the look-ahead's
+  chumps and joins and the misplay scan all asked `Has("Menace")` before (not a `CantBeBlockedBy` option: that asks one
+  blocker, this counts them); swampcycling is Lórien Revealed's. Dauthi Voidwalker: `Scripting.Shadow` (`CantBeBlockedBy`
+  + `CanBlockOnly`); `ExileInsteadOfYourGraveyard { Whose, CounterKind }` — `MoveCard` reads both battlefields now, the
+  owner picking a rule without a counter first; `Is.WithCounter(kind)` (`WithPlusOneCounter` moved onto it, its
+  `Property` gone); "choose an exiled card" is `MoveChosen(Exile, filter, Exile)` — To = From moves nothing (the
+  revert-check's catch: a move would make a new object, so the test asserts the void counter stayed). From the
+  Catacombs: escape is `MayCastThisFrom { Costs }`, joined by `CastSpellAction.CostsOf` for its player's graveyard cast;
+  Essence Burn's `ExileIfItWouldDie` became `ExileInsteadOf` (zones; Essence Burn, Khaaaaaaaaaaaannn! and Suplex
+  moved to `[Graveyard]`), the Catacombs' "anywhere else" every other zone, for good; its corpse counter is put on after it
+  enters (a ceiling, DesignNotes); the review's catches: escape's cost never joins a flashback cast (CR 118.9a),
+  `What` asked from the holder's side, one pass over the rules. 11 tests in `LsvBatch2h2eTests.cs` (`Costing(cost)`: a 3/3 of that cost, `Bounce`,
+  `TrollAttacks(troll, n)`), 12/12 revert-checks caught. Legal actions: none grow with the board (the choices come after).
+  Golden-out moved nothing; probe 150: none unfinished, each card used 297–434 times (Troll cast 38, cycled 405).
 
 ## Tasks
 
@@ -1493,7 +1511,8 @@ as his three priorities.
           Wishclaw Talisman (Decisions, "4.4h2c")
     - [x] MC-4.4h2d Options, triggers, 4: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black Widow
           (Decisions, "4.4h2d")
-    - [ ] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
+    - [x] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
+          (Decisions, "4.4h2e")
     - [ ] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white)
     - [ ] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red)
     - [ ] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy
@@ -1513,11 +1532,17 @@ Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue'
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
-pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions) and **h2d (triggers,
-271 of 528 play)** are done (Decisions, "4.4h1", "4.4h2a",
-"4.4h2b", "4.4h2c", "4.4h2d").
-Next, in a NEW session: **MC-4.4h2e — zones and combat, 4**: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From
-the Catacombs (the plan's notes in Decisions, "4.4h"). From h2d: a spell copy raises `SpellCopiedEvent` (magecraft is
+pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions), h2d (triggers) and
+**h2e (zones and combat, 275 of 528 play)** are done — **black's options are finished** (Decisions, "4.4h1", "4.4h2a" …
+"4.4h2e").
+Next, in a NEW session: **MC-4.4h3 — overload: Damn** (Winds of Abandon waits for white; the plan's notes in Decisions,
+"4.4h": `TargetSpec.IfKicked` swaps a target word, overload removes targeting). From h2e: revolt is
+`Count.PermanentsLeftTheBattlefieldThisTurn` (the controller's tally); how many must block is ONE number,
+`Combat.MinimumBlockers` (menace, `MinimumBlockers(N)`); shadow `Scripting.Shadow`; "an opponent's graveyard … with a
+void counter" `ExileInsteadOfYourGraveyard { Whose, CounterKind }`; "with a [kind] counter" `Is.WithCounter`; a choice
+that moves nothing `MoveChosen(Exile, filter, Exile)`; escape `MayCastThisFrom { Costs }`; "exile it instead" of going
+to a zone `ExileInsteadOf` (Essence Burn's `[Graveyard]`). h2e's tests are in `LsvBatch2h2eTests.cs` (`Costing(cost)`,
+`Bounce`, `TrollAttacks(troll, n)`). From h2d: a spell copy raises `SpellCopiedEvent` (magecraft is
 `LsvCards.Magecraft`: Witherbloom Apprentice when B/G comes); "except the first one they draw in their draw steps" on a
 trigger is `EventTest.NotTheTurnsDraw`; odd or even is `ChoosesNumberAsItEnters { OddOrEven }`; an exile whose
 permission its `Then` decides is `ExileTopPlayable { Play = null }`; ward can cost a fixed `PayLifeCost`. h2d's tests
@@ -1786,3 +1811,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   `EntersWithCountersComponent.Kind`. Next: MC-4.4h2d.
 - 2026-11-19: MC-4.4h2d done: triggers — 271 of 528 play. `SpellCopiedEvent` (magecraft), `DrewCardEvent.TurnDraw`,
   `ChoosesNumberAsItEnters.OddOrEven`, `ExileTopPlayable.Play` null, ward paid in life. Next: MC-4.4h2e.
+- 2026-11-19: MC-4.4h2e done: zones and combat — 275 of 528 play; black's options finished. Revolt's tally,
+  `Combat.MinimumBlockers`, shadow, `ExileInsteadOfYourGraveyard { Whose, CounterKind }`, `Is.WithCounter`, escape's
+  `MayCastThisFrom.Costs`, `ExileInsteadOf` (three cards moved). Next: MC-4.4h3.

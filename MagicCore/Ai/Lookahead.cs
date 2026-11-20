@@ -144,7 +144,9 @@ public static class Lookahead
 	/// starts one (it blocks only what it survives).
 	/// ponytail: damage summed — first strike, the attacker's split and deathtouch on the attacker's side
 	/// are not seen (a second "is it lethal" beside Survives'); count them if a misjudged gang block is
-	/// shown (DesignNotes, MagicCore known ceilings).
+	/// shown (DesignNotes, MagicCore known ceilings). Past two (Troll of Khazad-dûm's three,
+	/// Combat.MinimumBlockers) only the blocker completing the gang joins: the second of three never does,
+	/// so the look-ahead never builds one — plan the gang whole if a three-blocker attacker matters.
 	/// </summary>
 	static int Joins(GameState s, Card blocker, ChoiceAction choice)
 	{
@@ -171,10 +173,11 @@ public static class Lookahead
 				continue;
 			var kills = Kill(attacker, [.. with, blocker]);
 			if (
-				with.Count == 1
-					&& s.Has(attacker, "Menace")
+				with.Count + 1 == Turns.Combat.MinimumBlockers(s, attacker)
 					&& (kills || Survives(s, blocker, attacker))
-				|| kills && !Kill(attacker, with)
+				|| kills
+					&& !Kill(attacker, with)
+					&& with.Count + 1 >= Turns.Combat.MinimumBlockers(s, attacker)
 			)
 				return option.Id;
 		}
@@ -205,8 +208,7 @@ public static class Lookahead
 		int Damage(Card a) =>
 			Math.Max(0, Turns.Combat.Assigns(s, a)) * (s.Has(a, "Double strike") ? 2 : 1);
 		bool Blocked(Card a) =>
-			declared.Count(d => d.ChosenId == a.Id) is var n
-			&& (s.Has(a, "Menace") ? n >= 2 : n >= 1);
+			declared.Count(d => d.ChosenId == a.Id) >= Turns.Combat.MinimumBlockers(s, a);
 		var unblocked = Turns
 			.Combat.Attackers(s)
 			.Where(a => a.AttackingId == player && !Blocked(a))
@@ -223,7 +225,7 @@ public static class Lookahead
 			.ThenBy(c => c.Id)
 			.ToList();
 		// one blocker alone on a menace attacker is dropped: no chump there (Joins pairs them)
-		foreach (var attacker in unblocked.Where(a => !s.Has(a, "Menace")))
+		foreach (var attacker in unblocked.Where(a => Turns.Combat.MinimumBlockers(s, a) == 1))
 		{
 			if (left < life)
 				break;

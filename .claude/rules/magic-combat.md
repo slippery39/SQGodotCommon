@@ -56,4 +56,9 @@ whose subsystem it lives in.
   you control attacking alone (`EventTest.Alone` — a player or a planeswalker), each instance on its own.
 - **Landwalk and fear are no combat rule** (MC-6.8): `Scripting.Landwalk("Island")` is the plain "can't be blocked"
   under an `If` (the opponent controls one); `Scripting.Fear` is a `CantBeBlockedBy`, granted until end of turn
-  through `ModifyUntilEndOfTurn.Gains` (Shizo; the keyword word beside it is only for the table).
+  through `ModifyUntilEndOfTurn.Gains` (Shizo; the keyword word beside it is only for the table). **Shadow** (Dauthi
+  Voidwalker) is `Scripting.Shadow`: `CantBeBlockedBy(!Is.With("Shadow"))` and `CanBlockOnly(Is.With("Shadow"))`.
+- **How many it takes to block an attacker is ONE number, `Combat.MinimumBlockers`** (MC-4.4h2e): menace's two, Troll of
+  Khazad-dûm's "can't be blocked except by three or more creatures" (`MinimumBlockers(3)`). Fewer are dropped as blockers
+  are declared (`FinishBlockersAction`), and the look-ahead's chumps and joins and the misplay scan read it — never
+  `s.Has(attacker, "Menace")` for a block count.

@@ -1049,14 +1049,10 @@ public static class BlunderLint
 			return null;
 		var eaten = attackers
 			.Where(a =>
-				!new[]
-				{
-					"Menace",
-					"First strike",
-					"Double strike",
-					"Deathtouch",
-					"Indestructible",
-				}.Any(k => s.Has(a, k))
+				Combat.MinimumBlockers(s, a) == 1 // menace, Troll of Khazad-dûm
+				&& !new[] { "First strike", "Double strike", "Deathtouch", "Indestructible" }.Any(
+					k => s.Has(a, k)
+				)
 				&& !s.AbilitiesOf<TriggeredAbilityComponent>(a).Any()
 				&& blockers.FirstOrDefault(b =>
 					Combat.CanBlock(s, b, a)
@@ -1069,9 +1065,12 @@ public static class BlunderLint
 		if (eaten.Count == 0)
 			return null;
 		// the defender's best hold: each blocker stops the biggest attacker it can block (one blocker per attacker)
-		var open = attackers.Where(a => !s.Has(a, "Menace")).OrderByDescending(s.Power).ToList();
+		var open = attackers
+			.Where(a => Combat.MinimumBlockers(s, a) == 1)
+			.OrderByDescending(s.Power)
+			.ToList();
 		var free = blockers.ToList();
-		var through = attackers.Where(a => s.Has(a, "Menace")).Sum(s.Power);
+		var through = attackers.Where(a => Combat.MinimumBlockers(s, a) > 1).Sum(s.Power);
 		foreach (var a in open)
 		{
 			var b = free.FirstOrDefault(b => Combat.CanBlock(s, b, a));

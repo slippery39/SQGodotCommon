@@ -467,7 +467,10 @@ public static class LsvCards
 					M(
 						[Creature],
 						new DealDamage(Ref.Target(), 3),
-						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true }
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+						{
+							ExileInsteadOf = [ZoneType.Graveyard],
+						}
 					),
 					M([Target(Is.Artifact)], new Exile(Ref.Target()))
 				),
@@ -2483,6 +2486,108 @@ public static class LsvCards
 						],
 					}
 				),
+			],
+			// ===== MC-4.4h2e: zones and combat (revolt, three blockers, shadow and void counters, escape) =====
+			["Fatal Push"] =
+			[
+				Spell(
+					[Creature],
+					new If(
+						new Matches(Ref.Target(), Is.ManaValueAtMost(2)),
+						[new Destroy(Ref.Target())]
+					)
+					{
+						Otherwise =
+						[
+							new If(
+								new Both(
+									new AtLeast(
+										Count.PermanentsLeftTheBattlefieldThisTurn(Ref.You),
+										1
+									),
+									new Matches(Ref.Target(), Is.ManaValueAtMost(4))
+								),
+								[new Destroy(Ref.Target())]
+							),
+						],
+					}
+				),
+			],
+			["Troll of Khazad-dûm"] =
+			[
+				new MinimumBlockers(3),
+				Cycling(
+					"{1}",
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Subtype = "Swamp",
+						Reveal = true,
+					}
+				),
+			],
+			["Dauthi Voidwalker"] =
+			[
+				.. Shadow,
+				new ExileInsteadOfYourGraveyard
+				{
+					Whose = Is.Opponents,
+					What = !Is.Token,
+					CounterKind = CounterKinds.Void,
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new MoveChosen(
+							ZoneType.Exile,
+							Is.Opponents & Is.WithCounter(CounterKinds.Void),
+							ZoneType.Exile
+						)
+						{
+							Prompt = "Choose an exiled card with a void counter",
+							Then =
+							[
+								new MakePlayable(
+									Ref.Chosen,
+									new() { ThisTurn = true, Free = true }
+								),
+							],
+						},
+					]
+				)
+				{
+					Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+				},
+			],
+			["From the Catacombs"] =
+			[
+				Spell(
+					[TargetSpec.InAnyGraveyard(Is.Creature)],
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						UnderYourControl = true,
+						Then =
+						[
+							// ponytail: the corpse counter is put on after it enters, not "with" it (DesignNotes)
+							new PutCounters(Ref.ThisWay, 1) { Kind = CounterKinds.Corpse },
+							new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
+							{
+								ForGood = true,
+								ExileInsteadOf =
+								[
+									ZoneType.Graveyard,
+									ZoneType.Hand,
+									ZoneType.Library,
+								],
+							},
+						],
+					},
+					new TakeTheInitiative(Ref.You)
+				),
+				new MayCastThisFrom(ZoneType.Graveyard)
+				{
+					Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 5 }],
+				},
 			],
 		};
 

@@ -573,8 +573,11 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 	/// <summary>Lyra: "Until end of turn, whenever [this] deals combat damage to a player, …" — Collect reads it.</summary>
 	public Effects.TriggeredAbilityComponent? Trigger { get; init; }
 
-	/// <summary>Essence Burn: "if that permanent would die this turn, exile it instead" — MoveCard reads it.</summary>
-	public bool ExileIfItWouldDie { get; init; }
+	/// <summary>
+	/// Essence Burn: "if that permanent would die this turn, exile it instead" — the zones it would go to that exile it
+	/// instead (From the Catacombs: anywhere else) — MoveCard reads it.
+	/// </summary>
+	public ImmutableArray<ZoneType> ExileInsteadOf { get; init; } = [];
 
 	/// <summary>Flourishing Grapple: "loses all abilities until end of turn" — Characteristics.HasLostAllAbilities.</summary>
 	public bool LosesAllAbilities { get; init; }

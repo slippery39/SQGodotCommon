@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 33/46 · uncommon 50/86 · rare 128/279 · mythic 51/108 · **271/528**
+**Playable:** common 34/46 · uncommon 51/86 · rare 130/279 · mythic 51/108 · **275/528**
 
 ### "Name Sticker" Goblin
 
@@ -701,7 +701,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		M(
 			[Creature],
 			new DealDamage(Ref.Target(), 3),
-			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true }
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileInsteadOf = [ZoneType.Graveyard] }
 		),
 		M([Target(Is.Artifact)], new Exile(Ref.Target()))
 	),
@@ -769,7 +769,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This creature can't be blocked except by three or more creatures.  
 > Swampcycling {1} ({1}, Discard this card: Search your library for a Swamp card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2eTests
+
+**Engine pieces:** `MinimumBlockers` — Troll of Khazad-dûm: "This creature can't be blocked except by three or more creatures."…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Troll of Khazad-dûm"] =
+[
+	new MinimumBlockers(3),
+	Cycling(
+		"{1}",
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Subtype = "Swamp",
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Unearth
 
@@ -1254,7 +1271,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Destroy target creature if it has mana value 2 or less.  
 > Revolt — Destroy that creature if it has mana value 4 or less instead if a permanent left the battlefield under your control this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2eTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Both` — Sylvia Tilly: "you may pay {1} and exile a card from your graveyard" — asked only when…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Fatal Push"] =
+[
+	Spell(
+		[Creature],
+		new If(new Matches(Ref.Target(), Is.ManaValueAtMost(2)), [new Destroy(Ref.Target())])
+		{
+			Otherwise =
+			[
+				new If(
+					new Both(
+						new AtLeast(Count.PermanentsLeftTheBattlefieldThisTurn(Ref.You), 1),
+						new Matches(Ref.Target(), Is.ManaValueAtMost(4))
+					),
+					[new Destroy(Ref.Target())]
+				),
+			],
+		}
+	),
+],
+```
 
 ### Feywild Caretaker
 
@@ -3042,7 +3083,45 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If a card would be put into an opponent's graveyard from anywhere, instead exile it with a void counter on it.  
 > {T}, Sacrifice this creature: Choose an exiled card an opponent owns with a void counter on it. You may play it this turn without paying its mana cost.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2eTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ExileInsteadOfYourGraveyard` — Necrodominance: "If a card or token would be put into your graveyard from anywhere,…; `MakePlayable` — Emry, Lurker of the Loch: "Choose target artifact card in your graveyard. You may cast…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveChosen` — MC-6.12: a CHOSEN move, not targeted — "return a land card from your graveyard to your…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `TapSelfCost` — "{T}:" — tap this permanent.; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Dauthi Voidwalker"] =
+[
+	.. Shadow,
+	new ExileInsteadOfYourGraveyard
+	{
+		Whose = Is.Opponents,
+		What = !Is.Token,
+		CounterKind = CounterKinds.Void,
+	},
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			new MoveChosen(
+				ZoneType.Exile,
+				Is.Opponents & Is.WithCounter(CounterKinds.Void),
+				ZoneType.Exile
+			)
+			{
+				Prompt = "Choose an exiled card with a void counter",
+				Then =
+				[
+					new MakePlayable(
+						Ref.Chosen,
+						new() { ThisTurn = true, Free = true }
+					),
+				],
+			},
+		]
+	)
+	{
+		Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+	},
+],
+```
 
 ### Death-Greeter's Champion
 
@@ -3735,7 +3814,38 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Put target creature card from a graveyard onto the battlefield under your control with a corpse counter on it. You take the initiative. If that creature would leave the battlefield, exile it instead of putting it anywhere else.  
 > Escape—{3}{B}{B}, Exile five other cards from your graveyard. (You may cast this card from your graveyard for its escape cost.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2eTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileFromGraveyardCost` — Gallia, Tragic Host: "Exile another creature card from your graveyard:" — "another" is…; `MayCastThisFrom` — MC-6.9: "You may cast this card from your graveyard / from exile" — the card's own…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TakeTheInitiative` — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) —…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["From the Catacombs"] =
+[
+	Spell(
+		[TargetSpec.InAnyGraveyard(Is.Creature)],
+		new MoveTo(Ref.Target(), ZoneType.Battlefield)
+		{
+			From = [ZoneType.Graveyard],
+			UnderYourControl = true,
+			Then =
+			[
+				// ponytail: the corpse counter is put on after it enters, not "with" it (DesignNotes)
+				new PutCounters(Ref.ThisWay, 1) { Kind = CounterKinds.Corpse },
+				new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
+				{
+					ForGood = true,
+					ExileInsteadOf = [ZoneType.Graveyard, ZoneType.Hand, ZoneType.Library],
+				},
+			],
+		},
+		new TakeTheInitiative(Ref.You)
+	),
+	new MayCastThisFrom(ZoneType.Graveyard)
+	{
+		Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 5 }],
+	},
+],
+```
 
 ### Gaea's Cradle
 

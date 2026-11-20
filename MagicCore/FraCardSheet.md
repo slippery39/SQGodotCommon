@@ -2241,7 +2241,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			),
 		],
 		new DealDamage(Ref.Target(), 5),
-		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true }
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileInsteadOf = [ZoneType.Graveyard] }
 	),
 ],
 ```

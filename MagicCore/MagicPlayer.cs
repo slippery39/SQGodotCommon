@@ -71,6 +71,9 @@ public record TurnTally
 	/// <summary>Miles O'Brien: "a permanent was returned to your hand from the battlefield this turn" — its owner's, MagicState.MoveCard.</summary>
 	public int PermanentsReturnedToHand { get; init; }
 
+	/// <summary>Revolt (Fatal Push): "if a permanent left the battlefield under your control this turn" — its controller's, MagicState.MoveCard.</summary>
+	public int PermanentsLeftTheBattlefield { get; init; }
+
 	/// <summary>Captain Benjamin Sisko: "for each dilemma you've faced this turn" — FacedDilemmaEvent.Face.</summary>
 	public int DilemmasFaced { get; init; }
 

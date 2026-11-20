@@ -42,8 +42,14 @@ whose subsystem it lives in.
   MC-4.4h2c) is Necrodominance's `ExileInsteadOfYourGraveyard` in a `ThisTurn` (a `ThisTurnEffect`, read beside the
   permanents' in `MoveCard`), `What = !Is.Token` — "a card"; Necrodominance's "a card or token" sets none. Its "you may
   play lands and cast spells from your graveyard" is `ThisTurn(MayPlayFromZone(Graveyard, Is.AnyCard))`, Sen's shape.
+  **"If a card would be put into an opponent's graveyard from anywhere, instead exile it with a void counter on it"**
+  (Dauthi Voidwalker, MC-4.4h2e) is the same piece `{ Whose = Is.Opponents, What = !Is.Token, CounterKind }`: whose
+  graveyard asked of the card's OWNER from the holder's side (unset: yours), so `MoveCard` reads both battlefields; the
+  counter is put on in exile through `PutCounters`. With several, the owner picks (CR 616.1): one without a counter first.
 - **"Exile it instead" of dying** is decided in `MoveCard` alone: a finality counter, or Essence Burn's
-  `UntilEndOfTurn.ExileIfItWouldDie` — so the card never dies and no "dies" trigger sees it.
+  `UntilEndOfTurn.ExileInsteadOf = [Graveyard]` — so the card never dies and no "dies" trigger sees it. **"If that
+  creature would leave the battlefield, exile it instead of putting it anywhere else"** (From the Catacombs, MC-4.4h2e)
+  is the same list, every other zone, for good (`ModifyUntilEndOfTurn { ForGood }`): a bounce exiles it too.
 - **"If you cast it"** is `Card.WasCast`, set by `EnterBattlefield(cast: true)` from a resolving spell.
 - **Who knows a hidden card is `Card.KnownTo`** (`Knowers`, relative to the owner — story AI-3): in a
   library, who knows its position; in a hand, whether the opponent saw it. `MoveCard` sets it on every
@@ -162,7 +168,13 @@ whose subsystem it lives in.
   OWNER's zone, so a choice among anyone's exiled cards works.
 - **"A permanent was returned to your hand from the battlefield this turn"** (Miles O'Brien) is
   `TurnTally.PermanentsReturnedToHand` — its OWNER's, counted in `MoveCard` (battlefield → hand: bounce, beam
-  me up's cost, a token too) — read by `Count.PermanentsReturnedToHandThisTurn`.
+  me up's cost, a token too) — read by `Count.PermanentsReturnedToHandThisTurn`. **Revolt** — "if a permanent left the
+  battlefield under your control this turn" (Fatal Push, MC-4.4h2e) — is `TurnTally.PermanentsLeftTheBattlefield`, its
+  CONTROLLER's, to any zone (a token too; phasing is no zone change), read by `Count.PermanentsLeftTheBattlefieldThisTurn`.
+- **"Choose an exiled card …"** with no move (Dauthi Voidwalker: "Choose an exiled card an opponent owns with a void
+  counter on it. You may play it this turn") is `MoveChosen(Exile, filter, Exile)` — To the zone it is already in is the
+  choice alone, the same object, `Then` reading it as `Ref.Chosen` (`MakePlayable(Ref.Chosen, { ThisTurn, Free })`).
+  "With a [kind] counter on it" is `Is.WithCounter(kind)` (`WithPlusOneCounter` is its +1/+1).
 - **"You can't sacrifice Treasure tokens"** (Quark, `CantSacrificeTreasures`) is `MagicState.CanSacrifice`, asked by
   every sacrifice: `MagicState.Sacrifice` itself (it does nothing), `SacrificeCost`'s candidates, a
   `ChoosePermanentChoice { Sacrifice }` (MaySacrifice, EachSacrifices) and
