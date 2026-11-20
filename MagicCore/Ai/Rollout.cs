@@ -270,18 +270,109 @@ public static class Rollout
 		bool? landsDrawn = null
 	)
 	{
-		var rootTurn = horizon - 1 - settings.LookaheadTurns;
-		rootTurnEnd = null;
-		var (looked, library) = (0, s.CardsIn(me, ZoneType.Library).Count());
-		var greedy = settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
-		var (turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
-		var them = s.OpponentOf(me);
-		GameState? turnEnd = null; // the root turn's end: the same moment for every candidate
-		// ponytail: a rollout that hits DecisionLimit is scored where it stopped, mid-turn, beside
-		// rollouts scored at the horizon. Only a loop that never advances reaches it; flag or drop
-		// such a candidate if one is ever seen.
-		var stopAt = horizon;
-		for (var i = 0; i < settings.DecisionLimit && !s.IsOver(); i++)
+		var walk = new Walk(s, me, horizon, settings, landsDrawn);
+		walk.Run(fork: false);
+		return walk.Finish(out rootTurnEnd, out unseen);
+	}
+
+	/// <summary>
+	/// <see cref="Hidden.Library.LandOrNot"/>'s two rollouts of one line (AI-30.4a, Shayne 2026-11-20: "do we really need
+	/// to do a full double look ahead for this?"): the two play the same game until our library first changes - a draw,
+	/// a look at an unseen card, a search or shuffle - so the "not lands" rollout is played to its end once, and the
+	/// "lands" one from the position before that change, its unseen draws made lands there (<see cref="Hidden.Unknown"/>).
+	/// The out values are the "not lands" rollout's, as <c>BeamSearchAi.RolloutScore</c> read them. An unknown card
+	/// already in our hand is a land the other way from the start: then nothing is shared.
+	/// ponytail: the shared start is played with duds below, so a move in it that reads the library's lands (none
+	/// measured, 14% of starts differed in length before) is the "not lands" one; play it out again if a position shows one.
+	/// </summary>
+	public static (double Lands, double None) ScoreBoth(
+		GameState s,
+		int me,
+		int horizon,
+		Settings settings,
+		out GameState? rootTurnEnd,
+		out (int Looked, int Drawn) unseen
+	)
+	{
+		var none = new Walk(s, me, horizon, settings, landsDrawn: false);
+		var share = !s.CardsIn(me, ZoneType.Hand).Any(Hidden.IsUnknown);
+		var fork = none.Run(fork: share);
+		var noneScore = none.Finish(out rootTurnEnd, out unseen);
+		var lands =
+			fork?.AsLands()
+			?? new Walk(
+				Hidden.Unknown(s, me, lands: true),
+				me,
+				horizon,
+				settings,
+				landsDrawn: true
+			);
+		lands.Run(fork: false);
+		return (lands.Finish(out _, out _), noneScore);
+	}
+
+	/// <summary>
+	/// One rollout's place - what its loop carries from step to step. A class so a copy is a fork
+	/// (<see cref="ScoreBoth"/>); the position is immutable, so the copy is cheap.
+	/// </summary>
+	sealed class Walk(GameState s, int me, int horizon, Settings settings, bool? landsDrawn)
+	{
+		readonly int rootTurn = horizon - 1 - settings.LookaheadTurns;
+		readonly int library = s.CardsIn(me, ZoneType.Library).Count();
+		readonly int them = s.OpponentOf(me);
+		readonly GreedyAi? greedy =
+			settings.Ours == OurPolicy.Greedy ? new GreedyAi(me, settings.Held) : null;
+		GameState s = s;
+		bool? landsDrawn = landsDrawn;
+		int i,
+			looked,
+			plays;
+		int turn = s.GetGame().TurnNumber;
+		int stopAt = horizon; // ponytail: a rollout that hits DecisionLimit is scored where it stopped, mid-turn, beside
+
+		// rollouts scored at the horizon. Only a loop that never advances reaches it; flag or drop such a candidate if
+		// one is ever seen.
+		bool landDone;
+		GameState? turnEnd; // the root turn's end: the same moment for every candidate
+		GameState? rootTurnEnd;
+
+		/// <summary>The same place, played on from here independently - its position's unseen draws made lands.</summary>
+		public Walk AsLands()
+		{
+			var copy = (Walk)MemberwiseClone();
+			copy.s = Hidden.Unknown(s, me, lands: true);
+			copy.landsDrawn = true;
+			return copy;
+		}
+
+		/// <summary>
+		/// Plays to the horizon. With <paramref name="fork"/>, returns the place just before our library first changed (or
+		/// the end, if it never did) - <see cref="ScoreBoth"/>'s shared start.
+		/// </summary>
+		public Walk? Run(bool fork)
+		{
+			Walk? before = null;
+			var shown = Hidden.Looked(s, me);
+			for (; i < settings.DecisionLimit && !s.IsOver(); i++)
+			{
+				var place = fork ? (Walk)MemberwiseClone() : null;
+				if (!Step())
+					break;
+				if (
+					fork
+					&& (
+						s.CardsIn(me, ZoneType.Library).Count() != library
+						|| Hidden.Looked(s, me) != shown
+						|| s.RngSeed != Hidden.Arranged
+					)
+				)
+					(before, fork) = (place, false);
+			}
+			return fork ? (Walk)MemberwiseClone() : before;
+		}
+
+		/// <summary>One move of the rollout, or false at the horizon.</summary>
+		bool Step()
 		{
 			if (s.GetGame().TurnNumber >= stopAt)
 			{
@@ -291,7 +382,7 @@ public static class Rollout
 					|| !settings.CounterAttack
 					|| s.GetGame().ActivePlayerId == me
 				)
-					break;
+					return false;
 				stopAt++;
 			}
 			if (landsDrawn is { } lands && s.RngSeed != Hidden.Arranged)
@@ -307,7 +398,7 @@ public static class Rollout
 			if (who != me)
 			{
 				s = OpponentStep(s, who, settings);
-				continue;
+				return true;
 			}
 			if (
 				Hidden.Looked(s, me) is > 0 and var shown
@@ -317,17 +408,17 @@ public static class Rollout
 			if (greedy is not null)
 			{
 				s = greedy.Play(s);
-				continue;
+				return true;
 			}
 			if (s.GetPendingChoice() is { } choice)
 			{
 				s = Choose(s, choice, who, settings, ours: true);
-				continue;
+				return true;
 			}
 			if (settings.LastChance && AtTheirEndStep(s, me, settings) is { } tap)
 			{
 				s = Do(s, who, tap);
-				continue;
+				return true;
 			}
 			var spent = plays >= settings.ActionsPerTurn;
 			var play = !(landDone && spent)
@@ -348,24 +439,30 @@ public static class Rollout
 			{
 				s = Do(s, who, play);
 				plays += play is PlayLandAction ? 0 : 1;
-				continue;
+				return true;
 			}
 			s = Pass(s, who); // nothing worth playing
+			return true;
 		}
 
-		if (s.GetGame().TurnNumber == rootTurn && !FreeToSpend(s, me))
-			rootTurnEnd = s; // the game ended, or the rollout stopped, inside the turn
-		unseen = (looked, Math.Max(0, library - s.CardsIn(me, ZoneType.Library).Count()));
-		var score = Evaluator.Evaluate(s, me, settings.Held);
-		if (!s.IsOver())
-			return score;
-		score *= Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn);
-		// under half a turn's discount (TurnEndCap), so a sooner win (or a later loss) still comes first, but no tie
-		if (s.WinnerId() == me)
-			return score + Progress(turnEnd ?? s, me, them, settings);
-		return settings.LostLines && turnEnd is not null
-			? score + TurnEndBoard(turnEnd, me, settings) // lost after our turn: the board we kept
-			: score;
+		/// <summary>The score where the rollout stopped (a finished game's decayed), and what it saw.</summary>
+		public double Finish(out GameState? rootTurnEnd, out (int Looked, int Drawn) unseen)
+		{
+			if (s.GetGame().TurnNumber == rootTurn && !FreeToSpend(s, me))
+				this.rootTurnEnd = s; // the game ended, or the rollout stopped, inside the turn
+			rootTurnEnd = this.rootTurnEnd;
+			unseen = (looked, Math.Max(0, library - s.CardsIn(me, ZoneType.Library).Count()));
+			var score = Evaluator.Evaluate(s, me, settings.Held);
+			if (!s.IsOver())
+				return score;
+			score *= Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn);
+			// under half a turn's discount (TurnEndCap), so a sooner win (or a later loss) still comes first, but no tie
+			if (s.WinnerId() == me)
+				return score + Progress(turnEnd ?? s, me, them, settings);
+			return settings.LostLines && turnEnd is not null
+				? score + TurnEndBoard(turnEnd, me, settings) // lost after our turn: the board we kept
+				: score;
+		}
 	}
 
 	/// <summary>

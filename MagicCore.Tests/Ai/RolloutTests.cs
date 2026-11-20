@@ -29,6 +29,58 @@ public class RolloutTests
 	GameState WithLife(GameState state, int player, int life) =>
 		state.WithPlayer(state.GetPlayer(player) with { Life = life });
 
+	// AI-30.4a: LandOrNot's two rollouts of a line played with a shared start - the same two scores as each played whole
+	// (in a real game's position, our draws ahead), for fewer engine steps.
+	[TestCase(2)]
+	[TestCase(3)]
+	public void BothWays_FromASharedStart_ScoreAsEachPlayedWhole(int seed)
+	{
+		var g = MagicRules.NewGame(
+			FraDecks.All["Red-Green"],
+			FraDecks.All["White-Black"],
+			seed: seed
+		);
+		g = TestGames.PlayAis(g, 4, new GreedyAi(g.Player1Id()), new GreedyAi(g.Player2Id()));
+		var who = g.DecidingPlayerId();
+		var root = Hidden.Unknown(g, who, lands: false);
+		var horizon = Rollout.Horizon(root, Rollout.Default);
+
+		var (whole, wholeSteps) = MagicRules.CountingSteps(
+			() =>
+				(
+					Lands: Rollout.Score(
+						Hidden.Unknown(root, who, lands: true),
+						who,
+						horizon,
+						Rollout.Default,
+						out _,
+						out _,
+						landsDrawn: true
+					),
+					None: Rollout.Score(
+						root,
+						who,
+						horizon,
+						Rollout.Default,
+						out _,
+						out _,
+						landsDrawn: false
+					)
+				)
+		);
+		var (shared, sharedSteps) = MagicRules.CountingSteps(
+			() => Rollout.ScoreBoth(root, who, horizon, Rollout.Default, out _, out _)
+		);
+
+		Assert.That(
+			Hidden.LandOdds(root, who),
+			Is.InRange(0.01, 0.99),
+			"setup: both ways are played"
+		);
+		Assert.That(shared, Is.EqualTo(whole));
+		Assert.That(sharedSteps, Is.LessThan(wholeSteps));
+	}
+
 	[Test]
 	public void ItAttacksForLethal_OnBoard()
 	{

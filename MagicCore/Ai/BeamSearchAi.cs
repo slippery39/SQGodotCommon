@@ -112,6 +112,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// by the search's card prices, not the flat 1.2 a card and 0.3 a land - the third price scale (AI-27). The default
 	/// since 2026-11-18 (Shayne; matched 48-48); off is beam+nosettleheld.
 	/// </param>
+	/// <param name="SharedStart">
+	/// <see cref="Hidden.Library.LandOrNot"/>'s two rollouts of a line share the play before our library first changes
+	/// (<see cref="Rollout.ScoreBoth"/>, AI-30.4a); off (beam+nosharedstart) plays each from the line's position.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -144,7 +148,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool ByUse = true,
 		bool DrawnCard = true,
 		bool LandUse = true,
-		bool SettleHeld = true
+		bool SettleHeld = true,
+		bool SharedStart = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -649,8 +654,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// A look at an unseen card - <paramref name="looks"/> in the tree, and those the rollout makes in this turn - moves
 	/// <paramref name="odds"/> towards the better of the two (<see cref="Evaluator.Terms.Looks"/>, AI-20.9): it is binned
 	/// unless it is the draw this line wants.
-	/// ponytail: twice the rollouts a line (the budget still counts lines); skip the second where no unseen card is
-	/// drawn within the horizon if the cost shows (AI-20.4).
+	/// The two share their play before our library first changes (<see cref="Settings.SharedStart"/>, AI-30.4a).
+	/// ponytail: twice the rollouts a line (the budget still counts lines), the second from its shared start.
 	/// </summary>
 	double RolloutScore(
 		GameState state,
@@ -667,26 +672,38 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		var (land, none) = (0.0, 0.0);
 		(int Looked, int Drawn) unseen = default;
 		turnEnd = null;
-		if (odds > 0)
-			land = Rollout.Score(
-				Hidden.Unknown(state, PlayerId, lands: true),
-				PlayerId,
-				horizon,
-				RolloutSettings,
-				out turnEnd,
-				out _,
-				landsDrawn: true
-			);
-		if (odds < 1) // its turn end is the one the potential reads: what the line keeps up without a lucky draw
-			none = Rollout.Score(
+		if (odds is > 0 and < 1 && options.SharedStart)
+			(land, none) = Rollout.ScoreBoth(
 				state,
 				PlayerId,
 				horizon,
 				RolloutSettings,
 				out turnEnd,
-				out unseen,
-				landsDrawn: false
+				out unseen
 			);
+		else
+		{
+			if (odds > 0)
+				land = Rollout.Score(
+					Hidden.Unknown(state, PlayerId, lands: true),
+					PlayerId,
+					horizon,
+					RolloutSettings,
+					out turnEnd,
+					out _,
+					landsDrawn: true
+				);
+			if (odds < 1) // its turn end is the one the potential reads: what the line keeps up without a lucky draw
+				none = Rollout.Score(
+					state,
+					PlayerId,
+					horizon,
+					RolloutSettings,
+					out turnEnd,
+					out unseen,
+					landsDrawn: false
+				);
+		}
 		// DrawnCard (AI-27.7): a drawn card is worth the same whatever it is, so a look can no longer gain by bettering the
 		// next draw - each look at an unseen card is credited a share of a drawn card, whatever it shows (Shayne, AI-9.3:
 		// "a useless card binned is effectively drawn you a card"; seed 4 #75, a Jace token at 1 kept rather than surveil)

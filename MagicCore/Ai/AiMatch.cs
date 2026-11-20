@@ -133,6 +133,10 @@ public static class AiMatch
 			// beam+nosettleheld as before (flat prices).
 			["settleheld"] = o => o with { SettleHeld = true },
 			["nosettleheld"] = o => o with { SettleHeld = false },
+			// AI-30.4a: LandOrNot's two rollouts of a line share the play before our first draw - the default since
+			// 2026-11-20; beam+nosharedstart plays each whole, as before.
+			["sharedstart"] = o => o with { SharedStart = true },
+			["nosharedstart"] = o => o with { SharedStart = false },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.

@@ -2270,3 +2270,47 @@ Shayne's rule: 5 life paid at 20 is about a card. Today an unseen card is 2.65 (
 
 Shayne on the last two groups: drawing later is never better than drawing now, and a bounce gives no card — so these
 are evaluator inconsistencies, not judgement. The story became the pricing pass (AI-27, Why).
+
+## AI-30.1: where the doubled decision cost went - by engine steps (2026-11-19)
+
+Not a time profile (that needs a quiet machine, still to do): the position suite's cost per position is
+deterministic, so each sprint-5 feature was switched off in turn, load or not (`--suite=beam+X`, 288 positions).
+
+| Run | Engine steps / position | Rollouts | Decisions changed |
+|---|---|---|---|
+| `beam` (today's default) | 19 094 | 37.2 | 0 |
+| `beam+shuffle` - one shuffled guess, not AI-20.4's land / not-a-land futures | **10 393 (−45.6%)** | **19.7** | 39 (13.5%) |
+| `beam+nooptionprice` (AI-26.4) | 19 008 | 37.5 | 6 |
+| `beam+nodrawncard` (AI-27.7) | 19 274 | 37.8 | 20 |
+| `beam+nolanduse` (AI-27.9) | 19 133 | 37.2 | 4 |
+| `beam+nosettleheld` (AI-27.10) | 19 104 | 37.2 | 1 |
+| `beam+nolastchance` (AI-26.5) | 19 011 | 37.1 | 0 |
+| `beam+firstmode` (AI-27 modes) | 19 090 | 37.2 | 0 |
+| `beam+nolooks` (AI-20.9) | 19 103 | 37.2 | 1 |
+| `beam+spellfirst` (AI-20.8) | 19 093 | 37.2 | 0 |
+
+**The whole doubling is AI-20.4's second future:** every line's rollout is played twice, our unseen draws lands and
+then not (`Hidden.Library.LandOrNot`) - the rollouts per position 19.7 → 37.2, the steps 10 393 → 19 094, back to
+AI-22's 10 594. The pricing work of AI-26 and AI-27 costs nothing measurable. So the lever is the second rollout:
+where it can't change a line's rank (no draw before the horizon matters), or only for the lines still in contention.
+
+## AI-30.2: the stopped games - first read (2026-11-19)
+
+The 2026-11-18 sealed runs (pool 5 and before, `ai_reports/sealed-builds-2026-11-18_*`, `--game-minutes=6`): 166 of
+608 games stopped (27%). **Not long games - slow decisions:** a stopped game has as many AI decisions as a finished
+one (median 103.5 against 102, mean 106 both), so it reached the cap at ≥ 3.5 s a decision. Replayed by record
+(`--record=FILE`, 165 of 166; one stale): cut at turn 14 median (mean 15, 8-34), where finished games average ~16 -
+most were a few turns from the end. Opponents differ: opp1 stopped in 10 games, opp21 8, opp44 7, against ~3-4
+typical; no one card common to them (Troubling Tribbles in two of four). Still to read: the boards at the cut, and
+the stopped games' share of a run's machine time.
+
+**The two futures' shared start (2026-11-19, a temporary counter over the suite, removed):** of 5 351 line pairs, the
+steps played BEFORE our library first changes (our first draw, a look, a search) are 34.3% of the "not lands" rollout
+and 39.0% of the "lands" one - the rest of our turn and the opponent's whole turn. Only 270 pairs (5%) never draw
+within the horizon (the existing `ponytail:` - skip the second where nothing is drawn - would save ~5% of second
+rollouts). In 774 pairs (14%) the two starts differ in length: the look-ahead's play before the draw already reads
+what the library holds, so sharing the start is close to, not exactly, today's answer.
+
+**AI-30.4a, built (2026-11-20):** the two rollouts share their start (`Rollout.ScoreBoth`; off: `beam+nosharedstart`).
+Suite: 0 of 288 decisions changed, **16 305 engine steps a position against 19 094 (−14.6%)**, oracle 73.6% both. The
+rewrite of the rollout loop is exact (off: 0 changed, 19 094).
