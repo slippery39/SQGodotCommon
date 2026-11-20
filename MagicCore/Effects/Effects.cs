@@ -169,8 +169,20 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// </summary>
 	public bool WhileSourceRemains { get; init; }
 
+	/// <summary>
+	/// Necromancy: "it becomes an Aura with 'enchant creature put onto the battlefield with Necromancy'"; Animate Dead:
+	/// "it loses 'enchant creature card in a graveyard' and gains 'enchant creature …'" — its enchant from now on
+	/// (UntilEndOfTurn.Enchant), so ForGood only. ponytail: "put onto the battlefield with this" is read as plain
+	/// "creature" — another effect could attach it to any creature (none in the cube does; DesignNotes).
+	/// </summary>
+	public TargetSpec? Enchant { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		if (Enchant is not null && !ForGood)
+			throw new InvalidOperationException(
+				"Enchant is a change no cleanup undoes: ForGood only (MC-4.4h5)"
+			);
 		if (WhileSourceRemains)
 		{
 			if (!LosesAllAbilities)
@@ -215,6 +227,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			BecomesCreatureTypes = BecomesCreatureTypes,
 			Gains = Gains,
 			AlsoCreatureType = AlsoCreatureType,
+			Enchant = Enchant,
 		};
 		if (AlsoType != Cards.CardType.None && !ForGood)
 			throw new InvalidOperationException(

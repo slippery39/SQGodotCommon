@@ -63,6 +63,13 @@ whose subsystem it lives in.
   as it is cast (`AuraComponent`) and attaches on resolving; what either grants is a live static
   (scope `Is.AttachedToSource`), never stamped. "When enchanted creature dies" looks back through
   `DiedEvent.Attached` — the state check takes the Aura in the same pass.
+  **An Aura on a card in a graveyard** (Animate Dead: "Enchant creature card in a graveyard", MC-4.4h5) attaches as any
+  Aura: a host is a permanent or a card in its owner's graveyard (`Attachments.HostOf`, `Attach`, `Ref.EnchantedCreature`),
+  the same object only while it stays there. **"It loses 'enchant A' and gains 'enchant B'"**, and Necromancy's "it
+  becomes an Aura with 'enchant creature …'", is `ModifyUntilEndOfTurn { ForGood, Enchant }` — `UntilEndOfTurn.Enchant`,
+  status, read in place of the `AuraComponent` by `Attachments.EnchantOf` (THE enchant: the state check, `CanEnchant`).
+  "When this leaves the battlefield, that creature's controller sacrifices it" is `SelfLeaves` with
+  `Sacrifice(Ref.EnchantedCreature)`, read from the Aura as it last was.
 - **Excess damage** (CR 120.4a) is `Damage.Excess`, measured BEFORE the damage is dealt (past
   loyalty, or toughness less marked damage; 1 from deathtouch). `DealDamage.IfExcess` runs with X = it.
 - **Copying a permanent** (CR 707.2) is `Card.WithCopiableValuesOf` — name, cost, types, colours,

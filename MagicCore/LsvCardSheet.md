@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 34/46 · uncommon 51/86 · rare 132/279 · mythic 51/108 · **277/528**
+**Playable:** common 34/46 · uncommon 53/86 · rare 132/279 · mythic 51/108 · **279/528**
 
 ### "Name Sticker" Goblin
 
@@ -892,7 +892,37 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this Aura enters, if it's on the battlefield, it loses "enchant creature card in a graveyard" and gains "enchant creature put onto the battlefield with this Aura." Return enchanted creature card to the battlefield under your control and attach this Aura to it. When this Aura leaves the battlefield, that creature's controller sacrifices it.  
 > Enchanted creature gets -1/-0.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h5Tests
+
+**Engine pieces:** `Attach` — Equip: "Attach to target creature you control." — this Equipment (What = Ref.Source) to…; `AuraComponent` — "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Animate Dead"] =
+[
+	new AuraComponent(TargetSpec.InAnyGraveyard(Is.Creature)),
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+		{
+			ForGood = true,
+			Enchant = TargetSpec.Creature,
+		},
+		new MoveTo(Ref.EnchantedCreature, ZoneType.Battlefield)
+		{
+			From = [ZoneType.Graveyard],
+			UnderYourControl = true,
+			Then = [new Attach(Ref.Source, Ref.ThisWay)],
+		}
+	) with
+	{
+		// "if it's on the battlefield" — a permanent now (Ref.Source would read it as it last was)
+		If = new Matches(Ref.Permanents(Is.Source), Is.AnyCard),
+	},
+	When(TriggerEvent.SelfLeaves, [], new Sacrifice(Ref.EnchantedCreature)),
+	AttachedGets(-1, 0),
+],
+```
 
 ### Auriok Salvagers
 
@@ -1586,7 +1616,35 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't have been cast, the controller of the permanent it becomes sacrifices it at the beginning of the next cleanup step.  
 > When this enchantment enters, if it's on the battlefield, it becomes an Aura with "enchant creature put onto the battlefield with Necromancy." Put target creature card from a graveyard onto the battlefield under your control and attach this enchantment to it. When this enchantment leaves the battlefield, that creature's controller sacrifices it.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h5Tests
+
+**Engine pieces:** `Attach` — Equip: "Attach to target creature you control." — this Equipment (What = Ref.Source) to…; `CastAsThoughItHadFlash` — Necromancy: "You may cast this spell as though it had flash. If you cast it any time a…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sacrifice` — "Sacrifice this …" — only what is still on the battlefield.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Necromancy"] =
+[
+	new CastAsThoughItHadFlash([new Sacrifice(Ref.Source)]),
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InAnyGraveyard(Is.Creature)],
+		new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+		{
+			ForGood = true,
+			Enchant = TargetSpec.Creature,
+		},
+		new MoveTo(Ref.Target(), ZoneType.Battlefield)
+		{
+			From = [ZoneType.Graveyard],
+			UnderYourControl = true,
+			Then = [new Attach(Ref.Source, Ref.ThisWay)],
+		}
+	) with
+	{
+		If = new Matches(Ref.Permanents(Is.Source), Is.AnyCard),
+	},
+	When(TriggerEvent.SelfLeaves, [], new Sacrifice(Ref.EnchantedCreature)),
+],
+```
 
 ### No More Lies
 
@@ -2908,7 +2966,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > If a nontoken creature would enter and it wasn't cast, exile it instead.
 
-**Status:** scripted · **tests naming it:** LsvBatch2dTests
+**Status:** scripted · **tests naming it:** LsvBatch2dTests, LsvBatch2h5Tests
 
 **Engine pieces:** `PermanentsEnter` — MC-6.10: "[permanents] enter tapped / untapped / with N additional [kind] counters /…
 

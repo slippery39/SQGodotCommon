@@ -209,6 +209,7 @@ public static class TurnStructure
 				or Step.BeginCombat
 				or Step.PostCombatMain
 				or Step.End
+				or Step.Cleanup // Necromancy: "at the beginning of the next cleanup step" (CR 514.3a)
 		)
 			s = s.Raise(new StepBeganEvent(step));
 		// CR 714.3b: a turn-based action, no stack — "as a player's precombat main phase begins, that

@@ -604,6 +604,13 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 
 	/// <summary>Worf, Intelligence Contractor: "gain control of … until end of turn" — the player cleanup gives it back to (Combat.CleanupPermanents).</summary>
 	public int ReturnControlTo { get; init; }
+
+	/// <summary>
+	/// Animate Dead: "it loses 'enchant creature card in a graveyard' and gains 'enchant creature put onto the
+	/// battlefield with this Aura'"; Necromancy: "it becomes an Aura with 'enchant creature …'" — the enchant it has
+	/// now, in place of any AuraComponent's (Rules.Attachments.EnchantOf). Set for good only (ModifyUntilEndOfTurn).
+	/// </summary>
+	public Targeting.TargetSpec? Enchant { get; init; }
 }
 
 /// <summary>

@@ -250,6 +250,11 @@ whose subsystem it lives in.
   that cost was paid, controlled by the spell's controller (CR 603.7d), set up in `EnterFromStackAction` as it resolves, never a "when it enters" (nothing to answer, CR 702.185a). Warp's is `MoveTo(Ref.Source, Exile)` then
   `MakePlayable(Ref.ThisWay, { By = its owner, Forever, LaterTurn, CastOnly })` — `LaterTurn` stamps
   `PlayableFromExile.FromTurn`, the next turn, read by `Playable.IsImpulsePlayableBy`. From exile it costs its mana cost.
+  **"You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't have been cast, …
+  sacrifices it at the beginning of the next cleanup step"** (Necromancy, MC-4.4h5) is `CastAsThoughItHadFlash(effects)`:
+  read by `Priority.AtInstantSpeed`, the cast stamped `OnStackComponent.NotAtSorcerySpeed` (judged before it moves to the
+  stack), and the effects a delayed trigger at `Beginning(Step.Cleanup)` set up as warp's is — the cleanup step raises
+  `StepBeganEvent` (CR 514.3a: something triggered, so players get priority there, then another cleanup).
   **Overload** (CR 702.96, Damn, MC-4.4h3) is `Scripting.Overload(cost)`: Baleful Mastery's alternative mana cost with
   `Overload` — cast for it (`CastSpellAction.PaysItsAlternativeCost`, the candidates' `Playable.OwnAlternativeCost`), the text has
   NO target words (`StackResolution.TextOf(…, alternative)`; a copy's too, from the stack's `AlternativeCost`),

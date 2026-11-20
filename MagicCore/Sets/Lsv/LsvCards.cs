@@ -2620,6 +2620,55 @@ public static class LsvCards
 				),
 				SpliceOntoArcane("{2}{B}"),
 			],
+			// ===== MC-4.4h5: Auras that return a creature from a graveyard (an Aura on a graveyard card, its enchant changed) =====
+			["Animate Dead"] =
+			[
+				new AuraComponent(TargetSpec.InAnyGraveyard(Is.Creature)),
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+					{
+						ForGood = true,
+						Enchant = TargetSpec.Creature,
+					},
+					new MoveTo(Ref.EnchantedCreature, ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						UnderYourControl = true,
+						Then = [new Attach(Ref.Source, Ref.ThisWay)],
+					}
+				) with
+				{
+					// "if it's on the battlefield" — a permanent now (Ref.Source would read it as it last was)
+					If = new Matches(Ref.Permanents(Is.Source), Is.AnyCard),
+				},
+				When(TriggerEvent.SelfLeaves, [], new Sacrifice(Ref.EnchantedCreature)),
+				AttachedGets(-1, 0),
+			],
+			["Necromancy"] =
+			[
+				new CastAsThoughItHadFlash([new Sacrifice(Ref.Source)]),
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InAnyGraveyard(Is.Creature)],
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+					{
+						ForGood = true,
+						Enchant = TargetSpec.Creature,
+					},
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						UnderYourControl = true,
+						Then = [new Attach(Ref.Source, Ref.ThisWay)],
+					}
+				) with
+				{
+					If = new Matches(Ref.Permanents(Is.Source), Is.AnyCard),
+				},
+				When(TriggerEvent.SelfLeaves, [], new Sacrifice(Ref.EnchantedCreature)),
+			],
 		};
 
 	/// <summary>

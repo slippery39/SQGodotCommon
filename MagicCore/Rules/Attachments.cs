@@ -19,20 +19,44 @@ public static class Attachments
 	public static bool IsOn(Card attachment, Card host) =>
 		attachment.AttachedToId == host.Id && attachment.AttachedToIncarnation == host.Incarnation;
 
-	/// <summary>Its host, if that is still the same object on the battlefield.</summary>
-	public static Card? HostOf(GameState s, Card attachment) =>
+	/// <summary>
+	/// Its host, if that is still the same object on the battlefield — or, <paramref name="orGraveyard"/>, a card in a
+	/// graveyard (Animate Dead, for the rules that read it: the state check, Ref.EnchantedCreature). A front end asks
+	/// for permanents only: an Aura on a graveyard card is drawn on the battlefield, not under a card it can't show.
+	/// </summary>
+	public static Card? HostOf(GameState s, Card attachment, bool orGraveyard = false) =>
 		attachment.AttachedToId != 0
-		&& s.IsOnBattlefield(attachment.AttachedToId)
+		&& (
+			orGraveyard
+				? CanHost(s, attachment.AttachedToId)
+				: s.IsOnBattlefield(attachment.AttachedToId)
+		)
 		&& s.GetCard(attachment.AttachedToId) is var host
 		&& IsOn(attachment, host)
 			? host
 			: null;
 
-	/// <summary>Attaches it — only while both are on the battlefield, and never to a permanent with protection from it
-	/// (CR 701.3b: the attach does nothing; it stays where it was).</summary>
+	/// <summary>
+	/// A permanent, or a card in its owner's graveyard — Animate Dead: "Enchant creature card in a graveyard" (CR 303.4a:
+	/// an Aura enchants what its enchant says, wherever). Same id is not same object, so a card attached to in a
+	/// graveyard is the host only while it stays there.
+	/// </summary>
+	static bool CanHost(GameState s, int id) =>
+		s.IsOnBattlefield(id)
+		|| s.HasObject(id)
+			&& s.GetObject(id) is Card c
+			&& s.IsIn(id, c.OwnerId, ZoneType.Graveyard);
+
+	/// <summary>The enchant it has now — changed for good (Animate Dead, Necromancy: UntilEndOfTurn.Enchant), else its own; null: no Aura.</summary>
+	public static Targeting.TargetSpec? EnchantOf(Card card) =>
+		card.GetComponents<UntilEndOfTurn>().LastOrDefault(u => u.Enchant is not null)?.Enchant
+		?? card.GetComponent<AuraComponent>()?.Enchant;
+
+	/// <summary>Attaches it — only while it is on the battlefield and its host is (or is a graveyard card: Animate Dead),
+	/// and never to a permanent with protection from it (CR 701.3b: the attach does nothing; it stays where it was).</summary>
 	public static GameState Attach(GameState s, int attachmentId, int hostId) =>
 		s.IsOnBattlefield(attachmentId)
-		&& s.IsOnBattlefield(hostId)
+		&& CanHost(s, hostId)
 		&& !Protection.Stops(s, s.GetCard(hostId), s.GetCard(attachmentId))
 			? s.UpdateObject(
 				attachmentId,
@@ -52,8 +76,8 @@ public static class Attachments
 
 	/// <summary>Could this Aura be on that permanent? The enchant restriction — not targeting, so hexproof doesn't matter.</summary>
 	public static bool CanEnchant(GameState s, Card aura, int hostId) =>
-		aura.GetComponent<AuraComponent>() is { } enchant
-		&& enchant.Enchant.IsLegal(s, aura.ControllerId, aura.Id, hostId, targeting: false)
+		EnchantOf(aura) is { } enchant
+		&& enchant.IsLegal(s, aura.ControllerId, aura.Id, hostId, targeting: false)
 		&& !(s.GetObject(hostId) is Card host && Protection.Stops(s, host, aura)); // CR 702.16c
 
 	/// <summary>
@@ -163,8 +187,8 @@ public static class Attachments
 	{
 		foreach (var card in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
 		{
-			var host = HostOf(s, card);
-			if (card.HasComponent<AuraComponent>())
+			var host = HostOf(s, card, orGraveyard: true);
+			if (EnchantOf(card) is not null)
 			{
 				if (host is null || !CanEnchant(s, card, host.Id))
 					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));

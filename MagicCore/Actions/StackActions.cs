@@ -73,6 +73,12 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// has it too, as it is kicked (CR 707.10).
 	/// </summary>
 	public bool AlternativeCost { get; init; }
+
+	/// <summary>
+	/// Necromancy: "If you cast it any time a sorcery couldn't have been cast" (CR 307.1) — stamped as it is cast, for
+	/// a card with CastAsThoughItHadFlash only.
+	/// </summary>
+	public bool NotAtSorcerySpeed { get; init; }
 }
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
@@ -787,6 +793,9 @@ public record CastSpellAction : GameAction
 	)
 	{
 		var card = s.GetCard(cardId);
+		// Necromancy's "any time a sorcery couldn't have been cast" — judged before it moves onto the stack
+		var notAtSorcerySpeed =
+			card.HasComponent<CastAsThoughItHadFlash>() && !Priority.AtSorcerySpeed(s, playerId);
 		if (Prepare.CreatureOf(s, card) is { } prepared)
 			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
 		s = s.MoveCard(cardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
@@ -805,6 +814,7 @@ public record CastSpellAction : GameAction
 					// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
 					CantBeCountered = proxies.Count > 0,
 					Kicked = kicked,
+					NotAtSorcerySpeed = notAtSorcerySpeed,
 					FirstSpellThisGame = s.GetPlayer(playerId).SpellsCastThisGame == 0,
 					SpellsCastBefore =
 						s.GetPlayer(s.Player1Id()).ThisTurn.SpellsCast
@@ -1612,6 +1622,26 @@ public record EnterFromStackAction(
 				)
 				{
 					ControllerId = ControllerId, // CR 603.7d: the spell's, even once it is stolen
+				}
+			);
+		// Necromancy: "If you cast it any time a sorcery couldn't have been cast, … sacrifices it at the beginning of the
+		// next cleanup step" — set up as warp's is.
+		if (
+			Spell is { NotAtSorcerySpeed: true }
+			&& s.IsOnBattlefield(CardId)
+			&& s.GetCard(CardId).GetComponent<CastAsThoughItHadFlash>() is { } flash
+		)
+			s = MoveTo.Delay(
+				s,
+				CardId,
+				new DelayedTrigger(
+					new TriggeredAbilityComponent(
+						TriggerEvent.Beginning(Step.Cleanup, Whose.Any),
+						flash.AtNextCleanup
+					)
+				)
+				{
+					ControllerId = ControllerId,
 				}
 			);
 		return new(s);

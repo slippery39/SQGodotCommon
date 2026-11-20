@@ -1150,6 +1150,14 @@ public record PreparedCopyOf(int CreatureId, int Incarnation) : GameComponent;
 public record AuraComponent(TargetSpec Enchant) : GameComponent;
 
 /// <summary>
+/// Necromancy: "You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't have been
+/// cast, the controller of the permanent it becomes sacrifices it at the beginning of the next cleanup step." — read
+/// by Priority.AtInstantSpeed; AtNextCleanup is a delayed trigger's effects, put on the permanent as it enters
+/// (EnterFromStackAction) when the cast was so (OnStackComponent.NotAtSorcerySpeed).
+/// </summary>
+public record CastAsThoughItHadFlash(ImmutableList<GameAction> AtNextCleanup) : GameComponent;
+
+/// <summary>
 /// Proft: "You can't cast this spell unless [When]." A restriction, not a cost — read by
 /// Playable.CanCastFromHere, so the card is never offered (MtgCore's CastRestrictionComponent).
 /// </summary>

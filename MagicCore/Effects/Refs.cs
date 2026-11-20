@@ -243,10 +243,9 @@ public record Ref(RefKind Kind, int Index = 0)
 				context.GetValueOrDefault(ContextKeys.SourceSnapshot) as Card
 				?? s.GetObject((int)context[ContextKeys.Source]) as Card
 			)
-				is { AttachedToId: not 0 } aura
-			&& s.IsOnBattlefield(aura.AttachedToId)
-			&& Rules.Attachments.IsOn(aura, s.GetCard(aura.AttachedToId))
-				? [aura.AttachedToId]
+				is { } aura
+			&& Rules.Attachments.HostOf(s, aura, orGraveyard: true) is { } host // Animate Dead's: a card in a graveyard
+				? [host.Id]
 				: [],
 			RefKind.OwnerOf => Of!
 				.Resolve(s, context)

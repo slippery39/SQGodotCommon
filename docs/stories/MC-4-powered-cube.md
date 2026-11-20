@@ -1309,6 +1309,34 @@ as his three priorities.
   suite 2,086 passed. Two findings on the way: four card replays (Bat'leth 02, Damn 01, Data 04, Semester Foreseer 01)
   failed at HEAD already — h3's recording was made before its review's last change; and `tools/batch_checks.py`'s probe
   ran `--no-build` after the revert-checks, so it played the last revert's DLL — it builds now.
+- 2026-11-20, Claude (cube lane) — **4.4h5: Auras that return a creature (Animate Dead, Necromancy), one widening, one
+  option and one small piece, 279 of 528 play.** Nearest pieces read: `AuraComponent` and `Attachments.Attach` (both
+  ends on the battlefield — the state check binned an Aura on a graveyard card), warp's `PaidAtNextEndStep` (a delayed
+  trigger set up as the spell resolves, but tied to an alternative cost). **The widening:** an Aura's host is a permanent
+  or a card in its owner's graveyard (`Attachments.HostOf`, `Attach`, `Ref.EnchantedCreature`) — the same object only
+  while it stays there, so only an Aura attached in a graveyard ever has one. **The option:** "loses 'enchant A', gains
+  'enchant B'" and "becomes an Aura with 'enchant creature'" are `ModifyUntilEndOfTurn { ForGood, Enchant }` →
+  `UntilEndOfTurn.Enchant`, status, read by `Attachments.EnchantOf` in place of the `AuraComponent` (Does Machines'
+  `AlsoType` shape). **The piece:** `CastAsThoughItHadFlash(effects)` — read by `Priority.AtInstantSpeed`, the cast stamped
+  `OnStackComponent.NotAtSorcerySpeed` before it moves to the stack, the effects a delayed trigger at
+  `Beginning(Step.Cleanup)` set up in `EnterFromStackAction` as warp's; the cleanup step now raises `StepBeganEvent`.
+  Animate Dead: its "enters" trigger (intervening "if it's on the battlefield": `Matches(Ref.Permanents(Is.Source))`)
+  changes the enchant, then `MoveTo(Ref.EnchantedCreature, Battlefield) { From = [Graveyard], UnderYourControl, Then =
+  Attach(Ref.Source, Ref.ThisWay) }`; "when this leaves, that creature's controller sacrifices it" `SelfLeaves` →
+  `Sacrifice(Ref.EnchantedCreature)`, read from the Aura as it last was. Necromancy the same with a target. Two
+  ceilings (DesignNotes): "enchant creature put onto the battlefield with this" read as "creature", and an Animate Dead
+  put onto the battlefield uncast offered only permanents. Legal actions: Animate Dead one cast per creature card in
+  all graveyards (Reanimate's); Necromancy one cast, its trigger one target each. 7 tests in `LsvBatch2h5Tests.cs`
+  (`Ogre`, `Disenchant`, `ToMyEndStep()`, `ToTheirTurn()`: their turn with my priority, the cleanup behind); 12/12
+  revert-checks caught. Golden-out moved nothing (the cleanup event included); golden-in moved 30 random and 118 card
+  games, 8 added (the new cards); probe 150: none unfinished, Animate Dead cast 358 times, Necromancy 513; full suite
+  2,094 passed. The probe's "abilities on the stack" counts distinct ids across all games — ids restart each game, so it
+  undercounts (92 for Animate Dead): read it as "some", not a number. The review (2026-11-20) fixed three: `HostOf`
+  is a permanent unless asked `orGraveyard` (the state check, `Ref.EnchantedCreature`) — the table would have hidden an
+  Aura under a card it doesn't draw; a Necromancy become an Aura has the subtype (`s.Subtypes`: a "non-Aura enchantment"
+  missed it); and the search's "could as well wait for instant speed" (`BeamSearchAi.InstantSpeed`) no longer holds
+  Necromancy, whose late cast costs the creature. Protection on a graveyard host is a ceiling, and the AI's "lasts this turn" an AI issue for after
+  the cube's implementations (Shayne, 2026-11-20; DesignNotes, the fix outlined). Suite 2,094 and card replays 861 passed after.
 
 ## Tasks
 
@@ -1548,7 +1576,7 @@ as his three priorities.
           (Decisions, "4.4h2e")
     - [x] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white; Decisions, "4.4h3")
     - [x] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red; Decisions, "4.4h4")
-    - [ ] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy
+    - [x] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy (Decisions, "4.4h5")
     - [ ] MC-4.4h6 Naming a card as a spell resolves: Demonic Consultation
     - [ ] MC-4.4h7 Saddle: Caustic Bronco
     - [ ] MC-4.4h8 Emerge: Crabomination
@@ -1566,11 +1594,15 @@ protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiat
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
 pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions), h2d (triggers) and
-h2e (zones and combat), h3 (overload: Damn) and **h4 (splice onto Arcane: Goryo's Vengeance, 277 of 528 play)** are done
-— black's options are finished (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3", "4.4h4").
-Next, in a NEW session: **MC-4.4h5 — Auras that return a creature from a graveyard: Animate Dead, Necromancy** (the
-plan's note in Decisions, "4.4h": `AuraComponent` attaches to permanents, and the state check bins an Aura on a graveyard
-card; Necromancy's "flash, sacrificed at cleanup if cast at instant speed" too). From h4: splice is `CastSpellAction.Splice`
+h2e (zones and combat), h3 (overload: Damn), h4 (splice onto Arcane: Goryo's Vengeance) and **h5 (Auras returning a
+creature: Animate Dead, Necromancy, 279 of 528 play)** are done — black's options are finished (Decisions, "4.4h1",
+"4.4h2a" … "4.4h2e", "4.4h3", "4.4h4", "4.4h5").
+Next, in a NEW session: **MC-4.4h6 — naming a card as a spell resolves: Demonic Consultation** (the plan's note in
+Decisions, "4.4h": Kai Winn's name is chosen as a permanent enters and kept on it, a spell has nowhere; the AI's rule for
+naming in its own library). From h5: an Aura's host may be a card in its owner's graveyard (`Attachments.HostOf`); its
+enchant changed for good is `ModifyUntilEndOfTurn { ForGood, Enchant }` (`Attachments.EnchantOf`); "you may cast this as
+though it had flash" `CastAsThoughItHadFlash(effects at the next cleanup)`, and the cleanup step raises `StepBeganEvent`.
+h5's tests are in `LsvBatch2h5Tests.cs` (`Ogre`: a 3/3, `Disenchant`, `ToMyEndStep()`, `ToTheirTurn()`). From h4: splice is `CastSpellAction.Splice`
 (hand card ids, one cast per set) and the `Spliced` stamp on the spell (Adventure's shape), its text appended by
 `StackResolution.TextOf`, scoped as a mode's; Through the Breach takes `Scripting.SpliceOntoArcane("{2}{R}{R}")` with red.
 h4's tests are in `LsvBatch2h4Tests.cs` (`Legend`: a legendary 3/3, `Rite`: a {1} Arcane instant, "target player gains 2
@@ -1600,7 +1632,8 @@ assert hand counts relative, or clear it (Collective Brutality's test). A mechan
 The probe's "activated N" for a card with no activated ability (g9's Riddler; h1's Dismember, Thoughtseize, Hymn) is
 answered: Q, Stacking the Deck's exiled card gains "exile a card from your hand: copy this" — counted under that card.
 Later, not now: MC-4.4g10b (does Does
-Machines ever level?). MC-4.5 is done (Decisions, "4.5").
+Machines ever level?); **an AI issue from h5, after the cube's implementations (Shayne, 2026-11-20)** — the
+evaluator prices a flashed Necromancy's creature as lasting (DesignNotes, the Auras-returning-a-creature ceiling: the fix outlined). MC-4.5 is done (Decisions, "4.5").
 From 4.4g10: a Class's level is `ClassLevel(N)` (status, not a counter; none is level 1, `Count.ClassLevelOf`);
 "[cost]: Level N" `Scripting.Level(cost, n)` → `GainLevel`, "when this Class becomes level N" `Scripting.WhenLevel`
 (`Trigger.Chapter` on `BecameLevel`), a level's abilities gated by `AtLevel(n)` (a trigger's `While`, a static's `If`).
@@ -1859,3 +1892,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   words. Next: MC-4.4h4.
 - 2026-11-19: MC-4.4h4 done: splice onto Arcane — 277 of 528 play. `CastSpellAction.Splice`, the `Spliced` stamp,
   `TextOf` appending a spliced text. Next: MC-4.4h5.
+- 2026-11-20: MC-4.4h5 done: Auras returning a creature — 279 of 528 play. An Aura's host in a graveyard,
+  `ModifyUntilEndOfTurn.Enchant`, `CastAsThoughItHadFlash` with a cleanup delayed trigger. Next: MC-4.4h6.

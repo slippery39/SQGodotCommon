@@ -92,9 +92,11 @@ public static class Characteristics
 	{
 		ImmutableArray<string>? set = null;
 		List<string>? also = null;
+		var aura = false;
 		foreach (var component in card.Components) // a loop, not LINQ: every subtype filter asks
 			if (component is UntilEndOfTurn u)
 			{
+				aura |= u.Enchant is not null; // Necromancy: "it becomes an Aura with 'enchant …'"
 				if (u.BecomesCreatureTypes is { } types)
 					set = types;
 				if (u.AlsoCreatureType is { } more)
@@ -111,9 +113,11 @@ public static class Characteristics
 			set is not { } setTo || !card.Is(CardType.Creature)
 				? card.Subtypes
 				: [.. setTo, .. card.Subtypes.Where(t => !setTo.Contains(t) && !IsCreatureType(t))];
-		return also is null || !card.Is(CardType.Creature)
-			? subtypes
-			: [.. subtypes, .. also.Where(t => !subtypes.Contains(t)).Distinct()];
+		var result =
+			also is null || !card.Is(CardType.Creature)
+				? subtypes
+				: [.. subtypes, .. also.Where(t => !subtypes.Contains(t)).Distinct()];
+		return aura && !result.Contains("Aura") ? result.Add("Aura") : result;
 	}
 
 	/// <summary>
@@ -288,7 +292,7 @@ public static class Characteristics
 			foreach (var component in c.Components)
 			{
 				// AI-22: what the state-based check's attachment passes can act on, noted in the same pass
-				attachments |= component is AuraComponent;
+				attachments |= component is AuraComponent or UntilEndOfTurn { Enchant: not null };
 				typeChanges |=
 					component is Animated or BecomesType
 					|| component is UntilEndOfTurn { Gains.Count: > 0 } u

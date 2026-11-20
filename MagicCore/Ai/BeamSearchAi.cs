@@ -730,7 +730,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	static bool InstantSpeed(GameState s, GameAction a) =>
 		a switch
 		{
-			CastSpellAction c => Priority.AtInstantSpeed(s, s.GetCard(c.CardId)),
+			// Necromancy isn't: cast later than a sorcery could be, its creature is sacrificed at the cleanup
+			CastSpellAction c => s.GetCard(c.CardId) is var card
+				&& Priority.AtInstantSpeed(s, card)
+				&& !card.HasComponent<Effects.CastAsThoughItHadFlash>(),
 			ActivateAbilityAction x => s.ActivatedAbilitiesOf(s.GetCard(x.CardId))
 				.ElementAtOrDefault(x.AbilityIndex)
 				is { SorcerySpeed: false },
