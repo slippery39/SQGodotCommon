@@ -149,6 +149,9 @@ whose subsystem it lives in.
   card (status: gone as it leaves); "a spell with mana value equal to the chosen number" is
   `Is.ManaValueIsChosenNumber`. The AI names the mana value commonest among the opponent's nonland cards it
   knows of, else 2 (`GreedyAi`, Shayne) — the beam doesn't branch on it (`ChooseNumberChoice.NamesAManaValue`).
+  **"Choose odd or even. (Zero is even.)"** (Gollum, Riddle Master, MC-4.4h2d) is the same piece `{ OddOrEven }`: the
+  choice is 0 ("Even") or 1 ("Odd"), the filter matches a mana value by its parity, and the AI names the commoner
+  parity the same way (none known: 2, even).
 - **"Put onto the battlefield … sacrifice those at the beginning of your next end step"** (Will Riker) is
   `RevealUntilOntoBattlefield.SacrificeAtNextEndStep` — the tokens' delayed trigger on each card it put there.
 - **Assimilate** (Death Is Irrelevant, Borg Cube) is `Assimilate`: `EnterBattlefield` under your control, a +1/+1

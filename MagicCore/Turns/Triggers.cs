@@ -175,9 +175,24 @@ public record LandPlayedEvent(int PlayerId, int CardId, ZoneType From) : MagicEv
 
 /// <summary>Data, New Life: "Whenever you draw a card" — a player drew one card; raised by MagicState.Draw, once per card.</summary>
 /// <param name="Number">Faerie Mastermind: "their second card each turn" — which card of that player's turn this is, numbered as it is drawn.</param>
-public record DrewCardEvent(int PlayerId, int Number = 0) : MagicEvent
+/// <param name="TurnDraw">Orcish Bowmasters: "except the first one they draw in each of their draw steps" — the draw step's own draw.</param>
+public record DrewCardEvent(int PlayerId, int Number = 0, bool TurnDraw = false) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.Drew;
+
+	public override int By(GameState s) => PlayerId;
+}
+
+/// <summary>
+/// Sedgemoor Witch: "Whenever you cast or copy an instant or sorcery spell" — a copy of a spell put on the stack, raised by
+/// CopySpell (CR 707.10); By is the copy's controller. A copy is never cast: SpellCastEvent never sees it.
+/// </summary>
+public record SpellCopiedEvent(int CardId, int PlayerId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.SpellCopied;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
 
 	public override int By(GameState s) => PlayerId;
 }
@@ -820,6 +835,7 @@ public static class Triggers
 				&& damaged.Combat
 				&& damaged.SourceId == source.Id,
 			EventTest.Noncombat => e is PlayerDealtDamageEvent { Combat: false },
+			EventTest.NotTheTurnsDraw => e is DrewCardEvent { TurnDraw: false },
 			_ => true,
 		};
 	}
@@ -868,6 +884,7 @@ public static class Triggers
 			EnteredBattlefieldEvent entered => entered.CardId,
 			AttackedEvent attacked => attacked.CardId,
 			SpellCastEvent cast => cast.CardId,
+			SpellCopiedEvent copied => copied.CardId,
 			LandPlayedEvent land => land.CardId,
 			DiedEvent died => died.LastKnown.Id,
 			BlocksEvent blocks => blocks.CardId,

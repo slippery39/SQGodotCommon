@@ -205,6 +205,13 @@ whose subsystem it lives in.
   card each turn"** (Faerie Mastermind, MC-4.4e2b) is the same option on a `Drew` trigger, against
   `DrewCardEvent.Number` — the drawer's count this turn, stamped by `MagicState.Draw` as each card is drawn, so two
   drawn in one resolution are the first and the second. `Nth` fits those two kinds only; never a second number.
+  **"Whenever an opponent draws a card except the first one they draw in each of their draw steps"** (Orcish
+  Bowmasters, MC-4.4h2d) is `Trigger(Drew) { Also = EventTest.NotTheTurnsDraw }`, against `DrewCardEvent.TurnDraw` — the
+  draw step's own first card, the one Hullbreacher's `ExceptTheTurnsDraw` excepts (`Draw(…, turnDraw: true)`, i == 0).
+- **Magecraft — "whenever you cast or copy an instant or sorcery spell"** (Sedgemoor Witch, MC-4.4h2d) is
+  `LsvCards.Magecraft(effects)`: a `SpellCast` trigger and a `SpellCopied` one, sharing the effects. `SpellCopiedEvent`
+  is raised by `CopySpell` alone — the one place a spell copy goes on the stack (storm, replicate, Chain of Smog) — By
+  the copy's controller. A copy is never a `SpellCastEvent`: every "whenever you cast" and storm's `SelfCast` would see it.
 - **"When this enters from anywhere other than a graveyard or exile"** ("Name Sticker" Goblin) is `Trigger.NotFrom`
   against `EnteredBattlefieldEvent.From` — the zone `EnterBattlefield` saw it leave (a resolving spell: the stack;
   null for a token just made, which no NotFrom refuses); `Trigger.From` reads it too. Its "if it's on the

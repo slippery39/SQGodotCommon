@@ -1243,6 +1243,21 @@ as his three priorities.
   (`Card.ManaValueNow` counts an X in the mana cost only, CR 202.3e), Deluge from the Citadel still chooses X, a cast's
   life payments are judged together (CR 119.4: the Citadel's beside X), `ExileInsteadOfYourGraveyard.What` is read on a
   permanent too; two ceilings in DesignNotes (the Citadel beside Zefram Cochrane; Rain's moves one per land).
+- 2026-11-19, Claude (cube lane) — **4.4h2d: triggers, four options and one event, no other new piece.** Sedgemoor
+  Witch's magecraft "cast or copy": a copy raised no event, and a `SpellCastEvent` can't take an option — every
+  "whenever you cast" and storm's own `SelfCast` would see the copy — so `CopySpell` (the one place a spell copy goes
+  on the stack) raises `SpellCopiedEvent`, and `LsvCards.Magecraft` is two triggers sharing the effects (a ceiling,
+  DesignNotes); its "Ward—Pay 3 life" is `PayLifeCost` paid by choosing (fixed amounts). Orcish Bowmasters:
+  `DrewCardEvent.TurnDraw` (the draw step's first card, Hullbreacher's `turnDraw`) read by `EventTest.NotTheTurnsDraw`;
+  amass composed (`If` no Army, an Orc Army; a counter on each Army — ceiling, DesignNotes). Gollum, Riddle Master:
+  `ChoosesNumberAsItEnters(1) { OddOrEven }` → "Even"/"Odd", the parity kept on `ChosenNumber.OddOrEven` (so a copy
+  effect can't change its meaning), matched by `Is.ManaValueIsChosenNumber`; the AI names the commoner parity (none
+  known: even); "one that hasn't been chosen" is Kobayashi Maru's `NotChosenBefore`. Black Widow, Super Spy:
+  `ExileTopPlayable { Play = null }` — no permission, `Then` decides: if she's still on the battlefield, "you may put a
+  +1/+1 counter", else (or on a no) `MakePlayable(Ref.ThisWay, { ThisTurn, AnyType, CastOnly })` — the review's catch:
+  gone, she can't take the counter, so you may cast. "That player" is `Ref.EachOpponent` (Bo1, two players). Legal
+  actions: none grow with the board. Golden-out moved nothing; probe 150: none unfinished, each card cast 311–343 times. The
+  suite's trigger table (`FilterMigrationTests`) takes `SpellCopied` and Bowmasters' row.
 
 ## Tasks
 
@@ -1476,7 +1491,8 @@ as his three priorities.
           (Decisions, "4.4h2b")
     - [x] MC-4.4h2c Options, costs and permissions, 5: Toxic Deluge, Bolas's Citadel, Rain of Filth, Yawgmoth's Will,
           Wishclaw Talisman (Decisions, "4.4h2c")
-    - [ ] MC-4.4h2d Options, triggers, 4: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black Widow
+    - [x] MC-4.4h2d Options, triggers, 4: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black Widow
+          (Decisions, "4.4h2d")
     - [ ] MC-4.4h2e Options, zones and combat, 4: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From the Catacombs
     - [ ] MC-4.4h3 Overload: Damn (Winds of Abandon waits for white)
     - [ ] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red)
@@ -1497,10 +1513,16 @@ Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue'
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
 (4.4g4), Adventures (4.4g5), teamwork (4.4g6), storm (4.4g7), spree (4.4g8), warp (4.4g9) and Classes (4.4g10) — are
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
-pieces), h2a (the five hand cards), h2b (the five graveyard returns) and **h2c (costs and permissions, 267 of 528
-play)** are done (Decisions, "4.4h1", "4.4h2a", "4.4h2b", "4.4h2c").
-Next, in a NEW session: **MC-4.4h2d — triggers, 4**: Sedgemoor Witch, Orcish Bowmasters, Gollum (Riddle Master), Black
-Widow (the plan's notes in Decisions, "4.4h"). From h2c: a counted life cost is `PayLifeCost(Count)` (fixed per cast,
+pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions) and **h2d (triggers,
+271 of 528 play)** are done (Decisions, "4.4h1", "4.4h2a",
+"4.4h2b", "4.4h2c", "4.4h2d").
+Next, in a NEW session: **MC-4.4h2e — zones and combat, 4**: Fatal Push, Troll of Khazad-dûm, Dauthi Voidwalker, From
+the Catacombs (the plan's notes in Decisions, "4.4h"). From h2d: a spell copy raises `SpellCopiedEvent` (magecraft is
+`LsvCards.Magecraft`: Witherbloom Apprentice when B/G comes); "except the first one they draw in their draw steps" on a
+trigger is `EventTest.NotTheTurnsDraw`; odd or even is `ChoosesNumberAsItEnters { OddOrEven }`; an exile whose
+permission its `Then` decides is `ExileTopPlayable { Play = null }`; ward can cost a fixed `PayLifeCost`. h2d's tests
+are in `LsvBatch2h2dTests.cs` (`Army(player)`, `TheyCast(card, mode)`: they cast at instant speed, a modal trigger's mode
+answered — `TheirSpellOnTheStack` can't answer a mode choice). From h2c: a counted life cost is `PayLifeCost(Count)` (fixed per cast,
 `PayLifeCost.For`); X from a cost `CastSpellAction.XInCosts`; "rather than its mana cost" from a zone permission is
 `MayPlayFromZone.Free`; a permanent's mana ability without {T} is a move (`TapForManaAction.NoTap`); a "this turn"
 exile-instead is `ExileInsteadOfYourGraveyard { What }` in a `ThisTurn`. h2c's tests are in `LsvBatch2h2cTests.cs`.
@@ -1762,3 +1784,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-19: MC-4.4h2c done: costs and permissions — 267 of 528 play. `PayLifeCost(Count)`, X from a cost,
   `MayPlayFromZone.Free`, a mana ability without {T} as a move, `ExileInsteadOfYourGraveyard` "this turn",
   `EntersWithCountersComponent.Kind`. Next: MC-4.4h2d.
+- 2026-11-19: MC-4.4h2d done: triggers — 271 of 528 play. `SpellCopiedEvent` (magecraft), `DrewCardEvent.TurnDraw`,
+  `ChoosesNumberAsItEnters.OddOrEven`, `ExileTopPlayable.Play` null, ward paid in life. Next: MC-4.4h2e.

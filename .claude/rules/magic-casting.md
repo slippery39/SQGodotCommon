@@ -90,7 +90,9 @@ whose subsystem it lives in.
   what was countered — a spell's card, an ability's SOURCE while it is still that object on the battlefield; a delayed
   trigger's (`StackAbility.Delayed`, set by `PutOnStack`) is never the card it sits on (CR 603.7d), so none. "Unless its
   controller pays" asks that player (`CounterUnlessPays`). **Ward** is a trigger whose "it" is the
-  targeting spell or ability, carried as the event card of `BecameTargetEvent`.
+  targeting spell or ability, carried as the event card of `BecameTargetEvent`. "Ward—Pay 3 life" (Sedgemoor Witch,
+  MC-4.4h2d) is `CounterUnlessPays { Costs = [PayLifeCost(3)] }` — a fixed life cost is paid by choosing (`LoseLife`),
+  asked only while the payer has the life (`Life.CanPay`).
 - **A target is a zone and a filter** (`TargetSpec(From, Filter)`): the zone says where candidates
   come from, the filter which of them (`Is.…`), and `TargetSpec` alone adds the targeting rules —
   hexproof on the battlefield, and off it a spell or ability never targets its own card. Targets in a
@@ -271,7 +273,10 @@ whose subsystem it lives in.
   without paying its mana cost": `PlayableFromExile.Free`, answered first by `Playable.FreeCast`) — or **`Now`**,
   a cast as it resolves and never a mark (Chandra; `Free`: The Caretaker, discover's `OrIntoHand`; Sisko's `AnyNumber`
   under `ManaValueAtMost`, counted once, CR 608.2h), with "if you don't" (`Otherwise`). Q's card `Gains` an ability
-  instead. Cast or played, the card is public again (`ExiledFaceDown` is status). Tersa Lightshatter's "exile a card at
+  instead. **`Play = null`** leaves no permission at all, for its `Then` to decide (Black Widow, Super Spy, MC-4.4h2d:
+  "You may put a +1/+1 counter on Black Widow. If you don't, you may cast the exiled nonland card until end of turn and
+  mana of any type can be spent" — a `May { Otherwise = MakePlayable(Ref.ThisWay, { ThisTurn, AnyType, CastOnly }) }`;
+  `CastOnly` keeps the lands exiled on the way unplayed). Cast or played, the card is public again (`ExiledFaceDown` is status). Tersa Lightshatter's "exile a card at
   random from your graveyard" is the same effect `{ From = Graveyard, AtRandom }`; "if you exiled a land card this way"
   (Bonehoard Dracosaur) is its `Then`, with `Ref.ThisWay` the cards exiled.
 - **"[Once during each of your turns,] you may play [cast] … from your graveyard / the top of your library [/ outside

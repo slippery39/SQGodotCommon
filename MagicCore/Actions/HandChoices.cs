@@ -295,7 +295,16 @@ public record SetChosenNumberAction(int CardId) : GameAction
 			: new(
 				s.UpdateObject(
 					CardId,
-					s.GetCard(CardId).WithComponent(new Effects.ChosenNumber(id - 1))
+					s.GetCard(CardId)
+						.WithComponent(
+							new Effects.ChosenNumber(id - 1)
+							{
+								OddOrEven =
+									s.GetCard(CardId)
+										.GetComponent<Effects.ChoosesNumberAsItEnters>()
+										is { OddOrEven: true },
+							}
+						)
 				)
 			);
 }
@@ -410,6 +419,9 @@ public record ChooseNumberChoice : ChoiceAction
 	/// <summary>Nyota Uhura's number is a mana value to wait for — the AI answers by its rule, never by search.</summary>
 	public bool NamesAManaValue { get; init; }
 
+	/// <summary>Gollum, Riddle Master: "choose odd or even" — 0 is even, 1 odd (ChoosesNumberAsItEnters.OddOrEven).</summary>
+	public bool OddOrEven { get; init; }
+
 	public ChooseNumberChoice(int playerId, int max)
 	{
 		PlayerId = playerId;
@@ -427,7 +439,14 @@ public record ChooseNumberChoice : ChoiceAction
 		[
 			.. Enumerable
 				.Range(0, Max + 1)
-				.Select(n => new ChoiceOption { Id = n + 1, DisplayText = $"{n}" }),
+				.Select(n => new ChoiceOption
+				{
+					Id = n + 1,
+					DisplayText =
+						!OddOrEven ? $"{n}"
+						: n == 0 ? "Even"
+						: "Odd",
+				}),
 		];
 
 	public override int GetDecidingPlayerId(

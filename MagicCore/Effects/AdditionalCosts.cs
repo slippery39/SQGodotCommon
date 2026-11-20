@@ -262,6 +262,13 @@ public sealed record PayLifeCost(Count Amount) : AdditionalCost
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
 		Rules.Life.Lose(s, playerId, Life(s, sourceId));
 
+	/// <summary>Sedgemoor Witch: "Ward—Pay 3 life." — a fixed amount only; the payer is "you" there.</summary>
+	public override GameAction? PaidByChoosing() =>
+		Amount.Kind == CountOf.Fixed ? new LoseLife(Ref.You, Amount) : null;
+
+	public override bool CanPayByChoosing(GameState s, int payerId) =>
+		Amount.Kind == CountOf.Fixed && Rules.Life.CanPay(s, payerId, Amount.Fixed);
+
 	public override string Describe() =>
 		Amount.Kind switch
 		{

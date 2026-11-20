@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 33/46 · uncommon 50/86 · rare 126/279 · mythic 49/108 · **267/528**
+**Playable:** common 33/46 · uncommon 50/86 · rare 128/279 · mythic 51/108 · **271/528**
 
 ### "Name Sticker" Goblin
 
@@ -2524,10 +2524,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		Free = true,
 		Costs = [new PayLifeCost(Count.GreatestManaValueOf(Ref.Source))],
 	},
-	new ActivatedAbilityComponent(
-		ManaCost.None,
-		[new LoseLife(Ref.EachOpponent, 10)]
-	)
+	new ActivatedAbilityComponent(ManaCost.None, [new LoseLife(Ref.EachOpponent, 10)])
 	{
 		Costs = [new TapSelfCost(), new SacrificeCost(!Is.Land) { Count = 10 }],
 	},
@@ -4763,7 +4760,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > When this creature enters and whenever an opponent draws a card except the first one they draw in each of their draw steps, this creature deals 1 damage to any target. Then amass Orcs 1.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2dTests
+
+**Engine pieces:** `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Orcish Bowmasters"] =
+[
+	When(TriggerEvent.SelfEnters, [TargetSpec.AnyTarget()], BowmastersShot),
+	When(
+		new Trigger(EventKind.Drew)
+		{
+			By = Whose.Opponent,
+			Also = EventTest.NotTheTurnsDraw,
+		},
+		[TargetSpec.AnyTarget()],
+		BowmastersShot
+	),
+],
+```
 
 ### Otawara, Soaring City
 
@@ -5259,7 +5274,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.)  
 > Magecraft — Whenever you cast or copy an instant or sorcery spell, create a 1/1 black and green Pest creature token with "When this token dies, you gain 1 life."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2dTests
+
+**Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sedgemoor Witch"] =
+[
+	When(
+		TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+		[],
+		new CounterUnlessPays(Ref.EventObject, ManaCost.None)
+		{
+			Costs = [new PayLifeCost(3)],
+		}
+	),
+	.. Magecraft(
+		new CreateTokens(Pest, 1)
+		{
+			Abilities = [When(TriggerEvent.SelfDies, [], new GainLife(Ref.You, 1))],
+		}
+	),
+],
+```
 
 ### Sensei's Divining Top
 
@@ -6094,8 +6131,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[],
 		new ModifyUntilEndOfTurn(
 			Ref.Permanents(Is.Creature),
-			Count.X with { Sign = -1 },
-			Count.X with { Sign = -1 }
+			Count.X with
+			{
+				Sign = -1,
+			},
+			Count.X with
+			{
+				Sign = -1,
+			}
 		)
 	),
 ],
@@ -6759,7 +6802,45 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace  
 > Whenever Black Widow deals combat damage to a player, that player exiles cards from the top of their library until they exile a nonland card. You may put a +1/+1 counter on Black Widow. If you don't, you may cast the exiled nonland card until end of turn and mana of any type can be spent to cast that spell.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2dTests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Black Widow, Super Spy"] =
+[
+	When(
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		[],
+		new ExileTopPlayable
+		{
+			Of = Ref.EachOpponent, // "that player": the one dealt the damage, the opponent
+			Until = !Is.Land,
+			Play = null, // decided below
+			Then =
+			[
+				// Gone, she can't have the counter: you didn't, so you may cast it.
+				new If(
+					new Matches(Ref.Permanents(Is.Source), Is.Creature),
+					[
+						new May(
+							"Put a +1/+1 counter on Black Widow?",
+							new Always(),
+							[new PutCounters(Ref.Source, 1)]
+						)
+						{
+							Otherwise = [WidowsCast],
+						},
+					]
+				)
+				{
+					Otherwise = [WidowsCast],
+				},
+			],
+		}
+	),
+],
+```
 
 ### Bonehoard Dracosaur
 
@@ -7263,7 +7344,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Each opponent loses 2 life and you gain 2 life.  
 > • Draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h2dTests
+
+**Engine pieces:** `ChoosesNumberAsItEnters` — Nyota Uhura: "Hailing Frequencies — As Nyota Uhura enters, choose a number between 0 and…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Gollum, Riddle Master"] =
+[
+	new ChoosesNumberAsItEnters(1) { OddOrEven = true },
+	ModalWhen(
+		"Gollum, Riddle Master",
+		new Trigger(EventKind.SpellCast)
+		{
+			By = Whose.Opponent,
+			Subject = Is.ManaValueIsChosenNumber,
+		},
+		new() { NotChosenBefore = true },
+		M([], new PutCounters(Ref.Source, 1)),
+		M([], new LoseLife(Ref.EachOpponent, 2), new GainLife(Ref.You, 2)),
+		M([], new DrawCards(Ref.You, 1))
+	),
+],
+```
 
 ### Grief
 
@@ -8559,7 +8661,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Target player draws three cards.
 
-**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests
+**Status:** scripted · **tests naming it:** LsvBatch1Tests, LsvBatch2eTests, LsvBatch2h2dTests
 
 **Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 

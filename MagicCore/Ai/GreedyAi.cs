@@ -134,15 +134,16 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 	/// <summary>
 	/// Nyota Uhura (Shayne, 2026-11-05): the mana value most common among the opponent's nonland cards
 	/// this player knows of — on the battlefield, in the graveyard, exiled face up, seen in hand — the
-	/// lower on a tie; with none known, 2.
+	/// lower on a tie; with none known, 2. Gollum, Riddle Master's odd or even: the commoner parity, the same way (none
+	/// known: even).
 	/// </summary>
-	int LikeliestManaValue(GameState s) =>
+	int LikeliestManaValue(GameState s, bool oddOrEven = false) =>
 		KnownOpponentNonlands(s)
-			.GroupBy(c => c.ManaCost.ManaValue)
+			.GroupBy(c => oddOrEven ? c.ManaCost.ManaValue % 2 : c.ManaCost.ManaValue)
 			.OrderByDescending(g => g.Count())
 			.ThenBy(g => g.Key)
 			.Select(g => (int?)g.Key)
-			.FirstOrDefault() ?? 2;
+			.FirstOrDefault() ?? (oddOrEven ? 0 : 2);
 
 	/// <summary>This player's answer to a pending choice. The search AI asks it for the choices it doesn't branch on.</summary>
 	public IEnumerable<int> Answer(GameState s, ChoiceAction choice)
@@ -184,8 +185,15 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 			return choice.Options.Take(1).Select(o => o.Id);
 		if (choice is ChooseKeywordChoice { NamesACard: true } naming)
 			return [naming.Keywords.IndexOf(LikeliestName(s, naming.Keywords)) + 1];
-		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max })
-			return [Math.Min(LikeliestManaValue(s), max) + 1]; // option id = the number + 1
+		if (choice is ChooseNumberChoice { NamesAManaValue: true, Max: var max } number)
+			return
+			[
+				(
+					number.OddOrEven
+						? LikeliestManaValue(s, true)
+						: Math.Min(LikeliestManaValue(s), max)
+				) + 1, // option id = the number + 1
+			];
 		if (choice is ChooseColorChoice)
 			return
 			[

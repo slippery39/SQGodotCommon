@@ -1905,8 +1905,16 @@ public record PlayPermission
 /// </summary>
 public record ExileTopPlayable : Effect
 {
-	/// <summary>Who may play them, how long, free or now (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }.</summary>
-	public PlayPermission Play { get; init; } = new();
+	/// <summary>
+	/// Who may play them, how long, free or now (PlayPermission) — Kirk, Commanding Officer: { ThisTurn = true }. Null:
+	/// no permission here — Black Widow, Super Spy: "You may put a +1/+1 counter on Black Widow. If you don't, you may
+	/// cast the exiled nonland card until end of turn" is decided by Then (MakePlayable).
+	/// </summary>
+	public PlayPermission? Play { get; init; } = new();
+
+	static readonly PlayPermission NoPermission = new();
+
+	PlayPermission Permission => Play ?? NoPermission;
 
 	/// <summary>Reckless Impulse: "Exile the top two cards of your library."; Ensign Pavel Chekov: "the top X cards".</summary>
 	public Count N { get; init; } = 1;
@@ -1959,13 +1967,13 @@ public record ExileTopPlayable : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var who = Play.By is { } by ? All(by, s).FirstOrDefault() : Controller;
+		var who = Permission.By is { } by ? All(by, s).FirstOrDefault() : Controller;
 		if (who == 0)
 			return new(s);
 		var sourceId = GetInput<int>(ContextKeys.Source);
 		var incarnation = s.HasObject(sourceId) ? s.GetCard(sourceId).Incarnation : -1;
-		var cap = Play.ManaValueAtMost?.Value(s, InputContext) ?? int.MaxValue;
-		var playable = Play.For(s, who);
+		var cap = Permission.ManaValueAtMost?.Value(s, InputContext) ?? int.MaxValue;
+		var playable = Permission.For(s, who);
 		var steps = ImmutableList<GameAction>.Empty;
 		var done = ImmutableArray.CreateBuilder<int>();
 		foreach (
@@ -2007,7 +2015,7 @@ public record ExileTopPlayable : Effect
 								}
 							).WithComponent(new ExiledFaceDown())
 					);
-				if (Play.AnyNumber)
+				if (Permission.AnyNumber)
 					s = Update(
 						s,
 						(Card)s.GetCard(top.Id).WithComponent(new ExiledBy(sourceId, incarnation))
@@ -2015,9 +2023,10 @@ public record ExileTopPlayable : Effect
 				if (
 					(Until is not null && top.Id != hit?.Id)
 					|| Choose is not null
-					|| Play.Now
-					|| Play.AnyNumber // a cast now, too
+					|| Permission.Now
+					|| Permission.AnyNumber // a cast now, too
 					|| Gains is not null
+					|| Play is null // Then decides (Black Widow)
 				)
 					continue;
 				s = Update(
@@ -2057,7 +2066,7 @@ public record ExileTopPlayable : Effect
 								}
 							)
 				);
-			if (Play.AnyNumber)
+			if (Permission.AnyNumber)
 				s = s.SpawnAction(
 					new PipelineAction
 					{
@@ -2072,7 +2081,7 @@ public record ExileTopPlayable : Effect
 						],
 					}
 				);
-			else if (Play.Now)
+			else if (Permission.Now)
 				s = CastThatCard(s, Until is null ? exiled.FirstOrDefault() : hit);
 			var choice = new ChooseAmongChoice
 			{
@@ -2084,7 +2093,11 @@ public record ExileTopPlayable : Effect
 				MinChoices = 1,
 				Prompt = "Choose one you may play",
 			};
-			if (Choose is not null && !choice.GetOptions(s, InputContext).IsEmpty) // none of them a land: nothing to choose
+			if (
+				Choose is not null
+				&& Play is not null // none: Then decides
+				&& !choice.GetOptions(s, InputContext).IsEmpty // none of them a land: nothing to choose
+			)
 				steps = steps.AddRange([choice, new MakeChosenPlayableAction(playable)]);
 		}
 		if (!Then.IsEmpty)
@@ -2109,10 +2122,10 @@ public record ExileTopPlayable : Effect
 	{
 		ImmutableList<GameAction> declined =
 		[
-			.. Play.OrIntoHand && that is not null
+			.. Permission.OrIntoHand && that is not null
 				? [new MoveTo(Ref.Id(that.Id), ZoneType.Hand) { From = [ZoneType.Exile] }]
 				: Array.Empty<GameAction>(),
-			.. Play.Otherwise,
+			.. Permission.Otherwise,
 		];
 		if (that is null)
 			return declined.IsEmpty
@@ -2120,7 +2133,7 @@ public record ExileTopPlayable : Effect
 				: s.SpawnAction(
 					new PipelineAction { Steps = declined, PipelineContext = InputContext }
 				);
-		if (!CastNow.CanCast(s, Controller, s.GetCard(that.Id), free: Play.Free))
+		if (!CastNow.CanCast(s, Controller, s.GetCard(that.Id), free: Permission.Free))
 			return s.SpawnAction(
 				new PipelineAction { Steps = declined, PipelineContext = InputContext }
 			);
@@ -2132,10 +2145,10 @@ public record ExileTopPlayable : Effect
 				[
 					new YesNoChoice(
 						Controller,
-						$"Cast {that.Name}{(Play.Free ? " free" : "")}?"
-							+ (Play.OrIntoHand ? " (No: into your hand)" : "")
+						$"Cast {that.Name}{(Permission.Free ? " free" : "")}?"
+							+ (Permission.OrIntoHand ? " (No: into your hand)" : "")
 					),
-					new IfChosenAction([new CastNow(that.Id, Free: Play.Free)])
+					new IfChosenAction([new CastNow(that.Id, Free: Permission.Free)])
 					{
 						Otherwise = declined,
 					},

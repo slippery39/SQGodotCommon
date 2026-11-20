@@ -601,6 +601,7 @@ public class FilterMigrationTests
 		TriggerEvent.YouDrawACard,
 		new Trigger(EventKind.AbilityActivated) { By = Whose.Opponent }, // Kai Winn: the source, Is.NamedChosenName
 		new Trigger(EventKind.LandPlayed) { By = Whose.You }, // Prosper, Tome-Bound: From = Exile
+		new Trigger(EventKind.SpellCopied) { By = Whose.You }, // Sedgemoor Witch: magecraft's copy (SpellCopiedEvent), Is.Instant | Is.Sorcery
 	];
 
 	/// <summary>
@@ -622,6 +623,7 @@ public class FilterMigrationTests
 		new Trigger(EventKind.CountersPut) { Subject = Is.Source, Chapter = 1 }, // a Saga's chapter: the lore count crossing N (Scripting.Chapter)
 		new Trigger(EventKind.BecameLevel) { Subject = Is.Source, Chapter = 2 }, // a Class's level: the level it became (Scripting.WhenLevel)
 		TriggerEvent.OneOrMoreCardsLeaveYourGraveyard, // one per batch (Trigger.OneOrMore)
+		new Trigger(EventKind.Drew) { By = Whose.Opponent, Also = EventTest.NotTheTurnsDraw }, // Orcish Bowmasters: not the draw step's own card (DrewCardEvent.TurnDraw)
 	];
 
 	/// <summary>Read from the card itself, not matched against an event on the battlefield (Triggers.Collect).</summary>

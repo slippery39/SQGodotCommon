@@ -124,6 +124,7 @@ public enum EventKind
 	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
 	LandPlayed, // Prosper, Tome-Bound: "whenever you play a card from exile" — a land played (PlayLandAction), not one put onto the battlefield
 	BecameLevel, // Does Machines: "When this Class becomes level 2" — GainLevel (Trigger.Chapter)
+	SpellCopied, // Sedgemoor Witch: magecraft's "or copy" — a copy of a spell put on the stack (CopySpell); a copy is never cast
 }
 
 /// <summary>
@@ -149,6 +150,7 @@ public enum EventTest
 	FirstNoncreatureSpell, // Plan for All Outcomes: numbered as it is cast
 	CombatDamageFromThis, // "whenever this deals combat damage to a player"
 	Noncombat, // "whenever an opponent is dealt noncombat damage"
+	NotTheTurnsDraw, // Orcish Bowmasters: "except the first one they draw in each of their draw steps" (DrewCardEvent.TurnDraw)
 }
 
 /// <summary>
@@ -355,6 +357,7 @@ public record Trigger(EventKind On)
 			EventTest.Alone => on == EventKind.Attacked,
 			EventTest.CombatDamageFromThis or EventTest.Noncombat => on
 				== EventKind.PlayerDealtDamage,
+			EventTest.NotTheTurnsDraw => on == EventKind.Drew,
 			_ => on == EventKind.SpellCast,
 		};
 }
@@ -1039,10 +1042,21 @@ public record ChosenColorMana(ManaColor Color) : GameComponent;
 /// Nyota Uhura: "Hailing Frequencies — As Nyota Uhura enters, choose a number between 0 and 10." Applied
 /// by MagicState.EnterBattlefield; the AI names a mana value its opponent is likely to cast (GreedyAi).
 /// </summary>
-public record ChoosesNumberAsItEnters(int Max) : GameComponent;
+public record ChoosesNumberAsItEnters(int Max) : GameComponent
+{
+	/// <summary>
+	/// Gollum, Riddle Master: "As Gollum enters, choose odd or even. (Zero is even.)" — the number chosen (Max 1) is 0
+	/// (even) or 1 (odd), and a mana value matches it by its parity (ChosenNumber.OddOrEven, Is.ManaValueIsChosenNumber).
+	/// </summary>
+	public bool OddOrEven { get; init; }
+}
 
 /// <summary>The number chosen as it entered (Nyota Uhura) — gone when it leaves.</summary>
-public record ChosenNumber(int N) : GameComponent;
+public record ChosenNumber(int N) : GameComponent
+{
+	/// <summary>Gollum, Riddle Master: N is a parity (0 even, 1 odd) — kept with the choice, so a copy effect can't change what it means.</summary>
+	public bool OddOrEven { get; init; }
+}
 
 /// <summary>
 /// A Class's level (CR 716) — Does Machines: "{1}{U}: Level 2". No counter (Brad Boimler doesn't add to it, "a

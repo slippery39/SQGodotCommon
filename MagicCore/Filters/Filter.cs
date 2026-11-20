@@ -125,7 +125,8 @@ public sealed record OfSupertype(Supertype Supertypes) : Filter
 
 /// <summary>
 /// Nyota Uhura: "Whenever an opponent casts a spell with mana value equal to the chosen number" — the
-/// number the source chose as it entered (ChosenNumber); X counts on the stack.
+/// number the source chose as it entered (ChosenNumber); X counts on the stack. Gollum, Riddle Master: "a spell with mana
+/// value of the chosen quality" — odd or even (ChosenNumber.OddOrEven), the number its parity.
 /// </summary>
 public sealed record ManaValueIsChosenNumber : Filter
 {
@@ -138,7 +139,7 @@ public sealed record ManaValueIsChosenNumber : Filter
 		&& s.HasObject(c.Source)
 		&& s.GetObject(c.Source) is Card source
 		&& source.GetComponent<Effects.ChosenNumber>() is { } chosen
-		&& card.ManaValueNow == chosen.N;
+		&& (chosen.OddOrEven ? card.ManaValueNow % 2 : card.ManaValueNow) == chosen.N;
 }
 
 /// <summary>Kai Winn: "a spell with the chosen name", "a source with the chosen name" — the name the source chose as it entered (ChosenName).</summary>

@@ -2404,7 +2404,147 @@ public static class LsvCards
 					OnlyIf = new DuringYourTurn(),
 				},
 			],
+			// ===== MC-4.4h2d: triggers (a copy's event, the turn's draw, odd or even, an exile Then decides) =====
+			["Sedgemoor Witch"] =
+			[
+				When(
+					TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+					[],
+					new CounterUnlessPays(Ref.EventObject, ManaCost.None)
+					{
+						Costs = [new PayLifeCost(3)],
+					}
+				),
+				.. Magecraft(
+					new CreateTokens(Pest, 1)
+					{
+						Abilities = [When(TriggerEvent.SelfDies, [], new GainLife(Ref.You, 1))],
+					}
+				),
+			],
+			["Orcish Bowmasters"] =
+			[
+				When(TriggerEvent.SelfEnters, [TargetSpec.AnyTarget()], BowmastersShot),
+				When(
+					new Trigger(EventKind.Drew)
+					{
+						By = Whose.Opponent,
+						Also = EventTest.NotTheTurnsDraw,
+					},
+					[TargetSpec.AnyTarget()],
+					BowmastersShot
+				),
+			],
+			["Gollum, Riddle Master"] =
+			[
+				new ChoosesNumberAsItEnters(1) { OddOrEven = true },
+				ModalWhen(
+					"Gollum, Riddle Master",
+					new Trigger(EventKind.SpellCast)
+					{
+						By = Whose.Opponent,
+						Subject = Is.ManaValueIsChosenNumber,
+					},
+					new() { NotChosenBefore = true },
+					M([], new PutCounters(Ref.Source, 1)),
+					M([], new LoseLife(Ref.EachOpponent, 2), new GainLife(Ref.You, 2)),
+					M([], new DrawCards(Ref.You, 1))
+				),
+			],
+			["Black Widow, Super Spy"] =
+			[
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					new ExileTopPlayable
+					{
+						Of = Ref.EachOpponent, // "that player": the one dealt the damage, the opponent
+						Until = !Is.Land,
+						Play = null, // decided below
+						Then =
+						[
+							// Gone, she can't have the counter: you didn't, so you may cast it.
+							new If(
+								new Matches(Ref.Permanents(Is.Source), Is.Creature),
+								[
+									new May(
+										"Put a +1/+1 counter on Black Widow?",
+										new Always(),
+										[new PutCounters(Ref.Source, 1)]
+									)
+									{
+										Otherwise = [WidowsCast],
+									},
+								]
+							)
+							{
+								Otherwise = [WidowsCast],
+							},
+						],
+					}
+				),
+			],
 		};
+
+	/// <summary>
+	/// Magecraft (Sedgemoor Witch): "Whenever you cast or copy an instant or sorcery spell, [effects]" — two triggers, one
+	/// on the cast and one on the copy (SpellCopiedEvent): a copy is never cast. ponytail: one printed ability, two on the
+	/// card — a rule counting a permanent's triggered abilities would count two (none does; DesignNotes).
+	/// </summary>
+	static TriggeredAbilityComponent[] Magecraft(params GameAction[] effects) =>
+		[
+			When(
+				new Trigger(EventKind.SpellCast)
+				{
+					By = Whose.You,
+					Subject = Is.Instant | Is.Sorcery,
+				},
+				[],
+				effects
+			),
+			When(
+				new Trigger(EventKind.SpellCopied)
+				{
+					By = Whose.You,
+					Subject = Is.Instant | Is.Sorcery,
+				},
+				[],
+				effects
+			),
+		];
+
+	/// <summary>
+	/// Orcish Bowmasters: "this creature deals 1 damage to any target. Then amass Orcs 1." Amass N (CR 701.47): "If you
+	/// don't control an Army creature, create a 0/0 black Orc Army creature token. Put N +1/+1 counters on an Army you
+	/// control." ponytail: with two or more Armies (a changeling) each gets them — no choice of one; and an Army that
+	/// isn't an Orc doesn't become one. Make it a ChoosePermanentChoice when a deck has two.
+	/// </summary>
+	static GameAction[] BowmastersShot =>
+		[
+			new DealDamage(Ref.Target(), 1),
+			new If(
+				new Not(new AtLeast(Count.NumberOf(Ref.Permanents(YourArmies)), 1)),
+				[new CreateTokens(OrcArmy, 1)]
+			),
+			new PutCounters(Ref.Permanents(YourArmies), 1),
+		];
+
+	static Filter YourArmies => Is.Creature & Is.Yours & Is.Subtype("Army");
+
+	/// <summary>
+	/// Black Widow, Super Spy: "you may cast the exiled nonland card until end of turn and mana of any type can be spent to
+	/// cast that spell" — the lands exiled on the way are marked too, but CastOnly: never played.
+	/// </summary>
+	static MakePlayable WidowsCast =>
+		new(
+			Ref.ThisWay,
+			new()
+			{
+				ThisTurn = true,
+				AnyType = true,
+				CastOnly = true,
+			}
+		);
 
 	/// <summary>
 	/// Pyrogoyf, Barrowgoyf: "power is equal to the number of card types among cards in all graveyards and its toughness
@@ -2600,6 +2740,12 @@ public static class LsvCards
 
 	/// <summary>Urza, Lord High Artificer: "a 0/0 colorless Construct artifact creature token".</summary>
 	static CardData Construct => Token("Construct", "Artifact Creature — Construct", "0", "0");
+
+	/// <summary>Sedgemoor Witch: "a 1/1 black and green Pest creature token" (its life on dying is the script's).</summary>
+	static CardData Pest => Token("Pest", "Creature — Pest", "1", "1", ["B", "G"]);
+
+	/// <summary>Amass Orcs: "a 0/0 black Orc Army creature token".</summary>
+	static CardData OrcArmy => Token("Orc Army", "Creature — Orc Army", "0", "0", ["B"]);
 
 	/// <summary>Legion Extruder: "a 3/3 colorless Golem artifact creature token".</summary>
 	static CardData Golem => Token("Golem", "Artifact Creature — Golem", "3", "3");

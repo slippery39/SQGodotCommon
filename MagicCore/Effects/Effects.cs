@@ -455,9 +455,9 @@ public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
 
 /// <summary>
 /// "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on the
-/// stack above it, controlled by you; it is not cast (no "whenever you cast" sees it) and ceases to
-/// exist once it leaves the stack. Its targets are chosen anew from what is legal for it — the
-/// original's among them.
+/// stack above it, controlled by you; it is not cast (no "whenever you cast" sees it — magecraft's "or copy" does:
+/// SpellCopiedEvent) and ceases to exist once it leaves the stack. Its targets are chosen anew from what is legal
+/// for it — the original's among them.
 /// </summary>
 public record CopySpell(Ref What) : Effect
 {
@@ -497,7 +497,8 @@ public record CopySpell(Ref What) : Effect
 						),
 				stack
 			);
-			s = s.MoveObjectToFront(copy.Id, stack); // index 0 is the top
+			s = s.MoveObjectToFront(copy.Id, stack) // index 0 is the top
+				.Raise(new SpellCopiedEvent(copy.Id, Controller));
 			var onStack = copy.GetComponent<OnStackComponent>()!;
 			var specs = StackResolution
 				.TextOf(copy, onStack.Modes, onStack.Kicked, onStack.X)

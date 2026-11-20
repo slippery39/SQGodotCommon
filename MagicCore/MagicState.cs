@@ -673,7 +673,10 @@ public static class MagicState
 						new Actions.ChooseNumberChoice(controllerId, number.Max)
 						{
 							NamesAManaValue = true,
-							Prompt = $"{card.Name}: choose a number",
+							OddOrEven = number.OddOrEven,
+							Prompt = number.OddOrEven
+								? $"{card.Name}: choose odd or even"
+								: $"{card.Name}: choose a number",
 						},
 						new Actions.SetChosenNumberAction(cardId),
 					],
@@ -926,7 +929,7 @@ public static class MagicState
 			var number = s.GetPlayer(playerId).ThisTurn.CardsDrawn + 1;
 			s = s.MoveCard(top, handId)
 				.Tally(playerId, t => t with { CardsDrawn = number })
-				.Raise(new DrewCardEvent(playerId, number));
+				.Raise(new DrewCardEvent(playerId, number, turnDraw && i == 0));
 		}
 		return s;
 	}
