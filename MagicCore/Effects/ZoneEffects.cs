@@ -978,6 +978,9 @@ public record CastOneOf(Ref Among) : Effect
 	/// </summary>
 	public Filters.Filter? Exiled { get; init; }
 
+	/// <summary>Miracle (Scripting.Miracle): "by paying [cost] rather than its mana cost" (CastNow.Instead) — Free or not.</summary>
+	public ManaCost? Instead { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		ImmutableList<int> castable =
@@ -986,7 +989,7 @@ public record CastOneOf(Ref Among) : Effect
 				.Where(id =>
 					s.HasObject(id)
 					&& s.GetObject(id) is Card c
-					&& CastNow.CanCast(s, Controller, c, free: Free)
+					&& CastNow.CanCast(s, Controller, c, free: Free, Instead)
 				),
 		];
 		return castable.IsEmpty
@@ -1005,9 +1008,17 @@ public record CastOneOf(Ref Among) : Effect
 								Zone = (
 									(Zone)s.GetObject(s.GetParent(castable[0])!.Value)
 								).ZoneType,
-								Prompt = Free ? "You may cast one free" : "You may cast one",
+								Prompt =
+									Instead is { } cost ? $"You may cast it for {cost}"
+									: Free ? "You may cast one free"
+									: "You may cast one",
 							},
-							new CastChosen { Free = Free, Exiled = Exiled },
+							new CastChosen
+							{
+								Free = Free,
+								Exiled = Exiled,
+								Instead = Instead,
+							},
 						],
 					}
 				)
@@ -1027,6 +1038,9 @@ public record CastChosen : Effect
 	/// <summary>Bilbo: "If an instant or sorcery spell cast this way would be put into your graveyard, exile it instead".</summary>
 	public Filters.Filter? Exiled { get; init; }
 
+	/// <summary>Miracle: the cost paid rather than its mana cost (CastNow.Instead).</summary>
+	public ManaCost? Instead { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		ChooseCardsFromHandChoice.Read(InputContext).FirstOrDefault() is > 0 and var id
 			? new(
@@ -1038,6 +1052,7 @@ public record CastChosen : Effect
 						[
 							new CastNow(id, Free)
 							{
+								Instead = Instead,
 								ExiledLeavingTheStack =
 									Exiled?.Matches(
 										s,
@@ -1158,13 +1173,17 @@ public record CastNow(int CardId, bool Free) : Effect
 	/// <summary>Bilbo's instants and sorceries: exiled leaving the stack (CastSpellAction.ExiledLeavingTheStack).</summary>
 	public bool ExiledLeavingTheStack { get; init; }
 
-	/// <summary>Every legal way to cast it now — free means X is 0 and no mana cost.</summary>
+	/// <summary>Miracle: "by paying [cost] rather than its mana cost" — that paid, never the mana cost (CastSpellAction.ManaInstead).</summary>
+	public ManaCost? Instead { get; init; }
+
+	/// <summary>Every legal way to cast it now — free means X is 0 and no mana cost; Instead is free but that cost paid.</summary>
 	public static ImmutableList<CastSpellAction> Options(
 		GameState s,
 		int playerId,
 		int cardId,
 		bool free,
-		bool exiled = false
+		bool exiled = false,
+		ManaCost? instead = null
 	) =>
 		!s.HasObject(cardId) || s.GetObject(cardId) is not Card card || card.Is(CardType.Land)
 			? []
@@ -1174,13 +1193,14 @@ public record CastNow(int CardId, bool Free) : Effect
 						MagicRules
 							.CastCandidates(s, playerId, card)
 							.OfType<CastSpellAction>()
-							.Where(c => !free || c.X == 0)
+							.Where(c => !free && instead is null || c.X == 0)
 							.Select(c =>
 								c with
 								{
 									DuringResolution = true,
-									WithoutPayingManaCost = free,
+									WithoutPayingManaCost = free || instead is not null,
 									ExiledLeavingTheStack = exiled,
+									ManaInstead = instead,
 								}
 							)
 					)
@@ -1188,12 +1208,17 @@ public record CastNow(int CardId, bool Free) : Effect
 					.Where(c => c.ValidateAdd(s).IsValid),
 			];
 
-	public static bool CanCast(GameState s, int playerId, Card card, bool free) =>
-		!Options(s, playerId, card.Id, free).IsEmpty;
+	public static bool CanCast(
+		GameState s,
+		int playerId,
+		Card card,
+		bool free,
+		ManaCost? instead = null
+	) => !Options(s, playerId, card.Id, free, instead: instead).IsEmpty;
 
 	public override ActionResult Execute(GameState s)
 	{
-		var options = Options(s, Controller, CardId, Free, ExiledLeavingTheStack);
+		var options = Options(s, Controller, CardId, Free, ExiledLeavingTheStack, Instead);
 		return options.Count switch
 		{
 			0 => new(s),
@@ -2002,6 +2027,13 @@ public record ExileTopPlayable : Effect
 	public bool AtRandom { get; init; }
 
 	/// <summary>
+	/// Crabomination: "exiles the top card of their library, a card at random from their graveyard, and a card at random
+	/// from their hand. You may cast a spell from among cards exiled this way" — each exiled card linked to this object of
+	/// the source (ExiledBy, CR 607.2a), so three exiles from three zones are one group: Ref.All(Exile, Is.ExiledBySource).
+	/// </summary>
+	public bool Linked { get; init; }
+
+	/// <summary>
 	/// Bonehoard Dracosaur: "If you exiled a land card this way, create … If you exiled a nonland card this way, create
 	/// a Treasure token." — run after, with Ref.ThisWay the cards exiled.
 	/// </summary>
@@ -2057,7 +2089,7 @@ public record ExileTopPlayable : Effect
 								}
 							).WithComponent(new ExiledFaceDown())
 					);
-				if (Permission.AnyNumber)
+				if (Permission.AnyNumber || Linked)
 					s = Update(
 						s,
 						(Card)s.GetCard(top.Id).WithComponent(new ExiledBy(sourceId, incarnation))

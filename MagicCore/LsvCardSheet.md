@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 34/46 · uncommon 54/86 · rare 132/279 · mythic 51/108 · **280/528**
+**Playable:** common 34/46 · uncommon 54/86 · rare 135/279 · mythic 51/108 · **283/528**
 
 ### "Name Sticker" Goblin
 
@@ -2773,7 +2773,43 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever this creature attacks, reveal the top card of your library and put it into your hand. You lose life equal to that card's mana value if this creature isn't saddled. Otherwise, each opponent loses that much life.  
 > Saddle 3 (Tap any number of other creatures you control with total power 3 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h7Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Caustic Bronco"] =
+[
+	When(
+		TriggerEvent.SelfAttacks,
+		[],
+		new LookAndTake(1)
+		{
+			Must = true,
+			Reveal = true,
+			Then =
+			[
+				new If(
+					new Matches(Ref.Source, Saddled),
+					[
+						new LoseLife(
+							Ref.EachOpponent,
+							Count.GreatestManaValueOf(Ref.ThisWay)
+						),
+					]
+				)
+				{
+					Otherwise =
+					[
+						new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.ThisWay)),
+					],
+				},
+			],
+		}
+	),
+	Saddle(3),
+],
+```
 
 ### Caves of Chaos Adventurer
 
@@ -3099,7 +3135,43 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Emerge from artifact {5}{B}{B} (You may cast this spell by sacrificing an artifact and paying the emerge cost reduced by that artifact's mana value.)  
 > When this creature enters, target opponent exiles the top card of their library, a card at random from their graveyard, and a card at random from their hand. You may cast a spell from among cards exiled this way without paying its mana cost.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h7Tests
+
+**Engine pieces:** `CastOneOf` — "You may cast one of [these cards]" as it resolves — one chosen among those that can be…; `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Crabomination"] =
+[
+	Emerge("{5}{B}{B}", Is.Artifact),
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Player(Is.Opponents)],
+		new ExileTopPlayable
+		{
+			Of = Ref.Target(),
+			Play = null,
+			Linked = true,
+		},
+		new ExileTopPlayable
+		{
+			Of = Ref.Target(),
+			From = ZoneType.Graveyard,
+			AtRandom = true,
+			Play = null,
+			Linked = true,
+		},
+		new ExileTopPlayable
+		{
+			Of = Ref.Target(),
+			From = ZoneType.Hand,
+			AtRandom = true,
+			Play = null,
+			Linked = true,
+		},
+		new CastOneOf(Ref.All(ZoneType.Exile, Is.ExiledBySource, Ref.Target()))
+	),
+],
+```
 
 ### Creeping Tar Pit
 
@@ -4800,7 +4872,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, return up to one target creature card from your graveyard to the battlefield with a lifelink counter on it.  
 > Miracle {1}{B} (You may cast this card for its miracle cost when you draw it if it's the first card you drew this turn.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2h7Tests
+
+**Engine pieces:** `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Metamorphosis Fanatic"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InYourGraveyard(Is.Creature) with { Optional = true }],
+		new MoveTo(Ref.Target(), ZoneType.Battlefield)
+		{
+			From = [ZoneType.Graveyard],
+			Then = [new PutCounters(Ref.ThisWay, 1) { Kind = CounterKinds.Lifelink }],
+		}
+	),
+	Miracle("{1}{B}"),
+],
+```
 
 ### Meticulous Archive
 

@@ -989,9 +989,11 @@ public static class MagicState
 				);
 			// Numbered as it is drawn: two cards drawn at once are the first and the second (Faerie Mastermind).
 			var number = s.GetPlayer(playerId).ThisTurn.CardsDrawn + 1;
-			s = s.MoveCard(top, handId)
-				.Tally(playerId, t => t with { CardsDrawn = number })
-				.Raise(new DrewCardEvent(playerId, number, turnDraw && i == 0));
+			s = s.MoveCard(top, handId).Tally(playerId, t => t with { CardsDrawn = number });
+			// The opening hand and a mulligan's are drawn before the first turn: nothing triggers (a miracle can't be
+			// cast from an opening hand).
+			if (s.GetGame().TurnNumber > 0)
+				s = s.Raise(new DrewCardEvent(playerId, number, turnDraw && i == 0, top));
 		}
 		return s;
 	}

@@ -218,6 +218,43 @@ public static class Scripting
 	public static MayCastFromHandFree Overload(string cost) =>
 		new(Is.Source) { Mana = ManaCost.Parse(cost), Overload = true };
 
+	/// <summary>
+	/// Emerge (CR 702.119) — Crabomination: "Emerge from artifact {5}{B}{B} (You may cast this spell by sacrificing an
+	/// artifact and paying the emerge cost reduced by that artifact's mana value.)" — Flare of Fortitude's sacrifice as an
+	/// alternative cost, with Baleful Mastery's mana less the sacrificed card's mana value (LessTheSacrificed); one cast
+	/// per permanent to sacrifice. "Emerge" alone (any creature) is Is.Creature.
+	/// </summary>
+	public static MayCastFromHandFree Emerge(string cost, Filter from) =>
+		new(Is.Source)
+		{
+			Mana = ManaCost.Parse(cost),
+			Costs = [new SacrificeCost(from)],
+			LessTheSacrificed = true,
+		};
+
+	/// <summary>
+	/// Miracle (CR 702.94) — Metamorphosis Fanatic: "Miracle {1}{B} (You may cast this card for its miracle cost when you
+	/// draw it if it's the first card you drew this turn.)" — a trigger read from the HAND (TriggeredAbilityComponent.From)
+	/// on the card's own draw (DrewCardEvent's subject), the first of the turn (Nth = 1); as it resolves, while the card is
+	/// still that object in the hand, its owner may cast it paying the cost instead (CastOneOf.Instead) — at any timing.
+	/// The opening hand is drawn before the first turn, so it never triggers. The card is revealed as it triggers
+	/// (Triggers.PutOnStack) — the "may" reveal is never asked: a declined miracle stays revealed (DesignNotes).
+	/// </summary>
+	public static TriggeredAbilityComponent Miracle(string cost) =>
+		When(
+			new Trigger(EventKind.Drew)
+			{
+				By = Whose.You,
+				Subject = Is.Source,
+				Nth = 1,
+			},
+			[],
+			new CastOneOf(Ref.Source) { Instead = ManaCost.Parse(cost) }
+		) with
+		{
+			From = ZoneType.Hand,
+		};
+
 	/// <summary>Splice onto Arcane (CR 702.47) — Goryo's Vengeance: "Splice onto Arcane {2}{B}" (CastSpellAction.Splice).</summary>
 	public static SpliceComponent SpliceOntoArcane(string cost) =>
 		new(ManaCost.Parse(cost), Is.Subtype("Arcane"));

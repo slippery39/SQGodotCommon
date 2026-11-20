@@ -162,8 +162,8 @@ artifact creature at 6+" and the 6+ box's keywords. Any other "N+ | ability" is 
 `If` (a static) or `OnlyIf` (an activated one) = `new AtLeast(Count.ChargeCountersOn(Ref.Source), N)`.
 
 **Tokens** — `new CreateTokens(Cadet, n)` with a token's `CardData` (Cadet, Beast, Treasure… at the top of
-FraCards); its abilities in `Abilities = [...]`. **Abilities from the graveyard** — `FromGraveyard = true`
-on a trigger, `From = ZoneType.Graveyard` on an activated ability (see Command the Stage in the sheet).
+FraCards); its abilities in `Abilities = [...]`. **Abilities from the graveyard** — `From = ZoneType.Graveyard`
+on a trigger (`Hand`: miracle, `Scripting.Miracle`), `From = ZoneType.Graveyard` on an activated ability (see Command the Stage in the sheet).
 
 **Targets** are a zone and a filter. A permanent: `Target(Is.Creature & Is.Yours & !Is.Source)` is
 "another target creature you control"; `Creature` and `CreatureOrPlaneswalker` are the plain ones.

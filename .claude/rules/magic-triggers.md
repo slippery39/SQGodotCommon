@@ -51,8 +51,8 @@ whose subsystem it lives in.
 - **"You win the game"** (`WinTheGame`) ends it at once: a same-moment draw from an empty library never
   reaches the state-based check.
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this
-  dies"; a graveyard card's abilities marked `FromGraveyard` (Darklight Phoenix) — those, and only
-  those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,
+  dies"; a graveyard or hand card's abilities whose `From` names that zone (`TriggeredAbilityComponent.From`: Darklight
+  Phoenix's `Graveyard`, miracle's `Hand` — MC-4.4h9 generalised `FromGraveyard`) — those, and only those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,
   Lyra), which ends at cleanup or a zone change like any other until-end-of-turn effect.
 - **"Becomes the target"** is raised when a spell or ability goes on the stack with its targets —
   `CastSpellAction` and `StackResolution.Push` (every ability), the one place each.
@@ -166,7 +166,11 @@ whose subsystem it lives in.
   `MoveTo(Ref.EventCard, Exile) { From = [Graveyard] }`, the card only while it is still in that graveyard.
 - **"[Permanents] you control have '[triggered ability]'"** is `GrantsTriggeredAbility(scope, ability)`:
   `Triggers.Collect` gives it to each permanent the scope matches, and "this creature" is that one.
-- **"Whenever you draw a card"** is `DrewCardEvent`, raised by `MagicState.Draw` once per card (Data, New Life).
+- **"Whenever you draw a card"** is `DrewCardEvent`, raised by `MagicState.Draw` once per card (Data, New Life). Its
+  subject is the card drawn while it stays in its owner's hand (miracle's "when you draw it": `Subject = Is.Source`) —
+  never its event card: an opponent's draw is a hidden card. A trigger from the hand reveals its card as it goes on the
+  stack (`PutOnStack`: miracle's reveal), so the AI's hidden-hand sampling never swaps it. The opening hand and a mulligan's are drawn before the first turn (`TurnNumber` 0) and raise none — a
+  miracle can't be cast from an opening hand.
 - **"When that creature dies this turn, you …"** (A Good Day to Die) is `WheneverThisTurn { About }`: the
   trigger on YOUR command-zone object, its subject bound to that one object as it resolves (`TheObject`).
 - **"When this land enters untapped, choose one —"** (TRK's five, `TrkCards.EntersUntapped`) is a `SelfEnters`

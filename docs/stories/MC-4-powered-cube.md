@@ -1354,6 +1354,32 @@ as his three priorities.
   moved 30 random and 75 card games, 4 added; probe 150: none unfinished, Consultation cast 187 times; full suite 2,097
   passed. The review (2026-11-20) made "your own" an option on the effect (it was hardcoded: a Cabal Therapy would have
   named its own card); the singleton miss stays a ceiling.
+- 2026-11-20, Claude (cube lane) — **4.4h7–h9 as one batch: saddle, emerge, miracle — 283 of 528 play; black is
+  finished.** **Saddle** (Caustic Bronco) composed: teamwork's `TapUntappedCost { TotalPower }` on a sorcery-speed
+  activated ability (`LsvCards.Saddle(n)`, "other" `!Is.Source`), "saddled" a keyword granted until end of turn
+  (`Is.With("Saddled")` — goad's stamp was the alternative; a ceiling in DesignNotes); the attack trigger is Dark
+  Confidant's `LookAndTake` with an `If`. **Emerge** (Crabomination) is an option on the card's alternative cost,
+  `MayCastFromHandFree.LessTheSacrificed` (`Scripting.Emerge`: Flare of Fortitude's sacrifice + Baleful Mastery's mana, less
+  the `SacrificeId` card's mana value); its three exiles are `ExileTopPlayable { Linked }` (nearest: `Exile { Linked }`;
+  `Then`'s `Ref.ThisWay` sees only its own effect's cards) and `CastOneOf` over `Ref.All(Exile, Is.ExiledBySource)`.
+  **Miracle** (Metamorphosis Fanatic): `TriggeredAbilityComponent.FromGraveyard` generalised to `From` (a zone — its five
+  cards moved), read for the hand too; `DrewCardEvent` carries the card (its subject and event card); `CastOneOf {
+  Instead }` → `CastNow.Instead` → `CastSpellAction.ManaInstead` (an effect's cast skipped the card's own alternative
+  cost, so it needed a cost of its own). Found on the way: the opening hand drawn unsmoothed, or a mulligan's, raised
+  `DrewCardEvent`s the first priority would read — a miracle from the opening hand; `Draw` raises none before turn 1.
+  Legal actions: one cast per artifact to sacrifice; saddle one activation, the creatures picked after. The review
+  (2026-11-20) fixed four: a trigger from the hand REVEALS its card as it goes on the stack (`PutOnStack` — or the AI's
+  hidden-hand sampling could swap the Fanatic for a guess under its own trigger); `Instead` alone is the free path (it
+  needed `Free` too, silently); the cast's prompt names the cost, not "free"; `Collect` copies only the hand and graveyard
+  cards with such a trigger. The drawn card is the event's subject but never its event card (an opponent's draw is hidden).
+  Ceilings (DesignNotes): the reveal never asked, `AlternativeCostWasPaid` false for a miracle, an X miracle cost at X = 0,
+  emerge reading the cast's one `SacrificeId`. 12 tests in `LsvBatch2h7Tests.cs`; 13/13 revert-checks caught (the
+  opening-hand test was vacuous at first — a smoothed hand is moved, not drawn — and now uses `New(smoothing: false)`).
+  Golden-out moved nothing (162 random, 862 card games); golden-in moved 30 random and 194 card games, 12 added; probe 150:
+  none unfinished, Bronco cast 393 / saddled 842, Crabomination 248, Fanatic 184 ("activated 5": Q's gift, as before);
+  full suite 2,109 passed — all 8 steps run again after the review's fixes. **The one-batch experiment:** the checks ran
+  as one batch (22 min, then 34 min in full after the review) where three batches would each have run them; its cost is
+  its row in `docs/findings/card-batch-usage.md`.
 
 ## Tasks
 
@@ -1578,7 +1604,7 @@ as his three priorities.
           0) — likely because its levels pay off only with artifacts (in the graveyard for level 2, on the battlefield for
           level 3), which the random decks seldom hold. An isolated test: a board with artifacts and the mana free — is
           the level ability taken, by the probe's random play and by the AI?
-  - [ ] MC-4.4h Black (Shayne, 2026-11-18: the next colour in the list) — 48 cards read card by card and tiered
+  - [x] MC-4.4h Black (Shayne, 2026-11-18: the next colour in the list; done 2026-11-20) — 48 cards read card by card and tiered
         (Decisions, "4.4h"): 19 tested pieces, 22 options, 7 new pieces; one part per session:
     - [x] MC-4.4h1 The tested pieces, 17 of the 19 (list in Decisions; Duress and Wishclaw Talisman moved to h2a, h2c)
     - [x] MC-4.4h2a Options, hands, 5: Inquisition of Kozilek, Duress, Deep-Cavern Bat, Collective Brutality, Chain of
@@ -1595,9 +1621,9 @@ as his three priorities.
     - [x] MC-4.4h4 Splice onto Arcane: Goryo's Vengeance (Through the Breach waits for red; Decisions, "4.4h4")
     - [x] MC-4.4h5 Auras that return a creature from a graveyard: Animate Dead, Necromancy (Decisions, "4.4h5")
     - [x] MC-4.4h6 Naming a card as a spell resolves: Demonic Consultation (Decisions, "4.4h6")
-    - [ ] MC-4.4h7 Saddle: Caustic Bronco
-    - [ ] MC-4.4h8 Emerge: Crabomination
-    - [ ] MC-4.4h9 Miracle: Metamorphosis Fanatic
+    - [x] MC-4.4h7 Saddle: Caustic Bronco (one batch with h8, h9; Decisions, "4.4h7–h9")
+    - [x] MC-4.4h8 Emerge: Crabomination
+    - [x] MC-4.4h9 Miracle: Metamorphosis Fanatic
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -1612,10 +1638,16 @@ protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiat
 done: **blue is finished.** Black is surveyed and planned (Decisions, "4.4h"; Shayne took it as written); h1 (17 tested
 pieces), h2a (the five hand cards), h2b (the five graveyard returns), h2c (costs and permissions), h2d (triggers) and
 h2e (zones and combat), h3 (overload: Damn), h4 (splice onto Arcane: Goryo's Vengeance), h5 (Auras returning a
-creature: Animate Dead, Necromancy) and **h6 (naming a card as a spell resolves: Demonic Consultation, 280 of 528 play)**
-are done — black's options are finished (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3" … "4.4h6").
-Next, in a NEW session: **MC-4.4h7 — saddle: Caustic Bronco** (the plan's note in Decisions, "4.4h": teamwork's
-`TapUntappedCost { TotalPower }` plus a "saddled" status until end of turn; crew's later). From h6: "choose a card name" as
+creature: Animate Dead, Necromancy), h6 (naming a card as a spell resolves: Demonic Consultation) and **h7–h9 as one
+batch (saddle: Caustic Bronco; emerge: Crabomination; miracle: Metamorphosis Fanatic — 283 of 528 play)** are done:
+**black is finished** (Decisions, "4.4h1", "4.4h2a" … "4.4h2e", "4.4h3" … "4.4h6", "4.4h7–h9").
+Next, in a NEW session: **Shayne's pick of the next colour** — red is next in the list (its tier 1 was 4.4c), read card by
+card, tiered and planned as 4.4h was; no batch is planned yet. From h7–h9: saddle is `LsvCards.Saddle(n)` ("saddled"
+`Is.With("Saddled")`); emerge `Scripting.Emerge(cost, filter)` (`MayCastFromHandFree.LessTheSacrificed`);
+`ExileTopPlayable { Linked }` groups exiles from several zones for `Is.ExiledBySource`; a trigger read from a hand or
+graveyard is `TriggeredAbilityComponent.From` (was `FromGraveyard`); miracle `Scripting.Miracle(cost)` (`CastOneOf {
+Instead }`, `DrewCardEvent.CardId`). The one-batch experiment's row is in `card-batch-usage.md`. h7–h9's tests are in
+`LsvBatch2h7Tests.cs` (`Four`: a {2}{B}{B} 4/4, `Relic`: a {3} artifact, `Draw(n)`). From h6: "choose a card name" as
 a spell resolves is `ChooseCardName` (the name on the spell on the stack, `MagicState.AskName` the one question; the AI
 names its own card when `ChooseKeywordChoice.NamesYourOwn`); Identity Echo's reveal-until takes `{ Matching, To }`. h6's
 tests are in `LsvBatch2h6Tests.cs` (`Naming(name)`). From h5: an Aura's host may be a card in its owner's graveyard (`Attachments.HostOf`); its
@@ -1915,3 +1947,8 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   `ModifyUntilEndOfTurn.Enchant`, `CastAsThoughItHadFlash` with a cleanup delayed trigger. Next: MC-4.4h6.
 - 2026-11-20: MC-4.4h6 done: naming a card as a spell resolves — 280 of 528 play. `ChooseCardName` (the name on the
   spell on the stack), `RevealUntilOntoBattlefield { Matching, To }`, the AI naming its own best card. Next: MC-4.4h7.
+- 2026-11-20: h7, h8 and h9 to be built as one batch, an experiment in bigger batches (Shayne: the checks afterwards are
+  the bottleneck). Measured by its row in `docs/findings/card-batch-usage.md`.
+- 2026-11-20: MC-4.4h7–h9 done as one batch: saddle, emerge, miracle — 283 of 528 play; black is finished. `Saddle`,
+  `Emerge` (`LessTheSacrificed`), `ExileTopPlayable.Linked`, `TriggeredAbilityComponent.From` (hand), `CastOneOf.Instead`;
+  the opening hand no longer raises draw events. Next: Shayne's pick of the next colour (red is next in the list).

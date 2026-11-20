@@ -92,6 +92,9 @@ public static class CounterKinds
 	/// <summary>Drivnod, Carnage Dominus: a keyword counter — it has that keyword (CR 122.1b, Card.HasOwn).</summary>
 	public const string Indestructible = "indestructible";
 
+	/// <summary>Metamorphosis Fanatic: "with a lifelink counter on it" — a keyword counter, as Drivnod's.</summary>
+	public const string Lifelink = "lifelink";
+
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
 	public const string PlusOne = "+1/+1";
@@ -535,7 +538,7 @@ public static class TriggerEvent
 	/// <summary>Tinybones: "whenever a player discards one or more cards".</summary>
 	public static readonly Trigger APlayerDiscards = new(EventKind.Discarded);
 
-	/// <summary>Titanbones: "when you discard this card" — FromGraveyard, where the card now is.</summary>
+	/// <summary>Titanbones: "when you discard this card" — From = Graveyard, where the card now is.</summary>
 	public static readonly Trigger SelfDiscarded =
 		new(EventKind.Discarded) { Subject = Filters.Is.Source };
 
@@ -607,8 +610,11 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 	/// <summary>"At …, if [condition], …" — intervening: checked as it triggers AND as it resolves (CR 603.4).</summary>
 	public Condition? If { get; init; }
 
-	/// <summary>Darklight Phoenix: "return this card from your graveyard" — it triggers from there, not the battlefield.</summary>
-	public bool FromGraveyard { get; init; }
+	/// <summary>
+	/// Where the card is when it triggers — the battlefield unless said (as ActivatedAbilityComponent.From). Darklight
+	/// Phoenix: "return this card from your graveyard" (Graveyard); miracle's "when you draw it" (Hand, Scripting.Miracle).
+	/// </summary>
+	public ZoneType From { get; init; } = ZoneType.Battlefield;
 
 	/// <summary>"This ability triggers only once each turn." Stamped on the card as it goes on the stack.</summary>
 	public bool OncePerTurn { get; init; }
@@ -1646,6 +1652,13 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 
 	/// <summary>Baleful Mastery: "You may pay {1}{B} rather than pay this spell's mana cost." — mana paid instead (AlternativeCostWasPaid reads it).</summary>
 	public ManaCost? Mana { get; init; }
+
+	/// <summary>
+	/// Emerge (CR 702.119, Crabomination): "You may cast this spell by sacrificing an artifact and paying the emerge cost
+	/// reduced by that artifact's mana value" — the Mana less the mana value of the card the cast's SacrificeCost picked
+	/// (CastSpellAction.SacrificeId), generic only (CR 601.2f): Scripting.Emerge.
+	/// </summary>
+	public bool LessTheSacrificed { get; init; }
 
 	/// <summary>
 	/// Overload (CR 702.96) — Damn: "Overload {2}{W}{W} (You may cast this spell for its overload cost. If you do, change

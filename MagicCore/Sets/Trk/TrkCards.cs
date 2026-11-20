@@ -1363,7 +1363,7 @@ public static class TrkCards
 					)
 				) with
 				{
-					FromGraveyard = true,
+					From = ZoneType.Graveyard,
 				},
 			],
 			["Tell Me What You See"] =
@@ -4007,7 +4007,7 @@ public static class TrkCards
 					new ModifyUntilEndOfTurn(Ref.AllCreatures, -2, -2)
 				) with
 				{
-					FromGraveyard = true,
+					From = ZoneType.Graveyard,
 				},
 			],
 			["Shizo, Death's Storehouse"] =

@@ -2035,7 +2035,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	) with
 	{
 		If = new AtLeast(Count.NoncombatDamageToOpponentsLastTurn, 1),
-		FromGraveyard = true,
+		From = ZoneType.Graveyard,
 	},
 ],
 ```
@@ -3888,7 +3888,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(TriggerEvent.YouGainLife, [], new PutCounters(Ref.Source, 2)),
 	When(TriggerEvent.SelfDiscarded, [], new GainLife(Ref.You, 3)) with
 	{
-		FromGraveyard = true,
+		From = ZoneType.Graveyard,
 	},
 ],
 ```
@@ -6539,7 +6539,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	) with
 	{
 		If = new AtLeast(Count.CreaturesDiedThisTurn, 2),
-		FromGraveyard = true,
+		From = ZoneType.Graveyard,
 	},
 ],
 ```

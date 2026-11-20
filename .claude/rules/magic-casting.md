@@ -267,6 +267,14 @@ whose subsystem it lives in.
   `StackResolution.TextOf` appends each text after the spell's own, its targets scoped as a mode's (`ScopeTargetsAction`:
   Goryo's `Target(0)` is its own word; the spell's own text scoped to its own words, so its "each target" isn't Goryo's). `PutOnStack` re-stamps it after the move; leaving the stack takes it, a copy keeps it.
   Through the Breach takes it with red.
+  **Emerge** (CR 702.119, Crabomination, MC-4.4h8) is `Scripting.Emerge(cost, filter)`: Flare of Fortitude's sacrifice and
+  Baleful Mastery's mana as ONE alternative cost on the card, `{ LessTheSacrificed }` — that mana less the mana value of
+  the card the cast's `SacrificeId` names, generic only (`CastSpellAction.CostBeforeLife`); one cast per permanent to sacrifice.
+  **Miracle** (CR 702.94, Metamorphosis Fanatic, MC-4.4h9) is `Scripting.Miracle(cost)`: a trigger read from the HAND
+  (`TriggeredAbilityComponent.From`) on the card's own draw, the first this turn (`Nth = 1`), whose `CastOneOf(Ref.Source)
+  { Instead }` casts it as it resolves paying that cost rather than its mana cost (`CastNow.Instead` →
+  `CastSpellAction.ManaInstead`, beside `WithoutPayingManaCost`) — at any timing, as every cast during a resolution; the
+  card moved out of the hand first is a new object, and nothing is cast.
   **"Its owner puts it on their choice of the top or bottom of their library"** is Clash of Elements' `May { Who =
   Ref.OwnerOfTarget(), Otherwise }` over two `MoveTo(…, Library) { From = [Stack] }`.
 - **"Choose target [card] in your graveyard. You may cast that card this turn"** (Emry, Lurker of the Loch) is
@@ -295,7 +303,12 @@ whose subsystem it lives in.
   mana of any type can be spent" — a `May { Otherwise = MakePlayable(Ref.ThisWay, { ThisTurn, AnyType, CastOnly }) }`;
   `CastOnly` keeps the lands exiled on the way unplayed). Cast or played, the card is public again (`ExiledFaceDown` is status). Tersa Lightshatter's "exile a card at
   random from your graveyard" is the same effect `{ From = Graveyard, AtRandom }`; "if you exiled a land card this way"
-  (Bonehoard Dracosaur) is its `Then`, with `Ref.ThisWay` the cards exiled.
+  (Bonehoard Dracosaur) is its `Then`, with `Ref.ThisWay` the cards exiled. Crabomination's "target opponent exiles the
+  top card of their library, a card at random from their graveyard, and a card at random from their hand. You may cast a
+  spell from among cards exiled this way without paying its mana cost" (MC-4.4h8) is three of them `{ Of, Play = null,
+  Linked }` — `Linked` stamps each `ExiledBy` this object of the source, so three zones make one group,
+  `Ref.All(Exile, Is.ExiledBySource, Ref.Target())` — then `CastOneOf` over it: an opponent's card, cast from their exile
+  under your control.
 - **"[Once during each of your turns,] you may play [cast] … from your graveyard / the top of your library [/ outside
   the game / exile / that player's hand]"** is ONE piece (MC-6.9), `MayPlayFromZone(From, filter) { OncePerTurn,
   Finality, OutsideTheGame, Of, AnyTime, If, AnyType }` — Overflow Submatrix, The Holodeck, Nog's gained lands, Zefram

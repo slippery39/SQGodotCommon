@@ -176,9 +176,15 @@ public record LandPlayedEvent(int PlayerId, int CardId, ZoneType From) : MagicEv
 /// <summary>Data, New Life: "Whenever you draw a card" — a player drew one card; raised by MagicState.Draw, once per card.</summary>
 /// <param name="Number">Faerie Mastermind: "their second card each turn" — which card of that player's turn this is, numbered as it is drawn.</param>
 /// <param name="TurnDraw">Orcish Bowmasters: "except the first one they draw in each of their draw steps" — the draw step's own draw.</param>
-public record DrewCardEvent(int PlayerId, int Number = 0, bool TurnDraw = false) : MagicEvent
+/// <param name="CardId">Miracle (Metamorphosis Fanatic): "when you draw it" — the card drawn, the event's subject while it
+/// stays in the hand; never its event card (an opponent's draw is a hidden card).</param>
+public record DrewCardEvent(int PlayerId, int Number = 0, bool TurnDraw = false, int CardId = 0)
+	: MagicEvent
 {
 	public override EventKind Kind() => EventKind.Drew;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		CardId != 0 && s.IsIn(CardId, PlayerId, ZoneType.Hand) ? [s.GetCard(CardId)] : [];
 
 	public override int By(GameState s) => PlayerId;
 }
@@ -381,11 +387,17 @@ public static class Triggers
 				s.CardsIn(p, ZoneType.Battlefield).Concat(s.CardsIn(p, ZoneType.Command))
 			)
 			.ToList(); // walked several times below
-		// A card in a graveyard is controlled by its owner (CR 108.4a).
-		var inGraveyards = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
-			s.CardsIn(p, ZoneType.Graveyard)
-				.Where(c => AbilitiesOf(s, c).Any(a => a.FromGraveyard))
-				.Select(c => c with { ControllerId = c.OwnerId })
+		// A card in a graveyard or a hand is controlled by its owner (CR 108.4a): its abilities that trigger from there
+		// (TriggeredAbilityComponent.From) — Darklight Phoenix's graveyard, miracle's hand.
+		var offTheBattlefield = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
+			new[] { ZoneType.Graveyard, ZoneType.Hand }.SelectMany(zone =>
+				s.CardsIn(p, zone)
+					.Where(c => AbilitiesOf(s, c).Any(a => a.From == zone)) // most cards have none: copy only those
+					.Select(c => c with { ControllerId = c.OwnerId })
+					.SelectMany(c =>
+						AbilitiesOf(s, c).Where(a => a.From == zone).Select(a => (source: c, a))
+					)
+			)
 		);
 		// An exiled or dead card's delayed trigger only — never its own abilities (Ghost of Illyria's
 		// "return that card at the beginning of the next end step"; Dr. McCoy's, on the card that died).
@@ -433,7 +445,7 @@ public static class Triggers
 			IEnumerable<TriggeredAbilityComponent> abilities
 		) =>
 			abilities
-				.Where(a => !a.FromGraveyard && Concerns(s, a.On, was, was))
+				.Where(a => a.From == ZoneType.Battlefield && Concerns(s, a.On, was, was))
 				.SelectMany(a =>
 					Enumerable.Repeat(
 						new Pending(was, a, was.Id, was),
@@ -443,15 +455,11 @@ public static class Triggers
 		var fromTheBattlefield = permanents
 			.SelectMany(source =>
 				AbilitiesOf(s, source)
-					.Where(a => !a.FromGraveyard)
+					.Where(a => a.From == ZoneType.Battlefield)
 					.Concat(Granted(s, grants, source))
 					.Select(a => (source, a))
 			)
-			.Concat(
-				inGraveyards.SelectMany(source =>
-					AbilitiesOf(s, source).Where(a => a.FromGraveyard).Select(a => (source, a))
-				)
-			)
+			.Concat(offTheBattlefield)
 			.Concat(delayedInExile)
 			.SelectMany(found =>
 				events
@@ -905,6 +913,10 @@ public static class Triggers
 		{
 			var t = pending with { Delayed = FiredDelayedTrigger(s, pending) is not null };
 			s = WithoutFiredDelayedTrigger(s, t);
+			// Miracle: "you may reveal it" as it is drawn — the trigger is the reveal (CR 702.94a), so the card is known
+			// (and never swapped for a guess by the AI's hidden-hand sampling while its trigger waits).
+			if (t.Ability.From == ZoneType.Hand && s.HasObject(t.Source.Id))
+				s = s.MakeKnown(t.Source.Id, Knowers.Everyone);
 			if (t.Ability.OncePerTurn)
 			{
 				// "Only once each turn": the first goes on the stack and stamps the card; the rest

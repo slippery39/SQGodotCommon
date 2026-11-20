@@ -19,7 +19,7 @@ whose subsystem it lives in.
 - **Discarding is `MagicState.Discard`** — effects, costs (cast or ability) and the cleanup alike: one
   `DiscardedEvent` per batch ("one or more cards"), counted in `TurnTally.CardsDiscarded`. A chosen
   card going to the graveyard is a discard only from the hand (`MoveChosenToGraveyardAction`; surveil
-  isn't). "When you discard this card" triggers `FromGraveyard`, where the card now is. Something that
+  isn't). "When you discard this card" triggers `From = Graveyard`, where the card now is. Something that
   triggers in the cleanup (a discard to hand size) gets priority THERE, then another cleanup step
   follows (`TurnStructure.FinishCleanup`, CR 514.3a) — never carried into the next turn.
 - **Every token is made by `CreateTokens`** — so a replacement on tokens (Draconic Visitor's "artifact

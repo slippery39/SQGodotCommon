@@ -143,6 +143,12 @@ public record CastSpellAction : GameAction
 	/// <summary>Omnipresence: cast without paying its mana cost — X is 0 (CR 107.3c).</summary>
 	public bool WithoutPayingManaCost { get; init; }
 
+	/// <summary>
+	/// Miracle (Metamorphosis Fanatic): "you may cast it by paying {1}{B} rather than its mana cost" as a trigger resolves
+	/// (CastNow.Instead) — paid with WithoutPayingManaCost, as Baleful Mastery's alternative mana is.
+	/// </summary>
+	public ManaCost? ManaInstead { get; init; }
+
 	/// <summary>Consign to Memory, Lose Focus: how many times its replicate cost is paid — that many copies.</summary>
 	public int Replicate { get; init; }
 
@@ -387,9 +393,15 @@ public record CastSpellAction : GameAction
 		if (
 			WithoutPayingManaCost
 			&& !DuringResolution
-			&& Playable.FreeCast(s, card, PlayerId)?.Mana is { } instead
+			&& Playable.FreeCast(s, card, PlayerId) is { Mana: { } instead } freeCast
 		)
+		{
+			if (freeCast.LessTheSacrificed && SacrificeId != 0 && s.HasObject(SacrificeId)) // emerge
+				instead = instead.WithGeneric(-s.GetCard(SacrificeId).ManaCost.ManaValue);
 			added = added?.Plus(instead) ?? instead;
+		}
+		if (ManaInstead is { } miracle)
+			added = added?.Plus(miracle) ?? miracle;
 		if (card.GetComponent<ReplicateComponent>() is { } replicate)
 			for (var i = 0; i < Replicate; i++)
 				added = added?.Plus(replicate.Cost) ?? replicate.Cost;

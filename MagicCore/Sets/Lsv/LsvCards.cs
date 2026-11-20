@@ -2684,7 +2684,103 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4h7: saddle (teamwork's total-power tap cost on a sorcery-speed ability; "saddled" until end of turn) =====
+			["Caustic Bronco"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new LookAndTake(1)
+					{
+						Must = true,
+						Reveal = true,
+						Then =
+						[
+							new If(
+								new Matches(Ref.Source, Saddled),
+								[
+									new LoseLife(
+										Ref.EachOpponent,
+										Count.GreatestManaValueOf(Ref.ThisWay)
+									),
+								]
+							)
+							{
+								Otherwise =
+								[
+									new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.ThisWay)),
+								],
+							},
+						],
+					}
+				),
+				Saddle(3),
+			],
+			// ===== MC-4.4h8: emerge (an alternative cost reduced by the sacrificed's mana value); three linked exiles =====
+			["Crabomination"] =
+			[
+				Emerge("{5}{B}{B}", Is.Artifact),
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new ExileTopPlayable
+					{
+						Of = Ref.Target(),
+						Play = null,
+						Linked = true,
+					},
+					new ExileTopPlayable
+					{
+						Of = Ref.Target(),
+						From = ZoneType.Graveyard,
+						AtRandom = true,
+						Play = null,
+						Linked = true,
+					},
+					new ExileTopPlayable
+					{
+						Of = Ref.Target(),
+						From = ZoneType.Hand,
+						AtRandom = true,
+						Play = null,
+						Linked = true,
+					},
+					new CastOneOf(Ref.All(ZoneType.Exile, Is.ExiledBySource, Ref.Target()))
+				),
+			],
+			// ===== MC-4.4h9: miracle (a trigger from the hand on the card's own draw; a cast paying the miracle cost) =====
+			["Metamorphosis Fanatic"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InYourGraveyard(Is.Creature) with { Optional = true }],
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						Then = [new PutCounters(Ref.ThisWay, 1) { Kind = CounterKinds.Lifelink }],
+					}
+				),
+				Miracle("{1}{B}"),
+			],
 		};
+
+	/// <summary>
+	/// Saddle N (CR 702.171, Caustic Bronco): "Tap any number of other creatures you control with total power N or more:
+	/// This Mount becomes saddled until end of turn. Saddle only as a sorcery." — teamwork's cost (TapUntappedCost
+	/// { TotalPower }, the creatures picked after activating) on a sorcery-speed ability; "saddled" a keyword granted
+	/// until end of turn (goad's shape), so it ends at cleanup or as the Mount leaves. ponytail: a saddled Mount that
+	/// loses all abilities stops reading as saddled (CR 702.171b: a designation) — no card reads it but the Mount's own,
+	/// which it has lost too; a status like goad's stamp read when one does (crew is the other half, later).
+	/// </summary>
+	static ActivatedAbilityComponent Saddle(int power) =>
+		new(ManaCost.None, [new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Saddled")])
+		{
+			Costs = [new TapUntappedCost(0, Is.Creature & !Is.Source) { TotalPower = power }],
+			SorcerySpeed = true,
+		};
+
+	/// <summary>Caustic Bronco: "if this creature isn't saddled" — Saddle's grant.</summary>
+	static Filter Saddled => Is.With("Saddled");
 
 	/// <summary>
 	/// Magecraft (Sedgemoor Witch): "Whenever you cast or copy an instant or sorcery spell, [effects]" — two triggers, one

@@ -3014,7 +3014,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		)
 	) with
 	{
-		FromGraveyard = true,
+		From = ZoneType.Graveyard,
 	},
 ],
 ```
@@ -7396,7 +7396,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new ModifyUntilEndOfTurn(Ref.AllCreatures, -2, -2)
 	) with
 	{
-		FromGraveyard = true,
+		From = ZoneType.Graveyard,
 	},
 ],
 ```

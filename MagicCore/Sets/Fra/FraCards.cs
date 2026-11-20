@@ -1190,7 +1190,7 @@ public static class FraCards
 				) with
 				{
 					If = new AtLeast(Count.CreaturesDiedThisTurn, 2),
-					FromGraveyard = true,
+					From = ZoneType.Graveyard,
 				},
 			],
 			["Ruric Thar, Biomagus"] =
@@ -1333,7 +1333,7 @@ public static class FraCards
 				) with
 				{
 					If = new AtLeast(Count.NoncombatDamageToOpponentsLastTurn, 1),
-					FromGraveyard = true,
+					From = ZoneType.Graveyard,
 				},
 			],
 
@@ -2312,7 +2312,7 @@ public static class FraCards
 				When(TriggerEvent.YouGainLife, [], new PutCounters(Ref.Source, 2)),
 				When(TriggerEvent.SelfDiscarded, [], new GainLife(Ref.You, 3)) with
 				{
-					FromGraveyard = true,
+					From = ZoneType.Graveyard,
 				},
 			],
 			["Jiang Yanggu, Alone"] =
