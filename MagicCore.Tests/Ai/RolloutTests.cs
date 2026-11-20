@@ -29,6 +29,52 @@ public class RolloutTests
 	GameState WithLife(GameState state, int player, int life) =>
 		state.WithPlayer(state.GetPlayer(player) with { Life = life });
 
+	// AI-30.4c (Shayne, 2026-11-20: "if I already have 2 lands in hand, I don't need to simulate what happens if i need to
+	// draw a land next turn"): in our main with the land not yet played, the look-ahead has two of our land drops left -
+	// this turn's and next turn's.
+	[Test]
+	public void TwoLandsInHand_CoverTheLookAheadsLandDrops_OneDoesNot()
+	{
+		var horizon = Rollout.Horizon(s, Rollout.Default);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Hand);
+
+		Assert.That(BeamSearchAi.LandDropsCovered(s, me, horizon), Is.False, "one land");
+		var played = s.WithPlayer(
+			s.GetPlayer(me) with
+			{
+				ThisTurn = s.GetPlayer(me).ThisTurn with { LandsPlayed = 1 },
+			}
+		);
+		Assert.That(
+			BeamSearchAi.LandDropsCovered(played, me, horizon),
+			Is.True,
+			"one land, this turn's already made"
+		);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Hand);
+		Assert.That(BeamSearchAi.LandDropsCovered(s, me, horizon), Is.True, "two lands");
+	}
+
+	// A land that enters tapped covers no drop: a land drawn would be played over it (Konstrari Annex, no planeswalker).
+	[Test]
+	public void ATappedLandInHand_CoversNoLandDrop()
+	{
+		var horizon = Rollout.Horizon(s, Rollout.Default);
+		s = s.WithPlayer(
+			s.GetPlayer(me) with
+			{
+				ThisTurn = s.GetPlayer(me).ThisTurn with { LandsPlayed = 1 },
+			}
+		);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Konstrari Annex"), ZoneType.Hand);
+		Assert.That(
+			BeamSearchAi.LandDropsCovered(s, me, horizon),
+			Is.False,
+			"the Annex enters tapped"
+		);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Hand);
+		Assert.That(BeamSearchAi.LandDropsCovered(s, me, horizon), Is.True, "a Forest beside it");
+	}
+
 	// AI-30.4a: LandOrNot's two rollouts of a line played with a shared start - the same two scores as each played whole
 	// (in a real game's position, our draws ahead), for fewer engine steps.
 	[TestCase(2)]

@@ -2314,3 +2314,35 @@ what the library holds, so sharing the start is close to, not exactly, today's a
 **AI-30.4a, built (2026-11-20):** the two rollouts share their start (`Rollout.ScoreBoth`; off: `beam+nosharedstart`).
 Suite: 0 of 288 decisions changed, **16 305 engine steps a position against 19 094 (−14.6%)**, oracle 73.6% both. The
 rewrite of the rollout loop is exact (off: 0 changed, 19 094).
+
+**AI-30.4c and 30.4b (2026-11-20), the suite (288 positions):**
+
+| Run | Steps / position | Rollouts | Changed | Oracle |
+|---|---|---|---|---|
+| A (committed) | 16 305 | 37.2 | 0 | 73.6% |
+| A + D - lands in hand cover the look-ahead's land drops: not-lands way alone (default) | **13 374** | 29.2 | 1 | 74.0% |
+| A + D + B, `contenders4` | 12 835 | 27.9 | 2 | 74.3% |
+| A + D + B, `contenders3` | 12 309 | 26.5 | 3 | 74.7% |
+| A + D + B, `contenders2` | 11 628 | 24.7 | 5 | 74.3% |
+
+D's one change: seed 2 #21, Koth cast before combat or after, no attack either way (it flipped in AI-29.4-29.7 too).
+B's: seed 2 #71 Jace −3 → Ajani's Anguish X=1 (4, 3, 2), seed 1 #60 Koth's attack dropped (3, 2), seed 1 #69 Jace −3 →
+−1 and #79 Tam's Resistance → pass (2). B buys less than estimated: D already removes many second ways, A made the
+rest a third cheaper, and below the root a batch has only a few children.
+
+**The matches (2026-11-20, overnight, a quiet machine; `--until-clear`, FRA's decks):**
+- `beam` (A + D) vs `beam+nolandscovered` (A alone): **51.0% ± 1.0pp over 96 games (49-47)**, no 5pp difference either
+  way; cost per decision **7 593 against 8 312 engine steps (−8.7%)**, rollouts 19.1 / 21.7; lands 7.4 and spells 10.1
+  a game both. 22 min.
+- `beam+contenders3` (B) vs `beam`: **50.0% over 96 games (48-48)**, every mirror pair split, no 5pp difference; cost
+  per decision **6 806 against 7 565 (−10.0%)**, rollouts 17.0 / 19.1. 20 min.
+A match's decisions cost less than the suite's positions, and D saves less there (−8.7% against the suite's −18%).
+
+**D's one deciding game, and the fix (2026-11-20).** The only White-Black mirror pair of the D match that did not split:
+Red-Green v White-Black seed 7 - with D Red-Green won on turn 16, without it lost on turn 33. They part at #50, Rank Rat's
+discard on turn 3: D discarded Arni, Renowned Champion (14.66 v 13.95), without D Chandra's Emberling (16.89 v 16.85, a
+tie); the games then differ everywhere - noise, not a misplay. But D's reason was wrong: the one land in hand was
+Konstrari Annex (enters tapped), counted as covering turn 4's drop, while a drawn Forest is what casts Arni on turn 4.
+Since then **only a land that would enter untapped covers a drop** (`LandDropsCovered`). Suite: **13 582 steps a
+position** (+1.6% on 13 374; −16.7% on A), 1 changed - seed 2 #21 back to A's "Cast Koth" (an Annex in that hand),
+oracle 73.6%. In match 2 the pair played identically on both sides (`beam` has D), so B never met it.

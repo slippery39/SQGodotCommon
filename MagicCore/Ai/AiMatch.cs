@@ -137,6 +137,14 @@ public static class AiMatch
 			// 2026-11-20; beam+nosharedstart plays each whole, as before.
 			["sharedstart"] = o => o with { SharedStart = true },
 			["nosharedstart"] = o => o with { SharedStart = false },
+			// AI-30.4c: lands in hand for every land drop the look-ahead has left - the not-lands way alone; beam+nolandscovered
+			// plays both, as before.
+			["landscovered"] = o => o with { LandsCovered = true },
+			["nolandscovered"] = o => o with { LandsCovered = false },
+			// AI-30.4b, an experiment: only the best N lines of a batch by the "not lands" rollout get the "lands" one too.
+			["contenders2"] = o => o with { Contenders = 2 },
+			["contenders3"] = o => o with { Contenders = 3 },
+			["contenders4"] = o => o with { Contenders = 4 },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.

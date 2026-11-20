@@ -42,7 +42,11 @@ plans (`WholeAttacks.Best`) 50%, free passes 36%, the engine's per-step checks t
       ImmutableGameObjects
       - [x] AI-30.4a LandOrNot's two rollouts of a line share their play before our library first changes
             (`Rollout.ScoreBoth`, `beam+nosharedstart` off) - Shayne, 2026-11-20: "lets test out A"
-      - [ ] AI-30.4b The second rollout only for the lines still in contention (a switch, measured)
+      - [x] AI-30.4b The second rollout only for the lines still in contention - a switch (`beam+contendersN`), off
+      - [x] AI-30.4c With lands in hand for every land drop the look-ahead has left, the not-lands way alone (Shayne,
+            2026-11-20: "if I already have 2 lands in hand, I don't need to simulate what happens if i need to draw a
+            land next turn"; `beam+nolandscovered` off) - only lands that enter untapped count (Shayne, 2026-11-20:
+            "D should only count untapped lands that makes more sense")
 - [ ] AI-30.5 The before/after sealed run, in `docs/findings/magic-ai.md`
 
 ## Next
@@ -69,3 +73,31 @@ till the end), and Shayne's margin. Read AI-22 (done) and its findings ("AI-22.1
   `beam+nosharedstart`: 0 changed, 19 094 steps (the rewrite exact); `beam`: **0 of 288 changed, 16 305 steps a
   position (−14.6%)**, rollouts 37.2 both. Test: the two scores equal to each played whole, fewer steps (seeds 2, 3;
   fails with the lands not made at the split).
+- 2026-11-20: AI-30.4a committed (039764d6). Shayne: build B, and D too - "if I already have 2 lands in hand, I don't
+  need to simulate what happens if i need to draw a land next turn right away, I can focus on what plays I know I can
+  already make". D built (`Settings.LandsCovered`, `LandDropsCovered`): suite **13 374 steps a position (−18% on A,
+  −30% on 19 094)**, rollouts 29.2, 1 changed (seed 2 #21 - Koth before or after combat, the near-tie that flipped in
+  AI-29.4-29.7 too), oracle 74.0%. B built as a switch (`Rollout.ScoreFirst`/`ScoreSecond`, `SecondWays`; the rest
+  given the contenders' average lift): contenders4 12 835 (−4.0% on A+D, 2 changed), contenders3 12 309 (−8.0%, 3),
+  contenders2 11 628 (−13.1%, 5) - far less than the ~30% estimated: D already skips many second ways, A made the
+  rest a third cheaper, and below the root a batch is only a few children.
+- 2026-11-20: D's change accepted (Shayne: "its not a big deal if they cast it before or after combat, if nobody is
+  attacking anyways"). Overnight, one after the other: `beam,beam+nolandscovered --until-clear` (D), then
+  `beam+contenders3,beam --until-clear` (B).
+- 2026-11-20: both matches flat, each stopped at 96 games (22 and 20 min on the quiet machine): D 51.0% (49-47), 7 593
+  vs 8 312 steps a decision (−8.7%); B (`contenders3`) 50.0% (48-48), 6 806 vs 7 565 (−10.0%). Findings "AI-30.4".
+  For Shayne: commit A's follow-ups (D on, B's switch) and decide whether B becomes the default.
+- 2026-11-20: Shayne asked which game D won. Red-Green v White-Black seed 7, parting at a tied discard to Rank Rat -
+  noise; but D had counted a tapped Konstrari Annex as covering turn 4's drop. Shayne: count only untapped lands. Built
+  (`LandDropsCovered`, a test with the Annex): suite 13 582 steps (+1.6%), 1 changed - seed 2 #21 back to A's "Cast
+  Koth", accepted (FRA.positions.txt equal to the committed one again). The matches stand: the fix moves few positions.
+- 2026-11-20: B's three changes (`contenders3`, 12 455 steps, −8.3% on D) shown to Shayne. Seed 1 #60, Koth kept home
+  (13 life, their 1/4 flyer untapped): "Not attacking is fine, the other player probably will block anyways". Seed 2
+  #21, Yoshimaru 1/1 attacks and No Admittance at the 1/4 flyer instead of Koth: "playing koth is better". Seed 2 #71,
+  Ajani's Anguish X=1 before Jace's −3 draw: "draw first is better" - and in BOTH, the X=1 at the opponent "should not
+  be being used at the opponent unless there is additional context". B stays a switch, off.
+- 2026-11-20: Shayne: Anguish at X=1 is fine for now (the counter and trample); why do land switches change non-land
+  plays? Every move's score blends the two futures. Seed 2 #21, measured: Koth's "not lands" 23.29, "lands" 33.32
+  (landfall) - blended 27.64, the best. Under B, Koth ranked below the top 3 by "not lands" alone, so its "lands" way
+  was guessed with the batch's average lift - 25.06 - and the Yoshimaru attack + No Admittance line (29.39) won. B's
+  own ceiling (`SecondWays`' ponytail), seen: the card a land lifts most is the one it ranks by the average.

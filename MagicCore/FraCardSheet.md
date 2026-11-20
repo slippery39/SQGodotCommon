@@ -870,7 +870,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This land enters tapped unless you control a planeswalker.  
 > {T}: Add {R} or {G}.
 
-**Status:** scripted · **tests naming it:** LandOrderTests
+**Status:** scripted · **tests naming it:** LandOrderTests, RolloutTests
 
 ```csharp
 ["Konstrari Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.Red, ManaColor.Green),
