@@ -74,6 +74,14 @@ public static class TurnStructure
 			s = s.WithPlayer(s.GetPlayer(id) with { ManaPool = ManaPool.Empty });
 
 		var game = s.GetGame();
+		// Fear of Missing Out: an additional combat phase directly after this one (CR 500.8) — its creatures removed
+		// from combat as the end of combat step ends (CR 511.3), as the main phase's start does otherwise.
+		if (game.Step == Step.EndCombat && game.AdditionalCombats > 0)
+		{
+			s = Combat.EndCombat(s);
+			s = s.WithGame(s.GetGame() with { AdditionalCombats = game.AdditionalCombats - 1 });
+			return EnterStep(s, Step.BeginCombat);
+		}
 		// Only a cleanup in which something triggered gives priority; after it, another cleanup (CR 514.3a).
 		return EnterStep(s, game.Step == Step.Cleanup ? Step.Cleanup : game.Step + 1);
 	}
@@ -149,7 +157,7 @@ public static class TurnStructure
 				if (!effect.HasComponent<Effects.RestOfTheGame>()) // Screaming Nemesis: "for the rest of the game"
 					s = s.RemoveObject(effect.Id);
 		}
-		s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0 });
+		s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0, AdditionalCombats = 0 });
 		return EndStep(s); // nobody gets priority during untap (CR 502.4)
 	}
 

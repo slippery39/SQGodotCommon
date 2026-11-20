@@ -1465,6 +1465,27 @@ as his three priorities.
   revert-checks caught (Tinybones' OneOrMore by its own old test). Golden-out moved nothing (162 random, 865 card games);
   golden-in moved 30 random and 618 card games, 40 added; probe 150: none unfinished, every card used (Oliphaunt cycled
   248, Fury 272 casts); the checks 17.2 min; after the review's fixes the full suite again, 2,121 passed.
+- 2026-11-20, Claude (cube lane) — **4.4i2b + i3 as one batch: multikicker, dash, backup and an additional combat phase —
+  297 of 528 play (red 51 of 54).** **Batroc the Leaper** — multikicker is squad's payment with nothing made of it,
+  `Scripting.Multikicker` (`ReplicateComponent { AsItEnters }`, `Count.TimesReplicated`); "enters with a counter for
+  each time" `EntersWithCountersComponent(that count)` — its context now has `Ref.Source`; "each of up to X targets,
+  where X is the times kicked" generalised `TargetSpec.PerX` from a bool to a `Count` (Dominion Infiltration moved to
+  `Count.X`): a trigger counts it as it triggers (`Triggers.QueueTargets`, one word at a time), a spell's is its X
+  (DesignNotes). **Ragavan, Death-Greeter's Champion** — dash `Scripting.Dash(cost)`: warp's alternative cost, its
+  `PaidAtNextEndStep` the return to hand, haste a static `If = AlternativeCostWasPaid`; Ragavan's exile Black Widow's
+  `ExileTopPlayable { Of = EachOpponent }` with `Play { ThisTurn, CastOnly }`; backup `Scripting.Backup(n, keyword)`
+  (one keyword, DesignNotes). **Fear of Missing Out** (i3, the new piece) — `AdditionalCombatPhase` counts
+  `MagicGame.AdditionalCombats`, taken by `TurnStructure.EndStep` as an end of combat step ends (`Combat.EndCombat`,
+  then a beginning of combat: CR 500.8, no main phase); "attacks for the first time each turn" is `Trigger.Nth = 1`
+  on `Attacked`, against `AttackedEvent.Number` (`Card.TimesAttacked`). Legal actions: none grow with the board
+  (Batroc one cast per kick count, his targets one word at a time; dash one cast more per card). 13 tests (2 the review's) in
+  `LsvBatch2i2bTests.cs`; 11/11 revert-checks caught (the extra combat's removal from combat only after the test
+  gained a Bear attacking in the first combat alone). Golden-out moved nothing (162 random, 875 card games); golden-in
+  moved 30 random and 257 card games, 16 added, no AI game; probe 150: none unfinished, every card used (Batroc 313
+  casts, Fear of Missing Out 289); suite 2,132 passed; the checks 22.8 min. The review's fixes, each with a test
+  (2/2 revert-checks): a required "X targets" trigger with fewer objects than X is removed (CR 603.3d), never an
+  unanswerable pick; the evaluator's "their combat is over" (`untapsFirst`, a walker's `attackFirst`) reads
+  `AdditionalCombats` — a tapped blocker can't block the combat still owed. After them the full suite again, 2,134 passed.
 
 ## Tasks
 
@@ -1716,9 +1737,9 @@ as his three priorities.
           Breach, Gut, True Soul Zealot, Headliner Scarlett
     - [x] MC-4.4i2a Options, triggers and combat, 4: Fury, Ivora, Insatiable Heir, Dragon's Rage Channeler, Caves of
           Chaos Adventurer
-    - [ ] MC-4.4i2b Options, casting, 3 (one batch with i3): Batroc the Leaper (multikicker), Ragavan, Nimble Pilferer and Death-Greeter's
+    - [x] MC-4.4i2b Options, casting, 3 (one batch with i3): Batroc the Leaper (multikicker), Ragavan, Nimble Pilferer and Death-Greeter's
           Champion (dash, backup)
-    - [ ] MC-4.4i3 An additional combat phase: Fear of Missing Out
+    - [x] MC-4.4i3 An additional combat phase: Fear of Missing Out
     - [ ] MC-4.4i4 Counters on a player — energy (one batch with i5, i6): Galvanic Discharge (Guide of Souls waits for white)
     - [ ] MC-4.4i5 Transforming double-faced cards: Fable of the Mirror-Breaker
     - [ ] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
@@ -1745,9 +1766,15 @@ which every colour's survey missed (Decisions, "4.4i"; blue's three too). **Red 
 4.4i** (Decisions, "4.4i") — i1 the 6 tested pieces, i2a/i2b the 7 options, then i3–i6 one new piece a session (an
 extra combat, energy, transforming DFCs, Etali); i7 the missed blue and black DFCs — built as four batches, i1 + i2a,
 i2b + i3, i4–i6, i7 (Shayne: more cards a session). Each session ends with the cube's cards implemented by rarity AND
-by colour (`python tools/magic_set.py coverage --set LSV`). **i1 + i2a are done** (Decisions, "4.4i1 + i2a"; 293 of 528
-play, red 47 of 54). Next, in a NEW session: **MC-4.4i2b + i3** (4 cards: Batroc the Leaper, Ragavan, Death-Greeter's
-Champion, Fear of Missing Out). From i1 + i2a: delirium is `LsvCards.Delirium`; a trigger's divided targets are
+by colour (`python tools/magic_set.py coverage --set LSV`). **i1 + i2a and i2b + i3 are done** (Decisions, "4.4i1 +
+i2a", "4.4i2b + i3"; 297 of 528 play, red 51 of 54). Next, in a NEW session: **MC-4.4i4–i6** (3 cards: Galvanic
+Discharge — energy, counters on a player; Fable of the Mirror-Breaker — transforming DFCs; Etali, Primal Conqueror —
+transform by an activation, poison, casting any number free). From i2b + i3: multikicker is `Scripting.Multikicker`
+(`Count.TimesReplicated(Ref.Source)`); `TargetSpec.PerX` is a `Count` (a trigger's counted as it triggers); dash
+`Scripting.Dash(cost)`, backup `Scripting.Backup(n, keyword)`; an additional combat `AdditionalCombatPhase`
+(`MagicGame.AdditionalCombats`, `TurnStructure.EndStep`); "attacks for the first time each turn" `Trigger.Nth = 1` on
+`Attacked` (`AttackedEvent.Number`). Their tests are in `LsvBatch2i2bTests.cs` (`Ox(name)`, `Delirium()`,
+`AttackInEveryCombat(fomo, alongside)`). From i1 + i2a: delirium is `LsvCards.Delirium`; a trigger's divided targets are
 `Division.Words` / `Division.Ask` (`StackAbility.Shares`); `DiscardedEvent` is one per card ("one or more" is
 `OneOrMore`); "attacks each combat if able" is `Combat.AttacksEachCombat` (`Combat.MustAttack`); "if you've completed a
 dungeon" `YouCompletedADungeon`; the Blood token `Tokens.CreateBlood`. Their tests are in `LsvBatch2iTests.cs`
@@ -2070,3 +2097,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-20: MC-4.4i1 + i2a done as one batch: red's 6 tested pieces and 4 options — 293 of 528 play (red 47 of 54).
   A trigger's divided targets, one discard event per card, `Combat.MustAttack`, completed dungeons counted.
   Next: MC-4.4i2b + i3.
+- 2026-11-20: MC-4.4i2b + i3 done as one batch: multikicker, dash, backup, an additional combat phase — 297 of 528 play
+  (red 51 of 54). `TargetSpec.PerX` a `Count`; `AdditionalCombatPhase`; `Trigger.Nth` on attacks. Next: MC-4.4i4–i6.

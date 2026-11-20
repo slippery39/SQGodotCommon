@@ -631,12 +631,8 @@ public static class MagicState
 			.PutCounters(cardId, CounterKinds.Time, card.GetComponent<Vanishing>()?.N ?? 0); // vanishing: "enters with N time counters"
 		var entersWith = card.GetComponent<EntersWithCountersComponent>();
 		var entersWithN =
-			entersWith?.Count.Value(
-				s,
-				ImmutableDictionary<string, object>
-					.Empty.Add(ContextKeys.Controller, controllerId)
-					.Add(ContextKeys.X, spell?.X ?? 0)
-			) ?? 0;
+			// Batroc the Leaper: "a +1/+1 counter for each time he was kicked" — Ref.Source is the card entering
+			entersWith?.Count.Value(s, entryContext.Add(ContextKeys.X, spell?.X ?? 0)) ?? 0;
 		var plusOne = entersWith is null or { Kind: CounterKinds.PlusOne };
 		s = s.AddPlusOneCounters(
 			cardId,

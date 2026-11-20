@@ -47,6 +47,13 @@ public record MagicGame : GameObject
 	/// </summary>
 	public ImmutableList<int> ExtraTurns { get; init; } = [];
 
+	/// <summary>
+	/// Fear of Missing Out: "After this phase, there is an additional combat phase" (CR 500.8) — how many are owed,
+	/// each taken as an end of combat step ends (TurnStructure.EndStep): the next step is a beginning of combat, no
+	/// main phase between. Reset as each turn begins.
+	/// </summary>
+	public int AdditionalCombats { get; init; }
+
 	public Step Step { get; init; } = Step.PreGame;
 
 	/// <summary>0 while nobody has priority: pregame, untap, cleanup, a pending choice, game over.</summary>

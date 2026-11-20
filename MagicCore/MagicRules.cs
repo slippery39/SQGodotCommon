@@ -301,7 +301,7 @@ public static class MagicRules
 				.ToList();
 		// Dominion Infiltration's "X target creatures": one cast per X, the targets a choice as it is cast
 		// (CastSpellAction.ChoosesTargets) — never a cast per set, 2^n against n creatures.
-		var perX = text?.Targets.Any(t => t.PerX) == true;
+		var perX = text?.Targets.Any(t => t.PerX is not null) == true;
 		// Pyrokinesis' 4 damage divided among any number of targets: the same, at any X — its sets and splits
 		// are 1,365 casts against 12 creatures. Pure Energy's two stay casts: one per creature and per pair.
 		var divided = text?.Targets.Any(t => t.Divide > 2) == true;
@@ -720,6 +720,7 @@ public static class MagicRules
 				EnteredOnTurn = Now(c.EnteredOnTurn),
 				ControlledSinceTurn = Turns.Combat.IsSummoningSick(s, c) ? 1 : 0,
 				AttackedOnTurn = Now(c.AttackedOnTurn),
+				TimesAttacked = Now(c.AttackedOnTurn) * c.TimesAttacked,
 				LoyaltyActivatedOnTurn = Now(c.LoyaltyActivatedOnTurn),
 				OncePerTurnTriggeredOn = Now(c.OncePerTurnTriggeredOn),
 				ResolvedOnTurn = Now(c.ResolvedOnTurn),

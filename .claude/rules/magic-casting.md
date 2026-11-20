@@ -159,6 +159,12 @@ whose subsystem it lives in.
   copied as it is cast; the count rides the spell (`OnStackComponent.Replicate` → `Card.CastAs`), and
   `Scripting.Squad(cost)`'s "when this enters, if its squad cost was paid" makes `CreateTokenCopy(Ref.Source) { N =
   Count.TimesReplicated(Ref.Source) }`. A token copy wasn't cast, so its squad makes none.
+  **Multikicker** (CR 702.33c, Batroc the Leaper, MC-4.4i2b) is that payment with nothing made of it,
+  `Scripting.Multikicker(cost)`: the card reads `Count.TimesReplicated(Ref.Source)` — "enters with a +1/+1 counter for
+  each time" is `EntersWithCountersComponent(that count)` (its context has `Ref.Source`, the card entering). Not
+  `WasKicked` (DesignNotes). **"Each of up to X targets, where X is …"** is `TargetSpec.PerX` — a `Count`, this word
+  that many times, each `NotThePrevious` (`Optional`: "up to"): a trigger's counted as it triggers
+  (`Triggers.QueueTargets`, one `ChooseTargetChoice` per word), a spell's always its X (Dominion Infiltration's `Count.X`).
   **Storm** (CR 702.40, Brain Freeze, MC-4.4g7) is `Scripting.Storm`: a "when you cast this spell" trigger
   (`TriggerEvent.SelfCast`) of `CopySpell(Ref.EventCard) { N = Count.SpellsCastBefore(Ref.EventCard) }`. The count is
   EVERY player's spells this turn, stamped as it is cast (`OnStackComponent.SpellsCastBefore`, from both tallies), so a
@@ -254,6 +260,12 @@ whose subsystem it lives in.
   that cost was paid, controlled by the spell's controller (CR 603.7d), set up in `EnterFromStackAction` as it resolves, never a "when it enters" (nothing to answer, CR 702.185a). Warp's is `MoveTo(Ref.Source, Exile)` then
   `MakePlayable(Ref.ThisWay, { By = its owner, Forever, LaterTurn, CastOnly })` — `LaterTurn` stamps
   `PlayableFromExile.FromTurn`, the next turn, read by `Playable.IsImpulsePlayableBy`. From exile it costs its mana cost.
+  **Dash** (CR 702.109, Ragavan, Death-Greeter's Champion, MC-4.4i2b) is `Scripting.Dash(cost)`: warp's shape, its
+  `PaidAtNextEndStep` `MoveTo(Ref.Source, Hand) { From = [Battlefield] }`, and haste a static `If =
+  AlternativeCostWasPaid` (read on the permanent, `Card.CastAs`: a new object of it wasn't dashed).
+  **Backup N** (CR 702.165, Death-Greeter's Champion) is `Scripting.Backup(n, keyword)`: a `SelfEnters` trigger,
+  `PutCounters(target, n)`, then `If(Matches(Target(0), !Is.Source))` the keyword until end of turn — one keyword
+  (DesignNotes).
   **"You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't have been cast, …
   sacrifices it at the beginning of the next cleanup step"** (Necromancy, MC-4.4h5) is `CastAsThoughItHadFlash(effects)`:
   read by `Priority.AtInstantSpeed`, the cast stamped `OnStackComponent.NotAtSorcerySpeed` (judged before it moves to the

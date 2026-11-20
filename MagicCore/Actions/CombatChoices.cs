@@ -218,12 +218,15 @@ public record FinishAttackersAction : GameAction
 		foreach (var (id, target) in declared)
 		{
 			var card = s.GetCard(id);
+			var turn = s.GetGame().TurnNumber;
+			var number = card.AttackedOnTurn == turn ? card.TimesAttacked + 1 : 1;
 			s = s.UpdateObject(
 				id,
 				card with
 				{
 					AttackingId = target,
-					AttackedOnTurn = s.GetGame().TurnNumber,
+					AttackedOnTurn = turn,
+					TimesAttacked = number,
 				}
 			);
 			if (!s.Has(card, "Vigilance"))
@@ -234,7 +237,7 @@ public record FinishAttackersAction : GameAction
 					card.ControllerId,
 					t => t with { SubtypesAttacked = [.. t.SubtypesAttacked.Union(subtypes)] }
 				);
-			s = s.Raise(new AttackedEvent(id));
+			s = s.Raise(new AttackedEvent(id) { Number = number });
 		}
 		// "Whenever you attack": once for the whole declaration, however many attack.
 		if (declared.Count > 0)

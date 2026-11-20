@@ -184,6 +184,12 @@ public record Card : GameObject
 	/// <summary>TurnNumber it was last declared as an attacker — Hexhaven's "creature that attacked this turn".</summary>
 	public int AttackedOnTurn { get; init; }
 
+	/// <summary>
+	/// How many times it was declared as an attacker on turn AttackedOnTurn — an additional combat phase (Fear of
+	/// Missing Out) makes it more than one: "attacks for the first time each turn" (AttackedEvent.Number).
+	/// </summary>
+	public int TimesAttacked { get; init; }
+
 	/// <summary>-1/-1 counters — annihilated with +1/+1 counters by the state-based check (CR 704.5q).</summary>
 	public int MinusOneCounters { get; init; }
 
@@ -311,6 +317,7 @@ public record Card : GameObject
 			LoyaltyActivatedOnTurn = 0,
 			EnteredOnTurn = 0,
 			AttackedOnTurn = 0,
+			TimesAttacked = 0,
 			OncePerTurnTriggeredOn = 0,
 			ModesChosen = 0,
 			ResolvedTimes = 0,

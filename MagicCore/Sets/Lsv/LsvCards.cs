@@ -2909,6 +2909,59 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4i2b + i3: multikicker, dash, backup, an additional combat phase =====
+			["Batroc the Leaper"] =
+			[
+				Multikicker("{2}"),
+				new EntersWithCountersComponent(Count.TimesReplicated(Ref.Source)),
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						TargetSpec.AnyTarget() with
+						{
+							PerX = Count.TimesReplicated(Ref.Source),
+							Optional = true,
+						},
+					],
+					new DealDamage(Ref.EachTarget, Count.PowerOf(Ref.Source))
+				),
+			],
+			["Ragavan, Nimble Pilferer"] =
+			[
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					CreateTreasure(1),
+					new ExileTopPlayable
+					{
+						Of = Ref.EachOpponent, // "that player": the one dealt the damage, the opponent
+						Play = new() { ThisTurn = true, CastOnly = true },
+					}
+				),
+				.. Dash("{1}{R}"),
+			],
+			["Death-Greeter's Champion"] = [.. Dash("{3}{R}"), Backup(1, "Double strike")],
+			["Fear of Missing Out"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Discard(Ref.You, 1),
+					new DrawCards(Ref.You, 1)
+				),
+				When(
+					TriggerEvent.SelfAttacks with
+					{
+						Nth = 1,
+					},
+					[Creature],
+					new Untap(Ref.Target()),
+					new AdditionalCombatPhase()
+				) with
+				{
+					If = Delirium,
+				},
+			],
 		};
 
 	/// <summary>

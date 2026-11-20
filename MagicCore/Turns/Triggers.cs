@@ -42,6 +42,12 @@ public record EnteredBattlefieldEvent(
 /// <summary>A creature was declared as an attacker — one event per attacker.</summary>
 public record AttackedEvent(int CardId) : MagicEvent
 {
+	/// <summary>
+	/// Fear of Missing Out: "Whenever this creature attacks for the first time each turn" — which of this object's
+	/// attacks this turn it is (Card.TimesAttacked), read by Trigger.Nth.
+	/// </summary>
+	public int Number { get; init; } = 1;
+
 	public override EventKind Kind() => EventKind.Attacked;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
@@ -806,6 +812,7 @@ public static class Triggers
 				{
 					SpellCastEvent cast => cast.SpellNumber,
 					DrewCardEvent drew => drew.Number,
+					AttackedEvent attacked => attacked.Number,
 					_ => 0,
 				}
 		)
@@ -1037,12 +1044,31 @@ public static class Triggers
 	)
 	{
 		var controller = t.Source.ControllerId;
+		// Fury: "4 damage divided as you choose among any number of target creatures and/or planeswalkers" — N words
+		// chosen one at a time, as a spell's are (Division.Words), the division after them (CR 603.3d). Batroc the
+		// Leaper's "each of up to X targets": the word N times, N counted as it triggers (TargetSpec.PerX).
+		var divided = specs.Sum(spec => spec.Divide);
+		var tooFew = false;
+		specs =
+		[
+			.. specs.SelectMany(spec =>
+			{
+				if (spec.PerX is not { } n)
+					return Actions.Division.Words(spec);
+				var count = n.Value(s, ContextOf(t));
+				// CR 603.3d: a required "X targets" needs X different objects, or the trigger is removed — never a
+				// pick with nothing left to choose.
+				tooFew |=
+					!spec.Optional && count > spec.Candidates(s, controller, t.Source.Id).Count();
+				return Enumerable
+					.Range(0, count)
+					.Select(i => spec with { PerX = null, NotThePrevious = i > 0 });
+			}),
+		];
+		if (tooFew)
+			return s;
 		if (specs.Any(spec => !spec.Optional && !spec.Candidates(s, controller, t.Source.Id).Any()))
 			return s;
-		// Fury: "4 damage divided as you choose among any number of target creatures and/or planeswalkers" — N words
-		// chosen one at a time, as a spell's are (Division.Words), the division after them (CR 603.3d).
-		var divided = specs.Sum(spec => spec.Divide);
-		specs = [.. specs.SelectMany(Actions.Division.Words)];
 		if (t.Ability.If is { } condition)
 			steps = [new If(condition, steps)]; // CR 603.4: checked again on resolution
 		return s.SpawnAction(

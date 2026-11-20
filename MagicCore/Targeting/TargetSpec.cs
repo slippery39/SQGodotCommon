@@ -55,10 +55,12 @@ public record TargetSpec(From From, Filter? Filter = null)
 	public bool OfThePreviousTargetsController { get; init; }
 
 	/// <summary>
-	/// Dominion Infiltration: "Choose X target creatures your opponents control" — this word X times, X as
-	/// cast, each a different object: one cast per SET, never per order (StackResolution.TextOf).
+	/// Dominion Infiltration: "Choose X target creatures your opponents control" — this word N times, each a different
+	/// object: a spell's N is the X it is cast with (Count.X), one cast per SET, never per order (StackResolution.TextOf);
+	/// a trigger's is counted as it triggers (Triggers.QueueTargets) — Batroc the Leaper: "each of up to X targets, where
+	/// X is the number of times he was kicked" (Count.TimesReplicated(Ref.Source), Optional).
 	/// </summary>
-	public bool PerX { get; init; }
+	public Effects.Count? PerX { get; init; }
 
 	/// <summary>
 	/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — N of something divided

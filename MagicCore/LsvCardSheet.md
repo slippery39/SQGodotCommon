@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 36/46 · uncommon 58/86 · rare 137/279 · mythic 53/108 · **293/528**
+**Playable:** common 36/46 · uncommon 58/86 · rare 140/279 · mythic 54/108 · **297/528**
 
 ### "Name Sticker" Goblin
 
@@ -1487,9 +1487,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[],
 		new MaySacrifice(
 			Is.Creature & !Is.Source | Is.Artifact,
-			[
-				new CreateTokens(Skeleton, 1) { Tapped = true, Attacking = true },
-			]
+			[new CreateTokens(Skeleton, 1) { Tapped = true, Attacking = true }]
 		)
 	),
 ],
@@ -2622,7 +2620,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Batroc enters with a +1/+1 counter on him for each time he was kicked.  
 > When Batroc enters, he deals damage equal to his power to each of up to X targets, where X is the number of times he was kicked.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i2bTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `EntersWithCountersComponent` — "This creature enters with N (or X) +1/+1 counters on it." Applied by…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Batroc the Leaper"] =
+[
+	Multikicker("{2}"),
+	new EntersWithCountersComponent(Count.TimesReplicated(Ref.Source)),
+	When(
+		TriggerEvent.SelfEnters,
+		[
+			TargetSpec.AnyTarget() with
+			{
+				PerX = Count.TimesReplicated(Ref.Source),
+				Optional = true,
+			},
+		],
+		new DealDamage(Ref.EachTarget, Count.PowerOf(Ref.Source))
+	),
+],
+```
 
 ### Bayou
 
@@ -2943,7 +2962,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 					]
 				)
 				{
-					Otherwise = [new MakePlayable(Ref.ThisWay, new() { ThisTurn = true })],
+					Otherwise =
+					[
+						new MakePlayable(Ref.ThisWay, new() { ThisTurn = true }),
+					],
 				},
 			],
 		}
@@ -3436,7 +3458,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Backup 1 (When this creature enters, put a +1/+1 counter on target creature. If that's another creature, it gains the following ability until end of turn.)  
 > Double strike
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i2bTests
+
+```csharp
+["Death-Greeter's Champion"] = [.. Dash("{3}{R}"), Backup(1, "Double strike")],
+```
 
 ### Delighted Halfling
 
@@ -3919,7 +3945,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, discard a card, then draw a card.  
 > Delirium — Whenever this creature attacks for the first time each turn, if there are four or more card types among cards in your graveyard, untap target creature. After this phase, there is an additional combat phase.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i2bTests
+
+**Engine pieces:** `AdditionalCombatPhase` — Fear of Missing Out: "After this phase, there is an additional combat phase." (CR 500.8)…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Fear of Missing Out"] =
+[
+	When(TriggerEvent.SelfEnters, [], new Discard(Ref.You, 1), new DrawCards(Ref.You, 1)),
+	When(
+		TriggerEvent.SelfAttacks with { Nth = 1 },
+		[Creature],
+		new Untap(Ref.Target()),
+		new AdditionalCombatPhase()
+	) with
+	{
+		If = Delirium,
+	},
+],
+```
 
 ### Fiery Confluence
 
@@ -4432,7 +4476,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.YourUpkeep,
 		[],
-		new ExileTopPlayable { FaceDown = true, Play = new() { ThisTurn = true } }
+		new ExileTopPlayable
+		{
+			FaceDown = true,
+			Play = new() { ThisTurn = true },
+		}
 	),
 ],
 ```
@@ -8365,7 +8413,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever Ragavan deals combat damage to a player, create a Treasure token and exile the top card of that player's library. Until end of turn, you may cast that card.  
 > Dash {1}{R} (You may cast this spell for its dash cost. If you do, it gains haste, and it's returned from the battlefield to its owner's hand at the beginning of the next end step.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i2bTests
+
+**Engine pieces:** `ExileTopPlayable` — MC-6.9: THE "exile these, they may be played" effect. Blazing Crescendo: "Exile the top…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Ragavan, Nimble Pilferer"] =
+[
+	When(
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		[],
+		CreateTreasure(1),
+		new ExileTopPlayable
+		{
+			Of = Ref.EachOpponent, // "that player": the one dealt the damage, the opponent
+			Play = new() { ThisTurn = true, CastOnly = true },
+		}
+	),
+	.. Dash("{1}{R}"),
+],
+```
 
 ### Robber of the Rich
 

@@ -76,7 +76,7 @@ public static partial class Evaluator
 		var attackFirst =
 			game.ActivePlayerId == me
 				? c.LoyaltyActivatedOnTurn == game.TurnNumber || game.Step >= Step.End
-				: game.Step < Step.EndCombat;
+				: game.Step < Step.EndCombat || game.AdditionalCombats > 0;
 		return Priced(
 			Lifetime(s, me, options, perTurn, perActivation, c.Loyalty, attackFirst),
 			c.Loyalty

@@ -1119,10 +1119,10 @@ public static class StackResolution
 		ImmutableList<TargetSpec> words =
 		[
 			.. specs.SelectMany(t =>
-				t.PerX
+				t.PerX is not null // ponytail: a spell's PerX is its X — another Count there would need the state here
 					? Enumerable
 						.Range(0, x)
-						.Select(i => t with { PerX = false, NotThePrevious = i > 0 })
+						.Select(i => t with { PerX = null, NotThePrevious = i > 0 })
 					: Division.Words(t)
 			),
 		];

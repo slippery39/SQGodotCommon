@@ -289,6 +289,18 @@ public record TakeExtraTurn : Effect
 }
 
 /// <summary>
+/// Fear of Missing Out: "After this phase, there is an additional combat phase." (CR 500.8) — counted on
+/// MagicGame.AdditionalCombats, taken as the end of combat step ends (TurnStructure.EndStep). ponytail: "after this
+/// phase" is read as after this COMBAT — the only card says it during one; a main-phase "additional combat phase
+/// followed by an additional main phase" (Relentless Assault) needs the main phase too.
+/// </summary>
+public record AdditionalCombatPhase : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.WithGame(s.GetGame() with { AdditionalCombats = s.GetGame().AdditionalCombats + 1 }));
+}
+
+/// <summary>
 /// "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through MagicState.PutCounters
 /// (Yoshimaru's, Brad's and Geordi's replacements apply there). +1/+1 by default; Cryotheory Adept: { Kind =
 /// Stun }; Gardenize: { Kind = Charge }; Anthropological Mission: { Kind = Quest }. N is counted for EACH

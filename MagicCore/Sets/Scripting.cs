@@ -313,6 +313,52 @@ public static class Scripting
 		];
 
 	/// <summary>
+	/// Multikicker (CR 702.33c) — Batroc the Leaper: "Multikicker {2} (You may pay an additional {2} any number of times
+	/// as you cast this spell.)" — squad's payment (CastSpellAction.Replicate, one cast per number of payments) with nothing
+	/// made of it: the card reads the count, Count.TimesReplicated (on the stack, or the permanent it became). ponytail:
+	/// WasKicked doesn't read it — no multikicker card says "if this spell was kicked".
+	/// </summary>
+	public static ReplicateComponent Multikicker(string cost) =>
+		new(ManaCost.Parse(cost)) { AsItEnters = true };
+
+	/// <summary>
+	/// Dash (CR 702.109) — Ragavan, Nimble Pilferer: "Dash {1}{R} (You may cast this spell for its dash cost. If you do,
+	/// it gains haste, and it's returned from the battlefield to its owner's hand at the beginning of the next end
+	/// step.)" — warp's shape: an alternative mana cost from the hand, its PaidAtNextEndStep the return, and haste while
+	/// that cost was paid (AlternativeCostWasPaid, read on the permanent: a new object of it wasn't dashed).
+	/// </summary>
+	public static GameComponent[] Dash(string cost) =>
+		[
+			new MayCastFromHandFree(Is.Source)
+			{
+				Mana = ManaCost.Parse(cost),
+				From = [ZoneType.Hand],
+				PaidAtNextEndStep =
+				[
+					new MoveTo(Ref.Source, ZoneType.Hand) { From = [ZoneType.Battlefield] },
+				],
+			},
+			new StaticEffectComponent(Is.Source, "Haste") { If = new AlternativeCostWasPaid() },
+		];
+
+	/// <summary>
+	/// Backup N (CR 702.165) — Death-Greeter's Champion: "Backup 1 (When this creature enters, put a +1/+1 counter on
+	/// target creature. If that's another creature, it gains the following ability until end of turn.)" — the ability
+	/// below it is a keyword (Double strike). ponytail: one keyword; a backup granting a triggered ability needs
+	/// ModifyUntilEndOfTurn.Gains.
+	/// </summary>
+	public static TriggeredAbilityComponent Backup(int n, string keyword) =>
+		When(
+			TriggerEvent.SelfEnters,
+			[Creature],
+			new PutCounters(Ref.Target(), n),
+			new If(
+				new Matches(Ref.Target(0), !Is.Source),
+				[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, keyword)]
+			)
+		);
+
+	/// <summary>
 	/// Storm (CR 702.40) — Brain Freeze: "When you cast this spell, copy it for each spell cast before it this turn. You
 	/// may choose new targets for the copies." — every player's spells, counted as it was cast
 	/// (Count.SpellsCastBefore); a copy isn't cast, so it has no storm of its own. Countered in response, it is still

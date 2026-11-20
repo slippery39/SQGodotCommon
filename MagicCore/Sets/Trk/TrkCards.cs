@@ -2956,7 +2956,7 @@ public static class TrkCards
 			["Dominion Infiltration"] =
 			[
 				Spell(
-					[Target(Is.Creature & Is.Opponents) with { PerX = true }],
+					[Target(Is.Creature & Is.Opponents) with { PerX = Count.X }],
 					new CreateTokenCopy(Ref.EachTarget)
 					{
 						AddingKeywords = ["Changeling", "Haste"],

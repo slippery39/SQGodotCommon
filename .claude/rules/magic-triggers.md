@@ -207,11 +207,19 @@ whose subsystem it lives in.
   ("haven't begun an extra turn this game", `HaventBegunAnExtraTurn`). `TurnNumber` counts it like any turn, so
   every "this turn" stamp holds. Turns no longer alternate: **summoning sickness reads `MagicPlayer.TurnBeganOn`**,
   never "the turn before".
+- **An additional combat phase** (CR 500.8, Fear of Missing Out, MC-4.4i3) is `AdditionalCombatPhase`: a count on
+  `MagicGame.AdditionalCombats`, taken by `TurnStructure.EndStep` as an end of combat step ends — creatures removed
+  from combat (`Combat.EndCombat`), then a beginning of combat step, no main phase between; reset as each turn begins.
+  "After this phase" is read as after this combat (DesignNotes). Every combat step's triggers fire again in it.
+  **"Whenever this creature attacks for the first time each turn"** is `Trigger.Nth = 1` on an `Attacked` trigger,
+  against `AttackedEvent.Number` — that object's attacks this turn (`Card.TimesAttacked`, with `AttackedOnTurn`) —
+  never `OncePerTurn`, which stamps a TRIGGER: an attack before delirium never triggered.
 - **"Your second spell each turn"** (Stella Lee) is `Trigger.Nth = 2` against `SpellCastEvent.SpellNumber`,
   numbered as it is cast (any kind; `NoncreatureSpellNumber` beside it). **"Whenever an opponent draws their second
   card each turn"** (Faerie Mastermind, MC-4.4e2b) is the same option on a `Drew` trigger, against
   `DrewCardEvent.Number` — the drawer's count this turn, stamped by `MagicState.Draw` as each card is drawn, so two
-  drawn in one resolution are the first and the second. `Nth` fits those two kinds only; never a second number.
+  drawn in one resolution are the first and the second. `Nth` fits those two kinds and `Attacked` (above) only; never a
+  second number.
   **"Whenever an opponent draws a card except the first one they draw in each of their draw steps"** (Orcish
   Bowmasters, MC-4.4h2d) is `Trigger(Drew) { Also = EventTest.NotTheTurnsDraw }`, against `DrewCardEvent.TurnDraw` — the
   draw step's own first card, the one Hullbreacher's `ExceptTheTurnsDraw` excepts (`Draw(…, turnDraw: true)`, i == 0).

@@ -792,7 +792,10 @@ public static partial class Evaluator
 		// A tapped blocker blocks the next attack only if the defender untaps first: the attacker's own
 		// combat this turn is over, so its next attack comes after the defender's turn.
 		var game = s.GetGame();
-		var untapsFirst = game.ActivePlayerId == attacker && game.Step >= Step.EndCombat;
+		var untapsFirst =
+			game.ActivePlayerId == attacker
+			&& game.Step >= Step.EndCombat
+			&& game.AdditionalCombats == 0; // Fear of Missing Out: another combat is owed
 		var blockers = new List<Card>();
 		foreach (var c in s.CardsIn(defender, ZoneType.Battlefield))
 			if (c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))

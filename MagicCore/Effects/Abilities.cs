@@ -33,7 +33,8 @@ public record ReplicateComponent(ManaCost Cost) : GameComponent
 	/// <summary>
 	/// Squad (Sicarian Infiltrator): "As an additional cost to cast this spell, you may pay {2} any number of times.
 	/// When this creature enters, create that many tokens that are copies of it." — paid as replicate is, but nothing
-	/// is copied as it is cast: Scripting.Squad's trigger reads the payments (Count.TimesReplicated).
+	/// is copied as it is cast: Scripting.Squad's trigger reads the payments (Count.TimesReplicated). Multikicker
+	/// (Batroc the Leaper, Scripting.Multikicker) is the same payment, read by the card's own text.
 	/// </summary>
 	public bool AsItEnters { get; init; }
 }
@@ -245,16 +246,20 @@ public record Trigger(EventKind On)
 	/// <summary>
 	/// Stella Lee, Wild Card: "Whenever you cast your second spell each turn"; Faerie Mastermind: "Whenever an
 	/// opponent draws their second card each turn" — the event of that player's Nth spell (SpellCast) or Nth
-	/// card drawn (Drew) this turn, numbered as it happens (SpellCastEvent.SpellNumber, DrewCardEvent.Number).
+	/// card drawn (Drew) this turn, numbered as it happens (SpellCastEvent.SpellNumber, DrewCardEvent.Number);
+	/// Fear of Missing Out: "Whenever this creature attacks for the first time each turn" — the creature's Nth
+	/// attack (Attacked, AttackedEvent.Number).
 	/// </summary>
 	public int Nth
 	{
 		get => nth;
 		init =>
 			nth =
-				value == 0 || On is EventKind.SpellCast or EventKind.Drew
+				value == 0 || On is EventKind.SpellCast or EventKind.Drew or EventKind.Attacked
 					? value
-					: throw new ArgumentException($"An Nth only fits SpellCast or Drew, not {On}");
+					: throw new ArgumentException(
+						$"An Nth only fits SpellCast, Drew or Attacked, not {On}"
+					);
 	}
 
 	readonly string? ability;
