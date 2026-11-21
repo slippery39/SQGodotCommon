@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 40/46 · uncommon 64/86 · rare 177/279 · mythic 70/108 · **360/528**
+**Playable:** common 40/46 · uncommon 65/86 · rare 179/279 · mythic 71/108 · **364/528**
 
 ### "Name Sticker" Goblin
 
@@ -646,7 +646,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}, Sacrifice a Forest: Add three mana in any combination of {R} and/or {G}.
 
-**Status:** scripted · **tests naming it:** LsvBatch2c2Tests
+**Status:** scripted · **tests naming it:** LsvBatch2c2Tests, LsvBatch2k3Tests
 
 **Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `TapSelfCost` — "{T}:" — tap this permanent.
 
@@ -1900,7 +1900,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever this creature attacks, destroy target artifact or enchantment defending player controls.  
 > Nightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k3Tests
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Outland Liberator // Frenzied Trapbreaker"] =
+[
+	LiberatorsSacrifice,
+	BackFace(
+		"Outland Liberator // Frenzied Trapbreaker",
+		LiberatorsSacrifice,
+		When(
+			TriggerEvent.SelfAttacks,
+			// "defending player controls" — the one opponent
+			[Target((Is.Artifact | Is.Enchantment) & Is.Opponents)],
+			new Destroy(Ref.Target())
+		)
+	),
+],
+```
 
 ### Palace Jailer
 
@@ -4167,7 +4186,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever Esika's Chariot attacks, create a token that's a copy of target token you control.  
 > Crew 4
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k3Tests
+
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Esika's Chariot"] =
+[
+	When(TriggerEvent.SelfEnters, [], new CreateTokens(GreenCat, 2)),
+	When(
+		TriggerEvent.SelfAttacks,
+		[Target(Is.Token & Is.Yours)],
+		new CreateTokenCopy(Ref.Target())
+	),
+	Crew(4),
+],
+```
 
 ### Etali, Primal Conqueror // Etali, Primal Sickness
 
@@ -6884,7 +6918,39 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Enchanted creature gets +1/+1.  
 > Landfall — Whenever a land you control enters, you may pay {1}{G} if this permanent is attached to a creature you control. If you do, create a token that's a copy of that creature. If you didn't create a token this way, create a 1/1 green Insect creature token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k3Tests
+
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `PayMana` — Proft: "you may pay {2}" — the first step of a May's Then; its Can is CanPay…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Springheart Nantuko"] =
+[
+	.. Bestow("{1}{G}"),
+	AttachedGets(1, 1),
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[],
+		// "you may pay {1}{G} if this permanent is attached to a creature you control" — unattached, or
+		// unable or unwilling to pay, no token was created this way: the Insect
+		new If(
+			new Matches(Ref.EnchantedCreature, Is.Creature & Is.Yours),
+			[
+				MayPay(
+					"Pay {1}{G} to create a token that's a copy of the enchanted creature?",
+					new PayMana(
+						ManaCost.Parse("{1}{G}"),
+						[new CreateTokenCopy(Ref.EnchantedCreature)]
+					),
+					new CreateTokens(Insect, 1)
+				),
+			]
+		)
+		{
+			Otherwise = [new CreateTokens(Insect, 1)],
+		}
+	),
+],
+```
 
 ### Squandered Resources
 
@@ -8318,7 +8384,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, earthbend 1. (Target land you control becomes a 0/0 creature with haste that's still a land. Put a +1/+1 counter on it. When it dies or is exiled, return it to the battlefield tapped.)  
 > Whenever you tap a creature for mana, add an additional {G}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k3Tests
+
+**Engine pieces:** `ExtraMana` — Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional…
+
+```csharp
+["Badgermole Cub"] =
+[
+	When(TriggerEvent.SelfEnters, [Target(Is.Land & Is.Yours)], Earthbend(1)),
+	new ExtraMana(Is.Creature, ManaColor.Green),
+],
+```
 
 ### Balance
 

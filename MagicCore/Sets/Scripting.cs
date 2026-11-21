@@ -212,6 +212,26 @@ public static class Scripting
 		];
 
 	/// <summary>
+	/// Bestow (CR 702.103) — Springheart Nantuko: "Bestow {1}{G} (If you cast this card for its bestow cost, it's an
+	/// Aura spell with enchant creature. It becomes a creature again if it's not attached to a creature.)" — Baleful
+	/// Mastery's alternative mana cost with an enchant (MayCastFromHandFree.Enchant: the cast targets a creature and
+	/// the permanent enters attached to it), and Lion Sash's "while attached, this isn't a creature" — here an Aura
+	/// (BecomesType on itself). Its host gone, it falls off as a reconfigured Equipment does (Attachments.Detach) and
+	/// is a creature again. "Enchanted creature gets …" is the card's own static (AttachedGets).
+	/// ponytail: on the STACK a bestowed spell still reads as a creature spell ("whenever you cast a creature spell",
+	/// a counter for creature spells) — an Adventure's cast stamp if a card needs it (DesignNotes).
+	/// </summary>
+	public static GameComponent[] Bestow(string cost) =>
+		[
+			new MayCastFromHandFree(Is.Source) { Mana = ManaCost.Parse(cost), Enchant = Creature },
+			new BecomesType(Is.Source & Is.Attached)
+			{
+				Remove = CardType.Creature,
+				Subtype = "Aura",
+			},
+		];
+
+	/// <summary>
 	/// Overload (CR 702.96) — Damn: "Overload {2}{W}{W}" — Baleful Mastery's alternative mana cost, from wherever it is
 	/// cast, with no target words when paid; the text's "each" is an If(AlternativeCostWasPaid) beside its "target".
 	/// </summary>

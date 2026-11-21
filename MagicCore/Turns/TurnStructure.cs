@@ -193,6 +193,8 @@ public static class TurnStructure
 				BegunExtraTurn = s.GetPlayer(next).BegunExtraTurn || extra,
 			}
 		);
+		// Daybound: day or night for the turn about to begin, by the spells the turn just ended saw (CR 730.2a)
+		s = Rules.DayNight.NextTurn(s, game.ActivePlayerId);
 		return EnterStep(s, Step.Untap);
 	}
 

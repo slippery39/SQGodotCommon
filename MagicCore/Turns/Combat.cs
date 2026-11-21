@@ -467,20 +467,26 @@ public static class Combat
 			c =>
 				c.Damage > 0
 				|| c.DamagedByDeathtouch
-				|| c.Components.Any(x => x is UntilEndOfTurn { UntilTurnOf: 0 })
+				|| c.Components.Any(x =>
+					x is UntilEndOfTurn { UntilTurnOf: 0 } or Animated { EndsAtCleanup: true }
+				)
 				|| c.HasComponent<CopyUntilEndOfTurn>(),
 			c =>
-				(Card)(
-					c.WithoutCopyUntilEndOfTurn() with
-					{
-						Damage = 0,
-						DamagedByDeathtouch = false,
-					}
-				) with
+			{
+				// crew: "becomes an artifact creature until end of turn" — its types put back, BEFORE a copy until
+				// end of turn is undone (Card.Fresh's order): the stamp holds the types it had as it was crewed
+				var card = (
+					c.GetComponent<Animated>() is { EndsAtCleanup: true } ? c.WithoutAnimation() : c
+				).WithoutCopyUntilEndOfTurn();
+				return card with
 				{
-					Components = c.WithoutCopyUntilEndOfTurn()
-						.Components.RemoveAll(x => x is UntilEndOfTurn { UntilTurnOf: 0 }),
-				}
+					Damage = 0,
+					DamagedByDeathtouch = false,
+					Components = card.Components.RemoveAll(x =>
+						x is UntilEndOfTurn { UntilTurnOf: 0 }
+					),
+				};
+			}
 		);
 
 	/// <summary>

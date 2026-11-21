@@ -402,7 +402,12 @@ public class FraEngineTests : FraBoardTest
 	{
 		for (var i = 0; i < 8; i++)
 			Field(TestGames.Card("Mountain"), me);
-		s = GetEmblem.ToCommandZone(s, me, "Molten Tide", [new ExtraRedFromMountains()]); // TEST SETUP: Molten Tide resolved
+		s = GetEmblem.ToCommandZone(
+			s,
+			me,
+			"Molten Tide",
+			[new ExtraMana(global::MagicCore.Filters.Is.Subtype("Mountain"), ManaColor.Red)]
+		); // TEST SETUP: Molten Tide resolved
 		TapAllLandsBut();
 		foreach (
 			var m in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Name == "Mountain").ToList()

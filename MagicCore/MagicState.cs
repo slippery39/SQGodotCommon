@@ -608,6 +608,14 @@ public static class MagicState
 		var from = s.GetParent(cardId) is { } parent
 			? (s.GetObject(parent) as Zone)?.ZoneType
 			: null;
+		// Daybound (Outland Liberator): the first one makes it day (CR 730.2); at night it enters transformed
+		// (CR 702.145d). A face-down card has no abilities as it enters.
+		if (!faceDown && Rules.DayNight.EntersBound(s.GetCard(cardId)))
+		{
+			if (s.GetGame().Daytime == Rules.Daytime.Neither)
+				s = Rules.DayNight.Become(s, Rules.Daytime.Day);
+			transformed |= s.GetGame().Daytime == Rules.Daytime.Night;
+		}
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
 		if (faceDown)
 			s = s.UpdateObject(cardId, s.GetCard(cardId).TurnedFaceDown());
@@ -617,11 +625,13 @@ public static class MagicState
 		// as it enters and until it leaves.
 		if (loses != CardType.None && s.GetCard(cardId) is var printed)
 			s = s.UpdateObject(cardId, printed.WithTypesUntilItLeaves(printed.Types & ~loses));
+		s = s.UpdateObject(cardId, s.GetCard(cardId) with { ControllerId = controllerId });
+		// Bestow (Springheart Nantuko, cast for its bestow cost): it enters attached, before its types are read — the
+		// Aura it is while attached is no creature entering. An Aura card attaches below, as ever.
+		if (attachTo != 0 && !s.GetCard(cardId).HasComponent<AuraComponent>())
+			s = Rules.Attachments.Attach(s, cardId, attachTo);
 		// Mogis: its type change is there as it enters — no "whenever a creature enters" sees a creature.
-		s = Rules.Attachments.Retype(
-			s.UpdateObject(cardId, s.GetCard(cardId) with { ControllerId = controllerId }),
-			cardId
-		);
+		s = Rules.Attachments.Retype(s, cardId);
 		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types, from));
 		var card = s.GetCard(cardId);
 		var entersTapped = card.GetComponent<EntersTappedComponent>();

@@ -4105,7 +4105,131 @@ public static class LsvCards
 				},
 				new Protection(Is.AnyCard) { If = HasLevel(8) },
 			],
+			// ===== MC-4.4k3: green's new pieces (crew: a type until end of turn; earthbend: a land a creature for good, its return, "an additional {G}"; bestow: an enchant on the alternative cost; day/night: Rules.DayNight) =====
+			["Esika's Chariot"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(GreenCat, 2)),
+				When(
+					TriggerEvent.SelfAttacks,
+					[Target(Is.Token & Is.Yours)],
+					new CreateTokenCopy(Ref.Target())
+				),
+				Crew(4),
+			],
+			["Badgermole Cub"] =
+			[
+				When(TriggerEvent.SelfEnters, [Target(Is.Land & Is.Yours)], Earthbend(1)),
+				new ExtraMana(Is.Creature, ManaColor.Green),
+			],
+			["Springheart Nantuko"] =
+			[
+				.. Bestow("{1}{G}"),
+				AttachedGets(1, 1),
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					// "you may pay {1}{G} if this permanent is attached to a creature you control" — unattached, or
+					// unable or unwilling to pay, no token was created this way: the Insect
+					new If(
+						new Matches(Ref.EnchantedCreature, Is.Creature & Is.Yours),
+						[
+							MayPay(
+								"Pay {1}{G} to create a token that's a copy of the enchanted creature?",
+								new PayMana(
+									ManaCost.Parse("{1}{G}"),
+									[new CreateTokenCopy(Ref.EnchantedCreature)]
+								),
+								new CreateTokens(Insect, 1)
+							),
+						]
+					)
+					{
+						Otherwise = [new CreateTokens(Insect, 1)],
+					}
+				),
+			],
+			["Outland Liberator // Frenzied Trapbreaker"] =
+			[
+				LiberatorsSacrifice,
+				BackFace(
+					"Outland Liberator // Frenzied Trapbreaker",
+					LiberatorsSacrifice,
+					When(
+						TriggerEvent.SelfAttacks,
+						// "defending player controls" — the one opponent
+						[Target((Is.Artifact | Is.Enchantment) & Is.Opponents)],
+						new Destroy(Ref.Target())
+					)
+				),
+			],
 		};
+
+	/// <summary>
+	/// Crew N (CR 702.122, Esika's Chariot): "Tap any number of other untapped creatures you control with total power N
+	/// or more: This Vehicle becomes an artifact creature until end of turn." — saddle's cost (TapUntappedCost
+	/// { TotalPower }, the creatures picked after activating; summoning-sick ones may crew) at instant speed, and the
+	/// creature type stamped until the cleanup step (ModifyUntilEndOfTurn.AlsoType); its printed power and toughness
+	/// are read while it is one.
+	/// </summary>
+	static ActivatedAbilityComponent Crew(int power) =>
+		new(
+			ManaCost.None,
+			[new ModifyUntilEndOfTurn(Ref.Source, 0, 0) { AlsoType = CardType.Creature }]
+		)
+		{
+			Keyword = "Crew",
+			Costs = [new TapUntappedCost(0, Is.Creature & !Is.Source) { TotalPower = power }],
+		};
+
+	/// <summary>
+	/// Earthbend N (CR 701.66, Badgermole Cub): "Target land you control becomes a 0/0 creature with haste that's still
+	/// a land. Put N +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped." — the
+	/// effects, on the ability's first target (a "target land you control" word). Does Machines' type change for good,
+	/// and Serra Paragon's gained leave trigger twice — to a graveyard, to exile — each returning the card from there.
+	/// ponytail: the return is the LAND's gained ability, so its controller's as it left, where CR 701.66 makes it the
+	/// earthbender's delayed trigger ("under your control") — the same player unless the land changed hands.
+	/// </summary>
+	static GameAction[] Earthbend(int n) =>
+		[
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Haste")
+			{
+				ForGood = true,
+				AlsoType = CardType.Creature,
+				SetBase = (0, 0),
+				Trigger = EarthbentReturns(ZoneType.Graveyard),
+			},
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+			{
+				ForGood = true,
+				Trigger = EarthbentReturns(ZoneType.Exile),
+			},
+			new PutCounters(Ref.Target(), n),
+		];
+
+	/// <summary>Earthbend: "When it dies or is exiled, return it to the battlefield tapped." — one zone's half.</summary>
+	static TriggeredAbilityComponent EarthbentReturns(ZoneType from) =>
+		When(
+			TriggerEvent.SelfLeaves with
+			{
+				To = from,
+			},
+			[],
+			new MoveTo(Ref.EventCard, ZoneType.Battlefield) { From = [from], Tapped = true }
+		);
+
+	/// <summary>Outland Liberator, and Frenzied Trapbreaker: "{1}, Sacrifice this creature: Destroy target artifact or enchantment."</summary>
+	static ActivatedAbilityComponent LiberatorsSacrifice =>
+		new(ManaCost.Parse("{1}"), [new Destroy(Ref.Target())])
+		{
+			Costs = [new SacrificeSelfCost()],
+			Targets = [Target(Is.Artifact | Is.Enchantment)],
+		};
+
+	/// <summary>Esika's Chariot: "a 2/2 green Cat creature token".</summary>
+	static CardData GreenCat => Token("Cat", "Creature — Cat", "2", "2", ["G"]);
+
+	/// <summary>Springheart Nantuko: "a 1/1 green Insect creature token".</summary>
+	static CardData Insect => Token("Insect", "Creature — Insect", "1", "1", ["G"]);
 
 	/// <summary>
 	/// Eternalize (CR 702.129; Fanatic of Rhonas): "[cost], Exile this card from your graveyard: Create a token that's a

@@ -58,7 +58,7 @@ MagicCore/
 ├── Cookbook.md          how to script a card, by pattern; the tiers of checking
 ├── DesignAudit.md       2026-10-10: what was reinvented instead of reused from MtgCore, and MtgCore's own flaws
 ├── FilterRefactorPlan.md  DONE (story MC-2): one composable Filter replacing the closed enums — the design and why
-├── Rules/Attachments.cs THE Aura/Equipment rules: attach, what's on a permanent, fall-off (state-based); Phasing.cs: THE phasing rules
+├── Rules/Attachments.cs THE Aura/Equipment rules: attach, what's on a permanent, fall-off (state-based); Phasing.cs: THE phasing rules; DayNight.cs: THE day/night designation (daybound)
 ├── Rules/Playable.cs    THE "may it be cast/played from here": hand, flashback, prepared copy, impulse exile
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
 ├── Rules/Life.cs        THE life-gain path ("whenever you gain life") and THE life-loss path (TurnTally.LifeLost)

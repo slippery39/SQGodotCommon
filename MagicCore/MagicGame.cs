@@ -54,6 +54,12 @@ public record MagicGame : GameObject
 	/// </summary>
 	public int AdditionalCombats { get; init; }
 
+	/// <summary>
+	/// Outland Liberator // Frenzied Trapbreaker: "Daybound" — the game's day/night designation (CR 730): neither until
+	/// a daybound permanent enters, then day or night for the rest of the game (Rules.DayNight).
+	/// </summary>
+	public Rules.Daytime Daytime { get; init; }
+
 	public Step Step { get; init; } = Step.PreGame;
 
 	/// <summary>0 while nobody has priority: pregame, untap, cleanup, a pending choice, game over.</summary>

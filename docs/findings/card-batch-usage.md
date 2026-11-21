@@ -108,3 +108,4 @@ after the split is DEV-4.3.
 | 2026-11-21 | MC-4.4k1: green's tested pieces (two took an option: IfNth Otherwise, a land's zone-change event), 21 cards | 4aaa62c6 | 73 | 225k | 2.3M |
 | 2026-11-21 | MC-4.4k2a: green's mana, land and token options (OnlyIf, eternalize, sacrifice event, Fastbond, shroud, persist), 7 cards | 88002b3e | 96 | 230k | 3.6M |
 | 2026-11-21 | MC-4.4k2b: green's trigger, combat and casting options (a spell as a target, attacks that player, any-kind counter removal, unpreventable combat damage, into a graveyard from anywhere, level up), 8 cards | a492df18 | 91 | 276k | 4.5M |
+| 2026-11-21 | MC-4.4k3: green's four new pieces (crew, earthbend, bestow, day/night), 4 cards | ae115d7d | 82 | 308k | 5.4M |

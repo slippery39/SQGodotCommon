@@ -282,7 +282,9 @@ public record TapForManaAction : GameAction
 		var pool = player.ManaPool;
 		foreach (var unit in yield.Units.Select((u, i) => (Colors: u, First: i == 0)))
 		{
-			var color = unit.First || yield.SameColor ? Color : unit.Colors[0];
+			// a unit of one colour is that colour (Badgermole Cub's additional {G}), whatever was chosen
+			var color =
+				unit.First || (yield.SameColor && unit.Colors.Length > 1) ? Color : unit.Colors[0];
 			// Restricted mana floats as restricted (ManaPool.Restricted) — what it may pay for stays with it.
 			pool =
 				yield.Restriction == Effects.ManaRestriction.None
@@ -305,6 +307,11 @@ public record TapForManaAction : GameAction
 	{
 		var ability = Chosen(s)!;
 		var n = Math.Max(0, ability.Amount.Value(s, Conditions.Of(s.GetCard(CardId))));
+		// Badgermole Cub: "whenever you tap a creature for mana" — only if this ability taps it (Orcish Lumberjack's
+		// "{T}, Sacrifice a Forest"; never "Sacrifice this: Add …"), judged before the costs are paid
+		ManaColor[] extra = ability.Costs.Any(c => c is TapSelfCost)
+			? [.. ManaAbilities.ExtraFor(s, s.GetCard(CardId))]
+			: [];
 		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
 		foreach (var cost in ability.Costs.OrderByDescending(c => c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, cost.Slot == CostSlot.Sacrifice ? SacrificeId : 0);
@@ -326,6 +333,11 @@ public record TapForManaAction : GameAction
 						};
 				}
 			);
-		return s.WithPlayer(player with { ManaPool = pool });
+		return s.WithPlayer(
+			player with
+			{
+				ManaPool = extra.Aggregate(pool, (p, color) => p.Add(color)),
+			}
+		);
 	}
 }

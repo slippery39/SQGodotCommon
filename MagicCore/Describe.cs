@@ -42,9 +42,14 @@ public static class Describe
 				+ (
 					!c.WithoutPayingManaCost || c.DuringResolution ? ""
 					// Damn: "cast this spell for its overload cost"
+					// … Springheart Nantuko: cast for its bestow cost
 					: Rules.Playable.OwnAlternativeCost(s, s.GetCard(c.CardId), c.PlayerId)
-					&& s.GetCard(c.CardId).GetComponent<MayCastFromHandFree>() is { Overload: true }
-						? " (overload)"
+						? s.GetCard(c.CardId).GetComponent<MayCastFromHandFree>() switch
+						{
+							{ Overload: true } => " (overload)",
+							{ Enchant: not null } => " (bestow)",
+							_ => " (not paying its mana cost)",
+						}
 					: " (not paying its mana cost)"
 				)
 				+ (c.Replicate > 0 ? $" (replicate ×{c.Replicate})" : "")

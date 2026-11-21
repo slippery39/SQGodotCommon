@@ -18,7 +18,11 @@ whose subsystem it lives in.
 
 - **What tapping a permanent for mana makes** is `ManaAbilities.YieldOf`: units of mana, each with its
   allowed colours — several of ONE colour (Loot, the Nexus: `SameColor`), a Mountain's extra {R} under
-  Molten Tide (`ExtraRedFromMountains`, a `ThisTurnEffect`), mana that can't pay for spells from your hand
+  Molten Tide (`ExtraMana(filter, colour)` in a `ThisTurn` — the same piece on a permanent is Badgermole Cub's
+  "whenever you tap a creature for mana, add an additional {G}", MC-4.4k3: one more for each permanent of its
+  holder's controller the filter matches, listed once per state; `ManaAbilities.ExtraFor` is the one answer, read by
+  a tap whose cost picks a card too, and a unit of ONE colour is never the "one colour chosen": beside Birds' any-colour
+  mana the extra is {G}), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
   doesn't use floats (`Payment.Floats`). **A mana ability is an activated ability** (CR 605): ONE
   `ManaAbilityComponent` — `Amount`, `AnyOneColor`, a mana `Cost`, and the shared `Costs` list ("{T}" unless
@@ -112,13 +116,15 @@ whose subsystem it lives in.
   **"Tap three" or more** (Collation Trimatrix, Picard's seven Officers) is ONE cost picking the whole set
   (`CostSlot.TapSet`, `ActivateAbilityAction.TapIds`): one legal action per set, never per order
   (`MagicRules.TapSets`), clicked in any order on the table (`Targeting.Narrow`) — Shayne, 2026-11-05.
-  **"Tap any number of creatures you control with total power N or more"** (teamwork, We Say Thee Nay!, MC-4.4g6; crew
-  takes it as it comes) is `TapUntappedCost { TotalPower = N }`: no pick in the action, the creatures picked AFTER it
+  **"Tap any number of creatures you control with total power N or more"** (teamwork, We Say Thee Nay!, MC-4.4g6; saddle
+  and crew, below) is `TapUntappedCost { TotalPower = N }`: no pick in the action, the creatures picked AFTER it
   one at a time until the total (`TapChosenForPowerAction`, a `ChoosePermanentChoice` each) — a cast per set would be
   4,096 against 12 creatures. The mana is paid first, so `Uses` keeps the most powerful out of the payment until the
   total (`Reserved`) — a creature can't tap for the mana and the teamwork both. **Saddle** (Caustic Bronco, MC-4.4h7) is
   that cost on a sorcery-speed activated ability, `LsvCards.Saddle(n)` (`Is.Creature & !Is.Source`: "other creatures"),
   the Mount's "saddled" a keyword granted until end of turn (`Is.With("Saddled")`; DesignNotes for its ceiling).
+  **Crew** (CR 702.122, Esika's Chariot, MC-4.4k3) is the same cost at instant speed, `LsvCards.Crew(n)` — summoning-sick
+  creatures may crew (no {T}) — resolving to `ModifyUntilEndOfTurn(Ref.Source, 0, 0) { AlsoType = Creature }`.
 - **Sunburst** (`Sunburst`, Engineered Explosives) is the colours actually SPENT: the cast pays with the most
   different colours it can for the X chosen (`ManaPayment.Find(…, mostColors)`, Shayne, 2026-11-05), records
   them (`ManaPayment.ColorsSpent` → `OnStackComponent.ColorsSpent`), and `EnterFromStackAction` puts that many

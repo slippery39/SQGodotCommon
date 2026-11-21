@@ -1828,6 +1828,41 @@ as his three priorities.
   other card games unmoved); golden-in moved 30 random and 507 card games, 32 added, no AI game; probe 150: none
   unfinished, all eight used (Hexdrinker activated 702, Green Sun's Zenith cast 232; Worldspine Wurm cast 2, its
   shuffle on the stack 23). Suite 2,224 passed.
+- 2026-11-21, Claude (cube lane) — **4.4k3: green's four new pieces — 364 of 528 play; green is finished (50 of 50).**
+  Read with the nearest piece's code open, three of the four were OPTIONS; only day/night is a new piece.
+  **Crew** (Esika's Chariot) is `LsvCards.Crew(n)`: saddle's cost at instant speed, and `ModifyUntilEndOfTurn.AlsoType`
+  without `ForGood` — the type stamp marked `Animated.EndsAtCleanup`, put back by the cleanup step (it threw before:
+  "ForGood only"); the printed 4/4 is read while it is a creature. Smuggler's Copter and Reckoner Bankbuster can take
+  it with colourless. **Earthbend** (Badgermole Cub) is `LsvCards.Earthbend(n)`, composed: Does Machines' stamp for good
+  (0/0, haste), the counter, and "when it dies or is exiled, return it to the battlefield tapped" two gained leave
+  triggers (Serra Paragon's shape) — the plan's risk held no surprise: a gained trigger is already read from the card
+  as it last was. "Whenever you tap a creature for mana, add an additional {G}" is `ExtraMana(filter, colour)`,
+  **`ExtraRedFromMountains` generalised and Molten Tide moved onto it** (in a `ThisTurn`; the Cub's on the permanent).
+  **Bestow** (Springheart Nantuko) is `Scripting.Bestow(cost)`: an `Enchant` option on the card's own alternative cost
+  (overload's mirror — the cast GAINS a target word, one cast per creature, beside the plain cast), the permanent
+  entering attached before its types are read, and Lion Sash's "not a creature while attached" (`BecomesType` on itself,
+  with subtype Aura); its host gone it falls off as a reconfigured Equipment does and is a creature again; its target
+  illegal as it resolves, it resolves a creature (never countered). The landfall is `If(attached to a creature you
+  control, [MayPay → CreateTokenCopy(the host)]) { Otherwise = the Insect }`. **Day/night** (Outland Liberator //
+  Frenzied Trapbreaker) is the new piece, `Rules/DayNight.cs`: `MagicGame.Daytime` (the game's, where the monarch is a
+  player's object), day as the first daybound permanent enters, judged as each turn ends by the spells its active
+  player cast (none by day: night; two or more by night: day), every daybound permanent transformed to match, one
+  entering at night transformed — read where something changes, never by the state-based check. New token data: a 2/2
+  green Cat, a 1/1 green Insect. Ceilings in DesignNotes (crew: one type stamp a permanent, the AI crews by search
+  alone and `Evaluator.NextTurn` — the AI lane's — still counts a Vehicle crewed this turn as a creature next turn;
+  earthbend's return is the land's controller's; a bestowed spell still reads as a creature spell on the stack;
+  day/night's three; the extra mana's restriction and convoke corners). The review found eight; fixed with a test
+  each: the additional mana keeps its own colour beside an any-colour creature (Birds of Paradise: `SameColor` binds
+  only units with a choice — the solver, the float and tapping by hand), a creature tapped by a cost-picking mana
+  ability gets it too (Orcish Lumberjack: `ManaAbilities.ExtraFor`, the one answer), the cleanup undoes a crew stamp
+  before a copy until end of turn (`Card.Fresh`'s order), one battlefield scan for grants and extras, one read in
+  `Describe` ("(bestow)"); the rest are the ceilings above. 25 tests in `LsvBatch2k3Tests.cs` (`NextTurn()`,
+  `LandEnters(answer)`, `CastBestowed(host)`, `Earthbend()`); 44/44 revert-checks caught. Golden-out moved nothing (162
+  random, 942 card games — Molten Tide's move and the entry reorder changed no recorded game); golden-in moved 30 random
+  and 256 card games, 16 added, no AI game; probe 150: none unfinished, all four used (Esika's Chariot activated 2,517,
+  Outland Liberator 316; Badgermole Cub and Springheart Nantuko cast 312 and 379 — their "activated 0" is right, neither
+  has an activated ability). Suite 2,249 passed.
+- 2026-11-21, Shayne: **colourless is next** (4.4l) — 105 left of 163, the lands among them; multicolour (59) after.
 
 ## Tasks
 
@@ -2108,8 +2143,9 @@ as his three priorities.
     - [x] MC-4.4k2b Options, triggers, combat and casting, 8: Surrak, Elusive Hunter, Ursine Monstrosity, Leatherhead,
           Swamp Stalker, Questing Beast, Worldspine Wurm, Once Upon a Time, Green Sun's Zenith, Hexdrinker (done
           2026-11-21; MACO Strike Team's trigger corrected with Surrak's)
-    - [ ] MC-4.4k3 New pieces, 4: crew (Esika's Chariot), earthbend (Badgermole Cub), bestow (Springheart Nantuko),
-          day/night (Outland Liberator // Frenzied Trapbreaker)
+    - [x] MC-4.4k3 New pieces, 4: crew (Esika's Chariot), earthbend (Badgermole Cub), bestow (Springheart Nantuko),
+          day/night (Outland Liberator // Frenzied Trapbreaker) (done 2026-11-21 — three were options; day/night the
+          one new piece; Molten Tide moved onto `ExtraMana`)
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -2146,9 +2182,18 @@ options), k3 (crew, earthbend, bestow, day/night).** **k1 is done** (Decisions, 
 U 75/75, B 61/61, R 54/54, G 31/50, multicolour 6/65, colourless 58/163). **k2a is done** (Decisions, "4.4k2a"; 352 of
 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 38/50, multicolour 6/65, colourless 58/163). **k2b is done**
 (Decisions, "4.4k2b"; 360 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 46/50, multicolour 6/65, colourless
-58/163); **k3 is next — green's last four, each a new piece** (crew: Esika's Chariot; earthbend: Badgermole Cub;
-bestow: Springheart Nantuko; day/night: Outland Liberator // Frenzied Trapbreaker — 4.4k's plan, part k3, each with its
-nearest piece named there). From k2b: "becomes the target" has a permanent or a spell as its subject (`Is.Spell` tells
+58/163). **k3 is done: green is finished** (Decisions, "4.4k3"; 364 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54,
+G 50/50, multicolour 6/65, colourless 58/163). **Every colour is done. Colourless is next (Shayne, 2026-11-21):
+MC-4.4l** — its 105 unplayed cards, the lands among them; multicolour (59) after — read card by card
+(`python tools/magic_set.py text --missing --set LSV`) and tiered as each colour was (each new piece naming its
+nearest), written in Decisions as "4.4l", then batches of more cards a session; Shayne reviews the plan before the
+first batch. From k3: crew `LsvCards.Crew(n)` (Smuggler's Copter and Reckoner Bankbuster wait on nothing else for it);
+a type until end of turn `ModifyUntilEndOfTurn { AlsoType }` without `ForGood`; earthbend `LsvCards.Earthbend(n)`;
+"whenever you tap [these] for mana, add an additional …" `ExtraMana(filter, colour)` (`ManaAbilities.ExtraFor`);
+bestow `Scripting.Bestow(cost)` (`MayCastFromHandFree.Enchant`); day/night `Rules.DayNight` (`MagicGame.Daytime`,
+daybound the printed keyword on a card with a `BackFace`); k3's tests are in `LsvBatch2k3Tests.cs` (`NextTurn()`,
+`LandEnters(answer)`, `CastBestowed(host)`). For the AI lane after the merge: `Evaluator.NextTurn` doesn't yet undo a
+crew stamp (DesignNotes, "Crew"), and no front end shows day or night. From k2b: "becomes the target" has a permanent or a spell as its subject (`Is.Spell` tells
 them apart); "attacks that player if able" `Combat.AttacksThePlayer`; a counter of any kind removed `RemoveCounters {
 AnyKind }`; `CombatDamageCantBePrevented(filter)`; "put into a graveyard from anywhere" a `ChangedZone { Subject =
 Is.Source, To = Graveyard }` trigger read `From = Graveyard`; `Protection { If }`; level counters `CounterKinds.Level`;
@@ -2544,3 +2589,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-21: MC-4.4k2a done — green's 7 mana, land and token options, 352 of 528 play (green 38 of 50). Next: k2b.
 - 2026-11-21: MC-4.4k2b done — green's 8 trigger, combat and casting options, 360 of 528 play (green 46 of 50); MACO
   Strike Team's become-target trigger corrected (one golden game moved, intended). Next: k3.
+- 2026-11-21: MC-4.4k3 done — crew, earthbend, bestow, day/night; 364 of 528 play, **green (50 of 50) finished: every
+  colour is done**. Shayne picked colourless. Next: MC-4.4l, colourless' 105 — survey, tiers, plan.

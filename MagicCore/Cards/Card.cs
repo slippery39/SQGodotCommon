@@ -430,10 +430,15 @@ public record Card : GameObject
 	/// creature"; Enduring Innocence returned: "It's an enchantment. (It's not a creature.)" What it was is kept on
 	/// an Animated with no source: the state check leaves it, WithoutAnimation puts it back (leaving, a copy).
 	/// </summary>
-	public Card WithTypesUntilItLeaves(CardType types) =>
+	/// <param name="endsAtCleanup">Crew (Esika's Chariot): "becomes an artifact creature until end of turn" — the
+	/// cleanup step puts it back (Combat.CleanupPermanents), as leaving does.</param>
+	public Card WithTypesUntilItLeaves(CardType types, bool endsAtCleanup = false) =>
 		(Card)
 			(this with { Types = types }).WithComponent(
 				new Animated(0, 0, Types, null, BasePower, BaseToughness)
+				{
+					EndsAtCleanup = endsAtCleanup,
+				}
 			);
 
 	/// <summary>Back to what it was before a type change — its source left or stopped, or it leaves (CR 400.7).</summary>
@@ -731,7 +736,11 @@ public record Animated(
 	string? AddedSubtype,
 	int BasePower,
 	int BaseToughness
-) : GameComponent;
+) : GameComponent
+{
+	/// <summary>Crew (Esika's Chariot): "becomes an artifact creature until end of turn" — a sourceless stamp the cleanup step undoes.</summary>
+	public bool EndsAtCleanup { get; init; }
+}
 
 /// <summary>
 /// What goes in a deck: the printed data plus the hand-written ability components. A card with no

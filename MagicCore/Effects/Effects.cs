@@ -157,7 +157,11 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 
 	/// <summary>
 	/// Does Machines: "it becomes a 0/0 Robot creature in addition to its other types" — card types added, STAMPED
-	/// (Card.WithTypesUntilItLeaves: every rule reads card.Is), so ForGood only. With SetBase and AlsoCreatureType.
+	/// (Card.WithTypesUntilItLeaves: every rule reads card.Is), with SetBase and AlsoCreatureType; ForGood, or until end
+	/// of turn — crew (Esika's Chariot): "This Vehicle becomes an artifact creature until end of turn", the stamp undone
+	/// by the cleanup step (Animated.EndsAtCleanup). ponytail: one stamp a permanent — a type it already has is not
+	/// stamped again, so "for good" on a Vehicle crewed this turn ends with the crew; a stamp per effect if a card
+	/// needs both.
 	/// </summary>
 	public Cards.CardType AlsoType { get; init; }
 
@@ -229,9 +233,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			AlsoCreatureType = AlsoCreatureType,
 			Enchant = Enchant,
 		};
-		if (AlsoType != Cards.CardType.None && !ForGood)
+		if (AlsoType != Cards.CardType.None && UntilYourNextTurn)
 			throw new InvalidOperationException(
-				"AlsoType is a stamp no cleanup undoes: ForGood only (MC-4.4g10)"
+				"AlsoType is a stamp the cleanup step undoes: for good or until end of turn, never until your next turn (MC-4.4k3)"
 			);
 		return new(
 			Permanents(What, s)
@@ -244,7 +248,10 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 								(
 									(c.Types & AlsoType) == AlsoType
 										? c
-										: c.WithTypesUntilItLeaves(c.Types | AlsoType)
+										: c.WithTypesUntilItLeaves(
+											c.Types | AlsoType,
+											endsAtCleanup: !ForGood
+										)
 								).WithComponent(effect)
 						)
 				)
@@ -1298,8 +1305,14 @@ public record CantCastOrActivate : ThisTurnEffect
 	public Filters.Filter? Of { get; init; }
 }
 
-/// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>
-public record ExtraRedFromMountains : ThisTurnEffect;
+/// <summary>
+/// Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — in a ThisTurn;
+/// Badgermole Cub: "Whenever you tap a creature for mana, add an additional {G}." — on the permanent. One more mana of
+/// that colour for each permanent of YOURS (its holder's controller's) the filter matches, as it is tapped for mana:
+/// a mana ability triggering on a mana ability resolves at once (CR 605.1b), so it is part of the yield
+/// (ManaAbilities.YieldOf) — payment, tapping by hand and the X bound all see it.
+/// </summary>
+public record ExtraMana(Filters.Filter What, ManaColor Color) : ThisTurnEffect;
 
 /// <summary>Flare of Fortitude: "Until end of turn, your life total can't change" — Rules.Life (Gain, Lose, CanPay).</summary>
 public record LifeTotalCantChange : ThisTurnEffect

@@ -1763,6 +1763,15 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 	public bool Overload { get; init; }
 
 	/// <summary>
+	/// Bestow (CR 702.103) — Springheart Nantuko: "Bestow {1}{G} (If you cast this card for its bestow cost, it's an
+	/// Aura spell with enchant creature. It becomes a creature again if it's not attached to a creature.)" — cast for
+	/// this cost, the spell has this one target word (StackResolution.TextOf) and the permanent enters attached to it
+	/// (MagicState.EnterBattlefield); the target illegal as it resolves, it resolves unattached, a creature (CR
+	/// 702.103e) — never countered as an Aura card's spell is. Written with Scripting.Bestow.
+	/// </summary>
+	public TargetSpec? Enchant { get; init; }
+
+	/// <summary>
 	/// Warp (Quantum Riddler): "You may cast this card from your HAND by paying [cost]" — the zones the card's own
 	/// alternative cost is cast from, the CASTER's (never another's hand under Sen Triplets); empty: wherever it is cast
 	/// (Flare of Fortitude).

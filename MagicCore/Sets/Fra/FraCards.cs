@@ -2581,7 +2581,7 @@ public static class FraCards
 				PrepareSpell(
 					"Pyre Rhymer // Molten Tide",
 					[],
-					new ThisTurn(new ExtraRedFromMountains())
+					new ThisTurn(new ExtraMana(Is.Subtype("Mountain"), ManaColor.Red))
 				),
 			],
 

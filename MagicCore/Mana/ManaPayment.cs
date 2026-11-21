@@ -476,7 +476,10 @@ public static class ManaPayment
 				plan.Add(
 					new Payment(
 						src.LandId,
-						search.Locked[all[u].Source] ?? all[u].Colors[0],
+						// a unit of one colour floats as that colour, whatever the source's chosen one (ExtraMana)
+						all[u].Colors.Length == 1
+							? all[u].Colors[0]
+							: search.Locked[all[u].Source] ?? all[u].Colors[0],
 						Floats: true
 					)
 				);
@@ -518,7 +521,11 @@ public static class ManaPayment
 					var src = sources[source];
 					if (need.NotFrom != 0 && src.LandId == need.NotFrom)
 						continue;
-					var colors = Locked[source] is { } locked ? [locked] : units[i].Colors;
+					// "one colour chosen" binds the units that have a choice: Badgermole Cub's additional {G} beside
+					// Birds of Paradise's mana is {G} whatever the Birds made
+					var chooses = units[i].Colors.Length > 1;
+					var colors =
+						chooses && Locked[source] is { } locked ? [locked] : units[i].Colors;
 					foreach (var color in colors.Where(need.Allowed.Contains))
 					{
 						// The same kind of source in the same state is the same choice.
@@ -532,7 +539,7 @@ public static class ManaPayment
 						if (!tried.Add(key))
 							continue;
 						var lockedBefore = Locked[source];
-						if (src.SameColor)
+						if (src.SameColor && chooses)
 							Locked[source] = color;
 						Used[i] = true;
 						unused--;

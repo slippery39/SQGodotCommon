@@ -157,16 +157,59 @@ public static class ManaAbilities
 	/// </summary>
 	static List<(Card, GrantsManaAbility)> Grants(GameState s)
 	{
-		if (ReferenceEquals(grantsOf, s) && grants is not null)
-			return grants;
-		var found = new List<(Card, GrantsManaAbility)>();
-		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
-		foreach (var g in s.CardsIn(player, ZoneType.Battlefield))
-		foreach (var grant in s.AbilitiesOf<GrantsManaAbility>(g)) // cheap on none — a gained grant too
-			found.Add((g, grant));
-		(grantsOf, grants) = (s, found);
-		return found;
+		Scan(s);
+		return grants!;
 	}
+
+	/// <summary>
+	/// Every "whenever you tap [these] for mana, add an additional …" (ExtraMana) — a permanent's (Badgermole Cub) or a
+	/// player's this-turn effect (Molten Tide) — with whose it is; listed with the grants, in the same pass.
+	/// </summary>
+	static List<(int ControllerId, int HolderId, ExtraMana Rule)> Extras(GameState s)
+	{
+		Scan(s);
+		return extras!;
+	}
+
+	/// <summary>The one pass over both battlefields (and command zones) that lists the grants and the extras of a state.</summary>
+	static void Scan(GameState s)
+	{
+		if (ReferenceEquals(grantsOf, s) && grants is not null && extras is not null)
+			return;
+		var found = new List<(Card, GrantsManaAbility)>();
+		var more = new List<(int, int, ExtraMana)>();
+		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
+		{
+			foreach (var g in s.CardsIn(player, ZoneType.Battlefield))
+			{
+				foreach (var grant in s.AbilitiesOf<GrantsManaAbility>(g)) // cheap on none — a gained grant too
+					found.Add((g, grant));
+				foreach (var rule in s.AbilitiesOf<ExtraMana>(g))
+					more.Add((player, g.Id, rule));
+			}
+			foreach (var effect in s.ThisTurnEffects<ExtraMana>(player))
+				more.Add((player, effect.Id, effect.GetComponent<ExtraMana>()!));
+		}
+		(grantsOf, grants, extras) = (s, found, more);
+	}
+
+	/// <summary>
+	/// The additional mana tapping this permanent for mana makes (ExtraMana: Molten Tide's {R} for a Mountain, Badgermole
+	/// Cub's {G} for a creature) — one colour for each rule of its controller's whose filter it matches. THE answer:
+	/// the yield of a plain tap (YieldOf) and a tap whose cost picks a card (TapForManaAction, Orcish Lumberjack) read it.
+	/// </summary>
+	public static IEnumerable<ManaColor> ExtraFor(GameState s, Card card)
+	{
+		foreach (var (controllerId, holderId, extra) in Extras(s))
+			if (
+				controllerId == card.ControllerId
+				&& extra.What.Matches(s, card, new Filters.FilterContext(controllerId, holderId))
+			)
+				yield return extra.Color;
+	}
+
+	[ThreadStatic]
+	static List<(int ControllerId, int HolderId, ExtraMana Rule)>? extras;
 
 	/// <summary>
 	/// Urza, Lord High Artificer: "Tap an untapped artifact you control: Add {U}." — this player's mana abilities whose
@@ -334,17 +377,11 @@ public static class ManaAbilities
 					most
 				),
 			];
-		// Molten Tide: "whenever you tap a Mountain for mana, add an additional {R}" — a mana
-		// ability triggering on a mana ability, so it resolves at once (CR 605.1b), as more mana.
-		if (card.Subtypes.Contains("Mountain"))
-			units =
-			[
-				.. units,
-				.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
-					[ManaColor.Red],
-					s.ThisTurnEffects<Effects.ExtraRedFromMountains>(card.ControllerId).Count()
-				),
-			];
+		// Molten Tide: "whenever you tap a Mountain for mana, add an additional {R}"; Badgermole Cub: "… a creature
+		// …, add an additional {G}" — a mana ability triggering on a mana ability, so it resolves at once
+		// (CR 605.1b), as more mana. A unit of one colour is never the "one colour chosen": SameColor leaves it.
+		foreach (var extra in ExtraFor(s, card))
+			units = units.Add([extra]);
 		// ponytail: one restriction per permanent — all its mana abilities share it (Heartwood
 		// Crafter's {C}, Gideon's Memorial's five colours). Track it per unit if a card mixes them.
 		var restriction =

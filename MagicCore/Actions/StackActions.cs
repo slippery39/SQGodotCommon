@@ -1128,6 +1128,8 @@ public static class StackResolution
 			// CR 702.96b: "target" becomes "each" — the script's If(AlternativeCostWasPaid) says each what.
 			// ponytail: the card's first alternative cost, not the one paid — none prints two (DesignNotes).
 			specs = [];
+		if (alternative && card.GetComponent<MayCastFromHandFree>() is { Enchant: { } bestowed })
+			specs = [bestowed]; // CR 702.103b: cast bestowed, it is an Aura spell with enchant creature
 		ImmutableList<TargetSpec> words =
 		[
 			.. specs.SelectMany(t =>
@@ -1237,6 +1239,14 @@ public static class StackResolution
 					auraHost == 0
 					|| !aura.Enchant.IsLegal(s, permanent.ControllerId, permanent.Id, auraHost);
 			}
+			// Bestow (Springheart Nantuko): its target illegal, it resolves as a creature, attached to nothing
+			// (CR 702.103e) — it is never countered for it.
+			else if (
+				cast is { AlternativeCost: true, Targets: [var host, ..] }
+				&& permanent.GetComponent<MayCastFromHandFree>() is { Enchant: { } bestow }
+				&& bestow.IsLegal(s, permanent.ControllerId, permanent.Id, host)
+			)
+				auraHost = host;
 			var fromGraveyard = cast?.CastFrom == ZoneType.Graveyard;
 			var mayCastThere =
 				MayCastThisFrom.On(permanent, ZoneType.Graveyard) // Storied Veteran

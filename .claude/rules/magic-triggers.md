@@ -258,3 +258,12 @@ whose subsystem it lives in.
 - **"Whenever you play a card from [zone]"** (Prosper, Tome-Bound) is `Trigger.From` on two rows: a `SpellCast`
   (`SpellCastEvent.From`, the zone it was cast from) and a `LandPlayed` (`LandPlayedEvent`, raised by `PlayLandAction`
   alone — a land put onto the battlefield isn't played). A prepared copy isn't a card: `Subject = !Is.Copy`.
+- **Day and night** (CR 730; daybound / nightbound, CR 702.145 — Outland Liberator // Frenzied Trapbreaker, MC-4.4k3)
+  is the GAME's designation, `MagicGame.Daytime` (`Rules.DayNight`), never a player's object as the monarch is: neither
+  until a daybound permanent enters (`EnterBattlefield`: day), then judged as each turn ends for the next
+  (`TurnStructure.FinishCleanup` → `DayNight.NextTurn`, before anything untaps) by the spells that turn's ACTIVE player
+  cast — none by day: night; two or more by night: day. `DayNight.Become` transforms every daybound permanent that
+  doesn't match (front by day, back by night; `TransformedEvent` raised), and one entering at night enters transformed.
+  Daybound is the printed keyword on a card with a back face (`TransformsInto`); the front's keywords are both faces'
+  (Scryfall), so daybound is asked of a front and nightbound of a back. Read where something CHANGES, never by the
+  state-based check (DesignNotes).

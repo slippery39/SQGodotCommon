@@ -84,7 +84,13 @@ whose subsystem it lives in.
   in `CopyUntilEndOfTurn`, restored in cleanup AND as it leaves (`Card.Fresh`), so a dead Hall is a Hall.
 - **A type change by an effect, for good** (Does Machines: "it becomes a 0/0 Robot creature in addition to its other
   types") is `ModifyUntilEndOfTurn { ForGood, AlsoType, SetBase, AlsoCreatureType }` — the card type stamped
-  (`Card.WithTypesUntilItLeaves`, Assimilate's), so ForGood only: no cleanup undoes it.
+  (`Card.WithTypesUntilItLeaves`, Assimilate's). Without `ForGood` it is until end of turn (crew, Esika's Chariot,
+  MC-4.4k3: "becomes an artifact creature until end of turn"): the same stamp marked `Animated.EndsAtCleanup`, put back
+  by `Combat.CleanupPermanents`; a Vehicle's printed P/T is read while it is one. Never "until your next turn" (it throws).
+  **Earthbend** (CR 701.66, Badgermole Cub) is `LsvCards.Earthbend(n)`, composed on the ability's "target land you
+  control": that stamp for good with `SetBase = (0, 0)` and haste, N +1/+1 counters, and "when it dies or is exiled,
+  return it to the battlefield tapped" two gained leave triggers (`UntilEndOfTurn.Trigger`, Serra Paragon's shape:
+  `SelfLeaves with { To }` → `MoveTo(Ref.EventCard, Battlefield) { From, Tapped }`), read from the land as it last was.
 - **A type change** is `BecomesType(scope) { Add, Remove, Subtype, Power, Toughness, If }` — Puppet Crafting
   (`Is.AttachedToSource`: "is a 5/5 Construct creature in addition"), Mogis (`Is.Source`, `Remove = Creature`,
   `If` devotion < 7). STAMPED on what the scope matches (`Card.AnimatedBy`, what it was kept in `Animated`) and
@@ -99,6 +105,13 @@ whose subsystem it lives in.
   right BEFORE the fall-off: the attach resolves while it is still a creature, and the stamp is on by the time the
   fall-off is judged. Unattached, or its host gone, the stamp comes off and it is a creature again. `Attachments.
   Unattach` is THE unattach (the fall-off and the effect).
+- **Bestow** (CR 702.103, Springheart Nantuko, MC-4.4k3) is `Scripting.Bestow(cost)`: the card's own alternative mana
+  cost with `MayCastFromHandFree.Enchant` — cast for it, the spell has that one target word (`StackResolution.TextOf`)
+  and resolves ATTACHED to it (`EnterBattlefield(attachTo:)`, before its types are read: no "creature enters"); the
+  target illegal as it resolves, it enters unattached, a creature (CR 702.103e), never countered. Attached it is an
+  Aura and no creature — reconfigure's `BecomesType(Is.Source & Is.Attached) { Remove = Creature, Subtype = "Aura" }` —
+  with no enchant of its own (`Attachments.EnchantOf` is null), so its host gone it FALLS OFF as an Equipment does
+  and is a creature again, never put into the graveyard. Both casts are offered (the plain one has no target).
 - **Ascend** (CR 702.131, Ocelot Pride, MC-4.4j4) is the printed keyword; the city's blessing is `MagicPlayer.CitysBlessing`,
   for the game, set by the state-based check for a player controlling ten or more permanents, one with ascend
   (`YouHaveTheCitysBlessing.Earned`). "If you have the city's blessing" is `YouHaveTheCitysBlessing` — the flag, or earned

@@ -281,6 +281,8 @@ whose subsystem it lives in.
   NO target words (`StackResolution.TextOf(…, alternative)`; a copy's too, from the stack's `AlternativeCost`),
   so hexproof and protection never stop it and nothing fizzles. "Each" is the script's: `If(AlternativeCostWasPaid,
   [the each version]) { Otherwise = [the target version] }` — never an effect rewritten by the engine. One cast overloaded.
+  **Bestow** (Springheart Nantuko, MC-4.4k3) is the mirror, `MayCastFromHandFree { Mana, Enchant }`: cast for it the
+  spell GAINS a target word, one cast per creature (magic-statics.md, "Bestow").
   **Splice** (CR 702.47, Goryo's Vengeance, MC-4.4h4) is `Scripting.SpliceOntoArcane(cost)` (`SpliceComponent(Cost,
   Onto)`, a filter asked of the spell) and `CastSpellAction.Splice` — the ids of cards in the caster's hand, one cast per
   set (`|s` in `MoveKey`). The cast is validated and made on the card stamped `Spliced` (the texts and costs, status — an
