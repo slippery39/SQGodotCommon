@@ -1553,6 +1553,69 @@ as his three priorities.
   golden-in moved 30 random and 247 card games, 20 added, no AI game; probe 150: none unfinished, every card used (Jace
   activated 1,422, Curtains 311; Sink into Stupor cast 280 — its land plays aren't counted). The probe's "activated 8"
   for Cecil (no activated ability) is Q, Stacking the Deck's grant, as before. Suite 2,166 passed.
+- 2026-11-20, Shayne: **white is the next colour** (4.4j; its tier 1 was 4.4d).
+- 2026-11-20, Claude (cube lane) — **4.4j: white read card by card — 19 left of 60 (the three DFCs read from the front
+  face's cost: Ajani {1}{W}, Witch Enchanter {3}{W}, Jennifer Walters {1}{W}); 6 tested pieces, 9 options, 4 new
+  pieces.** MtgCore has none of the four (no monarch, voting, ascend or reconfigure). Parts:
+  **j1** the 6 tested pieces — Eagles of the North (Oliphaunt's landcycling as Plains; `SelfEnters`
+  `ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0, "First strike")`), Solitude (`Scripting.Evoke` white; "up to one
+  other target creature", Swords to Plowshares' life for its controller, counted before the exile), Witch Enchanter //
+  Witch-Blessed Meadow (i7's modal `BackFace`; `EntersTappedComponent { UnlessYouPayLife = 3 }` and a {W} mana ability;
+  the front's "destroy target artifact or enchantment an opponent controls"), White Plume Adventurer
+  (`TakeTheInitiative`; `EachUpkeep` by an opponent, `If(YouCompletedADungeon) { Otherwise }` over `Untap(all)` and
+  `Untap { UpTo = 1 }`), Parallax Wave (fading composed: `EntersWithCountersComponent(5) { Kind = "fade" }`, an upkeep
+  `If(AtLeast(CountersOfKind fade, 1), remove) { Otherwise = sacrifice }`, `RemoveCountersCost(1, Is.Source) { Kind }`;
+  `Exile { Linked }` and Skyclave Apparition's `SelfLeaves` → `MoveTo(Ref.All(Exile, Is.ExiledBySource), Battlefield)`,
+  each card to its owner — the classic trick, an exile resolving after the Wave left, keeps the card: right, as printed),
+  Get Lost (a Map token beside Clue in `Tokens.cs`: `{1}, {T}, sacrifice: target creature you control explores`, sorcery
+  speed — Explore is tested; `CreateTokens(Map, 2) { ControlledBy = Ref.ControllerOfTarget(0) }`);
+  **j2a** options, protection and triggers, 5 — Mother of Runes and Giver of Runes ("protection from the color of your
+  choice [or from colorless] until end of turn": Hungering Puppetbeast's `GainsChosenKeyword` with the choices granting
+  `Protection(Is.OfColor(c))` / `Protection(Is.Colorless)` through `ModifyUntilEndOfTurn.Gains` — no card yet grants
+  `Protection` until end of turn), Seasoned Dungeoneer (that grant with `Protection(Is.Creature)`; `YouAttack`, a target
+  attacking Cleric, Rogue, Warrior or Wizard, `Explore`; `TakeTheInitiative`), Winds of Abandon (h3's overload; single:
+  Path to Exile's fetch with no "may"; overloaded: `Exile(each) { ThenWithXExiled }` → `SearchLibrary { Who =
+  EachOpponent, UpTo = Count.X, Tapped }` — a counted search by another player), Jennifer Walters // The Sensational
+  She-Hulk (Voice of Victory's `CantCastOrActivate { By, Spells, If = DuringYourTurn }` on both faces; Etali's transform
+  by an activation, sorcery speed; "whenever a creature you control is dealt damage" is `SelfDealtDamage`'s event with
+  `Subject = Is.Creature & Is.Yours`, "that much" its X; "do this only once each turn" `OncePerTurn` — a ceiling: the
+  rules let every instance trigger and you pick which one to use, DesignNotes);
+  **j2b** options, counters, costs and tokens, 4 — Guide of Souls (i4's energy: `PutCounters(Ref.You)`; "you may pay
+  {E}{E}{E}" needs a player's counters COUNTED — `Count.CountersOfKind` reads cards only — and removed, then
+  `WhenYouDo`: two +1/+1 counters and a flying counter (a keyword counter, as Drivnod's indestructible), "becomes an
+  Angel in addition to its other types" with no duration `ModifyUntilEndOfTurn { ForGood, AlsoCreatureType }`),
+  Prismatic Ending (converge: Sunburst's `OnStackComponent.ColorsSpent` as a `Count`, and the most-colours payment for a
+  converge spell too — today it is keyed to `HasComponent<Sunburst>()`; `If(Matches(target, ManaValueAtMost(that)))`),
+  Sunfall (`Exile(all creatures) { ThenWithXExiled }`, incubate X: an Incubator artifact token with X +1/+1 counters and
+  "{2}: Transform this token", its back face a 0/0 Phyrexian artifact creature — i5's `TransformsInto` on a token's
+  `CardData`), Ajani, Nacatl Pariah // Ajani, Nacatl Avenger (front: a 2/1 Cat Warrior token; "one or more other Cats
+  you control die" `OneOrMore`, then i7's `LsvCards.ReturnTransformed`; +2 `PutCounters` on Cats; 0: the token, then
+  `WhenYouDo` under "if you control a red permanent other than Ajani", damage `Count.CreaturesYouControl` to any
+  target; **−4** "each opponent chooses an artifact, a creature, an enchantment, and a planeswalker from among the
+  nonland permanents they control, then sacrifices the rest" — Balance's `EachSacrifices` with what is KEPT, one choice
+  per type, never a set);
+  **j3–j6** new pieces, each with its nearest: **j3 the monarch** (Palace Jailer; Okoye, Forth Eorlingas! and Aragorn
+  take it with multicolour) — the initiative's object in the command zone (`InitiativeComponent`: one holder, its two
+  triggers, `Take`), generalised to a designation with its own triggers (the monarch's: "at the beginning of your end
+  step, draw a card", "whenever a creature deals combat damage to you, its controller becomes the monarch") — no
+  venture; "exile until an opponent becomes the monarch" is `ExileUntilSourceLeaves`' stamp with another end — returned
+  as the designation moves to an opponent of the exiler, not as a source leaves; **j4 ascend** (Ocelot Pride) — the
+  city's blessing is a game-long flag on the player, as `DungeonsCompleted`, got in the state-based check by a player
+  controlling ten or more permanents while one has ascend (CR 702.131); "if you gained life this turn" an intervening if
+  on `LifeYouGainedThisTurn`; "for each token you control that entered this turn" `CreateTokenCopy(Ref.Permanents(Is.Token
+  & Is.Yours & Is.EnteredThisTurn))`; **j5 reconfigure** (Lion Sash) — `Equip`'s attach plus "unattach", and "while
+  attached, this isn't a creature" — Mogis' `BecomesType { Remove = Creature, If }`, but an Equipment that is a creature
+  falls off in `Attachments.Check` (CR 301.5c), which reconfigure is exempt from (CR 702.151b), so a rule there; the rest
+  is tested (an exile from a graveyard, a counter if it was a permanent card, `AttachedGets` counted by its counters);
+  **j6 voting** (Council's Judgment) — "each player votes for a nonland permanent you don't control" is no target
+  (hexproof and protection don't stop it); nearest `EachSacrifices`' each-player choice, but the votes are tallied, and
+  "exile each with the most votes or tied" reads the tally — a new effect, `Vote(filter) { Then }` with `Ref.Chosen` the
+  winners.
+  **Legal actions, counted on a 12-creature board:** none grow with it — the colour choices are one choice (six), the
+  votes one choice per player, Ajani's −4 four choices, Winds' overload one cast, reconfigure one action per creature.
+  **Batches (Shayne: more cards a session):** **j1 + j2a** (11 cards), **j2b + j3** (5), **j4–j6** (3).
+- 2026-11-20, Shayne (reviewing 4.4j's plan): **taken as written** — the tiers and the three batches; j1 + j2a begins
+  in the same session.
 
 ## Tasks
 
@@ -1812,6 +1875,18 @@ as his three priorities.
     - [x] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
     - [x] MC-4.4i7 (Shayne: the default) The blue and black DFCs every survey missed: Tamiyo, Inquisitive
           Student; Jace, Vryn's Prodigy; Sink into Stupor (modal); Cecil, Dark Knight; Concealing Curtains
+  - [ ] MC-4.4j White beyond tier 1 (Shayne, 2026-11-20: the next colour, after i7) — 19 cards read card by card and
+        tiered (Decisions, "4.4j"): 6 tested pieces, 9 options, 4 new pieces; three batches — j1 + j2a, j2b + j3, j4–j6:
+    - [ ] MC-4.4j1 The tested pieces, 6 (one batch with j2a): Eagles of the North, Solitude, Witch Enchanter // Witch-Blessed
+          Meadow, White Plume Adventurer, Parallax Wave, Get Lost (the Map token)
+    - [ ] MC-4.4j2a Options, protection and triggers, 5: Mother of Runes, Giver of Runes, Seasoned Dungeoneer, Winds of
+          Abandon, Jennifer Walters // The Sensational She-Hulk
+    - [ ] MC-4.4j2b Options, counters, costs and tokens, 4 (one batch with j3): Guide of Souls, Prismatic Ending (converge),
+          Sunfall (incubate), Ajani, Nacatl Pariah // Ajani, Nacatl Avenger
+    - [ ] MC-4.4j3 The monarch: Palace Jailer
+    - [ ] MC-4.4j4 Ascend (one batch with j5, j6): Ocelot Pride
+    - [ ] MC-4.4j5 Reconfigure: Lion Sash
+    - [ ] MC-4.4j6 Voting: Council's Judgment
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -1836,9 +1911,15 @@ i2b + i3, i4–i6, i7 (Shayne: more cards a session). Each session ends with the
 by colour (`python tools/magic_set.py coverage --set LSV`). **i1 + i2a, i2b + i3 and i4–i6 are done: red is
 finished** (Decisions, "4.4i1 + i2a", "4.4i2b + i3", "4.4i4–i6"; 300 of 528 play, red 54 of 54). **i7 is done: blue and
 black are finished** (Decisions, "4.4i7"; 305 of 528 play — W 41/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolour
-6/65, colourless 58/163). **Next: no colour is planned — Shayne to pick** (white's 19, green's 40, multicolour, or
-colourless), then survey it card by card as 4.4h and 4.4i were, its DFCs read from the front face's cost (Ajani, Witch
-Enchanter, Outland Liberator, Ulvenwald Oddity — white's and green's). From i7: a modal DFC is `BackFace(…) with { Modal
+6/65, colourless 58/163). **MC-4.4j is planned (Decisions, "4.4j"; Shayne took it as written): three batches — j1 +
+j2a (the 6 tested pieces and 5 protection and trigger options), j2b + j3 (4 counter, cost and token options and the
+monarch), j4–j6 (ascend, reconfigure, voting). j1 + j2a is in progress.** White's 19 (Shayne, 2026-11-20: white next),
+read card by card and tiered as 4.4h and 4.4i were (Shayne: more cards a session) — Giver of Runes, Guide
+of Souls, Mother of Runes, Ocelot Pride, Ajani, Nacatl Pariah // Ajani, Nacatl Avenger, Lion Sash, White Plume
+Adventurer, Palace Jailer, Seasoned Dungeoneer, Witch Enchanter // Witch-Blessed Meadow (modal: i7's piece), Solitude,
+Eagles of the North, Get Lost, Prismatic Ending, Winds of Abandon (overload: h3's), Council's Judgment, Sunfall,
+Parallax Wave, Jennifer Walters // The Sensational She-Hulk. Guide of Souls takes i4's energy; White Plume and
+Seasoned Dungeoneer the initiative (g3's). From i7: a modal DFC is `BackFace(…) with { Modal
 = true }` and `PlayLandAction { BackFace }` (Witch Enchanter // Witch-Blessed Meadow takes it with white); "when this
 transforms into" `TriggerEvent.SelfTransforms` (`TransformedEvent`); "whenever this deals damage" `TriggerEvent.
 SelfDealsDamage` (`DealtDamageEvent`); "rounded up" `Count.RoundUp`; a graveyard mark's exile-instead `PlayPermission {
@@ -2192,3 +2273,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-20: Shayne took i7 as the default. MC-4.4i7 done: the five missed DFCs — 305 of 528 play, **blue (75 of 75)
   and black (61 of 61) finished**. `DealtDamageEvent`, `TransformedEvent`, CR 701.28f, modal DFCs (`PlayLandAction {
   BackFace }`). Next: Shayne to pick the next colour.
+- 2026-11-20: Shayne picked white. Next: MC-4.4j, white's 19 — survey, tiers, plan.
+- 2026-11-20: MC-4.4j planned — 6 tested pieces, 9 options, 4 new pieces (the monarch, ascend, reconfigure, voting);
+  three batches. Shayne took it as written; j1 + j2a next.
