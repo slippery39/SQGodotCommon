@@ -1671,6 +1671,101 @@ as his three priorities.
   golden-in moved 30 random and 202 card games, 12 added, no AI game; probe 150: none unfinished, every card used (Lion
   Sash activated 3,658, Council's Judgment cast 248). Suite 2,194 passed.
 - 2026-11-21, Shayne: **green is next** (4.4k) — the last colour; 40 left of 50.
+- 2026-11-21, Claude (cube lane) — **4.4k: green read card by card — 40 left of 50 (the three DFCs from the front
+  face's cost: Outland Liberator {1}{G}, Ulvenwald Oddity {2}{G}{G}, Emeritus of Abundance // Regrowth a prepare card
+  {2}{G}); 21 tested pieces, 15 options, 4 new pieces.** MtgCore has none of the four (no crew, earthbend, bestow or
+  day/night). Parts:
+  **k1** the 21 tested pieces — Bejeweled Warg (a modal `SelfDealsCombatDamageToPlayer`: `PutCounters` on a target Wolf
+  you control, or `CreateTreasure`), Keen-Eyed Curator (`{1}: Exile { Linked }` a target card from a graveyard; a static
+  `If = AtLeast(Count.CardTypesAmong(Ref.All(Exile, Is.ExiledBySource)), 4)` +4/+4 and trample), Lotus Cobra (landfall
+  `AddManaOfAnyOneColor(1)` — a trigger's mana, as Mana Drain's delayed one), Scythecat Cub (landfall `PutCounters` on a
+  target creature you control; Burnham's "the second time this ability has resolved this turn", Bristly Bill's double),
+  Sylvan Caryatid (`AnyColorMana`), Emeritus of Abundance // Regrowth (`EntersPrepared`; `SelfAttacks { If =
+  AtLeast(Count.LandsYouControl, 8) }` → `BecomePrepared`; `PrepareSpell` returning a target card from your graveyard to
+  hand), Endurance (`Evoke` green; "up to one target player" `MoveTo(their graveyard, Library)` — the bottom is MoveTo's
+  default; "in a random order" read when built), Formidable Speaker (`May` discard → `SearchLibrary(Creature, Hand) {
+  Reveal }`; `{1}, {T}: Untap` another target permanent), Mole Man, Moloid Master (`MayPlayFromZone(Graveyard, Is.Land)`
+  — Nog's; landfall a Moloid token with `SelfAttacks` `May` mill one), Sentinel of the Nameless City (`SelfEnters` and
+  `SelfAttacks` → `LsvCards.CreateMap`), Six (`MillAndMayTake(3, land)` — First Contact's; retrace is
+  `MayPlayFromZone(Graveyard, nonland permanent) { Costs = [discard a land] }` — Underworld Breach's escape shape, cast
+  in addition to its mana cost, during your turn), Icetill Explorer (`AdditionalLandEachTurn`, Nog's graveyard lands,
+  landfall mill one), Ouroboroid (`BeginningOfCombatOnYourTurn` `PutCounters(Ref.CreaturesYouControl,
+  Count.PowerOf(Ref.Source))`), Ulvenwald Oddity // Ulvenwald Behemoth (Etali's `Transform` by an activation; the back's
+  anthem a static), Generous Ent (`CreateFood`; forestcycling — Eagles of the North's landcycling as Forest), Tear
+  Asunder (`KickerComponent {1}{B}`, `TargetSpec.IfKicked` — Highly Illogical's), Force of Vigor (Force of Negation's
+  `MayCastFromHandFree { If = not your turn, Costs = [exile a green card] }`; up to two targets), Natural Order
+  (`AdditionalCostsComponent([SacrificeCost(green creature)])` — Silence the Echo's; `SearchLibrary` a green creature
+  onto the battlefield), Malevolent Rumble (`MillAndMayTake(4, permanent)` — First Contact's exactly; an Eldrazi Spawn
+  token, new token data only: 0/1, "Sacrifice this token: Add {C}"), Titania, Protector of Argoth (`SelfEnters` `MoveTo`
+  a target land card from your graveyard to the battlefield; `ChangedZone { From = Battlefield, To = Graveyard }` with
+  `Subject = Is.Land & Is.Yours` → a 5/3 Elemental), Pest Infestation (up to X targets — Dominion Infiltration's pick
+  after X; `CreateTokens(Pest, Count.X { Times = 2 })`, the Pest's dies-gain-1 its own trigger);
+  **k2a** options, mana, lands and tokens, 7 — Fanatic of Rhonas (ferocious: "activate only if" on a MANA ability —
+  `ManaAbilityComponent` has no `OnlyIf`, the activated ability's option moved across; eternalize `LsvCards.Eternalize`:
+  a graveyard ability `{ From = Graveyard, ExileSelfCost }` at sorcery speed, `CreateTokenCopy { OfAnExiledCard }`
+  with "except it's a 4/4 black Zombie … with no mana cost" — new EXCEPT options on CreateTokenCopy: base P/T, colour,
+  added creature type, no mana cost), Undermountain Adventurer (`TakeTheInitiative`; "add {G}{G}; if you've completed a
+  dungeon, add six {G} instead" — two mana abilities under the same `OnlyIf`, `YouCompletedADungeon` and its `Not`; the
+  yield picks the most), Baloth Prime (enters tapped with six stun counters: `EntersTappedComponent`,
+  `EntersWithCountersComponent(6) { Kind = Stun }` — stun is tested by `Untap`; "whenever you sacrifice a land" — no
+  event says a move was a sacrifice: `MagicState.Sacrifice` marks its `ChangedZoneEvent` `{ Sacrificed }`, a Trigger
+  option; `{4}, sacrifice a land: gain 2`), Fastbond ("any number of lands" — `AdditionalLandEachTurn { AnyNumber }`,
+  read by `LandDrops`; `LandPlayed` `{ If = lands played this turn ≥ 2 }`, a Count over `MagicPlayer.LandsPlayed`),
+  Sylvan Safekeeper (shroud, CR 702.18: hexproof from every player — beside `"Hexproof"` in `TargetSpec`, the
+  controller too; a `SacrificeCost(Is.Land)`), Vaultborn Tyrant (`CreatureYouControlEnters { Subject = Is.Source |
+  Is.PowerAtLeast(4) }`; `SelfDies { If = not a token }` → a token copy of the card that died, "except it's an
+  artifact" — the same EXCEPT option as eternalize's, a type added), Woodfall Primus (persist `LsvCards.Persist`:
+  `SelfDies { If = no −1/−1 counter as it last was }` → `MoveTo(Battlefield) { Counters }` — today +1/+1 only: a counter
+  KIND option; ETB destroy a target noncreature permanent);
+  **k2b** options, triggers, combat and casting, 8 — Surrak, Elusive Hunter (`CantBeCountered`; "a creature you control
+  or a creature SPELL you control becomes the target of" an opponent's — `SelfBecomesTargetOfOpponentsSpellOrAbility`'s
+  event with `Subject = Is.Creature & Is.Yours`, a spell on the stack a subject too — She-Hulk's shape), Ursine
+  Monstrosity (beginning of combat: mill one; "attacks that player this combat if able" DRC's `MustAttack` grant until
+  end of turn; indestructible and +X/+X, X `Count.CardTypesAmong(Ref.CardsInYourGraveyard)`; "an opponent at random"
+  is the opponent — two players, a ceiling as voting's), Leatherhead, Swamp Stalker (enters with a hexproof counter —
+  a keyword counter as Guide of Souls' flying; combat damage → `May` remove A counter of any kind (one choice among the
+  kinds on her), `WhenYouDo` destroy a target artifact or enchantment that player controls), Questing Beast
+  (`CantBeBlockedBy(power ≤ 2)`; "combat damage that would be dealt by creatures you control can't be prevented" — an
+  option read where `Damage.Deal` prevents (protection, `PreventAllDamageToYou`); combat damage to an opponent → "that
+  much" to a target planeswalker that player controls), Worldspine Wurm (`SelfDies` three 5/5 Wurms; "put into a
+  graveyard from anywhere" a `ChangedZone { To = Graveyard }` trigger read from the graveyard (`From = Graveyard`) →
+  `MoveTo(Library) { Shuffle }` — Fblthp's), Once Upon a Time (`MayCastFromHandFree(Is.Source) { If }` — "the first
+  spell you've cast this game" is today read from the spell's stamp (`FirstSpellYouCastThisGame`), so before casting it
+  needs the player's count: an option on the condition; top five, may take a creature or land, the rest
+  `BottomAtRandom`), Green Sun's Zenith (`SearchLibrary` green creature `ManaValueAtMost(X)` onto the battlefield;
+  "shuffle Green Sun's Zenith into its owner's library" — the spell's own way off the stack, Jace's
+  `ExiledLeavingTheStack` the nearest: a zone option), Hexdrinker (level up `LsvCards.LevelUp(cost)`: sorcery-speed
+  `PutCounters(Ref.Source, 1) { Kind = level }` and statics `If` on the level counters, LEVEL 3–7 4/4 and LEVEL 8+ 6/6;
+  "protection from instants / everything" granted by a STATIC — no static grants a component yet, only
+  `UntilEndOfTurn.Gains`: a `Grants` option read where `AbilitiesOf` reads Gains; base P/T as Station sets it, else
+  +N/+N with a ceiling);
+  **k3** new pieces, each with its nearest: **crew** (Esika's Chariot) — saddle's cost (`TapUntappedCost {
+  TotalPower }`, the creatures picked after activating; summoning-sick ones may crew, CR 702.122) at instant speed,
+  then "becomes an artifact creature until end of turn" (`ModifyUntilEndOfTurn { AlsoType = Creature }`, its printed
+  P/T read while it is one — Station's rule); likely composed as `LsvCards.Crew(n)` (Smuggler's Copter and Reckoner
+  Bankbuster wait for it in colourless); the rest is tested (two Cat tokens; `SelfAttacks` `CreateTokenCopy` of a target
+  token you control — Replicator's); **earthbend** (Badgermole Cub) — a keyword action: a target land you control
+  becomes a 0/0 creature with haste that's still a land (Does Machines' `AlsoType` 0/0, `ForGood`), a +1/+1 counter, and
+  "when it dies or is exiled, return it to the battlefield tapped" — a leave trigger it GAINS, read from the card as it
+  last was (the risk); "whenever you tap a creature for mana, add an additional {G}" is Molten Tide's
+  `ExtraRedFromMountains` generalised to a filter and a colour, a this-turn effect or a static (Molten Tide moved onto
+  it); **bestow** (Springheart Nantuko, CR 702.103) — cast for its bestow cost as an Aura with enchant creature
+  (Necromancy's `ModifyUntilEndOfTurn.Enchant`, an alternative cost as Baleful Mastery's `Mana`), a creature again once
+  unattached (it doesn't go to the graveyard); landfall `May` pay {1}{G} `If = Is.Attached` → `CreateTokenCopy` of the
+  host, `Otherwise` a 1/1 Insect; **day/night** (Outland Liberator // Frenzied Trapbreaker, CR 726) — a game
+  designation (j3's `DesignationComponent` is per player; this is the game's), set to day as a daybound permanent
+  appears, flipped as each turn begins by the spells the previous active player cast (`Count.SpellsYouCastThisTurn`:
+  none → night, two or more → day); daybound/nightbound permanents transform to match (i5's `Transform`), and one
+  entering at night enters transformed.
+  **Legal actions, counted on a 12-creature board:** Force of Vigor's up to two targets among 12 artifacts and
+  enchantments is 78 casts (the existing combinations; under the few dozen per side it was built for only in a normal
+  game — a choice after the cast if the probe slows); Six's retrace one cast per graveyard card per land in hand (12 ×
+  5 = 60 at worst); the rest don't grow — Pest Infestation's targets picked after X, crew's creatures after
+  activating, Leatherhead's counter one choice, Curator one activation per graveyard card.
+  **Batches (Shayne: more cards a session):** **k1** (21 cards, script-only, read on the card sheet), **k2a** (7),
+  **k2b** (8), **k3** (4 new pieces).
+- 2026-11-21, Shayne (reviewing 4.4k's plan): **taken as written** — the tiers and the four batches; k1 begins in a new
+  session.
 
 ## Tasks
 
@@ -1942,8 +2037,16 @@ as his three priorities.
     - [x] MC-4.4j4 Ascend (one batch with j5, j6): Ocelot Pride
     - [x] MC-4.4j5 Reconfigure: Lion Sash
     - [x] MC-4.4j6 Voting: Council's Judgment
-  - [ ] MC-4.4k Green beyond tier 1 (Shayne, 2026-11-21: the next colour, after white) — 40 cards, read card by card and
-        tiered as 4.4h, 4.4i and 4.4j were; the plan and its batches in Decisions, "4.4k"
+  - [ ] MC-4.4k Green beyond tier 1 (Shayne, 2026-11-21: the next colour, after white) — 40 cards read card by card and
+        tiered (Decisions, "4.4k"): 21 tested pieces, 15 options, 4 new pieces; four batches — k1, k2a, k2b, k3
+        (Shayne took it as written):
+    - [ ] MC-4.4k1 The tested pieces, 21 (list in Decisions)
+    - [ ] MC-4.4k2a Options, mana, lands and tokens, 7: Fanatic of Rhonas, Undermountain Adventurer, Baloth Prime,
+          Fastbond, Sylvan Safekeeper, Vaultborn Tyrant, Woodfall Primus
+    - [ ] MC-4.4k2b Options, triggers, combat and casting, 8: Surrak, Elusive Hunter, Ursine Monstrosity, Leatherhead,
+          Swamp Stalker, Questing Beast, Worldspine Wurm, Once Upon a Time, Green Sun's Zenith, Hexdrinker
+    - [ ] MC-4.4k3 New pieces, 4: crew (Esika's Chariot), earthbend (Badgermole Cub), bestow (Springheart Nantuko),
+          day/night (Outland Liberator // Frenzied Trapbreaker)
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -1974,7 +2077,9 @@ monarch), j4–j6 (ascend, reconfigure, voting). j1 + j2a is done** (Decisions, 
 U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **j2b + j3 is done** (Decisions, "4.4j2b +
 j3"; 321 of 528 play — W 57/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **j4–j6 is
 done: white is finished** (Decisions, "4.4j4–j6"; 324 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 10/50,
-multicolour 6/65, colourless 58/163). **Green is next (Shayne, 2026-11-21): MC-4.4k** — its 40 unplayed cards
+multicolour 6/65, colourless 58/163). **MC-4.4k is planned (Decisions, "4.4k"; Shayne took it as written): four
+batches — k1 (the 21 tested pieces), k2a (7 mana, land and token options), k2b (8 trigger, combat and casting
+options), k3 (crew, earthbend, bestow, day/night).** **Green is next (Shayne, 2026-11-21): MC-4.4k** — its 40 unplayed cards
 (`python tools/magic_set.py text --missing --set LSV`, the green ones) read card by card and tiered as 4.4h, 4.4i and
 4.4j were (a DFC from its front face's cost; each new piece naming its nearest), written in Decisions as "4.4k", then
 batches of more cards a session; Shayne reviews the plan before the first batch. Then multicolour (59) and colourless
