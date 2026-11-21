@@ -23,7 +23,12 @@ whose subsystem it lives in.
   doesn't use floats (`Payment.Floats`). **A mana ability is an activated ability** (CR 605): ONE
   `ManaAbilityComponent` — `Amount`, `AnyOneColor`, a mana `Cost`, and the shared `Costs` list ("{T}" unless
   it says otherwise); a grant is `GrantsManaAbility(filter, ability)` (Rok-Tahk, Rishkar), read with the
-  permanent's own by `ManaAbilities.AbilitiesOf`. **A cost that picks a card** (Phyrexian Tower's "Sacrifice a
+  permanent's own by `ManaAbilities.AbilitiesOf`. **"Activate only if"** on a mana ability (Fanatic of Rhonas'
+  ferocious {G}{G}{G}{G}; Undermountain Adventurer's "add six {G} instead" — two abilities, the {G}{G} under `Not`,
+  MC-4.4k2a) is `ManaAbilityComponent.OnlyIf`, judged where the abilities are listed (`ManaAbilities.AbilitiesOf`): an
+  ability it refuses isn't there for payment, manual tapping, the mana moves or the X bound, so the yield's "the one
+  making the most" picks among those it allows.
+  **A cost that picks a card** (Phyrexian Tower's "Sacrifice a
   creature") is never auto-paid: it is a move in `LegalActions`, one per candidate (`TapForManaAction.SacrificeId`,
   Shayne 2026-11-06), its mana floating. **So is a mana ability without {T}** (Rain of Filth: "until end of turn, lands
   you control gain 'Sacrifice this land: Add {B}'", MC-4.4h2c — gained through `ModifyUntilEndOfTurn.Gains`, read by

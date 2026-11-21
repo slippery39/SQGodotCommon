@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 40/46 · uncommon 64/86 · rare 167/279 · mythic 65/108 · **345/528**
+**Playable:** common 40/46 · uncommon 64/86 · rare 172/279 · mythic 67/108 · **352/528**
 
 ### "Name Sticker" Goblin
 
@@ -2773,7 +2773,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you sacrifice a land, create a tapped 4/4 green Beast creature token and untap this creature.  
 > {4}, Sacrifice a land: You gain 2 life.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2aTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `EntersWithCountersComponent` — "This creature enters with N (or X) +1/+1 counters on it." Applied by…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Baloth Prime"] =
+[
+	new EntersTappedComponent(),
+	new EntersWithCountersComponent(6) { Kind = CounterKinds.Stun },
+	When(
+		new Trigger(EventKind.ChangedZone)
+		{
+			From = ZoneType.Battlefield,
+			To = ZoneType.Graveyard,
+			Subject = Is.Land & Is.Yours,
+			Also = EventTest.Sacrificed,
+		},
+		[],
+		new CreateTokens(BalothBeast, 1) { Tapped = true },
+		new Untap(Ref.Source)
+	),
+	new ActivatedAbilityComponent(ManaCost.Parse("{4}"), [new GainLife(Ref.You, 2)])
+	{
+		Costs = [new SacrificeCost(Is.Land)],
+	},
+],
+```
 
 ### Barrowgoyf
 
@@ -4319,7 +4345,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.  
 > Eternalize {2}{G}{G} ({2}{G}{G}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a 4/4 black Zombie Snake Druid with no mana cost. Eternalize only as a sorcery.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2aTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Fanatic of Rhonas"] =
+[
+	new ManaAbilityComponent(ManaColor.Green),
+	new ManaAbilityComponent(ManaColor.Green)
+	{
+		Amount = 4,
+		OnlyIf = new AtLeast(
+			Count.NumberOf(Ref.Permanents(Is.Creature & Is.Yours & Is.PowerAtLeast(4))),
+			1
+		),
+	},
+	Eternalize("{2}{G}{G}"),
+],
+```
 
 ### Fear of Missing Out
 
@@ -7036,7 +7080,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Sacrifice a land: Target creature you control gains shroud until end of turn. (It can't be the target of spells or abilities.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2aTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…
+
+```csharp
+["Sylvan Safekeeper"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Shroud")]
+	)
+	{
+		Costs = [new SacrificeCost(Is.Land)],
+		Targets = [Target(Is.Creature & Is.Yours)],
+	},
+],
+```
 
 ### Taiga
 
@@ -7511,7 +7571,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you take the initiative.  
 > {T}: Add {G}{G}. If you've completed a dungeon, add six {G} instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2aTests
+
+**Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TakeTheInitiative` — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) —…; `YouCompletedADungeon` — Caves of Chaos Adventurer: "If you've completed a dungeon" — this game…
+
+```csharp
+["Undermountain Adventurer"] =
+[
+	When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+	new ManaAbilityComponent(ManaColor.Green)
+	{
+		Amount = 2,
+		OnlyIf = new Not(new YouCompletedADungeon()),
+	},
+	new ManaAbilityComponent(ManaColor.Green)
+	{
+		Amount = 6,
+		OnlyIf = new YouCompletedADungeon(),
+	},
+],
+```
 
 ### Underworld Breach
 
@@ -7855,7 +7934,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, destroy target noncreature permanent.  
 > Persist (When this creature dies, if it had no -1/-1 counters on it, return it to the battlefield under its owner's control with a -1/-1 counter on it.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2aTests
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Woodfall Primus"] =
+[
+	When(TriggerEvent.SelfEnters, [Target(!Is.Creature)], new Destroy(Ref.Target())),
+	Persist,
+],
+```
 
 ### Wrath of God
 
@@ -8625,7 +8714,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may play any number of lands on each of your turns.  
 > Whenever you play a land, if it wasn't the first land you played this turn, this enchantment deals 1 damage to you.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2aTests
+
+**Engine pieces:** `AdditionalLandEachTurn` — Captain Kathryn Janeway: "You may play an additional land on each of your turns." —…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Fastbond"] =
+[
+	new AdditionalLandEachTurn { AnyNumber = true },
+	When(
+		new Trigger(EventKind.LandPlayed) { By = Whose.You },
+		[],
+		new DealDamage(Ref.You, 1)
+	) with
+	{
+		If = new AtLeast(Count.LandsYouPlayedThisTurn, 2),
+	},
+],
+```
 
 ### Force of Will
 
@@ -10328,7 +10434,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever this creature or another creature you control with power 4 or greater enters, you gain 3 life and draw a card.  
 > When this creature dies, if it's not a token, create a token that's a copy of it, except it's an artifact in addition to its other types.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2aTests
+
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Vaultborn Tyrant"] =
+[
+	When(
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Creature & Is.Yours & (Is.Source | Is.PowerAtLeast(4)),
+		},
+		[],
+		new GainLife(Ref.You, 3),
+		new DrawCards(Ref.You, 1)
+	),
+	When(
+		TriggerEvent.SelfDies,
+		[],
+		new CreateTokenCopy(Ref.Source) { AlsoType = CardType.Artifact }
+	) with
+	{
+		If = new Not(new Matches(Ref.Source, Is.Token)),
+	},
+],
+```
 
 ### Vivi Ornitier
 

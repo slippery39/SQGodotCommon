@@ -603,6 +603,21 @@ public record CreateTokenCopy(Ref What) : Effect
 	/// <summary>Squad (Sicarian Infiltrator): "create that many tokens that are copies of it" — how many of each; unset is one.</summary>
 	public Count? N { get; init; }
 
+	/// <summary>Vaultborn Tyrant: "except it's an artifact in addition to its other types".</summary>
+	public CardType AlsoType { get; init; }
+
+	/// <summary>Eternalize (Fanatic of Rhonas): "except it's a 4/4 …" — its base power and toughness.</summary>
+	public (int Power, int Toughness)? SetBase { get; init; }
+
+	/// <summary>Eternalize: "… black …" — its colours, in place of the original's; empty keeps them.</summary>
+	public ImmutableArray<ManaColor> Colors { get; init; } = [];
+
+	/// <summary>Eternalize: "… Zombie Snake Druid" — creature types put before the original's.</summary>
+	public ImmutableArray<string> AlsoSubtypes { get; init; } = [];
+
+	/// <summary>Eternalize: "with no mana cost" (mana value 0).</summary>
+	public bool NoManaCost { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var n = N?.Value(s, InputContext) ?? 1;
@@ -639,6 +654,16 @@ public record CreateTokenCopy(Ref What) : Effect
 					Supertypes = NotLegendary
 						? copy.Supertypes & ~Supertype.Legendary
 						: copy.Supertypes,
+					Types = copy.Types | AlsoType,
+					Subtypes =
+					[
+						.. AlsoSubtypes.Where(t => !copy.Subtypes.Contains(t)),
+						.. copy.Subtypes,
+					],
+					Colors = Colors.IsEmpty ? copy.Colors : Colors,
+					ManaCost = NoManaCost ? ManaCost.None : copy.ManaCost,
+					BasePower = SetBase?.Power ?? copy.BasePower,
+					BaseToughness = SetBase?.Toughness ?? copy.BaseToughness,
 				}
 			) with
 			{
@@ -678,6 +703,9 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 
 	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
 	public int Counters { get; init; }
+
+	/// <summary>Persist (Woodfall Primus): "with a -1/-1 counter on it" — the kind of Counters; +1/+1 unless said.</summary>
+	public string CounterKind { get; init; } = CounterKinds.PlusOne;
 
 	/// <summary>Grim Repriser, Proctor: "with a finality counter on it".</summary>
 	public bool Finality { get; init; }
@@ -767,7 +795,7 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 				s = s.EnterBattlefield(
 					id,
 					UnderYourControl ? Controller : card.OwnerId,
-					extraCounters: Counters,
+					extraCounters: CounterKind == CounterKinds.PlusOne ? Counters : 0,
 					tapped: Tapped,
 					finality: Finality,
 					loses: Loses,
@@ -775,6 +803,10 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 				);
 				if (!s.IsOnBattlefield(id))
 					continue; // Containment Priest exiled it instead
+				// ponytail: any other kind is put on just after it entered, not as it entered — an "enters" trigger reading
+				// counters would miss it; pass the kind to EnterBattlefield when a card needs that.
+				if (CounterKind != CounterKinds.PlusOne && Counters > 0)
+					s = s.PutCounters(id, CounterKind, Counters, entering: true);
 				moved.Add(id);
 				if (ExileAtNextEndStep)
 					s = Delay(s, id, ExileItAtTheEndStep);

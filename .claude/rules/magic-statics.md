@@ -76,7 +76,11 @@ whose subsystem it lives in.
   P/T, keywords and abilities, never its status (`Card.IsStatus`: counters, damage, what it was
   given; the same set a zone change strips). A token copy (`CreateTokenCopy`) is a blank token with
   those values, entering through `EnterBattlefield` so its own "enters" fires; a source that just died
-  is copied as it last existed. "Becomes a copy until end of turn" (Hall of Echoes) keeps the original
+  is copied as it last existed. **Its "except …"** (MC-4.4k2a) are options on `CreateTokenCopy`, applied over the copied
+  values: Vaultborn Tyrant's "an artifact in addition to its other types" `AlsoType`; eternalize's "a 4/4 black Zombie
+  [its types] with no mana cost" `SetBase`, `Colors`, `AlsoSubtypes` (before the original's), `NoManaCost` — beside
+  `NotLegendary` and `AddingKeywords`. **Eternalize** (CR 702.129, Fanatic of Rhonas) is `LsvCards.Eternalize(cost)`: a
+  sorcery-speed graveyard ability with `ExileSelfCost`, copying the card as it was there (the source snapshot). "Becomes a copy until end of turn" (Hall of Echoes) keeps the original
   in `CopyUntilEndOfTurn`, restored in cleanup AND as it leaves (`Card.Fresh`), so a dead Hall is a Hall.
 - **A type change by an effect, for good** (Does Machines: "it becomes a 0/0 Robot creature in addition to its other
   types") is `ModifyUntilEndOfTurn { ForGood, AlsoType, SetBase, AlsoCreatureType }` — the card type stamped

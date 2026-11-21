@@ -226,6 +226,9 @@ public record ChangedZoneEvent(int PlayerId, int CardId, ZoneType From, ZoneType
 	/// <summary>Off the battlefield: the permanent as it last was — its own leaving abilities look back (CR 603.10a).</summary>
 	public Card? LastKnown { get; init; }
 
+	/// <summary>Baloth Prime: "Whenever you sacrifice a land" — the move was MagicState.Sacrifice (EventTest.Sacrificed).</summary>
+	public bool Sacrificed { get; init; }
+
 	public override EventKind Kind() => EventKind.ChangedZone;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
@@ -883,6 +886,7 @@ public static class Triggers
 				&& damaged.SourceId == source.Id,
 			EventTest.Noncombat => e is PlayerDealtDamageEvent { Combat: false },
 			EventTest.NotTheTurnsDraw => e is DrewCardEvent { TurnDraw: false },
+			EventTest.Sacrificed => e is ChangedZoneEvent { Sacrificed: true },
 			_ => true,
 		};
 	}

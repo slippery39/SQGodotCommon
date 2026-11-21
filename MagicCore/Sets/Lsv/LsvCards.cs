@@ -3881,7 +3881,151 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4k2a: green's mana, land and token options (a mana ability's OnlyIf, eternalize, a sacrifice's event, any number of lands, shroud, persist) =====
+			["Fanatic of Rhonas"] =
+			[
+				new ManaAbilityComponent(ManaColor.Green),
+				new ManaAbilityComponent(ManaColor.Green)
+				{
+					Amount = 4,
+					OnlyIf = new AtLeast(
+						Count.NumberOf(Ref.Permanents(Is.Creature & Is.Yours & Is.PowerAtLeast(4))),
+						1
+					),
+				},
+				Eternalize("{2}{G}{G}"),
+			],
+			["Undermountain Adventurer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+				new ManaAbilityComponent(ManaColor.Green)
+				{
+					Amount = 2,
+					OnlyIf = new Not(new YouCompletedADungeon()),
+				},
+				new ManaAbilityComponent(ManaColor.Green)
+				{
+					Amount = 6,
+					OnlyIf = new YouCompletedADungeon(),
+				},
+			],
+			["Baloth Prime"] =
+			[
+				new EntersTappedComponent(),
+				new EntersWithCountersComponent(6) { Kind = CounterKinds.Stun },
+				When(
+					new Trigger(EventKind.ChangedZone)
+					{
+						From = ZoneType.Battlefield,
+						To = ZoneType.Graveyard,
+						Subject = Is.Land & Is.Yours,
+						Also = EventTest.Sacrificed,
+					},
+					[],
+					new CreateTokens(BalothBeast, 1) { Tapped = true },
+					new Untap(Ref.Source)
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{4}"), [new GainLife(Ref.You, 2)])
+				{
+					Costs = [new SacrificeCost(Is.Land)],
+				},
+			],
+			["Fastbond"] =
+			[
+				new AdditionalLandEachTurn { AnyNumber = true },
+				When(
+					new Trigger(EventKind.LandPlayed) { By = Whose.You },
+					[],
+					new DealDamage(Ref.You, 1)
+				) with
+				{
+					If = new AtLeast(Count.LandsYouPlayedThisTurn, 2),
+				},
+			],
+			["Sylvan Safekeeper"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Shroud")]
+				)
+				{
+					Costs = [new SacrificeCost(Is.Land)],
+					Targets = [Target(Is.Creature & Is.Yours)],
+				},
+			],
+			["Vaultborn Tyrant"] =
+			[
+				When(
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Creature & Is.Yours & (Is.Source | Is.PowerAtLeast(4)),
+					},
+					[],
+					new GainLife(Ref.You, 3),
+					new DrawCards(Ref.You, 1)
+				),
+				When(
+					TriggerEvent.SelfDies,
+					[],
+					new CreateTokenCopy(Ref.Source) { AlsoType = CardType.Artifact }
+				) with
+				{
+					If = new Not(new Matches(Ref.Source, Is.Token)),
+				},
+			],
+			["Woodfall Primus"] =
+			[
+				When(TriggerEvent.SelfEnters, [Target(!Is.Creature)], new Destroy(Ref.Target())),
+				Persist,
+			],
 		};
+
+	/// <summary>
+	/// Eternalize (CR 702.129; Fanatic of Rhonas): "[cost], Exile this card from your graveyard: Create a token that's a
+	/// copy of it, except it's a 4/4 black Zombie [its types] with no mana cost. Eternalize only as a sorcery." — the card
+	/// copied as it last was in the graveyard (CreateTokenCopy's source snapshot).
+	/// </summary>
+	static ActivatedAbilityComponent Eternalize(string cost) =>
+		new(
+			ManaCost.Parse(cost),
+			[
+				new CreateTokenCopy(Ref.Source)
+				{
+					SetBase = (4, 4),
+					Colors = [ManaColor.Black],
+					AlsoSubtypes = ["Zombie"],
+					NoManaCost = true,
+				},
+			]
+		)
+		{
+			Keyword = "Eternalize",
+			From = ZoneType.Graveyard,
+			Costs = [new ExileSelfCost()],
+			SorcerySpeed = true,
+		};
+
+	/// <summary>
+	/// Persist (CR 702.79; Woodfall Primus): "When this creature dies, if it had no -1/-1 counters on it, return it to the
+	/// battlefield under its owner's control with a -1/-1 counter on it." — the counters read as it last was.
+	/// </summary>
+	static TriggeredAbilityComponent Persist =>
+		When(
+			TriggerEvent.SelfDies,
+			[],
+			new MoveTo(Ref.EventCard, ZoneType.Battlefield)
+			{
+				From = [ZoneType.Graveyard],
+				Counters = 1,
+				CounterKind = CounterKinds.MinusOne,
+			}
+		) with
+		{
+			If = new Not(new Matches(Ref.Source, Is.WithCounter(CounterKinds.MinusOne))),
+		};
+
+	/// <summary>Baloth Prime: "a tapped 4/4 green Beast creature token" (no trample — FRA's Beast has it).</summary>
+	static CardData BalothBeast => Token("Beast", "Creature — Beast", "4", "4", ["G"]);
 
 	/// <summary>Voice of Victory, Jennifer Walters: "Your opponents can't cast spells during your turn."</summary>
 	static CantCastOrActivate OpponentsCantCastDuringYourTurn =>

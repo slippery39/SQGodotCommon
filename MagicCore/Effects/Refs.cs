@@ -419,6 +419,7 @@ public enum CountOf
 	BeyondTheFewest, // Balance: "equal to the number … controlled by the player who controls the fewest, then sacrifices the rest" — the rest, for the player Ref.It
 	PermanentsLeftTheBattlefieldThisTurn, // Revolt (Fatal Push): "if a permanent left the battlefield under your control this turn" — of the player [Ref]
 	AmountPaid, // PayAnyAmount: "that many" / "that much" — the number paid
+	LandsYouPlayedThisTurn, // Fastbond: "if it wasn't the first land you played this turn"
 }
 
 /// <summary>
@@ -583,6 +584,10 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		new(0, null, CountOf.SpellsYouCastThisTurn);
 	public static readonly Count NoncreatureSpellsYouCastThisTurn =
 		new(0, null, CountOf.NoncreatureSpellsYouCastThisTurn);
+
+	/// <summary>Fastbond: "if it wasn't the first land you played this turn" — TurnTally.LandsPlayed.</summary>
+	public static readonly Count LandsYouPlayedThisTurn =
+		new(0, null, CountOf.LandsYouPlayedThisTurn);
 	public static readonly Count NoncombatDamageToOpponentsLastTurn =
 		new(0, null, CountOf.NoncombatDamageToOpponentsLastTurn);
 	public static readonly Count NoncombatDamageToOpponentsThisTurn =
@@ -690,6 +695,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				or CountOf.YourSurveilsThisTurn
 				or CountOf.SpellsYouCastThisTurn
 				or CountOf.NoncreatureSpellsYouCastThisTurn
+				or CountOf.LandsYouPlayedThisTurn
 		)
 		{
 			// Whose turn tally: Of (Narset: Ref.It, the player drawing); unset is you.
@@ -707,6 +713,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				CountOf.LoyaltyAbilitiesYouActivatedThisTurn => tally.LoyaltyAbilitiesActivated,
 				CountOf.SpellsYouCastThisTurn => tally.SpellsCast,
 				CountOf.NoncreatureSpellsYouCastThisTurn => tally.NoncreatureSpellsCast,
+				CountOf.LandsYouPlayedThisTurn => tally.LandsPlayed,
 				_ => tally.Surveils,
 			};
 		}

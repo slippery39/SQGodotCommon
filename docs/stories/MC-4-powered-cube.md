@@ -1783,6 +1783,23 @@ as his three priorities.
   Golden-out moved nothing (162 random, 906 card games); golden-in moved 30 random and 1,200 card games, 84 added, no AI
   game; probe 150: none unfinished, all 21 used (Keen-Eyed Curator activated 698, Formidable Speaker 430). Suite 2,197
   passed.
+- 2026-11-21, Claude (cube lane) — **4.4k2a: green's mana, land and token options — 352 of 528 play (green 38 of 50).**
+  All seven tier 2, each an option on the nearest piece as planned: a mana ability's "activate only if" is
+  `ManaAbilityComponent.OnlyIf`, judged in `ManaAbilities.AbilitiesOf` (Fanatic's ferocious {G}{G}{G}{G}; Undermountain
+  Adventurer's {G}{G} under `Not(YouCompletedADungeon)` beside a six-{G} ability under it — the yield picks the most
+  allowed); eternalize `LsvCards.Eternalize(cost)` with `CreateTokenCopy`'s new except-options `SetBase`, `Colors`,
+  `AlsoSubtypes`, `NoManaCost` (and `AlsoType`, Vaultborn Tyrant's artifact); "whenever you sacrifice a land" is
+  `EventTest.Sacrificed` on k1's land zone-change event — `MagicState.Sacrifice` tells `MoveCard` (`sacrificed:`), which
+  marks `ChangedZoneEvent.Sacrificed`; Fastbond `AdditionalLandEachTurn { AnyNumber }` (`LandDrops` = `int.MaxValue`) and
+  `Count.LandsYouPlayedThisTurn`; shroud beside hexproof in `TargetSpec` (every player's); persist `LsvCards.Persist`
+  with `MoveTo.CounterKind`. New token data: Baloth Prime's untrampled 4/4 Beast. One ceiling in DesignNotes (a
+  non-+1/+1 `MoveTo` counter put just after entering; a sacrificed land exiled instead raises no event; Baloth reads the
+  land's owner, Titania's). The review moved `OnlyIf` from `Usable` into `AbilitiesOf` (every reader, no ceiling) and
+  `LandDrops` back to an allocation-free loop; `AnyNumber` stays a flag, as `MaySacrifice { AnyNumber }`. 8 tests in `LsvBatch2k2aTests.cs` (`Mana(card)`: the units its yield makes, `Settle()`:
+  triggers raised outside an action resolved, `Enters(card)`); 12/12 revert-checks caught. Golden-out moved nothing (162
+  random, 927 card games); golden-in moved 30 random and 438 card games, 28 added, no AI game; probe 150: none
+  unfinished, all seven used (Sylvan Safekeeper activated 1,168, Baloth Prime 479; Undermountain's "activated 0" is a
+  mana ability's, never counted). Suite 2,205 passed.
 
 ## Tasks
 
@@ -2058,8 +2075,8 @@ as his three priorities.
         tiered (Decisions, "4.4k"): 21 tested pieces, 15 options, 4 new pieces; four batches — k1, k2a, k2b, k3
         (Shayne took it as written):
     - [x] MC-4.4k1 The tested pieces, 21 (list in Decisions; done 2026-11-21 — Scythecat Cub and Titania took an option)
-    - [ ] MC-4.4k2a Options, mana, lands and tokens, 7: Fanatic of Rhonas, Undermountain Adventurer, Baloth Prime,
-          Fastbond, Sylvan Safekeeper, Vaultborn Tyrant, Woodfall Primus
+    - [x] MC-4.4k2a Options, mana, lands and tokens, 7: Fanatic of Rhonas, Undermountain Adventurer, Baloth Prime,
+          Fastbond, Sylvan Safekeeper, Vaultborn Tyrant, Woodfall Primus (done 2026-11-21, all seven options as planned)
     - [ ] MC-4.4k2b Options, triggers, combat and casting, 8: Surrak, Elusive Hunter, Ursine Monstrosity, Leatherhead,
           Swamp Stalker, Questing Beast, Worldspine Wurm, Once Upon a Time, Green Sun's Zenith, Hexdrinker
     - [ ] MC-4.4k3 New pieces, 4: crew (Esika's Chariot), earthbend (Badgermole Cub), bestow (Springheart Nantuko),
@@ -2097,7 +2114,14 @@ done: white is finished** (Decisions, "4.4j4–j6"; 324 of 528 play — W 60/60,
 multicolour 6/65, colourless 58/163). **MC-4.4k is planned (Decisions, "4.4k"; Shayne took it as written): four
 batches — k1 (the 21 tested pieces), k2a (7 mana, land and token options), k2b (8 trigger, combat and casting
 options), k3 (crew, earthbend, bestow, day/night).** **k1 is done** (Decisions, "4.4k1"; 345 of 528 play — W 60/60,
-U 75/75, B 61/61, R 54/54, G 31/50, multicolour 6/65, colourless 58/163); **k2a is next**. From k1: "… instead" on the
+U 75/75, B 61/61, R 54/54, G 31/50, multicolour 6/65, colourless 58/163). **k2a is done** (Decisions, "4.4k2a"; 352 of
+528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 38/50, multicolour 6/65, colourless 58/163); **k2b is next** (Surrak,
+Ursine Monstrosity, Leatherhead, Questing Beast, Worldspine Wurm, Once Upon a Time, Green Sun's Zenith, Hexdrinker —
+4.4k's plan, part k2b). From k2a: a mana ability's "activate only if" is `ManaAbilityComponent.OnlyIf`; a token copy's
+"except" is `CreateTokenCopy { AlsoType, SetBase, Colors, AlsoSubtypes, NoManaCost }`; eternalize `LsvCards.Eternalize`,
+persist `LsvCards.Persist` (`MoveTo.CounterKind`); "whenever you sacrifice" `EventTest.Sacrificed`
+(`ChangedZoneEvent.Sacrificed`, lands only — the event is raised for a land); shroud beside hexproof; k2a's tests are in
+`LsvBatch2k2aTests.cs` (`Mana(card)`, `Settle()`, `Enters(card)`). From k1: "… instead" on the
 Nth resolution is `IfNthResolutionThisTurn { Otherwise }`; a land put into a graveyard from the battlefield raises
 `ChangedZoneEvent` (`LastKnown` the land as it was — Baloth Prime's "whenever you sacrifice a land" marks that event);
 the prepare helpers `EntersPrepared` / `PrepareSpell` are `Scripting`'s; k1's tests are in `LsvBatch2kTests.cs`
@@ -2482,3 +2506,4 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   Shayne to pick what follows (green, multicolour, colourless).
 - 2026-11-21: Shayne picked green. Next: MC-4.4k, green's 40 — survey, tiers, plan.
 - 2026-11-21: MC-4.4k1 done — green's 21 tested pieces, 345 of 528 play (green 31 of 50). Next: k2a.
+- 2026-11-21: MC-4.4k2a done — green's 7 mana, land and token options, 352 of 528 play (green 38 of 50). Next: k2b.

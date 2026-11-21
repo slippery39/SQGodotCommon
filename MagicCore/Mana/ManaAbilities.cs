@@ -40,6 +40,10 @@ public static class ManaAbilities
 	static bool Usable(GameState s, Card card, ManaAbilityComponent m) =>
 		m.IsPlain && m.Costs.All(c => c.Taps || c.CanPay(s, card.ControllerId, card.Id));
 
+	/// <summary>Fanatic of Rhonas' ferocious: "Activate only if …" (ManaAbilityComponent.OnlyIf).</summary>
+	static bool Allowed(GameState s, Card card, ManaAbilityComponent m) =>
+		m.OnlyIf is not { } only || only.Holds(s, Conditions.Of(card));
+
 	static bool Pays(
 		GameState s,
 		ManaAbilityComponent m,
@@ -120,11 +124,13 @@ public static class ManaAbilities
 		ZoneType from = ZoneType.Battlefield
 	)
 	{
-		var own = s.AbilitiesOf<ManaAbilityComponent>(card).Where(m => m.From == from);
+		// "Activate only if" (Fanatic of Rhonas' ferocious) leaves it out here, so every reader skips it.
+		var own = s.AbilitiesOf<ManaAbilityComponent>(card)
+			.Where(m => m.From == from && Allowed(s, card, m));
 		if (from != ZoneType.Battlefield)
 			return own;
 		var granted = Granted(s, card);
-		return granted is null ? own : own.Concat(granted);
+		return granted is null ? own : own.Concat(granted.Where(m => Allowed(s, card, m)));
 	}
 
 	/// <summary>The mana abilities granted to it; null (no allocation) for the usual none — payment asks per source.</summary>

@@ -34,7 +34,8 @@ whose subsystem it lives in.
   a search, a return, a token: never a bare `MoveCard` to the battlefield, which skips its entry
   (controller, tapped, its "enters" event). `MoveChosenToAction` routes a battlefield search there.
 - **Hexproof** is checked in `TargetSpec.IsLegal` through `s.Has` (an opponent's spells and abilities
-  only; mass effects never target). **Destroying is `MagicState.Destroy`** — the Destroy effect and the
+  only; mass effects never target); **shroud** (CR 702.18, Sylvan Safekeeper's grant, MC-4.4k2a) beside it — every
+  player's, its controller's too. **Destroying is `MagicState.Destroy`** — the Destroy effect and the
   state-based check's lethal damage and deathtouch alike: indestructible (`s.IsIndestructible`) is asked
   there, and Dr. McCoy's replacement ("instead remove all +1/+1 counters … damage healed",
   `CountersRemovedInsteadOfDestruction`) applies there. Several at once are JUDGED together before any
@@ -184,7 +185,11 @@ whose subsystem it lives in.
 - **Explore** (CR 701.44, Captain Janeway) is `Explore(ref)`: the top card revealed (`MakeKnown`), a land to the
   hand, else a +1/+1 counter through `PutCounters` and a yes/no to bin the card (`MoveTo(Ref.Id(card)) { From = [Library] }`).
   **"An additional land on each of your turns"** (`AdditionalLandEachTurn`) is `MagicState.LandDrops`, the one count
-  the land play and the rollout both read.
+  the land play and the rollout both read; Fastbond's "any number of lands" is its `{ AnyNumber }` (`int.MaxValue`), and
+  "if it wasn't the first land you played this turn" a `LandPlayed` trigger's intervening `If` on
+  `Count.LandsYouPlayedThisTurn` ≥ 2 (MC-4.4k2a). **Persist** (CR 702.79, Woodfall Primus) is `LsvCards.Persist`: `SelfDies
+  { If = no -1/-1 counter as it last was }` → `MoveTo(Ref.EventCard, Battlefield) { Counters = 1, CounterKind = MinusOne }`
+  — `MoveTo.CounterKind` the kind of its `Counters` (+1/+1 unless said; another kind put on just after it enters, DesignNotes).
 - **"Create a token … Attach it to [this]"** (Gwyndala) is `CreateTokens.AttachTo`; **"sacrifice any number of
   [lands], then … that many"** (Genesis Device) is `MaySacrifice { AnyNumber }` with `Count.PermanentsChosen`.
 - **"Exile [this spell]"** as it resolves (The Needs of the Many, Infinite Diversity) is

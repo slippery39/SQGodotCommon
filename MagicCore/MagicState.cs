@@ -188,7 +188,14 @@ public static class MagicState
 	}
 
 	/// <summary>Every zone change of a card on or off the battlefield/stack — it arrives as a new object (CR 400.7).</summary>
-	public static GameState MoveCard(this GameState s, int cardId, int zoneId, bool toTop = false)
+	/// <param name="sacrificed">From <see cref="Sacrifice"/> alone: its ChangedZoneEvent says so (Baloth Prime).</param>
+	public static GameState MoveCard(
+		this GameState s,
+		int cardId,
+		int zoneId,
+		bool toTop = false,
+		bool sacrificed = false
+	)
 	{
 		var before = s.GetCard(cardId);
 		// Flashback (CR 702.34a): leaving the stack — resolved, countered, fizzled, bounced — it is exiled instead.
@@ -337,6 +344,7 @@ public static class MagicState
 				)
 				{
 					LastKnown = before,
+					Sacrificed = sacrificed,
 				}
 			);
 
@@ -407,7 +415,11 @@ public static class MagicState
 	public static GameState Sacrifice(this GameState s, int cardId) =>
 		!s.CanSacrifice(cardId)
 			? s
-			: s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
+			: s.MoveCard(
+				cardId,
+				s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard),
+				sacrificed: true
+			);
 
 	/// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — every sacrifice asks: costs, choices, Treasure's own mana.</summary>
 	public static bool CanSacrifice(this GameState s, int cardId) =>
@@ -417,10 +429,18 @@ public static class MagicState
 			.Any(s.HasAbility<CantSacrificeTreasures>);
 
 	/// <summary>How many lands this player may play this turn: one, Way of the Paradox's extra ones, and one more per Captain Janeway (AdditionalLandEachTurn).</summary>
-	public static int LandDrops(this GameState s, int playerId) =>
-		1
-		+ s.GetPlayer(playerId).ThisTurn.ExtraLandDrops
-		+ s.CardsIn(playerId, ZoneType.Battlefield).Count(s.HasAbility<AdditionalLandEachTurn>);
+	public static int LandDrops(this GameState s, int playerId)
+	{
+		var drops = 1 + s.GetPlayer(playerId).ThisTurn.ExtraLandDrops;
+		foreach (var card in s.CardsIn(playerId, ZoneType.Battlefield)) // a loop: the AI asks per node
+		foreach (var extra in s.AbilitiesOf<AdditionalLandEachTurn>(card))
+		{
+			if (extra.AnyNumber) // Fastbond: "any number of lands"
+				return int.MaxValue;
+			drops++;
+		}
+		return drops;
+	}
 
 	/// <summary>
 	/// THE way a permanent is destroyed (CR 701.7) — a Destroy effect, lethal damage and deathtouch alike

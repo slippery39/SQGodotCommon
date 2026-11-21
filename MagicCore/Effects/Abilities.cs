@@ -182,6 +182,7 @@ public enum EventTest
 	CombatDamageFromThis, // "whenever this deals combat damage to a player"
 	Noncombat, // "whenever an opponent is dealt noncombat damage"
 	NotTheTurnsDraw, // Orcish Bowmasters: "except the first one they draw in each of their draw steps" (DrewCardEvent.TurnDraw)
+	Sacrificed, // Baloth Prime: "Whenever you sacrifice a land" — a ChangedZone made by MagicState.Sacrifice (ChangedZoneEvent.Sacrificed); MoveCard raises that event for a LAND (and a permanent reading its own leaving) only — widen it there before a "sacrifice a creature" trigger
 }
 
 /// <summary>
@@ -393,6 +394,7 @@ public record Trigger(EventKind On)
 			EventTest.CombatDamageFromThis or EventTest.Noncombat => on
 				== EventKind.PlayerDealtDamage,
 			EventTest.NotTheTurnsDraw => on == EventKind.Drew,
+			EventTest.Sacrificed => on == EventKind.ChangedZone,
 			_ => on == EventKind.SpellCast,
 		};
 }
@@ -839,6 +841,14 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// card in that zone, never of the permanent; ManaPayment.Find spends it only when nothing on the battlefield pays.
 	/// </summary>
 	public ZoneType From { get; init; } = ZoneType.Battlefield;
+
+	/// <summary>
+	/// Fanatic of Rhonas' ferocious: "{T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or
+	/// greater"; Undermountain Adventurer's "if you've completed a dungeon, add six {G} instead" (two abilities, one under
+	/// Not) — judged where its abilities are listed (ManaAbilities.AbilitiesOf): payment, manual tapping, the mana moves
+	/// and the X bound alike never see it while it doesn't hold.
+	/// </summary>
+	public Condition? OnlyIf { get; init; }
 
 	/// <summary>"Add one mana of any color" / "Choose a color. Add N of it".</summary>
 	public static ManaAbilityComponent OfAnyOneColor(Count amount) =>
@@ -1479,7 +1489,11 @@ public record GraveyardSpellsHaveBeamMeUp : GameComponent;
 public record CantSacrificeTreasures : GameComponent;
 
 /// <summary>Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops.</summary>
-public record AdditionalLandEachTurn : GameComponent;
+public record AdditionalLandEachTurn : GameComponent
+{
+	/// <summary>Fastbond: "You may play any number of lands on each of your turns." — no limit (MagicState.LandDrops).</summary>
+	public bool AnyNumber { get; init; }
+}
 
 /// <summary>
 /// Georgiou, Terran Emperor: "You don't lose the game for having 0 or less life." — the state-based

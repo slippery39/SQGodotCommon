@@ -156,8 +156,10 @@ public record TargetSpec(From From, Filter? Filter = null)
 				targeting
 				&& From == From.Battlefield
 				&& o is Card card
-				&& card.ControllerId != controllerId
-				&& s.Has(card, "Hexproof")
+				&& (
+					(card.ControllerId != controllerId && s.Has(card, "Hexproof"))
+					|| s.Has(card, "Shroud") // Sylvan Safekeeper: no spell or ability, its controller's too (CR 702.18)
+				)
 			)
 			&& !(
 				targeting
