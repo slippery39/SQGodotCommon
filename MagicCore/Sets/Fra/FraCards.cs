@@ -237,14 +237,6 @@ public static class FraCards
 
 	// ===== Prepare: a card's spell half, from its second face in FRA.json =====
 
-	static readonly EntersPreparedComponent EntersPrepared = new();
-
-	static PrepareSpellComponent PrepareSpell(
-		string card,
-		TargetSpec[] targets,
-		params GameAction[] effects
-	) => new(CardRegistry.DataOf(card).CardFaces![1], Spell(targets, effects));
-
 	/// <summary>"At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared."</summary>
 	static TriggeredAbilityComponent PreparesAtYourUpkeep =>
 		When(TriggerEvent.YourUpkeep, [], new BecomePrepared(Ref.Source)) with

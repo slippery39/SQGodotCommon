@@ -3611,6 +3611,276 @@ public static class LsvCards
 			[
 				Spell([], new Vote(!Is.Land & !Is.Yours) { Then = [new Exile(Ref.Chosen)] }),
 			],
+			// ===== MC-4.4k1: green's tested pieces =====
+			["Bejeweled Warg"] =
+			[
+				ModalWhen(
+					"Bejeweled Warg",
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					1,
+					M(
+						[Target(Is.Creature & Is.Yours & Is.Subtype("Wolf"))],
+						new PutCounters(Ref.Target(), 1)
+					),
+					M([], CreateTreasure(1))
+				),
+			],
+			["Keen-Eyed Curator"] =
+			[
+				new StaticEffectComponent(Is.Source, "Trample")
+				{
+					Power = 4,
+					Toughness = 4,
+					If = new AtLeast(
+						Count.CardTypesAmong(
+							Ref.All(ZoneType.Exile, Is.ExiledBySource, Ref.EachPlayer)
+						),
+						4
+					),
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new Exile(Ref.Target()) { Linked = true }]
+				)
+				{
+					Targets = [TargetSpec.InAnyGraveyard()],
+				},
+			],
+			["Lotus Cobra"] =
+			[
+				When(TriggerEvent.LandYouControlEnters, [], new AddManaOfAnyOneColor(1)),
+			],
+			["Scythecat Cub"] =
+			[
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[Target(Is.Creature & Is.Yours)],
+					new IfNthResolutionThisTurn(
+						2,
+						[new PutCounters(Ref.Target(), Count.CountersOn(Ref.It))]
+					)
+					{
+						Otherwise = [new PutCounters(Ref.Target(), 1)],
+					}
+				),
+			],
+			["Sylvan Caryatid"] = [.. AnyColorMana(ManaRestriction.None)],
+			["Emeritus of Abundance // Regrowth"] =
+			[
+				EntersPrepared,
+				When(TriggerEvent.SelfAttacks, [], new BecomePrepared(Ref.Source)) with
+				{
+					If = new AtLeast(Count.LandsYouControl, 8),
+				},
+				PrepareSpell(
+					"Emeritus of Abundance // Regrowth",
+					[TargetSpec.InYourGraveyard()],
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+				),
+			],
+			["Endurance"] =
+			[
+				// ponytail: "in a random order" is the graveyard's order, known to its owner — shuffle them first
+				// (MagicState.ToBottomAtRandom) if the AI ever reads that order.
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player() with { Optional = true }],
+					new MoveTo(
+						Ref.All(ZoneType.Graveyard, Is.AnyCard, Ref.Target()),
+						ZoneType.Library
+					)
+					{
+						From = [ZoneType.Graveyard],
+					}
+				),
+				.. Evoke(ManaColor.Green),
+			],
+			["Formidable Speaker"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new MayDiscard(
+						[new SearchLibrary(CardType.Creature, ZoneType.Hand) { Reveal = true }]
+					)
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new Untap(Ref.Target())])
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(!Is.Source)],
+				},
+			],
+			["Mole Man, Moloid Master"] =
+			[
+				new MayPlayFromZone(ZoneType.Graveyard, Is.Land),
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[],
+					new CreateTokens(Moloid, 1)
+					{
+						Abilities =
+						[
+							When(
+								TriggerEvent.SelfAttacks,
+								[],
+								new May("Mill a card?", new Always(), [new Mill(Ref.You, 1)])
+							),
+						],
+					}
+				),
+			],
+			["Sentinel of the Nameless City"] =
+			[
+				When(TriggerEvent.SelfEnters, [], CreateMap(1)),
+				When(TriggerEvent.SelfAttacks, [], CreateMap(1)),
+			],
+			["Six"] =
+			[
+				When(TriggerEvent.SelfAttacks, [], new MillAndMayTake(3, CardType.Land)),
+				// Retrace, during your turn: cast from the graveyard, discarding a land card beside its mana cost.
+				new MayPlayFromZone(ZoneType.Graveyard, Is.Type(NonlandPermanentTypes) & !Is.Land)
+				{
+					Costs = [new DiscardCost(Is.Land)],
+				},
+			],
+			["Icetill Explorer"] =
+			[
+				new AdditionalLandEachTurn(),
+				new MayPlayFromZone(ZoneType.Graveyard, Is.Land),
+				When(TriggerEvent.LandYouControlEnters, [], new Mill(Ref.You, 1)),
+			],
+			["Ouroboroid"] =
+			[
+				// X is fixed as it resolves (CR 608.2h): the others first, then itself, so its power is read unchanged.
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new PutCounters(Ref.OtherCreaturesYouControl, Count.PowerOf(Ref.Source)),
+					new PutCounters(Ref.Source, Count.PowerOf(Ref.Source))
+				),
+			],
+			["Ulvenwald Oddity // Ulvenwald Behemoth"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}{G}{G}"),
+					[new Transform(Ref.Source)]
+				),
+				BackFace(
+					"Ulvenwald Oddity // Ulvenwald Behemoth",
+					new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source, "Trample")
+					{
+						Power = 1,
+						Toughness = 1,
+					},
+					new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source, "Haste")
+				),
+			],
+			["Generous Ent"] =
+			[
+				When(TriggerEvent.SelfEnters, [], CreateFood(1)),
+				Cycling(
+					"{1}",
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Subtype = "Forest",
+						Reveal = true,
+					}
+				),
+			],
+			["Tear Asunder"] =
+			[
+				new KickerComponent(ManaCost.Parse("{1}{B}")),
+				Spell(
+					[Target(Is.Artifact | Is.Enchantment) with { IfKicked = Target(!Is.Land) }],
+					new Exile(Ref.Target())
+				),
+			],
+			["Force of Vigor"] =
+			[
+				new MayCastFromHandFree(Is.Source)
+				{
+					If = new Not(new DuringYourTurn()),
+					Costs = [new ExileFromHandCost(Is.Color(ManaColor.Green))],
+				},
+				Spell(
+					[
+						Target(Is.Artifact | Is.Enchantment) with
+						{
+							Optional = true,
+						},
+						Target(Is.Artifact | Is.Enchantment) with
+						{
+							Optional = true,
+							NotThePrevious = true,
+						},
+					],
+					new Destroy(Ref.EachTarget)
+				),
+			],
+			["Natural Order"] =
+			[
+				new AdditionalCostsComponent(
+					[new SacrificeCost(Is.Creature & Is.Color(ManaColor.Green))]
+				),
+				Spell(
+					[],
+					new SearchLibrary(CardType.Creature, ZoneType.Battlefield)
+					{
+						Filter = Is.Color(ManaColor.Green),
+						FilterText = "green",
+					}
+				),
+			],
+			["Malevolent Rumble"] =
+			[
+				Spell(
+					[],
+					new LookAndTake(4, Is.Type(PermanentTypes))
+					{
+						Reveal = true,
+						Rest = TheRest.Graveyard,
+					},
+					new CreateTokens(EldraziSpawn, 1)
+					{
+						Abilities =
+						[
+							new ManaAbilityComponent(ManaColor.Colorless)
+							{
+								Costs = [new SacrificeSelfCost()],
+							},
+						],
+					}
+				),
+			],
+			["Titania, Protector of Argoth"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InYourGraveyard(Is.Land)],
+					new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+				),
+				When(
+					new Trigger(EventKind.ChangedZone)
+					{
+						From = ZoneType.Battlefield,
+						To = ZoneType.Graveyard,
+						Subject = Is.Land & Is.Yours,
+					},
+					[],
+					new CreateTokens(TitaniasElemental, 1)
+				),
+			],
+			["Pest Infestation"] =
+			[
+				Spell(
+					[Target(Is.Artifact | Is.Enchantment) with { PerX = Count.X, Optional = true }],
+					new Destroy(Ref.EachTarget),
+					new CreateTokens(Pest, Count.X with { Times = 2 })
+					{
+						Abilities = [When(TriggerEvent.SelfDies, [], new GainLife(Ref.You, 1))],
+					}
+				),
+			],
 		};
 
 	/// <summary>Voice of Victory, Jennifer Walters: "Your opponents can't cast spells during your turn."</summary>
@@ -4061,6 +4331,16 @@ public static class LsvCards
 
 	/// <summary>Sedgemoor Witch: "a 1/1 black and green Pest creature token" (its life on dying is the script's).</summary>
 	static CardData Pest => Token("Pest", "Creature — Pest", "1", "1", ["B", "G"]);
+
+	/// <summary>Mole Man, Moloid Master: "a 1/1 green Minion creature token named Moloid" (its mill is the script's).</summary>
+	static CardData Moloid => Token("Moloid", "Creature — Minion", "1", "1", ["G"]);
+
+	/// <summary>Malevolent Rumble: "a 0/1 colorless Eldrazi Spawn creature token" (its mana is the script's).</summary>
+	static CardData EldraziSpawn => Token("Eldrazi Spawn", "Creature — Eldrazi Spawn", "0", "1");
+
+	/// <summary>Titania, Protector of Argoth: "a 5/3 green Elemental creature token".</summary>
+	static CardData TitaniasElemental =>
+		Token("Elemental", "Creature — Elemental", "5", "3", ["G"]);
 
 	/// <summary>Amass Orcs: "a 0/0 black Orc Army creature token".</summary>
 	static CardData OrcArmy => Token("Orc Army", "Creature — Orc Army", "0", "0", ["B"]);

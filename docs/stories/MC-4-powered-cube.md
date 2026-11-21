@@ -1766,6 +1766,23 @@ as his three priorities.
   **k2b** (8), **k3** (4 new pieces).
 - 2026-11-21, Shayne (reviewing 4.4k's plan): **taken as written** — the tiers and the four batches; k1 begins in a new
   session.
+- 2026-11-21, Claude (cube lane) — **4.4k1: green's 21 tested pieces — 345 of 528 play (green 31 of 50).** Two of the 21
+  weren't tier 1 on reading the code, each an OPTION on the nearest piece: **Scythecat Cub**'s "… instead" is
+  `IfNthResolutionThisTurn { Otherwise }` (Burnham's piece had no other branch; one counter, the second time double —
+  `PutCounters(target, Count.CountersOn(Ref.It))`); **Titania**'s "whenever a land you control is put into a graveyard from
+  the battlefield" needed `ChangedZoneEvent` for a land's move there — `MoveCard` raised it only for a permanent reading its
+  own leaving; now for every land to a graveyard too (rare: fetchlands, sacrificed lands — Baloth Prime's k2a sacrifice
+  option builds on it). Ouroboroid's X fixed as it resolves is script order: the others first, then itself. Malevolent
+  Rumble is `LookAndTake { Rest = Graveyard }` (not a mill: "put the rest into your graveyard"); Six's retrace
+  `MayPlayFromZone(Graveyard, nonland permanent) { Costs = [DiscardCost(Is.Land)] }`; Emeritus takes FRA's prepare
+  helpers, moved up to `Scripting` (`EntersPrepared`, `PrepareSpell`). New token data: Moloid, Eldrazi Spawn (sacrifice
+  for {C}, a no-tap mana ability), Titania's 5/3 Elemental; Pest Infestation reuses Sedgemoor Witch's Pest. Two ceilings
+  in DesignNotes: Endurance's "random order" is the graveyard's; Titania's "you control" reads the land card's owner. 2
+  tests in `LsvBatch2kTests.cs` (`LandEnters(target)`: a New Planet token's landfall, its target answered), 2/2
+  revert-checks caught; FraPrepareTests' every-prepare-card test puts a card in my graveyard (Regrowth's target).
+  Golden-out moved nothing (162 random, 906 card games); golden-in moved 30 random and 1,200 card games, 84 added, no AI
+  game; probe 150: none unfinished, all 21 used (Keen-Eyed Curator activated 698, Formidable Speaker 430). Suite 2,197
+  passed.
 
 ## Tasks
 
@@ -2040,7 +2057,7 @@ as his three priorities.
   - [ ] MC-4.4k Green beyond tier 1 (Shayne, 2026-11-21: the next colour, after white) — 40 cards read card by card and
         tiered (Decisions, "4.4k"): 21 tested pieces, 15 options, 4 new pieces; four batches — k1, k2a, k2b, k3
         (Shayne took it as written):
-    - [ ] MC-4.4k1 The tested pieces, 21 (list in Decisions)
+    - [x] MC-4.4k1 The tested pieces, 21 (list in Decisions; done 2026-11-21 — Scythecat Cub and Titania took an option)
     - [ ] MC-4.4k2a Options, mana, lands and tokens, 7: Fanatic of Rhonas, Undermountain Adventurer, Baloth Prime,
           Fastbond, Sylvan Safekeeper, Vaultborn Tyrant, Woodfall Primus
     - [ ] MC-4.4k2b Options, triggers, combat and casting, 8: Surrak, Elusive Hunter, Ursine Monstrosity, Leatherhead,
@@ -2079,7 +2096,12 @@ j3"; 321 of 528 play — W 57/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolou
 done: white is finished** (Decisions, "4.4j4–j6"; 324 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 10/50,
 multicolour 6/65, colourless 58/163). **MC-4.4k is planned (Decisions, "4.4k"; Shayne took it as written): four
 batches — k1 (the 21 tested pieces), k2a (7 mana, land and token options), k2b (8 trigger, combat and casting
-options), k3 (crew, earthbend, bestow, day/night).** **Green is next (Shayne, 2026-11-21): MC-4.4k** — its 40 unplayed cards
+options), k3 (crew, earthbend, bestow, day/night).** **k1 is done** (Decisions, "4.4k1"; 345 of 528 play — W 60/60,
+U 75/75, B 61/61, R 54/54, G 31/50, multicolour 6/65, colourless 58/163); **k2a is next**. From k1: "… instead" on the
+Nth resolution is `IfNthResolutionThisTurn { Otherwise }`; a land put into a graveyard from the battlefield raises
+`ChangedZoneEvent` (`LastKnown` the land as it was — Baloth Prime's "whenever you sacrifice a land" marks that event);
+the prepare helpers `EntersPrepared` / `PrepareSpell` are `Scripting`'s; k1's tests are in `LsvBatch2kTests.cs`
+(`LandEnters(target)`). **Green is next (Shayne, 2026-11-21): MC-4.4k** — its 40 unplayed cards
 (`python tools/magic_set.py text --missing --set LSV`, the green ones) read card by card and tiered as 4.4h, 4.4i and
 4.4j were (a DFC from its front face's cost; each new piece naming its nearest), written in Decisions as "4.4k", then
 batches of more cards a session; Shayne reviews the plan before the first batch. Then multicolour (59) and colourless
@@ -2459,3 +2481,4 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-21: MC-4.4j4–j6 done — ascend, reconfigure, voting; 324 of 528 play, **white (60 of 60) finished**. Next:
   Shayne to pick what follows (green, multicolour, colourless).
 - 2026-11-21: Shayne picked green. Next: MC-4.4k, green's 40 — survey, tiers, plan.
+- 2026-11-21: MC-4.4k1 done — green's 21 tested pieces, 345 of 528 play (green 31 of 50). Next: k2a.

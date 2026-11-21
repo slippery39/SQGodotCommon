@@ -59,6 +59,7 @@ public class FraPrepareTests : FraBoardTest
 	public void EveryPrepareCard_ItsCopyCasts_UnpreparesIt_AndLeavesNoCopy(string fra)
 	{
 		Field(TestGames.Creature("Theirs", "1/1"), them); // Unwind History's target
+		Put(TestGames.Creature("Mine", "1/1"), me, ZoneType.Graveyard); // Regrowth's (the cube's Emeritus)
 		var creature = Enter(fra);
 		s = Prepare.Become(s, creature); // the upkeep and end-step ones: prepared by test setup
 		Assert.That(s.GetCard(creature).IsPrepared);

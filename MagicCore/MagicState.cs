@@ -321,8 +321,13 @@ public static class MagicState
 		// "Leaves the battlefield" (Skyclave Apparition), "put into a graveyard from the battlefield" (Serra
 		// Paragon): a permanent that reads its own leaving, a token too, to the zone it really went to —
 		// carried as it LAST was. Only such a one: an event staged for every Treasure sacrificed would cost
-		// every search node a Collect and another state-check round.
-		if (ReadsItsLeaving(before))
+		// every search node a Collect and another state-check round. And a land put into a graveyard (Titania,
+		// Protector of Argoth: "Whenever a land you control is put into a graveyard from the battlefield") — rare
+		// enough (a fetchland, a sacrificed land) to raise for every one.
+		if (
+			ReadsItsLeaving(before)
+			|| (before.Is(CardType.Land) && zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard))
+		)
 			s = s.Raise(
 				new ChangedZoneEvent(
 					before.OwnerId,

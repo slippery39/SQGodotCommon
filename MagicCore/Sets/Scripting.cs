@@ -402,6 +402,16 @@ public static class Scripting
 	public static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
 		new("", [.. targets], [.. effects]);
 
+	/// <summary>Prepare: "This creature enters prepared." (FRA; Emeritus of Abundance in the cube.)</summary>
+	public static readonly EntersPreparedComponent EntersPrepared = new();
+
+	/// <summary>A prepare card's spell half — its second face in the set's JSON, and its text.</summary>
+	public static PrepareSpellComponent PrepareSpell(
+		string card,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) => new(CardRegistry.DataOf(card).CardFaces![1], Spell(targets, effects));
+
 	/// <summary>"Choose one/two —" spell. The modes must match the printed bullets one for one.</summary>
 	public static SpellEffectsComponent ModalSpell(
 		string name,

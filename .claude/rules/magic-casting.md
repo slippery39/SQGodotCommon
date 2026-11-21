@@ -309,7 +309,9 @@ whose subsystem it lives in.
 - **"Activate only once each turn"** is `ActivatedAbilityComponent.OncePerTurn`, stamped on the card as it
   is activated (`Card.ActivatedOncePerTurnOn`) — a new object may activate again.
 - **"If this is the second time this ability has resolved this turn"** is `IfNthResolutionThisTurn(n, …)`:
-  counted on the source as it resolves (`Card.ResolvedTimes`, by turn), the rest run on exactly the Nth.
+  counted on the source as it resolves (`Card.ResolvedTimes`, by turn), the rest run on exactly the Nth. "…, [do
+  this] instead" (Scythecat Cub, MC-4.4k1: one +1/+1 counter, or on the second time double them) is its `Otherwise`,
+  run on every other resolution — and when the source has left.
 - **Playing a card from exile** is `PlayableFromExile(player, until)` on it — anyone's card, in its owner's
   exile (`Playable.IsImpulsePlayableBy`; `Candidates` reads both exiles): `AnyType` ("mana of any type",
   Vulcan Mind-Meld) and `Tax` (Zero's "{2} more") are read by `Costs.Of`. **"Exile these, they may be played" is ONE

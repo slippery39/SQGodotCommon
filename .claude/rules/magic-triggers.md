@@ -163,7 +163,9 @@ whose subsystem it lives in.
   `MagicState.MoveCard` for the moves a card reads — out of a graveyard to anywhere, library → exile, and off the
   battlefield to anywhere for a permanent that reads its OWN leaving (MC-4.4d3: `MagicState.ReadsItsLeaving`; a
   token too, `LastKnown` the permanent as it last was — never for every permanent: `MoveCard` is the hottest path,
-  and a staged event costs each search node a `Collect` and a state-check round); widen it
+  and a staged event costs each search node a `Collect` and a state-check round) — and every LAND put into a graveyard
+  from the battlefield (MC-4.4k1, Titania, Protector of Argoth: `{ From = Battlefield, To = Graveyard, Subject = Is.Land &
+  Is.Yours }`, matched on Titania's battlefield; rare enough to raise for each); widen it
   THERE for another move, never a second event — matched by `Trigger.From` / `Trigger.To`. **"Whenever a card leaves
   your graveyard"** (Vash) is `{ By = You, From = Graveyard }`: every
   path out — cast, exiled, returned, shuffled, paid as a cost; a token isn't a card. **"Whenever one or more cards are

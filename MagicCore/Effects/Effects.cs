@@ -1621,23 +1621,34 @@ public record LoseTheGame : Effect
 /// Captain Michael Burnham: "If this is the second time this ability has resolved this turn, put a
 /// +1/+1 counter on Captain Burnham." — counted on the source as it resolves, Then run on exactly the
 /// Nth. ponytail: one count per card, not per ability (no TRK card has two such abilities), and a
-/// source that left the battlefield counts nothing.
+/// source that left the battlefield counts nothing (it runs Otherwise).
 /// </summary>
 public record IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then) : Effect
 {
+	/// <summary>
+	/// Scythecat Cub: "put a +1/+1 counter on target creature you control. If this is the second time this ability
+	/// has resolved this turn, double the number of +1/+1 counters on that creature instead." — run on every other
+	/// resolution.
+	/// </summary>
+	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
-		if (All(Ref.Source, s).Where(s.IsOnBattlefield).FirstOrDefault() is not (> 0 and var id))
-			return new(s);
-		var card = s.GetCard(id);
-		var turn = s.GetGame().TurnNumber;
-		var times = card.ResolvedOnTurn == turn ? card.ResolvedTimes + 1 : 1;
-		s = Update(s, card with { ResolvedOnTurn = turn, ResolvedTimes = times });
-		return times == N
-			? new(
-				s.SpawnAction(new PipelineAction { Steps = Then, PipelineContext = InputContext })
-			)
-			: new(s);
+		var steps = Otherwise;
+		if (All(Ref.Source, s).Where(s.IsOnBattlefield).FirstOrDefault() is > 0 and var id)
+		{
+			var card = s.GetCard(id);
+			var turn = s.GetGame().TurnNumber;
+			var times = card.ResolvedOnTurn == turn ? card.ResolvedTimes + 1 : 1;
+			s = Update(s, card with { ResolvedOnTurn = turn, ResolvedTimes = times });
+			if (times == N)
+				steps = Then;
+		}
+		return steps.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(new PipelineAction { Steps = steps, PipelineContext = InputContext })
+			);
 	}
 }
 

@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 38/46 · uncommon 63/86 · rare 154/279 · mythic 60/108 · **324/528**
+**Playable:** common 40/46 · uncommon 64/86 · rare 167/279 · mythic 65/108 · **345/528**
 
 ### "Name Sticker" Goblin
 
@@ -414,7 +414,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")  
 > Forestcycling {1} ({1}, Discard this card: Search your library for a Forest card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Generous Ent"] =
+[
+	When(TriggerEvent.SelfEnters, [], CreateFood(1)),
+	Cycling(
+		"{1}",
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Subtype = "Forest",
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Gitaxian Probe
 
@@ -500,7 +517,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Reveal the top four cards of your library. You may put a permanent card from among them into your hand. Put the rest into your graveyard. Create a 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this token: Add {C}."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
+
+```csharp
+["Malevolent Rumble"] =
+[
+	Spell(
+		[],
+		new LookAndTake(4, Is.Type(PermanentTypes))
+		{
+			Reveal = true,
+			Rest = TheRest.Graveyard,
+		},
+		new CreateTokens(EldraziSpawn, 1)
+		{
+			Abilities =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless)
+				{
+					Costs = [new SacrificeSelfCost()],
+				},
+			],
+		}
+	),
+],
+```
 
 ### Mana Leak
 
@@ -2341,7 +2384,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Kicker {1}{B} (You may pay an additional {1}{B} as you cast this spell.)  
 > Exile target artifact or enchantment. If this spell was kicked, exile target nonland permanent instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `KickerComponent` — Kicker (CR 702.33): Highly Illogical: "Kicker {1}{U} (You may pay an additional {1}{U}…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Tear Asunder"] =
+[
+	new KickerComponent(ManaCost.Parse("{1}{B}")),
+	Spell(
+		[Target(Is.Artifact | Is.Enchantment) with { IfKicked = Target(!Is.Land) }],
+		new Exile(Ref.Target())
+	),
+],
+```
 
 ### Theorix Charm
 
@@ -2795,7 +2851,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > • Put a +1/+1 counter on target Wolf you control.  
 > • Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Bejeweled Warg"] =
+[
+	ModalWhen(
+		"Bejeweled Warg",
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		1,
+		M(
+			[Target(Is.Creature & Is.Yours & Is.Subtype("Wolf"))],
+			new PutCounters(Ref.Target(), 1)
+		),
+		M([], CreateTreasure(1))
+	),
+],
+```
 
 ### Birds of Paradise
 
@@ -4422,7 +4496,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If it's not your turn, you may exile a green card from your hand rather than pay this spell's mana cost.  
 > Destroy up to two target artifacts and/or enchantments.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `ExileFromHandCost` — Q, Stacking the Deck's gift: "Exile a card from your hand:" — one legal action per card…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Force of Vigor"] =
+[
+	new MayCastFromHandFree(Is.Source)
+	{
+		If = new Not(new DuringYourTurn()),
+		Costs = [new ExileFromHandCost(Is.Color(ManaColor.Green))],
+	},
+	Spell(
+		[
+			Target(Is.Artifact | Is.Enchantment) with
+			{
+				Optional = true,
+			},
+			Target(Is.Artifact | Is.Enchantment) with
+			{
+				Optional = true,
+				NotThePrevious = true,
+			},
+		],
+		new Destroy(Ref.EachTarget)
+	),
+],
+```
 
 ### Forensic Gadgeteer
 
@@ -4454,7 +4555,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you may discard a card. If you do, search your library for a creature card, reveal it, put it into your hand, then shuffle.  
 > {1}, {T}: Untap another target permanent.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MayDiscard` — Improvised Act: "You may discard a card. If you do, [Then]."; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.; `TapSelfCost` — "{T}:" — tap this permanent.; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Formidable Speaker"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new MayDiscard(
+			[new SearchLibrary(CardType.Creature, ZoneType.Hand) { Reveal = true }]
+		)
+	),
+	new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new Untap(Ref.Target())])
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [Target(!Is.Source)],
+	},
+],
+```
 
 ### Forth Eorlingas!
 
@@ -4922,7 +5043,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may play lands from your graveyard.  
 > Landfall — Whenever a land you control enters, mill a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AdditionalLandEachTurn` — Captain Kathryn Janeway: "You may play an additional land on each of your turns." —…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Icetill Explorer"] =
+[
+	new AdditionalLandEachTurn(),
+	new MayPlayFromZone(ZoneType.Graveyard, Is.Land),
+	When(TriggerEvent.LandYouControlEnters, [], new Mill(Ref.You, 1)),
+],
+```
 
 ### Ignoble Hierarch
 
@@ -5113,7 +5245,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As long as there are four or more card types among cards exiled with this creature, it gets +4/+4 and has trample.  
 > {1}: Exile target card from a graveyard.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Keen-Eyed Curator"] =
+[
+	new StaticEffectComponent(Is.Source, "Trample")
+	{
+		Power = 4,
+		Toughness = 4,
+		If = new AtLeast(
+			Count.CardTypesAmong(
+				Ref.All(ZoneType.Exile, Is.ExiledBySource, Ref.EachPlayer)
+			),
+			4
+		),
+	},
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[new Exile(Ref.Target()) { Linked = true }]
+	)
+	{
+		Targets = [TargetSpec.InAnyGraveyard()],
+	},
+],
+```
 
 ### Ketria Triome
 
@@ -5295,7 +5453,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Landfall — Whenever a land you control enters, add one mana of any color.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AddManaOfAnyOneColor` — Culber and Stamets, Star-Crossed: "Add two mana of any one color." — the colour chosen…
+
+```csharp
+["Lotus Cobra"] =
+[
+	When(TriggerEvent.LandYouControlEnters, [], new AddManaOfAnyOneColor(1)),
+],
+```
 
 ### Luminarch Aspirant
 
@@ -5553,7 +5720,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > You may play lands from your graveyard.  
 > Landfall — Whenever a land you control enters, create a 1/1 green Minion creature token named Moloid with "Whenever this token attacks, you may mill a card."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Mole Man, Moloid Master"] =
+[
+	new MayPlayFromZone(ZoneType.Graveyard, Is.Land),
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[],
+		new CreateTokens(Moloid, 1)
+		{
+			Abilities =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new May("Mill a card?", new Always(), [new Mill(Ref.You, 1)])
+				),
+			],
+		}
+	),
+],
+```
 
 ### Multiversal Passage
 
@@ -5796,7 +5987,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy up to X target artifacts and/or enchantments. Create twice X 1/1 black and green Pest creature tokens with "When this token dies, you gain 1 life."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Pest Infestation"] =
+[
+	Spell(
+		[
+			Target(Is.Artifact | Is.Enchantment) with
+			{
+				PerX = Count.X,
+				Optional = true,
+			},
+		],
+		new Destroy(Ref.EachTarget),
+		new CreateTokens(Pest, Count.X with { Times = 2 })
+		{
+			Abilities = [When(TriggerEvent.SelfDies, [], new GainLife(Ref.You, 1))],
+		}
+	),
+],
+```
 
 ### Phelia, Exuberant Shepherd
 
@@ -6215,7 +6428,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > Landfall — Whenever a land you control enters, put a +1/+1 counter on target creature you control. If this is the second time this ability has resolved this turn, double the number of +1/+1 counters on that creature instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2kTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `IfNthResolutionThisTurn` — Captain Michael Burnham: "If this is the second time this ability has resolved this…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Scythecat Cub"] =
+[
+	When(
+		TriggerEvent.LandYouControlEnters,
+		[Target(Is.Creature & Is.Yours)],
+		new IfNthResolutionThisTurn(
+			2,
+			[new PutCounters(Ref.Target(), Count.CountersOn(Ref.It))]
+		)
+		{
+			Otherwise = [new PutCounters(Ref.Target(), 1)],
+		}
+	),
+],
+```
 
 ### Seachrome Coast
 
@@ -6312,7 +6544,15 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Vigilance  
 > Whenever this creature enters or attacks, create a Map token. (It's an artifact with "{1}, {T}, Sacrifice this token: Target creature you control explores. Activate only as a sorcery.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Sentinel of the Nameless City"] =
+[
+	When(TriggerEvent.SelfEnters, [], CreateMap(1)),
+	When(TriggerEvent.SelfAttacks, [], CreateMap(1)),
+],
+```
 
 ### Shadowy Backstreet
 
@@ -6365,7 +6605,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever Six attacks, mill three cards. You may put a land card from among them into your hand.  
 > During your turn, nonland permanent cards in your graveyard have retrace. (You may cast permanent cards from your graveyard by discarding a land card in addition to paying their other costs.)
 
-**Status:** NOT IMPLEMENTED · **tests naming it:** FraGraveyardTests, TrkBatch7aTests, TrkStardateTests
+**Status:** scripted · **tests naming it:** FraGraveyardTests, TrkBatch7aTests, TrkStardateTests
+
+**Engine pieces:** `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…; `MillAndMayTake` — Something Worth Saving: "Mill N. You may put a [Types] card from among them into your…
+
+```csharp
+["Six"] =
+[
+	When(TriggerEvent.SelfAttacks, [], new MillAndMayTake(3, CardType.Land)),
+	// Retrace, during your turn: cast from the graveyard, discarding a land card beside its mana cost.
+	new MayPlayFromZone(ZoneType.Graveyard, Is.Type(NonlandPermanentTypes) & !Is.Land)
+	{
+		Costs = [new DiscardCost(Is.Land)],
+	},
+],
+```
 
 ### Skullclamp
 
@@ -6776,7 +7030,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Defender, hexproof  
 > {T}: Add one mana of any color.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+```csharp
+["Sylvan Caryatid"] = [.. AnyColorMana(ManaRestriction.None)],
+```
 
 ### Sylvan Safekeeper
 
@@ -7200,7 +7458,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample, haste  
 > Other creatures you control get +1/+1 and have trample and haste.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `Transform` — Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with…
+
+```csharp
+["Ulvenwald Oddity // Ulvenwald Behemoth"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{5}{G}{G}"),
+		[new Transform(Ref.Source)]
+	),
+	BackFace(
+		"Ulvenwald Oddity // Ulvenwald Behemoth",
+		new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source, "Trample")
+		{
+			Power = 1,
+			Toughness = 1,
+		},
+		new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source, "Haste")
+	),
+],
+```
 
 ### Undercity Sewers
 
@@ -8281,7 +8560,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > //   
 > Return target card from your graveyard to your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `BecomePrepared` — "[It] becomes prepared" — through Rules.Prepare, which ignores one already prepared.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Emeritus of Abundance // Regrowth"] =
+[
+	EntersPrepared,
+	When(TriggerEvent.SelfAttacks, [], new BecomePrepared(Ref.Source)) with
+	{
+		If = new AtLeast(Count.LandsYouControl, 8),
+	},
+	PrepareSpell(
+		"Emeritus of Abundance // Regrowth",
+		[TargetSpec.InYourGraveyard()],
+		new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+	),
+],
+```
 
 ### Emrakul, the Aeons Torn
 
@@ -8303,7 +8600,29 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, up to one target player puts all the cards from their graveyard on the bottom of their library in a random order.  
 > Evoke—Exile a green card from your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Endurance"] =
+[
+	// ponytail: "in a random order" is the graveyard's order, known to its owner — shuffle them first
+	// (MagicState.ToBottomAtRandom) if the AI ever reads that order.
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.Player() with { Optional = true }],
+		new MoveTo(
+			Ref.All(ZoneType.Graveyard, Is.AnyCard, Ref.Target()),
+			ZoneType.Library
+		)
+		{
+			From = [ZoneType.Graveyard],
+		}
+	),
+	.. Evoke(ManaColor.Green),
+],
+```
 
 ### Fastbond
 
@@ -8987,7 +9306,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As an additional cost to cast this spell, sacrifice a green creature.  
 > Search your library for a green creature card, put it onto the battlefield, then shuffle.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Natural Order"] =
+[
+	new AdditionalCostsComponent(
+		[new SacrificeCost(Is.Creature & Is.Color(ManaColor.Green))]
+	),
+	Spell(
+		[],
+		new SearchLibrary(CardType.Creature, ZoneType.Battlefield)
+		{
+			Filter = Is.Color(ManaColor.Green),
+			FilterText = "green",
+		}
+	),
+],
+```
 
 ### Ocelot Pride
 
@@ -9049,7 +9387,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > At the beginning of combat on your turn, put X +1/+1 counters on each creature you control, where X is this creature's power.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Ouroboroid"] =
+[
+	// X is fixed as it resolves (CR 608.2h): the others first, then itself, so its power is read unchanged.
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn,
+		[],
+		new PutCounters(Ref.OtherCreaturesYouControl, Count.PowerOf(Ref.Source)),
+		new PutCounters(Ref.Source, Count.PowerOf(Ref.Source))
+	),
+],
+```
 
 ### Palantír of Orthanc
 
@@ -9810,7 +10163,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Titania enters, return target land card from your graveyard to the battlefield.  
 > Whenever a land you control is put into a graveyard from the battlefield, create a 5/3 green Elemental creature token.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2kTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Titania, Protector of Argoth"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InYourGraveyard(Is.Land)],
+		new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+	),
+	When(
+		new Trigger(EventKind.ChangedZone)
+		{
+			From = ZoneType.Battlefield,
+			To = ZoneType.Graveyard,
+			Subject = Is.Land & Is.Yours,
+		},
+		[],
+		new CreateTokens(TitaniasElemental, 1)
+	),
+],
+```
 
 ### Tolarian Academy
 

@@ -105,3 +105,4 @@ after the split is DEV-4.3.
 | 2026-11-20 | MC-4.4j1 + j2a: white's tested pieces and protection/trigger options, 11 cards | 5c8c0471 | 89 | 230k | 2.8M |
 | 2026-11-21 | MC-4.4j2b + j3: white's counter/cost/token options and the monarch, 5 cards | 3e948233 | 118 | 218k | 4.2M |
 | 2026-11-21 | MC-4.4j4–j6: ascend, reconfigure, voting (Ocelot Pride, Lion Sash, Council's Judgment), 3 cards | 81ccf22f | 96 | 227k | 3.4M |
+| 2026-11-21 | MC-4.4k1: green's tested pieces (two took an option: IfNth Otherwise, a land's zone-change event), 21 cards | 4aaa62c6 | 73 | 225k | 2.3M |
