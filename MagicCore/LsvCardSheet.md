@@ -5995,13 +5995,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Pest Infestation"] =
 [
 	Spell(
-		[
-			Target(Is.Artifact | Is.Enchantment) with
-			{
-				PerX = Count.X,
-				Optional = true,
-			},
-		],
+		[Target(Is.Artifact | Is.Enchantment) with { PerX = Count.X, Optional = true }],
 		new Destroy(Ref.EachTarget),
 		new CreateTokens(Pest, Count.X with { Times = 2 })
 		{
