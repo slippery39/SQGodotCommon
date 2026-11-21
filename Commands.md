@@ -202,6 +202,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     upkeepsearch  our upkeep and draw step searched even with an empty stack (before AI-30.4f)
 #     noblockers  AI-30.4e experiment (OFF by default): attack plans not re-judged against the real blocks when nothing of theirs can block
 #     oneattack   the clock reads one attack, a chump blocker stopping its attacker for good (before AI-33.4)
+#     onekillclock  the turns to kill read one attack (before AI-33.5); with oneattack: the AI before AI-33.4
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
 #     shuffle        what it can't know shuffled into ONE guess a decision (the default from AI-3.9 to AI-20.4); landornot: the default, kept as a name; beam-casts = beam+casts
 

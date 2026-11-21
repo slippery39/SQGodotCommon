@@ -656,6 +656,14 @@ public static partial class Evaluator
 		/// so a Cadet kept home scored over the double block that killed a Rampart Hunter (`+oneattack`).
 		/// </summary>
 		TwoAttacks = 1L << 40,
+
+		/// <summary>
+		/// The turns to kill read the same two attacks (<see cref="TurnsToKill"/>, AI-33.5): on Shayne's Cadet board (we at
+		/// 10, two 3/3 deathtouch and a 1/4 flier against our two 2/2 Cadets) one attack read only the flier's 1 through, 10
+		/// turns - two attacks read 1, then 7 once the chumps are dead: 3 turns. What it moves: how long a held card stays useful, the share of their attack sent
+		/// at our walker, the turns the option price looks ahead (`+onekillclock`).
+		/// </summary>
+		TwoAttackKill = 1L << 41,
 	}
 
 	/// <summary>
@@ -779,15 +787,22 @@ public static partial class Evaluator
 
 	/// <summary>
 	/// Turns <paramref name="attacker"/>'s board needs to kill <paramref name="defender"/> at the damage
-	/// that gets past its blockers now — the threat term's clock (int.MaxValue: no clock).
+	/// that gets past its blockers - the next attack, then the second (<see cref="Terms.TwoAttackKill"/>), counted up: the
+	/// second's damage stands for every attack after it, since what died in the first stays dead (int.MaxValue: no
+	/// clock). Read by OptionTurns, AtTheWalker and OptionPrice.TurnsAhead; the pressure term reads Attacks itself.
 	/// </summary>
 	public static int TurnsToKill(GameState s, int attacker, int defender)
 	{
 		var life = s.GetPlayer(defender).Life;
-		var through = Through(s, attacker, defender);
-		return life <= 0 ? 0
-			: through <= 0 ? int.MaxValue
-			: (life + through - 1) / through;
+		var first = Through(s, attacker, defender);
+		if (life <= 0)
+			return 0;
+		if (IsOff(Terms.TwoAttackKill))
+			return first <= 0 ? int.MaxValue : (life + first - 1) / first;
+		if (life <= first)
+			return 1;
+		var second = (int)Math.Round(2 * Attacks(s, attacker, defender, 0, 2)) - first;
+		return second <= 0 ? int.MaxValue : 1 + (life - first + second - 1) / second;
 	}
 
 	/// <summary>

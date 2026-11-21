@@ -951,6 +951,34 @@ public class RolloutTests
 		return true;
 	}
 
+	// AI-33.5: the turns to kill read two attacks (Evaluator.Terms.TwoAttackKill). The Cadet board before combat: their
+	// two Rampart Hunters (3/3 deathtouch) and a Screeching Soulbreaker (1/4 flier) against our two 2/2 Cadets, we at 10.
+	// One attack: the Cadets block both Hunters for good, only the flier's 1 gets through - 10 turns. Two attacks: 1, then
+	// the chumps are dead and 7 gets through, 7 a turn from then on: 1 + 7 + 7 >= 10, 3 turns. Counted up, not averaged
+	// (the review): at 3 life the first attack's 1 doesn't kill, so 2 turns; at 1 life, 1. The control: one attack.
+	[TestCase(false, 10, 3)]
+	[TestCase(false, 3, 2)]
+	[TestCase(false, 1, 1)]
+	[TestCase(true, 10, 10)]
+	public void TheCadetBoard_TheirClockReadsTwoAttacks(bool oneAttack, int life, int turns)
+	{
+		var s = TestGames.InFirstMain();
+		var them = s.GetGame().StartingPlayerId;
+		var me = s.OpponentOf(them);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = life });
+		foreach (var name in new[] { "Rampart Hunter", "Rampart Hunter", "Screeching Soulbreaker" })
+			(s, _) = TestGames.Put(s, them, CardRegistry.Get(name), ZoneType.Battlefield);
+		for (var i = 0; i < 2; i++)
+			(s, _) = TestGames.Put(s, me, TestGames.Creature("Cadet", "2/2"), ZoneType.Battlefield);
+		Assert.That(
+			Evaluator.Without(
+				oneAttack ? Evaluator.Terms.TwoAttackKill : Evaluator.Terms.None,
+				() => Evaluator.TurnsToKill(s, them, me)
+			),
+			Is.EqualTo(turns)
+		);
+	}
+
 	// AI-17.3's review: an answer of "don't attack" is still an answer — the first question's None used to
 	// leave the next looking like the first, so the AI dropped the whole attack it chose and searched
 	// again at every question. Now each question after the first is answered from the plan, unsearched.

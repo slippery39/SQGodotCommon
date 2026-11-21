@@ -72,14 +72,17 @@ our declare-attackers, both at 20 life unless said; creatures are vanilla unless
       1, 2, 3, 4, 6, 7, 9 (5 and 10 were already in `RolloutTests`); all pass; 8 not found as a board yet
 - [x] AI-33.4 The look-ahead's half-block on the Cadet board fixed (the explicit test passing), before the Cadet's
       attack is read as a fault of AI-30.4e's fix - the two-attack clock; its match still to run
+- [x] AI-33.5 The turns to kill read the same two attacks (`Evaluator.Terms.TwoAttackKill`, `beam+onekillclock` off) -
+      Shayne, 2026-11-21: "Sure lets explore that"; the Cadet board's clock on us 10 turns -> 3
+      (`TheCadetBoard_TheirClockReadsTwoAttacks`); counted up, not averaged (the review): suite 0 changed, match level, 49.0% ± 1.0pp
 - [ ] AI-33.3 The attack speed changes judged on them (AI-30.4e first, then `shortlist2`, then AI-21's steps) -
       `noblockers`, `shortlist2` and `shortlist1` keep every answer (each a fixture of `AttackTests`); AI-21's steps to come
 
 ## Next
 
-The two-attack clock's match stopped at 49.0% over 200 games (98-102), no difference - Shayne took it
-(2026-11-20) and committed. Open from the review: `TurnsToKill` and the two-turn lethal check still read one
-attack (DesignNotes) - each a suite and a match of its own. Position 8 (Shayne's Jace-token lethal, AI-19.21) needs its
+The two-attack clock is in the pressure term (AI-33.4) and the turns to kill (AI-33.5). Open: the two-turn lethal
+check (`BeamSearchAi.KillsWithinTwoTurns`, the burn rule) still reads one attack twice (DesignNotes) - a suite and a
+match of its own. Position 8 (Shayne's Jace-token lethal, AI-19.21) needs its
 board found. More positions welcome - especially BIG boards, where the attack plans' cost is (these small ones save 2-17%
 under the speed changes); a new AI-21 step joins as a `[TestFixture("beam+…")]`.
 
@@ -124,3 +127,29 @@ under the speed changes); a new AI-21 step joins as a `[TestFixture("beam+…")]
   (`+oneattack`) attacks under each. Engine steps, beam / shortlist2 / shortlist1 / noblockers: 1 lethal 1 165 / 1 100 /
   985 / 1 009; 2 331 / 331 / 331 / 291; 3 240 / 240 / 240 / 220; 4 7 198 / 6 637 / 5 974 / 7 030; 6 855 / 828 / 820 /
   767; 7 723 / 704 / 623 / 693; 9 4 945 / 4 879 / 4 813 / 4 691.
+- 2026-11-21: AI-33.5 - the turns to kill (`Evaluator.TurnsToKill`: how long a held card stays useful, the share of
+  their attack sent at our walker, the option price's turns ahead) read one attack; now the two the clock reads. On the
+  Cadet board their clock on us was 10 turns (the Cadets "stop" both Hunters for good, the flier's 1 through) and is 3
+  (1, then 7). Suite: 2 changed (0.7%), both seed 4's Red-Green against the Jace deck, 9 431 -> 9 500 steps a position:
+  #56 (we at 10, 5 mana; their Jace at 22 making Cadets): Ajani's Anguish -> Eardrum Rattler makes Samut unblockable,
+  Heartstring Puller (its Cadet; Arni 6/5 trample), Samut, Arni and the hasty Puller attack; #109 (we at 1, they at 12,
+  their Way of the Healer making Cadets): Ajani's Anguish for 2 -> Budding Insurgent sacrificed to destroy Way of the
+  Healer (a card drawn), then Ajani's Anguish for 2 on a Cadet. Shayne, on both: "Oh wow yeah those plays do look better". The match next.
+- 2026-11-21: AI-33.5's match, `beam` vs `beam+onekillclock` (--until-clear, 192 games, 28 min): **51.0% ± 1.0pp**
+  (98-94), no 5pp difference either way; 4 969 engine steps a decision against 5 054 (−1.7%); spells and lands alike.
+- 2026-11-21: pre-commit review: dividing life by the two attacks' AVERAGE misreads low life - the Cadet board at 3
+  life read 1 turn (the first attack does 1), and a lethal first attack followed by a blocked second read 2. Now counted
+  up: the first attack, then the second's damage for every attack after (cases at 10, 3 and 1 life). With that, **the
+  suite's two better plays go back to Ajani's Anguish** - the suite is the committed one again (0 changed), 9 281 steps a
+  position - and 2 of the 12 golden games still move. The two plays came from the average's miscount, not a better read
+  of the race; the match (51.0%) was of the averaged version. Shayne: "Sure" - the counted version's match, and the two
+  boards read with the search's own lines (a temporary probe, deleted). Both were TIES, not a wrong price: #56 two
+  winning lines, both won on turn 14 in the look-ahead, 9023.22 (Ajani's Anguish) against 9023.20 (Rattler) - though the
+  Rattler line won at 4 life and Ajani's at 1, a win's margin moving its score by 0.02; #109 Ajani's Anguish and Budding
+  Insurgent exactly level at the root (−7.69 each, neither line sacrificing it). After the Insurgent, sacrificing it on
+  Way of the Healer scores −17.32 against −7.69 for a land: in that look-ahead Arni stays home (4 damage not dealt) and
+  their Jace, with no Cadets to make, uses its −3 twice (two cards in their hand, −5.3) - our drawn card counted
+  (+2.7). The averaged clock only broke the ties the other way.
+- 2026-11-21: the counted version's match, `beam` vs `beam+onekillclock` (--until-clear, 192 games, 41 min): **49.0% ±
+  1.0pp** (94-98), no 5pp difference either way; 4 949 engine steps a decision against 5 005. Both versions level - the
+  clock is now right on the Cadet board at any life, at no cost in strength. Committed.

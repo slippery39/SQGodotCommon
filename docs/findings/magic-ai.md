@@ -2437,6 +2437,19 @@ pumping an opponent's creature; the blocks fix's two changes return to the commi
 **Match** (`--match=beam,beam+oneattack --until-clear`, FRA's decks; stopped by hand, not by the rule): **49.0%
 over 200 games (98-102)** at 53 min, no 5pp difference either way when stopped. Seed 3 #16's Oculus is AI-34's case 1.
 
+**AI-33.5: the turns to kill on the same two attacks** (`Terms.TwoAttackKill`; read by how long a held card stays
+useful, the share of their attack sent at our walker, the option price's turns ahead). The Cadet board before combat,
+we at 10: their clock on us 10 turns at one attack (only the flier's 1 through), 3 at two (1, then 7).
+
+| version | suite changed | steps a position | match vs `beam+onekillclock` (192 games) |
+|---|---|---|---|
+| life ÷ the two attacks' AVERAGE | 2 | 9,500 | 51.0% ± 1.0pp (98-94) |
+| counted up: the first attack, then the second's damage for every one after (committed) | 0 | 9,281 | 49.0% ± 1.0pp (94-98) |
+
+The average misread low life (the Cadet board at 3 life: 1 turn, really 2). Its 2 changes, both better plays by
+Shayne's read (seed 4's Red-Green: a hasty attack over Ajani's Anguish; Budding Insurgent destroying Way of the Healer
+at 1 life), were TIES the average broke the other way: 9023.22 against 9023.20 (two winning lines), and −7.69 each.
+
 ## AI-30.4e: the free passes' second count - what the searches decide (2026-11-21)
 
 Temporary counters (`beam` vs `beam`, 24 games of FRA's decks, any time): 3 196 decisions, 28.2M engine steps; for each,

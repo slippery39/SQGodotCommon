@@ -206,6 +206,8 @@ public static class AiMatch
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
 			// The clock reads one attack, a chump blocker stopping its attacker for good, before AI-33.4: beam+oneattack.
 			["oneattack"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttacks },
+			// The turns to kill read one attack, as before AI-33.5: beam+onekillclock.
+			["onekillclock"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttackKill },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.

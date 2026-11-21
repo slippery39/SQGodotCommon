@@ -7,9 +7,9 @@ Red-Green vs White-Blue Jace 01 : steps=137 turn=26 end=-1L[0,20,9,12,0] 36[0,15
 Red-Green vs White-Blue Jace 02 : steps=148 turn=25 end=2[0,22,5,15,0] -3L[0,18,10,13,0] final=f4382c92 | 92018536
 White-Black vs Red-Green 01 : steps=166 turn=26 end=-1L[0,20,9,11,0] 3[0,18,9,12,2] final=b29c6106 | 467466d2
 White-Black vs Red-Green 02 : steps=90 turn=25 end=13[0,20,9,11,0] 0L[0,18,8,14,1] final=9be9b50e
-White-Black vs White-Blue Jace 01 : steps=92 turn=23 end=25[0,22,7,11,0] -6L[0,18,10,12,2] final=3b82c267
+White-Black vs White-Blue Jace 01 : steps=88 turn=23 end=23[0,22,8,10,0] -3L[0,18,11,11,1] final=429328e7
 White-Black vs White-Blue Jace 02 : steps=82 turn=21 end=27[0,24,6,10,0] 0L[0,18,11,12,1] final=f3039920
-White-Blue Jace vs Red-Green 01 : steps=218 turn=34 end=-2L[0,13,14,16,0] 3[0,17,10,14,0] final=4c84cc36 | b2022d31 38d6ced9
+White-Blue Jace vs Red-Green 01 : steps=318 turn=39 end=28[0,10,15,24,0] -2L[0,14,13,13,0] final=79e2283d | b621d745 917d1083 2f709c0b
 White-Blue Jace vs Red-Green 02 : steps=199 turn=34 end=-6L[0,12,14,14,0] 9[0,13,12,17,0] final=1b219516 | 29d6ce76
 White-Blue Jace vs White-Black 01 : steps=142 turn=31 end=2[0,12,14,18,0] 0L[0,18,11,11,0] final=6f7f59c6 | 13251c07
 White-Blue Jace vs White-Black 02 : steps=76 turn=18 end=-1L[0,22,9,9,1] 16[0,23,6,11,0] final=13298665
