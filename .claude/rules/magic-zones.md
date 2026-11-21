@@ -268,3 +268,8 @@ whose subsystem it lives in.
   then sacrifices the rest"** (Ajani, Nacatl Avenger's −4, MC-4.4j2b) is `EachSacrifices(who, !Is.Land) { Keeps =
   [types] }`: one required choice per type there is one of (an artifact creature may be kept as both), then every
   other permanent the filter matches is sacrificed (`SacrificeTheRestAction`) — four choices, never a choice of sets.
+- **Voting** — will of the council (CR 701.38, Council's Judgment, MC-4.4j6) — is `Vote(filter) { Then }`: no target
+  (hexproof and protection don't stop it); each player, you first, picks one of what the filter matches from YOUR side
+  ("a nonland permanent you don't control": `!Is.Land & !Is.Yours`) — a `ChooseAmongChoice` each (`DeciderId` the
+  voter), one choice per player whatever the board — then `TallyVotesAction` runs `Then` with `Ref.Chosen` every
+  permanent with the most votes, ties included. Two players only (DesignNotes).

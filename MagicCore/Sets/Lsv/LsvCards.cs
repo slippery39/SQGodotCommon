@@ -3565,6 +3565,52 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4j4–j6: ascend (the city's blessing), reconfigure, voting (will of the council) =====
+			["Ocelot Pride"] =
+			[
+				When(
+					TriggerEvent.YourEndStep,
+					[],
+					new CreateTokens(Cat, 1),
+					new If(
+						new YouHaveTheCitysBlessing(),
+						[
+							new CreateTokenCopy(
+								Ref.Permanents(Is.Token & Is.Yours & Is.EnteredThisTurn)
+							),
+						]
+					)
+				) with
+				{
+					If = new AtLeast(Count.LifeYouGainedThisTurn, 1),
+				},
+			],
+			["Lion Sash"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{W}"),
+					[
+						new If(
+							new Matches(Ref.Target(0), Is.Type(PermanentTypes)),
+							[new PutCounters(Ref.Source, 1)]
+						),
+						new Exile(Ref.Target()),
+					]
+				)
+				{
+					Targets = [TargetSpec.InAnyGraveyard()],
+				},
+				new StaticEffectComponent(Is.AttachedToSource)
+				{
+					Power = Count.CountersOn(Ref.Source),
+					Toughness = Count.CountersOn(Ref.Source),
+				},
+				.. Reconfigure("{2}"),
+			],
+			["Council's Judgment"] =
+			[
+				Spell([], new Vote(!Is.Land & !Is.Yours) { Then = [new Exile(Ref.Chosen)] }),
+			],
 		};
 
 	/// <summary>Voice of Victory, Jennifer Walters: "Your opponents can't cast spells during your turn."</summary>
@@ -3696,6 +3742,32 @@ public static class LsvCards
 				),
 			],
 		};
+
+	/// <summary>
+	/// Reconfigure N (CR 702.151; Lion Sash): "{N}: Attach to target creature you control; or unattach from a creature.
+	/// Reconfigure only as a sorcery. While attached, this isn't a creature." — two abilities, and Mogis' type change on
+	/// itself while attached; Attachments.Detach lets an Equipment with reconfigure stay on as a creature (CR 301.5c).
+	/// </summary>
+	static GameComponent[] Reconfigure(string cost) =>
+		[
+			new ActivatedAbilityComponent(
+				ManaCost.Parse(cost),
+				[new Attach(Ref.Source, Ref.Target())]
+			)
+			{
+				SorcerySpeed = true,
+				Targets = [Target(Is.Creature & Is.Yours & !Is.Source)],
+			},
+			new ActivatedAbilityComponent(ManaCost.Parse(cost), [new Unattach(Ref.Source)])
+			{
+				SorcerySpeed = true,
+				OnlyIf = new Matches(Ref.Source, Is.Attached),
+			},
+			new BecomesType(Is.Source & Is.Attached) { Remove = CardType.Creature },
+		];
+
+	/// <summary>Ocelot Pride: "a 1/1 white Cat creature token".</summary>
+	static CardData Cat => Token("Cat", "Creature — Cat", "1", "1", ["W"]);
 
 	/// <summary>Ajani, Nacatl Pariah: "a 2/1 white Cat Warrior creature token".</summary>
 	static CardData CatWarrior => Token("Cat Warrior", "Creature — Cat Warrior", "2", "1", ["W"]);

@@ -56,6 +56,23 @@ public record DuringCombat : Condition
 		s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat;
 }
 
+/// <summary>
+/// Ocelot Pride: "Then if you have the city's blessing" — MagicPlayer.CitysBlessing, or earned this moment: ascend on a
+/// permanent is a static ability (CR 702.131b), so the Cat token that makes ten permanents gives the blessing in time for
+/// the copies, before the state-based check sets the flag.
+/// </summary>
+public record YouHaveTheCitysBlessing : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		(int)context[ContextKeys.Controller] is var you
+		&& (s.GetPlayer(you).CitysBlessing || Earned(s, [.. s.CardsIn(you, ZoneType.Battlefield)]));
+
+	/// <summary>Ascend's own test: ten or more permanents, one of them with ascend (its printed keyword — none grants it).</summary>
+	public static bool Earned(GameState s, IReadOnlyList<Card> permanents) =>
+		permanents.Count >= 10
+		&& permanents.Any(c => c.Keywords.Contains("Ascend") && s.Has(c, "Ascend"));
+}
+
 /// <summary>H.M.S. Bounty: "[if you] haven't begun an extra turn this game" — MagicPlayer.BegunExtraTurn.</summary>
 public record HaventBegunAnExtraTurn : Condition
 {

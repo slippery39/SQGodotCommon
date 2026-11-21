@@ -362,6 +362,10 @@ public static class StateBasedActions
 			// changed: this runs at every priority, half of each step the search simulates (AI-7.3d).
 			var field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 
+			// Ascend (CR 702.131b, Ocelot Pride): ten or more permanents, one with ascend — the blessing for the game.
+			if (!s.GetPlayer(id).CitysBlessing && Effects.YouHaveTheCitysBlessing.Earned(s, field))
+				s = s.WithPlayer(s.GetPlayer(id) with { CitysBlessing = true });
+
 			List<(Card Card, bool Destroyed)>? dying = null;
 			foreach (var c in field)
 				if (c.Is(CardType.Creature) && IsLethal(s, c))

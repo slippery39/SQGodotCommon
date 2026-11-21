@@ -1651,6 +1651,26 @@ as his three priorities.
   asked — the resolution check alone stopped the damage). Golden-out moved nothing (162 random, 898 card games);
   golden-in moved 30 random and 309 card games, 20 added, no AI game; probe 150: none unfinished, every card used (Ajani
   activated 343). Suite 2,183 passed.
+- 2026-11-21, Claude (cube lane) — **4.4j4–j6 as one batch: ascend, reconfigure and voting — 324 of 528 play (white 60 of
+  60: white is finished).** As planned. **j4 ascend** (Ocelot Pride): the city's blessing is `MagicPlayer.CitysBlessing`,
+  set by the state-based check (ten or more permanents, one with the printed keyword: `YouHaveTheCitysBlessing.Earned`);
+  "if you have the city's blessing" is `YouHaveTheCitysBlessing` — the flag OR earned this moment, because ascend is a
+  static ability (CR 702.131b): with nine permanents the end-step Cat is the tenth and is copied. The trigger is `YourEndStep`
+  `{ If = LifeYouGainedThisTurn ≥ 1 }`, `CreateTokens(Cat)`, then `CreateTokenCopy(Ref.Permanents(Is.Token & Is.Yours &
+  Is.EnteredThisTurn))`. **j5 reconfigure** (Lion Sash): `LsvCards.Reconfigure(cost)` — equip's attach, `Unattach(Ref.Source)`
+  (new, Attach's opposite) `OnlyIf = Matches(Ref.Source, Is.Attached)` (a new filter leaf, `Property.Attached`), and
+  Mogis' `BecomesType(Is.Source & Is.Attached) { Remove = Creature }`; `Attachments.Check` now puts the type changes
+  right BEFORE the fall-off (an Equipment creature falls off, CR 301.5c; the attach resolves while it is one) —
+  found in /pre-commit, it replaced a reconfigure exemption; `Attachments.Unattach` is the one unattach.
+  **j6 voting** (Council's Judgment): `Vote(filter) { Then }` — a `ChooseAmongChoice` per player (`DeciderId` the voter,
+  you first), the candidates asked from the caster's side, no target; `TallyVotesAction` runs `Then` with `Ref.Chosen` the
+  most-voted, ties included. Two ceilings in DesignNotes: voting is two players; reconfigure read live (one losing it
+  while attached falls off). 11 tests in `LsvBatch2j4Tests.cs` (`KeepLands(n)`: my lands but n to the graveyard;
+  `Votes(mine, theirs)`); 11/12 revert-checks caught — the twelfth (exile every permanent voted for) can't differ from
+  "the most votes" with two voters, so no test can see it. Golden-out moved nothing (162 random, 903 card games);
+  golden-in moved 30 random and 202 card games, 12 added, no AI game; probe 150: none unfinished, every card used (Lion
+  Sash activated 3,658, Council's Judgment cast 248). Suite 2,194 passed.
+- 2026-11-21, Shayne: **green is next** (4.4k) — the last colour; 40 left of 50.
 
 ## Tasks
 
@@ -1910,7 +1930,7 @@ as his three priorities.
     - [x] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
     - [x] MC-4.4i7 (Shayne: the default) The blue and black DFCs every survey missed: Tamiyo, Inquisitive
           Student; Jace, Vryn's Prodigy; Sink into Stupor (modal); Cecil, Dark Knight; Concealing Curtains
-  - [ ] MC-4.4j White beyond tier 1 (Shayne, 2026-11-20: the next colour, after i7) — 19 cards read card by card and
+  - [x] MC-4.4j White beyond tier 1 (Shayne, 2026-11-20: the next colour, after i7) — 19 cards read card by card and
         tiered (Decisions, "4.4j"): 6 tested pieces, 9 options, 4 new pieces; three batches — j1 + j2a, j2b + j3, j4–j6:
     - [x] MC-4.4j1 The tested pieces, 6 (one batch with j2a): Eagles of the North, Solitude, Witch Enchanter // Witch-Blessed
           Meadow, White Plume Adventurer, Parallax Wave, Get Lost (the Map token)
@@ -1919,9 +1939,11 @@ as his three priorities.
     - [x] MC-4.4j2b Options, counters, costs and tokens, 4 (one batch with j3): Guide of Souls, Prismatic Ending (converge),
           Sunfall (incubate), Ajani, Nacatl Pariah // Ajani, Nacatl Avenger
     - [x] MC-4.4j3 The monarch: Palace Jailer
-    - [ ] MC-4.4j4 Ascend (one batch with j5, j6): Ocelot Pride
-    - [ ] MC-4.4j5 Reconfigure: Lion Sash
-    - [ ] MC-4.4j6 Voting: Council's Judgment
+    - [x] MC-4.4j4 Ascend (one batch with j5, j6): Ocelot Pride
+    - [x] MC-4.4j5 Reconfigure: Lion Sash
+    - [x] MC-4.4j6 Voting: Council's Judgment
+  - [ ] MC-4.4k Green beyond tier 1 (Shayne, 2026-11-21: the next colour, after white) — 40 cards, read card by card and
+        tiered as 4.4h, 4.4i and 4.4j were; the plan and its batches in Decisions, "4.4k"
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -1950,9 +1972,16 @@ black are finished** (Decisions, "4.4i7"; 305 of 528 play — W 41/60, U 75/75, 
 j2a (the 6 tested pieces and 5 protection and trigger options), j2b + j3 (4 counter, cost and token options and the
 monarch), j4–j6 (ascend, reconfigure, voting). j1 + j2a is done** (Decisions, "4.4j1 + j2a"; 316 of 528 play — W 52/60,
 U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **j2b + j3 is done** (Decisions, "4.4j2b +
-j3"; 321 of 528 play — W 57/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **Next, in a
-NEW session: j4–j6** — ascend (Ocelot Pride), reconfigure (Lion Sash), voting (Council's Judgment), as the plan says;
-the last of white. From j2b + j3: the monarch and the initiative are `DesignationComponent(name)` (Okoye, Forth
+j3"; 321 of 528 play — W 57/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **j4–j6 is
+done: white is finished** (Decisions, "4.4j4–j6"; 324 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 10/50,
+multicolour 6/65, colourless 58/163). **Green is next (Shayne, 2026-11-21): MC-4.4k** — its 40 unplayed cards
+(`python tools/magic_set.py text --missing --set LSV`, the green ones) read card by card and tiered as 4.4h, 4.4i and
+4.4j were (a DFC from its front face's cost; each new piece naming its nearest), written in Decisions as "4.4k", then
+batches of more cards a session; Shayne reviews the plan before the first batch. Then multicolour (59) and colourless
+(105). From j4–j6: the city's blessing `MagicPlayer.CitysBlessing` / `YouHaveTheCitysBlessing`; reconfigure
+`LsvCards.Reconfigure(cost)` (`Unattach`, `Is.Attached`); voting `Vote(filter) { Then }` (`Ref.Chosen` the most-voted).
+j4–j6's tests are in `LsvBatch2j4Tests.cs` (`KeepLands(n)`, `Votes(mine, theirs)`). From j2b + j3: the monarch and the
+initiative are `DesignationComponent(name)` (Okoye, Forth
 Eorlingas! and Aragorn take the monarch with multicolour); a player's counters are counted and removed as cards' are;
 `EachSacrifices { Keeps }`; `WhenYouDo { If }`; incubate `LsvCards.Incubate(x)`; the tests are in
 `LsvBatch2j2bTests.cs`. From j1 + j2a: "protection from the color of your choice" is `GainsChosenKeyword { Grants }`;
@@ -2322,3 +2351,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   three batches. Shayne took it as written; j1 + j2a next.
 - 2026-11-20: MC-4.4j1 + j2a done — 11 white cards, 316 of 528 play (white 52 of 60). Next: j2b + j3.
 - 2026-11-21: MC-4.4j2b + j3 done — 5 white cards and the monarch, 321 of 528 play (white 57 of 60). Next: j4–j6.
+- 2026-11-21: MC-4.4j4–j6 done — ascend, reconfigure, voting; 324 of 528 play, **white (60 of 60) finished**. Next:
+  Shayne to pick what follows (green, multicolour, colourless).
+- 2026-11-21: Shayne picked green. Next: MC-4.4k, green's 40 — survey, tiers, plan.

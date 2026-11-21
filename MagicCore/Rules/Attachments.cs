@@ -116,17 +116,20 @@ public static class Attachments
 	/// <summary>
 	/// State-based (CR 704.5m/n): an Aura attached to nothing legal goes to its owner's graveyard;
 	/// an Equipment attached to something that is no longer a creature on the battlefield falls off.
-	/// Then every type change (<see cref="BecomesType"/>: Puppet Crafting, Mogis) is put right: gone from
-	/// what its source no longer changes, on what it does. ponytail: stamped, not a live layer-4 effect —
-	/// every rule reads card.Is(Creature); one stamp per permanent; put right before anyone gets priority.
+	/// Every type change (<see cref="BecomesType"/>: Puppet Crafting, Mogis) is put right FIRST: gone from
+	/// what its source no longer changes, on what it does — so Lion Sash, attached by its reconfigure while still a
+	/// creature, is no creature by the time the fall-off is judged (CR 702.151b, 301.5c). ponytail: stamped, not a live
+	/// layer-4 effect — every rule reads card.Is(Creature); one stamp per permanent; put right before anyone gets
+	/// priority. A reconfigure Equipment that loses its abilities while attached is a creature again and falls off (the
+	/// rulings keep it on, not a creature, until unattached) — a stamp at the attach if a card needs it.
 	/// </summary>
 	public static GameState Check(GameState s, int playerId)
 	{
 		// AI-22: each pass only when the board has something it can act on (the board is already built for the check)
-		if (Characteristics.AttachmentWork(s).Attachments)
-			s = Detach(s, playerId);
 		if (Characteristics.AttachmentWork(s).TypeChanges)
 			s = Animations(s, playerId);
+		if (Characteristics.AttachmentWork(s).Attachments)
+			s = Detach(s, playerId);
 		return s;
 	}
 
@@ -182,7 +185,10 @@ public static class Attachments
 		return s;
 	}
 
-	/// <summary>An Aura with no legal host dies; an Equipment off a non-creature, or one its host has protection from (CR 702.16d), falls off.</summary>
+	/// <summary>
+	/// An Aura with no legal host dies; an Equipment off a non-creature, one that is a creature itself (CR 301.5c), or one
+	/// its host has protection from (CR 702.16d), falls off.
+	/// </summary>
 	static GameState Detach(GameState s, int playerId)
 	{
 		foreach (var card in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
@@ -202,15 +208,22 @@ public static class Attachments
 					|| Protection.Stops(s, host, card)
 				)
 			)
-				s = s.UpdateObject(
-					card.Id,
-					card with
-					{
-						AttachedToId = 0,
-						AttachedToIncarnation = 0,
-					}
-				);
+				s = Unattach(s, card.Id);
 		}
 		return s;
 	}
+
+	/// <summary>
+	/// THE unattach: attached to nothing, still on the battlefield — an Equipment falling off, and Lion Sash's reconfigure
+	/// "or unattach from a creature" (the Unattach effect).
+	/// </summary>
+	public static GameState Unattach(GameState s, int attachmentId) =>
+		s.UpdateObject(
+			attachmentId,
+			s.GetCard(attachmentId) with
+			{
+				AttachedToId = 0,
+				AttachedToIncarnation = 0,
+			}
+		);
 }

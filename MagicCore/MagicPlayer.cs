@@ -28,6 +28,12 @@ public record MagicPlayer : GameObject
 	/// </summary>
 	public int DungeonsCompleted { get; init; }
 
+	/// <summary>
+	/// Ocelot Pride's ascend (CR 702.131): "If you control ten or more permanents, you get the city's blessing for the
+	/// rest of the game" — set by the state-based check, never reset (YouHaveTheCitysBlessing).
+	/// </summary>
+	public bool CitysBlessing { get; init; }
+
 	/// <summary>H.M.S. Bounty: "haven't begun an extra turn this game" — set as one begins.</summary>
 	public bool BegunExtraTurn { get; init; }
 

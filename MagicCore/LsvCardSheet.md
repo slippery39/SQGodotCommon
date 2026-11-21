@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 38/46 · uncommon 63/86 · rare 152/279 · mythic 59/108 · **321/528**
+**Playable:** common 38/46 · uncommon 63/86 · rare 154/279 · mythic 60/108 · **324/528**
 
 ### "Name Sticker" Goblin
 
@@ -3463,7 +3463,16 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Will of the council — Starting with you, each player votes for a nonland permanent you don't control. Exile each permanent with the most votes or tied for most votes.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j4Tests
+
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Vote` — Will of the council (CR 701.38; Council's Judgment): "Starting with you, each player…
+
+```csharp
+["Council's Judgment"] =
+[
+	Spell([], new Vote(!Is.Land & !Is.Yours) { Then = [new Exile(Ref.Chosen)] }),
+],
+```
 
 ### Coveted Jewel
 
@@ -5220,7 +5229,34 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Equipped creature gets +1/+1 for each +1/+1 counter on this Equipment.  
 > Reconfigure {2} ({2}: Attach to target creature you control; or unattach from a creature. Reconfigure only as a sorcery. While attached, this isn't a creature.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j4Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Lion Sash"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{W}"),
+		[
+			new If(
+				new Matches(Ref.Target(0), Is.Type(PermanentTypes)),
+				[new PutCounters(Ref.Source, 1)]
+			),
+			new Exile(Ref.Target()),
+		]
+	)
+	{
+		Targets = [TargetSpec.InAnyGraveyard()],
+	},
+	new StaticEffectComponent(Is.AttachedToSource)
+	{
+		Power = Count.CountersOn(Ref.Source),
+		Toughness = Count.CountersOn(Ref.Source),
+	},
+	.. Reconfigure("{2}"),
+],
+```
 
 ### Loran of the Third Path
 
@@ -8961,7 +8997,31 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Ascend (If you control ten or more permanents, you get the city's blessing for the rest of the game.)  
 > At the beginning of your end step, if you gained life this turn, create a 1/1 white Cat creature token. Then if you have the city's blessing, for each token you control that entered this turn, create a token that's a copy of it.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j4Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `YouHaveTheCitysBlessing` — Ocelot Pride: "Then if you have the city's blessing" — MagicPlayer.CitysBlessing, or…
+
+```csharp
+["Ocelot Pride"] =
+[
+	When(
+		TriggerEvent.YourEndStep,
+		[],
+		new CreateTokens(Cat, 1),
+		new If(
+			new YouHaveTheCitysBlessing(),
+			[
+				new CreateTokenCopy(
+					Ref.Permanents(Is.Token & Is.Yours & Is.EnteredThisTurn)
+				),
+			]
+		)
+	) with
+	{
+		If = new AtLeast(Count.LifeYouGainedThisTurn, 1),
+	},
+],
+```
 
 ### Oko, Thief of Crowns
 

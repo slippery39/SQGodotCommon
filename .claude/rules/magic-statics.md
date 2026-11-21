@@ -88,6 +88,17 @@ whose subsystem it lives in.
   `EnterBattlefield` before the entry event (`Attachments.Retype`), so Mogis never enters a creature. Every
   rule reads `card.Is(Creature)`, so a live layer-4 read would need every one of them; the stamp is right by
   the time anyone gets priority. **Devotion** is `Count.DevotionTo(colours)`: a hybrid symbol of two counts once.
+- **Reconfigure** (CR 702.151, Lion Sash, MC-4.4j5) is `LsvCards.Reconfigure(cost)`: equip's attach (`Is.Creature &
+  Is.Yours & !Is.Source`), "unattach" `Unattach(Ref.Source)` with `OnlyIf = Matches(Ref.Source, Is.Attached)`, both
+  sorcery speed, and "while attached, this isn't a creature" Mogis' `BecomesType(Is.Source & Is.Attached) { Remove =
+  Creature }`. An Equipment that is a creature falls off (CR 301.5c), so `Attachments.Check` puts the type changes
+  right BEFORE the fall-off: the attach resolves while it is still a creature, and the stamp is on by the time the
+  fall-off is judged. Unattached, or its host gone, the stamp comes off and it is a creature again. `Attachments.
+  Unattach` is THE unattach (the fall-off and the effect).
+- **Ascend** (CR 702.131, Ocelot Pride, MC-4.4j4) is the printed keyword; the city's blessing is `MagicPlayer.CitysBlessing`,
+  for the game, set by the state-based check for a player controlling ten or more permanents, one with ascend
+  (`YouHaveTheCitysBlessing.Earned`). "If you have the city's blessing" is `YouHaveTheCitysBlessing` — the flag, or earned
+  THIS moment (ascend is a static ability, CR 702.131b): the Cat token that makes ten gives it in time for the copies.
 - **Station** (Edge of Eternities' mechanic; TRK's Spacecraft, MC-5.2) is `TrkCards.Station(n, keywords)`. The
   station ability's cost is `TapUntappedCost(1, …)` — tapping ONE is a choice (`ActivateAbilityAction.TapId`,
   one legal action per creature; summoning sickness doesn't matter), and that creature is the ability's

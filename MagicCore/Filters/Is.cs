@@ -37,6 +37,9 @@ public static class Is
 
 	/// <summary>"Equipped creature", "enchanted creature".</summary>
 	public static readonly Filter AttachedToSource = new HasProperty(Property.AttachedToSource);
+
+	/// <summary>Lion Sash's reconfigure: "While attached, this isn't a creature" — attached to a permanent.</summary>
+	public static readonly Filter Attached = new HasProperty(Property.Attached);
 	public static readonly Filter Token = new HasProperty(Property.Token);
 	public static readonly Filter Copy = new HasProperty(Property.Copy);
 	public static readonly Filter Prepared = new HasProperty(Property.Prepared);

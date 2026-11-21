@@ -374,6 +374,7 @@ public enum Property
 	Source, // "this", so !Is.Source is "another"
 	EventCard, // "that creature"; !Is.EventCard is Roiling Canopy's "other"
 	AttachedToSource, // "equipped/enchanted creature"
+	Attached, // Lion Sash's reconfigure: "while attached" — this Aura or Equipment is on a permanent
 	Token,
 	Copy,
 	Prepared, // the creature is prepared (it has a copy of its spell in exile)
@@ -413,6 +414,7 @@ public sealed record HasProperty(Property Property) : Filter
 			Property.AttachedToSource => s.HasObject(c.Source)
 				&& s.GetObject(c.Source) is Card source
 				&& Rules.Attachments.IsOn(source, card),
+			Property.Attached => Rules.Attachments.HostOf(s, card) is not null,
 			Property.Token => card.IsToken,
 			Property.Copy => card.IsCopy,
 			Property.Prepared => card.IsPrepared,

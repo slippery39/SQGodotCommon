@@ -2692,6 +2692,16 @@ public record Attach(Ref What, Ref To) : Effect
 	}
 }
 
+/// <summary>
+/// Lion Sash's reconfigure: "or unattach from a creature" — this Aura or Equipment attached to nothing, still on the
+/// battlefield (Attach's opposite).
+/// </summary>
+public record Unattach(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(Permanents(What, s).Aggregate(s, (st, c) => Attachments.Unattach(st, c.Id)));
+}
+
 /// <summary>"Sacrifice this …" — only what is still on the battlefield.</summary>
 public record Sacrifice(Ref What) : Effect
 {
@@ -2944,6 +2954,92 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 		return s.SpawnAction(
 			new PipelineAction { PipelineContext = InputContext, Steps = [.. steps] }
 		);
+	}
+}
+
+/// <summary>
+/// Will of the council (CR 701.38; Council's Judgment): "Starting with you, each player votes for a nonland permanent you
+/// don't control. Exile each permanent with the most votes or tied for most votes." — no target, so hexproof and
+/// protection don't stop it: each player, you first, picks one of what Filter matches from YOUR side (one choice each,
+/// a ChooseAmongChoice), then Then runs with Ref.Chosen the permanents with the most votes. ponytail: two players — the
+/// candidates are your opponent's battlefield; a multiplayer vote would choose over every battlefield.
+/// </summary>
+public record Vote(Filters.Filter Filter) : Effect
+{
+	public const string Key = "vote";
+
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var source = GetInput<int>(ContextKeys.Source);
+		var opponent = s.OpponentOf(Controller);
+		ImmutableList<int> candidates =
+		[
+			.. s.CardsIn(opponent, ZoneType.Battlefield)
+				.Where(c => Filter.Matches(s, c, new Filters.FilterContext(Controller, source)))
+				.Select(c => c.Id),
+		];
+		if (candidates.IsEmpty)
+			return new(s);
+		int[] voters = [Controller, opponent];
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						.. voters.Select(
+							(voter, i) =>
+								(GameAction)
+									new ChooseAmongChoice
+									{
+										PlayerId = opponent,
+										DeciderId = voter,
+										Zone = ZoneType.Battlefield,
+										Ids = candidates,
+										MinChoices = 1,
+										OutputKey = Key + i,
+										Prompt = $"Vote ({Source(s).Name})",
+									}
+						),
+						new TallyVotesAction(voters.Length, Then),
+					],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>
+/// Council's Judgment's count: "Exile each permanent with the most votes or tied for most votes." — Vote's Then, with
+/// Ref.Chosen every permanent with the most votes, ties included.
+/// </summary>
+public record TallyVotesAction(int Voters, ImmutableList<GameAction> Then) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var votes = Enumerable
+			.Range(0, Voters)
+			.SelectMany(i =>
+				InputContext.GetValueOrDefault(Vote.Key + i) switch
+				{
+					int id => [id],
+					ImmutableList<int> ids => ids,
+					_ => [],
+				}
+			)
+			.GroupBy(id => id)
+			.ToList();
+		if (votes.Count == 0)
+			return new(s);
+		var most = votes.Max(g => g.Count());
+		ImmutableList<int> winners = [.. votes.Where(g => g.Count() == most).Select(g => g.Key)];
+		var context = InputContext.SetItem(ChooseCardsFromHandChoice.Chosen, winners);
+		foreach (var effect in Then)
+			s = (effect with { InputContext = context }).Execute(s).GameState;
+		return new(s);
 	}
 }
 
