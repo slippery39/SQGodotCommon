@@ -5663,7 +5663,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Parallax Wave"] =
 [
 	.. Fading(5),
-	new ActivatedAbilityComponent(ManaCost.None, [new Exile(Ref.Target()) { Linked = true }])
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[new Exile(Ref.Target()) { Linked = true }]
+	)
 	{
 		Costs = [new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Fade }],
 		Targets = [Creature],
@@ -7380,7 +7383,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 			]
 		)
 		{
-			Otherwise = [ItsControllerMayFetch with { May = false }, new Exile(Ref.Target())],
+			Otherwise =
+			[
+				ItsControllerMayFetch with
+				{
+					May = false,
+				},
+				new Exile(Ref.Target()),
+			],
 		}
 	),
 ],
@@ -8535,7 +8545,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 		// ponytail: "Do this only once each turn" as OncePerTurn — the first such trigger each turn is the
 		// only one; the rules let each trigger and you choose which to use (DesignNotes).
 		When(
-			new Trigger(EventKind.CreatureDealtDamage) { Subject = Is.Creature & Is.Yours },
+			new Trigger(EventKind.CreatureDealtDamage)
+			{
+				Subject = Is.Creature & Is.Yours,
+			},
 			[TargetSpec.AnyTarget()],
 			new May(
 				"Have The Sensational She-Hulk deal that much damage?",
