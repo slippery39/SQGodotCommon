@@ -178,6 +178,21 @@ public static class MagicRules
 							c.Is(CardType.Land)
 								? [new PlayLandAction { PlayerId = player, CardId = c.Id }]
 								: CastCandidates(s, player, c)
+									.Concat(
+										// Sink into Stupor // Soporific Springs: or played as its back face (ValidateAdd judges it)
+										c.GetComponent<TransformsInto>()
+											is { Modal: true }
+											?
+											[
+												new PlayLandAction
+												{
+													PlayerId = player,
+													CardId = c.Id,
+													BackFace = true,
+												},
+											]
+											: []
+									)
 						),
 					.. s.CardsIn(player, ZoneType.Battlefield)
 						.SelectMany(c =>
@@ -755,7 +770,7 @@ public static class MagicRules
 	public static object MoveKey(this GameState s, GameAction a) =>
 		a switch
 		{
-			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
+			PlayLandAction p => $"land|{Identity(s, p.CardId)}{(p.BackFace ? "|b" : "")}",
 			CastSpellAction c =>
 				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Adventure ? "|a" : "")}{(c.Splice.IsDefaultOrEmpty ? "" : $"|s{string.Join(",", c.Splice.Select(id => Fodder(s, id)))}")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>

@@ -80,6 +80,9 @@ whose subsystem it lives in.
 - **"Entering doesn't cause abilities to trigger"** (Karn, Argent Defender) drops those entering
   events in `Triggers.Collect` before ANY ability is matched — read at the next priority, so Karn
   entering alongside a creature silences it too, as the rulings say.
+- **"Whenever [this] deals damage"** — to anything (Cecil, Dark Knight, MC-4.4i7) — is `TriggerEvent.SelfDealsDamage`, on
+  `DealtDamageEvent(SourceId, Amount)` raised by `Damage.Deal` for every recipient (a planeswalker too); "that much" is
+  the trigger's X (one event per recipient: DesignNotes).
 - **"Whenever this creature is dealt damage"** triggers on `CreatureDealtDamageEvent` from `Damage.Deal`;
   "that many" is the trigger's X (`Triggers.Pending.X`). **Cards put into a graveyard from a library**
   (mill, surveil, anything) are counted in `MoveCard` (`TurnTally.CardsFromLibraryToGraveyard`).

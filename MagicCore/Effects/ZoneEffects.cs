@@ -1968,6 +1968,13 @@ public record PlayPermission
 	/// <summary>Warp (Quantum Riddler): "Its owner may cast this card after the current turn has ended" — from the next turn on.</summary>
 	public bool LaterTurn { get; init; }
 
+	/// <summary>
+	/// Jace, Telepath Unbound's −3: "You may cast target instant or sorcery card from your graveyard this turn. If that spell
+	/// would be put into your graveyard, exile it instead." — a cast from a graveyard by this mark is exiled leaving the
+	/// stack, as flashback's (PlayableFromExile.ExiledLeavingTheStack).
+	/// </summary>
+	public bool ExiledLeavingTheStack { get; init; }
+
 	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
 	public PlayableFromExile For(GameState s, int who) =>
 		new(
@@ -1986,6 +1993,7 @@ public record PlayPermission
 			CastOnly = CastOnly,
 			Free = Free,
 			FromTurn = LaterTurn ? s.GetGame().TurnNumber + 1 : 0,
+			ExiledLeavingTheStack = ExiledLeavingTheStack,
 		};
 }
 

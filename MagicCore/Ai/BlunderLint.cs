@@ -379,7 +379,9 @@ public static class BlunderLint
 						when step == Step.PostCombatMain
 							&& active == who
 							&& stackEmpty
-							&& legal.Any(a => a is PlayLandAction l && l.PlayerId == who):
+							&& legal.Any(a =>
+								a is PlayLandAction { BackFace: false } l && l.PlayerId == who
+							): // an MDFC kept as its spell is no misplay
 						Add(PassedWithLand, "passed the second main phase with a land to play");
 						break;
 					case CastSpellAction c when s.HasObject(c.CardId):

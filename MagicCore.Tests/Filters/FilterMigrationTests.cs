@@ -602,6 +602,8 @@ public class FilterMigrationTests
 		new Trigger(EventKind.AbilityActivated) { By = Whose.Opponent }, // Kai Winn: the source, Is.NamedChosenName
 		new Trigger(EventKind.LandPlayed) { By = Whose.You }, // Prosper, Tome-Bound: From = Exile
 		new Trigger(EventKind.SpellCopied) { By = Whose.You }, // Sedgemoor Witch: magecraft's copy (SpellCopiedEvent), Is.Instant | Is.Sorcery
+		TriggerEvent.SelfDealsDamage, // Cecil, Dark Knight: Is.Source as the damage source (DealtDamageEvent), any recipient
+		TriggerEvent.SelfTransforms, // Revealing Eye: Is.Source, raised by the Transform effect (TransformedEvent)
 	];
 
 	/// <summary>

@@ -75,6 +75,20 @@ public record PlayLandAction : GameAction
 	public int PlayerId { get; init; }
 	public int CardId { get; init; }
 
+	/// <summary>
+	/// Sink into Stupor // Soporific Springs: a modal double-faced card played as its back face, a land (CR 712.12) — judged
+	/// and entering as that face (Card.ModalBackFace), front face up again once it leaves.
+	/// </summary>
+	public bool BackFace { get; init; }
+
+	/// <summary>The land this plays: the card, or its modal back face.</summary>
+	Card? Land(GameState s) =>
+		s.HasObject(CardId) && s.GetObject(CardId) is Card card
+			? BackFace
+				? card.ModalBackFace()
+				: card
+			: null;
+
 	public override ValidationResult ValidateAdd(GameState s)
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
@@ -86,11 +100,7 @@ public record PlayLandAction : GameAction
 		var tally = s.GetPlayer(PlayerId).ThisTurn;
 		if (tally.LandsPlayed >= s.LandDrops(PlayerId))
 			return ValidationResult.Invalid("Already played a land this turn");
-		if (
-			!s.HasObject(CardId)
-			|| s.GetObject(CardId) is not Card land
-			|| !Rules.Playable.CanPlayLandFromHere(s, land, PlayerId)
-		)
+		if (Land(s) is not { } land || !Rules.Playable.CanPlayLandFromHere(s, land, PlayerId))
 			return ValidationResult.Invalid(
 				"Not a land in your hand, or one you may play from exile"
 			);
@@ -100,7 +110,7 @@ public record PlayLandAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		// The Holodeck: "once during each of your turns" — a land played from the graveyard uses it.
-		var permission = Rules.Playable.ZonePermission(s, s.GetCard(CardId), PlayerId);
+		var permission = Rules.Playable.ZonePermission(s, Land(s)!, PlayerId);
 		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
 				holder.Id,
@@ -110,7 +120,12 @@ public record PlayLandAction : GameAction
 				}
 			);
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
-		s = s.EnterBattlefield(CardId, PlayerId, gains: permission?.Rule.Gains); // Serra Paragon's gift
+		s = s.EnterBattlefield(
+			CardId,
+			PlayerId,
+			gains: permission?.Rule.Gains, // Serra Paragon's gift
+			transformed: BackFace
+		);
 		s = s.Tally(PlayerId, t => t with { LandsPlayed = t.LandsPlayed + 1 });
 		s = s.Raise(new LandPlayedEvent(PlayerId, CardId, from));
 		return new ActionResult(Priority.Retain(s, PlayerId));

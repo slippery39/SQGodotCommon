@@ -301,7 +301,9 @@ whose subsystem it lives in.
   graveyard or exile, REPLACING one left from an earlier turn; `Playable.IsImpulsePlayableBy` reads it in both. A cast
   from a graveyard by it (`Playable.MarkedInGraveyard`) is `ByPermission`, never flashback (a card with flashback casts
   by that) — not exiled, a permanent spell enters — and no permanent's zone permission: Underworld Breach's cost
-  isn't added, a once-each-turn rule isn't used up. A resolution's cast keeps its own exile (Bilbo).
+  isn't added, a once-each-turn rule isn't used up. A resolution's cast keeps its own exile (Bilbo). **"If that spell
+  would be put into your graveyard, exile it instead"** (Jace, Telepath Unbound's −3, MC-4.4i7) is `PlayPermission {
+  ExiledLeavingTheStack }` → the mark's own, so the cast is not `ByPermission`: flashback's exile (`MoveCard`).
 - **"Activate only once each turn"** is `ActivatedAbilityComponent.OncePerTurn`, stamped on the card as it
   is activated (`Card.ActivatedOncePerTurnOn`) — a new object may activate again.
 - **"If this is the second time this ability has resolved this turn"** is `IfNthResolutionThisTurn(n, …)`:

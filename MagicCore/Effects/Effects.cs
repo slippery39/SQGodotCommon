@@ -767,14 +767,28 @@ public record PayChosenAmount(PayAnyAmount Pay) : Effect
 
 /// <summary>
 /// Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with its other face up
-/// (Card.Transform): no zone change, its damage and counters stay; a card with no back face doesn't.
+/// (Card.Transform): no zone change, its damage and counters stay; a card with no back face doesn't. It raises
+/// TransformedEvent (Revealing Eye: "When this creature transforms into Revealing Eye"). An ability of a permanent
+/// transforms it only if it hasn't transformed since the ability was put on the stack (CR 701.28f): Cecil, Dark
+/// Knight's second "deals damage" trigger, or Etali activated twice, doesn't turn it back.
+/// ponytail: "hasn't transformed" is read as "the same face up as then" — transformed twice since reads as never.
 /// </summary>
 public record Transform(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var card in Permanents(What, s).ToList())
-			s = s.UpdateObject(card.Id, card.Transform());
+		{
+			if (
+				card.Id == GetInput<int>(ContextKeys.Source)
+				&& Conditions.SourceAsItWas(s, InputContext) is { } was
+				&& was.HasComponent<Transformed>() != card.HasComponent<Transformed>()
+			)
+				continue;
+			var turned = card.Transform();
+			if (!ReferenceEquals(turned, card))
+				s = s.UpdateObject(card.Id, turned).Raise(new TransformedEvent(card.Id));
+		}
 		return new(s);
 	}
 }

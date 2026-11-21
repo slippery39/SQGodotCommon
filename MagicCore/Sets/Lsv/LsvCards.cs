@@ -3071,6 +3071,189 @@ public static class LsvCards
 					)
 				),
 			],
+			// ===== MC-4.4i7: the blue and black DFCs every survey missed; a modal DFC =====
+			["Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar"] =
+			[
+				When(TriggerEvent.SelfAttacks, [], CreateClue(1)),
+				When(
+					new Trigger(EventKind.Drew) { By = Whose.You, Nth = 3 },
+					[],
+					ReturnTransformed
+				),
+				BackFace(
+					"Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar",
+					Loyalty(
+						2,
+						[],
+						new UntilYourNextTurnWhenever(
+							When(
+								new Trigger(EventKind.Attacked) { Subject = Is.AttackingYou },
+								[],
+								new ModifyUntilEndOfTurn(Ref.EventCard, -1, 0)
+							)
+						)
+					),
+					Loyalty(
+						-3,
+						[TargetSpec.InYourGraveyard(Is.Type(CardType.Instant | CardType.Sorcery))],
+						new If(
+							new Matches(Ref.Target(), Is.Color(ManaColor.Green)),
+							[new AddManaOfAnyOneColor(1)]
+						),
+						new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+					),
+					Loyalty(
+						-7,
+						[],
+						new DrawCards(
+							Ref.You,
+							Count.NumberOf(Ref.All(ZoneType.Library, of: Ref.You)) with
+							{
+								Per = 2,
+								RoundUp = true,
+							}
+						),
+						new GetEmblem(
+							[
+								new UntilEndOfTurn
+								{
+									NoMaximumHandSize = true,
+									UntilTurnOf = UntilEndOfTurn.Never,
+								},
+							]
+						)
+					)
+				),
+			],
+			["Jace, Vryn's Prodigy // Jace, Telepath Unbound"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new DrawCards(Ref.You, 1),
+						new Discard(Ref.You, 1),
+						new If(
+							new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 5),
+							[ReturnTransformed]
+						),
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+				BackFace(
+					"Jace, Vryn's Prodigy // Jace, Telepath Unbound",
+					Loyalty(
+						1,
+						[Target(Is.Creature) with { Optional = true }],
+						new ModifyUntilEndOfTurn(Ref.Target(), -2, 0) { UntilYourNextTurn = true }
+					),
+					Loyalty(
+						-3,
+						[TargetSpec.InYourGraveyard(Is.Type(CardType.Instant | CardType.Sorcery))],
+						new MakePlayable(
+							Ref.Target(),
+							new PlayPermission
+							{
+								ThisTurn = true,
+								CastOnly = true,
+								ExiledLeavingTheStack = true,
+							}
+						)
+					),
+					Loyalty(
+						-9,
+						[],
+						new GetEmblem(
+							[
+								When(
+									TriggerEvent.YouCastSpell,
+									[TargetSpec.Player(Is.Opponents)],
+									new Mill(Ref.Target(), 5)
+								),
+							]
+						)
+					)
+				),
+			],
+			["Cecil, Dark Knight // Cecil, Redeemed Paladin"] =
+			[
+				When(
+					TriggerEvent.SelfDealsDamage,
+					[],
+					new LoseLife(Ref.You, Count.X),
+					new If(
+						new Not(
+							new AtLeast(
+								Count.LifeTotalOf(Ref.You),
+								MagicPlayer.StartingLife / 2 + 1
+							)
+						),
+						[new Untap(Ref.Source), new Transform(Ref.Source)]
+					)
+				),
+				BackFace(
+					"Cecil, Dark Knight // Cecil, Redeemed Paladin",
+					When(
+						TriggerEvent.SelfAttacks,
+						[],
+						new ModifyUntilEndOfTurn(
+							Ref.Permanents(Is.Attacking & !Is.Source),
+							0,
+							0,
+							"Indestructible"
+						)
+					)
+				),
+			],
+			["Concealing Curtains // Revealing Eye"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}{B}"), [new Transform(Ref.Source)])
+				{
+					SorcerySpeed = true,
+				},
+				BackFace(
+					"Concealing Curtains // Revealing Eye",
+					When(
+						TriggerEvent.SelfTransforms,
+						[TargetSpec.Player(Is.Opponents)],
+						new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+						{
+							Filter = !Is.Land,
+							Optional = true,
+							Then = [new DrawCards(Ref.Target(), 1)],
+						}
+					)
+				),
+			],
+			["Sink into Stupor // Soporific Springs"] =
+			[
+				Spell(
+					[TargetSpec.Spell(Is.Opponents) with { Or = Target(!Is.Land & Is.Opponents) }],
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+					{
+						From = [ZoneType.Battlefield, ZoneType.Stack],
+					}
+				),
+				BackFace(
+					"Sink into Stupor // Soporific Springs",
+					new EntersTappedComponent { UnlessYouPayLife = 3 },
+					new ManaAbilityComponent(ManaColor.Blue)
+				) with
+				{
+					Modal = true,
+				},
+			],
+		};
+
+	/// <summary>
+	/// Tamiyo, Inquisitive Student; Jace, Vryn's Prodigy: "exile [it], then return [it] to the battlefield transformed under
+	/// [its] owner's control" (Fable's chapter III, under its owner).
+	/// </summary>
+	static MoveTo ReturnTransformed =>
+		new(Ref.Source, ZoneType.Exile)
+		{
+			Then = [new MoveTo(Ref.ThisWay, ZoneType.Battlefield) { Transformed = true }],
 		};
 
 	/// <summary>

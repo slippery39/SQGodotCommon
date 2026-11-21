@@ -526,7 +526,7 @@ public static class MagicState
 			// a face-down card is judged as the 2/2 it enters as, a transformed one as its back face
 			var judged =
 				faceDown ? entering.TurnedFaceDown()
-				: transformed ? entering.Transform()
+				: transformed ? entering.BackFaceUp()
 				: entering;
 			if (
 				EntryRules(
@@ -549,7 +549,7 @@ public static class MagicState
 		if (faceDown)
 			s = s.UpdateObject(cardId, s.GetCard(cardId).TurnedFaceDown());
 		if (transformed)
-			s = s.UpdateObject(cardId, s.GetCard(cardId).Transform());
+			s = s.UpdateObject(cardId, s.GetCard(cardId).BackFaceUp());
 		// Enduring Innocence: "It's an enchantment. (It's not a creature.)" — the types this entry takes, there
 		// as it enters and until it leaves.
 		if (loses != CardType.None && s.GetCard(cardId) is var printed)

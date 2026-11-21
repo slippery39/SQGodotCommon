@@ -226,5 +226,6 @@ public static class Playable
 				c.Is(CardType.Land)
 					? CanPlayLandFromHere(s, c, playerId)
 					: CanCastFromHere(s, c, playerId)
+						|| c.ModalBackFace() is { } land && CanPlayLandFromHere(s, land, playerId)
 			);
 }

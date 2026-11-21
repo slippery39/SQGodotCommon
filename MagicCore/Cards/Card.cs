@@ -522,9 +522,31 @@ public record Card : GameObject
 	/// Transformed.Original's when a card asks.
 	/// </summary>
 	public Card Transform() =>
-		HasComponent<EnteredAsCopy>() || HasComponent<CopyUntilEndOfTurn>() ? this
-		: GetComponent<Transformed>() is { } front ? FrontFaceUp()
-		: GetComponent<Effects.TransformsInto>() is { } back
+		HasComponent<EnteredAsCopy>()
+		|| HasComponent<CopyUntilEndOfTurn>()
+		// a modal DFC never transforms (CR 701.28d) — either face up: the back keeps the front on Transformed
+		|| (GetComponent<Transformed>()?.Original ?? this).GetComponent<Effects.TransformsInto>()
+			is { Modal: true }
+			? this
+		: GetComponent<Transformed>() is { } ? FrontFaceUp()
+		: GetComponent<Effects.TransformsInto>() is { } ? BackFaceUp()
+		: this;
+
+	/// <summary>
+	/// Sink into Stupor // Soporific Springs: the land a modal double-faced card is played as (PlayLandAction.BackFace) —
+	/// its back face up — or null when it has no modal back face.
+	/// </summary>
+	public Card? ModalBackFace() =>
+		GetComponent<Effects.TransformsInto>() is { Modal: true } ? BackFaceUp() : null;
+
+	/// <summary>
+	/// Its back face up (CR 712.8) — transformed (Transform), entering transformed (EnterBattlefield), or a modal DFC played
+	/// as its back face: the face's values as a copy's, the front kept on <see cref="Transformed"/>.
+	/// ponytail: a modal DFC returned "transformed" (MoveTo.Transformed) enters back face up, where CR 712.14a has it front
+	/// face up — none is; ask Modal in MoveTo when a card returns one (DesignNotes).
+	/// </summary>
+	public Card BackFaceUp() =>
+		!HasComponent<Transformed>() && GetComponent<Effects.TransformsInto>() is { } back
 			? (Card)
 				(
 					WithCopiableValuesOf(
@@ -543,7 +565,7 @@ public record Card : GameObject
 						Set = Set,
 					}
 				).WithComponent(new Transformed(this))
-		: this;
+			: this;
 
 	/// <summary>Its front face up again — transformed back, or as it leaves the battlefield (CR 712.14, Fresh).</summary>
 	public Card FrontFaceUp() =>

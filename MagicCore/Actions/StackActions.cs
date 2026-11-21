@@ -679,8 +679,10 @@ public record CastSpellAction : GameAction
 				: null;
 		// Malcolm, Bilbo: cast from a graveyard as an effect resolves (CR 608.2g) — not flashback, so it isn't exiled
 		// leaving the stack and a permanent spell resolves onto the battlefield, unless the effect exiles it.
+		// Jace, Telepath Unbound: a mark that exiles it instead is flashback's exile, not the mark's permission.
 		var byEffect =
-			DuringResolution && from == ZoneType.Graveyard && !ExiledLeavingTheStack || marked;
+			DuringResolution && from == ZoneType.Graveyard && !ExiledLeavingTheStack
+			|| marked && card.GetComponent<PlayableFromExile>()?.ExiledLeavingTheStack != true;
 		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
 				holder.Id,

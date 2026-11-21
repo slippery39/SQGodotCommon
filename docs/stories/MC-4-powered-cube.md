@@ -1528,6 +1528,31 @@ as his three priorities.
   transformed 77) — the probe counted a transformed card under its back face's name, so Reflection first read
   "activated 0": `CardProbeTests` counts it under the card's name now. After the review's fixes the checks again from
   golden-in (no AI game moved, probe 150 clean); suite 2,155 passed.
+- 2026-11-20, Shayne: **i7 as the default** — the five DFCs before another colour, as tiered (below).
+- 2026-11-20, Claude (cube lane) — **4.4i7: the five blue and black DFCs every survey missed — 305 of 528 play; blue 75 of
+  75 and black 61 of 61: both finished.** **Tamiyo, Inquisitive Student** (tier 2) — "your third card in a turn" is
+  `Trigger.Nth = 3` on `Drew`, Fable's exile-and-return (`LsvCards.ReturnTransformed`, under its owner); a planeswalker
+  back face enters with its own loyalty (tested: 2). Her −7's "half … rounded up" is `Count.RoundUp` (an option on
+  `Per`), the emblem `GetEmblem([UntilEndOfTurn { NoMaximumHandSize, UntilTurnOf = Never }])` — read by
+  `MaxHandSizeOf` past the next turn. **Jace, Vryn's Prodigy** (tier 2) — loot, then `If(AtLeast(graveyard, 5))` the same
+  return; his −3's "if that spell would be put into your graveyard, exile it instead" is `PlayPermission {
+  ExiledLeavingTheStack }` on Emry's mark (the cast not `ByPermission`: flashback's exile). **Cecil, Dark Knight** (tier
+  3) — "whenever Cecil deals damage" to anything: no event named the source of damage to a creature, and damage to a
+  planeswalker raised none, so `DealtDamageEvent(SourceId, Amount)` from `Damage.Deal` for every recipient
+  (`TriggerEvent.SelfDealsDamage`; one per recipient, as lifelink — DesignNotes); "half your starting life total" is
+  `MagicPlayer.StartingLife / 2`. **CR 701.28f** in the `Transform` effect: an ability of a permanent transforms it only
+  if it hasn't since it was put on the stack (the source snapshot's face) — Cecil's second trigger, Etali activated
+  twice. **Concealing Curtains** (tier 3, small) — "when this transforms into Revealing Eye" is `TransformedEvent`,
+  raised by `Transform` alone (`TriggerEvent.SelfTransforms`); the discard Salt Vampire's `YouChooseTheyDiscard {
+  Filter, Optional, Then }`. **Sink into Stupor // Soporific Springs** (tier 3) — a modal DFC is `BackFace(…) with {
+  Modal = true }`: `Card.Transform` refuses it either face up (the test found it flipping a back-face-up one to the
+  front: the marker is on the front, kept on `Transformed`), and `PlayLandAction { BackFace }` plays the land face
+  (`Card.ModalBackFace` → `BackFaceUp`, the copy stamp), offered beside the casts — a land permission from a graveyard
+  plays it though the instant can't be cast there. Legal actions: none grow with the board (one land play per MDFC).
+  11 tests in `LsvBatch2i7Tests.cs`; 11/11 revert-checks caught. Golden-out moved nothing (162 random, 882 card games);
+  golden-in moved 30 random and 247 card games, 20 added, no AI game; probe 150: none unfinished, every card used (Jace
+  activated 1,422, Curtains 311; Sink into Stupor cast 280 — its land plays aren't counted). The probe's "activated 8"
+  for Cecil (no activated ability) is Q, Stacking the Deck's grant, as before. Suite 2,166 passed.
 
 ## Tasks
 
@@ -1772,7 +1797,7 @@ as his three priorities.
     - [x] MC-4.4h7 Saddle: Caustic Bronco (one batch with h8, h9; Decisions, "4.4h7–h9")
     - [x] MC-4.4h8 Emerge: Crabomination
     - [x] MC-4.4h9 Miracle: Metamorphosis Fanatic
-  - [ ] MC-4.4i Red beyond tier 1 (Shayne, 2026-11-20: the next colour) — 17 cards read card by card and tiered
+  - [x] MC-4.4i Red beyond tier 1 (Shayne, 2026-11-20: the next colour) — 17 cards read card by card and tiered
         (Decisions, "4.4i"): 6 tested pieces, 7 options, 4 new pieces; four batches — i1 + i2a, i2b + i3, i4–i6, i7
         (Shayne: more cards a session):
     - [x] MC-4.4i1 The tested pieces, 6 (one batch with i2a): Embereth Shieldbreaker // Battle Display, Oliphaunt, Unholy Heat, Through the
@@ -1785,7 +1810,7 @@ as his three priorities.
     - [x] MC-4.4i4 Counters on a player — energy (one batch with i5, i6): Galvanic Discharge (Guide of Souls waits for white)
     - [x] MC-4.4i5 Transforming double-faced cards: Fable of the Mirror-Breaker
     - [x] MC-4.4i6 Etali, Primal Conqueror — transform by an activation, poison, casting any number free
-    - [ ] MC-4.4i7 (default, Shayne to confirm) The blue and black DFCs every survey missed: Tamiyo, Inquisitive
+    - [x] MC-4.4i7 (Shayne: the default) The blue and black DFCs every survey missed: Tamiyo, Inquisitive
           Student; Jace, Vryn's Prodigy; Sink into Stupor (modal); Cecil, Dark Knight; Concealing Curtains
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
@@ -1809,11 +1834,17 @@ which every colour's survey missed (Decisions, "4.4i"; blue's three too). **Red 
 extra combat, energy, transforming DFCs, Etali); i7 the missed blue and black DFCs — built as four batches, i1 + i2a,
 i2b + i3, i4–i6, i7 (Shayne: more cards a session). Each session ends with the cube's cards implemented by rarity AND
 by colour (`python tools/magic_set.py coverage --set LSV`). **i1 + i2a, i2b + i3 and i4–i6 are done: red is
-finished** (Decisions, "4.4i1 + i2a", "4.4i2b + i3", "4.4i4–i6"; 300 of 528 play, red 54 of 54). Next, in a NEW
-session: **MC-4.4i7** — the five blue and black DFCs every survey missed (Tamiyo, Inquisitive Student; Jace, Vryn's
-Prodigy; Cecil, Dark Knight; Concealing Curtains — transforming, on i5's `Card.Transform`; Sink into Stupor — a MODAL
-DFC, its own piece). **Open (for Shayne): i7 as the default, or another colour first** (the task's "Shayne to
-confirm"). From i4–i6: counters on a player are `MagicPlayer.Counters` through `MagicState.PutCounters` (a player's id;
+finished** (Decisions, "4.4i1 + i2a", "4.4i2b + i3", "4.4i4–i6"; 300 of 528 play, red 54 of 54). **i7 is done: blue and
+black are finished** (Decisions, "4.4i7"; 305 of 528 play — W 41/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolour
+6/65, colourless 58/163). **Next: no colour is planned — Shayne to pick** (white's 19, green's 40, multicolour, or
+colourless), then survey it card by card as 4.4h and 4.4i were, its DFCs read from the front face's cost (Ajani, Witch
+Enchanter, Outland Liberator, Ulvenwald Oddity — white's and green's). From i7: a modal DFC is `BackFace(…) with { Modal
+= true }` and `PlayLandAction { BackFace }` (Witch Enchanter // Witch-Blessed Meadow takes it with white); "when this
+transforms into" `TriggerEvent.SelfTransforms` (`TransformedEvent`); "whenever this deals damage" `TriggerEvent.
+SelfDealsDamage` (`DealtDamageEvent`); "rounded up" `Count.RoundUp`; a graveyard mark's exile-instead `PlayPermission {
+ExiledLeavingTheStack }`; `LsvCards.ReturnTransformed`. i7's tests are in `LsvBatch2i7Tests.cs` (`Transformed(name,
+loyalty)`: back face up with that loyalty, `Loyalty(walker, ability, targets)`). **For the AI lane:** an MDFC in hand
+counts as its front face, never a land (DesignNotes). From i4–i6: counters on a player are `MagicPlayer.Counters` through `MagicState.PutCounters` (a player's id;
 `PutCounters(Ref.You, 3) { Kind = CounterKinds.Energy }`), poison's loss at ten in the state-based check; "pay any amount
 of [life / {E}]" is `PayAnyAmount { Kind, AtMost, Then }` with `Count.AmountPaid` (Necrodominance moved onto it); a
 transforming DFC's back face is `LsvCards.BackFace(card, abilities…)` (`TransformsInto`), `Card.Transform` the copy
@@ -2158,3 +2189,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-20: MC-4.4i4–i6 done as one batch: counters on a player (energy, poison), transforming DFCs, transform by an
   activation — 300 of 528 play, **red finished (54 of 54)**. `PayAnyAmount` (Necrodominance moved onto it);
   `Card.Transform`; DFC colours from the front face. Next: MC-4.4i7 (Shayne to confirm).
+- 2026-11-20: Shayne took i7 as the default. MC-4.4i7 done: the five missed DFCs — 305 of 528 play, **blue (75 of 75)
+  and black (61 of 61) finished**. `DealtDamageEvent`, `TransformedEvent`, CR 701.28f, modal DFCs (`PlayLandAction {
+  BackFace }`). Next: Shayne to pick the next colour.

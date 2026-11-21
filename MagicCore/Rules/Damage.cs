@@ -53,6 +53,7 @@ public static class Damage
 				.Raise(new CreatureDealtDamageEvent(targetId, amount));
 		else
 			return s; // its target is gone: no damage was dealt
+		s = s.Raise(new DealtDamageEvent(source.Id, amount)); // Cecil, Dark Knight: "whenever Cecil deals damage"
 
 		// Ruric Thar, Magecrusher: "as long as they haven't dealt combat damage yet".
 		if (combat && s.IsOnBattlefield(source.Id) && !s.GetCard(source.Id).HasDealtCombatDamage)

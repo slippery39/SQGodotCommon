@@ -429,6 +429,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	/// <summary>"For every three cards in your graveyard": the count divided by this, rounded down.</summary>
 	public int Per { get; init; } = 1;
 
+	/// <summary>Tamiyo, Seasoned Scholar's −7: "half the number of cards in your library, rounded up" — Per rounds up.</summary>
+	public bool RoundUp { get; init; }
+
 	/// <summary>Dark Matter Manipulator: "+2/+0 for every seven" — each Per counts this many.</summary>
 	public int Times { get; init; } = 1;
 
@@ -601,7 +604,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static bool operator !=(Count c, int n) => !(c == n);
 
 	public int Value(GameState s, ImmutableDictionary<string, object> context) =>
-		Sign * Times * (Counted(s, context) / Per) + Plus;
+		Sign * Times * ((Counted(s, context) + (RoundUp ? Per - 1 : 0)) / Per) + Plus;
 
 	int Counted(GameState s, ImmutableDictionary<string, object> context)
 	{

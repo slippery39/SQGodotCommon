@@ -5,7 +5,10 @@ namespace MagicCore;
 
 public record MagicPlayer : GameObject
 {
-	public int Life { get; init; } = 20;
+	/// <summary>Cecil, Dark Knight: "half your starting life total" — every game starts at 20 (Bo1, two players).</summary>
+	public const int StartingLife = 20;
+
+	public int Life { get; init; } = StartingLife;
 
 	/// <summary>Empties at the end of every step and phase (CR 500.4).</summary>
 	public ManaPool ManaPool { get; init; } = ManaPool.Empty;

@@ -782,7 +782,8 @@ public static class Rollout
 		var moves = s.AiMoves(
 			allowed is null ? s.SearchMoves() : [.. s.SearchMoves().Where(allowed)]
 		);
-		if (moves.OfType<PlayLandAction>().FirstOrDefault() is { } land)
+		// Sink into Stupor // Soporific Springs: a modal DFC's land face only when no other land is offered
+		if (moves.OfType<PlayLandAction>().OrderBy(l => l.BackFace).FirstOrDefault() is { } land)
 			return land;
 		landDone = true; // none now: none this turn worth asking for again
 		if (playable is null)

@@ -15,8 +15,9 @@ public static class Describe
 			PassPriorityAction => "Pass",
 			KeepHandAction => "Keep hand",
 			MulliganAction => "Mulligan",
-			PlayLandAction p => $"Play {Name(s, p.CardId)}"
-				+ (s.IsIn(p.CardId, p.PlayerId, ZoneType.Exile) ? " from exile" : ""),
+			PlayLandAction p =>
+				$"Play {(p.BackFace ? s.GetCard(p.CardId).ModalBackFace()?.Name : null) ?? Name(s, p.CardId)}"
+					+ (s.IsIn(p.CardId, p.PlayerId, ZoneType.Exile) ? " from exile" : ""),
 			CastSpellAction c => (
 				c.Adventure
 				&& s.HasObject(c.CardId)

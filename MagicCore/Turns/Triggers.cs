@@ -287,6 +287,32 @@ public record CountersPutEvent(int CardId, string CounterKind, int From, int To)
 		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
 }
 
+/// <summary>
+/// A permanent transformed (CR 701.28; Revealing Eye: "When this creature transforms into Revealing Eye") — raised by the
+/// Transform effect alone: entering transformed (MoveTo.Transformed) or a modal DFC played as its back face isn't one.
+/// </summary>
+public record TransformedEvent(int CardId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.Transformed;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
+
+/// <summary>
+/// Cecil, Dark Knight: "Whenever Cecil deals damage, you lose that much life" — a source dealt damage to a player, a
+/// creature or a planeswalker (Rules.Damage.Deal, every path); its subject is the source while it is on the battlefield.
+/// ponytail: one event per recipient, so damage to two blockers at once triggers twice (CR 120: one damage event) —
+/// lifelink's ceiling too; a combat damage step's total per source when a card reads it differently.
+/// </summary>
+public record DealtDamageEvent(int SourceId, int Amount) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.DealtDamage;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(SourceId) ? [s.GetCard(SourceId)] : [];
+}
+
 /// <summary>A Class became level N (Does Machines: "When this Class becomes level 2") — raised by GainLevel.</summary>
 public record BecameLevelEvent(int CardId, int Level) : MagicEvent
 {
@@ -494,6 +520,7 @@ public static class Triggers
 									{
 										CreatureDealtDamageEvent damaged => damaged.Amount,
 										PlayerDealtDamageEvent dealt => dealt.Amount,
+										DealtDamageEvent dealt => dealt.Amount,
 										_ => 0,
 									}
 							),

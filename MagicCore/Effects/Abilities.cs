@@ -150,6 +150,8 @@ public enum EventKind
 	LandPlayed, // Prosper, Tome-Bound: "whenever you play a card from exile" — a land played (PlayLandAction), not one put onto the battlefield
 	BecameLevel, // Does Machines: "When this Class becomes level 2" — GainLevel (Trigger.Chapter)
 	SpellCopied, // Sedgemoor Witch: magecraft's "or copy" — a copy of a spell put on the stack (CopySpell); a copy is never cast
+	Transformed, // Revealing Eye: "When this creature transforms into Revealing Eye" — the Transform effect
+	DealtDamage, // Cecil, Dark Knight: "Whenever Cecil deals damage" — Rules.Damage.Deal, to anything (the source is the subject)
 }
 
 /// <summary>
@@ -570,6 +572,14 @@ public static class TriggerEvent
 		new(EventKind.CreatureDealtDamage) { Subject = Filters.Is.Source };
 	public static readonly Trigger SelfDealsCombatDamageToPlayer =
 		new(EventKind.PlayerDealtDamage) { Also = EventTest.CombatDamageFromThis };
+
+	/// <summary>Cecil, Dark Knight: "Whenever Cecil deals damage" — to a player, creature or planeswalker; X is how much.</summary>
+	public static readonly Trigger SelfDealsDamage =
+		new(EventKind.DealtDamage) { Subject = Filters.Is.Source };
+
+	/// <summary>Revealing Eye: "When this creature transforms into Revealing Eye" — read from the face it turned to.</summary>
+	public static readonly Trigger SelfTransforms =
+		new(EventKind.Transformed) { Subject = Filters.Is.Source };
 	public static readonly Trigger OpponentDealtNoncombatDamage =
 		new(EventKind.PlayerDealtDamage)
 		{
@@ -1056,6 +1066,9 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 
 	/// <summary>Warp (Quantum Riddler): "Its owner may cast this card after the current turn has ended" — the first turn it may be (PlayPermission.LaterTurn).</summary>
 	public int FromTurn { get; init; }
+
+	/// <summary>Jace, Telepath Unbound: "If that spell would be put into your graveyard, exile it instead" — PlayPermission's.</summary>
+	public bool ExiledLeavingTheStack { get; init; }
 }
 
 /// <summary>
@@ -1166,10 +1179,13 @@ public record AdventureComponent(Cards.CardFace Face, SpellEffectsComponent Text
 /// {T}: Create a token that's a copy of another target nonlegendary creature you control, except it has haste."): the
 /// face, its keywords (Scryfall merges both faces') and its abilities — what Card.Transform turns it into.
 /// </summary>
+/// <param name="Modal">A MODAL double-faced card's back face (CR 712.12; Sink into Stupor // Soporific Springs): never
+/// transformed — played as that face (PlayLandAction.BackFace), it is back face up until it leaves (Card.BackFaceUp).</param>
 public record TransformsInto(
 	Cards.CardFace Face,
 	ImmutableArray<string> Keywords,
-	ImmutableArray<GameComponent> Abilities
+	ImmutableArray<GameComponent> Abilities,
+	bool Modal = false
 ) : GameComponent;
 
 /// <summary>"This creature enters prepared." Applied by MagicState.EnterBattlefield.</summary>

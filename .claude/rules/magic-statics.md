@@ -215,5 +215,13 @@ whose subsystem it lives in.
   transforms (a transforming token); a permanent under a copy effect never does (Phyrexian Metamorph, Hall of Echoes:
   CR 701.28c). Each face's colours are Scryfall's (`CardFace.Colors` — the back's colour indicator: Etali, Primal Sickness
   is red and green; the front's when the card has none at the top); a back face has mana value 0 (DesignNotes).
+  **"When this transforms into [it]"** (Revealing Eye, MC-4.4i7) is `TriggerEvent.SelfTransforms` on the back face —
+  `TransformedEvent`, raised by the `Transform` effect alone (entering transformed isn't transforming). **An ability of a
+  permanent transforms it only if it hasn't transformed since it was put on the stack** (CR 701.28f: Cecil, Dark Knight's
+  second trigger, Etali activated twice) — `Transform` compares the source snapshot's face with the permanent's.
+  **A modal double-faced card** (CR 712.12; Sink into Stupor // Soporific Springs) is `BackFace(…) with { Modal = true }`:
+  never transformed (`Card.Transform` refuses either face up), its back face a land played as `PlayLandAction { BackFace }`
+  — offered beside the front's casts (`MagicRules`, `Playable.Candidates`: a land permission from a graveyard plays it),
+  judged and entering as that face (`Card.ModalBackFace` → `BackFaceUp`, the copy stamp), front face up once it leaves.
 - **A keyword counter** (CR 122.1b; Drivnod's indestructible counter, `CounterKinds.Indestructible`) is read by
   `Card.HasOwn`: a counter named as the keyword, lower case, gives it — so every rule that asks `s.Has` sees it.

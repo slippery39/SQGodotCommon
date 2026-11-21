@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 37/46 · uncommon 58/86 · rare 142/279 · mythic 54/108 · **300/528**
+**Playable:** common 37/46 · uncommon 59/86 · rare 144/279 · mythic 56/108 · **305/528**
 
 ### "Name Sticker" Goblin
 
@@ -2058,7 +2058,35 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As this land enters, you may pay 3 life. If you don't, it enters tapped.  
 > {T}: Add {U}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i7Tests
+
+**Engine pieces:** `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Sink into Stupor // Soporific Springs"] =
+[
+	Spell(
+		[
+			TargetSpec.Spell(Is.Opponents) with
+			{
+				Or = Target(!Is.Land & Is.Opponents),
+			},
+		],
+		new MoveTo(Ref.Target(), ZoneType.Hand)
+		{
+			From = [ZoneType.Battlefield, ZoneType.Stack],
+		}
+	),
+	BackFace(
+		"Sink into Stupor // Soporific Springs",
+		new EntersTappedComponent { UnlessYouPayLife = 3 },
+		new ManaAbilityComponent(ManaColor.Blue)
+	) with
+	{
+		Modal = true,
+	},
+],
+```
 
 ### Skateboard
 
@@ -3001,7 +3029,39 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Lifelink  
 > Protect — Whenever Cecil attacks, other attacking creatures gain indestructible until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i7Tests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `MagicPlayer` — ; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Transform` — Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+
+```csharp
+["Cecil, Dark Knight // Cecil, Redeemed Paladin"] =
+[
+	When(
+		TriggerEvent.SelfDealsDamage,
+		[],
+		new LoseLife(Ref.You, Count.X),
+		new If(
+			new Not(
+				new AtLeast(Count.LifeTotalOf(Ref.You), MagicPlayer.StartingLife / 2 + 1)
+			),
+			[new Untap(Ref.Source), new Transform(Ref.Source)]
+		)
+	),
+	BackFace(
+		"Cecil, Dark Knight // Cecil, Redeemed Paladin",
+		When(
+			TriggerEvent.SelfAttacks,
+			[],
+			new ModifyUntilEndOfTurn(
+				Ref.Permanents(Is.Attacking & !Is.Source),
+				0,
+				0,
+				"Indestructible"
+			)
+		)
+	),
+],
+```
 
 ### Celestial Colonnade
 
@@ -3154,7 +3214,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Menace  
 > When this creature transforms into Revealing Eye, target opponent reveals their hand. You may choose a nonland card from it. If you do, that player discards that card, then draws a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i7Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Transform` — Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
+
+```csharp
+["Concealing Curtains // Revealing Eye"] =
+[
+	new ActivatedAbilityComponent(ManaCost.Parse("{2}{B}"), [new Transform(Ref.Source)])
+	{
+		SorcerySpeed = true,
+	},
+	BackFace(
+		"Concealing Curtains // Revealing Eye",
+		When(
+			TriggerEvent.SelfTransforms,
+			[TargetSpec.Player(Is.Opponents)],
+			new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+			{
+				Filter = !Is.Land,
+				Optional = true,
+				Then = [new DrawCards(Ref.Target(), 1)],
+			}
+		)
+	),
+],
+```
 
 ### Consult the Star Charts
 
@@ -3925,7 +4010,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 			AnyNumber = true,
 		}
 	),
-	new ActivatedAbilityComponent(ManaCost.Parse("{9}{G/P}"), [new Transform(Ref.Source)])
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{9}{G/P}"),
+		[new Transform(Ref.Source)]
+	)
 	{
 		SorcerySpeed = true,
 	},
@@ -8170,7 +8258,63 @@ How to write a script: `MagicCore/Cookbook.md`.
 > −3: You may cast target instant or sorcery card from your graveyard this turn. If that spell would be put into your graveyard, exile it instead.  
 > −9: You get an emblem with "Whenever you cast a spell, target opponent mills five cards."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i7Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Discard` — Each player named discards, choosing for themselves — the number counted for each…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `MakePlayable` — Emry, Lurker of the Loch: "Choose target artifact card in your graveyard. You may cast…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PlayPermission` — MC-6.9: "You may play [cast] that card" — THE permission an effect gives the cards it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
+
+```csharp
+["Jace, Vryn's Prodigy // Jace, Telepath Unbound"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[
+			new DrawCards(Ref.You, 1),
+			new Discard(Ref.You, 1),
+			new If(
+				new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 5),
+				[ReturnTransformed]
+			),
+		]
+	)
+	{
+		Costs = [new TapSelfCost()],
+	},
+	BackFace(
+		"Jace, Vryn's Prodigy // Jace, Telepath Unbound",
+		Loyalty(
+			1,
+			[Target(Is.Creature) with { Optional = true }],
+			new ModifyUntilEndOfTurn(Ref.Target(), -2, 0) { UntilYourNextTurn = true }
+		),
+		Loyalty(
+			-3,
+			[TargetSpec.InYourGraveyard(Is.Type(CardType.Instant | CardType.Sorcery))],
+			new MakePlayable(
+				Ref.Target(),
+				new PlayPermission
+				{
+					ThisTurn = true,
+					CastOnly = true,
+					ExiledLeavingTheStack = true,
+				}
+			)
+		),
+		Loyalty(
+			-9,
+			[],
+			new GetEmblem(
+				[
+					When(
+						TriggerEvent.YouCastSpell,
+						[TargetSpec.Player(Is.Opponents)],
+						new Mill(Ref.Target(), 5)
+					),
+				]
+			)
+		)
+	),
+],
+```
 
 ### Jennifer Walters // The Sensational She-Hulk
 
@@ -8953,7 +9097,65 @@ How to write a script: `MagicCore/Cookbook.md`.
 > −3: Return target instant or sorcery card from your graveyard to your hand. If it's a green card, add one mana of any color.  
 > −7: Draw cards equal to half the number of cards in your library, rounded up. You get an emblem with "You have no maximum hand size."
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2i7Tests
+
+**Engine pieces:** `AddManaOfAnyOneColor` — Culber and Stamets, Star-Crossed: "Add two mana of any one color." — the colour chosen…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GetEmblem` — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `UntilEndOfTurn` — "Gets +P/+T and gains Keyword until end of turn" on a permanent. Removed in cleanup (CR…; `UntilYourNextTurnWhenever` — Jace, Reality Sculptor's −3, Garruk, Curse Breaker's −4: "Until your next turn, whenever…
+
+```csharp
+["Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar"] =
+[
+	When(TriggerEvent.SelfAttacks, [], CreateClue(1)),
+	When(
+		new Trigger(EventKind.Drew) { By = Whose.You, Nth = 3 },
+		[],
+		ReturnTransformed
+	),
+	BackFace(
+		"Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar",
+		Loyalty(
+			2,
+			[],
+			new UntilYourNextTurnWhenever(
+				When(
+					new Trigger(EventKind.Attacked) { Subject = Is.AttackingYou },
+					[],
+					new ModifyUntilEndOfTurn(Ref.EventCard, -1, 0)
+				)
+			)
+		),
+		Loyalty(
+			-3,
+			[TargetSpec.InYourGraveyard(Is.Type(CardType.Instant | CardType.Sorcery))],
+			new If(
+				new Matches(Ref.Target(), Is.Color(ManaColor.Green)),
+				[new AddManaOfAnyOneColor(1)]
+			),
+			new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+		),
+		Loyalty(
+			-7,
+			[],
+			new DrawCards(
+				Ref.You,
+				Count.NumberOf(Ref.All(ZoneType.Library, of: Ref.You)) with
+				{
+					Per = 2,
+					RoundUp = true,
+				}
+			),
+			new GetEmblem(
+				[
+					new UntilEndOfTurn
+					{
+						NoMaximumHandSize = true,
+						UntilTurnOf = UntilEndOfTurn.Never,
+					},
+				]
+			)
+		)
+	),
+],
+```
 
 ### Teferi, Hero of Dominaria
 
