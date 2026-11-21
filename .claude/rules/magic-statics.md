@@ -186,6 +186,10 @@ whose subsystem it lives in.
   in each DEBT rule's one place: `Damage.Prevented` (given the source), `Attachments` (enchant, and the Equipment
   fall-off), `Combat.CanBlock`, `TargetSpec`. Read through `AbilitiesOf`: a grant until end of turn counts, losing all
   abilities ends it. "As this enters, choose a player" is `ChoosesPlayerAsItEnters` → `ChosenPlayer` (status).
+  **"Gains protection from the color of your choice until end of turn"** (Mother of Runes, Giver of Runes, MC-4.4j2a)
+  is Hungering Puppetbeast's `GainsChosenKeyword { Grants }` — each word's `Protection(Is.Color(c))` (Giver's
+  `Is.Colorless` a sixth) through `ModifyUntilEndOfTurn.Gains`, the word only for the table, as Fear's; a fixed grant is
+  `Gains = [Protection(Is.Creature)]` (Seasoned Dungeoneer).
 - **An ability a card GAINS** (Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard'"; Q's exiled
   card) is `UntilEndOfTurn.Gains` — a static or activated ability read by `s.AbilitiesOf<T>` beside the card's own,
   so every rule sees it; for good (`ModifyUntilEndOfTurn.ForGood`) it lasts until the card changes zones. A gained

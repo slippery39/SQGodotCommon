@@ -81,10 +81,10 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `AttachTo` (Ref?): Gwyndala, the Progeny: "create … Neuroflux Heirloom … Attach it to Gwyndala." — once it has entered, if that…
   - `Then` (ImmutableList<GameAction>): Cori-Steel Cutter: "create a 1/1 white Monk creature token with prowess. You may attach this Equipment to…
 - **`DamageFrom(Ref From, Ref To, Count Amount)`** — "[A] deals damage equal to its power (or loyalty) to [B]" - the source is A, not the spell, so A's deathtouch and lifelink apply (Compel… [5: Compel Brutality, Flourishing Grapple, Ingris Stingerquill…]
-- **`DealDamage(Ref To, Count Amount)`** — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply. [71: Extended Absence, Cast Away Doubt, Screeching Soulbreaker…]
+- **`DealDamage(Ref To, Count Amount)`** — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply. [72: Extended Absence, Cast Away Doubt, Screeching Soulbreaker…]
   - `IfExcess` (ImmutableList<GameAction>): Violent Echoes: "if excess damage was dealt to that permanent this way, [IfExcess]" — X is the excess. For a…
   - `Then` (ImmutableList<GameAction>): Screaming Nemesis: "If a player is dealt damage this way, they can't gain life for the rest of the game." —…
-- **`Destroy(Ref What)`** — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7). [45: Prophesied End, Terminal Criticism, Surgical Precision…]
+- **`Destroy(Ref What)`** — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7). [47: Prophesied End, Terminal Criticism, Surgical Precision…]
   - `Then` (ImmutableList<GameAction>): Decree of Pain: "Destroy all creatures. … Draw a card for each creature destroyed this way." — run after,…
 - **`DestroyCreaturesNotOfChosenType`** — Kindred Judgment: "Choose a creature type. Destroy all creatures that aren't of the chosen type." The options are the types among… [1: Kindred Judgment]
 - **`DestroyCreaturesNotOfTypeAction(ImmutableArray<string> Types)`** — After the choice: every creature without the chosen type is destroyed.
@@ -98,7 +98,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`EachSacrifices(Ref Who, Filters.Filter Filter)`** — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own (never what can't be sacrificed). Emrakul's ward,… [10: Winter, Tormented Loner, Garruk, Veiled Butcher, Balance…]
   - `IfYouDid` (ImmutableList<GameAction>): Garruk, Veiled Butcher: "If you sacrificed a creature this way, [IfYouDid]."
   - `N` (Count): Balance: "chooses a number of lands … equal to [the fewest], then sacrifices the rest" — how many each…
-- **`Exile(Ref What)`** — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their owners' exile. [23: Extended Absence, Refute Destiny, Overwrite the Multiverse…]
+- **`Exile(Ref What)`** — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their owners' exile. [27: Extended Absence, Refute Destiny, Overwrite the Multiverse…]
   - `ThenWithXExiled` (ImmutableList<GameAction>): Overwrite the Multiverse: "… where X is the number of creatures exiled this way" — run after, with X.
   - `Linked` (bool): The Measure of a Man: "I — Exile up to one target …" whose III returns "the exiled card" — linked to this…
 - **`ExileAllButBottom(Ref Who)`** — Jace, Reality Sculptor: "Exile all but the bottom card of each opponent's library." [1: Jace, Reality Sculptor]
@@ -121,7 +121,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Linked` (bool): Crabomination: "exiles the top card of their library, a card at random from their graveyard, and a card at…
   - `Then` (ImmutableList<GameAction>): Bonehoard Dracosaur: "If you exiled a land card this way, create … If you exiled a nonland card this way,…
 - **`ExileUntilSourceLeaves(Ref What)`** — "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR 610.3c). A permanent, or a card in a hand… [6: Memory Trap, Solitary Cell, Portable Hole…]
-- **`Explore(Ref What)`** — Explore (CR 701.44) — Captain Kathryn Janeway: "that creature explores. (Reveal the top card of your library. Put that card into your hand… [1: Captain Kathryn Janeway]
+- **`Explore(Ref What)`** — Explore (CR 701.44) — Captain Kathryn Janeway: "that creature explores. (Reveal the top card of your library. Put that card into your hand… [2: Seasoned Dungeoneer, Captain Kathryn Janeway]
 - **`Fight(Ref A, Ref B)`** — CR 701.14: each deals damage equal to its power to the other. Nothing if either is gone. [4: Yoshimaru, Scrappy Stray, Mind Meanderer, Vigorbloom Charm…]
 - **`Flicker(Ref What)`** — Flickering Hound: "exile [it], then return that card to the battlefield under its owner's control" — a new object (CR 400.7). A token… [6: Flickering Hound, Touch the Spirit Realm, Phelia, Exuberant Shepherd…]
   - `AtNextEndStep` (bool): Ghost of Illyria: "Return that card to the battlefield under its owner's control at the beginning of the…
@@ -132,11 +132,13 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `UntilEndOfTurn` (bool): Worf, Intelligence Contractor; The Wrath of Khan: "gain control of [it] until end of turn" — its controller…
 - **`GainFlashbackThisTurn(Ref What)`** — Stingcaster Mage: "[it] gains flashback until end of turn" — read by Costs.Flashback. [2: Stingcaster Mage, Snapcaster Mage]
 - **`GainLevel(int N)`** — A Class's "[Cost]: Level N" (CR 716.2a; Does Machines: "{1}{U}: Level 2") as it resolves — "this Class's level becomes N": ClassLevel on…
-- **`GainLife(Ref Who, Count Amount)`** — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life". [57: Terminal Criticism, Extended Absence, Screeching Soulbreaker…]
+- **`GainLife(Ref Who, Count Amount)`** — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life". [58: Terminal Criticism, Extended Absence, Screeching Soulbreaker…]
 - **`GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords)`** — Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn." [1: Hungering Puppetbeast]
+  - `Grants` (ImmutableArray<GameComponent>): Mother of Runes: "gains protection from the color of your choice until end of turn" — what each choice…
 - **`GetEmblem(ImmutableArray<GameComponent> Abilities)`** — "You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good. [5: Ajani Resolute, Chandra, Chill of Compliance, Chandra, Torch of Defiance…]
 - **`GrantChosenKeywordAction(Ref What, ImmutableArray<string> Keywords)`** — After the choice: the chosen keyword, until end of turn.
-- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [124: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
+  - `Grants` (ImmutableArray<GameComponent>): GainsChosenKeyword.Grants: the component each choice grants, by its index.
+- **`If(Condition When, ImmutableList<GameAction> Then)`** — "If [condition], [effects]" — the effects run in order with this ability's context. [125: Prophesied End, Wrath of the Bloodmane, Koth, the Geomancer…]
   - `Otherwise` (ImmutableList<GameAction>): Desperate Futurescribe: "… instead" — what happens when the condition does not hold.
 - **`IfNthResolutionThisTurn(int N, ImmutableList<GameAction> Then)`** — Captain Michael Burnham: "If this is the second time this ability has resolved this turn, put a +1/+1 counter on Captain Burnham." —… [2: Captain Michael Burnham, Jake Sisko, War Correspondent]
 - **`LandTapsForTwoUntilThisIsCast(Ref Land)`** — Emrakul, the Exigent Doom: "Target land gains '{T}: Add {C}{C}' until this card is cast from exile. You may cast this card for as long as… [1: Emrakul, the Exigent Doom]
@@ -153,7 +155,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`LoseLife(Ref Who, Count Amount)`** — Life loss that is not damage — lifelink and damage triggers do not see it. [30: Rise of the Deathbringer, Vraska's Final Mercy, Bloodline Recollector // Ancestral Craving…]
 - **`LoseTheGame`** — Kobayashi Maru Scenario: "Abandon Ship — You lose the game." (CR 104.3a) — now, as WinTheGame. [1: Kobayashi Maru Scenario]
 - **`MakePlayable(Ref What, PlayPermission Play)`** — Emry, Lurker of the Loch: "Choose target artifact card in your graveyard. You may cast that card this turn." — the permission… [4: Emry, Lurker of the Loch, Dauthi Voidwalker, Caves of Chaos Adventurer…]
-- **`May(string Prompt, Condition Can, ImmutableList<GameAction> Then)`** — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the doing is the first of Then. Guiding Hydra: "you may… [32: Guiding Hydra, Proft, Consulting Detective, Lich's Relic…]
+- **`May(string Prompt, Condition Can, ImmutableList<GameAction> Then)`** — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the doing is the first of Then. Guiding Hydra: "you may… [34: Guiding Hydra, Proft, Consulting Detective, Lich's Relic…]
   - `Who` (Ref?): Clash of Elements: "its owner may …" — who answers. Unset is you; the effects stay yours.
   - `Otherwise` (ImmutableList<GameAction>): "If they didn't, [Otherwise]" — run on a "no". Not run when it can't be asked.
   - `ThenAsThem` (bool): Peace in Our Time: "that player may draw a card. If they do, they can't attack this turn" — Then runs as the…
@@ -167,7 +169,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`Mill(Ref Who, int N)`** — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard. [11: Liliana the Repentant, Primal Witchstalker, Theorix Charm…]
   - `IfMilled` (ImmutableList<GameAction>): Primal Witchstalker: "mill four cards. When you do, …" — run only if a card was milled.
 - **`MillAndMayTake(Count N, CardType Types)`** — Something Worth Saving: "Mill N. You may put a [Types] card from among them into your hand." Mill, CHOOSE, move — MtgCore's dig once… [4: Something Worth Saving, Barrowgoyf, Temporal Anomaly…]
-- **`ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, string? Keyword = null)`** — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves. [130: Last Gasp, Rampart Hunter, Artifist Acumen…]
+- **`ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, string? Keyword = null)`** — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves. [132: Last Gasp, Rampart Hunter, Artifist Acumen…]
   - `Trigger` (TriggeredAbilityComponent?): Lyra: "until end of turn, whenever …" — a triggered ability it has until cleanup.
   - `ExileInsteadOf` (ImmutableArray<ZoneType>): Essence Burn: "if that permanent would die this turn, exile it instead" ([Graveyard]); From the Catacombs:…
   - `LosesAllAbilities` (bool): Flourishing Grapple: "loses all abilities until end of turn".
@@ -186,7 +188,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Then` (ImmutableList<GameAction>): Erica Ortegas: "If you do, …" — after a pick.
   - `Otherwise` (ImmutableList<GameAction>): Temporal Conqueror: "If you can't, create a Treasure token." — nothing to pick; with May, "if you don't".
   - `Prompt` (string?): The question on the table; unset says where it goes.
-- **`MoveTo(Ref What, ZoneType To)`** — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) — "return this card from your graveyard to the… [84: Fatehold Charm, Living Library, The Theorist, Jace Beleren…]
+- **`MoveTo(Ref What, ZoneType To)`** — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) — "return this card from your graveyard to the… [85: Fatehold Charm, Living Library, The Theorist, Jace Beleren…]
   - `From` (ImmutableList<ZoneType>): Where it must be now — "from your graveyard" is [Graveyard] (its owner's), Unsummon's "spell or creature"…
   - `Tapped` (bool): Gallia, Tragic Host: "to the battlefield tapped".
   - `Counters` (int): Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.
@@ -229,7 +231,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`RollDie(int Sides, ImmutableList<DieRow> Rows)`** — "Name Sticker" Goblin: "roll a 20-sided die. 1-6 | Add {R}{R}{R}{R}. 7-14 | … 15-20 | …" — one fair roll (CR 706) from the game's seeded… [1: "Name Sticker" Goblin]
 - **`Sacrifice(Ref What)`** — "Sacrifice this …" — only what is still on the battlefield. [15: Frostbite Pyromental, Eye of Jace, Face Yourself…]
 - **`SacrificeGreatestManaValue(Ref Who, CardType Types)`** — Break Under Pressure: each player named sacrifices one of their [Types] with the greatest mana value. ponytail: on a tie the first is… [1: Break Under Pressure]
-- **`SearchLibrary(CardType Type, ZoneType To)`** — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling. [41: Carnivorous Cultivator // Enroot, Pia, Aether Ascetic, Fblthp, Knows the Way…]
+- **`SearchLibrary(CardType Type, ZoneType To)`** — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling. [43: Carnivorous Cultivator // Enroot, Pia, Aether Ascetic, Fblthp, Knows the Way…]
   - `Supertype` (Supertype): Basic landcycling: "a basic land card".
   - `UpTo` (Count): Fblthp: "up to X … with different names" — the options are already one per name.
   - `Tapped` (bool): Simulacrum Shaper: "put that card onto the battlefield tapped".
@@ -250,14 +252,14 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `To` (ZoneType): Where the chosen go. Library is a scry (CR 701.22, Preordain: "look at the top two cards of your library,…
 - **`TakeExtraTurn`** — H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on MagicGame.ExtraTurns, begun by TurnStructure.FinishCleanup.… [3: Time Walk, Time Warp, H.M.S. Bounty, Unlikely Timeship]
   - `Who` (Ref): Time Warp: "Target player takes an extra turn after this one."
-- **`TakeTheInitiative(Ref Who)`** — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) — the designation moves, then its taker ventures into… [3: Feywild Caretaker, From the Catacombs, Caves of Chaos Adventurer]
+- **`TakeTheInitiative(Ref Who)`** — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) — the designation moves, then its taker ventures into… [5: Feywild Caretaker, From the Catacombs, Caves of Chaos Adventurer…]
 - **`Tap(Ref What)`** — "Tap [What]" — permanents only. [17: Divining Duelist, Cryotheory Adept, Hapatra, the Desert Frost…]
 - **`ThisTurn(ThisTurnEffect What)`** — Puts a ThisTurnEffect in your command zone for the rest of the turn. [26: Pyre Rhymer // Molten Tide, Way of the Cryomancer, Jace's Machinations…]
   - `On` (Ref?): Sen Triplets: "This turn, that player can't …" — whose command zone (Ref.Target(0)); unset is you.
   - `RestOfTheGame` (bool): Screaming Nemesis: "they can't gain life for the rest of the game" — the same object, never removed with the…
-- **`Transform(Ref What)`** — Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with its other face up (Card.Transform): no zone… [3: Etali, Primal Conqueror // Etali, Primal Sickness, Cecil, Dark Knight // Cecil, Redeemed Paladin, Concealing Curtains // Revealing Eye]
+- **`Transform(Ref What)`** — Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with its other face up (Card.Transform): no zone… [4: Etali, Primal Conqueror // Etali, Primal Sickness, Cecil, Dark Knight // Cecil, Redeemed Paladin, Concealing Curtains // Revealing Eye…]
 - **`TriggersAdditionalTimeWhileSourceTapped(Ref What)`** — Lwaxana Troi, Charming Guest: "Choose another target creature you control. For as long as Lwaxana Troi remains tapped, if a triggered… [1: Lwaxana Troi, Charming Guest]
-- **`Untap(Ref What)`** — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead. [25: Tethermage's Advantage, Divining Duelist, Jiang Yanggu, Never Alone…]
+- **`Untap(Ref What)`** — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead. [26: Tethermage's Advantage, Divining Duelist, Jiang Yanggu, Never Alone…]
   - `UpTo` (Count?): Frantic Search: "Untap up to three lands" (Time Spiral's six) — a choice among what What names, then those…
 - **`UntilYourNextTurnWhenever(TriggeredAbilityComponent Ability)`** — Jace, Reality Sculptor's −3, Garruk, Curse Breaker's −4: "Until your next turn, whenever …" — an effect object in your command zone, so it… [3: Jace, Reality Sculptor, Garruk, Curse Breaker, Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar]
 - **`Venture`** — "Venture into Undercity" (CR 701.49, 725.2) — the initiative's: with no dungeon, Undercity goes into your command zone with the venture…
@@ -276,8 +278,8 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 
 ## Conditions — "if …" (`Effects/Conditions.cs`)
 
-- **`AlternativeCostWasPaid`** — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost). Evoke… [2: Baleful Mastery, Damn]
-- **`Always`** — A "you may" that can always be done. [13: Clash of Elements, Plan for All Outcomes, Generous Plunderer…]
+- **`AlternativeCostWasPaid`** — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost). Evoke… [3: Baleful Mastery, Damn, Winds of Abandon]
+- **`Always`** — A "you may" that can always be done. [14: Clash of Elements, Plan for All Outcomes, Generous Plunderer…]
 - **`AtLeast(Count Count, int N)`** — Eye of Jace: "if there are seven or more cards in your graveyard". [64: Wrath of the Bloodmane, Eye of Jace, Traxos, Academy Guardian…]
   - `MoreThan` (Count?): Robber of the Rich: "if defending player has more cards in hand than you" — at least N more than this count…
 - **`Both(Condition A, Condition B)`** — Sylvia Tilly: "you may pay {1} and exile a card from your graveyard" — asked only when both can be done. [4: Goblin Welder, "Name Sticker" Goblin, Fatal Push…]
@@ -286,7 +288,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`CanPayLife(int N)`** — The shocklands: "you may pay 2 life"; Hive Mind Coprocessor: "pay 1 life" — asked only when it can be paid (Rules.Life.CanPay). [1: Hive Mind Coprocessor]
 - **`CastFrom(ZoneType Zone)`** — "If this spell was cast from a graveyard" / "wasn't cast from your hand" (with Not). [2: Recursive Recruitment, Twinned Vision]
 - **`DuringCombat`** — Yuriko, Blade of the Mighty: "During combat" — from the beginning of combat to its end. [1: Yuriko, Blade of the Mighty]
-- **`DuringYourTurn`** — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your turn" static. [9: Skilled Battlecarver, Rescue Girl, First Responder, Force of Negation…]
+- **`DuringYourTurn`** — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your turn" static. [8: Skilled Battlecarver, Rescue Girl, First Responder, Force of Negation…]
 - **`ExiledWithSourceShareACardType`** — All Good Things..., chapter IV: "If all cards exiled with this Saga share a card type" — the cards linked to this object of the source… [1: All Good Things...]
 - **`FirstSpellYouCastThisGame`** — First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast. [1: First Contact]
 - **`GraveyardHasCopiesOfSource(int N)`** — "[N] cards named [this card] in your graveyard" — not this one. [1: Sphinx's Approach]
@@ -299,7 +301,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `Attacked` (bool): Robber of the Rich: "During any turn you attacked with a Rogue" — one of these subtypes ATTACKED under your…
 - **`WasKicked`** — Eject the Warp Core: "If this spell was kicked" — read from the spell on the stack. [7: Burst Lightning, Consult the Star Charts, Thieving Skydiver…]
 - **`YouCanBehold(string Subtype)`** — "You can behold a [Subtype]" — Theorist's Sanctum: a Jace you control or in your hand (it costs nothing). [1: Theorist's Sanctum]
-- **`YouCompletedADungeon`** — Caves of Chaos Adventurer: "If you've completed a dungeon" — this game (MagicPlayer.DungeonsCompleted). [1: Caves of Chaos Adventurer]
+- **`YouCompletedADungeon`** — Caves of Chaos Adventurer: "If you've completed a dungeon" — this game (MagicPlayer.DungeonsCompleted). [2: Caves of Chaos Adventurer, White Plume Adventurer]
 - **`YouHaveTheInitiative`** — Feywild Caretaker: "if you have the initiative". [1: Feywild Caretaker]
 - **`YourLibraryIsEmpty`** — Fblthp: "If your library has no cards in it". [2: Fblthp, Impossibly Lost, Jace, Wielder of Mysteries]
 
@@ -339,13 +341,13 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`PayLifeCost(Count Amount)`** — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana Confluence: "{T}, Pay 1 life: Add one mana of any… [8: Mana Confluence, Force of Will, Snuff Out…]
 - **`PayManaCost(int Generic)`** — "Pay {N}" in a cost list — the other half of an "or": Silence the Echo's "sacrifice a creature or pay {3}", Countersculpt's "behold a Jace… [2: Silence the Echo, Countersculpt]
 - **`PutSelfOnBottomCost`** — Daniels, Temporal Agent: "Put this card from your graveyard on the bottom of your library:". [1: Daniels, Temporal Agent]
-- **`RemoveCountersCost(int Count, Filter Filter)`** — "Remove N counters from among [Filter] you control" — Lieutenant Commander Data: "{1}, Remove three counters from among creatures you… [4: Staff of the Storyteller, Wishclaw Talisman, Lieutenant Commander Data…]
+- **`RemoveCountersCost(int Count, Filter Filter)`** — "Remove N counters from among [Filter] you control" — Lieutenant Commander Data: "{1}, Remove three counters from among creatures you… [5: Staff of the Storyteller, Wishclaw Talisman, Parallax Wave…]
   - `Kind` (string?): Mikaeus: "a +1/+1 counter" — only this kind. None: any kinds.
 - **`ReturnToHandCost(Filter Filter)`** — "Return a [Filter] you control to its owner's hand" — beam me up: "You may cast this card from your graveyard for [cost] if you also… [1: Daze]
   - `ExceptId` (int): Scotty, Miracle Worker: "Scotty can't be beamed up to cast a spell this way."
 - **`SacrificeCost(Filter? Filter = null)`** — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none: any permanent); Silence the Echo's "sacrifice a… [22: Marwyn, the Clearcutter, Edgar, Ancient Bloodlord, Silence the Echo…]
 - **`SacrificeSelfCost`** — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana). [16: Budding Insurgent, Living Library, Room of Refuge…]
-- **`TapSelfCost`** — "{T}:" — tap this permanent. [55: Marwyn, the Clearcutter, Eardrum Rattler, Gallia, the Merrymaker…]
+- **`TapSelfCost`** — "{T}:" — tap this permanent. [57: Marwyn, the Clearcutter, Eardrum Rattler, Gallia, the Merrymaker…]
 - **`TapUntappedCost(int Count, Filter Filter)`** — Tenured Tethermage: "Tap two untapped artifacts you control:" — tapping for a cost isn't {T}, so summoning sickness doesn't matter (CR… [5: Tenured Tethermage, Urza, Lord High Artificer, Worf, Honor-Bound Warrior…]
   - `TotalPower` (int): Teamwork 2 (We Say Thee Nay!): "tap any number of creatures you control with total power 2 or more" — no…
   - `NotTheSource` (bool): With "{T}" in the same cost the source is already spoken for — set by ActivatedAbilityComponent.Costs.
@@ -353,7 +355,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 
 ## Components — abilities, statics, replacements, markers on a card
 
-- **`ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction> Effects)`** — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does not. [145: Yoshimaru, Scrappy Stray, Budding Insurgent, Living Library…]
+- **`ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction> Effects)`** — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does not. [149: Yoshimaru, Scrappy Stray, Budding Insurgent, Living Library…]
   - `Keyword` (string?): The keyword this ability is, if any — Decree of Pain: "Cycling {3}{B}{B}" is "Cycling" (Scripting.Cycling),…
   - `Modes` (ImmutableList<Mode>): Tea, Earl Grey, Hot: "{2}, {T}, Sacrifice this artifact: Choose one — …" — chosen as it is activated (CR…
   - `Choose` (ModeChoice): How many of the Modes (ModeChoice).
@@ -381,7 +383,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`CantBeBlockedBy(Filters.Filter Blockers)`** — Cold-Blooded Crew: "This creature can't be blocked by creatures with power 2 or less."; Species 8472: "… by artifact creatures." — the… [2: Cold-Blooded Crew, Species 8472]
 - **`CantBeCountered`** — "This spell can't be countered." Read by StackResolution.Counter. [4: Ruric Thar, Magecrusher, Abrupt Decay, Delighted Halfling…]
 - **`CantBeTargetedByAbilitiesFrom(Filters.Filter Sources)`** — Species 8472: "This creature can't be the target of abilities from artifact sources your opponents control." — abilities only, never… [1: Species 8472]
-- **`CantCastOrActivate`** — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat, players can't cast spells or activate abilities… [5: Yuriko, Blade of the Mighty, Archon of Emeria, Voice of Victory…]
+- **`CantCastOrActivate`** — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat, players can't cast spells or activate abilities… [4: Yuriko, Blade of the Mighty, Archon of Emeria, Clarion Conqueror…]
   - `If` (Condition?): Yuriko: "During combat" (DuringCombat); Voice of Victory: "during your turn" — judged as its holder's.
   - `ManaAbilitiesToo` (bool): Sen Triplets: "activate abilities" — mana abilities too (Kai Winn's ruling); TapForManaAction and…
   - `By` (Whose): Voice of Victory: "Your opponents can't cast spells" — whose, from its holder's controller: a PERMANENT's. A…
@@ -429,7 +431,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`EnteredAsCopy(Card Original)`** — Flesh Duplicate: it entered as a copy — what it was, restored as it leaves the battlefield (Card.WithoutCopyEffect), never in cleanup.
 - **`EnteringArtifactsAndCreaturesDontTrigger`** — Karn, Argent Defender: "Artifacts and creatures entering the battlefield don't cause abilities to trigger." Read by Triggers.Collect. [1: Karn, Argent Defender]
 - **`EntersPreparedComponent`** — "This creature enters prepared." Applied by MagicState.EnterBattlefield.
-- **`EntersTappedComponent(Condition? Unless = null)`** — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield, judged on the board it is entering, with this permanent… [4: Room of Refuge, Roiling Canopy, Theorist's Sanctum…]
+- **`EntersTappedComponent(Condition? Unless = null)`** — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield, judged on the board it is entering, with this permanent… [5: Room of Refuge, Roiling Canopy, Theorist's Sanctum…]
   - `UnlessYouPayLife` (int): The shocklands (Blood Crypt): "As this land enters, you may pay 2 life. If you don't, it enters tapped." —…
 - **`EntersWithCountersComponent(Count Count)`** — "This creature enters with N (or X) +1/+1 counters on it." Applied by MagicState.EnterBattlefield. [6: Graft Surgeon, Guiding Hydra, Jacked Rabbit…]
   - `Kind` (string): Wishclaw Talisman: "This artifact enters with three wish counters on it." — the kind (CounterKinds); +1/+1…
@@ -462,7 +464,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
   - `MinusX` (bool): "−X:" — the activator chooses X (up to its loyalty); X reaches the effects (Count.X).
   - `OnlyIf` (Condition?): Jace, Reality Sculptor: "Activate only if …".
 - **`LoyaltyAtInstantSpeed(Filters.Filter Of)`** — "You may activate [their] loyalty abilities any time you could cast an instant" — Jace's Machinations: "you may activate loyalty abilities… [2: Jace's Machinations, The Wandering Emperor]
-- **`ManaAbilityComponent(ManaColor Color)`** — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost], [Costs]: Add [Amount] [Color]." "{T}: Add {C}." on a… [32: Greenhouse Propagator, Murmuring Volume, Hexhaven Dueling Arena…]
+- **`ManaAbilityComponent(ManaColor Color)`** — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost], [Costs]: Add [Amount] [Color]." "{T}: Add {C}." on a… [33: Greenhouse Propagator, Murmuring Volume, Hexhaven Dueling Arena…]
   - `Restriction` (ManaRestriction): "This mana can't be spent to cast spells from your hand" / "Spend this mana only to cast a planeswalker…
   - `Amount` (Count): How much: Rok-Tahk's {G}{G} is 2; Loot, the Nexus counts it as it is tapped.
   - `DealsDamageToYou` (int): Talisman of Conviction: "{T}: Add {R} or {W}. This artifact deals 1 damage to you."; Ancient Tomb's 2 —…
@@ -543,7 +545,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - **`PrepareSpellComponent(Cards.CardFace Face, SpellEffectsComponent Text)`** — A prepare card's spell half (CR: "a preparation card is a creature card in every zone"): its face and its text.
 - **`PreparedCopyOf(int CreatureId, int Incarnation)`** — On a prepared copy in exile: the creature (and which object of it) it belongs to.
 - **`PreventAllDamageToYou`** — The Needs of the Many: "Prevent all damage that would be dealt to you this turn." — Damage.Deal: none is dealt, so no lifelink either. [1: The Needs of the Many]
-- **`Protection(Filters.Filter From)`** — Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the chosen player." What it is protected FROM is a filter… [1: True-Name Nemesis]
+- **`Protection(Filters.Filter From)`** — Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the chosen player." What it is protected FROM is a filter… [2: True-Name Nemesis, Seasoned Dungeoneer]
 - **`ReplicateComponent(ManaCost Cost)`** — "Replicate [cost] (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the… [2: Consign to Memory, Lose Focus]
   - `AsItEnters` (bool): Squad (Sicarian Infiltrator): "As an additional cost to cast this spell, you may pay {2} any number of…
   - `Kicker` (bool): Multikicker (CR 702.33c): the payments are kicks — paid at least once, the spell is kicked…
@@ -776,7 +778,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - `Fetch` — The fetchlands: "{T}, Pay 1 life, Sacrifice this land: Search your library for a [Plains or Island] card, put it onto the battlefield,… [11: Arid Mesa, Bloodstained Mire, Flooded Strand…]
 - `SacrificeToDestroy` — Strip Mine, Wasteland: "{T}, Sacrifice this land: Destroy target [nonbasic] land." [2: Strip Mine, Wasteland]
 - `ExileABlueCard` — Mana Leak: "Counter target [noncreature] spell unless its controller pays {N}." Force of Will, Force of Negation: "exile a blue card from… [2: Force of Will, Force of Negation]
-- `ItsControllerMayFetch` — Path to Exile, Erode: "Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle." —… [2: Path to Exile, Erode]
+- `ItsControllerMayFetch` — Path to Exile, Erode: "Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle." —… [3: Path to Exile, Erode, Winds of Abandon]
 - `IfBlue` — Pyroblast: "… if it's blue" — any spell or permanent is a legal target; only a blue one is hit. [1: Pyroblast]
 - `PutOnTop` — Brainstorm: "then put two cards from your hand on top of your library in any order" — one at a time, the second on top. [1: Brainstorm]
 - `DoesntUntapItself` — The Monoliths and Mana Vault: "This artifact doesn't untap during your untap step." [3: Mana Vault, Grim Monolith, Basalt Monolith]
@@ -809,7 +811,7 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 
 ## Shared script helpers (`MagicCore/Sets/Scripting.cs`)
 
-- `Target` — "Target [filter]" — a permanent: Target(Is.Creature & Is.Yours) is "target creature you control". [146: Terminal Criticism, Yoshimaru, Scrappy Stray, Way of the Warlord…]
+- `Target` — "Target [filter]" — a permanent: Target(Is.Creature & Is.Yours) is "target creature you control". [153: Terminal Criticism, Yoshimaru, Scrappy Stray, Way of the Warlord…]
 - `Loyalty` — "[cost]: effects" — a loyalty ability, own or granted. [15: The Theorist, Jace Beleren, Ajani Unrelenting, Ajani Resolute…]
 - `Threshold` — Threshold — "as long as there are seven or more cards in your graveyard". [7: Void Extrapolator // Omit Variables, Theorix Metamage // Omit Variables, Proft, Sinister Mastermind…]
 - `YouControlTwoOrMoreOtherLands` — "Enters tapped unless you control two or more other lands" (FRA's slow lands, TRK's enters-untapped lands). [5: Deserted Beach, Haunted Ridge, Overgrown Farmland…]
@@ -821,13 +823,13 @@ and (in brackets) how many scripted cards (every set) use it, with a few. Find o
 - `Exalted` — Exalted (CR 702.83a): "Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn." — alone at a player or… [2: Noble Hierarch, Ignoble Hierarch]
 - `Prowess` — "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)" A scripted trigger, not an engine keyword:… [10: Traxos, Academy Guardian, Tetsuko Umezawa, Pursuer, Ruric Thar, Biomagus…]
 - `AnyColorMana` — "{T}: Add one mana of any color." — five abilities, one per colour, sharing a restriction. [4: Gideon's Memorial, Birds of Paradise, Xenobotanist…]
-- `Cycling` — Cycling (CR 702.29) — Decree of Pain: "Cycling {3}{B}{B} ({3}{B}{B}, Discard this card: Draw a card.)" — its keyword named, so "when you… [15: Hexhaven Battalion, Undulating Witness, Apex Witchstalker…]
-- `Cycling` — Landcycling — cycling that searches instead of drawing (CR 702.29e): "Basic landcycling {2} ({2}, Discard this card: Search your library… [15: Hexhaven Battalion, Undulating Witness, Apex Witchstalker…]
+- `Cycling` — Cycling (CR 702.29) — Decree of Pain: "Cycling {3}{B}{B} ({3}{B}{B}, Discard this card: Draw a card.)" — its keyword named, so "when you… [16: Hexhaven Battalion, Undulating Witness, Apex Witchstalker…]
+- `Cycling` — Landcycling — cycling that searches instead of drawing (CR 702.29e): "Basic landcycling {2} ({2}, Discard this card: Search your library… [16: Hexhaven Battalion, Undulating Witness, Apex Witchstalker…]
 - `Landwalk` — Landwalk (CR 702.14) — Thada Adel's "Islandwalk (This creature can't be blocked as long as defending player controls an Island.)" is… [1: Thada Adel, Acquisitor]
 - `Fear` — Fear (CR 702.36) — Shizo: "gains fear until end of turn. (It can't be blocked except by artifact creatures and/or black creatures.)" —… [2: Fear of Missing Out, Shizo, Death's Storehouse]
 - `Shadow` — Shadow (CR 702.28) — Dauthi Voidwalker: "Shadow (This creature can block or be blocked by only creatures with shadow.)" — no combat rule… [1: Dauthi Voidwalker]
-- `Evoke` — Evoke (CR 702.74) — Subtlety: "Evoke—Exile a blue card from your hand." (Solitude, Endurance, Fury, Grief: their colours.) An alternative… [3: Subtlety, Grief, Fury]
-- `Overload` — Overload (CR 702.96) — Damn: "Overload {2}{W}{W}" — Baleful Mastery's alternative mana cost, from wherever it is cast, with no target… [1: Damn]
+- `Evoke` — Evoke (CR 702.74) — Subtlety: "Evoke—Exile a blue card from your hand." (Solitude, Endurance, Fury, Grief: their colours.) An alternative… [4: Subtlety, Grief, Fury…]
+- `Overload` — Overload (CR 702.96) — Damn: "Overload {2}{W}{W}" — Baleful Mastery's alternative mana cost, from wherever it is cast, with no target… [2: Damn, Winds of Abandon]
 - `Emerge` — Emerge (CR 702.119) — Crabomination: "Emerge from artifact {5}{B}{B} (You may cast this spell by sacrificing an artifact and paying the… [1: Crabomination]
 - `Miracle` — Miracle (CR 702.94) — Metamorphosis Fanatic: "Miracle {1}{B} (You may cast this card for its miracle cost when you draw it if it's the… [2: Metamorphosis Fanatic, Scotty, Miracle Worker]
 - `SpliceOntoArcane` — Splice onto Arcane (CR 702.47) — Goryo's Vengeance: "Splice onto Arcane {2}{B}" (CastSpellAction.Splice). [2: Goryo's Vengeance, Through the Breach]

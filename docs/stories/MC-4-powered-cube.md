@@ -1616,6 +1616,21 @@ as his three priorities.
   **Batches (Shayne: more cards a session):** **j1 + j2a** (11 cards), **j2b + j3** (5), **j4–j6** (3).
 - 2026-11-20, Shayne (reviewing 4.4j's plan): **taken as written** — the tiers and the three batches; j1 + j2a begins
   in the same session.
+- 2026-11-20, Claude (cube lane) — **4.4j1 + j2a as one batch: white's 6 tested pieces and 5 protection and trigger
+  options — 316 of 528 play (white 52 of 60).** j1 as planned, all tier 1 (read on the card sheet): Eagles of the North,
+  Solitude, Witch Enchanter // Witch-Blessed Meadow, White Plume Adventurer (`Beginning(Upkeep, Opponent)`), Parallax
+  Wave (`LsvCards.Fading(n)`, composed; `CounterKinds.Fade`), Get Lost (the Map token is LSV's own, `LsvCards.CreateMap` —
+  one set makes it, so not `Tokens.cs`). j2a: **"protection from the color of your choice"** is `GainsChosenKeyword {
+  Grants }` — the component each word grants by its index, through `ModifyUntilEndOfTurn.Gains` (Mother of Runes; Giver
+  of Runes adds colorless); Seasoned Dungeoneer the same `Gains = [Protection(Is.Creature)]`; Winds of Abandon's
+  overload `Exile { ThenWithXExiled }` → `SearchLibrary { Who = EachOpponent, UpTo = Count.X, Tapped }` (no new piece:
+  the search took both options already); She-Hulk's trigger `CreatureDealtDamage` with `Subject = Is.Creature &
+  Is.Yours`. Voice of Victory and Jennifer Walters share `LsvCards.OpponentsCantCastDuringYourTurn` (Voice moved onto
+  it). Two ceilings in DesignNotes: She-Hulk's "do this only once each turn" as `OncePerTurn`, and Winds' one search
+  for the one opponent. 5 tests in `LsvBatch2jTests.cs` (`Rune(source, target, option)`; `Bolt`/`Murder`: a red and a
+  black instant — an inline card has no colour unless its data says so); 9/9 revert-checks caught. Golden-out moved
+  nothing (162 random, 887 card games); golden-in moved 30 random and 583 card games, 44 added, no AI game; probe 150:
+  none unfinished, every card used (Mother activated 868, Giver 742, Parallax Wave 799, Jennifer 74). Suite 2,171 passed.
 
 ## Tasks
 
@@ -1877,9 +1892,9 @@ as his three priorities.
           Student; Jace, Vryn's Prodigy; Sink into Stupor (modal); Cecil, Dark Knight; Concealing Curtains
   - [ ] MC-4.4j White beyond tier 1 (Shayne, 2026-11-20: the next colour, after i7) — 19 cards read card by card and
         tiered (Decisions, "4.4j"): 6 tested pieces, 9 options, 4 new pieces; three batches — j1 + j2a, j2b + j3, j4–j6:
-    - [ ] MC-4.4j1 The tested pieces, 6 (one batch with j2a): Eagles of the North, Solitude, Witch Enchanter // Witch-Blessed
+    - [x] MC-4.4j1 The tested pieces, 6 (one batch with j2a): Eagles of the North, Solitude, Witch Enchanter // Witch-Blessed
           Meadow, White Plume Adventurer, Parallax Wave, Get Lost (the Map token)
-    - [ ] MC-4.4j2a Options, protection and triggers, 5: Mother of Runes, Giver of Runes, Seasoned Dungeoneer, Winds of
+    - [x] MC-4.4j2a Options, protection and triggers, 5: Mother of Runes, Giver of Runes, Seasoned Dungeoneer, Winds of
           Abandon, Jennifer Walters // The Sensational She-Hulk
     - [ ] MC-4.4j2b Options, counters, costs and tokens, 4 (one batch with j3): Guide of Souls, Prismatic Ending (converge),
           Sunfall (incubate), Ajani, Nacatl Pariah // Ajani, Nacatl Avenger
@@ -1913,7 +1928,11 @@ finished** (Decisions, "4.4i1 + i2a", "4.4i2b + i3", "4.4i4–i6"; 300 of 528 pl
 black are finished** (Decisions, "4.4i7"; 305 of 528 play — W 41/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolour
 6/65, colourless 58/163). **MC-4.4j is planned (Decisions, "4.4j"; Shayne took it as written): three batches — j1 +
 j2a (the 6 tested pieces and 5 protection and trigger options), j2b + j3 (4 counter, cost and token options and the
-monarch), j4–j6 (ascend, reconfigure, voting). j1 + j2a is in progress.** White's 19 (Shayne, 2026-11-20: white next),
+monarch), j4–j6 (ascend, reconfigure, voting). j1 + j2a is done** (Decisions, "4.4j1 + j2a"; 316 of 528 play — W 52/60,
+U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **Next, in a NEW session: j2b + j3** — Guide
+of Souls, Prismatic Ending, Sunfall, Ajani, Nacatl Pariah and the monarch (Palace Jailer), as the plan says. From
+j1 + j2a: "protection from the color of your choice" is `GainsChosenKeyword { Grants }`; fading `LsvCards.Fading(n)`; the
+Map token `LsvCards.CreateMap`; j2a's tests are in `LsvBatch2jTests.cs` (`Rune`, `Bolt`, `Murder`). White's 19 (Shayne, 2026-11-20: white next),
 read card by card and tiered as 4.4h and 4.4i were (Shayne: more cards a session) — Giver of Runes, Guide
 of Souls, Mother of Runes, Ocelot Pride, Ajani, Nacatl Pariah // Ajani, Nacatl Avenger, Lion Sash, White Plume
 Adventurer, Palace Jailer, Seasoned Dungeoneer, Witch Enchanter // Witch-Blessed Meadow (modal: i7's piece), Solitude,
@@ -2276,3 +2295,4 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-20: Shayne picked white. Next: MC-4.4j, white's 19 — survey, tiers, plan.
 - 2026-11-20: MC-4.4j planned — 6 tested pieces, 9 options, 4 new pieces (the monarch, ascend, reconfigure, voting);
   three batches. Shayne took it as written; j1 + j2a next.
+- 2026-11-20: MC-4.4j1 + j2a done — 11 white cards, 316 of 528 play (white 52 of 60). Next: j2b + j3.

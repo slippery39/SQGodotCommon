@@ -95,6 +95,7 @@ public static class CounterKinds
 	public const string Wish = "wish"; // Wishclaw Talisman
 	public const string Void = "void"; // Dauthi Voidwalker
 	public const string Corpse = "corpse"; // From the Catacombs
+	public const string Fade = "fade"; // Parallax Wave (LsvCards.Fading)
 
 	/// <summary>Galvanic Discharge: "You get {E}{E}{E} (three energy counters)" — a player's (MagicPlayer.Counters).</summary>
 	public const string Energy = "energy";

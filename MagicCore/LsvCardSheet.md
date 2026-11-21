@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 37/46 · uncommon 59/86 · rare 144/279 · mythic 56/108 · **305/528**
+**Playable:** common 38/46 · uncommon 61/86 · rare 150/279 · mythic 58/108 · **316/528**
 
 ### "Name Sticker" Goblin
 
@@ -294,7 +294,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, creatures you control get +1/+0 and gain first strike until end of turn.  
 > Plainscycling {1} ({1}, Discard this card: Search your library for a Plains card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Eagles of the North"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[],
+		new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0, "First strike")
+	),
+	Cycling(
+		"{1}",
+		new SearchLibrary(CardType.Land, ZoneType.Hand)
+		{
+			Subtype = "Plains",
+			Reveal = true,
+		}
+	),
+],
+```
 
 ### Expedition Map
 
@@ -1715,7 +1736,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Target creature you control gains protection from the color of your choice until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2jTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Mother of Runes"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[ProtectionOfYourChoice(Ref.Target(), colorless: false)]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [Target(Is.Creature & Is.Yours)],
+	},
+],
+```
 
 ### Narset, Parter of Veils
 
@@ -2066,12 +2103,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Sink into Stupor // Soporific Springs"] =
 [
 	Spell(
-		[
-			TargetSpec.Spell(Is.Opponents) with
-			{
-				Or = Target(!Is.Land & Is.Opponents),
-			},
-		],
+		[TargetSpec.Spell(Is.Opponents) with { Or = Target(!Is.Land & Is.Opponents) }],
 		new MoveTo(Ref.Target(), ZoneType.Hand)
 		{
 			From = [ZoneType.Battlefield, ZoneType.Stack],
@@ -2397,7 +2429,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As this land enters, you may pay 3 life. If you don't, it enters tapped.  
 > {T}: Add {W}.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Witch Enchanter // Witch-Blessed Meadow"] =
+[
+	When(
+		TriggerEvent.SelfEnters,
+		[Target((Is.Artifact | Is.Enchantment) & Is.Opponents)],
+		new Destroy(Ref.Target())
+	),
+	BackFace(
+		"Witch Enchanter // Witch-Blessed Meadow",
+		new EntersTappedComponent { UnlessYouPayLife = 3 },
+		new ManaAbilityComponent(ManaColor.White)
+	) with
+	{
+		Modal = true,
+	},
+],
+```
 
 ### Witherbloom Apprentice
 
@@ -3042,7 +3095,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new LoseLife(Ref.You, Count.X),
 		new If(
 			new Not(
-				new AtLeast(Count.LifeTotalOf(Ref.You), MagicPlayer.StartingLife / 2 + 1)
+				new AtLeast(
+					Count.LifeTotalOf(Ref.You),
+					MagicPlayer.StartingLife / 2 + 1
+				)
 			),
 			[new Untap(Ref.Source), new Transform(Ref.Source)]
 		)
@@ -4449,7 +4505,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy target creature, enchantment, or planeswalker. Its controller creates two Map tokens. (They're artifacts with "{1}, {T}, Sacrifice this token: Target creature you control explores. Activate only as a sorcery.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Get Lost"] =
+[
+	// The Maps first: once it has left, "its controller" reads its owner (Path to Exile's order).
+	Spell(
+		[Target(Is.Creature | Is.Enchantment | Is.Planeswalker)],
+		CreateMap(2) with
+		{
+			ControlledBy = Ref.ControllerOfTarget(0),
+		},
+		new Destroy(Ref.Target())
+	),
+],
+```
 
 ### Ghost Vacuum
 
@@ -4466,7 +4539,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {T}: Another target creature you control gains protection from colorless or from the color of your choice until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2jTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Giver of Runes"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.None,
+		[ProtectionOfYourChoice(Ref.Target(), colorless: true)]
+	)
+	{
+		Costs = [new TapSelfCost()],
+		Targets = [Target(Is.Creature & Is.Yours & !Is.Source)],
+	},
+],
+```
 
 ### Gleemox
 
@@ -5566,7 +5655,28 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Remove a fade counter from this enchantment: Exile target creature.  
 > When this enchantment leaves the battlefield, each player returns to the battlefield all cards they own exiled with it.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RemoveCountersCost` — "Remove N counters from among [Filter] you control" — Lieutenant Commander Data: "{1},…
+
+```csharp
+["Parallax Wave"] =
+[
+	.. Fading(5),
+	new ActivatedAbilityComponent(ManaCost.None, [new Exile(Ref.Target()) { Linked = true }])
+	{
+		Costs = [new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Fade }],
+		Targets = [Creature],
+	},
+	// "each player returns … all cards they own exiled with it" — each to its owner (MoveTo). An exile
+	// resolving after the Wave left links to the object that's gone, so that card stays: as printed.
+	When(
+		TriggerEvent.SelfLeaves,
+		[],
+		new MoveTo(Ref.All(ZoneType.Exile, Is.ExiledBySource), ZoneType.Battlefield)
+	),
+],
+```
 
 ### Pest Infestation
 
@@ -6011,7 +6121,36 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you take the initiative.  
 > Whenever you attack, target attacking Cleric, Rogue, Warrior, or Wizard gains protection from creatures until end of turn. It explores. (Reveal the top card of your library. Put that card into your hand if it's a land. Otherwise, put a +1/+1 counter on the creature, then put the card back or put it into your graveyard.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2jTests
+
+**Engine pieces:** `Explore` — Explore (CR 701.44) — Captain Kathryn Janeway: "that creature explores. (Reveal the top…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Protection` — Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TakeTheInitiative` — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) —…
+
+```csharp
+["Seasoned Dungeoneer"] =
+[
+	When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+	When(
+		TriggerEvent.YouAttack,
+		[
+			Target(
+				Is.Creature
+					& Is.Attacking
+					& (
+						Is.Subtype("Cleric")
+						| Is.Subtype("Rogue")
+						| Is.Subtype("Warrior")
+						| Is.Subtype("Wizard")
+					)
+			),
+		],
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Protection from creatures")
+		{
+			Gains = [new Protection(Is.Creature)],
+		},
+		new Explore(Ref.Target())
+	),
+],
+```
 
 ### Sedgemoor Witch
 
@@ -7099,7 +7238,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2dTests
 
-**Engine pieces:** `CantCastOrActivate` — "Can't cast spells or activate abilities" — Yuriko, Blade of the Mighty: "During combat,…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…
 
 ```csharp
 ["Voice of Victory"] =
@@ -7115,12 +7254,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			SacrificeAtNextEndStep = true,
 		}
 	),
-	new CantCastOrActivate
-	{
-		By = Whose.Opponent,
-		Abilities = false,
-		If = new DuringYourTurn(),
-	},
+	OpponentsCantCastDuringYourTurn,
 ],
 ```
 
@@ -7188,7 +7322,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you take the initiative.  
 > At the beginning of each opponent's upkeep, untap a creature you control. If you've completed a dungeon, untap all creatures you control instead.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TakeTheInitiative` — Feywild Caretaker: "When this creature enters, you take the initiative." (CR 725.2) —…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.; `YouCompletedADungeon` — Caves of Chaos Adventurer: "If you've completed a dungeon" — this game…
+
+```csharp
+["White Plume Adventurer"] =
+[
+	When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+	// "If you've completed a dungeon" is read as it resolves — no intervening if.
+	When(
+		TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent),
+		[],
+		new If(new YouCompletedADungeon(), [new Untap(Ref.CreaturesYouControl)])
+		{
+			Otherwise = [new Untap(Ref.CreaturesYouControl) { UpTo = 1 }],
+		}
+	),
+],
+```
 
 ### Winds of Abandon
 
@@ -7197,7 +7349,42 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Exile target creature you don't control. For each creature exiled this way, its controller searches their library for a basic land card. Those players put those cards onto the battlefield tapped, then shuffle.  
 > Overload {4}{W}{W} (You may cast this spell for its overload cost. If you do, change "target" in its text to "each.")
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2jTests
+
+**Engine pieces:** `AlternativeCostWasPaid` — Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Winds of Abandon"] =
+[
+	Overload("{4}{W}{W}"),
+	Spell(
+		[Target(Is.Creature & !Is.Yours)],
+		new If(
+			new AlternativeCostWasPaid(),
+			[
+				// ponytail: "its controller" for each is the one opponent — a multiplayer game needs a
+				// search per controller, each counting their own creatures exiled.
+				new Exile(Ref.Permanents(Is.Creature & !Is.Yours))
+				{
+					ThenWithXExiled =
+					[
+						new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+						{
+							Supertype = Supertype.Basic,
+							Tapped = true,
+							Who = Ref.EachOpponent,
+							UpTo = Count.X,
+						},
+					],
+				},
+			]
+		)
+		{
+			Otherwise = [ItsControllerMayFetch with { May = false }, new Exile(Ref.Target())],
+		}
+	),
+],
+```
 
 ### Windswept Heath
 
@@ -8327,7 +8514,41 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Your opponents can't cast spells during your turn.  
 > Whenever a creature you control is dealt damage, you may have The Sensational She-Hulk deal that much damage to any target. Do this only once each turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2jTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Always` — A "you may" that can always be done.; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Transform` — Etali, Primal Conqueror: "{9}{G/P}: Transform Etali." (CR 701.28) — the same object with…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Jennifer Walters // The Sensational She-Hulk"] =
+[
+	OpponentsCantCastDuringYourTurn,
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{3}{G}{W}{W}"),
+		[new Transform(Ref.Source)]
+	)
+	{
+		SorcerySpeed = true,
+	},
+	BackFace(
+		"Jennifer Walters // The Sensational She-Hulk",
+		OpponentsCantCastDuringYourTurn,
+		// ponytail: "Do this only once each turn" as OncePerTurn — the first such trigger each turn is the
+		// only one; the rules let each trigger and you choose which to use (DesignNotes).
+		When(
+			new Trigger(EventKind.CreatureDealtDamage) { Subject = Is.Creature & Is.Yours },
+			[TargetSpec.AnyTarget()],
+			new May(
+				"Have The Sensational She-Hulk deal that much damage?",
+				new Always(),
+				[new DealDamage(Ref.Target(), Count.X)]
+			)
+		) with
+		{
+			OncePerTurn = true,
+		}
+	),
+],
+```
 
 ### Kaito, Bane of Nightmares
 
@@ -8992,7 +9213,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, exile up to one other target creature. That creature's controller gains life equal to its power.  
 > Evoke—Exile a white card from your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · no test names it
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Solitude"] =
+[
+	// Swords to Plowshares' life, its power read before it leaves (last-known information).
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & !Is.Source) with { Optional = true }],
+		new GainLife(Ref.ControllerOfTarget(0), Count.PowerOf(Ref.Target())),
+		new Exile(Ref.Target())
+	),
+	.. Evoke(ManaColor.White),
+],
+```
 
 ### Spellseeker
 

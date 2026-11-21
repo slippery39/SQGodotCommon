@@ -102,3 +102,4 @@ after the split is DEV-4.3.
 | 2026-11-20 | MC-4.4i2b + i3: multikicker, dash, backup, an additional combat phase, 4 cards | dbad31cf | 87 | 230k | 3.5M |
 | 2026-11-20 | MC-4.4i4–i6: counters on a player (energy, poison), transforming DFCs, transform by an activation, 3 cards | 48c24254 | 123 | 264k | 5.0M |
 | 2026-11-20 | MC-4.4i7: the missed DFCs (DealtDamageEvent, TransformedEvent, CR 701.28f, modal DFCs), 5 cards | 573e163d | 116 | 260k | 4.7M |
+| 2026-11-20 | MC-4.4j1 + j2a: white's tested pieces and protection/trigger options, 11 cards | 5c8c0471 | 89 | 230k | 2.8M |

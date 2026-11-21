@@ -640,6 +640,13 @@ public record AddChosenCounterAction(int CardId, ImmutableArray<string> Kinds, i
 /// <summary>Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn."</summary>
 public record GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords) : Effect
 {
+	/// <summary>
+	/// Mother of Runes: "gains protection from the color of your choice until end of turn" — what each choice grants
+	/// beyond its word, by the same index (`Protection(Is.Color(c))`), through ModifyUntilEndOfTurn.Gains; the word
+	/// is only for the table, as Fear's. Empty: the keyword alone.
+	/// </summary>
+	public ImmutableArray<GameComponent> Grants { get; init; } = [];
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -649,7 +656,7 @@ public record GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords) : Ef
 					Steps =
 					[
 						new ChooseKeywordChoice(Controller, Keywords),
-						new GrantChosenKeywordAction(What, Keywords),
+						new GrantChosenKeywordAction(What, Keywords) { Grants = Grants },
 					],
 				}
 			)
@@ -659,19 +666,20 @@ public record GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords) : Ef
 /// <summary>After the choice: the chosen keyword, until end of turn.</summary>
 public record GrantChosenKeywordAction(Ref What, ImmutableArray<string> Keywords) : Effect
 {
+	/// <summary>GainsChosenKeyword.Grants: the component each choice grants, by its index.</summary>
+	public ImmutableArray<GameComponent> Grants { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
-		var chosen = InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is int id
-			? Keywords[id - 1]
-			: null;
-		return chosen is null
-			? new(s)
-			: (
-				new ModifyUntilEndOfTurn(What, 0, 0, chosen) with
-				{
-					InputContext = InputContext,
-				}
-			).Execute(s);
+		if (InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is not int id)
+			return new(s);
+		return (
+			new ModifyUntilEndOfTurn(What, 0, 0, Keywords[id - 1]) with
+			{
+				InputContext = InputContext,
+				Gains = Grants.IsDefaultOrEmpty ? [] : [Grants[id - 1]],
+			}
+		).Execute(s);
 	}
 }
 

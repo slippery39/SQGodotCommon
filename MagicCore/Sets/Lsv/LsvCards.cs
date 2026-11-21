@@ -1284,12 +1284,7 @@ public static class LsvCards
 						SacrificeAtNextEndStep = true,
 					}
 				),
-				new CantCastOrActivate
-				{
-					By = Whose.Opponent,
-					Abilities = false,
-					If = new DuringYourTurn(),
-				},
+				OpponentsCantCastDuringYourTurn,
 			],
 			["Clarion Conqueror"] =
 			[
@@ -3242,6 +3237,283 @@ public static class LsvCards
 				) with
 				{
 					Modal = true,
+				},
+			],
+			// ===== MC-4.4j1: white's tested pieces =====
+			["Eagles of the North"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0, "First strike")
+				),
+				Cycling(
+					"{1}",
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Subtype = "Plains",
+						Reveal = true,
+					}
+				),
+			],
+			["Solitude"] =
+			[
+				// Swords to Plowshares' life, its power read before it leaves (last-known information).
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Creature & !Is.Source) with { Optional = true }],
+					new GainLife(Ref.ControllerOfTarget(0), Count.PowerOf(Ref.Target())),
+					new Exile(Ref.Target())
+				),
+				.. Evoke(ManaColor.White),
+			],
+			["Witch Enchanter // Witch-Blessed Meadow"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[Target((Is.Artifact | Is.Enchantment) & Is.Opponents)],
+					new Destroy(Ref.Target())
+				),
+				BackFace(
+					"Witch Enchanter // Witch-Blessed Meadow",
+					new EntersTappedComponent { UnlessYouPayLife = 3 },
+					new ManaAbilityComponent(ManaColor.White)
+				) with
+				{
+					Modal = true,
+				},
+			],
+			["White Plume Adventurer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+				// "If you've completed a dungeon" is read as it resolves — no intervening if.
+				When(
+					TriggerEvent.Beginning(Step.Upkeep, Whose.Opponent),
+					[],
+					new If(new YouCompletedADungeon(), [new Untap(Ref.CreaturesYouControl)])
+					{
+						Otherwise = [new Untap(Ref.CreaturesYouControl) { UpTo = 1 }],
+					}
+				),
+			],
+			["Parallax Wave"] =
+			[
+				.. Fading(5),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new Exile(Ref.Target()) { Linked = true }]
+				)
+				{
+					Costs = [new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Fade }],
+					Targets = [Creature],
+				},
+				// "each player returns … all cards they own exiled with it" — each to its owner (MoveTo). An exile
+				// resolving after the Wave left links to the object that's gone, so that card stays: as printed.
+				When(
+					TriggerEvent.SelfLeaves,
+					[],
+					new MoveTo(Ref.All(ZoneType.Exile, Is.ExiledBySource), ZoneType.Battlefield)
+				),
+			],
+			["Get Lost"] =
+			[
+				// The Maps first: once it has left, "its controller" reads its owner (Path to Exile's order).
+				Spell(
+					[Target(Is.Creature | Is.Enchantment | Is.Planeswalker)],
+					CreateMap(2) with
+					{
+						ControlledBy = Ref.ControllerOfTarget(0),
+					},
+					new Destroy(Ref.Target())
+				),
+			],
+			// ===== MC-4.4j2a: white's options — protection of your choice, a counted search, a dealt-damage trigger =====
+			["Mother of Runes"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[ProtectionOfYourChoice(Ref.Target(), colorless: false)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Creature & Is.Yours)],
+				},
+			],
+			["Giver of Runes"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[ProtectionOfYourChoice(Ref.Target(), colorless: true)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Creature & Is.Yours & !Is.Source)],
+				},
+			],
+			["Seasoned Dungeoneer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
+				When(
+					TriggerEvent.YouAttack,
+					[
+						Target(
+							Is.Creature
+								& Is.Attacking
+								& (
+									Is.Subtype("Cleric")
+									| Is.Subtype("Rogue")
+									| Is.Subtype("Warrior")
+									| Is.Subtype("Wizard")
+								)
+						),
+					],
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Protection from creatures")
+					{
+						Gains = [new Protection(Is.Creature)],
+					},
+					new Explore(Ref.Target())
+				),
+			],
+			["Winds of Abandon"] =
+			[
+				Overload("{4}{W}{W}"),
+				Spell(
+					[Target(Is.Creature & !Is.Yours)],
+					new If(
+						new AlternativeCostWasPaid(),
+						[
+							// ponytail: "its controller" for each is the one opponent — a multiplayer game needs a
+							// search per controller, each counting their own creatures exiled.
+							new Exile(Ref.Permanents(Is.Creature & !Is.Yours))
+							{
+								ThenWithXExiled =
+								[
+									new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+									{
+										Supertype = Supertype.Basic,
+										Tapped = true,
+										Who = Ref.EachOpponent,
+										UpTo = Count.X,
+									},
+								],
+							},
+						]
+					)
+					{
+						Otherwise =
+						[
+							ItsControllerMayFetch with
+							{
+								May = false,
+							},
+							new Exile(Ref.Target()),
+						],
+					}
+				),
+			],
+			["Jennifer Walters // The Sensational She-Hulk"] =
+			[
+				OpponentsCantCastDuringYourTurn,
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{G}{W}{W}"),
+					[new Transform(Ref.Source)]
+				)
+				{
+					SorcerySpeed = true,
+				},
+				BackFace(
+					"Jennifer Walters // The Sensational She-Hulk",
+					OpponentsCantCastDuringYourTurn,
+					// ponytail: "Do this only once each turn" as OncePerTurn — the first such trigger each turn is the
+					// only one; the rules let each trigger and you choose which to use (DesignNotes).
+					When(
+						new Trigger(EventKind.CreatureDealtDamage)
+						{
+							Subject = Is.Creature & Is.Yours,
+						},
+						[TargetSpec.AnyTarget()],
+						new May(
+							"Have The Sensational She-Hulk deal that much damage?",
+							new Always(),
+							[new DealDamage(Ref.Target(), Count.X)]
+						)
+					) with
+					{
+						OncePerTurn = true,
+					}
+				),
+			],
+		};
+
+	/// <summary>Voice of Victory, Jennifer Walters: "Your opponents can't cast spells during your turn."</summary>
+	static CantCastOrActivate OpponentsCantCastDuringYourTurn =>
+		new()
+		{
+			By = Whose.Opponent,
+			Abilities = false,
+			If = new DuringYourTurn(),
+		};
+
+	/// <summary>
+	/// Mother of Runes: "gains protection from the color of your choice until end of turn"; Giver of Runes: "from
+	/// colorless or from the color of your choice" — one choice of six, each granting its Protection.
+	/// </summary>
+	static GainsChosenKeyword ProtectionOfYourChoice(Ref what, bool colorless)
+	{
+		ManaColor[] colors =
+		[
+			ManaColor.White,
+			ManaColor.Blue,
+			ManaColor.Black,
+			ManaColor.Red,
+			ManaColor.Green,
+		];
+		var words = colors
+			.Select(c => $"Protection from {c.ToString().ToLowerInvariant()}")
+			.ToList();
+		List<GameComponent> grants = [.. colors.Select(c => new Protection(Is.Color(c)))];
+		if (colorless)
+		{
+			words.Add("Protection from colorless");
+			grants.Add(new Protection(Is.Colorless));
+		}
+		return new GainsChosenKeyword(what, [.. words]) { Grants = [.. grants] };
+	}
+
+	/// <summary>
+	/// Fading N (CR 702.32; Parallax Wave): "This enchantment enters with N fade counters on it. At the beginning of
+	/// your upkeep, remove a fade counter from it. If you can't, sacrifice it."
+	/// </summary>
+	static GameComponent[] Fading(int n) =>
+		[
+			new EntersWithCountersComponent(n) { Kind = CounterKinds.Fade },
+			When(
+				TriggerEvent.YourUpkeep,
+				[],
+				new If(
+					new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Fade), 1),
+					[new RemoveCounters(Ref.Source, 1) { Kind = CounterKinds.Fade }]
+				)
+				{
+					Otherwise = [new Sacrifice(Ref.Source)],
+				}
+			),
+		];
+
+	/// <summary>
+	/// Get Lost: "two Map tokens. (They're artifacts with '{1}, {T}, Sacrifice this token: Target creature you control
+	/// explores. Activate only as a sorcery.')"
+	/// </summary>
+	static CreateTokens CreateMap(Count count) =>
+		new(Token("Map", "Artifact — Map"), count)
+		{
+			Abilities =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new Explore(Ref.Target())])
+				{
+					Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+					Targets = [Target(Is.Creature & Is.Yours)],
+					SorcerySpeed = true,
 				},
 			],
 		};

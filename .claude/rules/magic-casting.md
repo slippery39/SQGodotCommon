@@ -149,7 +149,9 @@ whose subsystem it lives in.
   check sees Flesh Duplicate as a 0/0. **"Enter as a copy"** (`MayEnterAsCopy`) is that choice, then
   `BecomeCopyOfChosenAction`: its copiable values, with `EnteredAsCopy(original)` restored as it leaves
   (`Card.WithoutCopyEffect`), never in cleanup. **Vanishing** is `Vanishing.Of(n)`: the marker, an upkeep
-  trigger (`RemoveTimeCounter`) and `Card.TimeCounters`.
+  trigger (`RemoveTimeCounter`) and `Card.TimeCounters`. **Fading** (Parallax Wave, MC-4.4j1) is `LsvCards.Fading(n)`,
+  composed: `EntersWithCountersComponent(n) { Kind = Fade }` and an upkeep `If(a fade counter, remove one) { Otherwise =
+  sacrifice }`; "remove a fade counter:" is `RemoveCountersCost(1, Is.Source) { Kind }`.
 - **Targeting an ability on the stack** is `TargetSpec.Ability(filter)` (`From.Ability`; a `StackAbility`,
   not a card); `Is.TriggeredAbility` / `Is.ActivatedAbility` read `StackAbility.Triggered`, set where a
   trigger goes on the stack. Countering one removes it (`StackResolution.Counter`).
