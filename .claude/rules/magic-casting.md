@@ -350,7 +350,9 @@ whose subsystem it lives in.
   card as the SPELL it would be — `Playable.ZonePermission(…, x)`, from the cast's validation: X counts on the
   stack (CR 202.3e), so an X spell is offered only with an X that keeps it within the bound.
 - **"The first spell you've cast this game"** is stamped as it is cast (`OnStackComponent.FirstSpellThisGame`,
-  from `MagicPlayer.SpellsCastThisGame`), read by `FirstSpellYouCastThisGame` — a copy wasn't cast.
+  from `MagicPlayer.SpellsCastThisGame`), read by `FirstSpellYouCastThisGame` — a copy wasn't cast. Asked BEFORE the
+  cast (Once Upon a Time: "…, you may cast it without paying its mana cost" — `MayCastFromHandFree(Is.Source) { If }`,
+  MC-4.4k2b), of a card not yet on the stack, it reads the player's count: no spell cast this game.
 - **"You may cast this card from your graveyard / from exile"** is the card's own `MayCastThisFrom(From) { Finality }`
   (MC-6.9), read by `Playable.CanCastFromHere` — Storied Veteran (Graveyard) is not flashback: it isn't exiled leaving
   the stack, it resolves onto the battlefield (with a finality counter, `EnterFromStackAction.Finality`); Khan (Exile):

@@ -2564,7 +2564,7 @@ public static class TrkCards
 				When(
 					new Trigger(EventKind.BecameTarget)
 					{
-						Subject = Is.Creature & Is.Yours,
+						Subject = Is.Creature & Is.Yours & !Is.Spell,
 						By = Whose.Opponent,
 					},
 					[],

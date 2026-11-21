@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 40/46 · uncommon 64/86 · rare 172/279 · mythic 67/108 · **352/528**
+**Playable:** common 40/46 · uncommon 64/86 · rare 177/279 · mythic 70/108 · **360/528**
 
 ### "Name Sticker" Goblin
 
@@ -1290,7 +1290,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying, lifelink  
 > When this creature enters, look at target opponent's hand. You may exile a nonland card from it until this creature leaves the battlefield.
 
-**Status:** scripted · **tests naming it:** LsvBatch2h2aTests
+**Status:** scripted · **tests naming it:** LsvBatch2h2aTests, LsvBatch2k2bTests
 
 **Engine pieces:** `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
 
@@ -4918,7 +4918,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for a green creature card with mana value X or less, put it onto the battlefield, then shuffle. Shuffle Green Sun's Zenith into its owner's library.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Filter` — "Creature you control", "other nontoken creature", "card with mana value 3 or less" —…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
+
+```csharp
+["Green Sun's Zenith"] =
+[
+	Spell(
+		[],
+		new SearchLibrary(CardType.Creature, ZoneType.Battlefield)
+		{
+			Filter = Is.Color(ManaColor.Green) & Is.ManaValueAtMost(Count.X),
+			FilterText = "green",
+		},
+		new MoveTo(Ref.Source, ZoneType.Library)
+		{
+			From = [ZoneType.Stack],
+			Shuffle = true,
+		}
+	),
+],
+// ponytail: a level's 4/4 and 6/6 are +2/+3 and +4/+5 on the printed 2/1 — right until an effect sets its
+// base power and toughness (CR 711.5: a level SETS them); a base-setting static when a card meets one.
+```
 
 ### Grim Monolith
 
@@ -5393,7 +5416,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Leatherhead enters with a hexproof counter on her.  
 > Whenever Leatherhead deals combat damage to a player, you may remove a counter from her. When you do, destroy target artifact or enchantment that player controls.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `EntersWithCountersComponent` — "This creature enters with N (or X) +1/+1 counters on it." Applied by…; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RemoveCounters` — "Remove N [Kind] counters from [What]" — each object counted for itself, with Ref.It…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+
+```csharp
+["Leatherhead, Swamp Stalker"] =
+[
+	new EntersWithCountersComponent(1) { Kind = CounterKinds.Hexproof },
+	When(
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		[],
+		new May(
+			"Remove a counter from Leatherhead?",
+			// a counter RemoveCounters can take, on her as she is now — or no "when you do"
+			new AtLeast(Count.AllCountersOn(Ref.Permanents(Is.Source)), 1),
+			[
+				new RemoveCounters(Ref.Source, 1) { AnyKind = true },
+				new WhenYouDo(
+					[Target((Is.Artifact | Is.Enchantment) & Is.Opponents)],
+					[new Destroy(Ref.Target())]
+				),
+			]
+		)
+	),
+],
+```
 
 ### Leyline Binding
 
@@ -5931,7 +5979,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If this spell is the first spell you've cast this game, you may cast it without paying its mana cost.  
 > Look at the top five cards of your library. You may reveal a creature or land card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `FirstSpellYouCastThisGame` — First Contact: "If this spell is the first spell you've cast this game" — stamped as it…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `MayCastFromHandFree` — "You may cast [spells] from your hand without paying their mana costs" — Omnipresence:…
+
+```csharp
+["Once Upon a Time"] =
+[
+	new MayCastFromHandFree(Is.Source) { If = new FirstSpellYouCastThisGame() },
+	Spell([], new LookAndTake(5, Is.Creature | Is.Land) { Reveal = true }),
+],
+```
 
 ### Orcish Bowmasters
 
@@ -7049,7 +7107,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > Whenever a creature you control or a creature spell you control becomes the target of a spell or ability an opponent controls, draw a card.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `CantBeCountered` — "This spell can't be countered." Read by StackResolution.Counter.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Surrak, Elusive Hunter"] =
+[
+	new CantBeCountered(),
+	When(
+		new Trigger(EventKind.BecameTarget)
+		{
+			Subject = Is.Creature & Is.Yours,
+			By = Whose.Opponent,
+		},
+		[],
+		new DrawCards(Ref.You, 1)
+	),
+],
+```
 
 ### Sword of the Meek
 
@@ -7068,7 +7144,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Defender, hexproof  
 > {T}: Add one mana of any color.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
 
 ```csharp
 ["Sylvan Caryatid"] = [.. AnyColorMana(ManaRestriction.None)],
@@ -7657,7 +7733,27 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Trample  
 > At the beginning of combat on your turn, mill a card and choose an opponent at random. This creature attacks that player this combat if able. Until end of turn, this creature gains indestructible and gets +1/+1 for each card type among cards in your graveyard.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Ursine Monstrosity"] =
+[
+	When(
+		TriggerEvent.BeginningOfCombatOnYourTurn,
+		[],
+		new Mill(Ref.You, 1),
+		new ModifyUntilEndOfTurn(Ref.Source, 0, 0, Combat.AttacksThePlayer),
+		new ModifyUntilEndOfTurn(
+			Ref.Source,
+			Count.CardTypesAmong(Ref.CardsInYourGraveyard),
+			Count.CardTypesAmong(Ref.CardsInYourGraveyard),
+			"Indestructible"
+		)
+	),
+],
+```
 
 ### Urza's Saga
 
@@ -9023,7 +9119,37 @@ How to write a script: `MagicCore/Cookbook.md`.
 > 6/6  
 > Protection from everything
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Both` — Sylvia Tilly: "you may pay {1} and exile a card from your graveyard" — asked only when…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Protection` — Protection (CR 702.16) — True-Name Nemesis: "This creature has protection from the…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Hexdrinker"] =
+[
+	new ActivatedAbilityComponent(
+		ManaCost.Parse("{1}"),
+		[new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Level }]
+	)
+	{
+		Keyword = "Level up",
+		SorcerySpeed = true,
+	},
+	new StaticEffectComponent(Is.Source)
+	{
+		Power = 2,
+		Toughness = 3,
+		If = new Both(HasLevel(3), new Not(HasLevel(8))),
+	},
+	new Protection(Is.Instant) { If = new Both(HasLevel(3), new Not(HasLevel(8))) },
+	new StaticEffectComponent(Is.Source)
+	{
+		Power = 4,
+		Toughness = 5,
+		If = HasLevel(8),
+	},
+	new Protection(Is.AnyCard) { If = HasLevel(8) },
+],
+```
 
 ### Imperial Seal
 
@@ -9569,7 +9695,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Combat damage that would be dealt by creatures you control can't be prevented.  
 > Whenever Questing Beast deals combat damage to an opponent, it deals that much damage to target planeswalker that player controls.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `CantBeBlockedBy` — Cold-Blooded Crew: "This creature can't be blocked by creatures with power 2 or less.";…; `CombatDamageCantBePrevented` — Questing Beast: "Combat damage that would be dealt by creatures you control can't be…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Questing Beast"] =
+[
+	new CantBeBlockedBy(Is.PowerAtMost(2)),
+	new CombatDamageCantBePrevented(Is.Creature & Is.Yours),
+	When(
+		TriggerEvent.SelfDealsCombatDamageToPlayer,
+		[Target(Is.Planeswalker & Is.Opponents)],
+		new DealDamage(Ref.Target(), Count.X)
+	),
+],
+```
 
 ### Ragavan, Nimble Pilferer
 
@@ -10495,7 +10636,32 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature dies, create three 5/5 green Wurm creature tokens with trample.  
 > When Worldspine Wurm is put into a graveyard from anywhere, shuffle it into its owner's library.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
+
+**Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
+
+```csharp
+["Worldspine Wurm"] =
+[
+	When(TriggerEvent.SelfDies, [], new CreateTokens(Wurm, 3)),
+	When(
+		new Trigger(EventKind.ChangedZone)
+		{
+			Subject = Is.Source,
+			To = ZoneType.Graveyard,
+		},
+		[],
+		new MoveTo(Ref.Source, ZoneType.Library)
+		{
+			From = [ZoneType.Graveyard],
+			Shuffle = true,
+		}
+	) with
+	{
+		From = ZoneType.Graveyard,
+	},
+],
+```
 
 ### Wrenn and Six
 

@@ -1800,6 +1800,34 @@ as his three priorities.
   random, 927 card games); golden-in moved 30 random and 438 card games, 28 added, no AI game; probe 150: none
   unfinished, all seven used (Sylvan Safekeeper activated 1,168, Baloth Prime 479; Undermountain's "activated 0" is a
   mana ability's, never counted). Suite 2,205 passed.
+- 2026-11-21, Claude (cube lane) — **4.4k2b: green's trigger, combat and casting options — 360 of 528 play (green 46 of
+  50).** All eight tier 2, each an option on the nearest piece; three read differently from the plan once the code was
+  open. **Surrak** is MACO Strike Team's trigger as written — the fix is in the EVENT: `BecameTargetEvent`'s subject is a
+  permanent or a spell on the stack, never a card targeted in a graveyard (nobody controls it); MACO, "a creature you
+  control" alone, takes the new `Is.Spell` (`& !Is.Spell`). **Ursine Monstrosity**'s "attacks that player" is a stamp
+  until end of turn, `Combat.AttacksThePlayer`, read as goad's (`Combat.MustAttackThePlayer`; an effect, so losing all
+  abilities doesn't end it) — `MustAttack`, and `DeclareAttackerChoice` offers it no planeswalker. **Leatherhead**: a
+  hexproof keyword counter (`CounterKinds.Hexproof`); "remove a counter from her" is `RemoveCounters { AnyKind }` —
+  Dathon's choose-a-kind (`PutCounters.OfAKindOn`) removing; her "may" is asked only with such a counter on her now.
+  **Questing Beast**: `CombatDamageCantBePrevented(filter)`, read by `Damage.Prevented(…, combat)` alone (protection's
+  and The Needs of the Many's prevention; no option on either says damage ISN'T prevented). **Worldspine Wurm**:
+  `MoveCard` raises the zone-change event for a card that reads its own arrival in a graveyard
+  (`ReadsItsArrivalInAGraveyard`, asked of the card as it arrives — a face-down Wurm is the Wurm there), from any zone;
+  Emrakul, the Aeons Torn takes it with colourless. **Once Upon a Time**: no option needed — `FirstSpellYouCastThisGame`
+  asked of a card not yet on the stack reads the player's count. **Green Sun's Zenith**: tested pieces together
+  (`Is.ManaValueAtMost(Count.X)` in a search's filter; `MoveTo(Ref.Source, Library) { From = [Stack], Shuffle }`).
+  **Hexdrinker**: not a static `Grants` — `Protection { If }`, a level's box as a static's `If`; level up is scripted
+  (`CounterKinds.Level`, `LsvCards.HasLevel(n)`), no `LevelUp` helper for one card; its P/T by level are +N/+N statics
+  (a ceiling). New token data: the 5/5 trample Wurm. Ceilings in DesignNotes (Hexdrinker's base P/T; Ursine's "this
+  combat" and random opponent; a finality counter is no counter Leatherhead can remove). The review found five: a
+  face-down Wurm (fixed: the arriving card is asked), Ursine losing its abilities (fixed: the stamp), Leatherhead's
+  "when you do" with nothing removed (fixed: the condition), MACO still matching a creature spell (fixed: `Is.Spell`),
+  a doc comment on the wrong method. 19 tests in `LsvBatch2k2bTests.cs` (`TheyCast(instant, targets)`,
+  `TheirPlaneswalker(loyalty)`); 22/22 revert-checks caught. **Golden-out moved ONE game, intended**: Necromancy 02,
+  where MACO Strike Team used to trigger off a creature card targeted in its controller's graveyard (162 random, 933
+  other card games unmoved); golden-in moved 30 random and 507 card games, 32 added, no AI game; probe 150: none
+  unfinished, all eight used (Hexdrinker activated 702, Green Sun's Zenith cast 232; Worldspine Wurm cast 2, its
+  shuffle on the stack 23). Suite 2,224 passed.
 
 ## Tasks
 
@@ -2077,8 +2105,9 @@ as his three priorities.
     - [x] MC-4.4k1 The tested pieces, 21 (list in Decisions; done 2026-11-21 — Scythecat Cub and Titania took an option)
     - [x] MC-4.4k2a Options, mana, lands and tokens, 7: Fanatic of Rhonas, Undermountain Adventurer, Baloth Prime,
           Fastbond, Sylvan Safekeeper, Vaultborn Tyrant, Woodfall Primus (done 2026-11-21, all seven options as planned)
-    - [ ] MC-4.4k2b Options, triggers, combat and casting, 8: Surrak, Elusive Hunter, Ursine Monstrosity, Leatherhead,
-          Swamp Stalker, Questing Beast, Worldspine Wurm, Once Upon a Time, Green Sun's Zenith, Hexdrinker
+    - [x] MC-4.4k2b Options, triggers, combat and casting, 8: Surrak, Elusive Hunter, Ursine Monstrosity, Leatherhead,
+          Swamp Stalker, Questing Beast, Worldspine Wurm, Once Upon a Time, Green Sun's Zenith, Hexdrinker (done
+          2026-11-21; MACO Strike Team's trigger corrected with Surrak's)
     - [ ] MC-4.4k3 New pieces, 4: crew (Esika's Chariot), earthbend (Badgermole Cub), bestow (Springheart Nantuko),
           day/night (Outland Liberator // Frenzied Trapbreaker)
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
@@ -2115,9 +2144,15 @@ multicolour 6/65, colourless 58/163). **MC-4.4k is planned (Decisions, "4.4k"; S
 batches — k1 (the 21 tested pieces), k2a (7 mana, land and token options), k2b (8 trigger, combat and casting
 options), k3 (crew, earthbend, bestow, day/night).** **k1 is done** (Decisions, "4.4k1"; 345 of 528 play — W 60/60,
 U 75/75, B 61/61, R 54/54, G 31/50, multicolour 6/65, colourless 58/163). **k2a is done** (Decisions, "4.4k2a"; 352 of
-528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 38/50, multicolour 6/65, colourless 58/163); **k2b is next** (Surrak,
-Ursine Monstrosity, Leatherhead, Questing Beast, Worldspine Wurm, Once Upon a Time, Green Sun's Zenith, Hexdrinker —
-4.4k's plan, part k2b). From k2a: a mana ability's "activate only if" is `ManaAbilityComponent.OnlyIf`; a token copy's
+528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 38/50, multicolour 6/65, colourless 58/163). **k2b is done**
+(Decisions, "4.4k2b"; 360 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 46/50, multicolour 6/65, colourless
+58/163); **k3 is next — green's last four, each a new piece** (crew: Esika's Chariot; earthbend: Badgermole Cub;
+bestow: Springheart Nantuko; day/night: Outland Liberator // Frenzied Trapbreaker — 4.4k's plan, part k3, each with its
+nearest piece named there). From k2b: "becomes the target" has a permanent or a spell as its subject (`Is.Spell` tells
+them apart); "attacks that player if able" `Combat.AttacksThePlayer`; a counter of any kind removed `RemoveCounters {
+AnyKind }`; `CombatDamageCantBePrevented(filter)`; "put into a graveyard from anywhere" a `ChangedZone { Subject =
+Is.Source, To = Graveyard }` trigger read `From = Graveyard`; `Protection { If }`; level counters `CounterKinds.Level`;
+k2b's tests are in `LsvBatch2k2bTests.cs` (`TheyCast`, `TheirPlaneswalker`). From k2a: a mana ability's "activate only if" is `ManaAbilityComponent.OnlyIf`; a token copy's
 "except" is `CreateTokenCopy { AlsoType, SetBase, Colors, AlsoSubtypes, NoManaCost }`; eternalize `LsvCards.Eternalize`,
 persist `LsvCards.Persist` (`MoveTo.CounterKind`); "whenever you sacrifice" `EventTest.Sacrificed`
 (`ChangedZoneEvent.Sacrificed`, lands only — the event is raised for a land); shroud beside hexproof; k2a's tests are in
@@ -2507,3 +2542,5 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-21: Shayne picked green. Next: MC-4.4k, green's 40 — survey, tiers, plan.
 - 2026-11-21: MC-4.4k1 done — green's 21 tested pieces, 345 of 528 play (green 31 of 50). Next: k2a.
 - 2026-11-21: MC-4.4k2a done — green's 7 mana, land and token options, 352 of 528 play (green 38 of 50). Next: k2b.
+- 2026-11-21: MC-4.4k2b done — green's 8 trigger, combat and casting options, 360 of 528 play (green 46 of 50); MACO
+  Strike Team's become-target trigger corrected (one golden game moved, intended). Next: k3.

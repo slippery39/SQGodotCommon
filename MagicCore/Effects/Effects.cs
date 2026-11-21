@@ -332,7 +332,15 @@ public record PutCounters(Ref What, Count N) : Effect
 	public override ActionResult Execute(GameState s)
 	{
 		if (Kind is null)
-			return OfAKindOnIt(s);
+			return Permanents(What, s).FirstOrDefault() is { } first
+				? OfAKindOn(
+					s,
+					first,
+					N.Value(s, InputContext.SetItem(ContextKeys.It, first.Id)),
+					Controller,
+					InputContext
+				)
+				: new(s);
 		// on a permanent, or a player (CR 122.1) — Galvanic Discharge: "You get {E}{E}{E}"; Etali: "they get that many
 		// poison counters"
 		foreach (
@@ -344,11 +352,18 @@ public record PutCounters(Ref What, Count N) : Effect
 		return new(s);
 	}
 
-	ActionResult OfAKindOnIt(GameState s)
+	/// <summary>
+	/// N counters of ONE kind already on that permanent, put (Dathon) or — N negative — removed (Leatherhead,
+	/// RemoveCounters.AnyKind): one kind on it is that kind, unasked; several are chosen by name.
+	/// </summary>
+	internal static ActionResult OfAKindOn(
+		GameState s,
+		Card card,
+		int n,
+		int controller,
+		ImmutableDictionary<string, object> context
+	)
 	{
-		if (Permanents(What, s).FirstOrDefault() is not { } card)
-			return new(s);
-		var n = N.Value(s, InputContext.SetItem(ContextKeys.It, card.Id));
 		ImmutableArray<string> kinds = [.. card.AllCounters().Select(c => c.Kind)];
 		return kinds.Length switch
 		{
@@ -358,10 +373,10 @@ public record PutCounters(Ref What, Count N) : Effect
 				s.SpawnAction(
 					new PipelineAction
 					{
-						PipelineContext = InputContext,
+						PipelineContext = context,
 						Steps =
 						[
-							new ChooseKeywordChoice(Controller, kinds)
+							new ChooseKeywordChoice(controller, kinds)
 							{
 								Prompt = "Choose a kind of counter",
 							},
@@ -387,8 +402,26 @@ public record RemoveCounters(Ref What, Count N) : Effect
 	/// </summary>
 	public string? Kind { get; init; }
 
+	/// <summary>
+	/// Leatherhead, Swamp Stalker: "you may remove a counter from her" — of whichever kind its controller chooses
+	/// among those on the first object What names (one kind: unasked), PutCounters' choose-a-kind removing. It is
+	/// how a null Kind is resolved — chosen, in place of Mabel's rule — so a Kind beside it is never read.
+	/// ponytail: the kinds are Card.AllCounters — a finality counter (a flag) isn't one; and the first object only.
+	/// </summary>
+	public bool AnyKind { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		if (AnyKind)
+			return Permanents(What, s).FirstOrDefault() is { } first
+				? PutCounters.OfAKindOn(
+					s,
+					first,
+					-N.Value(s, InputContext.SetItem(ContextKeys.It, first.Id)),
+					Controller,
+					InputContext
+				)
+				: new(s);
 		// a player's (CR 122.1) — Guide of Souls: "you may pay {E}{E}{E}" (PutCounters' reach)
 		if (Kind is not null)
 			foreach (var id in All(What, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())

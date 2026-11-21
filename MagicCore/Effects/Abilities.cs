@@ -112,6 +112,12 @@ public static class CounterKinds
 	/// <summary>Guide of Souls: "put two +1/+1 counters and a flying counter on target attacking creature".</summary>
 	public const string Flying = "flying";
 
+	/// <summary>Leatherhead, Swamp Stalker: "enters with a hexproof counter on her" — a keyword counter, as Drivnod's.</summary>
+	public const string Hexproof = "hexproof";
+
+	/// <summary>Hexdrinker: "Level up {1} ({1}: Put a level counter on this. Level up only as a sorcery.)" — CR 702.87.</summary>
+	public const string Level = "level";
+
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
 	public const string PlusOne = "+1/+1";
@@ -1171,11 +1177,29 @@ public record ChosenPlayer(int PlayerId) : GameComponent;
 /// </summary>
 public record Protection(Filters.Filter From) : GameComponent
 {
+	/// <summary>
+	/// Hexdrinker: "LEVEL 3-7 … Protection from instants" / "LEVEL 8+ … Protection from everything" — had only while
+	/// this holds, judged as its holder's (a level's box: a static's If, an activated ability's OnlyIf).
+	/// </summary>
+	public Condition? If { get; init; }
+
 	/// <summary>THE protection question: does this permanent's protection stop that source?</summary>
 	public static bool Stops(GameState s, Cards.Card holder, Cards.Card source) =>
 		s.AbilitiesOf<Protection>(holder)
-			.Any(p => p.From.Matches(s, source, new(holder.ControllerId, holder.Id)));
+			.Any(p =>
+				p.From.Matches(s, source, new(holder.ControllerId, holder.Id))
+				&& (p.If?.Holds(s, Conditions.Of(holder)) ?? true)
+			);
 }
+
+/// <summary>
+/// Questing Beast: "Combat damage that would be dealt by creatures you control can't be prevented." — By is asked of
+/// the damage's SOURCE from the holder's side (Is.Creature &amp; Is.Yours). Read by Damage.Prevented alone, the one
+/// place damage is prevented (protection, The Needs of the Many), for combat damage only. The nearest pieces,
+/// Protection and PreventAllDamageToYou, each say when damage IS prevented; no option on either says it isn't.
+/// A "damage can't be prevented" that isn't combat's, or is one source's, is an option HERE (a flag, the filter).
+/// </summary>
+public record CombatDamageCantBePrevented(Filters.Filter By) : GameComponent;
 
 /// <summary>The City on the Edge of Forever's Human: "Permanents can't phase in." — read by Rules.Phasing.PhaseIn.</summary>
 public record PermanentsCantPhaseIn : GameComponent;

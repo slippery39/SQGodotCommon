@@ -245,13 +245,17 @@ public record LoyaltyCountersPutEvent(int PutterId) : MagicEvent
 	public override int By(GameState s) => PutterId;
 }
 
-/// <summary>A spell or ability put on the stack with this card as a target (CR 115).</summary>
+/// <summary>
+/// A spell or ability put on the stack with this card as a target (CR 115). Its subject is a permanent or a spell
+/// (Surrak, Elusive Hunter: "a creature you control or a creature spell you control becomes the target") — never a
+/// card in a graveyard, which nobody controls: a creature card targeted there is no "creature you control".
+/// </summary>
 public record BecameTargetEvent(int CardId, int ByPlayerId, int ByStackObjectId) : MagicEvent
 {
 	public override EventKind Kind() => EventKind.BecameTarget;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
-		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
+		s.IsOnBattlefield(CardId) || s.IsOnStack(CardId) ? [s.GetObject(CardId)] : [];
 
 	public override int By(GameState s) => ByPlayerId;
 }

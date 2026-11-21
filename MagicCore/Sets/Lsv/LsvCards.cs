@@ -3978,6 +3978,133 @@ public static class LsvCards
 				When(TriggerEvent.SelfEnters, [Target(!Is.Creature)], new Destroy(Ref.Target())),
 				Persist,
 			],
+			// ===== MC-4.4k2b: green's trigger, combat and casting options (a spell becoming a target, "attacks that player", a counter of any kind removed, unpreventable combat damage, into a graveyard from anywhere, the first spell before it is cast, a spell shuffled in, level up) =====
+			["Surrak, Elusive Hunter"] =
+			[
+				new CantBeCountered(),
+				When(
+					new Trigger(EventKind.BecameTarget)
+					{
+						Subject = Is.Creature & Is.Yours,
+						By = Whose.Opponent,
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Ursine Monstrosity"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new Mill(Ref.You, 1),
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0, Combat.AttacksThePlayer),
+					new ModifyUntilEndOfTurn(
+						Ref.Source,
+						Count.CardTypesAmong(Ref.CardsInYourGraveyard),
+						Count.CardTypesAmong(Ref.CardsInYourGraveyard),
+						"Indestructible"
+					)
+				),
+			],
+			["Leatherhead, Swamp Stalker"] =
+			[
+				new EntersWithCountersComponent(1) { Kind = CounterKinds.Hexproof },
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					new May(
+						"Remove a counter from Leatherhead?",
+						// a counter RemoveCounters can take, on her as she is now — or no "when you do"
+						new AtLeast(Count.AllCountersOn(Ref.Permanents(Is.Source)), 1),
+						[
+							new RemoveCounters(Ref.Source, 1) { AnyKind = true },
+							new WhenYouDo(
+								[Target((Is.Artifact | Is.Enchantment) & Is.Opponents)],
+								[new Destroy(Ref.Target())]
+							),
+						]
+					)
+				),
+			],
+			["Questing Beast"] =
+			[
+				new CantBeBlockedBy(Is.PowerAtMost(2)),
+				new CombatDamageCantBePrevented(Is.Creature & Is.Yours),
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[Target(Is.Planeswalker & Is.Opponents)],
+					new DealDamage(Ref.Target(), Count.X)
+				),
+			],
+			["Worldspine Wurm"] =
+			[
+				When(TriggerEvent.SelfDies, [], new CreateTokens(Wurm, 3)),
+				When(
+					new Trigger(EventKind.ChangedZone)
+					{
+						Subject = Is.Source,
+						To = ZoneType.Graveyard,
+					},
+					[],
+					new MoveTo(Ref.Source, ZoneType.Library)
+					{
+						From = [ZoneType.Graveyard],
+						Shuffle = true,
+					}
+				) with
+				{
+					From = ZoneType.Graveyard,
+				},
+			],
+			["Once Upon a Time"] =
+			[
+				new MayCastFromHandFree(Is.Source) { If = new FirstSpellYouCastThisGame() },
+				Spell([], new LookAndTake(5, Is.Creature | Is.Land) { Reveal = true }),
+			],
+			["Green Sun's Zenith"] =
+			[
+				Spell(
+					[],
+					new SearchLibrary(CardType.Creature, ZoneType.Battlefield)
+					{
+						Filter = Is.Color(ManaColor.Green) & Is.ManaValueAtMost(Count.X),
+						FilterText = "green",
+					},
+					new MoveTo(Ref.Source, ZoneType.Library)
+					{
+						From = [ZoneType.Stack],
+						Shuffle = true,
+					}
+				),
+			],
+			// ponytail: a level's 4/4 and 6/6 are +2/+3 and +4/+5 on the printed 2/1 — right until an effect sets its
+			// base power and toughness (CR 711.5: a level SETS them); a base-setting static when a card meets one.
+			["Hexdrinker"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Level }]
+				)
+				{
+					Keyword = "Level up",
+					SorcerySpeed = true,
+				},
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = 2,
+					Toughness = 3,
+					If = new Both(HasLevel(3), new Not(HasLevel(8))),
+				},
+				new Protection(Is.Instant) { If = new Both(HasLevel(3), new Not(HasLevel(8))) },
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = 4,
+					Toughness = 5,
+					If = HasLevel(8),
+				},
+				new Protection(Is.AnyCard) { If = HasLevel(8) },
+			],
 		};
 
 	/// <summary>
@@ -4023,6 +4150,13 @@ public static class LsvCards
 		{
 			If = new Not(new Matches(Ref.Source, Is.WithCounter(CounterKinds.MinusOne))),
 		};
+
+	/// <summary>Worldspine Wurm: "three 5/5 green Wurm creature tokens with trample".</summary>
+	static CardData Wurm => Token("Wurm", "Creature — Wurm", "5", "5", ["G"], ["Trample"]);
+
+	/// <summary>Hexdrinker: "LEVEL 3-7", "LEVEL 8+" — it has N or more level counters (CR 711).</summary>
+	static Condition HasLevel(int n) =>
+		new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Level), n);
 
 	/// <summary>Baloth Prime: "a tapped 4/4 green Beast creature token" (no trample — FRA's Beast has it).</summary>
 	static CardData BalothBeast => Token("Beast", "Creature — Beast", "4", "4", ["G"]);

@@ -51,7 +51,10 @@ whose subsystem it lives in.
   goader's next turn (`ModifyUntilEndOfTurn { UntilYourNextTurn }`), read from that stamp by `Combat.IsGoaded` — an
   effect, so losing all abilities doesn't end it. **"Attacks each combat if able"** (Dragon's Rage Channeler's delirium,
   MC-4.4i2a) is the ability-side twin, the keyword-like grant `Combat.AttacksEachCombat` (a static's, so losing all
-  abilities ends it); both are ONE question, `Combat.MustAttack`. `DeclareAttackerChoice` offers such a creature no "Don't attack",
+  abilities ends it); **"attacks that player this combat if able"** (Ursine Monstrosity, MC-4.4k2b) is a third,
+  `Combat.AttacksThePlayer`, stamped until end of turn and read from the stamp as goad's (`Combat.MustAttackThePlayer`:
+  an effect, so losing all abilities doesn't end it) — it is also offered no planeswalker; all are ONE question,
+  `Combat.MustAttack`. `DeclareAttackerChoice` offers such a creature no "Don't attack",
   so **"don't attack" is ONE answer, `DeclareAttackerChoice.NoAttack`** (the first target for a goaded creature) — the
   look-ahead's quick answer, `WholeAttacks` and the table's `DeclareCombat`; never a literal `CombatOption.None`.
 - **Exalted** (CR 702.83, Noble Hierarch) is a scripted trigger, `Scripting.Exalted`, not an engine keyword: a creature

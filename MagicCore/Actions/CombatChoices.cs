@@ -33,6 +33,7 @@ public record DeclareAttackerChoice : ChoiceAction
 		var opponent = s.GetPlayer(s.OpponentOf(PlayerId));
 		var oneEach = s.CardsIn(opponent.Id, ZoneType.Battlefield)
 			.Any(s.HasAbility<Effects.OneAttackerPerPlaneswalkerYouControl>);
+		var thePlayer = Combat.MustAttackThePlayer(s.GetCard(CreatureId)); // Ursine Monstrosity: "attacks that player"
 		return
 		[
 			// CR 508.1d: a creature that attacks if able and can attack must (goad, "attacks each combat if able")
@@ -44,7 +45,8 @@ public record DeclareAttackerChoice : ChoiceAction
 			// Tomik, by a creature declared before this one.
 			.. s.CardsIn(opponent.Id, ZoneType.Battlefield)
 				.Where(c =>
-					c.Is(Cards.CardType.Planeswalker)
+					!thePlayer
+					&& c.Is(Cards.CardType.Planeswalker)
 					&& !(
 						oneEach
 						&& !s.HasLostAllAbilities(c) // a granted ability: a stripped walker loses it

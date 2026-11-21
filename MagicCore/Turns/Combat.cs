@@ -168,17 +168,33 @@ public static class Combat
 		c.Components.Any(x => x is UntilEndOfTurn { Keyword: Goaded });
 
 	/// <summary>
+	/// Ursine Monstrosity's "attacks that player this combat if able" — an effect's stamp, read as goad's is: losing
+	/// all abilities doesn't end it. DeclareAttackerChoice offers such a creature no planeswalker.
+	/// </summary>
+	public static bool MustAttackThePlayer(Card c) =>
+		c.Components.Any(x => x is UntilEndOfTurn { Keyword: AttacksThePlayer });
+
+	/// <summary>
 	/// Dragon's Rage Channeler: "attacks each combat if able" — a keyword-like grant (its delirium static), read with
 	/// goad's requirement by MustAttack.
 	/// </summary>
 	public const string AttacksEachCombat = "Attacks each combat if able";
 
 	/// <summary>
-	/// CR 508.1d: it attacks if able — goaded (an effect, IsGoaded) or "attacks each combat if able" (an ability,
-	/// s.Has, so losing all abilities ends it). DeclareAttackerChoice offers it no "Don't attack".
+	/// CR 508.1d: it attacks if able — goaded or told to attack that player (effects: IsGoaded, MustAttackThePlayer)
+	/// or "attacks each combat if able" (an ability, s.Has, so losing all abilities ends it). DeclareAttackerChoice
+	/// offers it no "Don't attack".
 	/// </summary>
 	public static bool MustAttack(GameState s, Card c) =>
-		IsGoaded(c) || s.Has(c, AttacksEachCombat);
+		IsGoaded(c) || MustAttackThePlayer(c) || s.Has(c, AttacksEachCombat);
+
+	/// <summary>
+	/// Ursine Monstrosity: "choose an opponent at random. This creature attacks that player this combat if able." — a
+	/// stamp until end of turn (MustAttackThePlayer): it must attack (MustAttack), and the PLAYER —
+	/// DeclareAttackerChoice offers it no planeswalker. ponytail: two players, so "an opponent at random" is the
+	/// opponent; a second opponent makes the stamp name its player.
+	/// </summary>
+	public const string AttacksThePlayer = "Attacks the player if able";
 
 	/// <summary>
 	/// How many creatures it takes to block this attacker — menace's two (CR 702.110b), Troll of Khazad-dûm's three
@@ -427,7 +443,7 @@ public static class Combat
 
 		// Players never leave the game; a planeswalker token hit by first strike may already be gone.
 		var players = hits.Where(h => h.TargetId == s.Player1Id() || h.TargetId == s.Player2Id())
-			.Where(h => !Rules.Damage.Prevented(s, h.TargetId, h.Source)) // The Needs of the Many: none was dealt
+			.Where(h => !Rules.Damage.Prevented(s, h.TargetId, h.Source, combat: true)) // The Needs of the Many: none was dealt
 			.Select(h => h.TargetId)
 			.Distinct()
 			.ToImmutableList();

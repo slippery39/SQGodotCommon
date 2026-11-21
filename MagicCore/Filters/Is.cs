@@ -62,6 +62,12 @@ public static class Is
 
 	/// <summary>Null Summoner: "you may cast the exiled card" — one this same object of the source exiled (a linked ability, CR 607.2a).</summary>
 	public static readonly Filter ExiledBySource = new HasProperty(Property.ExiledBySource);
+
+	/// <summary>
+	/// A spell — a card on the stack. MACO Strike Team: "Whenever a creature you control becomes the target" is
+	/// <c>Is.Creature &amp; Is.Yours &amp; !Is.Spell</c>; Surrak, Elusive Hunter's "or a creature spell you control" leaves it out.
+	/// </summary>
+	public static readonly Filter Spell = new HasProperty(Property.Spell);
 	public static readonly Filter AttackingAPlayer = new HasProperty(Property.AttackingAPlayer);
 
 	/// <summary>"Attacks you or a planeswalker you control".</summary>

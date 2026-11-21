@@ -390,6 +390,7 @@ public enum Property
 	Tapped, // U.S.S. Excelsior: "target tapped creature"
 	Modal, // Riku of Many Paths: "a modal spell" — its text has modes ("choose one —")
 	ExiledBySource, // Null Summoner: "the exiled card" — exiled by THIS object of the source (ExiledBy, CR 607.2a)
+	Spell, // MACO Strike Team: "a creature you control" is never a creature SPELL — a card on the stack
 }
 
 /// <summary>Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.</summary>
@@ -447,6 +448,7 @@ public sealed record HasProperty(Property Property) : Filter
 							&& s.GetObject(c.Source) is Card source
 							&& source.Incarnation == link.SourceIncarnation
 				),
+			Property.Spell => s.IsOnStack(card.Id),
 			_ => false,
 		};
 }

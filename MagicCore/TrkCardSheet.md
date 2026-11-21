@@ -5957,7 +5957,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Whenever a creature you control becomes the target of a spell or ability an opponent controls, create a tapped 1/1 red Officer creature token.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LsvBatch2k2bTests
 
 **Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
@@ -5967,7 +5967,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		new Trigger(EventKind.BecameTarget)
 		{
-			Subject = Is.Creature & Is.Yours,
+			Subject = Is.Creature & Is.Yours & !Is.Spell,
 			By = Whose.Opponent,
 		},
 		[],

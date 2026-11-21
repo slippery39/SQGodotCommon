@@ -55,7 +55,10 @@ whose subsystem it lives in.
   Phoenix's `Graveyard`, miracle's `Hand` — MC-4.4h9 generalised `FromGraveyard`) — those, and only those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,
   Lyra), which ends at cleanup or a zone change like any other until-end-of-turn effect.
 - **"Becomes the target"** is raised when a spell or ability goes on the stack with its targets —
-  `CastSpellAction` and `StackResolution.Push` (every ability), the one place each.
+  `CastSpellAction` and `StackResolution.Push` (every ability), the one place each. Its subject is a permanent or a
+  spell on the stack (`BecameTargetEvent.Subjects`, MC-4.4k2b): Surrak, Elusive Hunter's "a creature you control or a
+  creature spell you control" is `Subject = Is.Creature & Is.Yours` — a creature card targeted in a graveyard is neither;
+  MACO Strike Team's "a creature you control" alone is `… & !Is.Spell` (`Is.Spell`: a card on the stack).
 - **"When you do"** (a reflexive trigger, CR 603.12) is the `WhenYouDo` effect: its targets are chosen
   as it triggers, after the thing done, and it goes on the stack above — never fold it into the effect.
   It triggers only if the thing was done: after a mill it goes in `Mill.IfMilled` (an empty library mills nothing).
@@ -167,7 +170,11 @@ whose subsystem it lives in.
   from the battlefield (MC-4.4k1, Titania, Protector of Argoth: `{ From = Battlefield, To = Graveyard, Subject = Is.Land &
   Is.Yours }`, matched on Titania's battlefield; rare enough to raise for each). **"Whenever you sacrifice a land"**
   (Baloth Prime, MC-4.4k2a) is that trigger with `Also = EventTest.Sacrificed`: `MagicState.Sacrifice` — every sacrifice,
-  costs and effects — tells `MoveCard`, which marks the event `Sacrificed`. Widen it
+  costs and effects — tells `MoveCard`, which marks the event `Sacrificed`. **"When [this] is put into a graveyard from
+  anywhere"** (Worldspine Wurm, MC-4.4k2b) is `{ Subject = Is.Source, To = Graveyard }` on a trigger read `From =
+  Graveyard`: `MoveCard` raises the event for a card that reads its own arrival there
+  (`MagicState.ReadsItsArrivalInAGraveyard`), from whatever zone it left; "shuffle it into its owner's library" is
+  `MoveTo(Ref.Source, Library) { From = [Graveyard], Shuffle }`, beside its "dies" trigger. Widen it
   THERE for another move, never a second event — matched by `Trigger.From` / `Trigger.To`. **"Whenever a card leaves
   your graveyard"** (Vash) is `{ By = You, From = Graveyard }`: every
   path out — cast, exiled, returned, shuffled, paid as a cost; a token isn't a card. **"Whenever one or more cards are

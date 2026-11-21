@@ -173,12 +173,20 @@ public record AlternativeCostWasPaid : Condition
 		&& spell.AsCast?.AlternativeCost == true;
 }
 
-/// <summary>First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast.</summary>
+/// <summary>
+/// First Contact: "If this spell is the first spell you've cast this game" — stamped as it was cast. Once Upon a
+/// Time: "…, you may cast it without paying its mana cost" is asked BEFORE the cast (MayCastFromHandFree.If), of a
+/// card not yet on the stack: its player has cast no spell this game.
+/// </summary>
 public record FirstSpellYouCastThisGame : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
 		s.GetObject((int)context[ContextKeys.Source]) is Card spell
-		&& spell.GetComponent<Actions.OnStackComponent>()?.FirstSpellThisGame == true;
+		&& (
+			spell.GetComponent<Actions.OnStackComponent>() is { } cast
+				? cast.FirstSpellThisGame
+				: s.GetPlayer((int)context[ContextKeys.Controller]).SpellsCastThisGame == 0
+		);
 }
 
 /// <summary>

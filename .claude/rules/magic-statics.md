@@ -194,7 +194,10 @@ whose subsystem it lives in.
   (Cut Down) is the same filter over `Stat.PowerPlusToughness` (`Is.TotalPowerAndToughnessAtMost`).
 - **A player's hexproof and prevented damage** (The Needs of the Many) are `ThisTurnEffect`s on that player:
   `YouHaveHexproof` asked in `TargetSpec.IsLegal` (an opponent's spell or ability only), `PreventAllDamageToYou` in
-  `Damage.Deal` before anything is dealt — so no lifelink, no "dealt damage" trigger.
+  `Damage.Deal` before anything is dealt — so no lifelink, no "dealt damage" trigger. **"Combat damage that would be
+  dealt by creatures you control can't be prevented"** (Questing Beast, MC-4.4k2b) is `CombatDamageCantBePrevented(filter)`
+  on its holder, the filter asked of the damage's source from its side — read by `Damage.Prevented(…, combat)` alone,
+  the one place prevention is decided (protection's too), so the damage is dealt and combat counts the player as dealt it.
 - **Protection** (CR 702.16, MC-4.4g1) is `Protection(From)`: a filter asked of the SOURCE (a spell, an ability's
   source, a creature dealing damage or blocking, an Aura or Equipment) from the holder's side — True-Name Nemesis'
   "from the chosen player" is `Is.ControlledByChosenPlayer`. ONE question, `Protection.Stops(s, holder, source)`, asked
@@ -204,7 +207,11 @@ whose subsystem it lives in.
   **"Gains protection from the color of your choice until end of turn"** (Mother of Runes, Giver of Runes, MC-4.4j2a)
   is Hungering Puppetbeast's `GainsChosenKeyword { Grants }` — each word's `Protection(Is.Color(c))` (Giver's
   `Is.Colorless` a sixth) through `ModifyUntilEndOfTurn.Gains`, the word only for the table, as Fear's; a fixed grant is
-  `Gains = [Protection(Is.Creature)]` (Seasoned Dungeoneer).
+  `Gains = [Protection(Is.Creature)]` (Seasoned Dungeoneer). **Level up** (CR 702.87, 711; Hexdrinker, MC-4.4k2b) is
+  scripted, no piece: a sorcery-speed `PutCounters(Ref.Source, 1) { Kind = CounterKinds.Level }`, and each level's box
+  an `If` on the level counters (`LsvCards.HasLevel(n)`) — a static's for its P/T (+N/+N on the printed one: a ceiling,
+  DesignNotes), and `Protection { If }` for "protection from instants" / "from everything" (`Is.AnyCard`), judged in
+  `Protection.Stops` as its holder's.
 - **An ability a card GAINS** (Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard'"; Q's exiled
   card) is `UntilEndOfTurn.Gains` — a static or activated ability read by `s.AbilitiesOf<T>` beside the card's own,
   so every rule sees it; for good (`ModifyUntilEndOfTurn.ForGood`) it lasts until the card changes zones. A gained
@@ -216,6 +223,10 @@ whose subsystem it lives in.
   `Count.CountersOn(Ref.It)`, Beckett's "remove those counters" `Count.CountersOfKind(Ref.It, kind)`. **A +1/+1 counter
   goes on any permanent** (CR 122.1): "if it's a creature" (Teyo, Shields Up!) is the card's own `If`. A remove COST is
   `RemoveCountersCost(N, Filter) { Kind }` — "from Mikaeus" is `(1, Is.Source)`, paid unasked when one permanent can.
+  **"Remove a counter from [it]"** of any kind (Leatherhead, Swamp Stalker, MC-4.4k2b) is `RemoveCounters { AnyKind }`:
+  Dathon's choose-a-kind (`PutCounters.OfAKindOn`) removing — one kind on it unasked, several chosen by name. Her "may"
+  is asked only with such a counter on her NOW (`AtLeast(Count.AllCountersOn(Ref.Permanents(Is.Source)), 1)`), or the
+  "when you do" would trigger with nothing removed.
 - **Counters on a player** (CR 122.1; Galvanic Discharge's energy, Etali, Primal Sickness' poison — MC-4.4i4–i6) are
   `MagicPlayer.Counters`, put and removed through the same `MagicState.PutCounters` (given a player's id) — "you get
   {E}{E}{E}" is `PutCounters(Ref.You, 3) { Kind = CounterKinds.Energy }`, which puts on every player its Ref names too.
@@ -247,5 +258,5 @@ whose subsystem it lives in.
   — offered beside the front's casts (`MagicRules`, `Playable.Candidates`: a land permission from a graveyard plays it),
   judged and entering as that face (`Card.ModalBackFace` → `BackFaceUp`, the copy stamp), front face up once it leaves.
 - **A keyword counter** (CR 122.1b; Drivnod's indestructible counter, `CounterKinds.Indestructible`; Guide of Souls'
-  `Flying`) is read by
+  `Flying`; Leatherhead's `Hexproof`) is read by
   `Card.HasOwn`: a counter named as the keyword, lower case, gives it — so every rule that asks `s.Has` sees it.

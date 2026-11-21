@@ -286,10 +286,20 @@ public static class MagicState
 			!before.IsToken
 			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Exile)
 			&& s.IsIn(cardId, before.OwnerId, ZoneType.Library);
+		var fresh = before.Fresh();
+		// Worldspine Wurm: "When [this] is put into a graveyard from anywhere" — only for a card that reads its own
+		// arrival there, from the zone it left. Asked of the card as it ARRIVES (no look-back, CR 603.6c): a
+		// face-down Wurm is the Wurm there, a Metamorph that copied one is not.
+		ZoneType? arrivesFrom =
+			zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
+			&& s.GetParent(cardId) != zoneId
+			&& ReadsItsArrivalInAGraveyard(fresh)
+				? ((Zone)s.GetObject(s.GetParent(cardId)!.Value)).ZoneType
+				: null;
 		var knownTo = KnownAfterMoving(s, before, zoneId);
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
-		).UpdateObject(cardId, before.Fresh() with { KnownTo = knownTo });
+		).UpdateObject(cardId, fresh with { KnownTo = knownTo });
 		if (exiledBy?.CounterKind is { } voidKind) // Dauthi Voidwalker: "with a void counter on it"
 			s = s.PutCounters(cardId, voidKind, 1);
 		if (
@@ -324,7 +334,9 @@ public static class MagicState
 				)
 			);
 		if (!leavesBattlefield)
-			return s;
+			return arrivesFrom is { } from
+				? s.Raise(new ChangedZoneEvent(before.OwnerId, cardId, from, ZoneType.Graveyard))
+				: s;
 		// "Leaves the battlefield" (Skyclave Apparition), "put into a graveyard from the battlefield" (Serra
 		// Paragon): a permanent that reads its own leaving, a token too, to the zone it really went to —
 		// carried as it LAST was. Only such a one: an event staged for every Treasure sacrificed would cost
@@ -333,6 +345,7 @@ public static class MagicState
 		// enough (a fetchland, a sacrificed land) to raise for every one.
 		if (
 			ReadsItsLeaving(before)
+			|| arrivesFrom is not null
 			|| (before.Is(CardType.Land) && zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard))
 		)
 			s = s.Raise(
@@ -391,6 +404,24 @@ public static class MagicState
 		card.GetComponent<ExiledUntilLeaves>()!.From == ZoneType.Battlefield
 			? s.EnterBattlefield(card.Id, card.OwnerId)
 			: s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Hand));
+
+	/// <summary>
+	/// Has it a "when this is put into a graveyard from anywhere" of its own (Worldspine Wurm) — a zone-change
+	/// trigger To a graveyard, read from there? A plain loop: MoveCard asks it of every card put into a graveyard.
+	/// </summary>
+	static bool ReadsItsArrivalInAGraveyard(Card card)
+	{
+		foreach (var c in card.Components)
+			if (
+				c is TriggeredAbilityComponent
+				{
+					From: ZoneType.Graveyard,
+					On: { On: EventKind.ChangedZone, To: ZoneType.Graveyard }
+				}
+			)
+				return true;
+		return false;
+	}
 
 	/// <summary>
 	/// Has it a "when this leaves the battlefield" of its own (TriggerEvent.SelfLeaves) — printed (Skyclave

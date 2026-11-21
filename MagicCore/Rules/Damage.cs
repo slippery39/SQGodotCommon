@@ -21,7 +21,7 @@ public static class Damage
 		if (amount <= 0 || !s.HasObject(targetId))
 			return s;
 		amount = Replaced(s, source, targetId, amount, combat);
-		if (Prevented(s, targetId, source))
+		if (Prevented(s, targetId, source, combat))
 			return s;
 
 		if (s.GetObject(targetId) is MagicPlayer player)
@@ -71,9 +71,11 @@ public static class Damage
 	/// <summary>
 	/// The Needs of the Many: "Prevent all damage that would be dealt to you this turn." — none is dealt, so
 	/// no life lost, no lifelink, and combat's "dealt combat damage to a player" doesn't count them. A permanent's
-	/// protection from the source (CR 702.16e, True-Name Nemesis) prevents it the same way.
+	/// protection from the source (CR 702.16e, True-Name Nemesis) prevents it the same way. Questing Beast:
+	/// "Combat damage that would be dealt by creatures you control can't be prevented." — asked last, only of damage
+	/// something would prevent (CombatDamageCantBePrevented).
 	/// </summary>
-	public static bool Prevented(GameState s, int targetId, Card source) =>
+	public static bool Prevented(GameState s, int targetId, Card source, bool combat = false) =>
 		s.GetObject(targetId) switch
 		{
 			MagicPlayer shielded => s.ThisTurnEffects<Effects.PreventAllDamageToYou>(shielded.Id)
@@ -81,7 +83,18 @@ public static class Damage
 			Card permanent => s.IsOnBattlefield(targetId)
 				&& Effects.Protection.Stops(s, permanent, source),
 			_ => false,
-		};
+		}
+		&& !(
+			combat
+			&& new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Any(holder =>
+					s.AbilitiesOf<Effects.CombatDamageCantBePrevented>(holder)
+						.Any(rule =>
+							rule.By.Matches(s, source, new(holder.ControllerId, holder.Id))
+						)
+				)
+		);
 
 	static int Replaced(GameState s, Card source, int targetId, int amount, bool combat) =>
 		Replacements.Apply(

@@ -124,7 +124,9 @@ whose subsystem it lives in.
 - **A shuffle is `ShuffleLibrary(who)`** (MC-4.4e2a), each player named shuffling once: Ponder's "you may shuffle"
   (under a `May`), every search's "then shuffle", and Timetwister's "each player shuffles their hand and graveyard
   into their library" — two `MoveTo`, then ONE shuffle for `Ref.EachPlayer`, so a player with nothing to shuffle in
-  shuffles too. `MoveTo { Shuffle }` is one card shuffled in (Fblthp); several are moved, then shuffled once.
+  shuffles too. `MoveTo { Shuffle }` is one card shuffled in (Fblthp; Green Sun's Zenith's "shuffle Green Sun's Zenith
+  into its owner's library" is the spell's last step, `MoveTo(Ref.Source, Library) { From = [Stack], Shuffle }`, as
+  buyback's return to hand); several are moved, then shuffled once.
   **"You MAY search … then shuffle"** is `SearchLibrary { May }`: no card taken is the search declined — nothing is
   shuffled, so a top card its owner knows stays known. A search with no "may" (Mystical Tutor, landcycling) shuffles
   with nothing found (CR 701.19). Script `May` whenever the text says "may search" — LSV's five are; FRA's two and
