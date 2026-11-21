@@ -1946,7 +1946,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 	Spell(
 		[Target(!Is.Land)],
 		new If(
-			new Matches(Ref.Target(), Is.ManaValueAtMost(Count.ColorsSpent(Ref.Source))),
+			new Matches(
+				Ref.Target(),
+				Is.ManaValueAtMost(Count.ColorsSpent(Ref.Source))
+			),
 			[new Exile(Ref.Target())]
 		)
 	),
@@ -7700,7 +7703,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 			OneOrMore = true,
 		},
 		[],
-		new May("Exile Ajani, then return him transformed?", new Always(), [ReturnTransformed])
+		new May(
+			"Exile Ajani, then return him transformed?",
+			new Always(),
+			[ReturnTransformed]
+		)
 	),
 	BackFace(
 		"Ajani, Nacatl Pariah // Ajani, Nacatl Avenger",
