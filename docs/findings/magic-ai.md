@@ -2436,3 +2436,34 @@ pumping an opponent's creature; the blocks fix's two changes return to the commi
 
 **Match** (`--match=beam,beam+oneattack --until-clear`, FRA's decks; stopped by hand, not by the rule): **49.0%
 over 200 games (98-102)** at 53 min, no 5pp difference either way when stopped. Seed 3 #16's Oculus is AI-34's case 1.
+
+## AI-30.4e: the free passes' second count - what the searches decide (2026-11-21)
+
+Temporary counters (`beam` vs `beam`, 24 games of FRA's decks, any time): 3 196 decisions, 28.2M engine steps; for each,
+whether it searched (or replayed its plan), the window (our main phase with an empty stack, a choice, or a step with
+priority), what it chose, and its engine steps.
+
+| searched in | decisions | chose | share of all engine steps |
+|---|---|---|---|
+| our main phase, empty stack | 528 | acted | 29.5% |
+| **our upkeep** | 150 (+12 acted, 3.2%) | **passed** | **23.4%** |
+| **our draw step** | 158 (+26 acted, 2.8%) | **passed** | **17.2%** |
+| declare attackers | 154 | answered | 7.4% |
+| our beginning of combat | 60 | passed | 3.8% |
+| declare blockers | 120 | answered | 2.7% |
+| a surveil's look | 102 | answered | 1.9% |
+| the rest of our turn's steps (end of combat, damage, end) | ~150 | passed | ~5% |
+| **every step of THEIR turn together** | ~190 | passed | **under 1%** |
+
+**Searches outside our main phase: 56.1% of all steps, and 658 of their 708 passed.** **Our upkeep and draw step
+alone: 308 searches that passed, 40.6% of every step**, about 44 000 and 31 000 steps each - a whole turn's search, run
+because an instant, a flash card or an ability usable any time is in reach (4.6 options on average). The upkeep's plan
+can't survive the draw: the drawn card is unseen, so the draw step searches the whole turn again, and the main phase
+often a third time. Their turn costs almost nothing - our options there are few and the plan rarely runs out.
+
+**The 20 plays those searches made** (the same 24 games, recorded): every one with an empty stack - instant removal and
+abilities used in our upkeep (6) or draw step (14) that the main phase could make as well, the upkeep's before seeing
+the draw. **AI-30.4f** (the default since 2026-11-21, off: `beam+upkeepsearch`; measured as `beam+afterdraw`: our upkeep and
+draw step pass unplanned while the stack is empty): suite
+**9 431 steps a position against 11 934 (−21%)**, 2 changed (draw-step instants now waiting), oracle 71.9% -> 72.2%. Match against `beam` (288 games, --until-clear): **49.7% ±
+1.4pp**, no 5pp difference either way, at **5 003 engine steps a decision against 7 124 (−29.8%)**.

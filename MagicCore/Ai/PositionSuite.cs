@@ -88,6 +88,7 @@ public static class PositionSuite
 			ExpandBranching: 8,
 			RolloutBudget: 2_000,
 			CommitPlans: false,
+			AfterTheDraw: false, // the reference searches everywhere: a human's upkeep play is ranked (--compare)
 			RolloutSettings: BeamSearchAi.DefaultRollout with
 			{
 				LookaheadTurns = 4,

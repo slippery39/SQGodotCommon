@@ -68,18 +68,20 @@ our declare-attackers, both at 20 life unless said; creatures are vanilla unless
 ## Tasks
 
 - [x] AI-33.1 Shayne corrects the draft (answers 4, 7 and 9 given 2026-11-20; more positions welcome)
-- [ ] AI-33.2 The positions as tests, run against today's search: which fail, at what cost each
+- [x] AI-33.2 The positions as tests, run against today's search: which fail, at what cost each - `AttackTests`:
+      1, 2, 3, 4, 6, 7, 9 (5 and 10 were already in `RolloutTests`); all pass; 8 not found as a board yet
 - [x] AI-33.4 The look-ahead's half-block on the Cadet board fixed (the explicit test passing), before the Cadet's
       attack is read as a fault of AI-30.4e's fix - the two-attack clock; its match still to run
-- [ ] AI-33.3 The attack speed changes judged on them (AI-30.4e first, then `shortlist2`, then AI-21's steps)
+- [ ] AI-33.3 The attack speed changes judged on them (AI-30.4e first, then `shortlist2`, then AI-21's steps) -
+      `noblockers`, `shortlist2` and `shortlist1` keep every answer (each a fixture of `AttackTests`); AI-21's steps to come
 
 ## Next
 
 The two-attack clock's match stopped at 49.0% over 200 games (98-102), no difference - Shayne took it
 (2026-11-20) and committed. Open from the review: `TurnsToKill` and the two-turn lethal check still read one
-attack (DesignNotes) - each a suite and a match of its own. Then AI-33.2: write the tests like `RolloutTests`' whole-attack tests
-(`TestGames.Put` the creatures, `PassUntil` the declare-attackers choice, `BeamSearchAi.Decide` each question) and
-report `MagicRules.CountingSteps` beside each answer.
+attack (DesignNotes) - each a suite and a match of its own. Position 8 (Shayne's Jace-token lethal, AI-19.21) needs its
+board found. More positions welcome - especially BIG boards, where the attack plans' cost is (these small ones save 2-17%
+under the speed changes); a new AI-21 step joins as a `[TestFixture("beam+…")]`.
 
 ## Log
 
@@ -116,3 +118,9 @@ report `MagicRules.CountingSteps` beside each answer.
 - 2026-11-20: pre-commit: the table's log showed an AI's damage split as its prompt ("how much damage to …? (3 left to
   divide)") - a game the new clock changed found it; now "Damage: Edgar, Ancient Bloodlord deals 0 to Arcane Amphisbaena"
   (`MagicTableManager.Declared`). `TableChangesTests` moved to seed 2 (seed 1 no longer marks damage on a survivor).
+- 2026-11-21: AI-33.2 - `AttackTests`: seven positions (1 lethal on board, 2 a bigger blocker, 3 nothing can block, 4 the
+  Cadet board on its real cards, 6 evasion only, 7 a deathtouch blocker, 9 ten 1/1s), each printing its cost; every one
+  run under `beam`, `beam+shortlist2`, `beam+shortlist1` and `beam+noblockers`. All 32 pass; the Cadet board's control
+  (`+oneattack`) attacks under each. Engine steps, beam / shortlist2 / shortlist1 / noblockers: 1 lethal 1 165 / 1 100 /
+  985 / 1 009; 2 331 / 331 / 331 / 291; 3 240 / 240 / 240 / 220; 4 7 198 / 6 637 / 5 974 / 7 030; 6 855 / 828 / 820 /
+  767; 7 723 / 704 / 623 / 693; 9 4 945 / 4 879 / 4 813 / 4 691.

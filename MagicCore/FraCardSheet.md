@@ -1119,7 +1119,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Deathtouch  
 > When this creature enters, target creature gets +2/+2 and gains deathtouch until end of turn.
 
-**Status:** scripted · **tests naming it:** FraCardTests, RolloutTests
+**Status:** scripted · **tests naming it:** AttackTests, FraCardTests, RolloutTests
 
 **Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1185,7 +1185,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Whenever this creature attacks, it deals 1 damage to each opponent and you gain 1 life.
 
-**Status:** scripted · **tests naming it:** FraCardTests, OptionReportTests, RolloutTests
+**Status:** scripted · **tests naming it:** AttackTests, FraCardTests, OptionReportTests, RolloutTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -4167,7 +4167,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Way of the Healer enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")  
 > Planeswalkers you control have "[−2]: Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1."
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AttackTests, FraCardTests
 
 **Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 

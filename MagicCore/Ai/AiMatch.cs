@@ -173,6 +173,8 @@ public static class AiMatch
 			// fewer attack plans re-judged against the rollout's real blocks (beam+shortlist2 / +shortlist1, the default 3).
 			["freepasses2"] = o => o with { FreePassCap = 2 },
 			["freepasses1"] = o => o with { FreePassCap = 1 },
+			// Our upkeep and draw step searched even with an empty stack, as before AI-30.4f: beam+upkeepsearch.
+			["upkeepsearch"] = o => o with { AfterTheDraw = false },
 			["shortlist2"] = WithRollout(r => r with { AttackShortlist = 2 }),
 			// AI-30.4e: the attack plans not re-judged against the real blocks when nothing of theirs can block
 			["noblockers"] = WithRollout(r => r with { NoBlockers = true }),

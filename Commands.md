@@ -199,6 +199,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     nodamagepotential  marked damage not in the potential, the combat tie to the first option (before AI-19.22)
 #     shortlist2 / shortlist1  AI-22 experiments (OFF by default): 2 or 1 attack plans re-judged against the rollout's real blocks, not 3
 #     freepasses2 / freepasses1  AI-22 experiments (OFF by default): at most 2 or 1 free passes in a row, not 4
+#     upkeepsearch  our upkeep and draw step searched even with an empty stack (before AI-30.4f)
 #     noblockers  AI-30.4e experiment (OFF by default): attack plans not re-judged against the real blocks when nothing of theirs can block
 #     oneattack   the clock reads one attack, a chump blocker stopping its attacker for good (before AI-33.4)
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)

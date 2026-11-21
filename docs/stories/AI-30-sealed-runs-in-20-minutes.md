@@ -52,6 +52,9 @@ plans (`WholeAttacks.Best`) 50%, free passes 36%, the engine's per-step checks t
             code removed
       - [ ] AI-30.4e The attack plans not re-judged against the real blocks when nothing of theirs can block
             (`beam+noblockers`, off) - Shayne, 2026-11-20: "A. sounds good"; it found a bug in the re-judging, fixed
+      - [x] AI-30.4f Our upkeep and draw step pass unplanned while the stack is empty - the default, `beam+upkeepsearch`
+            off (Shayne, 2026-11-21: "planing usually starts after you draw your card for the turn"); suite −21%, 2
+            changed; match level (49.7% ± 1.4pp, 288 games) at −30% a decision
 - [ ] AI-30.5 The before/after sealed run, in `docs/findings/magic-ai.md`
 
 ## Next
@@ -135,3 +138,24 @@ till the end), and Shayne's margin. Read AI-22 (done) and its findings ("AI-22.1
 - 2026-11-20: committed with AI-33.4's two-attack clock: the blocks fix (its two changes gone again under the new clock
   - the Cadet stays home), A still OFF (`beam+noblockers`; not yet matched; decision-neutral on the suite under the old clock). Review: the
   probe's cap raised to 100 passes (one pass a step since AutoPass went).
+- 2026-11-21: the free passes' second count (24 games, temporary counters): searches outside our main phase are 56% of
+  all engine steps and 658 of 708 passed; **our own upkeep and draw step: 308 searches that passed, 40.6% of every
+  step** - the upkeep's plan never survives the draw (an unseen card). Their turn: under 1%. Findings "the free passes'
+  second count". For Shayne: which lever.
+- 2026-11-21: the upkeep and draw-step plays (24 games, the counters again): 20 distinct, all with an EMPTY stack - none
+  answers a trigger, none looks at the library before the draw. Instant removal (Academic Ascent, Compel Brutality,
+  Wrath of the Bloodmane, Terminal Criticism, Extended Absence, Fulminous Forte, Last Gasp, Prophesied End, Fatehold
+  Charm) and abilities (Eardrum Rattler, Yoshimaru's {6}, Living Library) used early for nothing - six of them in the
+  upkeep, before seeing the draw. Shayne: "we can safely skip the planning for our own upkeep or draw step ... keep the
+  edge cases (i.e. certain cards in play ... that trigger on upkeep or on draw)" - a trigger is on the stack when we
+  get priority, so the skip is "our upkeep or draw step, no choice, an empty stack". Built: `Settings.AfterTheDraw`
+  (`beam+afterdraw`, off), test `OurUpkeep_PassesUnplanned_AfterTheDraw` (with its control). Suite: **9 431 steps a
+  position against 11 934 (−21%)**, 2 changed - both a draw-step instant now waiting (seed 2 #81 Compel Brutality from
+  the Jace token; seed 4 #56 Konstrari Charm's counters on a Cadet); oracle agreement 71.9% -> 72.2%. The counters
+  removed.
+- 2026-11-21: AI-30.4f's match, `beam+afterdraw` vs `beam` (--until-clear, 288 games): **49.7% ± 1.4pp** (143-145),
+  early stop "no difference of 5pp either way"; **5 003 engine steps a decision against 7 124 (−29.8%)**, rollouts
+  12.0 against 16.4. Spells cast 9.5 against 9.4, lands 7.3 each. Shayne: "Sure" - the default since 2026-11-21
+  (`Settings.AfterTheDraw`; `beam+upkeepsearch` searches there again); the oracle keeps searching there (`--compare`
+  ranks a human's upkeep play); the skip clears a plan made earlier in the upkeep. Suite re-accepted (the same 2
+  changed). The ceiling - nothing before the draw, such as a surveil instant setting it up - is in DesignNotes.

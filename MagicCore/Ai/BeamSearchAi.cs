@@ -127,6 +127,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// by the average lift). The default since 2026-11-20 (Shayne; matched 48-48, −12.5% a decision); off is
 	/// beam+nolandmatters.
 	/// </param>
+	/// <param name="AfterTheDraw">
+	/// Our own upkeep and draw step pass unplanned while the stack is empty (AI-30.4f, Shayne 2026-11-21: "planing
+	/// usually starts after you draw your card for the turn") - an upkeep or draw trigger is on the stack when we get
+	/// priority: theirs is still searched, ours resolves as before. Measured: 308 searches there that passed were 40.6% of every engine step, the
+	/// upkeep's plan never surviving the draw. The default since 2026-11-21 (match level, −30% a decision);
+	/// beam+upkeepsearch searches there again.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -162,7 +169,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool SettleHeld = true,
 		bool SharedStart = true,
 		bool LandsCovered = true,
-		bool LandMatters = true
+		bool LandMatters = true,
+		bool AfterTheDraw = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -319,7 +327,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// </summary>
 	public string Explain() =>
 		sampled is null
-			? "\n(no search: one option, a plan replayed, or a forced pass)\n"
+			? "\n(no search: one option, a plan replayed, a forced pass, or our upkeep or draw step)\n"
 			: Evaluator.Without(
 				options.Without,
 				() =>
@@ -501,6 +509,19 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		)
 			return AiDecision.Answering(s, [WholeAttacks.Answer(s, PlayerId, attack, ask)]);
 		declaring = null;
+		if (
+			options.AfterTheDraw
+			&& !s.IsWaitingForChoice
+			&& s.GetGame() is { Step: Step.Upkeep or Step.Draw } game
+			&& game.ActivePlayerId == PlayerId
+			&& Stops.TopOfStackControllerId(s) == 0
+		)
+		{
+			// ponytail: nothing before the draw is considered (a surveil instant setting it up); skip only when no such
+			// option is in reach if a card needs it (DesignNotes, MagicCore known ceilings)
+			(plan, planExpected) = ([], []); // a plan made earlier this upkeep must not replay its passes in the main phase
+			return AiDecision.Acting(s, new PassPriorityAction { PlayerId = PlayerId });
+		}
 		var decision = FromPlan(s) ?? Search(s);
 		if (decision is Declare d)
 		{
