@@ -1631,6 +1631,26 @@ as his three priorities.
   black instant — an inline card has no colour unless its data says so); 9/9 revert-checks caught. Golden-out moved
   nothing (162 random, 887 card games); golden-in moved 30 random and 583 card games, 44 added, no AI game; probe 150:
   none unfinished, every card used (Mother activated 868, Giver 742, Parallax Wave 799, Jennifer 74). Suite 2,171 passed.
+- 2026-11-21, Claude (cube lane) — **4.4j2b + j3 as one batch: white's counter, cost and token options and the monarch —
+  321 of 528 play (white 57 of 60).** As planned, but for three things found building. **Guide of Souls**: `Count.
+  CountersOfKind` and `RemoveCounters { Kind }` reach a player as `PutCounters` does — "you may pay {E}{E}{E}. When you
+  do" is `May(AtLeast(CountersOfKind(You, Energy), 3), [RemoveCounters, WhenYouDo])`; the flying counter `CounterKinds.
+  Flying` (Drivnod's keyword counter); the Angel `ForGood, AlsoCreatureType`. **Prismatic Ending**: converge is the
+  `Sunburst` marker on the card (the most-colours payment) and `Count.ColorsSpent(Ref.Source)` — no option needed on an
+  instant or sorcery (a converge permanent would get the charge counters: DesignNotes). Found: the most-colours payment
+  repeated the cost's OWN colour ({X}{W}, X = 2 spent two) — its known ceiling; fixed at the root, the subsets leave out
+  the cost's pips' colours (Engineered Explosives' {X} unchanged). **Sunfall**: `LsvCards.Incubate(x)`, an Incubator
+  token with `TransformsInto` among its abilities — no new piece. **Ajani**: `WhenYouDo { If }` (the intervening if on a
+  reflexive trigger, checked as it triggers and again on resolution); the −4 `EachSacrifices { Keeps = [types] }` — one
+  required choice per type there is one of, then the rest of the filter sacrificed (`SacrificeTheRestAction`).
+  **j3 the monarch**: `InitiativeComponent` generalised to `DesignationComponent(name)` (`Initiative`, `Monarch`; the
+  initiative's tests moved onto it), `BecomeTheMonarch`; Palace Jailer's exile `ExileUntilSourceLeaves {
+  UntilAnOpponentTakes = Monarch }` — stamped with no source, returned by `Take` as the designation MOVES to an opponent
+  of the exiler (ceiling in DesignNotes: one exiled while they already hold it waits until they take it again). 12
+  tests in `LsvBatch2j2bTests.cs`; 10/10 revert-checks caught (the Ajani one after its test also asserted no target is
+  asked — the resolution check alone stopped the damage). Golden-out moved nothing (162 random, 898 card games);
+  golden-in moved 30 random and 309 card games, 20 added, no AI game; probe 150: none unfinished, every card used (Ajani
+  activated 343). Suite 2,183 passed.
 
 ## Tasks
 
@@ -1896,9 +1916,9 @@ as his three priorities.
           Meadow, White Plume Adventurer, Parallax Wave, Get Lost (the Map token)
     - [x] MC-4.4j2a Options, protection and triggers, 5: Mother of Runes, Giver of Runes, Seasoned Dungeoneer, Winds of
           Abandon, Jennifer Walters // The Sensational She-Hulk
-    - [ ] MC-4.4j2b Options, counters, costs and tokens, 4 (one batch with j3): Guide of Souls, Prismatic Ending (converge),
+    - [x] MC-4.4j2b Options, counters, costs and tokens, 4 (one batch with j3): Guide of Souls, Prismatic Ending (converge),
           Sunfall (incubate), Ajani, Nacatl Pariah // Ajani, Nacatl Avenger
-    - [ ] MC-4.4j3 The monarch: Palace Jailer
+    - [x] MC-4.4j3 The monarch: Palace Jailer
     - [ ] MC-4.4j4 Ascend (one batch with j5, j6): Ocelot Pride
     - [ ] MC-4.4j5 Reconfigure: Lion Sash
     - [ ] MC-4.4j6 Voting: Council's Judgment
@@ -1929,10 +1949,15 @@ black are finished** (Decisions, "4.4i7"; 305 of 528 play — W 41/60, U 75/75, 
 6/65, colourless 58/163). **MC-4.4j is planned (Decisions, "4.4j"; Shayne took it as written): three batches — j1 +
 j2a (the 6 tested pieces and 5 protection and trigger options), j2b + j3 (4 counter, cost and token options and the
 monarch), j4–j6 (ascend, reconfigure, voting). j1 + j2a is done** (Decisions, "4.4j1 + j2a"; 316 of 528 play — W 52/60,
-U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **Next, in a NEW session: j2b + j3** — Guide
-of Souls, Prismatic Ending, Sunfall, Ajani, Nacatl Pariah and the monarch (Palace Jailer), as the plan says. From
-j1 + j2a: "protection from the color of your choice" is `GainsChosenKeyword { Grants }`; fading `LsvCards.Fading(n)`; the
-Map token `LsvCards.CreateMap`; j2a's tests are in `LsvBatch2jTests.cs` (`Rune`, `Bolt`, `Murder`). White's 19 (Shayne, 2026-11-20: white next),
+U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **j2b + j3 is done** (Decisions, "4.4j2b +
+j3"; 321 of 528 play — W 57/60, U 75/75, B 61/61, R 54/54, G 10/50, multicolour 6/65, colourless 58/163). **Next, in a
+NEW session: j4–j6** — ascend (Ocelot Pride), reconfigure (Lion Sash), voting (Council's Judgment), as the plan says;
+the last of white. From j2b + j3: the monarch and the initiative are `DesignationComponent(name)` (Okoye, Forth
+Eorlingas! and Aragorn take the monarch with multicolour); a player's counters are counted and removed as cards' are;
+`EachSacrifices { Keeps }`; `WhenYouDo { If }`; incubate `LsvCards.Incubate(x)`; the tests are in
+`LsvBatch2j2bTests.cs`. From j1 + j2a: "protection from the color of your choice" is `GainsChosenKeyword { Grants }`;
+fading `LsvCards.Fading(n)`; the Map token `LsvCards.CreateMap`; j2a's tests are in `LsvBatch2jTests.cs` (`Rune`,
+`Bolt`, `Murder`). White's 19 (Shayne, 2026-11-20: white next),
 read card by card and tiered as 4.4h and 4.4i were (Shayne: more cards a session) — Giver of Runes, Guide
 of Souls, Mother of Runes, Ocelot Pride, Ajani, Nacatl Pariah // Ajani, Nacatl Avenger, Lion Sash, White Plume
 Adventurer, Palace Jailer, Seasoned Dungeoneer, Witch Enchanter // Witch-Blessed Meadow (modal: i7's piece), Solitude,
@@ -2296,3 +2321,4 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-20: MC-4.4j planned — 6 tested pieces, 9 options, 4 new pieces (the monarch, ascend, reconfigure, voting);
   three batches. Shayne took it as written; j1 + j2a next.
 - 2026-11-20: MC-4.4j1 + j2a done — 11 white cards, 316 of 528 play (white 52 of 60). Next: j2b + j3.
+- 2026-11-21: MC-4.4j2b + j3 done — 5 white cards and the monarch, 321 of 528 play (white 57 of 60). Next: j4–j6.

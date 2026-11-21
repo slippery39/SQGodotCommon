@@ -365,12 +365,19 @@ public static class MagicState
 			)
 			.ToList();
 		foreach (var card in exiled)
-			s =
-				card.GetComponent<ExiledUntilLeaves>()!.From == ZoneType.Battlefield
-					? s.EnterBattlefield(card.Id, card.OwnerId)
-					: s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Hand)); // Deep-Cavern Bat's
+			s = s.ReturnFromExileUntil(card);
 		return s;
 	}
+
+	/// <summary>
+	/// A card exiled "until …" comes back (ExiledUntilLeaves) — to the zone it left: the battlefield under its owner, or
+	/// its owner's hand (Deep-Cavern Bat's). As its source leaves (MoveCard), or Palace Jailer's as an opponent of its
+	/// exiler becomes the monarch (DesignationComponent.Take).
+	/// </summary>
+	public static GameState ReturnFromExileUntil(this GameState s, Card card) =>
+		card.GetComponent<ExiledUntilLeaves>()!.From == ZoneType.Battlefield
+			? s.EnterBattlefield(card.Id, card.OwnerId)
+			: s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Hand));
 
 	/// <summary>
 	/// Has it a "when this leaves the battlefield" of its own (TriggerEvent.SelfLeaves) — printed (Skyclave

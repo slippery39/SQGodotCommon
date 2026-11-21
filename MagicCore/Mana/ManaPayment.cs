@@ -80,8 +80,8 @@ public static class ManaPayment
 	/// picks X, the payment does the rest (Shayne, 2026-11-05). k of the generic as k different coloured
 	/// pips, the largest k that pays; else Find's own. Never by sacrificing a Treasure or using Starfleet
 	/// Academy that Find's own wouldn't: a colour isn't worth a resource the player didn't choose to spend.
-	/// ponytail: built for a cost of X alone (Engineered Explosives) — with coloured pips of its own the
-	/// first k-subset that pays may repeat one, and not be the most colours.
+	/// Converge (Prismatic Ending, {X}{W}): the k colours are ones the cost's own pips don't already spend, so the
+	/// first k-subset that pays adds k colours to theirs. ponytail: a hybrid pip's colour isn't known until paid.
 	/// </summary>
 	static IReadOnlyList<Payment>? FindMostColors(
 		GameState s,
@@ -102,11 +102,14 @@ public static class ManaPayment
 			.Sum(m => m.Amount);
 		ManaColor[] colors =
 		[
-			ManaColor.White,
-			ManaColor.Blue,
-			ManaColor.Black,
-			ManaColor.Red,
-			ManaColor.Green,
+			.. new[]
+			{
+				ManaColor.White,
+				ManaColor.Blue,
+				ManaColor.Black,
+				ManaColor.Red,
+				ManaColor.Green,
+			}.Where(c => !cost.Symbols.Any(m => m.Kind == SymbolKind.Colored && m.Color == c)),
 		];
 		for (var k = Math.Min(generic, colors.Length); k > 0; k--)
 			foreach (var set in Subsets(colors, k))

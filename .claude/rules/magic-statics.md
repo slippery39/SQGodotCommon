@@ -208,7 +208,9 @@ whose subsystem it lives in.
   state-based check (CR 704.5c, `StateBasedActions`). **"You may pay any amount of [life / {E}]" is ONE piece,
   `PayAnyAmount { Kind, AtMost, Then }`** — a `ChooseNumberChoice` from 0 to what you have (life: never all of it), the
   amount paid, then `Then` with `Count.AmountPaid` — "deals that much damage", Necrodominance's "draw that many cards"
-  (`AtMost`: the cards in your library). Never a "pay X, then do Y" piece per card.
+  (`AtMost`: the cards in your library). Never a "pay X, then do Y" piece per card. A FIXED payment (Guide of Souls:
+  "you may pay {E}{E}{E}. When you do, …", MC-4.4j2b) is `May(AtLeast(Count.CountersOfKind(Ref.You, Energy), 3),
+  [RemoveCounters(Ref.You, 3) { Kind }, WhenYouDo(…)])` — the count and the removal reach a player as `PutCounters` does.
 - **A transforming double-faced card** (CR 712; Fable of the Mirror-Breaker, Etali, Primal Conqueror — MC-4.4i5–i6) is
   its front face, with its back as `TransformsInto(Face, Keywords, Abilities)` — `LsvCards.BackFace(card, abilities…)`,
   the back face's script. **`Card.Transform` is a copy stamp, as face-down's**: the back face's values, the front kept
@@ -219,6 +221,8 @@ whose subsystem it lives in.
   transforms (a transforming token); a permanent under a copy effect never does (Phyrexian Metamorph, Hall of Echoes:
   CR 701.28c). Each face's colours are Scryfall's (`CardFace.Colors` — the back's colour indicator: Etali, Primal Sickness
   is red and green; the front's when the card has none at the top); a back face has mana value 0 (DesignNotes).
+  **A transforming token** (Sunfall's incubate, MC-4.4j2b: `LsvCards.Incubate(x)`, an Incubator with "{2}: Transform
+  this token" becoming a 0/0 Phyrexian artifact creature) carries `TransformsInto` among `CreateTokens.Abilities`.
   **"When this transforms into [it]"** (Revealing Eye, MC-4.4i7) is `TriggerEvent.SelfTransforms` on the back face —
   `TransformedEvent`, raised by the `Transform` effect alone (entering transformed isn't transforming). **An ability of a
   permanent transforms it only if it hasn't transformed since it was put on the stack** (CR 701.28f: Cecil, Dark Knight's
@@ -227,5 +231,6 @@ whose subsystem it lives in.
   never transformed (`Card.Transform` refuses either face up), its back face a land played as `PlayLandAction { BackFace }`
   — offered beside the front's casts (`MagicRules`, `Playable.Candidates`: a land permission from a graveyard plays it),
   judged and entering as that face (`Card.ModalBackFace` → `BackFaceUp`, the copy stamp), front face up once it leaves.
-- **A keyword counter** (CR 122.1b; Drivnod's indestructible counter, `CounterKinds.Indestructible`) is read by
+- **A keyword counter** (CR 122.1b; Drivnod's indestructible counter, `CounterKinds.Indestructible`; Guide of Souls'
+  `Flying`) is read by
   `Card.HasOwn`: a counter named as the keyword, lower case, gives it — so every rule that asks `s.Has` sees it.

@@ -109,6 +109,9 @@ public static class CounterKinds
 	/// <summary>Metamorphosis Fanatic: "with a lifelink counter on it" — a keyword counter, as Drivnod's.</summary>
 	public const string Lifelink = "lifelink";
 
+	/// <summary>Guide of Souls: "put two +1/+1 counters and a flying counter on target attacking creature".</summary>
+	public const string Flying = "flying";
+
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
 	public const string PlusOne = "+1/+1";
@@ -879,6 +882,8 @@ public record ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComp
 /// mana spent to cast it." — the cast pays with as many different colours as it can
 /// (ManaPayment.FindMostColors) and records them (OnStackComponent.ColorsSpent). ponytail: charge
 /// counters only, as on an artifact; a sunburst creature's +1/+1 counters wait for one.
+/// Converge (Prismatic Ending, an instant or sorcery) is the same payment, read by Count.ColorsSpent — no permanent,
+/// so no counters. ponytail: a converge PERMANENT would get charge counters too; give this a Converge option then.
 /// </summary>
 public record Sunburst : GameComponent;
 
@@ -952,6 +957,11 @@ public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameCompo
 {
 	/// <summary>Where it returns: onto the battlefield, or its owner's hand (Deep-Cavern Bat's card).</summary>
 	public ZoneType From { get; init; } = ZoneType.Battlefield;
+
+	/// <summary>Palace Jailer's: returned as this designation moves to an opponent of Exiler (DesignationComponent.Take).</summary>
+	public string? UntilAnOpponentTakes { get; init; }
+
+	public int Exiler { get; init; }
 }
 
 /// <summary>

@@ -405,7 +405,8 @@ public enum CountOf
 	SubtypesAmong, // Tam: "planeswalker types among planeswalkers you control"
 	DistinctNamesOf, // Strange new worlds: "the number of differently named lands you control"
 	TotalPowerOf, // Power 8: "creatures you control have total power 8 or greater"
-	CountersOfKind, // Anthropological Mission: "three or more quest counters on [Ref]" — Count.CounterKind
+	CountersOfKind, // Anthropological Mission: "three or more quest counters on [Ref]" — Count.CounterKind; a player's too (Guide of Souls' {E})
+	ColorsSpent, // Prismatic Ending: "the number of colors of mana spent to cast this spell" — [Ref]'s spell (Card.AsCast)
 	CreatureTypesAmong, // Federation: "creature types among non-Borg creatures you control"
 	AllCountersOn, // Jadzia Dax: "the number of counters on her" — every kind
 	LifeTotalOf, // Live Long and Prosper: "Double your life total" — the players [Ref] names
@@ -443,6 +444,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static Count CountersOfKind(Ref r, string kind) =>
 		new(0, r, CountOf.CountersOfKind) { CounterKind = kind };
+
+	/// <summary>
+	/// Converge (Prismatic Ending): "the number of colors of mana spent to cast this spell" — the spell's (or the
+	/// permanent's: what it was cast as) OnStackComponent.ColorsSpent; the cast pays with the most colours it can,
+	/// as sunburst's, because the card carries Sunburst.
+	/// </summary>
+	public static Count ColorsSpent(Ref r) => new(0, r, CountOf.ColorsSpent);
 
 	/// <summary>DevotionTo: which colours.</summary>
 	public ImmutableArray<ManaColor> Colors { get; init; } = [];
@@ -746,7 +754,16 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Sum(c => c.GetComponent<Actions.OnStackComponent>()?.Modes.Length ?? 0),
 			CountOf.TimesReplicated => Cards().Sum(c => c.AsCast?.Replicate ?? 0),
 			CountOf.SpellsCastBefore => Cards().Sum(c => c.AsCast?.SpellsCastBefore ?? 0),
-			CountOf.CountersOfKind => Cards().Sum(c => c.CountersOf(CounterKind!)),
+			CountOf.CountersOfKind => Of.CountedAsTheyWere(s, context)
+				.Sum(o =>
+					o switch
+					{
+						Card c => c.CountersOf(CounterKind!),
+						MagicPlayer p => p.CountersOf(CounterKind!), // a player's (CR 122.1): energy, poison
+						_ => 0,
+					}
+				),
+			CountOf.ColorsSpent => Cards().Select(c => c.AsCast?.ColorsSpent ?? 0).FirstOrDefault(),
 			CountOf.DevotionTo => Cards()
 				.SelectMany(c => c.ManaCost.Symbols)
 				.Count(sym =>

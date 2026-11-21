@@ -201,44 +201,98 @@ public record MoveVentureMarkerAction(int DungeonId, ImmutableArray<int> Exits) 
 }
 
 /// <summary>
-/// The initiative (CR 725), held by one player: an object in its holder's command zone carrying the designation's
-/// two triggers — "at the beginning of your upkeep, venture into Undercity" and "whenever one or more creatures deal
-/// combat damage to you, their controller takes the initiative". Nearest piece: an emblem, which is forever and
-/// never changes hands.
+/// A designation one player holds — the initiative (CR 725), the monarch (CR 724): an object in its holder's command
+/// zone, named for it, carrying its triggers. The initiative's: "at the beginning of your upkeep, venture into
+/// Undercity" and "whenever one or more creatures deal combat damage to you, their controller takes the initiative";
+/// the monarch's (Palace Jailer): "at the beginning of your end step, draw a card" and "whenever a creature deals
+/// combat damage to you, its controller becomes the monarch". Nearest piece: an emblem, which is forever and never
+/// changes hands.
 /// </summary>
-public record InitiativeComponent : GameComponent
+public record DesignationComponent(string Name) : GameComponent
 {
-	public const string Name = "The Initiative";
+	public const string Initiative = "The Initiative";
+	public const string Monarch = "The Monarch";
 
-	static readonly ImmutableArray<GameComponent> Abilities =
+	static readonly ImmutableArray<GameComponent> InitiativeAbilities =
 	[
-		new InitiativeComponent(),
+		new DesignationComponent(Initiative),
 		new TriggeredAbilityComponent(TriggerEvent.YourUpkeep, [new Venture()]),
-		new TriggeredAbilityComponent(
-			new Trigger(EventKind.CombatDamageToPlayers) { Subject = Is.Player & Is.Yours },
-			// ponytail: the active player is the attackers' controller with two players; multiplayer needs the
-			// damage's source (DesignNotes)
-			[new TakeTheInitiative(Ref.ActivePlayer)]
-		),
+		TakenByCombatDamage(new TakeTheInitiative(Ref.ActivePlayer)),
 	];
 
-	/// <summary>Who has the initiative — 0 for nobody.</summary>
-	public static int HolderOf(GameState s) =>
-		new[] { s.Player1Id(), s.Player2Id() }.FirstOrDefault(p =>
-			s.CardsIn(p, ZoneType.Command).Any(c => c.HasComponent<InitiativeComponent>())
+	static readonly ImmutableArray<GameComponent> MonarchAbilities =
+	[
+		new DesignationComponent(Monarch),
+		new TriggeredAbilityComponent(TriggerEvent.YourEndStep, [new DrawCards(Ref.You, 1)]),
+		TakenByCombatDamage(new BecomeTheMonarch(Ref.ActivePlayer)),
+	];
+
+	static ImmutableArray<GameComponent> AbilitiesOf(string name) =>
+		name switch
+		{
+			Initiative => InitiativeAbilities,
+			Monarch => MonarchAbilities,
+			_ => throw new ArgumentException($"No designation {name}"),
+		};
+
+	// ponytail: the active player is the attackers' controller with two players; multiplayer needs the damage's
+	// source (DesignNotes)
+	static TriggeredAbilityComponent TakenByCombatDamage(Effect take) =>
+		new(
+			new Trigger(EventKind.CombatDamageToPlayers) { Subject = Is.Player & Is.Yours },
+			[take]
 		);
 
-	/// <summary>CR 725.3: one holder — the designation leaves whoever had it, then is the new holder's.</summary>
-	public static GameState Take(GameState s, int playerId)
+	/// <summary>Who holds it — 0 for nobody.</summary>
+	public static int HolderOf(GameState s, string name) =>
+		new[] { s.Player1Id(), s.Player2Id() }.FirstOrDefault(p =>
+			s.CardsIn(p, ZoneType.Command)
+				.Any(c => c.GetComponent<DesignationComponent>()?.Name == name)
+		);
+
+	/// <summary>
+	/// CR 725.3, 724.3: one holder — the designation leaves whoever had it, then is the new holder's. Moving to a new
+	/// holder, it returns what was exiled until an opponent of its exiler took it (Palace Jailer, from where it left).
+	/// </summary>
+	public static GameState Take(GameState s, int playerId, string name)
 	{
+		var moved = HolderOf(s, name) != playerId;
 		foreach (var p in new[] { s.Player1Id(), s.Player2Id() })
 		foreach (
 			var held in s.CardsIn(p, ZoneType.Command)
-				.Where(c => c.HasComponent<InitiativeComponent>())
+				.Where(c => c.GetComponent<DesignationComponent>()?.Name == name)
 				.ToList()
 		)
 			s = s.RemoveObject(held.Id);
-		return GetEmblem.ToCommandZone(s, playerId, Name, Abilities);
+		s = GetEmblem.ToCommandZone(s, playerId, name, AbilitiesOf(name));
+		if (!moved)
+			return s;
+		foreach (
+			var card in new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
+				.Where(c =>
+					c.GetComponent<ExiledUntilLeaves>() is { } link
+					&& link.UntilAnOpponentTakes == name
+					&& link.Exiler != playerId
+				)
+				.ToList()
+		)
+			s = s.ReturnFromExileUntil(card);
+		return s;
+	}
+}
+
+/// <summary>
+/// Palace Jailer: "When this creature enters, you become the monarch." (CR 724) — the designation moves; a player who
+/// is already the monarch stays it.
+/// </summary>
+public record BecomeTheMonarch(Ref Who) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Take(1).ToList())
+			s = DesignationComponent.Take(s, player, DesignationComponent.Monarch);
+		return new(s);
 	}
 }
 
@@ -253,7 +307,10 @@ public record TakeTheInitiative(Ref Who) : Effect
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Take(1).ToList())
-			s = Venture.Into(InitiativeComponent.Take(s, player), player);
+			s = Venture.Into(
+				DesignationComponent.Take(s, player, DesignationComponent.Initiative),
+				player
+			);
 		return new(s);
 	}
 }
@@ -269,5 +326,6 @@ public record YouCompletedADungeon : Condition
 public record YouHaveTheInitiative : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		InitiativeComponent.HolderOf(s) == (int)context[ContextKeys.Controller];
+		DesignationComponent.HolderOf(s, DesignationComponent.Initiative)
+		== (int)context[ContextKeys.Controller];
 }

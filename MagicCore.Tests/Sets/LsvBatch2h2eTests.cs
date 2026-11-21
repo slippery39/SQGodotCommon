@@ -170,7 +170,10 @@ public class LsvBatch2h2eTests : FraBoardTest
 			"under your control"
 		);
 		Assert.That(s.GetCard(bear).CountersOf(CounterKinds.Corpse), Nu.EqualTo(1));
-		Assert.That(InitiativeComponent.HolderOf(s), Nu.EqualTo(me));
+		Assert.That(
+			DesignationComponent.HolderOf(s, DesignationComponent.Initiative),
+			Nu.EqualTo(me)
+		);
 		Cast(Hand(TestCards.Kill(), me), [], bear);
 		Assert.That(InExile(bear), Nu.True, "would leave: exiled instead");
 	}

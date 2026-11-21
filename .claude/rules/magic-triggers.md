@@ -59,6 +59,8 @@ whose subsystem it lives in.
 - **"When you do"** (a reflexive trigger, CR 603.12) is the `WhenYouDo` effect: its targets are chosen
   as it triggers, after the thing done, and it goes on the stack above — never fold it into the effect.
   It triggers only if the thing was done: after a mill it goes in `Mill.IfMilled` (an empty library mills nothing).
+  "When you do, if you control a red permanent other than Ajani" (Ajani, Nacatl Avenger, MC-4.4j2b) is `WhenYouDo { If
+  }`: an intervening if — nothing triggers unless it holds, and it is checked again on resolution (the ability's `If`).
 - **An intervening "if" (CR 603.4) is `TriggeredAbilityComponent.If`**, never a bare `If` effect:
   checked as it triggers (`Collect`) AND again on resolution (`QueueTargets` wraps the effects).
   Edgar with a spell cast in response to his trigger gets nothing. A condition on the EVENT itself
@@ -139,12 +141,18 @@ whose subsystem it lives in.
   path), and the room's ability is put on the stack as `WhenYouDo`'s is (`Triggers.QueueTargets`, its source the
   dungeon). On its last room it is removed once that ability has left the stack — the Saga's check
   (`ChapterToResolve`), in the state-based actions. **The initiative** is an object in its holder's command zone
-  (`InitiativeComponent`) carrying its two triggers: "at the beginning of your upkeep, venture", and "whenever
+  (`DesignationComponent(Initiative)`) carrying its two triggers: "at the beginning of your upkeep, venture", and "whenever
   creatures deal combat damage to you, the active player takes it". `TakeTheInitiative(who)` moves it (one holder,
   CR 725.3), then ventures — again when you already hold it. "If you have the initiative" is `YouHaveTheInitiative`.
   **A dungeon removed on its last room is completed** (CR 309.7) — `Undercity.Complete`, from both removals (the state
   check and a venture), counts it on its venturer for the game (`MagicPlayer.DungeonsCompleted`); "if you've completed
   a dungeon" (Caves of Chaos Adventurer, MC-4.4i2a) is `YouCompletedADungeon`.
+  **The monarch** (CR 724, Palace Jailer, MC-4.4j3) is the same object: both are `DesignationComponent(name)`
+  (`Initiative`, `Monarch`), one holder each (`HolderOf`, `Take`); the monarch's triggers are "at the beginning of your
+  end step, draw a card" and combat damage to you making the active player the monarch — `BecomeTheMonarch(who)`.
+  "Exile … until an opponent becomes the monarch" is `ExileUntilSourceLeaves { UntilAnOpponentTakes = Monarch }`,
+  stamped `ExiledUntilLeaves(0, 0) { UntilAnOpponentTakes, Exiler }` — no source, so its leaving never returns it —
+  and returned by `Take` as the designation MOVES to an opponent of the exiler, to the zone it left.
 - **"Whenever [a creature with …] deals combat damage to a player"** — not "this" — is
   `Trigger.CombatDamageBy`, a filter on the damage's SOURCE (Phlox); the event's subject is the player.
 - **"Sacrifice it at the beginning of the next end step"** on a new token is `CreateTokens`/`CreateTokenCopy`

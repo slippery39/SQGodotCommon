@@ -3443,6 +3443,128 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4j2b + j3: white's counter, cost and token options; the monarch =====
+			["Guide of Souls"] =
+			[
+				When(
+					TriggerEvent.AnotherCreatureYouControlEnters,
+					[],
+					new GainLife(Ref.You, 1),
+					new PutCounters(Ref.You, 1) { Kind = CounterKinds.Energy }
+				),
+				When(
+					TriggerEvent.YouAttack,
+					[],
+					new May(
+						"Pay {E}{E}{E}? Two +1/+1 counters and a flying counter on target attacking creature.",
+						new AtLeast(Count.CountersOfKind(Ref.You, CounterKinds.Energy), 3),
+						[
+							new RemoveCounters(Ref.You, 3) { Kind = CounterKinds.Energy },
+							new WhenYouDo(
+								[Target(Is.Creature & Is.Attacking)],
+								[
+									new PutCounters(Ref.Target(), 2),
+									new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Flying },
+									new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+									{
+										ForGood = true,
+										AlsoCreatureType = "Angel",
+									},
+								]
+							),
+						]
+					)
+				),
+			],
+			["Prismatic Ending"] =
+			[
+				new Sunburst(), // converge: the cast spends the most colours it can (Count.ColorsSpent)
+				Spell(
+					[Target(!Is.Land)],
+					new If(
+						new Matches(
+							Ref.Target(),
+							Is.ManaValueAtMost(Count.ColorsSpent(Ref.Source))
+						),
+						[new Exile(Ref.Target())]
+					)
+				),
+			],
+			["Sunfall"] =
+			[
+				Spell(
+					[],
+					new Exile(Ref.Permanents(Is.Creature)) { ThenWithXExiled = [Incubate(Count.X)] }
+				),
+			],
+			["Ajani, Nacatl Pariah // Ajani, Nacatl Avenger"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(CatWarrior, 1)),
+				When(
+					new Trigger(EventKind.Died)
+					{
+						Subject = Is.Creature & Is.Yours & Is.Subtype("Cat") & !Is.Source,
+						OneOrMore = true,
+					},
+					[],
+					new May(
+						"Exile Ajani, then return him transformed?",
+						new Always(),
+						[ReturnTransformed]
+					)
+				),
+				BackFace(
+					"Ajani, Nacatl Pariah // Ajani, Nacatl Avenger",
+					Loyalty(
+						2,
+						[],
+						new PutCounters(Ref.Permanents(Is.Subtype("Cat") & Is.Yours), 1)
+					),
+					Loyalty(
+						0,
+						[],
+						new CreateTokens(CatWarrior, 1),
+						new WhenYouDo(
+							[TargetSpec.AnyTarget()],
+							[new DealDamage(Ref.Target(), Count.CreaturesYouControl)]
+						)
+						{
+							If = new AtLeast(
+								Count.NumberOf(
+									Ref.Permanents(Is.Color(ManaColor.Red) & Is.Yours & !Is.Source)
+								),
+								1
+							),
+						}
+					),
+					Loyalty(
+						-4,
+						[],
+						new EachSacrifices(Ref.EachOpponent, !Is.Land)
+						{
+							Keeps =
+							[
+								CardType.Artifact,
+								CardType.Creature,
+								CardType.Enchantment,
+								CardType.Planeswalker,
+							],
+						}
+					)
+				),
+			],
+			["Palace Jailer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new BecomeTheMonarch(Ref.You)),
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Creature & !Is.Yours)],
+					new ExileUntilSourceLeaves(Ref.Target())
+					{
+						UntilAnOpponentTakes = DesignationComponent.Monarch,
+					}
+				),
+			],
 		};
 
 	/// <summary>Voice of Victory, Jennifer Walters: "Your opponents can't cast spells during your turn."</summary>
@@ -3546,6 +3668,37 @@ public static class LsvCards
 			[.. abilities]
 		);
 	}
+
+	/// <summary>
+	/// Sunfall: "Incubate X. (Create an Incubator token with X +1/+1 counters on it and '{2}: Transform this token.' It
+	/// transforms into a 0/0 Phyrexian artifact creature.)" — a transforming token (TransformsInto on its abilities).
+	/// </summary>
+	static CreateTokens Incubate(Count x) =>
+		new(Token("Incubator", "Artifact — Incubator"), 1)
+		{
+			Counters = x,
+			Abilities =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new Transform(Ref.Source)]),
+				new TransformsInto(
+					new CardFace(
+						"Phyrexian",
+						null,
+						"Artifact Creature — Phyrexian",
+						null,
+						"0",
+						"0",
+						null,
+						[]
+					),
+					[],
+					[]
+				),
+			],
+		};
+
+	/// <summary>Ajani, Nacatl Pariah: "a 2/1 white Cat Warrior creature token".</summary>
+	static CardData CatWarrior => Token("Cat Warrior", "Creature — Cat Warrior", "2", "1", ["W"]);
 
 	/// <summary>Fable of the Mirror-Breaker, chapter I: "a 2/2 red Goblin Shaman creature token".</summary>
 	static CardData GoblinShaman =>

@@ -33,7 +33,11 @@ public class LsvBatch2g3Tests : FraBoardTest
 			c => c.Options.Take(c is ChooseFromLibraryChoice ? 1 : c.MinChoices).Select(o => o.Id)
 		);
 
-		Assert.That(InitiativeComponent.HolderOf(s), Nu.EqualTo(me), "I have the initiative");
+		Assert.That(
+			DesignationComponent.HolderOf(s, DesignationComponent.Initiative),
+			Nu.EqualTo(me),
+			"I have the initiative"
+		);
 		Assert.That(Room(me), Nu.EqualTo("Secret Entrance"), "Undercity, its first room");
 		Assert.That(
 			Basics(),
@@ -60,7 +64,7 @@ public class LsvBatch2g3Tests : FraBoardTest
 	public void FeywildCaretaker_WithoutTheInitiative_NoDragon()
 	{
 		Cast(Hand(Lsv("Feywild Caretaker"), me), []);
-		s = InitiativeComponent.Take(s, them); // TEST SETUP: they took it
+		s = DesignationComponent.Take(s, them, DesignationComponent.Initiative); // TEST SETUP: they took it
 
 		s = TestGames.PassUntil(s, x => x.GetGame().Step == Step.Cleanup);
 
@@ -70,14 +74,21 @@ public class LsvBatch2g3Tests : FraBoardTest
 	[Test]
 	public void TheInitiative_CombatDamageToItsHolder_TakesIt_AndTheTakerVentures()
 	{
-		s = InitiativeComponent.Take(s, them); // TEST SETUP: they have it, no dungeon of mine
+		s = DesignationComponent.Take(s, them, DesignationComponent.Initiative); // TEST SETUP: they have it, no dungeon of mine
 		var bear = Field(Bear, me);
 
 		AttackWith(c => c.Options.Take(c.MinChoices).Select(o => o.Id), bear);
 
-		Assert.That(InitiativeComponent.HolderOf(s), Nu.EqualTo(me), "my creature hit them");
 		Assert.That(
-			s.CardsIn(them, ZoneType.Command).Any(c => c.HasComponent<InitiativeComponent>()),
+			DesignationComponent.HolderOf(s, DesignationComponent.Initiative),
+			Nu.EqualTo(me),
+			"my creature hit them"
+		);
+		Assert.That(
+			s.CardsIn(them, ZoneType.Command)
+				.Any(c =>
+					c.GetComponent<DesignationComponent>()?.Name == DesignationComponent.Initiative
+				),
 			Nu.False,
 			"one holder: theirs is gone"
 		);

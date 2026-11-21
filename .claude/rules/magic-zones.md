@@ -264,3 +264,7 @@ whose subsystem it lives in.
   it. A player is asked ONCE, for exactly that many to give up (the same sets as choosing which to keep), and only
   when it is more than none: Balance is one cast whatever the board. Its three effects run in printed order, each
   counted as its turn comes — a land creature sacrificed as a land is no creature when the creatures are counted.
+  **"Chooses an artifact, a creature, an enchantment, and a planeswalker from among the nonland permanents they control,
+  then sacrifices the rest"** (Ajani, Nacatl Avenger's −4, MC-4.4j2b) is `EachSacrifices(who, !Is.Land) { Keeps =
+  [types] }`: one required choice per type there is one of (an artifact creature may be kept as both), then every
+  other permanent the filter matches is sacrificed (`SacrificeTheRestAction`) — four choices, never a choice of sets.

@@ -389,6 +389,10 @@ public record RemoveCounters(Ref What, Count N) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
+		// a player's (CR 122.1) — Guide of Souls: "you may pay {E}{E}{E}" (PutCounters' reach)
+		if (Kind is not null)
+			foreach (var id in All(What, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
+				s = s.PutCounters(id, Kind, -N.Value(s, InputContext.SetItem(ContextKeys.It, id)));
 		foreach (var target in Permanents(What, s).ToList())
 		{
 			var n = N.Value(s, InputContext.SetItem(ContextKeys.It, target.Id));
@@ -1550,8 +1554,16 @@ public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAct
 	/// </summary>
 	public Count? TargetsUpTo { get; init; }
 
+	/// <summary>
+	/// Ajani, Nacatl Avenger: "When you do, if you control a red permanent other than Ajani, …" — an intervening if
+	/// (CR 603.4): nothing triggers unless it holds, and it is checked again as it resolves (the ability's If).
+	/// </summary>
+	public Condition? If { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		if (If is { } condition && !condition.Holds(s, InputContext))
+			return new(s);
 		var targets = Targets;
 		if (TargetsUpTo is { } upTo)
 		{
@@ -1568,6 +1580,7 @@ public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAct
 		var ability = new TriggeredAbilityComponent(TriggerEvent.Reflexive, Then)
 		{
 			Targets = targets,
+			If = If,
 		};
 		return new(
 			Turns.Triggers.QueueTargets(

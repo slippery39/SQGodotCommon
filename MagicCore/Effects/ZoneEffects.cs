@@ -2865,10 +2865,23 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 	/// </summary>
 	public Count N { get; init; } = 1;
 
+	/// <summary>
+	/// Ajani, Nacatl Avenger's −4: "Each opponent chooses an artifact, a creature, an enchantment, and a planeswalker
+	/// from among the nonland permanents they control, then sacrifices the rest." — one choice per type, of what
+	/// Filter matches (one permanent may be kept as two: an artifact creature), then every other one of Filter is
+	/// sacrificed; N is not read. Four choices, never a choice of sets.
+	/// </summary>
+	public ImmutableArray<CardType> Keeps { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
 		{
+			if (!Keeps.IsDefaultOrEmpty)
+			{
+				s = KeepOneOfEach(s, player);
+				continue;
+			}
 			var choice = new ChoosePermanentChoice(
 				player,
 				GetInput<int>(ContextKeys.Source),
@@ -2907,6 +2920,61 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 		}
 		return new(s);
 	}
+
+	GameState KeepOneOfEach(GameState s, int player)
+	{
+		var source = GetInput<int>(ContextKeys.Source);
+		var steps = new List<GameAction>();
+		for (var i = 0; i < Keeps.Length; i++)
+		{
+			var keep = new ChoosePermanentChoice(
+				player,
+				source,
+				Filter & Filters.Is.Type(Keeps[i]),
+				required: true
+			)
+			{
+				OutputKey = SacrificeTheRestAction.Kept + i,
+				Prompt = $"Keep a {Keeps[i].ToString().ToLowerInvariant()} ({Source(s).Name})",
+			};
+			if (keep.GetOptions(s, InputContext).Count > 0)
+				steps.Add(keep);
+		}
+		steps.Add(new SacrificeTheRestAction(player, source, Filter, Keeps.Length));
+		return s.SpawnAction(
+			new PipelineAction { PipelineContext = InputContext, Steps = [.. steps] }
+		);
+	}
+}
+
+/// <summary>EachSacrifices.Keeps: the player sacrifices every permanent of theirs Filter matches but the ones kept.</summary>
+public record SacrificeTheRestAction(int PlayerId, int SourceId, Filters.Filter Filter, int Keeps)
+	: GameAction
+{
+	public const string Kept = "kept";
+
+	public override ActionResult Execute(GameState s)
+	{
+		var kept = Enumerable
+			.Range(0, Keeps)
+			.SelectMany(i =>
+				InputContext.GetValueOrDefault(Kept + i) switch
+				{
+					int id => [id],
+					ImmutableList<int> ids => ids,
+					_ => [],
+				}
+			)
+			.ToHashSet();
+		foreach (
+			var id in Filters
+				.FilterChoices.Among(Filter, s, PlayerId, ZoneType.Battlefield, SourceId)
+				.Where(id => !kept.Contains(id))
+				.ToList()
+		)
+			s = s.Sacrifice(id);
+		return new(s);
+	}
 }
 
 /// <summary>
@@ -2916,11 +2984,18 @@ public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 /// </summary>
 public record ExileUntilSourceLeaves(Ref What) : Effect
 {
+	/// <summary>
+	/// Palace Jailer: "exile target creature an opponent controls until an opponent becomes the monarch" — another
+	/// end: not the source leaving (it is exiled though the Jailer has gone), but this designation moving to an
+	/// opponent of the exiler (DesignationComponent.Take).
+	/// </summary>
+	public string? UntilAnOpponentTakes { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var sourceId = GetInput<int>(ContextKeys.Source);
 		var source = Ref.Source.Resolve(s, InputContext).FirstOrDefault(); // 0 if it left, even if it came back
-		if (source == 0 || !s.IsOnBattlefield(sourceId))
+		if (UntilAnOpponentTakes is null && (source == 0 || !s.IsOnBattlefield(sourceId)))
 			return new(s);
 		foreach (var id in All(What, s).ToList())
 		{
@@ -2935,10 +3010,17 @@ public record ExileUntilSourceLeaves(Ref What) : Effect
 				(Card)
 					s.GetCard(id)
 						.WithComponent(
-							new ExiledUntilLeaves(sourceId, s.GetCard(sourceId).Incarnation)
-							{
-								From = from,
-							}
+							UntilAnOpponentTakes is { } designation
+								? new ExiledUntilLeaves(0, 0) // never returned by a source leaving
+								{
+									From = from,
+									UntilAnOpponentTakes = designation,
+									Exiler = Controller,
+								}
+								: new ExiledUntilLeaves(sourceId, s.GetCard(sourceId).Incarnation)
+								{
+									From = from,
+								}
 						)
 			);
 		}

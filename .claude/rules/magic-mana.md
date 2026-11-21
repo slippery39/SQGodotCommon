@@ -119,6 +119,9 @@ whose subsystem it lives in.
   them (`ManaPayment.ColorsSpent` → `OnStackComponent.ColorsSpent`), and `EnterFromStackAction` puts that many
   charge counters through `PutCounters` (Geordi doubles them). A copy spent nothing (CR 702.44c). It never
   sacrifices a Treasure or uses Starfleet Academy for a colour that the plain payment wouldn't have.
+  **Converge** (Prismatic Ending, MC-4.4j2b) is that payment on an instant or sorcery: the card carries `Sunburst`, its
+  text reads `Count.ColorsSpent(Ref.Source)` (`Card.AsCast`). The colours the generic adds are ones the cost's own pips
+  don't already spend, so {X}{W} with X = 2 spends three.
 - **"Creatures you control have '{T}: Add {G}{G}'"** (Rok-Tahk, `GrantsManaAbility`) is read by
   `ManaAbilities.ColorsOf` and `YieldOf` — the one place mana is answered — so payment, manual tapping and the X
   bound all see it; a summoning-sick creature can't (`CanPayTapCost`).

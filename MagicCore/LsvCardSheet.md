@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 38/46 · uncommon 61/86 · rare 150/279 · mythic 58/108 · **316/528**
+**Playable:** common 38/46 · uncommon 63/86 · rare 152/279 · mythic 59/108 · **321/528**
 
 ### "Name Sticker" Goblin
 
@@ -1866,7 +1866,24 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When this creature enters, you become the monarch.  
 > When this creature enters, exile target creature an opponent controls until an opponent becomes the monarch.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j2bTests
+
+**Engine pieces:** `BecomeTheMonarch` — Palace Jailer: "When this creature enters, you become the monarch." (CR 724) — the…; `DesignationComponent` — A designation one player holds — the initiative (CR 725), the monarch (CR 724): an…; `ExileUntilSourceLeaves` — "Exile [it] until this leaves the battlefield." Does nothing if this already left (CR…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Palace Jailer"] =
+[
+	When(TriggerEvent.SelfEnters, [], new BecomeTheMonarch(Ref.You)),
+	When(
+		TriggerEvent.SelfEnters,
+		[Target(Is.Creature & !Is.Yours)],
+		new ExileUntilSourceLeaves(Ref.Target())
+		{
+			UntilAnOpponentTakes = DesignationComponent.Monarch,
+		}
+	),
+],
+```
 
 ### Path to Exile
 
@@ -1918,7 +1935,23 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Converge — Exile target nonland permanent if its mana value is less than or equal to the number of colors of mana spent to cast this spell.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j2bTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Sunburst` — Sunburst (Engineered Explosives): "This artifact enters with a charge counter on it for…
+
+```csharp
+["Prismatic Ending"] =
+[
+	new Sunburst(), // converge: the cast spends the most colours it can (Count.ColorsSpent)
+	Spell(
+		[Target(!Is.Land)],
+		new If(
+			new Matches(Ref.Target(), Is.ManaValueAtMost(Count.ColorsSpent(Ref.Source))),
+			[new Exile(Ref.Target())]
+		)
+	),
+],
+```
 
 ### Pyroblast
 
@@ -4738,7 +4771,44 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever another creature you control enters, you gain 1 life and get {E} (an energy counter).  
 > Whenever you attack, you may pay {E}{E}{E}. When you do, put two +1/+1 counters and a flying counter on target attacking creature. It becomes an Angel in addition to its other types.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j2bTests
+
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RemoveCounters` — "Remove N [Kind] counters from [What]" — each object counted for itself, with Ref.It…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+
+```csharp
+["Guide of Souls"] =
+[
+	When(
+		TriggerEvent.AnotherCreatureYouControlEnters,
+		[],
+		new GainLife(Ref.You, 1),
+		new PutCounters(Ref.You, 1) { Kind = CounterKinds.Energy }
+	),
+	When(
+		TriggerEvent.YouAttack,
+		[],
+		new May(
+			"Pay {E}{E}{E}? Two +1/+1 counters and a flying counter on target attacking creature.",
+			new AtLeast(Count.CountersOfKind(Ref.You, CounterKinds.Energy), 3),
+			[
+				new RemoveCounters(Ref.You, 3) { Kind = CounterKinds.Energy },
+				new WhenYouDo(
+					[Target(Is.Creature & Is.Attacking)],
+					[
+						new PutCounters(Ref.Target(), 2),
+						new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Flying },
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+						{
+							ForGood = true,
+							AlsoCreatureType = "Angel",
+						},
+					]
+				),
+			]
+		)
+	),
+],
+```
 
 ### Hallowed Fountain
 
@@ -6577,7 +6647,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Exile all creatures. Incubate X, where X is the number of creatures exiled this way. (Create an Incubator token with X +1/+1 counters on it and "{2}: Transform this token." It transforms into a 0/0 Phyrexian artifact creature.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j2bTests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Sunfall"] =
+[
+	Spell(
+		[],
+		new Exile(Ref.Permanents(Is.Creature)) { ThenWithXExiled = [Incubate(Count.X)] }
+	),
+],
+```
 
 ### Sunken Ruins
 
@@ -7603,7 +7685,64 @@ How to write a script: `MagicCore/Cookbook.md`.
 > 0: Create a 2/1 white Cat Warrior creature token. When you do, if you control a red permanent other than Ajani, he deals damage equal to the number of creatures you control to any target.  
 > −4: Each opponent chooses an artifact, a creature, an enchantment, and a planeswalker from among the nonland permanents they control, then sacrifices the rest.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2j2bTests
+
+**Engine pieces:** `Always` — A "you may" that can always be done.; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `EachSacrifices` — Winter: "each opponent sacrifices a creature of their choice" — each chooses their own…; `Exile` — "Exile [What]" — permanents, or cards in a graveyard (Emperor of Bones), to their…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `May` — "You may [do something]. If you do, [Then]." Asked only when it can be done (Can); the…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `WhenYouDo` — "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this…
+
+```csharp
+["Ajani, Nacatl Pariah // Ajani, Nacatl Avenger"] =
+[
+	When(TriggerEvent.SelfEnters, [], new CreateTokens(CatWarrior, 1)),
+	When(
+		new Trigger(EventKind.Died)
+		{
+			Subject = Is.Creature & Is.Yours & Is.Subtype("Cat") & !Is.Source,
+			OneOrMore = true,
+		},
+		[],
+		new May("Exile Ajani, then return him transformed?", new Always(), [ReturnTransformed])
+	),
+	BackFace(
+		"Ajani, Nacatl Pariah // Ajani, Nacatl Avenger",
+		Loyalty(
+			2,
+			[],
+			new PutCounters(Ref.Permanents(Is.Subtype("Cat") & Is.Yours), 1)
+		),
+		Loyalty(
+			0,
+			[],
+			new CreateTokens(CatWarrior, 1),
+			new WhenYouDo(
+				[TargetSpec.AnyTarget()],
+				[new DealDamage(Ref.Target(), Count.CreaturesYouControl)]
+			)
+			{
+				If = new AtLeast(
+					Count.NumberOf(
+						Ref.Permanents(Is.Color(ManaColor.Red) & Is.Yours & !Is.Source)
+					),
+					1
+				),
+			}
+		),
+		Loyalty(
+			-4,
+			[],
+			new EachSacrifices(Ref.EachOpponent, !Is.Land)
+			{
+				Keeps =
+				[
+					CardType.Artifact,
+					CardType.Creature,
+					CardType.Enchantment,
+					CardType.Planeswalker,
+				],
+			}
+		)
+	),
+],
+```
 
 ### Aragorn, King of Gondor
 
