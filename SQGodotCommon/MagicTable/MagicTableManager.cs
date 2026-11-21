@@ -512,7 +512,7 @@ public sealed class MagicTableManager
 
 	/// <summary>
 	/// An AI's combat declaration as yours reads ("Attack: Samut → You"); "don't" as a pass, which
-	/// shows nothing. Null for anything else. Describe.Answer would log the prompt itself
+	/// shows nothing; a damage split as what it deals. Null for anything else. Describe.Answer would log the prompt itself
 	/// ("Attack with Samut 2/2? Attack You") — and the golden replays hash that text, so it stays.
 	/// </summary>
 	private static string? Declared(GameState s, AiDecision decision) =>
@@ -522,6 +522,9 @@ public sealed class MagicTableManager
 				when pick == CombatOption.None => "Pass",
 			(DeclareAttackerChoice a, [var target]) => $"Attack: {Pair(s, a.CreatureId, target)}",
 			(DeclareBlockerChoice b, [var attacker]) => $"Block: {Pair(s, b.CreatureId, attacker)}",
+			// a blocked attacker's split (option id = the amount + 1): what it deals, not "how much damage to …?"
+			(AssignCombatDamageChoice d, [var pick]) =>
+				$"Damage: {s.GetCard(d.AttackerId).Name} deals {pick - 1} to {s.GetCard(d.BlockerId).Name}",
 			_ => null,
 		};
 

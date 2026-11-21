@@ -96,6 +96,10 @@ public static class Rollout
 	/// plays no end step of theirs after; the Greedy policy (<see cref="OurPolicy.Greedy"/>) ignores it. The default since
 	/// 2026-11-16 (Shayne: "please put on all 3 and let's try it out"); off is beam+nolastchance.
 	/// </param>
+	/// <param name="NoBlockers">
+	/// The attack plans' re-judging against the real blocks skipped when nothing of the defender's can block any attacker
+	/// (<see cref="WholeAttacks.Best"/>, AI-30.4e); beam+noblockers.
+	/// </param>
 	/// <param name="TheirWalkers">
 	/// The simulated opponent uses its best planeswalker ability every turn it can, whatever its model
 	/// (<see cref="TheirLoyalty"/>, story AI-8.1). False: only a casting opponent does, and only when
@@ -118,7 +122,8 @@ public static class Rollout
 		bool Mays = true,
 		bool CounterAttack = true,
 		int AttackShortlist = WholeAttacks.Shortlist,
-		bool LastChance = true
+		bool LastChance = true,
+		bool NoBlockers = false
 	);
 
 	/// <summary>How the rollout judges an attack declaration — both sides' (story AI-3.8).</summary>

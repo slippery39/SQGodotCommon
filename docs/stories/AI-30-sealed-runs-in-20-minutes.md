@@ -34,7 +34,7 @@ plans (`WholeAttacks.Best`) 50%, free passes 36%, the engine's per-step checks t
 
 ## Tasks
 
-- [ ] AI-30.1 Re-profile a sealed run at today's default (AI-22.1's method): where the doubling went
+- [x] AI-30.1 Re-profile a sealed run at today's default (AI-22.1's method): where the doubling went
 - [ ] AI-30.2 The stopped games: what makes them long (boards, decisions), and their share of a run's machine time
 - [ ] AI-30.3 Stop a sealed run early once its paired difference is clear (the stopgap)
 - [ ] AI-30.4 The levers the profile points at, each measured (suite changed, cost per decision, a sealed run's wall
@@ -50,6 +50,8 @@ plans (`WholeAttacks.Best`) 50%, free passes 36%, the engine's per-step checks t
       - [x] AI-30.4d In place of B's ranking, the "lands" way only where a drawn land could change something (Shayne,
             2026-11-20: "fixing this obvious bias") - the default (match 48-48, −12.5%), `beam+nolandmatters` off; B's
             code removed
+      - [ ] AI-30.4e The attack plans not re-judged against the real blocks when nothing of theirs can block
+            (`beam+noblockers`, off) - Shayne, 2026-11-20: "A. sounds good"; it found a bug in the re-judging, fixed
 - [ ] AI-30.5 The before/after sealed run, in `docs/findings/magic-ai.md`
 
 ## Next
@@ -114,3 +116,22 @@ till the end), and Shayne's margin. Read AI-22 (done) and its findings ("AI-22.1
 - 2026-11-20: Shayne: run the match. `beam+landmatters` vs `beam`: 50.0% (48-48), no 5pp difference, **6 671 against
   7 620 steps a decision (−12.5%)** - more than D (−8.7%) or B (−10.0%) saved. For Shayne: make it the default.
 - 2026-11-20: Shayne: "sure" - the default; its 5 suite changes accepted.
+- 2026-11-20: AI-30.1's time profile, quiet machine (Shayne): the rollouts 82% (90% on 2026-11-12) - the attack plans
+  37% (50%), the free passes 38% (36%), the opponent's step 36%, the engine's passes 25% (40%); AI-26.4's option price
+  9%, invisible to the step counts. Findings "AI-30.1: the time profile". For Shayne: which lever next - the attack
+  plans (AI-21), the free passes, or the option price.
+- 2026-11-20: Shayne: the big ones first, but research before changing them - attack tests like the flash tests
+  (story AI-33, Claude's draft of nine positions for him), A built, and two counts for the free passes. A
+  (`beam+noblockers`): suite 11 533 steps (−6.6%), 2 changed - one a Cadet attacking where it had stayed home. Why:
+  the real-blocks re-judging (`WholeAttacks.Blocked`) ran on past the combat whenever no block was asked - AutoPass
+  and a step test that the next turn's untap also passes - so "no attack" was scored in the opponent's next turn
+  and a blocked attack this turn. Fixed (this combat only): suite 12 014 steps (−2.8%), the same 2 changed (the Cadet
+  attacks, then Jace −2 makes a new blocker; Koth's Mountain before Jace −1); A on top, the same answers, 11 551
+  (−6.5% in all) - decision-neutral once the bug is gone.
+- 2026-11-20: the plan count (24 games): 1 168 decisions replayed the plan, 1 922 searched - 84% of those because the
+  plan had run out, 14% an unseen card drawn, ~1% a surprise (the score moved, their spell, a new turn). Findings
+  "AI-30.4e and the free passes' first count". For Shayne: the fix + A as the default (the Cadet and Mountain boards),
+  and which free-pass lever - a longer plan, or the second count first.
+- 2026-11-20: committed with AI-33.4's two-attack clock: the blocks fix (its two changes gone again under the new clock
+  - the Cadet stays home), A still OFF (`beam+noblockers`; not yet matched; decision-neutral on the suite under the old clock). Review: the
+  probe's cap raised to 100 passes (one pass a step since AutoPass went).

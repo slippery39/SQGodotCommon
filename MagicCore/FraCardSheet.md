@@ -1119,7 +1119,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Deathtouch  
 > When this creature enters, target creature gets +2/+2 and gains deathtouch until end of turn.
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** FraCardTests, RolloutTests
 
 **Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1185,7 +1185,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Whenever this creature attacks, it deals 1 damage to each opponent and you gain 1 life.
 
-**Status:** scripted · **tests naming it:** FraCardTests, OptionReportTests
+**Status:** scripted · **tests naming it:** FraCardTests, OptionReportTests, RolloutTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

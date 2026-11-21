@@ -648,6 +648,14 @@ public static partial class Evaluator
 		/// (`+nolandorder`). The rollout plays the land it picks too (AI-29.5), under the same switch.
 		/// </summary>
 		LandOrder = 1L << 39,
+
+		/// <summary>
+		/// The clock is the average of the next TWO attacks (<see cref="Attacks"/>, AI-33.4, Shayne 2026-11-20: "You cannot race
+		/// them. At this point you have to try and remove their creatures from the board"): a blocker that dies blocking is gone
+		/// for the second, an attacker that dies to its blocker too. One attack let a 2/2 token "stop" a 3/3 deathtouch for good,
+		/// so a Cadet kept home scored over the double block that killed a Rampart Hunter (`+oneattack`).
+		/// </summary>
+		TwoAttacks = 1L << 40,
 	}
 
 	/// <summary>
@@ -750,7 +758,8 @@ public static partial class Evaluator
 	/// A trampler (AI-8.4) is met by the blocker that absorbs most, and gets past it what that blocker
 	/// can't absorb by the next attack — its lasting toughness, or 1 against deathtouch: Yuriko's 2/3
 	/// "stopped" a 7/5 trampler at 3 life, scoring a lethal board as no clock at all.
-	/// Each creature is met as the cleanup leaves it (AI-17.9, <see cref="NextTurn"/>).
+	/// Each creature is met as the cleanup leaves it (AI-17.9, <see cref="NextTurn"/>). Two attacks averaged (AI-33.4,
+	/// <see cref="Terms.TwoAttacks"/>): a chump blocker stops its attacker in the first only.
 	/// ponytail: otherwise one blocker stops one attacker whatever their sizes; menace and first strike
 	/// are ignored. Blockers go
 	/// to attackers in order, never two to one trampler, and a non-trampler may take the blocker a
@@ -762,7 +771,10 @@ public static partial class Evaluator
 		var life = s.GetPlayer(defender).Life;
 		if (life <= 0)
 			return 0;
-		return PressureWeight * 20.0 * Through(s, attacker, defender) / life;
+		var through = IsOff(Terms.TwoAttacks)
+			? Through(s, attacker, defender)
+			: Attacks(s, attacker, defender, 0, 2);
+		return PressureWeight * 20.0 * through / life;
 	}
 
 	/// <summary>
@@ -782,7 +794,15 @@ public static partial class Evaluator
 	/// The power that gets past <paramref name="defender"/>'s blockers in <paramref name="attacker"/>'s next attack
 	/// — each attacker's power changed by <paramref name="bonus"/> (a walker's pump or −N/−0, AI-9.3).
 	/// </summary>
-	internal static int Through(GameState s, int attacker, int defender, int bonus = 0)
+	internal static int Through(GameState s, int attacker, int defender, int bonus = 0) =>
+		(int)Attacks(s, attacker, defender, bonus, 1);
+
+	/// <summary>
+	/// The power that gets past <paramref name="defender"/>'s blockers on average over <paramref name="count"/> attacks in a
+	/// row (<see cref="Terms.TwoAttacks"/>): after each, a blocker that died blocking is gone, and so is an attacker that died
+	/// to its blocker — a chump stops its attacker once, a trade for good.
+	/// </summary>
+	static double Attacks(GameState s, int attacker, int defender, int bonus, int count)
 	{
 		var attackers = new List<(Card Card, int Power)>();
 		foreach (var now in s.CardsIn(attacker, ZoneType.Battlefield))
@@ -805,36 +825,57 @@ public static partial class Evaluator
 			if (c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))
 				blockers.Add(NextTurn(c.IsTapped ? c with { IsTapped = false } : c));
 		// The defender blocks the biggest it can — fliers first, which only fliers and reach stop.
-		var through = 0;
-		foreach (
-			var (card, power) in attackers
+		attackers =
+		[
+			.. attackers
 				.OrderByDescending(a => s.Has(a.Card, "Flying"))
-				.ThenByDescending(a => a.Power)
-		)
+				.ThenByDescending(a => a.Power),
+		];
+		var total = 0;
+		for (var attack = 0; attack < count && attackers.Count > 0; attack++)
 		{
-			if (!IsTrampler(card))
+			var (living, survived) = (new List<(Card Card, int Power)>(), new List<Card>());
+			foreach (var (card, power) in attackers)
 			{
-				var blocker = blockers.FindIndex(b => Combat.CanBlock(s, b, card));
-				if (blocker < 0)
-					through += power;
+				Card? blocker;
+				if (!IsTrampler(card))
+				{
+					blocker = blockers.FirstOrDefault(b => Combat.CanBlock(s, b, card));
+					if (blocker is null)
+						total += power;
+				}
 				else
-					blockers.RemoveAt(blocker);
-				continue;
+				{
+					// What a blocker absorbs by the NEXT attack, as power is: pumps and marked damage gone.
+					var deathtouch = s.Has(card, "Deathtouch");
+					int Absorbs(Card b) =>
+						deathtouch ? 1 : Math.Max(1, s.Toughness(b) - Pumps(b).Toughness);
+					blocker = blockers.Where(b => Combat.CanBlock(s, b, card)).MaxBy(Absorbs);
+					total += blocker is null ? power : Math.Max(0, power - Absorbs(blocker));
+				}
+				if (blocker is not null)
+					blockers.Remove(blocker);
+				if (attack + 1 == count)
+					continue; // the last attack: who dies in it changes nothing counted
+				if (blocker is not null && !Kills(card, power, blocker))
+					survived.Add(blocker);
+				if (
+					blocker is null
+					|| !Kills(blocker, s.Power(blocker) - Pumps(blocker).Power, card)
+				)
+					living.Add((card, power));
 			}
-			// What a blocker absorbs by the NEXT attack, as power is: pumps and marked damage gone.
-			var deathtouch = s.Has(card, "Deathtouch");
-			int Absorbs(Card b) =>
-				deathtouch ? 1 : Math.Max(1, s.Toughness(b) - Pumps(b).Toughness);
-			var best = blockers.Where(b => Combat.CanBlock(s, b, card)).MaxBy(Absorbs);
-			if (best is null)
-				through += power;
-			else
-			{
-				through += Math.Max(0, power - Absorbs(best));
-				blockers.Remove(best);
-			}
+			// the blockers untap for the next attack; the ones that died blocking don't come back
+			blockers = [.. blockers, .. survived];
+			attackers = living;
 		}
-		return through;
+		return (double)total / count;
+
+		// ponytail: first strike and damage split ignored, as in the blocks above; count them if a race is misjudged
+		bool Kills(Card by, int power, Card target) =>
+			power > 0
+			&& !s.IsIndestructible(target)
+			&& (s.Has(by, "Deathtouch") || power >= s.Toughness(target) - Pumps(target).Toughness);
 
 		// Trample that lasts to the next attack (AI-8.4) — not one granted until end of turn.
 		bool IsTrampler(Card c) =>

@@ -3,13 +3,13 @@
 # turn, each player's life [hand,library,graveyard,battlefield,exile], hash | hash per 100 steps.
 Red-Green vs White-Black 01 : steps=145 turn=28 end=0L[0,19,10,11,1] 20[0,18,11,12,0] final=6dc34a29 | d8d9d6b0
 Red-Green vs White-Black 02 : steps=121 turn=30 end=-2L[0,19,9,11,1] 22[0,18,9,13,0] final=ad2af83c | 357ff434
-Red-Green vs White-Blue Jace 01 : steps=136 turn=26 end=-1L[0,20,9,12,0] 34[0,15,11,18,0] final=a8a7c026 | 8641ff23
-Red-Green vs White-Blue Jace 02 : steps=147 turn=29 end=13[0,19,9,12,0] 0L[0,16,12,13,0] final=9e9a5759 | 8e22ed91
-White-Black vs Red-Green 01 : steps=95 turn=24 end=0L[0,21,9,10,0] 7[0,21,9,10,2] final=17cb4863
-White-Black vs Red-Green 02 : steps=110 turn=23 end=10[0,22,9,9,0] 0L[0,19,8,13,1] final=d93f8eef | 2b47b99a
-White-Black vs White-Blue Jace 01 : steps=88 turn=23 end=23[0,22,8,10,0] -3L[0,18,11,11,1] final=429328e7
-White-Black vs White-Blue Jace 02 : steps=73 turn=19 end=23[0,25,6,9,0] 0L[1,20,10,10,1] final=bed2ad2d
-White-Blue Jace vs Red-Green 01 : steps=196 turn=33 end=9[0,13,13,18,0] 0L[0,18,12,10,0] final=1c420231 | 82ab11af
-White-Blue Jace vs Red-Green 02 : steps=295 turn=56 end=-3L[0,0,20,23,0] 1[0,1,17,22,0] final=3848f051 | 0185f600 7b534ef5
+Red-Green vs White-Blue Jace 01 : steps=137 turn=26 end=-1L[0,20,9,12,0] 36[0,15,11,18,0] final=8f1d137f | 10c4fc26
+Red-Green vs White-Blue Jace 02 : steps=148 turn=25 end=2[0,22,5,15,0] -3L[0,18,10,13,0] final=f4382c92 | 92018536
+White-Black vs Red-Green 01 : steps=166 turn=26 end=-1L[0,20,9,11,0] 3[0,18,9,12,2] final=b29c6106 | 467466d2
+White-Black vs Red-Green 02 : steps=90 turn=25 end=13[0,20,9,11,0] 0L[0,18,8,14,1] final=9be9b50e
+White-Black vs White-Blue Jace 01 : steps=92 turn=23 end=25[0,22,7,11,0] -6L[0,18,10,12,2] final=3b82c267
+White-Black vs White-Blue Jace 02 : steps=82 turn=21 end=27[0,24,6,10,0] 0L[0,18,11,12,1] final=f3039920
+White-Blue Jace vs Red-Green 01 : steps=218 turn=34 end=-2L[0,13,14,16,0] 3[0,17,10,14,0] final=4c84cc36 | b2022d31 38d6ced9
+White-Blue Jace vs Red-Green 02 : steps=199 turn=34 end=-6L[0,12,14,14,0] 9[0,13,12,17,0] final=1b219516 | 29d6ce76
 White-Blue Jace vs White-Black 01 : steps=142 turn=31 end=2[0,12,14,18,0] 0L[0,18,11,11,0] final=6f7f59c6 | 13251c07
 White-Blue Jace vs White-Black 02 : steps=76 turn=18 end=-1L[0,22,9,9,1] 16[0,23,6,11,0] final=13298665

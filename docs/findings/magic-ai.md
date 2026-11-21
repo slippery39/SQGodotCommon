@@ -2365,3 +2365,74 @@ seed 1 #70 Way of the Mentor after combat, seed 3 #56 Winter after combat). Matc
 engine steps (−12.5%)**, rollouts 16.0 / 19.1; lands 7.3 / 7.4, spells 10.0 both. 24 min. Then, from the review: a land in hand
 that enters tapped no longer counts as mana, and the drawn land's own "enters" trigger counts - suite 12 354 steps, 0
 changed; the default since.
+
+## AI-30.1: the time profile at today's default (2026-11-20)
+
+AI-22.1's method on a quiet machine, after A, D and AI-30.4d: `dotnet-trace collect --profile dotnet-sampled-thread-time`
+over `--set=trk --builds=sim_results/builds/RGb.txt --both-seats --games=8` (16 games in parallel, server collector,
+Release). 5 min - the run's length is its slowest game: one stopped at the 5 min cap (AI-22.1's none did), so this
+run's wall time says nothing; the shares do. Inclusive, of all time with an engine frame on the stack.
+
+| Under | AI-22.1 (2026-11-12) | Now |
+|---|---|---|
+| `BeamSearchAi.Search` | 91.8% | 93.4% |
+| the rollouts (`Rollout.Score` then; `Expand`'s `RollOut` now) | 89.7% | **82.4%** |
+| `Rollout.Choose` - the rollout policy's choices | 59.9% | 46.5% |
+| `BeamSearchAi.WithFreePasses` - AI-13.12's free passes | 36.1% | **37.6%** |
+| `WholeAttacks.Best` - the rollout's attack plans | 50.1% | **37.3%** |
+| `Rollout.OpponentStep` | - | 36.0% |
+| `Lookahead.Settle` | 43.5% | 29.5% |
+| `Evaluator.Position` | - | 26.2% |
+| `TurnStructure.GivePriority` (the engine's every pass) | 40.1% | 25.4% |
+| `WholeAttacks.Blocked` | 31.1% | 25.3% |
+| `MagicRules.LegalActions` | - | 23.9% |
+| `Rollout.Answer` / `Rollout.BestAlone` | 29.1% / 19.6% | 19.8% / 12.7% |
+| `Triggers.Collect` | - | 14.4% |
+| `ManaPayment.Find` | - | 11.5% |
+| `OptionPrice` at the root (`Root.Answers`, `TheirLikely`) - AI-26.4 | - | **9.2%** |
+
+- The leaf trap again: 72% of self time is `Thread.PollGC` and `MagicState.CardsIn` reads 38.5% inclusive - the
+  sampler's own stops (AI-7.1, "Two traps"), not a lever. Callers' inclusive time only.
+- The rollouts are still most of it, but no longer one thing: the attack plans fell from half to a third, and the
+  free passes are now as large. AI-26.4's option price costs 9% of the time while it costs no engine steps - the
+  step counts (AI-30.1 by engine steps) cannot see it.
+- Scripts: `prof_report.py` (inclusive shares) and `prof_drill.py` (callers, self time) in the session scratchpad;
+  the 1 GB Speedscope file needs ~10 GB of memory to read.
+
+## AI-30.4e and the free passes' first count (2026-11-20)
+
+**The real-blocks re-judging ran past the combat** (`WholeAttacks.Blocked`): with no block to ask - "no attack", or
+nothing able to block - its passes (AutoPass after each, and a step test `<= DeclareAttackers` that the next turn's
+untap also passes) went on into the opponent's next turn, so those plans were scored after their untap and draw and
+a blocked attack right after its blocks. Probed: both plans left at turn 2's declare-attackers; fixed, turn 1's
+EndCombat / DeclareBlockers. Suite: **12 014 steps a position (−2.8%), 2 changed** - seed 2 #102 the Cadet now attacks
+(nothing of theirs untapped; Jace −2 makes a new blocker after), seed 4 #43 the Mountain before Jace −1. **AI-30.4e**
+(`beam+noblockers`: no re-judging when nothing of theirs can block any attacker, `Combat.CanBlock`) on top: the same
+answers, **11 551 steps** (−3.9% on the fix, −6.5% in all) - before the fix it changed the same two.
+
+**Why a real decision searches (temporary counters, 24 games of FRA's decks, `beam` vs `beam`):** 3 090 decisions
+reached the plan check; **1 168 replayed the plan**, 1 922 searched (1 722 real, 200 with one option). Of the 1 922:
+the plan had **run out 1 618 times (84%)**; an unseen card was drawn or shown 276 (14%); the score moved past the
+threshold 12, a new turn 6, the planned move not found 6, their object on the stack 4. **A surprise drops a plan about
+1% of the time** - the AI re-plans because its plan is short (the tree's 3 levels and the free passes), not because
+it re-thinks a plan that still holds.
+
+## AI-33.4: the two-attack clock (2026-11-20)
+
+The Cadet board (we at 10 with two 2/2 Cadets; they at 12 with two Rampart Hunters, 3/3 deathtouch, and a 1/4 flier):
+the look-ahead blocked one Hunter with one Cadet and kept the other home. Its scores: half-block −36.61, double block
+−36.85, a chump on each Hunter −39.40, no blocks −40.57. Life after is 5 in both of the first two; the clock read the
+same 4 through in both, because the Cadet kept home "stopped" a Hunter for good - so a live 2/2 just outweighed a dead
+3/3 deathtouch. Averaging two attacks (a blocker that died blocking, and an attacker that died to its blocker, gone for
+the second): half-block 4 then 7 = 5.5, double block 4 then 4 = 4.0, about 3 points the double block's way at 5 life.
+
+| suite (288 positions) | changed | steps a position | score given up | oracle agreement |
+|---|---|---|---|---|
+| AI-30.4e's blocks fix, one attack | 2 | 12,014 | 0.66 | 71.9% |
+| + the two-attack clock | 14 | 11,934 | 0.57 | 71.9% |
+
+The 14 read on their boards: reorders (cast after combat, Jace's draw first), blockers cast at 4 and 9 life, none
+pumping an opponent's creature; the blocks fix's two changes return to the committed answers.
+
+**Match** (`--match=beam,beam+oneattack --until-clear`, FRA's decks; stopped by hand, not by the rule): **49.0%
+over 200 games (98-102)** at 53 min, no 5pp difference either way when stopped. Seed 3 #16's Oculus is AI-34's case 1.

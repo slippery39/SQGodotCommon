@@ -145,6 +145,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
 | [AI-21](AI-21-big-board-combat.md) | Combat on big boards — attack plans that don't grow with every token | ready |
 | [AI-30](AI-30-sealed-runs-in-20-minutes.md) | Sealed runs in 20 minutes — a pool's question answered while Shayne waits, not in 3 hours | ready |
+| [AI-33](AI-33-attack-tests.md) | Attack tests — the right attack pinned in small positions, before combat is made cheaper | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
@@ -155,6 +156,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-29](AI-29-ai-notes.md) | AI notes — specific evaluators for troublesome effects, called by the general one | backlog |
 | [AI-31](AI-31-the-oracle-reexamined.md) | The oracle re-examined — what the suite's "agrees with the oracle" measures, and whether it still should | backlog |
 | [AI-32](AI-32-machine-learning-research.md) | Machine learning — research where it could help the AI play better or faster, before building anything | backlog |
+| [AI-34](AI-34-play-around-their-cards.md) | Playing around the opponent's cards — removal, tricks and a look-ahead that bets on one future | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
 | [LIM-6](LIM-6-cube-builder.md) | A cube builder — build your own cube in the UI, then draft it | backlog |
@@ -192,5 +194,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-33 · DATA-3 · DEV-9 · LIM-8 · MC-9 · TBL-12
+Next free id per area: AI-35 · DATA-3 · DEV-9 · LIM-8 · MC-9 · TBL-12
 <!-- stories:end -->

@@ -182,18 +182,29 @@ public static class WholeAttacks
 		// Drive the combat to its blocks: an attacker's own trigger asks a choice (Tal Shiar Operative's "choose
 		// one"), and a defender with an instant-speed ability holds priority in declare-attackers (Chang) - a
 		// probe that stopped at either silently fell back to the weak defender (AI-17.14).
-		for (var i = 0; i < 40 && !s.IsOver(); i++)
+		// this combat only: AutoPass after the last pass, or no block to ask, ran on into the next turn - its untap and
+		// draw - so "no attack" was judged a turn later than an attack that was blocked (AI-30.4e, the Cadet at seed 2 #102)
+		var turn = s.GetGame().TurnNumber;
+		for (var i = 0; i < 100 && !s.IsOver() && s.GetGame().TurnNumber == turn; i++)
 		{
 			if (s.GetPendingChoice() is DeclareAttackerChoice) // a creature the plan left out: not ours to re-pick
 				break;
 			if (s.GetPendingChoice() is not null)
 				s = Rollout.Untraced(() => Rollout.OpponentStep(s, s.DecidingPlayerId(), defender));
 			else if (s.GetGame().Step <= Step.DeclareAttackers)
-				s = s.Act(new PassPriorityAction { PlayerId = s.DecidingPlayerId() }).AutoPass();
+				s = s.Act(new PassPriorityAction { PlayerId = s.DecidingPlayerId() });
 			else
 				break;
 		}
 		return s;
+	}
+
+	/// <summary>Whether a creature of the defender's could block any of <paramref name="attackers"/> (<see cref="Turns.Combat.CanBlock"/>).</summary>
+	static bool CanBeBlocked(GameState s, int who, IEnumerable<int> attackers)
+	{
+		var ours = attackers.Distinct().Select(s.GetCard).ToList();
+		return s.CardsIn(s.OpponentOf(who), ZoneType.Battlefield)
+			.Any(b => ours.Any(a => Turns.Combat.CanBlock(s, b, a)));
 	}
 
 	/// <summary>How many of the look-ahead's best attacks the true defender re-judges (with "no attack" always).</summary>
@@ -208,6 +219,9 @@ public static class WholeAttacks
 	/// cost ~3.1x there. The best 1 is cheaper (1.9x) and flips the Chang plays, but misses the lethal attack Shayne's
 	/// Jace token position holds (it flips to Pass), so it stays 3.
 	/// ponytail: a plan good only against the real blocks yet low under the cheap ones is missed; widen the list.
+	/// With nothing of theirs able to block any attacker (<see cref="Rollout.Settings.NoBlockers"/>, AI-30.4e) the real
+	/// blocks are the cheap ones - no blocks - and the re-judging is skipped; a trick of theirs is not played around
+	/// (Shayne, 2026-11-20: "we need to get the AI making the basic decisions well before ... a way to play around tricks").
 	/// </summary>
 	public static Plan Best(
 		GameState s,
@@ -229,7 +243,12 @@ public static class WholeAttacks
 			.OrderByDescending(x => x.Score)
 			.ThenBy(x => x.i)
 			.ToList();
-		if (defender is null || Evaluator.IsOff(Evaluator.Terms.TrueDefender))
+		if (
+			defender is null
+			|| Evaluator.IsOff(Evaluator.Terms.TrueDefender)
+			|| defender.NoBlockers
+				&& !CanBeBlocked(s, who, cheap.SelectMany(x => x.plan.Targets.Keys))
+		)
 			return cheap[0].plan;
 		var stay = cheap.First(x => x.plan.Targets.Count == 0);
 		return cheap

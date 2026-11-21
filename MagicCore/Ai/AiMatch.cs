@@ -174,6 +174,8 @@ public static class AiMatch
 			["freepasses2"] = o => o with { FreePassCap = 2 },
 			["freepasses1"] = o => o with { FreePassCap = 1 },
 			["shortlist2"] = WithRollout(r => r with { AttackShortlist = 2 }),
+			// AI-30.4e: the attack plans not re-judged against the real blocks when nothing of theirs can block
+			["noblockers"] = WithRollout(r => r with { NoBlockers = true }),
 			["shortlist1"] = WithRollout(r => r with { AttackShortlist = 1 }),
 			// Acting now wins a tie with the same move later this turn, as before AI-13.12 (part 2): beam+actnow.
 			["actnow"] = o => o with { WaitOnTies = false },
@@ -200,6 +202,8 @@ public static class AiMatch
 					Without = o.Without | Evaluator.Terms.NextTurnGrants,
 				},
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
+			// The clock reads one attack, a chump blocker stopping its attacker for good, before AI-33.4: beam+oneattack.
+			["oneattack"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttacks },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.

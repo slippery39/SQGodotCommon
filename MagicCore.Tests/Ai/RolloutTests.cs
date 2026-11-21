@@ -824,6 +824,133 @@ public class RolloutTests
 		);
 	}
 
+	// AI-30.4e: with nothing of theirs able to block, the attack plans are not re-judged against the real blocks - the
+	// same plan, fewer steps; a creature that can block (a wall, a flier's reach) keeps the re-judging.
+	[TestCase(false, false, true)]
+	[TestCase(true, false, false)]
+	[TestCase(true, true, true)]
+	public void NoBlockers_SkipsTheRealBlocks_OnlyWhenNothingCanBlock(
+		bool wall,
+		bool flyingOnly,
+		bool skipped
+	)
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var them = s.OpponentOf(me);
+		var ours = flyingOnly
+			? new[] { TestGames.Creature("Bird", "2/2", "Flying") }
+			: [TestGames.Creature("Three", "3/3"), TestGames.Creature("Two", "2/2")];
+		foreach (var c in ours)
+			(s, _) = TestGames.Put(s, me, c, ZoneType.Battlefield);
+		if (wall)
+			(s, _) = TestGames.Put(
+				s,
+				them,
+				TestGames.Creature("Wall", "0/4"),
+				ZoneType.Battlefield
+			);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+
+		var (full, fullSteps) = MagicRules.CountingSteps(
+			() => WholeAttacks.Best(s, me, null, Rollout.Default)
+		);
+		var (quick, quickSteps) = MagicRules.CountingSteps(
+			() => WholeAttacks.Best(s, me, null, Rollout.Default with { NoBlockers = true })
+		);
+		Assert.That(
+			quick,
+			Is.EqualTo(full).Using<WholeAttacks.Plan>((x, y) => x.Targets.SequenceEqual(y.Targets))
+		);
+		Assert.That(
+			quickSteps < fullSteps,
+			Is.EqualTo(skipped),
+			$"{quickSteps} against {fullSteps} steps"
+		);
+	}
+
+	// AI-33 (Shayne, 2026-11-20, the Cadet at seed 2 #102: "the AI should keep the 2/2 back to try and double block one of
+	// their 3/3's"): their 3/3 attacks into our two 2/2s - both block it (it dies; we lose one). The look-ahead's
+	// defender (the model the search's rollouts block with) and the search deciding for real.
+	[TestCase(true)]
+	[TestCase(false)]
+	public void TwoTwoTwos_DoubleBlock_AnAttackingThreeThree(bool lookahead)
+	{
+		var s = TestGames.InFirstMain();
+		var them = s.GetGame().StartingPlayerId;
+		var me = s.OpponentOf(them);
+		(s, var three) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Three", "3/3"),
+			ZoneType.Battlefield
+		);
+		(s, var a) = TestGames.Put(s, me, TestGames.Creature("Two A", "2/2"), ZoneType.Battlefield);
+		(s, var b) = TestGames.Put(s, me, TestGames.Creature("Two B", "2/2"), ZoneType.Battlefield);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+		s = s.Choose([me]); // the 3/3 attacks us
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareBlockerChoice);
+
+		var ai = new BeamSearchAi(me);
+		while (s.GetPendingChoice() is Actions.DeclareBlockerChoice ask && ask.PlayerId == me)
+			s = lookahead ? Rollout.OpponentStep(s, me, Rollout.Default) : ai.Decide(s).State;
+		Assert.That(
+			new[] { s.GetCard(a).BlockingId, s.GetCard(b).BlockingId },
+			Is.All.EqualTo(three),
+			"both 2/2s block the 3/3"
+		);
+	}
+
+	// AI-33: the Cadet board itself (seed 2 #102's next turn) - two Rampart Hunters (3/3 deathtouch) and a Screeching
+	// Soulbreaker attack our two 2/2 Cadets, we at 10, they at 12. The search double-blocks a Hunter; the look-ahead
+	// blocks it with ONE Cadet and leaves the other idle - nothing of theirs dies and the second Hunter still connects -
+	// so a Cadet kept home was worth nothing to the search's rollouts - judged alone, the second stayed out of the block the
+	// first counted on it joining (−36.61 against −36.85: a live 2/2 just over a dead Rampart Hunter). The cause (AI-33.4):
+	// a clock of one attack counted the Cadet kept home as stopping a Hunter for good - with two attacks
+	// (Evaluator.Terms.TwoAttacks) it chumps once and the Hunter is back. The control: one attack, the half-block.
+	[TestCase(true, false)]
+	[TestCase(true, true)]
+	[TestCase(false, false)]
+	public void TheCadetBoard_BothCadetsBlockTheSameHunter(bool lookahead, bool oneAttack) =>
+		Evaluator.Without(
+			oneAttack ? Evaluator.Terms.TwoAttacks : Evaluator.Terms.None,
+			() => CadetBoard(lookahead, oneAttack)
+		);
+
+	static bool CadetBoard(bool lookahead, bool oneAttack)
+	{
+		var s = TestGames.InFirstMain();
+		var them = s.GetGame().StartingPlayerId;
+		var me = s.OpponentOf(them);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 10 })
+			.WithPlayer(s.GetPlayer(them) with { Life = 12 });
+		(s, _) = TestGames.Put(s, them, CardRegistry.Get("Rampart Hunter"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, CardRegistry.Get("Rampart Hunter"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(
+			s,
+			them,
+			CardRegistry.Get("Screeching Soulbreaker"),
+			ZoneType.Battlefield
+		);
+		(s, var a) = TestGames.Put(s, me, TestGames.Creature("Cadet", "2/2"), ZoneType.Battlefield);
+		(s, var b) = TestGames.Put(s, me, TestGames.Creature("Cadet", "2/2"), ZoneType.Battlefield);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+		while (s.GetPendingChoice() is Actions.DeclareAttackerChoice)
+			s = s.Choose([me]); // everyone attacks us
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareBlockerChoice);
+
+		var ai = new BeamSearchAi(me);
+		while (s.GetPendingChoice() is Actions.DeclareBlockerChoice ask && ask.PlayerId == me)
+			s = lookahead ? Rollout.OpponentStep(s, me, Rollout.Default) : ai.Decide(s).State;
+		var (blockA, blockB) = (s.GetCard(a).BlockingId, s.GetCard(b).BlockingId);
+		Assert.That(blockA, Is.Not.Zero, "a Cadet blocks");
+		if (oneAttack)
+			Assert.That(blockB, Is.Zero, "control: one attack's clock keeps the other Cadet out");
+		else
+			Assert.That(blockB, Is.EqualTo(blockA), "the other Cadet blocks the same Hunter");
+		return true;
+	}
+
 	// AI-17.3's review: an answer of "don't attack" is still an answer — the first question's None used to
 	// leave the next looking like the first, so the AI dropped the whole attack it chose and searched
 	// again at every question. Now each question after the first is answered from the plan, unsearched.

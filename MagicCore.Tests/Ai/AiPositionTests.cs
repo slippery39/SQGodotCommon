@@ -171,7 +171,11 @@ public class AiPositionTests
 		string Chose(Evaluator.Terms without) =>
 			new BeamSearchAi(s.DecidingPlayerId(), new(Without: without)).Decide(s).What;
 
-		Assert.That(Chose(Evaluator.Terms.HandSize), Does.StartWith("Cast Yoshimaru"), "control");
+		Assert.That(
+			Chose(Evaluator.Terms.HandSize | Evaluator.Terms.TwoAttacks), // AI-33.4's clock alone keeps it too
+			Does.StartWith("Cast Yoshimaru"),
+			"control"
+		);
 		Assert.That(Chose(Evaluator.Terms.None), Is.EqualTo("Pass"));
 	}
 
@@ -247,10 +251,15 @@ public class AiPositionTests
 				).Decide(s)
 			);
 
-		// the control also turns off the damage potential (AI-19.22), which finds the pass at #458 too
+		// the control also turns off the damage potential (AI-19.22), which finds the pass at #458 too, and AI-33.4's
+		// two-attack clock, which finds it at both
 		Assert.That(
 			MoveTokens.Same(
-				Choice(Evaluator.Terms.TrueDefender | Evaluator.Terms.DamagePotential),
+				Choice(
+					Evaluator.Terms.TrueDefender
+						| Evaluator.Terms.DamagePotential
+						| Evaluator.Terms.TwoAttacks
+				),
 				token
 			),
 			"control"
@@ -744,7 +753,10 @@ public class AiPositionTests
 			.Select(o => $"c{o.Id}");
 
 		Assert.That(
-			MoveTokens.Same(Choice(Evaluator.Terms.Trample), record.Moves[331].Token),
+			MoveTokens.Same(
+				Choice(Evaluator.Terms.Trample | Evaluator.Terms.TwoAttacks), // AI-33.4's clock alone trades too
+				record.Moves[331].Token
+			),
 			"the control: without trample, it declines"
 		);
 		Assert.That(trades, Does.Contain(Choice(Evaluator.Terms.None)), "it trades");

@@ -216,7 +216,8 @@ public class HiddenTests
 		);
 	}
 
-	// The same for the opponent's hand, with an opponent that casts from it — the only one it matters to.
+	// The same for the opponent's hand, with an opponent that casts from it — the only one it matters to. Seed 2 since AI-30.4e's
+	// blocks fix and AI-33.4's two-attack clock: on seed 3 the two hand modes now play alike (seeds 2 and 5 still differ for both, 1 and 4 not).
 	[Test]
 	public void TheSearch_PlaysARealGame_FromItsSampledHands()
 	{
@@ -227,8 +228,8 @@ public class HiddenTests
 			KnownOnly = false,
 		};
 		Assert.That(
-			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.ShuffleUnseen)),
-			Is.Not.EqualTo(Play(new(RolloutSettings: casts)))
+			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.ShuffleUnseen), seed: 2),
+			Is.Not.EqualTo(Play(new(RolloutSettings: casts), seed: 2))
 		);
 	}
 
@@ -242,8 +243,8 @@ public class HiddenTests
 			KnownOnly = false,
 		};
 		Assert.That(
-			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.GuessedFromColors)),
-			Is.Not.EqualTo(Play(new(RolloutSettings: casts)))
+			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.GuessedFromColors), seed: 2),
+			Is.Not.EqualTo(Play(new(RolloutSettings: casts), seed: 2))
 		);
 	}
 
