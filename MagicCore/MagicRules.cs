@@ -419,14 +419,16 @@ public static class MagicRules
 	/// <summary>
 	/// Phyrexian Tower: "{T}, Sacrifice a creature: Add {B}{B}." — a mana ability whose cost picks a card
 	/// is never auto-paid (Shayne, 2026-11-06): a move, one per creature. So is one without {T} (Rain of Filth's
-	/// gained "Sacrifice this land: Add {B}.", TapForManaAction.NoTap): one move per land. Every other mana ability
-	/// stays out of LegalActions (pure branching for the AI).
+	/// gained "Sacrifice this land: Add {B}.", TapForManaAction.NoTap): one move per land. So is one that costs mana
+	/// AND sacrifices itself (Chromatic Star's "{1}, {T}, Sacrifice this artifact: Add one mana of any color",
+	/// TapForManaAction.PaysItsCost): cashing it in is a decision. Every other mana ability stays out of LegalActions
+	/// (pure branching for the AI).
 	/// </summary>
 	static IEnumerable<GameAction> ManaMoves(GameState s, int player, Card card) =>
 		ManaAbilities
 			.AbilitiesOf(s, card)
-			.Where(m => m.ChoosesCost || m.NoTap)
-			.Take(1) // ponytail: TapForManaAction.SacrificeId / NoTap names the first such ability
+			.Where(m => m.ChoosesCost || m.NoTap || m.CashedIn)
+			.Take(1) // ponytail: TapForManaAction.SacrificeId / NoTap / PaysItsCost names the first such ability
 			.SelectMany(m =>
 				from id in CostList.Options(m.Costs, CostSlot.Sacrifice, s, player, card.Id)
 				where id != 0 || !m.ChoosesCost
@@ -443,6 +445,7 @@ public static class MagicRules
 					Color = color,
 					SacrificeId = id,
 					NoTap = m.NoTap,
+					PaysItsCost = m.CashedIn,
 					OfTheOther = other,
 				}
 			);

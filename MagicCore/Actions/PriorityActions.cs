@@ -179,8 +179,9 @@ public record TurnFaceUpAction : GameAction
 /// Activates a land's mana ability. Only basic land types' intrinsic abilities so far (CR 305.6);
 /// nonbasic lands get hand-written abilities with their cards.
 ///
-/// Not offered by LegalActions: tapping with nothing to spend on is pure branching for the AI.
-/// Casting will pay costs by tapping through this same action.
+/// A plain tap is not offered by LegalActions: tapping with nothing to spend on is pure branching for the AI,
+/// and casting pays by tapping. Three kinds ARE moves, each a decision (MagicRules.ManaMoves): a cost that picks a
+/// card (SacrificeId), no {T} (NoTap), and a mana cost with its own sacrifice (PaysItsCost).
 /// </summary>
 public record TapForManaAction : GameAction
 {
@@ -199,6 +200,13 @@ public record TapForManaAction : GameAction
 	/// in LegalActions, as Phyrexian Tower's), on a tapped land too; never the solver's.
 	/// </summary>
 	public bool NoTap { get; init; }
+
+	/// <summary>
+	/// Chromatic Star: "{1}, {T}, Sacrifice this artifact: Add one mana of any color." — set, this activates its mana
+	/// ability that costs mana and sacrifices itself (ManaAbilityComponent.CashedIn; a move in LegalActions): the mana
+	/// cost is paid by the other permanents and the pool, never by the mana it makes, then its costs, then the mana.
+	/// </summary>
+	public bool PaysItsCost { get; init; }
 
 	/// <summary>
 	/// Orcish Lumberjack: "three mana in any combination of {R} and/or {G}" — how many of the units are the ability's
@@ -220,7 +228,18 @@ public record TapForManaAction : GameAction
 	ManaAbilityComponent? Chosen(GameState s) =>
 		ManaAbilities
 			.AbilitiesOf(s, s.GetCard(CardId))
-			.FirstOrDefault(m => m.ChoosesCost || m.NoTap);
+			.FirstOrDefault(m => PaysItsCost ? m.CashedIn : m.ChoosesCost || m.NoTap);
+
+	/// <summary>What pays the chosen ability's own mana cost — never the permanent itself.</summary>
+	IReadOnlyList<ManaPayment.Payment>? ManaFor(GameState s, ManaAbilityComponent ability) =>
+		ManaPayment.Find(
+			s,
+			PlayerId,
+			ability.Cost!,
+			0,
+			excludeId: CardId,
+			forAbilityOf: s.GetCard(CardId)
+		);
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
@@ -237,12 +256,12 @@ public record TapForManaAction : GameAction
 			return ValidationResult.Invalid(
 				"No mana abilities now: Sen Triplets, Clarion Conqueror"
 			);
-		if (SacrificeId != 0 || NoTap)
+		if (SacrificeId != 0 || NoTap || PaysItsCost)
 			return
 				s.IsIn(CardId, PlayerId, ZoneType.Battlefield)
-				&& Chosen(s) is { Cost: null } ability // ponytail: a mana cost beside a picked one isn't paid here — no card has both
+				&& Chosen(s) is { } ability
 				&& ability.NoTap == NoTap
-				&& (ability.AnyOneColor || ability.Color == Color)
+				&& (ability.AnyOneColor ? Color != ManaColor.Colorless : ability.Color == Color) // "any color" is never {C}
 				&& OfTheOther >= 0
 				&& OfTheOther
 					<= (
@@ -254,6 +273,11 @@ public record TapForManaAction : GameAction
 				&& CostList
 					.Options(ability.Costs, CostSlot.Sacrifice, s, PlayerId, CardId)
 					.Contains(SacrificeId)
+				// Last: the one costly question (a payment solved) — asked once per colour offered, so only of a
+				// Star that could otherwise be cashed in. ponytail: a mana cost beside a PICKED one isn't paid here —
+				// no card has both; five solves per Star per LegalActions — remember the answer per state if a
+				// profile shows it (ManaAbilities.Grants does).
+				&& (PaysItsCost ? ManaFor(s, ability) is not null : ability.Cost is null)
 				? ValidationResult.Valid
 				: ValidationResult.Invalid("That mana ability can't be activated so");
 		if (
@@ -272,7 +296,7 @@ public record TapForManaAction : GameAction
 	/// <summary>Makes its whole yield: the chosen colour, all of it for Loot; Molten Tide's extra {R}.</summary>
 	public override ActionResult Execute(GameState s)
 	{
-		if (SacrificeId != 0 || NoTap)
+		if (SacrificeId != 0 || NoTap || PaysItsCost)
 			return new ActionResult(Priority.Retain(WithChosenCost(s), PlayerId));
 		var yield = YieldFor(s);
 		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
@@ -313,6 +337,8 @@ public record TapForManaAction : GameAction
 			? [.. ManaAbilities.ExtraFor(s, s.GetCard(CardId))]
 			: [];
 		s = ManaPayment.RaiseActivated(s, PlayerId, CardId);
+		if (PaysItsCost)
+			s = ManaPayment.Pay(s, PlayerId, ManaFor(s, ability)!); // Chromatic Star's {1}, before its {T} and sacrifice
 		foreach (var cost in ability.Costs.OrderByDescending(c => c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, cost.Slot == CostSlot.Sacrifice ? SacrificeId : 0);
 		var player = s.GetPlayer(PlayerId);

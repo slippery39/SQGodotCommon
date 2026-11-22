@@ -59,11 +59,7 @@ public static class LsvCards
 
 	/// <summary>Strip Mine, Wasteland: "{T}, Sacrifice this land: Destroy target [nonbasic] land."</summary>
 	static ActivatedAbilityComponent SacrificeToDestroy(Filter land) =>
-		new(ManaCost.None, [new Destroy(Ref.Target())])
-		{
-			Costs = [new TapSelfCost(), new SacrificeSelfCost()],
-			Targets = [Target(land)],
-		};
+		SacrificeThis(null, tap: true, [Target(land)], new Destroy(Ref.Target()));
 
 	/// <summary>Mana Leak: "Counter target [noncreature] spell unless its controller pays {N}."</summary>
 	/// <summary>Force of Will, Force of Negation: "exile a blue card from your hand" (not this one).</summary>
@@ -349,10 +345,7 @@ public static class LsvCards
 			[
 				new MayCastFromHandFree(Is.Source)
 				{
-					If = new AtLeast(
-						Count.NumberOf(Ref.Permanents(Is.Yours & Is.Subtype("Swamp"))),
-						1
-					),
+					If = YouControlA(Is.Subtype("Swamp")),
 					Costs = [new PayLifeCost(4)],
 				},
 				// "It can't be regenerated": the engine has no regeneration yet (Wrath of God's note, MC-4.3b).
@@ -4162,7 +4155,462 @@ public static class LsvCards
 					)
 				),
 			],
+			// ===== MC-4.4l1: colourless' tested lands (surveil lands, Triomes, fast lands, horizon lands, Verges) =====
+			["Meticulous Archive"] = SurveilLand,
+			["Undercity Sewers"] = SurveilLand,
+			["Raucous Theater"] = SurveilLand,
+			["Commercial District"] = SurveilLand,
+			["Lush Portico"] = SurveilLand,
+			["Shadowy Backstreet"] = SurveilLand,
+			["Thundering Falls"] = SurveilLand,
+			["Underground Mortuary"] = SurveilLand,
+			["Elegant Parlor"] = SurveilLand,
+			["Hedge Maze"] = SurveilLand,
+			["Spara's Headquarters"] = Triome,
+			["Raffine's Tower"] = Triome,
+			["Xander's Lounge"] = Triome,
+			["Ziatora's Proving Ground"] = Triome,
+			["Jetmir's Garden"] = Triome,
+			["Savai Triome"] = Triome,
+			["Ketria Triome"] = Triome,
+			["Indatha Triome"] = Triome,
+			["Raugrin Triome"] = Triome,
+			["Zagoth Triome"] = Triome,
+			["Seachrome Coast"] = FastLand(ManaColor.White, ManaColor.Blue),
+			["Darkslick Shores"] = FastLand(ManaColor.Blue, ManaColor.Black),
+			["Blackcleave Cliffs"] = FastLand(ManaColor.Black, ManaColor.Red),
+			["Copperline Gorge"] = FastLand(ManaColor.Red, ManaColor.Green),
+			["Razorverge Thicket"] = FastLand(ManaColor.Green, ManaColor.White),
+			["Concealed Courtyard"] = FastLand(ManaColor.White, ManaColor.Black),
+			["Spirebluff Canal"] = FastLand(ManaColor.Blue, ManaColor.Red),
+			["Blooming Marsh"] = FastLand(ManaColor.Black, ManaColor.Green),
+			["Inspiring Vantage"] = FastLand(ManaColor.Red, ManaColor.White),
+			["Botanical Sanctum"] = FastLand(ManaColor.Green, ManaColor.Blue),
+			["Horizon Canopy"] = HorizonLand(ManaColor.Green, ManaColor.White),
+			["Fiery Islet"] = HorizonLand(ManaColor.Blue, ManaColor.Red),
+			["Nurturing Peatland"] = HorizonLand(ManaColor.Black, ManaColor.Green),
+			["Sunbaked Canyon"] = HorizonLand(ManaColor.Red, ManaColor.White),
+			["Waterlogged Grove"] = HorizonLand(ManaColor.Green, ManaColor.Blue),
+			["Blazemire Verge"] = Verge(ManaColor.Black, ManaColor.Red, "Swamp", "Mountain"),
+			["Bleachbone Verge"] = Verge(ManaColor.Black, ManaColor.White, "Plains", "Swamp"),
+			["Karakas"] =
+			[
+				new ManaAbilityComponent(ManaColor.White),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new MoveTo(Ref.Target(), ZoneType.Hand)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Creature & Is.Legendary)],
+				},
+			],
+			["Library of Alexandria"] =
+			[
+				ColorlessMana(),
+				new ActivatedAbilityComponent(ManaCost.None, [new DrawCards(Ref.You, 1)])
+				{
+					Costs = [new TapSelfCost()],
+					// "exactly seven": seven or more, and not eight
+					OnlyIf = new Both(
+						new AtLeast(Count.NumberOf(Ref.CardsInYourHand), 7),
+						new Not(new AtLeast(Count.NumberOf(Ref.CardsInYourHand), 8))
+					),
+				},
+			],
+			["Abandoned Air Temple"] =
+			[
+				new EntersTappedComponent(YouControlA(Is.Land & Is.Supertype(Supertype.Basic))),
+				new ManaAbilityComponent(ManaColor.White),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{W}"),
+					[new PutCounters(Ref.CreaturesYouControl, 1)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			// ===== MC-4.4l2: colourless' other tested pieces =====
+			["Aether Spellbomb"] =
+			[
+				SacrificeThis(
+					"{U}",
+					tap: false,
+					[Creature],
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+				),
+				SacrificeThis("{1}", tap: false, [], new DrawCards(Ref.You, 1)),
+			],
+			["Pyrite Spellbomb"] =
+			[
+				SacrificeThis(
+					"{R}",
+					tap: false,
+					[TargetSpec.AnyTarget()],
+					new DealDamage(Ref.Target(), 2)
+				),
+				SacrificeThis("{1}", tap: false, [], new DrawCards(Ref.You, 1)),
+			],
+			["Haywire Mite"] =
+			[
+				When(TriggerEvent.SelfDies, [], new GainLife(Ref.You, 2)),
+				SacrificeThis(
+					"{G}",
+					tap: false,
+					[Target((Is.Artifact | Is.Enchantment) & !Is.Creature)],
+					new Exile(Ref.Target())
+				),
+			],
+			["Expedition Map"] =
+			[
+				SacrificeThis(
+					"{2}",
+					tap: true,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Hand) { Reveal = true }
+				),
+			],
+			["Soul-Guide Lantern"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.InAnyGraveyard()],
+					new Exile(Ref.Target())
+				),
+				SacrificeThis(
+					null,
+					tap: true,
+					[],
+					new Exile(Ref.All(ZoneType.Graveyard, Is.AnyCard, Ref.EachOpponent))
+				),
+				SacrificeThis("{1}", tap: true, [], new DrawCards(Ref.You, 1)),
+			],
+			["Voltaic Key"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new Untap(Ref.Target())])
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Artifact)],
+				},
+			],
+			["Manifold Key"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new Untap(Ref.Target())])
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Artifact & !Is.Source)],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBeBlocked)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Creature],
+				},
+			],
+			["Zuran Orb"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.None, [new GainLife(Ref.You, 2)])
+				{
+					Costs = [new SacrificeCost(Is.Land)],
+				},
+			],
+
+			["Chromatic Star"] =
+			[
+				// a mana cost and its own sacrifice: the solver's last resort, and a move (ManaAbilityComponent.CashedIn)
+				SacrificeForMana(1) with
+				{
+					Cost = ManaCost.Parse("{1}"),
+				},
+				When(
+					TriggerEvent.SelfLeaves with
+					{
+						To = ZoneType.Graveyard,
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Gleemox"] = [.. AnyColorMana(ManaRestriction.None)], // "This card is banned." is no rules text
+			["Mox Opal"] =
+			[
+				// metalcraft: "Activate only if you control three or more artifacts."
+				.. AnyColorMana(ManaRestriction.None)
+					.Cast<ManaAbilityComponent>()
+					.Select(m =>
+						m with
+						{
+							OnlyIf = new AtLeast(
+								Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+								3
+							),
+						}
+					),
+			],
+			["Retrofitter Foundry"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{3}"), [new Untap(Ref.Source)]),
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new CreateTokens(Servo, 1)])
+				{
+					Costs = [new TapSelfCost()],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new CreateTokens(Fra.FraCards.Thopter, 1)]
+				)
+				{
+					Costs = [new TapSelfCost(), new SacrificeCost(Is.Subtype("Servo"))],
+				},
+				new ActivatedAbilityComponent(ManaCost.None, [new CreateTokens(BigConstruct, 1)])
+				{
+					Costs = [new TapSelfCost(), new SacrificeCost(Is.Subtype("Thopter"))],
+				},
+			],
+			["Sensei's Divining Top"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new LookAndTake(3) { Take = 0, Rest = TheRest.TopInAnyOrder }]
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new DrawCards(Ref.You, 1),
+						new MoveTo(Ref.Source, ZoneType.Library) { OnTop = true },
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Skateboard"] =
+			[
+				When(TriggerEvent.SelfEnters, [Target()], new Tap(Ref.Target())),
+				AttachedGets(1, 0),
+				new StaticEffectComponent(Is.AttachedToSource, "Haste"),
+				Equip("{1}"),
+			],
+			["Skullclamp"] =
+			[
+				AttachedGets(1, -1),
+				When(TriggerEvent.AttachedCreatureDies, [], new DrawCards(Ref.You, 2)),
+				Equip("{1}"),
+			],
+			["Smuggler's Copter"] =
+			[
+				When(TriggerEvent.SelfAttacks, [], MayLoot),
+				When(new Trigger(EventKind.Blocks) { Subject = Is.Source }, [], MayLoot),
+				Crew(1),
+			],
+			["Crucible of Worlds"] = [new MayPlayFromZone(ZoneType.Graveyard, Is.Land)],
+			["Golos, Tireless Pilgrim"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+					{
+						Tapped = true,
+						May = true,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{W}{U}{B}{R}{G}"),
+					[
+						new ExileTopPlayable
+						{
+							N = 3,
+							Play = new() { ThisTurn = true, Free = true },
+						},
+					]
+				),
+			],
+			["Memnarch, the Warden"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Myr, 2)),
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new DrawCards(Ref.You, Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)))
+				),
+			],
+			["Tezzeret, Cruel Captain"] =
+			[
+				When(
+					new Trigger(EventKind.Entered) { Subject = Is.Artifact & Is.Yours },
+					[],
+					new AddLoyalty(Ref.Source, 1)
+				),
+				Loyalty(
+					0,
+					[Target(Is.Artifact | Is.Creature)],
+					new Untap(Ref.Target()),
+					new If(
+						new Matches(Ref.Target(), Is.Artifact & Is.Creature),
+						[new PutCounters(Ref.Target(), 1)]
+					)
+				),
+				Loyalty(
+					-3,
+					[],
+					new SearchLibrary(CardType.Artifact, ZoneType.Hand)
+					{
+						Filter = Is.ManaValueAtMost(1),
+						FilterText = "mana value 1 or less",
+						Reveal = true,
+					}
+				),
+				Loyalty(
+					-7,
+					[],
+					new GetEmblem(
+						[
+							When(
+								TriggerEvent.BeginningOfCombatOnYourTurn,
+								[Target(Is.Artifact & Is.Yours)],
+								new PutCounters(Ref.Target(), 3),
+								new If(
+									new Not(new Matches(Ref.Target(), Is.Creature)),
+									[
+										new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+										{
+											ForGood = true,
+											SetBase = (0, 0),
+											AlsoCreatureType = "Robot",
+											AlsoType = CardType.Creature,
+										},
+									]
+								)
+							),
+						]
+					)
+				),
+			],
+			["Portal to Phyrexia"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new EachSacrifices(Ref.EachOpponent, Is.Creature) { N = 3 }
+				),
+				When(
+					TriggerEvent.YourUpkeep,
+					[TargetSpec.InAnyGraveyard(Is.Creature)],
+					new MoveTo(Ref.Target(), ZoneType.Battlefield)
+					{
+						From = [ZoneType.Graveyard],
+						UnderYourControl = true,
+						Then =
+						[
+							new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
+							{
+								ForGood = true,
+								AlsoCreatureType = "Phyrexian",
+							},
+						],
+					}
+				),
+			],
+			["Cogwork Librarian"] = [], // ponytail: a 3/3 — its text is the DRAFT's, which Limited/Draft.cs doesn't know (DesignNotes)
 		};
+
+	/// <summary>
+	/// The surveil lands (Meticulous Archive): "This land enters tapped. When this land enters, surveil 1." — their
+	/// mana is their two basic land types' (CR 305.6), as the original duals'.
+	/// </summary>
+	static ImmutableArray<GameComponent> SurveilLand =>
+		[new EntersTappedComponent(), When(TriggerEvent.SelfEnters, [], new Surveil(1))];
+
+	/// <summary>The Triomes (Savai Triome): "This land enters tapped. Cycling {3}" — their mana is their three land types'.</summary>
+	static ImmutableArray<GameComponent> Triome => [new EntersTappedComponent(), Cycling("{3}")];
+
+	/// <summary>
+	/// The fast lands (Seachrome Coast): "This land enters tapped unless you control two or fewer other lands.
+	/// {T}: Add {A} or {B}." — tapped with three or more others.
+	/// </summary>
+	static ImmutableArray<GameComponent> FastLand(ManaColor a, ManaColor b) =>
+		[
+			new EntersTappedComponent(new Not(new AtLeast(OtherLandsYouControl, 3))),
+			new ManaAbilityComponent(a),
+			new ManaAbilityComponent(b),
+		];
+
+	/// <summary>
+	/// The horizon lands (Horizon Canopy): "{T}, Pay 1 life: Add {A} or {B}. {1}, {T}, Sacrifice this land: Draw a
+	/// card." — Mana Confluence's life, on each colour.
+	/// </summary>
+	static ImmutableArray<GameComponent> HorizonLand(ManaColor a, ManaColor b) =>
+		[
+			new ManaAbilityComponent(a) { Costs = [new TapSelfCost(), new PayLifeCost(1)] },
+			new ManaAbilityComponent(b) { Costs = [new TapSelfCost(), new PayLifeCost(1)] },
+			SacrificeThis("{1}", tap: true, [], new DrawCards(Ref.You, 1)),
+		];
+
+	/// <summary>
+	/// The Verges (Blazemire Verge): "{T}: Add {A}. {T}: Add {B}. Activate only if you control a [Swamp] or a
+	/// [Mountain]." — Fanatic of Rhonas' "activate only if", on the second colour.
+	/// </summary>
+	static ImmutableArray<GameComponent> Verge(
+		ManaColor a,
+		ManaColor b,
+		string type1,
+		string type2
+	) =>
+		[
+			new ManaAbilityComponent(a),
+			new ManaAbilityComponent(b)
+			{
+				OnlyIf = YouControlA(Is.Subtype(type1) | Is.Subtype(type2)),
+			},
+		];
+
+	/// <summary>
+	/// "You control a [filter]" — Abandoned Air Temple: "unless you control a basic land"; the Verges' land types;
+	/// Snuff Out: "If you control a Swamp".
+	/// </summary>
+	static Condition YouControlA(Filter what) =>
+		new AtLeast(Count.NumberOf(Ref.Permanents(what & Is.Yours)), 1);
+
+	/// <summary>
+	/// "[Cost], [{T},] Sacrifice this artifact: [effects]." — the Spellbombs (Aether Spellbomb: "{U}, Sacrifice this
+	/// artifact: Return target creature to its owner's hand."), Expedition Map, Soul-Guide Lantern, the horizon lands,
+	/// Strip Mine and Wasteland. <paramref name="tap"/>: the printed cost has {T} — say it by name at every call.
+	/// </summary>
+	static ActivatedAbilityComponent SacrificeThis(
+		string? cost,
+		bool tap,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	)
+	{
+		ImmutableList<AdditionalCost> costs = tap
+			? [new TapSelfCost(), new SacrificeSelfCost()]
+			: [new SacrificeSelfCost()];
+		return new(cost is null ? ManaCost.None : ManaCost.Parse(cost), [.. effects])
+		{
+			Costs = costs,
+			Targets = [.. targets],
+		};
+	}
+
+	/// <summary>Smuggler's Copter: "you may draw a card. If you do, discard a card."</summary>
+	static May MayLoot =>
+		new(
+			"Draw a card, then discard a card?",
+			new Always(),
+			[new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)]
+		);
+
+	/// <summary>Retrofitter Foundry: "a 1/1 colorless Servo artifact creature token".</summary>
+	static CardData Servo => Token("Servo", "Artifact Creature — Servo", "1", "1");
+
+	/// <summary>Retrofitter Foundry: "a 4/4 colorless Construct artifact creature token".</summary>
+	static CardData BigConstruct => Token("Construct", "Artifact Creature — Construct", "4", "4");
+
+	/// <summary>Memnarch, the Warden: "1/1 colorless Myr artifact creature tokens".</summary>
+	static CardData Myr => Token("Myr", "Artifact Creature — Myr", "1", "1");
 
 	/// <summary>
 	/// Crew N (CR 702.122, Esika's Chariot): "Tap any number of other untapped creatures you control with total power N

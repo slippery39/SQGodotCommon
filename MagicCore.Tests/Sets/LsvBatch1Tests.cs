@@ -27,16 +27,6 @@ public class LsvBatch1Tests : FraBoardTest
 			}
 		);
 
-	bool CanTapFor(int card, ManaColor color) =>
-		new TapForManaAction
-		{
-			PlayerId = me,
-			CardId = card,
-			Color = color,
-		}
-			.ValidateAdd(s)
-			.IsValid;
-
 	/// <summary>Every land of mine tapped: what pays now is only what the test puts down after.</summary>
 	void TapMyLands()
 	{
@@ -59,8 +49,13 @@ public class LsvBatch1Tests : FraBoardTest
 	public void Tundra_ReminderTextOnly_IsImplemented_AndTapsForItsTypes()
 	{
 		Assert.That(CardRegistry.IsImplemented("Tundra"), "only reminder text: implemented");
+		// Asked of the printed data, whatever is scripted: the Triomes were unscripted until MC-4.4l1.
 		Assert.That(
-			CardRegistry.IsImplemented("Indatha Triome"),
+			CardRegistry.NeedsNoScript(Lsv("Tundra").Data),
+			"only reminder text: no script needed"
+		);
+		Assert.That(
+			CardRegistry.NeedsNoScript(Lsv("Indatha Triome").Data),
 			Nu.False,
 			"reminder text beside a real line is not enough"
 		);

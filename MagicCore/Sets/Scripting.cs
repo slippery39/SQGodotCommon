@@ -30,8 +30,13 @@ public static class Scripting
 	public static readonly AtLeast Threshold = new(Count.NumberOf(Ref.CardsInYourGraveyard), 7);
 
 	/// <summary>"Enters tapped unless you control two or more other lands" (FRA's slow lands, TRK's enters-untapped lands).</summary>
+	/// <summary>"Other lands you control" — the slow lands' "two or more", the fast lands' "two or fewer" (Seachrome Coast).</summary>
+	public static readonly Count OtherLandsYouControl = Count.NumberOf(
+		Ref.Permanents(Is.Land & Is.Yours & !Is.Source)
+	);
+
 	public static readonly Condition YouControlTwoOrMoreOtherLands = new AtLeast(
-		Count.NumberOf(Ref.Permanents(Is.Land & Is.Yours & !Is.Source)),
+		OtherLandsYouControl,
 		2
 	);
 

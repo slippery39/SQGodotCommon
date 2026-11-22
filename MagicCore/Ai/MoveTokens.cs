@@ -24,7 +24,7 @@ public static class MoveTokens
 		if (answer is not null)
 			return (s.GetPendingChoice() is OrderLibraryTopChoice ? "o" : "c")
 				+ string.Join(",", answer);
-		if (action is TapForManaAction { SacrificeId: 0, NoTap: false } tap) // Phyrexian Tower's, Rain of Filth's are legal moves: a{index}
+		if (action is TapForManaAction { SacrificeId: 0, NoTap: false, PaysItsCost: false } tap) // Phyrexian Tower's, Rain of Filth's, Chromatic Star's are legal moves: a{index}
 			return $"t{tap.CardId}:{(int)tap.Color}";
 		if (action is SandboxPutAction put)
 			return Sandbox(put.PlayerId, put.Card.Data.Name, put.Zone);

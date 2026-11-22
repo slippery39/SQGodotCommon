@@ -382,7 +382,7 @@ public static class ManaPayment
 									n
 								),
 							],
-							false
+							costly.SacrificesItself // Chromatic Star: "{1}, {T}, Sacrifice this artifact" — Pay sacrifices it
 						),
 					],
 					// its own cost first: the most constrained (never its own mana)
@@ -673,7 +673,11 @@ public static class ManaPayment
 	public static GameState RaiseActivated(GameState s, int playerId, int sourceId) =>
 		s.GetCard(sourceId) is var source
 		&& !source.Is(CardType.Land)
-		&& ManaAbilities.CanTap(s, source)
+		&& (
+			ManaAbilities.CanTap(s, source)
+			// Chromatic Star has no plain tap: its one mana ability costs {1} — cashed in, it was activated
+			|| ManaAbilities.AbilitiesOf(s, source).Any(m => m.CashedIn)
+		)
 			? Turns.Triggers.Raise(s, new Turns.AbilityActivatedEvent(playerId, source))
 			: s;
 }

@@ -115,11 +115,18 @@ public static class CardRegistry
 	/// land types' mana, made by the subtypes (CR 305.6), as a basic land's is.
 	/// </summary>
 	public static bool IsImplemented(string name) =>
-		Scripts.Value.ContainsKey(name)
-		|| Data[name].TypeLine.StartsWith("Basic Land") // mana from the subtype, CR 305.6
+		Scripts.Value.ContainsKey(name) || NeedsNoScript(Data[name]);
+
+	/// <summary>
+	/// The card plays as printed with no script: a basic land, or text that is only engine keywords and reminder
+	/// text. Asked of the card's data alone, so the rule can be tested on a card whatever is scripted — a Triome's
+	/// reminder text beside "This land enters tapped." is NOT enough.
+	/// </summary>
+	public static bool NeedsNoScript(CardData card) =>
+		card.TypeLine.StartsWith("Basic Land") // mana from the subtype, CR 305.6
 		|| (
-			Data[name].CardFaces is null
-			&& (Data[name].OracleText ?? "")
+			card.CardFaces is null
+			&& (card.OracleText ?? "")
 				.Split('\n', StringSplitOptions.RemoveEmptyEntries)
 				.All(line => IsReminderOnly(line) || line.Split(", ").All(EngineKeywords.Contains))
 		);

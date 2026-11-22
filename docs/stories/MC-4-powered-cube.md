@@ -1863,6 +1863,242 @@ as his three priorities.
   Outland Liberator 316; Badgermole Cub and Springheart Nantuko cast 312 and 379 — their "activated 0" is right, neither
   has an activated ability). Suite 2,249 passed.
 - 2026-11-21, Shayne: **colourless is next** (4.4l) — 105 left of 163, the lands among them; multicolour (59) after.
+- 2026-11-21, Claude (cube lane) — **4.4l: colourless read card by card — 105 left of 163: 54 lands and 51 others
+  (five the coverage counts colourless sit among the multicolour names: Aether Spellbomb, Pyrite Spellbomb, Haywire
+  Mite, Sowing Mycospawn — devoid — and Relic of Sauron); 63 tested pieces, 33 options, 9 cards on 5 new pieces.**
+  MtgCore has none of the five (no computed colour, entering cost, skipped turn, pregame action, exert). Parts:
+  **l1** the 40 tested LANDS, by family — the 10 surveil lands (Meticulous Archive, Undercity Sewers, Raucous Theater,
+  Commercial District, Lush Portico, Shadowy Backstreet, Thundering Falls, Underground Mortuary, Elegant Parlor, Hedge
+  Maze: their basic land types give the mana, as Tundra's; `EntersTappedComponent`, `SelfEnters` → `Surveil(1)`), the
+  10 Triomes (Spara's Headquarters, Raffine's Tower, Xander's Lounge, Ziatora's Proving Ground, Jetmir's Garden, Savai,
+  Ketria, Indatha, Raugrin, Zagoth: `EntersTappedComponent`, `Cycling("{3}")`), the 10 fast lands (Seachrome Coast,
+  Darkslick Shores, Blackcleave Cliffs, Copperline Gorge, Razorverge Thicket, Concealed Courtyard, Spirebluff Canal,
+  Blooming Marsh, Inspiring Vantage, Botanical Sanctum: `EntersTappedComponent(Unless)` with `Not(AtLeast(other lands
+  you control, 3))` — `YouControlTwoOrMoreOtherLands`' count), the 5 horizon lands (Horizon Canopy, Fiery Islet,
+  Nurturing Peatland, Sunbaked Canyon, Waterlogged Grove: Mana Confluence's `Costs = [TapSelfCost, PayLifeCost(1)]` on
+  each colour; `{1}, {T}, SacrificeSelfCost`: draw), the 2 Verges (Blazemire, Bleachbone: the second colour's
+  `ManaAbilityComponent.OnlyIf` you control a Swamp or a Mountain — Fanatic of Rhonas' option), Karakas (`{T}`:
+  `MoveTo(Hand)` a target legendary creature), Library of Alexandria (`OnlyIf = Both(AtLeast(cards in hand, 7),
+  Not(AtLeast(…, 8)))`), Abandoned Air Temple (unless you control a basic land; `PutCounters(Ref.CreaturesYouControl)`);
+  **l2** the 23 other tested pieces — Aether Spellbomb, Pyrite Spellbomb (`SacrificeSelfCost` activations), Haywire
+  Mite (`SelfDies` gain 2; exile a target noncreature artifact or noncreature enchantment), Expedition Map
+  (`SearchLibrary(Land, Hand) { Reveal }`), Soul-Guide Lantern (ETB exile a target card from a graveyard; `Exile` each
+  opponent's graveyard), Voltaic Key, Manifold Key (`Untap` another target artifact; `Combat.CantBeBlocked` until end
+  of turn), Zuran Orb (`SacrificeCost(Is.Land)` — Baloth Prime's), Chromatic Star (a mana ability with `Cost = {1}` and
+  `SacrificeSelfCost`; its own `ChangedZone` battlefield → graveyard draws), Gleemox (`AnyColorMana`; "This card is
+  banned" is no rules text), Mox Opal (metalcraft: each colour `OnlyIf = AtLeast(ArtifactsYouControl, 3)`), Retrofitter
+  Foundry (Servo, Thopter, 4/4 Construct tokens; `SacrificeCost(Is.Subtype)`), Sensei's Divining Top (Ponder's
+  `LookAndTake(3) { Take = 0, Rest = TopInAnyOrder }`; draw, then `MoveTo(Ref.Source, Library) { OnTop }`), Skateboard,
+  Skullclamp (`AttachedCreatureDies` draw two), Lightning Greaves (statics haste and shroud; `Equip("{0}")`),
+  Smuggler's Copter (`Crew(1)`; `SelfAttacks` and a `Blocks` trigger, `May` draw then discard), Crucible of Worlds
+  (Nog's `MayPlayFromZone(Graveyard, Is.Land)`), Golos, Tireless Pilgrim (`SearchLibrary(Land, Battlefield) { Tapped,
+  May }`; Urza's `ExileTopPlayable { N = 3, Play = { ThisTurn, Free } }`), Memnarch, the Warden (two Myr; `DrawCards`
+  by `ArtifactsYouControl`), Tezzeret, Cruel Captain (`AddLoyalty` as an artifact you control enters; untap, a counter
+  `If` it is an artifact creature; `SearchLibrary` an artifact of mana value ≤ 1; the emblem's combat trigger — Does
+  Machines' 0/0 Robot, `ForGood`), Portal to Phyrexia (`EachSacrifices(EachOpponent, Creature) { N = 3 }`; upkeep
+  `TargetSpec.InAnyGraveyard(Creature)` → `MoveTo(Battlefield) { UnderYourControl, Then }` a Phyrexian too), Cogwork
+  Librarian (its text is the DRAFT's, not a game's: an empty script, a 3/3 — a ceiling; see the questions);
+  **l3a** options, mana, 10 — Sunken Ruins (a HYBRID `Cost` {U/B} on a mana ability; two mana `Color`/`OrColor` —
+  Orcish Lumberjack's), Relic of Sauron ("any combination of {U}, {B}, and/or {R}": `OrColor` holds ONE other colour —
+  a list of colours, Orcish Lumberjack moved onto it), Pentad Prism (`Sunburst`; a counter-removal cost,
+  `RemoveCountersCost(1, Is.Source) { Kind }`, on a MANA ability with no `{T}`), Gemstone Mine (three mining counters;
+  the same cost, and "if there are no mining counters on this land, sacrifice it" — a mana ability's rider: `Then`
+  effects, where `DealsDamageToYou` is today's only rider — read whether the Talismans fold onto it), Chrome Mox
+  (imprint: `SelfEnters` `May` exile a nonartifact, nonland card from your hand, `Linked`; "one mana of any of the
+  exiled card's colors" — a mana ability's colours read from a Ref, `Is.ExiledBySource`), Lion's Eye Diamond ("discard
+  your hand" as a COST — `DiscardCost` has a count, not the hand; built as an activated ability adding
+  `AddManaOfAnyOneColor(3)`, never a `ManaAbilityComponent`: the payment solver taps mana abilities by itself and must
+  never discard a hand — a ceiling, it uses the stack), Wizard's Rockets (the same shape with `{X}`: "X mana in any
+  combination of colors" — `AddManaOfAnyOneColor` chooses one colour: a per-unit choice option; enters tapped; its own
+  leaving draws), Coalition Relic (`AnyColorMana`; `{T}`: a charge counter; `YourFirstMainPhase` remove them all,
+  "one mana of any color for each" — the Rockets' option, counted by the counters removed), Starting Town ("unless
+  it's your first, second, or third turn of the game" — no count of a player's turns: a `CountOf` stamped by
+  `TurnStructure`; `{T}`, pay 1 life: any colour), Walking Ballista (`{X}{X}`: only Pest Infestation pays X twice, and
+  it enters with nothing — `EntersWithCountersComponent(Count.X)` read from an XX cost; `RemoveCountersCost`: 1 damage
+  to any target);
+  **l3b** options, exile, graveyard and library, 11 — Currency Converter (`APlayerDiscards` by you → `May` exile THAT
+  card from your graveyard, `Linked`; `{T}`: `MoveChosen(Exile, Is.ExiledBySource, Graveyard) { Then }` a Treasure if
+  `Ref.Chosen` is a land, else a 2/2 black Rogue), Ghost Vacuum (Keen-Eyed Curator's linked exile; `{6}, {T}`,
+  sacrifice: every creature card "exiled with this" onto the battlefield under your control with a flying counter, a
+  1/1 Spirit too — the links read from the source AS IT WAS, its cost having sacrificed it: the risk), Memory Jar (each
+  player's hand exiled face down, `Linked`, seven drawn; `AtNextEndStep` each discards and takes theirs back — the
+  same read of a sacrificed source, by a delayed trigger), Karn, Scion of Urza (+1: the top two revealed, "an opponent
+  chooses one" — Extrapolate's `DeciderId`; the other exiled "with a silver counter" — `MoveTo.CounterKind` to EXILE,
+  a counter on a card there; −1 `MoveChosen(Exile, …, Hand)` by that counter; −2 a Construct with `StaticEffectComponent`
+  +1/+1 per artifact), Ugin, Eye of the Storms (`SelfCast` and `YouCastSpell { Subject = Is.Colorless }` → exile up to
+  one target `!Is.Colorless` permanent; 0: `AddMana(Colorless, 3)`; −11 `SearchLibrary { UpTo, Filter, To = Exile,
+  Play = { ThisTurn, Free } }` — Thada Adel's `Play` with any number and free), Shelldock Isle (hideaway 4:
+  `LookAndTake(4) { To = Exile, FaceDown, Rest = BottomAtRandom }` — `Linked` is not one of its options; `{U}, {T}`:
+  `MakePlayable` the exiled card free, `OnlyIf` a library has twenty or fewer cards), Grindstone (`Mill(target, 2)`,
+  "if two cards that share a color were milled this way, repeat this process" — `Mill` has `IfMilled` only: a repeat
+  option reading the two; it stops when fewer than two are milled — with Painter's Servant, the whole library),
+  Palantír of Orthanc (`YourEndStep`: an influence counter, scry 2 — `Surveil(2) { To = Library }`; target opponent
+  `May { Who }` have you draw; `Otherwise` you mill X — `Mill.N` is an int, a `Count` — and "loses life equal to the
+  total mana value of those cards", a `CountOf` over the milled), Mishra's Bauble and Urza's Bauble ("look at the top
+  card of target player's library" / "a card at random in target player's hand" — `LookAtHand` makes a whole hand
+  known: one card of it, or a library's top; "draw a card at the beginning of the next turn's upkeep" —
+  `AtNextEndStep` has `NextMainPhase`: its step an option, not a second flag), Shifting Woodland (unless you control a
+  Forest; delirium `OnlyIf = AtLeast(Count.CardTypesAmong(Ref.CardsInYourGraveyard), 4)`; Hall of Echoes'
+  `BecomeCopyUntilEndOfTurn(Ref.Source, Ref.Target())` of a permanent CARD in your graveyard — today a creature on the
+  battlefield);
+  **l3c** options, triggers, combat, equipment and casting, 12 — Sowing Mycospawn (`KickerComponent` {1}{C}; two
+  `SelfCast` triggers, the second `If = WasKicked` with a target — a cast trigger reading the kick of its own spell),
+  Emrakul, the Aeons Torn (`CantBeCountered`; `SelfCast` → `TakeExtraTurn`; `Protection(Is.Spell & !Is.Colorless)`;
+  annihilator 6 a scripted `SelfAttacks` → `EachSacrifices(EachOpponent, any permanent) { N = 6 }` — two players, the
+  defending player is the opponent; Worldspine Wurm's graveyard arrival → the owner's whole graveyard `MoveTo(Library)
+  { Shuffle }`), Candelabra of Tawnos ("{X}, {T}: Untap X target lands" — Dominion Infiltration's targets picked after
+  X, on an ACTIVATED ability), Reckoner Bankbuster (three charge counters; `{2}, {T}`, remove one: draw, then `If` none
+  are left a Treasure and a Pilot; `Crew(3)`; the Pilot "crews Vehicles as though its power were 2 greater" — an
+  option where `TapUntappedCost.TotalPower` sums), Sword of the Meek (a trigger `From = Graveyard` on a creature you
+  control entering with power AND toughness 1; `May` `MoveTo(Battlefield) { Then = [Attach(Ref.ThisWay,
+  Ref.EventCard)] }`), The Fantasticar (a Vehicle with no crew: `YouCastNoncreatureSpell` → `May` crew's `AlsoType`;
+  "your FOURTH noncreature spell each turn" — `EventTest.FirstNoncreatureSpell` reads `NoncreatureSpellNumber: 1`:
+  the number an option, the first moved onto it; `May` sacrifice → four 4/4 Constructs with flying and haste), The One
+  Ring (`SelfEnters { If = SourceWasCast }` "you gain protection from everything until your next turn" — The Needs of
+  the Many's `YouHaveHexproof` and `PreventAllDamageToYou` are this-turn effects: `UntilTurnOf` their option; burden
+  counters; upkeep `LoseLife` by them; `{T}`: one more, then draw that many), Coveted Jewel (draw three; three mana of
+  any one colour; "whenever one or more creatures an opponent controls attack you and aren't blocked" — no event says
+  an attacker went unblocked: one raised as blockers are declared (`IsBlocked` false), `OneOrMore`; that player draws
+  three, `GainControl(Ref.Source, …)`, `Untap`), Kaldra Compleat (living weapon: Cori-Steel Cutter's `CreateTokens(Germ)
+  { Then = Attach }`; statics on `Is.AttachedToSource`; "whenever this creature deals combat damage to a creature,
+  exile that creature" written on the Equipment — a `CreatureDealtDamage` trigger by the attached creature, in combat),
+  Boseiju, Who Endures and Otawara, Soaring City (channel: an activated ability `From = Hand` with `DiscardSelfCost`,
+  cycling's shape; "costs {1} less to activate for each legendary creature you control" — `CostChange { Abilities }`
+  is Anointed Peacekeeper's tax on OTHER sources: an ability's own reduction; Boseiju's `ItsControllerMayFetch` with
+  "a land card with a basic land type", untapped), Urza's Saga (a `SagaComponent(3)` on a LAND — it enters by a land
+  drop, never cast; chapters I and II "this Saga GAINS" an ability — `ModifyUntilEndOfTurn { Gains, ForGood }`; III
+  `SearchLibrary(Artifact, Battlefield)` "with mana COST {0} or {1}" — not mana value: a filter on the printed cost);
+  **l4** new pieces, each with its nearest: **computed colours** (Painter's Servant; Celestial Colonnade, Creeping Tar
+  Pit, Restless Vinestalk) — colour is read as printed (`Card.Colors`, 18 reads outside the sets and the AI: `Filter`,
+  `Refs`, `ManaPayment` …); the nearest is `Rules/Characteristics` (THE power, toughness and keywords: own + every
+  static) — it has no colour, so no option fits: a `ColorsOf` beside them that every read moves onto. Then Painter is
+  `ChoosesColorAsItEnters` (Room of Refuge's) and a static over every zone, and a creature land's "becomes a 4/4 white
+  and blue Elemental creature … still a land" is crew's `ModifyUntilEndOfTurn { AlsoType = Creature }` with `SetBase`,
+  `AlsoCreatureType` and a `Colors` option (Tar Pit `Combat.CantBeBlocked`; Vinestalk's `SelfAttacks` `SetBase (3, 3)`
+  on up to one other target creature — Perfected Theory's); **an entering's cost** (Mox Diamond; Multiversal Passage)
+  — nearest `EntersTappedComponent.UnlessYouPayLife`, the shocklands' "as this enters, you may pay 2 life; if you
+  don't, it enters tapped": an int of life with one consequence. Generalised to a cost from the shared list
+  (`PayLifeCost(2)`; `DiscardCost(Is.Land)`) and what a "no" does (tapped; Mox Diamond's "put it into its owner's
+  graveyard" INSTEAD of entering — no enter or leave event), the shocklands moved onto it. Multiversal Passage also
+  "choose a basic land type … this land is the chosen type": a fifth "as it enters, choose" beside colour, name,
+  number and player — read whether the four fold into one when built; the type stamped as a subtype, which gives the
+  mana; **skipping a turn** (Time Vault) — nearest `SkipYourDrawStep` (a static: a STEP never begins) and
+  `TurnStructure.FinishCleanup` (whose turn is next, the extra-turn queue): "if you would begin your turn while this
+  artifact is tapped, you may skip that turn instead. If you do, untap this artifact" is a CHOICE as a turn would
+  begin — no option on a static fits; the rest is tested (`EntersTappedComponent`, `DoesntUntapItself`, `{T}`:
+  `TakeExtraTurn`); **beginning the game on the battlefield** (Gemstone Caverns) — nearest the mulligan
+  (`Actions/MulliganActions`), the only pregame choice; nothing reads an opening hand after it (no Leyline plays):
+  once hands are kept, the player who isn't starting may put it onto the battlefield with a luck counter and exile a
+  card from their hand; its mana two abilities under `OnlyIf` and its `Not` (Undermountain Adventurer's shape);
+  **exert, and mana that grants** (Arena of Glory) — exert "won't untap during your next untap step": nearest a stun
+  counter (`MagicState.Untap` removes it instead) — any untap spends a stun counter, an exerted permanent still untaps
+  by an effect — and `DoesntUntap`, a static with no end; "if any of that mana is spent on a creature spell, it gains
+  haste until end of turn": nearest `ManaRestriction` (the pool's mana tagged with what it may pay) — that limits a
+  payment, this gives the spell something: a rider on the same tag, read as the spell is paid for.
+  **Legal actions, counted on a 12-creature board:** nothing grows by combinations — Candelabra's lands, crew's
+  creatures and annihilator's six are picked after the action; Wizard's Rockets' and Coalition Relic's colours are one
+  choice per unit (never one option per combination: 5^X); Relic of Sauron's solver sees 6 outputs, Sunken Ruins' 3.
+  One action each per: graveyard card (Ghost Vacuum, Soul-Guide Lantern, Portal, Shifting Woodland — 30 late), land
+  (Zuran Orb), legendary creature (Karakas), target (Walking Ballista: ~26). **Loops the probe must show end:**
+  Lightning Greaves' `Equip {0}` (free, without limit at sorcery speed — the AI's search within a turn), Time Vault
+  with Voltaic Key, Manifold Key or Tezzeret (a turn after every turn), Painter's Servant with Grindstone (ends with
+  the library). Each probed at 10 games before 150.
+  **Batches (Shayne: more cards a session):** **l1** (40 lands, script-only, read on the card sheet), **l2** (23,
+  script-only), **l3a** (10, mana), **l3b** (11, exile, graveyard, library), **l3c** (12, triggers, combat, casting),
+  **l4a** (6: computed colours, an entering's cost), **l4b** (3: Time Vault, Gemstone Caverns, Arena of Glory).
+  **Questions for Shayne's review:** (1) Cogwork Librarian — an empty script (a 3/3 in games, the draft ability a
+  ceiling in DesignNotes) is planned; the other reading is `Limited/Draft.cs` learning "draft an additional card".
+  (2) Lion's Eye Diamond and Wizard's Rockets as abilities that use the stack (above) — the ceiling is that they can
+  be responded to and can't pay mid-cast, which LED's "activate only as an instant" forbids anyway.
+- 2026-11-21, Shayne (reviewing 4.4l's plan, its two questions): **Cogwork Librarian is a 3/3 with no script** — it
+  "only applies in the draft, it's kind of an edge case". **Lion's Eye Diamond and Wizard's Rockets as abilities that
+  use the stack are "fine for now, but please note the limitation"** — so l3a writes it down where ceilings live
+  (DesignNotes, "MagicCore known ceilings", and a `ponytail:` on each script), in these words' substance: both are
+  mana abilities in the rules (CR 605) and are built as ordinary activated abilities, because the payment solver taps
+  mana abilities by itself and must never discard a hand or choose an X. What that costs: (1) the ability goes on the
+  stack, so an opponent gets priority and may respond — and Sublime Epiphany's "counter target activated or triggered
+  ability" can counter it, which the rules forbid; (2) casting never uses them — the mana must be made BEFORE the
+  spell is cast and float, so a spell payable only through them isn't offered until they have been activated, and
+  Wizard's Rockets can't fix a colour in the middle of a payment (LED's "activate only as an instant" forbids that for
+  LED anyway); (3) the AI has to choose the activation as its own move. Upgrade path: a mana ability the solver may
+  not choose by itself — offered as an action and while paying, never auto-tapped.
+- 2026-11-21, Shayne (the same review): **more cards a session** — 4.4l's seven parts are built as FOUR batches:
+  **l1 + l2** (63: every tested piece, lands and others, script-only, read on the card sheet), **l3a + l3b** (21
+  options: mana; exile, graveyard and library), **l3c** (12 options: triggers, combat, equipment, casting), **l4a +
+  l4b** (9 cards on the 5 new pieces). The parts keep their names and lists. Three batches (every option, 33, in one
+  session) is his to ask for: it is twice the most options a session has built (h2's and k2's were 5–8 each), and
+  each option carries a test and a revert-check, so that session's context is the one the usage log would show.
+- 2026-11-21, Claude (cube lane) — **4.4l1 + l2: 62 of colourless' 63 tested pieces — 426 of 528 play (colourless
+  120 of 163); the review took one out and found one broken, fixed here.** Shayne took the plan by starting the
+  batch. One engine option, Chromatic Star's (the entry after Shayne's note). The 37
+  family lands are five helpers (`SurveilLand`, `Triome`, `FastLand`, `HorizonLand`, `Verge`), with
+  `YouControlA(filter)` and `SacrificeThis(cost, tap:, targets, effects)` (the Spellbombs, Expedition Map, Soul-Guide
+  Lantern, the horizon lands' draw); Retrofitter Foundry's Thopter is FRA's token, referenced, not copied. **The
+  lands got tests although tier 1** (`LsvBatch2lTests`, 41 cases, a family each against its printed text — fast lands
+  at two and three other lands and their two colours, a surveil land's entering, a Triome's cycling, a horizon land's
+  life and sacrifice, a Verge's second colour, Library of Alexandria at six, seven and eight cards, Abandoned Air
+  Temple): a land is played, never cast, so the probe says nothing of ten fast lands and two Verges. Cogwork
+  Librarian is `[]` (DesignNotes' ceilings).
+  **Both found by /pre-commit's review, neither by the card sheet nor the probe:** **Chromatic Star, broken as
+  scripted — fixed in this session (below).**
+  "{1}, {T}, Sacrifice this artifact: Add one mana of any color": a mana ability with a mana `Cost` AND
+  `SacrificeSelfCost` is not `IsPlain`, so only `ManaPayment.WithCostlyMana` uses it — which never sacrifices — and
+  no move activates it by hand: it tapped as a reusable colour filter and never drew. The plan called it tested (its
+  tier came from the catalog); it is an option. **Lightning Greaves → l5, waiting on the AI.** Its script is right
+  (statics `Haste` and `Shroud` on `Is.AttachedToSource`, `Equip("{0}")`) but the search AI re-equips it without end
+  — watched, on a board of Greaves, a 2/2 and a 4/4: "Activate Lightning Greaves → Bear | Pass | Pass | Activate
+  Lightning Greaves → Ogre | Pass | Pass | …" for 30 decisions, the turn never ending. Free, at sorcery speed, and
+  each equip a new position, so nothing in the beam ends it; random play only showed it as 4 of 150 probe games
+  unfinished. **Zuran Orb is in, and the AI overuses it:** nine lands sacrificed in a row on its first turn
+  ("Activate Zuran Orb, sacrificing Plains" …, still going at 30 decisions, on the test board's twenty basics) — it
+  ends, bounded by the lands, but 2 life is priced above a land there. Smuggler's Copter, Retrofitter Foundry,
+  Sensei's Divining Top and Karakas, watched the same way, take sensible turns that end. The recipe: on
+  `FraBoardTest`'s board `Field` the card and two creatures, then `s = s.AutoPass(); s = new
+  BeamSearchAi(s.DecidingPlayerId()).Decide(s).State` until the turn number changes, collecting each `What`.
+  **Review's other fixes:** `CardRegistry.NeedsNoScript(CardData)` extracted from `IsImplemented` (no behaviour
+  change), so `LsvBatch1Tests`' reminder-text rule is asked of the printed data — a Triome was its unscripted example
+  until this batch scripted it; `Scripting.OtherLandsYouControl` (the slow and the fast lands' one count); Snuff Out
+  onto `YouControlA`; `SacrificeToDestroy` through `SacrificeThis`; `CanTapFor` moved to `FraBoardTest`.
+  **Checks (the final 62, after the Star's fix):** golden-out unmoved (162 + 946) — the engine change moves no
+  recorded game; golden-in regenerated, 62 card replays added (1,008), the AI replay unmoved; probe, the 21 non-lands:
+  150 games, none unfinished, every card cast or used, and the Star alone: 150 games, none unfinished, cast 575
+  times, its draw on the stack 58 (the first run, all 63 with Greaves in: 4 unfinished at the 20,000-step cap).
+  `batch_checks.py`'s probe150 with every card named timed out at its 30 minutes — three of each is a 208-card deck:
+  a batch this size names its non-lands to the probe, its lands being tested. Revert-checks 6 of 6 caught. Full suite
+  2,295 passed, 1 skipped; docs current.
+- 2026-11-21, Shayne (on those two findings): **"We might need an AI note to stop it from using Zuran Orb so
+  liberally. Same with Lightning Greaves — free abilities in general, I guess."** So the note, FOR THE AI LANE (its
+  code, its measurements — nothing of the search or the evaluator is changed in the cube lane): **an activated
+  ability that costs no mana is not free to the search.** Two cases, both watched above: (1) one that can be taken
+  without end (Greaves' `Equip {0}`: every activation a new position) — the search needs a rule that ends it, e.g. no
+  move back to a position this turn has already had, or a cap on activations of one ability a turn; until it has one
+  Lightning Greaves stays unscripted (l5). (2) one that spends a RESOURCE the evaluator underprices (Zuran Orb: a
+  land for 2 life, nine times) — a land sacrificed should cost what the land count and `LandUnlock` say it is worth,
+  and more while cards in hand still need it. The same look is owed to the next ones the cube adds: Lion's Eye
+  Diamond (discard your hand), Mox Diamond and Chrome Mox (a card from hand), Gemstone Mine, Walking Ballista (its
+  counters), Karn's and Tezzeret's 0s. Claude's reading of "note": written here and in Next for the merge — not a
+  change to the AI made in this lane; say if a guard should be built here instead.
+- 2026-11-21, Shayne (asked why Chromatic Star wasn't working, and how to fix it): **"Yes please fix it in this
+  session so we can move on."** Claude (cube lane) — **Chromatic Star is back in l2, with one engine option: a mana
+  ability that costs mana AND sacrifices itself, `ManaAbilityComponent.CashedIn`.** The nearest was Starfleet
+  Academy's costly mana (`ManaPayment.WithCostlyMana`: auto-payment only, its source STAYS) — the Star's is that with
+  `SacrificeSelfCost`, so no new piece: (1) `WithCostlyMana` marks its source sacrificed when the ability says so,
+  and `Pay` sacrifices it as a Treasure — its "put into a graveyard from the battlefield, draw a card" then fires;
+  (2) cashing it in is a decision, so it is also a MOVE, one per colour — `TapForManaAction.PaysItsCost`, beside the
+  two mana moves there were (a cost that picks a card, no {T}): its {1} paid by the other permanents and the pool
+  (`ManaPayment.Find` without it), then its {T} and sacrifice, the mana floating; (3) `RaiseActivated` sees it (it
+  has no plain tap, so `CanTap` hid its activation from Kai Winn), and "any color" is never {C} on a mana move.
+  Tests in `LsvBatch2lTests` (cashed in by hand: {1} paid, sacrificed, the colour, the draw; paying for a spell;
+  nothing to pay its {1}: no move; never colourless; Kai Winn's 3), each line revert-checked. **The AI's turn with
+  it, watched:** "Play Forest | Pay for and sacrifice Chromatic Star for White | Cast Graft Surgeon | Attack with
+  Bear" — it ends; the cash-in was for the card, its mana unused. Ceilings in DesignNotes ("Chromatic Star"): one
+  costly source a payment plan (two Stars never pay one spell together unasked); five moves a Star, each solving its
+  {1}; a saved record in which a mana MOVE was offered reads stale (the new field is in the move's key — the kept
+  records and the position suite are unaffected). A second /pre-commit review of the engine change found the
+  activation event, the colourless hole and two stale doc lines (`MagicCore/CLAUDE.md`, the action's summary) — all
+  fixed. **For l3a:** Lion's Eye Diamond and Wizard's Rockets were planned as abilities that use the stack because
+  the solver must never discard a hand or choose an X by itself — this move is the other way to that (a mana ability
+  the solver may not choose, offered as a move); weigh it there before taking the stack.
 
 ## Tasks
 
@@ -2146,6 +2382,33 @@ as his three priorities.
     - [x] MC-4.4k3 New pieces, 4: crew (Esika's Chariot), earthbend (Badgermole Cub), bestow (Springheart Nantuko),
           day/night (Outland Liberator // Frenzied Trapbreaker) (done 2026-11-21 — three were options; day/night the
           one new piece; Molten Tide moved onto `ExtraMana`)
+  - [ ] MC-4.4l Colourless beyond tier 1 (Shayne, 2026-11-21: after the colours) — 105 cards, 54 of them lands, read
+        card by card and tiered (Decisions, "4.4l"): 63 tested pieces, 33 options, 9 cards on 5 new pieces; seven
+        parts built as FOUR batches — l1 + l2, l3a + l3b, l3c, l4a + l4b (Shayne, 2026-11-21: more cards a session;
+        he reviews the plan before the first):
+    - [x] MC-4.4l1 The tested lands, 40: surveil lands, Triomes, fast lands, horizon lands, Verges, Karakas, Library of
+          Alexandria, Abandoned Air Temple (done 2026-11-21, one batch with l2; a test per land family)
+    - [x] MC-4.4l2 The other tested pieces, 22 of the 23 (list in Decisions) — Cogwork Librarian a 3/3 with no script
+          (Shayne: draft-only, an edge case); its draft ability a line in DesignNotes' ceilings (done 2026-11-21;
+          the review moved Lightning Greaves to l5 and found Chromatic Star broken — fixed with an engine option, a
+          mana ability that costs mana and sacrifices itself)
+    - [ ] MC-4.4l3a Options, mana, 10: Sunken Ruins, Relic of Sauron, Pentad Prism, Gemstone Mine, Chrome Mox, Lion's
+          Eye Diamond, Wizard's Rockets, Coalition Relic, Starting Town, Walking Ballista — LED and the Rockets use
+          the stack (Shayne: fine for now, the limitation NOTED: DesignNotes' ceilings and a `ponytail:` each, the
+          words in Decisions)
+    - [ ] MC-4.4l3b Options, exile, graveyard and library, 11: Currency Converter, Ghost Vacuum, Memory Jar, Karn,
+          Scion of Urza, Ugin, Eye of the Storms, Shelldock Isle, Grindstone, Palantír of Orthanc, Mishra's Bauble,
+          Urza's Bauble, Shifting Woodland
+    - [ ] MC-4.4l3c Options, triggers, combat, equipment and casting, 12: Sowing Mycospawn, Emrakul, the Aeons Torn,
+          Candelabra of Tawnos, Reckoner Bankbuster, Sword of the Meek, The Fantasticar, The One Ring, Coveted Jewel,
+          Kaldra Compleat, Boseiju, Who Endures, Otawara, Soaring City, Urza's Saga
+    - [ ] MC-4.4l4a New pieces, 6 cards: computed colours (Painter's Servant; Celestial Colonnade, Creeping Tar Pit,
+          Restless Vinestalk), an entering's cost (Mox Diamond; Multiversal Passage)
+    - [ ] MC-4.4l4b New pieces, 3: skipping a turn (Time Vault), beginning the game on the battlefield (Gemstone
+          Caverns), exert and mana that grants (Arena of Glory)
+    - [ ] MC-4.4l5 Lightning Greaves — scripted, then taken out (2026-11-21): the search AI re-equips `Equip {0}`
+          without end. Waits on the AI lane's rule for abilities that cost no mana (Shayne's note, Decisions); then
+          its three-line script and a kept test that the AI's turn ends
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -2187,7 +2450,33 @@ G 50/50, multicolour 6/65, colourless 58/163). **Every colour is done. Colourles
 MC-4.4l** — its 105 unplayed cards, the lands among them; multicolour (59) after — read card by card
 (`python tools/magic_set.py text --missing --set LSV`) and tiered as each colour was (each new piece naming its
 nearest), written in Decisions as "4.4l", then batches of more cards a session; Shayne reviews the plan before the
-first batch. From k3: crew `LsvCards.Crew(n)` (Smuggler's Copter and Reckoner Bankbuster wait on nothing else for it);
+first batch. **MC-4.4l is planned (Decisions, "4.4l") and waits for Shayne's review — no card of it is built:** 63
+tested pieces, 33 options, 9 cards on 5 new pieces, in seven parts — l1 (the 40 tested lands), l2 (the 23 other
+tested pieces), l3a (10 mana options), l3b (11 exile, graveyard and library options), l3c (12 trigger, combat,
+equipment and casting options), l4a (computed colours, an entering's cost: 6 cards), l4b (Time Vault, Gemstone
+Caverns, Arena of Glory). Its two questions are answered (Shayne, 2026-11-21; Decisions, after "4.4l"): Cogwork
+Librarian is a 3/3 with no script, and Lion's Eye Diamond and Wizard's Rockets use the stack for now — l3a must write
+that limitation into DesignNotes' ceilings. **Built as four batches (Shayne, 2026-11-21: more cards a session): l1 +
+l2 (63, script-only), l3a + l3b (21 options), l3c (12 options), l4a + l4b (9 cards, the 5 new pieces).** **l1 + l2
+is done, 62 of its 63** (Decisions, "4.4l1 + l2"; 426 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 50/50,
+multicolour 6/65, colourless 120/163): the review took out Lightning Greaves (l5: the search AI re-equips it without
+end) and found Chromatic Star broken — fixed in the batch (`ManaAbilityComponent.CashedIn`: a mana ability that
+costs mana and sacrifices itself is sacrificed by the solver and is a move, `TapForManaAction.PaysItsCost`).
+**For the AI lane at the merge
+(Shayne, 2026-11-21; Decisions, after "4.4l1 + l2"): an ability that costs no mana is not free to the search** —
+Greaves' endless `Equip {0}` needs a rule that ends it, and Zuran Orb (in, and playing) had the AI sacrifice nine
+lands in a row for life. **Next: l3a + l3b** — the 21 options (mana; exile, graveyard and library), each with its
+test and revert-check; LED and Wizard's Rockets were to use the stack, the limitation written into DesignNotes
+there — first weigh the Star's move for them (a mana ability the solver may not choose, offered as a move:
+Decisions, the Star's entry); WATCH the AI's turn with each card that has a free or resource-spending ability (the recipe is in
+Decisions) — the probe's random play doesn't show it. From l1 + l2:
+the land helpers `SurveilLand`, `Triome`, `FastLand(a, b)`, `HorizonLand(a, b)`, `Verge(a, b, type, type)`;
+`YouControlA(filter)`; `SacrificeThis(cost, tap, targets, effects…)`; tokens `Servo`, `Myr`, `BigConstruct` (4/4;
+`Construct` is the 0/0 — Karn's and Urza's Saga's needs its +1/+1 static); `MayLoot`; the lands' tests are in
+`LsvBatch2lTests.cs` (`EmptyBoard()` — the base board's twenty basics answer every "unless you control";
+`PlayAmong(land, n)`, `TapsFor(land, colour)`). Two rules the plan didn't know, from the rules files: a plain `{T}`
+mana ability doesn't read `OrColor` (Relic of Sauron, Sunken Ruins: magic-mana.md), and "X targets" on an activated
+ability THROWS today (Candelabra: magic-casting.md). From k3: crew `LsvCards.Crew(n)` (Smuggler's Copter and Reckoner Bankbuster wait on nothing else for it);
 a type until end of turn `ModifyUntilEndOfTurn { AlsoType }` without `ForGood`; earthbend `LsvCards.Earthbend(n)`;
 "whenever you tap [these] for mana, add an additional …" `ExtraMana(filter, colour)` (`ManaAbilities.ExtraFor`);
 bestow `Scripting.Bestow(cost)` (`MayCastFromHandFree.Enchant`); day/night `Rules.DayNight` (`MagicGame.Daytime`,
@@ -2591,3 +2880,12 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   Strike Team's become-target trigger corrected (one golden game moved, intended). Next: k3.
 - 2026-11-21: MC-4.4k3 done — crew, earthbend, bestow, day/night; 364 of 528 play, **green (50 of 50) finished: every
   colour is done**. Shayne picked colourless. Next: MC-4.4l, colourless' 105 — survey, tiers, plan.
+- 2026-11-21: MC-4.4l planned — colourless' 105 read and tiered (63 tested pieces, 33 options, 9 cards on 5 new
+  pieces), seven batches; no card built (364 of 528 play). Shayne answered its two questions (Cogwork Librarian no
+  script; LED and Wizard's Rockets on the stack, the limitation to be noted in l3a), and asked for more cards a
+  session: four batches. Next: l1 + l2.
+- 2026-11-21: MC-4.4l1 + l2 done — 62 of colourless' 63 tested pieces (40 lands, 22 others); 426 of 528 play
+  (colourless 120 of 163). The review took out Lightning Greaves (l5: the AI re-equips it without end) and found
+  Chromatic Star broken — fixed at Shayne's asking (a mana ability that costs mana and sacrifices itself: sacrificed
+  by the solver, and a move); Shayne: an AI note on free abilities — Zuran Orb too. Next: l3a + l3b, the 21 mana and
+  exile/graveyard/library options.

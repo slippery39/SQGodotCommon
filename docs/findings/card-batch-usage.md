@@ -109,3 +109,4 @@ after the split is DEV-4.3.
 | 2026-11-21 | MC-4.4k2a: green's mana, land and token options (OnlyIf, eternalize, sacrifice event, Fastbond, shroud, persist), 7 cards | 88002b3e | 96 | 230k | 3.6M |
 | 2026-11-21 | MC-4.4k2b: green's trigger, combat and casting options (a spell as a target, attacks that player, any-kind counter removal, unpreventable combat damage, into a graveyard from anywhere, level up), 8 cards | a492df18 | 91 | 276k | 4.5M |
 | 2026-11-21 | MC-4.4k3: green's four new pieces (crew, earthbend, bestow, day/night), 4 cards | ae115d7d | 82 | 308k | 5.4M |
+| 2026-11-21 | MC-4.4l plan + l1 + l2: colourless surveyed and planned (105), then its tested pieces - 40 lands, 22 others; Chromatic Star's mana ability fixed (CashedIn), Lightning Greaves out (the AI loops), 62 cards | 610fb846 | 142 | 387k | 9.5M |

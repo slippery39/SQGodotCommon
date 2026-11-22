@@ -175,7 +175,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Combat declarations are one choice per creature**, not one pick among subsets. Option id 0 is
   "don't". Damage assignment ORDER is gone from the rules (Foundations, Nov 2024); the split among
   blockers is automatic for now (`Combat.DealDamage`).
-- Mana abilities are not in `LegalActions` (pure AI branching); casting taps what it needs.
+- Mana abilities are not in `LegalActions` (pure AI branching); casting taps what it needs — but for the three that are a decision (`MagicRules.ManaMoves`: a cost that picks a card, no {T}, a mana cost with its own sacrifice).
 - **A card plays only if `CardRegistry.IsImplemented`** — scripted, a basic land, or text that is only
   engine keywords. Anything else plays silently vanilla. **Every scripted card has a test in
   a `Sets/Fra*Tests` file that its ability FIRES** (`FraCardTests`, or the batch's own file —

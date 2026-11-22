@@ -874,6 +874,14 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 
 	/// <summary>Tapped as payment or by hand with nothing more to pay: no mana cost, nothing to pick, a {T} (on a permanent).</summary>
 	public bool IsPlain => Cost is null && !ChoosesCost && !NoTap;
+
+	/// <summary>
+	/// Chromatic Star: "{1}, {T}, Sacrifice this artifact: Add one mana of any color." — a mana cost AND its own
+	/// sacrifice. Cashing it in is a decision, so it is a move (TapForManaAction.PaysItsCost) as well as the solver's
+	/// last resort (ManaPayment.WithCostlyMana, which sacrifices it). A costly ability that stays (Starfleet Academy,
+	/// Talon Gates) is never a move.
+	/// </summary>
+	public bool CashedIn => Cost is not null && SacrificesItself && !ChoosesCost && !NoTap;
 }
 
 /// <summary>

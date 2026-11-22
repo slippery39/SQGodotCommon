@@ -40,7 +40,12 @@ whose subsystem it lives in.
   and stays plain), so it is not `IsPlain` and the solver, which taps each source once, never sees it; it is a move per land, `TapForManaAction.NoTap`, on a tapped land too. **A mana ability that costs mana** (Starfleet Academy: "{5}, {T}:
   Choose a color. Add N"; Talon Gates' "{1}, {T}", `ManaAbilityComponent.Cost`) is never a plain tap: `Find` tries it only when
   nothing else pays (`WithCostlyMana`), its N units of one colour in place of its {C}, its own cost owed
-  beside the spell's and never paid by the mana it makes (`Need.NotFrom`).
+  beside the spell's and never paid by the mana it makes (`Need.NotFrom`). **One that costs mana AND sacrifices itself**
+  (Chromatic Star: "{1}, {T}, Sacrifice this artifact: Add one mana of any color", MC-4.4l2) is
+  `ManaAbilityComponent.CashedIn`: the solver's last resort still, sacrificed by `Pay` as a Treasure is (so its "put
+  into a graveyard from the battlefield: draw" fires) — and ALSO a move, one per colour (`TapForManaAction.PaysItsCost`):
+  its {1} paid by the other permanents and the pool (`ManaPayment.Find` without it), then its {T} and sacrifice, the
+  mana floating. Cashing it in is a decision; a costly ability that STAYS (the Academy, Talon Gates) is never a move.
   Manual tapping floats restricted mana AS restricted (`ManaPool.Restricted`).
   A restriction is a `ManaRestriction` the solver checks against the spell it pays for
   (`Find(…, forSpell)`), or the source of the activated ability it pays for (`forAbilityOf` —

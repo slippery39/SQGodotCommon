@@ -219,6 +219,17 @@ public abstract class FraBoardTest
 			? Undercity.Rooms[d.Room].Name
 			: null;
 
+	/// <summary>Whether I may tap it for that colour now — a land's or a rock's mana, its "activate only if" too.</summary>
+	protected bool CanTapFor(int card, ManaColor color) =>
+		new TapForManaAction
+		{
+			PlayerId = me,
+			CardId = card,
+			Color = color,
+		}
+			.ValidateAdd(s)
+			.IsValid;
+
 	protected int Life(int p) => s.GetPlayer(p).Life;
 
 	protected int HandCount(int p) => s.CardsIn(p, ZoneType.Hand).Count();
