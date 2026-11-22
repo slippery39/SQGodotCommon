@@ -146,10 +146,24 @@ public static class TurnStructure
 						)
 					)
 					&& c.Id != keepTapped // Lwaxana Troi, kept tapped
+					&& !c.HasComponent<Effects.Exerted>() // exert: "won't untap during your next untap step"
 				)
 				.ToList()
 		)
 			s = s.Untap(card.Id);
+		// …and this was that step: the exert is spent, tapped or not (an effect may have untapped it).
+		foreach (
+			var exerted in s.CardsIn(active, ZoneType.Battlefield)
+				.Where(c => c.HasComponent<Effects.Exerted>())
+				.ToList()
+		)
+			s = s.UpdateObject(
+				exerted.Id,
+				exerted with
+				{
+					Components = exerted.Components.RemoveAll(x => x is Effects.Exerted),
+				}
+			);
 		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 		{
 			s = s.WithPlayer(
@@ -184,20 +198,48 @@ public static class TurnStructure
 			return GivePriority(s, s.GetGame().ActivePlayerId);
 		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 			s = s.WithPlayer(s.GetPlayer(id) with { ManaPool = ManaPool.Empty });
+		return NextTurn(s, s.GetGame().ActivePlayerId);
+	}
+
+	/// <summary>
+	/// The turn after <paramref name="after"/>'s: an extra turn first, the last created first (H.M.S. Bounty, CR 500.7),
+	/// else the other player's — unless its player skips it (Time Vault: "If you would begin your turn while this
+	/// artifact is tapped, you may skip that turn instead. If you do, untap this artifact." — MaySkipYourTurnToUntap),
+	/// and then the turn after the skipped one is asked for.
+	/// </summary>
+	public static GameState NextTurn(GameState s, int after)
+	{
 		var game = s.GetGame();
-		// H.M.S. Bounty: an extra turn is taken before the next one, the last created first (CR 500.7).
 		var extra = !game.ExtraTurns.IsEmpty;
-		var next = extra ? game.ExtraTurns[^1] : s.OpponentOf(game.ActivePlayerId);
-		s = s.WithGame(
-			game with
-			{
-				ActivePlayerId = next,
-				TurnNumber = game.TurnNumber + 1,
-				ExtraTurns = extra
-					? game.ExtraTurns.RemoveAt(game.ExtraTurns.Count - 1)
-					: game.ExtraTurns,
-			}
-		);
+		var next = extra ? game.ExtraTurns[^1] : s.OpponentOf(after);
+		if (extra)
+			s = s.WithGame(
+				game with
+				{
+					ExtraTurns = game.ExtraTurns.RemoveAt(game.ExtraTurns.Count - 1),
+				}
+			);
+		var vault = s.CardsIn(next, ZoneType.Battlefield)
+			.FirstOrDefault(c => c.IsTapped && s.HasAbility<Effects.MaySkipYourTurnToUntap>(c));
+		if (vault is not null)
+			return s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new YesNoChoice(next, $"Skip your turn to untap {vault.Name}?"),
+						new SkipTurnAction(next, vault.Id, extra),
+					],
+				}
+			);
+		return BeginTurn(s, next, extra);
+	}
+
+	/// <summary><paramref name="next"/>'s turn begins — counted, its untap step entered.</summary>
+	public static GameState BeginTurn(GameState s, int next, bool extra)
+	{
+		var game = s.GetGame();
+		s = s.WithGame(game with { ActivePlayerId = next, TurnNumber = game.TurnNumber + 1 });
 		s = s.WithPlayer(
 			s.GetPlayer(next) with
 			{

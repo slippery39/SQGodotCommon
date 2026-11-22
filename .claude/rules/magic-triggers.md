@@ -253,6 +253,12 @@ whose subsystem it lives in.
   ("haven't begun an extra turn this game", `HaventBegunAnExtraTurn`). `TurnNumber` counts it like any turn, so
   every "this turn" stamp holds. Turns no longer alternate: **summoning sickness reads `MagicPlayer.TurnBeganOn`**,
   never "the turn before".
+- **Skipping a turn** (Time Vault: "If you would begin your turn while this artifact is tapped, you may skip that turn
+  instead. If you do, untap this artifact.", MC-4.4l4b) is `MaySkipYourTurnToUntap`, asked as that player's turn would
+  begin — extra turns too — in `TurnStructure.NextTurn` (from `FinishCleanup`): a yes untaps it and asks for the turn
+  after the skipped one (`SkipTurnAction`); a skipped turn never begins, so no `TurnNumber`, `TurnsBegun` or untap step.
+  A no begins it (`BeginTurn`). With Voltaic Key or Manifold Key it is a turn after every turn, bounded within each turn
+  by the Key's {T}: the game ends with its player's library.
 - **An additional combat phase** (CR 500.8, Fear of Missing Out, MC-4.4i3) is `AdditionalCombatPhase`: a count on
   `MagicGame.AdditionalCombats`, taken by `TurnStructure.EndStep` as an end of combat step ends — creatures removed
   from combat (`Combat.EndCombat`), then a beginning of combat step, no main phase between; reset as each turn begins.

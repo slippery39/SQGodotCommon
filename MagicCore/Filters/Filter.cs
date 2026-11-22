@@ -230,7 +230,7 @@ public sealed record OfColor(ManaColor Color) : Filter
 	public override bool ReadsKeywords() => false;
 
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
-		o is Card card && card.Colors.Contains(Color);
+		o is Card card && s.ColorsOf(card).Contains(Color);
 }
 
 /// <summary>Consign to Memory: "target triggered ability" — an ability on the stack, triggered or activated.</summary>
@@ -252,7 +252,7 @@ public sealed record Colorless : Filter
 	public override bool ReadsKeywords() => false;
 
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
-		o is Card { Colors.Length: 0 };
+		o is Card card && s.ColorsOf(card).Length == 0;
 }
 
 /// <summary>

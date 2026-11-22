@@ -97,8 +97,72 @@ public record FinishKeepAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		s = s.WithPlayer(s.GetPlayer(PlayerId) with { HasKeptHand = true });
+		if (Mulligan.DecidingPlayerId(s) != 0)
+			return new ActionResult(s);
+		// Gemstone Caverns: "If this card is in your opening hand and you're not the starting player, you may begin the
+		// game with Gemstone Caverns on the battlefield" — asked once both hands are kept. ponytail: one such card asked
+		// for, the first in hand (two Caverns would meet the legend rule).
+		var second = s.OpponentOf(s.GetGame().StartingPlayerId);
+		var opening = s.CardsIn(second, ZoneType.Hand)
+			.FirstOrDefault(c => c.HasComponent<Effects.BeginsTheGameOnTheBattlefield>());
+		if (opening is null)
+			return new ActionResult(TurnStructure.StartFirstTurn(s));
 		return new ActionResult(
-			Mulligan.DecidingPlayerId(s) == 0 ? TurnStructure.StartFirstTurn(s) : s
+			s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new YesNoChoice(
+							second,
+							$"Begin the game with {opening.Name} on the battlefield? If you do, exile a card from your hand."
+						),
+						new BeginOnTheBattlefieldAction(opening.Id, second),
+						new StartFirstTurnAction(),
+					],
+				}
+			)
 		);
 	}
+}
+
+/// <summary>
+/// Gemstone Caverns, on a yes: onto the battlefield with a luck counter, then a card exiled from the hand (chosen in a
+/// spawned choice, before the first turn starts).
+/// </summary>
+public record BeginOnTheBattlefieldAction(int CardId, int PlayerId) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (!YesNoChoice.SaidYes(InputContext))
+			return new(s);
+		s = s.EnterBattlefield(CardId, PlayerId)
+			.PutCounters(CardId, Effects.CounterKinds.Luck, 1, entering: true);
+		if (!s.CardsIn(PlayerId, ZoneType.Hand).Any())
+			return new(s);
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new ChooseCardsFromHandChoice
+						{
+							PlayerId = PlayerId,
+							MinChoices = 1,
+							MaxChoices = 1,
+							Prompt = "Exile a card from your hand",
+						},
+						new MoveChosenToAction(PlayerId, ZoneType.Exile),
+					],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>The game's first turn, after a pregame choice (Gemstone Caverns).</summary>
+public record StartFirstTurnAction : GameAction
+{
+	public override ActionResult Execute(GameState s) => new(TurnStructure.StartFirstTurn(s));
 }

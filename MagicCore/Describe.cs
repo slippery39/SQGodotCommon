@@ -95,13 +95,19 @@ public static class Describe
 				$"Tap {Name(s, t.CardId)}, sacrificing {Name(s, t.SacrificeId)}, for {t.Color}{(t.OfTheOther > 0 ? $" ({t.OfTheOther} of its other colour)" : "")}",
 			TapForManaAction { NoTap: true } t => $"{NoTapCosts(s, t)} for {t.Color}",
 			TapForManaAction { PaysItsCost: true } t =>
-				$"Pay for and sacrifice {Name(s, t.CardId)} for {t.Color}",
+				$"Pay for and {(Exerts(s, t.CardId) ? "exert" : "sacrifice")} {Name(s, t.CardId)} for {t.Color}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
 			TurnFaceUpAction f => TurnFaceUpAction.CardOf(s, f.PlayerId, f.CardId) is { } card
 				? $"Turn face up: {card.Name} ({card.ManaCost})"
 				: "Turn face up",
 			_ => action.GetType().Name,
 		};
+
+	/// <summary>Arena of Glory's cashed-in mana ability exerts it; Chromatic Star's sacrifices itself.</summary>
+	static bool Exerts(GameState s, int cardId) =>
+		s.HasObject(cardId)
+		&& s.GetObject(cardId) is Cards.Card card
+		&& ManaAbilities.AbilitiesOf(s, card).Any(m => m.CashedIn && m.Exerts);
 
 	/// <summary>
 	/// A mana ability without {T}, by what it costs — Rain of Filth's "Sacrifice Swamp"; Pentad Prism's "Pentad Prism:

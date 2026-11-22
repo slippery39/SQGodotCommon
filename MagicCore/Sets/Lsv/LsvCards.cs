@@ -3211,7 +3211,7 @@ public static class LsvCards
 				),
 				BackFace(
 					"Sink into Stupor // Soporific Springs",
-					new EntersTappedComponent { UnlessYouPayLife = 3 },
+					new EntryCost(new PayLifeCost(3)),
 					new ManaAbilityComponent(ManaColor.Blue)
 				) with
 				{
@@ -3255,7 +3255,7 @@ public static class LsvCards
 				),
 				BackFace(
 					"Witch Enchanter // Witch-Blessed Meadow",
-					new EntersTappedComponent { UnlessYouPayLife = 3 },
+					new EntryCost(new PayLifeCost(3)),
 					new ManaAbilityComponent(ManaColor.White)
 				) with
 				{
@@ -5234,7 +5234,137 @@ public static class LsvCards
 					}
 				),
 			],
+			// ===== MC-4.4l5: Lightning Greaves (the search's free abilities, once a turn) =====
+			["Lightning Greaves"] =
+			[
+				new StaticEffectComponent(Is.AttachedToSource, "Haste"),
+				new StaticEffectComponent(Is.AttachedToSource, "Shroud"),
+				Equip("{0}"),
+			],
+			// ===== MC-4.4l4a + l4b: colourless' new pieces (computed colours, an entering's cost, skipping a turn, beginning the game on the battlefield, exert and mana that grants) =====
+			["Painter's Servant"] = [new ChoosesColorAsItEnters(), new AllCardsAreTheChosenColor()],
+			["Celestial Colonnade"] =
+			[
+				new EntersTappedComponent(),
+				new ManaAbilityComponent(ManaColor.White),
+				new ManaAbilityComponent(ManaColor.Blue),
+				CreatureLand(
+					"{3}{W}{U}",
+					(4, 4),
+					"Elemental",
+					[ManaColor.White, ManaColor.Blue],
+					"Flying",
+					"Vigilance"
+				),
+			],
+			["Creeping Tar Pit"] =
+			[
+				new EntersTappedComponent(),
+				new ManaAbilityComponent(ManaColor.Blue),
+				new ManaAbilityComponent(ManaColor.Black),
+				CreatureLand(
+					"{1}{U}{B}",
+					(3, 2),
+					"Elemental",
+					[ManaColor.Blue, ManaColor.Black],
+					Combat.CantBeBlocked
+				),
+			],
+			["Restless Vinestalk"] =
+			[
+				new EntersTappedComponent(),
+				new ManaAbilityComponent(ManaColor.Green),
+				new ManaAbilityComponent(ManaColor.Blue),
+				CreatureLand(
+					"{3}{G}{U}",
+					(5, 5),
+					"Plant",
+					[ManaColor.Green, ManaColor.Blue],
+					"Trample"
+				),
+				When(
+					TriggerEvent.SelfAttacks,
+					[Target(Is.Creature & !Is.Source) with { Optional = true }],
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { SetBase = (3, 3) }
+				),
+			],
+			["Mox Diamond"] =
+			[
+				new EntryCost(new DiscardCost(Is.Land)) { Instead = ZoneType.Graveyard },
+				.. AnyColorMana(ManaRestriction.None),
+			],
+			["Multiversal Passage"] =
+			[
+				new ChoosesBasicLandTypeAsItEnters(),
+				new EntryCost(new PayLifeCost(2)),
+			],
+			["Time Vault"] =
+			[
+				new EntersTappedComponent(),
+				DoesntUntapItself,
+				new MaySkipYourTurnToUntap(),
+				new ActivatedAbilityComponent(ManaCost.None, [new TakeExtraTurn()])
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Gemstone Caverns"] =
+			[
+				new BeginsTheGameOnTheBattlefield(),
+				// "{T}: Add {C}. If Gemstone Caverns has a luck counter on it, instead add one mana of any color."
+				new ManaAbilityComponent(ManaColor.Colorless) { OnlyIf = new Not(Lucky) },
+				.. AnyColorMana(ManaRestriction.None)
+					.Cast<ManaAbilityComponent>()
+					.Select(m => m with { OnlyIf = Lucky }),
+			],
+			["Arena of Glory"] =
+			[
+				new EntersTappedComponent(YouControlA(Is.Subtype("Mountain"))),
+				new ManaAbilityComponent(ManaColor.Red),
+				// "{R}, {T}, Exert this land: Add {R}{R}. If any of that mana is spent on a creature spell, it gains haste
+				// until end of turn." — costly mana (the payment's last resort), its rider on the spell it pays for
+				new ManaAbilityComponent(ManaColor.Red)
+				{
+					Amount = 2,
+					Cost = ManaCost.Parse("{R}"),
+					Costs = [new TapSelfCost(), new ExertCost()],
+					Restriction = new ManaRestriction(null)
+					{
+						Gains = "Haste",
+						GainsIf = Is.Creature,
+					},
+				},
+			],
 		};
+
+	/// <summary>Gemstone Caverns: "If Gemstone Caverns has a luck counter on it".</summary>
+	static Condition Lucky => new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Luck), 1);
+
+	/// <summary>
+	/// A creature land (Celestial Colonnade: "{3}{W}{U}: Until end of turn, this land becomes a 4/4 white and blue
+	/// Elemental creature with flying and vigilance. It's still a land.") — crew's type stamp until end of turn, its base
+	/// P/T, creature type and colours SET (Characteristics.ColorsOf), one ModifyUntilEndOfTurn per keyword.
+	/// </summary>
+	static ActivatedAbilityComponent CreatureLand(
+		string cost,
+		(int, int) size,
+		string type,
+		ImmutableArray<ManaColor> colors,
+		params string[] keywords
+	) =>
+		new(
+			ManaCost.Parse(cost),
+			[
+				new ModifyUntilEndOfTurn(Ref.Source, 0, 0, keywords[0])
+				{
+					AlsoType = CardType.Creature,
+					SetBase = size,
+					AlsoCreatureType = type,
+					Colors = colors,
+				},
+				.. keywords.Skip(1).Select(k => new ModifyUntilEndOfTurn(Ref.Source, 0, 0, k)),
+			]
+		);
 
 	/// <summary>
 	/// Channel (Boseiju, Who Endures: "Channel — {1}{G}, Discard this card: Destroy target …. This ability costs {1}

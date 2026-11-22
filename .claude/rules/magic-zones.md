@@ -172,11 +172,27 @@ whose subsystem it lives in.
   every "enters tapped" in `EnterBattlefield` — the land's own, Root Maze's, a token or a return made tapped (Shayne,
   2026-11-01). **"[Permanents] you control enter with N additional [kind] counters"** (Zefram Cochrane) is its
   `{ CounterKind, Counters }`, put on there through `PutCounters`.
-- **The shocklands' "you may pay 2 life. If you don't, it enters tapped"** is `EntersTappedComponent { UnlessYouPayLife }`:
-  it enters tapped, and `EnterBattlefield` spawns a `May` ONLY when its own text is what taps it — not under Warp
-  Speed (untapped anyway) or Root Maze / "onto the battlefield tapped" (tapped anyway) — and the controller has
-  the life (CR 119.4). Yes is `LoseLife` (the one life-loss path) and it untaps. The AI's answer is the search's
-  (Shayne, 2026-11-05): both answers are beam nodes, so it pays when the turn's plan spends the mana.
+- **An entering's cost is ONE piece, `EntryCost(cost) { Instead }`** (MC-4.4l4a; it was `EntersTappedComponent {
+  UnlessYouPayLife }`): "as this enters, you may [cost]" — a cost from the shared list, paid BY CHOOSING as ward's is
+  (`AdditionalCost.PaidByChoosing` / `CanPayByChoosing`), asked only when it can be paid. **"If you don't, it enters
+  tapped"** (the shocklands' `PayLifeCost(2)`, Soporific Springs' 3, Multiversal Passage) is no `Instead`: it enters
+  tapped, and `EnterBattlefield` spawns a `May` ONLY when its own text is what taps it — not under Warp Speed (untapped
+  anyway) or Root Maze / "onto the battlefield tapped" (tapped anyway) — AFTER the "as it enters, choose" (Passage:
+  "choose a basic land type. Then you may pay 2 life"). Yes pays and it untaps. The AI's answer is the search's
+  (Shayne, 2026-11-05): both answers are beam nodes, so it pays when the turn's plan spends the mana. **"If this would
+  enter, you may [cost] instead. If you don't, put it into its owner's graveyard"** (Mox Diamond's `DiscardCost(Is.Land)`)
+  is `Instead = Graveyard`: asked at the top of `EnterBattlefield`, BEFORE it moves (`EntryCost.AskInstead`), so a "no"
+  never enters — no enter or leave event — and a yes enters again through `EnterPaidAction` (`paidToEnter`). The land is
+  picked just after it enters (a ceiling, DesignNotes).
+- **"Choose a basic land type … This land is the chosen type"** (Multiversal Passage) is `ChoosesBasicLandTypeAsItEnters`
+  → `ChosenType` (status), a fifth "as it enters, choose" beside colour, number, player and name — not folded into one:
+  each is its own status read by its own rule. `s.Subtypes` adds the type, and the land's mana is that type's
+  (`ManaAbilities.ColorsOf`'s intrinsic mana, CR 305.6).
+- **"If this card is in your opening hand and you're not the starting player, you may begin the game with it on the
+  battlefield"** (Gemstone Caverns, MC-4.4l4b) is `BeginsTheGameOnTheBattlefield`: once both hands are kept
+  (`FinishKeepAction`), the non-starting player is asked, then it enters with a luck counter and a card is exiled from
+  the hand (`BeginOnTheBattlefieldAction`), then the first turn starts (`StartFirstTurnAction`). Nothing else reads an
+  opening hand; a Leyline would make its three parts options.
 - **"As this enters, choose a number"** (Nyota Uhura) is `ChoosesNumberAsItEnters` → `ChosenNumber` on the
   card (status: gone as it leaves); "a spell with mana value equal to the chosen number" is
   `Is.ManaValueIsChosenNumber`. The AI names the mana value commonest among the opponent's nonland cards it

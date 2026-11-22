@@ -121,6 +121,9 @@ public static class CounterKinds
 	/// <summary>Gemstone Mine: "enters with three mining counters on it".</summary>
 	public const string Mining = "mining";
 
+	/// <summary>Gemstone Caverns: "begin the game with Gemstone Caverns on the battlefield with a luck counter on it".</summary>
+	public const string Luck = "luck";
+
 	/// <summary>Palantír of Orthanc: "put an influence counter on Palantír of Orthanc".</summary>
 	public const string Influence = "influence";
 
@@ -767,6 +770,12 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 
 	/// <summary>"{T}" is part of the cost.</summary>
 	public bool TapsItself => Costs.Any(c => c is TapSelfCost);
+
+	/// <summary>
+	/// Lightning Greaves' "Equip {0}": it costs nothing — no mana, no X, no other cost — so nothing stops it being
+	/// activated again and again (Card.FreeAbilityActivatedOn, Evaluator.SearchMoves).
+	/// </summary>
+	public bool IsFree => Cost.ManaValue == 0 && !Cost.HasX && Costs.IsEmpty;
 }
 
 /// <summary>
@@ -808,9 +817,19 @@ public readonly record struct ManaRestriction(Filters.Filter? Spells)
 
 	/// <summary>
 	/// Delighted Halfling: "Spend this mana only to cast a legendary spell, and that spell can't be countered." — a
-	/// spell this mana paid for is stamped OnStackComponent.CantBeCountered (ManaPayment.MakesUncounterable).
+	/// spell this mana paid for is stamped OnStackComponent.CantBeCountered (ManaPayment.Riders).
 	/// </summary>
 	public bool CantBeCountered { get; init; }
+
+	/// <summary>
+	/// Arena of Glory: "If any of that mana is spent on a creature spell, it gains haste until end of turn." — a rider,
+	/// not a limit (Spells null: it pays for anything): a spell this mana paid for that GainsIf matches is stamped
+	/// OnStackComponent.KeywordsUntilEndOfTurn (ManaPayment.Riders), given to the permanent as it enters.
+	/// </summary>
+	public string? Gains { get; init; }
+
+	/// <summary>Arena of Glory: "on a creature spell" — which spells the Gains rider is for; null: any.</summary>
+	public Filters.Filter? GainsIf { get; init; }
 }
 
 /// <summary>
@@ -906,6 +925,9 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// <summary>Treasure: it is sacrificed as it makes the mana.</summary>
 	public bool SacrificesItself => Costs.Any(c => c is SacrificeSelfCost);
 
+	/// <summary>Arena of Glory: "Exert this land" — it spends its next untap (ExertCost).</summary>
+	public bool Exerts => Costs.Any(c => c is ExertCost);
+
 	/// <summary>
 	/// Rain of Filth's gained "Sacrifice this land: Add {B}." — a PERMANENT's mana ability without {T}: a move, never the
 	/// solver's. A card's in a hand never taps (a Spirit Guide's exile is its whole cost), so From = Hand is never this.
@@ -918,10 +940,13 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// <summary>
 	/// Chromatic Star: "{1}, {T}, Sacrifice this artifact: Add one mana of any color." — a mana cost AND its own
 	/// sacrifice. Cashing it in is a decision, so it is a move (TapForManaAction.PaysItsCost) as well as the solver's
-	/// last resort (ManaPayment.WithCostlyMana, which sacrifices it). A costly ability that stays (Starfleet Academy,
-	/// Talon Gates) is never a move.
+	/// last resort (ManaPayment.WithCostlyMana, which sacrifices it). So is Arena of Glory's "{R}, {T}, Exert this land:
+	/// Add {R}{R}" (ExertCost: it spends its next untap) — it makes no more mana than a plain tap beside the {R} it costs,
+	/// so the solver alone would never exert it, and exerting is a decision (its mana's haste rider floats with it,
+	/// ManaPool.Restricted). A costly ability that stays (Starfleet Academy, Talon Gates) is never a move.
 	/// </summary>
-	public bool CashedIn => Cost is not null && SacrificesItself && !ChoosesCost && !NoTap;
+	public bool CashedIn =>
+		Cost is not null && (SacrificesItself || Exerts) && !ChoosesCost && !NoTap;
 }
 
 /// <summary>
@@ -955,14 +980,69 @@ public record Sunburst : GameComponent;
 /// "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield, judged on the
 /// board it is entering, with this permanent as the source ("other lands" is !Is.Source).
 /// </summary>
-public record EntersTappedComponent(Condition? Unless = null) : GameComponent
+public record EntersTappedComponent(Condition? Unless = null) : GameComponent;
+
+/// <summary>
+/// An entering's cost: "as this enters, you may [Cost]. If you don't, [it enters tapped / Instead]" — paid by
+/// choosing, as ward's is (AdditionalCost.PaidByChoosing), and asked only when it can be paid. The shocklands (Blood
+/// Crypt): <c>new EntryCost(new PayLifeCost(2))</c> — "As this land enters, you may pay 2 life. If you don't, it enters
+/// tapped." — it enters tapped and is asked only when this text is what taps it (not under Warp Speed or Root Maze),
+/// then untapped on a yes (MagicState.EnterBattlefield). Mox Diamond: <c>{ Instead = Graveyard }</c> with
+/// <c>DiscardCost(Is.Land)</c> — "If this artifact would enter, you may discard a land card instead. If you do, put this
+/// artifact onto the battlefield. If you don't, put it into its owner's graveyard." — asked BEFORE it moves, so a "no"
+/// never enters: no enter or leave event.
+/// </summary>
+public record EntryCost(AdditionalCost Cost) : GameComponent
 {
+	/// <summary>Mox Diamond: where it goes instead of entering when the cost isn't paid; null: it enters tapped.</summary>
+	public ZoneType? Instead { get; init; }
+
 	/// <summary>
-	/// The shocklands (Blood Crypt): "As this land enters, you may pay 2 life. If you don't, it enters
-	/// tapped." — asked as it enters, only when this text is what taps it (not under Warp Speed or Root
-	/// Maze) and its controller has the life to pay (CR 119.4).
+	/// Mox Diamond's question, asked as it would enter: pay and enter (EnterPaidAction), else its owner's Instead zone.
+	/// ponytail: the discard is chosen just AFTER it enters (May's yes runs inline; Discard asks in a spawned choice) —
+	/// nothing can act between; and only the controller, spell and "tapped" of this entry are kept (Mox Diamond needs no
+	/// more; face down it has no abilities and isn't asked).
 	/// </summary>
-	public int UnlessYouPayLife { get; init; }
+	public PipelineAction AskInstead(
+		Cards.Card card,
+		int controllerId,
+		Actions.OnStackComponent? spell,
+		bool tapped
+	)
+	{
+		var no = new Actions.EnterPaidAction(card.Id, controllerId, spell) { Instead = Instead };
+		return new()
+		{
+			PipelineContext = ImmutableDictionary<string, object>
+				.Empty.Add(ContextKeys.Controller, controllerId)
+				.Add(ContextKeys.Source, card.Id),
+			Steps =
+			[
+				new If(
+					new CanPayByChoosing(Cost),
+					[
+						new May(
+							$"{Cost.Describe()}? If you don't, {card.Name} is put into its owner's {Instead.ToString()!.ToLowerInvariant()}.",
+							new Always(),
+							[
+								Cost.PaidByChoosing()!,
+								new Actions.EnterPaidAction(card.Id, controllerId, spell)
+								{
+									Tapped = tapped,
+								},
+							]
+						)
+						{
+							Otherwise = [no],
+						},
+					]
+				)
+				{
+					Otherwise = [no],
+				},
+			],
+		};
+	}
 }
 
 /// <summary>
@@ -1162,11 +1242,50 @@ public record ExiledFaceDown : GameComponent
 		(Cards.Card)(card with { KnownTo = knownTo }).WithComponent(new ExiledFaceDown());
 }
 
-/// <summary>Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.</summary>
-public record ChoosesColorAsItEnters : GameComponent;
+/// <summary>Room of Refuge, Painter's Servant: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.</summary>
+public record ChoosesColorAsItEnters : GameComponent
+{
+	/// <summary>Room of Refuge: "{T}: Add one mana of the chosen color." — ManaAbilities.ColorsOf reads the choice as its mana.</summary>
+	public bool Mana { get; init; }
+}
 
-/// <summary>"{T}: Add one mana of the chosen color." — set as it entered; gone when it leaves.</summary>
-public record ChosenColorMana(ManaColor Color) : GameComponent;
+/// <summary>
+/// Multiversal Passage: "As this land enters, choose a basic land type. … This land is the chosen type." — a fifth "as it
+/// enters, choose" beside colour, number, player and name (each its own status, read by its own rule: not folded).
+/// The type kept on it as ChosenType: Characteristics.Subtypes adds it, and its mana is that type's (ManaAbilities).
+/// </summary>
+public record ChoosesBasicLandTypeAsItEnters : GameComponent;
+
+/// <summary>Multiversal Passage: the basic land type chosen as it entered — status: gone when it leaves.</summary>
+public record ChosenType(string Subtype) : GameComponent;
+
+/// <summary>
+/// Time Vault: "If you would begin your turn while this artifact is tapped, you may skip that turn instead. If you do,
+/// untap this artifact." — asked as its controller's turn would begin, extra turns too (TurnStructure.NextTurn): a
+/// skipped turn never begins, so it is not counted (TurnNumber, TurnsBegun) and the turn after it is asked for next.
+/// Read with AbilitiesOf: one that lost its abilities isn't asked.
+/// </summary>
+public record MaySkipYourTurnToUntap : GameComponent;
+
+/// <summary>
+/// Gemstone Caverns: "If this card is in your opening hand and you're not the starting player, you may begin the game
+/// with Gemstone Caverns on the battlefield with a luck counter on it. If you do, exile a card from your hand." — asked
+/// once both hands are kept, before the first turn (Actions.FinishKeepAction). ponytail: the whole text is this one
+/// card's — a Leyline ("any player, no counter, nothing exiled") would make its three parts options.
+/// </summary>
+public record BeginsTheGameOnTheBattlefield : GameComponent;
+
+/// <summary>Exerted (ExertCost): it won't untap during its controller's next untap step — status, gone when it leaves.</summary>
+public record Exerted : GameComponent;
+
+/// <summary>The colour chosen as it entered (ChoosesColorAsItEnters) — status: gone when it leaves.</summary>
+public record ChosenColor(ManaColor Color) : GameComponent;
+
+/// <summary>
+/// Painter's Servant: "All cards that aren't on the battlefield, spells, and permanents are the chosen color in addition
+/// to their other colors." — every card in every zone, read by Characteristics.ColorsOf from the board (its ChosenColor).
+/// </summary>
+public record AllCardsAreTheChosenColor : GameComponent;
 
 /// <summary>
 /// Nyota Uhura: "Hailing Frequencies — As Nyota Uhura enters, choose a number between 0 and 10." Applied

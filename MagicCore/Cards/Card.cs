@@ -229,6 +229,13 @@ public record Card : GameObject
 	/// <summary>DOT-7 Repair Squad: "Activate only once each turn" — the TurnNumber it was last activated.</summary>
 	public int ActivatedOncePerTurnOn { get; init; }
 
+	/// <summary>
+	/// Lightning Greaves' "Equip {0}": the TurnNumber a FREE ability of this object was last activated
+	/// (ActivatedAbilityComponent.IsFree) — no rule reads it; the search is offered one such activation a turn
+	/// (Evaluator.SearchMoves).
+	/// </summary>
+	public int FreeAbilityActivatedOn { get; init; }
+
 	/// <summary>Zefram Cochrane: "Once during each of your turns, you may cast an artifact spell from the top of your library" — the TurnNumber this object let one be cast.</summary>
 	public int PermissionUsedOn { get; init; }
 
@@ -335,6 +342,7 @@ public record Card : GameObject
 			HasDealtCombatDamage = false,
 			ExhaustUsed = false,
 			ActivatedOncePerTurnOn = 0,
+			FreeAbilityActivatedOn = 0,
 			PermissionUsedOn = 0,
 			Counters = ImmutableDictionary<string, int>.Empty,
 			Damage = 0,
@@ -359,7 +367,9 @@ public record Card : GameObject
 				or Effects.PlayableFromExile
 				or Effects.ExiledFaceDown
 				or Effects.ExiledBy
-				or Effects.ChosenColorMana
+				or Effects.ChosenColor
+				or Effects.ChosenType
+				or Effects.Exerted
 				or Effects.ChosenNumber
 				or Effects.ClassLevel
 				or Effects.ChosenName
@@ -697,6 +707,9 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 	/// now, in place of any AuraComponent's (Rules.Attachments.EnchantOf). Set for good only (ModifyUntilEndOfTurn).
 	/// </summary>
 	public Targeting.TargetSpec? Enchant { get; init; }
+
+	/// <summary>Celestial Colonnade: "becomes a 4/4 white and blue Elemental creature" — its colours SET while this lasts (Characteristics.ColorsOf).</summary>
+	public ImmutableArray<ManaColor>? Colors { get; init; }
 }
 
 /// <summary>

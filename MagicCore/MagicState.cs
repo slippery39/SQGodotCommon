@@ -583,9 +583,20 @@ public static class MagicState
 		bool attacking = false,
 		TriggeredAbilityComponent? gains = null,
 		bool faceDown = false,
-		bool transformed = false
+		bool transformed = false,
+		bool paidToEnter = false
 	)
 	{
+		// Mox Diamond: "If this artifact would enter, you may discard a land card instead … If you don't, put it into its
+		// owner's graveyard." — asked before it moves (EntryCost.AskInstead), entering again once paid.
+		if (
+			!paidToEnter
+			&& !faceDown // a face-down 2/2 has no abilities
+			&& s.GetCard(cardId).GetComponent<EntryCost>() is { Instead: not null } instead
+		)
+			return s.SpawnAction(
+				instead.AskInstead(s.GetCard(cardId), controllerId, spell, tapped)
+			);
 		// Containment Priest: "If a nontoken creature would enter and it wasn't cast, exile it instead."
 		// ponytail: judged by its types before it moves, less what this entry takes (loses) — a permanent's
 		// type change stamped as it enters (Mogis, no creature at low devotion) isn't seen yet. Judge it
@@ -642,6 +653,7 @@ public static class MagicState
 		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types, from));
 		var card = s.GetCard(cardId);
 		var entersTapped = card.GetComponent<EntersTappedComponent>();
+		var entryCost = card.GetComponent<EntryCost>() is { Instead: null } paying ? paying : null;
 		var rules = EntryRules(s, card with { ControllerId = controllerId });
 		var landsUntapped = rules.Any(r => r.Untapped);
 		var tappedByOthers = tapped || rules.Any(r => r.Tapped);
@@ -649,7 +661,8 @@ public static class MagicState
 			.Empty.Add(ContextKeys.Controller, controllerId)
 			.Add(ContextKeys.Source, card.Id);
 		var tappedByItself =
-			entersTapped is not null && entersTapped.Unless?.Holds(s, entryContext) != true;
+			entersTapped is not null && entersTapped.Unless?.Holds(s, entryContext) != true
+			|| entryCost is not null;
 		if (card.Subtypes.Except(s.GetPlayer(controllerId).ThisTurn.SubtypesEntered).Any())
 			s = s.Tally(
 				controllerId,
@@ -691,27 +704,7 @@ public static class MagicState
 					AttackingId = s.OpponentOf(controllerId),
 				}
 			);
-		// The shocklands: "you may pay 2 life. If you don't, it enters tapped." Asked only when it decides.
-		if (
-			entersTapped is { UnlessYouPayLife: > 0 and var life }
-			&& tappedByItself
-			&& !landsUntapped
-			&& !tappedByOthers
-		)
-			s = s.SpawnAction(
-				new PipelineAction
-				{
-					PipelineContext = entryContext,
-					Steps =
-					[
-						new May(
-							$"Pay {life} life? If you don't, {card.Name} enters tapped.",
-							new CanPayLife(life),
-							[new LoseLife(Ref.You, life), new Untap(Ref.Source)]
-						),
-					],
-				}
-			);
+		var askEntryCost = entryCost is not null && !landsUntapped && !tappedByOthers;
 		// Zefram Cochrane: "Spacecraft you control enter with two additional charge counters on them."
 		foreach (var rule in rules.Where(r => r is { CounterKind: not null, Counters: > 0 }))
 			s = s.PutCounters(cardId, rule.CounterKind!, rule.Counters, entering: true);
@@ -751,7 +744,26 @@ public static class MagicState
 				? copying
 				: null;
 		if (asCopy is null)
+		{
 			s = s.ChooseAsItEnters(cardId);
+			// The shocklands: "you may pay 2 life. If you don't, it enters tapped." Asked only when it decides — after
+			// the "as it enters, choose" (Multiversal Passage: "choose a basic land type. Then you may pay 2 life").
+			if (askEntryCost)
+				s = s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = entryContext,
+						Steps =
+						[
+							new May(
+								$"{entryCost!.Cost.Describe()}? If you don't, {card.Name} enters tapped.",
+								new CanPayByChoosing(entryCost.Cost),
+								[entryCost.Cost.PaidByChoosing()!, new Untap(Ref.Source)]
+							),
+						],
+					}
+				);
+		}
 		else
 			s = s.SpawnAction(
 				new PipelineAction
@@ -774,6 +786,16 @@ public static class MagicState
 			);
 		return card.HasComponent<EntersPreparedComponent>() ? Rules.Prepare.Become(s, cardId) : s;
 	}
+
+	/// <summary>Multiversal Passage's choice (CR 205.3i): the five basic land types, in WUBRG order.</summary>
+	public static readonly ImmutableArray<string> BasicLandTypes =
+	[
+		"Plains",
+		"Island",
+		"Swamp",
+		"Mountain",
+		"Forest",
+	];
 
 	/// <summary>
 	/// The "as this enters, choose …" choices (Room of Refuge's colour, Nyota Uhura's number, True-Name Nemesis'
@@ -828,6 +850,20 @@ public static class MagicState
 							cardId,
 							[s.OpponentOf(controllerId), controllerId]
 						),
+					],
+				}
+			);
+		if (card.HasComponent<ChoosesBasicLandTypeAsItEnters>())
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new Actions.ChooseKeywordChoice(controllerId, BasicLandTypes)
+						{
+							Prompt = $"{card.Name}: choose a basic land type",
+						},
+						new Actions.SetChosenTypeAction(cardId, BasicLandTypes),
 					],
 				}
 			);

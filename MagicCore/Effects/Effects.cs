@@ -181,6 +181,12 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// </summary>
 	public TargetSpec? Enchant { get; init; }
 
+	/// <summary>
+	/// Celestial Colonnade: "becomes a 4/4 white and blue Elemental creature" (CR 205.1b: the colours are SET, not added)
+	/// — read by Characteristics.ColorsOf while it lasts.
+	/// </summary>
+	public ImmutableArray<ManaColor>? Colors { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (Enchant is not null && !ForGood)
@@ -232,6 +238,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			Gains = Gains,
 			AlsoCreatureType = AlsoCreatureType,
 			Enchant = Enchant,
+			Colors = Colors,
 		};
 		if (AlsoType != Cards.CardType.None && UntilYourNextTurn)
 			throw new InvalidOperationException(
@@ -583,6 +590,7 @@ public record CopySpell(Ref What) : Effect
 								CantBeCountered = false,
 								FirstSpellThisGame = false,
 								ColorsSpent = 0,
+								KeywordsUntilEndOfTurn = [], // Arena of Glory's haste was the cast's mana's
 							}
 						),
 				stack

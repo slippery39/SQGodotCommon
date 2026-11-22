@@ -1857,7 +1857,7 @@ public static class FraCards
 			["Room of Refuge"] =
 			[
 				new EntersTappedComponent(),
-				new ChoosesColorAsItEnters(),
+				new ChoosesColorAsItEnters { Mana = true },
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{5}"),
 					[new PutCounters(Ref.Target(), 2)]

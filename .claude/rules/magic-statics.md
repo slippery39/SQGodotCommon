@@ -129,6 +129,17 @@ whose subsystem it lives in.
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).
   With no duration (Seven of Nine: "base power and toughness become 7/9") it is `ModifyUntilEndOfTurn.ForGood`
   — `UntilTurnOf = UntilEndOfTurn.Never`, which no turn ends: only leaving the battlefield.
+- **THE colours of a card are `s.ColorsOf(card)`** (Characteristics, MC-4.4l4a; CR 105, layer 5) — every rule asks there,
+  never `Card.Colors` (the printed colours; the AI's deck-building reads keep them): `Is.Color`, `Is.Colorless`,
+  `Count.ColorsAmong`, Chrome Mox's `OfTheColorsOf`, Grindstone's `TwoShareAColor`. **"Becomes a 4/4 white and blue
+  Elemental creature … It's still a land"** (Celestial Colonnade, Creeping Tar Pit, Restless Vinestalk: `LsvCards.
+  CreatureLand`) is crew's `ModifyUntilEndOfTurn { AlsoType = Creature, SetBase, AlsoCreatureType }` with `Colors` —
+  the colours SET while it lasts (`UntilEndOfTurn.Colors`, the latest), one more `ModifyUntilEndOfTurn` per keyword.
+  **"All cards that aren't on the battlefield, spells, and permanents are the chosen color in addition to their other
+  colors"** (Painter's Servant) is `AllCardsAreTheChosenColor` with `ChoosesColorAsItEnters`: every card in every zone,
+  its `ChosenColor` found once per state with the statics (`Board.Painted`; a Servant that lost its abilities paints
+  nothing) and added after a set — no timestamps (DesignNotes). The choice is no mana: Room of Refuge's "{T}: Add one
+  mana of the chosen color" is `ChoosesColorAsItEnters { Mana }`. With Grindstone it mills the whole library and ends.
 - **A card with only engine keywords and reminder text needs no script** (`CardRegistry.IsImplemented`): a line
   wholly in parentheses has no rules force (CR 207.2) — the original duals' "({T}: Add {W} or {U}.)" is their land
   types' mana (CR 305.6), made by the subtypes as a basic land's is. `tools/magic_set.py` mirrors the rule.

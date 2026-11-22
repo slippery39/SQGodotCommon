@@ -2868,13 +2868,17 @@ public record Discard(Ref Who, Count Count) : Effect
 	/// <summary>Tersa Lightshatter: "discard up to two cards, then draw that many cards" — none is an answer.</summary>
 	public bool UpTo { get; init; }
 
+	/// <summary>Mox Diamond: "discard a land card" — which cards may be discarded (as its controller's).</summary>
+	public Filters.Filter? Filter { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s))
 		{
 			var n = Math.Min(
 				Count.Value(s, InputContext.SetItem(ContextKeys.It, player)),
-				s.CardsIn(player, ZoneType.Hand).Count()
+				s.CardsIn(player, ZoneType.Hand)
+					.Count(c => Filter?.Matches(s, c, new(player, 0)) ?? true)
 			);
 			if (n == 0 && !Then.IsEmpty) // Garruk: an empty hand "didn't discard two nonland cards"
 				s = s.SpawnAction(
@@ -2896,6 +2900,7 @@ public record Discard(Ref Who, Count Count) : Effect
 								PlayerId = player,
 								MinChoices = UpTo ? 0 : n,
 								MaxChoices = n,
+								Filter = Filter,
 								Prompt = UpTo ? $"Discard up to {n}" : $"Discard {n}",
 							},
 							new MoveChosenToGraveyardAction { PlayerId = player },

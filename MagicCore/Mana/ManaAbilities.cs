@@ -18,7 +18,14 @@ public static class ManaAbilities
 	)
 	{
 		// A basic land type's mana ability is intrinsic (CR 305.6) — an ability all the same.
-		var intrinsic = card.Subtypes.Select(BasicLandColor).OfType<ManaColor>();
+		// Multiversal Passage: "This land is the chosen type." — that type's mana too
+		var intrinsic = (
+			card.GetComponent<ChosenType>() is { } chosenType
+				? card.Subtypes.Add(chosenType.Subtype)
+				: card.Subtypes
+		)
+			.Select(BasicLandColor)
+			.OfType<ManaColor>();
 		if (intrinsic.Any() && s.HasLostAllAbilities(card))
 			return [];
 		return intrinsic
@@ -27,7 +34,12 @@ public static class ManaAbilities
 					.Where(m => Usable(s, card, m) && Pays(s, m, paying))
 					.SelectMany(m => Makes(s, card, m))
 			)
-			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
+			.Concat(
+				s.AbilitiesOf<ChoosesColorAsItEnters>(card).Any(c => c.Mana)
+				&& card.GetComponent<ChosenColor>() is { } chosen
+					? [chosen.Color]
+					: []
+			)
 			.Distinct();
 	}
 
@@ -55,7 +67,7 @@ public static class ManaAbilities
 			.Resolve(s, Conditions.Of(card))
 			.Select(s.GetObject)
 			.OfType<Card>()
-			.SelectMany(c => c.Colors)
+			.SelectMany(c => s.ColorsOf(c))
 			.ToHashSet();
 		return [.. AnyColor.Where(colors.Contains)];
 	}

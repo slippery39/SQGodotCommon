@@ -285,6 +285,33 @@ public record SetChosenPlayerAction(int CardId, ImmutableArray<int> Players) : G
 			);
 }
 
+/// <summary>Multiversal Passage, after the choice: the basic land type, kept on it (ChosenType).</summary>
+public record SetChosenTypeAction(int CardId, ImmutableArray<string> Types) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		!s.IsOnBattlefield(CardId)
+		|| InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is not int id
+			? new(s)
+			: new(
+				s.UpdateObject(
+					CardId,
+					s.GetCard(CardId).WithComponent(new Effects.ChosenType(Types[id - 1]))
+				)
+			);
+}
+
+/// <summary>
+/// Time Vault, as its controller's turn would begin: on a yes the turn is skipped and the Vault untapped (the turn after
+/// it is asked for next); on a no it begins (TurnStructure.NextTurn).
+/// </summary>
+public record SkipTurnAction(int PlayerId, int VaultId, bool Extra) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		YesNoChoice.SaidYes(InputContext)
+			? new(TurnStructure.NextTurn(s.Untap(VaultId), PlayerId))
+			: new(TurnStructure.BeginTurn(s, PlayerId, Extra));
+}
+
 /// <summary>Nyota Uhura, after the choice: the number, kept on her (ChosenNumber).</summary>
 public record SetChosenNumberAction(int CardId) : GameAction
 {
@@ -309,7 +336,7 @@ public record SetChosenNumberAction(int CardId) : GameAction
 			);
 }
 
-/// <summary>Room of Refuge: its mana is the chosen color — while it stays this object.</summary>
+/// <summary>Room of Refuge, Painter's Servant: the chosen color, kept on it (ChosenColor) — while it stays this object.</summary>
 public record SetChosenColorAction(int CardId) : GameAction
 {
 	public override ActionResult Execute(GameState s)
@@ -323,7 +350,7 @@ public record SetChosenColorAction(int CardId) : GameAction
 			s.UpdateObject(
 				CardId,
 				s.GetCard(CardId)
-					.WithComponent(new Effects.ChosenColorMana(ChooseColorChoice.ColorOf(color)))
+					.WithComponent(new Effects.ChosenColor(ChooseColorChoice.ColorOf(color)))
 			)
 		);
 	}

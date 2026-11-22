@@ -20,3 +20,8 @@ whose subsystem it lives in.
   player's lands making more than one mana (Shayne, 2026-11-22), with none never: 21 activations on a 20-land board
   cost their VALIDATION at every node (move generation 0.87 → 3.91 ms), so filtering the finished list saved nothing.
   The choice it then asks is answered by rule (`GreedyAi`: its own lands by `ManaAbilities.YieldOf`, tapped first).
+  **A free ability — no mana, no X, no other cost (`ActivatedAbilityComponent.IsFree`: Lightning Greaves' "Equip {0}") —
+  is offered to the search once per permanent a turn** (`RepeatsAFreeAbility`, read from `Card.FreeAbilityActivatedOn`,
+  stamped as any free ability is activated; Shayne, 2026-11-22, MC-4.4l5): each activation is a new position, so the
+  search moved Greaves from creature to creature for 30 decisions and the turn never ended. An ability with a cost
+  (Zuran Orb's land) is not free — what it spends must be priced instead.

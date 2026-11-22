@@ -2276,6 +2276,91 @@ as his three priorities.
   than X; the trigger table lists the new event kind); docs current. **DEV-5:** run a second time from the start,
   `batch_checks.py`'s golden-out fails on the files its own golden-in regenerated (30 games "played differently") —
   `git checkout` the golden files first, or have the script restore them before golden-out.
+- 2026-11-22, Claude (cube lane) — **4.4l4a + l4b: colourless' five new pieces, 9 cards — 468 of 528 play (colourless
+  162 of 163: only Lightning Greaves, l5, waits — on the AI lane).** Shayne took the batch by starting it. Each piece
+  as planned, its nearest named in "4.4l", **l4**: **computed colours** — `s.ColorsOf(card)` (Characteristics: printed,
+  then an until-end-of-turn effect that SETS them — `UntilEndOfTurn.Colors`, `ModifyUntilEndOfTurn { Colors }` — then
+  every Painter's Servant's colour added, found once per state with the statics, `Board.Painted`); the rules' five reads
+  moved onto it (`Is.Color`, `Is.Colorless`, `Count.ColorsAmong`, Chrome Mox's `OfTheColorsOf`, Grindstone's
+  `TwoShareAColor`), the AI's deck-building reads left on the printed colours. Painter is `ChoosesColorAsItEnters` +
+  `AllCardsAreTheChosenColor`; the choice was Room of Refuge's MANA (`ChosenColorMana`), so it is now `ChosenColor` and
+  Room's "{T}: Add one mana of the chosen color" `ChoosesColorAsItEnters { Mana }` — or Painter would have tapped for
+  blue. The creature lands are `LsvCards.CreatureLand` (crew's stamp with `SetBase`, `AlsoCreatureType`, `Colors`, a
+  `ModifyUntilEndOfTurn` per keyword; Vinestalk's attack trigger Perfected Theory's `SetBase (3, 3)`). **An entering's
+  cost** — `EntryCost(cost) { Instead }`, paid by choosing as ward's is (`CanPayByChoosing`; `DiscardCost` learned a
+  filter, `Discard { Filter }`); the shocklands and the two MDFC lands moved onto it (`EntersTappedComponent.
+  UnlessYouPayLife` is gone), its question now asked AFTER the "as it enters" choices (Passage: the type, then the life).
+  Mox Diamond's `Instead = Graveyard` is asked before it moves (`EntryCost.AskInstead` → `EnterPaidAction`): a "no" never
+  enters. Multiversal Passage's type is a fifth "as it enters, choose", `ChoosesBasicLandTypeAsItEnters` → `ChosenType`
+  — the four don't fold (each its own status read by its own rule). **Skipping a turn** — `MaySkipYourTurnToUntap`,
+  asked in `TurnStructure.NextTurn` (split out of `FinishCleanup`, with `BeginTurn`): a skipped turn never begins.
+  **Beginning the game on the battlefield** — `BeginsTheGameOnTheBattlefield`, asked once both hands are kept
+  (`FinishKeepAction`). **Exert, and mana that grants** — `ExertCost` stamps `Exerted`, which the next untap step reads
+  and removes; "if any of that mana is spent on a creature spell, it gains haste" is a rider on the Halfling's
+  `ManaRestriction` (`Gains`, `GainsIf`; `ManaPayment.Riders` replaces `MakesUncounterable`), stamped on the spell
+  (`OnStackComponent.KeywordsUntilEndOfTurn`) and given as it enters.
+  **One thing the plan had wrong, found as the tests were written:** exerting Arena of Glory makes NO more mana than its
+  plain tap (the {R} paid in is the {R} it adds), so the payment solver, which reaches for a costly ability only when
+  plain mana falls short, could never exert it — the haste would never happen. Exerting is a decision, so it is a MOVE:
+  `ManaAbilityComponent.CashedIn` widened from Chromatic Star's "sacrifices itself" to "spends itself" (its sacrifice,
+  or its next untap), the mana floating with the rider; `WithCostlyMana` never exerts. A `Payment.Ability` plumbing
+  built first for the solver's path was taken out again: the revert-check pass showed nothing could reach it.
+  **The loops, shown to end** (tests): **Time Vault with Voltaic Key, and with Manifold Key** — the Key untaps the Vault
+  each turn and the Vault takes another: they never get a turn, and the game ends when the Vault's player decks (three
+  draws left, decked by the fourth turn). Within a turn it is bounded by the Key's {T}. **Painter's Servant with
+  Grindstone** — every card blue, so every pair shares a colour: their whole library milled in one activation, and it
+  stops there (`RepeatWhile` judged of the cards just milled); without the Servant the colourless deck mills two.
+  **The AI's turn with each card, watched** (the recipe; a Bear and an Ogre, their Wolf, twenty basics each, hands
+  empty but the card): **Painter's Servant** — cast, white chosen, then the Ogre attacks. **Celestial Colonnade, Creeping
+  Tar Pit** — animated in the first main phase and attacking beside the Ogre (4/4 flier; 3/2 unblockable), 8 s each.
+  **Restless Vinestalk** — animated, attacks alone, its trigger shrinking THEIR 5/5 Ogre to 3/3 (which stays home). **Mox
+  Diamond** — a Forest played, combat, then Mox Diamond cast after it, the second Forest discarded (a land it couldn't
+  play this turn). **Multiversal Passage** — played as an Island, 2 life paid, the six-mana blue creature cast at once.
+  **Time Vault** alone — tapped at the end of its turn for the extra turn, which it takes; asked each turn after, it
+  never skips (a skipped turn for an untapped Vault is a wash). **Time Vault and Voltaic Key** — the loop, found by the
+  search: Key → Vault, Vault, every turn (four turns of its own in a row, 113 s: ~28 s a turn against ~8). **Gemstone
+  Caverns** — the second player begins with it on the battlefield and exiles a card. **Arena of Glory** — exerted, the
+  {R}{R} 3/3 cast with haste and attacking at once. Every turn ends.
+  **The review's findings** (`/pre-commit`; seven fixed, each with a test that fails without it): **(1) a face-down Mox
+  Diamond was asked** — manifest dread's face-down 2/2 has no abilities; now not asked (and "put onto the battlefield
+  tapped" is kept through the question); **(2) a copy of the hasty spell got haste too** — `CopySpell` resets the cast's
+  own stamps, and now `KeywordsUntilEndOfTurn`; **(3) convoke read the printed colours** (`ManaPayment.Helps`) — a
+  painted or animated creature now convokes its colour; **(4) a declined Mox Diamond already in its graveyard moved
+  graveyard to graveyard** (a new object, a "leaves your graveyard" event) — it stays; **(5) the exert test written three
+  times** — `ManaAbilityComponent.Exerts`; **(6) a `///` summary misplaced twice** (`ChooseAsItEnters`, `NoTapCosts`: a new
+  member put between a summary and its method); **(7) the prompt's "Graveyard"**. Not taken: Gemstone Caverns' entry
+  event at pregame (nothing else is on the battlefield to see it) and `ColorsOf`'s board lookup (power and keywords take
+  the same one).
+  **Checks** (`batch_checks.py`, the 9 named): golden-out unmoved (162 + 1,041) — the engine change moves
+  no recorded game (the card replays took 25 minutes beside the AI lane's `--match` and passed `batch_checks`' 15-minute
+  cap: run alone. **DEV-5:** its first golden-out also named Voltaic Key, Manifold Key and Grindstone — already scripted,
+  so unscripting them moved 30 games; a batch names ONLY its own cards, and its loop partners are probed separately);
+  golden-in regenerated, 30 of GoldenReplay's games and 222 of GoldenCardReplay's moved, 36 added, the AI's replay
+  unmoved; probe 10 then 150 games, none unfinished (Time Vault activated 1,901 times; the lands are played, never cast);
+  the loop partners probed by name (Time Vault, both Keys, Painter's Servant, Grindstone): 150 games, none unfinished,
+  each Key activated ~2,100 times, Grindstone 841; full suite 2,381 passed, 1 skipped; docs current.
+  Revert-checks 30 of 30 caught — 25, then the review's 5 (the first run caught 24: Painter's "its choice is no mana" asked `CanTapFor`, which reads
+  the yield, not the line broken — now it asks `ManaAbilities.ColorsOf`).
+- 2026-11-22, Shayne (after l4a + l4b): **"So can we try to make a fix for Lightning Greaves just to close off the
+  colorless cards please"** — so the search rule the AI-lane note asked for is built here, in the cube lane, on his
+  word (the note said "say if a guard should be built here instead"). Claude (cube lane) — **4.4l5: Lightning Greaves —
+  469 of 528 play, colourless 163 of 163: colourless is finished.** The rule is the note's second option, "a cap on
+  activations of one ability a turn": **a FREE ability — no mana, no X, no other cost (`ActivatedAbilityComponent.
+  IsFree`) — is offered to the SEARCH once per permanent a turn** (`Evaluator.SearchMoves`, `RepeatsAFreeAbility`, left
+  out before validation as Candelabra's untaps are). The rules' moves stay complete: `LegalActions()` still offers the
+  equip, and a human may move Greaves as often as they like. Activating one stamps `Card.FreeAbilityActivatedOn` (status,
+  reset as it changes zones) — kept apart from "activate only once each turn"'s stamp, so a card with both never has one
+  blocked by the other. Not the note's first option ("no move back to a position this turn has had"): it needs every
+  position a turn has had remembered, and one a turn already ends Greaves. **Watched** (a Bear and a 4/4 Ogre, their
+  Wolf): "Activate Lightning Greaves → Bear | Pass | Attack with Bear | Attack with Ogre | Pass" — equipped once, the
+  turn ends (it went 30 decisions and never ended before). The ceiling (DesignNotes): Greaves moved onto a creature cast
+  early can't move to one cast later the same turn. Zuran Orb — the note's other case, a resource underpriced — is NOT
+  this rule (its ability costs a land) and stays the AI lane's. Tests in `LsvBatch2l4Tests` (the grant; the search offered
+  it once a turn and the rules always; the search AI's turn ends), revert-checks 5 of 5.
+  **Checks** (`batch_checks.py "Lightning Greaves"`): golden-out unmoved (162 + 1,050, the AI's replay included — no
+  recorded game has a free ability the search used twice); golden-in, against the last commit (l4's games with it): 30
+  and 280 moved, 40 added (l4's 36, Greaves' 4), the AI's replay unmoved; probe 10 then 150 games, none unfinished, the
+  equip activated 3,105 times; full suite 2,384 passed, 1 skipped; docs current.
 
 ## Tasks
 
@@ -2579,13 +2664,14 @@ as his three priorities.
     - [x] MC-4.4l3c (done 2026-11-22 — Decisions, "4.4l3c") Options, triggers, combat, equipment and casting, 12: Sowing Mycospawn, Emrakul, the Aeons Torn,
           Candelabra of Tawnos, Reckoner Bankbuster, Sword of the Meek, The Fantasticar, The One Ring, Coveted Jewel,
           Kaldra Compleat, Boseiju, Who Endures, Otawara, Soaring City, Urza's Saga
-    - [ ] MC-4.4l4a New pieces, 6 cards: computed colours (Painter's Servant; Celestial Colonnade, Creeping Tar Pit,
+    - [x] MC-4.4l4a (done 2026-11-22, one batch with l4b — Decisions, "4.4l4a + l4b") New pieces, 6 cards: computed colours (Painter's Servant; Celestial Colonnade, Creeping Tar Pit,
           Restless Vinestalk), an entering's cost (Mox Diamond; Multiversal Passage)
-    - [ ] MC-4.4l4b New pieces, 3: skipping a turn (Time Vault), beginning the game on the battlefield (Gemstone
+    - [x] MC-4.4l4b (done 2026-11-22) New pieces, 3: skipping a turn (Time Vault), beginning the game on the battlefield (Gemstone
           Caverns), exert and mana that grants (Arena of Glory)
-    - [ ] MC-4.4l5 Lightning Greaves — scripted, then taken out (2026-11-21): the search AI re-equips `Equip {0}`
-          without end. Waits on the AI lane's rule for abilities that cost no mana (Shayne's note, Decisions); then
-          its three-line script and a kept test that the AI's turn ends
+    - [x] MC-4.4l5 (done 2026-11-22, Shayne: "just to close off the colorless cards" — Decisions, "4.4l5") Lightning
+          Greaves — scripted, then taken out (2026-11-21): the search AI re-equips `Equip {0}` without end. The search
+          is now offered a free ability once per permanent a turn; its three-line script and a kept test that the AI's
+          turn ends
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -2661,13 +2747,22 @@ search 75 s a turn on a 20-land board — FIXED in this batch (the search is off
 one mana, before validation: Decisions, "4.4l3c"; Wizard's Rockets' 82 s is the same cost, one validated activation per X at
 every node, and `LegalActions(worthTrying)` is where a bound on it would go), Kaldra Compleat is re-equipped off its
 own Germ the turn it is cast, and Sowing Mycospawn is never kicked.
-**Next: l4a + l4b, one batch** — the 9 cards on the 5 new pieces (list in Tasks; each piece's nearest and why no
-option fits is in Decisions, "4.4l", **l4**): computed colours (Painter's Servant; Celestial Colonnade, Creeping Tar
-Pit, Restless Vinestalk), an entering's cost (Mox Diamond; Multiversal Passage), skipping a turn (Time Vault),
-beginning the game on the battlefield (Gemstone Caverns), exert and mana that grants (Arena of Glory). Tier 3: full
-tests, revert-checks, the probe at 10 before 150 — and the loops the plan names must be SHOWN to end (Time Vault with
-Voltaic Key or Manifold Key, Painter's Servant with Grindstone); WATCH the AI's turn with each card (the recipe is in
-Decisions). From l3c: X targets on an activation `ActivateAbilityAction.ChoosesTargets`; `TapUntappedCost { Crew }` and
+**l4a + l4b is done, all 9** (Decisions, "4.4l4a + l4b"): the five new pieces as planned, but Arena of Glory's exert is
+a mana MOVE (it makes no more mana than a plain tap, so the solver never would). The loops end (Time Vault with either
+Key decks its player; Painter's Servant with Grindstone stops with the library), and the AI plays every card sensibly.
+**l5 is done: colourless is finished** (Shayne, 2026-11-22; Decisions, "4.4l5"; 469 of 528 play — W 60/60, U 75/75,
+B 61/61, R 54/54, G 50/50, multicolour 6/65, colourless 163/163): the search is offered a free ability once per
+permanent a turn (`Evaluator.SearchMoves`), so Lightning Greaves' `Equip {0}` ends. **For the AI lane at the merge:**
+that rule is now in the search (built in the cube lane on Shayne's word) — Zuran Orb's case, a resource underpriced,
+is still theirs. **Next: multicolour, MC-4.4m** — its 59 unplayed cards
+(`python tools/magic_set.py text --missing --set LSV`, the multicoloured ones) read card by card and tiered as 4.4l was
+(each new piece naming its nearest), written in Decisions as "4.4m", then batches of more cards a session; Shayne
+reviews the plan before the first batch. From l4: colours `s.ColorsOf` (never `Card.Colors` in a rule); a creature land
+`LsvCards.CreatureLand(cost, size, type, colours, keywords)`; an entering's cost `EntryCost { Instead }` (paid by
+choosing: a cost's `PaidByChoosing`/`CanPayByChoosing`); "as it enters, choose a basic land type" `ChosenType`;
+`ChoosesColorAsItEnters { Mana }`; a turn's start `TurnStructure.NextTurn`/`BeginTurn`; exert `ExertCost`/`Exerted`; a
+mana rider `ManaRestriction { Gains, GainsIf }` (`ManaPayment.Riders`); `YesNoChoice.SaidYes`; l4's tests are in
+`LsvBatch2l4Tests.cs` (`ToTheVaultsQuestion(skip)`, `PassTheTurn()`, `Coloured`). From l3c: X targets on an activation `ActivateAbilityAction.ChoosesTargets`; `TapUntappedCost { Crew }` and
 `CrewsAsThoughPowerGreater`; `Trigger.NthNoncreature`; `ThisTurn { UntilYourNextTurn }`; `AttackedUnblockedEvent`
 (`Combat.RaiseUnblocked`); `CombatDamageBy` on a `CreatureDealtDamage` trigger; `LsvCards.Channel`; `Is.ManaCost(cost)`;
 tokens `Pilot`, `Germ`, `FlyingConstruct`; `CounterKinds.Burden`; `Is.Spell` is a card ON THE STACK — a card being cast
@@ -3115,3 +3210,10 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-22: Shayne asked why Candelabra played badly for the AI: diagnosed (tied with Pass on basics; 21 activations
   validated at every search node; the pick took the first land) and fixed on his rule — the search considers it only
   with lands making more than one mana (`Evaluator.SearchMoves`, asked before validation), the pick by yield.
+- 2026-11-22: MC-4.4l4a + l4b done — colourless' 9 cards on 5 new pieces (computed colours, an entering's cost,
+  skipping a turn, beginning the game on the battlefield, exert and mana that grants); 468 of 528 play (colourless 162 of
+  163: Lightning Greaves waits on the AI lane). Arena of Glory's exert turned out to be a decision, a mana move (no more
+  mana than a plain tap). The loops shown to end; every card watched in the AI's turn. Next: multicolour, MC-4.4m —
+  survey and plan.
+- 2026-11-22: MC-4.4l5 done (Shayne asked) — Lightning Greaves; the search is offered a free ability once per permanent
+  a turn. 469 of 528 play; colourless 163 of 163 — finished. Next: multicolour, MC-4.4m — survey and plan.

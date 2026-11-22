@@ -754,7 +754,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 					)
 			),
 			CountOf.ColorsAmong => Cards()
-				.SelectMany(c => c.Colors)
+				.SelectMany(c => s.ColorsOf(c))
 				.Where(c => c != ManaColor.Colorless)
 				.Distinct()
 				.Count(),

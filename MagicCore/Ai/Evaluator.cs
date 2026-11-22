@@ -227,8 +227,9 @@ public static partial class Evaluator
 		&& s.IsIn(cardId, c.OwnerId, ZoneType.Exile);
 
 	/// <summary>
-	/// The legal moves for the search: without playing a phantom impulse card (<see cref="Terms.ImpulseValue"/>), and
-	/// without an untap that can gain nothing (<see cref="GainsNothingUntapping"/>).
+	/// The legal moves for the search: without playing a phantom impulse card (<see cref="Terms.ImpulseValue"/>),
+	/// without an untap that can gain nothing (<see cref="PaysXToUntapXLands"/>), and without a free ability its
+	/// permanent already used this turn (<see cref="RepeatsAFreeAbility"/>).
 	/// </summary>
 	public static ImmutableList<GameAction> SearchMoves(this GameState s)
 	{
@@ -240,8 +241,23 @@ public static partial class Evaluator
 				PaysXToUntapXLands(s, a) is { } untap
 				&& untap.X > (landsMakingMore ??= LandsMakingMoreThanOneMana(s, untap.PlayerId))
 			)
+			&& !RepeatsAFreeAbility(s, a)
 		);
 	}
+
+	/// <summary>
+	/// Lightning Greaves' "Equip {0}" costs nothing, so the search moved it from creature to creature without end —
+	/// each equip a new position, a turn of 30 decisions that never ended (watched, MC-4.4l2; Shayne, 2026-11-21: "free
+	/// abilities in general"). A free ability (ActivatedAbilityComponent.IsFree) is offered to the search once per
+	/// permanent a turn (Card.FreeAbilityActivatedOn); LegalActions itself stays complete.
+	/// ponytail: one a turn — Greaves moved onto a creature cast earlier can't move again to one cast later in the same
+	/// turn; remember the positions a turn has had if a deck needs that (DesignNotes).
+	/// </summary>
+	static bool RepeatsAFreeAbility(GameState s, GameAction a) =>
+		a is ActivateAbilityAction act
+		&& s.GetCard(act.CardId) is { } card
+		&& card.FreeAbilityActivatedOn == s.GetGame().TurnNumber
+		&& s.ActivatedAbilitiesOf(card).ElementAtOrDefault(act.AbilityIndex) is { IsFree: true };
 
 	/// <summary>
 	/// Candelabra of Tawnos ("{X}, {T}: Untap X target lands") pays a mana for each land it untaps, so it gains only

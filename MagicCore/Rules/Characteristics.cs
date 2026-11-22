@@ -92,6 +92,7 @@ public static class Characteristics
 	{
 		ImmutableArray<string>? set = null;
 		List<string>? also = null;
+		string? chosen = null;
 		var aura = false;
 		foreach (var component in card.Components) // a loop, not LINQ: every subtype filter asks
 			if (component is UntilEndOfTurn u)
@@ -102,6 +103,8 @@ public static class Characteristics
 				if (u.AlsoCreatureType is { } more)
 					(also ??= []).Add(more); // Worf's "Warriors in addition to their other types"
 			}
+			else if (component is Effects.ChosenType type)
+				chosen = type.Subtype; // Multiversal Passage: "This land is the chosen type."
 		if (
 			set is null
 			&& BoardOf(s).TypeSet is { } typed
@@ -117,6 +120,8 @@ public static class Characteristics
 			also is null || !card.Is(CardType.Creature)
 				? subtypes
 				: [.. subtypes, .. also.Where(t => !subtypes.Contains(t)).Distinct()];
+		if (chosen is not null && !result.Contains(chosen))
+			result = result.Add(chosen);
 		return aura && !result.Contains("Aura") ? result.Add("Aura") : result;
 	}
 
@@ -209,6 +214,29 @@ public static class Characteristics
 		s.Has(card, "Indestructible");
 
 	/// <summary>
+	/// THE colours of a card, anywhere (CR 105, layer 5) — every rule asks here, never Card.Colors, or a creature land
+	/// animated "white and blue" reads colourless and Painter's Servant paints nothing. Its printed colours, or what an
+	/// effect until end of turn SETS them to (Celestial Colonnade: "becomes a 4/4 white and blue Elemental creature" —
+	/// UntilEndOfTurn.Colors, the latest), then every Painter's Servant's chosen colour added (AllCardsAreTheChosenColor:
+	/// "All cards that aren't on the battlefield, spells, and permanents are the chosen color in addition to their other
+	/// colors"). ponytail: no timestamps — Painter's colour is added after a set, whichever came first.
+	/// </summary>
+	public static ImmutableArray<ManaColor> ColorsOf(this GameState s, Card card)
+	{
+		var own = card.Colors;
+		foreach (var component in card.Components) // a loop, not LINQ: every colour filter asks
+			if (component is UntilEndOfTurn { Colors: { } set })
+				own = set;
+		var painted = BoardOf(s).Painted;
+		if (painted is null)
+			return own;
+		foreach (var color in painted)
+			if (!own.Contains(color))
+				own = own.Add(color);
+		return own;
+	}
+
+	/// <summary>
 	/// What the battlefield says, found once per (immutable) state — this sits under the AI's
 	/// simulations: every static that applies (from a permanent that still has its abilities), and
 	/// the permanents an Aura strips of theirs. Never mutated once built.
@@ -235,6 +263,9 @@ public static class Characteristics
 
 		/// <summary>A permanent's tax on activated abilities (Anointed Peacekeeper) — what <c>Costs.OfAbility</c> can find (MC-4.4d2b).</summary>
 		public bool AbilityTaxes { get; init; }
+
+		/// <summary>Painter's Servant: the colours every card is in addition to its own; null when no Servant paints.</summary>
+		public ImmutableArray<ManaColor>? Painted { get; init; }
 	}
 
 	static readonly HashSet<(int, int)> NoneStripped = [];
@@ -276,6 +307,7 @@ public static class Characteristics
 		List<(Card, StaticEffectComponent)> statics = [];
 		HashSet<(int, int)>? stripped = null;
 		List<(Card Aura, GrantsActivatedAbility Grant)>? grants = null;
+		List<Card>? painters = null;
 		Dictionary<(int, int), string>? typeSet = null;
 		bool attachments = false,
 			typeChanges = false,
@@ -319,6 +351,8 @@ public static class Characteristics
 					(grants ??= []).Add((c, grant));
 				else if (component is EnchantedIsCreatureType type && c.AttachedToId != 0)
 					(typeSet ??= [])[(c.AttachedToId, c.AttachedToIncarnation)] = type.Subtype;
+				else if (component is AllCardsAreTheChosenColor && c.HasComponent<ChosenColor>())
+					(painters ??= []).Add(c);
 			}
 		}
 		var lost = new Board([], stripped ?? NoneStripped);
@@ -333,6 +367,12 @@ public static class Characteristics
 					typeSet.Remove((c.AttachedToId, c.AttachedToIncarnation));
 		// An Aura that lost its abilities grants none either.
 		var live = grants?.Where(g => !Lost(lost, g.Aura)).ToList();
+		// A Painter's Servant that lost its abilities paints nothing.
+		var painted = painters
+			?.Where(p => !Lost(lost, p))
+			.Select(p => p.GetComponent<ChosenColor>()!.Color)
+			.Distinct()
+			.ToImmutableArray();
 		return lost with
 		{
 			Attachments = attachments,
@@ -340,6 +380,7 @@ public static class Characteristics
 			Locks = locks,
 			AbilityTaxes = abilityTaxes,
 			TypeSet = typeSet,
+			Painted = painted is { IsEmpty: false } ? painted : null,
 			Granted = live is null or []
 				? null
 				: live.GroupBy(g => (g.Aura.AttachedToId, g.Aura.AttachedToIncarnation))

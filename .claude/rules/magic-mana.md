@@ -55,8 +55,18 @@ whose subsystem it lives in.
   the spell paid for (Mishra's Workshop: `new(Is.Artifact)`, "artifact spells"; Chandra's `new(!Is.Creature)`), with
   `Abilities` the ability's source too (Isolinear Processor), `NotFromHand` Heartwood Crafter's. `default` is none.
   Read by `ManaAbilities.Allows` alone; never a new case per card.
-  `CantBeCountered` (Delighted Halfling: "and that spell can't be countered") stamps the spell it paid for
-  (`ManaPayment.MakesUncounterable`, asked before `Pay`: floating, or the ability `Used` names). **A permanent whose
+  **What mana says of the spell it pays for is a rider on the same `ManaRestriction`** (MC-4.4l4b), read by
+  `ManaPayment.Riders` (the restrictions of the mana a payment SPENT — floating, or the ability `Used` names; asked
+  before `Pay`): `CantBeCountered` (Delighted Halfling: "and that spell can't be countered") stamps the spell
+  `OnStackComponent.CantBeCountered`; `Gains` with `GainsIf` (Arena of Glory: "If any of that mana is spent on a creature
+  spell, it gains haste until end of turn" — `new ManaRestriction(null) { Gains = "Haste", GainsIf = Is.Creature }`: no
+  limit, a rider) stamps `OnStackComponent.KeywordsUntilEndOfTurn`, given to the permanent as it enters
+  (`EnterFromStackAction`). **Exert** (CR 701.43, the Arena's "{R}, {T}, Exert this land: Add {R}{R}") is `ExertCost`:
+  the `Exerted` mark (status), which its controller's next untap step reads and removes (`TurnStructure.FinishUntap`) —
+  an untap by an effect still untaps it, and it stays exerted. Exerting makes no more mana than a plain tap beside the
+  {R} it costs, so it is a decision and a MOVE only — `ManaAbilityComponent.CashedIn` (a mana cost and a cost that
+  spends the permanent: its sacrifice, or its next untap), its mana floating with the rider (`ManaPool.Restricted`);
+  `WithCostlyMana` never exerts. **A permanent whose
   abilities differ in restriction** (the Halfling's free {C} beside its legendary-only colours) is answered per payment:
   `YieldOf(…, paying)` leaves out the abilities whose mana can't pay for that spell; tapped by hand, a colour its
   restricted yield lacks comes from its unrestricted abilities (`TapForManaAction.YieldFor`).

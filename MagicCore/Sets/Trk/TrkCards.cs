@@ -4235,7 +4235,7 @@ public static class TrkCards
 		};
 
 	/// <summary>The shocklands (Blood Crypt …): "As this land enters, you may pay 2 life. If you don't, it enters tapped."</summary>
-	static EntersTappedComponent Shockland => new() { UnlessYouPayLife = 2 };
+	static EntryCost Shockland => new(new PayLifeCost(2));
 
 	/// <summary>All Good Things..., chapters I–III: "then exile a card from your hand" — linked to this Saga for chapter IV.</summary>
 	static MayDiscard ExileAGoodThing =>

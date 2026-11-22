@@ -70,6 +70,23 @@ public abstract record AdditionalCost
 	public virtual bool CanPayByChoosing(GameState s, int payerId) => false;
 }
 
+/// <summary>
+/// Exert (CR 701.43) — Arena of Glory: "{R}, {T}, Exert this land: Add {R}{R}." — "An exerted permanent won't untap
+/// during your next untap step": the Exerted mark on it, which that untap step reads and removes
+/// (TurnStructure.FinishUntap). An untap by an effect still untaps it, and it stays exerted (unlike a stun counter).
+/// </summary>
+public sealed record ExertCost : AdditionalCost
+{
+	public override bool CanPay(GameState s, int playerId, int sourceId) => true;
+
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		s.GetCard(sourceId).HasComponent<Exerted>()
+			? s
+			: s.UpdateObject(sourceId, (Card)s.GetCard(sourceId).WithComponent(new Exerted()));
+
+	public override string Describe() => "Exert this";
+}
+
 /// <summary>"{T}:" — tap this permanent.</summary>
 public sealed record TapSelfCost : AdditionalCost
 {
@@ -506,10 +523,15 @@ public sealed record DiscardCost(Filter? Filter = null) : AdditionalCost
 		: Count is > 1 ? $"Discard {Count} cards"
 		: "Discard a card";
 
-	public override GameAction? PaidByChoosing() => Filter is null ? new Discard(Ref.You, 1) : null;
+	/// <summary>Ward's "discard a card"; Mox Diamond's "discard a land card" (EntryCost) — one card, of the filter.</summary>
+	public override GameAction? PaidByChoosing() =>
+		Count is null && !Hand ? new Discard(Ref.You, 1) { Filter = Filter } : null;
 
 	public override bool CanPayByChoosing(GameState s, int payerId) =>
-		Filter is null && s.CardsIn(payerId, ZoneType.Hand).Any();
+		Count is null
+		&& !Hand
+		&& s.CardsIn(payerId, ZoneType.Hand)
+			.Any(c => Filter?.Matches(s, c, new(payerId, 0)) ?? true);
 }
 
 /// <summary>"Exile this card from your graveyard:".</summary>

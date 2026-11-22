@@ -48,6 +48,9 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>Theorist's Proxy: this cast can't be countered — gone with the stack object, so a recast can be.</summary>
 	public bool CantBeCountered { get; init; }
 
+	/// <summary>Arena of Glory's mana spent on it: "it gains haste until end of turn" — given as it enters (EnterFromStackAction).</summary>
+	public ImmutableArray<string> KeywordsUntilEndOfTurn { get; init; } = [];
+
 	/// <summary>Kicker: "if this spell was kicked" — a copy of it is kicked too (CR 707.10).</summary>
 	public bool Kicked { get; init; }
 
@@ -695,7 +698,18 @@ public record CastSpellAction : GameAction
 			);
 		var sunburst = card.HasComponent<Sunburst>();
 		var payment = FindPayment(s, card, costs, mostColors: sunburst)!;
-		var uncounterable = ManaPayment.MakesUncounterable(s, PlayerId, payment);
+		var riders = ManaPayment.Riders(s, PlayerId, payment).ToList();
+		var uncounterable = riders.Any(r => r.CantBeCountered);
+		ImmutableArray<string> gains =
+		[
+			.. riders
+				.Where(r =>
+					r.Gains is not null
+					&& (r.GainsIf?.Matches(s, card, new(PlayerId, CardId)) ?? true)
+				)
+				.Select(r => r.Gains!)
+				.Distinct(),
+		];
 		s = ManaPayment.Pay(s, PlayerId, payment);
 		s = MagicCore.Rules.Life.Lose(s, PlayerId, 2 * LifeForPhyrexian);
 		foreach (var cost in costs)
@@ -715,6 +729,17 @@ public record CastSpellAction : GameAction
 							Shares = Shares.IsEmpty
 								? Division.Splits(divided, Targets.Count(id => id != 0)).Single()
 								: Shares,
+						}
+					)
+			);
+		if (!gains.IsEmpty) // Arena of Glory: "If any of that mana is spent on a creature spell, it gains haste"
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							KeywordsUntilEndOfTurn = gains,
 						}
 					)
 			);
@@ -1132,6 +1157,14 @@ public record ActivateAbilityAction : GameAction
 				s.GetCard(CardId) with
 				{
 					ActivatedOncePerTurnOn = s.GetGame().TurnNumber,
+				}
+			);
+		if (ability.IsFree) // Lightning Greaves: the search is offered it once a turn (Evaluator.SearchMoves)
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId) with
+				{
+					FreeAbilityActivatedOn = s.GetGame().TurnNumber,
 				}
 			);
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
@@ -1732,6 +1765,13 @@ public record EnterFromStackAction(
 			sunburst: Sunburst,
 			gains: Gains
 		);
+		// Arena of Glory: "it gains haste until end of turn" — the mana's rider, stamped on the spell as it was paid for
+		foreach (var keyword in Spell?.KeywordsUntilEndOfTurn ?? [])
+			if (s.IsOnBattlefield(CardId))
+				s = s.UpdateObject(
+					CardId,
+					(Cards.Card)s.GetCard(CardId).WithComponent(new UntilEndOfTurn(0, 0, keyword))
+				);
 		// Warp: "if this spell's warp cost was paid, exile the permanent … at the beginning of the next end step" — set
 		// up as it resolves, after it enters (entering strips a delayed trigger). ponytail: the card's first alternative
 		// cost with one is taken as the one paid — a card with two such costs would need OnStackComponent to name it.
@@ -1775,6 +1815,34 @@ public record EnterFromStackAction(
 			);
 		return new(s);
 	}
+}
+
+/// <summary>
+/// Mox Diamond, its entering's cost answered (EntryCost.AskInstead): it enters — or, with Instead, goes to its owner's
+/// zone instead, from wherever it is, never having entered.
+/// </summary>
+public record EnterPaidAction(int CardId, int ControllerId, OnStackComponent? Spell) : GameAction
+{
+	public ZoneType? Instead { get; init; }
+
+	/// <summary>"Put onto the battlefield tapped" — kept through the question.</summary>
+	public bool Tapped { get; init; }
+
+	public override ActionResult Execute(GameState s) =>
+		!s.HasObject(CardId) ? new(s)
+		// already there (returned from its graveyard and declined): it stays, the same object
+		: Instead is { } zone && s.IsIn(CardId, s.GetCard(CardId).OwnerId, zone) ? new(s)
+		: Instead is { } to ? new(s.MoveCard(CardId, s.ZoneId(s.GetCard(CardId).OwnerId, to)))
+		: new(
+			s.EnterBattlefield(
+				CardId,
+				ControllerId,
+				Spell,
+				tapped: Tapped,
+				cast: Spell is not null,
+				paidToEnter: true
+			)
+		);
 }
 
 /// <summary>After a resolution, the active player gets priority (CR 117.3b).</summary>

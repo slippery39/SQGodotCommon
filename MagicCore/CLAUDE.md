@@ -51,7 +51,7 @@ MagicCore/
 │                        MagicCore.Tests/Filters/FilterMigrationTests.cs
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions: every CostChange)
-├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
+├── Rules/Characteristics.cs  THE power, toughness, keywords and colours (ColorsOf): own + every static on the battlefield
 ├── FraCoverage.md / TrkCoverage.md   per set: what is scripted, what waits and why — status, not rules; LsvSurvey.md: the cube's survey (GENERATED, tools/survey.py)
 ├── AbilityCatalog.md    GENERATED: every effect, trigger, ref, count, condition, component — one line each
 ├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests (Trk-, LsvCardSheet.md too)
@@ -130,7 +130,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   `Hidden.Sample`'s hand modes, in a hypothetical position where a real zone change's events must
   not fire: swapping opponent cards between hand and library (AI-3.4), or replacing one in place
   with a guessed card that keeps its id (`UpdateObject`, AI-3.5) — as `Hidden.Unknown`'s unknown cards do (AI-20.3).
-- **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has` (Rules/
+- **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has`/`s.ColorsOf` (Rules/
   Characteristics.cs — the card's own numbers plus every static ability on the battlefield; rules
   never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board),
   `s.AbilitiesOf<T>`/`HasAbility<T>` (a permanent's own abilities — never `GetComponents`, or "loses all

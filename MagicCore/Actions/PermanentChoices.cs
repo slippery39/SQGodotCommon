@@ -164,6 +164,15 @@ public record YesNoChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) => [new ChoiceOption { Id = 1, DisplayText = "Yes" }];
 
+	/// <summary>Was it answered yes? (an id or a list of them, as IfChosenAction reads it).</summary>
+	public static bool SaidYes(ImmutableDictionary<string, object> context) =>
+		context.GetValueOrDefault(ChoosePermanentChoice.Chosen) switch
+		{
+			int => true,
+			ImmutableList<int> ids => !ids.IsEmpty,
+			_ => false,
+		};
+
 	public override int GetDecidingPlayerId(
 		GameState s,
 		ImmutableDictionary<string, object> context

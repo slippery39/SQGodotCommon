@@ -154,7 +154,9 @@ public record TwoShareAColor(Ref What) : Condition
 			.Any(x =>
 				cards
 					.Skip(x.i + 1)
-					.Any(b => x.a.Colors.Intersect(b.Colors).Any(c => c != ManaColor.Colorless))
+					.Any(b =>
+						s.ColorsOf(x.a).Intersect(s.ColorsOf(b)).Any(c => c != ManaColor.Colorless)
+					)
 			);
 	}
 }
@@ -246,6 +248,16 @@ public record CanPayLife(int N) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
 		Rules.Life.CanPay(s, (int)context[ContextKeys.Controller], N);
+}
+
+/// <summary>
+/// An entering's cost (EntryCost: the shocklands' 2 life, Mox Diamond's land card) — can its controller pay it by
+/// choosing? The question ward asks (AdditionalCost.CanPayByChoosing).
+/// </summary>
+public record CanPayByChoosing(AdditionalCost Cost) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		Cost.CanPayByChoosing(s, (int)context[ContextKeys.Controller]);
 }
 
 /// <summary>Proft: "you may pay {2}" — asked only when it can be paid.</summary>

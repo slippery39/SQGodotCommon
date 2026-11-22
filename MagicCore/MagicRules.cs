@@ -602,7 +602,7 @@ public static class MagicRules
 						is { } yield
 					&& yield.CanPayFor(s, spell)
 						? yield.Units.Length
-					: ManaPayment.Helps(helpers, c) is not null ? 1
+					: ManaPayment.Helps(s, helpers, c) is not null ? 1
 					: ManaAbilities.TappedFor(s, c, tappingAnother) is not null ? 1
 					: 0
 				)
@@ -764,6 +764,7 @@ public static class MagicRules
 				OncePerTurnTriggeredOn = Now(c.OncePerTurnTriggeredOn),
 				ResolvedOnTurn = Now(c.ResolvedOnTurn),
 				ActivatedOncePerTurnOn = Now(c.ActivatedOncePerTurnOn),
+				FreeAbilityActivatedOn = Now(c.FreeAbilityActivatedOn),
 				PermissionUsedOn = Now(c.PermissionUsedOn),
 				Keywords = [],
 				Subtypes = [],

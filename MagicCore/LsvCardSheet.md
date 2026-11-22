@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 46/46 · uncommon 74/86 · rare 243/279 · mythic 87/108 · **459/528**
+**Playable:** common 46/46 · uncommon 75/86 · rare 249/279 · mythic 90/108 · **469/528**
 
 ### "Name Sticker" Goblin
 
@@ -1814,7 +1814,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Equipped creature has haste and shroud. (It can't be the target of spells or abilities.)  
 > Equip {0}
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+
+```csharp
+["Lightning Greaves"] =
+[
+	new StaticEffectComponent(Is.AttachedToSource, "Haste"),
+	new StaticEffectComponent(Is.AttachedToSource, "Shroud"),
+	Equip("{0}"),
+],
+```
 
 ### Lim-Dûl's Vault
 
@@ -1871,7 +1882,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {1}, {T}: Untap another target artifact.  
 > {3}, {T}: Target creature can't be blocked this turn.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
@@ -2354,7 +2365,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2i7Tests
 
-**Engine pieces:** `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `EntryCost` — An entering's cost: "as this enters, you may [Cost]. If you don't, [it enters tapped /…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Sink into Stupor // Soporific Springs"] =
@@ -2368,7 +2379,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 	BackFace(
 		"Sink into Stupor // Soporific Springs",
-		new EntersTappedComponent { UnlessYouPayLife = 3 },
+		new EntryCost(new PayLifeCost(3)),
 		new ManaAbilityComponent(ManaColor.Blue)
 	) with
 	{
@@ -2731,7 +2742,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {1}, {T}: Untap target artifact.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
@@ -2757,7 +2768,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · no test names it
 
-**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `EntryCost` — An entering's cost: "as this enters, you may [Cost]. If you don't, [it enters tapped /…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Witch Enchanter // Witch-Blessed Meadow"] =
@@ -2769,7 +2780,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 	BackFace(
 		"Witch Enchanter // Witch-Blessed Meadow",
-		new EntersTappedComponent { UnlessYouPayLife = 3 },
+		new EntryCost(new PayLifeCost(3)),
 		new ManaAbilityComponent(ManaColor.White)
 	) with
 	{
@@ -2973,7 +2984,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {R}.  
 > {R}, {T}, Exert this land: Add {R}{R}. If any of that mana is spent on a creature spell, it gains haste until end of turn. (An exerted permanent won't untap during your next untap step.)
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ExertCost` — Exert (CR 701.43) — Arena of Glory: "{R}, {T}, Exert this land: Add {R}{R}." — "An…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Arena of Glory"] =
+[
+	new EntersTappedComponent(YouControlA(Is.Subtype("Mountain"))),
+	new ManaAbilityComponent(ManaColor.Red),
+	// "{R}, {T}, Exert this land: Add {R}{R}. If any of that mana is spent on a creature spell, it gains haste
+	// until end of turn." — costly mana (the payment's last resort), its rider on the spell it pays for
+	new ManaAbilityComponent(ManaColor.Red)
+	{
+		Amount = 2,
+		Cost = ManaCost.Parse("{R}"),
+		Costs = [new TapSelfCost(), new ExertCost()],
+		Restriction = new ManaRestriction(null) { Gains = "Haste", GainsIf = Is.Creature },
+	},
+],
+```
 
 ### Arid Mesa
 
@@ -3594,7 +3624,26 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {W} or {U}.  
 > {3}{W}{U}: Until end of turn, this land becomes a 4/4 white and blue Elemental creature with flying and vigilance. It's still a land.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…
+
+```csharp
+["Celestial Colonnade"] =
+[
+	new EntersTappedComponent(),
+	new ManaAbilityComponent(ManaColor.White),
+	new ManaAbilityComponent(ManaColor.Blue),
+	CreatureLand(
+		"{3}{W}{U}",
+		(4, 4),
+		"Elemental",
+		[ManaColor.White, ManaColor.Blue],
+		"Flying",
+		"Vigilance"
+	),
+],
+```
 
 ### Chaos Defiler
 
@@ -4030,7 +4079,25 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add {U} or {B}.  
 > {1}{U}{B}: Until end of turn, this land becomes a 3/2 blue and black Elemental creature. It's still a land. It can't be blocked this turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…
+
+```csharp
+["Creeping Tar Pit"] =
+[
+	new EntersTappedComponent(),
+	new ManaAbilityComponent(ManaColor.Blue),
+	new ManaAbilityComponent(ManaColor.Black),
+	CreatureLand(
+		"{1}{U}{B}",
+		(3, 2),
+		"Elemental",
+		[ManaColor.Blue, ManaColor.Black],
+		Combat.CantBeBlocked
+	),
+],
+```
 
 ### Currency Converter
 
@@ -6453,7 +6520,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.  
 > This land is the chosen type.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `ChoosesBasicLandTypeAsItEnters` — Multiversal Passage: "As this land enters, choose a basic land type. … This land is the…; `EntryCost` — An entering's cost: "as this enters, you may [Cost]. If you don't, [it enters tapped /…; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…
+
+```csharp
+["Multiversal Passage"] =
+[
+	new ChoosesBasicLandTypeAsItEnters(),
+	new EntryCost(new PayLifeCost(2)),
+],
+```
 
 ### Mystic Confluence
 
@@ -6673,7 +6750,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As this creature enters, choose a color.  
 > All cards that aren't on the battlefield, spells, and permanents are the chosen color in addition to their other colors.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `AllCardsAreTheChosenColor` — Painter's Servant: "All cards that aren't on the battlefield, spells, and permanents are…; `ChoosesColorAsItEnters` — Room of Refuge, Painter's Servant: "As it enters, choose a color." Applied by…
+
+```csharp
+["Painter's Servant"] = [new ChoosesColorAsItEnters(), new AllCardsAreTheChosenColor()],
+```
 
 ### Parallax Wave
 
@@ -7065,7 +7148,30 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {3}{G}{U}: Until end of turn, this land becomes a 5/5 green and blue Plant creature with trample. It's still a land.  
 > Whenever this land attacks, up to one other target creature has base power and toughness 3/3 until end of turn.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+
+```csharp
+["Restless Vinestalk"] =
+[
+	new EntersTappedComponent(),
+	new ManaAbilityComponent(ManaColor.Green),
+	new ManaAbilityComponent(ManaColor.Blue),
+	CreatureLand(
+		"{3}{G}{U}",
+		(5, 5),
+		"Plant",
+		[ManaColor.Green, ManaColor.Blue],
+		"Trample"
+	),
+	When(
+		TriggerEvent.SelfAttacks,
+		[Target(Is.Creature & !Is.Source) with { Optional = true }],
+		new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { SetBase = (3, 3) }
+	),
+],
+```
 
 ### Retrofitter Foundry
 
@@ -10120,7 +10226,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If this card is in your opening hand and you're not the starting player, you may begin the game with Gemstone Caverns on the battlefield with a luck counter on it. If you do, exile a card from your hand.  
 > {T}: Add {C}. If Gemstone Caverns has a luck counter on it, instead add one mana of any color.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `BeginsTheGameOnTheBattlefield` — Gemstone Caverns: "If this card is in your opening hand and you're not the starting…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".
+
+```csharp
+["Gemstone Caverns"] =
+[
+	new BeginsTheGameOnTheBattlefield(),
+	// "{T}: Add {C}. If Gemstone Caverns has a luck counter on it, instead add one mana of any color."
+	new ManaAbilityComponent(ManaColor.Colorless) { OnlyIf = new Not(Lucky) },
+	.. AnyColorMana(ManaRestriction.None)
+		.Cast<ManaAbilityComponent>()
+		.Select(m => m with { OnlyIf = Lucky }),
+],
+```
 
 ### Generous Plunderer
 
@@ -10233,7 +10353,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {3}, {T}: Target player mills two cards. If two cards that share a color were milled this way, repeat this process.
 
-**Status:** scripted · **tests naming it:** LsvBatch2l3Tests
+**Status:** scripted · **tests naming it:** LsvBatch2l3Tests, LsvBatch2l4Tests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Mill` — "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard — N…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `TwoShareAColor` — Grindstone: "If two cards that share a color were milled this way" — two of the cards…
 
@@ -10856,7 +10976,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If this artifact would enter, you may discard a land card instead. If you do, put this artifact onto the battlefield. If you don't, put it into its owner's graveyard.  
 > {T}: Add one mana of any color.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `DiscardCost` — Hallway Heckler: "Discard a card:" — a card in your hand (not this one) the filter…; `EntryCost` — An entering's cost: "as this enters, you may [Cost]. If you don't, [it enters tapped /…
+
+```csharp
+["Mox Diamond"] =
+[
+	new EntryCost(new DiscardCost(Is.Land)) { Instead = ZoneType.Graveyard },
+	.. AnyColorMana(ManaRestriction.None),
+],
+```
 
 ### Mox Opal
 
@@ -11911,7 +12041,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 > If you would begin your turn while this artifact is tapped, you may skip that turn instead. If you do, untap this artifact.  
 > {T}: Take an extra turn after this one.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2l4Tests
+
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MaySkipYourTurnToUntap` — Time Vault: "If you would begin your turn while this artifact is tapped, you may skip…; `TakeExtraTurn` — H.M.S. Bounty: "take an extra turn after this one" (CR 500.7) — queued on…; `TapSelfCost` — "{T}:" — tap this permanent.
+
+```csharp
+["Time Vault"] =
+[
+	new EntersTappedComponent(),
+	DoesntUntapItself,
+	new MaySkipYourTurnToUntap(),
+	new ActivatedAbilityComponent(ManaCost.None, [new TakeExtraTurn()])
+	{
+		Costs = [new TapSelfCost()],
+	},
+],
+```
 
 ### Titania, Protector of Argoth
 

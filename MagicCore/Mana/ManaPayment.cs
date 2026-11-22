@@ -174,6 +174,7 @@ public static class ManaPayment
 	/// Not a {T} cost, so summoning sickness doesn't matter.
 	/// </summary>
 	public static ImmutableArray<ManaColor>? Helps(
+		GameState s,
 		(bool Creatures, bool Artifacts) helpers,
 		Card permanent
 	)
@@ -182,7 +183,7 @@ public static class ManaPayment
 			return null;
 		ImmutableArray<ManaColor>? pays = null;
 		if (helpers.Creatures && permanent.Is(CardType.Creature))
-			pays = [.. permanent.Colors, ManaColor.Colorless];
+			pays = [.. s.ColorsOf(permanent), ManaColor.Colorless]; // an animated Colonnade's white and blue
 		if (helpers.Artifacts && permanent.Is(CardType.Artifact))
 			pays ??= [ManaColor.Colorless]; // a convoking creature already pays {1}
 		return pays;
@@ -237,7 +238,7 @@ public static class ManaPayment
 				yield = null; // its mana can't pay (YieldOf left out what can't) — but it may still convoke
 			// Convoke and improvise (Helps): an untapped creature or artifact you control may pay {1} (and a
 			// creature one mana of its colour). A one-mana creature may pay either way.
-			var convokes = Helps(helpers, c);
+			var convokes = Helps(s, helpers, c);
 			if (yield is { Sacrificed: true } && convokes is not null)
 				yield = null; // ponytail: convoking only taps it, so a Sculpture Treasure convokes
 			// rather than being sacrificed for a colour; offer both if that ever matters
@@ -359,7 +360,9 @@ public static class ManaPayment
 			foreach (
 				var costly in ManaAbilities
 					.AbilitiesOf(s, c)
-					.Where(m => m.Cost is not null && !m.ChoosesCost)
+					// ponytail: Arena of Glory's exert is a decision, a move only (ManaAbilityComponent.CashedIn): it makes no more mana
+					// than its plain tap, and this path pays no cost beyond {T} and its own sacrifice
+					.Where(m => m.Cost is not null && !m.ChoosesCost && !m.Exerts)
 			)
 			{
 				var n = costly.Amount.Value(s, Conditions.Of(c));
@@ -639,26 +642,26 @@ public static class ManaPayment
 	}
 
 	/// <summary>
-	/// Delighted Halfling: "Spend this mana only to cast a legendary spell, and that spell can't be countered." — did this
-	/// payment spend such mana (floating, or made by the ability that paid)? Asked before Pay, while the sources are there.
+	/// What the mana this payment SPENT says of the spell it paid for (floating, or made by the ability that paid) —
+	/// Delighted Halfling: "that spell can't be countered"; Arena of Glory: "If any of that mana is spent on a creature
+	/// spell, it gains haste until end of turn". Asked before Pay, while the sources are there.
 	/// </summary>
-	public static bool MakesUncounterable(
+	public static IEnumerable<ManaRestriction> Riders(
 		GameState s,
 		int playerId,
 		IEnumerable<Payment> payment
 	) =>
-		payment.Any(p =>
-			!p.Floats
-			&& (
+		payment
+			.Where(p => !p.Floats)
+			.Select(p =>
 				p.LandId == 0 ? p.Restriction
 				: s.IsIn(p.LandId, playerId, ZoneType.Hand)
 					? ManaAbilities
 						.Used(s, s.GetCard(p.LandId), p.Color, ZoneType.Hand)
-						?.Restriction
-				: ManaAbilities.Used(s, s.GetCard(p.LandId), p.Color)?.Restriction
+						?.Restriction ?? default
+				: ManaAbilities.Used(s, s.GetCard(p.LandId), p.Color)?.Restriction ?? default
 			)
-				is { CantBeCountered: true }
-		);
+			.Where(r => r != ManaRestriction.None);
 
 	/// <summary>
 	/// Kai Winn: a mana ability is an activated ability (CR 605) — "activates an ability of a source with the
