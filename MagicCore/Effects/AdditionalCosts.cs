@@ -444,7 +444,13 @@ public sealed record DiscardCost(Filter? Filter = null) : AdditionalCost
 	/// </summary>
 	public int? Count { get; init; }
 
-	public override CostSlot Slot => Count is null ? CostSlot.Discard : CostSlot.None;
+	/// <summary>
+	/// Lion's Eye Diamond: "Discard your hand, Sacrifice this artifact:" — every card in it, nothing picked; an empty
+	/// hand pays it too.
+	/// </summary>
+	public bool Hand { get; init; }
+
+	public override CostSlot Slot => Count is null && !Hand ? CostSlot.Discard : CostSlot.None;
 
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		s.CardsIn(playerId, ZoneType.Hand)
@@ -454,34 +460,39 @@ public sealed record DiscardCost(Filter? Filter = null) : AdditionalCost
 			.Select(c => c.Id);
 
 	public override bool CanPay(GameState s, int playerId, int sourceId) =>
-		Count is not { } n || Candidates(s, playerId, sourceId).Count() >= n;
+		Hand || Count is not { } n || Candidates(s, playerId, sourceId).Count() >= n;
 
 	// Uses: the card discarded — a Spirit Guide discarded can't also be exiled for mana.
 
 	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
-		Count switch
-		{
-			null => chosen == 0 ? s : s.Discard(playerId, [chosen]),
-			int n => s.SpawnAction(
-				new PipelineAction
-				{
-					Steps =
-					[
-						new ChooseCardsFromHandChoice
-						{
-							PlayerId = playerId,
-							Filter = Filter,
-							MinChoices = n,
-							MaxChoices = n,
-							Prompt = $"Discard {n}",
-						},
-						new MoveChosenToGraveyardAction { PlayerId = playerId },
-					],
-				}
-			),
-		};
+		Hand
+			? s.Discard(playerId, [.. Candidates(s, playerId, sourceId)])
+			: Count switch
+			{
+				null => chosen == 0 ? s : s.Discard(playerId, [chosen]),
+				int n => s.SpawnAction(
+					new PipelineAction
+					{
+						Steps =
+						[
+							new ChooseCardsFromHandChoice
+							{
+								PlayerId = playerId,
+								Filter = Filter,
+								MinChoices = n,
+								MaxChoices = n,
+								Prompt = $"Discard {n}",
+							},
+							new MoveChosenToGraveyardAction { PlayerId = playerId },
+						],
+					}
+				),
+			};
 
-	public override string Describe() => Count is > 1 ? $"Discard {Count} cards" : "Discard a card";
+	public override string Describe() =>
+		Hand ? "Discard your hand"
+		: Count is > 1 ? $"Discard {Count} cards"
+		: "Discard a card";
 
 	public override GameAction? PaidByChoosing() => Filter is null ? new Discard(Ref.You, 1) : null;
 

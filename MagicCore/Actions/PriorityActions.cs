@@ -210,7 +210,7 @@ public record TapForManaAction : GameAction
 
 	/// <summary>
 	/// Orcish Lumberjack: "three mana in any combination of {R} and/or {G}" — how many of the units are the ability's
-	/// other colour (ManaAbilityComponent.OrColor); the rest are Color.
+	/// other colour (the first of ManaAbilityComponent.OrColors); the rest are Color.
 	/// </summary>
 	public int OfTheOther { get; init; }
 
@@ -261,11 +261,16 @@ public record TapForManaAction : GameAction
 				s.IsIn(CardId, PlayerId, ZoneType.Battlefield)
 				&& Chosen(s) is { } ability
 				&& ability.NoTap == NoTap
-				&& (ability.AnyOneColor ? Color != ManaColor.Colorless : ability.Color == Color) // "any color" is never {C}
+				// "any color" is never {C}; a combination's move names its first colour (OfTheOther the rest)
+				&& (
+					ability.AnyOneColor
+						? ManaAbilities.Makes(s, s.GetCard(CardId), ability).Contains(Color)
+						: ability.Color == Color
+				)
 				&& OfTheOther >= 0
 				&& OfTheOther
 					<= (
-						ability.OrColor is null
+						ability.OrColors.IsEmpty
 							? 0
 							: ability.Amount.Value(s, Conditions.Of(s.GetCard(CardId)))
 					)
@@ -304,11 +309,11 @@ public record TapForManaAction : GameAction
 		s = ManaAbilities.PayAsUsed(s, PlayerId, s.GetCard(CardId), Color);
 		var player = s.GetPlayer(PlayerId);
 		var pool = player.ManaPool;
-		foreach (var unit in yield.Units.Select((u, i) => (Colors: u, First: i == 0)))
+		foreach (var unit in yield.Units)
 		{
-			// a unit of one colour is that colour (Badgermole Cub's additional {G}), whatever was chosen
-			var color =
-				unit.First || (yield.SameColor && unit.Colors.Length > 1) ? Color : unit.Colors[0];
+			// a unit that can't be the chosen colour is its own (Badgermole Cub's additional {G}); Relic of Sauron's
+			// two are both the one chosen (ponytail: no {U}{B} by hand — ManaAbilityComponent.OrColors)
+			var color = unit.Contains(Color) ? Color : unit[0];
 			// Restricted mana floats as restricted (ManaPool.Restricted) — what it may pay for stays with it.
 			pool =
 				yield.Restriction == Effects.ManaRestriction.None
@@ -348,7 +353,8 @@ public record TapForManaAction : GameAction
 				player.ManaPool,
 				(p, i) =>
 				{
-					var color = i < n - OfTheOther ? Color : ability.OrColor ?? Color;
+					var color =
+						i >= n - OfTheOther && ability.OrColors is [var other, ..] ? other : Color;
 					return ability.Restriction == ManaRestriction.None
 						? p.Add(color)
 						: p with

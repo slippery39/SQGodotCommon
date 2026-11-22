@@ -101,14 +101,24 @@ whose subsystem it lives in.
   `On = Ref.Chosen` in `MoveChosen.Then`; its "gains haste" with no duration is `ModifyUntilEndOfTurn.ForGood`).
   With no card to hold it ("return a land you control", Erica Ortegas) it is `AtNextEndStep`: an object in
   your command zone, removed once it has resolved. Set up during the end step, either waits for the next turn's.
-  **"At the beginning of your next main phase"** (Mana Drain) is `AtNextEndStep { NextMainPhase }`: your precombat main,
+  **The step it waits for is ONE option, `AtNextEndStep.At`** (MC-4.4l3b; never a flag per step): the end step unless
+  said; "at the beginning of your next main phase" (Mana Drain) is `At = Step.PreCombatMain` — your precombat main,
   or this turn's postcombat main when set up on your turn before it (so the postcombat main raises a `StepBeganEvent`
-  too). **A number fixed as it is set up** ("equal to that spell's mana value") is `AtNextEndStep.X`, the delayed
-  trigger's `TriggeredAbilityComponent.X` — its effects read it as `Count.X`.
+  too); "at the beginning of the next turn's upkeep" (Mishra's Bauble, Urza's Bauble) is `At = Step.Upkeep`, whoever's
+  turn that is. **A number fixed as it is set up** ("equal to that spell's mana value") is `AtNextEndStep.X`, the delayed
+  trigger's `TriggeredAbilityComponent.X` — its effects read it as `Count.X`. **The cards it is about** (Memory Jar: "each
+  player discards their hand and returns to their hand each card they exiled this way") are `AtNextEndStep.Those`: the
+  cards a Ref names AS IT IS SET UP (`Ref.ThisWay`, in the exile's `Then`), its effects' own `Ref.ThisWay` when it
+  resolves — its "this" is a command-zone object, which no `ExiledBy` link names.
   **One on a permanent whose controller is someone else** (The Wrath of Khan's "at the beginning of the next
   combat this turn, gain control of that creature", `AtBeginningOfNextCombat`) names its controller
   (`DelayedTrigger.ControllerId`, CR 603.7d): `Triggers.Collect` reads those as it reads an exiled card's —
   never as the permanent's own, which would make its controller "you".
+- **A discard trigger's "that card"** (Currency Converter: "Whenever you discard a card, you may exile that card from your
+  graveyard") is its event card — `DiscardedEvent` in `Triggers.EventCard` — so `Exile(Ref.EventCard) { Linked }`, which
+  takes it only while it is still in a graveyard. **"Your first, second, or third turn of the game"** (Starting Town) is
+  `Count.TurnsYouHaveBegun` — `MagicPlayer.TurnsBegun`, stamped beside `TurnBeganOn` as each turn of that player begins,
+  extra turns too — under `DuringYourTurn`.
 - **Emblems** (CR 114) are cards in their owner's COMMAND zone (`GetEmblem`): `Triggers.Collect` and
   the statics board read that zone beside the battlefield, so an emblem's trigger has a source
   ("this emblem deals 5 damage") and its anthem applies. Nothing removes them.

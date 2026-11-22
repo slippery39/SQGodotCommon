@@ -15,21 +15,6 @@ namespace MagicCore.Tests.Sets;
 /// </summary>
 public class LsvBatch2lTests : FraBoardTest
 {
-	/// <summary>No lands at all — the base board's twenty basics answer every "unless you control".</summary>
-	void EmptyBoard()
-	{
-		s = TestGames.InFirstMain();
-		me = s.GetGame().StartingPlayerId;
-		them = s.OpponentOf(me);
-	}
-
-	int Play(string land)
-	{
-		var id = Hand(Lsv(land), me);
-		s = s.Act(new PlayLandAction { PlayerId = me, CardId = id });
-		return id;
-	}
-
 	int PlayAmong(string land, int otherLands, CardDefinition? other = null)
 	{
 		EmptyBoard();

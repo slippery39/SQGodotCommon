@@ -76,6 +76,7 @@ public static class Describe
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")
 				+ (a.Modes.Length > 0 ? $" ({ModeText(s, a)})" : "")
+				+ (a.X > 0 ? $" (X = {a.X})" : "")
 				+ Targets(s, a.Targets)
 				+ (a.SacrificeId != 0 ? $", sacrificing {Name(s, a.SacrificeId)}" : "")
 				+ (a.DiscardId != 0 ? $", discarding {Name(s, a.DiscardId)}" : "")
@@ -92,7 +93,7 @@ public static class Describe
 				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
 			TapForManaAction { SacrificeId: not 0 } t =>
 				$"Tap {Name(s, t.CardId)}, sacrificing {Name(s, t.SacrificeId)}, for {t.Color}{(t.OfTheOther > 0 ? $" ({t.OfTheOther} of its other colour)" : "")}",
-			TapForManaAction { NoTap: true } t => $"Sacrifice {Name(s, t.CardId)} for {t.Color}",
+			TapForManaAction { NoTap: true } t => $"{NoTapCosts(s, t)} for {t.Color}",
 			TapForManaAction { PaysItsCost: true } t =>
 				$"Pay for and sacrifice {Name(s, t.CardId)} for {t.Color}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
@@ -101,6 +102,18 @@ public static class Describe
 				: "Turn face up",
 			_ => action.GetType().Name,
 		};
+
+	/// <summary>
+	/// A mana ability without {T}, by what it costs — Rain of Filth's "Sacrifice Swamp"; Pentad Prism's "Pentad Prism:
+	/// Remove 1 charge counter from this"; Lion's Eye Diamond's "…: Discard your hand, Sacrifice this".
+	/// </summary>
+	static string NoTapCosts(GameState s, TapForManaAction t) =>
+		s.HasObject(t.CardId)
+		&& s.GetObject(t.CardId) is Card card
+		&& ManaAbilities.AbilitiesOf(s, card).FirstOrDefault(m => m.NoTap)
+			is { Costs: not [SacrificeSelfCost] } ability
+			? $"{card.Name}: {string.Join(", ", ability.Costs.Select(c => c.Describe()))}"
+			: $"Sacrifice {Name(s, t.CardId)}";
 
 	/// <summary>Tells a card's activated abilities apart — " [#2: {2}{B}, T]"; empty when it has one.</summary>
 	static string WhichAbility(GameState s, ActivateAbilityAction a)

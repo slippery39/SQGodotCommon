@@ -2099,6 +2099,77 @@ as his three priorities.
   fixed. **For l3a:** Lion's Eye Diamond and Wizard's Rockets were planned as abilities that use the stack because
   the solver must never discard a hand or choose an X by itself — this move is the other way to that (a mana ability
   the solver may not choose, offered as a move); weigh it there before taking the stack.
+- 2026-11-22, Claude (cube lane) — **4.4l3a + l3b: colourless' 21 mana and exile/graveyard/library options — 447 of
+  528 play (colourless 141 of 163); no new piece, two engine bugs found by the batch's own tests.** Every card is an
+  option on a tested piece, as planned; where the plan and the build differ:
+  **Lion's Eye Diamond does NOT use the stack** (the Star's move, weighed as Next asked): it is a real mana ability
+  without {T} — Rain of Filth's `TapForManaAction.NoTap`, one move per colour, its mana floating, no stack — and the one
+  thing it needed was "discard your hand" as a cost (`DiscardCost { Hand }`); "activate only as an instant" is when a
+  move is offered, and the payment never uses it (so a hand is never discarded to pay). **Pentad Prism** is the same
+  move with `RemoveCountersCost`. **Wizard's Rockets uses the stack**, as Shayne approved (its limitation in
+  DesignNotes' ceilings and a `ponytail:` on the script): a mana MOVE would need an X and a colour per unit on
+  `TapForManaAction`, and its `{X}` built the piece Candelabra needs anyway — `ActivateAbilityAction.X`, one legal
+  action per X, `Count.X` on the stack.
+  **The options, l3a:** `ManaAbilityComponent.OrColors` (a list; `OrColor` and Orcish Lumberjack moved onto it) with
+  `ManaAbilities.Makes` THE colours a unit may be — a plain tap's yield (Relic of Sauron), the costly path (Sunken
+  Ruins' hybrid `Cost`), and `OfTheColorsOf` (Chrome Mox: the exiled card's; its imprint `MayDiscard { Exile, Linked,
+  Filter }`); `SacrificedIf` (Gemstone Mine's "if there are no mining counters, sacrifice it" — a condition judged in
+  `PayAsUsed`; not effects: a mana ability is paid inside a payment, so the Talismans don't fold onto it either);
+  `AddManaOfAnyOneColor { AnyCombination }` (the Rockets, Coalition Relic: a colour per unit); `Count.TurnsYouHaveBegun`
+  (Starting Town; `MagicPlayer.TurnsBegun`). **l3b:** `Mill` with a counted N, `IfMilled` reading the milled as
+  `Ref.ThisWay` and `RepeatWhile` (Palantír of Orthanc with `Count.TotalManaValueOf`; Grindstone with `TwoShareAColor`);
+  `LookAtHand(player)` became `LookAt(cards)` — a Ref: a hand, a library's `{ Top }` (Mishra's Bauble), `{ AtRandom }`
+  one of them (Urza's Bauble), Gitaxian Probe, V'Ger and Sen Triplets moved onto it — known now to the one who LOOKED
+  (it marked a hand its own controller looked at as known to the opponent); `AtNextEndStep.At` (a step; `NextMainPhase` and Mana Drain moved onto
+  it) and `Those` (Memory Jar: the cards named as it is set up — its delayed trigger is a command-zone object no link
+  names); `MoveTo { FaceDown }` to exile, and a face-down exiled card keeps who knew it when it returns
+  (`KnownAfterMoving`: the returned hands aren't revealed to the AI); `LookAndTake { ChosenBy, Rest = Exile,
+  RestCounter }` (Karn) and `{ FaceDown, Linked }` to exile (Shelldock Isle's hideaway); `BecomeCopyUntilEndOfTurn` of
+  a card in a graveyard (Shifting Woodland). Currency Converter, Ghost Vacuum and Ugin are existing options combined;
+  Ghost Vacuum's links ARE read from the sacrificed source (the risk the plan named: tested, nothing to build).
+  **Two bugs, neither a batch card's own:** **{X}{X} paid X ONCE** — the cast added X to the cost a single time
+  whatever the number of {X} symbols, so Pest Infestation ({X}{X}{G}, in since k1 with no test) has cost {X}{G}; found
+  by Walking Ballista's test tapping two lands for X = 2. Fixed (`ManaCost.XCount`, in the cast's cost and
+  `Card.ManaValueNow`); the cube's two are the only {X}{X} cards in any set, so nothing of FRA or TRK moves. And **a
+  discard trigger had no "that card"** — `DiscardedEvent` wasn't in `Triggers.EventCard`, so Currency Converter's exile
+  did nothing, silently; one line.
+  **The AI's turn with each card, watched** (the recipe; FraBoardTest's board, a Bear and an Ogre, their Wolf, cards in
+  both graveyards): **Pentad Prism — it removes BOTH counters as its first two moves, with nothing to spend them on**
+  ("Pentad Prism: Remove 1 charge counter from this for White" twice, then land, attack, a creature paid by lands): a
+  third case for the AI lane's note beside Greaves and Zuran Orb — it ends, the Prism is in. **Wizard's Rockets** —
+  activated at once for X = 0, a free card (sensible), but that one turn took the search 82 s against ~15 s for the
+  others: 21 activations (X from 0 to 20 lands), each resolved through X colour choices (DesignNotes). **Walking
+  Ballista** — {4} four times with all its mana, a ping at the Wolf, attacks as a 5/5, a second ping kills the Wolf; 41
+  decisions, the turn ends (each ping costs a counter). **Karn** takes −2 (a 1/1 Construct) over +1. **Lion's Eye
+  Diamond** — left alone with seven cards in hand. **Chrome Mox** — cast, imprints nothing. **Memory Jar** — activated
+  first, a creature and a land from the seven, the old hand back at the end step. **Currency Converter** — loots at
+  the end of the turn and exiles the discard. **Ghost Vacuum** — exiles a creature card from its OWN graveyard.
+  **Shifting Woodland** — becomes the Bear in its graveyard and attacks. **The Baubles** — sacrificed during combat,
+  targeting itself. **Ugin** +2. Gemstone Mine, Coalition Relic, Grindstone, Relic of Sauron, Starting Town, Sunken
+  Ruins, Shelldock Isle: untouched or tapped for mana only; Palantír's trigger: the opponent declines, one card milled.
+  Every turn ends.
+  **Also:** `Describe` names a no-{T} mana move by its costs (it read "Sacrifice Pentad Prism"); `CreateConstruct`
+  (Urza's token, Karn's, Urza's Saga's next); `EmptyBoard()` and `Play(land)` moved to `FraBoardTest`; tests in
+  `LsvBatch2l3Tests` (35 cases — `Coloured(…)`: TestGames' inline cards have no colour).
+  **/pre-commit's review of the engine changes, ten findings, each fixed:** Starting Town paid 1 life for EVERY mana —
+  its "any color" scripted as one any-one-colour ability became the land's whole yield, so its free {C} was never
+  made (now five one-mana abilities with the life cost, the Talismans' shape: generic is paid by the {C}; the rule
+  is in magic-mana.md); the hideaway link took whatever object had the source's id (an Isle bounced and replayed
+  under its own trigger — `ExiledBy.ByTheSource`, the same-object check imprint's exile already made, now one
+  method for both); `LookAtHand`'s two flags became `LookAt(Ref)` (above); the face-down exile stamp is one method
+  (`ExiledFaceDown.On`); the three colour lists left beside `Makes` read it; the X bounds — an activation's counted
+  once per ability, a cast's halved for {X}{X}; the table's X spinner knows an activated ability's X
+  (`MagicTable/Targeting.cs`, two lines — the AI lane's file, for the merge); three summaries.
+  **Checks:** golden-out with the 21 OUT: 1 of 162 random games and 24 of 1,008 card replays moved — every one
+  a game with Pest Infestation in it, the {X}{X} fix (**DEV-5:** `batch_checks.py` stops golden-out at its first
+  failing filter, so the card replays were run by hand against the committed file); golden-in regenerated on the final
+  code — 30 random games moved, the card replays moved and 21 cards' added (1,029), the AI replay unmoved; both golden
+  steps run again after the review's fixes, the same 1 + 24; revert-checks 44 of 44 caught (33 in the script; Chrome
+  Mox's imprint asking nothing with no card to exile; 10 on the lines the review changed); probe, all
+  21 named: 10 then 150 games, none unfinished, every non-land cast or used (the three it calls NEVER USED are lands;
+  Pentad Prism and Lion's Eye Diamond read "activated 0" — a mana move isn't an activation it counts: their tests
+  cover them), run again on the final code; full suite 2,330 passed, 1 skipped; docs current; the table project
+  builds. The script's run took 27 minutes, 12 of them the 33 revert-checks. Chrome Mox's imprint (`MayDiscard { Filter }`) is asked only with a card the filter matches.
 
 ## Tasks
 
@@ -2392,11 +2463,11 @@ as his three priorities.
           (Shayne: draft-only, an edge case); its draft ability a line in DesignNotes' ceilings (done 2026-11-21;
           the review moved Lightning Greaves to l5 and found Chromatic Star broken — fixed with an engine option, a
           mana ability that costs mana and sacrifices itself)
-    - [ ] MC-4.4l3a Options, mana, 10: Sunken Ruins, Relic of Sauron, Pentad Prism, Gemstone Mine, Chrome Mox, Lion's
+    - [x] MC-4.4l3a (done 2026-11-22, one batch with l3b; LED a mana MOVE, never the stack — Decisions) Options, mana, 10: Sunken Ruins, Relic of Sauron, Pentad Prism, Gemstone Mine, Chrome Mox, Lion's
           Eye Diamond, Wizard's Rockets, Coalition Relic, Starting Town, Walking Ballista — LED and the Rockets use
           the stack (Shayne: fine for now, the limitation NOTED: DesignNotes' ceilings and a `ponytail:` each, the
           words in Decisions)
-    - [ ] MC-4.4l3b Options, exile, graveyard and library, 11: Currency Converter, Ghost Vacuum, Memory Jar, Karn,
+    - [x] MC-4.4l3b (done 2026-11-22) Options, exile, graveyard and library, 11: Currency Converter, Ghost Vacuum, Memory Jar, Karn,
           Scion of Urza, Ugin, Eye of the Storms, Shelldock Isle, Grindstone, Palantír of Orthanc, Mishra's Bauble,
           Urza's Bauble, Shifting Woodland
     - [ ] MC-4.4l3c Options, triggers, combat, equipment and casting, 12: Sowing Mycospawn, Emrakul, the Aeons Torn,
@@ -2465,11 +2536,26 @@ costs mana and sacrifices itself is sacrificed by the solver and is a move, `Tap
 **For the AI lane at the merge
 (Shayne, 2026-11-21; Decisions, after "4.4l1 + l2"): an ability that costs no mana is not free to the search** —
 Greaves' endless `Equip {0}` needs a rule that ends it, and Zuran Orb (in, and playing) had the AI sacrifice nine
-lands in a row for life. **Next: l3a + l3b** — the 21 options (mana; exile, graveyard and library), each with its
-test and revert-check; LED and Wizard's Rockets were to use the stack, the limitation written into DesignNotes
-there — first weigh the Star's move for them (a mana ability the solver may not choose, offered as a move:
-Decisions, the Star's entry); WATCH the AI's turn with each card that has a free or resource-spending ability (the recipe is in
-Decisions) — the probe's random play doesn't show it. From l1 + l2:
+lands in a row for life. **l3a + l3b is done, all 21** (Decisions, "4.4l3a + l3b"; 447 of 528 play — W 60/60, U 75/75,
+B 61/61, R 54/54, G 50/50, multicolour 6/65, colourless 141/163): Lion's Eye Diamond is a real mana ability offered as
+a MOVE (no stack), Wizard's Rockets uses the stack (its limitation in DesignNotes); the batch's tests found {X}{X}
+paying X once (Pest Infestation half price since k1) and a discard trigger with no "that card" — both fixed; the
+review found Starting Town paying life for every mana (a free {C} beside "pay 1 life: any color" is five one-mana
+abilities, never `OfAnyOneColor(1)`: magic-mana.md). **For the
+AI lane at the merge, beside Greaves and Zuran Orb:** the search removes Pentad Prism's counters for nothing on sight,
+takes Karn's −2 over his +1, and a turn with Wizard's Rockets on a 20-land board took it 82 s (one activation per X).
+**Next: l3c** — the 12 trigger, combat, equipment and casting options (list in Tasks), each with its test and
+revert-check; WATCH the AI's turn with each card that has a free or resource-spending ability (the recipe is in
+Decisions) — the probe's random play doesn't show it. From l3a + l3b: an activated ability's `{X}` is built
+(`ActivateAbilityAction.X`) — Candelabra of Tawnos still needs its "X target lands" (`TargetSpec.PerX` on an activation
+THROWS); `AddManaOfAnyOneColor { AnyCombination }` (Coveted Jewel's "three mana of any one color" is the plain one);
+`AtNextEndStep { At = step, Those = ref }`; `LookAt(cards)` (`LookAtHand` is gone); `LookAndTake { ChosenBy, Rest =
+TheRest.Exile, RestCounter, Linked, FaceDown }`; `ExiledBy.ByTheSource`, `ExiledFaceDown.On`; `Mill { RepeatWhile }`, its `IfMilled` reading `Ref.ThisWay`; `Count.TurnsYouHaveBegun`,
+`Count.TotalManaValueOf`; `CreateConstruct` (Urza's Saga's token), the `Rogue` token, `Bauble(look)`; a no-{T} mana
+ability is a move whatever it costs (`DiscardCost { Hand }`, `RemoveCountersCost`); tests in `LsvBatch2l3Tests.cs`
+(`Coloured(name, cost, colour)` — TestGames' inline cards have NO colour; `ManaMoves(card)`, `To(step)`,
+`ToNext(step)`, `Activate(card, ability, targets)`, `Loyalty(walker, ability)`), `EmptyBoard()` and `Play(land)` now in
+`FraBoardTest`. From l1 + l2:
 the land helpers `SurveilLand`, `Triome`, `FastLand(a, b)`, `HorizonLand(a, b)`, `Verge(a, b, type, type)`;
 `YouControlA(filter)`; `SacrificeThis(cost, tap, targets, effects…)`; tokens `Servo`, `Myr`, `BigConstruct` (4/4;
 `Construct` is the 0/0 — Karn's and Urza's Saga's needs its +1/+1 static); `MayLoot`; the lands' tests are in
@@ -2889,3 +2975,8 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   Chromatic Star broken — fixed at Shayne's asking (a mana ability that costs mana and sacrifices itself: sacrificed
   by the solver, and a move); Shayne: an AI note on free abilities — Zuran Orb too. Next: l3a + l3b, the 21 mana and
   exile/graveyard/library options.
+- 2026-11-22: MC-4.4l3a + l3b done — colourless' 21 mana and exile/graveyard/library options; 447 of 528 play
+  (colourless 141 of 163). Lion's Eye Diamond a mana move (no stack), Wizard's Rockets on the stack with its
+  limitation noted; {X}{X} was paying X once (Pest Infestation) and a discard trigger had no "that card" — fixed.
+  For the AI lane: Pentad Prism's counters burned on sight, Karn's −2 over +1. Next: l3c, the 12 trigger, combat,
+  equipment and casting options.

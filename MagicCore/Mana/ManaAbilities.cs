@@ -25,7 +25,7 @@ public static class ManaAbilities
 			.Concat(
 				AbilitiesOf(s, card)
 					.Where(m => Usable(s, card, m) && Pays(s, m, paying))
-					.SelectMany(m => m.AnyOneColor ? AnyColor : [m.Color])
+					.SelectMany(m => Makes(s, card, m))
 			)
 			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
 			.Distinct();
@@ -39,6 +39,26 @@ public static class ManaAbilities
 	/// </summary>
 	static bool Usable(GameState s, Card card, ManaAbilityComponent m) =>
 		m.IsPlain && m.Costs.All(c => c.Taps || c.CanPay(s, card.ControllerId, card.Id));
+
+	/// <summary>
+	/// The colours ONE unit of this ability's mana may be — THE answer: "any color" (never {C}); Chrome Mox's "any of
+	/// the exiled card's colors" (OfTheColorsOf); else its colour and those it combines with (Relic of Sauron's {U},
+	/// {B} and/or {R}: OrColors).
+	/// </summary>
+	public static ImmutableArray<ManaColor> Makes(GameState s, Card card, ManaAbilityComponent m)
+	{
+		if (!m.AnyOneColor)
+			return m.OrColors.IsEmpty ? [m.Color] : [m.Color, .. m.OrColors];
+		if (m.OfTheColorsOf is not { } among)
+			return AnyColor;
+		var colors = among
+			.Resolve(s, Conditions.Of(card))
+			.Select(s.GetObject)
+			.OfType<Card>()
+			.SelectMany(c => c.Colors)
+			.ToHashSet();
+		return [.. AnyColor.Where(colors.Contains)];
+	}
 
 	/// <summary>Fanatic of Rhonas' ferocious: "Activate only if …" (ManaAbilityComponent.OnlyIf).</summary>
 	static bool Allowed(GameState s, Card card, ManaAbilityComponent m) =>
@@ -84,9 +104,7 @@ public static class ManaAbilities
 		var context = Conditions.Of(card);
 		return AbilitiesOf(s, card, from)
 			// "any color" is never {C}: Delighted Halfling's {C} is its unrestricted ability's
-			.Where(m =>
-				m.IsPlain && (m.AnyOneColor ? color != ManaColor.Colorless : m.Color == color)
-			)
+			.Where(m => m.IsPlain && Makes(s, card, m).Contains(color))
 			.OrderByDescending(m => m.Amount.Value(s, context))
 			.ThenBy(m => m.Costs.Count + m.DealsDamageToYou)
 			.FirstOrDefault();
@@ -109,8 +127,11 @@ public static class ManaAbilities
 			return s;
 		foreach (var cost in m.Costs.Where(c => !c.Taps && c is not SacrificeSelfCost))
 			s = cost.Pay(s, playerId, card.Id, 0);
-		return m.DealsDamageToYou > 0
-			? Rules.Damage.Deal(s, card, playerId, m.DealsDamageToYou)
+		if (m.DealsDamageToYou > 0)
+			s = Rules.Damage.Deal(s, card, playerId, m.DealsDamageToYou);
+		// Gemstone Mine: "If there are no mining counters on this land, sacrifice it." — its last counter just paid
+		return m.SacrificedIf is { } gone && gone.Holds(s, Conditions.Of(card))
+			? s.Sacrifice(card.Id)
 			: s;
 	}
 
@@ -248,7 +269,7 @@ public static class ManaAbilities
 		ImmutableArray<ManaColor>? colors = null;
 		foreach (var (holder, m, cost) in rules)
 			if (cost.Filter.Matches(s, card, new(holder.ControllerId, holder.Id)))
-				colors = [.. (colors ?? []).Union(m.AnyOneColor ? AnyColor : [m.Color])];
+				colors = [.. (colors ?? []).Union(Makes(s, holder, m))];
 		return colors;
 	}
 
@@ -362,7 +383,11 @@ public static class ManaAbilities
 			if (!Usable(s, card, m) || !Pays(s, m, paying))
 				continue;
 			first ??= m;
-			if (!m.AnyOneColor && m.Amount is { Kind: CountOf.Fixed, Fixed: 1 })
+			if (
+				!m.AnyOneColor
+				&& m.OrColors.IsEmpty
+				&& m.Amount is { Kind: CountOf.Fixed, Fixed: 1 }
+			)
 				continue;
 			var n = Math.Max(0, m.Amount.Value(s, context));
 			if (oneColor is null || n > most)
@@ -370,13 +395,7 @@ public static class ManaAbilities
 		}
 		ImmutableArray<ImmutableArray<ManaColor>> units = oneColor is null
 			? [colors]
-			:
-			[
-				.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
-					oneColor.AnyOneColor ? AnyColor : [oneColor.Color],
-					most
-				),
-			];
+			: [.. Enumerable.Repeat(Makes(s, card, oneColor), most)];
 		// Molten Tide: "whenever you tap a Mountain for mana, add an additional {R}"; Badgermole Cub: "… a creature
 		// …, add an additional {G}" — a mana ability triggering on a mana ability, so it resolves at once
 		// (CR 605.1b), as more mana. A unit of one colour is never the "one colour chosen": SameColor leaves it.

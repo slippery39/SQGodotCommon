@@ -399,7 +399,7 @@ public static class LsvCards
 					[TargetSpec.Spell()],
 					new AtNextEndStep([new AddMana(ManaColor.Colorless, Count.X)])
 					{
-						NextMainPhase = true,
+						At = Step.PreCombatMain,
 						X = Count.GreatestManaValueOf(Ref.Target(0)),
 					},
 					new Counter(Ref.Target())
@@ -727,7 +727,7 @@ public static class LsvCards
 				new ManaAbilityComponent(ManaColor.Red)
 				{
 					Amount = 3,
-					OrColor = ManaColor.Green,
+					OrColors = [ManaColor.Green],
 					Costs = [new TapSelfCost(), new SacrificeCost(Is.Subtype("Forest"))],
 				},
 			],
@@ -1578,7 +1578,7 @@ public static class LsvCards
 			[
 				Spell(
 					[TargetSpec.Player()],
-					new LookAtHand(Ref.Target()),
+					new LookAt(Ref.All(ZoneType.Hand, Is.AnyCard, Ref.Target())),
 					new DrawCards(Ref.You, 1)
 				),
 			],
@@ -1593,21 +1593,7 @@ public static class LsvCards
 			],
 			["Urza, Lord High Artificer"] =
 			[
-				When(
-					TriggerEvent.SelfEnters,
-					[],
-					new CreateTokens(Construct, 1)
-					{
-						Abilities =
-						[
-							new StaticEffectComponent(Is.Source)
-							{
-								Power = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
-								Toughness = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
-							},
-						],
-					}
-				),
+				When(TriggerEvent.SelfEnters, [], CreateConstruct),
 				new ManaAbilityComponent(ManaColor.Blue)
 				{
 					Costs = [new TapUntappedCost(1, Is.Artifact & Is.Yours)],
@@ -4514,6 +4500,472 @@ public static class LsvCards
 				),
 			],
 			["Cogwork Librarian"] = [], // ponytail: a 3/3 — its text is the DRAFT's, which Limited/Draft.cs doesn't know (DesignNotes)
+
+			// ===== MC-4.4l3a: colourless' mana options (colours in any combination, a rider on a mana ability, a mana move that removes a counter or discards the hand, the exiled card's colours, X on an activated ability, a colour per unit, a count of your turns) =====
+			["Sunken Ruins"] =
+			[
+				ColorlessMana(),
+				// "{U/B}, {T}: Add {U}{U}, {U}{B}, or {B}{B}." — costly mana: the payment's last resort (a filter, never more mana)
+				new ManaAbilityComponent(ManaColor.Blue)
+				{
+					Amount = 2,
+					OrColors = [ManaColor.Black],
+					Cost = ManaCost.Parse("{U/B}"),
+				},
+			],
+			["Relic of Sauron"] =
+			[
+				new ManaAbilityComponent(ManaColor.Blue)
+				{
+					Amount = 2,
+					OrColors = [ManaColor.Black, ManaColor.Red],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}"),
+					[new DrawCards(Ref.You, 2), new Discard(Ref.You, 1)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Pentad Prism"] =
+			[
+				new Sunburst(),
+				// no {T}: a mana ability offered as a move, one per colour (TapForManaAction.NoTap) — never the payment's
+				ManaAbilityComponent.OfAnyOneColor(1) with
+				{
+					Costs = [new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Charge }],
+				},
+			],
+			["Gemstone Mine"] =
+			[
+				new EntersWithCountersComponent(3) { Kind = CounterKinds.Mining },
+				ManaAbilityComponent.OfAnyOneColor(1) with
+				{
+					Costs =
+					[
+						new TapSelfCost(),
+						new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Mining },
+					],
+					SacrificedIf = new Not(
+						new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Mining), 1)
+					),
+				},
+			],
+			["Chrome Mox"] =
+			[
+				// Imprint
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new MayDiscard([])
+					{
+						Exile = true,
+						Linked = true,
+						Filter = !Is.Artifact & !Is.Land,
+					}
+				),
+				ManaAbilityComponent.OfAnyOneColor(1) with
+				{
+					OfTheColorsOf = Ref.All(ZoneType.Exile, Is.ExiledBySource),
+				},
+			],
+			["Lion's Eye Diamond"] =
+			[
+				// A real mana ability with no {T}: a move, one per colour, its mana floating (TapForManaAction.NoTap) — the
+				// payment never discards a hand by itself. "Activate only as an instant" is when a move is offered.
+				ManaAbilityComponent.OfAnyOneColor(3) with
+				{
+					Costs = [new DiscardCost() { Hand = true }, new SacrificeSelfCost()],
+				},
+			],
+			["Wizard's Rockets"] =
+			[
+				new EntersTappedComponent(),
+				// ponytail: a mana ability in the rules (CR 605), built as an activated ability that uses the stack — the
+				// payment must never choose an X or sacrifice this by itself. So it can be responded to (and countered by
+				// Sublime Epiphany), and its mana is made BEFORE a spell is cast, never while paying for one (DesignNotes).
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{X}"),
+					[new AddManaOfAnyOneColor(Count.X) { AnyCombination = true }]
+				)
+				{
+					Costs = [new TapSelfCost(), new SacrificeSelfCost()],
+				},
+				When(
+					TriggerEvent.SelfLeaves with
+					{
+						To = ZoneType.Graveyard,
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Coalition Relic"] =
+			[
+				.. AnyColorMana(ManaRestriction.None),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Charge }]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+				When(
+					TriggerEvent.YourFirstMainPhase,
+					[],
+					// counted before they are removed: "for each charge counter removed this way"
+					new AddManaOfAnyOneColor(Count.ChargeCountersOn(Ref.Source))
+					{
+						AnyCombination = true,
+					},
+					new RemoveCounters(Ref.Source, Count.ChargeCountersOn(Ref.It))
+					{
+						Kind = CounterKinds.Charge,
+					}
+				),
+			],
+			["Starting Town"] =
+			[
+				// "unless it's your first, second, or third turn of the game" — a turn of yours, one of your first three
+				new EntersTappedComponent(
+					new Both(new DuringYourTurn(), new Not(new AtLeast(Count.TurnsYouHaveBegun, 4)))
+				),
+				ColorlessMana(),
+				// five one-mana abilities, never "any one color": beside the free {C} the yield is one unit of every
+				// colour it makes, {C} first — so generic is paid without the life (the Talismans' shape)
+				.. AnyColorMana(ManaRestriction.None)
+					.Cast<ManaAbilityComponent>()
+					.Select(m => m with { Costs = [new TapSelfCost(), new PayLifeCost(1)] }),
+			],
+			["Walking Ballista"] =
+			[
+				new EntersWithCountersComponent(Count.X),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}"),
+					[new PutCounters(Ref.Source, 1)]
+				),
+				new ActivatedAbilityComponent(ManaCost.None, [new DealDamage(Ref.Target(), 1)])
+				{
+					Costs = [new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.PlusOne }],
+					Targets = [TargetSpec.AnyTarget()],
+				},
+			],
+
+			// ===== MC-4.4l3b: colourless' exile, graveyard and library options (a mill counted, repeated and read; one card looked at; a delayed trigger's step and its cards; face down from a hand; an opponent's pick and the rest exiled; a copy of a card in a graveyard) =====
+			["Currency Converter"] =
+			[
+				When(
+					new Trigger(EventKind.Discarded) { By = Whose.You },
+					[],
+					new May(
+						"Exile the discarded card?",
+						new Always(),
+						[new Exile(Ref.EventCard) { Linked = true }]
+					)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new MoveChosen(ZoneType.Exile, Is.ExiledBySource, ZoneType.Graveyard)
+						{
+							Then =
+							[
+								new If(new Matches(Ref.Chosen, Is.Land), [CreateTreasure(1)])
+								{
+									Otherwise = [new CreateTokens(Rogue, 1)],
+								},
+							],
+						},
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					// ponytail: with nothing exiled it does nothing, so it isn't offered — the AI would tap it for nothing
+					OnlyIf = new AtLeast(
+						Count.NumberOf(Ref.All(ZoneType.Exile, Is.ExiledBySource, Ref.EachPlayer)),
+						1
+					),
+				},
+			],
+			["Ghost Vacuum"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new Exile(Ref.Target()) { Linked = true }]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [TargetSpec.InAnyGraveyard()],
+				},
+				// its links are read from the Vacuum as it was: the cost sacrificed it
+				SacrificeThis(
+					"{6}",
+					tap: true,
+					[],
+					new MoveTo(
+						Ref.All(ZoneType.Exile, Is.Creature & Is.ExiledBySource, Ref.EachPlayer),
+						ZoneType.Battlefield
+					)
+					{
+						From = [ZoneType.Exile],
+						UnderYourControl = true,
+						Counters = 1,
+						CounterKind = CounterKinds.Flying,
+						Then =
+						[
+							new ModifyUntilEndOfTurn(Ref.ThisWay, 0, 0)
+							{
+								ForGood = true,
+								SetBase = (1, 1),
+								AlsoCreatureType = "Spirit",
+							},
+						],
+					}
+				) with
+				{
+					SorcerySpeed = true,
+				},
+			],
+			["Memory Jar"] =
+			[
+				SacrificeThis(
+					null,
+					tap: true,
+					[],
+					new MoveTo(Ref.All(ZoneType.Hand, Is.AnyCard, Ref.EachPlayer), ZoneType.Exile)
+					{
+						From = [ZoneType.Hand],
+						FaceDown = true,
+						Then =
+						[
+							new DrawCards(Ref.EachPlayer, 7),
+							new AtNextEndStep(
+								[
+									new DiscardHand(Ref.EachPlayer),
+									new MoveTo(Ref.ThisWay, ZoneType.Hand)
+									{
+										From = [ZoneType.Exile],
+									},
+								]
+							)
+							{
+								Those = Ref.ThisWay,
+							},
+						],
+					}
+				),
+			],
+			["Karn, Scion of Urza"] =
+			[
+				Loyalty(
+					1,
+					[],
+					new LookAndTake(2)
+					{
+						Reveal = true,
+						Must = true,
+						ChosenBy = Ref.EachOpponent,
+						Rest = TheRest.Exile,
+						RestCounter = CounterKinds.Silver,
+					}
+				),
+				Loyalty(
+					-1,
+					[],
+					new MoveChosen(
+						ZoneType.Exile,
+						Is.Yours & Is.WithCounter(CounterKinds.Silver),
+						ZoneType.Hand
+					)
+				),
+				Loyalty(-2, [], CreateConstruct),
+			],
+			["Ugin, Eye of the Storms"] =
+			[
+				When(
+					TriggerEvent.SelfCast,
+					[Target(!Is.Colorless) with { Optional = true }],
+					new Exile(Ref.Target())
+				),
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.Colorless,
+					},
+					[Target(!Is.Colorless) with { Optional = true }],
+					new Exile(Ref.Target())
+				),
+				Loyalty(2, [], new GainLife(Ref.You, 3), new DrawCards(Ref.You, 1)),
+				Loyalty(0, [], new AddMana(ManaColor.Colorless, 3)),
+				Loyalty(
+					-11,
+					[],
+					new SearchLibrary(CardType.None, ZoneType.Exile)
+					{
+						UpTo = 99, // "any number"
+						Filter = Is.Colorless & !Is.Land,
+						FilterText = "colorless nonland",
+						Play = new()
+						{
+							ThisTurn = true,
+							Free = true,
+							CastOnly = true,
+						},
+					}
+				),
+			],
+			["Shelldock Isle"] =
+			[
+				// Hideaway 4
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new LookAndTake(4)
+					{
+						To = ZoneType.Exile,
+						Must = true,
+						FaceDown = true,
+						Linked = true,
+					}
+				),
+				new EntersTappedComponent(),
+				new ManaAbilityComponent(ManaColor.Blue),
+				// ponytail: "you may play the exiled card … if a library has twenty or fewer cards" is judged as it is
+				// ACTIVATED, and the card is playable until end of turn at its own timing, not only as this resolves
+				// (DesignNotes) — a land needs a land drop either way.
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{U}"),
+					[
+						new MakePlayable(
+							Ref.All(ZoneType.Exile, Is.ExiledBySource),
+							new() { ThisTurn = true, Free = true }
+						),
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					OnlyIf = new Not(
+						new Both(
+							new AtLeast(
+								Count.NumberOf(Ref.All(ZoneType.Library, null, Ref.You)),
+								21
+							),
+							new AtLeast(
+								Count.NumberOf(Ref.All(ZoneType.Library, null, Ref.EachOpponent)),
+								21
+							)
+						)
+					),
+				},
+			],
+			["Grindstone"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}"),
+					[new Mill(Ref.Target(), 2) { RepeatWhile = new TwoShareAColor(Ref.ThisWay) }]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [TargetSpec.Player()],
+				},
+			],
+			["Palantír of Orthanc"] =
+			[
+				When(
+					TriggerEvent.YourEndStep,
+					[TargetSpec.Player(Is.Opponents)],
+					new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Influence },
+					new Surveil(2) { To = ZoneType.Library },
+					new May("Have them draw a card?", new Always(), [new DrawCards(Ref.You, 1)])
+					{
+						Who = Ref.Target(),
+						Otherwise =
+						[
+							new Mill(
+								Ref.You,
+								Count.CountersOfKind(Ref.Source, CounterKinds.Influence)
+							)
+							{
+								IfMilled =
+								[
+									new LoseLife(Ref.Target(), Count.TotalManaValueOf(Ref.ThisWay)),
+								],
+							},
+						],
+					}
+				),
+			],
+			["Mishra's Bauble"] =
+			[
+				Bauble(
+					new LookAt(
+						Ref.All(ZoneType.Library, Is.AnyCard, Ref.Target()) with
+						{
+							Top = true,
+						}
+					)
+				),
+			],
+			["Urza's Bauble"] =
+			[
+				Bauble(
+					new LookAt(Ref.All(ZoneType.Hand, Is.AnyCard, Ref.Target())) { AtRandom = true }
+				),
+			],
+			["Shifting Woodland"] =
+			[
+				new EntersTappedComponent(YouControlA(Is.Subtype("Forest"))),
+				new ManaAbilityComponent(ManaColor.Green),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{G}{G}"),
+					[new BecomeCopyUntilEndOfTurn(Ref.Source, Ref.Target())]
+				)
+				{
+					Targets = [TargetSpec.InYourGraveyard(Is.Type(PermanentTypes))],
+					OnlyIf = Delirium,
+				},
+			],
+		};
+
+	/// <summary>
+	/// The Baubles (Mishra's Bauble, Urza's Bauble): "{T}, Sacrifice this artifact: Look at [a card of target player's].
+	/// Draw a card at the beginning of the next turn's upkeep."
+	/// </summary>
+	static ActivatedAbilityComponent Bauble(LookAt look) =>
+		SacrificeThis(
+			null,
+			tap: true,
+			[TargetSpec.Player()],
+			look,
+			new AtNextEndStep([new DrawCards(Ref.You, 1)]) { At = Step.Upkeep }
+		);
+
+	/// <summary>Currency Converter: "a 2/2 black Rogue creature token".</summary>
+	static CardData Rogue => Token("Rogue", "Creature — Rogue", "2", "2", ["B"]);
+
+	/// <summary>
+	/// Urza, Lord High Artificer; Karn, Scion of Urza: "Create a 0/0 colorless Construct artifact creature token with
+	/// 'This token gets +1/+1 for each artifact you control.'"
+	/// </summary>
+	static CreateTokens CreateConstruct =>
+		new(Construct, 1)
+		{
+			Abilities =
+			[
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+					Toughness = Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+				},
+			],
 		};
 
 	/// <summary>

@@ -417,7 +417,9 @@ public record CastSpellAction : GameAction
 			s,
 			PlayerId,
 			card,
-			(XIsMana(card, Kicked) ? X : 0) + CostList.ManaOwed(Paid(s, card)),
+			// X once for each {X} in the cost (Walking Ballista's {X}{X}); a kicker's {X} once
+			(XIsMana(card, Kicked) ? X * Math.Max(1, card.ManaCost.XCount) : 0)
+				+ CostList.ManaOwed(Paid(s, card)),
 			free: WithoutPayingManaCost,
 			targets: Targets,
 			added: added,
@@ -917,6 +919,13 @@ public record ActivateAbilityAction : GameAction
 	/// </summary>
 	public int LifeForPhyrexian { get; init; }
 
+	/// <summary>
+	/// Wizard's Rockets: "{X}, {T}, Sacrifice this artifact: Add X mana …" — the X chosen with the activation (one
+	/// legal action per X the mana could pay), paid as a spell's, and the ability's X on the stack (Count.X). 0 for a
+	/// cost with no {X}.
+	/// </summary>
+	public int X { get; init; }
+
 	/// <summary>The mana this activation pays — its cost changes, less the symbols paid with life.</summary>
 	ManaCost Mana(GameState s, ActivatedAbilityComponent ability) =>
 		Costs.OfAbility(s, ability, Targets, PlayerId, CardId).PayingLifeFor(LifeForPhyrexian);
@@ -981,6 +990,8 @@ public record ActivateAbilityAction : GameAction
 			&& !onlyIf.Holds(s, Conditions.Of(card with { ControllerId = PlayerId }))
 		)
 			return ValidationResult.Invalid("Its condition isn't met");
+		if (X < 0 || (X != 0 && !ability.Cost.HasX))
+			return ValidationResult.Invalid("No such X for this ability");
 		if (ability.Exhaust && card.ExhaustUsed)
 			return ValidationResult.Invalid("Exhaust: activated once already");
 		if (ability.OncePerTurn && card.ActivatedOncePerTurnOn == s.GetGame().TurnNumber)
@@ -1031,7 +1042,7 @@ public record ActivateAbilityAction : GameAction
 				s,
 				PlayerId,
 				Mana(s, ability),
-				0,
+				X,
 				alsoExclude: CostPermanents(s, ability),
 				forAbilityOf: s.GetCard(CardId)
 			)
@@ -1048,7 +1059,7 @@ public record ActivateAbilityAction : GameAction
 			s,
 			PlayerId,
 			Mana(s, ability),
-			0,
+			X,
 			alsoExclude: CostPermanents(s, ability),
 			forAbilityOf: s.GetCard(CardId)
 		)!;
@@ -1095,6 +1106,7 @@ public record ActivateAbilityAction : GameAction
 				Targets = Targets,
 				EventCardId = eventCardId, // "its power": the creature tapped for it, or sacrificed
 				EventSnapshot = tapped,
+				X = X,
 			}
 		);
 		return new ActionResult(Priority.Retain(s, PlayerId));

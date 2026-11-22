@@ -40,6 +40,12 @@ public record MagicPlayer : GameObject
 	/// <summary>The TurnNumber this player's most recent turn began — summoning sickness (CR 302.6); 0 before their first.</summary>
 	public int TurnBeganOn { get; init; }
 
+	/// <summary>
+	/// Starting Town: "unless it's your first, second, or third turn of the game" — how many turns this player has
+	/// begun, extra turns too (Count.TurnsYouHaveBegun); stamped beside TurnBeganOn.
+	/// </summary>
+	public int TurnsBegun { get; init; }
+
 	public int MulligansTaken { get; init; }
 	public bool HasKeptHand { get; init; }
 

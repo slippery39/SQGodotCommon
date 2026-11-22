@@ -198,6 +198,7 @@ public static class Targeting
 		{
 			CastSpellAction c => c.X,
 			ActivateLoyaltyAction l => l.X,
+			ActivateAbilityAction { X: > 0 } a => a.X, // Wizard's Rockets' "{X}, {T}, Sacrifice"
 			_ => null,
 		};
 
@@ -207,6 +208,7 @@ public static class Targeting
 		{
 			CastSpellAction c => c with { X = x },
 			ActivateLoyaltyAction l => l with { X = x },
+			ActivateAbilityAction a => a with { X = x },
 			_ => m,
 		};
 

@@ -294,7 +294,8 @@ public static class MagicRules
 		var costsX = CastSpellAction.XInCosts(card);
 		var maxX =
 			costsX && !card.ManaCost.HasX ? Math.Max(0, s.GetPlayer(player).Life)
-			: CastSpellAction.ChoosesX(card, kicked) ? AvailableMana(s, player, card)
+			: CastSpellAction.ChoosesX(card, kicked)
+				? AvailableMana(s, player, card) / Math.Max(1, card.ManaCost.XCount) // {X}{X} pays X twice
 			: 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		// Damn: overloaded, it targets nothing (StackResolution.TextOf)
@@ -432,11 +433,11 @@ public static class MagicRules
 			.SelectMany(m =>
 				from id in CostList.Options(m.Costs, CostSlot.Sacrifice, s, player, card.Id)
 				where id != 0 || !m.ChoosesCost
-				from color in m.AnyOneColor ? ManaAbilities.AnyColor : [m.Color]
+				from color in m.AnyOneColor ? ManaAbilities.Makes(s, card, m) : [m.Color] // a combination's move names its first colour
 				// Orcish Lumberjack: "any combination of {R} and/or {G}" — one move per split
 				from other in Enumerable.Range(
 					0,
-					m.OrColor is null ? 1 : m.Amount.Value(s, Conditions.Of(card)) + 1
+					m.OrColors.IsEmpty ? 1 : m.Amount.Value(s, Conditions.Of(card)) + 1
 				)
 				select new TapForManaAction
 				{
@@ -457,6 +458,10 @@ public static class MagicRules
 		return s.ActivatedAbilitiesOf(card)
 			.Select((ability, index) => (ability, index))
 			.Where(a => a.ability.From == zone)
+			// Wizard's Rockets: "{X}, {T}, Sacrifice this artifact" — the X bound, once per ability
+			.Select(a =>
+				(a.ability, a.index, maxX: a.ability.Cost.HasX ? AvailableMana(s, player, card) : 0)
+			)
 			.SelectMany(a =>
 				from taps in TapSets(a.ability.Costs, s, player, card.Id).ToList() // once per ability, not per target
 				from modes in a.ability.Choose.Choices(s, card, a.ability.Modes)
@@ -481,6 +486,7 @@ public static class MagicRules
 					card.Id
 				)
 				from exile in CostList.Options(a.ability.Costs, CostSlot.Exile, s, player, card.Id)
+				from x in Enumerable.Range(0, a.maxX + 1) // one activation per X the mana could pay
 				from life in Enumerable.Range(0, a.ability.Cost.PhyrexianCount + 1) // Drivnod: {B/P} paid with mana or 2 life
 				from tap in CostList.Options(a.ability.Costs, CostSlot.Tap, s, player, card.Id)
 				from secondTap in CostList.Options(
@@ -506,6 +512,7 @@ public static class MagicRules
 						SecondTapId = secondTap,
 						TapIds = taps,
 						LifeForPhyrexian = life,
+						X = x,
 					}
 			);
 	}
@@ -777,7 +784,7 @@ public static class MagicRules
 			CastSpellAction c =>
 				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Adventure ? "|a" : "")}{(c.Splice.IsDefaultOrEmpty ? "" : $"|s{string.Join(",", c.Splice.Select(id => Fodder(s, id)))}")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
-				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
+				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}{(activate.X > 0 ? $"|x{activate.X}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>
 				$"loyalty|{loyalty.CardId}|{loyalty.AbilityIndex}|{loyalty.X}|{string.Join(",", loyalty.Targets)}",
 			_ => a, // the rest have no collection fields, so a record's own equality is the identity

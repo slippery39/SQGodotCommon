@@ -61,13 +61,34 @@ whose subsystem it lives in.
   search takes it face down) — and `Shuffle` clears the library's. Anything else that LOOKS or REVEALS
   adds with `s.MakeKnown`: surveil's look, a search's `Reveal` (set it whenever the text says "reveal
   it"), "reveals their hand", behold from the hand (a cost — Theorist's Sanctum's behold as it enters
-  is a condition and reveals nothing, a known gap), "look at target opponent's hand" (`LookAtHand`, V'Ger —
-  the table logs what you now know there; showing it in the hand is TBL-6). **Exiled face down**
-  (`ExileTopPlayable.FaceDown`, Vulcan Mind-Meld) is `ExiledFaceDown` + `KnownTo` (who looked); every front
+  is a condition and reveals nothing, a known gap), and **"look at [cards]" is ONE piece, `LookAt(Ref)`** (MC-4.4l3b;
+  it was `LookAtHand(player)`): the cards a Ref names — "target opponent's hand" `Ref.All(Hand, Is.AnyCard, target)`
+  (V'Ger; the table logs what you now know there, showing it in the hand is TBL-6), "the top card of target player's
+  library" `Ref.All(Library, …) { Top }` (Mishra's Bauble), "a card at random in target player's hand" `{ AtRandom }`
+  (Urza's Bauble) — each known to the one who LOOKED: its owner for their own card, else the owner's opponent; never a
+  flag per zone. **Exiled face down**
+  (`ExileTopPlayable.FaceDown`, Vulcan Mind-Meld) is `ExiledFaceDown` + `KnownTo` (who looked), stamped by
+  `ExiledFaceDown.On(card, knownTo)` alone; a linked exile's `ExiledBy` by `ExiledBy.ByTheSource` (this object of the
+  source only while it is still the one the ability came from); every front
   end asks `Card.IsHiddenFrom(viewer)` and draws a back. **Zefram's "look at the top card any time"** is
   read, never stamped — `MagicState.TopIsKnownToOwner` (the top changes on every path). A random order (Identity Echo's bottom) is NOT
   known. A new card that looks at or reveals a hidden card must do the same, or the search's "shuffle
   what isn't known" reshuffles a card its player has seen.
+- **Mill is counted, read and repeated** (MC-4.4l3b): `Mill(who, N)` with N a `Count` (Palantír of Orthanc: "you mill X
+  cards, where X is the number of influence counters"), `IfMilled` run with `Ref.ThisWay` the cards milled ("that player
+  loses life equal to the total mana value of those cards": `Count.TotalManaValueOf`), and `RepeatWhile` — Grindstone's
+  "If two cards that share a color were milled this way, repeat this process": `TwoShareAColor(Ref.ThisWay)`, judged of
+  the cards JUST milled, so it ends with the library.
+- **Face down from a hand** (Memory Jar: "Each player exiles all cards from their hand face down") is `MoveTo(…, Exile)
+  { FaceDown }`: `ExiledFaceDown`, as known as it was in the hand — and a face-down exiled card moved back to a hand or
+  library was never public, so `MagicState.KnownAfterMoving` keeps who knew it (never "everyone saw it").
+- **Look and take's other options** (MC-4.4l3b): `ChosenBy` (Karn, Scion of Urza: "An opponent chooses one of them" —
+  the choice's `DeciderId`), `Rest = TheRest.Exile` with `RestCounter` ("exile the other with a silver counter on it";
+  his −1 finds it by `Is.WithCounter`), and, taken to EXILE, `{ FaceDown, Linked }` — hideaway (Shelldock Isle): the
+  card hidden from all but you and linked (`ExiledBy`), so "the exiled card" is `Ref.All(Exile, Is.ExiledBySource)`,
+  played by `MakePlayable(…, { ThisTurn, Free })` (its timing a ceiling, DesignNotes).
+  **"Becomes a copy of target permanent card in your graveyard"** (Shifting Woodland) is `BecomeCopyUntilEndOfTurn` with
+  a graveyard target: the model is the card wherever it is.
 - **"Target player reveals their hand. You choose a [kind of] card from it"** is ONE piece, `YouChooseTheyDiscard(who,
   Types) { Filter, Optional, ExileInstead, UntilSourceLeaves, … }` (MC-4.4h2a): `Types` matches ANY of its types, so
   Duress' "noncreature, nonland" and Inquisition of Kozilek's "nonland … mana value 3 or less" are a `Filter` (an

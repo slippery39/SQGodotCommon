@@ -30,6 +30,22 @@ public abstract class FraBoardTest
 				(s, _) = TestGames.Put(s, player, TestGames.Card(land), ZoneType.Battlefield);
 	}
 
+	/// <summary>No lands at all — the base board's twenty basics answer every "unless you control".</summary>
+	protected void EmptyBoard()
+	{
+		s = TestGames.InFirstMain();
+		me = s.GetGame().StartingPlayerId;
+		them = s.OpponentOf(me);
+	}
+
+	/// <summary>I play this cube land from my hand (its land drop); what it triggers is left on the stack.</summary>
+	protected int Play(string land)
+	{
+		var id = Hand(Lsv(land), me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = id });
+		return id;
+	}
+
 	// Each helper replaces s — call on its own line (see MagicCore/CLAUDE.md, the test trap).
 	protected int Field(CardDefinition card, int player)
 	{

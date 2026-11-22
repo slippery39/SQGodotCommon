@@ -63,7 +63,13 @@ public static class TurnStructure
 	{
 		var game = s.GetGame();
 		s = s.WithGame(game with { ActivePlayerId = game.StartingPlayerId, TurnNumber = 1 });
-		s = s.WithPlayer(s.GetPlayer(game.StartingPlayerId) with { TurnBeganOn = 1 });
+		s = s.WithPlayer(
+			s.GetPlayer(game.StartingPlayerId) with
+			{
+				TurnBeganOn = 1,
+				TurnsBegun = 1,
+			}
+		);
 		return EnterStep(s, Step.Untap);
 	}
 
@@ -190,6 +196,7 @@ public static class TurnStructure
 			s.GetPlayer(next) with
 			{
 				TurnBeganOn = game.TurnNumber + 1,
+				TurnsBegun = s.GetPlayer(next).TurnsBegun + 1,
 				BegunExtraTurn = s.GetPlayer(next).BegunExtraTurn || extra,
 			}
 		);

@@ -955,6 +955,7 @@ public static class Triggers
 			BlocksEvent blocks => blocks.CardId,
 			BecameTargetEvent targeted => targeted.CardId,
 			CreatureDealtDamageEvent damaged => damaged.CardId,
+			DiscardedEvent discarded => discarded.CardId, // Currency Converter: "you may exile that card from your graveyard"
 			_ => 0,
 		};
 

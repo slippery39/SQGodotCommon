@@ -140,6 +140,25 @@ public static class Conditions
 			.Add(ContextKeys.Source, card.Id);
 }
 
+/// <summary>
+/// Grindstone: "If two cards that share a color were milled this way" — two of the cards this names have a colour in
+/// common; a colourless card shares none.
+/// </summary>
+public record TwoShareAColor(Ref What) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var cards = What.Resolve(s, context).Select(s.GetObject).OfType<Card>().ToList();
+		return cards
+			.Select((a, i) => (a, i))
+			.Any(x =>
+				cards
+					.Skip(x.i + 1)
+					.Any(b => x.a.Colors.Intersect(b.Colors).Any(c => c != ManaColor.Colorless))
+			);
+	}
+}
+
 /// <summary>"If this spell was cast from a graveyard" / "wasn't cast from your hand" (with Not).</summary>
 public record CastFrom(ZoneType Zone) : Condition
 {

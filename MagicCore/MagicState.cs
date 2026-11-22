@@ -179,7 +179,14 @@ public static class MagicState
 		if (zoneId != library && zoneId != hand)
 			return Knowers.None;
 		if (from != library && from != hand)
-			return Knowers.Everyone;
+		{
+			// Memory Jar: a card exiled face down was never public — back in a hand it is as known as it was
+			if (card.GetComponent<ExiledFaceDown>() is null)
+				return Knowers.Everyone;
+			return zoneId == library
+				? card.KnownTo | Knowers.Owner
+				: card.KnownTo & Knowers.Opponent;
+		}
 		if (zoneId == library)
 			return card.KnownTo | Knowers.Owner;
 		return s.GetChildrenIds(library).FirstOrDefault() == card.Id // drawn, not searched for

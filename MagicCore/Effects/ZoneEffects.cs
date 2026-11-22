@@ -720,6 +720,14 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 	public bool OnTop { get; init; }
 
 	/// <summary>
+	/// Memory Jar: "Each player exiles all cards from their hand face down" — into exile hidden (ExiledFaceDown), as
+	/// known as it was in the hand: moved back to a hand it is no more known than before (MagicState.KnownAfterMoving).
+	/// ponytail: from a HAND (or a library) only — a permanent exiled face down this way would be hidden from an
+	/// opponent who saw it; stamp it known to everyone when a card exiles one from a public zone.
+	/// </summary>
+	public bool FaceDown { get; init; }
+
+	/// <summary>
 	/// Fable of the Mirror-Breaker, chapter III: "return it to the battlefield transformed" — it enters with its back
 	/// face up (Card.Transform), so it is that face as it enters (no Saga's lore counter). A card with no back face
 	/// enters as it is.
@@ -820,6 +828,8 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 				.Reverse()
 				.ToList();
 			s = s.MoveCard(id, zone, toTop: OnTop || Beneath is not null);
+			if (FaceDown && To == ZoneType.Exile)
+				s = Update(s, ExiledFaceDown.On(s.GetCard(id), card.KnownTo | Knowers.Owner));
 			foreach (var top in above) // back on top, in their order — a reorder: each as known as it was
 				s = s.MoveObjectToFront(top, zone);
 			if (Shuffle && To == ZoneType.Library)
@@ -984,7 +994,8 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		if (Permanents(Of, s).FirstOrDefault() is not { } model)
+		// a permanent, or a card where it is — Shifting Woodland: "a copy of target permanent card in your graveyard"
+		if (All(Of, s).Select(s.GetObject).OfType<Card>().FirstOrDefault() is not { } model)
 			return new(s);
 		foreach (var card in Permanents(What, s).ToList())
 		{
@@ -1619,25 +1630,56 @@ public record BecomePrepared(Ref What) : Effect
 		new(Permanents(What, s).Aggregate(s, (st, c) => Prepare.Become(st, c.Id)));
 }
 
-/// <summary>"Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.</summary>
-public record Mill(Ref Who, int N) : Effect
+/// <summary>
+/// "Mill N" (CR 701.13): the top N cards of each player's library into their graveyard — N counted as it resolves
+/// (Palantír of Orthanc: "you mill X cards, where X is the number of influence counters").
+/// </summary>
+public record Mill(Ref Who, Count N) : Effect
 {
-	/// <summary>Primal Witchstalker: "mill four cards. When you do, …" — run only if a card was milled.</summary>
+	/// <summary>
+	/// Primal Witchstalker: "mill four cards. When you do, …" — run only if a card was milled, with Ref.ThisWay the
+	/// cards milled (Palantír of Orthanc: "that player loses life equal to the total mana value of those cards").
+	/// </summary>
 	public ImmutableList<GameAction> IfMilled { get; init; } = [];
+
+	/// <summary>
+	/// Grindstone: "Target player mills two cards. If two cards that share a color were milled this way, repeat this
+	/// process." — milled again while this holds of the cards JUST milled (Ref.ThisWay: TwoShareAColor); it ends with
+	/// the library.
+	/// </summary>
+	public Condition? RepeatWhile { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
-		var any = false;
+		var n = N.Value(s, InputContext);
+		var all = ImmutableArray.CreateBuilder<int>();
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
 		{
-			(s, var milled) = Top(s, player, N);
-			any |= !milled.IsEmpty;
+			ImmutableList<int> milled;
+			do
+			{
+				(s, milled) = Top(s, player, n);
+				all.AddRange(milled);
+			} while (
+				!milled.IsEmpty
+				&& RepeatWhile?.Holds(
+					s,
+					InputContext.SetItem(ContextKeys.ThisWay, milled.ToImmutableArray())
+				) == true
+			);
 		}
-		return !any || IfMilled.IsEmpty
+		return all.Count == 0 || IfMilled.IsEmpty
 			? new(s)
 			: new(
 				s.SpawnAction(
-					new PipelineAction { Steps = IfMilled, PipelineContext = InputContext }
+					new PipelineAction
+					{
+						Steps = IfMilled,
+						PipelineContext = InputContext.SetItem(
+							ContextKeys.ThisWay,
+							all.ToImmutable()
+						),
+					}
 				)
 			);
 	}
@@ -1861,8 +1903,15 @@ public record MayDiscard(ImmutableList<GameAction> Then) : Effect
 	/// <summary>All Good Things...: "all cards exiled with this Saga" — the exiled card linked to this object of the source (ExiledBy, CR 607.2a).</summary>
 	public bool Linked { get; init; }
 
+	/// <summary>Chrome Mox's imprint: "you may exile a nonartifact, nonland card from your hand" — which cards; unset is any.</summary>
+	public Filters.Filter? Filter { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
-		s.CardsIn(Controller, ZoneType.Hand).Any()
+		// asked only with a card to pick: never an empty question (Chrome Mox with a hand of lands)
+		s.CardsIn(Controller, ZoneType.Hand)
+			.Any(c =>
+				Filter?.Matches(s, c, new(Controller, GetInput<int>(ContextKeys.Source))) ?? true
+			)
 			? new(
 				s.SpawnAction(
 					new PipelineAction
@@ -1873,6 +1922,7 @@ public record MayDiscard(ImmutableList<GameAction> Then) : Effect
 							new ChooseCardsFromHandChoice
 							{
 								PlayerId = Controller,
+								Filter = Filter,
 								MinChoices = Must ? 1 : 0,
 								MaxChoices = 1,
 								Prompt = (Must, Exile) switch
@@ -2146,13 +2196,10 @@ public record ExileTopPlayable : Effect
 				if (FaceDown) // known only to the one who looked (CR 406.3)
 					s = Update(
 						s,
-						(Card)
-							(
-								s.GetCard(top.Id) with
-								{
-									KnownTo = who == owner ? Knowers.Owner : Knowers.Opponent,
-								}
-							).WithComponent(new ExiledFaceDown())
+						ExiledFaceDown.On(
+							s.GetCard(top.Id),
+							who == owner ? Knowers.Owner : Knowers.Opponent
+						)
 					);
 				if (Permission.AnyNumber || Linked)
 					s = Update(
@@ -2336,16 +2383,26 @@ public record MakeChosenPlayableAction(PlayableFromExile Playable) : GameAction
 }
 
 /// <summary>
-/// V'Ger, the Intruder: "Look at target opponent's hand" — every card in it becomes known to its owner's
-/// opponent (Card.KnownTo); the table logs what it now knows (TBL-6 will show it in the hand).
+/// "Look at [cards]" — each hidden card the Ref names becomes known to the one who LOOKS (Card.KnownTo): its owner for
+/// their own card, else its owner's opponent. V'Ger, the Intruder: "Look at target opponent's hand" (Ref.All(Hand, …,
+/// the target)); Mishra's Bauble: "Look at the top card of target player's library" (Ref.All(Library, …) { Top }). The
+/// table logs what it now knows (TBL-6 will show it in the hand).
 /// </summary>
-public record LookAtHand(Ref Who) : Effect
+public record LookAt(Ref What) : Effect
 {
+	/// <summary>Urza's Bauble: "Look at a card at random in target player's hand." — one of them (s.TakeRng), not all.</summary>
+	public bool AtRandom { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
-		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
-		foreach (var card in s.CardsIn(player, ZoneType.Hand).ToList())
-			s = s.MakeKnown(card.Id, Knowers.Opponent);
+		var cards = All(What, s).Select(s.GetObject).OfType<Card>().ToList();
+		if (AtRandom && cards.Count > 1)
+		{
+			(var rng, s) = s.TakeRng();
+			cards = [cards[rng.Next(cards.Count)]];
+		}
+		foreach (var card in cards)
+			s = s.MakeKnown(card.Id, card.OwnerId == Controller ? Knowers.Owner : Knowers.Opponent);
 		return new(s);
 	}
 }
@@ -2442,17 +2499,13 @@ public record ExileChosenLinkedAction : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var sourceId = GetInput<int>(ContextKeys.Source);
 		// The same object the ability came from, or never castable — left and came back is a new one (CR 400.7).
-		var incarnation =
-			Ref.Source.Resolve(s, InputContext).Any() && s.IsOnBattlefield(sourceId)
-				? s.GetCard(sourceId).Incarnation
-				: -1;
+		var link = ExiledBy.ByTheSource(s, InputContext);
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext).ToList())
 		{
 			var card = s.GetCard(id);
 			s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Exile));
-			s = Update(s, (Card)s.GetCard(id).WithComponent(new ExiledBy(sourceId, incarnation)));
+			s = Update(s, (Card)s.GetCard(id).WithComponent(link));
 		}
 		return new(s);
 	}
@@ -2537,6 +2590,22 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	public bool FaceDown { get; init; }
 
 	/// <summary>
+	/// Karn, Scion of Urza: "Reveal the top two cards of your library. An opponent chooses one of them." — who picks
+	/// the cards taken (the choice's DeciderId); unset is you.
+	/// </summary>
+	public Ref? ChosenBy { get; init; }
+
+	/// <summary>Karn: "exile the other with a silver counter on it" — with Rest = Exile, a counter of this kind on each.</summary>
+	public string? RestCounter { get; init; }
+
+	/// <summary>
+	/// Hideaway (Shelldock Isle): "look at the top four cards of your library, exile one face down" — with To = Exile,
+	/// the taken card linked to this object of the source (ExiledBy, CR 607.2a): its "the exiled card" is
+	/// Ref.All(Exile, Is.ExiledBySource). FaceDown hides it there from all but you.
+	/// </summary>
+	public bool Linked { get; init; }
+
+	/// <summary>
 	/// Undercity's Throne of the Dead Three: "Put a creature card from among them onto the battlefield with three
 	/// +1/+1 counters on it. It gains hexproof until your next turn." — run after, with Ref.ThisWay the cards taken.
 	/// ponytail: the counters are put on once it has entered, not as it enters — the same unless a card counts them
@@ -2554,6 +2623,7 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 		var choice = new ChooseAmongChoice
 		{
 			PlayerId = Controller,
+			DeciderId = ChosenBy is null ? 0 : All(ChosenBy, s).FirstOrDefault(),
 			Ids = top,
 			Zone = ZoneType.Library,
 			Filter = Filter,
@@ -2574,7 +2644,9 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			: $"up to {take}";
 		choice = choice with
 		{
-			Prompt = $"{(Must ? "Put" : "You may put")} {many} {where}",
+			Prompt = ChosenBy is not null
+				? $"Choose {many} for them to put {where.Replace("your", "their")}"
+				: $"{(Must ? "Put" : "You may put")} {many} {where}",
 			MinChoices = Must ? take : 0,
 			MaxChoices = take,
 		};
@@ -2584,7 +2656,9 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			To = To,
 			Tapped = Tapped,
 			FaceDown = FaceDown,
+			Linked = Linked,
 			Rest = Rest,
+			RestCounter = RestCounter,
 			Then = Then,
 		};
 		return new(
@@ -2624,6 +2698,9 @@ public enum TheRest
 	/// reads the bottom.
 	/// </summary>
 	BottomInAnyOrder,
+
+	/// <summary>Karn, Scion of Urza: "exile the other with a silver counter on it" (LookAndTake.RestCounter).</summary>
+	Exile,
 }
 
 /// <summary>After LookAndTake's choice: the chosen cards where To says, the rest where Rest says.</summary>
@@ -2638,6 +2715,12 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 	public bool FaceDown { get; init; }
 
 	public TheRest Rest { get; init; }
+
+	/// <summary>LookAndTake.Linked — Shelldock Isle's hideaway: the card taken to exile is "the exiled card" of this object of the source.</summary>
+	public bool Linked { get; init; }
+
+	/// <summary>LookAndTake.RestCounter — Karn, Scion of Urza: "exile the other with a silver counter on it".</summary>
+	public string? RestCounter { get; init; }
 
 	/// <summary>LookAndTake.Then: run after the rest are put away, with Ref.ThisWay the cards taken.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
@@ -2680,6 +2763,16 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 				ZoneType.Library => s.MakeKnown(id, Knowers.Owner),
 				_ => s.MoveCard(id, s.ZoneId(PlayerId, To)), // the hand; any other zone of yours as it is named
 			};
+			if (To == ZoneType.Exile && (FaceDown || Linked))
+			{
+				// Hideaway: face down — only its looker knows it — and "the exiled card" of this object of the source
+				var exiled = s.GetCard(id);
+				if (FaceDown)
+					exiled = ExiledFaceDown.On(exiled, Knowers.Owner);
+				if (Linked)
+					exiled = (Card)exiled.WithComponent(ExiledBy.ByTheSource(s, InputContext));
+				s = s.UpdateObject(id, exiled);
+			}
 			if (Reveal)
 				s = s.MakeKnown(id, Knowers.Everyone);
 		}
@@ -2691,6 +2784,17 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 				rest.Aggregate(
 					s,
 					(st, id) => st.MoveCard(id, st.ZoneId(PlayerId, ZoneType.Graveyard))
+				)
+			);
+		if (Rest == TheRest.Exile)
+			return new(
+				rest.Aggregate(
+					s,
+					(st, id) =>
+					{
+						st = st.MoveCard(id, st.ZoneId(PlayerId, ZoneType.Exile));
+						return RestCounter is null ? st : st.PutCounters(id, RestCounter, 1);
+					}
 				)
 			);
 		if (Rest == TheRest.BottomInAnyOrder)

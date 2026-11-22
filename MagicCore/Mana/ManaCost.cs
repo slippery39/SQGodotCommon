@@ -27,6 +27,9 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 
 	public bool HasX => Symbols.Any(s => s.Kind == SymbolKind.X);
 
+	/// <summary>How many {X} it has — Walking Ballista's {X}{X} and Pest Infestation's {X}{X}{G} pay X twice.</summary>
+	public int XCount => Symbols.Count(s => s.Kind == SymbolKind.X);
+
 	/// <summary>Drivnod, Carnage Dominus: "{B/P}{B/P}" — how many symbols may be paid with 2 life each.</summary>
 	public int PhyrexianCount => Symbols.Count(s => s.Kind == SymbolKind.Phyrexian);
 

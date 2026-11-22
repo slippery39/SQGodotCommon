@@ -312,10 +312,8 @@ public static class ManaPayment
 						h.Ability.AnyOneColor,
 						(ImmutableArray<ImmutableArray<ManaColor>>)
 							[
-								.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
-									h.Ability.AnyOneColor
-										? ManaAbilities.AnyColor
-										: [h.Ability.Color],
+								.. Enumerable.Repeat(
+									ManaAbilities.Makes(s, h.Card, h.Ability),
 									Math.Max(0, h.Ability.Amount.Value(s, Conditions.Of(h.Card)))
 								),
 							],
@@ -375,13 +373,8 @@ public static class ManaPayment
 						(
 							c.Id,
 							c.Is(CardType.Creature),
-							true,
-							[
-								.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
-									costly.AnyOneColor ? ManaAbilities.AnyColor : [costly.Color],
-									n
-								),
-							],
+							costly.AnyOneColor, // "choose a color": all of it; Sunken Ruins' {U}{B} mixes
+							[.. Enumerable.Repeat(ManaAbilities.Makes(s, c, costly), n)],
 							costly.SacrificesItself // Chromatic Star: "{1}, {T}, Sacrifice this artifact" — Pay sacrifices it
 						),
 					],
@@ -609,10 +602,12 @@ public static class ManaPayment
 				);
 				continue;
 			}
-			var firstTap = p.LandId != 0 && !s.GetCard(p.LandId).IsTapped;
+			// Gemstone Mine: sacrificed as its last counter made its first mana — what else it made is only spent
+			var here = p.LandId != 0 && s.IsOnBattlefield(p.LandId);
+			var firstTap = here && !s.GetCard(p.LandId).IsTapped;
 			if (firstTap)
 				s = RaiseActivated(s, playerId, p.LandId);
-			if (p.LandId != 0)
+			if (here)
 				s = s.Tap(p.LandId);
 			if (firstTap) // Talismans' damage, Mana Confluence's life: once, for the colour it made
 				s = ManaAbilities.PayAsUsed(s, playerId, s.GetCard(p.LandId), p.Color);

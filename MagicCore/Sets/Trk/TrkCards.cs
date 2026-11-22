@@ -197,7 +197,7 @@ public static class TrkCards
 			1,
 			M(
 				[TargetSpec.Player(Is.Opponents)],
-				new LookAtHand(Ref.Target()),
+				new LookAt(Ref.All(ZoneType.Hand, Is.AnyCard, Ref.Target())),
 				new DrawCards(Ref.You, 1)
 			),
 			M(
@@ -4109,7 +4109,7 @@ public static class TrkCards
 					{
 						On = Ref.Target(0),
 					},
-					new LookAtHand(Ref.Target(0)), // "plays with their hand revealed" — to you; they know it
+					new LookAt(Ref.All(ZoneType.Hand, Is.AnyCard, Ref.Target(0))), // "plays with their hand revealed" — to you; they know it
 					new ThisTurn(
 						new MayPlayFromZone(ZoneType.Hand, Is.AnyCard) { Of = Ref.Target(0) }
 					)

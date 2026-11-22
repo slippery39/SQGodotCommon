@@ -118,6 +118,15 @@ public static class CounterKinds
 	/// <summary>Hexdrinker: "Level up {1} ({1}: Put a level counter on this. Level up only as a sorcery.)" — CR 702.87.</summary>
 	public const string Level = "level";
 
+	/// <summary>Gemstone Mine: "enters with three mining counters on it".</summary>
+	public const string Mining = "mining";
+
+	/// <summary>Palantír of Orthanc: "put an influence counter on Palantír of Orthanc".</summary>
+	public const string Influence = "influence";
+
+	/// <summary>Karn, Scion of Urza: "exile the other with a silver counter on it" — on a card in exile.</summary>
+	public const string Silver = "silver";
+
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
 	public const string PlusOne = "+1/+1";
@@ -819,12 +828,31 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	public bool AnyOneColor { get; init; }
 
 	/// <summary>
-	/// Orcish Lumberjack: "Add three mana in any combination of {R} and/or {G}." — each unit Color or this one; how
-	/// many of this one is the activation's (TapForManaAction.OfTheOther, one move per split). Read for an ability
-	/// whose cost picks a card. ponytail: a plain {T} ability with it makes only Color — a yield unit of two colours
-	/// (ManaAbilities.YieldOf) when a card needs one.
+	/// "In any combination of" colours — Relic of Sauron: "{T}: Add two mana in any combination of {U}, {B}, and/or
+	/// {R}."; Sunken Ruins: "Add {U}{U}, {U}{B}, or {B}{B}."; Orcish Lumberjack: "Add three mana in any combination of
+	/// {R} and/or {G}." — each unit Color or one of these (ManaAbilities.Makes: a yield unit of several colours, which
+	/// the payment mixes freely). On an ability whose cost picks a card the split is the activation's
+	/// (TapForManaAction.OfTheOther, one move per split). ponytail: that move splits Color and the FIRST of these only
+	/// (no card picks a cost and makes three colours), and tapped by hand every unit is the one colour chosen — the
+	/// table can't ask for {U}{B}; a colour per unit there when it is missed (DesignNotes).
 	/// </summary>
-	public ManaColor? OrColor { get; init; }
+	public ImmutableArray<ManaColor> OrColors { get; init; } = [];
+
+	/// <summary>
+	/// Chrome Mox: "{T}: Add one mana of any of the exiled card's colors." — with AnyOneColor, only the colours of the
+	/// cards this names (Ref.All(Exile, Is.ExiledBySource), asked as the permanent's): nothing exiled, or a colourless
+	/// card, and it makes no mana (ManaAbilities.Makes).
+	/// </summary>
+	public Ref? OfTheColorsOf { get; init; }
+
+	/// <summary>
+	/// Gemstone Mine: "{T}, Remove a mining counter from this land: Add one mana of any color. If there are no mining
+	/// counters on this land, sacrifice it." — judged once its costs are paid, as it makes the mana
+	/// (ManaAbilities.PayAsUsed: payment and manual tapping alike); no stack. A condition, not effects: a mana ability
+	/// is paid inside a payment — a function of the state, never a pipeline (the Talismans' damage is a number for the
+	/// same reason).
+	/// </summary>
+	public Condition? SacrificedIf { get; init; }
 
 	/// <summary>
 	/// Starfleet Academy: "{5}, {T}: Choose a color. Add …"; Talon Gates of Madara: "{1}, {T}: Add one
@@ -1112,7 +1140,15 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 /// ponytail: the search's Hidden.Sample doesn't guess the ones its player hasn't seen — sample them
 /// as a library is sampled if the AI misplays on that knowledge (DesignNotes).
 /// </summary>
-public record ExiledFaceDown : GameComponent;
+public record ExiledFaceDown : GameComponent
+{
+	/// <summary>
+	/// The card as it lies face down in exile, known to these only — Vulcan Mind-Meld's looker, hideaway's (Shelldock
+	/// Isle), Memory Jar's owner and whoever had seen it in the hand. THE stamp: every face-down exile makes it here.
+	/// </summary>
+	public static Cards.Card On(Cards.Card card, Cards.Knowers knownTo) =>
+		(Cards.Card)(card with { KnownTo = knownTo }).WithComponent(new ExiledFaceDown());
+}
 
 /// <summary>Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.</summary>
 public record ChoosesColorAsItEnters : GameComponent;
@@ -1795,4 +1831,21 @@ public record MayCastFromHandFree(Filters.Filter What) : GameComponent
 }
 
 /// <summary>On a card a permanent exiled for a linked ability (CR 607.2a) — which object of it.</summary>
-public record ExiledBy(int SourceId, int SourceIncarnation) : GameComponent;
+public record ExiledBy(int SourceId, int SourceIncarnation) : GameComponent
+{
+	/// <summary>
+	/// The link a resolving ability stamps on a card it exiles (Chrome Mox's imprint, Shelldock Isle's hideaway): this
+	/// object of its source, only while that is still the object the ability came from (CR 607.2a) — one that left and
+	/// came back is linked to nothing.
+	/// </summary>
+	public static ExiledBy ByTheSource(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var id = (int)context[ContextKeys.Source];
+		return new(
+			id,
+			Ref.Source.Resolve(s, context).Any() && s.IsOnBattlefield(id)
+				? s.GetCard(id).Incarnation
+				: -1
+		);
+	}
+}

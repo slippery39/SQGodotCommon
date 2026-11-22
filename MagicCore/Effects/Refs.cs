@@ -420,6 +420,8 @@ public enum CountOf
 	PermanentsLeftTheBattlefieldThisTurn, // Revolt (Fatal Push): "if a permanent left the battlefield under your control this turn" — of the player [Ref]
 	AmountPaid, // PayAnyAmount: "that many" / "that much" — the number paid
 	LandsYouPlayedThisTurn, // Fastbond: "if it wasn't the first land you played this turn"
+	TurnsYouHaveBegun, // Starting Town: "unless it's your first, second, or third turn of the game" — MagicPlayer.TurnsBegun
+	TotalManaValueOf, // Palantír of Orthanc: "life equal to the total mana value of those cards"
 }
 
 /// <summary>
@@ -588,6 +590,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	/// <summary>Fastbond: "if it wasn't the first land you played this turn" — TurnTally.LandsPlayed.</summary>
 	public static readonly Count LandsYouPlayedThisTurn =
 		new(0, null, CountOf.LandsYouPlayedThisTurn);
+
+	/// <summary>Starting Town: "your first, second, or third turn of the game" — the turns you have begun, this one too.</summary>
+	public static readonly Count TurnsYouHaveBegun = new(0, null, CountOf.TurnsYouHaveBegun);
+
+	/// <summary>Palantír of Orthanc: "that player loses life equal to the total mana value of those cards".</summary>
+	public static Count TotalManaValueOf(Ref r) => new(0, r, CountOf.TotalManaValueOf);
+
 	public static readonly Count NoncombatDamageToOpponentsLastTurn =
 		new(0, null, CountOf.NoncombatDamageToOpponentsLastTurn);
 	public static readonly Count NoncombatDamageToOpponentsThisTurn =
@@ -644,6 +653,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		}
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
+		if (Kind == CountOf.TurnsYouHaveBegun)
+			return s.GetPlayer((int)context[ContextKeys.Controller]).TurnsBegun;
 		if (Kind == CountOf.PermanentsChosen)
 			return ChoosePermanentChoice.Read(context).Count();
 		if (Kind == CountOf.AmountPaid)
@@ -731,6 +742,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Select(c => c.ManaValueNow) // a spell on the stack: its X too (Mana Drain, CR 202.3e)
 				.DefaultIfEmpty(0)
 				.Max(),
+			CountOf.TotalManaValueOf => Cards().Sum(c => c.ManaValueNow),
 			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),
 			CountOf.DistinctPowersOf => Cards().Select(c => s.Power(c)).Distinct().Count(),
 			// the ids, not Cards()' two lists as they were: it sits under Tarmogoyf's P/T

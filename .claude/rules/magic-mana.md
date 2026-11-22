@@ -60,10 +60,39 @@ whose subsystem it lives in.
   abilities differ in restriction** (the Halfling's free {C} beside its legendary-only colours) is answered per payment:
   `YieldOf(…, paying)` leaves out the abilities whose mana can't pay for that spell; tapped by hand, a colour its
   restricted yield lacks comes from its unrestricted abilities (`TapForManaAction.YieldFor`).
-- **"Add three mana in any combination of {R} and/or {G}"** (Orcish Lumberjack: "{T}, Sacrifice a Forest") is
-  `ManaAbilityComponent { Amount = 3, OrColor }` on an ability whose cost picks a card: one move per Forest × split
-  (`TapForManaAction.OfTheOther`, how many units are the other colour — 4 splits of three), the mana floating. A plain
-  {T} ability doesn't read `OrColor` (DesignNotes).
+- **"Mana in any combination of" colours** is `ManaAbilityComponent.OrColors` (MC-4.4l3a): each unit its `Color` or one
+  of these. `ManaAbilities.Makes(s, card, ability)` is THE colours one unit of an ability's mana may be — also "any
+  color", and Chrome Mox's "any of the exiled card's colors" (`OfTheColorsOf`, a Ref asked as the permanent's:
+  nothing exiled, or a colourless card, and it makes no mana). A plain {T} ability's yield is that many units of those
+  colours, mixed freely by the payment (Relic of Sauron: "two mana in any combination of {U}, {B}, and/or {R}"); a
+  costly one's the same in `WithCostlyMana` (Sunken Ruins: "{U/B}, {T}: Add {U}{U}, {U}{B}, or {B}{B}" — its `Cost` a
+  hybrid, the payment's last resort: a filter, never more mana). On an ability whose cost picks a card (Orcish
+  Lumberjack: "{T}, Sacrifice a Forest: Add three mana in any combination of {R} and/or {G}") it is one move per
+  Forest × split (`TapForManaAction.OfTheOther`, how many units are the first other colour — 4 splits of three), the
+  mana floating. Tapped by hand every unit is the one colour chosen (DesignNotes).
+- **A mana ability's rider** — Gemstone Mine: "{T}, Remove a mining counter from this land: Add one mana of any color.
+  If there are no mining counters on this land, sacrifice it." — is `ManaAbilityComponent.SacrificedIf`, a CONDITION
+  judged in `ManaAbilities.PayAsUsed` once the costs are paid (its `RemoveCountersCost(1, Is.Source) { Kind }`, paid
+  there as Mana Confluence's life is): payment and manual tapping alike, no stack. Never an effect list — a mana ability
+  is paid inside a payment, a function of the state. `ManaPayment.Pay` only spends what else a source made once it left.
+- **A free "{T}: Add {C}" beside "{T}, Pay 1 life: Add one mana of any color"** (Starting Town) is FIVE one-mana
+  abilities with the life cost (`AnyColorMana(…)` each `with { Costs }`, the Talismans' shape), never
+  `OfAnyOneColor(1)`: an any-one-colour ability becomes the permanent's whole yield (`YieldOf`'s one yield per
+  permanent), so its {C} would never be made and every tap would cost the life. Mana Confluence, with no other
+  ability, is the one `OfAnyOneColor(1)` with a cost.
+- **A mana ability without {T} is a move whatever it costs** (MC-4.4l3a; Rain of Filth's was the first): Pentad Prism's
+  "Remove a charge counter from this artifact: Add one mana of any color" and Lion's Eye Diamond's "Discard your hand,
+  Sacrifice this artifact: Add three mana of any one color" (`DiscardCost { Hand }`) — `TapForManaAction.NoTap`, one
+  move per colour, the mana floating, no stack; never the payment's, so a hand is never discarded nor a counter removed
+  to pay. "Activate only as an instant" is when a move is offered.
+- **{X}{X}** (Walking Ballista, Pest Infestation) pays X once for EACH {X} in the mana cost (`ManaCost.XCount`, in
+  `CastSpellAction.CostBeforeLife`) and counts each on the stack (`Card.ManaValueNow`). **{X} in an activated ability's
+  cost** (Wizard's Rockets: "{X}, {T}, Sacrifice this artifact: Add X mana in any combination of colors") is
+  `ActivateAbilityAction.X`: one legal action per X the mana could pay (`|xN` in `MoveKey`, only when above 0), paid by
+  `ManaPayment.Find(…, X)`, the ability's `Count.X` on the stack (`StackAbility.X`). **"X mana in any combination of
+  colors"** / Coalition Relic's "one mana of any color for each charge counter removed" is `AddManaOfAnyOneColor
+  { AnyCombination }`: a colour chosen for each unit as it resolves, never an option per combination (5^X). The Rockets
+  use the stack — a mana ability in the rules (a ceiling, DesignNotes).
 - **A mana ability of a card in the HAND** (the Spirit Guides: "Exile this card from your hand: Add {G}") is
   `ManaAbilityComponent.From = Hand` with `Costs = [ExileSelfCost]` — `ManaAbilities.AbilitiesOf(…, from)` keeps each
   zone's apart, so it is no mana on the battlefield. `ManaPayment.Find` spends it only when the battlefield can't pay,

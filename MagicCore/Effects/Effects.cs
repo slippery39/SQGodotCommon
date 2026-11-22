@@ -641,6 +641,13 @@ public record AddManaOfAnyOneColor(Count Amount) : Effect
 	/// <summary>Dal R'El, Augment Orphan: "add {R} or {G}" — the colours to choose from; empty is any.</summary>
 	public ImmutableArray<ManaColor> Colors { get; init; } = [];
 
+	/// <summary>
+	/// Wizard's Rockets: "Add X mana in any combination of colors."; Coalition Relic: "Add one mana of any color for
+	/// each charge counter removed this way." — a colour chosen for EACH unit, counted as it resolves; never one option
+	/// per combination (5^X).
+	/// </summary>
+	public bool AnyCombination { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -649,8 +656,18 @@ public record AddManaOfAnyOneColor(Count Amount) : Effect
 					PipelineContext = InputContext,
 					Steps =
 					[
-						new ChooseColorChoice(Controller) { Colors = Colors },
-						new AddChosenColorManaAction(Amount),
+						.. Enumerable
+							.Range(
+								0,
+								AnyCombination ? Math.Max(0, Amount.Value(s, InputContext)) : 1
+							)
+							.SelectMany(_ =>
+								(GameAction[])
+									[
+										new ChooseColorChoice(Controller) { Colors = Colors },
+										new AddChosenColorManaAction(AnyCombination ? 1 : Amount),
+									]
+							),
 					],
 				}
 			)
@@ -1085,10 +1102,19 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 	public Ref? On { get; init; }
 
 	/// <summary>
-	/// Mana Drain: "At the beginning of your next main phase" — your precombat main, or this turn's postcombat main
-	/// when set up during your turn before it (CR 505.1: both are main phases; the card's rulings).
+	/// The step it waits for — the end step unless said. Mana Drain: "At the beginning of your next main phase"
+	/// (Step.PreCombatMain) — your precombat main, or this turn's postcombat main when set up during your turn before it
+	/// (CR 505.1: both are main phases; the card's rulings). Mishra's Bauble: "at the beginning of the next turn's
+	/// upkeep" (Step.Upkeep) — whoever's turn that is. Any other step: the next one of anyone's.
 	/// </summary>
-	public bool NextMainPhase { get; init; }
+	public Step At { get; init; } = Step.End;
+
+	/// <summary>
+	/// Memory Jar: "At the beginning of the next end step, each player … returns to their hand each card they exiled
+	/// this way." — the cards a Ref names AS IT IS SET UP (Ref.ThisWay, in the exile's Then), the delayed trigger's own
+	/// Ref.ThisWay when it resolves: its "this" is a command-zone object, which no link (ExiledBy) names.
+	/// </summary>
+	public Ref? Those { get; init; }
 
 	/// <summary>Mana Drain: "equal to that spell's mana value" — counted as it is set up, the delayed trigger's X.</summary>
 	public Count? X { get; init; }
@@ -1098,12 +1124,16 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 		var game = s.GetGame();
 		var trigger = new DelayedTrigger(
 			new TriggeredAbilityComponent(
-				!NextMainPhase ? TriggerEvent.EachEndStep
-					: game.ActivePlayerId == Controller
+				At switch
+				{
+					Step.End => TriggerEvent.EachEndStep,
+					Step.PreCombatMain => game.ActivePlayerId == Controller
 					&& game.Step is >= Step.PreCombatMain and < Step.PostCombatMain
 						? TriggerEvent.Beginning(Step.PostCombatMain, Whose.You)
-					: TriggerEvent.YourFirstMainPhase,
-				Effects
+						: TriggerEvent.YourFirstMainPhase,
+					_ => TriggerEvent.Beginning(At, Whose.Any),
+				},
+				Those is null ? Effects : [new WithThoseAction([.. All(Those, s)], Effects)]
 			)
 			{
 				X = X?.Value(s, InputContext) ?? 0,
@@ -1140,11 +1170,34 @@ public record AtNextEndStep(ImmutableList<GameAction> Effects) : Effect
 			GetEmblem.ToCommandZone(
 				s,
 				Controller,
-				$"{Source(s).Name} ({(NextMainPhase ? "next main phase" : "next end step")})",
+				$"{Source(s).Name} ({At switch
+				{
+					Step.End => "next end step",
+					Step.PreCombatMain => "next main phase",
+					_ => $"next {At.ToString().ToLowerInvariant()}",
+				}})",
 				[trigger]
 			)
 		);
 	}
+}
+
+/// <summary>
+/// AtNextEndStep.Those, as its delayed trigger resolves — Memory Jar: "each player discards their hand and returns to
+/// their hand each card they exiled this way": the effects, with Ref.ThisWay the cards named when it was set up.
+/// </summary>
+public record WithThoseAction(ImmutableArray<int> Those, ImmutableList<GameAction> Effects) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.SetItem(ContextKeys.ThisWay, Those),
+					Steps = Effects,
+				}
+			)
+		);
 }
 
 /// <summary>

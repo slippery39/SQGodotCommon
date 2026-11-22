@@ -628,7 +628,12 @@ public record Card : GameObject
 	/// <summary>Its mana value — on the stack an X in its mana cost counts (CR 202.3e); anywhere else X is 0, and an X
 	/// that is no mana (Toxic Deluge's "pay X life") never.</summary>
 	public int ManaValueNow =>
-		ManaCost.ManaValue + (ManaCost.HasX ? GetComponent<Actions.OnStackComponent>()?.X ?? 0 : 0);
+		ManaCost.ManaValue
+		+ (
+			ManaCost.HasX
+				? ManaCost.XCount * (GetComponent<Actions.OnStackComponent>()?.X ?? 0) // {X}{X}: twice X (CR 202.3e)
+				: 0
+		);
 
 	public bool Is(Supertype supertype) => (Supertypes & supertype) != 0;
 }
