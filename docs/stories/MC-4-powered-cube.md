@@ -2361,6 +2361,175 @@ as his three priorities.
   recorded game has a free ability the search used twice); golden-in, against the last commit (l4's games with it): 30
   and 280 moved, 40 added (l4's 36, Greaves' 4), the AI's replay unmoved; probe 10 then 150 games, none unfinished, the
   equip activated 3,105 times; full suite 2,384 passed, 1 skipped; docs current.
+- 2026-11-22, Shayne: **multicolour is next** (4.4m) — its 59 unplayed cards surveyed and planned, nothing built until
+  he has reviewed it.
+- 2026-11-22, Claude (cube lane) — **4.4m: multicolour read card by card — 59 left of 65: 20 tested pieces, 36 options,
+  3 cards on 3 new pieces. Nothing is built.** Every multicoloured card left; the coverage's five colourless-among-them
+  were 4.4l's. Pieces checked against the catalog and, where a plan hangs on it, the code (named below). Parts:
+  **m1** the 20 tested pieces — Spider-Woman, Stunning Savior (`PermanentsEnter((Artifact | Creature) & Is.Opponents)
+  { Tapped }`), Teferi, Hero of Dominaria (+1 draw, `AtNextEndStep` `Untap(lands) { UpTo = 2 }`; −3 `MoveTo(Library) {
+  Beneath = 2 }`; −8 an emblem's `YouDrawACard` trigger — emblems' triggers are read, magic-triggers.md), Baleful Strix,
+  Bloodtithe Harvester (`CreateBlood`; `{T}`, sacrifice, sorcery speed: −X/−X by twice the Blood tokens you control,
+  `Count.NumberOf { Times = 2 }`), Manamorphose (`AddManaOfAnyOneColor(2) { AnyCombination }`, draw), Mawloc (ravenous
+  is Jacked Rabbit's `EntersWithCountersComponent(Count.X)` and `If = AtLeast(Count.X, 5)`; Essence Burn's `ExileInsteadOf`
+  on the target, then `Fight`), Territorial Kavu (Tarmogoyf's `StaticEffectComponent(Is.Source) { Power, Toughness }` by
+  `Count.BasicLandTypesAmongLandsYouControl`; a modal attack trigger), Minsc & Boo (a legendary 1/1 Hamster token; +1 on
+  "up to one target creature with trample or haste"; −2 `MaySacrifice { Must }` → `WhenYouDo` by the sacrificed's power,
+  `Ref.ThisWay` as Transmute Artifact's, a draw `If` a Hamster), Arwen, Mortal Queen (keyword counters — indestructible,
+  lifelink — are `Card.HasOwn`'s; `RemoveCountersCost(1, Is.Source) { Kind }`), Knight of Autumn, Torsten (`LookAndTake(7,
+  creature | land) { Take = 7, Reveal, Rest = BottomAtRandom }`; dies: seven Soldiers), Tidehollow Sculler
+  (`YouChooseTheyDiscard { UntilSourceLeaves }`, Deep-Cavern Bat's, not optional), Lurrus of the Dream-Den (`MayPlayFromZone
+  (Graveyard, permanent & mana value ≤ 2 & !land) { OncePerTurn }`; companion — question 1), Traumatic Critique, Lutri
+  (`SelfEnters { If = SourceWasCast }` → `CopySpell` of a target instant or sorcery you control; companion), Witherbloom
+  Apprentice (`LsvCards.Magecraft`, waiting for B/G since h2d), Vicious Rivalry (Toxic Deluge's `XInCosts` life; destroy
+  artifacts and creatures with `ManaValueAtMost(Count.X)`), Forth Eorlingas! (X 2/2 Knights with trample and haste;
+  `WheneverThisTurn` "you become the monarch" — j2b named it for multicolour), Otharri, Suns' Glory (an experience counter
+  on you — a player counter, energy's, a new `CounterKinds` name only; X Rebels `{ Tapped, Attacking }`; a graveyard
+  ability `TapUntappedCost(1, Rebel)` → `MoveTo(Battlefield) { Tapped }`), Thopter Foundry (`SacrificeCost(Artifact &
+  !Token)`; its Thopter is BLUE — a token of its own, not FraCards' colourless one);
+  **m2a** options, casting and the stack, 12 — No More Lies (`CounterUnlessPays` has no `To`; Remand's `Counter.To` moved
+  onto it: exiled instead), Teferi, Time Raveler (the static is `CantCastOrActivate { By = Opponent, Abilities = false, If
+  }` — but its `If` is judged as the HOLDER's, and "only any time they could cast a sorcery" is the CASTER's sorcery timing
+  (`Priority.AtSorcerySpeed` for them): the condition read as the caster's, an option on the lock; +1 "you may cast sorcery
+  spells as though they had flash until your next turn" — Necromancy's `CastAsThoughItHadFlash` is the card's own: the same
+  read by `Priority.AtInstantSpeed` from a `ThisTurn { UntilYourNextTurn }` object with a filter; −3 tested), Kolaghan's
+  Command (tested modes, but a "choose two" spell still offers a cast per combination of targets — 644 below — so its words
+  are chosen one at a time: `EachWord`, the Confluences' and spree's (Shayne, 2026-11-18), on this card ahead of MC-8),
+  Fire Covenant (Toxic Deluge's X life; "X damage divided among any number of target creatures" is Pyrokinesis'
+  `TargetSpec.Divide` — an int, and past three targets the split is ONE `ChooseKeywordChoice` of `Division.Splits`: at X =
+  20 over 12 creatures 75,582 ways. `Divide` becomes a `Count` (X), and the shares are asked one target at a time — a
+  number each, as delve's cards are picked after), Bloodbraid Challenger (cascade is discover's shape — `TrkCards.Discover`:
+  `ExileTopPlayable { Until = !land & mana value < this spell's, Play = Now { Free }, RestOnBottom }` — on a `SelfCast`
+  trigger, with no "into your hand": a helper, `LsvCards.Cascade`; escape tested), Pillage the Bog (plot is warp's shape:
+  an activated ability `From = Hand`, sorcery speed, `MoveTo(Ref.Source, Exile)` then `MakePlayable { Forever, LaterTurn,
+  Free, CastOnly }` — plot is a SPECIAL action in the rules (no stack): a ceiling, as LED's; the cast's sorcery timing an
+  option on the permission), Phlage and Uro ("sacrifice it unless it escaped" — `SourceWasCast` reads that it was cast,
+  not HOW: the escape payment stamped on the spell (`OnStackComponent`, carried by `Card.CastAs`) and a condition reading
+  it, as `AlternativeCostWasPaid` reads evoke's; Uro's land `MoveChosen(Hand, Land, Battlefield) { May }`), Expressive
+  Iteration (two looks: `LookAndTake(3) { Take = 1, Must, Rest = TopInAnyOrder }`, then `LookAndTake(2) { Take = 1, Must,
+  To = Exile, Rest = Bottom… }` whose `Then` is `MakePlayable(Ref.ThisWay, { ThisTurn })` — the composition tested),
+  Lim-Dûl's Vault ("as many times as you choose, you may pay 1 life, put those cards on the bottom, then look at the top
+  five" — a `May` whose `Then` ends with the same `May` again (data, no delegate), Grindstone's `RepeatWhile` its nearest;
+  "then shuffle and put the last cards you looked at on top in any order": `ShuffleLibrary` keeping the top five, then
+  Ponder's order — an option on the shuffle), Zirda (Forensic Gadgeteer's `CostChange(-2) { Abilities, Floor = 1 }` for
+  EVERY ability you activate — `Abilities` asks the source's filter whoever activates: `By` read for abilities too),
+  Wrenn and Six (±1 tested; −7's emblem is Six's retrace, `MayPlayFromZone(Graveyard, instant | sorcery) { Costs =
+  [DiscardCost(Is.Land)], AnyTime }` — but `Playable.ZoneRules` reads the battlefield and `ThisTurn` objects: an EMBLEM's
+  permission is the option, one test);
+  **m2b** options, combat and triggers, 12 — Kaito, Bane of Nightmares and Fallen Shinobi (ninjutsu, CR 702.49, uses the
+  stack: an activated ability `From = Hand` with Daze's `ReturnToHandCost(an unblocked attacker you control)` →
+  `MoveTo(Ref.Source, Battlefield) { Tapped, Attacking }` — `EnterBattlefield(attacking:)` exists (mobilize's); options:
+  "unblocked" a `Property` (`Combat` knows it once blockers are declared), `MoveTo.Attacking`; `LsvCards.Ninjutsu(cost)`.
+  Kaito "during your turn … he's a 3/4 Ninja creature and has hexproof" is `BecomesType(Is.Source) { Add = Creature,
+  Subtype, Power, Toughness, If = Both(DuringYourTurn, loyalty ≥ 1) }`, Mogis' shape, a hexproof static `If`; 0 surveil 2
+  and a draw `If` the opponent lost life this turn (two players); −2 `Tap` and two stun counters. Shinobi's
+  `ExileTopPlayable { N = 2, Of = Ref.EachOpponent, Play = { ThisTurn, Free } }`), Raph & Mikey (Identity Echo's
+  `RevealUntilOntoBattlefield { Tapped }` with `Attacking` — the same entry option), Okoye and Aragorn ("attacks the monarch
+  this turn" / "if you're the monarch": `YouHaveTheInitiative` generalised to the designation's holder, `Holds(who,
+  name)`, the initiative moved onto it; Okoye's `WheneverThisTurn { About }` on that creature's `Attacked`; Aragorn's
+  "creatures can't block this turn" `ModifyUntilEndOfTurn(Ref.AllCreatures, …, Combat.CantBlock)` — those on the battlefield
+  then: a ceiling), Psychic Frog ("combat damage to a player or planeswalker": `SelfDealsCombatDamageToPlayer` is
+  `PlayerDealtDamage` only — the planeswalker half a `DealtDamage` row with `CombatDamageFromThis`; the costs tested),
+  Leovold (Narset's `NumericReplacement(Draw) { If }`, tested; "whenever you … become the target" — `BecameTargetEvent` is
+  raised for CARDS only (`Triggers` line 406): a player targeted raises it too), Nadu (`GrantsTriggeredAbility` on
+  `BecameTarget { Subject = Is.Source }`; "triggers only twice each turn" — `OncePerTurn` a stamp: a count; the top card
+  revealed, a land onto the battlefield else into the hand: `Ref.All(Library) { Top }` under an `If`), Dack Fayden (+1, −2
+  tested; the emblem's "whenever you cast a spell that targets one or more permanents, gain control of those permanents" —
+  the spell's targets as a `Ref`, read from its `OnStackComponent` as magic-triggers.md says), Alpha Deathclaw
+  (monstrosity is no piece: `If(Not(monstrous))` → four +1/+1 counters and "Monstrous" granted for good (`Is.With`, saddle's
+  shape), then `WhenYouDo` destroy target permanent — the "when it becomes monstrous" trigger as a reflexive one: nothing
+  else makes it monstrous), Aang, Swift Savior (a transforming DFC, front {1}{W}{U}; airbend "exile it; while it's exiled,
+  its owner may cast it for {2} rather than its mana cost" — `MoveTo(…, Exile) { From = [Battlefield, Stack] }` and a
+  permission with miracle's `Instead` cost (`CastNow.Instead` exists; `PlayableFromExile` gains it); waterbend {8} is
+  convoke + improvise for an ABILITY's cost — `ManaPayment.Helpers` reads the spell's keywords: the ability's
+  `Keyword = "Waterbend"` read too (`forAbilityOf`); the back's attack trigger tested), Comet, Stellar Pup (`RollDie(6,
+  rows)`, tested; each row a loyalty change and its effect; "you may activate Comet's loyalty ability two more times this
+  turn" — `LoyaltyActivatedOnTurn` is a once-a-turn stamp: a count of extra activations this turn on the permanent);
+  **m2c** options, permanents, copies and mana, 12 — Fractured Identity (`Exile` then `CreateTokenCopy { OfAnExiledCard }`
+  "each player other than its controller" — `CreateTokens.ControlledBy`'s option on the copy, the other player of the
+  target's controller), Superior Spider-Man (`MayEnterAsCopy` of a creature CARD in a graveyard — Shifting Woodland's
+  graveyard model; except his name and "a 4/4 Spider Human Hero in addition": the copy's `SetBase` and `AlsoSubtypes`, and
+  a kept name — eternalize's options on the token copy, here on the entering copy; "when you do, exile that card" a
+  `WhenYouDo`), Saheeli, Sublime Artificer (Servo per noncreature spell; −2 Hall of Echoes' `BecomeCopyUntilEndOfTurn` with
+  `AlsoType = Artifact`), Oko, Thief of Crowns (+2 Food; +1 "loses all abilities and becomes a green Elk creature with base
+  3/3" — `ModifyUntilEndOfTurn { ForGood, LosesAllAbilities, AlsoType, BecomesCreatureTypes, Colors, SetBase }`, the
+  loss for good untested; −5 two `GainControl`, its two words chosen one at a time — 150 activations below), Figure of
+  Fable and Figure of Destiny ("becomes a Kithkin Scout with base power and toughness 2/3" — `ForGood` with
+  `BecomesCreatureTypes` and `SetBase` together, untested; "if it is a Scout" `If(Matches(Ref.Source, Is.Subtype))`; the
+  Avatars' keywords and "protection from each of your opponents" `Gains` for good), Chaos Defiler ("for each opponent,
+  choose a nonland permanent that player controls. Destroy one of them chosen at random" — two players: one chosen, not
+  targeted, then destroyed: `ChoosePermanentChoice` is the chooser's own permanents — an opponent's an option, `Destroy(Ref.
+  Chosen)`; random among one a ceiling), Cloak and Dagger ("exile a nonland card from their hand OR the chosen creature
+  until they leave" — `YouChooseTheyDiscard { Optional, UntilSourceLeaves }` with the creature target offered beside the
+  hand), Atraxa (`LookAndTake(10)` "for each card type, you may put a card of that type" — Ajani's `EachSacrifices { Keeps =
+  types }` shape on the look: `LookAndTake.OnePerType`, a choice per type there is), Vivi Ornitier ("{0}: Add X mana in any
+  combination of {U} and/or {R}, X its power. Activate only during your turn and only once each turn" — a no-{T} mana move
+  with `Amount`, `OrColors`, `OnlyIf = DuringYourTurn`; "once each turn" is `ActivatedAbilityComponent.OncePerTurn` — a
+  mana ability's the option), Squandered Resources ("Sacrifice a land: Add one mana of any type the sacrificed land could
+  produce" — a no-{T} move with `SacrificeCost(Is.Land)`, Chrome Mox's `OfTheColorsOf` read as what the SACRIFICED land's
+  mana abilities make, `ManaAbilities.Makes`), Loot, the Pathfinder (exhaust on a MANA ability — "{G}, {T}: Add three mana
+  of any one color", once: `ManaAbilityComponent.CashedIn`'s move, Exhaust stamped as an activated ability's);
+  **m3** new pieces, 3 — **split cards** (Life // Death, `layout: split`, mana value 3 off the stack) — nearest the
+  Adventure (`CastSpellAction.Adventure`, the card stamped as its face for the cast, `CastAsAdventure`): a split card is
+  that cast for EITHER face, with no creature behind it and no exile as it resolves — the Adventure's stamp generalised
+  to a face index, its exile an Adventure's alone (Life: `ModifyUntilEndOfTurn(Ref.LandsYouControl) { AlsoType, SetBase
+  (1, 1) }`, the creature lands'; Death: the return and `LoseLife` by its mana value); **control of a spell** (Invert
+  Polarity: "gain control of that spell and you may choose new targets for it", `FlipACoin { IfWon }`, else `Counter`) —
+  nearest `GainControl` (a permanent's controller, `MagicState.GainControl`) and `CopySpell`'s new targets; no option fits:
+  a stack object's controller is set as it is cast and never moves — a `GainControl` of a spell, its targets chosen again
+  as a copy's are; **prohibitions on what an opponent makes you do** (Tamiyo, Collector of Tales: "Spells and abilities
+  your opponents control can't cause you to discard cards or sacrifice permanents") — nearest Quark's
+  `CantSacrificeTreasures` (`MagicState.CanSacrifice`, asked by every sacrifice); no option fits because neither
+  `MagicState.Sacrifice` nor `MagicState.Discard` knows WHO caused it: the controller of the resolving effect carried to
+  both, your own costs and effects untouched (+1 `ChooseCardName` and `LookAndTake(4) { Take all of that name, Rest =
+  Graveyard }`; −3 tested).
+  **Legal actions, counted on a 12-creature board** (~26 any targets, ~30 graveyard cards, 20 lands): grows with the board
+  and fixed here — **Kolaghan's Command 644 casts today** (return 15 × any 26 = 390, artifact 4 × 26, discard 2 × 26 …)
+  → 6 with `EachWord`; **Fire Covenant** 20 casts (X) but its split 75,582 ways in one choice → a number per target;
+  **Oko's −5 ~150** (your 12+ artifacts and creatures × their ≤ 12 with power 3 or less) → its second target chosen after.
+  Kept, as every card of the shape is today: Traumatic Critique X × 26 ≈ 200 and Mawloc X × 13 ≈ 100 (an X spell with a
+  target); Wrenn and Six's retrace late, up to ~300 (4 instants or sorceries × 3 lands to discard × 26 — Six's, the land
+  named in the cast; delve's pick-after if it ever shows); Saheeli's −2 ~42; Squandered Resources ~40 moves (a land ×
+  its colours); ninjutsu ≤ 24 (unblocked attackers × ninjas in hand); Fractured Identity, Teferi's −3 ~26; Vivi power + 1
+  splits (6 at 5). Chosen after the action, never multiplied: Atraxa, Torsten, Tidehollow, Cloak and Dagger, Chaos Defiler,
+  Expressive Iteration, Lim-Dûl's Vault, Comet's rows, Minsc's sacrifice.
+  **Loops the probe must show end:** Thopter Foundry with Sword of the Meek (in the cube since l3c: sacrifice the Sword,
+  a 1/1 Thopter returns and re-equips it — {1} a loop, ending with the mana); Comet's 6 ("two more times", each roll a
+  one-in-six to go on — a seeded die, and the search branching on every activation); Lim-Dûl's Vault (each look costs 1
+  life; with five or fewer cards in the library the same five come back — it ends with the AI's no or its life); Nadu with
+  a cheap targeting ability (Lightning Greaves' free equip is once a turn since l5, Skullclamp's {1}: bounded by "twice
+  each turn" per creature). Each probed at 10 games before 150. **For the AI lane, not loops:** Figure of Destiny and
+  Figure of Fable's first ability on an 8/8 makes it a 2/2 again (the rules' own: a misplay to watch), and Squandered
+  Resources sacrificing lands for mana it doesn't spend (Zuran Orb's case).
+  **Ceilings to write when built:** plot uses the stack; Chaos Defiler's random choice is among one (two players);
+  Aragorn's "creatures can't block" misses a creature that enters after; Kaito is a creature planeswalker during your turn
+  (damage to him removes loyalty and is marked — check `Damage.Deal` before relying on it); a split card in a front end
+  shows one face (the table's).
+  **Batches (more cards a session):** **m1 + m2a** (20 script-only, 12 options), **m2b + m2c** (24 options — l3a + l3b
+  built 21), **m3** (3 new pieces). Four sessions — m2b and m2c apart — is his to ask for.
+  **Questions for Shayne's review:** (1) **Companion** (Lurrus, Lutri, Zirda): planned as no script — each plays as its
+  main-deck card, the companion rule a ceiling in DesignNotes, as Cogwork Librarian's draft ability; the other way is the
+  sideboard (`MagicRules.WithSideboard`, Bo1 limited's pool) as "outside the game", a check of the starting deck and a
+  {3} special action to put it into your hand. (2) Kolaghan's Command takes `EachWord` now (the rest of MC-8 still
+  waits). (3) The three batches above, or four.
+- 2026-11-22, Shayne (reviewing 4.4m's plan, its three questions): **three batches** — m1 + m2a, m2b + m2c, m3, as
+  planned. **Kolaghan's Command's targets are chosen one at a time** (`EachWord`, in m2a; the rest of MC-8 still waits).
+  **"Companions should be set at deck building time"** — so companion is NOT left unscripted: it is a fourth new piece,
+  in **m3** (now 6 cards: Life // Death, Invert Polarity, Tamiyo, and the companion rule for Lurrus, Lutri and Zirda,
+  whose main-deck text is built in m1, m1 and m2a as planned). Read as: the companion is chosen as the deck is BUILT, its
+  condition checked against that deck there (Lurrus: every permanent card mana value 2 or less; Lutri: every nonland card a
+  different name; Zirda: every permanent card has an activated ability — a land's mana ability counts), and the game
+  begins with it outside the game; "{3}: put it into your hand, as a sorcery" is a special action (CR 702.139c, no stack),
+  once. Nearest pieces: the `Sideboard` zone (`MagicRules.WithSideboard`, Bo1 limited's pool — "outside the game"),
+  `TurnFaceUpAction` (a special action offered with priority), and `ArenaDeck`, which today SKIPS an export's "Companion"
+  section (`ArenaDeck.cs` line 74). **To confirm with Shayne when m3 starts** (the details the answer leaves open): where a
+  companion is chosen — an Arena export's Companion section, the sealed builder's suggestion (`SealedBuilder`, and the AI's
+  own deck), and the table's deck screen — and whether a chosen companion that fails its condition is refused there or
+  only not offered.
+- 2026-11-22, Shayne (the two companion details): **a companion is chosen in all three places** — an Arena export's
+  Companion section (`ArenaDeck` reads it instead of skipping it), the sealed builder (`SealedBuilder`, the AI's own deck
+  too) and the table's deck screen ("Sure", to the three listed). **A companion that fails its condition just stays in the
+  sideboard** — never refused, never an error: it is an ordinary sideboard card, with no {3} action.
 
 ## Tasks
 
@@ -2644,7 +2813,7 @@ as his three priorities.
     - [x] MC-4.4k3 New pieces, 4: crew (Esika's Chariot), earthbend (Badgermole Cub), bestow (Springheart Nantuko),
           day/night (Outland Liberator // Frenzied Trapbreaker) (done 2026-11-21 — three were options; day/night the
           one new piece; Molten Tide moved onto `ExtraMana`)
-  - [ ] MC-4.4l Colourless beyond tier 1 (Shayne, 2026-11-21: after the colours) — 105 cards, 54 of them lands, read
+  - [x] MC-4.4l Colourless beyond tier 1 (Shayne, 2026-11-21: after the colours) — 105 cards, 54 of them lands, read
         card by card and tiered (Decisions, "4.4l"): 63 tested pieces, 33 options, 9 cards on 5 new pieces; seven
         parts built as FOUR batches — l1 + l2, l3a + l3b, l3c, l4a + l4b (Shayne, 2026-11-21: more cards a session;
         he reviews the plan before the first):
@@ -2672,6 +2841,22 @@ as his three priorities.
           Greaves — scripted, then taken out (2026-11-21): the search AI re-equips `Equip {0}` without end. The search
           is now offered a free ability once per permanent a turn; its three-line script and a kept test that the AI's
           turn ends
+  - [ ] MC-4.4m Multicolour (Shayne, 2026-11-22: after colourless) — 59 cards read card by card and tiered (Decisions,
+        "4.4m"): 20 tested pieces, 36 options, 3 cards on 3 new pieces and the companion rule; three batches — m1 + m2a,
+        m2b + m2c, m3 (Shayne, 2026-11-22: reviewed; companions set at deck building time — Decisions, after "4.4m"):
+    - [ ] MC-4.4m1 The tested pieces, 20 (list in Decisions) — script-only, read on the card sheet
+    - [ ] MC-4.4m2a Options, casting and the stack, 12: No More Lies, Teferi, Time Raveler, Kolaghan's Command, Fire
+          Covenant, Bloodbraid Challenger, Pillage the Bog, Phlage, Uro, Expressive Iteration, Lim-Dûl's Vault, Zirda,
+          Wrenn and Six
+    - [ ] MC-4.4m2b Options, combat and triggers, 12: Kaito, Fallen Shinobi, Raph & Mikey, Okoye, Aragorn, Psychic Frog,
+          Leovold, Nadu, Dack Fayden, Alpha Deathclaw, Aang, Comet
+    - [ ] MC-4.4m2c Options, permanents, copies and mana, 12: Fractured Identity, Superior Spider-Man, Saheeli, Oko,
+          Figure of Fable, Figure of Destiny, Chaos Defiler, Cloak and Dagger, Atraxa, Vivi Ornitier, Squandered
+          Resources, Loot
+    - [ ] MC-4.4m3 New pieces, 4: split cards (Life // Death), control of a spell (Invert Polarity), what an opponent
+          can't make you do (Tamiyo, Collector of Tales), companion — chosen at deck building time, its condition
+          checked there, put into your hand for {3} (Lurrus, Lutri, Zirda) — chosen in an Arena export, the sealed
+          builder and the table's deck screen; one failing its condition stays an ordinary sideboard card (Shayne)
 - [x] MC-4.5 (done 2026-11-19 with h2b; Shayne, 2026-11-18) Troubling Tribbles out of the random decks — the fuzz probe's extras
       (`CardProbeTests.Deck`) and `RandomGameTests.RandomPlay_EveryScriptedCard` (which already skips seed 21 for it):
       the doubling balloons the board past 300 permanents ("not much additional benefit" — Shayne). Its own tests stay,
@@ -2754,10 +2939,11 @@ Key decks its player; Painter's Servant with Grindstone stops with the library),
 B 61/61, R 54/54, G 50/50, multicolour 6/65, colourless 163/163): the search is offered a free ability once per
 permanent a turn (`Evaluator.SearchMoves`), so Lightning Greaves' `Equip {0}` ends. **For the AI lane at the merge:**
 that rule is now in the search (built in the cube lane on Shayne's word) — Zuran Orb's case, a resource underpriced,
-is still theirs. **Next: multicolour, MC-4.4m** — its 59 unplayed cards
-(`python tools/magic_set.py text --missing --set LSV`, the multicoloured ones) read card by card and tiered as 4.4l was
-(each new piece naming its nearest), written in Decisions as "4.4m", then batches of more cards a session; Shayne
-reviews the plan before the first batch. From l4: colours `s.ColorsOf` (never `Card.Colors` in a rule); a creature land
+is still theirs. **Next: multicolour, MC-4.4m — planned (Decisions, "4.4m") and reviewed (Shayne, 2026-11-22: the entry
+after it):** 59 cards — 20 tested pieces, 36 options, 3 cards on 3 new pieces (split cards, control of a spell, what an
+opponent can't make you do) and the companion rule (set at deck building time, m3) — as three batches, **m1 + m2a
+first**, then m2b + m2c, then m3 (a companion chosen in an Arena export, the sealed builder and the table's deck screen;
+one failing its condition stays in the sideboard — Shayne). Kolaghan's Command takes `EachWord` in m2a. From l4: colours `s.ColorsOf` (never `Card.Colors` in a rule); a creature land
 `LsvCards.CreatureLand(cost, size, type, colours, keywords)`; an entering's cost `EntryCost { Instead }` (paid by
 choosing: a cost's `PaidByChoosing`/`CanPayByChoosing`); "as it enters, choose a basic land type" `ChosenType`;
 `ChoosesColorAsItEnters { Mana }`; a turn's start `TurnStructure.NextTurn`/`BeginTurn`; exert `ExertCost`/`Exerted`; a
