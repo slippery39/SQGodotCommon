@@ -3000,7 +3000,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 		Amount = 2,
 		Cost = ManaCost.Parse("{R}"),
 		Costs = [new TapSelfCost(), new ExertCost()],
-		Restriction = new ManaRestriction(null) { Gains = "Haste", GainsIf = Is.Creature },
+		Restriction = new ManaRestriction(null)
+		{
+			Gains = "Haste",
+			GainsIf = Is.Creature,
+		},
 	},
 ],
 ```
