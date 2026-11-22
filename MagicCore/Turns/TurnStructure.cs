@@ -112,7 +112,10 @@ public static class TurnStructure
 				x is UntilEndOfTurn u && u.UntilTurnOf == playerId
 			);
 			s =
-				zone == ZoneType.Command && left.IsEmpty
+				// The One Ring's protection (ThisTurn.UntilYourNextTurn) keeps its effect here: unmarked, it is a
+				// "this turn" effect again, and this untap step's FinishUntap removes it with the others.
+				zone == ZoneType.Command
+				&& left.IsEmpty
 					? s.RemoveObject(c.Id)
 					: s.UpdateObject(c.Id, c with { Components = left });
 		}
@@ -160,7 +163,10 @@ public static class TurnStructure
 			// cleanup (CR 514.2), as the tally flags they replaced did; differs only if a cleanup
 			// gives priority. Move both into cleanup if a card ever cares.
 			foreach (var effect in s.ThisTurnEffects<Effects.ThisTurnEffect>(id).ToList())
-				if (!effect.HasComponent<Effects.RestOfTheGame>()) // Screaming Nemesis: "for the rest of the game"
+				if (
+					!effect.HasComponent<Effects.RestOfTheGame>() // Screaming Nemesis: "for the rest of the game"
+					&& !effect.Components.Any(x => x is UntilEndOfTurn { UntilTurnOf: > 0 }) // The One Ring: "until your next turn"
+				)
 					s = s.RemoveObject(effect.Id);
 		}
 		s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0, AdditionalCombats = 0 });

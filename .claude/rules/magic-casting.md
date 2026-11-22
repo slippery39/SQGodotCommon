@@ -168,8 +168,12 @@ whose subsystem it lives in.
   reads it). **"Each of up to X targets, where X is …"** is `TargetSpec.PerX` — a `Count`, this word that many times,
   each `NotThePrevious` (`Optional`: "up to"): a trigger's counted as it triggers (`Triggers.QueueTargets`, one
   `ChooseTargetChoice` per word; a required one with fewer objects than X removes the trigger), a spell's its X
-  (Dominion Infiltration, Pest Infestation: `Count.X` — another count THROWS), an activated ability's THROWS (not built:
-  Candelabra of Tawnos, DesignNotes).
+  (Dominion Infiltration, Pest Infestation: `Count.X` — another count THROWS), an activated ability's its X too
+  (Candelabra of Tawnos: "{X}, {T}: Untap X target lands", MC-4.4l3c) — `ActivateAbilityAction.ChoosesTargets`: ONE
+  legal action per X with no targets in it, refused unless X lands can be chosen; activating asks
+  `ChooseXTargetsChoice { Ability }` (exactly X), then `ActivateWithChosenTargetsAction` activates with them, before
+  anything is paid. Never one activation per set of lands (2^n); an activation naming its own X targets is refused.
+  A spell's and an activation's X words are ONE expansion, `TargetSpec.XWords(x, of)`.
   **Storm** (CR 702.40, Brain Freeze, MC-4.4g7) is `Scripting.Storm`: a "when you cast this spell" trigger
   (`TriggerEvent.SelfCast`) of `CopySpell(Ref.EventCard) { N = Count.SpellsCastBefore(Ref.EventCard) }`. The count is
   EVERY player's spells this turn, stamped as it is cast (`OnStackComponent.SpellsCastBefore`, from both tallies), so a
@@ -308,6 +312,10 @@ whose subsystem it lives in.
   isn't added, a once-each-turn rule isn't used up. A resolution's cast keeps its own exile (Bilbo). **"If that spell
   would be put into your graveyard, exile it instead"** (Jace, Telepath Unbound's −3, MC-4.4i7) is `PlayPermission {
   ExiledLeavingTheStack }` → the mark's own, so the cast is not `ByPermission`: flashback's exile (`MoveCard`).
+- **Channel** (Boseiju, Who Endures; Otawara, Soaring City — MC-4.4l3c) is `LsvCards.Channel(cost, targets, effects)`:
+  cycling's shape (`From = Hand`, `DiscardSelfCost`) with the ability's OWN `CostChange` — "costs {1} less to activate
+  for each legendary creature you control" is `Count.NumberOf(…).Negated`, read by `Costs.OfAbility` as the activating
+  player's (the card is in a hand). An ability word: no keyword, and it is not cycling.
 - **"Activate only once each turn"** is `ActivatedAbilityComponent.OncePerTurn`, stamped on the card as it
   is activated (`Card.ActivatedOncePerTurnOn`) — a new object may activate again.
 - **"If this is the second time this ability has resolved this turn"** is `IfNthResolutionThisTurn(n, …)`:

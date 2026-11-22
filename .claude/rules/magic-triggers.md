@@ -126,6 +126,11 @@ whose subsystem it lives in.
   that player's untap step ends it (`TurnStructure.EndUntilYourNextTurn`). One on a permanent rides the
   permanent (Garruk's −4/−1); "until your next turn, whenever …" is an effect card in the command
   zone (`UntilYourNextTurnWhenever`), so it outlives the planeswalker, and is removed when it ends.
+  **A "this turn" effect that lasts until your next turn** (The One Ring: "you gain protection from everything until
+  your next turn", MC-4.4l3c) is `ThisTurn(effect) { UntilYourNextTurn }`: the same command-zone object with an
+  `UntilEndOfTurn { UntilTurnOf }` beside the effect — the turn's end leaves it (as `RestOfTheGame`'s);
+  `EndUntilYourNextTurn` takes the mark off as that player's untap step begins, and the same step's removal of "this
+  turn" effects (`FinishUntap`) then takes the object. "Your" is the effect's controller, whoever `On` names.
 - **"When you cast this spell"** (`TriggerEvent.SelfCast`, Emrakul) is read from the spell on the stack, and keeps it as
   it was cast (`EventSnapshot`): storm's copies of a spell countered in response still read it (MC-4.4g7).
 - **Necrodominance's rules each live in their one place:** a skipped draw step never begins (`EnterStep`),
@@ -140,6 +145,8 @@ whose subsystem it lives in.
   begins — a TURN-BASED action in `EnterStep`, no stack (Shayne, 2026-11-01). The state-based check
   sacrifices a Saga at its last chapter only once no chapter ability of it is waiting: collected and not
   yet on the stack (`GivePriority` passes them to `StateBasedActions.Check`) or on the stack.
+  **A Saga that is a land** (Urza's Saga, MC-4.4l3c) is the same component, entering by a land drop; "this Saga
+  gains '[ability]'" is `ModifyUntilEndOfTurn(Ref.Source, 0, 0) { ForGood, Gains }` — a mana ability or an activated one.
 - **Classes** (CR 716; Does Machines, MC-4.4g10) have a LEVEL, never a counter: `ClassLevel(N)`, status on the card
   (gone as it leaves, never copied; none is level 1), read by `Count.ClassLevelOf`. "[Cost]: Level N" is
   `Scripting.Level(cost, n)` — sorcery speed, only at level N−1, resolving to `GainLevel(n)`, which raises
@@ -168,6 +175,13 @@ whose subsystem it lives in.
   and returned by `Take` as the designation MOVES to an opponent of the exiler, to the zone it left.
 - **"Whenever [a creature with …] deals combat damage to a player"** — not "this" — is
   `Trigger.CombatDamageBy`, a filter on the damage's SOURCE (Phlox); the event's subject is the player.
+  **"… deals combat damage to a creature"** (Kaldra Compleat, MC-4.4l3c) is the same option on a `CreatureDealtDamage`
+  trigger, `CreatureDealtDamageEvent` carrying its `SourceId` and `Combat`. "Equipped creature … has 'Whenever this
+  creature deals combat damage to a creature, exile that creature'" is the CREATURE's ability —
+  `GrantsTriggeredAbility(Is.AttachedToSource, When(… { CombatDamageBy = Is.Source }, …))`, gone when it loses all
+  abilities — never a trigger of the Equipment's; and "exile that creature" is `MoveTo(Ref.EventCard, Exile) { From =
+  [Battlefield] }`: one that died of the damage is a new object and stays in the graveyard (`Exile` takes a graveyard
+  card too, and `Ref.EventCard` is an id).
 - **"Sacrifice it at the beginning of the next end step"** on a new token is `CreateTokens`/`CreateTokenCopy`
   `.SacrificeAtNextEndStep` — a `DelayedTrigger` added after it enters, like `ExileAtNextEndStep`.
 - **"Whenever …, this turn"** from a resolving ability (The Naked Time's chapter II) is `WheneverThisTurn`:
@@ -252,7 +266,10 @@ whose subsystem it lives in.
   card each turn"** (Faerie Mastermind, MC-4.4e2b) is the same option on a `Drew` trigger, against
   `DrewCardEvent.Number` — the drawer's count this turn, stamped by `MagicState.Draw` as each card is drawn, so two
   drawn in one resolution are the first and the second. `Nth` fits those two kinds and `Attacked` (above) only; never a
-  second number.
+  second number. **"Your fourth noncreature spell each turn"** (The Fantasticar, MC-4.4l3c) is `Nth = 4` with
+  `NthNoncreature`: the same number read against `SpellCastEvent.NoncreatureSpellNumber` (0 for a creature spell — never
+  the Nth). Plan for All Outcomes' "first noncreature spell" is `Nth = 1, NthNoncreature`
+  (`TriggerEvent.YouCastFirstNoncreatureSpellEachTurn`); `EventTest.FirstNoncreatureSpell` is gone.
   **"Whenever an opponent draws a card except the first one they draw in each of their draw steps"** (Orcish
   Bowmasters, MC-4.4h2d) is `Trigger(Drew) { Also = EventTest.NotTheTurnsDraw }`, against `DrewCardEvent.TurnDraw` — the
   draw step's own first card, the one Hullbreacher's `ExceptTheTurnsDraw` excepts (`Draw(…, turnDraw: true)`, i == 0).

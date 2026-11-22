@@ -1279,6 +1279,13 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 	/// </summary>
 	public bool RestOfTheGame { get; init; }
 
+	/// <summary>
+	/// The One Ring: "you gain protection from everything until your next turn" — the same object kept past this
+	/// turn's end, gone as that player's next turn begins (UntilEndOfTurn.UntilTurnOf beside the effect,
+	/// TurnStructure.EndUntilYourNextTurn).
+	/// </summary>
+	public bool UntilYourNextTurn { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var who = On is null
@@ -1306,8 +1313,11 @@ public record ThisTurn(ThisTurnEffect What) : Effect
 				GetEmblem.ToCommandZone(
 					s,
 					who,
-					$"{Source(s).Name} ({(RestOfTheGame ? "rest of the game" : "this turn")})",
-					RestOfTheGame ? [what, new RestOfTheGame()] : [what]
+					$"{Source(s).Name} ({(RestOfTheGame ? "rest of the game" : UntilYourNextTurn ? "until your next turn" : "this turn")})",
+					RestOfTheGame ? [what, new RestOfTheGame()]
+						: UntilYourNextTurn
+							? [what, new UntilEndOfTurn { UntilTurnOf = Controller }] // YOUR next turn, whoever On names
+						: [what]
 				)
 			);
 	}

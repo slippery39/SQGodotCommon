@@ -156,7 +156,13 @@ public static class MagicRules
 	}
 
 	/// <summary>Everything the deciding player may do. Empty while a choice is pending — answer it with Choose.</summary>
-	public static ImmutableList<GameAction> LegalActions(this GameState s)
+	/// <param name="worthTrying">The search's own filter (Evaluator.SearchMoves), asked BEFORE a candidate is validated:
+	/// Candelabra of Tawnos' 21 activations on a 20-land board cost the search their validation at every node, tripling
+	/// this call, though it never tried one. Never a rule, and never set by a front end: unset, the list is complete.</param>
+	public static ImmutableList<GameAction> LegalActions(
+		this GameState s,
+		Func<GameAction, bool>? worthTrying = null
+	)
 	{
 		var player = s.DecidingPlayerId();
 		if (player == 0 || s.IsWaitingForChoice)
@@ -217,7 +223,9 @@ public static class MagicRules
 						.Concat(s.CardsIn(player, ZoneType.Exile)) // Q's gift: "only if this card is exiled"
 						.SelectMany(c => ActivateCandidates(s, player, c)),
 				];
-		return candidates.Where(a => a.ValidateAdd(s).IsValid).ToImmutableList();
+		return candidates
+			.Where(a => worthTrying?.Invoke(a) != false && a.ValidateAdd(s).IsValid)
+			.ToImmutableList();
 	}
 
 	/// <summary>
@@ -465,12 +473,17 @@ public static class MagicRules
 			.SelectMany(a =>
 				from taps in TapSets(a.ability.Costs, s, player, card.Id).ToList() // once per ability, not per target
 				from modes in a.ability.Choose.Choices(s, card, a.ability.Modes)
-				from targets in TargetSpec.Combinations(
-					s,
-					ActivateAbilityAction.TextOf(a.ability, modes).Specs,
-					player,
-					card.Id
-				)
+				// Candelabra of Tawnos' "X target lands": one activation per X, the lands a choice as it is activated
+				// (ActivateAbilityAction.ChoosesTargets) — never one per set, 2^n against n lands.
+				let perX = a.ability.Targets.Any(t => t.PerX is not null)
+				from targets in perX
+					? [ImmutableArray<int>.Empty]
+					: TargetSpec.Combinations(
+						s,
+						ActivateAbilityAction.TextOf(a.ability, modes).Specs,
+						player,
+						card.Id
+					)
 				from sacrifice in CostList.Options(
 					a.ability.Costs,
 					CostSlot.Sacrifice,
@@ -513,6 +526,7 @@ public static class MagicRules
 						TapIds = taps,
 						LifeForPhyrexian = life,
 						X = x,
+						ChoosesTargets = perX,
 					}
 			);
 	}

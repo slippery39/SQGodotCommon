@@ -159,6 +159,9 @@ whose subsystem it lives in.
   the Mount's "saddled" a keyword granted until end of turn (`Is.With("Saddled")`; DesignNotes for its ceiling).
   **Crew** (CR 702.122, Esika's Chariot, MC-4.4k3) is the same cost at instant speed, `LsvCards.Crew(n)` — summoning-sick
   creatures may crew (no {T}) — resolving to `ModifyUntilEndOfTurn(Ref.Source, 0, 0) { AlsoType = Creature }`.
+  **"Crews Vehicles as though its power were 2 greater"** (Reckoner Bankbuster's Pilot token, MC-4.4l3c) is
+  `CrewsAsThoughPowerGreater(2)` on the creature, added where a CREW cost sums — `TapUntappedCost { Crew }` (set by
+  `LsvCards.Crew`), `TapUntappedCost.PowerFor` the one sum, the picks after it too — never for teamwork or saddle.
 - **Sunburst** (`Sunburst`, Engineered Explosives) is the colours actually SPENT: the cast pays with the most
   different colours it can for the X chosen (`ManaPayment.Find(…, mostColors)`, Shayne, 2026-11-05), records
   them (`ManaPayment.ColorsSpent` → `OnStackComponent.ColorsSpent`), and `EnterFromStackAction` puts that many

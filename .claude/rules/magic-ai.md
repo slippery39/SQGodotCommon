@@ -14,3 +14,9 @@ whose subsystem it lives in.
 - **AI evaluation terms are MONOTONIC** — more of a good thing always scores more, tapering not
   capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap
   at 20 stopped every attack past tapped blockers; a land cap at 7 made the AI hoard lands.
+- **A move the search should never try is left out in `Evaluator.SearchMoves`, BEFORE it is validated** —
+  `MagicRules.LegalActions(worthTrying)`, the search's filter and never a front end's; `LegalActions()` stays complete.
+  Candelabra of Tawnos ("{X}, {T}: Untap X target lands") is offered to the search only for X up to the number of its
+  player's lands making more than one mana (Shayne, 2026-11-22), with none never: 21 activations on a 20-land board
+  cost their VALIDATION at every node (move generation 0.87 → 3.91 ms), so filtering the finished list saved nothing.
+  The choice it then asks is answered by rule (`GreedyAi`: its own lands by `ManaAbilities.YieldOf`, tapped first).

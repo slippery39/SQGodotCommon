@@ -262,7 +262,7 @@ public static class Combat
 		var defender = Defender(s);
 		var candidates = BlockCandidates(s);
 		if (candidates.Count == 0)
-			return TurnStructure.GivePriority(s, s.GetGame().ActivePlayerId);
+			return TurnStructure.GivePriority(RaiseUnblocked(s), s.GetGame().ActivePlayerId);
 		return s.SpawnAction(
 			new PipelineAction
 			{
@@ -273,6 +273,26 @@ public static class Combat
 				],
 			}
 		);
+	}
+
+	/// <summary>
+	/// Blockers are declared (or nothing could block): the creatures attacking a player that weren't blocked, as ONE
+	/// AttackedUnblockedEvent — Coveted Jewel. None when every attacker is blocked or attacks a planeswalker.
+	/// </summary>
+	public static GameState RaiseUnblocked(GameState s)
+	{
+		ImmutableArray<int> unblocked =
+		[
+			.. Attackers(s)
+				// a planeswalker it attacked may have left since: that attacker attacks nothing now
+				.Where(a =>
+					!a.IsBlocked
+					&& s.HasObject(a.AttackingId)
+					&& s.GetObject(a.AttackingId) is MagicPlayer
+				)
+				.Select(a => a.Id),
+		];
+		return unblocked.IsEmpty ? s : s.Raise(new AttackedUnblockedEvent(unblocked));
 	}
 
 	public static bool AnyFirstStrike(GameState s) =>

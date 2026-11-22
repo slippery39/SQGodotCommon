@@ -2170,6 +2170,112 @@ as his three priorities.
   Pentad Prism and Lion's Eye Diamond read "activated 0" — a mana move isn't an activation it counts: their tests
   cover them), run again on the final code; full suite 2,330 passed, 1 skipped; docs current; the table project
   builds. The script's run took 27 minutes, 12 of them the 33 revert-checks. Chrome Mox's imprint (`MayDiscard { Filter }`) is asked only with a card the filter matches.
+- 2026-11-22, Shayne (taking the batch): **"can we diagnose why the AI misuses it?"** — Pentad Prism. Claude (cube
+  lane), diagnosed with the search's own tools (`BeamSearchAi.Ranked` and `Explain` in the watched position; nothing
+  of the AI changed here) — **for the AI lane:** **(1) the removal is free to the evaluator.** Every noncreature,
+  nonland permanent is worth a flat 2.0 whatever is on it (`Evaluator.Other`: "our other permanents +2.00" with two
+  counters or none), and floating mana scores nothing, so "remove a counter" ends in exactly the score of the line
+  without it: at the first decision Play Forest, Cast Graft Surgeon and all five removals read 26.86. **(2) the
+  tie-break then PREFERS it.** `Best` gives an exact tie to the higher potential — our untapped creatures and PLAIN
+  mana sources kept at the turn's end (`BeamSearchAi.Potential`) — and the floating mana pays part of Graft Surgeon in
+  the rollout, so one more land stays untapped: potential 18 for each removal against 17 for the land and the cast.
+  The Prism is no plain mana source (`ManaAbilities.ColorsOf`), so its spent counters cost no potential. **(3) the
+  second removal is rollout noise.** With {W} floating, "remove for White / Blue" read 30.36 against 26.86: in that
+  line the rollout happened to attack before casting and the simulated opponent didn't block (20 → 14, not 16 with
+  a trade) — nothing to do with the mana. The same shape as Zuran Orb's lands only in (1): a spent resource the score
+  doesn't see. Options, cheapest first: price stored mana in `Evaluator.Other` (a permanent whose mana ability's cost
+  removes a counter: each counter worth about a land's mana once) — it breaks the tie at the first decision, where
+  the chain starts; count such counters in `Potential`; or never offer a mana move the turn's plan doesn't spend (as
+  plain taps aren't offered). Lion's Eye Diamond was left alone only because discarding seven cards costs score.
+- 2026-11-22, Claude (cube lane) — **4.4l3c: colourless' 12 trigger, combat, equipment and casting options — 459 of
+  528 play (colourless 153 of 163).** Shayne took the batch by starting it. Every card is an OPTION on a tested piece,
+  as planned; no new piece. **The options:** **X targets on an activated ability** (Candelabra of Tawnos) —
+  `ActivateAbilityAction.ChoosesTargets`: one legal action per X, the lands a `ChooseXTargetsChoice { Ability }` as it is
+  activated, then `ActivateWithChosenTargetsAction` (the cast's shape; another count than X still throws; X = 0 isn't
+  offered); `GreedyAi` answers with its own tapped lands first. **The Pilot's crew power** (Reckoner Bankbuster) —
+  `CrewsAsThoughPowerGreater(2)` on the token, added where a CREW cost sums (`TapUntappedCost { Crew }`, set by
+  `LsvCards.Crew`; `TapUntappedCost.PowerFor` the one sum), never for teamwork or saddle. **The Nth noncreature spell**
+  (The Fantasticar's fourth) — `Trigger.Nth` with `NthNoncreature`; Plan for All Outcomes moved onto it and
+  `EventTest.FirstNoncreatureSpell` is gone. **A "this turn" effect until your next turn** (The One Ring) — `ThisTurn
+  { UntilYourNextTurn }`: the command-zone object marked `UntilEndOfTurn { UntilTurnOf }`, which the turn's end leaves
+  and `EndUntilYourNextTurn` unmarks — the same untap step's removal of "this turn" effects then takes it (a line that
+  removed it there too was not caught by its revert-check: unnecessary, taken out). **Attackers that weren't blocked**
+  (Coveted Jewel) — ONE `AttackedUnblockedEvent` as blockers are declared (`Combat.RaiseUnblocked`, also from a
+  declare-blockers step with nothing to block with), its subjects the creatures attacking a PLAYER. **Combat damage to
+  a creature by the equipped one** (Kaldra Compleat) — `Trigger.CombatDamageBy` on a `CreatureDealtDamage` trigger
+  (`CreatureDealtDamageEvent.SourceId`, `Combat`), GRANTED to the creature (`GrantsTriggeredAbility(Is.AttachedToSource,
+  …)`: the review, below); living weapon is Cori-Steel Cutter's `CreateTokens { Then = Attach }`.
+  **Channel** (Boseiju, Otawara) — `LsvCards.Channel`: cycling's shape with the ability's own `CostChange` (Warrior's
+  Blades'). **A printed mana cost** (Urza's Saga's "mana cost {0} or {1}") — `Is.ManaCost("{0}")`, never a mana value;
+  a Saga LAND needed nothing, and "this Saga gains" is `ModifyUntilEndOfTurn { ForGood, Gains }`. Script-only beside a
+  test: Sowing Mycospawn (two `SelfCast` triggers, the second `If = WasKicked` — unkicked it asks for no target),
+  Sword of the Meek (a trigger `From = Graveyard` on a 1/1 entering), Emrakul (`EachSacrifices { N = 6 }`; the whole
+  graveyard `MoveTo(Library) { Shuffle }`).
+  **Two things the plan had wrong, found by the tests:** **(1) `Protection(Is.Spell & !Is.Colorless)` stopped nothing
+  as a spell is CAST** — `Is.Spell` is a card on the stack, and a card being cast is still in its owner's zone as its
+  targets are chosen, so a red instant was a legal cast at Emrakul (and would have fizzled). Her protection tells the
+  cast by what the card is: `!Is.Colorless & (Is.Spell | Is.Instant | Is.Sorcery | (Is.Subtype("Aura") & !Is.Attached))`
+  (magic-statics.md; its ceiling in DesignNotes). **(2) the new combat event crashed a recorded game** — golden-out's
+  Sicarian Infiltrator replay: an attacker whose planeswalker had left before blockers were declared
+  (`s.GetObject` of an id that is gone); `RaiseUnblocked` asks `HasObject` first. The golden replays are its test.
+  **The AI's turn with each card, watched** (the recipe; a Bear and an Ogre, their Wolf and Sol Ring, a Wasteland,
+  twenty basics): **Candelabra of Tawnos** — one activation at the turn's end, X = 1 at a Plains (its own tapped lands
+  come first, by rule: a land untapped for a land tapped, nothing gained or lost), but the turn took the search
+  **75 s** against 6–30 s for the others — one activation per X, Wizard's Rockets' cost again (DesignNotes).
+  **Diagnosed (Shayne asked why, 2026-11-22; the turn run again with the search's own scores, `BeamSearchAi.Ranked`):**
+  (1) on basics the card is worth nothing ({X} taps X lands to untap X) and the search knows it — at every priority
+  Pass and all 19–22 activations score the SAME (18.931), and at the end step the tie went to an activation; nothing
+  is misvalued. (2) the cost is those 19–22 tied moves at each of its nine priority decisions, 3–6 s each against ~1.2 s
+  without the card (the turn 61 s against 30 s that run). (3) with something to gain it is found only by luck of the
+  battlefield's order: an Ancient Tomb, three Forests and a {6} creature in hand (5 mana; 6 by X = 1 paid from the
+  Tomb, its other mana floating, the Tomb untapped) — the Tomb put onto the battlefield FIRST, the AI does exactly that
+  and casts the creature (life 16); the Forests first, the rule's pick ties on power and mana value, names a Forest,
+  every activation scores below Pass and the creature stays in hand.
+  **Fixed the same day (Shayne: "its really only used with lands that produce more than 1 mana … we should start with an
+  edge case to only factor in if we have multi mana lands before deciding to use it to save on Ai steps"; colour
+  filtering — untapping a coloured source to use it twice — is the rarer use, left out):** the SEARCH is offered a
+  "pay {X}, untap X lands" activation only for X up to the number of its player's lands making more than one mana —
+  with none, never the card (`Evaluator.SearchMoves`); the rules' list is unchanged. The filter is asked BEFORE a
+  candidate is validated (`MagicRules.LegalActions(worthTrying)`): filtering after it left the turn at 52 s, because the
+  cost was never the branching but validating 21 activations at every node of the search — move generation on that
+  board 0.87 ms without the card, 3.91 ms with it, 1.08 ms for the search's list now (interleaved, so load cancels).
+  And the pick takes its own lands by the mana each makes (`ManaAbilities.YieldOf`), a tapped one before an untapped
+  one making as much. Watched again: on basics no activation, the same turn as without the card (26 s against 23 s);
+  with the Tomb, X = 1 at the Tomb and the creature cast in EITHER order of the lands. Tests: the search's list on
+  basics and with a Tomb; the pick with the Tomb put down last; 6 revert-checks.
+  **Reckoner Bankbuster** — never activated and never crewed, though one creature spell was all its mana went to: a
+  card for {2} left unused (for the AI lane — not diagnosed here; the Prism's diagnosis suggests where to look: a
+  spent counter and a drawn card's worth).
+  **The One Ring** — tapped for its card once a turn (on the battlefield: in its declare-attackers step; cast from
+  hand: cast after combat, then tapped); it can't repeat ({T}). **Coveted Jewel** — left untapped (one creature spell
+  cast, paid by lands); **The Fantasticar** — becomes a creature for its first noncreature spell and attacks as a 4/4 flier;
+  **Kaldra Compleat** — equipped onto its best creature for {7} and attacks as a 7/7; cast from hand it then moves off
+  its Germ (which dies) for another {7} the same turn — fourteen mana for +2/+2 over the Germ: wasteful, it ends.
+  **Sword of the Meek** — equipped once ({2}), then attacks. **Otawara** — channelled at their Wolf, then both
+  creatures attack into the empty board; **Boseiju** — kept (their Sol Ring a legal target), a Forest played instead.
+  **Sowing Mycospawn** — cast UNKICKED with the kicker payable, a Forest fetched: their land is not worth {1}{C} to
+  it. **Emrakul** — cast (fifteen of its lands), the extra turn taken. **Urza's Saga** (chapter II) — a Construct made
+  first thing. Every turn ends; nothing loops (each ability taps its source or costs mana).
+  **The review's six findings, each fixed** (`/pre-commit`): **(1) Kaldra exiled a creature that had DIED of the
+  damage** — `Exile(Ref.EventCard)` takes a graveyard card too and the event card is an id; now `MoveTo(…, Exile)
+  { From = [Battlefield] }`, a 2/2 blocker stays in the graveyard (its test). **(2) its exile was the Equipment's own
+  trigger**, so a creature that lost all abilities still exiled; now the creature's, granted (its test: a stripped
+  Ogre deals its 8 and exiles nothing). **(3) the AI's Candelabra pick** named only its own tapped lands and then
+  whatever came first — an opponent's tapped land among them; now its own tapped, its own others, theirs untapped,
+  theirs tapped last (its test). **(4) `Protection` had lost its `///` summary** to the Pilot's record put between them
+  (the catalog showed it "(no summary)"). **(5) "until YOUR next turn" was stamped with the player `On` names**, not
+  the effect's controller — the same player for the Ring, wrong for the first card with both; one word, no card to test
+  it with. **(6) a third copy of the "X target" expansion** — a spell's and an activation's are now one,
+  `TargetSpec.XWords`.
+  **Checks** (`batch_checks.py`, run again from golden-out on the reviewed code): golden-out first FAILED on the crash
+  above — fixed, then unmoved (162 + 1,029); golden-in: 30 of GoldenReplay's games and 572 of GoldenCardReplay's moved,
+  48 added, the AI's replay unmoved; reverts 28 of 28 caught (the first run caught 24 of 26: the Sword's test took a 2/1
+  and a 1/2 — a 2/2 was refused by the toughness bound alone — and the unnecessary line went); probe 10 then 150 games,
+  none unfinished, every card cast or activated (the two channel lands and the Saga are played, never cast: "cast 0");
+  full suite 2,351 passed, 1 skipped (two old tests updated: "X targets on an activation throw" now asks another count
+  than X; the trigger table lists the new event kind); docs current. **DEV-5:** run a second time from the start,
+  `batch_checks.py`'s golden-out fails on the files its own golden-in regenerated (30 games "played differently") —
+  `git checkout` the golden files first, or have the script restore them before golden-out.
 
 ## Tasks
 
@@ -2470,7 +2576,7 @@ as his three priorities.
     - [x] MC-4.4l3b (done 2026-11-22) Options, exile, graveyard and library, 11: Currency Converter, Ghost Vacuum, Memory Jar, Karn,
           Scion of Urza, Ugin, Eye of the Storms, Shelldock Isle, Grindstone, Palantír of Orthanc, Mishra's Bauble,
           Urza's Bauble, Shifting Woodland
-    - [ ] MC-4.4l3c Options, triggers, combat, equipment and casting, 12: Sowing Mycospawn, Emrakul, the Aeons Torn,
+    - [x] MC-4.4l3c (done 2026-11-22 — Decisions, "4.4l3c") Options, triggers, combat, equipment and casting, 12: Sowing Mycospawn, Emrakul, the Aeons Torn,
           Candelabra of Tawnos, Reckoner Bankbuster, Sword of the Meek, The Fantasticar, The One Ring, Coveted Jewel,
           Kaldra Compleat, Boseiju, Who Endures, Otawara, Soaring City, Urza's Saga
     - [ ] MC-4.4l4a New pieces, 6 cards: computed colours (Painter's Servant; Celestial Colonnade, Creeping Tar Pit,
@@ -2542,13 +2648,32 @@ a MOVE (no stack), Wizard's Rockets uses the stack (its limitation in DesignNote
 paying X once (Pest Infestation half price since k1) and a discard trigger with no "that card" — both fixed; the
 review found Starting Town paying life for every mana (a free {C} beside "pay 1 life: any color" is five one-mana
 abilities, never `OfAnyOneColor(1)`: magic-mana.md). **For the
-AI lane at the merge, beside Greaves and Zuran Orb:** the search removes Pentad Prism's counters for nothing on sight,
+AI lane at the merge, beside Greaves and Zuran Orb:** the search removes Pentad Prism's counters for nothing on sight
+(diagnosed — Decisions, after "4.4l3a + l3b": its counters and floating mana are worth nothing to the evaluator, and
+the tie-break's potential then prefers the removal),
 takes Karn's −2 over his +1, and a turn with Wizard's Rockets on a 20-land board took it 82 s (one activation per X).
-**Next: l3c** — the 12 trigger, combat, equipment and casting options (list in Tasks), each with its test and
-revert-check; WATCH the AI's turn with each card that has a free or resource-spending ability (the recipe is in
-Decisions) — the probe's random play doesn't show it. From l3a + l3b: an activated ability's `{X}` is built
-(`ActivateAbilityAction.X`) — Candelabra of Tawnos still needs its "X target lands" (`TargetSpec.PerX` on an activation
-THROWS); `AddManaOfAnyOneColor { AnyCombination }` (Coveted Jewel's "three mana of any one color" is the plain one);
+**l3c is done, all 12** (Decisions, "4.4l3c"; 459 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 50/50,
+multicolour 6/65, colourless 153/163): every card an option, no new piece; the tests found Emrakul's planned
+protection filter stopping nothing as a spell is cast, and golden-out found the new combat event crashing on an
+attacker whose planeswalker had left — both fixed. **For the AI lane at the merge, beside those above:** Reckoner
+Bankbuster is never activated (a card for {2} left unused with lands open), Candelabra of Tawnos costs the
+search 75 s a turn on a 20-land board — FIXED in this batch (the search is offered it only for lands making more than
+one mana, before validation: Decisions, "4.4l3c"; Wizard's Rockets' 82 s is the same cost, one validated activation per X at
+every node, and `LegalActions(worthTrying)` is where a bound on it would go), Kaldra Compleat is re-equipped off its
+own Germ the turn it is cast, and Sowing Mycospawn is never kicked.
+**Next: l4a + l4b, one batch** — the 9 cards on the 5 new pieces (list in Tasks; each piece's nearest and why no
+option fits is in Decisions, "4.4l", **l4**): computed colours (Painter's Servant; Celestial Colonnade, Creeping Tar
+Pit, Restless Vinestalk), an entering's cost (Mox Diamond; Multiversal Passage), skipping a turn (Time Vault),
+beginning the game on the battlefield (Gemstone Caverns), exert and mana that grants (Arena of Glory). Tier 3: full
+tests, revert-checks, the probe at 10 before 150 — and the loops the plan names must be SHOWN to end (Time Vault with
+Voltaic Key or Manifold Key, Painter's Servant with Grindstone); WATCH the AI's turn with each card (the recipe is in
+Decisions). From l3c: X targets on an activation `ActivateAbilityAction.ChoosesTargets`; `TapUntappedCost { Crew }` and
+`CrewsAsThoughPowerGreater`; `Trigger.NthNoncreature`; `ThisTurn { UntilYourNextTurn }`; `AttackedUnblockedEvent`
+(`Combat.RaiseUnblocked`); `CombatDamageBy` on a `CreatureDealtDamage` trigger; `LsvCards.Channel`; `Is.ManaCost(cost)`;
+tokens `Pilot`, `Germ`, `FlyingConstruct`; `CounterKinds.Burden`; `Is.Spell` is a card ON THE STACK — a card being cast
+isn't one yet (Emrakul's protection, magic-statics.md); l3c's tests are in `LsvBatch2l3cTests.cs` (`MyNext(step)`,
+`TheyAttack(attacker, blocker)`, `Yes`, `TakingTheFirst`). From l3a + l3b: an activated ability's `{X}` is built
+(`ActivateAbilityAction.X`); `AddManaOfAnyOneColor { AnyCombination }` (Coveted Jewel's "three mana of any one color" is the plain one);
 `AtNextEndStep { At = step, Those = ref }`; `LookAt(cards)` (`LookAtHand` is gone); `LookAndTake { ChosenBy, Rest =
 TheRest.Exile, RestCounter, Linked, FaceDown }`; `ExiledBy.ByTheSource`, `ExiledFaceDown.On`; `Mill { RepeatWhile }`, its `IfMilled` reading `Ref.ThisWay`; `Count.TurnsYouHaveBegun`,
 `Count.TotalManaValueOf`; `CreateConstruct` (Urza's Saga's token), the `Rogue` token, `Bauble(look)`; a no-{T} mana
@@ -2980,3 +3105,13 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   limitation noted; {X}{X} was paying X once (Pest Infestation) and a discard trigger had no "that card" — fixed.
   For the AI lane: Pentad Prism's counters burned on sight, Karn's −2 over +1. Next: l3c, the 12 trigger, combat,
   equipment and casting options.
+- 2026-11-22: MC-4.4l3c done — colourless' 12 trigger, combat, equipment and casting options; 459 of 528 play
+  (colourless 153 of 163). Every card an option (X targets on an activation, the Pilot's crew power, the Nth
+  noncreature spell, a player's protection until their next turn, attackers that weren't blocked, the equipped
+  creature's combat damage to a creature, channel, a printed mana cost). The tests found Emrakul's planned protection
+  stopping no spell as it is cast; golden-out found the new combat event crashing a recorded game — both fixed. For the
+  AI lane: Reckoner Bankbuster never activated, Candelabra 75 s a turn, Kaldra re-equipped off its Germ, Sowing
+  Mycospawn never kicked. Next: l4a + l4b, the 9 cards on the 5 new pieces.
+- 2026-11-22: Shayne asked why Candelabra played badly for the AI: diagnosed (tied with Pass on basics; 21 activations
+  validated at every search node; the pick took the first land) and fixed on his rule — the search considers it only
+  with lands making more than one mana (`Evaluator.SearchMoves`, asked before validation), the pick by yield.

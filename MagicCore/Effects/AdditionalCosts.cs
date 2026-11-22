@@ -107,7 +107,18 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 	/// </summary>
 	public int TotalPower { get; init; }
 
-	static int PowerOf(GameState s, int id) => Math.Max(0, s.Power(s.GetCard(id)));
+	/// <summary>
+	/// Crew (LsvCards.Crew): the total is CREW's, so Reckoner Bankbuster's Pilot counts 2 more
+	/// (CrewsAsThoughPowerGreater) — teamwork and saddle sum the same creatures without it.
+	/// </summary>
+	public bool Crew { get; init; }
+
+	/// <summary>What a creature adds to a total-power cost: its power, never less than 0 — and for crew, the Pilot's 2 more.</summary>
+	public static int PowerFor(GameState s, int id, bool crew) =>
+		Math.Max(0, s.Power(s.GetCard(id)))
+		+ (crew ? s.AbilitiesOf<CrewsAsThoughPowerGreater>(s.GetCard(id)).Sum(c => c.By) : 0);
+
+	int PowerOf(GameState s, int id) => PowerFor(s, id, Crew);
 
 	/// <summary>
 	/// Teamwork's creatures kept out of the mana payment, which comes first: the most powerful until the total —
@@ -172,7 +183,8 @@ public sealed record TapUntappedCost(int Count, Filter Filter) : AdditionalCost
 					playerId,
 					sourceId,
 					NotTheSource ? Filter & !Is.Source : Filter,
-					TotalPower
+					TotalPower,
+					Crew
 				)
 			)
 		: chosen == 0 ? s

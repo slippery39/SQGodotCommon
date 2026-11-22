@@ -190,7 +190,17 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 			// Dominion Infiltration copies them: the biggest. ponytail: power, then mana value, stands in for worth.
 			return choice
 				.Options.Select(o => s.GetCard(o.Id))
-				.OrderByDescending(s.Power)
+				// Candelabra of Tawnos untaps them: our own lands first, the one making the most mana before the
+				// others (an Ancient Tomb pays the {X} and floats the rest: the search is offered X only up to such
+				// lands, Evaluator.SearchMoves), a tapped one before an untapped one making as much; then their
+				// untapped ones, and a land of theirs that is tapped last — never free mana for them while another
+				// land is left (no creature the copies name is a land: all 0).
+				.OrderByDescending(c =>
+					!c.Is(CardType.Land) ? 0
+					: c.ControllerId != PlayerId ? (c.IsTapped ? -1 : 0)
+					: 1 + 2 * ManaAbilities.YieldOf(s, c).Units.Length + (c.IsTapped ? 1 : 0)
+				)
+				.ThenByDescending(s.Power)
 				.ThenByDescending(c => c.ManaCost.ManaValue)
 				.Take(choice.MinChoices)
 				.Select(c => c.Id);

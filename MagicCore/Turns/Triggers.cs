@@ -123,6 +123,11 @@ public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId, in
 /// <summary>A creature was dealt damage — Hexhaven Invigorator's "that many" is Amount.</summary>
 public record CreatureDealtDamageEvent(int CardId, int Amount) : MagicEvent
 {
+	/// <summary>Kaldra Compleat: "whenever this creature deals combat damage to a creature" — what dealt it, and whether in combat (Trigger.CombatDamageBy).</summary>
+	public int SourceId { get; init; }
+
+	public bool Combat { get; init; }
+
 	public override EventKind Kind() => EventKind.CreatureDealtDamage;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
@@ -135,6 +140,19 @@ public record StepBeganEvent(Step Step) : MagicEvent
 	public override EventKind Kind() => EventKind.StepBegan;
 
 	public override int By(GameState s) => s.GetGame().ActivePlayerId;
+}
+
+/// <summary>
+/// Coveted Jewel: "Whenever one or more creatures an opponent controls attack you and aren't blocked" — ONE event as
+/// blockers are declared (Combat.RaiseUnblocked), its subjects every creature attacking a PLAYER that no creature
+/// blocks; none when there is no such attacker. A creature attacking a planeswalker isn't attacking "you".
+/// </summary>
+public record AttackedUnblockedEvent(ImmutableArray<int> CardIds) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.AttackedUnblocked;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		CardIds.Where(s.IsOnBattlefield).Select(id => (GameObject)s.GetCard(id));
 }
 
 /// <summary>A creature was declared as a blocker.</summary>
@@ -844,7 +862,9 @@ public static class Triggers
 			&& on.Nth
 				!= e switch
 				{
-					SpellCastEvent cast => cast.SpellNumber,
+					SpellCastEvent cast => on.NthNoncreature
+						? cast.NoncreatureSpellNumber
+						: cast.SpellNumber,
 					DrewCardEvent drew => drew.Number,
 					AttackedEvent attacked => attacked.Number,
 					_ => 0,
@@ -856,9 +876,19 @@ public static class Triggers
 		if (
 			on.CombatDamageBy is { } by
 			&& (
-				e is not PlayerDealtDamageEvent { Combat: true } damage
-				|| !s.HasObject(damage.SourceId)
-				|| !by.Matches(s, s.GetObject(damage.SourceId), asking)
+				e switch
+				{
+					PlayerDealtDamageEvent { Combat: true } damage => damage.SourceId,
+					// Kaldra Compleat: "whenever this creature deals combat damage to a creature"
+					CreatureDealtDamageEvent { Combat: true } damage => damage.SourceId,
+					_ => 0,
+				}
+					is var dealer
+				&& (
+					dealer == 0
+					|| !s.HasObject(dealer)
+					|| !by.Matches(s, s.GetObject(dealer), asking)
+				)
 			)
 		)
 			return false;
@@ -883,8 +913,7 @@ public static class Triggers
 				),
 			EventTest.TargetsAnOpponentOrTheirCreature => e is SpellCastEvent cast
 				&& Targets(cast, Is.Opponents & (Is.Player | Is.Creature)),
-			// Counted as it is cast, so a second spell cast in response can't take the first's place.
-			EventTest.FirstNoncreatureSpell => e is SpellCastEvent { NoncreatureSpellNumber: 1 },
+
 			EventTest.CombatDamageFromThis => e is PlayerDealtDamageEvent damaged
 				&& damaged.Combat
 				&& damaged.SourceId == source.Id,

@@ -63,6 +63,18 @@ public record TargetSpec(From From, Filter? Filter = null)
 	public Effects.Count? PerX { get; init; }
 
 	/// <summary>
+	/// This PerX word as X words, each a different object (NotThePrevious) — a spell's X (Dominion Infiltration) or an
+	/// activation's (Candelabra of Tawnos: "Untap X target lands"), where nothing but X can be counted: another count
+	/// THROWS, never silently X. A trigger counts its own as it triggers (Triggers.QueueTargets).
+	/// </summary>
+	public IEnumerable<TargetSpec> XWords(int x, string of) =>
+		PerX is not { Kind: Effects.CountOf.X }
+			? throw new InvalidOperationException(
+				$"{of}: TargetSpec.PerX must be Count.X — another count needs the state here"
+			)
+			: Enumerable.Range(0, x).Select(i => this with { PerX = null, NotThePrevious = i > 0 });
+
+	/// <summary>
 	/// Pyrokinesis: "4 damage divided as you choose among any number of target creatures" — N of something divided
 	/// among one to N targets of this word, each taking at least one (CR 601.2d); Pure Energy's "distribute two +1/+1
 	/// counters among one or two target creatures" is 2. StackResolution.TextOf makes it N words, all but the first

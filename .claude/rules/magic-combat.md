@@ -31,6 +31,11 @@ whose subsystem it lives in.
   `DeclareAttackerChoice` doesn't offer, read from the declarations already made in that pipeline.
 - **"Whenever you attack"** and **"one or more … are dealt combat damage"** are ONE event each per
   declaration or damage step (`AttackersDeclaredEvent`, `CombatDamageToPlayersEvent`) — never one per creature.
+- **"Whenever one or more creatures an opponent controls attack you and aren't blocked"** (Coveted Jewel, MC-4.4l3c)
+  is ONE `AttackedUnblockedEvent` as blockers are declared — `Combat.RaiseUnblocked`, from `FinishBlockersAction` and
+  from the declare-blockers step that has nothing to block with: its subjects every creature attacking a PLAYER that
+  no creature blocks (an attack on a planeswalker isn't "you"), none raised when there is no such attacker. The
+  trigger's `Subject` is `Is.Creature & Is.Opponents`; "that player" is the opponent (two players).
 - **"Can't block"** is `Combat.CantBlock`, a keyword-like grant read by `Combat.CanBlock` — a static
   (Cleveland Booker's Worm) or until end of turn (La'An).
 - **"Can't be blocked by [creatures with …]"** is `CantBeBlockedBy(filter)` on the attacker, the filter asked

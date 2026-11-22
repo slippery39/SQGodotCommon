@@ -4933,7 +4933,338 @@ public static class LsvCards
 					OnlyIf = Delirium,
 				},
 			],
+			// ===== MC-4.4l3c: colourless' trigger, combat, equipment and casting options (X targets on an activation, the Pilot's crew power, the Nth noncreature spell, a player's protection until their next turn, attackers that weren't blocked, combat damage to a creature by the equipped one, channel, a Saga land, a printed mana cost) =====
+			["Sowing Mycospawn"] =
+			[
+				new KickerComponent(ManaCost.Parse("{1}{C}")),
+				When(
+					TriggerEvent.SelfCast,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+				),
+				When(TriggerEvent.SelfCast, [Target(Is.Land)], new Exile(Ref.Target())) with
+				{
+					If = new WasKicked(),
+				},
+			],
+			["Emrakul, the Aeons Torn"] =
+			[
+				new CantBeCountered(),
+				When(TriggerEvent.SelfCast, [], new TakeExtraTurn()),
+				// "Protection from spells that are one or more colors": a spell on the stack (its damage, its
+				// targets as it resolves) or a card being CAST — still in its owner's zone as its targets are chosen,
+				// so told by what it is: an instant, a sorcery, an Aura not yet attached. A coloured permanent's
+				// ability is no spell. ponytail: a coloured card's own ability from a hand or graveyard isn't told
+				// from its cast, and a bestowed creature is no Aura in the hand (DesignNotes).
+				new Protection(
+					!Is.Colorless
+						& (Is.Spell | Is.Instant | Is.Sorcery | (Is.Subtype("Aura") & !Is.Attached))
+				),
+				// Annihilator 6 (CR 702.86): the defending player is the opponent (two players).
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new EachSacrifices(Ref.EachOpponent, Is.AnyCard) { N = 6 }
+				),
+				When(
+					new Trigger(EventKind.ChangedZone)
+					{
+						Subject = Is.Source,
+						To = ZoneType.Graveyard,
+					},
+					[],
+					new MoveTo(Ref.All(ZoneType.Graveyard, Is.AnyCard, Ref.You), ZoneType.Library)
+					{
+						From = [ZoneType.Graveyard],
+						Shuffle = true,
+					}
+				) with
+				{
+					From = ZoneType.Graveyard,
+				},
+			],
+			["Candelabra of Tawnos"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{X}"), [new Untap(Ref.EachTarget)])
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Target(Is.Land) with { PerX = Count.X }],
+				},
+			],
+			["Reckoner Bankbuster"] =
+			[
+				new EntersWithCountersComponent(3) { Kind = CounterKinds.Charge },
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[
+						new DrawCards(Ref.You, 1),
+						new If(
+							new Not(
+								new AtLeast(
+									Count.CountersOfKind(Ref.Source, CounterKinds.Charge),
+									1
+								)
+							),
+							[
+								CreateTreasure(1),
+								new CreateTokens(Pilot, 1)
+								{
+									Abilities = [new CrewsAsThoughPowerGreater(2)],
+								},
+							]
+						),
+					]
+				)
+				{
+					Costs =
+					[
+						new TapSelfCost(),
+						new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Charge },
+					],
+				},
+				Crew(3),
+			],
+			["Sword of the Meek"] =
+			[
+				AttachedGets(1, 2),
+				Equip("{2}"),
+				When(
+					new Trigger(EventKind.Entered)
+					{
+						// "a 1/1 creature you control"
+						Subject =
+							Is.Creature
+							& Is.Yours
+							& Is.PowerAtLeast(1)
+							& Is.PowerAtMost(1)
+							& Is.ToughnessAtLeast(1)
+							& Is.ToughnessAtMost(1),
+					},
+					[],
+					new May(
+						"Return Sword of the Meek to the battlefield attached to that creature?",
+						new Always(),
+						[
+							new MoveTo(Ref.Source, ZoneType.Battlefield)
+							{
+								From = [ZoneType.Graveyard],
+								Then = [new Attach(Ref.ThisWay, Ref.EventCard)],
+							},
+						]
+					)
+				) with
+				{
+					From = ZoneType.Graveyard,
+				},
+			],
+			["The Fantasticar"] =
+			[
+				// A Vehicle with no crew: its own trigger makes it a creature.
+				When(
+					TriggerEvent.YouCastNoncreatureSpell,
+					[],
+					new May(
+						"Have The Fantasticar become an artifact creature until end of turn?",
+						new Always(),
+						[
+							new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+							{
+								AlsoType = CardType.Creature,
+							},
+						]
+					)
+				),
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Nth = 4,
+						NthNoncreature = true,
+					},
+					[],
+					new MaySacrifice(Is.Source, [new CreateTokens(FlyingConstruct, 4)])
+				),
+			],
+			["The One Ring"] =
+			[
+				// ponytail: "protection from everything" is hexproof and no damage — your OWN spells and abilities
+				// may still target you (DesignNotes).
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ThisTurn(new YouHaveHexproof()) { UntilYourNextTurn = true },
+					new ThisTurn(new PreventAllDamageToYou()) { UntilYourNextTurn = true }
+				) with
+				{
+					If = new SourceWasCast(),
+				},
+				When(
+					TriggerEvent.YourUpkeep,
+					[],
+					new LoseLife(Ref.You, Count.CountersOfKind(Ref.Source, CounterKinds.Burden))
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Burden },
+						new DrawCards(
+							Ref.You,
+							Count.CountersOfKind(Ref.Source, CounterKinds.Burden)
+						),
+					]
+				)
+				{
+					Costs = [new TapSelfCost()],
+				},
+			],
+			["Coveted Jewel"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 3)),
+				ManaAbilityComponent.OfAnyOneColor(3),
+				// "that player": the attacker — your opponent (two players)
+				When(
+					new Trigger(EventKind.AttackedUnblocked)
+					{
+						Subject = Is.Creature & Is.Opponents,
+					},
+					[],
+					new DrawCards(Ref.EachOpponent, 3),
+					new GainControl(Ref.Source, Ref.EachOpponent),
+					new Untap(Ref.Source)
+				),
+			],
+			["Kaldra Compleat"] =
+			[
+				// Living weapon (CR 702.92): "When this Equipment enters, create a 0/0 black Phyrexian Germ creature
+				// token, then attach this to it."
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new CreateTokens(Germ, 1) { Then = [new Attach(Ref.Source, Ref.ThisWay)] }
+				),
+				AttachedGets(5, 5),
+				new StaticEffectComponent(Is.AttachedToSource, "First strike"),
+				new StaticEffectComponent(Is.AttachedToSource, "Trample"),
+				new StaticEffectComponent(Is.AttachedToSource, "Indestructible"),
+				new StaticEffectComponent(Is.AttachedToSource, "Haste"),
+				// "… and has 'Whenever this creature deals combat damage to a creature, exile that creature.'" — the
+				// creature's own ability (gone with its others). One that died of the damage is a new object: it stays.
+				new GrantsTriggeredAbility(
+					Is.AttachedToSource,
+					When(
+						new Trigger(EventKind.CreatureDealtDamage) { CombatDamageBy = Is.Source },
+						[],
+						new MoveTo(Ref.EventCard, ZoneType.Exile) { From = [ZoneType.Battlefield] }
+					)
+				),
+				Equip("{7}"),
+			],
+			["Boseiju, Who Endures"] =
+			[
+				new ManaAbilityComponent(ManaColor.Green),
+				// the search scripted BEFORE the destroy, as Path to Exile's: "that player" is still its controller
+				Channel(
+					"{1}{G}",
+					[
+						Target(
+							(
+								Is.Artifact
+								| Is.Enchantment
+								| (Is.Land & !Is.Supertype(Supertype.Basic))
+							) & Is.Opponents
+						),
+					],
+					new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+					{
+						Filter =
+							Is.Subtype("Plains")
+							| Is.Subtype("Island")
+							| Is.Subtype("Swamp")
+							| Is.Subtype("Mountain")
+							| Is.Subtype("Forest"),
+						FilterText = "with a basic land type",
+						Who = Ref.ControllerOfTarget(0),
+						May = true,
+					},
+					new Destroy(Ref.Target())
+				),
+			],
+			["Otawara, Soaring City"] =
+			[
+				new ManaAbilityComponent(ManaColor.Blue),
+				Channel(
+					"{3}{U}",
+					[Target(Is.Artifact | Is.Creature | Is.Enchantment | Is.Planeswalker)],
+					new MoveTo(Ref.Target(), ZoneType.Hand)
+				),
+			],
+			["Urza's Saga"] =
+			[
+				new SagaComponent(3),
+				Chapter(
+					1,
+					[],
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+					{
+						ForGood = true,
+						Gains = [ColorlessMana()],
+					}
+				),
+				Chapter(
+					2,
+					[],
+					new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+					{
+						ForGood = true,
+						Gains =
+						[
+							new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [CreateConstruct])
+							{
+								Costs = [new TapSelfCost()],
+							},
+						],
+					}
+				),
+				Chapter(
+					3,
+					[],
+					new SearchLibrary(CardType.Artifact, ZoneType.Battlefield)
+					{
+						Filter = Is.ManaCost("{0}") | Is.ManaCost("{1}"),
+						FilterText = "with mana cost {0} or {1}",
+					}
+				),
+			],
 		};
+
+	/// <summary>
+	/// Channel (Boseiju, Who Endures: "Channel — {1}{G}, Discard this card: Destroy target …. This ability costs {1}
+	/// less to activate for each legendary creature you control."; Otawara, Soaring City) — cycling's shape, an ability
+	/// of the card in your hand with DiscardSelfCost, and the ability's OWN cost change (Warrior's Blades' equip).
+	/// </summary>
+	static ActivatedAbilityComponent Channel(
+		string cost,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) =>
+		new(ManaCost.Parse(cost), [.. effects])
+		{
+			From = ZoneType.Hand,
+			Costs = [new DiscardSelfCost()],
+			Targets = [.. targets],
+			CostChange = new(
+				Count.NumberOf(Ref.Permanents(Is.Legendary & Is.Creature & Is.Yours)).Negated
+			),
+		};
+
+	/// <summary>Reckoner Bankbuster: "a 1/1 colorless Pilot creature token" (its crew ability: CrewsAsThoughPowerGreater).</summary>
+	static CardData Pilot => Token("Pilot", "Creature — Pilot", "1", "1");
+
+	/// <summary>Kaldra Compleat's living weapon: "a 0/0 black Phyrexian Germ creature token".</summary>
+	static CardData Germ => Token("Phyrexian Germ", "Creature — Phyrexian Germ", "0", "0", ["B"]);
+
+	/// <summary>The Fantasticar: "four 4/4 colorless Construct artifact creature tokens with flying and haste".</summary>
+	static CardData FlyingConstruct =>
+		Token("Construct", "Artifact Creature — Construct", "4", "4", null, ["Flying", "Haste"]);
 
 	/// <summary>
 	/// The Baubles (Mishra's Bauble, Urza's Bauble): "{T}, Sacrifice this artifact: Look at [a card of target player's].
@@ -5078,7 +5409,14 @@ public static class LsvCards
 		)
 		{
 			Keyword = "Crew",
-			Costs = [new TapUntappedCost(0, Is.Creature & !Is.Source) { TotalPower = power }],
+			Costs =
+			[
+				new TapUntappedCost(0, Is.Creature & !Is.Source)
+				{
+					TotalPower = power,
+					Crew = true,
+				},
+			],
 		};
 
 	/// <summary>

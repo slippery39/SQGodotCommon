@@ -255,6 +255,20 @@ public sealed record Colorless : Filter
 		o is Card { Colors.Length: 0 };
 }
 
+/// <summary>
+/// Urza's Saga: "an artifact card with mana cost {0} or {1}" — the printed cost itself, never the mana value:
+/// Walking Ballista's {X}{X} and a card with no mana cost have mana value 0 and neither cost; {W} is no {1}.
+/// </summary>
+public sealed record ManaCostIs(string Cost) : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card && card.ManaCost.ToString() == Cost;
+}
+
 /// <summary>Konstrari Charm: "creature with flying" — through s.Has, so a granted keyword counts.</summary>
 public sealed record HasKeyword(string Keyword) : Filter
 {

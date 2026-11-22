@@ -271,6 +271,7 @@ public record FinishBlockersAction : GameAction
 			s = s.UpdateObject(attacker, s.GetCard(attacker) with { IsBlocked = true })
 				.Raise(new BlocksEvent(blocker));
 		}
+		s = Turns.Combat.RaiseUnblocked(s);
 		return new ActionResult(TurnStructure.GivePriority(s, s.GetGame().ActivePlayerId));
 	}
 }

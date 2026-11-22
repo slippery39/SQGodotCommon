@@ -926,21 +926,37 @@ public record ActivateAbilityAction : GameAction
 	/// </summary>
 	public int X { get; init; }
 
+	/// <summary>
+	/// Candelabra of Tawnos: "{X}, {T}: Untap X target lands." — the X targets (TargetSpec.PerX) aren't in this
+	/// action: activating it asks ChooseXTargetsChoice (exactly X), then activates with them — one legal action per
+	/// X, as a spell's (CastSpellAction.ChoosesTargets), never one per set of lands (2^n).
+	/// </summary>
+	public bool ChoosesTargets { get; init; }
+
 	/// <summary>The mana this activation pays — its cost changes, less the symbols paid with life.</summary>
 	ManaCost Mana(GameState s, ActivatedAbilityComponent ability) =>
 		Costs.OfAbility(s, ability, Targets, PlayerId, CardId).PayingLifeFor(LifeForPhyrexian);
 
 	/// <summary>An ability's target words and steps for these modes (the whole text when not modal).</summary>
+	/// <param name="x">The X activated with — Candelabra of Tawnos' "X target lands" (TargetSpec.PerX) is X words.</param>
 	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
 		ActivatedAbilityComponent ability,
-		ImmutableArray<int> modes
-	) =>
-		ability.Targets.Any(t => t.PerX is not null)
-			// never one silent target: Candelabra of Tawnos' "{X}, {T}: Untap X target lands" needs its own choice
-			? throw new InvalidOperationException(
-				"An activated ability's X targets (TargetSpec.PerX) aren't built — a ChooseXTargetsChoice for activations"
+		ImmutableArray<int> modes,
+		int x = 0
+	)
+	{
+		var (specs, steps) = Modal.Compose(ability.Targets, ability.Effects, ability.Modes, modes);
+		return specs.Any(t => t.PerX is not null)
+			? (
+				[
+					.. specs.SelectMany(t =>
+						t.PerX is null ? [t] : t.XWords(x, "An activated ability")
+					),
+				],
+				steps
 			)
-			: Modal.Compose(ability.Targets, ability.Effects, ability.Modes, modes);
+			: (specs, steps);
+	}
 
 	int Chosen(CostSlot slot) =>
 		slot switch
@@ -1027,7 +1043,18 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (!ability.Choose.IsLegal(s, s.GetCard(CardId), ability.Modes, Modes))
 			return ValidationResult.Invalid("Not a legal choice of modes");
-		if (!TargetSpec.AreLegal(s, TextOf(ability, Modes).Specs, Targets, PlayerId, CardId))
+		var specs = TextOf(ability, Modes, X).Specs;
+		if (
+			ChoosesTargets != ability.Targets.Any(t => t.PerX is not null)
+			|| (
+				ChoosesTargets
+					? !(
+						Targets.IsEmpty
+						&& ChooseXTargetsChoice.CanChoose(s, PlayerId, CardId, specs)
+					)
+					: !TargetSpec.AreLegal(s, specs, Targets, PlayerId, CardId)
+			)
+		)
 			return ValidationResult.Invalid("Illegal targets");
 		if (
 			LifeForPhyrexian < 0
@@ -1055,6 +1082,27 @@ public record ActivateAbilityAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var ability = Ability(s)!;
+		if (ChoosesTargets) // Candelabra of Tawnos: the X lands chosen, then this activation with them
+			return new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						Steps =
+						[
+							new ChooseXTargetsChoice(PlayerId, CardId, X, Modes, false, X, X)
+							{
+								Ability = AbilityIndex,
+							},
+							new ActivateWithChosenTargetsAction(
+								this with
+								{
+									ChoosesTargets = false,
+								}
+							),
+						],
+					}
+				)
+			);
 		var mana = ManaPayment.Find(
 			s,
 			PlayerId,
@@ -1090,7 +1138,7 @@ public record ActivateAbilityAction : GameAction
 		foreach (var cost in ability.Costs.Where(c => !c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = s.Raise(new Turns.AbilityActivatedEvent(PlayerId, source, ability.Keyword));
-		var (specs, steps) = TextOf(ability, Modes);
+		var (specs, steps) = TextOf(ability, Modes, X);
 		if (!Modes.IsEmpty)
 			s = Turns.FacedDilemmaEvent.Face(s, PlayerId);
 		s = StackResolution.Push(
@@ -1145,15 +1193,10 @@ public static class StackResolution
 		ImmutableList<TargetSpec> words =
 		[
 			.. specs.SelectMany(t =>
-				t.PerX is { } n
-					? n.Kind != CountOf.X
-						// never silently X: a spell's "X targets" counts its X (Pest Infestation, Dominion Infiltration)
-						? throw new InvalidOperationException(
-							$"{card.Name}: a spell's TargetSpec.PerX must be Count.X — another count needs the state here"
-						)
-						: Enumerable
-							.Range(0, x)
-							.Select(i => t with { PerX = null, NotThePrevious = i > 0 })
+				// a spell's "X targets" counts its X (Pest Infestation, Dominion Infiltration)
+				t.PerX
+					is not null
+					? t.XWords(x, card.Name)
 					: Division.Words(t)
 			),
 		];
@@ -1508,6 +1551,12 @@ public record ChooseXTargetsChoice : ChoiceAction
 	public ImmutableArray<int> Modes { get; init; }
 	public bool Kicked { get; init; }
 
+	/// <summary>
+	/// Candelabra of Tawnos: "{X}, {T}: Untap X target lands." — the targets of an ACTIVATED ability, this one of the
+	/// card's (ActivateAbilityAction.AbilityIndex); -1: a spell's.
+	/// </summary>
+	public int Ability { get; init; } = -1;
+
 	public ChooseXTargetsChoice(
 		int playerId,
 		int cardId,
@@ -1563,8 +1612,15 @@ public record ChooseXTargetsChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		[
-			.. StackResolution
-				.TextOf(s.GetCard(CardId), Modes, Kicked, X)
+			.. (
+				Ability >= 0
+					? ActivateAbilityAction.TextOf(
+						s.ActivatedAbilitiesOf(s.GetCard(CardId)).ElementAt(Ability),
+						Modes,
+						X
+					)
+					: StackResolution.TextOf(s.GetCard(CardId), Modes, Kicked, X)
+			)
 				.Specs[0]
 				.Candidates(s, PlayerId, CardId)
 				.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name }),
@@ -1582,6 +1638,16 @@ public record ChooseXTargetsChoice : ChoiceAction
 			ImmutableList<int> ids => [.. ids.Order()],
 			_ => [],
 		};
+}
+
+/// <summary>
+/// After ChooseXTargetsChoice: Candelabra of Tawnos' activation ("{X}, {T}: Untap X target lands.") with the X lands
+/// chosen — CastWithChosenTargetsAction's twin for an activated ability.
+/// </summary>
+public record ActivateWithChosenTargetsAction(ActivateAbilityAction Activation) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		(Activation with { Targets = ChooseXTargetsChoice.Read(InputContext) }).Execute(s);
 }
 
 /// <summary>

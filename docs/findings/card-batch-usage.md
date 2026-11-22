@@ -111,3 +111,4 @@ after the split is DEV-4.3.
 | 2026-11-21 | MC-4.4k3: green's four new pieces (crew, earthbend, bestow, day/night), 4 cards | ae115d7d | 82 | 308k | 5.4M |
 | 2026-11-21 | MC-4.4l plan + l1 + l2: colourless surveyed and planned (105), then its tested pieces - 40 lands, 22 others; Chromatic Star's mana ability fixed (CashedIn), Lightning Greaves out (the AI loops), 62 cards | 610fb846 | 142 | 387k | 9.5M |
 | 2026-11-22 | MC-4.4l3a + l3b: colourless' options (mana; exile, graveyard and library), 21 cards | 743aac59 | 119 | 419k | 8.4M |
+| 2026-11-22 | MC-4.4l3c: colourless' trigger, combat, equipment and casting options, 12 cards | 9e827eca | 144 | 302k | 8.0M |

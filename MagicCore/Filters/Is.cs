@@ -114,6 +114,9 @@ public static class Is
 	/// <summary>Eye of Ugin: "colorless" — a card with no colour at all.</summary>
 	public static readonly Filter Colorless = new Colorless();
 
+	/// <summary>Urza's Saga: "with mana cost {0} or {1}" is Is.ManaCost("{0}") | Is.ManaCost("{1}") — the printed cost.</summary>
+	public static Filter ManaCost(string cost) => new ManaCostIs(cost);
+
 	/// <summary>"With flying" — granted keywords count.</summary>
 	public static Filter With(string keyword) => new HasKeyword(keyword);
 

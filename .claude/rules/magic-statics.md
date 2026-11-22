@@ -205,12 +205,17 @@ whose subsystem it lives in.
   SOURCE's X there (Thieving Skydiver's "target artifact with mana value X or less", MC-4.4e2c): its stack X, else
   the X it was cast for (`CastX`, CR 107.3m). "Cast from your hand without paying" is `MayCastFromHandFree(filter)`. "Total power and toughness 5 or less"
   (Cut Down) is the same filter over `Stat.PowerPlusToughness` (`Is.TotalPowerAndToughnessAtMost`).
+  **"With mana cost {0} or {1}"** (Urza's Saga, MC-4.4l3c) is NOT a mana value: `Is.ManaCost("{0}") | Is.ManaCost("{1}")`,
+  the printed cost itself (`ManaCostIs`) — Walking Ballista's {X}{X} and a card with no mana cost have mana value 0 and
+  neither cost, and {W} is no {1}.
 - **A player's hexproof and prevented damage** (The Needs of the Many) are `ThisTurnEffect`s on that player:
   `YouHaveHexproof` asked in `TargetSpec.IsLegal` (an opponent's spell or ability only), `PreventAllDamageToYou` in
   `Damage.Deal` before anything is dealt — so no lifelink, no "dealt damage" trigger. **"Combat damage that would be
   dealt by creatures you control can't be prevented"** (Questing Beast, MC-4.4k2b) is `CombatDamageCantBePrevented(filter)`
   on its holder, the filter asked of the damage's source from its side — read by `Damage.Prevented(…, combat)` alone,
   the one place prevention is decided (protection's too), so the damage is dealt and combat counts the player as dealt it.
+  **"You gain protection from everything until your next turn"** (The One Ring, MC-4.4l3c) is those two effects, each
+  `ThisTurn(…) { UntilYourNextTurn }` (magic-triggers.md) — your own spells may still target you (DesignNotes).
 - **Protection** (CR 702.16, MC-4.4g1) is `Protection(From)`: a filter asked of the SOURCE (a spell, an ability's
   source, a creature dealing damage or blocking, an Aura or Equipment) from the holder's side — True-Name Nemesis'
   "from the chosen player" is `Is.ControlledByChosenPlayer`. ONE question, `Protection.Stops(s, holder, source)`, asked
@@ -224,7 +229,11 @@ whose subsystem it lives in.
   scripted, no piece: a sorcery-speed `PutCounters(Ref.Source, 1) { Kind = CounterKinds.Level }`, and each level's box
   an `If` on the level counters (`LsvCards.HasLevel(n)`) — a static's for its P/T (+N/+N on the printed one: a ceiling,
   DesignNotes), and `Protection { If }` for "protection from instants" / "from everything" (`Is.AnyCard`), judged in
-  `Protection.Stops` as its holder's.
+  `Protection.Stops` as its holder's. **"Protection from spells that are one or more colors"** (Emrakul, the Aeons Torn,
+  MC-4.4l3c) is `!Is.Colorless & (Is.Spell | Is.Instant | Is.Sorcery | (Is.Subtype("Aura") & !Is.Attached))`:
+  `Is.Spell` is a card ON THE STACK (its damage, its targets as it resolves), but a card being cast is still in its
+  owner's zone as its targets are chosen — so the cast is told by what the card is. A coloured permanent's ability is
+  no spell (a ceiling for a hand or graveyard ability, DesignNotes).
 - **An ability a card GAINS** (Nog, Ambitious Cadet: "gains 'You may play lands from your graveyard'"; Q's exiled
   card) is `UntilEndOfTurn.Gains` — a static or activated ability read by `s.AbilitiesOf<T>` beside the card's own,
   so every rule sees it; for good (`ModifyUntilEndOfTurn.ForGood`) it lasts until the card changes zones. A gained

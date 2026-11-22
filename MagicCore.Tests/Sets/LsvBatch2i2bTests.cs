@@ -445,15 +445,22 @@ public class LsvBatch2i2bTests : FraBoardTest
 	}
 
 	[Test]
-	public void XTargets_OnAnActivatedAbility_RefusedLoudly_NeverOneSilentTarget()
+	public void XTargets_OnAnActivatedAbility_AnotherCountThanX_RefusedLoudly()
 	{
+		// Its X is built (Candelabra of Tawnos, MC-4.4l3c: LsvBatch2l3cTests); another count still throws, as a spell's.
 		var candle = TestGames.Inline("Candle", "{1}", "Artifact") with
 		{
 			Components =
 			[
 				new ActivatedAbilityComponent(ManaCost.Parse("{X}"), [new Untap(Ref.EachTarget)])
 				{
-					Targets = [Scripting.Target(MagicCore.Filters.Is.Land) with { PerX = Count.X }],
+					Targets =
+					[
+						Scripting.Target(MagicCore.Filters.Is.Land) with
+						{
+							PerX = (Count)2,
+						},
+					],
 				},
 			],
 		};

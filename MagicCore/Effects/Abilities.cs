@@ -127,6 +127,9 @@ public static class CounterKinds
 	/// <summary>Karn, Scion of Urza: "exile the other with a silver counter on it" — on a card in exile.</summary>
 	public const string Silver = "silver";
 
+	/// <summary>The One Ring: "Put a burden counter on The One Ring, then draw a card for each burden counter on The One Ring."</summary>
+	public const string Burden = "burden";
+
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
 	public const string PlusOne = "+1/+1";
@@ -171,6 +174,7 @@ public enum EventKind
 	SpellCopied, // Sedgemoor Witch: magecraft's "or copy" — a copy of a spell put on the stack (CopySpell); a copy is never cast
 	Transformed, // Revealing Eye: "When this creature transforms into Revealing Eye" — the Transform effect
 	DealtDamage, // Cecil, Dark Knight: "Whenever Cecil deals damage" — Rules.Damage.Deal, to anything (the source is the subject)
+	AttackedUnblocked, // Coveted Jewel: "whenever one or more creatures an opponent controls attack you and aren't blocked" — as blockers are declared (Combat.RaiseUnblocked)
 }
 
 /// <summary>
@@ -193,7 +197,7 @@ public enum EventTest
 	Alone, // Jiang Yanggu, Yuriko: the only creature its controller has attacking
 	EquipmentOrTargetsYourCreature, // Danitha, Sword of Hope: an Equipment spell, or a spell targeting your creature
 	TargetsAnOpponentOrTheirCreature, // Danitha, Spear of Agony
-	FirstNoncreatureSpell, // Plan for All Outcomes: numbered as it is cast
+
 	CombatDamageFromThis, // "whenever this deals combat damage to a player"
 	Noncombat, // "whenever an opponent is dealt noncombat damage"
 	NotTheTurnsDraw, // Orcish Bowmasters: "except the first one they draw in each of their draw steps" (DrewCardEvent.TurnDraw)
@@ -296,6 +300,13 @@ public record Trigger(EventKind On)
 					);
 	}
 
+	/// <summary>
+	/// The Fantasticar: "Whenever you cast your fourth noncreature spell each turn"; Plan for All Outcomes: "your
+	/// first noncreature spell each turn" — Nth counts the caster's NONCREATURE spells this turn
+	/// (SpellCastEvent.NoncreatureSpellNumber, 0 for a creature spell: never the Nth), numbered as each is cast.
+	/// </summary>
+	public bool NthNoncreature { get; init; }
+
 	readonly string? ability;
 
 	/// <summary>
@@ -393,10 +404,10 @@ public record Trigger(EventKind On)
 		get => combatDamageBy;
 		init =>
 			combatDamageBy =
-				value is null || On == EventKind.PlayerDealtDamage
+				value is null || On is EventKind.PlayerDealtDamage or EventKind.CreatureDealtDamage
 					? value
 					: throw new ArgumentException(
-						$"CombatDamageBy only fits PlayerDealtDamage, not {On}"
+						$"CombatDamageBy only fits PlayerDealtDamage or CreatureDealtDamage, not {On}"
 					);
 	}
 
@@ -534,7 +545,8 @@ public static class TriggerEvent
 	/// <summary>Plan for All Outcomes.</summary>
 	public static readonly Trigger YouCastFirstNoncreatureSpellEachTurn = YouCastSpell with
 	{
-		Also = EventTest.FirstNoncreatureSpell,
+		Nth = 1,
+		NthNoncreature = true,
 	};
 
 	/// <summary>Danitha, Sword of Hope.</summary>
@@ -1235,6 +1247,12 @@ public record Protection(Filters.Filter From) : GameComponent
 				&& (p.If?.Holds(s, Conditions.Of(holder)) ?? true)
 			);
 }
+
+/// <summary>
+/// Reckoner Bankbuster's Pilot token: "This token crews Vehicles as though its power were 2 greater." — added to its
+/// power where a CREW cost sums (TapUntappedCost.Crew → PowerFor), nowhere else: its power is still 1.
+/// </summary>
+public record CrewsAsThoughPowerGreater(int By) : GameComponent;
 
 /// <summary>
 /// Questing Beast: "Combat damage that would be dealt by creatures you control can't be prevented." — By is asked of

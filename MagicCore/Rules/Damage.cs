@@ -50,7 +50,13 @@ public static class Damage
 							target.DamagedByDeathtouch || s.Has(source, "Deathtouch"),
 					}
 				)
-				.Raise(new CreatureDealtDamageEvent(targetId, amount));
+				.Raise(
+					new CreatureDealtDamageEvent(targetId, amount)
+					{
+						SourceId = source.Id,
+						Combat = combat,
+					}
+				);
 		else
 			return s; // its target is gone: no damage was dealt
 		s = s.Raise(new DealtDamageEvent(source.Id, amount)); // Cecil, Dark Knight: "whenever Cecil deals damage"

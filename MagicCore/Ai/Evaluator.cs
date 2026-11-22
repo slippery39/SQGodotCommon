@@ -226,14 +226,42 @@ public static partial class Evaluator
 		&& c.GetComponent<PlayableFromExile>() is { Blind: true }
 		&& s.IsIn(cardId, c.OwnerId, ZoneType.Exile);
 
-	/// <summary>The legal moves for the search: without playing a phantom impulse card (<see cref="Terms.ImpulseValue"/>).</summary>
-	public static ImmutableList<GameAction> SearchMoves(this GameState s) =>
-		[
-			.. s.LegalActions()
-				.Where(a =>
-					MagicRules.CardOf(a) is var id && (id == 0 || !IsPhantomImpulse(id, s))
-				),
-		];
+	/// <summary>
+	/// The legal moves for the search: without playing a phantom impulse card (<see cref="Terms.ImpulseValue"/>), and
+	/// without an untap that can gain nothing (<see cref="GainsNothingUntapping"/>).
+	/// </summary>
+	public static ImmutableList<GameAction> SearchMoves(this GameState s)
+	{
+		int? landsMakingMore = null; // counted once a call, and only when an untap asks
+		return s.LegalActions(a =>
+			MagicRules.CardOf(a) is var id
+			&& (id == 0 || !IsPhantomImpulse(id, s))
+			&& !(
+				PaysXToUntapXLands(s, a) is { } untap
+				&& untap.X > (landsMakingMore ??= LandsMakingMoreThanOneMana(s, untap.PlayerId))
+			)
+		);
+	}
+
+	/// <summary>
+	/// Candelabra of Tawnos ("{X}, {T}: Untap X target lands") pays a mana for each land it untaps, so it gains only
+	/// on a land that makes more than one (Ancient Tomb, Tolarian Academy): the search is offered X up to the number
+	/// of such lands its player controls — with none, never the card (Shayne, 2026-11-22: on basics its 19–22
+	/// activations at every priority, each tied with Pass, doubled a turn's search). Asked before a candidate is
+	/// validated (LegalActions' worthTrying); LegalActions itself stays complete.
+	/// ponytail: colour filtering (untapping a coloured source to use it twice) and a land with another {T} ability
+	/// are never tried — count those lands too if a deck needs it (DesignNotes).
+	/// </summary>
+	static ActivateAbilityAction? PaysXToUntapXLands(GameState s, GameAction a) =>
+		a is ActivateAbilityAction { ChoosesTargets: true } untap
+		&& s.ActivatedAbilitiesOf(s.GetCard(untap.CardId)).ElementAtOrDefault(untap.AbilityIndex)
+			is { Effects: [Untap] }
+			? untap
+			: null;
+
+	static int LandsMakingMoreThanOneMana(GameState s, int player) =>
+		s.CardsIn(player, ZoneType.Battlefield)
+			.Count(c => c.Is(CardType.Land) && ManaAbilities.YieldOf(s, c).Units.Length > 1);
 
 	/// <summary>What the phantom impulse cards of <paramref name="player"/> are credited: a share of an unknown card each, fading.</summary>
 	static double ImpulseCredit(GameState s, int player, HeldValues held) =>

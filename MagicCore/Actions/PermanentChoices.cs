@@ -268,12 +268,24 @@ public record RemoveACounterFromChosenAction : GameAction
 /// asks for another. ponytail: it stops at the total and never offers a creature with no power — "any number" may
 /// tap more (for a "becomes tapped" trigger); offer a "done" answer if a card ever cares.
 /// </summary>
-public record TapChosenForPowerAction(int PlayerId, int SourceId, Filter Filter, int Remaining)
-	: GameAction
+public record TapChosenForPowerAction(
+	int PlayerId,
+	int SourceId,
+	Filter Filter,
+	int Remaining,
+	bool Crew = false
+) : GameAction
 {
 	static Filter Offered(Filter filter) => filter & !Is.Tapped & Is.PowerAtLeast(1);
 
-	public static PipelineAction Next(int playerId, int sourceId, Filter filter, int remaining) =>
+	/// <param name="crew">Crew's total: Reckoner Bankbuster's Pilot counts 2 more (TapUntappedCost.PowerFor).</param>
+	public static PipelineAction Next(
+		int playerId,
+		int sourceId,
+		Filter filter,
+		int remaining,
+		bool crew = false
+	) =>
 		new()
 		{
 			Steps =
@@ -282,7 +294,7 @@ public record TapChosenForPowerAction(int PlayerId, int SourceId, Filter Filter,
 				{
 					Prompt = $"Tap a creature for power {remaining} more",
 				},
-				new TapChosenForPowerAction(playerId, sourceId, filter, remaining),
+				new TapChosenForPowerAction(playerId, sourceId, filter, remaining, crew),
 			],
 		};
 
@@ -291,12 +303,12 @@ public record TapChosenForPowerAction(int PlayerId, int SourceId, Filter Filter,
 		var left = Remaining;
 		foreach (var id in ChoosePermanentChoice.Read(InputContext))
 		{
-			left -= Math.Max(0, s.Power(s.GetCard(id)));
+			left -= TapUntappedCost.PowerFor(s, id, Crew);
 			s = s.Tap(id);
 		}
 		return new ActionResult(
 			left > 0 && Offered(Filter).Among(s, PlayerId, ZoneType.Battlefield, SourceId).Any()
-				? s.SpawnAction(Next(PlayerId, SourceId, Filter, left))
+				? s.SpawnAction(Next(PlayerId, SourceId, Filter, left, Crew))
 				: s
 		);
 	}
