@@ -3309,8 +3309,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 		"{1}{G}",
 		[
 			Target(
-				(Is.Artifact | Is.Enchantment | (Is.Land & !Is.Supertype(Supertype.Basic)))
-					& Is.Opponents
+				(
+					Is.Artifact
+					| Is.Enchantment
+					| (Is.Land & !Is.Supertype(Supertype.Basic))
+				) & Is.Opponents
 			),
 		],
 		new SearchLibrary(CardType.Land, ZoneType.Battlefield)
@@ -3962,7 +3965,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 	ManaAbilityComponent.OfAnyOneColor(3),
 	// "that player": the attacker — your opponent (two players)
 	When(
-		new Trigger(EventKind.AttackedUnblocked) { Subject = Is.Creature & Is.Opponents },
+		new Trigger(EventKind.AttackedUnblocked)
+		{
+			Subject = Is.Creature & Is.Opponents,
+		},
 		[],
 		new DrawCards(Ref.EachOpponent, 3),
 		new GainControl(Ref.Source, Ref.EachOpponent),
@@ -6995,7 +7001,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 			new DrawCards(Ref.You, 1),
 			new If(
 				new Not(
-					new AtLeast(Count.CountersOfKind(Ref.Source, CounterKinds.Charge), 1)
+					new AtLeast(
+						Count.CountersOfKind(Ref.Source, CounterKinds.Charge),
+						1
+					)
 				),
 				[
 					CreateTreasure(1),
@@ -9915,12 +9924,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	// from its cast, and a bestowed creature is no Aura in the hand (DesignNotes).
 	new Protection(
 		!Is.Colorless
-			& (
-				Is.Spell
-				| Is.Instant
-				| Is.Sorcery
-				| (Is.Subtype("Aura") & !Is.Attached)
-			)
+			& (Is.Spell | Is.Instant | Is.Sorcery | (Is.Subtype("Aura") & !Is.Attached))
 	),
 	// Annihilator 6 (CR 702.86): the defending player is the opponent (two players).
 	When(
