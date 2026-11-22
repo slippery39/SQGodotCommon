@@ -75,14 +75,21 @@ our declare-attackers, both at 20 life unless said; creatures are vanilla unless
 - [x] AI-33.5 The turns to kill read the same two attacks (`Evaluator.Terms.TwoAttackKill`, `beam+onekillclock` off) -
       Shayne, 2026-11-21: "Sure lets explore that"; the Cadet board's clock on us 10 turns -> 3
       (`TheCadetBoard_TheirClockReadsTwoAttacks`); counted up, not averaged (the review): suite 0 changed, match level, 49.0% ± 1.0pp
+- [x] AI-33.6 The burn rule's two-turn kill reads the same two attacks (`Evaluator.Terms.TwoAttackBurn`,
+      `beam+oneburnclock` off) - Shayne, 2026-11-21: "Sure" to tests on two boards over a match's noise
+      (`TheBurnRulesKill_ReadsTwoAttacks`: a chump stops its attacker once, a trade for good); suite 0 changed; match
+      identical (48-48, every game alike)
+- [x] AI-33.7 A creature tapped for the next attack is back for the second - an experiment, OFF by default
+      (`beam+tappedback`, switching off `Evaluator.Terms.TappedStay`); found by AI-33.6's review; oracle re-read;
+      match 48.2% ± 1.2pp (600 games, undecided, leaning worse)
 - [ ] AI-33.3 The attack speed changes judged on them (AI-30.4e first, then `shortlist2`, then AI-21's steps) -
       `noblockers`, `shortlist2` and `shortlist1` keep every answer (each a fixture of `AttackTests`); AI-21's steps to come
 
 ## Next
 
-The two-attack clock is in the pressure term (AI-33.4) and the turns to kill (AI-33.5). Open: the two-turn lethal
-check (`BeamSearchAi.KillsWithinTwoTurns`, the burn rule) still reads one attack twice (DesignNotes) - a suite and a
-match of its own. Position 8 (Shayne's Jace-token lethal, AI-19.21) needs its
+The two-attack clock is in the pressure term (AI-33.4) and the turns to kill (AI-33.5). The burn rule's two-turn kill
+(AI-33.6) reads it too. A blocker tapped now is still missing from the second attack (`TappedStay`, the default): the
+fix, `beam+tappedback` (AI-33.7), leaned 1.8pp worse - find the games it loses first. Left on one attack: the walker's damage a turn (`AtTheWalker`, DesignNotes). Position 8 (Shayne's Jace-token lethal, AI-19.21) needs its
 board found. More positions welcome - especially BIG boards, where the attack plans' cost is (these small ones save 2-17%
 under the speed changes); a new AI-21 step joins as a `[TestFixture("beam+…")]`.
 
@@ -153,3 +160,35 @@ under the speed changes); a new AI-21 step joins as a `[TestFixture("beam+…")]
 - 2026-11-21: the counted version's match, `beam` vs `beam+onekillclock` (--until-clear, 192 games, 41 min): **49.0% ±
   1.0pp** (94-98), no 5pp difference either way; 4 949 engine steps a decision against 5 005. Both versions level - the
   clock is now right on the Cadet board at any life, at no cost in strength. Committed.
+- 2026-11-21: AI-33.6 - the burn rule's two-turn kill (`BeamSearchAi.KillsWithinTwoTurns`, which lets burn go at the
+  face) read one attack twice against their blockers as they stand. Now the two attacks together (`Evaluator.TwoThrough`,
+  shared with the turns to kill) while we can still attack this turn. Shayne chose tests over a match's noise - the rule
+  is rare: they at 10 with a 2/2 against our two 3/3s and a burn for 3 now kills (3 + 6 + 3; read twice 9); they at 6
+  with a 4/4 against our 3/3 and 2/2 does not (2 + 0 + 3; read twice 7). Suite 0 changed, golden replay unchanged.
+- 2026-11-21: AI-33.6's match, `beam` vs `beam+oneburnclock` (--until-clear, 96 games, 21 min): **48-48, ± 0.0pp, the
+  same 5 141 engine steps a decision** - every game played alike: in FRA's three decks the two readings never disagreed
+  where a burn could go at the face. Its tests are what pin it.
+- 2026-11-21: AI-33.6's review found a bug in the two-attack clock itself (since AI-33.4): when the attack is this
+  turn's, the defender's creatures tapped now were left out of the SECOND attack too - every creature that attacked the
+  turn before, untapped by then. It overstated our second attack on our turn and theirs on theirs (the pressure term,
+  the turns to kill, the burn rule). AI-33.7: they come back for the second (`SecondUntaps`, `+tappedstay` without);
+  the burn test gains the review's board (they at 8 with a tapped 4/4, our 3/3 and a burn for 3: no kill, 3 + 0 + 3).
+  Suite: **16 changed (5.6%)**, score given up 0.57 -> 0.32 a position, oracle agreement 72.2% -> 71.5%, misses a win
+  the oracle found 2 -> 5; 9 281 -> 9 388 steps a position. The changes: Jace's abilities used more (5 of 16), attacks at
+  a walker or held back, removal on a walker over a creature. AI-33.6 itself: tests passed (AI 441, table 78).
+- 2026-11-21: the three "new missed wins" were the STORED oracle's, read before the fix. Re-searched with each line
+  shown, all three win: on two the oracle now picks the new answer (Jace −2 for a Cadet, then the Enforcer after
+  combat; the second Rampart Hunter over Final Mercy on Koth), on the third (Samut attacks beside Koth as a decoy: the
+  3/3 blocks Samut, Koth's 3 goes through) it still prefers Koth alone, 8 170 to 8 163. Shayne's "why no 4/4 on turn
+  9?": Red-Green holds Jace's −4 for its next precombat main - the Beast entering gives Arni +4/+0 (5/5 trample), and
+  with Koth's landfall ping it is lethal from 5; a line that wins only because the simulated opponent attacks and
+  keeps no blockers. Oracle re-read (`--suite=oracle`, 3.0 min, the fixed evaluator - it leans to the fix): **the fix
+  94.1% agreement, 1 missed win, 0.58 given up a position; without it (`+tappedstay`) 92.4%, 2, 0.37.**
+- 2026-11-21: AI-33.7's match, `beam` (the fix) vs `beam+tappedstay` (--until-clear, 600 games, 69 min): **fix 48.2%
+  ± 1.2pp (289-311), UNDECIDED at the cap**, leaning worse (log-likelihood worse -2.36 of ±2.94); 4 782 vs 4 817 engine
+  steps a decision. beam's record by deck: Red-Green 131-69, White-Black 99-101, White-Blue Jace 59-141.
+- 2026-11-21: Decided (Shayne): commit both, the fix OFF by default - the old reading kept as the default term
+  `TappedStay` (was `SecondUntaps`), the fix `beam+tappedback` (was the default, `+tappedstay` the old reading). The
+  oracle re-read again on the DEFAULT's evaluator (3.8 min): the default 93.1%, 0.46 given up, 1 win missed; the fix 91.0%,
+  0.77, 4 - each oracle favours the evaluator it was read with, so for an evaluator change the match is the verdict
+  (findings: magic-ai.md, AI-33.7). Suite 0 changed for the default.

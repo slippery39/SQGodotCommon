@@ -208,6 +208,10 @@ public static class AiMatch
 			["oneattack"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttacks },
 			// The turns to kill read one attack, as before AI-33.5: beam+onekillclock.
 			["onekillclock"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttackKill },
+			// The burn rule's two-turn kill reads one attack twice, as before AI-33.6: beam+oneburnclock.
+			["oneburnclock"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttackBurn },
+			// AI-33.7 experiment (OFF by default): a blocker tapped now is back for the second attack - beam+tappedback.
+			["tappedback"] = o => o with { Without = o.Without | Evaluator.Terms.TappedStay },
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.

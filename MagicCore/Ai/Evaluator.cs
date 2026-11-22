@@ -664,6 +664,23 @@ public static partial class Evaluator
 		/// at our walker, the turns the option price looks ahead (`+onekillclock`).
 		/// </summary>
 		TwoAttackKill = 1L << 41,
+
+		/// <summary>
+		/// The burn rule's two-turn kill reads the same two attacks (BeamSearchAi.KillsWithinTwoTurns, AI-33.6): they at 10
+		/// with a 2/2, our two 3/3s and a burn for 3 - one attack read twice is 3 + 3, no kill, the burn held; two attacks,
+		/// 3 then 6 once the chump is dead, a kill. Against their 4/4 our 3/3 dies blocked (the 4/4 lives) and is gone for
+		/// the second (`+oneburnclock`).
+		/// </summary>
+		TwoAttackBurn = 1L << 42,
+
+		/// <summary>
+		/// The second attack meets only the defender's blockers untapped NOW (<see cref="Attacks"/>): a creature tapped
+		/// for the next attack - one that attacked the turn before - is missing from it, though it untaps between the
+		/// two. The DEFAULT, though wrong: switched off (`+tappedback`, AI-33.7) it is back for the second, and that
+		/// measured 48.2% ± 1.2pp over 600 games, leaning worse (docs/findings/magic-ai.md) - something else may lean on the
+		/// overstated second attack.
+		/// </summary>
+		TappedStay = 1L << 43,
 	}
 
 	/// <summary>
@@ -801,9 +818,16 @@ public static partial class Evaluator
 			return first <= 0 ? int.MaxValue : (life + first - 1) / first;
 		if (life <= first)
 			return 1;
-		var second = (int)Math.Round(2 * Attacks(s, attacker, defender, 0, 2)) - first;
+		var second = TwoThrough(s, attacker, defender) - first;
 		return second <= 0 ? int.MaxValue : 1 + (life - first + second - 1) / second;
 	}
+
+	/// <summary>
+	/// The power that gets past <paramref name="defender"/>'s blockers over <paramref name="attacker"/>'s next TWO attacks
+	/// together (<see cref="Attacks"/>): a chump blocker stops its attacker once, a trade for good.
+	/// </summary>
+	internal static int TwoThrough(GameState s, int attacker, int defender) =>
+		(int)Math.Round(2 * Attacks(s, attacker, defender, 0, 2));
 
 	/// <summary>
 	/// The power that gets past <paramref name="defender"/>'s blockers in <paramref name="attacker"/>'s next attack
@@ -835,10 +859,13 @@ public static partial class Evaluator
 		// combat this turn is over, so its next attack comes after the defender's turn.
 		var game = s.GetGame();
 		var untapsFirst = game.ActivePlayerId == attacker && game.Step >= Step.EndCombat;
-		var blockers = new List<Card>();
+		var (blockers, later) = (new List<Card>(), new List<Card>());
 		foreach (var c in s.CardsIn(defender, ZoneType.Battlefield))
-			if (c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))
-				blockers.Add(NextTurn(c.IsTapped ? c with { IsTapped = false } : c));
+			if (c.Is(CardType.Creature) && Alive(s, c))
+				if (untapsFirst || !c.IsTapped)
+					blockers.Add(NextTurn(c.IsTapped ? c with { IsTapped = false } : c));
+				else if (IsOff(Terms.TappedStay))
+					later.Add(NextTurn(c with { IsTapped = false })); // tapped for the next attack, untapped by the one after
 		// The defender blocks the biggest it can — fliers first, which only fliers and reach stop.
 		attackers =
 		[
@@ -881,7 +908,7 @@ public static partial class Evaluator
 					living.Add((card, power));
 			}
 			// the blockers untap for the next attack; the ones that died blocking don't come back
-			blockers = [.. blockers, .. survived];
+			(blockers, later) = ([.. blockers, .. survived, .. later], []);
 			attackers = living;
 		}
 		return (double)total / count;

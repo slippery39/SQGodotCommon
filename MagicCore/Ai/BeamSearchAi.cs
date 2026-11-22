@@ -1108,13 +1108,14 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// Shayne's burn rule (AI-17.6, 2026-11-09): "save it until you can actually kill the opponent" - this turn or the
 	/// next. Their life against the damage reachable in the two: the burn in our hand cast cheapest first with each
 	/// turn's mana (now: untapped sources and a land still to play; next: every source and another land), X taking
-	/// what is left (X spells last), and what our attackers get past their blockers each turn (<see cref="Evaluator.Through"/>;
-	/// this turn's only while we can still attack).
-	/// ponytail: mana counted by source, colours ignored; this turn's attack counts every creature, sick or not, and next
-	/// turn's meets their blockers as they stand now; a count's multipliers (Times) unread; lifegain they may have
+	/// what is left (X spells last), and what our attackers get past their blockers: this turn's attack and next turn's
+	/// (<see cref="Evaluator.TwoThrough"/>: a chump stops its attacker once, a trade for good, AI-33.6) while we can still
+	/// attack, else next turn's (<see cref="Evaluator.Through"/>).
+	/// ponytail: mana counted by source, colours ignored; this turn's attack counts every creature, sick or not, and the
+	/// second attack meets only their blockers untapped now (`Evaluator.Terms.TappedStay`); a count's multipliers (Times) unread; lifegain they may have
 	/// (Shayne's lifelinker) not subtracted - the search then weighs killing it; their answers to come unseen.
 	/// </summary>
-	static bool KillsWithinTwoTurns(GameState s, int me)
+	public static bool KillsWithinTwoTurns(GameState s, int me)
 	{
 		var them = s.OpponentOf(me);
 		var game = s.GetGame();
@@ -1153,12 +1154,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					burns.Remove(burn);
 				}
 		}
+		var attackNow =
+			ours && game.Step <= Step.DeclareAttackers && !Turns.Combat.Attackers(s).Any();
 		var combat =
-			(
-				ours && game.Step <= Step.DeclareAttackers && !Turns.Combat.Attackers(s).Any()
-					? Evaluator.Through(s, me, them)
-					: 0
-			) + Evaluator.Through(s, me, them);
+			!attackNow ? Evaluator.Through(s, me, them)
+			: Evaluator.IsOff(Evaluator.Terms.TwoAttackBurn) ? 2 * Evaluator.Through(s, me, them)
+			: Evaluator.TwoThrough(s, me, them);
 		return s.GetPlayer(them).Life <= damage + combat;
 	}
 

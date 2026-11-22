@@ -2450,6 +2450,24 @@ The average misread low life (the Cadet board at 3 life: 1 turn, really 2). Its 
 Shayne's read (seed 4's Red-Green: a hasty attack over Ajani's Anguish; Budding Insurgent destroying Way of the Healer
 at 1 life), were TIES the average broke the other way: 9023.22 against 9023.20 (two winning lines), and −7.69 each.
 
+**AI-33.6: the burn rule's two-turn kill on the two attacks** (`Terms.TwoAttackBurn`): suite 0 changed; match
+`beam` vs `beam+oneburnclock` **48-48, every game alike** (96 games, 21 min) - in FRA's three decks the two readings
+never disagreed where a burn could go at the face. Its tests (`TheBurnRulesKill_ReadsTwoAttacks`) are what pin it.
+
+**AI-33.7: a blocker tapped now is back for the second attack** (`beam+tappedback`, OFF by default; the default
+`Terms.TappedStay` leaves it out - wrong, but measured no worse):
+
+| | suite changed | oracle read on the fix's evaluator | oracle read on the default's |
+|---|---|---|---|
+| default (`TappedStay`) | 0 | 92.4%, 0.37 given up, 2 wins missed | **93.1%, 0.46, 1** |
+| the fix (`+tappedback`) | 16 | **94.1%, 0.58, 1** | 91.0%, 0.77, 4 |
+
+Match `beam` (then the fix) vs `beam+tappedstay` (then the old reading): **the fix 48.2% ± 1.2pp, 289-311 over 600
+games** (69 min), undecided at the cap, leaning worse; 4 782 vs 4 817 engine steps a decision. **Each oracle favours the
+evaluator it was read with** - agreement and missed wins flip with the reading, so for an EVALUATOR change the oracle
+check is no verdict; the match is. The three "new missed wins" against the oracle stored before the fix all won when
+re-searched (two picked the fix's own answer).
+
 ## AI-30.4e: the free passes' second count - what the searches decide (2026-11-21)
 
 Temporary counters (`beam` vs `beam`, 24 games of FRA's decks, any time): 3 196 decisions, 28.2M engine steps; for each,
