@@ -2466,7 +2466,18 @@ Match `beam` (then the fix) vs `beam+tappedstay` (then the old reading): **the f
 games** (69 min), undecided at the cap, leaning worse; 4 782 vs 4 817 engine steps a decision. **Each oracle favours the
 evaluator it was read with** - agreement and missed wins flip with the reading, so for an EVALUATOR change the oracle
 check is no verdict; the match is. The three "new missed wins" against the oracle stored before the fix all won when
-re-searched (two picked the fix's own answer).
+re-searched (two picked the fix's own answer). **Its lost games** (each game twice from one seed, the fix vs `beam` and
+`beam` vs `beam`, 192 pairs): 32 results flipped, 18 lost and 14 won, the first changed decisions spread over casts,
+orderings, Jace, X sizes, attacks and blocks - no one kind of play behind the lean.
+
+**AI-33.8: the damage at our walker on the two attacks** (`Terms.TwoAttackWalker`; off: `beam+onewalkerclock`): suite
+**2 changed** - Mindseeker Oculus cast before combat (Shayne: "makes sense"), and Yoshimaru's counter on the Cadet 2/2
+over Heartstring Puller 3/1 (Shayne: the 4/2 Puller, a clean blocker for their 5/4). That flip is the ROLLOUT's: the
+Cadet line counters the Puller a turn later and now attacks it into the Duelist for the trade (8.74, was 3.72 holding
+back), over the Puller line's 7.95; the walker term on the end board moved 0.25. Match `beam` vs `beam+onewalkerclock`:
+**51.4% ± 0.8pp, 148-140 over 288 games** (40 min), stopped clear of 5pp either way, leaning better; 4 874 vs 4 895
+engine steps a decision. On by default; 4 greedy golden games moved; the oracle re-read on it: 92.0%, 0.60 given up
+a position, 1 win missed (the old default on its own oracle: 93.1%, 0.46, 1).
 
 ## AI-30.4e: the free passes' second count - what the searches decide (2026-11-21)
 

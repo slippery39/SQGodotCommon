@@ -82,6 +82,9 @@ our declare-attackers, both at 20 life unless said; creatures are vanilla unless
 - [x] AI-33.7 A creature tapped for the next attack is back for the second - an experiment, OFF by default
       (`beam+tappedback`, switching off `Evaluator.Terms.TappedStay`); found by AI-33.6's review; oracle re-read;
       match 48.2% ± 1.2pp (600 games, undecided, leaning worse)
+- [x] AI-33.8 The damage sent at our walker reads the two attacks (`Evaluator.Terms.TwoAttackWalker`,
+      `beam+onewalkerclock` off): the first attack's at the first hit, the second's after (`AChumpBlocker_ShieldsTheWalkerOnce`);
+      suite 2 changed, 4 golden games moved; match 51.4% ± 0.8pp (288 games, leaning better) - the default
 - [ ] AI-33.3 The attack speed changes judged on them (AI-30.4e first, then `shortlist2`, then AI-21's steps) -
       `noblockers`, `shortlist2` and `shortlist1` keep every answer (each a fixture of `AttackTests`); AI-21's steps to come
 
@@ -89,7 +92,7 @@ our declare-attackers, both at 20 life unless said; creatures are vanilla unless
 
 The two-attack clock is in the pressure term (AI-33.4) and the turns to kill (AI-33.5). The burn rule's two-turn kill
 (AI-33.6) reads it too. A blocker tapped now is still missing from the second attack (`TappedStay`, the default): the
-fix, `beam+tappedback` (AI-33.7), leaned 1.8pp worse - find the games it loses first. Left on one attack: the walker's damage a turn (`AtTheWalker`, DesignNotes). Position 8 (Shayne's Jace-token lethal, AI-19.21) needs its
+fix, `beam+tappedback` (AI-33.7), leaned 1.8pp worse, its lost games showing no pattern - left off. The walker's damage a turn (`AtTheWalker`) reads the two attacks too (AI-33.8, the default: match 51.4% ± 0.8pp). Position 8 (Shayne's Jace-token lethal, AI-19.21) needs its
 board found. More positions welcome - especially BIG boards, where the attack plans' cost is (these small ones save 2-17%
 under the speed changes); a new AI-21 step joins as a `[TestFixture("beam+…")]`.
 
@@ -192,3 +195,31 @@ under the speed changes); a new AI-21 step joins as a `[TestFixture("beam+…")]
   oracle re-read again on the DEFAULT's evaluator (3.8 min): the default 93.1%, 0.46 given up, 1 win missed; the fix 91.0%,
   0.77, 4 - each oracle favours the evaluator it was read with, so for an evaluator change the match is the verdict
   (findings: magic-ai.md, AI-33.7). Suite 0 changed for the default.
+- 2026-11-22: Which games the fix loses (a temporary probe, deleted: each game played twice from one seed, the fix on
+  one seat vs `beam`, and `beam` vs `beam` - alike up to the fix's first changed decision; 16 seeds, 192 pairs, 50 min):
+  **the fix 92-100, the mirror 96-96; 159 diverged, 32 results flipped - 18 lost, 14 won** (as likely as not by
+  chance). The first changed decisions spread over everything - which spell first, a land before a spell, Jace's
+  abilities, X sizes, attacks, blocks (3 of the 18 losses a block the default didn't make, against 1 of the 14 wins).
+  No one kind of play leans on the overstated second attack: the fix moves the clock's small terms everywhere, close
+  calls flip, and the games after go either way. Left OFF; no further digging unless a board shows the misread.
+  Shayne on the one block flagged (we at 15 with a Jace at 2: our 1/4 Screeching Soulbreaker chumping their 4/4
+  Repurposed Enforcer): "seems wrong" - held for later (White-Blue Jace vs White-Black seed 11, move 221, the fix's seat).
+- 2026-11-22: AI-33.8 built: `AtTheWalker` returns the first attack's hit and the later ones' (TwoThrough − Through),
+  the lifetime reading the first at the walker's first attack and the later at each after. Test: their 3/3 against
+  our walker (+1 Surveil, −3 draw, at 4), our 2/2 in front - priced lower than one attack read every turn; without the
+  2/2 the two agree. Suite **2 changed**: Mindseeker Oculus cast BEFORE combat (was: pass) - Repurposed Enforcer's
+  attack trigger then counts one creature more for Jace; Yoshimaru's end-step counter on the Cadet 2/2 over Heartstring
+  Puller 3/1 trample. 4 of the greedy golden games moved.
+  Shayne: the Oculus "makes sense"; the counter belongs on the Puller - "a 4/2 so we have a clean blocker for their
+  5/4" (Divining Duelist: a 4/2 kills it blocking, a 3/3 doesn't).
+  Why (`Explain` under both readings): the walker term on the end board barely moves (their Jace −10.22 vs −10.47);
+  what flipped is the ROLLOUT in the Cadet line. There, both readings put the next counter on the Puller a turn later;
+  the old one then held back and lost Rattler and Yoshimaru double-blocking their Duelist (3.72), the new one attacks
+  the 4/2 Puller into it and trades - the trade that clears their only blocker now counts for the Jace damage after
+  (8.74, over the Puller line's 7.95, which casts Arcane Amphisbaena instead). Their turn between - where Shayne's 4/2
+  is the clean blocker - the rollout's opponent attacks in neither line (at 8 life facing our 10 power), so the clean
+  blocker never shows. Asked Shayne whether that 5/4 attacks there: "not sure", not to focus on - the match decides.
+  Match `beam` vs `beam+onewalkerclock`: 51.4% ± 0.8pp, 148-140 over 288 games, stopped clear of 5pp - on by default.
+  Review: `AtTheWalker` reads its two attacks once and passes them to `TurnsToKill(life, first, second)` (was four
+  passes; suite and golden games unchanged); the test also prices a walker used this turn - there the sooner second
+  attack's soak outweighs its lost turns, so only that the chump counts is asserted.

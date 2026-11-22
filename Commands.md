@@ -205,6 +205,7 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #     onekillclock  the turns to kill read one attack (before AI-33.5); with oneattack: the AI before AI-33.4
 #     oneburnclock  the burn rule's two-turn kill reads one attack twice (before AI-33.6)
 #     tappedback  AI-33.7 experiment (OFF by default): a blocker tapped now is back untapped for the second attack
+#     onewalkerclock  the damage sent at our walker reads one attack every turn (before AI-33.8)
 #     liveoptionturns a held option's turns left read in each line, not at the search's root (before AI-13.9)
 #     shuffle        what it can't know shuffled into ONE guess a decision (the default from AI-3.9 to AI-20.4); landornot: the default, kept as a name; beam-casts = beam+casts
 

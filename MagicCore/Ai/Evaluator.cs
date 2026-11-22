@@ -681,6 +681,14 @@ public static partial class Evaluator
 		/// overstated second attack.
 		/// </summary>
 		TappedStay = 1L << 43,
+
+		/// <summary>
+		/// The damage sent at our walker reads the two attacks (<see cref="AtTheWalker"/>, AI-33.8): the first attack's
+		/// at the first hit, the second's at every one after - a chump blocker shields the walker once, a trade for good.
+		/// Without it every turn's hit is the first attack's: a 2/2 in front of a walker facing a 3/3 kept it safe for good
+		/// (`+onewalkerclock`).
+		/// </summary>
+		TwoAttackWalker = 1L << 44,
 	}
 
 	/// <summary>
@@ -806,21 +814,28 @@ public static partial class Evaluator
 	/// Turns <paramref name="attacker"/>'s board needs to kill <paramref name="defender"/> at the damage
 	/// that gets past its blockers - the next attack, then the second (<see cref="Terms.TwoAttackKill"/>), counted up: the
 	/// second's damage stands for every attack after it, since what died in the first stays dead (int.MaxValue: no
-	/// clock). Read by OptionTurns, AtTheWalker and OptionPrice.TurnsAhead; the pressure term reads Attacks itself.
+	/// clock). Read by OptionTurns, AtTheWalker (from the attacks it reads itself) and OptionPrice.TurnsAhead; the
+	/// pressure term reads Attacks itself.
 	/// </summary>
 	public static int TurnsToKill(GameState s, int attacker, int defender)
 	{
 		var life = s.GetPlayer(defender).Life;
 		var first = Through(s, attacker, defender);
-		if (life <= 0)
-			return 0;
-		if (IsOff(Terms.TwoAttackKill))
-			return first <= 0 ? int.MaxValue : (life + first - 1) / first;
-		if (life <= first)
-			return 1;
-		var second = TwoThrough(s, attacker, defender) - first;
-		return second <= 0 ? int.MaxValue : 1 + (life - first + second - 1) / second;
+		if (life <= first) // life 0 included
+			return life <= 0 ? 0 : 1;
+		return TurnsToKill(
+			life,
+			first,
+			IsOff(Terms.TwoAttackKill) ? first : TwoThrough(s, attacker, defender) - first
+		);
 	}
+
+	/// <summary>The turns to take <paramref name="life"/>: the <paramref name="first"/> attack's damage, then the <paramref name="second"/>'s for every one after.</summary>
+	static int TurnsToKill(int life, int first, int second) =>
+		life <= 0 ? 0
+		: life <= first ? 1
+		: second <= 0 ? int.MaxValue
+		: 1 + (life - first + second - 1) / second;
 
 	/// <summary>
 	/// The power that gets past <paramref name="defender"/>'s blockers over <paramref name="attacker"/>'s next TWO attacks
