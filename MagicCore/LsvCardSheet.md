@@ -72,7 +72,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Aether Spellbomb"] =
 [
-	SacrificeThis("{U}", tap: false, [Creature], new MoveTo(Ref.Target(), ZoneType.Hand)),
+	SacrificeThis(
+		"{U}",
+		tap: false,
+		[Creature],
+		new MoveTo(Ref.Target(), ZoneType.Hand)
+	),
 	SacrificeThis("{1}", tap: false, [], new DrawCards(Ref.You, 1)),
 ],
 ```
@@ -2364,7 +2369,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Soul-Guide Lantern"] =
 [
-	When(TriggerEvent.SelfEnters, [TargetSpec.InAnyGraveyard()], new Exile(Ref.Target())),
+	When(
+		TriggerEvent.SelfEnters,
+		[TargetSpec.InAnyGraveyard()],
+		new Exile(Ref.Target())
+	),
 	SacrificeThis(
 		null,
 		tap: true,
@@ -10078,13 +10087,15 @@ How to write a script: `MagicCore/Cookbook.md`.
 	// metalcraft: "Activate only if you control three or more artifacts."
 	.. AnyColorMana(ManaRestriction.None)
 		.Cast<ManaAbilityComponent>()
-		.Select(m => m with
-		{
-			OnlyIf = new AtLeast(
-				Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
-				3
-			),
-		}),
+		.Select(m =>
+			m with
+			{
+				OnlyIf = new AtLeast(
+					Count.NumberOf(Ref.Permanents(Is.Artifact & Is.Yours)),
+					3
+				),
+			}
+		),
 ],
 ```
 
