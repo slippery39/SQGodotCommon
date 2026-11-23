@@ -183,7 +183,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new PutCounters(Ref.Source, 1)
 	) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 ],
 ```
@@ -833,7 +833,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, LsvBatch2h2cTests, LsvBatch2i2bTests, LsvBatch2iTests, LsvBatch2k2aTests, LsvBatch2k3Tests, LsvBatch2l3Tests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2mTests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, LsvBatch2h2cTests, LsvBatch2i2bTests, LsvBatch2iTests, LsvBatch2k2aTests, LsvBatch2k3Tests, LsvBatch2l3Tests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2m2Tests, LsvBatch2mTests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Free Borg Revolutionaries
 
@@ -3213,7 +3213,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new CreateTokens(ArtifactIllusion, 1)
 	) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 ],
 ```
@@ -4741,7 +4741,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(TriggerEvent.YourUpkeep, [], new Surveil(1)),
 	When(TriggerEvent.CardLeavesYourGraveyard, [], new DrawCards(Ref.You, 1)) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 ],
 ```
@@ -5673,7 +5673,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		CreateTreasure(1)
 	) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 ],
 ```
@@ -6913,7 +6913,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new ExileTopPlayable { Play = new() { ThisTurn = true } }
 	) with
 	{
-		OncePerTurn = true, // "for the first time each turn": the trigger is only about itself
+		TimesEachTurn = 1, // "for the first time each turn": the trigger is only about itself
 	},
 	.. Station(7, "Flying", "Vigilance"),
 ],

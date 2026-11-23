@@ -163,7 +163,7 @@ whose subsystem it lives in.
   (`ChapterToResolve`), in the state-based actions. **The initiative** is an object in its holder's command zone
   (`DesignationComponent(Initiative)`) carrying its two triggers: "at the beginning of your upkeep, venture", and "whenever
   creatures deal combat damage to you, the active player takes it". `TakeTheInitiative(who)` moves it (one holder,
-  CR 725.3), then ventures — again when you already hold it. "If you have the initiative" is `YouHaveTheInitiative`.
+  CR 725.3), then ventures — again when you already hold it. "If you have the initiative" is `YouHold(Initiative)`.
   **A dungeon removed on its last room is completed** (CR 309.7) — `Undercity.Complete`, from both removals (the state
   check and a venture), counts it on its venturer for the game (`MagicPlayer.DungeonsCompleted`); "if you've completed
   a dungeon" (Caves of Chaos Adventurer, MC-4.4i2a) is `YouCompletedADungeon`.
@@ -313,3 +313,25 @@ whose subsystem it lives in.
   graveyard have retrace" — `MayPlayFromZone(Graveyard, …) { Costs = [DiscardCost(land)], AnyTime }`) is read where the
   "this turn" ones are (`s.ThisTurnEffects<T>`, the command zone); `GetEmblem` marks such an emblem `RestOfTheGame`, so
   the turn's end never takes it (CR 114.4).
+- **MC-4.4m2b's trigger options** (multicolour; tests in `LsvBatch2m2Tests.cs`):
+  - **"Whenever this creature deals combat damage to a player or planeswalker"** (Psychic Frog) is a `DealtDamage`
+    trigger with `CombatDamageTo` — a filter asked of what was dealt the damage (`DealtDamageEvent.ToId`, `Combat`),
+    `Is.Player | Is.Planeswalker`; `SelfDealsCombatDamageToPlayer` stays the player-only one.
+  - **"Whenever you or a permanent you control becomes the target"** (Leovold, Emissary of Trest): a PLAYER targeted
+    raises `BecameTargetEvent` too (`Triggers.RaiseTargeted`), its subject the player — `Subject = Is.Yours & !Is.Spell`
+    — but only while a permanent's own trigger reads it (`ReadsPlayersTargeted`: a staged event costs every search
+    node, MoveCard's rule). A trigger with no `Subject` on `BecameTarget` sees players: give it one.
+  - **"This ability triggers only twice each turn"** (Nadu, Winged Wisdom) is `TriggeredAbilityComponent.TimesEachTurn`
+    (it was the flag `OncePerTurn`: 1) — counted PER ABILITY on the card as each goes on the stack
+    (`Card.LimitedTriggers`, with `OncePerTurnTriggeredOn`): Nadu's grant on Enduring Innocence never uses up her own
+    "once each turn", and a granted ability's count is the creature's own. Nadu's "reveal the top card of your
+    library. If it's a land card, put it onto the battlefield. Otherwise, put it into your hand" is `LookAt(top) { Reveal }`
+    then an `If(Matches(top, Is.Land))` over two `MoveTo { From = [Library] }`, `top` being `Ref.All(Library, …) { Top }`.
+  - **"Whenever you cast a spell that targets one or more permanents, gain control of those permanents"** (Dack
+    Fayden's emblem) is `Trigger.Targeting` — a filter asked of each of the spell's targets (a player, or a permanent
+    on the battlefield): `!Is.Player` — and `Ref.TargetsOf(Ref.EventCard)`, read from the spell on the stack. Danitha,
+    Spear of Agony's "that targets an opponent or a creature an opponent controls" is the same option (it was an
+    `EventTest`); only "an Equipment spell, or …" stays one.
+  - **Monstrosity** (CR 701.37, Alpha Deathclaw) is scripted, no piece: `If(Matches(Ref.Permanents(Is.Source),
+    !Is.With("Monstrous")))` → N +1/+1 counters, "Monstrous" granted for good (saddle's shape), and "when this becomes
+    monstrous" a `WhenYouDo` — nothing else makes it monstrous.

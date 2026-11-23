@@ -1266,7 +1266,7 @@ public static class FraCards
 			[
 				When(TriggerEvent.YouSurveil, [], new CreateTokens(Thopter, 1)) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 			],
 			["Proft, Consulting Detective"] =
@@ -1524,7 +1524,7 @@ public static class FraCards
 					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0)
 				) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 				PeerReview("Prudent Fateseer // Peer Review"),
 			],
@@ -2161,7 +2161,7 @@ public static class FraCards
 			[
 				When(TriggerEvent.YouGainLife, [], new DrawCards(Ref.You, 1)) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}{G}{W}"),
@@ -2335,7 +2335,7 @@ public static class FraCards
 					new DrawCards(Ref.You, 1)
 				) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 			],
 			["Danitha, Spear of Agony"] =
@@ -2887,7 +2887,7 @@ public static class FraCards
 					new CreateTokens(Lotus, 1) { Abilities = [SacrificeForMana(3)] }
 				) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 			],
 			["Draconic Visitor"] = [new ArtifactTokensBecome(Dragon, [])],

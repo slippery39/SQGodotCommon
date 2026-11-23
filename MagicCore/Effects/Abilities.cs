@@ -202,7 +202,6 @@ public enum EventTest
 	RemovingTwoOrMore, // Way of the Mind Sculptor: a loyalty ability that removed two or more
 	Alone, // Jiang Yanggu, Yuriko: the only creature its controller has attacking
 	EquipmentOrTargetsYourCreature, // Danitha, Sword of Hope: an Equipment spell, or a spell targeting your creature
-	TargetsAnOpponentOrTheirCreature, // Danitha, Spear of Agony
 
 	CombatDamageFromThis, // "whenever this deals combat damage to a player"
 	Noncombat, // "whenever an opponent is dealt noncombat damage"
@@ -251,6 +250,42 @@ public record Trigger(EventKind On)
 
 	/// <summary>"When this dies", "when you cast this": read from the card itself (Triggers.Collect), never matched on the battlefield.</summary>
 	public ReadFrom ReadFrom { get; init; }
+
+	readonly Filters.Filter? combatDamageTo;
+
+	/// <summary>
+	/// Psychic Frog: "Whenever this creature deals combat damage to a player or planeswalker" — on a DealtDamage
+	/// trigger (its subject the source), combat damage dealt to something this matches, asked from the trigger's side:
+	/// <c>Is.Player | Is.Planeswalker</c>.
+	/// </summary>
+	public Filters.Filter? CombatDamageTo
+	{
+		get => combatDamageTo;
+		init =>
+			combatDamageTo =
+				value is null || On == EventKind.DealtDamage
+					? value
+					: throw new ArgumentException(
+						$"CombatDamageTo only fits DealtDamage, not {On}"
+					);
+	}
+
+	readonly Filters.Filter? targeting;
+
+	/// <summary>
+	/// Dack Fayden's emblem: "Whenever you cast a spell that targets one or more permanents" — a spell one of whose
+	/// targets (a player, or a permanent on the battlefield) this matches, asked from the trigger's side:
+	/// <c>!Is.Player</c>. "Those permanents" are Ref.TargetsOf(Ref.EventCard).
+	/// </summary>
+	public Filters.Filter? Targeting
+	{
+		get => targeting;
+		init =>
+			targeting =
+				value is null || On == EventKind.SpellCast
+					? value
+					: throw new ArgumentException($"Targeting only fits SpellCast, not {On}");
+	}
 
 	/// <summary>
 	/// Power 8: "whenever you attack WHILE creatures you control have total power 8 or greater" — part
@@ -564,7 +599,7 @@ public static class TriggerEvent
 	/// <summary>Danitha, Spear of Agony.</summary>
 	public static readonly Trigger YouCastSpellTargetingOpponentOrTheirCreature = YouCastSpell with
 	{
-		Also = EventTest.TargetsAnOpponentOrTheirCreature,
+		Targeting = Filters.Is.Opponents & (Filters.Is.Player | Filters.Is.Creature),
 	};
 
 	/// <summary>Emrakul: "When you cast this spell" — read from the spell on the stack.</summary>
@@ -684,8 +719,11 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 	/// </summary>
 	public ZoneType From { get; init; } = ZoneType.Battlefield;
 
-	/// <summary>"This ability triggers only once each turn." Stamped on the card as it goes on the stack.</summary>
-	public bool OncePerTurn { get; init; }
+	/// <summary>
+	/// "This ability triggers only once each turn." (1); Nadu, Winged Wisdom: "This ability triggers only twice each
+	/// turn." (2) — how many times a turn, counted on the card as each goes on the stack; 0: no limit.
+	/// </summary>
+	public int TimesEachTurn { get; init; }
 }
 
 /// <summary>"[Cost]: [effects]." Uses the stack. Mana abilities are <see cref="ManaAbilityComponent"/>, which does not.</summary>
@@ -766,8 +804,8 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 
 	/// <summary>
 	/// "Exhaust — … (Activate each exhaust ability only once.)" — stamped on the card as it is
-	/// activated. ponytail: one stamp per card, as no FRA card has two exhaust abilities.
-	/// Not MtgCore's "exhaust", which is its tapping.
+	/// activated, a bit per ability (Card.ExhaustUsed, its index among the card's activated abilities): Loot, the
+	/// Pathfinder has three. Not MtgCore's "exhaust", which is its tapping.
 	/// </summary>
 	public bool Exhaust { get; init; }
 
@@ -794,6 +832,14 @@ public record LoyaltyAbilityComponent(int Cost, ImmutableList<GameAction> Effect
 
 	/// <summary>Jace, Reality Sculptor: "Activate only if …".</summary>
 	public Condition? OnlyIf { get; init; }
+
+	/// <summary>
+	/// Oko, Thief of Crowns' −5: "Exchange control of target artifact or creature you control and target creature an
+	/// opponent controls with power 3 or less" — ONE legal action, its target words chosen one at a time as it is
+	/// activated (ActivateLoyaltyAction.ChoosesTargets, a ChooseTargetChoice each, as a trigger's), never an activation
+	/// per pair: 150 on a 12-creature board.
+	/// </summary>
+	public bool EachWord { get; init; }
 }
 
 /// <summary>The Way cycle and friends: "Planeswalkers you control have [loyalty ability]."</summary>
@@ -918,6 +964,30 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// </summary>
 	public Condition? OnlyIf { get; init; }
 
+	/// <summary>
+	/// Vivi Ornitier: "{0}: Add X mana … Activate only during your turn and only once each turn." — stamped on the card
+	/// as it is activated (Card.ActivatedOncePerTurnOn, an activated ability's stamp) and left out of the abilities
+	/// listed for the rest of the turn (ManaAbilities.AbilitiesOf). A move's only: the payment never spends it.
+	/// </summary>
+	public bool OncePerTurn { get; init; }
+
+	/// <summary>
+	/// Loot, the Pathfinder: "Exhaust — {G}, {T}: Add three mana of any one color. (Activate each exhaust ability only
+	/// once.)" — stamped on the card (Card.ExhaustUsed, ManaAbilityBit) and never listed again. Using it up is a
+	/// decision, so it is a move only (CashedIn): the payment never exhausts it.
+	/// </summary>
+	public bool Exhaust { get; init; }
+
+	/// <summary>The bit of Card.ExhaustUsed an exhausted MANA ability sets — an activated one sets its index's. ponytail: one exhaust mana ability a card.</summary>
+	public const int ManaAbilityBit = 1 << 30;
+
+	/// <summary>
+	/// Squandered Resources: "Sacrifice a land: Add one mana of any type the sacrificed land could produce." — the
+	/// colours (and {C}) the permanent its cost picks could tap for (ManaAbilities.ColorsOf), one move per land and
+	/// colour (TapForManaAction.SacrificeId, Color).
+	/// </summary>
+	public bool OfWhatTheSacrificedMakes { get; init; }
+
 	/// <summary>"Add one mana of any color" / "Choose a color. Add N of it".</summary>
 	public static ManaAbilityComponent OfAnyOneColor(Count amount) =>
 		new(ManaColor.Colorless) { Amount = amount, AnyOneColor = true };
@@ -949,7 +1019,7 @@ public record ManaAbilityComponent(ManaColor Color) : GameComponent
 	/// ManaPool.Restricted). A costly ability that stays (Starfleet Academy, Talon Gates) is never a move.
 	/// </summary>
 	public bool CashedIn =>
-		Cost is not null && (SacrificesItself || Exerts) && !ChoosesCost && !NoTap;
+		Cost is not null && (SacrificesItself || Exerts || Exhaust) && !ChoosesCost && !NoTap;
 }
 
 /// <summary>
@@ -1227,6 +1297,9 @@ public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent
 
 	/// <summary>Jace, Telepath Unbound: "If that spell would be put into your graveyard, exile it instead" — PlayPermission's.</summary>
 	public bool ExiledLeavingTheStack { get; init; }
+
+	/// <summary>Airbend (Aang, Swift Savior): "its owner may cast it for {2} rather than its mana cost" — paid in place of the mana cost (Costs.Of).</summary>
+	public ManaCost? Instead { get; init; }
 }
 
 /// <summary>
@@ -1861,6 +1934,28 @@ public record MayEnterAsCopy : GameComponent
 
 	/// <summary>Dominion Saboteur: "you may" offered as may — a 3/3 that copies nothing is still a 3/3 (Flesh Duplicate's must is its shortcut).</summary>
 	public bool Optional { get; init; }
+
+	/// <summary>
+	/// Superior Spider-Man: "enter as a copy of any creature card in a graveyard" — where the model is, anyone's
+	/// (Shifting Woodland's graveyard model, on an entering copy); unset is the battlefield.
+	/// </summary>
+	public ZoneType From { get; init; } = ZoneType.Battlefield;
+
+	/// <summary>Superior Spider-Man: "except his name is Superior Spider-Man" — the copy keeps this card's own name.</summary>
+	public bool KeepsName { get; init; }
+
+	/// <summary>Superior Spider-Man: "he's a 4/4 …" — the copy's base power and toughness (eternalize's exception, on an entering copy).</summary>
+	public (int Power, int Toughness)? SetBase { get; init; }
+
+	/// <summary>Superior Spider-Man: "… Spider Human Hero in addition to his other types" — subtypes added to the copy's.</summary>
+	public ImmutableArray<string> AlsoSubtypes { get; init; } = [];
+
+	/// <summary>
+	/// Superior Spider-Man: "When you do, exile that card." — run once it has become the copy, as its controller, with
+	/// Ref.Chosen the card copied. ponytail: run at once, not a reflexive trigger on the stack (CR 603.12) — nobody
+	/// can respond to the exile; a WhenYouDo here when a card's "when you do" has a target.
+	/// </summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
 }
 
 /// <summary>

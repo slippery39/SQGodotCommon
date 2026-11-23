@@ -44,6 +44,7 @@ public static class Targeting
 				.. Cost(a.SacrificeId, "sacrifice", "sacrificing"),
 				.. Cost(a.DiscardId, "discard", "discarding"),
 				.. Cost(a.ExileId, "exile", "exiling"),
+				.. Cost(a.ReturnId, "return", "returning"),
 				.. Cost(a.TapId, "tap", "tapping"),
 				.. Cost(a.SecondTapId, "tap", "tapping"),
 				.. a.TapIds.SelectMany(id => Cost(id, "tap", "tapping")), // a set, last: clicked in any order (SetRest)
@@ -237,6 +238,7 @@ public static class Targeting
 				SacrificeId = 0,
 				DiscardId = 0,
 				ExileId = 0,
+				ReturnId = 0,
 				TapId = 0,
 				SecondTapId = 0,
 				TapIds = [],

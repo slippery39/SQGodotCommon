@@ -454,3 +454,20 @@ whose subsystem it lives in.
     cast). **"Sacrifice it unless it escaped"** is `When(SelfEnters, Sacrifice) with { If = Not(Escaped) }`: the cast
     stamped `OnStackComponent.Escaped` (a graveyard cast paying an escape's costs — its own or Underworld Breach's), read
     on the permanent through `Card.AsCast`, as evoke's `AlternativeCostWasPaid`.
+- **MC-4.4m2b + m2c's options** (multicolour; tests in `LsvBatch2m2Tests.cs`):
+  - **Airbend** (CR 701.65, Aang, Swift Savior: "Exile it. While it's exiled, its owner may cast it for {2} rather than
+    its mana cost") is `LsvCards.Airbend(ref)`: `MoveTo(…, Exile) { From = [Battlefield, Stack] }` whose `Then` is
+    `MakePlayable(Ref.ThisWay, { By = its owner, Forever, CastOnly, Instead = {2} })` — `PlayPermission.Instead` →
+    `PlayableFromExile.Instead`, the mana `Costs.Of` charges in place of the card's mana cost (taxes still apply), and
+    X is 0 for that cast (CR 107.3b: `CastSpellAction` refuses any other).
+  - **A loyalty ability's targets chosen one at a time** (Oko, Thief of Crowns' −5) is `LoyaltyAbilityComponent.
+    EachWord` → `ActivateLoyaltyAction.ChoosesTargets`: ONE legal action with no targets, a `ChooseTargetChoice` per
+    word as it is activated, then `ActivateLoyaltyWithChosenTargetsAction` validates and activates with them — nothing
+    paid if they aren't legal. An exchange of control is two `GainControl` under an `If(Both(Matches, Matches))`: both
+    targets still legal, or nothing (CR 701.12a).
+  - **"You may activate [its] loyalty ability two more times this turn"** (Comet, Stellar Pup) is `ActivateLoyaltyAgain
+    (ref, n)` — `Card.ExtraLoyaltyActivations`, each activation after the turn's first taking one; "may it activate
+    now" is ONE question, `Card.LoyaltyUsedOn(turn)` (the action, the evaluator's lifetime price and the rollout ask
+    it — never `LoyaltyActivatedOnTurn == turn`). A die row's "[+2]" is `PutCounters(Ref.Source, 2) { Kind = Loyalty }`.
+  - **Exhaust is stamped per ability** (Loot, the Pathfinder has three): `Card.ExhaustUsed` is a bit per activated
+    ability (its index) and `ManaAbilityComponent.ManaAbilityBit` for a mana ability's.

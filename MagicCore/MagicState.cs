@@ -739,7 +739,11 @@ public static class MagicState
 		var asCopy =
 			card.GetComponent<MayEnterAsCopy>() is { } copying
 			// nothing to copy: no prompt with no options (an empty forced pick can't be answered)
-			&& new Actions.ChooseCreatureToCopyChoice(controllerId, cardId) { Of = copying.Of }
+			&& new Actions.ChooseCreatureToCopyChoice(controllerId, cardId)
+			{
+				Of = copying.Of,
+				From = copying.From,
+			}
 				.GetOptions(s, ImmutableDictionary<string, object>.Empty)
 				.Count > 0
 				? copying
@@ -774,14 +778,10 @@ public static class MagicState
 						new Actions.ChooseCreatureToCopyChoice(controllerId, cardId)
 						{
 							Of = asCopy.Of,
+							From = asCopy.From,
 							MinChoices = asCopy.Optional ? 0 : 1,
 						},
-						new Actions.BecomeCopyOfChosenAction(cardId, asCopy.VanishingIfNone)
-						{
-							NotLegendary = asCopy.NotLegendary,
-							WithCounters = asCopy.WithCounters,
-							AlsoType = asCopy.AlsoType,
-						},
+						new Actions.BecomeCopyOfChosenAction(cardId, asCopy),
 					],
 				}
 			);

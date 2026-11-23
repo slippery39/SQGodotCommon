@@ -114,3 +114,4 @@ after the split is DEV-4.3.
 | 2026-11-22 | MC-4.4l3c: colourless' trigger, combat, equipment and casting options, 12 cards | 9e827eca | 144 | 302k | 8.0M |
 | 2026-11-22 | MC-4.4l4a + l4b + l5: colourless' new pieces and Lightning Greaves, 10 cards | bf0edc53 | 231 | 392k | 11.6M |
 | 2026-11-22 | MC-4.4m1 + m2a: multicolour's 20 tested pieces and 12 casting and stack options, 32 cards | 3849d1be | 182 | 317k | 8.2M |
+| 2026-11-22 | MC-4.4m2b + m2c: multicolour's 12 combat and trigger options and 12 permanent, copy and mana options, 24 cards | cb347085 | 156 | 415k | 10.1M |

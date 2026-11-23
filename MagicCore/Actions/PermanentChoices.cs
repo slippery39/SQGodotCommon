@@ -19,6 +19,9 @@ public record ChooseCreatureToCopyChoice : ChoiceAction
 	/// <summary>Dominion Saboteur: "any artifact or creature" — unset is a creature.</summary>
 	public Filter? Of { get; init; }
 
+	/// <summary>Superior Spider-Man: "a copy of any creature card in a graveyard" — the zone, anyone's; unset is the battlefield.</summary>
+	public ZoneType From { get; init; } = ZoneType.Battlefield;
+
 	public ChooseCreatureToCopyChoice(int playerId, int sourceId)
 	{
 		PlayerId = playerId;
@@ -35,7 +38,7 @@ public record ChooseCreatureToCopyChoice : ChoiceAction
 	) =>
 		[
 			.. new[] { s.Player1Id(), s.Player2Id() }
-				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.SelectMany(p => s.CardsIn(p, From))
 				.Where(c =>
 					c.Id != SourceId
 					&& (Of?.Matches(s, c, new(PlayerId, SourceId)) ?? c.Is(CardType.Creature))
@@ -56,39 +59,56 @@ public record ChooseCreatureToCopyChoice : ChoiceAction
 /// Saboteur copying a Spacecraft under Zefram gets no two charge counters, CR 614.12); copy before
 /// EnterBattlefield's entry stamp if a card needs it.
 /// </summary>
-public record BecomeCopyOfChosenAction(int CardId, int VanishingIfNone) : GameAction
+public record BecomeCopyOfChosenAction(int CardId, MayEnterAsCopy As) : GameAction
 {
-	/// <summary>Dominion Saboteur: "except it isn't legendary".</summary>
-	public bool NotLegendary { get; init; }
-
-	/// <summary>Dominion Saboteur: "with additional counters … the same number and kinds" as the copied permanent.</summary>
-	public bool WithCounters { get; init; }
-
-	/// <summary>Phyrexian Metamorph: "except it's an artifact in addition to its other types".</summary>
-	public CardType AlsoType { get; init; }
-
 	public override ActionResult Execute(GameState s)
 	{
 		if (!s.IsOnBattlefield(CardId))
 			return new(s);
 		if (
 			ChoosePermanentChoice.Read(InputContext).FirstOrDefault() is not (> 0 and var id)
-			|| !s.IsOnBattlefield(id)
+			|| s.GetObject(id) is not Card there
+			|| !(
+				As.From == ZoneType.Battlefield
+					? s.IsOnBattlefield(id)
+					: s.IsIn(id, there.OwnerId, As.From)
+			)
 		)
 			return new(s.ChooseAsItEnters(CardId)); // itself after all
 		var card = s.GetCard(CardId);
 		var model = s.GetCard(id);
 		var copy = (Card)card.WithCopiableValuesOf(model).WithComponent(new EnteredAsCopy(card));
-		if (NotLegendary)
+		if (As.NotLegendary)
 			copy = copy with { Supertypes = copy.Supertypes & ~Supertype.Legendary };
-		copy = copy with { Types = copy.Types | AlsoType };
-		if (VanishingIfNone > 0 && !s.HasAbility<Vanishing>(model))
-			foreach (var component in Vanishing.Of(VanishingIfNone))
+		copy = copy with
+		{
+			Types = copy.Types | As.AlsoType,
+			Name = As.KeepsName ? card.Name : copy.Name,
+			BasePower = As.SetBase?.Power ?? copy.BasePower,
+			BaseToughness = As.SetBase?.Toughness ?? copy.BaseToughness,
+			Subtypes =
+			[
+				.. copy.Subtypes,
+				.. As.AlsoSubtypes.Where(t => !copy.Subtypes.Contains(t)),
+			],
+		};
+		if (!As.Then.IsEmpty)
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = Conditions
+						.Of(card)
+						.SetItem(ChooseCardsFromHandChoice.Chosen, id),
+					Steps = As.Then,
+				}
+			);
+		if (As.VanishingIfNone > 0 && !s.HasAbility<Vanishing>(model))
+			foreach (var component in Vanishing.Of(As.VanishingIfNone))
 				copy = (Card)copy.WithComponent(component);
 		// It entered just before it became the copy: vanishing's "enters with N time counters" here.
 		s = s.UpdateObject(CardId, copy with { TimeCounters = 0 })
 			.PutCounters(CardId, CounterKinds.Time, copy.GetComponent<Vanishing>()?.N ?? 0);
-		if (WithCounters)
+		if (As.WithCounters)
 			foreach (var (kind, n) in model.AllCounters())
 				s = s.PutCounters(CardId, kind, n, entering: true);
 		return new(s.ChooseAsItEnters(CardId)); // the copy's "as this enters" choices (CR 707.5)
@@ -118,6 +138,15 @@ public record ChoosePermanentChoice : ChoiceAction
 	/// <summary>A sacrifice: what can't be sacrificed (Quark's Treasures) isn't offered — MagicState.CanSacrifice.</summary>
 	public bool Sacrifice { get; init; }
 
+	/// <summary>
+	/// Chaos Defiler: "choose a nonland permanent that player controls" — every player's permanents the filter matches
+	/// (asked from the chooser's side), not only the chooser's own.
+	/// </summary>
+	public bool Anyones { get; init; }
+
+	/// <summary>Comet, Stellar Pup: "to a creature or player" — with Anyones, the players the filter matches are offered too.</summary>
+	public bool OrPlayers { get; init; }
+
 	/// <param name="required">"Sacrifices a creature" must; "you may sacrifice" need not.</param>
 	public ChoosePermanentChoice(int playerId, int sourceId, Filter? filter, bool required = false)
 	{
@@ -133,8 +162,20 @@ public record ChoosePermanentChoice : ChoiceAction
 		GameState s,
 		ImmutableDictionary<string, object> context
 	) =>
-		Filter
-			.Among(s, PlayerId, ZoneType.Battlefield, SourceId)
+		(
+			Anyones
+				? new[] { PlayerId, s.OpponentOf(PlayerId) }
+					.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+					.Cast<GameObject>()
+					.Concat(
+						OrPlayers
+							? [s.GetPlayer(PlayerId), s.GetPlayer(s.OpponentOf(PlayerId))]
+							: []
+					)
+					.Where(o => Filter?.Matches(s, o, new(PlayerId, SourceId)) ?? o is Card)
+					.Select(o => o.Id)
+				: Filter.Among(s, PlayerId, ZoneType.Battlefield, SourceId)
+		)
 			.Where(id => !Sacrifice || s.CanSacrifice(id))
 			.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name })
 			.ToImmutableList();

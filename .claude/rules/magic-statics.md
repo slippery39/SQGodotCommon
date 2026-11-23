@@ -293,3 +293,20 @@ whose subsystem it lives in.
 - **A keyword counter** (CR 122.1b; Drivnod's indestructible counter, `CounterKinds.Indestructible`; Guide of Souls'
   `Flying`; Leatherhead's `Hexproof`) is read by
   `Card.HasOwn`: a counter named as the keyword, lower case, gives it — so every rule that asks `s.Has` sees it.
+- **MC-4.4m2c's copy and type options** (multicolour; tests in `LsvBatch2m2Tests.cs`):
+  - **"Each player other than its controller creates a token that's a copy of it"** (Fractured Identity) is
+    `CreateTokenCopy.ControlledBy` (CreateTokens' option) under an `If(Matches(target, Is.Yours))` — two players: the
+    other one — made just before the `Exile` (a ceiling, DesignNotes).
+  - **"Enter as a copy of any creature card in a graveyard, except his name is … and he's a 4/4 Spider Human Hero in
+    addition to his other types. When you do, exile that card"** (Superior Spider-Man) is `MayEnterAsCopy { From =
+    Graveyard, KeepsName, SetBase, AlsoSubtypes, Then }` — the exceptions become the copy's copiable values; `Then`
+    runs at once with `Ref.Chosen` the card copied (no stack: a ceiling).
+  - **"Becomes a copy … until end of turn, except it's an artifact in addition to its other types"** (Saheeli, Sublime
+    Artificer) is `BecomeCopyUntilEndOfTurn { AlsoType }` — added to the COPY's types (its copiable ones), never read
+    from the model's, which may carry a type stamp (a crewed Vehicle, an animated land) that no copy has.
+  - **"Loses all abilities and becomes a green Elk creature with base power and toughness 3/3"** (Oko) is
+    `ModifyUntilEndOfTurn { ForGood, LosesAllAbilities, AlsoType = Creature, BecomesCreatureTypes, Colors, SetBase }` —
+    it keeps its other card types and loses its other creature types and colours. **"Becomes a Kithkin Spirit with
+    base power and toughness 2/2"** (the Figures, `LsvCards.FigureBecomes`) is `{ ForGood, BecomesCreatureTypes,
+    SetBase }`, each later level under `If(Matches(Ref.Permanents(Is.Source), Is.Subtype(…)))`, its keywords and
+    "protection from each of your opponents" (`Protection(Is.Opponents)`) gained for good — the latest stamp wins.

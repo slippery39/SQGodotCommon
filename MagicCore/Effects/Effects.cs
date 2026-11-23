@@ -1857,6 +1857,31 @@ public record RollDie(int Sides, ImmutableList<DieRow> Rows) : Effect
 	}
 }
 
+/// <summary>
+/// Comet, Stellar Pup: "you may activate Comet's loyalty ability two more times this turn" — that many more
+/// activations of each planeswalker named, this turn (Card.ExtraLoyaltyActivations), beyond the one a turn (CR 606.3).
+/// </summary>
+public record ActivateLoyaltyAgain(Ref What, int Times) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var turn = s.GetGame().TurnNumber;
+		foreach (var walker in Permanents(What, s).ToList())
+			s = s.UpdateObject(
+				walker.Id,
+				walker with
+				{
+					// one not activated this turn has its own activation besides: the stamp below takes it
+					ExtraLoyaltyActivations =
+						(walker.LoyaltyActivatedOnTurn == turn ? walker.ExtraLoyaltyActivations : 1)
+						+ Times,
+					LoyaltyActivatedOnTurn = turn,
+				}
+			);
+		return new(s);
+	}
+}
+
 /// <summary>"Name Sticker" Goblin: "7-14 | Add {R}{R}{R}{R}{R}." — a row of a die's table: the results From to To, and what happens.</summary>
 public record DieRow(int From, int To, ImmutableList<GameAction> Then);
 

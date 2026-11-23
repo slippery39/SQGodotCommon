@@ -279,7 +279,7 @@ public static class TrkCards
 					new PutCounters(Ref.Source, 1)
 				) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 			],
 			["Captain's Tutelage"] =
@@ -1998,7 +1998,7 @@ public static class TrkCards
 					new CreateTokens(ArtifactIllusion, 1)
 				) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 			],
 			["Vash, Freelance Archaeologist"] =
@@ -2006,7 +2006,7 @@ public static class TrkCards
 				When(TriggerEvent.YourUpkeep, [], new Surveil(1)),
 				When(TriggerEvent.CardLeavesYourGraveyard, [], new DrawCards(Ref.You, 1)) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 			],
 			["I'm a Doctor, Not a . . ."] =
@@ -2495,7 +2495,7 @@ public static class TrkCards
 					CreateTreasure(1)
 				) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 			],
 			["Hit It!"] =
@@ -3159,7 +3159,7 @@ public static class TrkCards
 					new ExileTopPlayable { Play = new() { ThisTurn = true } }
 				) with
 				{
-					OncePerTurn = true, // "for the first time each turn": the trigger is only about itself
+					TimesEachTurn = 1, // "for the first time each turn": the trigger is only about itself
 				},
 				.. Station(7, "Flying", "Vigilance"),
 			],

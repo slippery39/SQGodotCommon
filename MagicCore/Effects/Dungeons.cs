@@ -322,10 +322,12 @@ public record YouCompletedADungeon : Condition
 		s.GetPlayer((int)context[ContextKeys.Controller]).DungeonsCompleted > 0;
 }
 
-/// <summary>Feywild Caretaker: "if you have the initiative".</summary>
-public record YouHaveTheInitiative : Condition
+/// <summary>
+/// Feywild Caretaker: "if you have the initiative" (DesignationComponent.Initiative); Aragorn, King of Gondor: "If
+/// you're the monarch" (Monarch) — you hold that designation.
+/// </summary>
+public record YouHold(string Designation) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		DesignationComponent.HolderOf(s, DesignationComponent.Initiative)
-		== (int)context[ContextKeys.Controller];
+		DesignationComponent.HolderOf(s, Designation) == (int)context[ContextKeys.Controller];
 }

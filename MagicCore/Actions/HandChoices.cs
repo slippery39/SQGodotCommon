@@ -29,6 +29,12 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 	/// <summary>MoveChosen's filter on a hand — Erica Ortegas: "a land card from your hand"; none is any.</summary>
 	public Filters.Filter? Filter { get; init; }
 
+	/// <summary>
+	/// Cloak and Dagger, Entwined: "a nonland card from their hand or the chosen creature" — permanents offered beside
+	/// the hand's cards (YouChooseTheyDiscard.OrThe), while they are still on the battlefield.
+	/// </summary>
+	public ImmutableList<int> Also { get; init; } = [];
+
 	public ChooseCardsFromHandChoice() => OutputKey = Chosen;
 
 	public override ImmutableList<ChoiceOption> GetOptions(
@@ -38,6 +44,7 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 		s.CardsIn(PlayerId, ZoneType.Hand)
 			.Where(c => Types == CardType.None || c.Is(Types))
 			.Where(c => Filter?.Matches(s, c, new(PlayerId, SourceOf.Context(context))) ?? true)
+			.Concat(Also.Where(s.IsOnBattlefield).Select(s.GetCard))
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();
 
@@ -183,6 +190,27 @@ public record ChooseAmongChoice : ChoiceAction
 	/// </summary>
 	public bool Delve { get; init; }
 
+	/// <summary>
+	/// Atraxa, Grand Unifier: "For each card type, you may put a card of that type …" — a card already chosen under
+	/// a key beginning with this (an earlier type's choice) isn't offered again.
+	/// </summary>
+	public string? ExceptUnder { get; init; }
+
+	static IEnumerable<int> ChosenUnder(
+		ImmutableDictionary<string, object> context,
+		string prefix
+	) =>
+		context
+			.Where(entry => entry.Key.StartsWith(prefix, StringComparison.Ordinal))
+			.SelectMany(entry =>
+				entry.Value switch
+				{
+					int id => [id],
+					ImmutableList<int> ids => ids,
+					_ => (IEnumerable<int>)[],
+				}
+			);
+
 	public ChooseAmongChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -202,6 +230,7 @@ public record ChooseAmongChoice : ChoiceAction
 			)
 			.Select(s.GetCard)
 			.Where(c => Types == CardType.None || c.Is(Types)) // None: any card
+			.Where(c => ExceptUnder is null || !ChosenUnder(context, ExceptUnder).Contains(c.Id))
 			.Where(c => Filter?.Matches(s, c, new(PlayerId, SourceOf.Context(context))) ?? true);
 		return (DifferentNames ? cards.DistinctBy(c => c.Name) : cards)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })

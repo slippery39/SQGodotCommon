@@ -443,7 +443,13 @@ public static class MagicRules
 			.SelectMany(m =>
 				from id in CostList.Options(m.Costs, CostSlot.Sacrifice, s, player, card.Id)
 				where id != 0 || !m.ChoosesCost
-				from color in m.AnyOneColor ? ManaAbilities.Makes(s, card, m) : [m.Color] // a combination's move names its first colour
+				from color in m.OfWhatTheSacrificedMakes // Squandered Resources: what the sacrificed land could produce
+					? id == 0
+						? []
+						: ManaAbilities.ColorsOf(s, s.GetCard(id)).Distinct()
+					: m.AnyOneColor
+						? ManaAbilities.Makes(s, card, m)
+						: [m.Color] // a combination's move names its first colour
 				// Orcish Lumberjack: "any combination of {R} and/or {G}" — one move per split
 				from other in Enumerable.Range(
 					0,
@@ -501,6 +507,13 @@ public static class MagicRules
 					card.Id
 				)
 				from exile in CostList.Options(a.ability.Costs, CostSlot.Exile, s, player, card.Id)
+				from returned in CostList.Options(
+					a.ability.Costs,
+					CostSlot.Return,
+					s,
+					player,
+					card.Id
+				) // ninjutsu's unblocked attacker
 				from x in Enumerable.Range(0, a.maxX + 1) // one activation per X the mana could pay
 				from life in Enumerable.Range(0, a.ability.Cost.PhyrexianCount + 1) // Drivnod: {B/P} paid with mana or 2 life
 				from tap in CostList.Options(a.ability.Costs, CostSlot.Tap, s, player, card.Id)
@@ -523,6 +536,7 @@ public static class MagicRules
 						SacrificeId = sacrifice,
 						DiscardId = discard,
 						ExileId = exile,
+						ReturnId = returned,
 						TapId = tap,
 						SecondTapId = secondTap,
 						TapIds = taps,
@@ -569,7 +583,13 @@ public static class MagicRules
 			.AbilitiesOf(s, card)
 			.SelectMany(
 				(ability, index) =>
-					from targets in TargetSpec.Combinations(s, ability.Targets, player, card.Id)
+					// Oko's −5: one activation, its two targets chosen after (LoyaltyAbilityComponent.EachWord)
+					from targets in ability.EachWord
+						? TargetSpec
+							.Combinations(s, ability.Targets, player, card.Id)
+							.Take(1)
+							.Select(_ => ImmutableArray<int>.Empty)
+						: TargetSpec.Combinations(s, ability.Targets, player, card.Id)
 					from x in ability.MinusX ? Enumerable.Range(0, card.Loyalty + 1) : [0]
 					select new ActivateLoyaltyAction
 					{
@@ -578,6 +598,7 @@ public static class MagicRules
 						AbilityIndex = index,
 						Targets = targets,
 						X = x,
+						ChoosesTargets = ability.EachWord,
 					}
 			);
 
@@ -698,6 +719,7 @@ public static class MagicRules
 				CardId = T(c.CardId),
 				Targets = Ts(c.Targets),
 				SacrificeId = T(c.SacrificeId),
+				ReturnId = T(c.ReturnId),
 				TapId = T(c.TapId),
 				SecondTapId = T(c.SecondTapId),
 				TapIds = Ts(c.TapIds),
@@ -763,7 +785,9 @@ public static class MagicRules
 				AttackedOnTurn = Now(c.AttackedOnTurn),
 				TimesAttacked = Now(c.AttackedOnTurn) * c.TimesAttacked,
 				LoyaltyActivatedOnTurn = Now(c.LoyaltyActivatedOnTurn),
+				ExtraLoyaltyActivations = Now(c.LoyaltyActivatedOnTurn) * c.ExtraLoyaltyActivations,
 				OncePerTurnTriggeredOn = Now(c.OncePerTurnTriggeredOn),
+				LimitedTriggers = c.OncePerTurnTriggeredOn == turn ? c.LimitedTriggers : [],
 				ResolvedOnTurn = Now(c.ResolvedOnTurn),
 				ActivatedOncePerTurnOn = Now(c.ActivatedOncePerTurnOn),
 				FreeAbilityActivatedOn = Now(c.FreeAbilityActivatedOn),
@@ -801,7 +825,7 @@ public static class MagicRules
 			CastSpellAction c =>
 				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Adventure ? "|a" : "")}{(c.Splice.IsDefaultOrEmpty ? "" : $"|s{string.Join(",", c.Splice.Select(id => Fodder(s, id)))}")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
-				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}{(activate.X > 0 ? $"|x{activate.X}" : "")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
+				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}{(activate.X > 0 ? $"|x{activate.X}" : "")}{(activate.ReturnId == 0 ? "" : $"|b{Fodder(s, activate.ReturnId)}")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>
 				$"loyalty|{loyalty.CardId}|{loyalty.AbilityIndex}|{loyalty.X}|{string.Join(",", loyalty.Targets)}",
 			_ => a, // the rest have no collection fields, so a record's own equality is the identity

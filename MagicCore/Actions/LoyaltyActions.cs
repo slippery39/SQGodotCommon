@@ -59,6 +59,13 @@ public record ActivateLoyaltyAction : GameAction
 	/// <summary>The X of a "−X" ability; 0 otherwise.</summary>
 	public int X { get; init; }
 
+	/// <summary>
+	/// Oko, Thief of Crowns' −5 (LoyaltyAbilityComponent.EachWord): no targets in the action — activating asks a
+	/// ChooseTargetChoice for each word, then activates with them (ActivateLoyaltyWithChosenTargetsAction), before
+	/// anything is paid.
+	/// </summary>
+	public bool ChoosesTargets { get; init; }
+
 	int CostOf(LoyaltyAbilityComponent ability) => ability.MinusX ? -X : ability.Cost;
 
 	public override ValidationResult ValidateAdd(GameState s)
@@ -80,7 +87,7 @@ public record ActivateLoyaltyAction : GameAction
 			return ValidationResult.Invalid("Loyalty abilities are sorcery speed");
 		if (Turns.Combat.LockedDown(s, PlayerId, walker)) // split second, Yuriko, Sen Triplets, Clarion Conqueror
 			return ValidationResult.Invalid("No abilities now: a lock or split second");
-		if (walker.LoyaltyActivatedOnTurn == game.TurnNumber)
+		if (walker.LoyaltyUsedOn(game.TurnNumber))
 			return ValidationResult.Invalid(
 				"Already activated a loyalty ability of this planeswalker this turn"
 			);
@@ -90,6 +97,13 @@ public record ActivateLoyaltyAction : GameAction
 			return ValidationResult.Invalid("Not enough loyalty");
 		if (ability.OnlyIf is { } onlyIf && !onlyIf.Holds(s, Conditions.Of(walker)))
 			return ValidationResult.Invalid("Its condition isn't met");
+		if (ChoosesTargets)
+			return
+				ability.EachWord
+				&& Targets.IsDefaultOrEmpty
+				&& TargetSpec.Combinations(s, ability.Targets, PlayerId, CardId).Any()
+				? ValidationResult.Valid
+				: ValidationResult.Invalid("No targets to choose");
 		if (!TargetSpec.AreLegal(s, ability.Targets, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
 		return ValidationResult.Valid;
@@ -99,9 +113,37 @@ public record ActivateLoyaltyAction : GameAction
 	{
 		var walker = s.GetCard(CardId);
 		var ability = Loyalty.AbilitiesOf(s, walker)[AbilityIndex];
+		if (ChoosesTargets)
+			return new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						Steps =
+						[
+							.. ability.Targets.Select(
+								(spec, i) => new ChooseTargetChoice(PlayerId, CardId, spec, i)
+							),
+							new ActivateLoyaltyWithChosenTargetsAction(
+								this with
+								{
+									ChoosesTargets = false,
+								},
+								ability.Targets.Count
+							),
+						],
+					}
+				)
+			);
 		var cost = CostOf(ability);
+		var turn = s.GetGame().TurnNumber;
+		// Comet, Stellar Pup: an activation after the turn's first uses one of the "more times"
+		var extra = walker.LoyaltyActivatedOnTurn == turn ? walker.ExtraLoyaltyActivations - 1 : 0;
 		s = Loyalty.Change(s, CardId, cost, PlayerId);
-		walker = s.GetCard(CardId) with { LoyaltyActivatedOnTurn = s.GetGame().TurnNumber };
+		walker = s.GetCard(CardId) with
+		{
+			LoyaltyActivatedOnTurn = turn,
+			ExtraLoyaltyActivations = extra,
+		};
 		s = s.UpdateObject(CardId, walker)
 			.Tally(
 				PlayerId,
@@ -125,5 +167,16 @@ public record ActivateLoyaltyAction : GameAction
 			}
 		);
 		return new ActionResult(Priority.Retain(s, PlayerId));
+	}
+}
+
+/// <summary>Oko's −5: the words chosen one at a time (ChooseTargetChoice), then the activation with them — refused, and nothing paid, if they aren't legal.</summary>
+public record ActivateLoyaltyWithChosenTargetsAction(ActivateLoyaltyAction Activation, int Words)
+	: GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var activation = Activation with { Targets = ChooseTargetChoice.Read(InputContext, Words) };
+		return activation.ValidateAdd(s).IsValid ? activation.Execute(s) : new(s);
 	}
 }

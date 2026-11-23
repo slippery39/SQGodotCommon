@@ -1227,7 +1227,7 @@ public static class LsvCards
 					new DrawCards(Ref.You, 1)
 				) with
 				{
-					OncePerTurn = true,
+					TimesEachTurn = 1,
 				},
 				// "If it was a creature": only a creature dies — returned, it is none, and this never triggers again.
 				When(
@@ -1890,7 +1890,7 @@ public static class LsvCards
 				When(TriggerEvent.SelfEnters, [], new TakeTheInitiative(Ref.You)),
 				When(TriggerEvent.YourEndStep, [], new CreateTokens(FaerieDragon, 1)) with
 				{
-					If = new YouHaveTheInitiative(),
+					If = new YouHold(DesignationComponent.Initiative),
 				},
 			],
 			// ===== MC-4.4g4: face-down permanents (Card.TurnedFaceDown, TurnFaceUpAction) =====
@@ -3418,7 +3418,7 @@ public static class LsvCards
 						)
 					) with
 					{
-						OncePerTurn = true,
+						TimesEachTurn = 1,
 					}
 				),
 			],
@@ -5818,6 +5818,655 @@ public static class LsvCards
 					)
 				),
 			],
+			// ===== MC-4.4m2b: multicolour's combat and trigger options (ninjutsu: a returned unblocked attacker, entering attacking; a creature planeswalker; the monarch's holder; combat damage to a planeswalker; a player becoming a target; "twice each turn"; a spell's targets; monstrosity; airbend and waterbend; a chosen creature or player; loyalty abilities again) =====
+			["Kaito, Bane of Nightmares"] =
+			[
+				Ninjutsu("{1}{U}{B}"),
+				// "During your turn, as long as Kaito has one or more loyalty counters on him, he's a 3/4 Ninja creature
+				// and has hexproof." — Mogis' type stamp; damage to him is marked AND removes loyalty (Damage.Deal).
+				new BecomesType(Is.Source)
+				{
+					Add = CardType.Creature,
+					Subtype = "Ninja",
+					Power = 3,
+					Toughness = 4,
+					If = KaitoIsACreature,
+				},
+				new StaticEffectComponent(Is.Source, "Hexproof") { If = KaitoIsACreature },
+				Loyalty(
+					1,
+					[],
+					new GetEmblem(
+						[
+							new StaticEffectComponent(Is.Creature & Is.Yours & Is.Subtype("Ninja"))
+							{
+								Power = 1,
+								Toughness = 1,
+							},
+						]
+					)
+				),
+				// "Then draw a card for each opponent who lost life this turn" — two players: one
+				Loyalty(
+					0,
+					[],
+					new Surveil(2),
+					new If(
+						new AtLeast(Count.LifeLostThisTurnOf(Ref.EachOpponent), 1),
+						[new DrawCards(Ref.You, 1)]
+					)
+				),
+				Loyalty(
+					-2,
+					[Creature],
+					new Tap(Ref.Target()),
+					new PutCounters(Ref.Target(), 2) { Kind = CounterKinds.Stun }
+				),
+			],
+			["Fallen Shinobi"] =
+			[
+				Ninjutsu("{2}{U}{B}"),
+				// "that player exiles the top two cards of their library" — two players: the opponent
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[],
+					new ExileTopPlayable
+					{
+						N = 2,
+						Of = Ref.EachOpponent,
+						Play = new() { ThisTurn = true, Free = true },
+					}
+				),
+			],
+			["Raph & Mikey, Troublemakers"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new RevealUntilOntoBattlefield(CardType.Creature)
+					{
+						Tapped = true,
+						Attacking = true,
+					}
+				),
+			],
+			["Okoye, Mighty and Adored"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new BecomeTheMonarch(Ref.You)),
+				// "Whenever that creature attacks the monarch this turn" — the player holding it, never their planeswalker
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[Creature],
+					new PutCounters(Ref.Target(), 1),
+					new WheneverThisTurn(
+						new TriggeredAbilityComponent(
+							new Trigger(EventKind.Attacked)
+							{
+								Subject = Is.AttackingThe(DesignationComponent.Monarch),
+							},
+							[
+								new ModifyUntilEndOfTurn(Ref.EventCard, 0, 0, "Double strike"),
+								new ModifyUntilEndOfTurn(Ref.EventCard, 0, 0, "Trample"),
+							]
+						)
+					)
+					{
+						About = Ref.Target(0),
+					}
+				),
+			],
+			["Aragorn, King of Gondor"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new BecomeTheMonarch(Ref.You)),
+				// ponytail: "creatures can't block this turn" is those on the battlefield as it resolves — one entering
+				// after can block (DesignNotes); a ThisTurn rule read by Combat.CanBlock when it matters.
+				When(
+					TriggerEvent.SelfAttacks,
+					[Creature with { Optional = true }],
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBlock),
+					new If(
+						new YouHold(DesignationComponent.Monarch),
+						[new ModifyUntilEndOfTurn(Ref.AllCreatures, 0, 0, Combat.CantBlock)]
+					)
+				),
+			],
+			["Psychic Frog"] =
+			[
+				When(
+					new Trigger(EventKind.DealtDamage)
+					{
+						Subject = Is.Source,
+						CombatDamageTo = Is.Player | Is.Planeswalker,
+					},
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+				new ActivatedAbilityComponent(ManaCost.None, [new PutCounters(Ref.Source, 1)])
+				{
+					Costs = [new DiscardCost()],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Flying")]
+				)
+				{
+					Costs = [new ExileFromGraveyardCost(Is.AnyCard) { Count = 3 }],
+				},
+			],
+			["Leovold, Emissary of Trest"] =
+			[
+				// Narset's "can't draw more than one card each turn"
+				new NumericReplacement(ReplacedEvent.Draw)
+				{
+					Affected = Is.Opponents,
+					If = new AtLeast(Count.CardsYouDrewThisTurn with { Of = Ref.It }, 1),
+					Instead = [],
+				},
+				// "you or a permanent you control" — a player becomes a target too (BecameTargetEvent); never your spell
+				When(
+					new Trigger(EventKind.BecameTarget)
+					{
+						Subject = Is.Yours & !Is.Spell,
+						By = Whose.Opponent,
+					},
+					[],
+					new May("Draw a card?", new Always(), [new DrawCards(Ref.You, 1)])
+				),
+			],
+			["Nadu, Winged Wisdom"] =
+			[
+				new GrantsTriggeredAbility(
+					Is.Creature & Is.Yours,
+					When(
+						new Trigger(EventKind.BecameTarget) { Subject = Is.Source },
+						[],
+						new LookAt(TopOfYourLibrary) { Reveal = true },
+						new If(
+							new Matches(TopOfYourLibrary, Is.Land),
+							[
+								new MoveTo(TopOfYourLibrary, ZoneType.Battlefield)
+								{
+									From = [ZoneType.Library],
+									UnderYourControl = true,
+								},
+							]
+						)
+						{
+							Otherwise =
+							[
+								new MoveTo(TopOfYourLibrary, ZoneType.Hand)
+								{
+									From = [ZoneType.Library],
+								},
+							],
+						}
+					) with
+					{
+						TimesEachTurn = 2,
+					}
+				),
+			],
+			["Dack Fayden"] =
+			[
+				Loyalty(
+					1,
+					[TargetSpec.Player()],
+					new DrawCards(Ref.Target(), 2),
+					new Discard(Ref.Target(), 2)
+				),
+				Loyalty(-2, [Target(Is.Artifact)], new GainControl(Ref.Target(), Ref.You)),
+				Loyalty(
+					-6,
+					[],
+					new GetEmblem(
+						[
+							When(
+								TriggerEvent.YouCastSpell with
+								{
+									Targeting = !Is.Player,
+								},
+								[],
+								new GainControl(Ref.TargetsOf(Ref.EventCard), Ref.You)
+							),
+						]
+					)
+				),
+			],
+			["Alpha Deathclaw"] =
+			[
+				When(TriggerEvent.SelfEnters, [TargetSpec.Permanent()], new Destroy(Ref.Target())),
+				// Monstrosity 4 (CR 701.37): "If this creature isn't monstrous, put four +1/+1 counters on it and it
+				// becomes monstrous" — "Monstrous" granted for good (saddle's shape), and "when this becomes monstrous"
+				// a reflexive trigger: nothing else makes it monstrous.
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}{B}{G}"),
+					[
+						new If(
+							new Matches(Ref.Permanents(Is.Source), !Is.With("Monstrous")),
+							[
+								new PutCounters(Ref.Source, 4),
+								new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Monstrous")
+								{
+									ForGood = true,
+								},
+								new WhenYouDo(
+									[TargetSpec.Permanent()],
+									[new Destroy(Ref.Target())]
+								),
+							]
+						),
+					]
+				),
+			],
+			["Aang, Swift Savior // Aang and La, Ocean's Fury"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						Target(Is.Creature & !Is.Source) with
+						{
+							Or = TargetSpec.Spell(),
+							Optional = true,
+						},
+					],
+					Airbend(Ref.Target())
+				),
+				// "Waterbend {8}" — its cost helped by your artifacts and creatures (ManaPayment.Helpers)
+				new ActivatedAbilityComponent(ManaCost.Parse("{8}"), [new Transform(Ref.Source)])
+				{
+					Keyword = "Waterbend",
+				},
+				BackFace(
+					"Aang, Swift Savior // Aang and La, Ocean's Fury",
+					When(
+						TriggerEvent.SelfAttacks,
+						[],
+						new PutCounters(Ref.Permanents(Is.Creature & Is.Yours & Is.Tapped), 1)
+					)
+				),
+			],
+			["Comet, Stellar Pup"] =
+			[
+				// "0: Roll a six-sided die." — each row its loyalty change and its effect, in printed order
+				Loyalty(
+					0,
+					[],
+					new RollDie(
+						6,
+						[
+							new DieRow(
+								1,
+								2,
+								[
+									new PutCounters(Ref.Source, 2) { Kind = CounterKinds.Loyalty },
+									new CreateTokens(Squirrel, 2) { GainsUntilEndOfTurn = "Haste" },
+								]
+							),
+							new DieRow(
+								3,
+								3,
+								[
+									new RemoveCounters(Ref.Source, 1)
+									{
+										Kind = CounterKinds.Loyalty,
+									},
+									new MoveChosen(
+										ZoneType.Graveyard,
+										Is.ManaValueAtMost(2),
+										ZoneType.Hand
+									),
+								]
+							),
+							// "to a creature or player" — chosen as it resolves, never targeted
+							new DieRow(
+								4,
+								5,
+								[
+									new MoveChosen(
+										ZoneType.Battlefield,
+										Is.Creature | Is.Player,
+										ZoneType.Battlefield
+									)
+									{
+										Anyones = true,
+										OrPlayers = true,
+										Prompt = "Comet deals damage to",
+										Then =
+										[
+											new DealDamage(Ref.Chosen, Count.LoyaltyOf(Ref.Source)),
+										],
+									},
+									new RemoveCounters(Ref.Source, 2)
+									{
+										Kind = CounterKinds.Loyalty,
+									},
+								]
+							),
+							new DieRow(
+								6,
+								6,
+								[
+									new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Loyalty },
+									new ActivateLoyaltyAgain(Ref.Source, 2),
+								]
+							),
+						]
+					)
+				),
+			],
+			// ===== MC-4.4m2c: multicolour's permanent, copy and mana options (a copy for the other player; entering as a copy of a graveyard card, its name kept; a copy that is an artifact too; all abilities lost for good; a creature type and base P/T for good; an opponent's permanent chosen; a hand card or a creature exiled; a card per type; mana by power once a turn; what a sacrificed land makes; exhaust on a mana ability) =====
+			["Fractured Identity"] =
+			[
+				// "Each player other than its controller" — two players: the other one. ponytail: the copy is made just
+				// BEFORE the exile (a token copy reads a permanent), so its "enters" sees the original still there.
+				Spell(
+					[Target(!Is.Land)],
+					new If(
+						new Matches(Ref.Target(), Is.Yours),
+						[new CreateTokenCopy(Ref.Target()) { ControlledBy = Ref.EachOpponent }]
+					)
+					{
+						Otherwise = [new CreateTokenCopy(Ref.Target())],
+					},
+					new Exile(Ref.Target())
+				),
+			],
+			["Superior Spider-Man"] =
+			[
+				new MayEnterAsCopy
+				{
+					Optional = true,
+					From = ZoneType.Graveyard,
+					KeepsName = true,
+					SetBase = (4, 4),
+					AlsoSubtypes = ["Spider", "Human", "Hero"],
+					Then = [new MoveTo(Ref.Chosen, ZoneType.Exile) { From = [ZoneType.Graveyard] }],
+				},
+			],
+			["Saheeli, Sublime Artificer"] =
+			[
+				When(TriggerEvent.YouCastNoncreatureSpell, [], new CreateTokens(Servo, 1)),
+				Loyalty(
+					-2,
+					[
+						Target(Is.Artifact & Is.Yours),
+						Target((Is.Artifact | Is.Creature) & Is.Yours) with
+						{
+							NotThePrevious = true,
+						},
+					],
+					new BecomeCopyUntilEndOfTurn(Ref.Target(0), Ref.Target(1))
+					{
+						AlsoType = CardType.Artifact,
+					}
+				),
+			],
+			["Oko, Thief of Crowns"] =
+			[
+				Loyalty(2, [], CreateFood(1)),
+				// "loses all abilities and becomes a green Elk creature with base power and toughness 3/3" — for good;
+				// it keeps its other card types (an artifact stays one) and loses its other creature types and colours
+				Loyalty(
+					1,
+					[Target(Is.Artifact | Is.Creature)],
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+					{
+						ForGood = true,
+						LosesAllAbilities = true,
+						AlsoType = CardType.Creature,
+						BecomesCreatureTypes = ["Elk"],
+						Colors = [ManaColor.Green],
+						SetBase = (3, 3),
+					}
+				),
+				// An exchange needs both (CR 701.12a); the two targets are chosen one at a time (EachWord)
+				Loyalty(
+					-5,
+					[
+						Target((Is.Artifact | Is.Creature) & Is.Yours),
+						Target(Is.Creature & Is.Opponents & Is.PowerAtMost(3)),
+					],
+					new If(
+						new Both(
+							new Matches(Ref.Target(0), Is.AnyCard),
+							new Matches(Ref.Target(1), Is.AnyCard)
+						),
+						[
+							new GainControl(Ref.Target(0), Ref.EachOpponent),
+							new GainControl(Ref.Target(1), Ref.You),
+						]
+					)
+				) with
+				{
+					EachWord = true,
+				},
+			],
+			["Figure of Fable"] =
+			[
+				FigureBecomes("{G/W}", null, ["Kithkin", "Scout"], (2, 3)),
+				FigureBecomes("{1}{G/W}{G/W}", "Scout", ["Kithkin", "Soldier"], (4, 5)),
+				FigureBecomes(
+					"{3}{G/W}{G/W}{G/W}",
+					"Soldier",
+					["Kithkin", "Avatar"],
+					(7, 8),
+					[new Protection(Is.Opponents)] // "protection from each of your opponents"
+				),
+			],
+			["Figure of Destiny"] =
+			[
+				FigureBecomes("{R/W}", null, ["Kithkin", "Spirit"], (2, 2)),
+				FigureBecomes(
+					"{R/W}{R/W}{R/W}",
+					"Spirit",
+					["Kithkin", "Spirit", "Warrior"],
+					(4, 4)
+				),
+				FigureBecomes(
+					"{R/W}{R/W}{R/W}{R/W}{R/W}{R/W}",
+					"Warrior",
+					["Kithkin", "Spirit", "Warrior", "Avatar"],
+					(8, 8),
+					null,
+					"Flying",
+					"First strike"
+				),
+			],
+			["Chaos Defiler"] =
+			[
+				When(TriggerEvent.SelfEnters, [], BattleCannon),
+				When(TriggerEvent.SelfDies, [], BattleCannon),
+			],
+			["Cloak and Dagger, Entwined"] =
+			[
+				// "up to one target creature they control" — two players: an opponent's
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						TargetSpec.Player(Is.Opponents),
+						Target(Is.Creature & Is.Opponents) with
+						{
+							Optional = true,
+						},
+					],
+					new YouChooseTheyDiscard(Ref.Target(0), CardType.None)
+					{
+						Filter = !Is.Land,
+						Optional = true,
+						UntilSourceLeaves = true,
+						OrThe = Ref.Target(1),
+					}
+				),
+			],
+			["Atraxa, Grand Unifier"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new LookAndTake(10) { OnePerType = true, Reveal = true }
+				),
+			],
+			["Vivi Ornitier"] =
+			[
+				// "{0}: Add X mana in any combination of {U} and/or {R}, where X is Vivi Ornitier's power. Activate only
+				// during your turn and only once each turn." — a mana MOVE, one per split, never the payment's
+				new ManaAbilityComponent(ManaColor.Blue)
+				{
+					Amount = Count.PowerOf(Ref.Source),
+					OrColors = [ManaColor.Red],
+					Costs = [],
+					OnlyIf = new DuringYourTurn(),
+					OncePerTurn = true,
+				},
+				When(
+					TriggerEvent.YouCastNoncreatureSpell,
+					[],
+					new PutCounters(Ref.Source, 1),
+					new DealDamage(Ref.EachOpponent, 1)
+				),
+			],
+			["Squandered Resources"] =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless)
+				{
+					Costs = [new SacrificeCost(Is.Land)],
+					OfWhatTheSacrificedMakes = true,
+				},
+			],
+			["Loot, the Pathfinder"] =
+			[
+				ManaAbilityComponent.OfAnyOneColor(3) with
+				{
+					Cost = ManaCost.Parse("{G}"),
+					Exhaust = true,
+				},
+				new ActivatedAbilityComponent(ManaCost.Parse("{U}"), [new DrawCards(Ref.You, 3)])
+				{
+					Costs = [new TapSelfCost()],
+					Exhaust = true,
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{R}"),
+					[new DealDamage(Ref.Target(), 3)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [TargetSpec.AnyTarget()],
+					Exhaust = true,
+				},
+			],
+		};
+
+	/// <summary>Kaito, Bane of Nightmares: "During your turn, as long as Kaito has one or more loyalty counters on him".</summary>
+	static Condition KaitoIsACreature =>
+		new Both(new DuringYourTurn(), new AtLeast(Count.LoyaltyOf(Ref.Source), 1));
+
+	/// <summary>Nadu, Winged Wisdom: "the top card of your library".</summary>
+	static Ref TopOfYourLibrary =>
+		Ref.All(ZoneType.Library, Is.AnyCard, Ref.You) with
+		{
+			Top = true,
+		};
+
+	/// <summary>Comet, Stellar Pup: "two 1/1 green Squirrel creature tokens".</summary>
+	static CardData Squirrel => Token("Squirrel", "Creature — Squirrel", "1", "1", ["G"]);
+
+	/// <summary>
+	/// Ninjutsu (CR 702.49; Fallen Shinobi: "Ninjutsu {2}{U}{B} ({2}{U}{B}, Return an unblocked attacker you control to
+	/// hand: Put this card onto the battlefield from your hand tapped and attacking.)") — an ability of the card in hand:
+	/// Daze's ReturnToHandCost over Is.Unblocked (an attacker no creature blocks, once blockers are declared), and
+	/// MoveTo { Tapped, Attacking }. ponytail: the Ninja attacks the opponent, also when the creature returned was
+	/// attacking a planeswalker (EnterBattlefield(attacking:) names the player) — carry what it attacked when it matters.
+	/// </summary>
+	static ActivatedAbilityComponent Ninjutsu(string cost) =>
+		new(
+			ManaCost.Parse(cost),
+			[
+				new MoveTo(Ref.Source, ZoneType.Battlefield)
+				{
+					From = [ZoneType.Hand],
+					Tapped = true,
+					Attacking = true,
+				},
+			]
+		)
+		{
+			From = ZoneType.Hand,
+			Costs = [new ReturnToHandCost(Is.Creature & Is.Unblocked)],
+			Keyword = "Ninjutsu",
+		};
+
+	/// <summary>
+	/// Airbend (CR 701.65; Aang, Swift Savior: "airbend up to one other target creature or spell. (Exile it. While it's
+	/// exiled, its owner may cast it for {2} rather than its mana cost.)") — a permanent or a spell exiled, then its
+	/// owner's permission to cast it for {2} for as long as it stays there (PlayPermission.Instead).
+	/// </summary>
+	static MoveTo Airbend(Ref what) =>
+		new(what, ZoneType.Exile)
+		{
+			From = [ZoneType.Battlefield, ZoneType.Stack],
+			Then =
+			[
+				new MakePlayable(
+					Ref.ThisWay,
+					new PlayPermission
+					{
+						By = Ref.OwnerOf(Ref.ThisWay),
+						Forever = true,
+						CastOnly = true,
+						Instead = ManaCost.Parse("{2}"),
+					}
+				),
+			],
+		};
+
+	/// <summary>
+	/// Figure of Destiny: "{R/W}{R/W}{R/W}: If this creature is a Spirit, it becomes a Kithkin Spirit Warrior with base
+	/// power and toughness 4/4." — its creature types and base P/T for good (it loses its other creature types), only
+	/// while it is still the type named; the last level's keywords and abilities (Figure of Fable: "protection from
+	/// each of your opponents") gained for good too.
+	/// </summary>
+	static ActivatedAbilityComponent FigureBecomes(
+		string cost,
+		string? ifItIsA,
+		ImmutableArray<string> types,
+		(int, int) size,
+		ImmutableList<GameComponent>? gains = null,
+		params string[] keywords
+	)
+	{
+		ImmutableList<GameAction> becomes =
+		[
+			new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+			{
+				ForGood = true,
+				BecomesCreatureTypes = types,
+				SetBase = size,
+				Gains = gains ?? [],
+			},
+			.. keywords.Select(k => new ModifyUntilEndOfTurn(Ref.Source, 0, 0, k)
+			{
+				ForGood = true,
+			}),
+		];
+		return new(
+			ManaCost.Parse(cost),
+			ifItIsA is null
+				? becomes
+				: [new If(new Matches(Ref.Permanents(Is.Source), Is.Subtype(ifItIsA)), becomes)]
+		);
+	}
+
+	/// <summary>
+	/// Chaos Defiler's Battle Cannon: "for each opponent, choose a nonland permanent that player controls. Destroy one of
+	/// them chosen at random." — two players: the one chosen (not targeted) is destroyed. ponytail: random among one.
+	/// </summary>
+	static MoveChosen BattleCannon =>
+		new(ZoneType.Battlefield, !Is.Land & Is.Opponents, ZoneType.Battlefield)
+		{
+			Anyones = true,
+			Prompt = "Choose a nonland permanent to destroy",
+			Then = [new Destroy(Ref.Chosen)],
 		};
 
 	/// <summary>Gemstone Caverns: "If Gemstone Caverns has a luck counter on it".</summary>

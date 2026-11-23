@@ -142,6 +142,9 @@ public static class Costs
 		var impulse = Playable.IsImpulsePlayableBy(s, card, casterId)
 			? card.GetComponent<PlayableFromExile>()
 			: null;
+		// Airbend (Aang, Swift Savior): "its owner may cast it for {2} rather than its mana cost"
+		if (!free && impulse?.Instead is { } rather)
+			printed = added is null ? rather : rather.Plus(added);
 		// Null Summoner: "mana of any type can be spent to cast that spell".
 		if (
 			!free

@@ -320,3 +320,16 @@ whose subsystem it lives in.
 - **"Then shuffle and put the last cards you looked at this way on top in any order"** (Lim-Dûl's Vault, MC-4.4m2a) is
   `ShuffleLibrary { KeepTop = 5 }` (`MagicState.Shuffle(…, keepTop)`): the top N stay where they are, as known as they
   were — their order was chosen as they were last looked at (`LookAndTake { Take = 0, Rest = TopInAnyOrder }`).
+- **MC-4.4m2b + m2c's choice options** (multicolour; tests in `LsvBatch2m2Tests.cs`):
+  - **"Choose a nonland permanent that player controls"** — chosen, never targeted (Chaos Defiler) — is `MoveChosen
+    (Battlefield, filter, Battlefield) { Anyones, Then }`: `ChoosePermanentChoice.Anyones` offers EVERY player's
+    permanents the filter matches, asked from the chooser's side (`Is.Opponents`), and `Then` reads `Ref.Chosen`.
+    **"To a creature or player"** (Comet, Stellar Pup) adds `OrPlayers`: the players the filter matches too.
+  - **"A nonland card from their hand or the chosen creature"** (Cloak and Dagger, Entwined) is `YouChooseTheyDiscard
+    { OrThe = Ref.Target(1) }` — the permanents it names offered beside the hand's cards (`ChooseCardsFromHandChoice.
+    Also`), exiled until the source leaves the same way.
+  - **"For each card type, you may put a card of that type from among them into your hand"** (Atraxa, Grand Unifier) is
+    `LookAndTake { OnePerType }`: one choice per card type there is among the cards looked at — every `CardType`,
+    kindred too — up to one card each (`PutLookedAtAction.PerType`), a card taken as one type never offered as another
+    (`ChooseAmongChoice.ExceptUnder`) — never a choice of sets.
+  - **"Reveal [cards]"** with nothing chosen is `LookAt(ref) { Reveal }` — known to everyone.

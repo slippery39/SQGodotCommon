@@ -273,7 +273,12 @@ public record BecameTargetEvent(int CardId, int ByPlayerId, int ByStackObjectId)
 	public override EventKind Kind() => EventKind.BecameTarget;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
-		s.IsOnBattlefield(CardId) || s.IsOnStack(CardId) ? [s.GetObject(CardId)] : [];
+		s.IsOnBattlefield(CardId) || s.IsOnStack(CardId) || IsAPlayer(s)
+			? [s.GetObject(CardId)]
+			: [];
+
+	/// <summary>Leovold, Emissary of Trest: "you … become the target" — a player targeted is the subject too.</summary>
+	bool IsAPlayer(GameState s) => s.HasObject(CardId) && s.GetObject(CardId) is MagicPlayer;
 
 	public override int By(GameState s) => ByPlayerId;
 }
@@ -332,6 +337,11 @@ public record TransformedEvent(int CardId) : MagicEvent
 /// </summary>
 public record DealtDamageEvent(int SourceId, int Amount) : MagicEvent
 {
+	/// <summary>What was dealt the damage — a player, a creature or a planeswalker (Trigger.CombatDamageTo).</summary>
+	public int ToId { get; init; }
+
+	public bool Combat { get; init; }
+
 	public override EventKind Kind() => EventKind.DealtDamage;
 
 	public override IEnumerable<GameObject> Subjects(GameState s) =>
@@ -403,10 +413,42 @@ public static class Triggers
 	) =>
 		targets
 			.Distinct() // targeted by two words of one spell, it still becomes its target once
-			.Where(id => id != 0 && s.HasObject(id) && s.GetObject(id) is Card)
+			.Where(id =>
+				id != 0
+				&& s.HasObject(id)
+				&& s.GetObject(id) switch
+				{
+					Card => true,
+					MagicPlayer player => ReadsPlayersTargeted(s, player), // Leovold: "you … become the target"
+					_ => false,
+				}
+			)
 			.Aggregate(
 				s,
 				(st, id) => st.Raise(new BecameTargetEvent(id, byPlayerId, byStackObjectId))
+			);
+
+	/// <summary>
+	/// A player becoming a target is an event only while a permanent reads it (Leovold, Emissary of Trest) — every burn
+	/// spell aimed at a player would otherwise stage one, and a staged event costs each search node a Collect and a
+	/// state-check round (MoveCard's rule for ChangedZoneEvent). ponytail: a permanent's OWN triggers only — give an
+	/// emblem or a granted ability the same look when one reads a player targeted.
+	/// </summary>
+	static bool ReadsPlayersTargeted(GameState s, MagicPlayer player) =>
+		new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+			.Any(c =>
+				s.AbilitiesOf<TriggeredAbilityComponent>(c)
+					.Any(a =>
+						a.On.On == EventKind.BecameTarget
+						&& (
+							a.On.Subject?.Matches(
+								s,
+								player,
+								new FilterContext(c.ControllerId, c.Id)
+							) ?? true
+						)
+					)
 			);
 
 	/// <summary>A triggered ability waiting to go on the stack. EventSnapshot is the card the event was about, as it last was (a dead creature's counters).</summary>
@@ -874,6 +916,21 @@ public static class Triggers
 		if (!ZonesFit(on, e))
 			return false;
 		if (
+			on.CombatDamageTo is { } recipient
+			&& (
+				e is not DealtDamageEvent { Combat: true } dealtDamage
+				|| !s.HasObject(dealtDamage.ToId)
+				|| !recipient.Matches(s, s.GetObject(dealtDamage.ToId), asking)
+			)
+		)
+			return false;
+		// Dack Fayden's emblem: "a spell that targets one or more permanents"
+		if (
+			on.Targeting is { } aimedAt
+			&& (e is not SpellCastEvent castSpell || !Targets(castSpell, aimedAt))
+		)
+			return false;
+		if (
 			on.CombatDamageBy is { } by
 			&& (
 				e switch
@@ -911,8 +968,6 @@ public static class Triggers
 					s.GetCard(cast.CardId).Subtypes.Contains("Equipment")
 					|| Targets(cast, Is.Creature & Is.Yours)
 				),
-			EventTest.TargetsAnOpponentOrTheirCreature => e is SpellCastEvent cast
-				&& Targets(cast, Is.Opponents & (Is.Player | Is.Creature)),
 
 			EventTest.CombatDamageFromThis => e is PlayerDealtDamageEvent damaged
 				&& damaged.Combat
@@ -995,7 +1050,8 @@ public static class Triggers
 	/// </summary>
 	public static GameState PutOnStack(GameState s, List<Pending> triggers, int priorityPlayerId)
 	{
-		var firedOnce = new HashSet<(int Id, int Incarnation)>();
+		var fired =
+			new Dictionary<(int Id, int Incarnation, TriggeredAbilityComponent Ability), int>();
 		foreach (var pending in triggers)
 		{
 			var t = pending with { Delayed = FiredDelayedTrigger(s, pending) is not null };
@@ -1004,21 +1060,32 @@ public static class Triggers
 			// (and never swapped for a guess by the AI's hidden-hand sampling while its trigger waits).
 			if (t.Ability.From == ZoneType.Hand && s.HasObject(t.Source.Id))
 				s = s.MakeKnown(t.Source.Id, Knowers.Everyone);
-			if (t.Ability.OncePerTurn)
+			if (t.Ability.TimesEachTurn is > 0 and var limit)
 			{
-				// "Only once each turn": the first goes on the stack and stamps the card; the rest
+				// "Only once each turn" (Nadu: twice): the first go on the stack and stamp the card; the rest
 				// don't. A source that already left still resolves (CR 603.3) — there is nothing left
 				// to stamp, and a new object may trigger again anyway (CR 400.7).
-				// ponytail: one stamp per card, so two once-per-turn abilities on one permanent would
-				// block each other. Key it by ability if a card ever has two.
+				// Counted per ABILITY: Nadu's granted "twice each turn" and Enduring Innocence's own "once each
+				// turn" on one creature never use each other up.
 				var turn = s.GetGame().TurnNumber;
-				if (!firedOnce.Add((t.Source.Id, t.Source.Incarnation)))
+				var key = (t.Source.Id, t.Source.Incarnation, t.Ability);
+				var before = fired.GetValueOrDefault(key);
+				if (before >= limit)
 					continue;
+				fired[key] = before + 1;
 				if (s.IsOnBattlefield(t.Source.Id) && s.GetCard(t.Source.Id) is var now)
 				{
-					if (now.OncePerTurnTriggeredOn == turn)
+					var already = now.OncePerTurnTriggeredOn == turn ? now.LimitedTriggers : [];
+					if (already.Count(a => a.Equals(t.Ability)) >= limit)
 						continue;
-					s = s.UpdateObject(now.Id, now with { OncePerTurnTriggeredOn = turn });
+					s = s.UpdateObject(
+						now.Id,
+						now with
+						{
+							OncePerTurnTriggeredOn = turn,
+							LimitedTriggers = already.Add(t.Ability),
+						}
+					);
 				}
 			}
 			if (t.Ability.Modes.IsEmpty)

@@ -75,7 +75,7 @@ public static partial class Evaluator
 		// unused in its controller's turn, or the opponent's combat is already over.
 		var attackFirst =
 			game.ActivePlayerId == me
-				? c.LoyaltyActivatedOnTurn == game.TurnNumber || game.Step >= Step.End
+				? c.LoyaltyUsedOn(game.TurnNumber) || game.Step >= Step.End
 				: game.Step < Step.EndCombat || game.AdditionalCombats > 0;
 		return Priced(
 			Lifetime(s, me, options, perTurn, perActivation, c.Loyalty, attackFirst),

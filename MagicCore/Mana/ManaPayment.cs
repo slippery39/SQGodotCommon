@@ -164,8 +164,17 @@ public static class ManaPayment
 	/// Convoke (CR 702.51) and improvise (CR 702.126): whether this spell's creatures and its artifacts may tap to help
 	/// pay — read once per payment, then asked of each permanent by <see cref="Helps"/>.
 	/// </summary>
-	public static (bool Creatures, bool Artifacts) Helpers(GameState s, Card? spell) =>
-		spell is null ? default : (s.Has(spell, "Convoke"), s.Has(spell, "Improvise"));
+	/// <param name="abilityKeyword">Waterbend (Aang, Swift Savior: "Waterbend {8}", CR 701.67): "While paying a waterbend
+	/// cost, you can tap your artifacts and creatures to help. Each one pays for {1}." — an ACTIVATED ability's cost,
+	/// told by its keyword (ActivatedAbilityComponent.Keyword); a creature pays {1} there, never its colour.</param>
+	public static (bool Creatures, bool Artifacts, bool OnlyGeneric) Helpers(
+		GameState s,
+		Card? spell,
+		string? abilityKeyword = null
+	) =>
+		abilityKeyword == "Waterbend" ? (true, true, true)
+		: spell is null ? default
+		: (s.Has(spell, "Convoke"), s.Has(spell, "Improvise"), false);
 
 	/// <summary>
 	/// What tapping this permanent pays toward a spell its <see cref="Helpers"/> let it help, or null: a creature, for
@@ -175,7 +184,7 @@ public static class ManaPayment
 	/// </summary>
 	public static ImmutableArray<ManaColor>? Helps(
 		GameState s,
-		(bool Creatures, bool Artifacts) helpers,
+		(bool Creatures, bool Artifacts, bool OnlyGeneric) helpers,
 		Card permanent
 	)
 	{
@@ -183,7 +192,9 @@ public static class ManaPayment
 			return null;
 		ImmutableArray<ManaColor>? pays = null;
 		if (helpers.Creatures && permanent.Is(CardType.Creature))
-			pays = [.. s.ColorsOf(permanent), ManaColor.Colorless]; // an animated Colonnade's white and blue
+			pays = helpers.OnlyGeneric
+				? [ManaColor.Colorless]
+				: [.. s.ColorsOf(permanent), ManaColor.Colorless]; // an animated Colonnade's white and blue
 		if (helpers.Artifacts && permanent.Is(CardType.Artifact))
 			pays ??= [ManaColor.Colorless]; // a convoking creature already pays {1}
 		return pays;
@@ -202,7 +213,8 @@ public static class ManaPayment
 		Card? forSpell = null,
 		IReadOnlyCollection<int>? alsoExclude = null,
 		Card? forAbilityOf = null,
-		bool mostColors = false
+		bool mostColors = false,
+		string? abilityKeyword = null
 	)
 	{
 		if (mostColors)
@@ -217,7 +229,7 @@ public static class ManaPayment
 				forAbilityOf
 			);
 		var player = s.GetPlayer(playerId);
-		var helpers = Helpers(s, forSpell);
+		var helpers = Helpers(s, forSpell, abilityKeyword);
 		var tappable = new List<Tappable>();
 		// Sen Triplets: floating mana and convoke only; Clarion Conqueror: no artifact's or creature's mana
 		var locks = Turns.Combat.Locks(s, playerId);
@@ -362,7 +374,7 @@ public static class ManaPayment
 					.AbilitiesOf(s, c)
 					// ponytail: Arena of Glory's exert is a decision, a move only (ManaAbilityComponent.CashedIn): it makes no more mana
 					// than its plain tap, and this path pays no cost beyond {T} and its own sacrifice
-					.Where(m => m.Cost is not null && !m.ChoosesCost && !m.Exerts)
+					.Where(m => m.Cost is not null && !m.ChoosesCost && !m.Exerts && !m.Exhaust) // Loot's exhaust: a move only
 			)
 			{
 				var n = costly.Amount.Value(s, Conditions.Of(c));

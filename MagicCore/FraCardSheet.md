@@ -620,7 +620,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, LsvBatch2h2cTests, LsvBatch2i2bTests, LsvBatch2iTests, LsvBatch2k2aTests, LsvBatch2k3Tests, LsvBatch2l3Tests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2mTests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, LsvBatch2h2cTests, LsvBatch2i2bTests, LsvBatch2iTests, LsvBatch2k2aTests, LsvBatch2k3Tests, LsvBatch2l3Tests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2m2Tests, LsvBatch2mTests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Formidable Commons
 
@@ -1937,7 +1937,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 [
 	When(TriggerEvent.YouGainLife, [], new DrawCards(Ref.You, 1)) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{4}{G}{W}"),
@@ -2129,7 +2129,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new DrawCards(Ref.You, 1)
 	) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 ],
 ```
@@ -3425,7 +3425,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0)
 	) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 	PeerReview("Prudent Fateseer // Peer Review"),
 ],
@@ -3636,7 +3636,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 [
 	When(TriggerEvent.YouSurveil, [], new CreateTokens(Thopter, 1)) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 ],
 ```
@@ -6861,7 +6861,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new CreateTokens(Lotus, 1) { Abilities = [SacrificeForMana(3)] }
 	) with
 	{
-		OncePerTurn = true,
+		TimesEachTurn = 1,
 	},
 ],
 ```

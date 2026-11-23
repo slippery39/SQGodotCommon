@@ -201,3 +201,17 @@ whose subsystem it lives in.
   one mana"** (Zirda, the Dawnwaker, MC-4.4m2a) is `CostChange(-2, Is.AnyCard) { Abilities, Floor = 1 }` — a tax on
   abilities reads `By` now (who activates, from the holder's controller: Zirda's default `You`), so Anointed
   Peacekeeper's, on everyone's, is `By = Whose.Any`.
+- **MC-4.4m2b + m2c's mana options** (multicolour; tests in `LsvBatch2m2Tests.cs`):
+  - **Waterbend** (CR 701.67, Aang, Swift Savior: "Waterbend {8}") is an activated ability with `Keyword = "Waterbend"`:
+    `ManaPayment.Helpers(…, abilityKeyword)` lets your untapped artifacts and creatures each pay {1} of it (never a
+    colour) — convoke and improvise's answer, for an ability's cost.
+  - **"{0}: Add X mana in any combination of {U} and/or {R}, where X is [its] power. Activate only during your turn
+    and only once each turn"** (Vivi Ornitier) is a no-{T} mana ability (`Costs = []`, `Amount = Count.PowerOf`,
+    `OrColors`, `OnlyIf`) with `ManaAbilityComponent.OncePerTurn` — stamped as an activated ability's, then left out
+    of `ManaAbilities.AbilitiesOf` for the turn. A move per split, never the payment's.
+  - **"Sacrifice a land: Add one mana of any type the sacrificed land could produce"** (Squandered Resources) is
+    `ManaAbilityComponent { Costs = [SacrificeCost(Is.Land)], OfWhatTheSacrificedMakes }`: one move per land and
+    colour that land's plain abilities make (`ManaAbilities.ColorsOf`, {C} too).
+  - **Exhaust on a mana ability** (Loot, the Pathfinder: "Exhaust — {G}, {T}: Add three mana of any one color") is
+    `ManaAbilityComponent.Exhaust`: a MOVE only (`CashedIn`, `TapForManaAction.PaysItsCost`, one per colour) — the
+    payment never exhausts it — and never listed again once used.

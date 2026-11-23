@@ -519,6 +519,9 @@ public record CastSpellAction : GameAction
 				&& (
 					!ChoosesX(card, Kicked)
 					|| WithoutPayingManaCost && !XInKicker(card, Kicked) && !XInCosts(card)
+					// airbend: "for {2} rather than its mana cost" — an alternative cost with no X (CR 107.3b)
+					|| Playable.IsImpulsePlayableBy(s, card, PlayerId)
+						&& card.GetComponent<PlayableFromExile>() is { Instead: not null }
 				)
 			)
 			|| (Kicked && X < (card.GetComponent<KickerComponent>()?.MinX ?? 0)) // "X can't be 0"
@@ -960,6 +963,9 @@ public record ActivateAbilityAction : GameAction
 	/// <summary>The graveyard card exiled as the cost ("Exile another creature card from your graveyard:"); 0 if none.</summary>
 	public int ExileId { get; init; }
 
+	/// <summary>Ninjutsu (Fallen Shinobi): "Return an unblocked attacker you control to hand" — the permanent returned (ReturnToHandCost, a spell's ReturnId); 0 if none.</summary>
+	public int ReturnId { get; init; }
+
 	/// <summary>The creature tapped as the cost (Station: "Tap another creature you control"); 0 if none.</summary>
 	public int TapId { get; init; }
 
@@ -1021,6 +1027,7 @@ public record ActivateAbilityAction : GameAction
 			CostSlot.Sacrifice => SacrificeId,
 			CostSlot.Discard => DiscardId,
 			CostSlot.Exile => ExileId,
+			CostSlot.Return => ReturnId,
 			CostSlot.Tap => TapId,
 			CostSlot.SecondTap => SecondTapId,
 			_ => throw new InvalidOperationException($"An ability's cost can't pick into {slot}"),
@@ -1064,7 +1071,7 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Its condition isn't met");
 		if (X < 0 || (X != 0 && !ability.Cost.HasX))
 			return ValidationResult.Invalid("No such X for this ability");
-		if (ability.Exhaust && card.ExhaustUsed)
+		if (ability.Exhaust && (card.ExhaustUsed & (1 << AbilityIndex)) != 0)
 			return ValidationResult.Invalid("Exhaust: activated once already");
 		if (ability.OncePerTurn && card.ActivatedOncePerTurnOn == s.GetGame().TurnNumber)
 			return ValidationResult.Invalid("Activated once this turn already");
@@ -1090,6 +1097,8 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a card you can exile for this");
+		if (!CostList.Fits(costs, CostSlot.Return, ReturnId, s, PlayerId, CardId))
+			return ValidationResult.Invalid("Not a permanent you can return to hand for this");
 		// {T}, and Lieutenant Commander Data's "remove three counters from among" (the picking is after).
 		if (costs.Any(c => c is not TapUntappedCost && !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Cannot pay its cost");
@@ -1127,7 +1136,8 @@ public record ActivateAbilityAction : GameAction
 				Mana(s, ability),
 				X,
 				alsoExclude: CostPermanents(s, ability),
-				forAbilityOf: s.GetCard(CardId)
+				forAbilityOf: s.GetCard(CardId),
+				abilityKeyword: ability.Keyword
 			)
 			is null
 		)
@@ -1165,7 +1175,8 @@ public record ActivateAbilityAction : GameAction
 			Mana(s, ability),
 			X,
 			alsoExclude: CostPermanents(s, ability),
-			forAbilityOf: s.GetCard(CardId)
+			forAbilityOf: s.GetCard(CardId),
+			abilityKeyword: ability.Keyword
 		)!;
 		// Station's "its power" is read as the ability resolves — from this snapshot once the creature
 		// left (last-known information). ponytail: as it was TAPPED, not as it left — a pump between
@@ -1181,7 +1192,13 @@ public record ActivateAbilityAction : GameAction
 		s = ManaPayment.Pay(s, PlayerId, mana);
 		s = MagicCore.Rules.Life.Lose(s, PlayerId, 2 * LifeForPhyrexian);
 		if (ability.Exhaust)
-			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId) with
+				{
+					ExhaustUsed = s.GetCard(CardId).ExhaustUsed | (1 << AbilityIndex),
+				}
+			);
 		if (ability.OncePerTurn)
 			s = s.UpdateObject(
 				CardId,

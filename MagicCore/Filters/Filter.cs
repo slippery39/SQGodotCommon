@@ -400,11 +400,27 @@ public enum Property
 	AttackingAPlayer, // Garruk, Curse Breaker: not a planeswalker
 	AttackingYou, // Jace, Reality Sculptor: "attacks you or a planeswalker you control"
 	Blocking,
+	Unblocked, // ninjutsu (Fallen Shinobi): "an unblocked attacker" — attacking, blockers declared, none blocks it
 	DealtCombatDamage, // Ruric Thar: "as long as they haven't dealt combat damage yet"
 	Tapped, // U.S.S. Excelsior: "target tapped creature"
 	Modal, // Riku of Many Paths: "a modal spell" — its text has modes ("choose one —")
 	ExiledBySource, // Null Summoner: "the exiled card" — exiled by THIS object of the source (ExiledBy, CR 607.2a)
 	Spell, // MACO Strike Team: "a creature you control" is never a creature SPELL — a card on the stack
+}
+
+/// <summary>
+/// Okoye, Mighty and Adored: "Whenever that creature attacks the monarch this turn" — a creature attacking the PLAYER
+/// who holds this designation (DesignationComponent: the monarch, the initiative), never their planeswalker.
+/// </summary>
+public sealed record AttackingTheHolderOf(string Designation) : Filter
+{
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card { AttackingId: not 0 } card
+		&& card.AttackingId == Effects.DesignationComponent.HolderOf(s, Designation);
 }
 
 /// <summary>Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.</summary>
@@ -448,6 +464,9 @@ public sealed record HasProperty(Property Property) : Filter
 					|| (s.IsOnBattlefield(at) && s.GetCard(at).ControllerId == c.Controller)
 				),
 			Property.Blocking => card.BlockingId != 0,
+			Property.Unblocked => card.AttackingId != 0
+				&& !card.IsBlocked
+				&& s.GetGame().Step >= Step.DeclareBlockers,
 			Property.DealtCombatDamage => card.HasDealtCombatDamage,
 			Property.Tapped => card.IsTapped,
 			Property.Modal => card.GetComponent<Effects.SpellEffectsComponent>()

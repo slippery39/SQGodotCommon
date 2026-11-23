@@ -172,6 +172,17 @@ public record Card : GameObject
 
 	/// <summary>The TurnNumber a loyalty ability of this permanent was last activated — once per turn (CR 606.3).</summary>
 	public int LoyaltyActivatedOnTurn { get; init; }
+
+	/// <summary>
+	/// Comet, Stellar Pup: "you may activate Comet's loyalty ability two more times this turn" — how many more, the
+	/// turn of LoyaltyActivatedOnTurn (ActivateLoyaltyAgain); each activation after the first takes one.
+	/// </summary>
+	public int ExtraLoyaltyActivations { get; init; }
+
+	/// <summary>No loyalty ability of it may be activated this turn any more: one was, and none more is allowed (CR 606.3).</summary>
+	public bool LoyaltyUsedOn(int turn) =>
+		LoyaltyActivatedOnTurn == turn && ExtraLoyaltyActivations <= 0;
+
 	public int Damage { get; init; }
 	public bool DamagedByDeathtouch { get; init; }
 
@@ -195,6 +206,12 @@ public record Card : GameObject
 
 	/// <summary>TurnNumber its "triggers only once each turn" ability last triggered.</summary>
 	public int OncePerTurnTriggeredOn { get; init; }
+
+	/// <summary>
+	/// Its abilities with a limit each turn that triggered that turn, once per time (Nadu, Winged Wisdom: "This
+	/// ability triggers only twice each turn") — counted per ability, so a granted one and its own never share a count.
+	/// </summary>
+	public ImmutableList<Effects.TriggeredAbilityComponent> LimitedTriggers { get; init; } = [];
 
 	/// <summary>Kobayashi Maru Scenario: "choose one that hasn't been chosen" — bit i is mode i, chosen by this object (ModeChoice.NotChosenBefore).</summary>
 	public int ModesChosen { get; init; }
@@ -224,7 +241,7 @@ public record Card : GameObject
 	public bool HasDealtCombatDamage { get; init; }
 
 	/// <summary>Its exhaust ability has been activated — never again for this object.</summary>
-	public bool ExhaustUsed { get; init; }
+	public int ExhaustUsed { get; init; }
 
 	/// <summary>DOT-7 Repair Squad: "Activate only once each turn" — the TurnNumber it was last activated.</summary>
 	public int ActivatedOncePerTurnOn { get; init; }
@@ -327,10 +344,12 @@ public record Card : GameObject
 			ChargeCounters = 0,
 			TimeCounters = 0,
 			LoyaltyActivatedOnTurn = 0,
+			ExtraLoyaltyActivations = 0,
 			EnteredOnTurn = 0,
 			AttackedOnTurn = 0,
 			TimesAttacked = 0,
 			OncePerTurnTriggeredOn = 0,
+			LimitedTriggers = [],
 			ModesChosen = 0,
 			ResolvedTimes = 0,
 			ResolvedOnTurn = 0,
@@ -340,7 +359,7 @@ public record Card : GameObject
 			HasFinalityCounter = false,
 			StunCounters = 0,
 			HasDealtCombatDamage = false,
-			ExhaustUsed = false,
+			ExhaustUsed = 0,
 			ActivatedOncePerTurnOn = 0,
 			FreeAbilityActivatedOn = 0,
 			PermissionUsedOn = 0,

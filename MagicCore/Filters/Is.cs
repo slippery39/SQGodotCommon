@@ -74,6 +74,12 @@ public static class Is
 	public static readonly Filter AttackingYou = new HasProperty(Property.AttackingYou);
 	public static readonly Filter Blocking = new HasProperty(Property.Blocking);
 
+	/// <summary>Ninjutsu (Fallen Shinobi): "an unblocked attacker you control" — once blockers are declared.</summary>
+	public static readonly Filter Unblocked = new HasProperty(Property.Unblocked);
+
+	/// <summary>Okoye, Mighty and Adored: "attacks the monarch" — attacking the player who holds that designation.</summary>
+	public static Filter AttackingThe(string designation) => new AttackingTheHolderOf(designation);
+
 	/// <summary>Ruric Thar: "haven't dealt combat damage yet" is !Is.DealtCombatDamage.</summary>
 	public static readonly Filter DealtCombatDamage = new HasProperty(Property.DealtCombatDamage);
 

@@ -73,8 +73,11 @@ public static class ManaAbilities
 	}
 
 	/// <summary>Fanatic of Rhonas' ferocious: "Activate only if …" (ManaAbilityComponent.OnlyIf).</summary>
+	/// <summary>… and one used up: Loot's exhaust, Vivi Ornitier's "only once each turn".</summary>
 	static bool Allowed(GameState s, Card card, ManaAbilityComponent m) =>
-		m.OnlyIf is not { } only || only.Holds(s, Conditions.Of(card));
+		(m.OnlyIf is not { } only || only.Holds(s, Conditions.Of(card)))
+		&& !(m.Exhaust && (card.ExhaustUsed & ManaAbilityComponent.ManaAbilityBit) != 0)
+		&& !(m.OncePerTurn && card.ActivatedOncePerTurnOn == s.GetGame().TurnNumber);
 
 	static bool Pays(
 		GameState s,

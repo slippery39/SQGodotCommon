@@ -72,3 +72,21 @@ whose subsystem it lives in.
   Khazad-dûm's "can't be blocked except by three or more creatures" (`MinimumBlockers(3)`). Fewer are dropped as blockers
   are declared (`FinishBlockersAction`), and the look-ahead's chumps and joins and the misplay scan read it — never
   `s.Has(attacker, "Menace")` for a block count.
+- **MC-4.4m2b's combat options** (multicolour; tests in `LsvBatch2m2Tests.cs`):
+  - **Ninjutsu** (CR 702.49; Fallen Shinobi, Kaito, Bane of Nightmares) is `LsvCards.Ninjutsu(cost)`: an activated
+    ability `From = Hand` (it uses the stack, as the rules say), Daze's `ReturnToHandCost(Is.Creature & Is.Unblocked)` —
+    a cost an ACTIVATION picks now too (`ActivateAbilityAction.ReturnId`, one activation per attacker) — resolving to
+    `MoveTo(Ref.Source, Battlefield) { From = [Hand], Tapped, Attacking }`. **"Unblocked"** is `Is.Unblocked`: attacking,
+    no creature blocks it, and blockers have been declared (the declare blockers step on) — never before. **"Onto the
+    battlefield tapped and attacking"** is `MoveTo.Attacking` / `RevealUntilOntoBattlefield { Tapped, Attacking }` (Raph &
+    Mikey) — `EnterBattlefield(attacking:)`, mobilize's stamp: never declared, so no "whenever … attacks", and it
+    attacks the opponent (a ceiling when the creature returned was attacking a planeswalker, DesignNotes).
+  - **"Attacks the monarch"** (Okoye, Mighty and Adored) is `Is.AttackingThe(DesignationComponent.Monarch)` — a creature
+    attacking the PLAYER who holds that designation, never their planeswalker — as the `Subject` of an `Attacked`
+    trigger in a `WheneverThisTurn { About }`. **"If you're the monarch"** (Aragorn) and "if you have the initiative"
+    are ONE condition, `YouHold(designation)` (it was `YouHaveTheInitiative`).
+  - **A creature that is a planeswalker** (Kaito: "During your turn, as long as Kaito has one or more loyalty counters
+    on him, he's a 3/4 Ninja creature and has hexproof" — Mogis' `BecomesType(Is.Source) { Add = Creature, Subtype,
+    Power, Toughness, If }` and a hexproof static under the same `If`) is dealt damage BOTH ways in `Damage.Deal`: that
+    many loyalty counters removed (CR 120.3c) and the damage marked (120.3e). A planeswalker that is no creature only
+    loses loyalty, as before.

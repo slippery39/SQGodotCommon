@@ -226,6 +226,9 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 	/// <summary>U.S.S. Voyager: "onto the battlefield tapped".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>Raph &amp; Mikey, Troublemakers: "Put that card onto the battlefield tapped and attacking" — MoveTo.Attacking's stamp.</summary>
+	public bool Attacking { get; init; }
+
 	/// <summary>Branching Timeline: "Reveal the top X cards of your library … Put all permanent cards revealed this way onto the battlefield" — every [Types] card among the top X, not "until".</summary>
 	public Count? Top { get; init; }
 
@@ -257,7 +260,7 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 				s = s.MoveCard(hit, s.ZoneId(Controller, To)).MakeKnown(hit, Knowers.Everyone);
 				continue;
 			}
-			s = s.EnterBattlefield(hit, Controller, tapped: Tapped);
+			s = s.EnterBattlefield(hit, Controller, tapped: Tapped, attacking: Attacking);
 			if (SacrificeAtNextEndStep)
 				s = MoveTo.Delay(s, hit, MoveTo.SacrificeItAtTheEndStep);
 		}
@@ -618,10 +621,17 @@ public record CreateTokenCopy(Ref What) : Effect
 	/// <summary>Eternalize: "with no mana cost" (mana value 0).</summary>
 	public bool NoManaCost { get; init; }
 
+	/// <summary>
+	/// Fractured Identity: "Each player other than its controller creates a token that's a copy of it" — who creates
+	/// it (CreateTokens.ControlledBy's option); unset is you.
+	/// </summary>
+	public Ref? ControlledBy { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var n = N?.Value(s, InputContext) ?? 1;
-		if (n <= 0)
+		var controller = ControlledBy is null ? Controller : All(ControlledBy, s).FirstOrDefault();
+		if (n <= 0 || controller == 0)
 			return new(s);
 		var originals = OfAnExiledCard
 			? All(What, s)
@@ -635,18 +645,18 @@ public record CreateTokenCopy(Ref What) : Effect
 			&& GetInput<Card?>(ContextKeys.SourceSnapshot) is { } lastKnown
 		)
 			originals.Add(lastKnown);
-		var each = Replacements.Apply(s, ReplacedEvent.Tokens, s.GetPlayer(Controller), n); // Elspeth: twice that many
+		var each = Replacements.Apply(s, ReplacedEvent.Tokens, s.GetPlayer(controller), n); // Elspeth: twice that many
 		foreach (var original in originals.SelectMany(o => Enumerable.Repeat(o, each)))
 		{
 			var copy = new Card
 			{
-				OwnerId = Controller,
-				ControllerId = Controller,
+				OwnerId = controller,
+				ControllerId = controller,
 				IsToken = true,
 			}.WithCopiableValuesOf(original);
 			copy = CreateTokens.Instead(
 				s,
-				Controller,
+				controller,
 				copy with
 				{
 					Keywords = [.. copy.Keywords, .. AddingKeywords],
@@ -670,7 +680,7 @@ public record CreateTokenCopy(Ref What) : Effect
 				IsToken = true,
 			};
 			(s, copy) = s.AddObject(copy);
-			s = s.EnterBattlefield(copy.Id, Controller, tapped: Tapped);
+			s = s.EnterBattlefield(copy.Id, controller, tapped: Tapped);
 			// after entering: a zone change strips a delayed trigger, entering included
 			if (ExileAtNextEndStep)
 				s = MoveTo.Delay(s, copy.Id, MoveTo.ExileItAtTheEndStep);
@@ -700,6 +710,12 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 
 	/// <summary>Gallia, Tragic Host: "to the battlefield tapped".</summary>
 	public bool Tapped { get; init; }
+
+	/// <summary>
+	/// Ninjutsu (Fallen Shinobi): "Put this card onto the battlefield from your hand tapped and attacking" — it enters
+	/// attacking (EnterBattlefield(attacking:), mobilize's stamp): never declared, so no "whenever … attacks".
+	/// </summary>
+	public bool Attacking { get; init; }
 
 	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
 	public int Counters { get; init; }
@@ -807,6 +823,7 @@ public record MoveTo(Ref What, ZoneType To) : Effect
 					tapped: Tapped,
 					finality: Finality,
 					loses: Loses,
+					attacking: Attacking,
 					transformed: Transformed
 				);
 				if (!s.IsOnBattlefield(id))
@@ -880,6 +897,16 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 	/// <summary>Erica Ortegas: "you MAY put" — none is an answer, and it is asked even with nothing to pick.</summary>
 	public bool May { get; init; }
 
+	/// <summary>
+	/// Chaos Defiler: "for each opponent, choose a nonland permanent that player controls" — From the battlefield, the
+	/// choice is among EVERY player's permanents the filter matches, asked from the chooser's side (Is.Opponents), not
+	/// only the chooser's own. Chosen, never targeted: hexproof and protection don't stop it.
+	/// </summary>
+	public bool Anyones { get; init; }
+
+	/// <summary>Comet, Stellar Pup: "deals damage … to a creature or player" — with Anyones, the players the filter matches are offered too.</summary>
+	public bool OrPlayers { get; init; }
+
 	/// <summary>Erica Ortegas: "If you do, …" — after a pick.</summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
 
@@ -942,6 +969,8 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 			{
 				Prompt = prompt,
 				OutputKey = ChooseCardsFromHandChoice.Chosen, // Ref.Chosen reads one key
+				Anyones = Anyones,
+				OrPlayers = OrPlayers,
 			},
 			ZoneType.Hand => new ChooseCardsFromHandChoice
 			{
@@ -992,6 +1021,12 @@ public record MoveChosen(ZoneType From, Filters.Filter? Filter, ZoneType To) : E
 /// </summary>
 public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 {
+	/// <summary>Saheeli, Sublime Artificer: "except it's an artifact in addition to its other types" — a type added to the copy's.</summary>
+	public CardType AlsoType { get; init; }
+
+	/// <summary>The copy's own types (its copiable ones — never a type stamp on the model) and AlsoType.</summary>
+	Card WithAlsoType(Card copy) => copy with { Types = copy.Types | AlsoType };
+
 	public override ActionResult Execute(GameState s)
 	{
 		// a permanent, or a card where it is — Shifting Woodland: "a copy of target permanent card in your graveyard"
@@ -1003,7 +1038,7 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 			s = Update(
 				s,
 				(Card)
-					card.WithCopiableValuesOf(model)
+					WithAlsoType(card.WithCopiableValuesOf(model))
 						.WithComponentReplaced(new CopyUntilEndOfTurn(original))
 			);
 		}
@@ -2063,6 +2098,12 @@ public record PlayPermission
 	/// </summary>
 	public bool ExiledLeavingTheStack { get; init; }
 
+	/// <summary>
+	/// Airbend (Aang, Swift Savior): "While it's exiled, its owner may cast it for {2} rather than its mana cost" — the
+	/// mana paid in place of the card's mana cost (PlayableFromExile.Instead, read by Costs.Of); taxes still apply.
+	/// </summary>
+	public ManaCost? Instead { get; init; }
+
 	/// <summary>The marker for the player <paramref name="who"/> (By, resolved by the effect).</summary>
 	public PlayableFromExile For(GameState s, int who) =>
 		new(
@@ -2082,6 +2123,7 @@ public record PlayPermission
 			Free = Free,
 			FromTurn = LaterTurn ? s.GetGame().TurnNumber + 1 : 0,
 			ExiledLeavingTheStack = ExiledLeavingTheStack,
+			Instead = Instead,
 		};
 }
 
@@ -2396,6 +2438,11 @@ public record MakeChosenPlayableAction(PlayableFromExile Playable) : GameAction
 /// </summary>
 public record LookAt(Ref What) : Effect
 {
+	/// <summary>
+	/// Nadu, Winged Wisdom: "reveal the top card of your library" — known to everyone, not only to the one who looks.
+	/// </summary>
+	public bool Reveal { get; init; }
+
 	/// <summary>Urza's Bauble: "Look at a card at random in target player's hand." — one of them (s.TakeRng), not all.</summary>
 	public bool AtRandom { get; init; }
 
@@ -2408,7 +2455,12 @@ public record LookAt(Ref What) : Effect
 			cards = [cards[rng.Next(cards.Count)]];
 		}
 		foreach (var card in cards)
-			s = s.MakeKnown(card.Id, card.OwnerId == Controller ? Knowers.Owner : Knowers.Opponent);
+			s = s.MakeKnown(
+				card.Id,
+				Reveal ? Knowers.Everyone
+					: card.OwnerId == Controller ? Knowers.Owner
+					: Knowers.Opponent
+			);
 		return new(s);
 	}
 }
@@ -2447,8 +2499,16 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 	/// </summary>
 	public bool UntilSourceLeaves { get; init; }
 
+	/// <summary>
+	/// Cloak and Dagger, Entwined: "You may exile a nonland card from their hand or the chosen creature until Cloak and
+	/// Dagger leave the battlefield" — the permanents this names are offered beside the hand's cards
+	/// (ChooseCardsFromHandChoice.Also); one of them chosen is exiled the same way.
+	/// </summary>
+	public Ref? OrThe { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		ImmutableList<int> also = OrThe is null ? [] : [.. Permanents(OrThe, s).Select(c => c.Id)];
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
 		{
 			// "reveals their hand" — ponytail: Deep-Cavern Bat's "look at" too, the same with two players (DesignNotes)
@@ -2460,6 +2520,7 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 				DeciderId = Controller,
 				Types = Types,
 				Filter = Filter,
+				Also = also,
 				MinChoices = Optional ? 0 : 1,
 				MaxChoices = 1,
 				Prompt =
@@ -2619,6 +2680,20 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 	/// </summary>
 	public ImmutableList<GameAction> Then { get; init; } = [];
 
+	/// <summary>
+	/// Atraxa, Grand Unifier: "For each card type, you may put a card of that type from among the revealed cards into
+	/// your hand" — one choice per card type there is among them (an artifact creature may be taken as either), up to
+	/// one card each, in place of Take: eight choices at most, never a choice of sets (Ajani's EachSacrifices.Keeps,
+	/// on the look).
+	/// </summary>
+	public bool OnePerType { get; init; }
+
+	/// <summary>Every card type (CR 205.2a) — kindred too, though Atraxa's reminder text lists eight.</summary>
+	static readonly CardType[] CardTypes =
+	[
+		.. Enum.GetValues<CardType>().Where(type => type != CardType.None),
+	];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var top = s.CardsIn(Controller, ZoneType.Library)
@@ -2667,6 +2742,40 @@ public record LookAndTake(Count N, Filters.Filter? Filter = null) : Effect
 			RestCounter = RestCounter,
 			Then = Then,
 		};
+		if (OnePerType)
+		{
+			var perType = CardTypes
+				.Select(type =>
+					choice with
+					{
+						Filter = Filter is null
+							? Filters.Is.Type(type)
+							: Filter & Filters.Is.Type(type),
+						Prompt = $"You may put a {type.ToString().ToLowerInvariant()} card {where}",
+						MinChoices = 0,
+						MaxChoices = 1,
+					}
+				)
+				.Where(c => c.GetOptions(s, context).Count > 0)
+				.Select(
+					(c, i) =>
+						c with
+						{
+							OutputKey = PutLookedAtAction.TypeKey + i,
+							ExceptUnder = PutLookedAtAction.TypeKey, // a card taken as one type isn't offered as another
+						}
+				)
+				.ToList();
+			return new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = context,
+						Steps = [.. perType, put with { PerType = perType.Count }],
+					}
+				)
+			);
+		}
 		return new(
 			s.SpawnAction(
 				new PipelineAction
@@ -2712,6 +2821,26 @@ public enum TheRest
 /// <summary>After LookAndTake's choice: the chosen cards where To says, the rest where Rest says.</summary>
 public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameAction
 {
+	public const string TypeKey = "taken:";
+
+	/// <summary>Atraxa (LookAndTake.OnePerType): how many choices were asked, one per card type — each under TypeKey + i; 0: the one choice.</summary>
+	public int PerType { get; init; }
+
+	IEnumerable<int> Taken =>
+		PerType == 0
+			? ChooseCardsFromHandChoice.Read(InputContext)
+			: Enumerable
+				.Range(0, PerType)
+				.SelectMany(i =>
+					InputContext.GetValueOrDefault(TypeKey + i) switch
+					{
+						int id => [id],
+						ImmutableList<int> ids => ids,
+						_ => (IEnumerable<int>)[],
+					}
+				)
+				.Distinct();
+
 	public bool Reveal { get; init; }
 
 	public ZoneType To { get; init; } = ZoneType.Hand;
@@ -2742,7 +2871,7 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 					{
 						PipelineContext = InputContext.SetItem(
 							ContextKeys.ThisWay,
-							ChooseCardsFromHandChoice.Read(InputContext).ToImmutableArray()
+							Taken.ToImmutableArray()
 						),
 						Steps = Then,
 					}
@@ -2752,7 +2881,7 @@ public record PutLookedAtAction(int PlayerId, ImmutableList<int> Looked) : GameA
 
 	ActionResult Put(GameState s)
 	{
-		var taken = ChooseCardsFromHandChoice.Read(InputContext).ToHashSet();
+		var taken = Taken.ToHashSet();
 		foreach (var id in taken)
 		{
 			s = To switch

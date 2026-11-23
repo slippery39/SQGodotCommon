@@ -592,9 +592,7 @@ public static class Rollout
 	/// <summary>A planeswalker of <paramref name="who"/>'s that hasn't used its loyalty this turn.</summary>
 	static bool HasUnusedWalker(GameState s, int who) =>
 		s.CardsIn(who, ZoneType.Battlefield)
-			.Any(c =>
-				c.Is(CardType.Planeswalker) && c.LoyaltyActivatedOnTurn != s.GetGame().TurnNumber
-			);
+			.Any(c => c.Is(CardType.Planeswalker) && !c.LoyaltyUsedOn(s.GetGame().TurnNumber));
 
 	static GameAction? TheirLoyalty(GameState s, int who, Settings settings)
 	{

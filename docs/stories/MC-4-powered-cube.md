@@ -2551,6 +2551,46 @@ as his three priorities.
   (DesignNotes — the fix moves golden replays). 14 tests (`LsvBatch2mTests.cs`), 14 of 14 revert-checks caught; golden-out
   moved no game; the probe at 150, every card used (Lutri's trigger never — it wants your own spell on the stack), and
   Thopter Foundry with Sword of the Meek and Lim-Dûl's Vault ended in 40 games of their own.
+- 2026-11-22, Claude (cube lane) — **4.4m2b + m2c: multicolour's 12 combat and trigger options and 12 permanent, copy
+  and mana options, all 24 — 525 of 528 play (multicolour 62 of 65).** Shayne took the plan by starting it. Every card
+  an option on an existing piece, no new piece. **m2b:** ninjutsu `LsvCards.Ninjutsu(cost)` — `Is.Unblocked` (once
+  blockers are declared), `MoveTo.Attacking`, and Daze's `ReturnToHandCost` on an ACTIVATION, which the plan missed
+  (`ActivateAbilityAction.ReturnId`: only a spell could pay it); Kaito a creature during your turn (Mogis'
+  `BecomesType`), dealt damage both ways (`Damage.Deal`: loyalty removed AND marked — a planeswalker that is no
+  creature as before); Raph & Mikey `RevealUntilOntoBattlefield { Attacking }`; Okoye `Is.AttackingThe(Monarch)` and
+  Aragorn `YouHold(Monarch)` (`YouHaveTheInitiative` generalised, Feywild Caretaker moved onto it); Psychic Frog
+  `Trigger.CombatDamageTo` on `DealtDamageEvent { ToId, Combat }`; Leovold — a player targeted raises
+  `BecameTargetEvent`; Nadu `TimesEachTurn = 2` (the flag `OncePerTurn` became the count; its 12 cards moved) and
+  `LookAt { Reveal }`; Dack Fayden's emblem `Trigger.Targeting` and `Ref.TargetsOf`; Alpha Deathclaw's monstrosity
+  scripted (`WhenYouDo`); Aang — airbend `LsvCards.Airbend` (`PlayPermission.Instead`, read by `Costs.Of`), waterbend an
+  ability's `Keyword` read by `ManaPayment.Helpers`; Comet — `RollDie`'s rows, "a creature or player" chosen
+  (`MoveChosen { Anyones, OrPlayers }`), `ActivateLoyaltyAgain` (`Card.ExtraLoyaltyActivations`, `LoyaltyUsedOn` the one
+  question). **m2c:** Fractured Identity `CreateTokenCopy.ControlledBy`; Superior Spider-Man `MayEnterAsCopy { From =
+  Graveyard, KeepsName, SetBase, AlsoSubtypes, Then }`; Saheeli `BecomeCopyUntilEndOfTurn { AlsoType }`; Oko's +1 for
+  good, composed and now tested, his −5 ONE activation (`LoyaltyAbilityComponent.EachWord`, a `ChooseTargetChoice` per
+  word); the Figures `LsvCards.FigureBecomes`; Chaos Defiler `MoveChosen { Anyones }`; Cloak and Dagger
+  `YouChooseTheyDiscard { OrThe }`; Atraxa `LookAndTake { OnePerType }`; Vivi a no-{T} mana move
+  `ManaAbilityComponent.OncePerTurn`; Squandered Resources `OfWhatTheSacrificedMakes`; Loot `ManaAbilityComponent.Exhaust`
+  — and exhaust stamped per ability (`Card.ExhaustUsed` a bit each: Loot has three). **Found building:** the first
+  choice among anyone's permanents offered the opponent PLAYER (`Is.Opponents` matches a player) — players are their
+  own option, `OrPlayers`; a revert-check found Psychic Frog's noncombat test vacuous (nothing gave priority, so no
+  trigger was collected) — fixed, and the player case added. Nine ceilings in DesignNotes (two-player readings, the
+  Ninja attacks the player, Aragorn's "can't block" misses a later creature, Dack's targets read from the stack,
+  Fractured Identity's copy before the exile, Spider-Man's exile with no stack, Comet's loyalty and "whenever you put
+  loyalty counters", Vivi at 0 power, exhaust's bits). **The review (`/pre-commit`) found ten things, all
+  fixed:** a copy until end of turn took the model's STAMPED types (a copy of a crewed Vehicle a 0/0 creature — my
+  `AlsoType` line, every user of the piece); the per-turn trigger limit was one count a card, so Nadu's grant used up
+  Enduring Innocence's own "once each turn" — counted per ability now (`Card.LimitedTriggers`); Atraxa offered no
+  kindred pick and offered a card again for its second type (`ChooseAmongChoice.ExceptUnder`); an airbent X spell was
+  cast with X (`CastSpellAction` refuses it: an alternative cost with no X); Squandered Resources' move read "Tap …";
+  `ActivateLoyaltyAgain` shorted a walker not yet activated; `Trigger.Targeting` repeated a helper and left Danitha,
+  Spear of Agony's `EventTest` beside it (moved onto it, the enum case gone); a player targeted staged an event in
+  every game (raised only while a permanent reads it, `Triggers.ReadsPlayersTargeted`); `BecomeCopyOfChosenAction`
+  mirrored `MayEnterAsCopy` field by field (it carries the component now). 38 tests (`LsvBatch2m2Tests.cs`), 42 of 42
+  revert-checks caught (the first run 33 of 34: the vacuous one); the full suite 2435 passed; golden-out moved no
+  game — run again after the review's fixes — golden-in the random games only (96 card replays added); the probe at 150, none unfinished and every card used (Vivi's and Squandered Resources' mana moves
+  aren't counted there: their tests cover them). **Not watched in the AI's turn** — the cards were probed at random
+  and tested, never played by the search.
 
 ## Tasks
 
@@ -2870,9 +2910,9 @@ as his three priorities.
     - [x] MC-4.4m2a (done 2026-11-22) Options, casting and the stack, 12: No More Lies, Teferi, Time Raveler, Kolaghan's Command, Fire
           Covenant, Bloodbraid Challenger, Pillage the Bog, Phlage, Uro, Expressive Iteration, Lim-Dûl's Vault, Zirda,
           Wrenn and Six
-    - [ ] MC-4.4m2b Options, combat and triggers, 12: Kaito, Fallen Shinobi, Raph & Mikey, Okoye, Aragorn, Psychic Frog,
+    - [x] MC-4.4m2b (done 2026-11-22; Decisions, "4.4m2b + m2c") Options, combat and triggers, 12: Kaito, Fallen Shinobi, Raph & Mikey, Okoye, Aragorn, Psychic Frog,
           Leovold, Nadu, Dack Fayden, Alpha Deathclaw, Aang, Comet
-    - [ ] MC-4.4m2c Options, permanents, copies and mana, 12: Fractured Identity, Superior Spider-Man, Saheeli, Oko,
+    - [x] MC-4.4m2c (done 2026-11-22) Options, permanents, copies and mana, 12: Fractured Identity, Superior Spider-Man, Saheeli, Oko,
           Figure of Fable, Figure of Destiny, Chaos Defiler, Cloak and Dagger, Atraxa, Vivi Ornitier, Squandered
           Resources, Loot
     - [ ] MC-4.4m3 New pieces, 4: split cards (Life // Death), control of a spell (Invert Polarity), what an opponent
@@ -2966,8 +3006,28 @@ after it):** 59 cards — 20 tested pieces, 36 options, 3 cards on 3 new pieces 
 opponent can't make you do) and the companion rule (set at deck building time, m3) — as three batches, **m1 + m2a
 first**, then m2b + m2c, then m3 (a companion chosen in an Arena export, the sealed builder and the table's deck screen;
 one failing its condition stays in the sideboard — Shayne). Kolaghan's Command takes `EachWord` in m2a. **m1 + m2a is done** (Decisions, "4.4m1 + m2a"; 501 of 528 play — W 60/60,
-U 75/75, B 61/61, R 54/54, G 50/50, multicolour 38/65, colourless 163/163). **m2b + m2c is next** (24 options, plan in
-Decisions "4.4m"). From m1 + m2a: "when you do" with a number `WhenYouDo { X }`; a sacrifice's `Ref.ThisWay` counted as it
+U 75/75, B 61/61, R 54/54, G 50/50, multicolour 38/65, colourless 163/163). **m2b + m2c is done, all 24** (Decisions,
+"4.4m2b + m2c"; 525 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 50/50, multicolour 62/65, colourless 163/163).
+**m3 is next and last: the four new pieces, 6 cards** — split cards (Life // Death), control of a spell (Invert
+Polarity), what an opponent can't make you do (Tamiyo, Collector of Tales), and companion (Lurrus, Lutri and Zirda,
+already playing as main-deck cards) — plan in Decisions "4.4m" and the two entries after it (Shayne, 2026-11-22: a
+companion is chosen in an Arena export's Companion section, the sealed builder and the table's deck screen; one failing
+its condition stays an ordinary sideboard card, with no {3} action). From m2b + m2c: `LsvCards.Ninjutsu(cost)`,
+`Is.Unblocked`, `MoveTo.Attacking`, an activation's `ReturnId`; `YouHold(designation)`, `Is.AttackingThe(designation)`;
+`Trigger.CombatDamageTo`, `Trigger.Targeting`, `Ref.TargetsOf`; `TriggeredAbilityComponent.TimesEachTurn` (no
+`OncePerTurn` on a trigger any more; counted per ability, `Card.LimitedTriggers`); a player targeted raises
+`BecameTargetEvent` while a permanent reads it; `LsvCards.Airbend`
+(`PlayPermission.Instead`); `MoveChosen { Anyones, OrPlayers }`; `ActivateLoyaltyAgain`, `Card.LoyaltyUsedOn`;
+`LoyaltyAbilityComponent.EachWord`; `CreateTokenCopy.ControlledBy`; `MayEnterAsCopy { From, KeepsName, SetBase,
+AlsoSubtypes, Then }`; `YouChooseTheyDiscard { OrThe }`; `LookAndTake { OnePerType }`; `ManaAbilityComponent {
+OncePerTurn, Exhaust, OfWhatTheSacrificedMakes }`; `Card.ExhaustUsed` is a bit per ability; the tests are in
+`LsvBatch2m2Tests.cs` (`Walker(name, loyalty)`, `Loyalty(walker, cost)`, `AttackTo(defender, attackers)`,
+`ToMyPriorityIn(step)`, `TheyCast(card, targets)`, `ManaMoves(card)`). **For the AI lane at the merge, from m2b + m2c:**
+none of the 24 was watched in the search's hands. To look at first: Squandered Resources (lands sacrificed for mana it doesn't
+spend — Zuran Orb's case), Vivi Ornitier's mana move (offered at 0 power, where it makes nothing), Psychic Frog's two
+free abilities (a discard for a counter), the Figures' first ability on a bigger Figure (it shrinks it — the rules'
+own), Loot's exhaust mana (three mana once: a held resource), and Oko's −5, whose two targets are choices the search
+branches on. From m1 + m2a: "when you do" with a number `WhenYouDo { X }`; a sacrifice's `Ref.ThisWay` counted as it
 last was; `CounterUnlessPays { To }`; `CantCastOrActivate { ExceptAtSorcerySpeed }`; `CastAsThoughItHadFlash { Of }` in a
 `ThisTurn`; `ModeChoice { EachWord }`; `TargetSpec.Divide` a `Count` (`Division.Total`, `AskShares`); `LsvCards.Cascade`,
 `LsvCards.Plot(cost)`; `MayCastThisFrom { Mana }`, the `Escaped` condition; `May { Again }`; `ShuffleLibrary { KeepTop }`;
@@ -3439,3 +3499,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-22: MC-4.4m1 + m2a done — multicolour's 20 tested pieces and 12 casting and stack options; 501 of 528 play,
   multicolour 38 of 65. Minsc & Boo needed the sacrificed creature as it last was; a may's Then runs inline (a ceiling).
   Next: m2b + m2c.
+- 2026-11-22: MC-4.4m2b + m2c done — multicolour's 12 combat and trigger options and 12 permanent, copy and mana
+  options; 525 of 528 play, multicolour 62 of 65. Ninjutsu needed a return-to-hand cost on an activation; "once each
+  turn" on a trigger became a count; exhaust is stamped per ability. Next: m3, the last four new pieces (6 cards).

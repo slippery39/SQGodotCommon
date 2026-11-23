@@ -87,6 +87,7 @@ public enum RefKind
 	ThisWay, // Decree of Pain: "each creature destroyed this way" — what the effect did its thing to
 	Chosen, // Temporal Conqueror: "return a land card from your graveyard" — the card(s) just chosen (MoveChosen)
 	Id, // explore's revealed card, discover's exiled one — a card the engine named as it built the step
+	TargetsOf, // Dack Fayden's emblem: "gain control of those permanents" — what the spells a Ref names (Of) target
 }
 
 /// <summary>
@@ -208,6 +209,14 @@ public record Ref(RefKind Kind, int Index = 0)
 	/// </summary>
 	public static Ref OwnerOf(Ref cards) => new(RefKind.OwnerOf) { Of = cards };
 
+	/// <summary>
+	/// Dack Fayden's emblem: "Whenever you cast a spell that targets one or more permanents, gain control of those
+	/// permanents" — the targets of the spells a Ref names (TargetsOf(Ref.EventCard)), read from the stack
+	/// (OnStackComponent.Targets). ponytail: a spell that has left the stack names none — a spell countered in
+	/// response to the trigger; read the trigger's snapshot of it when that matters.
+	/// </summary>
+	public static Ref TargetsOf(Ref spells) => new(RefKind.TargetsOf) { Of = spells };
+
 	/// <summary>Twisted Fates: "each creature target player controls".</summary>
 	public static Ref PermanentsOfTargetPlayer(CardType type, int index) =>
 		All(ZoneType.Battlefield, Is.Type(type), Target(index));
@@ -288,6 +297,12 @@ public record Ref(RefKind Kind, int Index = 0)
 				: [],
 			RefKind.Chosen => ChooseCardsFromHandChoice.Read(context),
 			RefKind.Id => [Index],
+			RefKind.TargetsOf => Of!
+				.Resolve(s, context)
+				.Select(s.GetObject)
+				.OfType<Card>()
+				.SelectMany(c => c.GetComponent<Actions.OnStackComponent>()?.Targets ?? [])
+				.Distinct(),
 			_ => throw new ArgumentOutOfRangeException(
 				nameof(Kind),
 				Kind,

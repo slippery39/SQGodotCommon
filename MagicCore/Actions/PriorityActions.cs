@@ -269,9 +269,13 @@ public record TapForManaAction : GameAction
 				&& ability.NoTap == NoTap
 				// "any color" is never {C}; a combination's move names its first colour (OfTheOther the rest)
 				&& (
-					ability.AnyOneColor
+					ability.OfWhatTheSacrificedMakes // Squandered Resources: a colour the sacrificed land could produce
+						? s.HasObject(SacrificeId)
+							&& s.GetObject(SacrificeId) is Card land
+							&& ManaAbilities.ColorsOf(s, land).Contains(Color)
+					: ability.AnyOneColor
 						? ManaAbilities.Makes(s, s.GetCard(CardId), ability).Contains(Color)
-						: ability.Color == Color
+					: ability.Color == Color
 				)
 				&& OfTheOther >= 0
 				&& OfTheOther
@@ -352,6 +356,20 @@ public record TapForManaAction : GameAction
 			s = ManaPayment.Pay(s, PlayerId, ManaFor(s, ability)!); // Chromatic Star's {1}, before its {T} and sacrifice
 		foreach (var cost in ability.Costs.OrderByDescending(c => c.Taps))
 			s = cost.Pay(s, PlayerId, CardId, cost.Slot == CostSlot.Sacrifice ? SacrificeId : 0);
+		// Loot, the Pathfinder's exhaust; Vivi Ornitier's "only once each turn" — used up (ManaAbilities.AbilitiesOf)
+		if ((ability.Exhaust || ability.OncePerTurn) && s.IsOnBattlefield(CardId))
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId) with
+				{
+					ExhaustUsed =
+						s.GetCard(CardId).ExhaustUsed
+						| (ability.Exhaust ? ManaAbilityComponent.ManaAbilityBit : 0),
+					ActivatedOncePerTurnOn = ability.OncePerTurn
+						? s.GetGame().TurnNumber
+						: s.GetCard(CardId).ActivatedOncePerTurnOn,
+				}
+			);
 		var player = s.GetPlayer(PlayerId);
 		var pool = Enumerable
 			.Range(0, n)

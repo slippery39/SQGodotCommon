@@ -132,6 +132,7 @@ public class FilterMigrationTests
 		RefKind.ThisWay, // Decree of Pain: what the effect did its thing to
 		RefKind.Chosen, // Temporal Conqueror: the card just chosen (MoveChosen)
 		RefKind.Id, // explore's revealed card: an id the engine knows as it builds the step
+		RefKind.TargetsOf, // Dack Fayden's emblem: what the spell a Ref names targets
 	];
 
 	[TestCaseSource(nameof(RefRows))]

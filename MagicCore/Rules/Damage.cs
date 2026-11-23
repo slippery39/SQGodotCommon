@@ -38,9 +38,16 @@ public static class Damage
 			s.GetObject(targetId) is Card { } walker
 			&& s.IsOnBattlefield(targetId)
 			&& walker.Is(CardType.Planeswalker)
+			&& !walker.Is(CardType.Creature)
 		)
 			s = Actions.Loyalty.Change(s, targetId, -amount); // CR 120.3c
-		else if (s.GetObject(targetId) is Card target && s.IsOnBattlefield(targetId))
+		else if (s.GetObject(targetId) is Card permanent && s.IsOnBattlefield(targetId))
+		{
+			// Kaito, Bane of Nightmares, a creature during your turn: both results (CR 120.3c and 120.3e) — that
+			// many loyalty counters are removed and the damage is marked.
+			if (permanent.Is(CardType.Planeswalker))
+				s = Actions.Loyalty.Change(s, targetId, -amount);
+			var target = s.GetCard(targetId);
 			s = s.UpdateObject(
 					targetId,
 					target with
@@ -57,9 +64,11 @@ public static class Damage
 						Combat = combat,
 					}
 				);
+		}
 		else
 			return s; // its target is gone: no damage was dealt
-		s = s.Raise(new DealtDamageEvent(source.Id, amount)); // Cecil, Dark Knight: "whenever Cecil deals damage"
+		// Cecil, Dark Knight: "whenever Cecil deals damage"; Psychic Frog: "combat damage to a player or planeswalker"
+		s = s.Raise(new DealtDamageEvent(source.Id, amount) { ToId = targetId, Combat = combat });
 
 		// Ruric Thar, Magecrusher: "as long as they haven't dealt combat damage yet".
 		if (combat && s.IsOnBattlefield(source.Id) && !s.GetCard(source.Id).HasDealtCombatDamage)
