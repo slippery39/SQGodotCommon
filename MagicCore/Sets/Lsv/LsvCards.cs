@@ -1311,7 +1311,7 @@ public static class LsvCards
 				// ponytail: a loyalty ability of the named card isn't taxed — it has no mana payment (DesignNotes).
 				new ChoosesNameAsItEnters { LooksAtHand = true, AnyName = true },
 				new CostChange(2, Is.NamedChosenName) { By = Whose.Opponent },
-				new CostChange(2, Is.NamedChosenName) { Abilities = true },
+				new CostChange(2, Is.NamedChosenName) { Abilities = true, By = Whose.Any },
 			],
 			// ===== MC-4.4d3: white's options, leaving the battlefield =====
 			["Skyclave Apparition"] =
@@ -5335,6 +5335,489 @@ public static class LsvCards
 					},
 				},
 			],
+
+			// ===== MC-4.4m1: multicolour's tested pieces =====
+			["Spider-Woman, Stunning Savior"] =
+			[
+				new PermanentsEnter((Is.Artifact | Is.Creature) & Is.Opponents) { Tapped = true },
+			],
+			["Teferi, Hero of Dominaria"] =
+			[
+				Loyalty(
+					1,
+					[],
+					new DrawCards(Ref.You, 1),
+					new AtNextEndStep([new Untap(Ref.Permanents(Is.Land)) { UpTo = 2 }])
+				),
+				Loyalty(
+					-3,
+					[Target(!Is.Land)],
+					new MoveTo(Ref.Target(), ZoneType.Library) { Beneath = 2 }
+				),
+				Loyalty(
+					-8,
+					[],
+					new GetEmblem(
+						[
+							When(
+								TriggerEvent.YouDrawACard,
+								[Target(Is.Opponents)],
+								new Exile(Ref.Target())
+							),
+						]
+					)
+				),
+			],
+			["Baleful Strix"] = [When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1))],
+			["Bloodtithe Harvester"] =
+			[
+				When(TriggerEvent.SelfEnters, [], CreateBlood(1)),
+				SacrificeThis(
+					null,
+					tap: true,
+					[Creature],
+					new ModifyUntilEndOfTurn(Ref.Target(), TwiceYourBlood, TwiceYourBlood)
+				) with
+				{
+					SorcerySpeed = true,
+				},
+			],
+			["Manamorphose"] =
+			[
+				Spell(
+					[],
+					new AddManaOfAnyOneColor(2) { AnyCombination = true },
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Mawloc"] =
+			[
+				// Ravenous, Jacked Rabbit's.
+				new EntersWithCountersComponent(Count.X),
+				When(TriggerEvent.SelfEnters, [], new DrawCards(Ref.You, 1)) with
+				{
+					If = new AtLeast(Count.X, 5),
+				},
+				When(
+					TriggerEvent.SelfEnters,
+					[Target(Is.Creature & Is.Opponents) with { Optional = true }],
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0)
+					{
+						ExileInsteadOf = [ZoneType.Graveyard],
+					},
+					new Fight(Ref.Source, Ref.Target())
+				),
+			],
+			["Territorial Kavu"] =
+			[
+				new StaticEffectComponent(Is.Source)
+				{
+					Power = Count.BasicLandTypesAmongLandsYouControl,
+					Toughness = Count.BasicLandTypesAmongLandsYouControl,
+				},
+				ModalWhen(
+					"Territorial Kavu",
+					TriggerEvent.SelfAttacks,
+					1,
+					M([], new MayDiscard([new DrawCards(Ref.You, 1)]) { Must = true }),
+					M(
+						[TargetSpec.InAnyGraveyard(Is.AnyCard) with { Optional = true }],
+						new Exile(Ref.Target())
+					)
+				),
+			],
+			["Minsc & Boo, Timeless Heroes"] =
+			[
+				When(TriggerEvent.SelfEnters, [], MayCreateBoo),
+				When(TriggerEvent.YourUpkeep, [], MayCreateBoo),
+				Loyalty(
+					1,
+					[
+						Target(Is.Creature & (Is.With("Trample") | Is.With("Haste"))) with
+						{
+							Optional = true,
+						},
+					],
+					new PutCounters(Ref.Target(), 3)
+				),
+				// "When you do, … X is that creature's power" — its power as it last was, fixed as the reflexive
+				// trigger triggers (WhenYouDo.X); "if it was a Hamster" can't change after, so it picks the text.
+				Loyalty(
+					-2,
+					[],
+					new MaySacrifice(
+						Is.Creature,
+						[
+							new If(
+								new Matches(Ref.ThisWay, Is.Subtype("Hamster"))
+								{
+									AsItLastWas = true,
+								},
+								[
+									new WhenYouDo(
+										[TargetSpec.AnyTarget()],
+										[
+											new DealDamage(Ref.Target(), Count.X),
+											new DrawCards(Ref.You, Count.X),
+										]
+									)
+									{
+										X = Count.PowerOf(Ref.ThisWay),
+									},
+								]
+							)
+							{
+								Otherwise =
+								[
+									new WhenYouDo(
+										[TargetSpec.AnyTarget()],
+										[new DealDamage(Ref.Target(), Count.X)]
+									)
+									{
+										X = Count.PowerOf(Ref.ThisWay),
+									},
+								],
+							},
+						]
+					)
+					{
+						Must = true,
+					}
+				),
+			],
+			["Arwen, Mortal Queen"] =
+			[
+				new EntersWithCountersComponent(1) { Kind = CounterKinds.Indestructible },
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Indestructible"),
+						new PutCounters(Ref.Target(), 1),
+						new PutCounters(Ref.Target(), 1) { Kind = CounterKinds.Lifelink },
+						new PutCounters(Ref.Source, 1),
+						new PutCounters(Ref.Source, 1) { Kind = CounterKinds.Lifelink },
+					]
+				)
+				{
+					Costs =
+					[
+						new RemoveCountersCost(1, Is.Source) { Kind = CounterKinds.Indestructible },
+					],
+					Targets = [Target(Is.Creature & !Is.Source)],
+				},
+			],
+			["Knight of Autumn"] =
+			[
+				ModalWhen(
+					"Knight of Autumn",
+					TriggerEvent.SelfEnters,
+					1,
+					M([], new PutCounters(Ref.Source, 2)),
+					M([Target(Is.Artifact | Is.Enchantment)], new Destroy(Ref.Target())),
+					M([], new GainLife(Ref.You, 4))
+				),
+			],
+			["Torsten, Founder of Benalia"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new LookAndTake(7, Is.Creature | Is.Land) { Take = 7, Reveal = true }
+				),
+				When(TriggerEvent.SelfDies, [], new CreateTokens(Soldier, 7)),
+			],
+			["Tidehollow Sculler"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Player(Is.Opponents)],
+					new YouChooseTheyDiscard(Ref.Target(), CardType.None)
+					{
+						Filter = !Is.Land,
+						UntilSourceLeaves = true,
+					}
+				),
+			],
+			["Lurrus of the Dream-Den"] =
+			[
+				// Companion is MC-4.4m3; this is its main-deck text.
+				new MayPlayFromZone(
+					ZoneType.Graveyard,
+					Is.Type(NonlandPermanentTypes) & !Is.Land & Is.ManaValueAtMost(2)
+				)
+				{
+					OncePerTurn = true,
+				},
+			],
+			["Traumatic Critique"] =
+			[
+				Spell(
+					[TargetSpec.AnyTarget()],
+					new DealDamage(Ref.Target(), Count.X),
+					new DrawCards(Ref.You, 2),
+					new Discard(Ref.You, 1)
+				),
+			],
+			["Lutri, the Spellchaser"] =
+			[
+				// Companion is MC-4.4m3; this is its main-deck text.
+				When(
+					TriggerEvent.SelfEnters,
+					[TargetSpec.Spell((Is.Instant | Is.Sorcery) & Is.Yours)],
+					new CopySpell(Ref.Target())
+				) with
+				{
+					If = new SourceWasCast(),
+				},
+			],
+			["Witherbloom Apprentice"] =
+			[
+				.. Magecraft(new LoseLife(Ref.EachOpponent, 1), new GainLife(Ref.You, 1)),
+			],
+			["Vicious Rivalry"] =
+			[
+				new AdditionalCostsComponent([new PayLifeCost(Count.X)]),
+				Spell(
+					[],
+					new Destroy(
+						Ref.Permanents((Is.Artifact | Is.Creature) & Is.ManaValueAtMost(Count.X))
+					)
+				),
+			],
+			["Forth Eorlingas!"] =
+			[
+				Spell(
+					[],
+					new CreateTokens(EorlingasKnight, Count.X),
+					new WheneverThisTurn(
+						When(
+							new Trigger(EventKind.CombatDamageToPlayers) { By = Whose.You },
+							[],
+							new BecomeTheMonarch(Ref.You)
+						)
+					)
+				),
+			],
+			["Otharri, Suns' Glory"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new PutCounters(Ref.You, 1) { Kind = CounterKinds.Experience },
+					new CreateTokens(Rebel, Count.CountersOfKind(Ref.You, CounterKinds.Experience))
+					{
+						Tapped = true,
+						Attacking = true,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{R}{W}"),
+					[
+						new MoveTo(Ref.Source, ZoneType.Battlefield)
+						{
+							From = [ZoneType.Graveyard],
+							Tapped = true,
+						},
+					]
+				)
+				{
+					From = ZoneType.Graveyard,
+					Costs = [new TapUntappedCost(1, Is.Creature & Is.Subtype("Rebel"))],
+				},
+			],
+			["Thopter Foundry"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new CreateTokens(BlueThopter, 1), new GainLife(Ref.You, 1)]
+				)
+				{
+					Costs = [new SacrificeCost(Is.Artifact & !Is.Token)],
+				},
+			],
+
+			// ===== MC-4.4m2a: multicolour's casting and stack options (a counter's exile, a sorcery-timing lock, sorceries with flash until your next turn, modes' targets one word at a time, X divided, cascade, plot, escape's mana and "unless it escaped", a may asked again, a shuffle under the top, an ability tax's whose, an emblem's play permission) =====
+			["No More Lies"] =
+			[
+				Spell(
+					[TargetSpec.Spell()],
+					new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{3}"))
+					{
+						To = ZoneType.Exile,
+					}
+				),
+			],
+			["Teferi, Time Raveler"] =
+			[
+				new CantCastOrActivate
+				{
+					By = Whose.Opponent,
+					Abilities = false,
+					ExceptAtSorcerySpeed = true,
+				},
+				Loyalty(
+					1,
+					[],
+					new ThisTurn(new CastAsThoughItHadFlash([]) { Of = Is.Sorcery })
+					{
+						UntilYourNextTurn = true,
+					}
+				),
+				Loyalty(
+					-3,
+					[Target(Is.Artifact | Is.Creature | Is.Enchantment) with { Optional = true }],
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Battlefield] },
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Kolaghan's Command"] =
+			[
+				ModalSpell(
+					"Kolaghan's Command",
+					new()
+					{
+						AtLeast = 2,
+						AtMost = 2,
+						EachWord = true,
+					},
+					M(
+						[TargetSpec.InYourGraveyard(Is.Creature)],
+						new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+					),
+					M([TargetSpec.Player()], new Discard(Ref.Target(), 1)),
+					M([Target(Is.Artifact)], new Destroy(Ref.Target())),
+					M([TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 2))
+				),
+			],
+			["Fire Covenant"] =
+			[
+				new AdditionalCostsComponent([new PayLifeCost(Count.X)]),
+				Spell(
+					[Creature with { Divide = Count.X }],
+					new DealDamage(Ref.EachTarget, Count.Share)
+				),
+			],
+			["Bloodbraid Challenger"] =
+			[
+				Cascade,
+				new MayCastThisFrom(ZoneType.Graveyard)
+				{
+					Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 3 }],
+				},
+			],
+			["Pillage the Bog"] =
+			[
+				Spell(
+					[],
+					new LookAndTake(Count.LandsYouControl with { Times = 2 }) { Must = true }
+				),
+				Plot("{1}{B}{G}"),
+			],
+			["Phlage, Titan of Fire's Fury"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new Sacrifice(Ref.Source)) with
+				{
+					If = new Not(new Escaped()),
+				},
+				When(TriggerEvent.SelfEnters, [TargetSpec.AnyTarget()], PhlagesFury),
+				When(TriggerEvent.SelfAttacks, [TargetSpec.AnyTarget()], PhlagesFury),
+				new MayCastThisFrom(ZoneType.Graveyard)
+				{
+					Mana = ManaCost.Parse("{R}{R}{W}{W}"),
+					Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 5 }],
+				},
+			],
+			["Uro, Titan of Nature's Wrath"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new Sacrifice(Ref.Source)) with
+				{
+					If = new Not(new Escaped()),
+				},
+				When(TriggerEvent.SelfEnters, [], [.. UrosWrath]),
+				When(TriggerEvent.SelfAttacks, [], [.. UrosWrath]),
+				new MayCastThisFrom(ZoneType.Graveyard)
+				{
+					Mana = ManaCost.Parse("{G}{G}{U}{U}"),
+					Costs = [new ExileFromGraveyardCost(!Is.Source) { Count = 5 }],
+				},
+			],
+			["Expressive Iteration"] =
+			[
+				Spell(
+					[],
+					// one into your hand, the other two left on top; then of those, one exiled (playable this
+					// turn) and the last on the bottom
+					new LookAndTake(3) { Must = true, Rest = TheRest.TopInAnyOrder },
+					new LookAndTake(2)
+					{
+						Must = true,
+						To = ZoneType.Exile,
+						Rest = TheRest.BottomInAnyOrder,
+						Then =
+						[
+							new MakePlayable(Ref.ThisWay, new PlayPermission { ThisTurn = true }),
+						],
+					}
+				),
+			],
+			["Lim-Dûl's Vault"] =
+			[
+				// ponytail: each look's order is chosen as it is looked at, so the last one's IS the "any order" on
+				// top after the shuffle — the same choices in another order.
+				Spell(
+					[],
+					new LookAndTake(5) { Take = 0, Rest = TheRest.TopInAnyOrder },
+					new May(
+						"Pay 1 life to put those five on the bottom and look at the next five?",
+						new CanPayLife(1),
+						[
+							new LoseLife(Ref.You, 1),
+							new LookAndTake(5) { Take = 0, Rest = TheRest.BottomInAnyOrder },
+							new LookAndTake(5) { Take = 0, Rest = TheRest.TopInAnyOrder },
+						]
+					)
+					{
+						Again = true,
+					},
+					new ShuffleLibrary(Ref.You) { KeepTop = 5 }
+				),
+			],
+			["Zirda, the Dawnwaker"] =
+			[
+				// Companion is MC-4.4m3; this is its main-deck text.
+				new CostChange(-2, Is.AnyCard) { Abilities = true, Floor = 1 },
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBlock)]
+				)
+				{
+					Costs = [new TapSelfCost()],
+					Targets = [Creature],
+				},
+			],
+			["Wrenn and Six"] =
+			[
+				Loyalty(
+					1,
+					[TargetSpec.InYourGraveyard(Is.Land) with { Optional = true }],
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+				),
+				Loyalty(-1, [TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 1)),
+				Loyalty(
+					-7,
+					[],
+					// "Instant and sorcery cards in your graveyard have retrace." — Six's, any time
+					new GetEmblem(
+						[
+							new MayPlayFromZone(ZoneType.Graveyard, Is.Instant | Is.Sorcery)
+							{
+								Costs = [new DiscardCost(Is.Land)],
+								AnyTime = true,
+							},
+						]
+					)
+				),
+			],
 		};
 
 	/// <summary>Gemstone Caverns: "If Gemstone Caverns has a luck counter on it".</summary>
@@ -6114,6 +6597,107 @@ public static class LsvCards
 
 	/// <summary>Amass Orcs: "a 0/0 black Orc Army creature token".</summary>
 	static CardData OrcArmy => Token("Orc Army", "Creature — Orc Army", "0", "0", ["B"]);
+
+	/// <summary>
+	/// Cascade (CR 702.85, Bloodbraid Challenger): "When you cast this spell, exile cards from the top of your library until
+	/// you exile a nonland card whose mana value is less than this spell's mana value. You may cast that spell without
+	/// paying its mana cost. Then put all cards exiled this way that weren't cast on the bottom in a random order." —
+	/// discover's shape (TrkCards.Discover) on a SelfCast trigger, with no "into your hand".
+	/// </summary>
+	static TriggeredAbilityComponent Cascade =>
+		When(
+			TriggerEvent.SelfCast,
+			[],
+			new ExileTopPlayable
+			{
+				Until =
+					!Is.Land
+					& Is.ManaValueAtMost(Count.GreatestManaValueOf(Ref.Source) with { Plus = -1 }),
+				RestOnBottom = true,
+				Play = new() { Now = true, Free = true },
+			}
+		);
+
+	/// <summary>
+	/// Plot (CR 702.170, Pillage the Bog): "You may pay {1}{B}{G} and exile this card from your hand. Cast it as a sorcery
+	/// on a later turn without paying its mana cost. Plot only as a sorcery." — warp's exile and permission (Warp) on an
+	/// ability of the card in hand. ponytail: plot is a special action (CR 116.2k) — this one uses the stack, so the card
+	/// may be cast in response; a sorcery plotted keeps its own timing (an instant would need the permission's).
+	/// </summary>
+	static ActivatedAbilityComponent Plot(string cost) =>
+		new(
+			ManaCost.Parse(cost),
+			[
+				new MoveTo(Ref.Source, ZoneType.Exile)
+				{
+					From = [ZoneType.Hand],
+					Then =
+					[
+						new MakePlayable(
+							Ref.ThisWay,
+							new PlayPermission
+							{
+								Forever = true,
+								LaterTurn = true,
+								Free = true,
+								CastOnly = true,
+							}
+						),
+					],
+				},
+			]
+		)
+		{
+			From = ZoneType.Hand,
+			SorcerySpeed = true,
+		};
+
+	/// <summary>Phlage: "it deals 3 damage to any target and you gain 3 life".</summary>
+	static GameAction[] PhlagesFury => [new DealDamage(Ref.Target(), 3), new GainLife(Ref.You, 3)];
+
+	/// <summary>Uro: "you gain 3 life and draw a card, then you may put a land card from your hand onto the battlefield".</summary>
+	static GameAction[] UrosWrath =>
+		[
+			new GainLife(Ref.You, 3),
+			new DrawCards(Ref.You, 1),
+			new MoveChosen(ZoneType.Hand, Is.Land, ZoneType.Battlefield) { May = true },
+		];
+
+	/// <summary>Bloodtithe Harvester: "-X/-X … where X is twice the number of Blood tokens you control".</summary>
+	static Count TwiceYourBlood =>
+		Count.NumberOf(Ref.Permanents(Is.Token & Is.Subtype("Blood") & Is.Yours)) with
+		{
+			Times = 2,
+			Sign = -1,
+		};
+
+	/// <summary>Minsc &amp; Boo: "you may create Boo, a legendary 1/1 red Hamster creature token with trample and haste".</summary>
+	static May MayCreateBoo =>
+		new(
+			"Create Boo?",
+			new Always(),
+			[
+				new CreateTokens(
+					Token(
+						"Boo",
+						"Legendary Creature — Hamster",
+						"1",
+						"1",
+						["R"],
+						["Trample", "Haste"]
+					),
+					1
+				),
+			]
+		);
+
+	/// <summary>Forth Eorlingas!: "2/2 red Human Knight creature tokens with trample and haste".</summary>
+	static CardData EorlingasKnight =>
+		Token("Knight", "Creature — Human Knight", "2", "2", ["R"], ["Trample", "Haste"]);
+
+	/// <summary>Thopter Foundry: "a 1/1 blue Thopter artifact creature token with flying" — blue, not FraCards' colourless one.</summary>
+	static CardData BlueThopter =>
+		Token("Thopter", "Artifact Creature — Thopter", "1", "1", ["U"], ["Flying"]);
 
 	/// <summary>Legion Extruder: "a 3/3 colorless Golem artifact creature token".</summary>
 	static CardData Golem => Token("Golem", "Artifact Creature — Golem", "3", "3");

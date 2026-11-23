@@ -452,6 +452,9 @@ public record ChooseNumberChoice : ChoiceAction
 	/// <summary>Gollum, Riddle Master: "choose odd or even" — 0 is even, 1 odd (ChoosesNumberAsItEnters.OddOrEven).</summary>
 	public bool OddOrEven { get; init; }
 
+	/// <summary>Fire Covenant: a target's share of what is divided is at least 1 (CR 601.2d) — the least number offered.</summary>
+	public int Min { get; init; }
+
 	public ChooseNumberChoice(int playerId, int max)
 	{
 		PlayerId = playerId;
@@ -468,7 +471,7 @@ public record ChooseNumberChoice : ChoiceAction
 	) =>
 		[
 			.. Enumerable
-				.Range(0, Max + 1)
+				.Range(Min, Max - Min + 1)
 				.Select(n => new ChoiceOption
 				{
 					Id = n + 1,

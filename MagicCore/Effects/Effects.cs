@@ -892,6 +892,12 @@ public record May(string Prompt, Condition Can, ImmutableList<GameAction> Then) 
 	/// <summary>Peace in Our Time: "that player may draw a card. If they do, they can't attack this turn" — Then runs as the one who answers ("you" is them).</summary>
 	public bool ThenAsThem { get; init; }
 
+	/// <summary>
+	/// Lim-Dûl's Vault: "As many times as you choose, you may pay 1 life, …" — after Then, the same question again,
+	/// while it can be done; a "no" ends it.
+	/// </summary>
+	public bool Again { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var decider = Who is null ? Controller : All(Who, s).FirstOrDefault();
@@ -909,7 +915,12 @@ public record May(string Prompt, Condition Can, ImmutableList<GameAction> Then) 
 						Steps =
 						[
 							new YesNoChoice(decider, Prompt),
-							new IfChosenAction(Then) { Otherwise = Otherwise },
+							// Again: Then as a child pipeline, so its steps each finish — a look after a look sees
+							// the cards the first moved — before the question is asked again
+							new IfChosenAction(Again ? [new If(new Always(), Then), this] : Then)
+							{
+								Otherwise = Otherwise,
+							},
 						],
 					}
 				)
@@ -983,7 +994,18 @@ public record Untap(Ref What) : Effect
 public record GetEmblem(ImmutableArray<GameComponent> Abilities) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
-		new(ToCommandZone(s, Controller, $"Emblem — {Source(s).Name}", Abilities));
+		new(
+			ToCommandZone(
+				s,
+				Controller,
+				$"Emblem — {Source(s).Name}",
+				// Wrenn and Six's retrace is a play-from-a-zone rule, read where "this turn" ones are: an emblem's
+				// lasts the game (CR 114.4), never removed with the turn
+				Abilities.Any(a => a is ThisTurnEffect)
+					? [.. Abilities, new RestOfTheGame()]
+					: Abilities
+			)
+		);
 
 	/// <summary>The ONE way an object is made in the command zone — emblems and effects alike.</summary>
 	public static GameState ToCommandZone(
@@ -1374,6 +1396,12 @@ public record CantCastOrActivate : ThisTurnEffect
 	/// the PERMANENT whose ability it is (never a card in a hand or graveyard), asked from its holder.
 	/// </summary>
 	public Filters.Filter? Of { get; init; }
+
+	/// <summary>
+	/// Teferi, Time Raveler: "Each opponent can cast spells only any time they could cast a sorcery" — the lock binds
+	/// only while the player it binds could NOT cast a sorcery now (Priority.AtSorcerySpeed: theirs, never the holder's).
+	/// </summary>
+	public bool ExceptAtSorcerySpeed { get; init; }
 }
 
 /// <summary>
@@ -1532,6 +1560,12 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
 
+	/// <summary>
+	/// No More Lies: "If that spell is countered this way, exile it instead of putting it into its owner's graveyard"
+	/// (Exile) — Counter.To's option (Remand), only when it was countered.
+	/// </summary>
+	public ZoneType To { get; init; } = ZoneType.Graveyard;
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (!Costs.IsEmpty && (!Cost.Symbols.IsEmpty || Costs.Any(c => c.PaidByChoosing() is null)))
@@ -1556,7 +1590,7 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 				);
 			if (!canPay)
 			{
-				s = StackResolution.Counter(s, id);
+				s = StackResolution.Counter(s, id, To);
 				continue;
 			}
 			var name = s.GetObject(id).Name;
@@ -1571,7 +1605,7 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 						?
 						[
 							new PayToKeepChoice(payer, $"Pay {Cost} to keep {name}?"),
-							new PayOrCounterAction(id, payer, Cost),
+							new PayOrCounterAction(id, payer, Cost) { To = To },
 						]
 						:
 						[
@@ -1581,7 +1615,7 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 							),
 							new IfChosenAction([.. Costs.Select(c => c.PaidByChoosing()!)])
 							{
-								Otherwise = [new Counter(What)],
+								Otherwise = [new Counter(What) { To = To }],
 							},
 						],
 				}
@@ -1648,12 +1682,15 @@ public record Counter(Ref What) : Effect
 /// <summary>After the payer's answer: pay the cost, or the spell or ability is countered.</summary>
 public record PayOrCounterAction(int StackObjectId, int PayerId, ManaCost Cost) : GameAction
 {
+	/// <summary>CounterUnlessPays.To: where a spell countered this way goes (No More Lies: exile).</summary>
+	public ZoneType To { get; init; } = ZoneType.Graveyard;
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			ChoosePermanentChoice.Read(InputContext).Any()
 			&& ManaPayment.Find(s, PayerId, Cost, 0) is { } payment
 				? ManaPayment.Pay(s, PayerId, payment)
-				: StackResolution.Counter(s, StackObjectId)
+				: StackResolution.Counter(s, StackObjectId, To)
 		);
 }
 
@@ -1677,10 +1714,18 @@ public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAct
 	/// </summary>
 	public Condition? If { get; init; }
 
+	/// <summary>
+	/// Minsc &amp; Boo: "Sacrifice a creature. When you do, Minsc &amp; Boo deals X damage to any target, where X is that
+	/// creature's power" — a number fixed as it triggers, read by Then as Count.X (Count.PowerOf(Ref.ThisWay): the
+	/// sacrificed as it last was).
+	/// </summary>
+	public Count? X { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (If is { } condition && !condition.Holds(s, InputContext))
 			return new(s);
+		var x = X?.Value(s, InputContext) ?? 0;
 		var targets = Targets;
 		if (TargetsUpTo is { } upTo)
 		{
@@ -1708,7 +1753,8 @@ public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAct
 						ControllerId = Controller,
 					},
 					ability,
-					0
+					0,
+					X: x
 				),
 				targets,
 				Then

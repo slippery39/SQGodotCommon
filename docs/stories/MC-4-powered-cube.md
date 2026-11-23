@@ -2530,6 +2530,27 @@ as his three priorities.
   Companion section (`ArenaDeck` reads it instead of skipping it), the sealed builder (`SealedBuilder`, the AI's own deck
   too) and the table's deck screen ("Sure", to the three listed). **A companion that fails its condition just stays in the
   sideboard** — never refused, never an error: it is an ordinary sideboard card, with no {3} action.
+- 2026-11-22, Claude (cube lane) — **4.4m1 + m2a: multicolour's 20 tested pieces and 12 casting and stack options, all
+  32 — 501 of 528 play (multicolour 38 of 65).** Shayne took the plan by starting it. **m1** as planned but for one
+  option the plan missed: Minsc & Boo's "X is that creature's power" — `WhenYouDo { X }` (fixed as it triggers, the
+  reflexive trigger's `Count.X`) and the sacrificed AS IT LAST WAS (`SacrificeChosenAction` passes it on,
+  `ContextKeys.ThisWayAsTheyWere`, read by `Ref.CountedAsTheyWere`): Boo is a token, so without it X was 0. Otharri's
+  experience counter is `CounterKinds.Experience`; Thopter Foundry's Thopter its own blue token. Lurrus and Lutri have
+  their main-deck text only (companion is m3, Shayne). **m2a**, each an option: No More Lies `CounterUnlessPays { To }`;
+  Teferi, Time Raveler's lock `CantCastOrActivate { ExceptAtSorcerySpeed }` (the bound player's sorcery timing, never the
+  holder's `If`) and his +1 Necromancy's `CastAsThoughItHadFlash { Of }` in a `ThisTurn { UntilYourNextTurn }`;
+  Kolaghan's Command `ModeChoice { EachWord }` (6 casts; Shayne); Fire Covenant — `TargetSpec.Divide` is a `Count` (a
+  number or X), an X division's shares asked a target at a time (`Division.AskShares`, `ChooseNumberChoice { Min }`) and
+  `Division.Fits` checked by sum, never enumerated; cascade `LsvCards.Cascade` and plot `LsvCards.Plot` (the stack: a
+  ceiling, DesignNotes); escape's own mana `MayCastThisFrom { Mana }` (Phlage {R}{R}{W}{W}, Uro {G}{G}{U}{U}) and
+  "unless it escaped" the `Escaped` condition on `OnStackComponent.Escaped`; Lim-Dûl's Vault `May { Again }` and
+  `ShuffleLibrary { KeepTop }`; Zirda — a tax on abilities reads `By` now (Anointed Peacekeeper moved onto `By = Any`);
+  Wrenn and Six's emblem — `GetEmblem` marks one holding a "this turn" kind of rule `RestOfTheGame`, so the turn's end
+  never took it. **Found building:** a may's Then runs INLINE (`IfChosenAction`), so Lim-Dûl's second look saw the five
+  the first had just sent to the bottom; `Again` runs its Then as a child pipeline, the general case a ceiling
+  (DesignNotes — the fix moves golden replays). 14 tests (`LsvBatch2mTests.cs`), 14 of 14 revert-checks caught; golden-out
+  moved no game; the probe at 150, every card used (Lutri's trigger never — it wants your own spell on the stack), and
+  Thopter Foundry with Sword of the Meek and Lim-Dûl's Vault ended in 40 games of their own.
 
 ## Tasks
 
@@ -2844,8 +2865,9 @@ as his three priorities.
   - [ ] MC-4.4m Multicolour (Shayne, 2026-11-22: after colourless) — 59 cards read card by card and tiered (Decisions,
         "4.4m"): 20 tested pieces, 36 options, 3 cards on 3 new pieces and the companion rule; three batches — m1 + m2a,
         m2b + m2c, m3 (Shayne, 2026-11-22: reviewed; companions set at deck building time — Decisions, after "4.4m"):
-    - [ ] MC-4.4m1 The tested pieces, 20 (list in Decisions) — script-only, read on the card sheet
-    - [ ] MC-4.4m2a Options, casting and the stack, 12: No More Lies, Teferi, Time Raveler, Kolaghan's Command, Fire
+    - [x] MC-4.4m1 (done 2026-11-22; Decisions, "4.4m1 + m2a") The tested pieces, 20 (list in Decisions) — script-only,
+          read on the card sheet; Minsc & Boo took an option (`WhenYouDo.X`, the sacrificed as it last was)
+    - [x] MC-4.4m2a (done 2026-11-22) Options, casting and the stack, 12: No More Lies, Teferi, Time Raveler, Kolaghan's Command, Fire
           Covenant, Bloodbraid Challenger, Pillage the Bog, Phlage, Uro, Expressive Iteration, Lim-Dûl's Vault, Zirda,
           Wrenn and Six
     - [ ] MC-4.4m2b Options, combat and triggers, 12: Kaito, Fallen Shinobi, Raph & Mikey, Okoye, Aragorn, Psychic Frog,
@@ -2943,7 +2965,18 @@ is still theirs. **Next: multicolour, MC-4.4m — planned (Decisions, "4.4m") an
 after it):** 59 cards — 20 tested pieces, 36 options, 3 cards on 3 new pieces (split cards, control of a spell, what an
 opponent can't make you do) and the companion rule (set at deck building time, m3) — as three batches, **m1 + m2a
 first**, then m2b + m2c, then m3 (a companion chosen in an Arena export, the sealed builder and the table's deck screen;
-one failing its condition stays in the sideboard — Shayne). Kolaghan's Command takes `EachWord` in m2a. From l4: colours `s.ColorsOf` (never `Card.Colors` in a rule); a creature land
+one failing its condition stays in the sideboard — Shayne). Kolaghan's Command takes `EachWord` in m2a. **m1 + m2a is done** (Decisions, "4.4m1 + m2a"; 501 of 528 play — W 60/60,
+U 75/75, B 61/61, R 54/54, G 50/50, multicolour 38/65, colourless 163/163). **m2b + m2c is next** (24 options, plan in
+Decisions "4.4m"). From m1 + m2a: "when you do" with a number `WhenYouDo { X }`; a sacrifice's `Ref.ThisWay` counted as it
+last was; `CounterUnlessPays { To }`; `CantCastOrActivate { ExceptAtSorcerySpeed }`; `CastAsThoughItHadFlash { Of }` in a
+`ThisTurn`; `ModeChoice { EachWord }`; `TargetSpec.Divide` a `Count` (`Division.Total`, `AskShares`); `LsvCards.Cascade`,
+`LsvCards.Plot(cost)`; `MayCastThisFrom { Mana }`, the `Escaped` condition; `May { Again }`; `ShuffleLibrary { KeepTop }`;
+a tax on abilities reads `By`; an emblem with a "this turn" kind of rule lasts (`GetEmblem`); `CounterKinds.Experience`;
+**a may's Then runs inline** — two spawning steps in it read the state before either ran (DesignNotes); the tests are in
+`LsvBatch2mTests.cs` (`Yes`, `Loyalty(walker, cost)`, `MyNext(step)`, `CanCast(player, card)`). **For the AI lane at the
+merge:** Fire Covenant's shares are ordinary `ChooseNumberChoice`s, so the search branches on each (X = 20 over 12
+creatures: 11 questions) — a rule-answered division, as combat damage's split is, would end that; and a TRIGGER dividing
+X still enumerates the ways (no card does yet). From l4: colours `s.ColorsOf` (never `Card.Colors` in a rule); a creature land
 `LsvCards.CreatureLand(cost, size, type, colours, keywords)`; an entering's cost `EntryCost { Instead }` (paid by
 choosing: a cost's `PaidByChoosing`/`CanPayByChoosing`); "as it enters, choose a basic land type" `ChosenType`;
 `ChoosesColorAsItEnters { Mana }`; a turn's start `TurnStructure.NextTurn`/`BeginTurn`; exert `ExertCost`/`Exerted`; a
@@ -3403,3 +3436,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
   survey and plan.
 - 2026-11-22: MC-4.4l5 done (Shayne asked) — Lightning Greaves; the search is offered a free ability once per permanent
   a turn. 469 of 528 play; colourless 163 of 163 — finished. Next: multicolour, MC-4.4m — survey and plan.
+- 2026-11-22: MC-4.4m1 + m2a done — multicolour's 20 tested pieces and 12 casting and stack options; 501 of 528 play,
+  multicolour 38 of 65. Minsc & Boo needed the sacrificed creature as it last was; a may's Then runs inline (a ceiling).
+  Next: m2b + m2c.

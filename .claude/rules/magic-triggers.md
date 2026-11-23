@@ -300,3 +300,16 @@ whose subsystem it lives in.
   Daybound is the printed keyword on a card with a back face (`TransformsInto`); the front's keywords are both faces'
   (Scryfall), so daybound is asked of a front and nightbound of a back. Read where something CHANGES, never by the
   state-based check (DesignNotes).
+- **"Sacrifice a creature. When you do, … X is that creature's power"** (Minsc & Boo, MC-4.4m1) is `MaySacrifice { Must }`
+  → `WhenYouDo { X = Count.PowerOf(Ref.ThisWay) }`: X fixed as the reflexive trigger triggers (`Triggers.Pending.X`, its
+  effects' `Count.X`), the sacrificed read as it last was — `SacrificeChosenAction` passes each on
+  (`ContextKeys.ThisWayAsTheyWere`), so `Ref.CountedAsTheyWere` counts its counters and a token that ceased to exist.
+  "If the sacrificed creature was a Hamster" can't change after, so an `If(Matches(Ref.ThisWay, …) { AsItLastWas })`
+  picks between two `WhenYouDo`s.
+- **"As many times as you choose, you may …"** (Lim-Dûl's Vault, MC-4.4m2a) is `May { Again }`: after Then, the same
+  question, until a no. Then runs as a CHILD pipeline there — `IfChosenAction` runs a may's Then inline, so two looks in
+  one Then would both read the library before either moved it (DesignNotes).
+- **An emblem whose ability is a "this turn" kind of rule** (Wrenn and Six's −7: "Instant and sorcery cards in your
+  graveyard have retrace" — `MayPlayFromZone(Graveyard, …) { Costs = [DiscardCost(land)], AnyTime }`) is read where the
+  "this turn" ones are (`s.ThisTurnEffects<T>`, the command zone); `GetEmblem` marks such an emblem `RestOfTheGame`, so
+  the turn's end never takes it (CR 114.4).

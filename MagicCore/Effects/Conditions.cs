@@ -183,6 +183,17 @@ public record WasKicked : Condition
 }
 
 /// <summary>
+/// Phlage, Titan of Fire's Fury: "When Phlage enters, sacrifice it unless it escaped." — stamped as it was cast
+/// (OnStackComponent.Escaped), read on the permanent (Card.AsCast) as AlternativeCostWasPaid reads evoke's.
+/// </summary>
+public record Escaped : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetObject((int)context[ContextKeys.Source]) is Card permanent
+		&& permanent.AsCast?.Escaped == true;
+}
+
+/// <summary>
 /// Baleful Mastery: "If the {1}{B} cost was paid" — cast for the alternative cost on the card (OnStackComponent.AlternativeCost).
 /// Evoke (Subtlety): "When this creature enters, if its evoke cost was paid, its controller sacrifices it" — the
 /// permanent it became (Card.CastAs); a new object of it wasn't evoked.

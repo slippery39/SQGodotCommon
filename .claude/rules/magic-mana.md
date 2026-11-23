@@ -197,3 +197,7 @@ whose subsystem it lives in.
   **"Sacrifice five Treasures"** (Magda) is `SacrificeCost(filter) { Count = 5 }` the same way: no pick in the action
   (`CostSlot.None`), offered only with five to sacrifice, the set chosen after activating (`ChoosePermanentChoice
   { Sacrifice }`, then `SacrificeChosenAction`).
+- **"Abilities you activate that aren't mana abilities cost {2} less … can't reduce the mana in that cost to less than
+  one mana"** (Zirda, the Dawnwaker, MC-4.4m2a) is `CostChange(-2, Is.AnyCard) { Abilities, Floor = 1 }` — a tax on
+  abilities reads `By` now (who activates, from the holder's controller: Zirda's default `You`), so Anointed
+  Peacekeeper's, on everyone's, is `By = Whose.Any`.

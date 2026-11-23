@@ -49,6 +49,13 @@ public record ModeChoice
 	/// </summary>
 	public bool Repeats { get; init; }
 
+	/// <summary>
+	/// Kolaghan's Command: "Choose two —" — a spell's target words chosen one at a time as it is cast
+	/// (CastSpellAction.EachWord), the Confluences' way: 6 casts, never one per pair of targets (644 on a 12-creature
+	/// board, Shayne 2026-11-22). The other modal spells still enumerate until MC-8, which makes this every one's.
+	/// </summary>
+	public bool EachWord { get; init; }
+
 	public static implicit operator ModeChoice(int n) => new() { AtLeast = n, AtMost = n };
 
 	/// <summary>

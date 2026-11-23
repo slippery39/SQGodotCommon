@@ -101,10 +101,11 @@ public static class MagicState
 		return (rng, s with { RngSeed = rng.Next(1, int.MaxValue) });
 	}
 
-	public static GameState Shuffle(this GameState s, int playerId)
+	/// <param name="keepTop">Lim-Dûl's Vault: the top cards left in place, the rest shuffled under them.</param>
+	public static GameState Shuffle(this GameState s, int playerId, int keepTop = 0)
 	{
 		var libraryId = s.ZoneId(playerId, ZoneType.Library);
-		var ids = s.GetChildrenIds(libraryId).ToArray();
+		var ids = s.GetChildrenIds(libraryId).Skip(keepTop).ToArray();
 		(var rng, s) = s.TakeRng();
 		rng.Shuffle(ids);
 		foreach (var id in ids)

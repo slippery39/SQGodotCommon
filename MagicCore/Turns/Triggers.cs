@@ -1112,14 +1112,14 @@ public static class Triggers
 		// Fury: "4 damage divided as you choose among any number of target creatures and/or planeswalkers" — N words
 		// chosen one at a time, as a spell's are (Division.Words), the division after them (CR 603.3d). Batroc the
 		// Leaper's "each of up to X targets": the word N times, N counted as it triggers (TargetSpec.PerX).
-		var divided = specs.Sum(spec => spec.Divide);
+		var divided = specs.Sum(spec => Actions.Division.Total(spec, XOf(t)));
 		var tooFew = false;
 		specs =
 		[
 			.. specs.SelectMany(spec =>
 			{
 				if (spec.PerX is not { } n)
-					return Actions.Division.Words(spec);
+					return Actions.Division.Words(spec, XOf(t));
 				var count = n.Value(s, ContextOf(t));
 				// CR 603.3d: a required "X targets" needs X different objects, or the trigger is removed — never a
 				// pick with nothing left to choose.

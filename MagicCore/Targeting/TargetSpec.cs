@@ -80,9 +80,10 @@ public record TargetSpec(From From, Filter? Filter = null)
 	/// counters among one or two target creatures" is 2. StackResolution.TextOf makes it N words, all but the first
 	/// optional and each a different object; what each target takes is Count.Share. Past two, the targets and the
 	/// split are chosen as it is cast (CastSpellAction.ChoosesTargets), never a cast per set and split — four
-	/// among 12 creatures would be 1,365 casts.
+	/// among 12 creatures would be 1,365 casts. Fire Covenant: "X damage divided as you choose among any number of
+	/// target creatures" is Count.X — the spell's X; any other count throws (Division.Total), as PerX's.
 	/// </summary>
-	public int Divide { get; init; }
+	public Effects.Count? Divide { get; init; }
 
 	/// <summary>
 	/// Fatehold Charm: "target spell or creature" — also legal where this one says, in its own zone.

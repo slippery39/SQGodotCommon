@@ -317,3 +317,6 @@ whose subsystem it lives in.
   ("a nonland permanent you don't control": `!Is.Land & !Is.Yours`) — a `ChooseAmongChoice` each (`DeciderId` the
   voter), one choice per player whatever the board — then `TallyVotesAction` runs `Then` with `Ref.Chosen` every
   permanent with the most votes, ties included. Two players only (DesignNotes).
+- **"Then shuffle and put the last cards you looked at this way on top in any order"** (Lim-Dûl's Vault, MC-4.4m2a) is
+  `ShuffleLibrary { KeepTop = 5 }` (`MagicState.Shuffle(…, keepTop)`): the top N stay where they are, as known as they
+  were — their order was chosen as they were last looked at (`LookAndTake { Take = 0, Rest = TopInAnyOrder }`).

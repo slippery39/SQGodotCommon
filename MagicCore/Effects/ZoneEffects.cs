@@ -1832,11 +1832,17 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 /// </summary>
 public record ShuffleLibrary(Ref Who) : Effect
 {
+	/// <summary>
+	/// Lim-Dûl's Vault: "Then shuffle and put the last cards you looked at this way on top in any order" — the top N
+	/// kept where they are, as known as they were, the rest shuffled under them.
+	/// </summary>
+	public int KeepTop { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			All(Who, s)
 				.Where(id => s.GetObject(id) is MagicPlayer)
-				.Aggregate(s, (st, player) => st.Shuffle(player))
+				.Aggregate(s, (st, player) => st.Shuffle(player, KeepTop))
 		);
 }
 

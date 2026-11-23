@@ -100,6 +100,7 @@ public static class Combat
 				rule.By.Includes(playerId, holder.ControllerId)
 				&& s.GetPlayer(playerId).ThisTurn.SpellsCast >= rule.SpellsEachTurn
 				&& rule.If?.Holds(s, Effects.Conditions.Of(holder)) != false
+				&& !(rule.ExceptAtSorcerySpeed && Actions.Priority.AtSorcerySpeed(s, playerId))
 			)
 				(locks ??= []).Add((rule, holder));
 		return locks ?? NoLocks;

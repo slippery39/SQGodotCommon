@@ -328,7 +328,9 @@ public static class MagicRules
 		var perX = text?.Targets.Any(t => t.PerX is not null) == true;
 		// Pyrokinesis' 4 damage divided among any number of targets: the same, at any X — its sets and splits
 		// are 1,365 casts against 12 creatures. Pure Energy's two stay casts: one per creature and per pair.
-		var divided = text?.Targets.Any(t => t.Divide > 2) == true;
+		// Fire Covenant's X likewise (Division.ByX).
+		var divided =
+			text?.Targets.Any(t => t.Divide is { Kind: CountOf.X } || t.Divide?.Fixed > 2) == true;
 		List<(ImmutableArray<int> modes, ImmutableArray<int> targets)> unchosen = [([], [])];
 		// Mystic Confluence: "you may choose the same mode more than once" — one cast per choice of modes, the
 		// targets chosen word by word as it is cast; "return target creature" three times is 220 casts otherwise.

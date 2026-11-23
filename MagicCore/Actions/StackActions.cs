@@ -39,6 +39,12 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 	/// <summary>Overflow Submatrix, The Holodeck: cast from a graveyard by a permanent's permission — not flashback, so not exiled leaving the stack; it resolves onto the battlefield.</summary>
 	public bool ByPermission { get; init; }
 
+	/// <summary>
+	/// Phlage, Uro: "sacrifice it unless it escaped" — cast from its graveyard paying an escape's costs (its own
+	/// MayCastThisFrom's, or Underworld Breach's), read on the permanent (Card.AsCast) by the Escaped condition.
+	/// </summary>
+	public bool Escaped { get; init; }
+
 	/// <summary>Overflow Submatrix: "that artifact creature enters with a finality counter on it".</summary>
 	public bool Finality { get; init; }
 
@@ -266,7 +272,7 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public static bool EachWord(Card card) =>
 		card.GetComponent<SpellEffectsComponent>() is { } text
-		&& (text.Choose.Repeats || text.Modes.Any(m => m.Cost is not null));
+		&& (text.Choose.Repeats || text.Choose.EachWord || text.Modes.Any(m => m.Cost is not null));
 
 	/// <summary>
 	/// Pyrokinesis: how its 4 damage is divided among the targets chosen (TargetSpec.Divide), one number per
@@ -567,8 +573,10 @@ public record CastSpellAction : GameAction
 				: !TargetSpec.AreLegal(s, specs, Targets, PlayerId, CardId)
 		)
 			return ValidationResult.Invalid("Illegal targets");
-		if (!ChoosesTargets && !Division.Fits(Division.Of(card), Targets, Shares))
+		if (!ChoosesTargets && !Division.Fits(Division.Of(card, X), Targets, Shares))
 			return ValidationResult.Invalid("Illegal division");
+		if (Division.ByX(card) && Division.Of(card, X) < 1) // Fire Covenant: 0 can't be divided (CR 601.2d)
+			return ValidationResult.Invalid("Nothing to divide");
 		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (!CostList.Fits(costs, CostSlot.Behold, BeholdId, s, PlayerId, CardId))
@@ -688,6 +696,18 @@ public record CastSpellAction : GameAction
 		var byEffect =
 			DuringResolution && from == ZoneType.Graveyard && !ExiledLeavingTheStack
 			|| marked && card.GetComponent<PlayableFromExile>()?.ExiledLeavingTheStack != true;
+		// Phlage: escape — a cast from the graveyard paying an escape's exile (its own, or Underworld Breach's), never
+		// flashback, an effect's cast, or retrace's discard (Six, Wrenn and Six's emblem)
+		var escaped =
+			from == ZoneType.Graveyard
+			&& !DuringResolution
+			&& !marked
+			&& Costs.Flashback(s, card) is null
+			&& (
+				permission is { } p && p.Rule.Costs.Any(c => c is ExileFromGraveyardCost)
+				|| s.AbilitiesOf<MayCastThisFrom>(card)
+					.Any(m => m.From == ZoneType.Graveyard && !m.Costs.IsEmpty)
+			);
 		if (permission is { Rule.OncePerTurn: true, Holder: var holder })
 			s = s.UpdateObject(
 				holder.Id,
@@ -719,7 +739,7 @@ public record CastSpellAction : GameAction
 		foreach (var id in card.GetComponent<Spliced>()?.CardIds ?? []) // "you may reveal this card from your hand"
 			s = s.MakeKnown(id, Knowers.Everyone);
 		s = PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from, Kicked);
-		if (Division.Of(card) is > 0 and var divided) // Pyrokinesis, Pure Energy: the division is announced now
+		if (Division.Of(card, X) is > 0 and var divided) // Pyrokinesis, Pure Energy: the division is announced now
 			s = s.UpdateObject(
 				CardId,
 				s.GetCard(CardId)
@@ -770,6 +790,17 @@ public record CastSpellAction : GameAction
 							ByPermission = true,
 							Finality = permission?.Rule.Finality ?? false,
 							Gains = permission?.Rule.Gains,
+						}
+					)
+			);
+		if (escaped)
+			s = s.UpdateObject(
+				CardId,
+				s.GetCard(CardId)
+					.WithComponentReplaced(
+						s.GetCard(CardId).GetComponent<OnStackComponent>()! with
+						{
+							Escaped = true,
 						}
 					)
 			);
@@ -1230,7 +1261,7 @@ public static class StackResolution
 				t.PerX
 					is not null
 					? t.XWords(x, card.Name)
-					: Division.Words(t)
+					: Division.Words(t, x)
 			),
 		];
 		// Goryo's Vengeance spliced on (CR 702.47b): its target words after the spell's own, its effects after — each
@@ -1503,9 +1534,65 @@ public record FinishSpellAction : GameAction
 /// </summary>
 public static class Division
 {
-	/// <summary>The total a card's text divides (TargetSpec.Divide); 0 when it divides nothing.</summary>
-	public static int Of(Card card) =>
-		card.GetComponent<SpellEffectsComponent>()?.Targets.Sum(t => t.Divide) ?? 0;
+	/// <summary>The total a card's text divides (TargetSpec.Divide) when cast for this X; 0 when it divides nothing.</summary>
+	public static int Of(Card card, int x = 0) =>
+		card.GetComponent<SpellEffectsComponent>()?.Targets.Sum(t => Total(t, x)) ?? 0;
+
+	/// <summary>What one word divides: a fixed number (Pyrokinesis' 4), or the X (Fire Covenant). Another count throws.</summary>
+	public static int Total(TargetSpec t, int x) =>
+		t.Divide switch
+		{
+			null => 0,
+			{ Kind: CountOf.Fixed } n => n.Fixed,
+			{ Kind: CountOf.X } => x,
+			_ => throw new InvalidOperationException(
+				"TargetSpec.Divide is a number or Count.X — no other count is divided yet"
+			),
+		};
+
+	/// <summary>Fire Covenant: the text divides its X — its shares asked one target at a time (AskShares).</summary>
+	public static bool ByX(Card card) =>
+		card.GetComponent<SpellEffectsComponent>()
+			?.Targets.Any(t => t.Divide is { Kind: CountOf.X }) == true;
+
+	/// <summary>
+	/// Fire Covenant: each target's share asked in turn — a number from one to what leaves every target after it one
+	/// each; the last takes the rest — then the cast with them. Never one choice of the ways: X = 20 among 12 creatures
+	/// is 75,582 of them.
+	/// </summary>
+	public static ActionResult AskShares(
+		GameState s,
+		CastSpellAction cast,
+		ImmutableArray<int> shares,
+		int remaining,
+		bool retain
+	)
+	{
+		var named = cast.Targets.Where(id => id != 0).ToList();
+		var left = named.Count - shares.Length;
+		if (left <= 1)
+		{
+			var done = cast with { Shares = left == 1 ? shares.Add(remaining) : shares };
+			return retain ? done.Execute(s) : new(done.Cast(s));
+		}
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new ChooseNumberChoice(cast.PlayerId, remaining - (left - 1))
+						{
+							Min = 1,
+							Prompt =
+								$"Divide: how much to {s.GetObject(named[shares.Length]).Name}",
+						},
+						new TakeShareAction(cast, shares, remaining, retain),
+					],
+				}
+			)
+		);
+	}
 
 	/// <summary>Every way to divide the total among k targets, the first target's biggest share first.</summary>
 	public static ImmutableList<ImmutableArray<int>> Splits(int total, int k) =>
@@ -1526,11 +1613,11 @@ public static class Division
 		];
 
 	/// <summary>A divided word as the N words it is (CR 601.2d): the first required, the rest optional and different.</summary>
-	public static IEnumerable<TargetSpec> Words(TargetSpec t) =>
-		t.Divide > 0
+	public static IEnumerable<TargetSpec> Words(TargetSpec t, int x = 0) =>
+		t.Divide is not null
 			? Enumerable
-				.Range(0, t.Divide)
-				.Select(i => t with { Divide = 0, Optional = i > 0, NotThePrevious = i > 0 })
+				.Range(0, Total(t, x))
+				.Select(i => t with { Divide = null, Optional = i > 0, NotThePrevious = i > 0 })
 			: [t];
 
 	/// <summary>"Divide among the targets": one of the ways, named for the targets chosen (0 is a word left empty).</summary>
@@ -1561,10 +1648,11 @@ public static class Division
 	/// <summary>A cast's shares fit its targets: none without a division or when only one way is left, else one of the ways.</summary>
 	public static bool Fits(int total, ImmutableArray<int> targets, ImmutableArray<int> shares)
 	{
-		var splits = Splits(total, targets.Count(id => id != 0));
+		// One way is left with one target, or one each — never enumerated: X = 20 among 12 is 75,582 ways.
+		var k = targets.Count(id => id != 0);
 		return shares.IsEmpty
-			? total == 0 || splits.Count == 1
-			: splits.Any(split => split.SequenceEqual(shares));
+			? total == 0 || (k >= 1 && (k == 1 || k == total))
+			: shares.Length == k && shares.All(n => n >= 1) && shares.Sum() == total;
 	}
 }
 
@@ -1701,7 +1789,10 @@ public record CastWithChosenTargetsAction(CastSpellAction Cast, bool Retain) : G
 				? ChooseTargetChoice.Read(InputContext, Words)
 				: ChooseXTargetsChoice.Read(InputContext);
 		var cast = Cast with { Targets = chosen };
-		var splits = Division.Splits(Division.Of(card), chosen.Length);
+		var total = Division.Of(card, Cast.X);
+		if (Division.ByX(card) && chosen.Count(id => id != 0) is > 1 and var k && k < total)
+			return Division.AskShares(s, cast, [], total, Retain);
+		var splits = Division.Splits(total, chosen.Length);
 		if (splits.Count > 1)
 			return new(
 				s.SpawnAction(
@@ -1716,6 +1807,21 @@ public record CastWithChosenTargetsAction(CastSpellAction Cast, bool Retain) : G
 				)
 			);
 		return Retain ? cast.Execute(s) : new(cast.Cast(s));
+	}
+}
+
+/// <summary>Fire Covenant: one target's share chosen (ChooseNumberChoice), then the next asked — Division.AskShares.</summary>
+public record TakeShareAction(
+	CastSpellAction Cast,
+	ImmutableArray<int> Shares,
+	int Remaining,
+	bool Retain
+) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var share = (int)InputContext[ChooseNumberChoice.Chosen] - 1;
+		return Division.AskShares(s, Cast, Shares.Add(share), Remaining - share, Retain);
 	}
 }
 

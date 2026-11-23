@@ -50,6 +50,13 @@ public static class ContextKeys
 	/// <summary>ImmutableArray&lt;int&gt;: what an effect did its thing to, for its Then (Ref.ThisWay) — Destroy.</summary>
 	public const string ThisWay = "ThisWay";
 
+	/// <summary>
+	/// ImmutableList&lt;Card&gt;: Ref.ThisWay's permanents as they last were on the battlefield — a sacrifice's
+	/// (SacrificeChosenAction), so Minsc &amp; Boo's "that creature's power" counts its counters, and a token that ceased
+	/// to exist is still counted (Ref.CountedAsTheyWere).
+	/// </summary>
+	public const string ThisWayAsTheyWere = "ThisWayAsTheyWere";
+
 	/// <summary>Who a filter asks for in a resolving context: "you", "this", "that creature".</summary>
 	public static Filters.FilterContext Asking(ImmutableDictionary<string, object> context) =>
 		new(
@@ -319,6 +326,27 @@ public record Ref(RefKind Kind, int Index = 0)
 		ImmutableDictionary<string, object> context
 	)
 	{
+		// a sacrifice's ids as they last were — the snapshot's, so a token gone from the state still counts
+		if (
+			Kind == RefKind.ThisWay
+			&& context.GetValueOrDefault(ContextKeys.ThisWayAsTheyWere) is ImmutableList<Card> were
+			&& context.GetValueOrDefault(ContextKeys.ThisWay) is ImmutableArray<int> ids
+		)
+			return
+			[
+				.. ids.Select(id =>
+						were.FirstOrDefault(w => w.Id == id) is { } was
+						&& !(
+							s.HasObject(id)
+							&& s.GetObject(id) is Card now
+							&& now.Incarnation == was.Incarnation
+						)
+							? was
+						: s.HasObject(id) ? s.GetObject(id)
+						: null
+					)
+					.OfType<GameObject>(),
+			];
 		var objects = ObjectsAsTheyWere(s, context).ToList();
 		return
 			Kind == RefKind.EventCard

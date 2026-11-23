@@ -80,6 +80,7 @@ public static class Costs
 			foreach (var tax in s.AbilitiesOf<CostChange>(permanent))
 				if (
 					tax.Abilities
+					&& tax.By.Includes(controllerId, permanent.ControllerId) // Zirda: "abilities you activate"
 					&& Conditions.Of(permanent) is var asItsHolder
 					&& Applies(s, tax, source, asItsHolder)
 					&& tax.Amount.Value(s, asItsHolder) is var amount
@@ -121,6 +122,20 @@ public static class Costs
 			free ? ManaCost.None
 			: flashback ? Flashback(s, card)?.Cost ?? card.ManaCost // flashback is an alternative cost: taxes still apply
 			: card.ManaCost;
+		// Phlage's escape: "Escape—{R}{R}{W}{W}" — its owner's cast from the graveyard, never flashback or an effect's
+		if (
+			!free
+			&& flashback
+			&& casterId == card.OwnerId
+			&& s.IsIn(card.Id, card.OwnerId, ZoneType.Graveyard)
+			&& Flashback(s, card) is null
+			&& !Playable.MarkedInGraveyard(s, card, casterId) // Emry's mark casts it for its mana cost
+			&& s.AbilitiesOf<MayCastThisFrom>(card)
+				.FirstOrDefault(m => m.From == ZoneType.Graveyard)
+				?.Mana
+				is { } escape
+		)
+			printed = escape;
 		if (added is not null)
 			printed = printed.Plus(added);
 		// Cast from exile by impulse: Vulcan Mind-Meld's "mana of any type", Zero's "costs {2} more".

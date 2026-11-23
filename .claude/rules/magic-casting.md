@@ -428,3 +428,29 @@ whose subsystem it lives in.
   (Riku of Many Paths) is `Count.ModesChosen(Ref.EventCard)`, read from its `OnStackComponent`. A trigger's
   `ModeChoice` is counted with the TRIGGER's context (`Triggers.ContextOf`: its source and event card), so
   `AtMost = Count.ModesChosen(Ref.EventCard)` is "choose up to X".
+- **MC-4.4m2a's options** (multicolour; tests in `LsvBatch2mTests.cs`):
+  - **"If that spell is countered this way, exile it instead"** (No More Lies) is `CounterUnlessPays { To }` — `Counter.To`'s
+    option, on both ways it counters (unpaid, or unpayable).
+  - **"Each opponent can cast spells only any time they could cast a sorcery"** (Teferi, Time Raveler) is
+    `CantCastOrActivate { By = Opponent, Abilities = false, ExceptAtSorcerySpeed }`: the lock binds only while the player
+    it binds could not cast a sorcery NOW (`Priority.AtSorcerySpeed` for THEM, never the holder's `If`) — a cast during a
+    resolution is locked too. His +1, **"until your next turn, you may cast sorcery spells as though they had flash"**, is
+    Necromancy's `CastAsThoughItHadFlash([]) { Of = Is.Sorcery }` in a `ThisTurn { UntilYourNextTurn }` — read by
+    `Priority.AtInstantSpeed` from the caster's command zone, `Of` asked of the card.
+  - **"Choose two —" with its targets chosen one at a time** (Kolaghan's Command, Shayne 2026-11-22) is `ModeChoice {
+    EachWord }` → `CastSpellAction.EachWord`: one cast per pair of modes (6), never per pair of targets (644). MC-8 makes
+    it every modal spell's.
+  - **"X damage divided as you choose among any number of target creatures"** (Fire Covenant) is `TargetSpec.Divide`
+    as a `Count` — a number, or `Count.X` (any other count throws, `Division.Total`). An X division's targets are one
+    `ChooseXTargetsChoice`, then each target's share a `ChooseNumberChoice { Min = 1 }` in turn (`Division.AskShares`,
+    `TakeShareAction`), the last taking the rest — never one choice of the ways (75,582 at X = 20 over 12). `Division.
+    Fits` checks shares by sum, never by enumerating. X = 0 is refused (CR 601.2d).
+  - **Cascade** (CR 702.85, Bloodbraid Challenger) is `LsvCards.Cascade`: discover's `ExileTopPlayable { Until = !land &
+    mana value < this spell's, Play = Now { Free }, RestOnBottom }` on a `SelfCast` trigger. **Plot** (CR 702.170, Pillage
+    the Bog) is `LsvCards.Plot(cost)`: warp's exile and `PlayPermission { Forever, LaterTurn, Free, CastOnly }` on a
+    sorcery-speed ability `From = Hand` — it uses the stack (a ceiling, DesignNotes).
+  - **Escape for a cost of its own** (Phlage: "Escape—{R}{R}{W}{W}, Exile five other cards") is `MayCastThisFrom {
+    Mana, Costs }` — `Costs.Of` pays `Mana` for its owner's cast from the graveyard (never flashback, never an effect's
+    cast). **"Sacrifice it unless it escaped"** is `When(SelfEnters, Sacrifice) with { If = Not(Escaped) }`: the cast
+    stamped `OnStackComponent.Escaped` (a graveyard cast paying an escape's costs — its own or Underworld Breach's), read
+    on the permanent through `Card.AsCast`, as evoke's `AlternativeCostWasPaid`.

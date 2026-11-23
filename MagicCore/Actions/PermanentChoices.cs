@@ -232,14 +232,22 @@ public record AttachChosenHostAction(int AuraId) : GameAction
 		);
 }
 
-/// <summary>Sacrifices what the previous choice picked (to its owner's graveyard — it dies).</summary>
+/// <summary>
+/// Sacrifices what the previous choice picked (to its owner's graveyard — it dies), passing on each as it last was
+/// (ContextKeys.ThisWayAsTheyWere): Minsc &amp; Boo's "X is that creature's power".
+/// </summary>
 public record SacrificeChosenAction : GameAction
 {
 	public override ActionResult Execute(GameState s)
 	{
+		var were = ImmutableList.CreateBuilder<Card>();
 		foreach (var id in ChoosePermanentChoice.Read(InputContext))
+		{
+			if (s.IsOnBattlefield(id))
+				were.Add(s.GetCard(id));
 			s = s.Sacrifice(id);
-		return new ActionResult(s);
+		}
+		return new ActionResult(s).WithOutput(ContextKeys.ThisWayAsTheyWere, were.ToImmutable());
 	}
 }
 

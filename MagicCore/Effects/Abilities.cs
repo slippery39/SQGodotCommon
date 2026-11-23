@@ -133,6 +133,9 @@ public static class CounterKinds
 	/// <summary>The One Ring: "Put a burden counter on The One Ring, then draw a card for each burden counter on The One Ring."</summary>
 	public const string Burden = "burden";
 
+	/// <summary>Otharri, Suns' Glory: "you get an experience counter" — a player's, as energy (MagicPlayer.Counters).</summary>
+	public const string Experience = "experience";
+
 	// The older kinds keep their own fields on Card (rules read them everywhere); MagicState.PutCounters
 	// is still the one way any of them is put on.
 	public const string PlusOne = "+1/+1";
@@ -1431,9 +1434,16 @@ public record AuraComponent(TargetSpec Enchant) : GameComponent;
 /// Necromancy: "You may cast this spell as though it had flash. If you cast it any time a sorcery couldn't have been
 /// cast, the controller of the permanent it becomes sacrifices it at the beginning of the next cleanup step." — read
 /// by Priority.AtInstantSpeed; AtNextCleanup is a delayed trigger's effects, put on the permanent as it enters
-/// (EnterFromStackAction) when the cast was so (OnStackComponent.NotAtSorcerySpeed).
+/// (EnterFromStackAction) when the cast was so (OnStackComponent.NotAtSorcerySpeed). Teferi, Time Raveler's +1: "Until
+/// your next turn, you may cast sorcery spells as though they had flash" — the same rule in a ThisTurn { UntilYourNextTurn
+/// }, for the spells Of names (asked of the card cast, as its caster's), with nothing at cleanup.
 /// </summary>
-public record CastAsThoughItHadFlash(ImmutableList<GameAction> AtNextCleanup) : GameComponent;
+public record CastAsThoughItHadFlash(ImmutableList<GameAction> AtNextCleanup)
+	: Effects.ThisTurnEffect
+{
+	/// <summary>Teferi, Time Raveler: "sorcery spells" (Is.Sorcery) — the spells a player's "this turn" rule lets them cast so.</summary>
+	public Filters.Filter? Of { get; init; }
+}
 
 /// <summary>
 /// Proft: "You can't cast this spell unless [When]." A restriction, not a cost — read by
@@ -1588,6 +1598,12 @@ public record MayCastThisFrom(ZoneType From) : GameComponent
 	/// the graveyard as it resolves.
 	/// </summary>
 	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
+
+	/// <summary>
+	/// Phlage: "Escape—{R}{R}{W}{W}, Exile five other cards from your graveyard." — the mana paid instead of its mana
+	/// cost when its owner casts it from the graveyard this way (Costs.Of); unset, its mana cost (From the Catacombs).
+	/// </summary>
+	public ManaCost? Mana { get; init; }
 
 	/// <summary>The card's own permission from <paramref name="zone"/> — what it printed, not what it was granted.</summary>
 	public static bool On(Cards.Card card, ZoneType zone) =>

@@ -37,7 +37,13 @@ static class Priority
 	public static bool AtInstantSpeed(GameState s, Card card) =>
 		card.Is(CardType.Instant)
 		|| s.Has(card, "Flash")
-		|| card.HasComponent<CastAsThoughItHadFlash>(); // Necromancy
+		|| card.HasComponent<CastAsThoughItHadFlash>() // Necromancy
+		|| s.ThisTurnEffects<CastAsThoughItHadFlash>(card.ControllerId) // Teferi, Time Raveler's +1
+			.Any(holder =>
+				holder
+					.GetComponent<CastAsThoughItHadFlash>()!
+					.Of?.Matches(s, card, new(card.ControllerId, holder.Id)) == true
+			);
 
 	/// <summary>CR 117.3c: a player who acts gets priority back, and the pass count restarts.</summary>
 	public static GameState Retain(GameState s, int playerId) =>
