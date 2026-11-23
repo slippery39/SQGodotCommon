@@ -1,3 +1,4 @@
+using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
@@ -8,7 +9,7 @@ namespace MagicCore.Tests.Ai;
 
 /// <summary>
 /// MC-9: the cube's cards in the AI's hands — each item watched first (the position below is the one watched), then
-/// fixed. A realistic board, not the base board's twenty basics: six lands.
+/// fixed. A realistic board, not the base board's twenty basics: six lands, two each of Swamp, Island and Mountain.
 /// </summary>
 public class CubeAiTests : FraBoardTest
 {
@@ -16,10 +17,23 @@ public class CubeAiTests : FraBoardTest
 	{
 		EmptyBoard();
 		s = TestGames.EmptyHands(s);
-		foreach (
-			var land in new[] { "Swamp", "Swamp", "Swamp", "Mountain", "Mountain", "Mountain" }
-		)
+		foreach (var land in new[] { "Swamp", "Swamp", "Island", "Island", "Mountain", "Mountain" })
 			Field(TestGames.Card(land), me);
+	}
+
+	/// <summary>The search plays the rest of this turn, both seats; what each decision was, in order.</summary>
+	List<string> SearchPlaysTheTurn()
+	{
+		var (turn, played) = (s.GetGame().TurnNumber, new List<string>());
+		for (var i = 0; i < 30 && s.GetGame().TurnNumber == turn && !s.IsOver(); i++)
+		{
+			s = s.AutoPass();
+			if (s.GetGame().TurnNumber != turn || s.IsOver())
+				break;
+			var decision = new BeamSearchAi(s.DecidingPlayerId()).Decide(s);
+			(s, played) = (decision.State, [.. played, decision.What]);
+		}
+		return played;
 	}
 
 	int TheirCreatures() =>
@@ -58,15 +72,39 @@ public class CubeAiTests : FraBoardTest
 		for (var i = 0; i < 12; i++)
 			Field(TestGames.Creature($"C{i}", sizes[i % sizes.Length]), them);
 		Hand(Lsv("Fire Covenant"), me);
-		var turn = s.GetGame().TurnNumber;
-
-		for (var i = 0; i < 20 && s.GetGame().TurnNumber == turn; i++)
-		{
-			s = s.AutoPass();
-			if (s.GetGame().TurnNumber == turn)
-				s = new BeamSearchAi(s.DecidingPlayerId()).Decide(s).State;
-		}
+		SearchPlaysTheTurn();
 
 		Assert.That(TheirCreatures(), Nu.LessThanOrEqualTo(12 - 2), "more than one killed");
+	}
+
+	// MC-9.2, watched 2026-11-23: with no noncreature spell to grow her first, the search took Vivi's {0} mana move at
+	// power 0 after its last spell - no mana, and the turn's one activation used.
+	[Test]
+	public void Vivi_AtPowerZero_HerManaMoveIsLeftOutOfTheSearch_NotTheRules()
+	{
+		SixLands();
+		var vivi = Field(Lsv("Vivi Ornitier"), me);
+		var bolt = Hand(Lsv("Lightning Bolt"), me);
+		bool Offered(IEnumerable<GameAction> moves) =>
+			moves.OfType<TapForManaAction>().Any(m => m.CardId == vivi);
+
+		Assert.That(Offered(s.LegalActions()), Nu.True, "the rules offer it");
+		Assert.That(Offered(s.SearchMoves()), Nu.False, "at power 0 it adds nothing");
+		Cast(bolt, [], them); // "whenever you cast a noncreature spell, put a +1/+1 counter on Vivi"
+		Assert.That(s.Power(s.GetCard(vivi)), Nu.GreaterThan(0), "setup: she grew");
+		Assert.That(Offered(s.SearchMoves()), Nu.True, "with power, offered");
+	}
+
+	[Test]
+	public void Vivi_TheSearchsTurnWithoutASpell_NeverTakesHerManaMove()
+	{
+		SixLands();
+		Field(Lsv("Vivi Ornitier"), me);
+		Hand(TestGames.CreatureCosting("{4}{U}", "Big Blue", "5/5"), me);
+
+		var played = SearchPlaysTheTurn();
+
+		Assert.That(played, Has.Some.StartsWith("Cast Big Blue"), "setup: the turn was played");
+		Assert.That(played, Has.None.StartsWith("Vivi Ornitier"));
 	}
 }

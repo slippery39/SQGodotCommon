@@ -228,8 +228,9 @@ public static partial class Evaluator
 
 	/// <summary>
 	/// The legal moves for the search: without playing a phantom impulse card (<see cref="Terms.ImpulseValue"/>),
-	/// without an untap that can gain nothing (<see cref="PaysXToUntapXLands"/>), and without a free ability its
-	/// permanent already used this turn (<see cref="RepeatsAFreeAbility"/>).
+	/// without an untap that can gain nothing (<see cref="PaysXToUntapXLands"/>), without a free ability its
+	/// permanent already used this turn (<see cref="RepeatsAFreeAbility"/>), and without a mana move that adds no mana
+	/// (<see cref="MakesNoMana"/>).
 	/// </summary>
 	public static ImmutableList<GameAction> SearchMoves(this GameState s)
 	{
@@ -242,8 +243,24 @@ public static partial class Evaluator
 				&& untap.X > (landsMakingMore ??= LandsMakingMoreThanOneMana(s, untap.PlayerId))
 			)
 			&& !RepeatsAFreeAbility(s, a)
+			&& !MakesNoMana(s, a)
 		);
 	}
+
+	/// <summary>
+	/// Vivi Ornitier at power 0: "{0}: Add X mana … where X is Vivi Ornitier's power. Activate only … once each turn"
+	/// makes nothing and uses the turn's activation — watched (MC-9.2): the search took it after its last spell, where a
+	/// noncreature spell later in the turn would have grown Vivi first. A mana move whose ability would add no mana is
+	/// left out; LegalActions itself stays complete.
+	/// </summary>
+	static bool MakesNoMana(GameState s, GameAction a) =>
+		a is TapForManaAction tap
+		&& s.GetCard(tap.CardId) is { } card
+		&& ManaAbilities
+			.AbilitiesOf(s, card)
+			.FirstOrDefault(m => m.ChoosesCost || m.NoTap || m.CashedIn) // MagicRules.ManaMoves' ability
+			is { } ability
+		&& ability.Amount.Value(s, Conditions.Of(card)) <= 0;
 
 	/// <summary>
 	/// Lightning Greaves' "Equip {0}" costs nothing, so the search moved it from creature to creature without end —

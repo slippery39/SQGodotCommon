@@ -1880,7 +1880,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Lightning Bolt deals 3 damage to any target.
 
-**Status:** scripted · **tests naming it:** ArenaDeckTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2bTests, LsvBatch2c2Tests
+**Status:** scripted · **tests naming it:** ArenaDeckTests, CubeAiTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2bTests, LsvBatch2c2Tests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -13609,7 +13609,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {0}: Add X mana in any combination of {U} and/or {R}, where X is Vivi Ornitier's power. Activate only during your turn and only once each turn.  
 > Whenever you cast a noncreature spell, put a +1/+1 counter on Vivi Ornitier and it deals 1 damage to each opponent.
 
-**Status:** scripted · **tests naming it:** LsvBatch2m2Tests
+**Status:** scripted · **tests naming it:** CubeAiTests, LsvBatch2m2Tests
 
 **Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DuringYourTurn` — Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

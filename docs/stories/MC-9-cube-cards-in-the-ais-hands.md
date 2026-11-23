@@ -61,6 +61,11 @@ The plan, by likely cause, cheapest and clearest first:
   each played out (`Settle`). After: X = 4 kills three of six, four of twelve. How much life to pay stays the
   evaluator's. Only Pyrokinesis and Fire Covenant reach that answer (Fury's trigger divides its words by
   `Division.Words`; TRK's Pure Energy stays casts), so no FRA or TRK decision moves.
+- 2026-11-23, Claude — **MC-9.2 watched** (six lands, Vivi Ornitier 0/3 on the battlefield, a 5-drop in hand): with a
+  noncreature spell in hand (Lightning Bolt, Preordain) the order was RIGHT — the spell, Vivi grows to 1, her mana for
+  {U}, the 5-drop. Without one, the search cast the 5-drop and then took her move at power 0 ("Vivi Ornitier:  for
+  Blue", an empty amount): nothing made, the turn's activation used, a node the search pays for each turn. Left out of
+  the search's moves; the rules still offer it.
 
 Open questions:
 - Phase 2, option A or B — decided once the Prism is watched again on a realistic board (Shayne).
@@ -74,8 +79,9 @@ Phase 1:
       (`ChooseNumberChoice.ShareOf`, `Lookahead.KillingShare`). Watched first: the COST was not the problem — the play
       was (Decisions, "MC-9.1 watched"); so the target set got kill sets too (`GreedyAi.KillSets`). A TRIGGER dividing
       X (none yet) would need the same.
-- [ ] MC-9.2 Vivi Ornitier's mana move at 0 power (it makes nothing and uses the turn's activation) left out in
-      `SearchMoves`: a mana move whose yield is 0.
+- [x] MC-9.2 (done 2026-11-23) Vivi Ornitier's mana move at 0 power (it makes nothing and uses the turn's activation)
+      left out in `SearchMoves`: a mana move whose ability would add no mana (`Evaluator.MakesNoMana`). Watched first
+      (Decisions, "MC-9.2 watched").
 - [ ] MC-9.3 Wizard's Rockets: the turn timed on a 6–8 land board. Still slow: bound X in `SearchMoves` as Candelabra's
       is — up to the coloured pips the hand can't pay otherwise (DesignNotes, "{X} on an ACTIVATED ability").
 - [ ] MC-9.4 Oko, Thief of Crowns' −5: what its two target choices cost the search, measured; left alone if small.
@@ -113,8 +119,9 @@ Phase 5:
 
 ## Next
 
-Next is MC-9.2 (Vivi at 0 power). The tests are `MagicCore.Tests/Ai/CubeAiTests.cs` (`SixLands()`: the realistic
-board; a search-played turn is a loop of `BeamSearchAi.Decide` until the turn changes). Read MC-4's Decisions from "4.4l1 + l2" (the free-ability note, Shayne 2026-11-21) and the Pentad Prism
+Next is MC-9.3 (Wizard's Rockets, timed on a realistic board). The tests are `MagicCore.Tests/Ai/CubeAiTests.cs`
+(`SixLands()`: two each of Swamp, Island and Mountain; `SearchPlaysTheTurn()`: the search decides until the turn
+changes, returning each decision's description). Read MC-4's Decisions from "4.4l1 + l2" (the free-ability note, Shayne 2026-11-21) and the Pentad Prism
 diagnosis (2026-11-22), and magic-ai.md. To watch a position: build it in a test as `LsvBatch2l3Tests` does
 (`EmptyBoard()`, `Play(land)` in `FraBoardTest` — but use a realistic land count) and print `BeamSearchAi.Ranked` /
 `Evaluator.Explain`. After each fix: `python -u tools/test_changed.py --run`, the suite (`--suite=beam`), and the
@@ -126,3 +133,4 @@ golden replays in the normal tests.
   four DesignNotes items, as one plan in five phases.
 - 2026-11-23: MC-9.1 done — Fire Covenant's shares and target set by rule; watched, it had been killing one creature
   of twelve; now four. Two tests in `CubeAiTests`, both revert-checked.
+- 2026-11-23: MC-9.2 done — Vivi's mana move at power 0 left out of the search's moves; two tests, revert-checked.
