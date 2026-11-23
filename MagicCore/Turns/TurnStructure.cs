@@ -203,7 +203,8 @@ public static class TurnStructure
 
 	/// <summary>
 	/// The turn after <paramref name="after"/>'s: an extra turn first, the last created first (H.M.S. Bounty, CR 500.7),
-	/// else the other player's — unless its player skips it (Time Vault: "If you would begin your turn while this
+	/// else normal order's — the player due after the turn the extra turns followed (<see cref="MagicGame.ResumesWith"/>),
+	/// or with none taken the other player's — unless its player skips it (Time Vault: "If you would begin your turn while this
 	/// artifact is tapped, you may skip that turn instead. If you do, untap this artifact." — MaySkipYourTurnToUntap),
 	/// and then the turn after the skipped one is asked for.
 	/// </summary>
@@ -211,14 +212,23 @@ public static class TurnStructure
 	{
 		var game = s.GetGame();
 		var extra = !game.ExtraTurns.IsEmpty;
-		var next = extra ? game.ExtraTurns[^1] : s.OpponentOf(after);
-		if (extra)
-			s = s.WithGame(
-				game with
+		var next =
+			extra ? game.ExtraTurns[^1]
+			: game.ResumesWith != 0 ? game.ResumesWith
+			: s.OpponentOf(after);
+		s = s.WithGame(
+			extra
+				? game with
 				{
 					ExtraTurns = game.ExtraTurns.RemoveAt(game.ExtraTurns.Count - 1),
+					// the first extra turn of a run: normal order resumes after it with who was due now
+					ResumesWith = game.ResumesWith != 0 ? game.ResumesWith : s.OpponentOf(after),
 				}
-			);
+				: game with
+				{
+					ResumesWith = 0,
+				}
+		);
 		var vault = s.CardsIn(next, ZoneType.Battlefield)
 			.FirstOrDefault(c => c.IsTapped && s.HasAbility<Effects.MaySkipYourTurnToUntap>(c));
 		if (vault is not null)

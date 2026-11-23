@@ -252,7 +252,9 @@ whose subsystem it lives in.
   the last queued taken first by `TurnStructure.FinishCleanup`, which also sets `MagicPlayer.BegunExtraTurn`
   ("haven't begun an extra turn this game", `HaventBegunAnExtraTurn`). `TurnNumber` counts it like any turn, so
   every "this turn" stamp holds. Turns no longer alternate: **summoning sickness reads `MagicPlayer.TurnBeganOn`**,
-  never "the turn before".
+  never "the turn before". **After the extra turns, normal order resumes with the player due after the turn they
+  followed** (`MagicGame.ResumesWith`, set as the first begins) — never "the opponent of whoever played last": Time Vault
+  tapped on the OPPONENT's turn gives its controller the extra turn and then its own (MC-10, Shayne's game gave it away).
 - **Skipping a turn** (Time Vault: "If you would begin your turn while this artifact is tapped, you may skip that turn
   instead. If you do, untap this artifact.", MC-4.4l4b) is `MaySkipYourTurnToUntap`, asked as that player's turn would
   begin — extra turns too — in `TurnStructure.NextTurn` (from `FinishCleanup`): a yes untaps it and asks for the turn

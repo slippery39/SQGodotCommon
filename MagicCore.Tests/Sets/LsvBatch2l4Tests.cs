@@ -309,6 +309,28 @@ public class LsvBatch2l4Tests : FraBoardTest
 		Assert.That(s.GetCard(vault).IsTapped, Nu.EqualTo(!skip));
 	}
 
+	// MC-10, Shayne's cube game (seed 1215797514): the AI tapped the Vault on HIS turn - its extra turn came, and then his
+	// turn again, where the AI's own was due (CR 500.7: an extra turn is added after that turn; normal order resumes).
+	[Test]
+	public void TimeVault_TappedOnTheirTurn_MyExtraTurn_ThenMyOwnTurn_ThenTheirs()
+	{
+		var vault = Field(Lsv("Time Vault"), me);
+		PassTheTurn(); // into theirs
+		s = TestGames.PassUntil(s, x => x.DecidingPlayerId() == me && !x.IsWaitingForChoice);
+		Assert.That(s.GetGame().ActivePlayerId, Nu.EqualTo(them), "setup: their turn, my priority");
+		Activate(vault);
+		Resolve();
+
+		var who = new List<int>();
+		for (var i = 0; i < 3; i++)
+		{
+			ToTheVaultsQuestion(skip: false);
+			who.Add(s.GetGame().ActivePlayerId);
+		}
+
+		Assert.That(who, Nu.EqualTo(new[] { me, me, them }), "my extra turn, my own, then theirs");
+	}
+
 	[TestCase("Voltaic Key")]
 	[TestCase("Manifold Key")]
 	public void TimeVault_WithAKey_ATurnAfterEveryTurn_EndsWithTheLibrary(string untapper)

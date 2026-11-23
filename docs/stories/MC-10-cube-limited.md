@@ -44,6 +44,12 @@ all 528 cards' crops and full cards (`fetch_set_art.py lsv`); a cube's tokens fa
     AI's gaps are bigger. Claude: an experiment on the AI, not the table;
   - CubeCobra's human pick data — Shayne exporting the cube's analysis from the browser (CubeCobra refuses automated
     fetches: 403). Claude's lean: it, with engine values for any card it lacks.
+- 2026-11-23, **the notes of 2026-11-23** (Shayne's two cube sealed games), each read with `--explain`: (1) the AI's
+  Emrakul and friends: the placeholder ratings (MC-10.2, 10.7); (2) Sowing Mycospawn found a Forest: unread (10.10);
+  (3) the initiative's rooms unseen: the table's (10.10); (4) Legion Extruder over Bloodbraid Challenger (10.10);
+  (5) Time Vault — Shayne: "Not sure if this is correct": it was NOT — the engine gave him the turn after the AI's extra
+  turn (fixed, 10.8); the skip itself, and (6) Lion's Eye Diamond discarding Ugin, were the look-ahead's simulated
+  opponent attacking all-in into a lethal crackback — an imagined win (10.9).
 - 2026-11-23, Claude: the AI's search prices a HELD card from the values table, which has FRA and TRK only
   (`CardValues.TableSets`) — LSV cards in hand are priced flat. Adding LSV changes how the AI plays the cube (and its
   golden replays): a task of its own, not slipped in here.
@@ -61,6 +67,16 @@ all 528 cards' crops and full cards (`fetch_set_art.py lsv`); a cube's tokens fa
 - [ ] MC-10.5 LSV in the values table the search prices held cards by (`CardValues.TableSets`) — measured, as an
       evaluator change: the suite, the golden replays, a match on cube decks.
 - [ ] MC-10.6 The cube's tokens' art (a cube has no token set: `fetch_set_art.py` fetches none).
+- [x] MC-10.8 (done 2026-11-23) Shayne's first cube games' notes read (`game_records/2026-11-23_1334*`, `_1343*`).
+      Fixed: **an extra turn made on the opponent's turn gave the next turn to the wrong player** (Time Vault; CR 500.7 —
+      `MagicGame.ResumesWith`). The rest are tasks (Decisions, "the notes of 2026-11-23").
+- [ ] MC-10.9 The look-ahead's simulated opponent attacks all-in into a lethal crackback — the AI "won" in its
+      imagination and played for it: Lion's Eye Diamond discarding Ugin (8990.66 against Pass 6.08) and Time Vault's
+      skip (8994.59 against 8.58). FOR THE AI LANE (the rollout's opponent model touches every FRA decision); five
+      colour copies of one mana move give the noise five chances (a cube-side lever: one move per mana move).
+- [ ] MC-10.10 Legion Extruder sacrificing The Echoverse Fulcrum over casting Bloodbraid Challenger, or the Fulcrum's
+      board wipe after combat (seed 637145, #360) — watch; Sowing Mycospawn fetching only a Forest (its deck's lands, or
+      the search); the initiative's rooms shown on the table (the TBL lane's).
 - [ ] MC-10.7 The engine's card values discounted by mana cost (Shayne, 2026-11-23: "they should be properly
       discounted by mana cost in the future") — today a 15-mana Emrakul is the cube's best card and Time Walk 503rd of
       528. Options and their cost in DesignNotes ("The card-value sandbox is NOT discounted by mana cost"); a change to
@@ -75,3 +91,5 @@ MC-10.2 — the ratings, once Shayne's CubeCobra export is in. To play now:
 
 - 2026-11-23: opened (Shayne) — the cube in limited. MC-10.1 done: packs, the Set button, singleton option, basics,
   Pest Infestation's answer; a cube sealed game played through by test; ratings open.
+- 2026-11-23: Shayne's notes from two cube games read: the extra-turn order fixed (Time Vault on the opponent's turn);
+  the Diamond and the Vault's skip traced to the look-ahead's all-in opponent (MC-10.9, the AI lane's).

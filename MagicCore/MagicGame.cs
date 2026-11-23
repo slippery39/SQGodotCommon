@@ -48,6 +48,14 @@ public record MagicGame : GameObject
 	public ImmutableList<int> ExtraTurns { get; init; } = [];
 
 	/// <summary>
+	/// Whose turn normal order resumes with once the extra turns are taken (CR 500.7): the player due after the turn the
+	/// first of them followed — set as that one begins, cleared as normal order resumes; 0 between. Time Vault tapped on
+	/// the OPPONENT's turn makes its controller's extra turn, then its controller's own turn (MC-10: Shayne's game gave
+	/// the opponent the turn after the extra one — "opponent of whoever played last").
+	/// </summary>
+	public int ResumesWith { get; init; }
+
+	/// <summary>
 	/// Fear of Missing Out: "After this phase, there is an additional combat phase" (CR 500.8) — how many are owed,
 	/// each taken as an end of combat step ends (TurnStructure.EndStep): the next step is a beginning of combat, no
 	/// main phase between. Reset as each turn begins.
