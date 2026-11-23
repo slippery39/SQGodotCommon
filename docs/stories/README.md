@@ -50,26 +50,27 @@ re-profiled (quiet machine). The cube lane goes on with MC-4.4h (black) in its o
 15. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
 16. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
 17. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
-18. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
-19. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
-20. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
-21. **AI-13** — Shayne's lessons as general rules for the search, each measured
-22. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
-23. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
-24. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
-25. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
-26. **MC-5** — Star Trek: every task done; its requirements to tick and close
-27. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
-28. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-29. **DATA-1** — bring in 17lands data
-30. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
-31. **AI-4** — strategic plans above single actions
-32. **AI-12** — a card's threat over time
-33. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
-34. **MC-8** — every modal spell one cast per choice of modes, its targets chosen after; Mystic Confluence's triple counter (cube lane)
-35. **TBL-11** — playable on a phone (backlog, Shayne 2026-11-18)
-36. **LIM-6** — a cube builder in the UI (backlog)
-37. **LIM-7** — constructed testing (backlog)
+18. **MC-9** — the cube's cards in the AI's hands: the deferred AI items, watched then fixed, five phases (cube lane, 2026-11-23)
+19. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
+20. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
+21. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
+22. **AI-13** — Shayne's lessons as general rules for the search, each measured
+23. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
+24. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
+25. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
+26. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
+27. **MC-5** — Star Trek: every task done; its requirements to tick and close
+28. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
+29. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+30. **DATA-1** — bring in 17lands data
+31. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
+32. **AI-4** — strategic plans above single actions
+33. **AI-12** — a card's threat over time
+34. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
+35. **MC-8** — every modal spell one cast per choice of modes, its targets chosen after; Mystic Confluence's triple counter (cube lane)
+36. **TBL-11** — playable on a phone (backlog, Shayne 2026-11-18)
+37. **LIM-6** — a cube builder in the UI (backlog)
+38. **LIM-7** — constructed testing (backlog)
 
 ## How it works
 
@@ -140,6 +141,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [LIM-2](LIM-2-draft.md) | Draft Reality Fracture against bots | in-progress |
 | [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | in-progress |
 | [MC-7](MC-7-combat-damage-assignment.md) | The attacker assigns combat damage among its blockers | in-progress |
+| [MC-9](MC-9-cube-cards-in-the-ais-hands.md) | The cube's cards in the AI's hands - the deferred AI items, watched and fixed | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
@@ -194,5 +196,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-35 · DATA-3 · DEV-9 · LIM-8 · MC-9 · TBL-12
+Next free id per area: AI-35 · DATA-3 · DEV-9 · LIM-8 · MC-10 · TBL-12
 <!-- stories:end -->

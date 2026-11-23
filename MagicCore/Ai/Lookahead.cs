@@ -54,6 +54,7 @@ public static class Lookahead
 				or AssignCombatDamageChoice
 				or PayToKeepChoice
 				or ChooseAmongChoice { Delve: true } // a rule, never searched (Shayne, MC-4.4g2): QuickAnswer's first
+				or ChooseNumberChoice { ShareOf: > 0 } // Fire Covenant's share: the damage that kills it (MC-9.1)
 			)
 		&& choice.MaxChoices == 1
 		&& (
@@ -130,10 +131,26 @@ public static class Lookahead
 			return [DeclareAttackerChoice.NoAttack(choice)];
 		if (choice is AssignCombatDamageChoice divide)
 			return [divide.Default(s)];
+		if (choice is ChooseNumberChoice { ShareOf: > 0 } share)
+			return [KillingShare(s, share) + 1]; // option id = the number + 1
 		if (choice is PayToKeepChoice or ChooseCastChoice) // looking ahead: keep the spell if it can be paid; cast it
 			return choice.Options.Select(o => o.Id).Take(1); // (a cast choice may be left empty, MinChoices 0: TBL-2.16)
 		return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 	}
+
+	/// <summary>
+	/// Fire Covenant's share for one target (MC-9.1): the damage that kills it — its toughness less the damage marked, a
+	/// planeswalker's loyalty — within what may be given it (the last target takes the rest anyway). One that damage
+	/// can't kill (indestructible) gets the least.
+	/// </summary>
+	public static int KillingShare(GameState s, ChooseNumberChoice share) =>
+		Math.Clamp(Lethal(s, s.GetCard(share.ShareOf)) ?? share.Min, share.Min, share.Max);
+
+	/// <summary>The damage that kills <paramref name="c"/> now, or null when damage can't (indestructible, no creature or planeswalker).</summary>
+	internal static int? Lethal(GameState s, Card c) =>
+		c.Is(CardType.Planeswalker) && !c.Is(CardType.Creature) ? Math.Max(1, c.Loyalty)
+		: c.Is(CardType.Creature) && !s.IsIndestructible(c) ? Math.Max(1, s.Toughness(c) - c.Damage)
+		: null;
 
 	/// <summary>
 	/// The attacker this blocker gang-blocks (story AI-15), or none: one already blocked this declaration

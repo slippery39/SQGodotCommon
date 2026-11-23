@@ -1612,6 +1612,7 @@ public static class Division
 						new ChooseNumberChoice(cast.PlayerId, remaining - (left - 1))
 						{
 							Min = 1,
+							ShareOf = named[shares.Length],
 							Prompt =
 								$"Divide: how much to {s.GetObject(named[shares.Length]).Name}",
 						},

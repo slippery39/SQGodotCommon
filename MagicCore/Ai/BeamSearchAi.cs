@@ -1015,6 +1015,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				or OrderLibraryTopChoice // a surveil's order: a rule, not n! orders (TBL-9.2)
 				or AssignCombatDamageChoice // a blocked attacker's split: GreedyAi's one-ply pick, not a rollout each (MC-7)
 				or ChooseAmongChoice { Delve: true } // delve's cards: a rule, not a rollout per graveyard card (Shayne)
+				or ChooseNumberChoice { ShareOf: > 0 } // Fire Covenant's share: the damage that kills it (MC-9.1)
 		)
 			return [new Pick([.. greedy.Answer(s, choice)], key)]; // Nyota: a rule, not 11 rollouts (Shayne)
 		// a surveil's lands by rule (LandUnlock.Surveil), its spells branched as any pick

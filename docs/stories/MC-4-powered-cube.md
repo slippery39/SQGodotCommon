@@ -2961,7 +2961,8 @@ batch is planned. Left in MC-4: the second requirement, the cube drafted as a ca
 booster sheets: `Boosters.SealedPool("LSV", …)` and so `SealedSession.OpponentFor` throw "No LSV.boosters.json", which is
 also why the sealed screen's companion row and the deck select's companion never meet a cube pool yet); the LATER
 items (4.4g2b the AI's delve picks, g5b and g5c the Adventure in the AI and on the table, g10b Does Machines never
-levelling); and the AI lane's list below. From m3: a split card's halves `AdventureComponent { Split }`
+levelling); and the AI lane's list below — **taken as MC-9 (Shayne, 2026-11-23), with DesignNotes' four AI items: the
+lists below stay as its source.** From m3: a split card's halves `AdventureComponent { Split }`
 (`LsvCards.Split`), its cast `CastSpellAction.Face`; `GainControl { NewTargets }` on a spell, `CopySpell.ChooseNewTargets
 (…, onlyChanged)`; `CantSacrifice(filter) { ByOpponents, OrDiscard }` and `by` on `MagicState.Sacrifice` / `Discard`
 (`CanBeMadeToDiscard`); `CompanionComponent`, `NewGame(… companion1, companion2)`, `MagicRules.CompanionHolds`,

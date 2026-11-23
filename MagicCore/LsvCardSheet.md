@@ -1666,7 +1666,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As an additional cost to cast this spell, pay X life.  
 > Fire Covenant deals X damage divided as you choose among any number of target creatures.
 
-**Status:** scripted · **tests naming it:** LsvBatch2mTests
+**Status:** scripted · **tests naming it:** CubeAiTests, LsvBatch2mTests
 
 **Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `PayLifeCost` — "Pay N life:" — Flooded Strand: "{T}, Pay 1 life, Sacrifice this land: Search …"; Mana…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

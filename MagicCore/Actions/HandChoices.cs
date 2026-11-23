@@ -488,6 +488,12 @@ public record ChooseNumberChoice : ChoiceAction
 	/// <summary>Fire Covenant: a target's share of what is divided is at least 1 (CR 601.2d) — the least number offered.</summary>
 	public int Min { get; init; }
 
+	/// <summary>
+	/// Fire Covenant: "X damage divided as you choose among any number of target creatures" — the target this share is
+	/// for (Division.AskShares); the AI answers it by rule, the damage that kills it (Lookahead.KillingShare), never by search.
+	/// </summary>
+	public int ShareOf { get; init; }
+
 	public ChooseNumberChoice(int playerId, int max)
 	{
 		PlayerId = playerId;

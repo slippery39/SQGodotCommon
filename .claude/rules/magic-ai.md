@@ -25,3 +25,7 @@ whose subsystem it lives in.
   stamped as any free ability is activated; Shayne, 2026-11-22, MC-4.4l5): each activation is a new position, so the
   search moved Greaves from creature to creature for 30 decisions and the turn never ended. An ability with a cost
   (Zuran Orb's land) is not free — what it spends must be priced instead.
+- **A divided spell's targets and shares are a rule, never searched past a few sets** (MC-9.1): Fire Covenant's
+  share for a target is the damage that kills it (`ChooseNumberChoice.ShareOf` → `Lookahead.KillingShare`, in the
+  search, the look-ahead and `GreedyAi` alike); past `BeamSearchAi.MaxPicks` target sets `GreedyAi` tries each single
+  target and two kill sets (`KillSets`). Watched: before it, Fire Covenant took one 4/4 of twelve creatures.

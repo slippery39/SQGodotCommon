@@ -162,6 +162,44 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 			.Select(g => (int?)g.Key)
 			.FirstOrDefault() ?? (oddOrEven ? 0 : 2);
 
+	/// <summary>
+	/// A divided spell's targets that its total kills together (MC-9.1, watched: Fire Covenant for X = 4 on one 4/4 of
+	/// twelve creatures, since past BeamSearchAi.MaxPicks sets only one target was ever tried): their creatures and
+	/// planeswalkers each given the damage that kills it (Lookahead.KillingShare answers the shares), most kills first
+	/// (the least lethal damage first), and the biggest threats first (power, then mana value) — each set of two or more.
+	/// </summary>
+	IEnumerable<IEnumerable<int>> KillSets(GameState s, ChooseXTargetsChoice targets)
+	{
+		if (
+			targets.Ability >= 0
+			|| Division.Of(s.GetCard(targets.CardId), targets.X) is not (> 1 and var total)
+		)
+			yield break;
+		var theirs = targets
+			.Options.Select(o => s.GetCard(o.Id))
+			.Where(c => c.ControllerId != PlayerId)
+			.Select(c =>
+				(c.Id, Lethal: Lookahead.Lethal(s, c), Power: s.Power(c), c.ManaCost.ManaValue)
+			)
+			.Where(c => c.Lethal is not null)
+			.ToList();
+		foreach (
+			var order in new[]
+			{
+				theirs.OrderBy(c => c.Lethal).ThenByDescending(c => c.Power),
+				theirs.OrderByDescending(c => c.Power).ThenByDescending(c => c.ManaValue),
+			}
+		)
+		{
+			var (left, set) = (total, new List<int>());
+			foreach (var c in order)
+				if (c.Lethal <= left && set.Count < targets.MaxChoices)
+					(left, set) = (left - c.Lethal!.Value, [.. set, c.Id]);
+			if (set.Count >= Math.Max(2, targets.MinChoices))
+				yield return set;
+		}
+	}
+
 	/// <summary>This player's answer to a pending choice. The search AI asks it for the choices it doesn't branch on.</summary>
 	public IEnumerable<int> Answer(GameState s, ChoiceAction choice)
 	{
@@ -180,11 +218,12 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		}
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
-		if (choice is ChooseXTargetsChoice && choice.MinChoices != choice.MaxChoices)
-			// Pyrokinesis: ponytail: one target takes all 4 — whichever plays out best; splitting it among
-			// several (two 2/2s) is never tried: evaluate the pairs and their splits if it misplays (AI-19).
+		if (choice is ChooseXTargetsChoice targets && choice.MinChoices != choice.MaxChoices)
+			// Pyrokinesis, Fire Covenant: one target taking all, or a kill set (MC-9.1) — whichever plays out best.
+			// ponytail: two kill sets, not every subset; try more orders if a division misplays.
 			return choice
 				.Options.Select(o => (IEnumerable<int>)[o.Id])
+				.Concat(KillSets(s, targets))
 				.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 		if (choice is ChooseXTargetsChoice)
 			// Dominion Infiltration copies them: the biggest. ponytail: power, then mana value, stands in for worth.
@@ -206,6 +245,8 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 				.Select(c => c.Id);
 		if (choice is OrderLibraryTopChoice order)
 			return LandUnlock.Order(s, order.PlayerId, [.. choice.Options.Select(o => o.Id)], held);
+		if (choice is ChooseNumberChoice { ShareOf: > 0 })
+			return Lookahead.QuickAnswer(s, choice); // Fire Covenant's share: the damage that kills it (MC-9.1)
 		if (choice is ChooseAmongChoice { Delve: true })
 			// ponytail: the first card left in the graveyard, whatever it is — blind to Barrowgoyf's card types, an
 			// Animate Dead or Regrowth target, threshold. Upgrade: a cheap procedural price per card (DesignNotes).
