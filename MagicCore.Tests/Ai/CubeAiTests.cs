@@ -21,14 +21,14 @@ public class CubeAiTests : FraBoardTest
 			Field(TestGames.Card(land), me);
 	}
 
-	/// <summary>The search plays the rest of this turn, both seats; what each decision was, in order.</summary>
-	List<string> SearchPlaysTheTurn()
+	/// <summary>The search plays the rest of this turn (and <paramref name="more"/> after it), both seats; what each decision was, in order.</summary>
+	List<string> SearchPlaysTheTurn(int more = 0)
 	{
-		var (turn, played) = (s.GetGame().TurnNumber, new List<string>());
-		for (var i = 0; i < 30 && s.GetGame().TurnNumber == turn && !s.IsOver(); i++)
+		var (end, played) = (s.GetGame().TurnNumber + 1 + more, new List<string>());
+		for (var i = 0; i < 30 * (1 + more) && s.GetGame().TurnNumber < end && !s.IsOver(); i++)
 		{
 			s = s.AutoPass();
-			if (s.GetGame().TurnNumber != turn || s.IsOver())
+			if (s.GetGame().TurnNumber >= end || s.IsOver())
 				break;
 			var decision = new BeamSearchAi(s.DecidingPlayerId()).Decide(s);
 			(s, played) = (decision.State, [.. played, decision.What]);
@@ -186,5 +186,105 @@ public class CubeAiTests : FraBoardTest
 		);
 
 		Assert.That(made, Nu.EqualTo(0));
+	}
+
+	// MC-9.6, watched 2026-11-23 on six lands: Zuran Orb ("Sacrifice a land: You gain 2 life") - at 6 life against 4
+	// power the search sacrificed all six lands in its own turn; at 5 against 6 power the same; at 3 against a Lightning
+	// Bolt it answered the Bolt, then went on to one land. Shayne: "The player effectively already has that life" - so
+	// a note (Notes/FreeLifeGain): offered only when passing would lose, or the sacrifice triggers something of ours.
+	void Orb(int life)
+	{
+		SixLands();
+		Field(Lsv("Zuran Orb"), me);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = life }); // TEST SETUP
+	}
+
+	int MyLands() => s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
+
+	void TheyHave(string size, int count)
+	{
+		for (var i = 0; i < count; i++)
+			Field(TestGames.Creature($"Attacker {i}", size), them);
+	}
+
+	[Test]
+	public void ZuranOrb_LowLife_NothingLethal_ItsLandsAreKept()
+	{
+		Orb(6);
+		TheyHave("2/2", 2);
+		var lands = MyLands();
+
+		SearchPlaysTheTurn();
+
+		Assert.That(MyLands(), Nu.EqualTo(lands));
+		Assert.That(Life(me), Nu.EqualTo(6));
+	}
+
+	[Test]
+	public void ZuranOrb_TheirLethalAttack_SacrificesOnlyWhatItTakesToSurvive()
+	{
+		Orb(5);
+		TheyHave("3/3", 2);
+		var lands = MyLands();
+
+		SearchPlaysTheTurn(more: 1); // ours, then theirs: they attack for 6
+
+		Assert.That(s.IsOver(), Nu.False, "survived");
+		Assert.That(MyLands(), Nu.EqualTo(lands - 1), "one land: 5 + 2 is 7, past their 6");
+	}
+
+	[Test]
+	public void ZuranOrb_ALethalBoltOnTheStack_OneSacrifice_ThenItHolds()
+	{
+		Orb(3);
+		var bolt = Hand(Lsv("Lightning Bolt"), them);
+		Field(TestGames.Card("Mountain"), them);
+		var lands = MyLands();
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = them,
+				CardId = bolt,
+				Targets = [me],
+			}
+		);
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+
+		SearchPlaysTheTurn();
+
+		Assert.That(s.IsOver(), Nu.False, "survived");
+		Assert.That(MyLands(), Nu.EqualTo(lands - 1), "one land: 3 + 2 is 5, past the Bolt's 3");
+	}
+
+	[Test]
+	public void ZuranOrb_WithTitania_TheSacrificeIsOffered_ForItsTokens()
+	{
+		Orb(20);
+		Field(Lsv("Titania, Protector of Argoth"), me);
+		var lands = MyLands();
+
+		SearchPlaysTheTurn();
+
+		Assert.That(MyLands(), Nu.LessThan(lands), "a 5/3 for each land");
+	}
+
+	[Test]
+	public void ZuranOrb_TheRolloutSacrificesToSurviveTheirAttack()
+	{
+		Orb(5);
+		TheyHave("3/3", 2);
+		var made = 0;
+
+		Rollout.Traced(
+			(_, who, d) => made += who == me && d.Action is ActivateAbilityAction ? 1 : 0,
+			() => Rollout.Score(s, me, Rollout.Horizon(s, Rollout.Default), Rollout.Default)
+		);
+
+		Assert.That(
+			made,
+			Nu.GreaterThan(0),
+			"on their turn, at instant speed - our rollout plays only at sorcery speed"
+		);
 	}
 }

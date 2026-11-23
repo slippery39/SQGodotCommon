@@ -229,12 +229,13 @@ public static partial class Evaluator
 	/// <summary>
 	/// The legal moves for the search: without playing a phantom impulse card (<see cref="Terms.ImpulseValue"/>),
 	/// without an untap that can gain nothing (<see cref="PaysXToUntapXLands"/>), without a free ability its
-	/// permanent already used this turn (<see cref="RepeatsAFreeAbility"/>), and without a mana move that adds no mana
-	/// (<see cref="MakesNoMana"/>).
+	/// permanent already used this turn (<see cref="RepeatsAFreeAbility"/>), without a mana move that adds no mana
+	/// (<see cref="MakesNoMana"/>), and without a free life gain that isn't needed (<see cref="Notes.FreeLifeGain"/>).
 	/// </summary>
 	public static ImmutableList<GameAction> SearchMoves(this GameState s)
 	{
 		int? landsMakingMore = null; // counted once a call, and only when an untap asks
+		bool? lifeNeeded = null; // judged once a call, and only when a free life gain is offered
 		return s.LegalActions(a =>
 			MagicRules.CardOf(a) is var id
 			&& (id == 0 || !IsPhantomImpulse(id, s))
@@ -244,6 +245,9 @@ public static partial class Evaluator
 			)
 			&& !RepeatsAFreeAbility(s, a)
 			&& !MakesNoMana(s, a)
+			&& !(
+				Notes.FreeLifeGain.IsMove(s, a) && !(lifeNeeded ??= Notes.FreeLifeGain.Needed(s, a))
+			)
 		);
 	}
 
@@ -750,6 +754,13 @@ public static partial class Evaluator
 		/// (`+onewalkerclock`).
 		/// </summary>
 		TwoAttackWalker = 1L << 44,
+
+		/// <summary>
+		/// A free life gain at instant speed (Zuran Orb) is offered only when needed (<see cref="Notes.FreeLifeGain"/>,
+		/// MC-9.6, Shayne 2026-11-23: "The player effectively already has that life"): passing would lose, or the
+		/// sacrifice triggers something of ours; the rollout sacrifices to survive (`+nofreelifegain`).
+		/// </summary>
+		FreeLifeGain = 1L << 45,
 	}
 
 	/// <summary>

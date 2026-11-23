@@ -90,7 +90,7 @@ MagicCore/
 │                        is the ~1 s wall-clock cap for the table and console — never in a sim run
 ├── Ai/BlunderLint.cs    AI-17.7: AI games (any set's sealed decks, kept as records) each decision checked for an obvious mistake, per-card misplay checks S1–S6 (AI-19.23)
 ├── Ai/LandUnlock.cs     AI-9.1: does a land unlock a card in hand, or more casts next turn? Prices own lands in the evaluator (Terms.LandUnlock)
-├── Ai/LandOrder.cs      AI-29.3: WHICH land to play, by rule - casts now, colours of hand and deck, a breakable condition first, tapped when free, a spell next turn worth more (AI-29.8) (Terms.LandOrder)
+├── Ai/LandOrder.cs      AI-29.3: WHICH land to play, by rule - casts now, colours of hand and deck, a breakable condition first, tapped when free, a spell next turn worth more (AI-29.8) (Terms.LandOrder); Ai/Notes/: AI notes, a file per mechanic (AI-29.1) — FreeLifeGain.cs (MC-9.6: Zuran Orb only when needed)
 ├── Ai/RunProgress.cs    the progress line EVERY batch run prints (done/total, minutes, running result) - a project rule
 ├── Ai/Hidden.cs         what the search may know of the libraries and the opponent's hand: the real
 │                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3); LandOrNot (the default, AI-20.4): no guess — unseen draws are unknown cards, or lands (Hidden.Unknown); one shuffled guess is beam+shuffle

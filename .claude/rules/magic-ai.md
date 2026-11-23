@@ -31,6 +31,13 @@ whose subsystem it lives in.
   good unseen, so a tie went to acting and Pentad Prism's counters went on sight. Of the lines close to the best, those
   with the fewest mana moves (`BeamSearchAi.ManaMoves`) are kept, in `Best` and `Prune` alike; the rollout takes one
   only when it scores better (`Rollout`'s strict rule); `LandMatters` counts the mana floating.
+- **AI notes live in `MagicCore/Ai/Notes/`, a file per MECHANIC** (AI-29.1's shape, agreed in the AI lane 2026-11-19;
+  the first built here, MC-9.6): matched by what the card has, never its name; called at ONE place for its kind (the
+  search's moves, a choice's answer, a held card's price); each its own switch in `Evaluator.Terms` (`beam+no<note>`).
+  **A free life gain at instant speed** (Zuran Orb's "Sacrifice a land: You gain 2 life") is offered only when NEEDED
+  (`Notes.FreeLifeGain`): passing now loses, or the sacrifice triggers something of ours — Shayne, 2026-11-23: "The
+  player effectively already has that life"; watched, below 10 life the search sacrificed every land. The rollout,
+  which plays our side only at sorcery speed, sacrifices one at a time to survive.
 - **A divided spell's targets and shares are a rule, never searched past a few sets** (MC-9.1): Fire Covenant's
   share for a target is the damage that kills it (`ChooseNumberChoice.ShareOf` → `Lookahead.KillingShare`, in the
   search, the look-ahead and `GreedyAi` alike); past `BeamSearchAi.MaxPicks` target sets `GreedyAi` tries each single

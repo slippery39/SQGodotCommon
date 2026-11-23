@@ -3003,7 +3003,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Sacrifice a land: You gain 2 life.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** CubeAiTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeCost` — "Sacrifice another creature or planeswalker:" — one of yours the filter matches (none:…
 
@@ -13346,7 +13346,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Titania enters, return target land card from your graveyard to the battlefield.  
 > Whenever a land you control is put into a graveyard from the battlefield, create a 5/3 green Elemental creature token.
 
-**Status:** scripted · **tests naming it:** LsvBatch2kTests
+**Status:** scripted · **tests naming it:** CubeAiTests, LsvBatch2kTests
 
 **Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 

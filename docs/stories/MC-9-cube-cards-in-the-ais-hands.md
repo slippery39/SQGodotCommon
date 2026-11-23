@@ -89,6 +89,31 @@ The plan, by likely cause, cheapest and clearest first:
   sacrificed in MC-4 were the twenty basics. A first fix also ranked mana moves last in `Narrow` — not caught by its
   revert-check once the rollout was fixed, so taken out.
 
+- 2026-11-23, Claude — **MC-9.6 watched** (six lands and Zuran Orb, the search playing the turn): at 20 life it holds;
+  at 6 against 4 power it sacrificed ALL six lands in its own turn (6 → 16); at 5 against 6 power the same (to 15), took
+  the hit, and ended with no land; at 3 with their Lightning Bolt on the stack it answered the Bolt (good), then kept
+  sacrificing in its main phase and end step to one land. Below ~10 life each 2 life outscored a land. Squandered
+  Resources holds (MC-9.5's rule).
+- 2026-11-23, Shayne: **"cases 2,3 and 4 are wrong. The AI should be sacrificing lands on a per needs basis to survive.
+  Not just sacrificing all of them just to pad its life total … once zuran orb is in play, its cost is 0, and its
+  instant speed. The player effectively already has that life, there is no bonus to using it all at once. In fact its
+  actually a detriment to use zuran orb if you don't need to. I think this might be one of those cases where we need an
+  edge case just for this card (and similar cards) since trying to price it in a way the AI uses it properly will never
+  work."** Claude agreed: the right answer is TIMING, not value — no price tells "bank it now" from "bank it later". Then
+  Shayne: build it as an AI NOTE, AI-29's (mtg-real: "specific evaluators for troublesome effects, called by the general
+  one"; the shape agreed there 2026-11-19, AI-29.1 — a mechanic matched by what the card has, three kinds at one call
+  point each, decide only when clear; home `MagicCore/Ai/Notes/`, nothing built there yet) — "lets try to build it here".
+  So this is the FIRST file in `Notes/`, built in the cube lane to AI-29.1's shape; the AI lane adds it to AI-29's list
+  at the next merge. MC-9.2's and MC-9.5's rules are notes in all but name too; they move there when next touched.
+  **The note** (`Notes/FreeLifeGain.cs`, "when to play it", DECIDES): the shape — an ability at instant speed, no mana,
+  no {T}, no target, only sacrifices as its cost and only life gain as its effect — is offered to the search only when
+  passing now loses the game (the stack and this combat played out, `Lookahead.Settle`) or the sacrifice triggers
+  something of ours (asked of the engine: Titania, Baloth Prime); and the rollout, which plays our side only at sorcery
+  speed, sacrifices to survive (one at a time, a tapped land first). After: at 6 and at 5 it holds on its own turn;
+  against the lethal attack ONE land (5 → 7, then 1 after 6 damage); against the Bolt ONE (3 → 5 → 2); with Titania all
+  six for six 5/3s — the combo Shayne named as the exception. No evaluator term: no `--match` (no FRA or TRK card has
+  the shape — the suite says so).
+
 Open questions:
 - Phase 5's energy and poison: the table's `PlayerPlate` shows neither — that is the TBL lane's; only the evaluator here.
 
@@ -112,11 +137,18 @@ Phase 2:
       must beat the close lines making fewer (`BeamSearchAi.ManaMoves`, `Best` and `Prune`); `LandMatters` counts the
       mana floating; the rollout's mana move must score better (`Rollout`, strict). Watched first (Decisions, "MC-9.5
       watched"). A tie-break, no evaluator term: the suite, not a `--match`.
-- [ ] MC-9.6 Zuran Orb and Squandered Resources (Shayne, "wait for as long as possible to use its ability"): on six
-      lands at 20 life the Orb already holds (MC-9.5's watch). Watch it (1) at low life, where 2 life may outscore a
-      land, and (2) facing lethal — the search must still sacrifice in response (at declare blockers, or with burn on
-      the stack), or holding it is worse than wasting it. If (1) sacrifices early: what the Orb can still gain counted
-      as life held, so a sacrifice gains only what it triggers (Titania, Baloth Prime) — an evaluator term, `--match`.
+- [x] MC-9.6 (done 2026-11-23) Zuran Orb: an AI note (AI-29.1's shape, the first in `MagicCore/Ai/Notes/`),
+      `FreeLifeGain` — a free life gain at instant speed offered to the search only when passing loses or the sacrifice
+      triggers something of ours; the rollout sacrifices to survive (`Terms.FreeLifeGain`, `beam+nofreelifegain`).
+      Watched first (Decisions, "MC-9.6 watched"). Squandered Resources needed nothing: it holds (MC-9.5's rule).
+- [ ] MC-9.6b (backlog — Shayne, 2026-11-23: "we will come back to later") The note generalised: not life gain but
+      ANY free instant-speed ability whose cost spends a card or permanent (sacrifice, discard, exile) — Shayne: "psychic
+      frog discarding a bunch of cards immediately, or sacrificing a bunch of creatures immediately when we don't need
+      to". The note gates WHEN, the search judges WHETHER, at the moments that can matter: (1) passing loses, (2) it
+      triggers ours, (3) combat after blockers, before damage, (4) something of ours about to die or leave, (5) their end
+      step. Watch Psychic Frog first (main phase with three cards: no discard; blocked by a 3/3; Bolted; their end step
+      with an extra land) — folds in MC-9.10's Frog item; add the moments one at a time, each a test; rename the note
+      (`FreeInstantCost`). Today only Zuran Orb and Psychic Frog have the shape in LSV, FRA and TRK.
 
 Phase 3:
 - [ ] MC-9.7 Reckoner Bankbuster never activated ({2}, {T}: draw): does a card read worse than lands kept untapped
@@ -146,8 +178,8 @@ Phase 5:
 
 ## Next
 
-Next is MC-9.6 (Zuran Orb at low life and facing lethal — MC-9.5's principle, Shayne 2026-11-23), then MC-9.3 (Wizard's
-Rockets, timed on a realistic board). The tests are `MagicCore.Tests/Ai/CubeAiTests.cs`
+Next is MC-9.3 (Wizard's Rockets, timed on a realistic board). A new rule for one mechanic goes in
+`MagicCore/Ai/Notes/` as an AI note (AI-29.1's shape; `FreeLifeGain.cs` the first). The tests are `MagicCore.Tests/Ai/CubeAiTests.cs`
 (`SixLands()`: two each of Swamp, Island and Mountain; `SearchPlaysTheTurn()`: the search decides until the turn
 changes, returning each decision's description). Read MC-4's Decisions from "4.4l1 + l2" (the free-ability note, Shayne 2026-11-21) and the Pentad Prism
 diagnosis (2026-11-22), and magic-ai.md. To watch a position: build it in a test as `LsvBatch2l3Tests` does
@@ -165,3 +197,6 @@ golden replays in the normal tests.
 - 2026-11-23: Phase 2 rewritten on Shayne's word (free abilities have no opportunity cost); MC-9.5 done — a mana move
   must beat holding, in the search, its beam and its rollout; `LandMatters` counts floating mana. Five tests, the
   three pieces revert-checked.
+- 2026-11-23: MC-9.6 done — Zuran Orb watched sacrificing every land below ~10 life; on Shayne's word an AI note
+  (AI-29's shape, built here: `Notes/FreeLifeGain.cs`) — offered only when needed, per needs. Five tests, each of the
+  four pieces revert-checked.

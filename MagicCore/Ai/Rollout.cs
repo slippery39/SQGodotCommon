@@ -425,6 +425,11 @@ public static class Rollout
 				s = Choose(s, choice, who, settings, ours: true);
 				return true;
 			}
+			if (Notes.FreeLifeGain.ToSurvive(s, me) is { } gain) // at instant speed, which OurPlay never plays
+			{
+				s = Do(s, who, gain);
+				return true;
+			}
 			if (settings.LastChance && AtTheirEndStep(s, me, settings) is { } tap)
 			{
 				s = Do(s, who, tap);

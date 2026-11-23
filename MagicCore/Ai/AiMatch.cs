@@ -212,6 +212,8 @@ public static class AiMatch
 			["oneburnclock"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttackBurn },
 			// AI-33.7 experiment (OFF by default): a blocker tapped now is back for the second attack - beam+tappedback.
 			["tappedback"] = o => o with { Without = o.Without | Evaluator.Terms.TappedStay },
+			// A free life gain (Zuran Orb) offered whenever legal, before MC-9.6's note: beam+nofreelifegain.
+			["nofreelifegain"] = o => o with { Without = o.Without | Evaluator.Terms.FreeLifeGain },
 			// The damage sent at our walker reads one attack every turn, as before AI-33.8: beam+onewalkerclock.
 			["onewalkerclock"] = o =>
 				o with
