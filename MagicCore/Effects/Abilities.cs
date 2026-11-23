@@ -1474,7 +1474,14 @@ public record PrepareSpellComponent(Cards.CardFace Face, SpellEffectsComponent T
 /// (CastSpellAction.Adventure, Card.AsAdventure); resolved, it is exiled and its caster may cast the creature from
 /// there (FinishSpellAction). Prepare's shape, not its rules: a prepare spell is a copy in exile, never the card.
 /// </summary>
-public record AdventureComponent(Cards.CardFace Face, SpellEffectsComponent Text) : GameComponent;
+public record AdventureComponent(Cards.CardFace Face, SpellEffectsComponent Text) : GameComponent
+{
+	/// <summary>
+	/// Life // Death: a split card's half (CR 709) — cast as this face as an Adventure is (CastSpellAction.Face), the
+	/// card itself never cast; resolved it goes to the graveyard, and it may be cast from exile. LsvCards.Split.
+	/// </summary>
+	public bool Split { get; init; }
+}
 
 /// <summary>
 /// A transforming double-faced card's back face (CR 712; Fable of the Mirror-Breaker // Reflection of Kiki-Jiki: "{1},
@@ -1779,8 +1786,59 @@ public record MayChooseNotToUntap : GameComponent;
 /// </summary>
 public record GraveyardSpellsHaveBeamMeUp : GameComponent;
 
-/// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — MagicState.CanSacrifice, asked by every sacrifice (costs, choices, Treasure's own mana).</summary>
-public record CantSacrificeTreasures : GameComponent;
+/// <summary>
+/// Companion (CR 702.139): "Companion — [condition]" — Lurrus of the Dream-Den: "Each permanent card in your starting
+/// deck has mana value 2 or less" (Scope permanent cards, Each Is.ManaValueAtMost(2)); Lutri, the Spellchaser: "Each
+/// nonland card in your starting deck has a different name" (Scope !Is.Land, DifferentNames); Zirda, the Dawnwaker:
+/// "Each permanent card in your starting deck has an activated ability" (Each Is.WithAnActivatedAbility). Chosen as
+/// the deck is built (NewGame's companion, Shayne 2026-11-22), the condition judged against the starting deck as the
+/// game begins (HoldsFor); held, the card is ChosenCompanion in the sideboard. Failing it, it is an ordinary sideboard
+/// card.
+/// </summary>
+public record CompanionComponent(Filters.Filter Scope) : GameComponent
+{
+	/// <summary>What each card Scope matches must be; null: only DifferentNames.</summary>
+	public Filters.Filter? Each { get; init; }
+
+	/// <summary>Lutri: "each … has a different name".</summary>
+	public bool DifferentNames { get; init; }
+
+	/// <summary>Does <paramref name="player"/>'s starting deck — every card in their library and hand — meet it.</summary>
+	public bool HoldsFor(GameState s, int player)
+	{
+		var cards = s.CardsIn(player, ZoneType.Library)
+			.Concat(s.CardsIn(player, ZoneType.Hand))
+			.Where(c => Scope.Matches(s, c, new(player, c.Id)))
+			.ToList();
+		return (Each is null || cards.All(c => Each.Matches(s, c, new(player, c.Id))))
+			&& (!DifferentNames || cards.DistinctBy(c => c.Name).Count() == cards.Count);
+	}
+}
+
+/// <summary>
+/// The companion chosen for this game, its condition met (CompanionComponent): "If this card is your chosen companion,
+/// you may put it into your hand from outside the game for {3} as a sorcery" — PutCompanionIntoHandAction. Status: it
+/// is gone once the card leaves the sideboard.
+/// </summary>
+public record ChosenCompanion : GameComponent;
+
+/// <summary>
+/// "Can't sacrifice" — MagicState.CanSacrifice, asked by every sacrifice (costs, choices, Treasure's own mana), what its
+/// controller controls that What matches (asked from its holder's side): Quark, Humble Proprietor's "You can't sacrifice
+/// Treasure tokens" (Is.Token &amp; Is.Subtype("Treasure")); Tamiyo, Collector of Tales' "Spells and abilities your
+/// opponents control can't cause you to discard cards or sacrifice permanents" (Is.AnyCard, ByOpponents, OrDiscard).
+/// </summary>
+public record CantSacrifice(Filters.Filter What) : GameComponent
+{
+	/// <summary>Tamiyo: only what an opponent's spell or ability causes — your own costs and effects are untouched.</summary>
+	public bool ByOpponents { get; init; }
+
+	/// <summary>Tamiyo: "… can't cause you to discard cards" too — MagicState.Discard, every discard but a cost's.</summary>
+	public bool OrDiscard { get; init; }
+
+	/// <summary>Does this rule, held by <paramref name="player"/>'s permanent, stop what <paramref name="by"/> caused (0: a cost or a rule).</summary>
+	public bool Stops(int player, int by) => !ByOpponents || (by != 0 && by != player);
+}
 
 /// <summary>Captain Kathryn Janeway: "You may play an additional land on each of your turns." — MagicState.LandDrops.</summary>
 public record AdditionalLandEachTurn : GameComponent

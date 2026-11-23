@@ -142,6 +142,28 @@ public sealed record ManaValueIsChosenNumber : Filter
 		&& (chosen.OddOrEven ? card.ManaValueNow % 2 : card.ManaValueNow) == chosen.N;
 }
 
+/// <summary>
+/// Zirda, the Dawnwaker's companion: "Each permanent card in your starting deck has an activated ability" — a card with
+/// an activated, loyalty or mana ability of its own, or a basic land type, whose mana ability is intrinsic (CR 305.6).
+/// </summary>
+public sealed record WithAnActivatedAbility : Filter
+{
+	static readonly string[] Basics = ["Plains", "Island", "Swamp", "Mountain", "Forest"];
+
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
+	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
+		o is Card card
+		&& (
+			s.AbilitiesOf<Effects.ActivatedAbilityComponent>(card).Any()
+			|| s.AbilitiesOf<Effects.LoyaltyAbilityComponent>(card).Any()
+			|| s.AbilitiesOf<Effects.ManaAbilityComponent>(card).Any()
+			|| card.Subtypes.Any(Basics.Contains)
+		);
+}
+
 /// <summary>Kai Winn: "a spell with the chosen name", "a source with the chosen name" — the name the source chose as it entered (ChosenName).</summary>
 public sealed record NamedChosenName : Filter
 {

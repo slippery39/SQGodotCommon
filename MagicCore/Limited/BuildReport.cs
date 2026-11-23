@@ -67,7 +67,8 @@ public static class BuildReport
 					: new SealedDeck(
 						[],
 						[.. against.Main.Select(c => c.Data.Name)],
-						[.. against.Sideboard.Select(c => c.Data.Name)]
+						[.. against.Sideboard.Select(c => c.Data.Name)],
+						Companion: against.Companion
 					)
 		);
 		var perBuild = 2 * opponents;
@@ -92,14 +93,18 @@ public static class BuildReport
 						rivalMain,
 						n,
 						sideboard1: build.Sideboard,
-						sideboard2: rivalOut
+						sideboard2: rivalOut,
+						companion1: build.Companion,
+						companion2: rival.Companion
 					)
 					: MagicRules.NewGame(
 						rivalMain,
 						build.Main,
 						n,
 						sideboard1: rivalOut,
-						sideboard2: build.Sideboard
+						sideboard2: build.Sideboard,
+						companion1: rival.Companion,
+						companion2: build.Companion
 					);
 				var (me, them) = seat1
 					? (start.Player1Id(), start.Player2Id())

@@ -217,10 +217,27 @@ whose subsystem it lives in.
   counter on it. You may play it this turn") is `MoveChosen(Exile, filter, Exile)` — To the zone it is already in is the
   choice alone, the same object, `Then` reading it as `Ref.Chosen` (`MakePlayable(Ref.Chosen, { ThisTurn, Free })`).
   "With a [kind] counter on it" is `Is.WithCounter(kind)` (`WithPlusOneCounter` is its +1/+1).
-- **"You can't sacrifice Treasure tokens"** (Quark, `CantSacrificeTreasures`) is `MagicState.CanSacrifice`, asked by
-  every sacrifice: `MagicState.Sacrifice` itself (it does nothing), `SacrificeCost`'s candidates, a
-  `ChoosePermanentChoice { Sacrifice }` (MaySacrifice, EachSacrifices) and
-  `ManaAbilities.CanTap` (a Treasure's only mana is sacrificing it).
+- **"Can't sacrifice" is ONE piece, `CantSacrifice(filter) { ByOpponents, OrDiscard }`** (MC-4.4m3; it was Quark's
+  `CantSacrificeTreasures`), read by `MagicState.CanSacrifice`, asked by every sacrifice: `MagicState.Sacrifice` itself
+  (it does nothing), `SacrificeCost`'s candidates, a `ChoosePermanentChoice { Sacrifice }` (MaySacrifice, EachSacrifices)
+  and `ManaAbilities.CanTap` (a Treasure's only mana is sacrificing it). Quark's "You can't sacrifice Treasure tokens" is
+  `CantSacrifice(Is.Token & Is.Subtype("Treasure"))`. **"Spells and abilities your opponents control can't cause you to
+  discard cards or sacrifice permanents"** (Tamiyo, Collector of Tales) is `CantSacrifice(Is.AnyCard) { ByOpponents,
+  OrDiscard }`: a sacrifice and a discard know WHO caused them — `MagicState.Sacrifice(id, by)` / `Discard(player, ids,
+  by)`, `by` the resolving effect's controller (an effect's `Controller`; a choice action reads `ContextKeys.Controller`
+  from its pipeline), 0 for a cost or a rule (the cleanup) — so your own costs and effects are untouched. The
+  `Discard` effect asks nothing it can't do (`CanBeMadeToDiscard`). A new sacrifice or discard path passes its `by`.
+- **Companion** (CR 702.139; Lurrus of the Dream-Den, Lutri, the Spellchaser, Zirda, the Dawnwaker — MC-4.4m3) is chosen
+  as the deck is BUILT (Shayne, 2026-11-22): `MagicRules.NewGame(… companion1, companion2)`, a name — an Arena export's
+  Companion section (`ArenaDeck.Result.Companion`; `ReadPool` counts its card once), the sealed builder's pick for every
+  build, the AI's own too (`SealedBuilder.CompanionFor`, `SealedDeck.Companion`), the table's deck screen (`SealedSession.
+  Companion`) — kept by the record (`GameRecord.Companion1/2`). `WithCompanion` finds it in the sideboard (adding it if
+  it isn't there) and marks it `ChosenCompanion` only if its condition holds for the starting deck — the library as the
+  game begins (`CompanionComponent(Scope) { Each, DifferentNames }.HoldsFor`; Zirda's "has an activated ability" is
+  `Is.WithAnActivatedAbility`, a basic land's intrinsic mana ability counted). **One that fails its condition is an
+  ordinary sideboard card** — never refused (Shayne). "{3}: put it into your hand, as a sorcery" is
+  `PutCompanionIntoHandAction`, a special action (no stack) offered for the marked card, so once; the table shows it as
+  a button. `MagicRules.CompanionHolds(name, deck)` is the deck builders' question, answered as a game would.
 - **Explore** (CR 701.44, Captain Janeway) is `Explore(ref)`: the top card revealed (`MakeKnown`), a land to the
   hand, else a +1/+1 counter through `PutCounters` and a yes/no to bin the card (`MoveTo(Ref.Id(card)) { From = [Library] }`).
   **"An additional land on each of your turns"** (`AdditionalLandEachTurn`) is `MagicState.LandDrops`, the one count

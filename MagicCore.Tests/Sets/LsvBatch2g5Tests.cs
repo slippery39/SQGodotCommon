@@ -17,7 +17,7 @@ public class LsvBatch2g5Tests : FraBoardTest
 
 	static CardDefinition Bird => TestGames.Creature("Bird", "1/1", "Flying");
 
-	IEnumerable<CastSpellAction> AsAdventure(int card) => Casts(card).Where(c => c.Adventure);
+	IEnumerable<CastSpellAction> AsAdventure(int card) => Casts(card).Where(c => c.Face > 0);
 
 	[Test]
 	public void PettyTheft_ReturnsTheirNonlandPermanent_ThenTheCreatureIsCastFromExile()

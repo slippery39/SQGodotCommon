@@ -17,7 +17,7 @@ the engine source). How to script: **`Cookbook.md`**. Every card's script beside
 
 ```
 MagicCore/
-├── MagicRules.cs        THE API: NewGame (+ WithSideboard: cards outside the game), DecidingPlayerId, LegalActions, Act, Choose, AutoPass,
+├── MagicRules.cs        THE API: NewGame (+ WithSideboard: cards outside the game; WithCompanion: the companion chosen, if its condition holds), DecidingPlayerId, LegalActions, Act, Choose, AutoPass,
 │                        DistinctMoves (+ IsMoveFor, CardOf: which card a move is for;
 │                        OptionsAreObjects: every choice type, classified — a test enforces it;
 │                        TapOptions: manual tapping for a front end)

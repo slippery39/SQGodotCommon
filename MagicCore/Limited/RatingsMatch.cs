@@ -125,7 +125,9 @@ public static class RatingsMatch
 					second.Main.Select(n => CardRegistry.Get(n, set)),
 					seed,
 					sideboard1: SealedBuildMatch.Outside(first.Sideboard),
-					sideboard2: SealedBuildMatch.Outside(second.Sideboard)
+					sideboard2: SealedBuildMatch.Outside(second.Sideboard),
+					companion1: first.Companion,
+					companion2: second.Companion
 				);
 				AiMatch.Game? game;
 				using var budget = new CancellationTokenSource(SimulatedRatings.GameBudget);

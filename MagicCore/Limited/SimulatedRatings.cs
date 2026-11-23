@@ -56,7 +56,9 @@ public static class SimulatedRatings
 					b.Main.Select(n => CardRegistry.Get(n, set)),
 					seed,
 					sideboard1: SealedBuildMatch.Outside(a.Sideboard),
-					sideboard2: SealedBuildMatch.Outside(b.Sideboard)
+					sideboard2: SealedBuildMatch.Outside(b.Sideboard),
+					companion1: a.Companion,
+					companion2: b.Companion
 				);
 				var hands = new InHandDuring(start);
 				AiMatch.Game? game;

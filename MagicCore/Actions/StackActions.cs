@@ -176,12 +176,14 @@ public record CastSpellAction : GameAction
 	public int Delve { get; init; }
 
 	/// <summary>
-	/// Brazen Borrower // Petty Theft: cast as its Adventure (CR 715.3) — the card as Petty Theft (Card.AsAdventure),
-	/// validated and cast exactly as that card would be. ponytail: never from exile — the Adventure's own exile lets
-	/// only the creature be cast (CR 715.3d), and another effect's exile permission would allow the Adventure too
-	/// (715.3a); tell the two apart when a card casts from exile that way (DesignNotes).
+	/// Brazen Borrower // Petty Theft: cast as its Adventure (CR 715.3) — Face 1, the card as Petty Theft
+	/// (Card.AsAdventure), validated and cast exactly as that card would be; Life // Death: a split card (CR 709.3) is
+	/// cast as one of its halves, Face 1 or 2 (its AdventureComponents in order, each Split), never as the whole card
+	/// (Face 0, refused). ponytail: an Adventure is never cast from exile — the Adventure's own exile lets only the
+	/// creature be cast (CR 715.3d), and another effect's exile permission would allow the Adventure too (715.3a); tell
+	/// the two apart when a card casts from exile that way (DesignNotes). A split half may be.
 	/// </summary>
-	public bool Adventure { get; init; }
+	public int Face { get; init; }
 
 	/// <summary>
 	/// Splice onto Arcane (CR 702.47; Goryo's Vengeance): the cards in the caster's hand revealed and spliced onto this
@@ -223,13 +225,16 @@ public record CastSpellAction : GameAction
 		);
 	}
 
-	/// <summary>The state with this cast's card as its Adventure; null when it has none or is in exile.</summary>
+	/// <summary>
+	/// The state with this cast's card as its face (an Adventure, a split half); null when it has none, or it is an
+	/// Adventure in exile.
+	/// </summary>
 	GameState? AsAdventure(GameState s) =>
 		s.HasObject(CardId)
 		&& s.GetObject(CardId) is Card card
-		&& card.HasComponent<AdventureComponent>()
-		&& !s.IsIn(CardId, card.OwnerId, ZoneType.Exile)
-			? s.UpdateObject(CardId, card.AsAdventure())
+		&& card.GetComponents<AdventureComponent>().ElementAtOrDefault(Face - 1) is { } face
+		&& (face.Split || !s.IsIn(CardId, card.OwnerId, ZoneType.Exile))
+			? s.UpdateObject(CardId, card.AsAdventure(Face))
 			: null;
 
 	/// <summary>Delve's cards: any in your graveyard but this one (a spell being cast from there).</summary>
@@ -448,9 +453,9 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public IReadOnlyList<ManaPayment.Payment>? PaymentPreview(GameState s)
 	{
-		if (Adventure) // Petty Theft's {1}{U}, not the creature's cost
+		if (Face > 0) // Petty Theft's {1}{U}, not the creature's cost
 			return AsAdventure(s) is { } asAdventure
-				? (this with { Adventure = false }).PaymentPreview(asAdventure)
+				? (this with { Face = 0 }).PaymentPreview(asAdventure)
 				: null;
 		if (!Splice.IsDefaultOrEmpty)
 			return SplicedState(s) is { } spliced
@@ -478,10 +483,16 @@ public record CastSpellAction : GameAction
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
-		if (Adventure)
+		if (Face > 0)
 			return AsAdventure(s) is { } asAdventure
-				? (this with { Adventure = false }).ValidateAdd(asAdventure)
+				? (this with { Face = 0 }).ValidateAdd(asAdventure)
 				: ValidationResult.Invalid("It can't be cast as an Adventure from here");
+		if (
+			s.HasObject(CardId)
+			&& s.GetObject(CardId) is Card whole
+			&& whole.GetComponent<AdventureComponent>() is { Split: true }
+		)
+			return ValidationResult.Invalid("A split card is cast as one of its halves");
 		if (!Splice.IsDefaultOrEmpty)
 			return SplicedState(s) is { } spliced
 				? (this with { Splice = [] }).ValidateAdd(spliced)
@@ -608,7 +619,7 @@ public record CastSpellAction : GameAction
 	}
 
 	public override ActionResult Execute(GameState s) =>
-		Adventure ? (this with { Adventure = false }).Execute(AsAdventure(s)!)
+		Face > 0 ? (this with { Face = 0 }).Execute(AsAdventure(s)!)
 		: !Splice.IsDefaultOrEmpty ? (this with { Splice = [] }).Execute(SplicedState(s)!)
 		: new(ChoosesTargets ? ChooseTargets(s, retain: true) : Priority.Retain(Cast(s), PlayerId));
 
@@ -673,8 +684,8 @@ public record CastSpellAction : GameAction
 	/// <summary>Pays and puts it on the stack — the priority action keeps priority after; a resolution goes on.</summary>
 	public GameState Cast(GameState s)
 	{
-		if (Adventure) // a cast during a resolution comes here without Execute
-			return (this with { Adventure = false }).Cast(AsAdventure(s)!);
+		if (Face > 0) // a cast during a resolution comes here without Execute
+			return (this with { Face = 0 }).Cast(AsAdventure(s)!);
 		if (!Splice.IsDefaultOrEmpty)
 			return (this with { Splice = [] }).Cast(SplicedState(s)!);
 		if (ChoosesTargets)
@@ -881,8 +892,8 @@ public record CastSpellAction : GameAction
 		if (Prepare.CreatureOf(s, card) is { } prepared)
 			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
 		s = s.MoveCard(cardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
-		if (card.HasComponent<CastAsAdventure>()) // CR 715.3b: on the stack it is the Adventure (the move made it the card)
-			s = s.UpdateObject(cardId, s.GetCard(cardId).AsAdventure());
+		if (card.GetComponent<CastAsAdventure>() is { } face) // CR 715.3b, 709.3b: on the stack it is that face (the move made it the card)
+			s = s.UpdateObject(cardId, s.GetCard(cardId).AsAdventure(face.Face));
 		if (card.GetComponent<Spliced>() is { } spliced) // CR 702.47c: the spliced text rides the spell (the move's Fresh took it)
 			s = s.UpdateObject(cardId, s.GetCard(cardId).WithComponent(spliced));
 		var proxies = s.ThisTurnEffects<NextSpellCantBeCountered>(playerId).ToList();
@@ -1522,7 +1533,7 @@ public record FinishSpellAction : GameAction
 		var card = s.GetCard(CardId);
 		if (s.GetParent(CardId) == s.GetWellKnownId(MagicKeys.Stack)) // Sphinx's Approach may have exiled itself
 			s =
-				Resolved && card.HasComponent<CastAsAdventure>()
+				Resolved && card.GetComponent<CastAsAdventure>() is { Split: false }
 					? OnAnAdventure(s, card)
 					: s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 		return new ActionResult(Priority.Retain(s, s.GetGame().ActivePlayerId));

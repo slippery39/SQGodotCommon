@@ -5,6 +5,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Filters;
+using MagicCore.Sets;
 using MagicCore.Targeting;
 
 namespace MagicCore;
@@ -23,6 +24,9 @@ public static class MagicRules
 	/// <param name="names">What prompts and logs call the two players ("Attack the AI"); the keys by default.</param>
 	/// <param name="sideboard1">Player 1's cards outside the game (sealed: the pool's unplayed cards).</param>
 	/// <param name="sideboard2">Player 2's.</param>
+	/// <param name="companion1">Player 1's companion, chosen as the deck was built (Lurrus, Lutri, Zirda) — by name, from
+	/// their sideboard (added there if it isn't in it); null: none.</param>
+	/// <param name="companion2">Player 2's.</param>
 	public static GameState NewGame(
 		IEnumerable<CardDefinition> deck1,
 		IEnumerable<CardDefinition> deck2,
@@ -30,7 +34,9 @@ public static class MagicRules
 		bool handSmoothing = true,
 		(string Player1, string Player2)? names = null,
 		IEnumerable<CardDefinition>? sideboard1 = null,
-		IEnumerable<CardDefinition>? sideboard2 = null
+		IEnumerable<CardDefinition>? sideboard2 = null,
+		string? companion1 = null,
+		string? companion2 = null
 	)
 	{
 		var s = new GameState { RngSeed = seed };
@@ -71,6 +77,7 @@ public static class MagicRules
 		}
 		// After everything else: ids of the decks don't move, and the shuffles below don't change.
 		s = s.WithSideboard(p1, sideboard1 ?? []).WithSideboard(p2, sideboard2 ?? []);
+		s = s.WithCompanion(p1, companion1).WithCompanion(p2, companion2); // the starting deck is the library now
 
 		(var rng, s) = s.TakeRng();
 		var starting = rng.Next(2) == 0 ? p1 : p2; // Bo1: a coin flip decides who plays first
@@ -97,6 +104,36 @@ public static class MagicRules
 		foreach (var card in list)
 			s = s.AddObject(CardFactory.Create(card, playerId), zoneId).GameState;
 		return s;
+	}
+
+	/// <summary>
+	/// Companion (CR 702.139a): the card chosen as the deck was built, outside the game — found in the player's
+	/// sideboard by name (added there if it isn't), and marked ChosenCompanion only if its condition holds for the
+	/// starting deck (CompanionComponent.HoldsFor). One that fails it is an ordinary sideboard card (Shayne, 2026-11-22).
+	/// </summary>
+	public static GameState WithCompanion(this GameState s, int playerId, string? name)
+	{
+		if (name is null)
+			return s;
+		if (s.CardsIn(playerId, ZoneType.Sideboard).All(c => c.Name != name))
+			s = s.WithSideboard(playerId, [CardRegistry.Get(name)]);
+		var card = s.CardsIn(playerId, ZoneType.Sideboard).First(c => c.Name == name);
+		return
+			card.GetComponent<CompanionComponent>() is { } companion
+			&& companion.HoldsFor(s, playerId)
+			? s.UpdateObject(card.Id, card.WithComponent(new ChosenCompanion()))
+			: s;
+	}
+
+	/// <summary>
+	/// Does this companion's condition hold for <paramref name="deck"/> (Lurrus, Lutri, Zirda) — the deck builders'
+	/// question (SealedBuilder, the table's deck screen), answered as a game beginning with it would (WithCompanion).
+	/// </summary>
+	public static bool CompanionHolds(string companion, IReadOnlyList<CardDefinition> deck)
+	{
+		var s = NewGame(deck, deck, handSmoothing: false, companion1: companion);
+		return s.CardsIn(s.Player1Id(), ZoneType.Sideboard)
+			.Any(c => c.HasComponent<ChosenCompanion>());
 	}
 
 	/// <summary>
@@ -222,6 +259,14 @@ public static class MagicRules
 						.Concat(s.CardsIn(player, ZoneType.Graveyard))
 						.Concat(s.CardsIn(player, ZoneType.Exile)) // Q's gift: "only if this card is exiled"
 						.SelectMany(c => ActivateCandidates(s, player, c)),
+					// Lurrus, Lutri, Zirda: the chosen companion's {3} (a missing sideboard is empty)
+					.. s.CardsIn(player, ZoneType.Sideboard)
+						.Where(c => c.HasComponent<ChosenCompanion>())
+						.Select(c => new PutCompanionIntoHandAction
+						{
+							PlayerId = player,
+							CardId = c.Id,
+						}),
 				];
 		return candidates
 			.Where(a => worthTrying?.Invoke(a) != false && a.ValidateAdd(s).IsValid)
@@ -272,17 +317,26 @@ public static class MagicRules
 					.ToList() // enumerated in the stamped state, before the loop's `spliced` moves on
 			);
 		}
-		// Brazen Borrower: each cast again as its Adventure (CR 715.3) — the card as Petty Theft (ValidateAdd: not from exile)
-		if (
-			!card.HasComponent<AdventureComponent>()
-			|| s.IsIn(card.Id, card.OwnerId, ZoneType.Exile) // cheap: ValidateAdd refuses them all
-		)
+		// Brazen Borrower: each cast again as its Adventure (CR 715.3) — the card as Petty Theft (ValidateAdd: not from
+		// exile). Life // Death: a split card is cast as either half, never whole (CR 709.3), from exile too.
+		var faces = card.GetComponents<AdventureComponent>().ToList();
+		if (faces.Count == 0)
 			return casts;
-		var adventure = card.AsAdventure();
-		return casts.Concat(
-			CastCandidates(s.UpdateObject(card.Id, adventure), player, adventure)
-				.Select(c => (GameAction)((CastSpellAction)c with { Adventure = true }))
-		);
+		if (faces[0].Split)
+			casts = [];
+		else if (s.IsIn(card.Id, card.OwnerId, ZoneType.Exile)) // cheap: ValidateAdd refuses them all
+			return casts;
+		for (var face = 1; face <= faces.Count; face++)
+		{
+			var asFace = card.AsAdventure(face);
+			var n = face; // captured: the loop's variable moves on
+			casts = casts.Concat(
+				CastCandidates(s.UpdateObject(card.Id, asFace), player, asFace)
+					.Select(c => (GameAction)((CastSpellAction)c with { Face = n }))
+					.ToList()
+			);
+		}
+		return casts;
 	}
 
 	/// <param name="free">Cast without paying its mana cost, paying these instead (Playable.FreeCosts); null: paid.</param>
@@ -823,7 +877,7 @@ public static class MagicRules
 		{
 			PlayLandAction p => $"land|{Identity(s, p.CardId)}{(p.BackFace ? "|b" : "")}",
 			CastSpellAction c =>
-				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Adventure ? "|a" : "")}{(c.Splice.IsDefaultOrEmpty ? "" : $"|s{string.Join(",", c.Splice.Select(id => Fodder(s, id)))}")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}{(c.Replicate > 0 ? $"|r{c.Replicate}" : "")}{(c.ReturnId == 0 ? "" : $"|b{Fodder(s, c.ReturnId)}")}{(c.Kicked ? "|k" : "")}{(c.ExileId == 0 ? "" : $"|e{Fodder(s, c.ExileId)}")}{(c.LifeForPhyrexian > 0 ? $"|p{c.LifeForPhyrexian}" : "")}{(c.Delve > 0 ? $"|d{c.Delve}" : "")}{(c.Face switch { 0 => "", 1 => "|a", _ => $"|a{c.Face}" })}{(c.Splice.IsDefaultOrEmpty ? "" : $"|s{string.Join(",", c.Splice.Select(id => Fodder(s, id)))}")}", // a beamed-up creature, kicked, an exiled card, life for Phyrexian mana, delve, only when chosen: older keys stay byte-identical
 			ActivateAbilityAction activate =>
 				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}{(activate.Modes.IsEmpty ? "" : $"|m{string.Join(",", activate.Modes)}")}{Taps(s, activate)}{(activate.LifeForPhyrexian > 0 ? $"|p{activate.LifeForPhyrexian}" : "")}{(activate.X > 0 ? $"|x{activate.X}" : "")}{(activate.ReturnId == 0 ? "" : $"|b{Fodder(s, activate.ReturnId)}")}", // modes, a tapped creature and life for Phyrexian mana only when chosen: older keys (records, the suite) stay byte-identical
 			ActivateLoyaltyAction loyalty =>

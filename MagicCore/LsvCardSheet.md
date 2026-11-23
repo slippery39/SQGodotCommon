@@ -5,7 +5,7 @@ script that plays it and the engine pieces that script uses (meanings from
 `MagicCore/AbilityCatalog.md`). Read them side by side: a missing clause or a wrong "whose" shows.
 How to write a script: `MagicCore/Cookbook.md`.
 
-**Playable:** common 46/46 · uncommon 85/86 · rare 277/279 · mythic 108/108 · **525/528**
+**Playable:** common 46/46 · uncommon 86/86 · rare 279/279 · mythic 108/108 · **528/528**
 
 ### "Name Sticker" Goblin
 
@@ -1846,7 +1846,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 > //   
 > Return target creature card from your graveyard to the battlefield. You lose life equal to its mana value.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2m3Tests
+
+**Engine pieces:** `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `LoseLife` — Life loss that is not damage — lifelink and damage triggers do not see it.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Life // Death"] =
+[
+	Split(
+		"Life // Death",
+		0,
+		[],
+		new ModifyUntilEndOfTurn(Ref.LandsYouControl, 0, 0)
+		{
+			AlsoType = CardType.Creature,
+			SetBase = (1, 1),
+		}
+	),
+	Split(
+		"Life // Death",
+		1,
+		[TargetSpec.InYourGraveyard(Is.Creature)],
+		// the loss first: once returned it is a new object, and an illegal target makes the spell do nothing
+		new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.Target())),
+		new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+	),
+],
+```
 
 ### Lightning Bolt
 
@@ -6243,7 +6269,22 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Choose target spell, then flip a coin. If you win the flip, gain control of that spell and you may choose new targets for it. If you lose the flip, counter that spell.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2m3Tests
+
+**Engine pieces:** `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `FlipACoin` — Mana Crypt: "flip a coin. If you lose the flip, this artifact deals 3 damage to you." —…; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Invert Polarity"] =
+[
+	Spell(
+		[TargetSpec.Spell()],
+		new FlipACoin([new Counter(Ref.Target())])
+		{
+			IfWon = [new GainControl(Ref.Target(), Ref.You) { NewTargets = true }],
+		}
+	),
+],
+```
 
 ### Jace, Wielder of Mysteries
 
@@ -6671,14 +6712,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Lifelink  
 > Once during each of your turns, you may cast a permanent spell with mana value 2 or less from your graveyard.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LsvBatch2m3Tests
 
-**Engine pieces:** `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…
+**Engine pieces:** `CompanionComponent` — Companion (CR 702.139): "Companion — [condition]" — Lurrus of the Dream-Den: "Each…; `MayPlayFromZone` — MC-6.9: "[Once during each of your turns,] you may play [cast] [cards] from your…
 
 ```csharp
 ["Lurrus of the Dream-Den"] =
 [
-	// Companion is MC-4.4m3; this is its main-deck text.
+	new CompanionComponent(Is.Type(PermanentTypes)) { Each = Is.ManaValueAtMost(2) },
 	new MayPlayFromZone(
 		ZoneType.Graveyard,
 		Is.Type(NonlandPermanentTypes) & !Is.Land & Is.ManaValueAtMost(2)
@@ -6711,14 +6752,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flash  
 > When Lutri enters, if you cast it, copy target instant or sorcery spell you control. You may choose new targets for the copy.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LsvBatch2m3Tests
 
-**Engine pieces:** `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SourceWasCast` — Null Summoner: "if you cast it" — it entered by resolving as a spell. Read from the…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `CompanionComponent` — Companion (CR 702.139): "Companion — [condition]" — Lurrus of the Dream-Den: "Each…; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SourceWasCast` — Null Summoner: "if you cast it" — it entered by resolving as a spell. Read from the…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Lutri, the Spellchaser"] =
 [
-	// Companion is MC-4.4m3; this is its main-deck text.
+	new CompanionComponent(!Is.Land) { DifferentNames = true },
 	When(
 		TriggerEvent.SelfEnters,
 		[TargetSpec.Spell((Is.Instant | Is.Sorcery) & Is.Yours)],
@@ -8931,7 +8972,33 @@ How to write a script: `MagicCore/Cookbook.md`.
 > +1: Choose a nonland card name, then reveal the top four cards of your library. Put all cards with the chosen name from among them into your hand and the rest into your graveyard.  
 > −3: Return target card from your graveyard to your hand.
 
-**Status:** NOT IMPLEMENTED
+**Status:** scripted · **tests naming it:** LsvBatch2m3Tests
+
+**Engine pieces:** `CantSacrifice` — "Can't sacrifice" — MagicState.CanSacrifice, asked by every sacrifice (costs, choices,…; `ChooseCardName` — Demonic Consultation: "Choose a card name." — as the spell resolves, the name kept on…; `LookAndTake` — Rutherford, Upgraded Ensign: "look at the top six cards of your library. You may reveal…; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+
+```csharp
+["Tamiyo, Collector of Tales"] =
+[
+	new CantSacrifice(Is.AnyCard) { ByOpponents = true, OrDiscard = true },
+	Loyalty(
+		1,
+		[],
+		new ChooseCardName { AnyName = false, YourOwn = true },
+		new LookAndTake(4, Is.NamedChosenName)
+		{
+			Take = 4,
+			Must = true,
+			Reveal = true,
+			Rest = TheRest.Graveyard,
+		}
+	),
+	Loyalty(
+		-3,
+		[TargetSpec.InYourGraveyard()],
+		new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+	),
+],
+```
 
 ### Temple Garden
 
@@ -10007,14 +10074,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Abilities you activate that aren't mana abilities cost {2} less to activate. This effect can't reduce the mana in that cost to less than one mana.  
 > {1}, {T}: Target creature can't block this turn.
 
-**Status:** scripted · **tests naming it:** LsvBatch2mTests
+**Status:** scripted · **tests naming it:** LsvBatch2m3Tests, LsvBatch2mTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CompanionComponent` — Companion (CR 702.139): "Companion — [condition]" — Lurrus of the Dream-Den: "Each…; `CostChange` — "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.
 
 ```csharp
 ["Zirda, the Dawnwaker"] =
 [
-	// Companion is MC-4.4m3; this is its main-deck text.
+	new CompanionComponent(Is.Type(PermanentTypes))
+	{
+		Each = Is.WithAnActivatedAbility,
+	},
 	new CostChange(-2, Is.AnyCard) { Abilities = true, Floor = 1 },
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{1}"),
@@ -11784,7 +11854,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** LsvBatch2m2Tests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CantSacrifice` — "Can't sacrifice" — MagicState.CanSacrifice, asked by every sacrifice (costs, choices,…; `CompanionComponent` — Companion (CR 702.139): "Companion — [condition]" — Lurrus of the Dream-Den: "Each…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCompanionIntoHandAction` — Companion (CR 702.139c; Lurrus, Lutri, Zirda): "you may put it into your hand from…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
 ```csharp
 ["Loot, the Pathfinder"] =
@@ -11809,6 +11879,8 @@ How to write a script: `MagicCore/Cookbook.md`.
 		Exhaust = true,
 	},
 ],
+// GainControl { NewTargets }; what an opponent can't make you do: CantSacrifice { ByOpponents, OrDiscard };
+// companion: CompanionComponent, NewGame's companion, PutCompanionIntoHandAction) =====
 ```
 
 ### Mana Crypt

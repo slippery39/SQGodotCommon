@@ -155,7 +155,8 @@ public record Flicker(Ref What) : Effect
 /// <summary>
 /// Rules of Acquisition: "Gain control of target nonland permanent an opponent controls" (To: you);
 /// "Target opponent gains control of target nonland permanent you control" (To: that player) — for
-/// good, through MagicState.GainControl.
+/// good, through MagicState.GainControl. Invert Polarity: "gain control of that spell" — a spell on the stack: its
+/// controller becomes that player (no zone change: the stack is shared), so it resolves as theirs.
 /// </summary>
 public record GainControl(Ref What, Ref To) : Effect
 {
@@ -165,6 +166,12 @@ public record GainControl(Ref What, Ref To) : Effect
 	/// </summary>
 	public bool UntilEndOfTurn { get; init; }
 
+	/// <summary>
+	/// Invert Polarity: "and you may choose new targets for it" — a spell gained: each target word chosen again by its new
+	/// controller, its old target among the options (CopySpell.ChooseNewTargets, a copy's).
+	/// </summary>
+	public bool NewTargets { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (
@@ -172,6 +179,14 @@ public record GainControl(Ref What, Ref To) : Effect
 			is not (> 0 and var player)
 		)
 			return new(s);
+		foreach (var id in All(What, s).Where(s.IsOnStack).ToList())
+		{
+			if (s.GetObject(id) is not Card spell)
+				continue;
+			s = s.UpdateObject(id, spell with { ControllerId = player });
+			if (NewTargets)
+				s = CopySpell.ChooseNewTargets(s, id, player, onlyChanged: true);
+		}
 		foreach (var c in Permanents(What, s).ToList())
 		{
 			s = s.GainControl(c.Id, player);
@@ -199,7 +214,7 @@ public record DiscardAtRandom(Ref Who, Count N) : Effect
 			var hand = s.CardsIn(player, ZoneType.Hand).Select(c => c.Id).ToArray();
 			(var rng, s) = s.TakeRng();
 			rng.Shuffle(hand);
-			s = s.Discard(player, [.. hand.Take(N.Value(s, InputContext))]);
+			s = s.Discard(player, [.. hand.Take(N.Value(s, InputContext))], Controller);
 		}
 		return new(s);
 	}
@@ -2977,7 +2992,7 @@ public record Unattach(Ref What) : Effect
 public record Sacrifice(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
-		new(Permanents(What, s).Aggregate(s, (st, c) => st.Sacrifice(c.Id)));
+		new(Permanents(What, s).Aggregate(s, (st, c) => st.Sacrifice(c.Id, Controller)));
 }
 
 /// <summary>Ajani Unrelenting: "Discard your hand" — the whole hand, so there is nothing to choose.</summary>
@@ -2986,7 +3001,11 @@ public record DiscardHand(Ref Who) : Effect
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
-			s = s.Discard(player, [.. s.CardsIn(player, ZoneType.Hand).Select(c => c.Id)]);
+			s = s.Discard(
+				player,
+				[.. s.CardsIn(player, ZoneType.Hand).Select(c => c.Id)],
+				Controller
+			);
 		return new(s);
 	}
 }
@@ -3010,11 +3029,13 @@ public record Discard(Ref Who, Count Count) : Effect
 	{
 		foreach (var player in All(Who, s))
 		{
-			var n = Math.Min(
-				Count.Value(s, InputContext.SetItem(ContextKeys.It, player)),
-				s.CardsIn(player, ZoneType.Hand)
-					.Count(c => Filter?.Matches(s, c, new(player, 0)) ?? true)
-			);
+			var n = !s.CanBeMadeToDiscard(player, Controller) // Tamiyo: an opponent's discard isn't asked
+				? 0
+				: Math.Min(
+					Count.Value(s, InputContext.SetItem(ContextKeys.It, player)),
+					s.CardsIn(player, ZoneType.Hand)
+						.Count(c => Filter?.Matches(s, c, new(player, 0)) ?? true)
+				);
 			if (n == 0 && !Then.IsEmpty) // Garruk: an empty hand "didn't discard two nonland cards"
 				s = s.SpawnAction(
 					new PipelineAction
@@ -3059,11 +3080,11 @@ public record SacrificeGreatestManaValue(Ref Who, CardType Types) : Effect
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
 		{
 			var victim = s.CardsIn(player, ZoneType.Battlefield)
-				.Where(c => c.Is(Types) && s.CanSacrifice(c.Id)) // Quark's Treasures aren't candidates
+				.Where(c => c.Is(Types) && s.CanSacrifice(c.Id, Controller)) // Quark's Treasures aren't candidates
 				.OrderByDescending(c => c.ManaCost.ManaValue)
 				.FirstOrDefault();
 			if (victim is not null)
-				s = s.Sacrifice(victim.Id);
+				s = s.Sacrifice(victim.Id, Controller);
 		}
 		return new(s);
 	}
@@ -3344,7 +3365,7 @@ public record SacrificeTheRestAction(int PlayerId, int SourceId, Filters.Filter 
 				.Where(id => !kept.Contains(id))
 				.ToList()
 		)
-			s = s.Sacrifice(id);
+			s = s.Sacrifice(id, GetInput<int>(ContextKeys.Controller));
 		return new(s);
 	}
 }

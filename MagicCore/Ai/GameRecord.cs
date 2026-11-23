@@ -29,6 +29,17 @@ public sealed record GameRecord
 	public ImmutableArray<string> Sideboard1 { get; init; } = [];
 	public ImmutableArray<string> Sideboard2 { get; init; } = [];
 
+	/// <summary>Each seat's companion (NewGame's), by name; null: none — left out of the file then.</summary>
+	[System.Text.Json.Serialization.JsonIgnore(
+		Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+	)]
+	public string? Companion1 { get; init; }
+
+	[System.Text.Json.Serialization.JsonIgnore(
+		Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+	)]
+	public string? Companion2 { get; init; }
+
 	/// <summary>What made the game: which seat was human, which AI, when — free text for a reader.</summary>
 	public ImmutableDictionary<string, string> About { get; init; } =
 		ImmutableDictionary<string, string>.Empty;
@@ -53,10 +64,14 @@ public sealed record GameRecord
 		IEnumerable<CardDefinition> deck2,
 		(string Player1, string Player2) names,
 		IEnumerable<CardDefinition>? sideboard1 = null,
-		IEnumerable<CardDefinition>? sideboard2 = null
+		IEnumerable<CardDefinition>? sideboard2 = null,
+		string? companion1 = null,
+		string? companion2 = null
 	) =>
 		new()
 		{
+			Companion1 = companion1,
+			Companion2 = companion2,
 			Seed = seed,
 			Players = [names.Player1, names.Player2],
 			Deck1 = [.. deck1.Select(c => c.Data.Name)],
@@ -75,7 +90,9 @@ public sealed record GameRecord
 			Seed,
 			names: (Players[0], Players[1]),
 			sideboard1: Sideboard1.Select(CardRegistry.Get),
-			sideboard2: Sideboard2.Select(CardRegistry.Get)
+			sideboard2: Sideboard2.Select(CardRegistry.Get),
+			companion1: Companion1,
+			companion2: Companion2
 		);
 
 	/// <summary>One more move, made from <paramref name="before"/>.</summary>

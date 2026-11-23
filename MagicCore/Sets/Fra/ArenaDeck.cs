@@ -24,6 +24,26 @@ public static partial class ArenaDeck
 	public sealed record Result(IReadOnlyList<CardDefinition> Deck, IReadOnlyList<string> Problems)
 	{
 		public bool Ok => Problems.Count == 0;
+
+		/// <summary>The export's Companion section (Lurrus, Lutri, Zirda: MagicRules.NewGame's companion); null: none.</summary>
+		public string? Companion { get; init; }
+	}
+
+	/// <summary>The card an export names under "Companion", by its name in <paramref name="set"/>; null if none or unknown.</summary>
+	static string? CompanionOf(List<string> lines, string set)
+	{
+		var header = lines.FindIndex(l =>
+			l.Equals("Companion", StringComparison.OrdinalIgnoreCase)
+		);
+		if (header < 0 || header + 1 >= lines.Count)
+			return null;
+		var match = CardLine().Match(lines[header + 1]);
+		return
+			match.Success
+			&& NamesOf(set)
+				.TryGetValue(Key(match.Groups[2].Value.Replace(" /// ", " // ")), out var name)
+			? name
+			: null;
 	}
 
 	// A deck or a sealed pool is its set's (MC-5.4: TRK pools; 2026-11-10: TRK decks).
@@ -71,7 +91,7 @@ public static partial class ArenaDeck
 		var deck = new List<CardDefinition>();
 		var problems = new List<string>();
 		var lines = text.Replace("\r", "").Split('\n').Select(l => l.Trim()).ToList();
-		// A Companion or Commander section may come first; the main deck starts after "Deck".
+		// A Companion or Commander section may come first (a companion is read, CompanionOf); the main deck starts after "Deck".
 		var deckHeader = lines.FindIndex(l => l.Equals("Deck", StringComparison.OrdinalIgnoreCase));
 		foreach (var raw in lines.Skip(deckHeader + 1))
 		{
@@ -107,12 +127,19 @@ public static partial class ArenaDeck
 			problems.Add(
 				"No cards found — paste an Arena export (\"4 Card Name (FRA) 123\" lines)"
 			);
-		return new Result(problems.Count == 0 ? deck : [], problems);
+		return new Result(problems.Count == 0 ? deck : [], problems)
+		{
+			Companion = CompanionOf(lines, set),
+		};
 	}
 
 	/// <param name="Pool">FRA card names, one per copy — basics dropped, since limited's are free.</param>
 	/// <param name="LeftOut">What isn't an FRA card (nor one of its Special Guests), one per copy, or an unreadable line.</param>
-	public sealed record PoolResult(IReadOnlyList<string> Pool, IReadOnlyList<string> LeftOut);
+	public sealed record PoolResult(IReadOnlyList<string> Pool, IReadOnlyList<string> LeftOut)
+	{
+		/// <summary>The export's Companion section; its card is in the pool once, whether or not the Sideboard lists it too.</summary>
+		public string? Companion { get; init; }
+	}
 
 	/// <summary>
 	/// A sealed pool exported from Arena (story LIM-1.7): EVERY section is the pool — the deck you
@@ -123,10 +150,19 @@ public static partial class ArenaDeck
 	{
 		var pool = new List<string>();
 		var leftOut = new List<string>();
-		foreach (var line in text.Replace("\r", "").Split('\n').Select(l => l.Trim()))
+		var lines = text.Replace("\r", "").Split('\n').Select(l => l.Trim()).ToList();
+		var companion = CompanionOf(lines, set);
+		var inCompanion = false;
+		foreach (var line in lines)
 		{
 			if (line.Length == 0 || !char.IsDigit(line[0]))
-				continue; // a section header: "Deck", "Sideboard", …
+			{
+				// a section header ("Deck", "Sideboard", "Companion" …) or the blank line ending one
+				inCompanion = line.Equals("Companion", StringComparison.OrdinalIgnoreCase);
+				continue;
+			}
+			if (inCompanion && companion is not null)
+				continue; // added below, once — one not of this set is left out by name, as any card
 			var match = CardLine().Match(line);
 			if (!match.Success)
 			{
@@ -142,6 +178,8 @@ public static partial class ArenaDeck
 			else if (!Limited.SealedBuilder.Basics.Contains(fra))
 				pool.AddRange(Enumerable.Repeat(fra, count));
 		}
-		return new PoolResult(pool, leftOut);
+		if (companion is not null && !pool.Contains(companion))
+			pool.Add(companion);
+		return new PoolResult(pool, leftOut) { Companion = companion };
 	}
 }

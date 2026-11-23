@@ -16,10 +16,12 @@ namespace MagicCore.Limited;
 public static class SealedBuildMatch
 {
 	/// <param name="Sideboard">The rest of the pool — "outside the game" (Extrapolate the Impossible).</param>
+	/// <param name="Companion">Its companion (an export's Companion section, a suggestion's); null: none.</param>
 	public sealed record Build(
 		string Name,
 		IReadOnlyList<CardDefinition> Main,
-		IReadOnlyList<CardDefinition> Sideboard
+		IReadOnlyList<CardDefinition> Sideboard,
+		string? Companion = null
 	);
 
 	/// <summary>
@@ -38,7 +40,8 @@ public static class SealedBuildMatch
 		return new Build(
 			name,
 			deck.Deck,
-			[.. rest.Where(CardRegistry.IsImplemented).Select(CardRegistry.Get)]
+			[.. rest.Where(CardRegistry.IsImplemented).Select(CardRegistry.Get)],
+			deck.Companion
 		);
 	}
 
@@ -47,7 +50,12 @@ public static class SealedBuildMatch
 
 	/// <summary>One of the builder's builds as a candidate (LIM-3.4): named by its button, the rest of its pool outside the game.</summary>
 	public static Build FromSuggestion(SealedDeck deck) =>
-		new(deck.Button, [.. deck.Main.Select(CardRegistry.Get)], Outside(deck.Sideboard));
+		new(
+			deck.Button,
+			[.. deck.Main.Select(CardRegistry.Get)],
+			Outside(deck.Sideboard),
+			deck.Companion
+		);
 
 	/// <summary>Builds as candidates, a repeated name numbered — the best's greedy and a close pair's can share one.</summary>
 	public static IReadOnlyList<Build> FromSuggestions(IEnumerable<SealedDeck> decks)
@@ -119,7 +127,9 @@ public static class SealedBuildMatch
 					rival.Main.Select(CardRegistry.Get),
 					seed,
 					sideboard1: build.Sideboard,
-					sideboard2: Outside(rival.Sideboard)
+					sideboard2: Outside(rival.Sideboard),
+					companion1: build.Companion,
+					companion2: rival.Companion
 				);
 				games[i] = AiMatch.Play(ai, ai, start, build.Name, $"pool {seed}", seed, true, 1)!;
 				progress.Tick(

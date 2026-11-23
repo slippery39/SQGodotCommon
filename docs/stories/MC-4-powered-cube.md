@@ -16,7 +16,7 @@ as his three priorities.
 
 ## Requirements
 
-- [ ] Every card on MTGA's powered cube list plays in MagicCore, each with a test that it FIRES
+- [x] Every card on MTGA's powered cube list plays in MagicCore, each with a test that it FIRES
       (`/card-batch` tiers)
 - [ ] The cube is a card list, drafted the same way as FRA's packs (LIM-2: the draft must not assume
       packs)
@@ -2591,6 +2591,34 @@ as his three priorities.
   game — run again after the review's fixes — golden-in the random games only (96 card replays added); the probe at 150, none unfinished and every card used (Vivi's and Squandered Resources' mana moves
   aren't counted there: their tests cover them). **Not watched in the AI's turn** — the cards were probed at random
   and tested, never played by the search.
+- 2026-11-22, Claude (cube lane) — **4.4m3: multicolour's four new pieces, all 6 cards — 528 of 528 play: every card of
+  the cube.** Shayne took the plan by starting it; the companion's two details were his already (after "4.4m"). Each
+  piece as planned, its nearest generalised: **split cards** (Life // Death) — the Adventure's cast is a face index,
+  `CastSpellAction.Face` (it was the bool `Adventure`; `|a` / `|a2` in `MoveKey`, older keys unchanged), a split card's
+  halves `AdventureComponent { Split }` (`LsvCards.Split`), never cast whole, both costs off the stack (`CardFactory`:
+  mana value 3), to the graveyard as it resolves, castable from exile; **control of a spell** (Invert Polarity) —
+  `GainControl` reaches a spell on the stack, `{ NewTargets }` retargets it as a copy is (`CopySpell.ChooseNewTargets`);
+  **what an opponent can't make you do** (Tamiyo) — Quark's `CantSacrificeTreasures` became `CantSacrifice(filter) {
+  ByOpponents, OrDiscard }` (Quark moved onto it), and a sacrifice and a discard know who caused them (`by`, the
+  resolving effect's controller; 0 for a cost or a rule); **companion** (Lurrus, Lutri, Zirda) — `CompanionComponent(
+  Scope) { Each, DifferentNames }` (Zirda's `Is.WithAnActivatedAbility`, a basic land's mana counted), chosen as the deck
+  is built: `NewGame`'s `companion1/2` (`WithCompanion`: found in the sideboard, marked `ChosenCompanion` only if the
+  starting deck meets it), `PutCompanionIntoHandAction` for {3} at sorcery speed, the record's `Companion1/2`; in the
+  three places Shayne named — an Arena export's Companion section (`ArenaDeck`; `ReadPool` counts its card once), the
+  sealed builder for every build, the AI's too (`SealedBuilder.CompanionFor`: the best-rated one met and castable in
+  its colours), and the table's deck screen (`SealedSession.Companion`, a button per companion on the sealed screen;
+  the deck select reports a pasted one). **Found building:** Tamiyo's +1 test was vacuous (a revert-check: my draw step
+  took the named card) — fixed. **The review (`/pre-commit`) found:** a stolen spell's KEPT target became the target
+  again (ward would trigger: `SetCopyTargetsAction.OnlyChanged`, a copy's every target still does); the builder could
+  name an off-colour companion; `ReadPool` dropped a companion not of the set (now left out by name) and a section ended
+  only by a header; every sacrifice scanned the battlefield (the rules listed once per state, `CantSacrificeRules`) —
+  all fixed, each with a test. Five ceilings in DesignNotes (a split card shown whole and judged by its first half's
+  cost; Tamiyo's wasted pick and an opponent-imposed cost; the companion judged once, unrevealed, and the deck select
+  reading FRA; a stolen spell's words retargeted one at a time; the per-state cache). 11 tests (`LsvBatch2m3Tests.cs`)
+  and one in `SealedSessionTests`, 21 of 21 revert-checks caught; golden-out moved no game (with the three new cards out
+  — the companions were scripted already: out, they left every random deck), golden-in the random games only; the probe
+  at 150, none unfinished, each card used. **Not watched in the AI's turn**, and no companion is ever chosen in random
+  play: the {3} action has its test, not a game.
 
 ## Tasks
 
@@ -2902,7 +2930,7 @@ as his three priorities.
           Greaves — scripted, then taken out (2026-11-21): the search AI re-equips `Equip {0}` without end. The search
           is now offered a free ability once per permanent a turn; its three-line script and a kept test that the AI's
           turn ends
-  - [ ] MC-4.4m Multicolour (Shayne, 2026-11-22: after colourless) — 59 cards read card by card and tiered (Decisions,
+  - [x] MC-4.4m Multicolour (done 2026-11-22; Shayne, 2026-11-22: after colourless) — 59 cards read card by card and tiered (Decisions,
         "4.4m"): 20 tested pieces, 36 options, 3 cards on 3 new pieces and the companion rule; three batches — m1 + m2a,
         m2b + m2c, m3 (Shayne, 2026-11-22: reviewed; companions set at deck building time — Decisions, after "4.4m"):
     - [x] MC-4.4m1 (done 2026-11-22; Decisions, "4.4m1 + m2a") The tested pieces, 20 (list in Decisions) — script-only,
@@ -2915,7 +2943,7 @@ as his three priorities.
     - [x] MC-4.4m2c (done 2026-11-22) Options, permanents, copies and mana, 12: Fractured Identity, Superior Spider-Man, Saheeli, Oko,
           Figure of Fable, Figure of Destiny, Chaos Defiler, Cloak and Dagger, Atraxa, Vivi Ornitier, Squandered
           Resources, Loot
-    - [ ] MC-4.4m3 New pieces, 4: split cards (Life // Death), control of a spell (Invert Polarity), what an opponent
+    - [x] MC-4.4m3 (done 2026-11-22; Decisions, "4.4m3") New pieces, 4: split cards (Life // Death), control of a spell (Invert Polarity), what an opponent
           can't make you do (Tamiyo, Collector of Tales), companion — chosen at deck building time, its condition
           checked there, put into your hand for {3} (Lurrus, Lutri, Zirda) — chosen in an Arena export, the sealed
           builder and the table's deck screen; one failing its condition stays an ordinary sideboard card (Shayne)
@@ -2926,6 +2954,21 @@ as his three priorities.
       the change (Commands.md, "Golden replays").
 
 ## Next
+
+**Every card of the cube plays (2026-11-22): 528 of 528 — W 60/60, U 75/75, B 61/61, R 54/54, G 50/50, multicolour
+65/65, colourless 163/163** (Decisions, "4.4m3"); the first requirement is met. **What is next is Shayne's to say** — no
+batch is planned. Left in MC-4: the second requirement, the cube drafted as a card list rather than packs (LSV has no
+booster sheets: `Boosters.SealedPool("LSV", …)` and so `SealedSession.OpponentFor` throw "No LSV.boosters.json", which is
+also why the sealed screen's companion row and the deck select's companion never meet a cube pool yet); the LATER
+items (4.4g2b the AI's delve picks, g5b and g5c the Adventure in the AI and on the table, g10b Does Machines never
+levelling); and the AI lane's list below. From m3: a split card's halves `AdventureComponent { Split }`
+(`LsvCards.Split`), its cast `CastSpellAction.Face`; `GainControl { NewTargets }` on a spell, `CopySpell.ChooseNewTargets
+(…, onlyChanged)`; `CantSacrifice(filter) { ByOpponents, OrDiscard }` and `by` on `MagicState.Sacrifice` / `Discard`
+(`CanBeMadeToDiscard`); `CompanionComponent`, `NewGame(… companion1, companion2)`, `MagicRules.CompanionHolds`,
+`PutCompanionIntoHandAction`, `SealedDeck.Companion`, `SealedBuilder.CompanionFor` / `Companions`; tests in
+`LsvBatch2m3Tests.cs`. **For the AI lane at the merge, from m3:** none of the 6 was watched in the search's hands; no
+random game chooses a companion, so the search has never been offered the {3} action; `CanSacrifice` now reads a
+per-state list (every sacrifice candidate asked it).
 
 Red's tier 1 (4.4c), white's (4.4d), blue's tiers 1 and 2 (4.4e, 4.4f) and blue's tier 3's first five parts —
 protection (4.4g1, with g1b's copy fix), delve (4.4g2), dungeons and the initiative (4.4g3), face-down permanents
@@ -3008,7 +3051,7 @@ first**, then m2b + m2c, then m3 (a companion chosen in an Arena export, the sea
 one failing its condition stays in the sideboard — Shayne). Kolaghan's Command takes `EachWord` in m2a. **m1 + m2a is done** (Decisions, "4.4m1 + m2a"; 501 of 528 play — W 60/60,
 U 75/75, B 61/61, R 54/54, G 50/50, multicolour 38/65, colourless 163/163). **m2b + m2c is done, all 24** (Decisions,
 "4.4m2b + m2c"; 525 of 528 play — W 60/60, U 75/75, B 61/61, R 54/54, G 50/50, multicolour 62/65, colourless 163/163).
-**m3 is next and last: the four new pieces, 6 cards** — split cards (Life // Death), control of a spell (Invert
+**m3 is done (the paragraph at the top): it was the four new pieces, 6 cards** — split cards (Life // Death), control of a spell (Invert
 Polarity), what an opponent can't make you do (Tamiyo, Collector of Tales), and companion (Lurrus, Lutri and Zirda,
 already playing as main-deck cards) — plan in Decisions "4.4m" and the two entries after it (Shayne, 2026-11-22: a
 companion is chosen in an Arena export's Companion section, the sealed builder and the table's deck screen; one failing
@@ -3502,3 +3545,6 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-22: MC-4.4m2b + m2c done — multicolour's 12 combat and trigger options and 12 permanent, copy and mana
   options; 525 of 528 play, multicolour 62 of 65. Ninjutsu needed a return-to-hand cost on an activation; "once each
   turn" on a trigger became a count; exhaust is stamped per ability. Next: m3, the last four new pieces (6 cards).
+- 2026-11-22: MC-4.4m3 done — split cards, control of a spell, what an opponent can't make you do, and companion
+  (chosen as the deck is built, in an Arena export, the sealed builder and the table); 528 of 528 play — every card of
+  the cube. Next: Shayne's call (the cube drafted, the LATER items).

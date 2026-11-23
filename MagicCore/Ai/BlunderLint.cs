@@ -157,6 +157,8 @@ public static class BlunderLint
 			deck2,
 			side1 = [],
 			side2 = [];
+		string? companion1 = null,
+			companion2 = null;
 		if (set is null)
 		{
 			var decks = FraDecks.All.Keys.ToList();
@@ -176,6 +178,7 @@ public static class BlunderLint
 				SealedBuildMatch.Outside(a.Sideboard),
 				SealedBuildMatch.Outside(b.Sideboard)
 			);
+			(companion1, companion2) = (a.Companion, b.Companion);
 		}
 		var names = ("Player1", "Player2");
 		var s = MagicRules.NewGame(
@@ -184,9 +187,20 @@ public static class BlunderLint
 			seed,
 			names: names,
 			sideboard1: side1,
-			sideboard2: side2
+			sideboard2: side2,
+			companion1: companion1,
+			companion2: companion2
 		);
-		var record = GameRecord.New(seed, deck1, deck2, names, side1, side2);
+		var record = GameRecord.New(
+			seed,
+			deck1,
+			deck2,
+			names,
+			side1,
+			side2,
+			companion1,
+			companion2
+		);
 		var first = s.DecidingPlayerId();
 		var ais = new[] { first, s.OpponentOf(first) }.ToDictionary(
 			p => p,

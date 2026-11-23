@@ -451,8 +451,10 @@ public static class MagicState
 	/// ceremony: controller, summoning-sickness stamp, starting loyalty, entering tapped, the event.
 	/// </summary>
 	/// <summary>The ONE way to sacrifice: to its owner's graveyard — a creature so moved dies.</summary>
-	public static GameState Sacrifice(this GameState s, int cardId) =>
-		!s.CanSacrifice(cardId)
+	/// <param name="by">Who caused it: the controller of the spell or ability whose effect sacrifices; 0 for a cost or
+	/// a rule (Tamiyo, Collector of Tales stops an opponent's — CantSacrifice.ByOpponents).</param>
+	public static GameState Sacrifice(this GameState s, int cardId, int by = 0) =>
+		!s.CanSacrifice(cardId, by)
 			? s
 			: s.MoveCard(
 				cardId,
@@ -460,12 +462,57 @@ public static class MagicState
 				sacrificed: true
 			);
 
-	/// <summary>Quark, Humble Proprietor: "You can't sacrifice Treasure tokens." — every sacrifice asks: costs, choices, Treasure's own mana.</summary>
-	public static bool CanSacrifice(this GameState s, int cardId) =>
-		s.GetCard(cardId) is not { IsToken: true } card
-		|| !card.Subtypes.Contains("Treasure")
-		|| !s.CardsIn(card.ControllerId, ZoneType.Battlefield)
-			.Any(s.HasAbility<CantSacrificeTreasures>);
+	/// <summary>
+	/// "Can't sacrifice" (CantSacrifice: Quark's Treasures, Tamiyo's "spells and abilities your opponents control can't
+	/// cause you to … sacrifice permanents") — every sacrifice asks: costs, choices, Treasure's own mana.
+	/// </summary>
+	/// <param name="by">Who causes it (Sacrifice's): 0 for a cost or a rule.</param>
+	public static bool CanSacrifice(this GameState s, int cardId, int by = 0)
+	{
+		var card = s.GetCard(cardId);
+		foreach (var (holder, rule) in CantSacrificeRules(s))
+			if (
+				holder.ControllerId == card.ControllerId
+				&& rule.Stops(card.ControllerId, by)
+				&& rule.What.Matches(s, card, new(holder.ControllerId, holder.Id))
+			)
+				return false;
+		return true;
+	}
+
+	[ThreadStatic]
+	static GameState? cantSacrificeOf;
+
+	[ThreadStatic]
+	static List<(Card Holder, CantSacrifice Rule)>? cantSacrifice;
+
+	/// <summary>
+	/// Every "can't sacrifice" on the battlefield, listed once per state (ManaAbilities.Grants' pattern): every sacrifice
+	/// candidate asks, at every search node, and a scan per candidate is the battlefield squared. ponytail: holds each
+	/// thread's last state alive until it asks again; a ConditionalWeakTable if that matters.
+	/// </summary>
+	static List<(Card Holder, CantSacrifice Rule)> CantSacrificeRules(GameState s)
+	{
+		if (ReferenceEquals(cantSacrificeOf, s) && cantSacrifice is not null)
+			return cantSacrifice;
+		var found = new List<(Card, CantSacrifice)>();
+		foreach (var player in (int[])[s.Player1Id(), s.Player2Id()])
+		foreach (var holder in s.CardsIn(player, ZoneType.Battlefield))
+		foreach (var rule in s.AbilitiesOf<CantSacrifice>(holder))
+			found.Add((holder, rule));
+		(cantSacrificeOf, cantSacrifice) = (s, found);
+		return found;
+	}
+
+	/// <summary>Tamiyo, Collector of Tales: "Spells and abilities your opponents control can't cause you to discard cards."</summary>
+	/// <param name="by">Who causes it: the controller of the spell or ability; 0 for a cost or a rule (the cleanup).</param>
+	public static bool CanBeMadeToDiscard(this GameState s, int playerId, int by) =>
+		by == 0
+		|| by == playerId
+		|| !CantSacrificeRules(s)
+			.Any(r =>
+				r.Holder.ControllerId == playerId && r.Rule.OrDiscard && r.Rule.Stops(playerId, by)
+			);
 
 	/// <summary>How many lands this player may play this turn: one, Way of the Paradox's extra ones, and one more per Captain Janeway (AdditionalLandEachTurn).</summary>
 	public static int LandDrops(this GameState s, int playerId)
@@ -953,9 +1000,16 @@ public static class MagicState
 	/// for two; "discards one or more cards" is Trigger.OneOrMore). MtgCore's lesson: a discard paid as a cost once
 	/// fired no discard trigger.
 	/// </summary>
-	public static GameState Discard(this GameState s, int playerId, IReadOnlyList<int> cardIds)
+	/// <param name="by">Who causes it: the controller of the spell or ability whose effect discards; 0 for a cost or a
+	/// rule — Tamiyo, Collector of Tales stops an opponent's (CanBeMadeToDiscard).</param>
+	public static GameState Discard(
+		this GameState s,
+		int playerId,
+		IReadOnlyList<int> cardIds,
+		int by = 0
+	)
 	{
-		if (cardIds.Count == 0)
+		if (cardIds.Count == 0 || !s.CanBeMadeToDiscard(playerId, by))
 			return s;
 		foreach (var id in cardIds)
 			s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Graveyard))

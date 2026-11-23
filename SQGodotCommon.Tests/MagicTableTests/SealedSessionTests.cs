@@ -23,6 +23,22 @@ public class SealedSessionTests
 		Assert.That(SealedSession.OpponentFor(3).Main, Has.Count.EqualTo(SealedBuilder.DeckSize));
 	}
 
+	/// <summary>MC-4.4m3: a companion chosen on this screen goes to the table while it is in the sideboard; one moved into the deck is no companion.</summary>
+	[Test]
+	public void ACompanionChosen_IsTheGamesCompanion_WhileItIsInTheSideboard()
+	{
+		const string lurrus = "Lurrus of the Dream-Den";
+		var s = new SealedSession([lurrus, "Invert Polarity"], set: "LSV");
+		Assert.That(s.Companions, Is.EqualTo(new[] { lurrus }));
+		s.Add("Invert Polarity");
+		Assert.That(s.CompanionMet(lurrus), Is.True, "no permanent card above mana value 2");
+		s.Companion = lurrus;
+		var rival = new SealedDeck([], ["Invert Polarity"], []); // LSV has no booster sheets: no opponent of its own
+		Assert.That(s.ToSetup(false, 1, rival).MyCompanion, Is.EqualTo(lurrus));
+		s.Add(lurrus);
+		Assert.That(s.ToSetup(false, 1, rival).MyCompanion, Is.Null, "in the deck");
+	}
+
 	[Test]
 	public void EachGame_FacesAFreshOpponent()
 	{

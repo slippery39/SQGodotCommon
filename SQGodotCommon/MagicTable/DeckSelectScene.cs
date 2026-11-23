@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using MagicCore;
 using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Sets;
@@ -25,6 +26,11 @@ public sealed record TableSetup(
 	public IReadOnlyList<CardDefinition> MySideboard { get; init; } = [];
 
 	public IReadOnlyList<CardDefinition> TheirSideboard { get; init; } = [];
+
+	/// <summary>Each seat's companion (Lurrus, Lutri, Zirda — MagicRules.NewGame's), by name; null: none.</summary>
+	public string? MyCompanion { get; init; }
+
+	public string? TheirCompanion { get; init; }
 
 	/// <summary>A recorded game to resume (TBL-5.7): the table makes its moves again, once.</summary>
 	public GameRecord? Resume { get; init; }
@@ -163,7 +169,12 @@ public partial class DeckSelectScene : Control
 			int.TryParse(_seed.Text.Trim(), out var seed) ? seed : null,
 			_aiVsAi.ButtonPressed,
 			_search.ButtonPressed
-		);
+		)
+		{
+			// a pasted export's Companion section — put outside the game by NewGame
+			MyCompanion = _mine.Companion,
+			TheirCompanion = _theirs.Companion,
+		};
 		Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");
 	}
 
@@ -204,6 +215,8 @@ public partial class DeckSelectScene : Control
 			{
 				MySideboard = [.. record.Sideboard1.Select(CardRegistry.Get)],
 				TheirSideboard = [.. record.Sideboard2.Select(CardRegistry.Get)],
+				MyCompanion = record.Companion1,
+				TheirCompanion = record.Companion2,
 				Resume = record,
 			};
 			Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");
@@ -267,6 +280,9 @@ public partial class DeckSelectScene : Control
 		/// <summary>The chosen deck; null while a paste doesn't read.</summary>
 		public IReadOnlyList<CardDefinition>? Deck { get; private set; }
 
+		/// <summary>A pasted export's companion; null for a built-in deck.</summary>
+		public string? Companion { get; private set; }
+
 		public Control Build()
 		{
 			var column = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -307,14 +323,23 @@ public partial class DeckSelectScene : Control
 			if (_choice != Paste)
 			{
 				Deck = FraDecks.All[_choice];
+				Companion = null;
 				_report.Text = $"{Deck.Count} cards";
 			}
 			else
 			{
 				var result = ArenaDeck.Parse(_paste.Text);
 				Deck = result.Ok ? result.Deck : null;
+				Companion = result.Ok ? result.Companion : null;
 				_report.Text = result.Ok
 					? $"{result.Deck.Count} cards read"
+						+ (
+							result.Companion is { } c
+								? MagicRules.CompanionHolds(c, result.Deck)
+									? $", companion {c}"
+									: $", companion {c} (its condition isn't met: an ordinary sideboard card)"
+								: ""
+						)
 					: string.Join("\n", result.Problems);
 			}
 			Changed?.Invoke();

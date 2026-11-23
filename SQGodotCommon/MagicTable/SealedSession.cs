@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using MagicCore;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Limited;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
@@ -238,12 +240,26 @@ public sealed class SealedSession
 				: ""
 		);
 
+	/// <summary>
+	/// Your companion (MC-4.4m3: chosen on this screen, Shayne 2026-11-22) — a card in the sideboard; a suggestion sets
+	/// its own (SealedBuilder.CompanionFor). Null: none. One whose condition the deck fails stays an ordinary sideboard card.
+	/// </summary>
+	public string? Companion { get; set; }
+
+	/// <summary>The companions you could choose: each card in the sideboard with a companion condition, once.</summary>
+	public IReadOnlyList<string> Companions => [.. SealedBuilder.Companions(Sideboard)];
+
+	/// <summary>Does the deck as it stands meet this companion's condition.</summary>
+	public bool CompanionMet(string companion) =>
+		MagicRules.CompanionHolds(companion, [.. Deck.Select(n => CardRegistry.Get(n))]); // a rule: any printing
+
 	/// <summary>Replaces the deck with one of <see cref="Suggestions"/> — the builder the opponents use too.</summary>
 	public SealedDeck Suggest(int which = 0)
 	{
 		var built = Suggestions[which];
 		Clear();
 		SuggestedIndex = which;
+		Companion = built.Companion;
 		foreach (var card in built.Main)
 		{
 			var basic = BasicNames.ToList().IndexOf(card);
@@ -278,6 +294,9 @@ public sealed class SealedSession
 			[
 				.. opponent.Sideboard.Where(Playable).Select(n => CardRegistry.Get(n, Set)),
 			],
+			// still in the sideboard: a companion moved into the deck is no companion
+			MyCompanion = Companion is { } c && Sideboard.Contains(c) ? c : null,
+			TheirCompanion = opponent.Companion,
 		};
 	}
 

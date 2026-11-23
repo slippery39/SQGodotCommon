@@ -72,13 +72,19 @@ whose subsystem it lives in.
   same creature is still prepared, and casting it unprepares the creature. A copy anywhere but the
   stack ceases to exist, unless it is a live prepared copy in exile (state-based, CR 704.5e).
 - **Adventures** (CR 715; Brazen Borrower // Petty Theft, MC-4.4g5) are `AdventureComponent(Face, Text)` (the second
-  face, `LsvCards.Adventure`) and `CastSpellAction.Adventure` — every cast of the card offered again as the Adventure
+  face, `LsvCards.Adventure`) and `CastSpellAction.Face` = 1 — every cast of the card offered again as the Adventure
   (`|a` in `MoveKey`), from anywhere but exile. The card BECOMES the Adventure for the cast, a copy stamp as face-down's
   (`Card.AsAdventure` → `CastAsAdventure(Original)`, status): the action validates and casts the stamped card as any
   other, so cost, timing, targets and "noncreature spell" all read Petty Theft; `PutOnStack` re-stamps it after the
   move (whose `Fresh` undoes it — `WithoutAdventure`). Resolved, `FinishSpellAction` exiles it with its caster's
   `PlayableFromExile { CastOnly }` (forever): the creature castable from there; fizzled (`Resolved = false`) or
   countered, it goes to the graveyard as the creature.
+  **Split cards** (CR 709; Life // Death, MC-4.4m3) are the same cast for EITHER half: `CastSpellAction.Face` (it was the
+  bool `Adventure`) numbers the card's `AdventureComponent`s — an adventurer's one is 1, a split card's halves 1 and 2
+  (`LsvCards.Split(card, half, …)`: `{ Split }`) — `|a` / `|a2` in `MoveKey`. A split card is never cast whole (`Face`
+  0 is refused); off the stack it has both halves' costs and types (`CardFactory`: mana value 3), on the stack the half's
+  (`CastAsAdventure { Face, Split }`, re-stamped by its face in `PutOnStack`); resolved it goes to the graveyard, and a
+  half may be cast from exile. A front end shows the card, not the half (DesignNotes).
 - **Abilities from the hand or graveyard** (landcycling, "exile this from your graveyard:") are
   `ActivatedAbilityComponent.From`; card costs (discard this / a card, exile this / another card)
   are chosen like a sacrifice, one legal action each. A finality counter exiles a creature instead
@@ -471,3 +477,7 @@ whose subsystem it lives in.
     it — never `LoyaltyActivatedOnTurn == turn`). A die row's "[+2]" is `PutCounters(Ref.Source, 2) { Kind = Loyalty }`.
   - **Exhaust is stamped per ability** (Loot, the Pathfinder has three): `Card.ExhaustUsed` is a bit per activated
     ability (its index) and `ManaAbilityComponent.ManaAbilityBit` for a mana ability's.
+- **"Gain control of that spell and you may choose new targets for it"** (Invert Polarity, MC-4.4m3) is `GainControl
+  { NewTargets }` on a spell: `GainControl` reaches a card on the stack — its controller set (no zone change, the stack
+  is shared), so it resolves as theirs — and its targets are chosen again by its new controller as a copy's are
+  (`CopySpell.ChooseNewTargets`, the one retargeting; a word with no new choice keeps its target).

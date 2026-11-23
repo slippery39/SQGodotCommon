@@ -19,11 +19,12 @@ public static class Describe
 				$"Play {(p.BackFace ? s.GetCard(p.CardId).ModalBackFace()?.Name : null) ?? Name(s, p.CardId)}"
 					+ (s.IsIn(p.CardId, p.PlayerId, ZoneType.Exile) ? " from exile" : ""),
 			CastSpellAction c => (
-				c.Adventure
+				c.Face > 0
 				&& s.HasObject(c.CardId)
 				&& s.GetObject(c.CardId) is Card { } adventurer
-				&& adventurer.GetComponent<AdventureComponent>() is { } adventure
-					? $"Cast {adventure.Face.Name} (Adventure)"
+				&& adventurer.GetComponents<AdventureComponent>().ElementAtOrDefault(c.Face - 1)
+					is { } adventure
+					? $"Cast {adventure.Face.Name}{(adventure.Split ? "" : " (Adventure)")}"
 					: $"Cast {Name(s, c.CardId)}"
 			)
 				+ (
@@ -100,6 +101,8 @@ public static class Describe
 			TapForManaAction { PaysItsCost: true } t =>
 				$"Pay for and {CashedInBy(s, t.CardId)} {Name(s, t.CardId)} for {t.Color}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
+			PutCompanionIntoHandAction p =>
+				$"Put {Name(s, p.CardId)} into your hand (companion, {{3}})",
 			TurnFaceUpAction f => TurnFaceUpAction.CardOf(s, f.PlayerId, f.CardId) is { } card
 				? $"Turn face up: {card.Name} ({card.ManaCost})"
 				: "Turn face up",

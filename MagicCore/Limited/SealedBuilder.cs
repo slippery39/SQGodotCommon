@@ -9,13 +9,15 @@ namespace MagicCore.Limited;
 /// <param name="Kind">How greedy it is: <see cref="SealedBuilder.TwoColours"/>, <see cref="SealedBuilder.Splashing"/> or <see cref="SealedBuilder.Greedy"/> (LIM-3).</param>
 /// <param name="Detail">What it splashes, for a reader ("Splash Black: Lich's Relic"); null for two colours.</param>
 /// <param name="Splash">The colours it only splashes (not its mains or a real extra colour).</param>
+/// <param name="Companion">Its companion, a sideboard card (MagicRules.NewGame's; SealedBuilder.CompanionFor); null: none.</param>
 public sealed record SealedDeck(
 	IReadOnlyList<ManaColor> Colors,
 	IReadOnlyList<string> Main,
 	IReadOnlyList<string> Sideboard,
 	string Kind = SealedBuilder.TwoColours,
 	string? Detail = null,
-	IReadOnlyList<ManaColor>? Splash = null
+	IReadOnlyList<ManaColor>? Splash = null,
+	string? Companion = null
 )
 {
 	public string Label => Detail ?? Kind;
@@ -436,7 +438,15 @@ public static class SealedBuilder
 						)
 					);
 		return new Built(
-			new SealedDeck(colors, main, sideboard, kind, detail, splashes),
+			new SealedDeck(
+				colors,
+				main,
+				sideboard,
+				kind,
+				detail,
+				splashes,
+				CompanionFor(main, sideboard, colors, ratings)
+			),
 			chosen.Sum(n => ratings[n])
 		);
 	}
@@ -618,7 +628,44 @@ public static class SealedBuilder
 		var sideboard = pool.ToList();
 		foreach (var card in chosen.Concat(duals))
 			sideboard.Remove(card);
-		return new SealedDeck(colors, main, sideboard);
+		return new SealedDeck(
+			colors,
+			main,
+			sideboard,
+			Companion: CompanionFor(main, sideboard, colors, ratings)
+		);
+	}
+
+	/// <summary>The companions among these cards (Lurrus, Lutri, Zirda): each playable card with a companion condition, once.</summary>
+	public static IEnumerable<string> Companions(IEnumerable<string> cards) =>
+		cards
+			.Distinct()
+			.Where(n =>
+				CardRegistry.IsImplemented(n)
+				&& CardRegistry.Get(n).Components.Any(c => c is CompanionComponent)
+			);
+
+	/// <summary>
+	/// A build's companion (MC-4.4m3; Shayne, 2026-11-22: chosen by the builder, the AI's own deck too) — the best-rated
+	/// card in its sideboard castable in its colours whose companion condition its main deck meets
+	/// (MagicRules.CompanionHolds); null if none.
+	/// </summary>
+	public static string? CompanionFor(
+		IReadOnlyList<string> main,
+		IEnumerable<string> sideboard,
+		IReadOnlyCollection<ManaColor> colors,
+		IReadOnlyDictionary<string, double> ratings
+	)
+	{
+		var candidates = Companions(sideboard)
+			.Where(n => Castable(FrontCost(CardRegistry.Get(n).Data), colors))
+			.OrderByDescending(n => ratings.GetValueOrDefault(n))
+			.ThenBy(n => n, StringComparer.Ordinal)
+			.ToList();
+		if (candidates.Count == 0)
+			return null;
+		var deck = main.Select(n => CardRegistry.Get(n)).ToList();
+		return candidates.FirstOrDefault(n => MagicRules.CompanionHolds(n, deck));
 	}
 
 	/// <summary>A pair's best <see cref="Spells"/> castable spells. An unscripted card would play silently vanilla (MagicCore/CLAUDE.md), so it is never played.</summary>

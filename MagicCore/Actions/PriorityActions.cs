@@ -182,6 +182,43 @@ public record TurnFaceUpAction : GameAction
 }
 
 /// <summary>
+/// Companion (CR 702.139c; Lurrus, Lutri, Zirda): "you may put it into your hand from outside the game for {3} as a
+/// sorcery" — a special action (CR 116.2g): no stack, the {3} paid, the card from the sideboard into the hand (MoveCard
+/// makes it known to everyone). Offered for the chosen companion only (ChosenCompanion: its condition met), so once.
+/// </summary>
+public record PutCompanionIntoHandAction : GameAction
+{
+	public int PlayerId { get; init; }
+	public int CardId { get; init; }
+
+	static readonly ManaCost Cost = ManaCost.Parse("{3}");
+
+	public override ValidationResult ValidateAdd(GameState s)
+	{
+		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
+			return noPriority;
+		if (
+			!s.HasObject(CardId)
+			|| !s.IsIn(CardId, PlayerId, ZoneType.Sideboard)
+			|| !s.GetCard(CardId).HasComponent<ChosenCompanion>()
+		)
+			return ValidationResult.Invalid("Not your chosen companion");
+		if (!Priority.AtSorcerySpeed(s, PlayerId))
+			return ValidationResult.Invalid("Only as a sorcery");
+		return ManaPayment.Find(s, PlayerId, Cost, 0) is null
+			? ValidationResult.Invalid("Can't pay {3}")
+			: ValidationResult.Valid;
+	}
+
+	public override ActionResult Execute(GameState s)
+	{
+		s = ManaPayment.Pay(s, PlayerId, ManaPayment.Find(s, PlayerId, Cost, 0)!);
+		s = s.MoveCard(CardId, s.ZoneId(PlayerId, ZoneType.Hand));
+		return new ActionResult(Priority.Retain(s, PlayerId));
+	}
+}
+
+/// <summary>
 /// Activates a land's mana ability. Only basic land types' intrinsic abilities so far (CR 305.6);
 /// nonbasic lands get hand-written abilities with their cards.
 ///

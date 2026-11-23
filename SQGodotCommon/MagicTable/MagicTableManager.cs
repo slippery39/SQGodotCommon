@@ -91,18 +91,23 @@ public sealed class MagicTableManager
 		bool aiVsAi = false,
 		bool search = false,
 		IReadOnlyList<CardDefinition>? sideboard1 = null,
-		IReadOnlyList<CardDefinition>? sideboard2 = null
+		IReadOnlyList<CardDefinition>? sideboard2 = null,
+		string? companion1 = null,
+		string? companion2 = null
 	)
 	{
 		(_deck1, _deck2, Seed, AiVsAi, Search) = (deck1, deck2, seed, aiVsAi, search);
 		(_sideboard1, _sideboard2) = (sideboard1 ?? [], sideboard2 ?? []);
+		(_companion1, _companion2) = (companion1, companion2);
 		State = MagicRules.NewGame(
 			deck1,
 			deck2,
 			seed,
 			names: aiVsAi ? ("AI 1", "AI 2") : ("You", "AI"),
 			sideboard1: _sideboard1,
-			sideboard2: _sideboard2
+			sideboard2: _sideboard2,
+			companion1: companion1,
+			companion2: companion2
 		);
 		(HumanId, OpponentId) = (State.Player1Id(), State.Player2Id());
 		var ai = search ? nameof(BeamSearchAi) : nameof(GreedyAi);
@@ -112,7 +117,9 @@ public sealed class MagicTableManager
 			deck2,
 			aiVsAi ? ("AI 1", "AI 2") : ("You", "AI"),
 			_sideboard1,
-			_sideboard2
+			_sideboard2,
+			companion1,
+			companion2
 		) with
 		{
 			About = ImmutableDictionary<string, string>
@@ -149,7 +156,9 @@ public sealed class MagicTableManager
 			aiVsAi: record.About.GetValueOrDefault("Player1") != "human",
 			search,
 			[.. record.Sideboard1.Select(MagicCore.Sets.CardRegistry.Get)],
-			[.. record.Sideboard2.Select(MagicCore.Sets.CardRegistry.Get)]
+			[.. record.Sideboard2.Select(MagicCore.Sets.CardRegistry.Get)],
+			record.Companion1,
+			record.Companion2
 		)
 		{
 			RecordTo = recordTo,
@@ -211,13 +220,25 @@ public sealed class MagicTableManager
 
 	/// <summary>The same game again: same decks, same seed, so the same shuffles.</summary>
 	public MagicTableManager Replay() =>
-		new(_deck1, _deck2, Seed, AiVsAi, Search, _sideboard1, _sideboard2)
+		new(
+			_deck1,
+			_deck2,
+			Seed,
+			AiVsAi,
+			Search,
+			_sideboard1,
+			_sideboard2,
+			_companion1,
+			_companion2
+		)
 		{
 			RecordTo = RecordTo,
 			Stops = Stops,
 			FullSearch = FullSearch,
 		};
 
+	private readonly string? _companion1;
+	private readonly string? _companion2;
 	private readonly IReadOnlyList<CardDefinition> _sideboard1;
 
 	/// <summary>

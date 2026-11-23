@@ -316,7 +316,9 @@ public partial class MagicTableScene : Control
 			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai") || setup?.AiVsAi == true,
 			UseSearch,
 			decks is null ? setup?.MySideboard : decks[0].Sideboard,
-			decks is null ? setup?.TheirSideboard : decks[1].Sideboard
+			decks is null ? setup?.TheirSideboard : decks[1].Sideboard,
+			decks is null ? setup?.MyCompanion : decks[0].Companion,
+			decks is null ? setup?.TheirCompanion : decks[1].Companion
 		)
 		{
 			RecordTo = RecordsDir,

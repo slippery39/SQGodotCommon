@@ -393,6 +393,7 @@ public record Card : GameObject
 				or Effects.ClassLevel
 				or Effects.ChosenName
 				or Effects.ChosenPlayer
+				or Effects.ChosenCompanion
 				or CopyUntilEndOfTurn
 				or EnteredAsCopy
 				or FaceDown
@@ -528,8 +529,9 @@ public record Card : GameObject
 	/// copy's, the card it is kept on <see cref="CastAsAdventure"/>, as a face-down card's (TurnedFaceDown). Anywhere
 	/// else it is the creature: leaving the stack undoes it (Fresh, WithoutAdventure).
 	/// </summary>
-	public Card AsAdventure() =>
-		GetComponent<Effects.AdventureComponent>() is { } adventure
+	/// <param name="face">Which: an adventurer's one Adventure is 1; a split card's halves are 1 and 2 (Life // Death).</param>
+	public Card AsAdventure(int face = 1) =>
+		GetComponents<Effects.AdventureComponent>().ElementAtOrDefault(face - 1) is { } adventure
 			? (Card)
 				(
 					WithCopiableValuesOf(
@@ -541,7 +543,7 @@ public record Card : GameObject
 					{
 						Set = Set,
 					}
-				).WithComponent(new CastAsAdventure(this))
+				).WithComponent(new CastAsAdventure(this) { Face = face, Split = adventure.Split })
 			: this;
 
 	/// <summary>
@@ -757,7 +759,14 @@ public record FaceDown(Card Original) : GameComponent;
 /// Petty Theft, "Return target nonland permanent an opponent controls to its owner's hand." Status: a copy of Petty
 /// Theft is no adventurer card, and leaving the stack makes it the creature again.
 /// </summary>
-public record CastAsAdventure(Card Original) : GameComponent;
+public record CastAsAdventure(Card Original) : GameComponent
+{
+	/// <summary>Which face it was cast as (CastSpellAction.Face) — re-stamped by that number once it is on the stack.</summary>
+	public int Face { get; init; } = 1;
+
+	/// <summary>Life // Death: a split card's half (CR 709) — resolved, it goes to the graveyard, never on an adventure.</summary>
+	public bool Split { get; init; }
+}
 
 /// <summary>
 /// Reflection of Kiki-Jiki: a double-faced card with its back face up (Card.Transform) — the card as its front was,
@@ -799,9 +808,18 @@ public static class CardFactory
 	public static Card Create(CardDefinition definition, int ownerId)
 	{
 		var data = definition.Data;
+		// Life // Death: off the stack a split card has both halves' characteristics (CR 709.4) — both costs (mana
+		// value 3), both types; on the stack it is the half cast (Card.AsAdventure).
+		var halves = data.Layout == "split" ? data.CardFaces : null;
 		// A multi-face card (FRA's "prepare") is its front face everywhere but the stack.
-		var front = data.CardFaces?[0];
-		var (types, supertypes, subtypes) = ParseTypeLine(front?.TypeLine ?? data.TypeLine);
+		var front = halves is null ? data.CardFaces?[0] : null;
+		var (types, supertypes, subtypes) = halves is null
+			? ParseTypeLine(front?.TypeLine ?? data.TypeLine)
+			: halves
+				.Select(h => ParseTypeLine(h.TypeLine))
+				.Aggregate(
+					(a, b) => (a.Item1 | b.Item1, a.Item2 | b.Item2, [.. a.Item3.Union(b.Item3)])
+				);
 		return new Card
 		{
 			Name = data.Name,
@@ -811,7 +829,11 @@ public static class CardFactory
 			Types = types,
 			Supertypes = supertypes,
 			Subtypes = subtypes,
-			ManaCost = ManaCost.Parse(front?.ManaCost ?? data.ManaCost),
+			ManaCost = ManaCost.Parse(
+				halves is null
+					? front?.ManaCost ?? data.ManaCost
+					: string.Concat(halves.Select(h => h.ManaCost))
+			),
 			BasePower = ParsePowerToughness(front?.Power ?? data.Power),
 			BaseToughness = ParsePowerToughness(front?.Toughness ?? data.Toughness),
 			PrintedLoyalty = ParsePowerToughness(front?.Loyalty ?? data.Loyalty),

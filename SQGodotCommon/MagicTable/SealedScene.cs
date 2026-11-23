@@ -515,6 +515,20 @@ public partial class SealedScene : Control
 			_suggestRow.AddChild(button);
 		}
 		_suggestRow.AddChild(Choice("Clear", () => Act(S.Clear)));
+		// Lurrus, Lutri, Zirda (MC-4.4m3): the companion is chosen here — a click picks it, again drops it
+		foreach (var companion in S.Companions)
+		{
+			var met = S.CompanionMet(companion);
+			var button = Choice(
+				$"Companion: {companion}{(met ? "" : " (not met)")}",
+				() => Act(() => S.Companion = S.Companion == companion ? null : companion)
+			);
+			button.TooltipText = met
+				? "Outside the game, into your hand for {3} as a sorcery"
+				: "Its condition isn't met by this deck: an ordinary sideboard card";
+			MtgUiStyles.StyleChoice(button, selected: S.Companion == companion);
+			_suggestRow.AddChild(button);
+		}
 		CardViews.Clear(_pairRow);
 		for (var i = 0; i < S.ClosePairs.Count; i++)
 		{

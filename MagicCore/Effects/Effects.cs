@@ -597,26 +597,44 @@ public record CopySpell(Ref What) : Effect
 			);
 			s = s.MoveObjectToFront(copy.Id, stack) // index 0 is the top
 				.Raise(new SpellCopiedEvent(copy.Id, Controller));
-			var onStack = copy.GetComponent<OnStackComponent>()!;
-			var specs = StackResolution
-				.TextOf(copy, onStack.Modes, onStack.Kicked, onStack.X, onStack.AlternativeCost)
-				.Specs;
-			if (specs.IsEmpty)
-				continue;
-			s = s.SpawnAction(
+			s = ChooseNewTargets(s, copy.Id, Controller);
+		}
+		return new(s);
+	}
+
+	/// <summary>
+	/// "You may choose new targets for [it]" (CR 115.7) — a copy's (CopySpell), a stolen spell's (Invert Polarity:
+	/// GainControl.NewTargets): each target word chosen by <paramref name="chooser"/>, the spell's own target among the
+	/// options; a word with no new choice keeps it (SetCopyTargetsAction).
+	/// </summary>
+	/// <param name="onlyChanged">A spell that was already on the stack: only a target that CHANGED becomes the target
+	/// (ward triggers on it); a copy is a new object, every target of it newly targeted.</param>
+	public static GameState ChooseNewTargets(
+		GameState s,
+		int spellId,
+		int chooser,
+		bool onlyChanged = false
+	)
+	{
+		var spell = s.GetCard(spellId);
+		var onStack = spell.GetComponent<OnStackComponent>()!;
+		var specs = StackResolution
+			.TextOf(spell, onStack.Modes, onStack.Kicked, onStack.X, onStack.AlternativeCost)
+			.Specs;
+		return specs.IsEmpty
+			? s
+			: s.SpawnAction(
 				new PipelineAction
 				{
 					Steps =
 					[
 						.. specs.Select(
-							(spec, i) => new ChooseTargetChoice(Controller, copy.Id, spec, i)
+							(spec, i) => new ChooseTargetChoice(chooser, spellId, spec, i)
 						),
-						new SetCopyTargetsAction(copy.Id),
+						new SetCopyTargetsAction(spellId) { OnlyChanged = onlyChanged },
 					],
 				}
 			);
-		}
-		return new(s);
 	}
 }
 
@@ -626,6 +644,9 @@ public record CopySpell(Ref What) : Effect
 /// </summary>
 public record SetCopyTargetsAction(int CopyId) : GameAction
 {
+	/// <summary>Invert Polarity's stolen spell: only a target that changed "becomes the target" (CR 115.7) — a kept one already was.</summary>
+	public bool OnlyChanged { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		if (!s.HasObject(CopyId))
@@ -639,7 +660,10 @@ public record SetCopyTargetsAction(int CopyId) : GameAction
 		];
 		// Replace, never add: GetComponent reads the first.
 		s = s.UpdateObject(CopyId, copy.WithComponentReplaced(onStack with { Targets = targets }));
-		return new(Turns.Triggers.RaiseTargeted(s, targets, copy.ControllerId, CopyId));
+		ImmutableArray<int> newly = OnlyChanged
+			? [.. targets.Where((id, i) => id != onStack.Targets[i])]
+			: targets;
+		return new(Turns.Triggers.RaiseTargeted(s, newly, copy.ControllerId, CopyId));
 	}
 }
 

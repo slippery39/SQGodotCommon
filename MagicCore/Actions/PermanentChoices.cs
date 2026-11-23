@@ -176,7 +176,13 @@ public record ChoosePermanentChoice : ChoiceAction
 					.Select(o => o.Id)
 				: Filter.Among(s, PlayerId, ZoneType.Battlefield, SourceId)
 		)
-			.Where(id => !Sacrifice || s.CanSacrifice(id))
+			.Where(id =>
+				!Sacrifice
+				|| s.CanSacrifice(
+					id,
+					context.GetValueOrDefault(Effects.ContextKeys.Controller) is int by ? by : 0
+				)
+			)
 			.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name })
 			.ToImmutableList();
 
@@ -286,7 +292,7 @@ public record SacrificeChosenAction : GameAction
 		{
 			if (s.IsOnBattlefield(id))
 				were.Add(s.GetCard(id));
-			s = s.Sacrifice(id);
+			s = s.Sacrifice(id, GetInput<int>(ContextKeys.Controller));
 		}
 		return new ActionResult(s).WithOutput(ContextKeys.ThisWayAsTheyWere, were.ToImmutable());
 	}

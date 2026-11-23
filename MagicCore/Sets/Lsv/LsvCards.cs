@@ -5540,7 +5540,7 @@ public static class LsvCards
 			],
 			["Lurrus of the Dream-Den"] =
 			[
-				// Companion is MC-4.4m3; this is its main-deck text.
+				new CompanionComponent(Is.Type(PermanentTypes)) { Each = Is.ManaValueAtMost(2) },
 				new MayPlayFromZone(
 					ZoneType.Graveyard,
 					Is.Type(NonlandPermanentTypes) & !Is.Land & Is.ManaValueAtMost(2)
@@ -5560,7 +5560,7 @@ public static class LsvCards
 			],
 			["Lutri, the Spellchaser"] =
 			[
-				// Companion is MC-4.4m3; this is its main-deck text.
+				new CompanionComponent(!Is.Land) { DifferentNames = true },
 				When(
 					TriggerEvent.SelfEnters,
 					[TargetSpec.Spell((Is.Instant | Is.Sorcery) & Is.Yours)],
@@ -5784,7 +5784,10 @@ public static class LsvCards
 			],
 			["Zirda, the Dawnwaker"] =
 			[
-				// Companion is MC-4.4m3; this is its main-deck text.
+				new CompanionComponent(Is.Type(PermanentTypes))
+				{
+					Each = Is.WithAnActivatedAbility,
+				},
 				new CostChange(-2, Is.AnyCard) { Abilities = true, Floor = 1 },
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}"),
@@ -6354,6 +6357,61 @@ public static class LsvCards
 					Targets = [TargetSpec.AnyTarget()],
 					Exhaust = true,
 				},
+			],
+			// ===== MC-4.4m3: multicolour's new pieces (split cards: CastSpellAction.Face; control of a spell:
+			// GainControl { NewTargets }; what an opponent can't make you do: CantSacrifice { ByOpponents, OrDiscard };
+			// companion: CompanionComponent, NewGame's companion, PutCompanionIntoHandAction) =====
+			["Life // Death"] =
+			[
+				Split(
+					"Life // Death",
+					0,
+					[],
+					new ModifyUntilEndOfTurn(Ref.LandsYouControl, 0, 0)
+					{
+						AlsoType = CardType.Creature,
+						SetBase = (1, 1),
+					}
+				),
+				Split(
+					"Life // Death",
+					1,
+					[TargetSpec.InYourGraveyard(Is.Creature)],
+					// the loss first: once returned it is a new object, and an illegal target makes the spell do nothing
+					new LoseLife(Ref.You, Count.GreatestManaValueOf(Ref.Target())),
+					new MoveTo(Ref.Target(), ZoneType.Battlefield) { From = [ZoneType.Graveyard] }
+				),
+			],
+			["Invert Polarity"] =
+			[
+				Spell(
+					[TargetSpec.Spell()],
+					new FlipACoin([new Counter(Ref.Target())])
+					{
+						IfWon = [new GainControl(Ref.Target(), Ref.You) { NewTargets = true }],
+					}
+				),
+			],
+			["Tamiyo, Collector of Tales"] =
+			[
+				new CantSacrifice(Is.AnyCard) { ByOpponents = true, OrDiscard = true },
+				Loyalty(
+					1,
+					[],
+					new ChooseCardName { AnyName = false, YourOwn = true },
+					new LookAndTake(4, Is.NamedChosenName)
+					{
+						Take = 4,
+						Must = true,
+						Reveal = true,
+						Rest = TheRest.Graveyard,
+					}
+				),
+				Loyalty(
+					-3,
+					[TargetSpec.InYourGraveyard()],
+					new MoveTo(Ref.Target(), ZoneType.Hand) { From = [ZoneType.Graveyard] }
+				),
 			],
 		};
 
@@ -7096,6 +7154,14 @@ public static class LsvCards
 		TargetSpec[] targets,
 		params GameAction[] effects
 	) => new(CardRegistry.DataOf(card).CardFaces![1], Spell(targets, effects));
+
+	/// <summary>A split card's half (CR 709; Life // Death): face <paramref name="half"/> of the set's JSON, and its text.</summary>
+	static AdventureComponent Split(
+		string card,
+		int half,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) => new(CardRegistry.DataOf(card).CardFaces![half], Spell(targets, effects)) { Split = true };
 
 	/// <summary>
 	/// Manifest dread (Abhorrent Oculus): "Look at the top two cards of your library. Put one onto the battlefield face

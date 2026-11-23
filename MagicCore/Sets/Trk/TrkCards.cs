@@ -3463,7 +3463,7 @@ public static class TrkCards
 			],
 			["Quark, Humble Proprietor"] =
 			[
-				new CantSacrificeTreasures(),
+				new CantSacrifice(Is.Token & Is.Subtype("Treasure")),
 				When(TriggerEvent.EachUpkeep, [], CreateTreasure(1)),
 			],
 			["Kira Nerys, Firebrand"] =

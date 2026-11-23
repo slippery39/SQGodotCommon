@@ -294,7 +294,8 @@ public record SetChosenNameAction(int CardId, ImmutableArray<string> Names) : Ga
 			: new(
 				s.UpdateObject(
 					CardId,
-					s.GetCard(CardId).WithComponent(new Effects.ChosenName(Names[id - 1]))
+					// replaced: Tamiyo, Collector of Tales names a card on every +1, and GetComponent reads the first
+					s.GetCard(CardId).WithComponentReplaced(new Effects.ChosenName(Names[id - 1]))
 				)
 			);
 }
@@ -425,7 +426,10 @@ public record MoveChosenToGraveyardAction : GameAction
 		var fromHand = chosen.Where(id => s.IsIn(id, PlayerId, ZoneType.Hand)).ToList();
 		foreach (var id in chosen.Except(fromHand))
 			s = s.MoveCard(id, graveyardId); // surveil: from the library, not a discard
-		return new ActionResult(s.Discard(PlayerId, fromHand));
+		// who caused it: the resolving spell's or ability's controller (Tamiyo); a cost or the cleanup has none
+		return new ActionResult(
+			s.Discard(PlayerId, fromHand, GetInput<int>(Effects.ContextKeys.Controller))
+		);
 	}
 }
 

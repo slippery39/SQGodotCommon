@@ -104,6 +104,9 @@ public static class Is
 
 	public static readonly Filter ManaValueIsChosenNumber = new ManaValueIsChosenNumber();
 	public static readonly Filter NamedChosenName = new NamedChosenName();
+
+	/// <summary>Zirda's companion: "has an activated ability" — a mana ability, a basic land's too.</summary>
+	public static readonly Filter WithAnActivatedAbility = new WithAnActivatedAbility();
 	public static readonly Filter ControlledByChosenPlayer = new ControlledByChosenPlayer();
 
 	/// <summary>Combadge: "with a Communicator attached to it".</summary>
