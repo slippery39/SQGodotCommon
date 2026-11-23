@@ -920,7 +920,12 @@ public static class Rollout
 		var (move, score) = BestSettled(s, me, candidates, settings);
 		// ponytail: strict for EVERY activation, not only one that changes nothing - an engine ability that scores flat at
 		// once (a level-up, a "{T}: surveil") is no longer used by our rollout; refuse only a no-op if a position shows it.
-		var strict = move is ActivateAbilityAction && !Evaluator.IsOff(Evaluator.Terms.Potential);
+		// A mana move too (MC-9.5): alone its mana floats and scores nothing - the rollout exhausted Loot, the Pathfinder
+		// for White on its turn 3, tapping it out of the attack. ponytail: so no rollout makes one to cast a spell (a
+		// Prism's counter for a 7-drop); a policy pairing a mana move with the cast it enables if a position needs it.
+		var strict =
+			move is ActivateAbilityAction or TapForManaAction
+			&& !Evaluator.IsOff(Evaluator.Terms.Potential);
 		return score > before || score == before && !strict ? move : null;
 	}
 

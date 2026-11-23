@@ -2260,7 +2260,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Sunburst (This artifact enters with a charge counter on it for each color of mana spent to cast it.)  
 > Remove a charge counter from this artifact: Add one mana of any color.
 
-**Status:** scripted · **tests naming it:** LsvBatch2l3Tests
+**Status:** scripted · **tests naming it:** CubeAiTests, LsvBatch2l3Tests
 
 **Engine pieces:** `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `RemoveCountersCost` — "Remove N counters from among [Filter] you control" — Lieutenant Commander Data: "{1},…; `Sunburst` — Sunburst (Engineered Explosives): "This artifact enters with a charge counter on it for…; `TapForManaAction` — Activates a land's mana ability. Only basic land types' intrinsic abilities so far (CR…
 
@@ -11852,7 +11852,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Exhaust — {U}, {T}: Draw three cards.  
 > Exhaust — {R}, {T}: Loot deals 3 damage to any target.
 
-**Status:** scripted · **tests naming it:** LsvBatch2m2Tests
+**Status:** scripted · **tests naming it:** CubeAiTests, LsvBatch2m2Tests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `CantSacrifice` — "Can't sacrifice" — MagicState.CanSacrifice, asked by every sacrifice (costs, choices,…; `CompanionComponent` — Companion (CR 702.139): "Companion — [condition]" — Lurrus of the Dream-Den: "Each…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `GainControl` — Rules of Acquisition: "Gain control of target nonland permanent an opponent controls"…; `ManaAbilityComponent` — A mana ability (CR 605) — an activated ability that doesn't use the stack: "[Cost],…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCompanionIntoHandAction` — Companion (CR 702.139c; Lurrus, Lutri, Zirda): "you may put it into your hand from…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TapSelfCost` — "{T}:" — tap this permanent.; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 

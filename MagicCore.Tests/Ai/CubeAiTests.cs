@@ -9,15 +9,15 @@ namespace MagicCore.Tests.Ai;
 
 /// <summary>
 /// MC-9: the cube's cards in the AI's hands — each item watched first (the position below is the one watched), then
-/// fixed. A realistic board, not the base board's twenty basics: six lands, two each of Swamp, Island and Mountain.
+/// fixed. A realistic board, not the base board's twenty basics: six lands, two each of Swamp (or another), Island and Mountain.
 /// </summary>
 public class CubeAiTests : FraBoardTest
 {
-	void SixLands()
+	void SixLands(string first = "Swamp")
 	{
 		EmptyBoard();
 		s = TestGames.EmptyHands(s);
-		foreach (var land in new[] { "Swamp", "Swamp", "Island", "Island", "Mountain", "Mountain" })
+		foreach (var land in new[] { first, first, "Island", "Island", "Mountain", "Mountain" })
 			Field(TestGames.Card(land), me);
 	}
 
@@ -106,5 +106,85 @@ public class CubeAiTests : FraBoardTest
 
 		Assert.That(played, Has.Some.StartsWith("Cast Big Blue"), "setup: the turn was played");
 		Assert.That(played, Has.None.StartsWith("Vivi Ornitier"));
+	}
+
+	// MC-9.5, watched 2026-11-23 on six lands: a mana move's mana floats and its counter or exhaust is spent for good,
+	// yet the score sees neither, so every tie went to making it - the Prism's two counters removed with nothing to cast,
+	// and both removed for a 7-drop that needed one; Loot exhausted for a 3-drop its lands paid. A mana move must now
+	// beat what makes fewer (Shayne: free abilities have no opportunity cost - "you don't need to use them right away").
+	int Prism(int counters)
+	{
+		var prism = Field(Lsv("Pentad Prism"), me);
+		s = s.UpdateObject(prism, s.GetCard(prism) with { ChargeCounters = counters }); // TEST SETUP
+		return prism;
+	}
+
+	[Test]
+	public void PentadPrism_NothingToCast_ItsCountersAreKept()
+	{
+		SixLands();
+		var prism = Prism(2);
+
+		var played = SearchPlaysTheTurn();
+
+		Assert.That(played, Has.None.StartsWith("Pentad Prism"));
+		Assert.That(s.GetCard(prism).ChargeCounters, Nu.EqualTo(2));
+	}
+
+	[Test]
+	public void PentadPrism_ASpellTheLandsPay_IsCastFromLands_ItsCountersKept()
+	{
+		SixLands();
+		var prism = Prism(2);
+		var bear = Hand(TestGames.CreatureCosting("{2}{B}", "Bear", "3/3"), me);
+
+		SearchPlaysTheTurn();
+
+		Assert.That(Alive(bear), Nu.True, "setup: cast");
+		Assert.That(s.GetCard(prism).ChargeCounters, Nu.EqualTo(2));
+	}
+
+	[Test]
+	public void PentadPrism_ASpellOneManaShort_SpendsOneCounter_NotBoth()
+	{
+		SixLands();
+		var prism = Prism(2);
+		var huge = Hand(TestGames.CreatureCosting("{6}{B}", "Huge", "7/7"), me);
+		var missing = s.GetCard(huge).ManaCost.ManaValue - 6;
+
+		SearchPlaysTheTurn();
+
+		Assert.That(Alive(huge), Nu.True, "setup: cast with the Prism's help");
+		Assert.That(s.GetCard(prism).ChargeCounters, Nu.EqualTo(2 - missing));
+	}
+
+	[Test]
+	public void Loot_ASpellTheLandsPay_ItsExhaustManaIsKept()
+	{
+		SixLands("Forest");
+		Field(Lsv("Loot, the Pathfinder"), me);
+		var bear = Hand(TestGames.CreatureCosting("{2}{G}", "Bear", "3/3"), me);
+
+		var played = SearchPlaysTheTurn();
+
+		Assert.That(Alive(bear), Nu.True, "setup: cast");
+		Assert.That(played, Has.None.StartsWith("Pay for and exhaust"));
+	}
+
+	// The rollout too: it exhausted Loot for White on its own turn 3 with nothing to spend, tapping it out of the attack.
+	[Test]
+	public void Loot_TheRolloutNeverMakesItsManaForNothing()
+	{
+		SixLands("Forest");
+		var loot = Field(Lsv("Loot, the Pathfinder"), me);
+		var made = 0;
+
+		Rollout.Traced(
+			(_, who, d) =>
+				made += who == me && d.Action is TapForManaAction t && t.CardId == loot ? 1 : 0,
+			() => Rollout.Score(s, me, Rollout.Horizon(s, Rollout.Default), Rollout.Default)
+		);
+
+		Assert.That(made, Nu.EqualTo(0));
 	}
 }

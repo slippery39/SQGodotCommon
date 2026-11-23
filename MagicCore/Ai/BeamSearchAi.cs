@@ -810,7 +810,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>
 	/// Whether a land drawn in the look-ahead to <paramref name="horizon"/> could change anything (AI-30.4d): a card the
 	/// line has already drawn (a land the other way, playable now); the hand's spells costing more than the mana we will
-	/// have - our sources and the untapped lands in hand we get to play (a tapped Konstrari Annex is not turn 4's mana) -
+	/// have - our sources, the mana floating and the untapped lands in hand we get to play (a tapped Konstrari Annex is not
+	/// turn 4's mana) -
 	/// or an X spell to pour it into; or a trigger of ours on a land entering, the land's own included (Koth's landfall -
 	/// read by the engine's own trigger matcher).
 	/// ponytail: mana counted, not colours (a land for a missing colour reads as changing nothing once the count is
@@ -830,6 +831,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			return true;
 		var mana =
 			s.CardsIn(me, ZoneType.Battlefield).Count(c => ManaAbilities.ColorsOf(s, c).Any())
+			+ s.GetPlayer(me).ManaPool.Total // a mana move's, floating (MC-9.5: a Prism's counter made a 7-drop castable)
 			+ Math.Min(
 				hand.Count(c => c.Is(Cards.CardType.Land) && EntersUntapped(s, me, c)),
 				Drops(s, me, horizon)
@@ -1284,13 +1286,15 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>
 	/// The lines kept for the next level: the best scores, an exact tie to the higher potential (AI-13.11) - else the line
 	/// that never spends its mana ties with the ones that spend it one stop later and falls out by list order, and Best
-	/// never sees it (Medic's Kitesail re-equipped in 30 of 30 guesses).
+	/// never sees it (Medic's Kitesail re-equipped in 30 of 30 guesses). Before potential, the line with fewer mana moves
+	/// (<see cref="ManaMoves"/>, MC-9.5): the Prism's six removals would otherwise fill the beam.
 	/// </summary>
 	List<Node> Prune(List<Node> nodes) =>
 		[
 			.. nodes
 				.Select((n, i) => (n, i))
 				.OrderByDescending(x => x.n.Score)
+				.ThenBy(x => ManaMoves(x.n))
 				.ThenByDescending(x =>
 					Evaluator.IsOff(Evaluator.Terms.Potential) ? 0 : x.n.Potential
 				)
@@ -1320,10 +1324,15 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// The best line. With <see cref="Evaluator.Terms.Potential"/>: of the lines within <see cref="Settings.PotentialMargin"/>
 	/// of the best main score, those that keep most up (the highest potential) - and among them, as without it, one
 	/// starting with a pass must beat the best line that acts by <see cref="Settings.PassBias"/>: where potential can't tell
-	/// two lines apart, acting still wins the near-tie (a free draw off a Jace token is taken).
+	/// two lines apart, acting still wins the near-tie (a free draw off a Jace token is taken). First, though, a line
+	/// with more mana moves must BEAT the close lines that make fewer (MC-9.5, <see cref="ManaMoves"/>).
 	/// </summary>
 	Node Best(List<Node> nodes)
 	{
+		var fewest = nodes
+			.Where(n => n.Score >= nodes.Max(m => m.Score) - options.PotentialMargin)
+			.Min(ManaMoves);
+		nodes = [.. nodes.Where(n => ManaMoves(n) <= fewest)];
 		if (!Evaluator.IsOff(Evaluator.Terms.Potential))
 		{
 			var top = nodes.Max(n => n.Score);
@@ -1362,6 +1371,15 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			: null;
 
 	static bool IsPass(Decision d) => d is Move { Action: PassPriorityAction };
+
+	/// <summary>
+	/// The mana moves a line makes (MC-9.5; <c>MagicRules.ManaMoves</c>: Pentad Prism's "Remove a charge counter: add one
+	/// mana of any color", Loot, the Pathfinder's exhaust). Their mana floats, and the counter or the exhaust is spent for
+	/// good, yet the score sees neither: watched on six lands, the search removed both counters with nothing to cast, and
+	/// exhausted Loot for a 3-drop its lands paid. Made when a spell needs it, the mana is the same - Shayne: free
+	/// abilities have no opportunity cost, "you don't need to use them right away". So a tie goes to the line making fewer.
+	/// </summary>
+	static int ManaMoves(Node n) => n.Path.Count(d => d is Move { Action: TapForManaAction });
 
 	/// <summary>
 	/// The potential score (AI-13.11): what a line KEEPS as the search's turn ends - our creatures and mana sources untapped

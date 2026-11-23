@@ -26,6 +26,11 @@ whose subsystem it lives in.
   search moved Greaves from creature to creature for 30 decisions and the turn never ended. An ability with a cost
   (Zuran Orb's land) is not free — what it spends must be priced instead. **A mana move that would add no mana**
   (Vivi Ornitier at power 0: "Add X mana … where X is Vivi Ornitier's power") is left out (`MakesNoMana`, MC-9.2).
+- **A mana move must BEAT holding, never tie it** (MC-9.5; Shayne, 2026-11-23: a free ability has no opportunity cost,
+  "you don't need to use them right away"): its mana floats and scores nothing, and its counter or exhaust is spent for
+  good unseen, so a tie went to acting and Pentad Prism's counters went on sight. Of the lines close to the best, those
+  with the fewest mana moves (`BeamSearchAi.ManaMoves`) are kept, in `Best` and `Prune` alike; the rollout takes one
+  only when it scores better (`Rollout`'s strict rule); `LandMatters` counts the mana floating.
 - **A divided spell's targets and shares are a rule, never searched past a few sets** (MC-9.1): Fire Covenant's
   share for a target is the damage that kills it (`ChooseNumberChoice.ShareOf` → `Lookahead.KillingShare`, in the
   search, the look-ahead and `GreedyAi` alike); past `BeamSearchAi.MaxPicks` target sets `GreedyAi` tries each single

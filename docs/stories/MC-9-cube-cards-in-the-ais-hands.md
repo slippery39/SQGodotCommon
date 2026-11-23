@@ -40,11 +40,10 @@ The plan, by likely cause, cheapest and clearest first:
 
 - **Phase 1 — the search tries what can't gain** (move filters and rule answers, cube shapes only): Fire Covenant's
   shares, Vivi at 0 power, Wizard's Rockets' X, Oko's −5.
-- **Phase 2 — a spent resource priced at nothing**: Pentad Prism and Loot's exhaust (diagnosed in MC-4's Decisions,
-  2026-11-22: the counters and floating mana score 0, the removal ties, and `BeamSearchAi.Potential`'s tie-break prefers
-  it); Zuran Orb and Squandered Resources (a land sacrificed). Option A: price the store in `Evaluator.Other` (a
-  permanent whose mana costs a counter or an exhaust is worth about a land's mana per use left). Option B: never offer
-  a no-{T} mana move the turn can't spend. Claude leans to A for the Prism and Loot — a price, not a rule.
+- **Phase 2 — a free ability used for nothing** (rewritten 2026-11-23 on Shayne's word, below): Pentad Prism and Loot's
+  exhaust mana — a tie goes to the line making fewer mana moves; Zuran Orb and Squandered Resources — what they can
+  still make is held, so spending it gains only what the spending triggers. (The first plan's options, a price on the
+  store or a filter, are dropped: the cause was the tie, not the price.)
 - **Phase 3 — abilities never or wrongly used** (watch, then decide): Reckoner Bankbuster, Sowing Mycospawn's kicker,
   Karn's −2 over his +1, Kaldra Compleat moved off its Germ, Psychic Frog's discard, the Figures' shrink.
 - **Phase 4 — coverage**: the companion's {3} has never been offered to the search; the six m3 cards unwatched.
@@ -67,8 +66,30 @@ The plan, by likely cause, cheapest and clearest first:
   Blue", an empty amount): nothing made, the turn's activation used, a node the search pays for each turn. Left out of
   the search's moves; the rules still offer it.
 
+- 2026-11-23, Shayne (reading MC-9.2's cause, "a mana move that adds no mana scored the same as not taking it"): **the
+  same cause as the Prism, Zuran Orb and maybe Lightning Greaves — "All of these things are 0 mana abilities, and as
+  such the opportunity cost to using them is non existent. Which means you don't need to use them right away."** Zuran
+  Orb, unless a card makes the sacrifice pay (Titania, Baloth Prime, a life combo), is used as late as possible: it is
+  free and at instant speed. Claude: in code, a tie went to ACTING (`Best`'s `PassBias` — a free draw off a Jace token
+  is taken), so every free move that gains nothing was made; Phase 2 rewritten as one rule for the mana moves and the
+  Orb's reserve. Greaves since MC-4.4l5 equips once a turn; not seen misused since — a board that shows it is a task.
+- 2026-11-23, Claude — **MC-9.5 watched** (six lands; the search playing the turn, its ranked first moves printed):
+  Pentad Prism with two counters removed both with nothing to cast (8.35 each way, an exact tie), removed both for a
+  3-drop it then paid from lands, and both for a 7-drop that needed one; Loot, the Pathfinder exhausted for a 3-drop its
+  lands paid, in combat — the mana emptied before the main phase. Three causes, each found in `Explain`: (1) the tie
+  went to acting — and `Prune` (score, then potential) kept the Prism's removals over the line holding them, the
+  floating mana paying part of the spell and keeping a land untapped; (2) the 7-drop's second counter: a line leaving a
+  spell in hand gets the "a land drawn" rollout's credit (`LandMatters`: the hand costs more than our sources), and the
+  floating {W} was not counted as mana, 40.75 against casting at once 40.24; (3) the ROLLOUT made mana moves on a tie too
+  (its strict rule was for activations only): it exhausted Loot for White on its turn 3, tapping it out of the attack.
+  Fixed: a line making more mana moves must BEAT the close lines making fewer (`BeamSearchAi.ManaMoves`, in `Best` and
+  `Prune`); `LandMatters` counts the mana floating; the rollout takes a mana move only when it scores better. After: the
+  Prism's counters held, one spent for the 7-drop; Loot's 3-drop paid from lands, Loot attacking, three drawn at their
+  end step (its line 50.95 → 56.73). Zuran Orb on six lands HOLDS (Pass 8.35 against a sacrifice 7.85): the nine
+  sacrificed in MC-4 were the twenty basics. A first fix also ranked mana moves last in `Narrow` — not caught by its
+  revert-check once the rollout was fixed, so taken out.
+
 Open questions:
-- Phase 2, option A or B — decided once the Prism is watched again on a realistic board (Shayne).
 - Phase 5's energy and poison: the table's `PlayerPlate` shows neither — that is the TBL lane's; only the evaluator here.
 
 ## Tasks
@@ -87,9 +108,15 @@ Phase 1:
 - [ ] MC-9.4 Oko, Thief of Crowns' −5: what its two target choices cost the search, measured; left alone if small.
 
 Phase 2:
-- [ ] MC-9.5 Pentad Prism and Loot, the Pathfinder's exhaust mana: watched on a realistic board, then option A or B.
-- [ ] MC-9.6 Zuran Orb and Squandered Resources on a 5–7 land board: if they still sacrifice, the land's price
-      (land count, `LandUnlock`) is what is missing — an evaluator term, so a `--match`.
+- [x] MC-9.5 (done 2026-11-23) Pentad Prism and Loot, the Pathfinder's exhaust mana: a line making more mana moves
+      must beat the close lines making fewer (`BeamSearchAi.ManaMoves`, `Best` and `Prune`); `LandMatters` counts the
+      mana floating; the rollout's mana move must score better (`Rollout`, strict). Watched first (Decisions, "MC-9.5
+      watched"). A tie-break, no evaluator term: the suite, not a `--match`.
+- [ ] MC-9.6 Zuran Orb and Squandered Resources (Shayne, "wait for as long as possible to use its ability"): on six
+      lands at 20 life the Orb already holds (MC-9.5's watch). Watch it (1) at low life, where 2 life may outscore a
+      land, and (2) facing lethal — the search must still sacrifice in response (at declare blockers, or with burn on
+      the stack), or holding it is worse than wasting it. If (1) sacrifices early: what the Orb can still gain counted
+      as life held, so a sacrifice gains only what it triggers (Titania, Baloth Prime) — an evaluator term, `--match`.
 
 Phase 3:
 - [ ] MC-9.7 Reckoner Bankbuster never activated ({2}, {T}: draw): does a card read worse than lands kept untapped
@@ -119,7 +146,8 @@ Phase 5:
 
 ## Next
 
-Next is MC-9.3 (Wizard's Rockets, timed on a realistic board). The tests are `MagicCore.Tests/Ai/CubeAiTests.cs`
+Next is MC-9.6 (Zuran Orb at low life and facing lethal — MC-9.5's principle, Shayne 2026-11-23), then MC-9.3 (Wizard's
+Rockets, timed on a realistic board). The tests are `MagicCore.Tests/Ai/CubeAiTests.cs`
 (`SixLands()`: two each of Swamp, Island and Mountain; `SearchPlaysTheTurn()`: the search decides until the turn
 changes, returning each decision's description). Read MC-4's Decisions from "4.4l1 + l2" (the free-ability note, Shayne 2026-11-21) and the Pentad Prism
 diagnosis (2026-11-22), and magic-ai.md. To watch a position: build it in a test as `LsvBatch2l3Tests` does
@@ -134,3 +162,6 @@ golden replays in the normal tests.
 - 2026-11-23: MC-9.1 done — Fire Covenant's shares and target set by rule; watched, it had been killing one creature
   of twelve; now four. Two tests in `CubeAiTests`, both revert-checked.
 - 2026-11-23: MC-9.2 done — Vivi's mana move at power 0 left out of the search's moves; two tests, revert-checked.
+- 2026-11-23: Phase 2 rewritten on Shayne's word (free abilities have no opportunity cost); MC-9.5 done — a mana move
+  must beat holding, in the search, its beam and its rollout; `LandMatters` counts floating mana. Five tests, the
+  three pieces revert-checked.
