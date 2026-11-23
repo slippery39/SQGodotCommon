@@ -227,6 +227,63 @@ public class GreedyAiTests
 			);
 	}
 
+	// AI-33.8: the damage sent at our walker reads two attacks. Their 3/3 against our walker: with our 2/2 in front, the
+	// first attack is chumped and the second gets through - one attack read every turn kept the walker safe for good,
+	// so it was priced higher. With no blocker both read 3 a turn and agree. Used this turn, their attack comes before
+	// its next activation (the lifetime's other branch): the second attack's hits come a turn sooner, where what the
+	// walker soaks (life we keep) outweighs the turns it loses - so there only that the chump counts once is asserted.
+	[TestCase(true, false)]
+	[TestCase(false, false)]
+	[TestCase(true, true)]
+	[TestCase(false, true)]
+	public void AChumpBlocker_ShieldsTheWalkerOnce(bool chump, bool used)
+	{
+		var s = TestGames.EmptyHands(TestGames.InFirstMain());
+		var me = s.GetGame().StartingPlayerId;
+		(s, _) = TestGames.Put(
+			s,
+			s.OpponentOf(me),
+			TestGames.Creature("Bear", "3/3"),
+			ZoneType.Battlefield
+		);
+		if (chump)
+			(s, _) = TestGames.Put(s, me, TestGames.Creature("Cub", "2/2"), ZoneType.Battlefield);
+		int walker;
+		(s, walker) = TestGames.Put(
+			s,
+			me,
+			TestGames.Planeswalker(
+				"Walker",
+				4,
+				[new(1, [new Surveil(1)]), new(-3, [new DrawCards(Ref.You, 1)])]
+			),
+			ZoneType.Battlefield
+		);
+		double Price(Evaluator.Terms without) =>
+			Evaluator.Without(
+				without,
+				() =>
+					Evaluator.Walker(
+						s,
+						s.GetCard(walker) with
+						{
+							Loyalty = 4,
+							LoyaltyActivatedOnTurn = used ? s.GetGame().TurnNumber : 0,
+						},
+						BeamSearchAi.DefaultRollout.Held
+					)
+			);
+		var (two, one) = (Price(Evaluator.Terms.None), Price(Evaluator.Terms.TwoAttackWalker));
+
+		Assert.That(
+			two,
+			!chump ? Is.EqualTo(one)
+				: used ? Is.Not.EqualTo(one)
+				: Is.LessThan(one),
+			$"two attacks {two:0.00}, one {one:0.00}"
+		);
+	}
+
 	// AI-9.3: priced over its lifetime, every scripted walker's value still rises with each loyalty counter
 	// (CLAUDE.md: a cap ties more with less) — on an empty board, and with a 3/3 of theirs attacking it
 	// unblocked, so the turns it lives depend on its loyalty.

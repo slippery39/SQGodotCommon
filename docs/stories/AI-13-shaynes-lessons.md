@@ -337,7 +337,8 @@ New lessons go here as Shayne thinks of them — in his words first, the rule af
       `Unsummon_IsHeld_AtMove547` (a guard; their turn, so patience doesn't touch it). Suite: 4
       decisions differ from no patience. Match: **53.0% ± 1.0pp, 600 games (318–282)**, undecided at
       5pp, "worse" rejected, cost the same — kept (Shayne's rule: sensible plays count; the agreed
-      position fixed). `docs/findings/magic-ai.md`- [x] AI-13.13 Holding ties with casting when the rollout casts it anyway (Shayne's notes, TBL-10.3, 2026-11-13; kept
+      position fixed). `docs/findings/magic-ai.md`
+- [x] AI-13.13 Holding ties with casting when the rollout casts it anyway (Shayne's notes, TBL-10.3, 2026-11-13; kept
       game `Records/ShayneNotesSeed1.json`). **#196** Yoshimaru cast with no creature of its own to fight — "it doesn't do
       anything and has more potential value later on" — Pass −13.81, cast −13.81: the Pass line's rollout casts
       Yoshimaru at once in the same main phase, so its held price (AI-13.5's check, `YoshimaruWithNoFight`) never

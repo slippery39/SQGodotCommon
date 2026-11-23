@@ -3548,3 +3548,7 @@ card, and a re-run after a fix needs the golden files restored from HEAD by hand
 - 2026-11-22: MC-4.4m3 done — split cards, control of a spell, what an opponent can't make you do, and companion
   (chosen as the deck is built, in an Arena export, the sealed builder and the table); 528 of 528 play — every card of
   the cube. Next: Shayne's call (the cube drafted, the LATER items).
+- 2026-11-23: mtg-real merged in (DEV-6: AI-29 land order, AI-30, AI-33). Two of its new readers asked the shocklands'
+  `UnlessYouPayLife`, gone since 4.4l4a: `LandOrder.EntersTapped` and `BeamSearchAi.EntersUntapped` now read an
+  `EntryCost` with no `Instead` (test: `LandOrderTests.TurnOne_AShockland_IsAnUntappedLand`, revert-checked). Every test
+  green, suite 0 of 288 changed. Next: the AI lane's deferred items, planned with Shayne.

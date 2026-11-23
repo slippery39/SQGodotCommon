@@ -620,7 +620,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, LsvBatch2h2cTests, LsvBatch2i2bTests, LsvBatch2iTests, LsvBatch2k2aTests, LsvBatch2k3Tests, LsvBatch2l3Tests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2m2Tests, LsvBatch2m3Tests, LsvBatch2mTests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AbilityTimingTests, AiPositionTests, ArenaDeckTests, BasicsTests, CardProbeTests, CardRegistryTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraSacrificeTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, HiddenTests, LandOrderTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2bTests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2dTests, LsvBatch2fTests, LsvBatch2g3Tests, LsvBatch2g4Tests, LsvBatch2h2cTests, LsvBatch2i2bTests, LsvBatch2iTests, LsvBatch2k2aTests, LsvBatch2k3Tests, LsvBatch2l3Tests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2m2Tests, LsvBatch2m3Tests, LsvBatch2mTests, ManaTests, OptionReportTests, PlaneswalkerTests, PricingPrincipleTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames, TrkBatch2Tests, TrkBatch3Tests, TrkBatch4Tests, TrkBatch4cTests, TrkBatch5aTests, TrkBatch6bTests, TrkBatch7aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Formidable Commons
 
@@ -870,7 +870,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This land enters tapped unless you control a planeswalker.  
 > {T}: Add {R} or {G}.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LandOrderTests, RolloutTests
 
 ```csharp
 ["Konstrari Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.Red, ManaColor.Green),
@@ -914,7 +914,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {6}, Sacrifice this creature: Choose target creature or planeswalker an opponent controls. Its owner shuffles it into their library.
 
-**Status:** scripted · **tests naming it:** FraSacrificeTests
+**Status:** scripted · **tests naming it:** FraSacrificeTests, RolloutTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `MoveTo` — MC-6.12: THE move of the cards a Ref names to a zone of their OWNER's (CR 400.3) —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).
 
@@ -1016,7 +1016,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, LsvBatch2i4Tests, LsvBatch2l4Tests, LsvBatch2lTests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch6aTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CastGainsTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, LandOrderTests, LsvBatch1Tests, LsvBatch2Tests, LsvBatch2c2Tests, LsvBatch2cTests, LsvBatch2eTests, LsvBatch2i4Tests, LsvBatch2l4Tests, LsvBatch2lTests, ManaTests, OptionReportTests, RandomGameTests, TrkBatch6aTests
 
 ### Murmuring Volume
 
@@ -1072,7 +1072,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2dTests, LsvBatch2jTests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2m3Tests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
+**Status:** basic land · **tests naming it:** AiPositionTests, BasicsTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, LandOrderTests, LandUnlockTests, LsvBatch1Tests, LsvBatch2dTests, LsvBatch2jTests, LsvBatch2l4Tests, LsvBatch2lTests, LsvBatch2m3Tests, ManaTests, RandomGameTests, TrkBatch2Tests, TrkBatch3Tests, TrkBatch5bTests, TrkBatch6aTests, TrkBatch7bTests, TrkBatch7cTests, TrkStardateTests
 
 ### Predictive Preparations
 
@@ -1119,7 +1119,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Deathtouch  
 > When this creature enters, target creature gets +2/+2 and gains deathtouch until end of turn.
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AttackTests, FraCardTests, RolloutTests
 
 **Engine pieces:** `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1157,7 +1157,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {T}: Add one mana of the chosen color.  
 > {5}, {T}, Sacrifice this land: Put two +1/+1 counters on target creature. Activate only as a sorcery.
 
-**Status:** scripted · **tests naming it:** FraCommonTests
+**Status:** scripted · **tests naming it:** FraCommonTests, LandOrderTests, LandUnlockTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ChoosesColorAsItEnters` — Room of Refuge, Painter's Servant: "As it enters, choose a color." Applied by…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutCounters` — "Put N [Kind] counters on [What]" (CR 122) — every kind, on any permanent, through…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Room` — A dungeon room (CR 309.4): its ability, triggered as the venture marker moves into it,…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" — Treasure's mana ability too (Tokens.SacrificeForMana).; `TapSelfCost` — "{T}:" — tap this permanent.
 
@@ -1185,7 +1185,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Flying  
 > Whenever this creature attacks, it deals 1 damage to each opponent and you gain 1 life.
 
-**Status:** scripted · **tests naming it:** FraCardTests, OptionReportTests
+**Status:** scripted · **tests naming it:** AttackTests, FraCardTests, OptionReportTests, RolloutTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -2906,7 +2906,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Reach  
 > Landfall — Whenever a land you control enters, Koth deals 1 damage to each opponent. If that land is a Mountain, add {R}.
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** FraCardTests, RolloutTests
 
 **Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -4170,7 +4170,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > When Way of the Healer enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")  
 > Planeswalkers you control have "[−2]: Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1."
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AttackTests, FraCardTests
 
 **Engine pieces:** `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top…
 
@@ -5680,7 +5680,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > This land enters tapped unless you control two or more other lands.  
 > {T}: Add {R} or {G}.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LandOrderTests
 
 ```csharp
 ["Rockfall Vale"] = DualLand(

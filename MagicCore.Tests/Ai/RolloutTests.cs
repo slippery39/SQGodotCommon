@@ -29,6 +29,159 @@ public class RolloutTests
 	GameState WithLife(GameState state, int player, int life) =>
 		state.WithPlayer(state.GetPlayer(player) with { Life = life });
 
+	// AI-30.4c (Shayne, 2026-11-20: "if I already have 2 lands in hand, I don't need to simulate what happens if i need to
+	// draw a land next turn"): in our main with the land not yet played, the look-ahead has two of our land drops left -
+	// this turn's and next turn's.
+	[Test]
+	public void TwoLandsInHand_CoverTheLookAheadsLandDrops_OneDoesNot()
+	{
+		var horizon = Rollout.Horizon(s, Rollout.Default);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Hand);
+
+		Assert.That(BeamSearchAi.LandDropsCovered(s, me, horizon), Is.False, "one land");
+		var played = s.WithPlayer(
+			s.GetPlayer(me) with
+			{
+				ThisTurn = s.GetPlayer(me).ThisTurn with { LandsPlayed = 1 },
+			}
+		);
+		Assert.That(
+			BeamSearchAi.LandDropsCovered(played, me, horizon),
+			Is.True,
+			"one land, this turn's already made"
+		);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Hand);
+		Assert.That(BeamSearchAi.LandDropsCovered(s, me, horizon), Is.True, "two lands");
+	}
+
+	// AI-30.4d (Shayne, 2026-11-20): the "lands" rollout only where a drawn land could change something - a card it
+	// casts, or a permanent that triggers on it - not ranked by the "not lands" score (AI-30.4b's bias: Koth).
+	[Test]
+	public void ADrawnLand_Matters_ForASpellItCasts_OrALandfall_NotForAnEmptyHand()
+	{
+		var horizon = Rollout.Horizon(s, Rollout.Default);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Battlefield);
+		Assert.That(
+			BeamSearchAi.LandMatters(s, me, horizon),
+			Is.False,
+			"nothing to cast, nothing on a land"
+		);
+
+		var (spell, _) = TestGames.Put(s, me, CardRegistry.Get("Living Library"), ZoneType.Hand); // {2}: the second land casts it
+		Assert.That(
+			BeamSearchAi.LandMatters(spell, me, horizon),
+			Is.True,
+			"a spell the land casts"
+		);
+
+		var (afforded, _) = TestGames.Put(
+			spell,
+			me,
+			CardRegistry.Get("Forest"),
+			ZoneType.Battlefield
+		);
+		Assert.That(
+			BeamSearchAi.LandMatters(afforded, me, horizon),
+			Is.False,
+			"the spell already paid for"
+		);
+		var (tapped, _) = TestGames.Put(
+			spell,
+			me,
+			CardRegistry.Get("Konstrari Annex"),
+			ZoneType.Hand
+		);
+		Assert.That(
+			BeamSearchAi.LandMatters(tapped, me, horizon),
+			Is.True,
+			"a land in hand that enters tapped pays nothing"
+		);
+
+		var drew = Hidden.Sample(s, me, Hidden.Library.LandOrNot).Draw(me); // a card drawn this turn: a land the other way
+		Assert.That(BeamSearchAi.LandMatters(drew, me, horizon), Is.True, "a card the line drew");
+
+		var (koth, _) = TestGames.Put(
+			s,
+			me,
+			CardRegistry.Get("Koth, the Geomancer"),
+			ZoneType.Battlefield
+		);
+		Assert.That(BeamSearchAi.LandMatters(koth, me, horizon), Is.True, "Koth's landfall");
+	}
+
+	// A land that enters tapped covers no drop: a land drawn would be played over it (Konstrari Annex, no planeswalker).
+	[Test]
+	public void ATappedLandInHand_CoversNoLandDrop()
+	{
+		var horizon = Rollout.Horizon(s, Rollout.Default);
+		s = s.WithPlayer(
+			s.GetPlayer(me) with
+			{
+				ThisTurn = s.GetPlayer(me).ThisTurn with { LandsPlayed = 1 },
+			}
+		);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Konstrari Annex"), ZoneType.Hand);
+		Assert.That(
+			BeamSearchAi.LandDropsCovered(s, me, horizon),
+			Is.False,
+			"the Annex enters tapped"
+		);
+		(s, _) = TestGames.Put(s, me, CardRegistry.Get("Forest"), ZoneType.Hand);
+		Assert.That(BeamSearchAi.LandDropsCovered(s, me, horizon), Is.True, "a Forest beside it");
+	}
+
+	// AI-30.4a: LandOrNot's two rollouts of a line played with a shared start - the same two scores as each played whole
+	// (in a real game's position, our draws ahead), for fewer engine steps.
+	[TestCase(2)]
+	[TestCase(3)]
+	public void BothWays_FromASharedStart_ScoreAsEachPlayedWhole(int seed)
+	{
+		var g = MagicRules.NewGame(
+			FraDecks.All["Red-Green"],
+			FraDecks.All["White-Black"],
+			seed: seed
+		);
+		g = TestGames.PlayAis(g, 4, new GreedyAi(g.Player1Id()), new GreedyAi(g.Player2Id()));
+		var who = g.DecidingPlayerId();
+		var root = Hidden.Unknown(g, who, lands: false);
+		var horizon = Rollout.Horizon(root, Rollout.Default);
+
+		var (whole, wholeSteps) = MagicRules.CountingSteps(
+			() =>
+				(
+					Lands: Rollout.Score(
+						Hidden.Unknown(root, who, lands: true),
+						who,
+						horizon,
+						Rollout.Default,
+						out _,
+						out _,
+						landsDrawn: true
+					),
+					None: Rollout.Score(
+						root,
+						who,
+						horizon,
+						Rollout.Default,
+						out _,
+						out _,
+						landsDrawn: false
+					)
+				)
+		);
+		var (shared, sharedSteps) = MagicRules.CountingSteps(
+			() => Rollout.ScoreBoth(root, who, horizon, Rollout.Default, out _, out _)
+		);
+
+		Assert.That(
+			Hidden.LandOdds(root, who),
+			Is.InRange(0.01, 0.99),
+			"setup: both ways are played"
+		);
+		Assert.That(shared, Is.EqualTo(whole));
+		Assert.That(sharedSteps, Is.LessThan(wholeSteps));
+	}
+
 	[Test]
 	public void ItAttacksForLethal_OnBoard()
 	{
@@ -668,6 +821,161 @@ public class RolloutTests
 					["Two"] = them,
 				}
 			)
+		);
+	}
+
+	// AI-30.4e: with nothing of theirs able to block, the attack plans are not re-judged against the real blocks - the
+	// same plan, fewer steps; a creature that can block (a wall, a flier's reach) keeps the re-judging.
+	[TestCase(false, false, true)]
+	[TestCase(true, false, false)]
+	[TestCase(true, true, true)]
+	public void NoBlockers_SkipsTheRealBlocks_OnlyWhenNothingCanBlock(
+		bool wall,
+		bool flyingOnly,
+		bool skipped
+	)
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var them = s.OpponentOf(me);
+		var ours = flyingOnly
+			? new[] { TestGames.Creature("Bird", "2/2", "Flying") }
+			: [TestGames.Creature("Three", "3/3"), TestGames.Creature("Two", "2/2")];
+		foreach (var c in ours)
+			(s, _) = TestGames.Put(s, me, c, ZoneType.Battlefield);
+		if (wall)
+			(s, _) = TestGames.Put(
+				s,
+				them,
+				TestGames.Creature("Wall", "0/4"),
+				ZoneType.Battlefield
+			);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+
+		var (full, fullSteps) = MagicRules.CountingSteps(
+			() => WholeAttacks.Best(s, me, null, Rollout.Default)
+		);
+		var (quick, quickSteps) = MagicRules.CountingSteps(
+			() => WholeAttacks.Best(s, me, null, Rollout.Default with { NoBlockers = true })
+		);
+		Assert.That(
+			quick,
+			Is.EqualTo(full).Using<WholeAttacks.Plan>((x, y) => x.Targets.SequenceEqual(y.Targets))
+		);
+		Assert.That(
+			quickSteps < fullSteps,
+			Is.EqualTo(skipped),
+			$"{quickSteps} against {fullSteps} steps"
+		);
+	}
+
+	// AI-33 (Shayne, 2026-11-20, the Cadet at seed 2 #102: "the AI should keep the 2/2 back to try and double block one of
+	// their 3/3's"): their 3/3 attacks into our two 2/2s - both block it (it dies; we lose one). The look-ahead's
+	// defender (the model the search's rollouts block with) and the search deciding for real.
+	[TestCase(true)]
+	[TestCase(false)]
+	public void TwoTwoTwos_DoubleBlock_AnAttackingThreeThree(bool lookahead)
+	{
+		var s = TestGames.InFirstMain();
+		var them = s.GetGame().StartingPlayerId;
+		var me = s.OpponentOf(them);
+		(s, var three) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Three", "3/3"),
+			ZoneType.Battlefield
+		);
+		(s, var a) = TestGames.Put(s, me, TestGames.Creature("Two A", "2/2"), ZoneType.Battlefield);
+		(s, var b) = TestGames.Put(s, me, TestGames.Creature("Two B", "2/2"), ZoneType.Battlefield);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+		s = s.Choose([me]); // the 3/3 attacks us
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareBlockerChoice);
+
+		var ai = new BeamSearchAi(me);
+		while (s.GetPendingChoice() is Actions.DeclareBlockerChoice ask && ask.PlayerId == me)
+			s = lookahead ? Rollout.OpponentStep(s, me, Rollout.Default) : ai.Decide(s).State;
+		Assert.That(
+			new[] { s.GetCard(a).BlockingId, s.GetCard(b).BlockingId },
+			Is.All.EqualTo(three),
+			"both 2/2s block the 3/3"
+		);
+	}
+
+	// AI-33: the Cadet board itself (seed 2 #102's next turn) - two Rampart Hunters (3/3 deathtouch) and a Screeching
+	// Soulbreaker attack our two 2/2 Cadets, we at 10, they at 12. The search double-blocks a Hunter; the look-ahead
+	// blocks it with ONE Cadet and leaves the other idle - nothing of theirs dies and the second Hunter still connects -
+	// so a Cadet kept home was worth nothing to the search's rollouts - judged alone, the second stayed out of the block the
+	// first counted on it joining (−36.61 against −36.85: a live 2/2 just over a dead Rampart Hunter). The cause (AI-33.4):
+	// a clock of one attack counted the Cadet kept home as stopping a Hunter for good - with two attacks
+	// (Evaluator.Terms.TwoAttacks) it chumps once and the Hunter is back. The control: one attack, the half-block.
+	[TestCase(true, false)]
+	[TestCase(true, true)]
+	[TestCase(false, false)]
+	public void TheCadetBoard_BothCadetsBlockTheSameHunter(bool lookahead, bool oneAttack) =>
+		Evaluator.Without(
+			oneAttack ? Evaluator.Terms.TwoAttacks : Evaluator.Terms.None,
+			() => CadetBoard(lookahead, oneAttack)
+		);
+
+	static bool CadetBoard(bool lookahead, bool oneAttack)
+	{
+		var s = TestGames.InFirstMain();
+		var them = s.GetGame().StartingPlayerId;
+		var me = s.OpponentOf(them);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = 10 })
+			.WithPlayer(s.GetPlayer(them) with { Life = 12 });
+		(s, _) = TestGames.Put(s, them, CardRegistry.Get("Rampart Hunter"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, CardRegistry.Get("Rampart Hunter"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(
+			s,
+			them,
+			CardRegistry.Get("Screeching Soulbreaker"),
+			ZoneType.Battlefield
+		);
+		(s, var a) = TestGames.Put(s, me, TestGames.Creature("Cadet", "2/2"), ZoneType.Battlefield);
+		(s, var b) = TestGames.Put(s, me, TestGames.Creature("Cadet", "2/2"), ZoneType.Battlefield);
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareAttackerChoice);
+		while (s.GetPendingChoice() is Actions.DeclareAttackerChoice)
+			s = s.Choose([me]); // everyone attacks us
+		s = TestGames.PassUntil(s, x => x.GetPendingChoice() is Actions.DeclareBlockerChoice);
+
+		var ai = new BeamSearchAi(me);
+		while (s.GetPendingChoice() is Actions.DeclareBlockerChoice ask && ask.PlayerId == me)
+			s = lookahead ? Rollout.OpponentStep(s, me, Rollout.Default) : ai.Decide(s).State;
+		var (blockA, blockB) = (s.GetCard(a).BlockingId, s.GetCard(b).BlockingId);
+		Assert.That(blockA, Is.Not.Zero, "a Cadet blocks");
+		if (oneAttack)
+			Assert.That(blockB, Is.Zero, "control: one attack's clock keeps the other Cadet out");
+		else
+			Assert.That(blockB, Is.EqualTo(blockA), "the other Cadet blocks the same Hunter");
+		return true;
+	}
+
+	// AI-33.5: the turns to kill read two attacks (Evaluator.Terms.TwoAttackKill). The Cadet board before combat: their
+	// two Rampart Hunters (3/3 deathtouch) and a Screeching Soulbreaker (1/4 flier) against our two 2/2 Cadets, we at 10.
+	// One attack: the Cadets block both Hunters for good, only the flier's 1 gets through - 10 turns. Two attacks: 1, then
+	// the chumps are dead and 7 gets through, 7 a turn from then on: 1 + 7 + 7 >= 10, 3 turns. Counted up, not averaged
+	// (the review): at 3 life the first attack's 1 doesn't kill, so 2 turns; at 1 life, 1. The control: one attack.
+	[TestCase(false, 10, 3)]
+	[TestCase(false, 3, 2)]
+	[TestCase(false, 1, 1)]
+	[TestCase(true, 10, 10)]
+	public void TheCadetBoard_TheirClockReadsTwoAttacks(bool oneAttack, int life, int turns)
+	{
+		var s = TestGames.InFirstMain();
+		var them = s.GetGame().StartingPlayerId;
+		var me = s.OpponentOf(them);
+		s = s.WithPlayer(s.GetPlayer(me) with { Life = life });
+		foreach (var name in new[] { "Rampart Hunter", "Rampart Hunter", "Screeching Soulbreaker" })
+			(s, _) = TestGames.Put(s, them, CardRegistry.Get(name), ZoneType.Battlefield);
+		for (var i = 0; i < 2; i++)
+			(s, _) = TestGames.Put(s, me, TestGames.Creature("Cadet", "2/2"), ZoneType.Battlefield);
+		Assert.That(
+			Evaluator.Without(
+				oneAttack ? Evaluator.Terms.TwoAttackKill : Evaluator.Terms.None,
+				() => Evaluator.TurnsToKill(s, them, me)
+			),
+			Is.EqualTo(turns)
 		);
 	}
 

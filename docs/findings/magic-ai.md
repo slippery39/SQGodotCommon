@@ -2270,3 +2270,242 @@ Shayne's rule: 5 life paid at 20 is about a card. Today an unseen card is 2.65 (
 
 Shayne on the last two groups: drawing later is never better than drawing now, and a bounce gives no card — so these
 are evaluator inconsistencies, not judgement. The story became the pricing pass (AI-27, Why).
+
+## AI-30.1: where the doubled decision cost went - by engine steps (2026-11-19)
+
+Not a time profile (that needs a quiet machine, still to do): the position suite's cost per position is
+deterministic, so each sprint-5 feature was switched off in turn, load or not (`--suite=beam+X`, 288 positions).
+
+| Run | Engine steps / position | Rollouts | Decisions changed |
+|---|---|---|---|
+| `beam` (today's default) | 19 094 | 37.2 | 0 |
+| `beam+shuffle` - one shuffled guess, not AI-20.4's land / not-a-land futures | **10 393 (−45.6%)** | **19.7** | 39 (13.5%) |
+| `beam+nooptionprice` (AI-26.4) | 19 008 | 37.5 | 6 |
+| `beam+nodrawncard` (AI-27.7) | 19 274 | 37.8 | 20 |
+| `beam+nolanduse` (AI-27.9) | 19 133 | 37.2 | 4 |
+| `beam+nosettleheld` (AI-27.10) | 19 104 | 37.2 | 1 |
+| `beam+nolastchance` (AI-26.5) | 19 011 | 37.1 | 0 |
+| `beam+firstmode` (AI-27 modes) | 19 090 | 37.2 | 0 |
+| `beam+nolooks` (AI-20.9) | 19 103 | 37.2 | 1 |
+| `beam+spellfirst` (AI-20.8) | 19 093 | 37.2 | 0 |
+
+**The whole doubling is AI-20.4's second future:** every line's rollout is played twice, our unseen draws lands and
+then not (`Hidden.Library.LandOrNot`) - the rollouts per position 19.7 → 37.2, the steps 10 393 → 19 094, back to
+AI-22's 10 594. The pricing work of AI-26 and AI-27 costs nothing measurable. So the lever is the second rollout:
+where it can't change a line's rank (no draw before the horizon matters), or only for the lines still in contention.
+
+## AI-30.2: the stopped games - first read (2026-11-19)
+
+The 2026-11-18 sealed runs (pool 5 and before, `ai_reports/sealed-builds-2026-11-18_*`, `--game-minutes=6`): 166 of
+608 games stopped (27%). **Not long games - slow decisions:** a stopped game has as many AI decisions as a finished
+one (median 103.5 against 102, mean 106 both), so it reached the cap at ≥ 3.5 s a decision. Replayed by record
+(`--record=FILE`, 165 of 166; one stale): cut at turn 14 median (mean 15, 8-34), where finished games average ~16 -
+most were a few turns from the end. Opponents differ: opp1 stopped in 10 games, opp21 8, opp44 7, against ~3-4
+typical; no one card common to them (Troubling Tribbles in two of four). Still to read: the boards at the cut, and
+the stopped games' share of a run's machine time.
+
+**The two futures' shared start (2026-11-19, a temporary counter over the suite, removed):** of 5 351 line pairs, the
+steps played BEFORE our library first changes (our first draw, a look, a search) are 34.3% of the "not lands" rollout
+and 39.0% of the "lands" one - the rest of our turn and the opponent's whole turn. Only 270 pairs (5%) never draw
+within the horizon (the existing `ponytail:` - skip the second where nothing is drawn - would save ~5% of second
+rollouts). In 774 pairs (14%) the two starts differ in length: the look-ahead's play before the draw already reads
+what the library holds, so sharing the start is close to, not exactly, today's answer.
+
+**AI-30.4a, built (2026-11-20):** the two rollouts share their start (`Rollout.ScoreBoth`; off: `beam+nosharedstart`).
+Suite: 0 of 288 decisions changed, **16 305 engine steps a position against 19 094 (−14.6%)**, oracle 73.6% both. The
+rewrite of the rollout loop is exact (off: 0 changed, 19 094).
+
+**AI-30.4c and 30.4b (2026-11-20), the suite (288 positions):**
+
+| Run | Steps / position | Rollouts | Changed | Oracle |
+|---|---|---|---|---|
+| A (committed) | 16 305 | 37.2 | 0 | 73.6% |
+| A + D - lands in hand cover the look-ahead's land drops: not-lands way alone (default) | **13 374** | 29.2 | 1 | 74.0% |
+| A + D + B, `contenders4` | 12 835 | 27.9 | 2 | 74.3% |
+| A + D + B, `contenders3` | 12 309 | 26.5 | 3 | 74.7% |
+| A + D + B, `contenders2` | 11 628 | 24.7 | 5 | 74.3% |
+
+D's one change: seed 2 #21, Koth cast before combat or after, no attack either way (it flipped in AI-29.4-29.7 too).
+B's: seed 2 #71 Jace −3 → Ajani's Anguish X=1 (4, 3, 2), seed 1 #60 Koth's attack dropped (3, 2), seed 1 #69 Jace −3 →
+−1 and #79 Tam's Resistance → pass (2). B buys less than estimated: D already removes many second ways, A made the
+rest a third cheaper, and below the root a batch has only a few children.
+
+**The matches (2026-11-20, overnight, a quiet machine; `--until-clear`, FRA's decks):**
+- `beam` (A + D) vs `beam+nolandscovered` (A alone): **51.0% ± 1.0pp over 96 games (49-47)**, no 5pp difference either
+  way; cost per decision **7 593 against 8 312 engine steps (−8.7%)**, rollouts 19.1 / 21.7; lands 7.4 and spells 10.1
+  a game both. 22 min.
+- `beam+contenders3` (B) vs `beam`: **50.0% over 96 games (48-48)**, every mirror pair split, no 5pp difference; cost
+  per decision **6 806 against 7 565 (−10.0%)**, rollouts 17.0 / 19.1. 20 min.
+A match's decisions cost less than the suite's positions, and D saves less there (−8.7% against the suite's −18%).
+
+**D's one deciding game, and the fix (2026-11-20).** The only White-Black mirror pair of the D match that did not split:
+Red-Green v White-Black seed 7 - with D Red-Green won on turn 16, without it lost on turn 33. They part at #50, Rank Rat's
+discard on turn 3: D discarded Arni, Renowned Champion (14.66 v 13.95), without D Chandra's Emberling (16.89 v 16.85, a
+tie); the games then differ everywhere - noise, not a misplay. But D's reason was wrong: the one land in hand was
+Konstrari Annex (enters tapped), counted as covering turn 4's drop, while a drawn Forest is what casts Arni on turn 4.
+Since then **only a land that would enter untapped covers a drop** (`LandDropsCovered`). Suite: **13 582 steps a
+position** (+1.6% on 13 374; −16.7% on A), 1 changed - seed 2 #21 back to A's "Cast Koth" (an Annex in that hand),
+oracle 73.6%. In match 2 the pair played identically on both sides (`beam` has D), so B never met it.
+
+**AI-30.4d (2026-11-20): the "lands" way only where a drawn land could change something** - in place of B's ranking
+(B ranks by the "not lands" score: Koth's landfall line, its lift +10, was given the average +4 and lost at seed 2
+#21). `LandMatters`: a card the line drew, the hand's spells costing more than our mana to come, an X spell, or our
+landfall. A first cut counting cards castable (`LandUnlock.Playable`) and skipping this turn's draws cost 10 578 steps
+but changed 6, Koth and Jace's draw-first among them. As built:
+
+| Run | Steps / position | Rollouts | Changed | Oracle |
+|---|---|---|---|---|
+| D (committed) | 13 582 | 30.0 | 0 | 73.6% |
+| B, `contenders3` (removed) | 12 455 | 27.0 | 3 | 74.7% |
+| D + `landmatters` | **12 326** (−9.2%) | 25.6 | 5 | 71.9% |
+
+Its five: two Jace −3 draws moved first (seed 1 #70, seed 2 #60), three orders (seed 1 #104 Anguish after the attack,
+seed 1 #70 Way of the Mentor after combat, seed 3 #56 Winter after combat). Match, `beam+landmatters` vs `beam`
+(`--until-clear`): **50.0% ± 1.5pp over 96 games (48-48)**, no 5pp difference; cost per decision **6 671 against 7 620
+engine steps (−12.5%)**, rollouts 16.0 / 19.1; lands 7.3 / 7.4, spells 10.0 both. 24 min. Then, from the review: a land in hand
+that enters tapped no longer counts as mana, and the drawn land's own "enters" trigger counts - suite 12 354 steps, 0
+changed; the default since.
+
+## AI-30.1: the time profile at today's default (2026-11-20)
+
+AI-22.1's method on a quiet machine, after A, D and AI-30.4d: `dotnet-trace collect --profile dotnet-sampled-thread-time`
+over `--set=trk --builds=sim_results/builds/RGb.txt --both-seats --games=8` (16 games in parallel, server collector,
+Release). 5 min - the run's length is its slowest game: one stopped at the 5 min cap (AI-22.1's none did), so this
+run's wall time says nothing; the shares do. Inclusive, of all time with an engine frame on the stack.
+
+| Under | AI-22.1 (2026-11-12) | Now |
+|---|---|---|
+| `BeamSearchAi.Search` | 91.8% | 93.4% |
+| the rollouts (`Rollout.Score` then; `Expand`'s `RollOut` now) | 89.7% | **82.4%** |
+| `Rollout.Choose` - the rollout policy's choices | 59.9% | 46.5% |
+| `BeamSearchAi.WithFreePasses` - AI-13.12's free passes | 36.1% | **37.6%** |
+| `WholeAttacks.Best` - the rollout's attack plans | 50.1% | **37.3%** |
+| `Rollout.OpponentStep` | - | 36.0% |
+| `Lookahead.Settle` | 43.5% | 29.5% |
+| `Evaluator.Position` | - | 26.2% |
+| `TurnStructure.GivePriority` (the engine's every pass) | 40.1% | 25.4% |
+| `WholeAttacks.Blocked` | 31.1% | 25.3% |
+| `MagicRules.LegalActions` | - | 23.9% |
+| `Rollout.Answer` / `Rollout.BestAlone` | 29.1% / 19.6% | 19.8% / 12.7% |
+| `Triggers.Collect` | - | 14.4% |
+| `ManaPayment.Find` | - | 11.5% |
+| `OptionPrice` at the root (`Root.Answers`, `TheirLikely`) - AI-26.4 | - | **9.2%** |
+
+- The leaf trap again: 72% of self time is `Thread.PollGC` and `MagicState.CardsIn` reads 38.5% inclusive - the
+  sampler's own stops (AI-7.1, "Two traps"), not a lever. Callers' inclusive time only.
+- The rollouts are still most of it, but no longer one thing: the attack plans fell from half to a third, and the
+  free passes are now as large. AI-26.4's option price costs 9% of the time while it costs no engine steps - the
+  step counts (AI-30.1 by engine steps) cannot see it.
+- Scripts: `prof_report.py` (inclusive shares) and `prof_drill.py` (callers, self time) in the session scratchpad;
+  the 1 GB Speedscope file needs ~10 GB of memory to read.
+
+## AI-30.4e and the free passes' first count (2026-11-20)
+
+**The real-blocks re-judging ran past the combat** (`WholeAttacks.Blocked`): with no block to ask - "no attack", or
+nothing able to block - its passes (AutoPass after each, and a step test `<= DeclareAttackers` that the next turn's
+untap also passes) went on into the opponent's next turn, so those plans were scored after their untap and draw and
+a blocked attack right after its blocks. Probed: both plans left at turn 2's declare-attackers; fixed, turn 1's
+EndCombat / DeclareBlockers. Suite: **12 014 steps a position (−2.8%), 2 changed** - seed 2 #102 the Cadet now attacks
+(nothing of theirs untapped; Jace −2 makes a new blocker after), seed 4 #43 the Mountain before Jace −1. **AI-30.4e**
+(`beam+noblockers`: no re-judging when nothing of theirs can block any attacker, `Combat.CanBlock`) on top: the same
+answers, **11 551 steps** (−3.9% on the fix, −6.5% in all) - before the fix it changed the same two.
+
+**Why a real decision searches (temporary counters, 24 games of FRA's decks, `beam` vs `beam`):** 3 090 decisions
+reached the plan check; **1 168 replayed the plan**, 1 922 searched (1 722 real, 200 with one option). Of the 1 922:
+the plan had **run out 1 618 times (84%)**; an unseen card was drawn or shown 276 (14%); the score moved past the
+threshold 12, a new turn 6, the planned move not found 6, their object on the stack 4. **A surprise drops a plan about
+1% of the time** - the AI re-plans because its plan is short (the tree's 3 levels and the free passes), not because
+it re-thinks a plan that still holds.
+
+## AI-33.4: the two-attack clock (2026-11-20)
+
+The Cadet board (we at 10 with two 2/2 Cadets; they at 12 with two Rampart Hunters, 3/3 deathtouch, and a 1/4 flier):
+the look-ahead blocked one Hunter with one Cadet and kept the other home. Its scores: half-block −36.61, double block
+−36.85, a chump on each Hunter −39.40, no blocks −40.57. Life after is 5 in both of the first two; the clock read the
+same 4 through in both, because the Cadet kept home "stopped" a Hunter for good - so a live 2/2 just outweighed a dead
+3/3 deathtouch. Averaging two attacks (a blocker that died blocking, and an attacker that died to its blocker, gone for
+the second): half-block 4 then 7 = 5.5, double block 4 then 4 = 4.0, about 3 points the double block's way at 5 life.
+
+| suite (288 positions) | changed | steps a position | score given up | oracle agreement |
+|---|---|---|---|---|
+| AI-30.4e's blocks fix, one attack | 2 | 12,014 | 0.66 | 71.9% |
+| + the two-attack clock | 14 | 11,934 | 0.57 | 71.9% |
+
+The 14 read on their boards: reorders (cast after combat, Jace's draw first), blockers cast at 4 and 9 life, none
+pumping an opponent's creature; the blocks fix's two changes return to the committed answers.
+
+**Match** (`--match=beam,beam+oneattack --until-clear`, FRA's decks; stopped by hand, not by the rule): **49.0%
+over 200 games (98-102)** at 53 min, no 5pp difference either way when stopped. Seed 3 #16's Oculus is AI-34's case 1.
+
+**AI-33.5: the turns to kill on the same two attacks** (`Terms.TwoAttackKill`; read by how long a held card stays
+useful, the share of their attack sent at our walker, the option price's turns ahead). The Cadet board before combat,
+we at 10: their clock on us 10 turns at one attack (only the flier's 1 through), 3 at two (1, then 7).
+
+| version | suite changed | steps a position | match vs `beam+onekillclock` (192 games) |
+|---|---|---|---|
+| life ÷ the two attacks' AVERAGE | 2 | 9,500 | 51.0% ± 1.0pp (98-94) |
+| counted up: the first attack, then the second's damage for every one after (committed) | 0 | 9,281 | 49.0% ± 1.0pp (94-98) |
+
+The average misread low life (the Cadet board at 3 life: 1 turn, really 2). Its 2 changes, both better plays by
+Shayne's read (seed 4's Red-Green: a hasty attack over Ajani's Anguish; Budding Insurgent destroying Way of the Healer
+at 1 life), were TIES the average broke the other way: 9023.22 against 9023.20 (two winning lines), and −7.69 each.
+
+**AI-33.6: the burn rule's two-turn kill on the two attacks** (`Terms.TwoAttackBurn`): suite 0 changed; match
+`beam` vs `beam+oneburnclock` **48-48, every game alike** (96 games, 21 min) - in FRA's three decks the two readings
+never disagreed where a burn could go at the face. Its tests (`TheBurnRulesKill_ReadsTwoAttacks`) are what pin it.
+
+**AI-33.7: a blocker tapped now is back for the second attack** (`beam+tappedback`, OFF by default; the default
+`Terms.TappedStay` leaves it out - wrong, but measured no worse):
+
+| | suite changed | oracle read on the fix's evaluator | oracle read on the default's |
+|---|---|---|---|
+| default (`TappedStay`) | 0 | 92.4%, 0.37 given up, 2 wins missed | **93.1%, 0.46, 1** |
+| the fix (`+tappedback`) | 16 | **94.1%, 0.58, 1** | 91.0%, 0.77, 4 |
+
+Match `beam` (then the fix) vs `beam+tappedstay` (then the old reading): **the fix 48.2% ± 1.2pp, 289-311 over 600
+games** (69 min), undecided at the cap, leaning worse; 4 782 vs 4 817 engine steps a decision. **Each oracle favours the
+evaluator it was read with** - agreement and missed wins flip with the reading, so for an EVALUATOR change the oracle
+check is no verdict; the match is. The three "new missed wins" against the oracle stored before the fix all won when
+re-searched (two picked the fix's own answer). **Its lost games** (each game twice from one seed, the fix vs `beam` and
+`beam` vs `beam`, 192 pairs): 32 results flipped, 18 lost and 14 won, the first changed decisions spread over casts,
+orderings, Jace, X sizes, attacks and blocks - no one kind of play behind the lean.
+
+**AI-33.8: the damage at our walker on the two attacks** (`Terms.TwoAttackWalker`; off: `beam+onewalkerclock`): suite
+**2 changed** - Mindseeker Oculus cast before combat (Shayne: "makes sense"), and Yoshimaru's counter on the Cadet 2/2
+over Heartstring Puller 3/1 (Shayne: the 4/2 Puller, a clean blocker for their 5/4). That flip is the ROLLOUT's: the
+Cadet line counters the Puller a turn later and now attacks it into the Duelist for the trade (8.74, was 3.72 holding
+back), over the Puller line's 7.95; the walker term on the end board moved 0.25. Match `beam` vs `beam+onewalkerclock`:
+**51.4% ± 0.8pp, 148-140 over 288 games** (40 min), stopped clear of 5pp either way, leaning better; 4 874 vs 4 895
+engine steps a decision. On by default; 4 greedy golden games moved; the oracle re-read on it: 92.0%, 0.60 given up
+a position, 1 win missed (the old default on its own oracle: 93.1%, 0.46, 1).
+
+## AI-30.4e: the free passes' second count - what the searches decide (2026-11-21)
+
+Temporary counters (`beam` vs `beam`, 24 games of FRA's decks, any time): 3 196 decisions, 28.2M engine steps; for each,
+whether it searched (or replayed its plan), the window (our main phase with an empty stack, a choice, or a step with
+priority), what it chose, and its engine steps.
+
+| searched in | decisions | chose | share of all engine steps |
+|---|---|---|---|
+| our main phase, empty stack | 528 | acted | 29.5% |
+| **our upkeep** | 150 (+12 acted, 3.2%) | **passed** | **23.4%** |
+| **our draw step** | 158 (+26 acted, 2.8%) | **passed** | **17.2%** |
+| declare attackers | 154 | answered | 7.4% |
+| our beginning of combat | 60 | passed | 3.8% |
+| declare blockers | 120 | answered | 2.7% |
+| a surveil's look | 102 | answered | 1.9% |
+| the rest of our turn's steps (end of combat, damage, end) | ~150 | passed | ~5% |
+| **every step of THEIR turn together** | ~190 | passed | **under 1%** |
+
+**Searches outside our main phase: 56.1% of all steps, and 658 of their 708 passed.** **Our upkeep and draw step
+alone: 308 searches that passed, 40.6% of every step**, about 44 000 and 31 000 steps each - a whole turn's search, run
+because an instant, a flash card or an ability usable any time is in reach (4.6 options on average). The upkeep's plan
+can't survive the draw: the drawn card is unseen, so the draw step searches the whole turn again, and the main phase
+often a third time. Their turn costs almost nothing - our options there are few and the plan rarely runs out.
+
+**The 20 plays those searches made** (the same 24 games, recorded): every one with an empty stack - instant removal and
+abilities used in our upkeep (6) or draw step (14) that the main phase could make as well, the upkeep's before seeing
+the draw. **AI-30.4f** (the default since 2026-11-21, off: `beam+upkeepsearch`; measured as `beam+afterdraw`: our upkeep and
+draw step pass unplanned while the stack is empty): suite
+**9 431 steps a position against 11 934 (−21%)**, 2 changed (draw-step instants now waiting), oracle 71.9% -> 72.2%. Match against `beam` (288 games, --until-clear): **49.7% ±
+1.4pp**, no 5pp difference either way, at **5 003 engine steps a decision against 7 124 (−29.8%)**.

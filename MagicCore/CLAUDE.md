@@ -84,12 +84,13 @@ MagicCore/
 ├── Ai/GameRecord.cs     a played game, EVERY transition kept (you/ai/stop/rule/sandbox), replayed by token alone; stale says so; Transcript, Before(#N) (TBL-5) — kept as AI test cases in MagicCore.Tests/Records (KeptRecords)
 ├── Ai/RecordComparison.cs  a record's choices beside the AI's: the default search's pick and the oracle's rank of yours at each `you` decision (--compare, TBL-5.6)
 ├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer (chumps facing lethal: Chumps); WholeAttacks.cs: an attack as ONE decision — candidates, targets, the declaration answered whole (AI-17.3)
-├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount; LastChance (AI-26.5): our tap abilities kept for their end step
+├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount; LastChance (AI-26.5): our tap abilities kept for their end step; ScoreBoth (AI-30.4a): LandOrNot's two ways from one shared start
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;
 │                        held cards priced by their measured value by default (AI-1); Settings.Interactive
 │                        is the ~1 s wall-clock cap for the table and console — never in a sim run
 ├── Ai/BlunderLint.cs    AI-17.7: AI games (any set's sealed decks, kept as records) each decision checked for an obvious mistake, per-card misplay checks S1–S6 (AI-19.23)
 ├── Ai/LandUnlock.cs     AI-9.1: does a land unlock a card in hand, or more casts next turn? Prices own lands in the evaluator (Terms.LandUnlock)
+├── Ai/LandOrder.cs      AI-29.3: WHICH land to play, by rule - casts now, colours of hand and deck, a breakable condition first, tapped when free, a spell next turn worth more (AI-29.8) (Terms.LandOrder)
 ├── Ai/RunProgress.cs    the progress line EVERY batch run prints (done/total, minutes, running result) - a project rule
 ├── Ai/Hidden.cs         what the search may know of the libraries and the opponent's hand: the real
 │                        ones, or what isn't known (Card.KnownTo) sampled at its root — Hidden.Sample (AI-3); LandOrNot (the default, AI-20.4): no guess — unseen draws are unknown cards, or lands (Hidden.Unknown); one shuffled guess is beam+shuffle

@@ -112,6 +112,28 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// by the search's card prices, not the flat 1.2 a card and 0.3 a land - the third price scale (AI-27). The default
 	/// since 2026-11-18 (Shayne; matched 48-48); off is beam+nosettleheld.
 	/// </param>
+	/// <param name="SharedStart">
+	/// <see cref="Hidden.Library.LandOrNot"/>'s two rollouts of a line share the play before our library first changes
+	/// (<see cref="Rollout.ScoreBoth"/>, AI-30.4a); off (beam+nosharedstart) plays each from the line's position.
+	/// </param>
+	/// <param name="LandsCovered">
+	/// With lands in hand for every land drop the look-ahead has left, only the not-lands way is played (AI-30.4c, Shayne
+	/// 2026-11-20: "if I already have 2 lands in hand, I don't need to simulate what happens if i need to draw a land
+	/// next turn"); off (beam+nolandscovered) plays both.
+	/// </param>
+	/// <param name="LandMatters">
+	/// A line's "lands" rollout only where a drawn land could change something (<see cref="LandMatters"/>, AI-30.4d,
+	/// Shayne 2026-11-20 - in place of AI-30.4b's top lines by the "not lands" score, which ranked Koth's landfall line
+	/// by the average lift). The default since 2026-11-20 (Shayne; matched 48-48, −12.5% a decision); off is
+	/// beam+nolandmatters.
+	/// </param>
+	/// <param name="AfterTheDraw">
+	/// Our own upkeep and draw step pass unplanned while the stack is empty (AI-30.4f, Shayne 2026-11-21: "planing
+	/// usually starts after you draw your card for the turn") - an upkeep or draw trigger is on the stack when we get
+	/// priority: theirs is still searched, ours resolves as before. Measured: 308 searches there that passed were 40.6% of every engine step, the
+	/// upkeep's plan never surviving the draw. The default since 2026-11-21 (match level, −30% a decision);
+	/// beam+upkeepsearch searches there again.
+	/// </param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -144,7 +166,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool ByUse = true,
 		bool DrawnCard = true,
 		bool LandUse = true,
-		bool SettleHeld = true
+		bool SettleHeld = true,
+		bool SharedStart = true,
+		bool LandsCovered = true,
+		bool LandMatters = true,
+		bool AfterTheDraw = true
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -236,6 +262,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	// The cards of our library the plan's search hadn't seen (LandOrNot): one of them in our hand is news it was made without.
 	HashSet<int> planUnseen = [];
+
+	/// <summary>Our library's nonland cards as the real game has them, read before the root is sampled - the deck <see cref="LandOrder"/> reads colours from.</summary>
+	List<Cards.Card> deck = [];
 	int rollouts;
 	int secondRollouts; // a line's second rollout under LandOrNot: a cost, not a line of the budget
 
@@ -298,7 +327,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// </summary>
 	public string Explain() =>
 		sampled is null
-			? "\n(no search: one option, a plan replayed, or a forced pass)\n"
+			? "\n(no search: one option, a plan replayed, a forced pass, or our upkeep or draw step)\n"
 			: Evaluator.Without(
 				options.Without,
 				() =>
@@ -480,6 +509,19 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		)
 			return AiDecision.Answering(s, [WholeAttacks.Answer(s, PlayerId, attack, ask)]);
 		declaring = null;
+		if (
+			options.AfterTheDraw
+			&& !s.IsWaitingForChoice
+			&& s.GetGame() is { Step: Step.Upkeep or Step.Draw } game
+			&& game.ActivePlayerId == PlayerId
+			&& Stops.TopOfStackControllerId(s) == 0
+		)
+		{
+			// ponytail: nothing before the draw is considered (a surveil instant setting it up); skip only when no such
+			// option is in reach if a card needs it (DesignNotes, MagicCore known ceilings)
+			(plan, planExpected) = ([], []); // a plan made earlier this upkeep must not replay its passes in the main phase
+			return AiDecision.Acting(s, new PassPriorityAction { PlayerId = PlayerId });
+		}
 		var decision = FromPlan(s) ?? Search(s);
 		if (decision is Declare d)
 		{
@@ -498,6 +540,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
+		// the whole library, the known top cards too - kept there by a scry or surveil (AI-29.6)
+		deck =
+		[
+			.. s.CardsIn(PlayerId, ZoneType.Library)
+				.Where(c => !Hidden.IsUnknown(c) && !c.Is(Cards.CardType.Land)),
+		];
 		planUnseen =
 			options.Library == Hidden.Library.LandOrNot
 				? [.. Hidden.Unseen(s, PlayerId).Select(c => c.Id)]
@@ -640,8 +688,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// A look at an unseen card - <paramref name="looks"/> in the tree, and those the rollout makes in this turn - moves
 	/// <paramref name="odds"/> towards the better of the two (<see cref="Evaluator.Terms.Looks"/>, AI-20.9): it is binned
 	/// unless it is the draw this line wants.
-	/// ponytail: twice the rollouts a line (the budget still counts lines); skip the second where no unseen card is
-	/// drawn within the horizon if the cost shows (AI-20.4).
+	/// The two share their play before our library first changes (<see cref="Settings.SharedStart"/>, AI-30.4a).
+	/// ponytail: twice the rollouts a line (the budget still counts lines), the second from its shared start.
 	/// </summary>
 	double RolloutScore(
 		GameState state,
@@ -654,30 +702,72 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		odds = 0;
 		if (options.Library != Hidden.Library.LandOrNot)
 			return Rollout.Score(state, PlayerId, horizon, RolloutSettings, out turnEnd, out _);
-		odds = Hidden.LandOdds(state, PlayerId);
+		odds = LandShare(state, horizon);
 		var (land, none) = (0.0, 0.0);
 		(int Looked, int Drawn) unseen = default;
 		turnEnd = null;
-		if (odds > 0)
-			land = Rollout.Score(
-				Hidden.Unknown(state, PlayerId, lands: true),
-				PlayerId,
-				horizon,
-				RolloutSettings,
-				out turnEnd,
-				out _,
-				landsDrawn: true
-			);
-		if (odds < 1) // its turn end is the one the potential reads: what the line keeps up without a lucky draw
-			none = Rollout.Score(
+		if (odds is > 0 and < 1 && options.SharedStart)
+			(land, none) = Rollout.ScoreBoth(
 				state,
 				PlayerId,
 				horizon,
 				RolloutSettings,
 				out turnEnd,
-				out unseen,
-				landsDrawn: false
+				out unseen
 			);
+		else
+		{
+			if (odds > 0)
+				land = Rollout.Score(
+					Hidden.Unknown(state, PlayerId, lands: true),
+					PlayerId,
+					horizon,
+					RolloutSettings,
+					out turnEnd,
+					out _,
+					landsDrawn: true
+				);
+			if (odds < 1) // its turn end is the one the potential reads: what the line keeps up without a lucky draw
+				none = Rollout.Score(
+					state,
+					PlayerId,
+					horizon,
+					RolloutSettings,
+					out turnEnd,
+					out unseen,
+					landsDrawn: false
+				);
+		}
+		if (odds is > 0 and < 1)
+			Interlocked.Increment(ref secondRollouts);
+		return Blend(state, ref odds, land, none, looks, unseen);
+	}
+
+	/// <summary>
+	/// The share of a line's "lands" rollout (<see cref="Hidden.LandOdds"/>), or 0 when its land drawn would sit in hand
+	/// (<see cref="Settings.LandsCovered"/>) or change nothing (<see cref="Settings.LandMatters"/>).
+	/// </summary>
+	double LandShare(GameState state, int horizon) =>
+		// a drawn card is priced alike whatever it is (DrawnCard), so a land that is not played, or changes nothing played,
+		// scores as the not-lands way does: that way alone
+		DrawnCard
+		&& (
+			options.LandsCovered && LandDropsCovered(state, PlayerId, horizon)
+			|| options.LandMatters && !LandMatters(state, PlayerId, horizon)
+		)
+			? 0
+			: Hidden.LandOdds(state, PlayerId);
+
+	/// <summary>A line's score from its two ways at <paramref name="odds"/> - moved by its looks - and the looks' credit.</summary>
+	double Blend(
+		GameState state,
+		ref double odds,
+		double land,
+		double none,
+		int looks,
+		(int Looked, int Drawn) unseen
+	)
+	{
 		// DrawnCard (AI-27.7): a drawn card is worth the same whatever it is, so a look can no longer gain by bettering the
 		// next draw - each look at an unseen card is credited a share of a drawn card, whatever it shows (Shayne, AI-9.3:
 		// "a useless card binned is effectively drawn you a card"; seed 4 #75, a Jace token at 1 kept rather than surveil)
@@ -688,7 +778,6 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			: 0;
 		if (odds is > 0 and < 1)
 		{
-			Interlocked.Increment(ref secondRollouts);
 			looks += unseen.Looked;
 			// a look moves the NEXT draw only, and a rollout's draws all go one way: its share of them (a Jace
 			// token at 6 surveiled rather than drew - two draws ahead, the look counted for both).
@@ -701,6 +790,88 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		}
 		return odds * land + (1 - odds) * none + credit;
 	}
+
+	/// <summary>
+	/// Whether the lands in <paramref name="me"/>'s hand cover every land drop the look-ahead to <paramref name="horizon"/>
+	/// has left: this turn's if ours and not yet made, one each later turn of ours (AI-30.4c). Only a land that would enter
+	/// untapped counts: a land drawn would be played over a tapped one (Konstrari Annex in hand, Arni's four mana on turn 4
+	/// only with a drawn Forest - match seed 7, 2026-11-20).
+	/// ponytail: "untapped" read from its own text on today's board (EntersTappedComponent, its "unless" now; a shockland
+	/// as untapped) - another permanent's entry rule (Root Maze) is not read; one drop a later turn (no extra drops counted ahead), turns alternate (no extra turns), a land in hand is
+	/// a drop whatever it makes - a land that would be played for its COLOUR still counts as surplus; count only lands that
+	/// unlock nothing more if a position shows a colour draw misjudged.
+	/// </summary>
+	public static bool LandDropsCovered(GameState s, int me, int horizon) =>
+		s.CardsIn(me, ZoneType.Hand)
+			.Count(c =>
+				!Hidden.IsUnknown(c) && c.Is(Cards.CardType.Land) && EntersUntapped(s, me, c)
+			) >= Drops(s, me, horizon);
+
+	/// <summary>
+	/// Whether a land drawn in the look-ahead to <paramref name="horizon"/> could change anything (AI-30.4d): a card the
+	/// line has already drawn (a land the other way, playable now); the hand's spells costing more than the mana we will
+	/// have - our sources and the untapped lands in hand we get to play (a tapped Konstrari Annex is not turn 4's mana) -
+	/// or an X spell to pour it into; or a trigger of ours on a land entering, the land's own included (Koth's landfall -
+	/// read by the engine's own trigger matcher).
+	/// ponytail: mana counted, not colours (a land for a missing colour reads as changing nothing once the count is
+	/// met); mana sinks on the board (Yoshimaru's {6}), a land as a cost (Marwyn's sacrifice) and "lands you control"
+	/// counts are not read; spells castable from elsewhere (flashback, impulse exile) are not counted; a card in hand that
+	/// triggers on a land (Koth not yet cast) only through the line that casts it; the land tested for a trigger is the
+	/// first unseen, not the commonest name the lands way draws; a land's own price on the battlefield (Evaluator's
+	/// LandUse) still differs between the two ways - skipped, as under LandsCovered. Read them if a position shows one.
+	/// </summary>
+	public static bool LandMatters(GameState s, int me, int horizon)
+	{
+		var hand = s.CardsIn(me, ZoneType.Hand).ToList();
+		if (hand.Any(Hidden.IsUnknown))
+			return true;
+		var spells = hand.Where(c => !c.Is(Cards.CardType.Land)).ToList();
+		if (spells.Any(c => c.ManaCost.HasX))
+			return true;
+		var mana =
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => ManaAbilities.ColorsOf(s, c).Any())
+			+ Math.Min(
+				hand.Count(c => c.Is(Cards.CardType.Land) && EntersUntapped(s, me, c)),
+				Drops(s, me, horizon)
+			);
+		if (spells.Sum(c => c.ManaCost.ManaValue) > mana)
+			return true;
+		if (Hidden.Unseen(s, me).FirstOrDefault(c => c.Is(Cards.CardType.Land)) is not { } land)
+			return false;
+		return global::MagicCore
+			.Turns.Triggers.Collect(s.EnterBattlefield(land.Id, me))
+			.Any(p => p.EventCardId == land.Id && p.Source.ControllerId == me);
+	}
+
+	/// <summary>Our land drops the look-ahead to <paramref name="horizon"/> has left: this turn's if ours and not yet made, one each later turn of ours.</summary>
+	static int Drops(GameState s, int me, int horizon)
+	{
+		var game = s.GetGame();
+		var ours = game.ActivePlayerId == me;
+		var drops = 0;
+		for (var turn = game.TurnNumber; turn < horizon; turn++, ours = !ours)
+			if (ours)
+				drops +=
+					turn == game.TurnNumber
+						? Math.Max(0, s.LandDrops(me) - s.GetPlayer(me).ThisTurn.LandsPlayed)
+						: 1;
+		return drops;
+	}
+
+	/// <summary>Whether a land in hand would enter untapped by its own text: no "enters tapped", its "unless" holds now, or a shockland's life.</summary>
+	static bool EntersUntapped(GameState s, int me, Cards.Card land) =>
+		land.GetComponent<EntersTappedComponent>() switch
+		{
+			null => true,
+			_ when land.GetComponent<EntryCost>() is { Instead: null } => true, // a shockland: untapped for its life (MC-4.4l4a)
+			{ Unless: { } unless } => unless.Holds(
+				s,
+				ImmutableDictionary<string, object>
+					.Empty.Add(ContextKeys.Controller, me)
+					.Add(ContextKeys.Source, land.Id)
+			),
+			_ => false,
+		};
 
 	/// <summary>A position of the tree as <see cref="Hidden.Library.LandOrNot"/> knows it: arranged again once anything random (a shuffle) has moved a library.</summary>
 	GameState Arranged(GameState s) =>
@@ -801,6 +972,17 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 			// a land is never worth passing on (Terms.LandDrop): the land first, then whatever else
 			if (!Evaluator.IsOff(Evaluator.Terms.LandDrop) && moves.Any(a => a is PlayLandAction))
 				moves.RemoveAll(a => a is PassPriorityAction);
+			// which land is a rule (Terms.LandOrder): the land it picks, alone when it must go first
+			if (
+				!Evaluator.IsOff(Evaluator.Terms.LandOrder)
+				&& moves.OfType<PlayLandAction>().ToList() is { Count: > 0 } lands
+			)
+			{
+				var (keep, first) = LandOrder.Pick(s, PlayerId, lands, deck, RolloutSettings.Held);
+				moves.RemoveAll(a =>
+					a is PlayLandAction l && !keep.Contains(l) || first && a is not PlayLandAction
+				);
+			}
 			// a Spacecraft that already has its threshold gains nothing from another counter (Terms.StationCap)
 			if (!Evaluator.IsOff(Evaluator.Terms.StationCap))
 				moves.RemoveAll(a => a is ActivateAbilityAction act && OverCharges(s, act));
@@ -929,13 +1111,14 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// Shayne's burn rule (AI-17.6, 2026-11-09): "save it until you can actually kill the opponent" - this turn or the
 	/// next. Their life against the damage reachable in the two: the burn in our hand cast cheapest first with each
 	/// turn's mana (now: untapped sources and a land still to play; next: every source and another land), X taking
-	/// what is left (X spells last), and what our attackers get past their blockers each turn (<see cref="Evaluator.Through"/>;
-	/// this turn's only while we can still attack).
-	/// ponytail: mana counted by source, colours ignored; this turn's attack counts every creature, sick or not, and next
-	/// turn's meets their blockers as they stand now; a count's multipliers (Times) unread; lifegain they may have
+	/// what is left (X spells last), and what our attackers get past their blockers: this turn's attack and next turn's
+	/// (<see cref="Evaluator.TwoThrough"/>: a chump stops its attacker once, a trade for good, AI-33.6) while we can still
+	/// attack, else next turn's (<see cref="Evaluator.Through"/>).
+	/// ponytail: mana counted by source, colours ignored; this turn's attack counts every creature, sick or not, and the
+	/// second attack meets only their blockers untapped now (`Evaluator.Terms.TappedStay`); a count's multipliers (Times) unread; lifegain they may have
 	/// (Shayne's lifelinker) not subtracted - the search then weighs killing it; their answers to come unseen.
 	/// </summary>
-	static bool KillsWithinTwoTurns(GameState s, int me)
+	public static bool KillsWithinTwoTurns(GameState s, int me)
 	{
 		var them = s.OpponentOf(me);
 		var game = s.GetGame();
@@ -974,12 +1157,12 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					burns.Remove(burn);
 				}
 		}
+		var attackNow =
+			ours && game.Step <= Step.DeclareAttackers && !Turns.Combat.Attackers(s).Any();
 		var combat =
-			(
-				ours && game.Step <= Step.DeclareAttackers && !Turns.Combat.Attackers(s).Any()
-					? Evaluator.Through(s, me, them)
-					: 0
-			) + Evaluator.Through(s, me, them);
+			!attackNow ? Evaluator.Through(s, me, them)
+			: Evaluator.IsOff(Evaluator.Terms.TwoAttackBurn) ? 2 * Evaluator.Through(s, me, them)
+			: Evaluator.TwoThrough(s, me, them);
 		return s.GetPlayer(them).Life <= damage + combat;
 	}
 

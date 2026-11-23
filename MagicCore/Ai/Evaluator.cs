@@ -685,6 +685,54 @@ public static partial class Evaluator
 		/// #16 - `+firstmode`).
 		/// </summary>
 		RolloutModes = 1L << 38,
+
+		/// <summary>
+		/// Which land to play is a rule, not the search (<see cref="LandOrder"/>, AI-29.3, Shayne 2026-11-19): the casts it
+		/// allows now, the colours the hand and the deck need, a condition that can break first, a tapped land when free
+		/// (`+nolandorder`). The rollout plays the land it picks too (AI-29.5), under the same switch.
+		/// </summary>
+		LandOrder = 1L << 39,
+
+		/// <summary>
+		/// The clock is the average of the next TWO attacks (<see cref="Attacks"/>, AI-33.4, Shayne 2026-11-20: "You cannot race
+		/// them. At this point you have to try and remove their creatures from the board"): a blocker that dies blocking is gone
+		/// for the second, an attacker that dies to its blocker too. One attack let a 2/2 token "stop" a 3/3 deathtouch for good,
+		/// so a Cadet kept home scored over the double block that killed a Rampart Hunter (`+oneattack`).
+		/// </summary>
+		TwoAttacks = 1L << 40,
+
+		/// <summary>
+		/// The turns to kill read the same two attacks (<see cref="TurnsToKill"/>, AI-33.5): on Shayne's Cadet board (we at
+		/// 10, two 3/3 deathtouch and a 1/4 flier against our two 2/2 Cadets) one attack read only the flier's 1 through, 10
+		/// turns - two attacks read 1, then 7 once the chumps are dead: 3 turns. What it moves: how long a held card stays useful, the share of their attack sent
+		/// at our walker, the turns the option price looks ahead (`+onekillclock`).
+		/// </summary>
+		TwoAttackKill = 1L << 41,
+
+		/// <summary>
+		/// The burn rule's two-turn kill reads the same two attacks (BeamSearchAi.KillsWithinTwoTurns, AI-33.6): they at 10
+		/// with a 2/2, our two 3/3s and a burn for 3 - one attack read twice is 3 + 3, no kill, the burn held; two attacks,
+		/// 3 then 6 once the chump is dead, a kill. Against their 4/4 our 3/3 dies blocked (the 4/4 lives) and is gone for
+		/// the second (`+oneburnclock`).
+		/// </summary>
+		TwoAttackBurn = 1L << 42,
+
+		/// <summary>
+		/// The second attack meets only the defender's blockers untapped NOW (<see cref="Attacks"/>): a creature tapped
+		/// for the next attack - one that attacked the turn before - is missing from it, though it untaps between the
+		/// two. The DEFAULT, though wrong: switched off (`+tappedback`, AI-33.7) it is back for the second, and that
+		/// measured 48.2% ± 1.2pp over 600 games, leaning worse (docs/findings/magic-ai.md) - something else may lean on the
+		/// overstated second attack.
+		/// </summary>
+		TappedStay = 1L << 43,
+
+		/// <summary>
+		/// The damage sent at our walker reads the two attacks (<see cref="AtTheWalker"/>, AI-33.8): the first attack's
+		/// at the first hit, the second's at every one after - a chump blocker shields the walker once, a trade for good.
+		/// Without it every turn's hit is the first attack's: a 2/2 in front of a walker facing a 3/3 kept it safe for good
+		/// (`+onewalkerclock`).
+		/// </summary>
+		TwoAttackWalker = 1L << 44,
 	}
 
 	/// <summary>
@@ -787,7 +835,8 @@ public static partial class Evaluator
 	/// A trampler (AI-8.4) is met by the blocker that absorbs most, and gets past it what that blocker
 	/// can't absorb by the next attack — its lasting toughness, or 1 against deathtouch: Yuriko's 2/3
 	/// "stopped" a 7/5 trampler at 3 life, scoring a lethal board as no clock at all.
-	/// Each creature is met as the cleanup leaves it (AI-17.9, <see cref="NextTurn"/>).
+	/// Each creature is met as the cleanup leaves it (AI-17.9, <see cref="NextTurn"/>). Two attacks averaged (AI-33.4,
+	/// <see cref="Terms.TwoAttacks"/>): a chump blocker stops its attacker in the first only.
 	/// ponytail: otherwise one blocker stops one attacker whatever their sizes; menace and first strike
 	/// are ignored. Blockers go
 	/// to attackers in order, never two to one trampler, and a non-trampler may take the blocker a
@@ -799,27 +848,59 @@ public static partial class Evaluator
 		var life = s.GetPlayer(defender).Life;
 		if (life <= 0)
 			return 0;
-		return PressureWeight * 20.0 * Through(s, attacker, defender) / life;
+		var through = IsOff(Terms.TwoAttacks)
+			? Through(s, attacker, defender)
+			: Attacks(s, attacker, defender, 0, 2);
+		return PressureWeight * 20.0 * through / life;
 	}
 
 	/// <summary>
 	/// Turns <paramref name="attacker"/>'s board needs to kill <paramref name="defender"/> at the damage
-	/// that gets past its blockers now — the threat term's clock (int.MaxValue: no clock).
+	/// that gets past its blockers - the next attack, then the second (<see cref="Terms.TwoAttackKill"/>), counted up: the
+	/// second's damage stands for every attack after it, since what died in the first stays dead (int.MaxValue: no
+	/// clock). Read by OptionTurns, AtTheWalker (from the attacks it reads itself) and OptionPrice.TurnsAhead; the
+	/// pressure term reads Attacks itself.
 	/// </summary>
 	public static int TurnsToKill(GameState s, int attacker, int defender)
 	{
 		var life = s.GetPlayer(defender).Life;
-		var through = Through(s, attacker, defender);
-		return life <= 0 ? 0
-			: through <= 0 ? int.MaxValue
-			: (life + through - 1) / through;
+		var first = Through(s, attacker, defender);
+		if (life <= first) // life 0 included
+			return life <= 0 ? 0 : 1;
+		return TurnsToKill(
+			life,
+			first,
+			IsOff(Terms.TwoAttackKill) ? first : TwoThrough(s, attacker, defender) - first
+		);
 	}
+
+	/// <summary>The turns to take <paramref name="life"/>: the <paramref name="first"/> attack's damage, then the <paramref name="second"/>'s for every one after.</summary>
+	static int TurnsToKill(int life, int first, int second) =>
+		life <= 0 ? 0
+		: life <= first ? 1
+		: second <= 0 ? int.MaxValue
+		: 1 + (life - first + second - 1) / second;
+
+	/// <summary>
+	/// The power that gets past <paramref name="defender"/>'s blockers over <paramref name="attacker"/>'s next TWO attacks
+	/// together (<see cref="Attacks"/>): a chump blocker stops its attacker once, a trade for good.
+	/// </summary>
+	internal static int TwoThrough(GameState s, int attacker, int defender) =>
+		(int)Math.Round(2 * Attacks(s, attacker, defender, 0, 2));
 
 	/// <summary>
 	/// The power that gets past <paramref name="defender"/>'s blockers in <paramref name="attacker"/>'s next attack
 	/// — each attacker's power changed by <paramref name="bonus"/> (a walker's pump or −N/−0, AI-9.3).
 	/// </summary>
-	internal static int Through(GameState s, int attacker, int defender, int bonus = 0)
+	internal static int Through(GameState s, int attacker, int defender, int bonus = 0) =>
+		(int)Attacks(s, attacker, defender, bonus, 1);
+
+	/// <summary>
+	/// The power that gets past <paramref name="defender"/>'s blockers on average over <paramref name="count"/> attacks in a
+	/// row (<see cref="Terms.TwoAttacks"/>): after each, a blocker that died blocking is gone, and so is an attacker that died
+	/// to its blocker — a chump stops its attacker once, a trade for good.
+	/// </summary>
+	static double Attacks(GameState s, int attacker, int defender, int bonus, int count)
 	{
 		var attackers = new List<(Card Card, int Power)>();
 		foreach (var now in s.CardsIn(attacker, ZoneType.Battlefield))
@@ -840,41 +921,65 @@ public static partial class Evaluator
 			game.ActivePlayerId == attacker
 			&& game.Step >= Step.EndCombat
 			&& game.AdditionalCombats == 0; // Fear of Missing Out: another combat is owed
-		var blockers = new List<Card>();
+		var (blockers, later) = (new List<Card>(), new List<Card>());
 		foreach (var c in s.CardsIn(defender, ZoneType.Battlefield))
-			if (c.Is(CardType.Creature) && Alive(s, c) && (untapsFirst || !c.IsTapped))
-				blockers.Add(NextTurn(c.IsTapped ? c with { IsTapped = false } : c));
+			if (c.Is(CardType.Creature) && Alive(s, c))
+				if (untapsFirst || !c.IsTapped)
+					blockers.Add(NextTurn(c.IsTapped ? c with { IsTapped = false } : c));
+				else if (IsOff(Terms.TappedStay))
+					later.Add(NextTurn(c with { IsTapped = false })); // tapped for the next attack, untapped by the one after
 		// The defender blocks the biggest it can — fliers first, which only fliers and reach stop.
-		var through = 0;
-		foreach (
-			var (card, power) in attackers
+		attackers =
+		[
+			.. attackers
 				.OrderByDescending(a => s.Has(a.Card, "Flying"))
-				.ThenByDescending(a => a.Power)
-		)
+				.ThenByDescending(a => a.Power),
+		];
+		var total = 0;
+		for (var attack = 0; attack < count && attackers.Count > 0; attack++)
 		{
-			if (!IsTrampler(card))
+			var (living, survived) = (new List<(Card Card, int Power)>(), new List<Card>());
+			foreach (var (card, power) in attackers)
 			{
-				var blocker = blockers.FindIndex(b => Combat.CanBlock(s, b, card));
-				if (blocker < 0)
-					through += power;
+				Card? blocker;
+				if (!IsTrampler(card))
+				{
+					blocker = blockers.FirstOrDefault(b => Combat.CanBlock(s, b, card));
+					if (blocker is null)
+						total += power;
+				}
 				else
-					blockers.RemoveAt(blocker);
-				continue;
+				{
+					// What a blocker absorbs by the NEXT attack, as power is: pumps and marked damage gone.
+					var deathtouch = s.Has(card, "Deathtouch");
+					int Absorbs(Card b) =>
+						deathtouch ? 1 : Math.Max(1, s.Toughness(b) - Pumps(b).Toughness);
+					blocker = blockers.Where(b => Combat.CanBlock(s, b, card)).MaxBy(Absorbs);
+					total += blocker is null ? power : Math.Max(0, power - Absorbs(blocker));
+				}
+				if (blocker is not null)
+					blockers.Remove(blocker);
+				if (attack + 1 == count)
+					continue; // the last attack: who dies in it changes nothing counted
+				if (blocker is not null && !Kills(card, power, blocker))
+					survived.Add(blocker);
+				if (
+					blocker is null
+					|| !Kills(blocker, s.Power(blocker) - Pumps(blocker).Power, card)
+				)
+					living.Add((card, power));
 			}
-			// What a blocker absorbs by the NEXT attack, as power is: pumps and marked damage gone.
-			var deathtouch = s.Has(card, "Deathtouch");
-			int Absorbs(Card b) =>
-				deathtouch ? 1 : Math.Max(1, s.Toughness(b) - Pumps(b).Toughness);
-			var best = blockers.Where(b => Combat.CanBlock(s, b, card)).MaxBy(Absorbs);
-			if (best is null)
-				through += power;
-			else
-			{
-				through += Math.Max(0, power - Absorbs(best));
-				blockers.Remove(best);
-			}
+			// the blockers untap for the next attack; the ones that died blocking don't come back
+			(blockers, later) = ([.. blockers, .. survived, .. later], []);
+			attackers = living;
 		}
-		return through;
+		return (double)total / count;
+
+		// ponytail: first strike and damage split ignored, as in the blocks above; count them if a race is misjudged
+		bool Kills(Card by, int power, Card target) =>
+			power > 0
+			&& !s.IsIndestructible(target)
+			&& (s.Has(by, "Deathtouch") || power >= s.Toughness(target) - Pumps(target).Toughness);
 
 		// Trample that lasts to the next attack (AI-8.4) — not one granted until end of turn.
 		bool IsTrampler(Card c) =>

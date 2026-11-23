@@ -104,6 +104,8 @@ public static class AiMatch
 			["nosurveilprice"] = o => o with { Without = o.Without | Evaluator.Terms.SurveilPrice },
 			// The search may pass with a land to play, before AI-13.7: beam+nolanddrop.
 			["nolanddrop"] = o => o with { Without = o.Without | Evaluator.Terms.LandDrop },
+			// The search tries every land, before AI-29.3's rule: beam+nolandorder.
+			["nolandorder"] = o => o with { Without = o.Without | Evaluator.Terms.LandOrder },
 			// A Spacecraft's charge counted past its station threshold, before 2026-11-09: beam+nostationcap.
 			["nostationcap"] = o => o with { Without = o.Without | Evaluator.Terms.StationCap },
 			// A land in hand at a flat 0.3 whatever it unlocks, before AI-9.1: beam+nolandunlock.
@@ -131,6 +133,18 @@ public static class AiMatch
 			// beam+nosettleheld as before (flat prices).
 			["settleheld"] = o => o with { SettleHeld = true },
 			["nosettleheld"] = o => o with { SettleHeld = false },
+			// AI-30.4a: LandOrNot's two rollouts of a line share the play before our first draw - the default since
+			// 2026-11-20; beam+nosharedstart plays each whole, as before.
+			["sharedstart"] = o => o with { SharedStart = true },
+			["nosharedstart"] = o => o with { SharedStart = false },
+			// AI-30.4c: lands in hand for every land drop the look-ahead has left - the not-lands way alone; beam+nolandscovered
+			// plays both, as before.
+			["landscovered"] = o => o with { LandsCovered = true },
+			["nolandscovered"] = o => o with { LandsCovered = false },
+			// AI-30.4d, the default: the "lands" rollout only where a drawn land could change something (in place of AI-30.4b's
+			// contenders); beam+nolandmatters plays it wherever D does.
+			["landmatters"] = o => o with { LandMatters = true },
+			["nolandmatters"] = o => o with { LandMatters = false },
 			// "Exile the top card, you may play it" priced as the sample's card, before 2026-11-09: beam+noimpulsevalue.
 			["noimpulsevalue"] = o => o with { Without = o.Without | Evaluator.Terms.ImpulseValue },
 			// A held card priced as castable however few lands we have, before AI-17.21: beam+nomanashort.
@@ -159,7 +173,11 @@ public static class AiMatch
 			// fewer attack plans re-judged against the rollout's real blocks (beam+shortlist2 / +shortlist1, the default 3).
 			["freepasses2"] = o => o with { FreePassCap = 2 },
 			["freepasses1"] = o => o with { FreePassCap = 1 },
+			// Our upkeep and draw step searched even with an empty stack, as before AI-30.4f: beam+upkeepsearch.
+			["upkeepsearch"] = o => o with { AfterTheDraw = false },
 			["shortlist2"] = WithRollout(r => r with { AttackShortlist = 2 }),
+			// AI-30.4e: the attack plans not re-judged against the real blocks when nothing of theirs can block
+			["noblockers"] = WithRollout(r => r with { NoBlockers = true }),
 			["shortlist1"] = WithRollout(r => r with { AttackShortlist = 1 }),
 			// Acting now wins a tie with the same move later this turn, as before AI-13.12 (part 2): beam+actnow.
 			["actnow"] = o => o with { WaitOnTies = false },
@@ -186,6 +204,20 @@ public static class AiMatch
 					Without = o.Without | Evaluator.Terms.NextTurnGrants,
 				},
 			["nogang"] = o => o with { Without = o.Without | Evaluator.Terms.GangBlocks },
+			// The clock reads one attack, a chump blocker stopping its attacker for good, before AI-33.4: beam+oneattack.
+			["oneattack"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttacks },
+			// The turns to kill read one attack, as before AI-33.5: beam+onekillclock.
+			["onekillclock"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttackKill },
+			// The burn rule's two-turn kill reads one attack twice, as before AI-33.6: beam+oneburnclock.
+			["oneburnclock"] = o => o with { Without = o.Without | Evaluator.Terms.TwoAttackBurn },
+			// AI-33.7 experiment (OFF by default): a blocker tapped now is back for the second attack - beam+tappedback.
+			["tappedback"] = o => o with { Without = o.Without | Evaluator.Terms.TappedStay },
+			// The damage sent at our walker reads one attack every turn, as before AI-33.8: beam+onewalkerclock.
+			["onewalkerclock"] = o =>
+				o with
+				{
+					Without = o.Without | Evaluator.Terms.TwoAttackWalker,
+				},
 			// A finished game scores a flat win or loss, its board unread, as before AI-17.6: beam+flatend.
 			["flatend"] = o => o with { Without = o.Without | Evaluator.Terms.EndBoard },
 			// The look-ahead stops right after our own turn, their swing back unseen, as before AI-17.6: beam+nocounter.

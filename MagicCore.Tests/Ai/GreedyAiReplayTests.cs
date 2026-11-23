@@ -12,6 +12,8 @@ namespace MagicCore.Tests.Ai;
 /// only for an intended change in how the AI plays, with the diff reviewed. Passes AutoPass takes (the
 /// only legal move) are not decisions and are not recorded.
 /// </summary>
+// DEV-8.4: its games are independent, so they run in parallel (GoldenReplay is safe for it).
+[Parallelizable(ParallelScope.All)]
 public class GreedyAiReplayTests
 {
 	static readonly GoldenReplay Replays = new("GoldenAiReplay.txt");

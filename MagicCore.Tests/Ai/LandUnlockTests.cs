@@ -67,6 +67,17 @@ public class LandUnlockTests
 		Assert.That(Unlocks("Forest"), Is.False);
 	}
 
+	// AI-29.4: Room of Refuge's colour is chosen as it enters - before it does, it can be the colour we lack. Read as
+	// no colour, it was surplus: discarded or surveilled away beside the white card it would cast.
+	[Test]
+	public void ALandThatChoosesItsColourAsItEnters_IsTheColourWeLack()
+	{
+		Put("Forest", ZoneType.Battlefield, 4);
+		Put("Pet Sehlat", ZoneType.Hand); // {2}{W}
+
+		Assert.That(Unlocks("Room of Refuge"), Is.True);
+	}
+
 	[Test]
 	public void WithNoSpellInHand_ALandUnlocksNothing()
 	{

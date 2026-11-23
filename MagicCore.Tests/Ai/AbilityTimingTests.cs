@@ -200,4 +200,31 @@ public class AbilityTimingTests
 		Many(3, them, TestGames.Card("Forest"));
 		Many(3, them, TestGames.Card("Forest"), ZoneType.Hand);
 	}
+
+	// AI-30.4f (Shayne, 2026-11-21: "planing usually starts after you draw your card for the turn"): with nothing on the
+	// stack our upkeep passes unplanned - a Pinger in reach and a 1/1 of theirs to ping; without the setting it plans the
+	// whole turn there. Measured before it: 308 such searches that passed were 40.6% of every engine step.
+	[TestCase(true)]
+	[TestCase(false)]
+	public void OurUpkeep_PassesUnplanned_AfterTheDraw(bool afterTheDraw)
+	{
+		FromOurUpkeep();
+		Put(me, Pinger);
+		Put(them, TestGames.Creature("Mouse", "1/1"));
+		Assert.That(
+			s.DecidingPlayerId(),
+			Is.EqualTo(me),
+			"precondition: our priority in our upkeep"
+		);
+		var (decided, steps) = MagicRules.CountingSteps(
+			() => new BeamSearchAi(me, new(AfterTheDraw: afterTheDraw)).Decide(s)
+		);
+		if (afterTheDraw)
+		{
+			Assert.That(decided.Action, Is.TypeOf<PassPriorityAction>());
+			Assert.That(steps, Is.EqualTo(1), "no search - the one step is the pass itself");
+		}
+		else
+			Assert.That(steps, Is.GreaterThan(100), "control: the turn is searched in the upkeep");
+	}
 }

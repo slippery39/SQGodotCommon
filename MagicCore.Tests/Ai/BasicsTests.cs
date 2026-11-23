@@ -627,6 +627,59 @@ public class BasicsTests
 			);
 	}
 
+	// AI-33.6: the burn rule's two-turn kill reads two attacks (Evaluator.Terms.TwoAttackBurn), Claude's two boards for
+	// Shayne (2026-11-21), each with Burn in hand and two Mountains. A chump stops its attacker ONCE: they at 10 with a
+	// 2/2, our two 3/3s - 3 this turn, 6 next once the 2/2 is dead, + 3 burn = 12, a kill (one attack read twice: 3 + 3 +
+	// 3 = 9, none). A blocker that kills its attacker stops it for GOOD: they at 6 with a 4/4, our 3/3 and 2/2 - the 4/4 kills the 3/3 this turn
+	// and blocks the 2/2 next, 2 + 0 + 3 = 5, no kill (read twice: 2 + 2 + 3 = 7, a kill). The controls: one attack.
+	[TestCase("chump", false, true)]
+	[TestCase("chump", true, false)]
+	[TestCase("kill", false, false)]
+	[TestCase("kill", true, true)]
+	// AI-33.7 (the review): a blocker tapped NOW untaps for the second attack. They at 8 with a tapped 4/4 (it attacked
+	// us), our 3/3: 3 now, 0 next turn once the 4/4 untaps and blocks, + 3 burn = 6, no kill - the second attack meeting
+	// only today's untapped blockers read 3 + 3 + 3 = 9. Its control is the default (TappedStay), not one attack's.
+	[TestCase("tapped", false, false)]
+	public void TheBurnRulesKill_ReadsTwoAttacks(string board, bool oneAttack, bool kills)
+	{
+		Lands(2, "Mountain");
+		Put(me, Burn, ZoneType.Hand);
+		if (board == "tapped")
+		{
+			Life(them, 8);
+			var wall = Put(them, TestGames.Creature("Wall", "4/4"));
+			s = s.UpdateObject(wall, s.GetCard(wall) with { IsTapped = true }); // TEST SETUP
+			Put(me, TestGames.Creature("Bear", "3/3"));
+			Assert.That(
+				BeamSearchAi.KillsWithinTwoTurns(s, me),
+				Is.True,
+				"control, the default: the second attack meets today's untapped blockers"
+			);
+		}
+		else if (board == "chump")
+		{
+			Life(them, 10);
+			Put(them, TestGames.Creature("Chump", "2/2"));
+			Put(me, TestGames.Creature("Bear", "3/3"));
+			Put(me, TestGames.Creature("Bear", "3/3"));
+		}
+		else
+		{
+			Life(them, 6);
+			Put(them, TestGames.Creature("Wall", "4/4"));
+			Put(me, TestGames.Creature("Bear", "3/3"));
+			Put(me, TestGames.Creature("Cub", "2/2"));
+		}
+		Assert.That(
+			Evaluator.Without(
+				(oneAttack ? Evaluator.Terms.TwoAttackBurn : Evaluator.Terms.None)
+					| (board == "tapped" ? Evaluator.Terms.TappedStay : Evaluator.Terms.None),
+				() => BeamSearchAi.KillsWithinTwoTurns(s, me)
+			),
+			Is.EqualTo(kills)
+		);
+	}
+
 	(string TheirLife, string BurnedAt) PlayOurTurn(Evaluator.Terms without)
 	{
 		var (x, ai, at) = (

@@ -356,3 +356,22 @@ paired on the same game: ≤14 turns 0.0 ± 6.4, 15–20 −6.1 ± 6.1, 21+ −6
 (the running win rates had suggested the opposite: finish order follows thinking time, not turns). Short on colour,
 RGb → RGb-All: Eject the Warp Core 31% → 22%, Resistance Is Futile 27% → 20%, Stray from History 17% → 12%, Vengeance
 Mission 17% → 11%, Gowron and He's Dead, Jim 7% → 3%; Planetary Bombardment unchanged (34% → 32%: no red was added).
+
+## Pool 5 (BGu / WB), tested by simulation (2026-11-18, LIM-1.12)
+
+BGu: B/G, 6 Forest, 6 Swamp, an Island, Overgrown Tomb, Ferenginar, Ni'Var Science Academy, Unexplored Territory (17
+lands). WB: 9 Plains, 8 Swamp. Shared: 3 Fugitive Listener, Enterprise-D, Tal Shiar Operative, Storied Veteran,
+Resistance Is Futile, Daniels, Tricorder. 50 opponents, both seats, `--game-minutes=6`.
+
+| Field | BGu | WB | BGu − WB paired | Stopped | Report |
+|---|---|---|---|---|---|
+| AI sealed decks | 53.2% ± 5.7 (play 56.1, draw 50.0) | 37.8% ± 5.4 (41.5 / 34.1) | **+12.1 ± 7.6** | 41 of 200 | `164356` |
+| His RB | 35.9% ± 5.5 (54.3 / 20.9) | 27.1% ± 4.8 (33.3 / 20.0) | +7.6 ± 6.6 | 37 of 200 | `173616` |
+| His Soup | 51.7% ± 6.6 (57.1 / 46.7) | 25.9% ± 5.8 (33.3 / 19.4) | **+30.6 ± 9.6** | **84 of 200** | `182723` |
+
+The runs took 52, 51 and 75 min, not ~30: a fifth of games stopped against the AI field, 42% against the Soup — both decks run
+long, so their long games are missing from these numbers. BUGw and RGb-All runs stopped by Shayne ("its clear BGu is
+the better deck"). BGu's cards positive in all three (IWD: AI / RB / Soup): Fugitive Listener +17 / +31 / +59 (in
+hand in ~80% of games: its GNS is a handful of games), Mugato +14 / +18 / +14 (Mirror Universe Intrusion +15 / +21 / −3).
+WB's white aggro cards read flat to negative (Saavik −2 / −6 / −10, Set Phasers −2 / −19 / −12); Resistance Is Futile
+positive in both builds in every run.

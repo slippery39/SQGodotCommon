@@ -40,6 +40,13 @@ public static class ManaAbilities
 					? [chosen.Color]
 					: []
 			)
+			// Room of Refuge's colour is chosen as it enters: off the battlefield it can be any (AI-29.4)
+			.Concat(
+				card.GetComponents<ChoosesColorAsItEnters>().Any(c => c.Mana)
+				&& !s.IsOnBattlefield(card.Id)
+					? AnyColor
+					: []
+			)
 			.Distinct();
 	}
 

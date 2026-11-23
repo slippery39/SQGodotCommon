@@ -151,6 +151,9 @@ last FRA card, **Extrapolate the Impossible**, whose "from outside the game" nee
       number put it (findings, "calibration"). **Pool 4 (RGb, 41 cards):** 52% against 150 AI decks, ~18% of games
       stopped (Rok-Tahk); its black removal sat for want of black ~30% of its turns in hand (LIM-1.13); his rebuild
       (+2nd Booker, +Warp Core, +Swamp; −Planetary Bombardment, −Savvy Profiteer, −Forest) leans better, −4.5 ± 4.2.
+      **Pool 5 (2026-11-18):** BGu (BG splashing blue) against WB — BGu ahead against 50 AI decks (+12.1 ± 7.6 paired),
+      his RB (+7.6 ± 6.6) and his Soup (+30.6 ± 9.6); BUGw and RGb-All runs stopped by Shayne, "its clear BGu is the
+      better deck" (findings, "Pool 5"). Shayne plays BGu: WB is the simpler deck, "but it seems like the power level is just too low".
 - [x] LIM-1.13 Every sealed-builds game kept, and why a card sat in hand (Shayne, 2026-11-12: "we should be saving
       the cards we drew for every game so we can analyze it afterwards"; "the black cards just sat in your hand"):
       `--both-seats` writes a folder beside its report — each game's record (`AiMatch.Play`'s `moved` hook, forced
@@ -217,3 +220,4 @@ opponent's pool is what it guesses from.
   commons and rate test by LIM-1.3 and MC-3, builder, suggested deck and play by LIM-1.4–1.5,
   Extrapolate by LIM-1.6. LIM-1.9 keeps the story open.
 - 2026-11-12: LIM-1.13's pre-commit fixes — a suggestion's name ("Blue/Black") as a file name; `--builds-records` reads only the build's own decisions (pool 4's removal "other" 19–21% → 10–12%, the colour shares unchanged); forced passes recorded as "rule".
+- 2026-11-18: LIM-1.12 pool 5 — BGu over WB in all three runs (AI field, RB, Soup); Shayne stopped the rest.

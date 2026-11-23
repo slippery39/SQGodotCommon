@@ -7871,7 +7871,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > ({T}: Add {R} or {W}.)  
 > As this land enters, you may pay 2 life. If you don't, it enters tapped.
 
-**Status:** scripted · no test names it
+**Status:** scripted · **tests naming it:** LandOrderTests
 
 ```csharp
 ["Sacred Foundry"] = [Shockland],

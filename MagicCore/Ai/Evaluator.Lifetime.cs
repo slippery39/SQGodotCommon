@@ -109,7 +109,8 @@ public static partial class Evaluator
 		bool attackFirst
 	)
 	{
-		var hits = AtTheWalker(s, me);
+		var (firstHit, laterHits) = AtTheWalker(s, me);
+		double Hits(int attack) => attack == 1 ? firstHit : laterHits;
 		var lifePoint = LifePoint(s.GetPlayer(me).Life);
 		List<(int Cost, double Yield)> choices =
 		[
@@ -117,10 +118,12 @@ public static partial class Evaluator
 			(0, 0), // idling is always open, and activates nothing
 		];
 		var memo = new Dictionary<(int, double), double>();
-		return attackFirst ? Soak(1, loyalty) + Best(1, loyalty - hits) : Best(1, loyalty);
+		return attackFirst
+			? Soak(1, loyalty, Hits(1)) + Best(1, loyalty - Hits(1))
+			: Best(1, loyalty);
 
-		// The damage soaked by a walker at `left`: life we didn't lose.
-		double Soak(double weight, double left) =>
+		// The damage soaked by a walker at `left` from an attack of `hits`: life we didn't lose.
+		double Soak(double weight, double left, double hits) =>
 			weight * Math.Min(Math.Max(0, left), hits) * lifePoint * SoakShare;
 
 		// The most turns k on can make from `left` loyalty: one ability a turn (or none), then their attack.
@@ -131,26 +134,38 @@ public static partial class Evaluator
 			if (memo.TryGetValue((k, left), out var known))
 				return known;
 			var weight = Math.Pow(LifetimeDecay, k);
+			var hits = Hits(attackFirst ? k + 1 : k); // the attack after this turn's activation
 			return memo[(k, left)] = choices
 				.Where(o => left + o.Cost >= 0)
 				.Max(o =>
 					weight * (o.Yield + perTurn)
-					+ Soak(weight, left + o.Cost)
+					+ Soak(weight, left + o.Cost, hits)
 					+ Best(k + 1, left + o.Cost - hits)
 				);
 		}
 	}
 
 	/// <summary>
-	/// The damage the opponent sends at <paramref name="me"/>'s walker a turn: what gets past our blockers,
-	/// times the share they'd aim at it — 1 − 1 ÷ the turns their attack needs to kill us. One turn from
-	/// lethal they go face (Shayne: "at lower the opponent might just kill us instead").
+	/// The damage the opponent sends at <paramref name="me"/>'s walker in its next attack, and in each after: what gets
+	/// past our blockers (the first attack, then the second's for every one after, AI-33.8 - a chump blocker shields the
+	/// walker once, as in <see cref="TurnsToKill"/>; `+onewalkerclock`: the first's every turn), times the share they'd
+	/// aim at it — 1 − 1 ÷ the turns their attack needs to kill us. One turn from lethal they go face (Shayne: "at lower
+	/// the opponent might just kill us instead").
 	/// </summary>
-	static double AtTheWalker(GameState s, int me)
+	static (double First, double Later) AtTheWalker(GameState s, int me)
 	{
 		var them = s.OpponentOf(me);
-		var kill = TurnsToKill(s, them, me);
-		return kill <= 1 ? 0 : (1 - 1.0 / kill) * Through(s, them, me);
+		var first = Through(s, them, me);
+		var second = TwoThrough(s, them, me) - first; // never below 0: the two attacks' total includes the first's
+		var kill = TurnsToKill(
+			s.GetPlayer(me).Life,
+			first,
+			IsOff(Terms.TwoAttackKill) ? first : second
+		);
+		if (kill <= 1)
+			return (0, 0);
+		var share = 1 - 1.0 / kill;
+		return (share * first, share * (IsOff(Terms.TwoAttackWalker) ? first : second));
 	}
 
 	/// <summary>The next point of life lost at <paramref name="life"/>, as the life term prices it (<see cref="LifeValue"/>).</summary>

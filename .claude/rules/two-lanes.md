@@ -10,7 +10,8 @@ This repository has two worktrees, each a lane with its own VS Code window and C
 - **Know your lane** (`git branch --show-current`) and take a new story id only from its areas, so the "next free
   id" never clashes. The shared docs ("Next up", the sprint file, `CLAUDE.md`) merge as text.
 - **Neither session sees the other's work until a merge** — commits are shared at once, but a branch only gets them
-  by `git merge`. Merge often and small; after every merge, the full tests and the position suite.
+  by `git merge`. Merge often and small; after every merge, the full tests (`python -u tools/test_changed.py --full`, in the background) and the
+  position suite.
 - **The engine is the real overlap.** A cube piece, or MC-6 generalising one, can change how FRA and TRK cards play
   — which the AI lane's measurements stand on. An engine fix both lanes need is made in one and merged into the other
   at once.

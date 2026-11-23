@@ -10,6 +10,8 @@ namespace MagicCore.Tests;
 /// every game ends — a net under everything the focused tests do not think of — and that each game
 /// plays exactly as recorded (<see cref="GoldenReplay"/>), so a refactor can prove it changed nothing.
 /// </summary>
+// DEV-8.4: its games are independent, so they run in parallel (GoldenReplay is safe for it).
+[Parallelizable(ParallelScope.All)]
 public class RandomGameTests
 {
 	static readonly GoldenReplay Replays = new("GoldenReplay.txt");

@@ -8,8 +8,8 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 ## Sprints
 
-**Current sprint: [2026-11-12](../sprints/2026-11-12.md)** — faster tests and AI decisions, a fairer
-look-ahead (AI-20), a table and a reviewer where the play is easy to follow; the cube lane starts LSVPower.
+**Current sprint: [2026-11-19](../sprints/2026-11-19.md)** — a sealed answer in 20 minutes and tests out of
+the way, then AI quality through notes (land sequencing, AI notes, option pricing); the cube lane goes on with LSVPower.
 Start there: it says which task is next.
 
 Sprints run **Thursday to Thursday**, when Shayne's Claude usage resets, so a sprint is one week's
@@ -29,45 +29,47 @@ every task a sprint file names exists.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-**Next session (written 2026-11-12, evening — the cube lane running its first session):**
-1. **For Shayne to read:** the AI-20 research note (`docs/findings/ai-research.md`, its questions are AI-20.1's) and the
-   MTGA reference to mark (`docs/mockups/magictable/mtga-reference.md`). The DamagePotential match: no difference, kept.
-2. Faster tests are done (the full suite ~3 min in parallel; while working, `Commands.md`'s slices — cards and engine 7 s).
-   Faster decisions closed 2026-11-13 (a sealed run ~11% faster, no move changed); the levers left are AI-24, for later.
-3. **The cube lane** (`D:\GameDev\SQGodotCommon-cube`) is on C1–C5; this lane runs nothing heavy until it ends.
+**Next session (written 2026-11-19):** DEV-8 done — `python -u tools/test_changed.py --run` runs what a change
+touches (~1-1.5 min), `--full` the suite at a story's end (~6 min, in the background). Next AI-30.1, the sealed run
+re-profiled (quiet machine). The cube lane goes on with MC-4.4h (black) in its own folder.
 
-1. **AI-27** — the evaluator pricing pass (Shayne, 2026-11-17): one theory, scored in cards, instead of piecemeal fixes — inventory first, then his principles as tests
-2. **AI-29** — AI notes (Shayne, 2026-11-18): specific evaluators for troublesome effects (flash, looting, bounce, an "enters, fight") called by the general one — noted, not started
-3. **AI-26** — option pricing: the option price, the held-off share (targets only) and tap abilities at their last chance are the DEFAULT (2026-11-17); Shayne is testing them at the table — his notes are next (the story's Next is the handoff)
-4. **TBL-2** — Shayne's table notes of 2026-11-17: blocks shown as chosen, a choice panel you can move or hide, the table live while the AI thinks (TBL-2.20–2.22)
-5. **AI-28** — the AI plays in those notes: L'Rell's copy before combat, the Captain's +1/+0 on an attacker, a Clue priced by use, Tricorder's think time
-6. **AI-21** — combat on big boards (Tribbles) — the rollout's attack plans are 50% of a sealed decision (AI-22's profile), the biggest speed lever left
-7. **AI-20** — the look-ahead stops betting on one guessed future: the land / not-a-land look-ahead is the default; paused 2026-11-16 while Shayne plays games to find big issues (its Next lists what waits)
-8. **AI-19** — the scan's value leftovers: Cold-Blooded Crew, Mikaeus, won-line ties
-9. **AI-23** — stationing priced: the positions first, Shayne confirms
-10. **TBL-4** — the MTGA reference page (TBL-4.4), then animations at MTGO's level (TBL-4.5)
-11. **TBL-10** — the game reviewer: step, rewind, notes, the AI's next decision while paused
-12. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
-13. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
-14. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
-15. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
-16. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
-17. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
-18. **AI-13** — Shayne's lessons as general rules for the search, each measured
-19. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
-20. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
-21. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
-22. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
-23. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-24. **MC-5** — Star Trek: every task done; its requirements to tick and close
-25. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
-26. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
-27. **DATA-1** — bring in 17lands data
-28. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
-29. **AI-4** — strategic plans above single actions
-30. **AI-12** — a card's threat over time
-31. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
-32. **MC-8** — every modal spell one cast per choice of modes, its targets chosen after; Mystic Confluence's triple counter (cube lane)
+1. **AI-30** — sealed runs in 20 minutes: re-profile (the decision cost doubled in sprint 5), the stopped games, early stop once clear, then the levers
+2. **AI-29** — AI notes: land sequencing first (AI-29.3), then the shape and the flash pilot; card tags when a note needs one
+3. **AI-26** — option pricing, continued from Shayne's table notes
+4. **AI-31** — the oracle re-examined: why agreement falls as play improves
+5. **AI-27** — the evaluator pricing pass; AI-27.11, the value / tempo / options evaluator separate and swappable
+6. **AI-32** — machine learning: research and a proposal, nothing built
+7. **TBL-2** — Shayne's table notes of 2026-11-17: blocks shown as chosen, a choice panel you can move or hide, the table live while the AI thinks (TBL-2.20–2.22)
+8. **AI-28** — the AI plays in those notes: L'Rell's copy before combat, the Captain's +1/+0 on an attacker, a Clue priced by use, Tricorder's think time
+9. **AI-21** — combat on big boards (Tribbles) — the rollout's attack plans are 50% of a sealed decision (AI-22's profile), the biggest speed lever left
+10. **AI-20** — the look-ahead stops betting on one guessed future: the land / not-a-land look-ahead is the default; paused 2026-11-16 while Shayne plays games to find big issues (its Next lists what waits)
+11. **AI-19** — the scan's value leftovers: Cold-Blooded Crew, Mikaeus, won-line ties
+12. **AI-23** — stationing priced: the positions first, Shayne confirms
+13. **TBL-4** — the MTGA reference page (TBL-4.4) for Shayne to mark; a smoother, less cluttered table
+14. **TBL-10** — the game reviewer: step, rewind, notes, the AI's next decision while paused
+15. **DEV-4**, **DEV-5** — the rules split and the end-of-batch script — before any new set (cube lane)
+16. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
+17. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
+18. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
+19. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
+20. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
+21. **AI-13** — Shayne's lessons as general rules for the search, each measured
+22. **AI-14** — see what the AI decides: AI-14.3 (reading reports) replaced by the reviewer (TBL-10)
+23. **LIM-2** — draft against bots: LIM-2.3, Shayne's playtest of the draft screen
+24. **LIM-1** — sealed: the deck testing tools (`/sealed-test`)
+25. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play — with TBL-4
+26. **MC-5** — Star Trek: every task done; its requirements to tick and close
+27. **DATA-2** — rate cards without 17lands: DATA-2.7, the format report
+28. **DEV-3** — sprint tooling: a `/sprint` skill, the story script's sprint view and drift checks
+29. **DATA-1** — bring in 17lands data
+30. **AI-11** — learn from Shayne's games: after the reviewer, his notes feed it
+31. **AI-4** — strategic plans above single actions
+32. **AI-12** — a card's threat over time
+33. **AI-24** — the speed levers left from AI-22: shortlist2 / freepasses2 (change moves), the step cap, the state-based audit
+34. **MC-8** — every modal spell one cast per choice of modes, its targets chosen after; Mystic Confluence's triple counter (cube lane)
+35. **TBL-11** — playable on a phone (backlog, Shayne 2026-11-18)
+36. **LIM-6** — a cube builder in the UI (backlog)
+37. **LIM-7** — constructed testing (backlog)
 
 ## How it works
 
@@ -91,7 +93,9 @@ story. Areas on this branch:
 A new area needs a row here first.
 
 **Status:** `backlog` (wanted, not yet shaped — open questions remain) → `ready` (requirements
-agreed, can start) → `in-progress` → `done`, or `dropped` (say why in the Log).
+agreed, can start) → `in-progress` → `done`, or `dropped` (say why in the Log). A story goes to `done` only
+after the full suite passed: `python -u tools/test_changed.py --full` (~6 min), started in the background when the
+last task's work is in, its `FULL:` line read before closing (DEV-8). Work goes on while it runs.
 
 **Keep the story current, in the same step as the work** — the root `CLAUDE.md` makes this a rule:
 - a requirement added, changed or dropped → edit Requirements, and log the change with its date
@@ -126,6 +130,8 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-18](AI-18-tap-choices.md) | Tap choices without ballooning moves | in-progress |
 | [AI-19](AI-19-card-by-card-play.md) | Card-by-card play and rulings — after every card plays | in-progress |
 | [AI-20](AI-20-lookahead-unknown-cards.md) | The look-ahead stops betting on one guessed future — unknown cards handled honestly | in-progress |
+| [AI-26](AI-26-option-pricing-by-target.md) | Option pricing by the target — a held card is worth what it will hit later, less the mana it costs then | in-progress |
+| [AI-27](AI-27-scores-in-cards.md) | An evaluator pricing pass — one consistent theory, scored in cards, instead of piecemeal fixes | in-progress |
 | [AI-28](AI-28-table-notes-2026-11-17.md) | Shayne's table notes of 2026-11-17 — the AI plays they flagged, each traced and fixed | in-progress |
 | [DATA-2](DATA-2-engine-ratings.md) | Rate a set's cards without 17lands — measured by the engine, checked against FRA's real rates | in-progress |
 | [DEV-4](DEV-4-split-mechanics-rules.md) | Split magic-mechanics.md by subsystem, so a session loads only the rules it touches | in-progress |
@@ -138,6 +144,8 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
 | [AI-21](AI-21-big-board-combat.md) | Combat on big boards — attack plans that don't grow with every token | ready |
+| [AI-30](AI-30-sealed-runs-in-20-minutes.md) | Sealed runs in 20 minutes — a pool's question answered while Shayne waits, not in 3 hours | ready |
+| [AI-33](AI-33-attack-tests.md) | Attack tests — the right attack pinned in small positions, before combat is made cheaper | ready |
 | [MC-5](MC-5-star-trek.md) | Star Trek (TRK) plays in MagicCore — sealed and draft before Arena's day 1 | ready |
 | [MC-6](MC-6-composable-pieces.md) | MagicCore's pieces compose — one piece per family, not one per card phrase | ready |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
@@ -145,13 +153,17 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [AI-12](AI-12-threat-over-time.md) | A card's threat over time — what it does if it isn't answered, on an empty board and a busy one | backlog |
 | [AI-23](AI-23-station-priced.md) | Stationing priced — what the counters buy against the attack or block given up | backlog |
 | [AI-24](AI-24-speed-levers-left.md) | The speed levers left over from AI-22 — tried, costed or proposed, each to decide later | backlog |
-| [AI-26](AI-26-option-pricing-by-target.md) | Option pricing by the target — a held card is worth what it will hit later, less the mana it costs then | backlog |
-| [AI-27](AI-27-scores-in-cards.md) | An evaluator pricing pass — one consistent theory, scored in cards, instead of piecemeal fixes | backlog |
 | [AI-29](AI-29-ai-notes.md) | AI notes — specific evaluators for troublesome effects, called by the general one | backlog |
+| [AI-31](AI-31-the-oracle-reexamined.md) | The oracle re-examined — what the suite's "agrees with the oracle" measures, and whether it still should | backlog |
+| [AI-32](AI-32-machine-learning-research.md) | Machine learning — research where it could help the AI play better or faster, before building anything | backlog |
+| [AI-34](AI-34-play-around-their-cards.md) | Playing around the opponent's cards — removal, tricks and a look-ahead that bets on one future | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [DEV-3](DEV-3-sprint-tooling.md) | Sprint tooling — a /sprint skill and the story script's mechanical checks | backlog |
+| [LIM-6](LIM-6-cube-builder.md) | A cube builder — build your own cube in the UI, then draft it | backlog |
+| [LIM-7](LIM-7-constructed-testing.md) | Constructed testing — real constructed decks tested by simulation | backlog |
 | [MC-8](MC-8-modal-targets-after-cast.md) | Every modal spell is one cast per choice of modes, its targets chosen after | backlog |
 | [TBL-10](TBL-10-game-reviewer.md) | A game reviewer — step, rewind and play a game on the table, with notes and the AI's next decision | backlog |
+| [TBL-11](TBL-11-playable-on-phone.md) | MagicTable playable on a phone — test decks on the go | backlog |
 | [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | done |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | done |
@@ -168,6 +180,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [DEV-6](DEV-6-two-worktrees.md) | Two lanes at once — a second worktree for the cube, merged back often | done |
 | [DEV-7](DEV-7-faster-tests.md) | Faster tests while working — run what a change touches, the full suite at a story's end | done |
+| [DEV-8](DEV-8-tests-out-of-the-flow.md) | Tests out of the flow — the slice a change touches while working, the full suite in the background at a story's end | done |
 | [LIM-3](LIM-3-greedy-builds.md) | Sealed builds beyond two colours — streamlined, splash or greedy, offered as suggestions | done |
 | [LIM-4](LIM-4-deck-builder-search.md) | Deck builder search: find cards by name and keyword | done |
 | [LIM-5](LIM-5-arena-deck-builder.md) | An Arena-style deck builder — the deck as cards in columns, sorted and arranged, real mana symbols | done |
@@ -181,5 +194,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-30 · DATA-3 · DEV-8 · LIM-6 · MC-9 · TBL-11
+Next free id per area: AI-35 · DATA-3 · DEV-9 · LIM-8 · MC-9 · TBL-12
 <!-- stories:end -->
