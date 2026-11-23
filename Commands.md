@@ -266,6 +266,7 @@ dotnet run --project MtgConsole
 ./Run-Godot.ps1 MtgGame/Draft/DraftScene.tscn                # any scene, directly
 ./Run-Godot.ps1 MtgGame/Draft/DraftScene.tscn -Capture shots/draft -Seconds 4
 ./Run-Godot.ps1 MtgGame/Draft/DraftScene.tscn -Headless -Seconds 4   # log-only check
+./Run-Godot.ps1 MagicTable/DeckSelectScene.tscn -GameArgs '--set=LSV'   # the cube (MC-10): Set: LSVPower cube, then Sealed or Draft
 ```
 
 **`Run-Godot.ps1` exists because three things go wrong every time and none are memorable.**

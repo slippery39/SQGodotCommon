@@ -219,12 +219,17 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
 		if (choice is ChooseXTargetsChoice targets && choice.MinChoices != choice.MaxChoices)
-			// Pyrokinesis, Fire Covenant: one target taking all, or a kill set (MC-9.1) — whichever plays out best.
+			// Pyrokinesis, Fire Covenant: one target taking all, or a kill set (MC-9.1) — whichever plays out best; Pest
+			// Infestation's "up to X" none too (MC-10: with nothing to target, nothing was offered and the answer was null).
 			// ponytail: two kill sets, not every subset; try more orders if a division misplays.
-			return choice
-				.Options.Select(o => (IEnumerable<int>)[o.Id])
-				.Concat(KillSets(s, targets))
-				.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
+			return (
+				choice.MinChoices == 0
+					?
+					[
+						[],
+					]
+					: Enumerable.Empty<IEnumerable<int>>()
+			).Concat(choice.Options.Select(o => (IEnumerable<int>)[o.Id])).Concat(KillSets(s, targets)).MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 		if (choice is ChooseXTargetsChoice)
 			// Dominion Infiltration copies them: the biggest. ponytail: power, then mana value, stands in for worth.
 			return choice

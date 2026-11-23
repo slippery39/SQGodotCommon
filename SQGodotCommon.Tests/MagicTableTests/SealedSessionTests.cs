@@ -323,6 +323,39 @@ public class SealedSessionTests
 		);
 	}
 
+	// MC-10: the cube's sealed — a singleton pool, the suggested build against the AI's own cube deck, played through.
+	[Test]
+	public void CubeSealed_ASingletonPool_AndAGamePlayedThrough()
+	{
+		var lsv = MagicCore.Sets.CardRegistry.Printings("LSV").Select(p => p.Card.Name).ToHashSet();
+		var s = new SealedSession(5, "LSV");
+		Assert.That(s.Pool.Where(n => !SealedBuilder.Basics.Contains(n)), Is.Unique, "singleton");
+		Assert.That(
+			new SealedSession(5, "LSV", singleton: false).Pool,
+			Is.Not.EqualTo(s.Pool),
+			"independent packs: another deal"
+		);
+
+		s.Suggest();
+		Assert.That(s.Ready);
+		var setup = s.ToSetup(search: false, gameSeed: 3);
+		Assert.That(
+			setup.Theirs.Select(c => c.Data.Name).Where(n => !SealedBuilder.Basics.Contains(n)),
+			Is.SubsetOf(lsv),
+			"the AI's own cube pool"
+		);
+
+		var g = MagicRules.NewGame(setup.Mine, setup.Theirs, seed: 3);
+		for (var i = 0; i < 3000 && !g.IsOver(); i++)
+		{
+			g = g.AutoPass();
+			if (g.IsOver())
+				break;
+			g = new MagicCore.Ai.GreedyAi(g.DecidingPlayerId()).Decide(g).State;
+		}
+		Assert.That(g.IsOver(), "a whole game, greedy on both sides");
+	}
+
 	[Test]
 	public void TheSearch_ReadsNameTypeTextAndKeywords_EveryWordMustMatch()
 	{

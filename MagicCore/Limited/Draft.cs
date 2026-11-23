@@ -25,8 +25,6 @@ public sealed record DraftState(ImmutableList<DraftSeat> Seats, int Round)
 /// passed left, the second right. Copied from MtgSimulator's <c>Draft</c> (MtgCore's cards, so a copy,
 /// not a reference). The cards are NAMES and the packs are dealt up front, so a cube drafts the same
 /// way from its own list (<see cref="Create"/>) — the draft never assumes packs (Shayne, 2026-10-23).
-/// ponytail: a card's colours come from FRA's card data (<see cref="ColorsOf"/>), so a cube's cards
-/// need their own lookup passed in — MC-4's, when the cube can be drafted.
 /// Packs lose cards only by picks, so the echoed-pair block leaves its signal honestly: a pack showing
 /// two pair cards from different pairs means the partner of one was taken.
 /// </summary>
@@ -46,21 +44,20 @@ public static class Draft
 	/// <summary>Picks over which the lean ramps from nothing to full — about when a drafter knows their colours.</summary>
 	public const int LaneRampPicks = 10;
 
-	/// <summary>A set's draft: <see cref="SeatCount"/> seats × <see cref="PackCount"/> Arena packs, the same for the same seed.</summary>
-	public static DraftState New(string set, int seed)
-	{
-		var rng = new Random(seed);
-		var packs = new List<IReadOnlyList<IReadOnlyList<string>>>();
-		for (var seat = 0; seat < SeatCount; seat++)
-			packs.Add(
-				[
-					.. Enumerable
-						.Range(0, PackCount)
-						.Select(_ => Boosters.Pack(set, rng).Select(c => c.Card).ToList()),
-				]
-			);
-		return Create(packs);
-	}
+	/// <summary>
+	/// A set's draft: <see cref="SeatCount"/> seats × <see cref="PackCount"/> packs, the same for the same seed — one deal,
+	/// so a cube's is singleton across the table unless asked otherwise (<see cref="Boosters.Packs"/>, MC-10).
+	/// </summary>
+	public static DraftState New(string set, int seed, bool? singleton = null) =>
+		Create(
+			[
+				.. Boosters
+					.Packs(set, new Random(seed), SeatCount * PackCount, singleton)
+					.Select(p => (IReadOnlyList<string>)[.. p.Select(c => c.Card)])
+					.Chunk(PackCount)
+					.Select(seat => (IReadOnlyList<IReadOnlyList<string>>)seat),
+			]
+		);
 
 	/// <summary>A draft from packs already dealt: <paramref name="packs"/>[seat][round], every pack the same size.</summary>
 	public static DraftState Create(IReadOnlyList<IReadOnlyList<IReadOnlyList<string>>> packs) =>

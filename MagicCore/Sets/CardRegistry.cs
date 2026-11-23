@@ -97,11 +97,20 @@ public static class CardRegistry
 	/// <summary>The card — its one script — as its first set prints it.</summary>
 	public static CardDefinition Get(string name) => Get(name, FirstSet[name]);
 
-	/// <summary>The card — its one script — as <paramref name="set"/> prints it (its art).</summary>
+	/// <summary>
+	/// The card — its one script — as <paramref name="set"/> prints it (its art). A basic land a set doesn't print is
+	/// its first printing's: a cube (LSV) lists none, and every deck built from it adds them (MC-10).
+	/// </summary>
 	public static CardDefinition Get(string name, string set)
 	{
 		if (!NamesIn.TryGetValue(set, out var names) || !names.Contains(name))
-			throw new KeyNotFoundException($"{set} doesn't print '{name}'");
+			return
+				NamesIn.ContainsKey(set)
+				&& Data.TryGetValue(name, out var basic)
+				&& basic.TypeLine.StartsWith("Basic Land")
+				&& FirstSet.TryGetValue(name, out var first)
+				? Get(name, first)
+				: throw new KeyNotFoundException($"{set} doesn't print '{name}'");
 		return new(
 			Data[name],
 			Scripts.Value.TryGetValue(name, out var components) ? components : [],

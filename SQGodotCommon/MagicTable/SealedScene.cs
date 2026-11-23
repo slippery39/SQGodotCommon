@@ -160,7 +160,8 @@ public partial class SealedScene : Control
 			&& int.TryParse(arg, out var seed)
 				? seed
 				: System.Random.Shared.Next(1, 1_000_000),
-			DeckSelectScene.LimitedSet
+			DeckSelectScene.LimitedSet,
+			DeckSelectScene.Singleton
 		);
 		MtgUiStyles.AddBackdrop(this);
 		var margin = new MarginContainer();
@@ -205,7 +206,8 @@ public partial class SealedScene : Control
 						int.TryParse(_seed.Text.Trim(), out var seed)
 							? seed
 							: System.Random.Shared.Next(1, 1_000_000),
-						S.Set
+						S.Set,
+						DeckSelectScene.Singleton
 					);
 					Redraw();
 				}

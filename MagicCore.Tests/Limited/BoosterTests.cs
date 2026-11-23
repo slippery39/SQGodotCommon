@@ -153,4 +153,58 @@ public class BoosterTests
 			Boosters.Sealed("FRA", 42).SelectMany(p => p),
 			Is.EqualTo(Boosters.Sealed("FRA", 42).SelectMany(p => p))
 		);
+
+	// ===== MC-10: the cube (LSV) — one sheet of its list, singleton across a deal by default =====
+
+	static readonly JsonNode Cube = JsonNode.Parse(CardDataSet.ResourceText("LSV.boosters.json")!)!;
+
+	static int CubePack => (int)Cube["boosters"]![0]!["contents"]!["cube"]!;
+
+	[Test]
+	public void TheCube_ADraftsPacks_NeverRepeatACard_EveryCardPlays()
+	{
+		var draft = Draft.New("LSV", seed: 5);
+		var cards = draft
+			.Seats.SelectMany(s => s.Pack.Concat(s.Unopened.SelectMany(p => p)))
+			.ToList();
+
+		Assert.That(cards, Has.Count.EqualTo(Draft.SeatCount * Draft.PackCount * CubePack));
+		Assert.That(cards, Is.Unique, "singleton: 24 packs from one deal");
+		Assert.That(cards.All(CardRegistry.IsImplemented), Is.True);
+	}
+
+	[Test]
+	public void TheCube_ASealedPool_IsSingleton_UnlessAskedForIndependentPacks()
+	{
+		Assert.That(Boosters.IsSingleton("LSV"), Is.True);
+		Assert.That(Boosters.SealedPool("LSV", 9), Is.Unique);
+		// independent packs: each pack its own draw from the whole cube - over enough pools, a card repeats
+		Assert.That(
+			Enumerable
+				.Range(0, 50)
+				.Any(seed =>
+					!Boosters
+						.SealedPool("LSV", seed, singleton: false)
+						.Distinct()
+						.SequenceEqual(Boosters.SealedPool("LSV", seed, singleton: false))
+				),
+			Is.True
+		);
+	}
+
+	[Test]
+	public void ASetsDraft_IsTheSameDeal_AsItsPacksOpenedOneAtATime()
+	{
+		var rng = new Random(11);
+		var oneByOne = Enumerable
+			.Range(0, Draft.SeatCount * Draft.PackCount)
+			.SelectMany(_ => Boosters.Pack("FRA", rng).Select(c => c.Card));
+		var draft = Draft.New("FRA", seed: 11);
+
+		Assert.That(
+			draft.Seats.SelectMany(s => s.Pack.Concat(s.Unopened.SelectMany(p => p))),
+			Is.EqualTo(oneByOne),
+			"FRA's drafts unchanged by the cube's deal"
+		);
+	}
 }

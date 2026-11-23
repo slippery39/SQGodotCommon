@@ -24,6 +24,7 @@ public sealed class SealedSession
 	[
 		("FRA", "Reality Fracture"),
 		("TRK", "Star Trek"),
+		("LSV", "LSVPower cube"), // MC-10: singleton packs of 15 (Boosters.IsSingleton)
 	];
 
 	/// <summary>The set the pool is opened from: its boosters, its ratings, the printing its cards show.</summary>
@@ -39,9 +40,9 @@ public sealed class SealedSession
 	private readonly Dictionary<SealedDeck, Castability.Result> _measured =
 		new(ReferenceEqualityComparer.Instance);
 
-	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool.</summary>
-	public SealedSession(int seed, string set = "FRA")
-		: this(Boosters.SealedPool(set, seed), set: set) => Seed = seed;
+	/// <summary>Six packs opened from <paramref name="seed"/> — one number replays your pool. <paramref name="singleton"/>: a cube's deal (MC-10), the set's default unless set.</summary>
+	public SealedSession(int seed, string set = "FRA", bool? singleton = null)
+		: this(Boosters.SealedPool(set, seed, singleton), set: set) => Seed = seed;
 
 	/// <summary>A pool you opened elsewhere (<see cref="ArenaDeck.ReadPool"/>); what it held that the engine hasn't is <paramref name="leftOut"/>.</summary>
 	public SealedSession(

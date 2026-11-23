@@ -18,11 +18,11 @@ public sealed class DraftSession
 	private SealedSession? _builder;
 	private readonly Dictionary<int, SealedDeck> _botDecks = new();
 
-	public DraftSession(int seed, string set = "FRA")
+	public DraftSession(int seed, string set = "FRA", bool? singleton = null)
 	{
 		Seed = seed;
 		Set = set;
-		State = Draft.New(set, seed);
+		State = Draft.New(set, seed, singleton); // a cube's deal: singleton unless asked (MC-10)
 		PackSize = State.Seats[0].Pack.Count;
 	}
 

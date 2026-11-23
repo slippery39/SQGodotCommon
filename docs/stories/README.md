@@ -51,6 +51,7 @@ re-profiled (quiet machine). The cube lane goes on with MC-4.4h (black) in its o
 16. **MC-7** — the attacker divides combat damage among its blockers (cube lane, this sprint)
 17. **MC-6** — MagicCore's pieces compose: one per family (cube lane)
 18. **MC-9** — the cube's cards in the AI's hands: the deferred AI items, watched then fixed, five phases (cube lane, 2026-11-23)
+19. **MC-10** — the cube in limited: sealed (first) and draft with LSVPower on the table; packs singleton by default; the ratings' source open (cube lane, 2026-11-23)
 19. **MC-4** — LSVPower (Shayne, 2026-11-12): imported, surveyed, built in batches (cube lane)
 20. **AI-18** — tap choices: fewer moves for the same choice (AI-18.1, measure first)
 21. **AI-9** — resources by use: AI-9.7 (Quadrant Theory boards), AI-9.8 (the card-value table charged for mana cost)
@@ -142,6 +143,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [MC-4](MC-4-powered-cube.md) | MTGA's powered cube plays in MagicCore — surveyed, then built in batches | in-progress |
 | [MC-7](MC-7-combat-damage-assignment.md) | The attacker assigns combat damage among its blockers | in-progress |
 | [MC-9](MC-9-cube-cards-in-the-ais-hands.md) | The cube's cards in the AI's hands - the deferred AI items, watched and fixed | in-progress |
+| [MC-10](MC-10-cube-limited.md) | The cube in limited - sealed and draft with LSVPower, on the table | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | in-progress |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | in-progress |
 | [TBL-4](TBL-4-clearer-table.md) | A clearer, calmer table — MTGA first, the best of MTGO kept | in-progress |
@@ -196,5 +198,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-8](TBL-8-mana-payment-you-can-see.md) | Mana payment you can trust and see — a smarter auto-tap, and Arena's tap preview | done |
 | [TBL-9](TBL-9-playtest-inputs.md) | Table inputs the playtests asked for: an X spinner, reordering a surveil, conceding | done |
 
-Next free id per area: AI-35 · DATA-3 · DEV-9 · LIM-8 · MC-10 · TBL-12
+Next free id per area: AI-35 · DATA-3 · DEV-9 · LIM-8 · MC-11 · TBL-12
 <!-- stories:end -->

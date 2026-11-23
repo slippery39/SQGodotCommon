@@ -287,4 +287,32 @@ public class CubeAiTests : FraBoardTest
 			"on their turn, at instant speed - our rollout plays only at sorcery speed"
 		);
 	}
+
+	// MC-10: the card-value sandbox crashed on Pest Infestation ("Choose up to X target artifacts and/or enchantments")
+	// with nothing to target - GreedyAi's "up to X" answer offered one target each and never none, so it was null.
+	[Test]
+	public void PestInfestation_NothingToTarget_GreedyAnswersNone()
+	{
+		SixLands("Forest");
+		var pest = Hand(Lsv("Pest Infestation"), me);
+		var cast = Casts(pest).First(c => c.X == 1);
+		s = s.Act(cast);
+		var targets = s.GetPendingChoice();
+		Assert.That(
+			targets,
+			Is.TypeOf<ChooseXTargetsChoice>().And.Property("Options").Empty,
+			"setup: asked, with nothing to target"
+		);
+
+		var answer = new GreedyAi(me).Answer(s, targets!); // the test helpers mask a null answer with the minimum
+
+		Assert.That(answer, Is.Not.Null.And.Empty);
+		s = s.Choose(answer);
+		Resolve();
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => c.IsToken),
+			Nu.EqualTo(2 * cast.X),
+			"twice X Pests"
+		);
+	}
 }

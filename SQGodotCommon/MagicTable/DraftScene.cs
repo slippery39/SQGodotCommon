@@ -63,7 +63,8 @@ public partial class DraftScene : Control
 			&& int.TryParse(arg, out var seed)
 				? seed
 				: System.Random.Shared.Next(1, 1_000_000),
-			DeckSelectScene.LimitedSet
+			DeckSelectScene.LimitedSet,
+			DeckSelectScene.Singleton
 		);
 		// --autopick: take the first card of every pack — straight to the deck building (captures)
 		if (args.Contains("--autopick"))

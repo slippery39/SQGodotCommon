@@ -4,6 +4,7 @@ using System.Linq;
 using MagicCore;
 using MagicCore.Ai;
 using MagicCore.Cards;
+using MagicCore.Limited;
 using MagicCore.Sets;
 using MagicCore.Sets.Fra;
 using MtgGame;
@@ -76,6 +77,15 @@ public partial class DeckSelectScene : Control
 			? set
 			: SealedSession.Sets[0].Code;
 
+	/// <summary>
+	/// A cube's packs (MC-10): singleton by default — no card twice in a pool or a draft — or independent packs, "just
+	/// for fun" (Shayne). Offered only for a set that deals singleton (<see cref="Boosters.IsSingleton"/>).
+	/// </summary>
+	public static bool SingletonPacks { get; private set; } = true;
+
+	/// <summary>What Sealed and Draft pass to the deal: the set's own default, or independent packs as asked.</summary>
+	public static bool? Singleton => SingletonPacks ? null : false;
+
 	private static string SetText() =>
 		$"Set: {SealedSession.Sets.First(s => s.Code == LimitedSet).Name}";
 
@@ -112,6 +122,16 @@ public partial class DeckSelectScene : Control
 		bottom.AddChild(_aiVsAi);
 		_search.AddThemeFontSizeOverride("font_size", 24);
 		bottom.AddChild(_search);
+		// a cube's packs (MC-10) - in the options row: a button beside Set pushed Start off the screen
+		var packs = new CheckBox
+		{
+			Text = "Singleton packs",
+			ButtonPressed = SingletonPacks,
+			Visible = Boosters.IsSingleton(LimitedSet),
+		};
+		packs.AddThemeFontSizeOverride("font_size", 24);
+		packs.Toggled += on => SingletonPacks = on;
+		bottom.AddChild(packs);
 		column.AddChild(bottom);
 		// The buttons get their own row: beside the options, the row outgrew the screen (2026-10-23).
 		var actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
@@ -128,6 +148,7 @@ public partial class DeckSelectScene : Control
 			var i = SealedSession.Sets.ToList().FindIndex(s => s.Code == LimitedSet);
 			LimitedSet = SealedSession.Sets[(i + 1) % SealedSession.Sets.Count].Code;
 			setButton.Text = SetText();
+			packs.Visible = Boosters.IsSingleton(LimitedSet);
 		};
 		actions.AddChild(setButton);
 		var sealedButton = new Button { Text = "Sealed", FocusMode = FocusModeEnum.None };

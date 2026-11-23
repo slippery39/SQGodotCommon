@@ -16,6 +16,8 @@ public sealed record PackCard(string Card, string Sheet);
 /// from each sheet. Arena has no foils, so paper's foil slot is simply a second wildcard (Wizards:
 /// "two non-foil wildcard slots") — foil flags are never read. On top, the one rule Wizards states
 /// for commons: "guarantee four of the five colors appear in common in each booster".
+/// A CUBE (LSV, MC-10) is one sheet of its whole list, no card twice in a draft or a pool by default
+/// (<see cref="Config.Singleton"/>): every pack of one deal draws from what the deal hasn't dealt (<see cref="Packs"/>).
 /// </summary>
 public static class Boosters
 {
@@ -23,7 +25,13 @@ public static class Boosters
 
 	sealed record Variant(int Weight, Dictionary<string, int> Contents);
 
-	sealed record Config(List<Variant> Boosters, Dictionary<string, Sheet> Sheets);
+	/// <param name="Singleton">A cube's: the packs of one deal never repeat a card (MC-10, Shayne: "singleton is usually
+	/// the default"); each deal may still ask for independent packs, "just for fun".</param>
+	sealed record Config(
+		List<Variant> Boosters,
+		Dictionary<string, Sheet> Sheets,
+		bool Singleton = false
+	);
 
 	static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 
@@ -53,19 +61,41 @@ public static class Boosters
 	/// <summary>The four-of-five-colours rule, applied to the <c>common</c> sheet's cards.</summary>
 	public const int MinCommonColors = 4;
 
+	/// <summary>Whether the set deals singleton by default — a cube (<see cref="Config.Singleton"/>).</summary>
+	public static bool IsSingleton(string set) => Of(set).Singleton;
+
 	/// <summary>A sealed pool: <paramref name="packs"/> packs (Arena: six), the same pool for the same seed.</summary>
-	public static IReadOnlyList<IReadOnlyList<PackCard>> Sealed(string set, int seed, int packs = 6)
-	{
-		var rng = new Random(seed);
-		return [.. Enumerable.Range(0, packs).Select(_ => Pack(set, rng))];
-	}
+	public static IReadOnlyList<IReadOnlyList<PackCard>> Sealed(
+		string set,
+		int seed,
+		int packs = 6,
+		bool? singleton = null
+	) => Packs(set, new Random(seed), packs, singleton);
 
 	/// <summary><see cref="Sealed"/> as card names, pack by pack — what a builder reads.</summary>
-	public static IReadOnlyList<string> SealedPool(string set, int seed) =>
-		[.. Sealed(set, seed).SelectMany(p => p).Select(c => c.Card)];
+	public static IReadOnlyList<string> SealedPool(string set, int seed, bool? singleton = null) =>
+		[.. Sealed(set, seed, singleton: singleton).SelectMany(p => p).Select(c => c.Card)];
+
+	/// <summary>
+	/// <paramref name="count"/> packs of one deal, in order. Singleton (the set's default, or as asked): no card twice
+	/// in the deal. Otherwise each pack is <see cref="Pack"/>'s alone — the same packs as one at a time.
+	/// </summary>
+	public static IReadOnlyList<IReadOnlyList<PackCard>> Packs(
+		string set,
+		Random rng,
+		int count,
+		bool? singleton = null
+	)
+	{
+		var dealt = singleton ?? Of(set).Singleton ? new HashSet<string>() : null;
+		return [.. Enumerable.Range(0, count).Select(_ => Pack(set, rng, dealt))];
+	}
 
 	/// <summary>One pack: a weighted variant, then each of its sheets drawn — no card twice from a sheet.</summary>
-	public static IReadOnlyList<PackCard> Pack(string set, Random rng)
+	public static IReadOnlyList<PackCard> Pack(string set, Random rng) => Pack(set, rng, null);
+
+	/// <summary>One pack, never a card <paramref name="dealt"/> holds (a singleton deal) — what it draws joins it.</summary>
+	static IReadOnlyList<PackCard> Pack(string set, Random rng, HashSet<string>? dealt)
 	{
 		var config = Of(set);
 		var contents = new Dictionary<string, int>(
@@ -75,13 +105,19 @@ public static class Boosters
 		var pack = new List<PackCard>();
 		foreach (var (sheet, count) in contents)
 			pack.AddRange(
-				Draw(config.Sheets[sheet], count, rng, balance: sheet == "common")
+				Draw(config.Sheets[sheet], count, rng, balance: sheet == "common", dealt)
 					.Select(c => new PackCard(c, sheet))
 			);
 		return pack;
 	}
 
-	static List<string> Draw(Sheet sheet, int count, Random rng, bool balance)
+	static List<string> Draw(
+		Sheet sheet,
+		int count,
+		Random rng,
+		bool balance,
+		HashSet<string>? dealt = null
+	)
 	{
 		if (sheet.Fixed)
 			return [.. sheet.Cards.Keys];
@@ -90,7 +126,7 @@ public static class Boosters
 		// proportion. Collate by FRA's real print runs instead if opened-pack data ever reveals them.
 		for (var attempt = 0; attempt < 1000; attempt++)
 		{
-			var left = sheet.Cards.ToList();
+			var left = sheet.Cards.Where(c => dealt?.Contains(c.Key) != true).ToList();
 			var drawn = new List<string>();
 			for (var i = 0; i < count; i++)
 			{
@@ -103,7 +139,10 @@ public static class Boosters
 				|| drawn.SelectMany(c => CardRegistry.Get(c).Data.Colors ?? []).Distinct().Count()
 					>= MinCommonColors
 			)
+			{
+				dealt?.UnionWith(drawn);
 				return drawn;
+			}
 		}
 		throw new InvalidOperationException(
 			$"{count} commons never showed {MinCommonColors} colours in 1000 draws"
